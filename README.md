@@ -1,4 +1,4 @@
-# Web simulation of Kali Linux
+# Web portfolio with a Kali Linux theme deisgn
 ![image](https://github.com/Alex-Unnippillil/kali-linux-portfolio/assets/24538548/82c8d6cd-d720-430f-a3be-91f25e349b52)
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
