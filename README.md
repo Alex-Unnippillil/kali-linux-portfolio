@@ -17,4 +17,4 @@ See the section about [deployment](https://facebook.github.io/create-react-app/d
 
 
 
-updated open source code from https:/vivek9patel.github.io
+updated open source code from https:/vivek9patel.github.io & https://github.com/DustinBrett/daedalOS 
