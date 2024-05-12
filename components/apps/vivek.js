@@ -222,7 +222,6 @@ function Skills() {
                         <img className="m-1" src="https://img.shields.io/badge/Unity-%23000000.svg?logo=unity&logoColor=white" alt="unity alex" />
                         <img className="m-1" src="https://img.shields.io/badge/Xcode-007ACC?logo=Xcode&logoColor=white" alt="xcode alex" />
                         <img className="m-1" src="https://img.shields.io/badge/Android%20Studio-3DDC84?logo=android-studio&logoColor=white" alt="alex android studio" />
-                        <img className="m-1" src="https://img.shields.io/badge/Vim-%2311AB00.svg?logo=vim&logoColor=white" alt="vim alex" />
 
                     </div>
                 </div>
