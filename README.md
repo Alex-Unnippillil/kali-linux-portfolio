@@ -1,63 +1,20 @@
-# Web simulation of UbuntuOS
-
-This is a personal portfolio website of theme Ubuntu 20.04, made using Next.js & tailwind CSS.
-If you want to edit this. Clone this project and edit the files in `/src/components`.
-
-To run this on localhost
-type `npm start` and when u are done coding type `npm run build` to build your app.
-
-_NOTE: if you have yarn just replace `npm start` and `npm run build` with `yarn start` and `yarn build`._
-
-<a href="https://www.buymeacoffee.com/vivek9patel" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 40px !important;width: 140px !important;" ></a>
-
-### To make the contact form work
-
-- Create a account in [emailjs](https://www.emailjs.com/) create also new Outlook or Gmail account to be able
-  to send email.
-- Create a new service, select and log in to your newly created outlook or gmail account on EmailJS.
-- Go back to the dashboard and get the Service ID copy it.
-- Create a .env file in your root folder and put
-
-```
-
-NEXT_PUBLIC_USER_ID = 'YOUR_USER_ID'
-NEXT_PUBLIC_TEMPLATE_ID = 'template_fqqqb9g'
-NEXT_PUBLIC_SERVICE_ID = 'YOUR_SERVICE_ID'
-
-```
-
-into it. Replace \*your user id and your service ID with your values in your EmailJS service.
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=vivek9patel/vivek9patel.github.io&type=Date)](https://star-history.com/#vivek9patel/vivek9patel.github.io&Date)
-
-## This project was made using Create Next App! Here is the scripts that u can run.
-
-### `npm start`
-
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
-
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+# Web portfolio with a Kali Linux theme design
+![image](https://github.com/Alex-Unnippillil/kali-linux-portfolio/assets/24538548/82c8d6cd-d720-430f-a3be-91f25e349b52)
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-## Contributing
+![image](https://github.com/Alex-Unnippillil/kali-linux-portfolio/assets/24538548/56ebb889-1675-4bfe-b2db-ab8ed7cc2499)
+![image](https://github.com/Alex-Unnippillil/kali-linux-portfolio/assets/24538548/28405500-6238-48d7-b7ec-83f409d12a30)
+![image](https://github.com/Alex-Unnippillil/kali-linux-portfolio/assets/24538548/ddd4f592-b83e-4949-a64d-459ba3fc1317)
+![image](https://github.com/Alex-Unnippillil/kali-linux-portfolio/assets/24538548/9050e83c-023f-4faa-b7c1-bf9167221e07)
+![image](https://github.com/Alex-Unnippillil/kali-linux-portfolio/assets/24538548/1804abd7-abe3-488a-a1ca-b18c1cbeaa8c)
+![image](https://github.com/Alex-Unnippillil/kali-linux-portfolio/assets/24538548/bc70cbbc-7f3a-4cca-b7fe-d11172e08af5)
+![image](https://github.com/Alex-Unnippillil/kali-linux-portfolio/assets/24538548/816634a4-4f6d-4ccd-9900-b8f310c71f41)
+![image](https://github.com/Alex-Unnippillil/kali-linux-portfolio/assets/24538548/be7b7f02-f798-476c-8f55-b78fa905c954)
 
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributiors who wants to make this website better can make contribution,which will be **greatly appreciated**.
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Added some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+
+
+
+
+updated open source code from https:/vivek9patel.github.io & https://github.com/DustinBrett/daedalOS
