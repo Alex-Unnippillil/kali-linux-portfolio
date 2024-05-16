@@ -127,7 +127,7 @@ function About() {
                 <li className=" mt-3 list-building">  If you're looking for the type of person that always wants to help others. That'll be there putting in the work 24/7. Please feel free to send an email <a className='text-underline'
                               href='mailto:alex.unnippillil@hotmail.com'><u>@alex.unnippillil@hotmail.com</u></a></li>
                 <li className=" mt-3 list-time"> When I am not learning my next technical skill, I like to spend my time reading books, rock climbing or watching <u className=' cursor-pointer '><a href="https://www.youtube.com/@Alex-Unnippillil/playlists" target={"_blank"}>Youtube Videos</a></u> and <u className=' cursor-pointer '><a href="https://myanimelist.net/animelist/alex_u" target={"_blank"}>Anime</a></u></li> 
-                <li className=" mt-3 list-star"> And I also have interest in Deep Learning & AI!</li> </ul>  </>
+                <li className=" mt-3 list-star"> And I also have interests in Deep Learning, Software Development & Animation!</li> </ul>  </>
     )
 }
 function Education() {
