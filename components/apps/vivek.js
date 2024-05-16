@@ -127,7 +127,7 @@ function About() {
                 <li className=" mt-3 list-building">  If you're looking for the type of person that always wants to help others. That'll be there putting in the work 24/7. Please feel free to send an email <a className='text-underline'
                               href='mailto:alex.unnippillil@hotmail.com'><u>@alex.unnippillil@hotmail.com</u></a></li>
                 <li className=" mt-3 list-time"> When I am not learning my next technical skill, I like to spend my time reading books, rock climbing or watching <u className=' cursor-pointer '><a href="https://www.youtube.com/@Alex-Unnippillil/playlists" target={"_blank"}>Youtube Videos</a></u> and <u className=' cursor-pointer '><a href="https://myanimelist.net/animelist/alex_u" target={"_blank"}>Anime</a></u></li> 
-                <li className=" mt-3 list-star"> And I also have interest in Deep Learning & AI!</li> </ul>  </>
+                <li className=" mt-3 list-star"> And I also have interests in Deep Learning, Software Development & Animation!</li> </ul>  </>
     )
 }
 function Education() {
@@ -204,7 +204,7 @@ function Skills() {
                         <img className="m-1" src="https://img.shields.io/badge/CCNA-007ACC?logo=Cisco&logoColor=fff" alt="CCNA unnippillil" />
                         <img className="m-1" src="https://img.shields.io/badge/CCNP-007ACC?logo=Cisco&logoColor=fff" alt="ccnp unnippillil" />
                         <img className="m-1" src="https://img.shields.io/badge/PuTTY-7D4698?logo=gnometerminal&logoColor=white" alt="unnippillil PuTTY" />
-                        <img className="m-1" src="https://img.shields.io/badge/Wireshark-%230072C6.svg?logo=wireshark&logoColor=white" alt="alex azure" />
+                        <img className="m-1" src="https://img.shields.io/badge/Wireshark-%230072C6.svg?logo=wireshark&logoColor=white" alt="alex wireshark" />
                         <img className=" m-1" src="https://img.shields.io/badge/OWASP-black?style=flat&logo=OWASP&logoColor=ffffff" alt="unnippillil OWASP" />
                         
                       
@@ -222,7 +222,6 @@ function Skills() {
                         <img className="m-1" src="https://img.shields.io/badge/Unity-%23000000.svg?logo=unity&logoColor=white" alt="unity alex" />
                         <img className="m-1" src="https://img.shields.io/badge/Xcode-007ACC?logo=Xcode&logoColor=white" alt="xcode alex" />
                         <img className="m-1" src="https://img.shields.io/badge/Android%20Studio-3DDC84?logo=android-studio&logoColor=white" alt="alex android studio" />
-
                     </div>
                 </div>
             </div>
@@ -256,12 +255,23 @@ function Skills() {
                     </div>
                 </div>
             </div>
-            <ul className=" tracking-tight text-sm md:text-base w-10/12 emoji-list mt-4">
-                <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
-                    <span> and of course I can type at the speed of the average security analyst</span>
-                </li>
-                <a href="https://data.typeracer.com/pit/profile?user=ulexa&ref=badge" target="_top"><img src="https://data.typeracer.com/misc/badge?user=ulexa" border="0" alt="TypeRacer.com scorecard for user ulexa"/></a>
-            </ul>
+            <div className="tracking-tight text-sm md:text-base w-10/12 emoji-list mt-4 flex">
+                <span className="list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight mr-4">
+                    and of course I can type at the speed of a average security analyst
+                </span>
+                            
+                <a href="https://data.typeracer.com/pit/profile?user=ulexa&ref=badge" target="_blank" rel="noopener noreferrer" className="mr-4">
+                    <img src="https://data.typeracer.com/misc/badge?user=ulexa" border="0" alt="TypeRacer.com scorecard for user ulexa"/>
+                </a>
+
+                <a href="https://www.credly.com/badges/783aed9a-91a7-4a2e-a4b8-11dbd0d25fc2/public_url" target="_blank" rel="noopener noreferrer">
+                    <img src="https://images.credly.com/size/110x110/images/0bf0f2da-a699-4c82-82e2-56dcf1f2e1c7/image.png" border="0" alt="Google Cybersecurity Certificate"/>
+                </a>
+                <a href="https://www.credly.com/badges/f1ec265d-6798-4fc0-b98e-ad5ac71f58c0" target="_blank" rel="noopener noreferrer" className="mr-4">
+                    <img src="https://images.credly.com/size/110x110/images/9180921d-4a13-429e-9357-6f9706a554f0/image.png" border="0" alt="ISC2 Candidate"/>
+                </a>
+            </div>
+                        
         </>
     )
 }
