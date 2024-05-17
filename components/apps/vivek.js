@@ -261,7 +261,7 @@ function Skills() {
                 </span>
                             
                 <a href="https://data.typeracer.com/pit/profile?user=ulexa&ref=badge" target="_blank" rel="noopener noreferrer" className="mr-4">
-                <img src="https://data.typeracer.com/misc/badge?user=ulexa" border="0" alt="TypeRacer.com scorecard for user ulexa" style={{width: "110px", height: "110px"}}/>
+                <img src="https://data.typeracer.com/misc/badge?user=ulexa" border="0" alt="TypeRacer.com scorecard for user ulexa"/>
             </a>
 
             <a href="https://www.credly.com/badges/783aed9a-91a7-4a2e-a4b8-11dbd0d25fc2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
