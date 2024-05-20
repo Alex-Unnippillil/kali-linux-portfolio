@@ -70,8 +70,8 @@ export class Calc extends Component {
             <React.Fragment key={id}>
                 <div className=" flex p-2 text-ubt-grey opacity-100 mt-1 float-left font-normal "></div>
                 <div className="flex w-full h-5">
-                        <div className=" flex text-ubt-green h-1 mr-2"> {';'} </div>
-                    <div id="cmd" onClick={this.focusCursor} className=" bg-transperent relative flex-1 overflow-hidden">
+                        <div className=" flex text-ubt-green h-1 mr-2"> {'$'} </div>
+                    <div id="cmd" onClick={this.focusCursor} className=" bg-transparent relative flex-1 overflow-hidden">
                         <span id={`show-calculator-${id}`} className=" float-left whitespace-pre pb-1 opacity-100 font-normal tracking-wider"></span>
                         <div id={`cursor-${id}`} className=" float-left mt-1 w-1.5 h-3.5 bg-white"></div>
                         <input id={`calculator-input-${id}`} data-row-id={id} onKeyDown={this.checkKey} onBlur={this.unFocusCursor} className=" absolute top-0 left-0 w-full opacity-0 outline-none bg-transparent" spellCheck={false} autoFocus={true} autoComplete="off" type="text" />
