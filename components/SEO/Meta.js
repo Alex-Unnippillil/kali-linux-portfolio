@@ -9,10 +9,10 @@ export default function Meta() {
             <meta charSet="utf-8" />
             <meta name="title" content="Alex Patel Portfolio - Computer Engineering Student" />
             <meta name="description"
-                content="Alex Unnippillil Personal Portfolio Website. Made with Kali theme by Next.js and Tailwind CSS." />
+                content="Alex Unnippillil Personal Portfolio Website" />
             <meta name="author" content="Alex Unnippillil" />
             <meta name="keywords"
-                content="Alex Unnippillil, Unnippillil's portfolio, linux, kali portfolio, alex unnippillil protfolio, alex patel computer, alex unnippillil, alex linux, alex unnippillil kali portfolio" />
+                content="Alex Unnippillil, Unnippillil's portfolio, linux, kali portfolio, alex unnippillil portfolio, alex computer, alex unnippillil, alex linux, alex unnippillil kali portfolio" />
             <meta name="robots" content="index, follow" />
             <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
             <meta name="language" content="English" />
@@ -24,23 +24,23 @@ export default function Meta() {
             /* Schema.org for Google */
             <meta itemProp="name" content="Alex Unnippillil Portfolio " />
             <meta itemProp="description"
-                content="Alex Unnippillil Personal Portfolio Website. Made with Kali theme by Next.js and Tailwind CSS." />
+                content="Alex Unnippillil Personal Portfolio Website" />
             <meta itemProp="image" content="images/logos/fevicon.png" />
             /* Twitter */
             <meta name="twitter:card" content="summary" />
-            <meta name="twitter:title" content="Alex Unnippillil Personal Portfolio Website." />
+            <meta name="twitter:title" content="Alex Unnippillil Personal Portfolio Website" />
             <meta name="twitter:description"
-                content="Alex Unnippillil Personal Portfolio Website. Made with Kali theme by Next.js and Tailwind CSS." />
+                content="Alex Unnippillil Personal Portfolio Website" />
             <meta name="twitter:site" content="alexunnippillil" />
             <meta name="twitter:creator" content="unnippillil" />
             <meta name="twitter:image:src" content="images/logos/logo_1024.png" />
             /* Open Graph general (Facebook, Pinterest & Google+) */
-            <meta name="og:title" content="Alex Unnippillil Personal Portfolio Website. Made with Kali theme by Next.js and Tailwind CSS." />
+            <meta name="og:title" content="Alex Unnippillil Personal Portfolio Website " />
             <meta name="og:description"
-                content="Alex Unnippillil Personal Portfolio Website. Made with Kali theme by Next.js and Tailwind CSS." />
+                content="Alex Unnippillil Personal Portfolio Website. ." />
             <meta name="og:image" content="images/logos/logo_1200.png" />
             <meta name="og:url" content="https://github.com/Alex-Unnippillil" />
-            <meta name="og:site_name" content="lex Unnippillil Personal Portfolio" />
+            <meta name="og:site_name" content="Alex Unnippillil Personal Portfolio" />
             <meta name="og:locale" content="en_IN" />
             <meta name="og:type" content="website" />
 
