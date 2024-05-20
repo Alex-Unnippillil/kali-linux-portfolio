@@ -48,7 +48,7 @@ export class SideBarApp extends Component {
                 {
                     (
                         this.props.isClose[this.id] === false
-                            ? <div className=" w-1 h-1 absolute left-0 top-1/2 bg-ub-orange rounded-sm"></div>
+                            ? <div className=" w-1 h-1 absolute left-0 top-1/2 bg-white rounded-sm"></div>
                             : null
                     )
                 }
