@@ -123,7 +123,7 @@ function About() {
                 <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-0"></div>
             </div>
             <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
-                <li className=" list-pc">I'm a <span className=" font-medium"> Technology Enthusiast </span> who thrives on the thrill of learning and mastering the rapidly evolving world of tech. I've completed 3 of a 4 year degree in <u className=' cursor-pointer '><a href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf" target={"_blank"}>Nuclear Engineering </a></u> at OntarioTech University before, I decided to switch majors and pursue a 4 year degree in my passion of <u className=' cursor-pointer '> <a href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf" target={"_blank"}> Networking and I.T. Security</a> </u>.</li>   
+                <li className=" list-pc">I'm a <span className=" font-medium"> Technology Enthusiast </span> who thrives on the thrill of learning and mastering the rapidly evolving world of tech. I've completed 4 years of a degree in <u className=' cursor-pointer '><a href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf" target={"_blank"}>Nuclear Engineering </a></u> at OntarioTech University before, I decided to my change my career goals to and pursue my passion of <u className=' cursor-pointer '> <a href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf" target={"_blank"}> Networking and I.T. Security</a> </u>.</li>   
                 <li className=" mt-3 list-building">  If you're looking for the type of person that always wants to help others. That'll be there putting in the work 24/7. Please feel free to send an email <a className='text-underline'
                               href='mailto:alex.unnippillil@hotmail.com'><u>@alex.unnippillil@hotmail.com</u></a></li>
                 <li className=" mt-3 list-time"> When I am not learning my next technical skill, I like to spend my time reading books, rock climbing or watching <u className=' cursor-pointer '><a href="https://www.youtube.com/@Alex-Unnippillil/playlists" target={"_blank"}>Youtube Videos</a></u> and <u className=' cursor-pointer '><a href="https://myanimelist.net/animelist/alex_u" target={"_blank"}>Anime</a></u></li> 
@@ -145,7 +145,7 @@ function Education() {
                     <div className=" text-lg md:text-xl text-left font-bold leading-tight">
                         Ontario Tech University
                     </div>
-                    <div className=" text-sm text-gray-400 mt-0.5">2017 - 2022</div>
+                    <div className=" text-sm text-gray-400 mt-0.5">2020 - 2024</div>
                     <div className=" text-sm md:text-base">Networking and Information Technology Security</div>
                     <div className="text-sm text-gray-300 font-bold mt-1"> </div>
                 </li>
@@ -162,7 +162,7 @@ function Education() {
                     St. John Paul II Catholic Secondary School
                     </div>
                     <div className=" text-sm text-gray-400 mt-0.5">2008 - 2012</div>
-                    <div className=" text-sm md:text-base">  International Baccalaureate Candidate</div>
+                    <div className=" text-sm md:text-base">  </div>
                     <div className="text-sm text-gray-300 font-bold mt-1"> </div>
                 </li>
             </ul>
