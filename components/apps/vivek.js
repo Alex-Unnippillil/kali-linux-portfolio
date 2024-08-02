@@ -266,7 +266,8 @@ function Skills() {
 
             <a href="https://www.credly.com/badges/8a945539-5d36-4de4-b454-1989656b282f/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
                 <img src="https://images.credly.com/size/340x340/images/74790a75-8451-400a-8536-92d792c5184a/CompTIA_Security_2Bce.png" border="0" alt="CompTIA Security+ Certificate" style={{width: "140px", height: "140px"}}/>
-    
+            </a>
+
             <a href="https://www.credly.com/badges/783aed9a-91a7-4a2e-a4b8-11dbd0d25fc2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
                 <img src="https://images.credly.com/size/110x110/images/0bf0f2da-a699-4c82-82e2-56dcf1f2e1c7/image.png" border="0" alt="Google Cybersecurity Certificate" style={{width: "140px", height: "140px"}}/>
             </a>
