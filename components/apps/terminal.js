@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import $ from 'jquery';
-import ReactGA from 'react-ga4';
+import { gaEvent } from '../../lib/analytics';
 
 export class Terminal extends Component {
     constructor() {
@@ -315,7 +315,7 @@ export class Terminal extends Component {
                 return;
             case "sudo":
 
-                ReactGA.event({
+                gaEvent({
                     category: "Sudo Access",
                     action: "lol",
                 });
