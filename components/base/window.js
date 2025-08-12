@@ -1,200 +1,179 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
-import { displayTerminal } from '../apps/terminal'
+import { displayTerminal } from '../apps/terminal';
 
-export class Window extends Component {
-    constructor() {
-        super();
-        this.id = null;
-        this.startX = 60;
-        this.startY = 10;
-        this.state = {
-            cursorType: "cursor-default",
-            width: 60,
-            height: 85,
-            closed: false,
-            maximized: false,
-            parentSize: {
-                height: 100,
-                width: 100
-            }
-        }
-    }
+export const Window = forwardRef((props, ref) => {
+    const id = props.id;
+    const startX = 60;
+    const startY = 10;
+    const [cursorType, setCursorType] = useState("cursor-default");
+    const [width, setWidth] = useState(60);
+    const [height, setHeight] = useState(85);
+    const [closed, setClosed] = useState(false);
+    const [maximized, setMaximized] = useState(false);
+    const [parentSize, setParentSize] = useState({ height: 100, width: 100 });
+    const windowRef = useRef(null);
 
-    componentDidMount() {
-        this.id = this.props.id;
-        this.setDefaultWindowDimenstion();
+    useImperativeHandle(ref, () => windowRef.current);
 
-        // google analytics
-        ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
+    useEffect(() => {
+        setDefaultWindowDimenstion();
+        ReactGA.send({ hitType: "pageview", page: `/${id}`, title: "Custom Title" });
+        window.addEventListener('resize', resizeBoundries);
+        return () => {
+            ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+            window.removeEventListener('resize', resizeBoundries);
+        };
+    }, []);
 
-        // on window resize, resize boundary
-        window.addEventListener('resize', this.resizeBoundries);
-    }
+    useEffect(() => {
+        resizeBoundries();
+    }, [height, width]);
 
-    componentWillUnmount() {
-        ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
-
-        window.removeEventListener('resize', this.resizeBoundries);
-    }
-
-    setDefaultWindowDimenstion = () => {
+    const setDefaultWindowDimenstion = () => {
         if (window.innerWidth < 640) {
-            this.setState({ height: 60, width: 85 }, this.resizeBoundries);
+            setHeight(60);
+            setWidth(85);
+        } else {
+            setHeight(85);
+            setWidth(60);
         }
-        else {
-            this.setState({ height: 85, width: 60 }, this.resizeBoundries);
-        }
-    }
+    };
 
-    resizeBoundries = () => {
-        this.setState({
-            parentSize: {
-                height: window.innerHeight //parent height
-                    - (window.innerHeight * (this.state.height / 100.0))  // this window's height
-                    - 28 // some padding
-                ,
-                width: window.innerWidth // parent width
-                    - (window.innerWidth * (this.state.width / 100.0)) //this window's width
-            }
+    const resizeBoundries = () => {
+        setParentSize({
+            height: window.innerHeight - (window.innerHeight * (height / 100.0)) - 28,
+            width: window.innerWidth - (window.innerWidth * (width / 100.0))
         });
-    }
+    };
 
-    changeCursorToMove = () => {
-        this.focusWindow();
-        if (this.state.maximized) {
-            this.restoreWindow();
+    const changeCursorToMove = () => {
+        focusWindow();
+        if (maximized) {
+            restoreWindow();
         }
-        this.setState({ cursorType: "cursor-move" })
-    }
+        setCursorType("cursor-move");
+    };
 
-    changeCursorToDefault = () => {
-        this.setState({ cursorType: "cursor-default" })
-    }
+    const changeCursorToDefault = () => {
+        setCursorType("cursor-default");
+    };
 
-    handleVerticleResize = () => {
-        this.setState({ height: this.state.height + 0.1 }, this.resizeBoundries);
-    }
+    const handleVerticleResize = () => {
+        setHeight(h => h + 0.1);
+    };
 
-    handleHorizontalResize = () => {
-        this.setState({ width: this.state.width + 0.1 }, this.resizeBoundries);
-    }
+    const handleHorizontalResize = () => {
+        setWidth(w => w + 0.1);
+    };
 
-    setWinowsPosition = () => {
-        var r = document.querySelector("#" + this.id);
-        var rect = r.getBoundingClientRect();
+    const setWinowsPosition = () => {
+        const r = windowRef.current;
+        const rect = r.getBoundingClientRect();
         r.style.setProperty('--window-transform-x', rect.x.toFixed(1).toString() + "px");
         r.style.setProperty('--window-transform-y', (rect.y.toFixed(1) - 32).toString() + "px");
-    }
+    };
 
-    checkOverlap = () => {
-        var r = document.querySelector("#" + this.id);
-        var rect = r.getBoundingClientRect();
-        if (rect.x.toFixed(1) < 50) { // if this window overlapps with SideBar
-            this.props.hideSideBar(this.id, true);
+    const checkOverlap = () => {
+        const r = windowRef.current;
+        const rect = r.getBoundingClientRect();
+        if (rect.x.toFixed(1) < 50) {
+            props.hideSideBar(id, true);
+        } else {
+            props.hideSideBar(id, false);
         }
-        else {
-            this.props.hideSideBar(this.id, false);
-        }
-    }
+    };
 
-    focusWindow = () => {
-        this.props.focus(this.id);
-    }
+    const focusWindow = () => {
+        props.focus(id);
+    };
 
-    minimizeWindow = () => {
+    const minimizeWindow = () => {
         let posx = -310;
-        if (this.state.maximized) {
+        if (maximized) {
             posx = -510;
         }
-        this.setWinowsPosition();
-        // get corrosponding sidebar app's position
-        var r = document.querySelector("#sidebar-" + this.id);
-        var sidebBarApp = r.getBoundingClientRect();
-
-        r = document.querySelector("#" + this.id);
-        // translate window to that position
+        setWinowsPosition();
+        const sidebBarApp = props.sidebarRefs.current[id].getBoundingClientRect();
+        const r = windowRef.current;
         r.style.transform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
-        this.props.hasMinimised(this.id);
-    }
+        props.hasMinimised(id);
+    };
 
-    restoreWindow = () => {
-        var r = document.querySelector("#" + this.id);
-        this.setDefaultWindowDimenstion();
-        // get previous position
+    const restoreWindow = () => {
+        const r = windowRef.current;
+        setDefaultWindowDimenstion();
         let posx = r.style.getPropertyValue("--window-transform-x");
         let posy = r.style.getPropertyValue("--window-transform-y");
-
         r.style.transform = `translate(${posx},${posy})`;
         setTimeout(() => {
-            this.setState({ maximized: false });
-            this.checkOverlap();
+            setMaximized(false);
+            checkOverlap();
         }, 300);
-    }
+    };
 
-    maximizeWindow = () => {
-        if (this.state.maximized) {
-            this.restoreWindow();
+    const maximizeWindow = () => {
+        if (maximized) {
+            restoreWindow();
         }
         else {
-            this.focusWindow();
-            var r = document.querySelector("#" + this.id);
-            this.setWinowsPosition();
-            // translate window to maximize position
+            focusWindow();
+            setWinowsPosition();
+            const r = windowRef.current;
             r.style.transform = `translate(-1pt,-2pt)`;
-            this.setState({ maximized: true, height: 96.3, width: 100.2 });
-            this.props.hideSideBar(this.id, true);
+            setMaximized(true);
+            setHeight(96.3);
+            setWidth(100.2);
+            props.hideSideBar(id, true);
         }
-    }
+    };
 
-    closeWindow = () => {
-        this.setWinowsPosition();
-        this.setState({ closed: true }, () => {
-            this.props.hideSideBar(this.id, false);
-            setTimeout(() => {
-                this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
-        });
-    }
+    const closeWindow = () => {
+        setWinowsPosition();
+        setClosed(true);
+        props.hideSideBar(id, false);
+        setTimeout(() => {
+            props.closed(id);
+        }, 300);
+    };
 
-    render() {
-        return (
-            <Draggable
-                axis="both"
-                handle=".bg-ub-window-title"
-                grid={[1, 1]}
-                scale={1}
-                onStart={this.changeCursorToMove}
-                onStop={this.changeCursorToDefault}
-                onDrag={this.checkOverlap}
-                allowAnyClick={false}
-                defaultPosition={{ x: this.startX, y: this.startY }}
-                bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+    return (
+        <Draggable
+            axis="both"
+            handle=".bg-ub-window-title"
+            grid={[1, 1]}
+            scale={1}
+            onStart={changeCursorToMove}
+            onStop={changeCursorToDefault}
+            onDrag={checkOverlap}
+            allowAnyClick={false}
+            defaultPosition={{ x: startX, y: startY }}
+            bounds={{ left: 0, top: 0, right: parentSize.width, bottom: parentSize.height }}
+        >
+            <div
+                ref={windowRef}
+                style={{ width: `${width}%`, height: `${height}%` }}
+                className={cursorType + " " + (closed ? " closed-window " : "") + (maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (props.minimized ? " opacity-0 invisible duration-200 " : "") + (props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                id={id}
             >
-                <div style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                    className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
-                    id={this.id}
-                >
-                    <WindowYBorder resize={this.handleHorizontalResize} />
-                    <WindowXBorder resize={this.handleVerticleResize} />
-                    <WindowTopBar title={this.props.title} />
-                    <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} />
-                    {(this.id === "settings"
-                        ? <Settings changeBackgroundImage={this.props.changeBackgroundImage} currBgImgName={this.props.bg_image_name} />
-                        : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                            addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                            openApp={this.props.openApp} />)}
-                </div>
-            </Draggable >
-        )
-    }
-}
+                <WindowYBorder resize={handleHorizontalResize} />
+                <WindowXBorder resize={handleVerticleResize} />
+                <WindowTopBar title={props.title} />
+                <WindowEditButtons minimize={minimizeWindow} maximize={maximizeWindow} isMaximised={maximized} close={closeWindow} id={id} />
+                {(id === "settings"
+                    ? <Settings changeBackgroundImage={props.changeBackgroundImage} currBgImgName={props.bg_image_name} />
+                    : <WindowMainScreen screen={props.screen} title={props.title}
+                        addFolder={props.id === "terminal" ? props.addFolder : null}
+                        openApp={props.openApp} />)}
+            </div>
+        </Draggable >
+    );
+});
 
-export default Window
+export default Window;
 
-// Window's title bar
 export function WindowTopBar(props) {
     return (
         <div className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}>
@@ -203,36 +182,32 @@ export function WindowTopBar(props) {
     )
 }
 
-// Window's Borders
-export class WindowYBorder extends Component {
-    componentDidMount() {
-        this.trpImg = new Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-        return (
-            <div className=" window-y-border border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }} onDrag={this.props.resize}>
-            </div>
-        )
-    }
+export const WindowYBorder = ({ resize }) => {
+    const trpImg = useRef(null);
+    useEffect(() => {
+        trpImg.current = new Image(0, 0);
+        trpImg.current.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        trpImg.current.style.opacity = 0;
+    }, []);
+    return (
+        <div className=" window-y-border border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" onDragStart={(e) => { e.dataTransfer.setDragImage(trpImg.current, 0, 0) }} onDrag={resize}>
+        </div>
+    )
 }
 
-export class WindowXBorder extends Component {
-    componentDidMount() {
-        this.trpImg = new Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-        return (
-            <div className=" window-x-border border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }} onDrag={this.props.resize}>
-            </div>
-        )
-    }
+export const WindowXBorder = ({ resize }) => {
+    const trpImg = useRef(null);
+    useEffect(() => {
+        trpImg.current = new Image(0, 0);
+        trpImg.current.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        trpImg.current.style.opacity = 0;
+    }, []);
+    return (
+        <div className=" window-x-border border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" onDragStart={(e) => { e.dataTransfer.setDragImage(trpImg.current, 0, 0) }} onDrag={resize}>
+        </div>
+    )
 }
 
-// Window's Edit Buttons
 export function WindowEditButtons(props) {
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center">
@@ -274,24 +249,18 @@ export function WindowEditButtons(props) {
     )
 }
 
-// Window's Main Screen
-export class WindowMainScreen extends Component {
-    constructor() {
-        super();
-        this.state = {
-            setDarkBg: false,
-        }
-    }
-    componentDidMount() {
-        setTimeout(() => {
-            this.setState({ setDarkBg: true });
+export const WindowMainScreen = (props) => {
+    const [setDarkBg, setSetDarkBg] = useState(false);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSetDarkBg(true);
         }, 3000);
-    }
-    render() {
-        return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.addFolder ? displayTerminal(this.props.addFolder, this.props.openApp) : this.props.screen()}
-            </div>
-        )
-    }
+        return () => clearTimeout(timer);
+    }, []);
+    return (
+        <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}> 
+            {props.addFolder ? displayTerminal(props.addFolder, props.openApp) : props.screen()}
+        </div>
+    )
 }
+
