@@ -3,7 +3,7 @@ import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
-import ReactGA from 'react-ga4';
+import { gaSend, gaEvent } from '../lib/analytics';
 
 export default class Ubuntu extends Component {
 	constructor() {
@@ -56,12 +56,12 @@ export default class Ubuntu extends Component {
 	};
 
 	lockScreen = () => {
-		// google analytics
-		ReactGA.send({ hitType: "pageview", page: "/lock-screen", title: "Lock Screen" });
-		ReactGA.event({
-			category: `Screen Change`,
-			action: `Set Screen to Locked`
-		});
+                // google analytics
+                gaSend({ hitType: "pageview", page: "/lock-screen", title: "Lock Screen" });
+                gaEvent({
+                        category: `Screen Change`,
+                        action: `Set Screen to Locked`
+                });
 
 		document.getElementById('status-bar').blur();
 		setTimeout(() => {
@@ -71,7 +71,7 @@ export default class Ubuntu extends Component {
 	};
 
 	unLockScreen = () => {
-		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+                gaSend({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
 		window.removeEventListener('click', this.unLockScreen);
 		window.removeEventListener('keypress', this.unLockScreen);
@@ -86,12 +86,12 @@ export default class Ubuntu extends Component {
 	};
 
 	shutDown = () => {
-		ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
+                gaSend({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
 
-		ReactGA.event({
-			category: `Screen Change`,
-			action: `Switched off the Ubuntu`
-		});
+                gaEvent({
+                        category: `Screen Change`,
+                        action: `Switched off the Ubuntu`
+                });
 
 		document.getElementById('status-bar').blur();
 		this.setState({ shutDownScreen: true });
@@ -99,7 +99,7 @@ export default class Ubuntu extends Component {
 	};
 
 	turnOn = () => {
-		ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+                gaSend({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
 		this.setState({ shutDownScreen: false, booting_screen: true });
 		this.setTimeOutBootScreen();
