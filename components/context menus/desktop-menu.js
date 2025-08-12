@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, forwardRef } from 'react'
 
-function DesktopMenu(props) {
+function DesktopMenu(props, ref) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
 
@@ -43,7 +43,7 @@ function DesktopMenu(props) {
     }
 
     return (
-        <div id="desktop-menu" className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}>
+        <div ref={ref} id="desktop-menu" className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}>
             <div onClick={props.addNewFolder} className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
                 <span className="ml-5">New Folder</span>
             </div>
@@ -86,4 +86,4 @@ function Devider() {
 }
 
 
-export default DesktopMenu
+export default forwardRef(DesktopMenu)

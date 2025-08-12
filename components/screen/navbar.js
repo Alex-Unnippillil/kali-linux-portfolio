@@ -30,28 +30,28 @@ export default class Navbar extends Component {
 				>
 					<Clock />
 				</div>
-				<div
-					id="status-bar"
-					tabIndex="0"
-					onFocus={() => {
-						this.setState({ status_card: true });
-					}}
-					// removed onBlur from here
-					className={
-						'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
-					}
-				>
-					<Status />
-					<StatusCard
-						shutDown={this.props.shutDown}
-						lockScreen={this.props.lockScreen}
-						visible={this.state.status_card}
-						toggleVisible={() => {
-							// this prop is used in statusCard component in handleClickOutside callback using react-onclickoutside
-							this.setState({ status_card: false });
-						}}
-					/>
-				</div>
+                                <div
+                                        id="status-bar"
+                                        ref={this.props.statusRef}
+                                        tabIndex="0"
+                                        onFocus={() => {
+                                                this.setState({ status_card: true });
+                                        }}
+                                        className={
+                                                'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
+                                        }
+                                >
+                                        <Status />
+                                        <StatusCard
+                                                shutDown={this.props.shutDown}
+                                                lockScreen={this.props.lockScreen}
+                                                visible={this.state.status_card}
+                                                openSettings={this.props.openSettings}
+                                                toggleVisible={() => {
+                                                        this.setState({ status_card: false });
+                                                }}
+                                        />
+                                </div>
 			</div>
 		);
 	}

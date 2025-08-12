@@ -120,10 +120,10 @@ export class StatusCard extends Component {
 				<div className="w-64 flex content-center justify-center">
 					<div className="w-2/4 border-black border-opacity-50 border-b my-2 border-solid" />
 				</div>
-				<div
-					id="open-settings"
-					className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20"
-				>
+                                <div
+                                        onClick={this.props.openSettings}
+                                        className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20"
+                                >
 					<div className="w-8">
 						<img width="16px" height="16px" src="./themes/Yaru/status/emblem-system-symbolic.svg" alt="ubuntu settings" />
 					</div>
