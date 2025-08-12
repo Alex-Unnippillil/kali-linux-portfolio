@@ -1,15 +1,24 @@
 import React from 'react'
 import Head from 'next/head';
 
-export default function Meta() {
+export const defaultMeta = {
+    title: "Alex Unnippillil's Portfolio",
+    description: "Alex Unnippillil Personal Portfolio Website",
+    image: "images/logos/fevicon.png"
+};
+
+export const buildMeta = (props = {}) => ({ ...defaultMeta, ...props });
+
+export default function Meta(props = {}) {
+    const { title, description, image } = buildMeta(props);
+
     return (
         <Head>
-           /* Primary Meta Tags */
-            <title>Alex Unnippillil's Portfolio </title>
+            {/* Primary Meta Tags */}
+            <title>{title}</title>
             <meta charSet="utf-8" />
-            <meta name="title" content="Alex Patel Portfolio - Computer Engineering Student" />
-            <meta name="description"
-                content="Alex Unnippillil Personal Portfolio Website" />
+            <meta name="title" content={title} />
+            <meta name="description" content={description} />
             <meta name="author" content="Alex Unnippillil" />
             <meta name="keywords"
                 content="Alex Unnippillil, Unnippillil's portfolio, linux, kali portfolio, alex unnippillil portfolio, alex computer, alex unnippillil, alex linux, alex unnippillil kali portfolio" />
@@ -19,26 +28,23 @@ export default function Meta() {
             <meta name="viewport" content="width=device-width, initial-scale=1" />
             <meta name="theme-color" content="#E95420" />
 
-            /* Search Engine */
-            <meta name="image" content="images/logos/fevicon.png" />
-            /* Schema.org for Google */
-            <meta itemProp="name" content="Alex Unnippillil Portfolio " />
-            <meta itemProp="description"
-                content="Alex Unnippillil Personal Portfolio Website" />
-            <meta itemProp="image" content="images/logos/fevicon.png" />
-            /* Twitter */
+            {/* Search Engine */}
+            <meta name="image" content={image} />
+            {/* Schema.org for Google */}
+            <meta itemProp="name" content={title} />
+            <meta itemProp="description" content={description} />
+            <meta itemProp="image" content={image} />
+            {/* Twitter */}
             <meta name="twitter:card" content="summary" />
-            <meta name="twitter:title" content="Alex Unnippillil Personal Portfolio Website" />
-            <meta name="twitter:description"
-                content="Alex Unnippillil Personal Portfolio Website" />
+            <meta name="twitter:title" content={title} />
+            <meta name="twitter:description" content={description} />
             <meta name="twitter:site" content="alexunnippillil" />
             <meta name="twitter:creator" content="unnippillil" />
-            <meta name="twitter:image:src" content="images/logos/logo_1024.png" />
-            /* Open Graph general (Facebook, Pinterest & Google+) */
-            <meta name="og:title" content="Alex Unnippillil Personal Portfolio Website " />
-            <meta name="og:description"
-                content="Alex Unnippillil Personal Portfolio Website. ." />
-            <meta name="og:image" content="images/logos/logo_1200.png" />
+            <meta name="twitter:image:src" content={image} />
+            {/* Open Graph general (Facebook, Pinterest & Google+) */}
+            <meta name="og:title" content={title} />
+            <meta name="og:description" content={description} />
+            <meta name="og:image" content={image} />
             <meta name="og:url" content="https://github.com/Alex-Unnippillil" />
             <meta name="og:site_name" content="Alex Unnippillil Personal Portfolio" />
             <meta name="og:locale" content="en_IN" />
