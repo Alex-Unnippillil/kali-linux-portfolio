@@ -7,10 +7,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "export": "next export"
+    "export": "next export",
+    "test": "jest"
   },
   "engines": {
     "node": ">=16.x"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
