@@ -1,12 +1,50 @@
+import React from 'react';
+import dynamic from 'next/dynamic';
+import ReactGA from 'react-ga4';
+
 import displaySpotify from './components/apps/spotify';
 import displayVsCode from './components/apps/vscode';
-import { displayTerminal } from './components/apps/terminal';
 import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/chrome';
 import { displayTrash } from './components/apps/trash';
 import { displayGedit } from './components/apps/gedit';
 import { displayAboutVivek } from './components/apps/vivek';
-import { displayTerminalCalc } from './components/apps/calc';
+// Dynamically loaded apps
+const TerminalApp = dynamic(() =>
+    import('./components/apps/terminal').then(mod => {
+        ReactGA.event({ category: 'Application', action: 'Loaded Terminal' });
+        return mod.default;
+    }), {
+        ssr: false,
+        loading: () => (
+            <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+                Loading Terminal...
+            </div>
+        ),
+    }
+);
+
+const CalcApp = dynamic(() =>
+    import('./components/apps/calc').then(mod => {
+        ReactGA.event({ category: 'Application', action: 'Loaded Calc' });
+        return mod.default;
+    }), {
+        ssr: false,
+        loading: () => (
+            <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+                Loading Calc...
+            </div>
+        ),
+    }
+);
+
+const displayTerminal = (addFolder, openApp) => (
+    <TerminalApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayTerminalCalc = (addFolder, openApp) => (
+    <CalcApp addFolder={addFolder} openApp={openApp} />
+);
 
 const apps = [
     {
