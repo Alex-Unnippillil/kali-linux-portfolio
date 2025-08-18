@@ -200,8 +200,10 @@ export class Calc extends Component {
                 expr=parser.parse(command)
                 try{
                     result = parser.evaluate(command,this.variables)
-                    if(expr.tokens.length===2&&expr.tokens[2].type==="IOP2")
-                    this.variables[expr.variables()[0]]=result
+                    // Tokens are in RPN: [variable, expression, operator]
+                    // Check length before accessing the operator token
+                    if(expr.tokens.length > 2 && expr.tokens[expr.tokens.length - 1].type === "IOP2")
+                        this.variables[expr.variables()[0]] = result
                 }
                 catch (e) {
                     result = e.message;
