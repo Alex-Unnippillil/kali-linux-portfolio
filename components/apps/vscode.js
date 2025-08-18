@@ -9,5 +9,5 @@ export default function VsCode() {
 }
 
 export const displayVsCode = () => {
-    <VsCode> </VsCode>
+    return <VsCode />;
 }
