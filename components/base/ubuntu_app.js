@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+import Image from 'next/image'
 
 export class UbuntuApp extends Component {
 
@@ -14,7 +15,14 @@ export class UbuntuApp extends Component {
                 onDoubleClick={this.openApp}
                 tabIndex={0}
             >
-                <img width="40px" height="40px" className="mb-1 w-10" src={this.props.icon} alt={"Kali " + this.props.name} />
+                <Image
+                    width={40}
+                    height={40}
+                    className="mb-1 w-10"
+                    src={this.props.icon.replace('./', '/')}
+                    alt={"Kali " + this.props.name}
+                    sizes="40px"
+                />
                 {this.props.name}
 
             </div>

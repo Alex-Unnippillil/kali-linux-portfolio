@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
 
@@ -56,23 +57,58 @@ export class AboutVivek extends Component {
         return (
             <>
                 <div id="about" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "about" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
-                    <img className=" w-3 md:w-4" alt="about Unnippillil" src="./themes/Yaru/status/about.svg" />
+                    <Image
+                        className=" w-3 md:w-4"
+                        alt="about Unnippillil"
+                        src="/themes/Yaru/status/about.svg"
+                        width={16}
+                        height={16}
+                        sizes="16px"
+                    />
                     <span className=" ml-1 md:ml-2 text-gray-50 ">About Me</span>
                 </div>
                 <div id="education" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "education" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
-                    <img className=" w-3 md:w-4" alt="Unnippillil' education" src="./themes/Yaru/status/education.svg" />
+                    <Image
+                        className=" w-3 md:w-4"
+                        alt="Unnippillil' education"
+                        src="/themes/Yaru/status/education.svg"
+                        width={16}
+                        height={16}
+                        sizes="16px"
+                    />
                     <span className=" ml-1 md:ml-2 text-gray-50 ">Education</span>
                 </div>
                 <div id="skills" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "skills" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
-                    <img className=" w-3 md:w-4" alt="Unnippillil' skills" src="./themes/Yaru/status/skills.svg" />
+                    <Image
+                        className=" w-3 md:w-4"
+                        alt="Unnippillil' skills"
+                        src="/themes/Yaru/status/skills.svg"
+                        width={16}
+                        height={16}
+                        sizes="16px"
+                    />
                     <span className=" ml-1 md:ml-2 text-gray-50 ">Skills</span>
                 </div>
                 <div id="projects" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "projects" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
-                    <img className=" w-3 md:w-4" alt="Unnippillil' projects" src="./themes/Yaru/status/projects.svg" />
+                    <Image
+                        className=" w-3 md:w-4"
+                        alt="Unnippillil' projects"
+                        src="/themes/Yaru/status/projects.svg"
+                        width={16}
+                        height={16}
+                        sizes="16px"
+                    />
                     <span className=" ml-1 md:ml-2 text-gray-50 ">Projects</span>
                 </div>
                 <div id="resume" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "resume" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
-                    <img className=" w-3 md:w-4" alt="Unnippillil's resume" src="./themes/Yaru/status/download.svg" />
+                    <Image
+                        className=" w-3 md:w-4"
+                        alt="Unnippillil's resume"
+                        src="/themes/Yaru/status/download.svg"
+                        width={16}
+                        height={16}
+                        sizes="16px"
+                    />
                     <span className=" ml-1 md:ml-2 text-gray-50 ">Resume</span>
                 </div>
 
@@ -113,7 +149,15 @@ function About() {
     return (
         <>
             <div className="w-20 md:w-28 my-4 full">
-                <img className="w-full" src="./images/logos/bitmoji.png" alt="Alex Unnippillil Logo" />
+                <Image
+                    className="w-full"
+                    src="/images/logos/bitmoji.png"
+                    alt="Alex Unnippillil Logo"
+                    width={256}
+                    height={256}
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                    priority
+                />
             </div>
             <div className=" mt-4 md:mt-8 text-lg md:text-2xl text-center px-1">
                 <div>My name is <span className="font-bold">Alex Unnippillil</span>, </div>
@@ -583,6 +627,6 @@ function Projects() {
 }
 function Resume() {
     return (
-        <iframe className="h-full w-full" src="./files/Alex-Unnippillil-Resume.pdf" title="Alex Unnippillil Resume" frameBorder="0"></iframe>
+        <iframe className="h-full w-full" src="/files/Alex-Unnippillil-Resume.pdf" title="Alex Unnippillil Resume" frameBorder="0"></iframe>
     )
 }

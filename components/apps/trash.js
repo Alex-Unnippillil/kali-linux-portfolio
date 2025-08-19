@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import Image from 'next/image';
 import $ from 'jquery';
 
 export class Trash extends Component {
@@ -7,32 +8,32 @@ export class Trash extends Component {
         this.trashItems = [
             {
                 name: "php",
-                icon: "./themes/filetypes/php.png"
+                icon: "/themes/filetypes/php.png"
             },
             {
                 name: "Angular.js",
-                icon: "./themes/filetypes/js.png"
+                icon: "/themes/filetypes/js.png"
             },
             {
                 name: "node_modules",
-                icon: "./themes/Yaru/system/folder.png"
+                icon: "/themes/Yaru/system/folder.png"
             },
 
             {
                 name: "abandoned project",
-                icon: "./themes/Yaru/system/folder.png"
+                icon: "/themes/Yaru/system/folder.png"
             },
             {
                 name: "INFR 4900U blockchain assignment AlexUnnippillil.zip",
-                icon: "./themes/filetypes/zip.png"
+                icon: "/themes/filetypes/zip.png"
             },
             {
                 name: "cryptography project final",
-                icon: "./themes/Yaru/system/folder.png"
+                icon: "/themes/Yaru/system/folder.png"
             },
             {
                 name: "project machine learning-final",
-                icon: "./themes/Yaru/system/folder.png"
+                icon: "/themes/Yaru/system/folder.png"
             },
 
         ];
@@ -64,7 +65,14 @@ export class Trash extends Component {
     emptyScreen = () => {
         return (
             <div className="flex-grow flex flex-col justify-center items-center">
-                <img className=" w-24" src="./themes/Yaru/status/user-trash-symbolic.svg" alt="Ubuntu Trash" />
+                <Image
+                    className=" w-24"
+                    src="/themes/Yaru/status/user-trash-symbolic.svg"
+                    alt="Ubuntu Trash"
+                    width={96}
+                    height={96}
+                    sizes="96px"
+                />
                 <span className="font-bold mt-4 text-xl px-1 text-gray-400">Trash is Empty</span>
             </div>
         );
@@ -78,7 +86,13 @@ export class Trash extends Component {
                         return (
                             <div key={index} tabIndex="1" onFocus={this.focusFile} onBlur={this.focusFile} className="flex flex-col items-center text-sm outline-none w-16 my-2 mx-4">
                                 <div className="w-16 h-16 flex items-center justify-center">
-                                    <img src={item.icon} alt="Ubuntu File Icons" />
+                                    <Image
+                                        src={item.icon}
+                                        alt="Ubuntu File Icons"
+                                        width={48}
+                                        height={48}
+                                        sizes="48px"
+                                    />
                                 </div>
                                 <span className="text-center rounded px-0.5">{item.name}</span>
                             </div>

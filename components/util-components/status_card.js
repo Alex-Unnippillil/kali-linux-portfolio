@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import Image from 'next/image';
 import SmallArrow from './small_arrow';
 import onClickOutside from 'react-onclickoutside';
 
@@ -67,7 +68,13 @@ export class StatusCard extends Component {
 				<div className="absolute w-0 h-0 -top-1 right-6 top-arrow-up" />
 				<div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
 					<div className="w-8">
-						<img width="16px" height="16px" src="./themes/Yaru/status/audio-headphones-symbolic.svg" alt="ubuntu headphone" />
+                                                <Image
+                                                        width={16}
+                                                        height={16}
+                                                        src="/themes/Yaru/status/audio-headphones-symbolic.svg"
+                                                        alt="ubuntu headphone"
+                                                        sizes="16px"
+                                                />
 					</div>
 					<Slider
 						onChange={this.handleSound}
@@ -78,7 +85,13 @@ export class StatusCard extends Component {
 				</div>
 				<div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
 					<div className="w-8">
-						<img width="16px" height="16px" src="./themes/Yaru/status/display-brightness-symbolic.svg" alt="ubuntu brightness" />
+                                                <Image
+                                                        width={16}
+                                                        height={16}
+                                                        src="/themes/Yaru/status/display-brightness-symbolic.svg"
+                                                        alt="ubuntu brightness"
+                                                        sizes="16px"
+                                                />
 					</div>
 					<Slider
 						onChange={this.handleBrightness}
@@ -92,7 +105,13 @@ export class StatusCard extends Component {
 				</div>
 				<div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
 					<div className="w-8">
-						<img width="16px" height="16px" src="./themes/Yaru/status/network-wireless-signal-good-symbolic.svg" alt="ubuntu wifi" />
+                                                <Image
+                                                        width={16}
+                                                        height={16}
+                                                        src="/themes/Yaru/status/network-wireless-signal-good-symbolic.svg"
+                                                        alt="ubuntu wifi"
+                                                        sizes="16px"
+                                                />
 					</div>
 					<div className="w-2/3 flex items-center justify-between text-gray-400">
 						<span>TellMyWiFiLoveHer</span>
@@ -101,7 +120,13 @@ export class StatusCard extends Component {
 				</div>
 				<div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
 					<div className="w-8">
-						<img width="16px" height="16px" src="./themes/Yaru/status/bluetooth-symbolic.svg" alt="ubuntu bluetooth" />
+                                                <Image
+                                                        width={16}
+                                                        height={16}
+                                                        src="/themes/Yaru/status/bluetooth-symbolic.svg"
+                                                        alt="ubuntu bluetooth"
+                                                        sizes="16px"
+                                                />
 					</div>
 					<div className="w-2/3 flex items-center justify-between text-gray-400">
 						<span>Off</span>
@@ -110,7 +135,13 @@ export class StatusCard extends Component {
 				</div>
 				<div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
 					<div className="w-8">
-						<img width="16px" height="16px" src="./themes/Yaru/status/battery-good-symbolic.svg" alt="ubuntu battery" />
+                                                <Image
+                                                        width={16}
+                                                        height={16}
+                                                        src="/themes/Yaru/status/battery-good-symbolic.svg"
+                                                        alt="ubuntu battery"
+                                                        sizes="16px"
+                                                />
 					</div>
 					<div className="w-2/3 flex items-center justify-between text-gray-400">
 						<span>2:42 Remaining (77%)</span>
@@ -125,7 +156,13 @@ export class StatusCard extends Component {
 					className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20"
 				>
 					<div className="w-8">
-						<img width="16px" height="16px" src="./themes/Yaru/status/emblem-system-symbolic.svg" alt="ubuntu settings" />
+                                                <Image
+                                                        width={16}
+                                                        height={16}
+                                                        src="/themes/Yaru/status/emblem-system-symbolic.svg"
+                                                        alt="ubuntu settings"
+                                                        sizes="16px"
+                                                />
 					</div>
 					<div className="w-2/3 flex items-center justify-between">
 						<span>Settings</span>
@@ -136,7 +173,13 @@ export class StatusCard extends Component {
 					className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20"
 				>
 					<div className="w-8">
-						<img width="16px" height="16px" src="./themes/Yaru/status/changes-prevent-symbolic.svg" alt="ubuntu lock" />
+                                                <Image
+                                                        width={16}
+                                                        height={16}
+                                                        src="/themes/Yaru/status/changes-prevent-symbolic.svg"
+                                                        alt="ubuntu lock"
+                                                        sizes="16px"
+                                                />
 					</div>
 					<div className="w-2/3 flex items-center justify-between">
 						<span>Lock</span>
@@ -147,7 +190,13 @@ export class StatusCard extends Component {
 					className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20"
 				>
 					<div className="w-8">
-						<img width="16px" height="16px" src="./themes/Yaru/status/system-shutdown-symbolic.svg" alt="ubuntu power" />
+                                                <Image
+                                                        width={16}
+                                                        height={16}
+                                                        src="/themes/Yaru/status/system-shutdown-symbolic.svg"
+                                                        alt="ubuntu power"
+                                                        sizes="16px"
+                                                />
 					</div>
 					<div className="w-2/3 flex items-center justify-between">
 						<span>Power Off / Log Out</span>
