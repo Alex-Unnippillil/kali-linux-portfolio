@@ -18,6 +18,10 @@ export default function Meta() {
             <meta name="language" content="English" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
             <meta name="theme-color" content="#E95420" />
+            <meta
+                httpEquiv="Content-Security-Policy"
+                content="default-src 'self'; img-src 'self' data:; script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://www.google-analytics.com;"
+            />
 
             /* Search Engine */
             <meta name="image" content="images/logos/fevicon.png" />

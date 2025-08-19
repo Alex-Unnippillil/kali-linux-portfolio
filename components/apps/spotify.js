@@ -1,30 +1,22 @@
 import React from 'react';
-import dynamic from 'next/dynamic';
 
-const TwitterTimeline = dynamic(
-    () => import('react-twitter-embed').then(m => m.TwitterTimelineEmbed),
-    {
-        ssr: false,
-        loading: () => (
-            <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-                Loading...
-            </div>
-        ),
-    }
-);
-
-export default function XApp() {
+function XApp() {
     return (
-        <div className="h-full w-full bg-ub-cool-grey">
-            <TwitterTimeline
-                sourceType="profile"
-                screenName="AUnnippillil"
-                options={{ height: '1200%' }}
-            />
+        <div className="h-full w-full bg-ub-cool-grey flex items-center justify-center">
+            <a
+                href="https://twitter.com/AUnnippillil"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 underline"
+            >
+                View @AUnnippillil on X
+            </a>
         </div>
     );
 }
 
 export const displayX = () => <XApp />;
+export const displaySpotify = displayX;
 
-=======
+export default XApp;
+
