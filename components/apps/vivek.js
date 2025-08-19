@@ -548,7 +548,8 @@ function Projects() {
                                 <div className="flex flex-wrap justify-between items-center">
                                     <div className='flex justify-center items-center'>
                                         <div className=" text-base md:text-lg mr-2">{project.name.toLowerCase()}</div>
-                                        <iframe src={`https://ghbtns.com/github-btn.html?user=alex-unnippillil&repo=${projectName}&type=star&count=true`} frameBorder="0" scrolling="0" width="150" height="20" title={project.name.toLowerCase()+"-star"}></iframe>
+                                        {/* GitHub star button only requires scripts */}
+                                        <iframe src={`https://ghbtns.com/github-btn.html?user=alex-unnippillil&repo=${projectName}&type=star&count=true`} frameBorder="0" scrolling="0" width="150" height="20" title={project.name.toLowerCase()+"-star"} sandbox="allow-scripts"></iframe>
                                     </div>
                                     <div className="text-gray-300 font-light text-sm">{project.date}</div>
                                 </div>
@@ -582,6 +583,7 @@ function Projects() {
 }
 function Resume() {
     return (
-        <iframe className="h-full w-full" src="./files/Alex-Unnippillil-Resume.pdf" title="Alex Unnippillil Resume" frameBorder="0"></iframe>
+        {/* Static PDF; no extra permissions needed */}
+        <iframe className="h-full w-full" src="./files/Alex-Unnippillil-Resume.pdf" title="Alex Unnippillil Resume" frameBorder="0" sandbox=""></iframe>
     )
 }

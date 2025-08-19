@@ -78,7 +78,8 @@ export class Chrome extends Component {
         return (
             <div className="h-full w-full flex flex-col bg-ub-cool-grey">
                 {this.displayUrlBar()}
-                <iframe src={this.state.url} className="flex-grow" id="chrome-screen" frameBorder="0" title="Ubuntu Chrome Url"></iframe>
+                {/* Sandbox allows forms, scripts, same-origin, and popups for browsing */}
+                <iframe src={this.state.url} className="flex-grow" id="chrome-screen" frameBorder="0" title="Ubuntu Chrome Url" sandbox="allow-forms allow-scripts allow-same-origin allow-popups"></iframe>
             </div>
         )
     }
