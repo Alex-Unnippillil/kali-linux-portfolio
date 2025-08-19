@@ -9,7 +9,8 @@
     "start": "next start",
     "export": "next export",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "lint": "next lint"
   },
   "engines": {
     "node": ">=16.x"
@@ -38,6 +39,8 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^24.2.1",
     "@types/react": "^19.1.10",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.4.7",
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
     "typescript": "^5.9.2"
