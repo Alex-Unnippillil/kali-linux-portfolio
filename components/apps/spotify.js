@@ -13,7 +13,7 @@ const TwitterTimeline = dynamic(
     }
 );
 
-export default function x() {
+export default function XApp() {
     return (
         <div className="h-full w-full bg-ub-cool-grey">
             <TwitterTimeline
@@ -24,3 +24,7 @@ export default function x() {
         </div>
     );
 }
+
+export const displayX = () => <XApp />;
+
+=======
