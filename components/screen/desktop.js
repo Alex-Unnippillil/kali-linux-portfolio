@@ -1,12 +1,12 @@
 import React, { Component } from 'react';
-import BackgroundImage from '../util components/background-image';
+import BackgroundImage from '../util-components/background-image';
 import SideBar from './side_bar';
 import apps from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
-import DesktopMenu from '../context menus/desktop-menu';
-import DefaultMenu from '../context menus/default';
+import DesktopMenu from '../context-menus/desktop-menu';
+import DefaultMenu from '../context-menus/default';
 import $ from 'jquery';
 import ReactGA from 'react-ga4';
 
@@ -71,9 +71,12 @@ export class Desktop extends Component {
     }
 
     setEventListeners = () => {
-        document.getElementById("open-settings").addEventListener("click", () => {
-            this.openApp("settings");
-        });
+        const openSettings = document.getElementById("open-settings");
+        if (openSettings) {
+            openSettings.addEventListener("click", () => {
+                this.openApp("settings");
+            });
+        }
     }
 
     setContextListeners = () => {

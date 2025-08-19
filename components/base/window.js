@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
-import { displayTerminal } from '../apps/terminal'
 
 export class Window extends Component {
     constructor() {
@@ -290,7 +289,7 @@ export class WindowMainScreen extends Component {
     render() {
         return (
             <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.addFolder ? displayTerminal(this.props.addFolder, this.props.openApp) : this.props.screen()}
+                {this.props.screen(this.props.addFolder, this.props.openApp)}
             </div>
         )
     }

@@ -8,5 +8,5 @@ export default function Todoist() {
 }
 
 export const displayTodoist = () => {
-    <Todoist> </Todoist>
-}
+    return <Todoist />;
+};
