@@ -1,7 +1,7 @@
 import React from 'react';
 import { TwitterTimelineEmbed } from 'react-twitter-embed';
 
-export default function x() {
+export default function XApp() {
     return (
         <div className="h-full w-full bg-ub-cool-grey">
             <TwitterTimelineEmbed
@@ -12,3 +12,6 @@ export default function x() {
         </div>
     );
 }
+
+export const displayX = () => <XApp />;
+
