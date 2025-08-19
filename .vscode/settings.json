@@ -1,5 +1,8 @@
 {
     "conventionalCommits.scopes": [
         "StatusCard"
-    ]
+    ],
+    "kiroAgent.configureMCP": "Disabled",
+    "editor.experimental.treeSitterTelemetry": true,
+    "redhat.telemetry.enabled": true
 }
