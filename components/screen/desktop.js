@@ -8,7 +8,7 @@ import AllApplications from '../screen/all-applications'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import $ from 'jquery';
-import ReactGA from 'react-ga4';
+import { trackPageview, trackEvent } from '../../lib/analytics';
 
 export class Desktop extends Component {
     constructor() {
@@ -36,7 +36,7 @@ export class Desktop extends Component {
 
     componentDidMount() {
         // google analytics
-        ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        trackPageview("/desktop");
 
         this.fetchAppsData();
         this.setContextListeners();
@@ -95,14 +95,14 @@ export class Desktop extends Component {
         this.hideAllContextMenu();
         switch (e.target.dataset.context) {
             case "desktop-area":
-                ReactGA.event({
+                trackEvent({
                     category: `Context Menu`,
                     action: `Opened Desktop Context Menu`
                 });
                 this.showContextMenu(e, "desktop");
                 break;
             default:
-                ReactGA.event({
+                trackEvent({
                     category: `Context Menu`,
                     action: `Opened Default Context Menu`
                 });
@@ -351,7 +351,7 @@ export class Desktop extends Component {
     openApp = (objId) => {
 
         // google analytics
-        ReactGA.event({
+        trackEvent({
             category: `Open App`,
             action: `Opened ${objId} window`
         });

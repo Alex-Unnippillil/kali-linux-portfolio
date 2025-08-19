@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
-import ReactGA from 'react-ga4';
+import { trackPageview } from '../../lib/analytics';
 
 export class Window extends Component {
     constructor() {
@@ -27,14 +27,14 @@ export class Window extends Component {
         this.setDefaultWindowDimenstion();
 
         // google analytics
-        ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
+        trackPageview(`/${this.id}`);
 
         // on window resize, resize boundary
         window.addEventListener('resize', this.resizeBoundries);
     }
 
     componentWillUnmount() {
-        ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        trackPageview("/desktop");
 
         window.removeEventListener('resize', this.resizeBoundries);
     }
