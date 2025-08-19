@@ -10,4 +10,4 @@ export default function VsCode() {
 
 export const displayVsCode = () => {
     return <VsCode />;
-}
+};

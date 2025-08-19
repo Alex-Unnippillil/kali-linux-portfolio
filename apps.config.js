@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 import ReactGA from 'react-ga4';
 
 import displaySpotify from './components/apps/spotify';
-import displayVsCode from './components/apps/vscode';
+import { displayVsCode } from './components/apps/vscode';
 import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/chrome';
 import { displayTrash } from './components/apps/trash';
