@@ -3,6 +3,9 @@ import dynamic from 'next/dynamic';
 import ReactGA from 'react-ga4';
 
 import displaySpotify from './components/apps/spotify';
+import { displayVsCode } from './components/apps/vscode';
+=======
+import { displayX } from './components/apps/spotify';
 import displayVsCode from './components/apps/vscode';
 import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/chrome';
@@ -116,6 +119,21 @@ const apps = [
           title: "Settings",
           icon: './themes/Yaru/apps/gnome-control-center.png',
           disabled: false,
+=======
+    {
+        id: "spotify",
+        title: "X",
+        icon: './themes/Yaru/apps/x.png',
+        disabled: false,
+        favourite: true,
+        desktop_shortcut: false,
+        screen: displayX, // India Top 50 Playlist 😅
+    },
+    {
+        id: "settings",
+        title: "Settings",
+        icon: './themes/Yaru/apps/gnome-control-center.png',
+        disabled: false,
         favourite: true,
         desktop_shortcut: false,
         screen: displaySettings,
