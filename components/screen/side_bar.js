@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import Image from 'next/image'
 import SideBarApp from '../base/side_bar_app';
 
 let renderApps = (props) => {
@@ -58,7 +59,14 @@ export function AllApps(props) {
             onClick={props.showApps}
         >
             <div className="relative">
-                <img width="28px" height="28px" className="w-7" src="./themes/Yaru/system/view-app-grid-symbolic.svg" alt="Ubuntu view app" />
+                <Image
+                    width={28}
+                    height={28}
+                    className="w-7"
+                    src="/themes/Yaru/system/view-app-grid-symbolic.svg"
+                    alt="Ubuntu view app"
+                    sizes="28px"
+                />
                 <div
                     className={
                         (title ? " visible " : " invisible ") +

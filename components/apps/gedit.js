@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import Image from 'next/image';
 import $ from 'jquery';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
@@ -93,7 +94,15 @@ export class Gedit extends Component {
                     (this.state.sending
                         ?
                         <div className="flex justify-center items-center animate-pulse h-full w-full bg-gray-400 bg-opacity-30 absolute top-0 left-0">
-                            <img className={" w-8 absolute animate-spin"} src="./themes/Yaru/status/process-working-symbolic.svg" alt="Ubuntu Process Symbol" />
+                            <Image
+                                className=" w-8 absolute animate-spin"
+                                src="/themes/Yaru/status/process-working-symbolic.svg"
+                                alt="Ubuntu Process Symbol"
+                                width={32}
+                                height={32}
+                                sizes="32px"
+                                priority
+                            />
                         </div>
                         : null
                     )

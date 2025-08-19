@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import Image from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
@@ -236,37 +237,49 @@ export function WindowEditButtons(props) {
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center">
             <span className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.minimize}>
-                <img
-                    src="./themes/Yaru/window/window-minimize-symbolic.svg"
+                <Image
+                    src="/themes/Yaru/window/window-minimize-symbolic.svg"
                     alt="Kali window minimize"
                     className="h-5 w-5 inline"
+                    width={20}
+                    height={20}
+                    sizes="20px"
                 />
             </span>
             {
                 (props.isMaximised
                     ?
                     <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
-                        <img
-                            src="./themes/Yaru/window/window-restore-symbolic.svg"
+                        <Image
+                            src="/themes/Yaru/window/window-restore-symbolic.svg"
                             alt="Kali window restore"
                             className="h-5 w-5 inline"
+                            width={20}
+                            height={20}
+                            sizes="20px"
                         />
                     </span>
                     :
                     <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
-                        <img
-                            src="./themes/Yaru/window/window-maximize-symbolic.svg"
+                        <Image
+                            src="/themes/Yaru/window/window-maximize-symbolic.svg"
                             alt="Kali window maximize"
                             className="h-5 w-5 inline"
+                            width={20}
+                            height={20}
+                            sizes="20px"
                         />
                     </span>
                 )
             }
             <button tabIndex="-1" id={`close-${props.id}`} className="mx-1.5 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.close}>
-                <img
-                    src="./themes/Yaru/window/window-close-symbolic.svg"
+                <Image
+                    src="/themes/Yaru/window/window-close-symbolic.svg"
                     alt="Kali window close"
                     className="h-5 w-5 inline"
+                    width={20}
+                    height={20}
+                    sizes="20px"
                 />
             </button>
         </div>
