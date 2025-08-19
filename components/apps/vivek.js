@@ -236,7 +236,7 @@ function Skills() {
                         <img className="m-1" src="https://img.shields.io/badge/C%2B%2B-00599C?style=flat&logo=c%2B%2B&logoColor=white" alt="unnippillil c++" />
                         <img className="m-1" src="http://img.shields.io/badge/-Python-3776AB?style=flat&logo=python&logoColor=ffffff" alt="unnippillil python" />
                         <img className="m-1" src="https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white" alt="unnippillil dart" />
-                        <a href="https://www.google.com/search?q=is+html+a+language%3F" target="_blank" rel="noreferrer"><img title="yes it's a language!" className="m-1" src="https://img.shields.io/badge/-HTML5-%23E44D27?style=flat&logo=html5&logoColor=ffffff" alt="unnippillil HTML" /></a>
+                        <a href="https://www.google.com/search?q=is+html+a+language%3F" target="_blank" rel="noopener noreferrer"><img title="yes it's a language!" className="m-1" src="https://img.shields.io/badge/-HTML5-%23E44D27?style=flat&logo=html5&logoColor=ffffff" alt="unnippillil HTML" /></a>
                         <img src="https://img.shields.io/badge/CSS-1572B6?logo=css3&logoColor=fff" alt="unnippillil css" className="m-1" />
                         <img src="https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=fff" alt="unnippillil mysql" className="m-1" />
                         <img src="https://img.shields.io/badge/Java-%23ED8B00.svg?logo=openjdk&logoColor=white" alt="unnippillil Java" className="m-1" />
@@ -543,7 +543,7 @@ function Projects() {
                     const projectNameFromLink = project.link.split('/')
                     const projectName = projectNameFromLink[projectNameFromLink.length - 1]
                     return (
-                        <a key={index} href={project.link} target="_blank" rel="noreferrer" className="flex w-full flex-col px-4">
+                        <a key={index} href={project.link} target="_blank" rel="noopener noreferrer" className="flex w-full flex-col px-4">
                             <div className="w-full py-1 px-2 my-2 border border-gray-50 border-opacity-10 rounded hover:bg-gray-50 hover:bg-opacity-5 cursor-pointer">
                                 <div className="flex flex-wrap justify-between items-center">
                                     <div className='flex justify-center items-center'>
