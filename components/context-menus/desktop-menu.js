@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { SETTINGS_LABEL } from '../../src/constants/strings'
 
 function DesktopMenu(props) {
 
@@ -67,7 +68,7 @@ function DesktopMenu(props) {
                 <span className="ml-5">Display Settings</span>
             </div>
             <div onClick={openSettings} className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
-                <span className="ml-5">Settings</span>
+                <span className="ml-5">{SETTINGS_LABEL}</span>
             </div>
             <Devider />
             <div onClick={goFullScreen} className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">

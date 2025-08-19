@@ -9,6 +9,7 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import $ from 'jquery';
 import ReactGA from 'react-ga4';
+import { OPEN_SETTINGS_ID } from '../../src/constants/strings';
 
 export class Desktop extends Component {
     constructor() {
@@ -71,7 +72,7 @@ export class Desktop extends Component {
     }
 
     setEventListeners = () => {
-        const openSettings = document.getElementById("open-settings");
+        const openSettings = document.getElementById(OPEN_SETTINGS_ID);
         if (openSettings) {
             openSettings.addEventListener("click", () => {
                 this.openApp("settings");

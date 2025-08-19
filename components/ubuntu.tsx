@@ -4,6 +4,7 @@ import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
+import { MONITOR_SCREEN_ID } from '../src/constants/strings';
 
 interface UbuntuProps {}
 
@@ -115,7 +116,7 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
 
   render(): React.ReactNode {
     return (
-      <div className="w-screen h-screen overflow-hidden" id="monitor-screen">
+      <div className="w-screen h-screen overflow-hidden" id={MONITOR_SCREEN_ID}>
         <LockScreen
           isLocked={this.state.screen_locked}
           bgImgName={this.state.bg_image_name}
