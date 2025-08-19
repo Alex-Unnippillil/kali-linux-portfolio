@@ -2,6 +2,9 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import ReactGA from 'react-ga4';
 
+import displaySpotify from './components/apps/spotify';
+import { displayVsCode } from './components/apps/vscode';
+=======
 import { displayX } from './components/apps/spotify';
 import displayVsCode from './components/apps/vscode';
 import { displaySettings } from './components/apps/settings';
