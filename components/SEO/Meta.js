@@ -4,7 +4,7 @@ import Head from 'next/head';
 export default function Meta() {
     return (
         <Head>
-           /* Primary Meta Tags */
+           {/* Primary Meta Tags */}
             <title>Alex Unnippillil's Portfolio </title>
             <meta charSet="utf-8" />
             <meta name="title" content="Alex Patel Portfolio - Computer Engineering Student" />
@@ -19,14 +19,14 @@ export default function Meta() {
             <meta name="viewport" content="width=device-width, initial-scale=1" />
             <meta name="theme-color" content="#E95420" />
 
-            /* Search Engine */
+            {/* Search Engine */}
             <meta name="image" content="images/logos/fevicon.png" />
-            /* Schema.org for Google */
+            {/* Schema.org for Google */}
             <meta itemProp="name" content="Alex Unnippillil Portfolio " />
             <meta itemProp="description"
                 content="Alex Unnippillil Personal Portfolio Website" />
             <meta itemProp="image" content="images/logos/fevicon.png" />
-            /* Twitter */
+            {/* Twitter */}
             <meta name="twitter:card" content="summary" />
             <meta name="twitter:title" content="Alex Unnippillil Personal Portfolio Website" />
             <meta name="twitter:description"
@@ -34,20 +34,32 @@ export default function Meta() {
             <meta name="twitter:site" content="alexunnippillil" />
             <meta name="twitter:creator" content="unnippillil" />
             <meta name="twitter:image:src" content="images/logos/logo_1024.png" />
-            /* Open Graph general (Facebook, Pinterest & Google+) */
+            {/* Open Graph general (Facebook, Pinterest & Google+) */}
             <meta name="og:title" content="Alex Unnippillil Personal Portfolio Website " />
             <meta name="og:description"
                 content="Alex Unnippillil Personal Portfolio Website. ." />
-            <meta name="og:image" content="images/logos/logo_1200.png" />
-            <meta name="og:url" content="https://github.com/Alex-Unnippillil" />
+            <meta name="og:image" content="https://unnippillil.com/images/logos/logo_1200.png" />
+            <meta name="og:url" content="https://unnippillil.com/" />
             <meta name="og:site_name" content="Alex Unnippillil Personal Portfolio" />
-            <meta name="og:locale" content="en_IN" />
+            <meta name="og:locale" content="en_CA" />
             <meta name="og:type" content="website" />
 
+            <link rel="canonical" href="https://unnippillil.com/" />
             <link rel="icon" href="images/logos/fevicon.svg" />
             <link rel="apple-touch-icon" href="images/logos/logo.png" />
             <link rel="preload" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" as="style" />
             <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet"></link>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "Person",
+                        name: "Alex Unnippillil",
+                        url: "https://unnippillil.com/",
+                    }),
+                }}
+            />
         </Head>
     )
 }
