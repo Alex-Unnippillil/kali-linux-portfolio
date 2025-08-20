@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
-import $ from 'jquery';
 
 export class Trash extends Component {
     constructor() {
@@ -52,9 +51,10 @@ export class Trash extends Component {
 
     focusFile = (e) => {
         // icon
-        $(e.target).children().get(0).classList.toggle("opacity-60");
+        const children = e.currentTarget.children;
+        if (children[0]) children[0].classList.toggle("opacity-60");
         // file name
-        $(e.target).children().get(1).classList.toggle("bg-ub-orange");
+        if (children[1]) children[1].classList.toggle("bg-ub-orange");
     }
 
     emptyTrash = () => {

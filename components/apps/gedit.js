@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
-import $ from 'jquery';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 
@@ -10,6 +9,11 @@ export class Gedit extends Component {
         super();
         this.state = {
             sending: false,
+            name: '',
+            subject: '',
+            message: '',
+            nameError: false,
+            messageError: false,
         }
     }
 
@@ -17,10 +21,12 @@ export class Gedit extends Component {
         emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
     }
 
+    handleChange = (field) => (e) => {
+        this.setState({ [field]: e.target.value, [`${field}Error`]: false });
+    }
+
     sendMessage = async () => {
-        let name = $("#sender-name").val();
-        let subject = $("#sender-subject").val();
-        let message = $("#sender-message").val();
+        let { name, subject, message } = this.state;
 
         name = name.trim();
         subject = subject.trim();
@@ -29,14 +35,12 @@ export class Gedit extends Component {
         let error = false;
 
         if (name.length === 0) {
-            $("#sender-name").val('');
-            $("#sender-name").attr("placeholder", "Name must not be Empty!");
+            this.setState({ name: '', nameError: true });
             error = true;
         }
 
         if (message.length === 0) {
-            $("#sender-message").val('');
-            $("#sender-message").attr("placeholder", "Message must not be Empty!");
+            this.setState({ message: '', messageError: true });
             error = true;
         }
         if (error) return;
@@ -53,8 +57,8 @@ export class Gedit extends Component {
 
         emailjs.send(serviceID, templateID, templateParams)
             .then(() => {
-                this.setState({ sending: false });
-                $("#close-gedit").trigger("click");
+                this.setState({ sending: false, name: '', subject: '', message: '' });
+                document.getElementById('close-gedit')?.click();
 
                 ReactGA.event({
                     category: "contact",
@@ -63,7 +67,7 @@ export class Gedit extends Component {
             })
             .catch(() => {
                 this.setState({ sending: false });
-                $("#close-gedit").trigger("click");
+                document.getElementById('close-gedit')?.click();
             });
 
     }
@@ -80,15 +84,15 @@ export class Gedit extends Component {
                 <div className="relative flex-grow flex flex-col bg-ub-gedit-dark font-normal windowMainScreen">
                     <div className="absolute left-0 top-0 h-full px-2 bg-ub-gedit-darker"></div>
                     <div className="relative">
-                        <input id="sender-name" className=" w-full text-ubt-gedit-orange focus:bg-ub-gedit-light outline-none font-medium text-sm pl-6 py-0.5 bg-transparent" placeholder="Your Email / Name :" spellCheck="false" autoComplete="off" type="text" />
+                        <input id="sender-name" value={this.state.name} onChange={this.handleChange('name')} className=" w-full text-ubt-gedit-orange focus:bg-ub-gedit-light outline-none font-medium text-sm pl-6 py-0.5 bg-transparent" placeholder={this.state.nameError ? "Name must not be Empty!" : "Your Email / Name :"} spellCheck="false" autoComplete="off" type="text" />
                         <span className="absolute left-1 top-1/2 transform -translate-y-1/2 font-bold light text-sm text-ubt-gedit-blue">1</span>
                     </div>
                     <div className="relative">
-                        <input id="sender-subject" className=" w-full my-1 text-ubt-gedit-blue focus:bg-ub-gedit-light gedit-subject outline-none text-sm font-normal pl-6 py-0.5 bg-transparent" placeholder="subject (may be a feedback for this website!)" spellCheck="false" autoComplete="off" type="text" />
+                        <input id="sender-subject" value={this.state.subject} onChange={this.handleChange('subject')} className=" w-full my-1 text-ubt-gedit-blue focus:bg-ub-gedit-light gedit-subject outline-none text-sm font-normal pl-6 py-0.5 bg-transparent" placeholder="subject (may be a feedback for this website!)" spellCheck="false" autoComplete="off" type="text" />
                         <span className="absolute left-1 top-1/2 transform -translate-y-1/2 font-bold  text-sm text-ubt-gedit-blue">2</span>
                     </div>
                     <div className="relative flex-grow">
-                        <textarea id="sender-message" className=" w-full gedit-message font-light text-sm resize-none h-full windowMainScreen outline-none tracking-wider pl-6 py-1 bg-transparent" placeholder="Message" spellCheck="false" autoComplete="none" type="text" />
+                        <textarea id="sender-message" value={this.state.message} onChange={this.handleChange('message')} className=" w-full gedit-message font-light text-sm resize-none h-full windowMainScreen outline-none tracking-wider pl-6 py-1 bg-transparent" placeholder={this.state.messageError ? "Message must not be Empty!" : "Message"} spellCheck="false" autoComplete="none" type="text" />
                         <span className="absolute left-1 top-1 font-bold  text-sm text-ubt-gedit-blue">3</span>
                     </div>
                 </div>
