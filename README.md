@@ -32,3 +32,14 @@ Add the `displayMyApp` function to `apps.config.js` and reference it in the `app
 The contact application records only non-PII metadata in Google Analytics.
 Submissions trigger an event with `{ category: "contact", action: "submit_success" }`, and the
 free-text fields (name, subject, message) are never sent to analytics.
+
+## Required CI Secrets
+
+The GitHub Actions workflow relies on the following secrets configured in the repository settings:
+
+- `NEXT_PUBLIC_TRACKING_ID`
+- `NEXT_PUBLIC_SERVICE_ID`
+- `NEXT_PUBLIC_TEMPLATE_ID`
+- `NEXT_PUBLIC_USER_ID`
+
+These secrets provide the values for the corresponding environment variables during the build step.

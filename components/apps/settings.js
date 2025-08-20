@@ -1,5 +1,4 @@
 import React from 'react';
-import $ from 'jquery';
 
 export function Settings(props) {
     const wallpapers = {
@@ -14,7 +13,7 @@ export function Settings(props) {
     };
 
     let changeBackgroundImage = (e) => {
-        props.changeBackgroundImage($(e.target).data("path"));
+        props.changeBackgroundImage(e.target.dataset.path);
     }
 
     return (
