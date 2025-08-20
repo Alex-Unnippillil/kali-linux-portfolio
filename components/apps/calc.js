@@ -83,6 +83,10 @@ export class Calc extends Component {
             default:
                 result = this.evaluateExp(command);
         }
+
+        document.getElementById(`row-calculator-result-${rowId}`).textContent = result;
+        this.appendTerminalRow();
+=======
         this.setState(prev => ({
             lines: [...prev.lines, { id: prev.lines.length, command, result }],
             currentInput: '',
@@ -95,6 +99,8 @@ export class Calc extends Component {
 
     closeTerminal = () => {
         document.getElementById('close-calc')?.click();
+
+      
     }
 
     evaluateExp = (command) => {
@@ -116,6 +122,8 @@ export class Calc extends Component {
         }
         return result;
     }
+    
+=======
 
     xss(str) {
         if (!str) return '';
@@ -138,6 +146,7 @@ export class Calc extends Component {
             }
         }).join('');
     }
+
 
     render() {
         return (
