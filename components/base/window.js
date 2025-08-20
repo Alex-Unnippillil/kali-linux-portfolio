@@ -206,7 +206,7 @@ export function WindowTopBar(props) {
 // Window's Borders
 export class WindowYBorder extends Component {
     componentDidMount() {
-        this.trpImg = new Image(0, 0);
+        this.trpImg = new window.Image(0, 0);
         this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         this.trpImg.style.opacity = 0;
     }
@@ -220,7 +220,7 @@ export class WindowYBorder extends Component {
 
 export class WindowXBorder extends Component {
     componentDidMount() {
-        this.trpImg = new Image(0, 0);
+        this.trpImg = new window.Image(0, 0);
         this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         this.trpImg.style.opacity = 0;
     }

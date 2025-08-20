@@ -4,8 +4,8 @@ import Head from 'next/head';
 export default function Meta() {
     return (
         <Head>
-           {/* Primary Meta Tags */}
-            <title>Alex Unnippillil's Portfolio </title>
+            {/* Primary Meta Tags */}
+             <title>Alex Unnippillil&apos;s Portfolio </title>
             <meta charSet="utf-8" />
             <meta name="title" content="Alex Patel Portfolio - Computer Engineering Student" />
             <meta name="description"

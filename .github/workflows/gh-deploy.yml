@@ -22,10 +22,13 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: "yarn"
-      - name: Installing Packages 
+      - name: Installing Packages
         run: yarn install
 
-      - name: Building 
+      - name: Lint
+        run: yarn lint
+
+      - name: Building
         run: yarn build
         env:
           NEXT_PUBLIC_TRACKING_ID: G-8FBXBFXC10
