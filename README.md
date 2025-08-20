@@ -26,3 +26,9 @@ const displayMyApp = (addFolder, openApp) => (
 ```
 
 Add the `displayMyApp` function to `apps.config.js` and reference it in the `apps` array to make the app available to the desktop.
+
+## Privacy
+
+The contact application records only non-PII metadata in Google Analytics.
+Submissions trigger an event with `{ category: "contact", action: "submit_success" }`, and the
+free-text fields (name, subject, message) are never sent to analytics.

@@ -51,18 +51,20 @@ export class Gedit extends Component {
             'message': message,
         }
 
-        emailjs.send(serviceID, templateID, templateParams).then(() => {
-            this.setState({ sending: false });
-            $("#close-gedit").trigger("click");
-        }).catch(() => {
-            this.setState({ sending: false });
-            $("#close-gedit").trigger("click");
-        })
+        emailjs.send(serviceID, templateID, templateParams)
+            .then(() => {
+                this.setState({ sending: false });
+                $("#close-gedit").trigger("click");
 
-        ReactGA.event({
-            category: "Send Message",
-            action: `${name}, ${subject}, ${message}`
-        });
+                ReactGA.event({
+                    category: "contact",
+                    action: "submit_success",
+                });
+            })
+            .catch(() => {
+                this.setState({ sending: false });
+                $("#close-gedit").trigger("click");
+            });
 
     }
 
