@@ -190,7 +190,7 @@ export class Calc extends Component {
             default: 
                 result = this.evaluteExp(command);                    
         }
-        document.getElementById(`row-calculator-result-${rowId}`).innerHTML = result;
+        document.getElementById(`row-calculator-result-${rowId}`).textContent = result;
         this.appendTerminalRow();
     }
     evaluteExp = (command) => {
@@ -213,27 +213,6 @@ export class Calc extends Component {
                 result="Invalid Expression"
             }    
         return result;
-    }
-    xss(str) {
-        if (!str) return;
-        return str.split('').map(char => {
-            switch (char) {
-                case '&':
-                    return '&amp';
-                case '<':
-                    return '&lt';
-                case '>':
-                    return '&gt';
-                case '"':
-                    return '&quot';
-                case "'":
-                    return '&#x27';
-                case '/':
-                    return '&#x2F';
-                default:
-                    return char;
-            }
-        }).join('');
     }
     
 
