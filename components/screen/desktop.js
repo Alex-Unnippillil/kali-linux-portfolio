@@ -7,7 +7,6 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
-import $ from 'jquery';
 import ReactGA from 'react-ga4';
 
 export class Desktop extends Component {
@@ -114,8 +113,10 @@ export class Desktop extends Component {
         let { posx, posy } = this.getMenuPosition(e);
         let contextMenu = document.getElementById(`${menuName}-menu`);
 
-        if (posx + $(contextMenu).width() > window.innerWidth) posx -= $(contextMenu).width();
-        if (posy + $(contextMenu).height() > window.innerHeight) posy -= $(contextMenu).height();
+        const menuWidth = contextMenu.offsetWidth;
+        const menuHeight = contextMenu.offsetHeight;
+        if (posx + menuWidth > window.innerWidth) posx -= menuWidth;
+        if (posy + menuHeight > window.innerHeight) posy -= menuHeight;
 
         posx = posx.toString() + "px";
         posy = posy.toString() + "px";

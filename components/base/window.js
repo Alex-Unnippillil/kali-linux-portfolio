@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import Image from 'next/image';
+import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
@@ -240,7 +240,7 @@ export function WindowEditButtons(props) {
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center">
             <span className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.minimize}>
-                <Image
+                <NextImage
                     src="/themes/Yaru/window/window-minimize-symbolic.svg"
                     alt="Kali window minimize"
                     className="h-5 w-5 inline"
@@ -253,7 +253,7 @@ export function WindowEditButtons(props) {
                 (props.isMaximised
                     ?
                     <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
-                        <Image
+                        <NextImage
                             src="/themes/Yaru/window/window-restore-symbolic.svg"
                             alt="Kali window restore"
                             className="h-5 w-5 inline"
@@ -264,7 +264,7 @@ export function WindowEditButtons(props) {
                     </span>
                     :
                     <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
-                        <Image
+                        <NextImage
                             src="/themes/Yaru/window/window-maximize-symbolic.svg"
                             alt="Kali window maximize"
                             className="h-5 w-5 inline"
@@ -276,7 +276,7 @@ export function WindowEditButtons(props) {
                 )
             }
             <button tabIndex="-1" id={`close-${props.id}`} className="mx-1.5 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.close}>
-                <Image
+                <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"
                     alt="Kali window close"
                     className="h-5 w-5 inline"
