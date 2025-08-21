@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const SimonApp = dynamic(
+  () =>
+    import('./components/apps/simon').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Simon' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Simon...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displaySimon = (addFolder, openApp) => (
+  <SimonApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -104,6 +124,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'simon',
+    title: 'Simon',
+    icon: './themes/Yaru/apps/simon.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySimon,
   },
   {
     id: 'about-alex',
@@ -197,4 +226,20 @@ const apps = [
   },
 ];
 
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'simon',
+    title: 'Simon',
+    icon: './themes/Yaru/apps/simon.svg',
+    screen: displaySimon,
+  },
+];
+
+export { games };
 export default apps;
