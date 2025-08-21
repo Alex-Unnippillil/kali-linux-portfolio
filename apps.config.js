@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const CarRacerApp = dynamic(
+  () =>
+    import('./components/apps/car-racer').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Car Racer' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Car Racer...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayCarRacer = (addFolder, openApp) => (
+  <CarRacerApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -197,4 +217,26 @@ const apps = [
   },
 ];
 
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'car-racer',
+    title: 'Car Racer',
+    icon: './themes/Yaru/apps/car-racer.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCarRacer,
+  },
+];
+
 export default apps;
+export { games };
