@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const HangmanApp = dynamic(
+  () =>
+    import('./components/apps/hangman').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Hangman' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Hangman...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -72,6 +88,30 @@ const displayTerminalCalc = (addFolder, openApp) => (
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
+
+const displayHangman = (addFolder, openApp) => (
+  <HangmanApp addFolder={addFolder} openApp={openApp} />
+);
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'hangman',
+    title: 'Hangman',
+    icon: './themes/Yaru/apps/hangman.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHangman,
+  },
+];
 
 const apps = [
   {
@@ -104,6 +144,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'hangman',
+    title: 'Hangman',
+    icon: './themes/Yaru/apps/hangman.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHangman,
   },
   {
     id: 'about-alex',
@@ -196,5 +245,5 @@ const apps = [
     screen: displayGedit,
   },
 ];
-
+export { games };
 export default apps;
