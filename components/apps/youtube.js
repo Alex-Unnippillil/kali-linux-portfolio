@@ -2,6 +2,12 @@ import React, { useEffect, useState } from 'react';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
+export default function YouTubeApp({ initialVideos = [] }) {
+  const [videos, setVideos] = useState(initialVideos);
+  const [sortBy, setSortBy] = useState('date');
+  const [selectedPlaylist, setSelectedPlaylist] = useState('All');
+  const [search, setSearch] = useState('');
+
 export default function YouTubeApp() {
   const [videos, setVideos] = useState([]);
   const [playlistInfos, setPlaylistInfos] = useState([]);
@@ -12,7 +18,7 @@ export default function YouTubeApp() {
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
   useEffect(() => {
-    if (!apiKey) return;
+    if (!apiKey || initialVideos.length) return;
 
     async function fetchData() {
       try {
@@ -48,6 +54,7 @@ export default function YouTubeApp() {
               title: item.snippet.title,
               playlist: pl.title,
               publishedAt: item.snippet.publishedAt,
+              thumbnail: item.snippet.thumbnails?.default?.url,
               url: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
               thumbnail: item.snippet.thumbnails?.medium?.url,
               channelTitle: item.snippet.channelTitle,
@@ -61,7 +68,17 @@ export default function YouTubeApp() {
     }
 
     fetchData();
-  }, [apiKey]);
+  }, [apiKey, initialVideos.length]);
+
+  const playlists = ['All', ...new Set(videos.map((v) => v.playlist))];
+
+  const filteredVideos = videos
+    .filter(
+      (v) => selectedPlaylist === 'All' || v.playlist === selectedPlaylist
+    )
+    .filter((v) => v.title.toLowerCase().includes(search.toLowerCase()));
+
+  const sortedVideos = [...filteredVideos].sort((a, b) => {
 
 
   const filteredVideos = videos.filter(
@@ -91,6 +108,14 @@ export default function YouTubeApp() {
       return a.playlist.localeCompare(b.playlist);
 
     }
+    if (sortBy === 'title') {
+      return a.title.localeCompare(b.title);
+    }
+    return new Date(b.publishedAt) - new Date(a.publishedAt);
+  });
+
+  if (!apiKey && videos.length === 0) {
+
   });
 
   const filteredVideos = sortedVideos.filter((video) =>
@@ -107,7 +132,13 @@ export default function YouTubeApp() {
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
-      <div className="p-2 flex justify-end space-x-2">
+      <div className="p-2 flex flex-wrap items-center space-x-2 space-y-2">
+        <input
+          placeholder="Search..."
+          className="text-black px-1"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
         <label htmlFor="sort" className="self-center">
           Sort by:
         </label>
@@ -121,6 +152,7 @@ export default function YouTubeApp() {
           <option value="dateAsc">Oldest First</option>
           <option value="title">Title (A-Z)</option>
           <option value="playlist">Playlist</option>
+          <option value="title">Title</option>
         </select>
 
       <div className="p-2 flex justify-between items-center space-x-2">
@@ -165,11 +197,26 @@ export default function YouTubeApp() {
           </button>
         ))}
       </div>
+      <div className="p-2 flex space-x-2">
+        {playlists.map((pl) => (
+          <button
+            key={pl}
+            onClick={() => setSelectedPlaylist(pl)}
+            className={`px-2 py-1 ${
+              selectedPlaylist === pl ? 'bg-gray-700' : 'bg-gray-500'
+            }`}
+          >
+            {pl}
+          </button>
+        ))}
+      </div>
       <ul className="p-2 space-y-2">
 
 
       <div className="p-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
         {sortedVideos.map((video) => (
+          <li key={video.id} data-testid="video-card">
+
           <a
             key={video.id}
             href={video.url}
@@ -199,6 +246,7 @@ export default function YouTubeApp() {
               rel="noopener noreferrer"
               className="underline text-blue-400"
             >
+              <img src={video.thumbnail} alt={video.title} />
               {video.title}
             </a>
             <div className="text-xs text-gray-300">
