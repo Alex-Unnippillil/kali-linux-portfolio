@@ -57,10 +57,17 @@ export default function YouTubeApp() {
   }, [apiKey]);
 
   const sortedVideos = [...videos].sort((a, b) => {
-    if (sortBy === 'playlist') {
-      return a.playlist.localeCompare(b.playlist);
+    switch (sortBy) {
+      case 'playlist':
+        return a.playlist.localeCompare(b.playlist);
+      case 'title':
+        return a.title.localeCompare(b.title);
+      case 'dateAsc':
+        return new Date(a.publishedAt) - new Date(b.publishedAt);
+      case 'date':
+      default:
+        return new Date(b.publishedAt) - new Date(a.publishedAt);
     }
-    return new Date(b.publishedAt) - new Date(a.publishedAt);
   });
 
   if (!apiKey) {
@@ -83,7 +90,9 @@ export default function YouTubeApp() {
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
         >
-          <option value="date">Date</option>
+          <option value="date">Newest First</option>
+          <option value="dateAsc">Oldest First</option>
+          <option value="title">Title (A-Z)</option>
           <option value="playlist">Playlist</option>
         </select>
       </div>
