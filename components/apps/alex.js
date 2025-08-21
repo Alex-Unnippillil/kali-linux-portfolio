@@ -216,130 +216,187 @@ function Education() {
         </>
     )
 }
+const SkillSection = ({ title, badges }) => {
+  const [filter, setFilter] = React.useState('');
+  const [selected, setSelected] = React.useState(null);
+
+  const filteredBadges = badges.filter(b =>
+    b.alt.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  return (
+    <div className="px-2 w-full">
+      <div className="text-sm text-center md:text-base font-bold">{title}</div>
+      <input
+        type="text"
+        placeholder="Filter..."
+        className="mt-2 w-full px-2 py-1 rounded text-black"
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+      />
+      <div className="flex flex-wrap justify-center items-start w-full mt-2">
+        {filteredBadges.map(badge => (
+          <img
+            key={badge.alt}
+            className="m-1 cursor-pointer"
+            src={badge.src}
+            alt={badge.alt}
+            title={badge.description}
+            onClick={() => setSelected(badge)}
+          />
+        ))}
+      </div>
+      {selected && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+          onClick={() => setSelected(null)}
+        >
+          <div
+            className="bg-ub-cool-grey p-4 rounded max-w-xs"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="font-bold mb-2 text-center">{selected.alt}</div>
+            <p className="text-sm text-center">{selected.description}</p>
+            <button
+              className="mt-2 px-2 py-1 bg-ubt-blue rounded"
+              onClick={() => setSelected(null)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 function Skills() {
-    return (
-        <>
-            <div className=" font-medium relative text-2xl mt-2 md:mt-4 mb-4">
-                Technical Skills
-                <div className="absolute pt-px bg-white mt-px top-full w-full">
-                    <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-full"></div>
-                    <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full"></div>
-                </div>
-            </div>
-            <ul className=" tracking-tight text-sm md:text-base w-10/12 emoji-list">
+  const networkingSecurity = [
+    { src: 'https://img.shields.io/badge/AWS-%23FF9900.svg?logo=amazon-aws&logoColor=white', alt: 'AWS', description: 'Amazon Web Services' },
+    { src: 'https://img.shields.io/badge/Azure-%230072C6.svg?logo=microsoftazure&logoColor=white', alt: 'Azure', description: 'Microsoft Azure' },
+    { src: 'https://img.shields.io/badge/Windows_Server-0078D6?logo=windows', alt: 'Windows Server', description: 'Windows Server Administration' },
+    { src: 'https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=fff', alt: 'Docker', description: 'Container Platform' },
+    { src: 'https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=fff', alt: 'Kubernetes', description: 'Container Orchestration' },
+    { src: 'https://img.shields.io/badge/Tor-7D4698?logo=Tor-Browser&logoColor=white', alt: 'Tor', description: 'Anonymity Network' },
+    { src: 'https://img.shields.io/badge/CCNA-007ACC?logo=Cisco&logoColor=fff', alt: 'CCNA', description: 'Cisco Certified Network Associate' },
+    { src: 'https://img.shields.io/badge/CCNP-007ACC?logo=Cisco&logoColor=fff', alt: 'CCNP', description: 'Cisco Certified Network Professional' },
+    { src: 'https://img.shields.io/badge/PuTTY-7D4698?logo=gnometerminal&logoColor=white', alt: 'PuTTY', description: 'SSH Client' },
+    { src: 'https://img.shields.io/badge/Wireshark-%230072C6.svg?logo=wireshark&logoColor=white', alt: 'Wireshark', description: 'Network Analyzer' },
+    { src: 'https://img.shields.io/badge/OWASP-black?style=flat&logo=OWASP&logoColor=ffffff', alt: 'OWASP', description: 'Open Web Application Security Project' },
+    { src: 'https://img.shields.io/badge/Nmap-4682B4?logo=nmap&logoColor=white', alt: 'Nmap', description: 'Network Scanner' },
+    { src: 'https://img.shields.io/badge/Metasploit-1280c4?logo=metasploit&logoColor=white', alt: 'Metasploit', description: 'Penetration Testing Framework' },
+    { src: 'https://img.shields.io/badge/Burp_Suite-FF6633?logo=burp-suite&logoColor=white', alt: 'Burp Suite', description: 'Web Vulnerability Scanner' },
+    { src: 'https://img.shields.io/badge/Splunk-000000?logo=splunk&logoColor=white', alt: 'Splunk', description: 'Security Information and Event Management' }
+  ];
 
-                <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
-                    <div>I&apos;ve learned a variety of programming languages and frameworks while <strong className="text-ubt-gedit-blue">specializing in network security</strong></div>
-                </li>
-                <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
-                    <div>Below are some skills I&apos;ve learned over the years</div>
-                </li>
-            </ul>
-            <div className="w-full md:w-10/12 flex mt-4">
-                <div className=" text-sm text-center md:text-base w-1/2 font-bold">Networking & Security</div>
-                <div className=" text-sm text-center md:text-base w-1/2 font-bold">Softwares & Operating Systems</div>
-            </div>
-            <div className="w-full md:w-10/12 flex justify-center items-start font-bold text-center">
-                <div className="px-2 w-1/2">
-                    <div className="flex flex-wrap justify-center items-start w-full mt-2">
-                        <img className="m-1" src="https://img.shields.io/badge/AWS-%23FF9900.svg?logo=amazon-aws&logoColor=white" alt="alex aws" />
-                        <img className="m-1" src="https://img.shields.io/badge/Azure-%230072C6.svg?logo=microsoftazure&logoColor=white" alt="alex azure" />
-                        <img className=" m-1" src="https://img.shields.io/badge/Windows_Server-0078D6?logo=windows" alt="unnippillil server" />
-                        <img className="m-1" src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=fff" alt="alex docker" />
-                        <img className="m-1" src="https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=fff" alt="alex  kubernetes" />
-                        <img className="m-1" src="https://img.shields.io/badge/Tor-7D4698?logo=Tor-Browser&logoColor=white" alt="alex tor" />
-                        <img className="m-1" src="https://img.shields.io/badge/CCNA-007ACC?logo=Cisco&logoColor=fff" alt="CCNA unnippillil" />
-                        <img className="m-1" src="https://img.shields.io/badge/CCNP-007ACC?logo=Cisco&logoColor=fff" alt="ccnp unnippillil" />
-                        <img className="m-1" src="https://img.shields.io/badge/PuTTY-7D4698?logo=gnometerminal&logoColor=white" alt="unnippillil PuTTY" />
-                        <img className="m-1" src="https://img.shields.io/badge/Wireshark-%230072C6.svg?logo=wireshark&logoColor=white" alt="alex wireshark" />
-                        <img className=" m-1" src="https://img.shields.io/badge/OWASP-black?style=flat&logo=OWASP&logoColor=ffffff" alt="unnippillil OWASP" />
-                        
-                      
-                    </div>
-                </div>
-                <div className="px-2 flex flex-wrap items-start w-1/2">
-                    <div className="flex flex-wrap justify-center items-start w-full mt-2">
-                        <img className=" m-1" src="https://img.shields.io/badge/PowerShell-%235391FE.svg?logo=powershell&logoColor=white" alt="alex powershell" />
-                        <img src="https://img.shields.io/badge/-VMware-FFCA28?style=flat&logo=vmware&logoColor=ffffff" alt="unnippillil alex" className="m-1" />
-                        <img className="m-1" src="https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white" alt="unnippillil windows" />
-                        <img className="m-1" src="https://img.shields.io/badge/Kali%20Linux-557C94?logo=kalilinux&logoColor=fff" alt="kali linux unnippillil" />
-                        <img src="https://img.shields.io/badge/Fedora-51A2DA?logo=fedora&logoColor=fff" alt="unnippillil fedora" className="m-1" />
-                        <img src="https://img.shields.io/badge/macOS-000000?logo=macos&logoColor=F0F0F0" alt="unnippillil macos" className="m-1" />
-                        <img className="m-1" src="https://img.shields.io/badge/PyCharm-143?logo=pycharm&logoColor=black&color=black&labelColor=green" alt="pycharm alex" />
-                        <img className="m-1" src="https://img.shields.io/badge/Unity-%23000000.svg?logo=unity&logoColor=white" alt="unity alex" />
-                        <img className="m-1" src="https://img.shields.io/badge/Xcode-007ACC?logo=Xcode&logoColor=white" alt="xcode alex" />
-                        <img className="m-1" src="https://img.shields.io/badge/Android%20Studio-3DDC84?logo=android-studio&logoColor=white" alt="alex android studio" />
-                    </div>
-                </div>
-            </div>
-            <div className="w-full md:w-10/12 flex mt-4">
-                <div className=" text-sm text-center md:text-base w-1/2 font-bold">Languages & Tools</div>
-                <div className=" text-sm text-center md:text-base w-1/2 font-bold">Frameworks & Libraries</div>
-            </div>
-            <div className="w-full md:w-10/12 flex justify-center items-start font-bold text-center">
-                <div className="px-2 w-1/2">
-                    <div className="flex flex-wrap justify-center items-start w-full mt-2">
-                        <img className="m-1" src="https://img.shields.io/badge/-JavaScript-%23F7DF1C?style=flat&logo=javascript&logoColor=000000&labelColor=%23F7DF1C&color=%23FFCE5A" alt="unnippillil javascript" />
-                        <img className="m-1" src="https://img.shields.io/badge/C%2B%2B-00599C?style=flat&logo=c%2B%2B&logoColor=white" alt="unnippillil c++" />
-                        {/* Use HTTPS to avoid mixed-content errors */}
-                        <img className="m-1" src="https://img.shields.io/badge/-Python-3776AB?style=flat&logo=python&logoColor=ffffff" alt="unnippillil python" />
-                        <img className="m-1" src="https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white" alt="unnippillil dart" />
-                        <a href="https://www.google.com/search?q=is+html+a+language%3F" target="_blank" rel="noopener noreferrer"><img title="yes it's a language!" className="m-1" src="https://img.shields.io/badge/-HTML5-%23E44D27?style=flat&logo=html5&logoColor=ffffff" alt="unnippillil HTML" /></a>
-                        <img src="https://img.shields.io/badge/CSS-1572B6?logo=css3&logoColor=fff" alt="unnippillil css" className="m-1" />
-                        <img src="https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=fff" alt="unnippillil mysql" className="m-1" />
-                        <img src="https://img.shields.io/badge/Java-%23ED8B00.svg?logo=openjdk&logoColor=white" alt="unnippillil Java" className="m-1" />
-                    </div>
-                </div>
-                <div className="px-2 flex flex-wrap items-start w-1/2">
-                    <div className="flex flex-wrap justify-center items-start w-full mt-2">
-                        <img className=" m-1" src="https://img.shields.io/badge/Next-black?style=flat&logo=next.js&logoColor=ffffff" alt="unnippillil next" />
-                        <img className=" m-1" src="https://img.shields.io/badge/-React-61DAFB?style=flat&logo=react&logoColor=ffffff" alt="unnippillil react" />
-                        <img className="m-1" src="https://img.shields.io/badge/Flutter-02569B?style=flat&logo=flutter&logoColor=white" alt="unnippillil flutter" />
-                        <img className="m-1" src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white" alt="unnippillil tailwind css" />
-                        <img src="https://img.shields.io/badge/-Nodejs-339933?style=flat&logo=Node.js&logoColor=ffffff" alt="unnippillil node.js" className="m-1" />
-                        <img src="https://img.shields.io/badge/jQuery-0769AD?style=flat&logo=jquery&logoColor=white" alt="unnippillil jquery" className="m-1" />
-                        <img className="m-1" src="https://img.shields.io/badge/Hydrogen-7AB55C?logo=shopify&logoColor=fff" alt="unnippillil hydrogen" />
-                    <img className=" m-1" src="https://img.shields.io/badge/NIST-black?style=flat&logo=netapp&logoColor=ffffff" alt="unnippillil NIST" />
-                    </div>
-                </div>
-            </div>
-            <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
-                <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
-                <img
-                    src="https://ghchart.rshah.org/Alex-Unnippillil"
-                    alt="Alex Unnippillil's GitHub contribution graph"
-                    className="w-full"
-                />
-            </div>
-            <div className="tracking-tight text-sm md:text-base w-10/12 emoji-list mt-4 flex">
-                <span className="list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight mr-4">
-                    ...and current certs and typing speed
-                </span>
-                            
-            <a href="https://data.typeracer.com/pit/profile?user=ulexa&ref=badge" target="_blank" rel="noopener noreferrer" className="mr-4">
-                <img src="https://data.typeracer.com/misc/badge?user=ulexa" border="0" alt="TypeRacer.com scorecard for user ulexa"/>
-            </a>
+  const softwaresOperating = [
+    { src: 'https://img.shields.io/badge/PowerShell-%235391FE.svg?logo=powershell&logoColor=white', alt: 'PowerShell', description: 'Automation Shell' },
+    { src: 'https://img.shields.io/badge/-VMware-FFCA28?style=flat&logo=vmware&logoColor=ffffff', alt: 'VMware', description: 'Virtualization Platform' },
+    { src: 'https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white', alt: 'Windows', description: 'Windows OS' },
+    { src: 'https://img.shields.io/badge/Kali%20Linux-557C94?logo=kalilinux&logoColor=fff', alt: 'Kali Linux', description: 'Penetration Testing Distribution' },
+    { src: 'https://img.shields.io/badge/Fedora-51A2DA?logo=fedora&logoColor=fff', alt: 'Fedora', description: 'Fedora Linux' },
+    { src: 'https://img.shields.io/badge/macOS-000000?logo=macos&logoColor=F0F0F0', alt: 'macOS', description: 'Apple Operating System' },
+    { src: 'https://img.shields.io/badge/PyCharm-143?logo=pycharm&logoColor=black&color=black&labelColor=green', alt: 'PyCharm', description: 'Python IDE' },
+    { src: 'https://img.shields.io/badge/Unity-%23000000.svg?logo=unity&logoColor=white', alt: 'Unity', description: 'Game Engine' },
+    { src: 'https://img.shields.io/badge/Xcode-007ACC?logo=Xcode&logoColor=white', alt: 'Xcode', description: 'Apple IDE' },
+    { src: 'https://img.shields.io/badge/Android%20Studio-3DDC84?logo=android-studio&logoColor=white', alt: 'Android Studio', description: 'Android IDE' },
+    { src: 'https://img.shields.io/badge/Ubuntu-E95420?logo=ubuntu&logoColor=white', alt: 'Ubuntu', description: 'Ubuntu Linux' },
+    { src: 'https://img.shields.io/badge/Debian-D70A53?logo=debian&logoColor=white', alt: 'Debian', description: 'Debian Linux' },
+    { src: 'https://img.shields.io/badge/Visual%20Studio-5C2D91?logo=visual-studio&logoColor=white', alt: 'Visual Studio', description: 'Microsoft IDE' },
+    { src: 'https://img.shields.io/badge/VS%20Code-007ACC?logo=visual-studio-code&logoColor=white', alt: 'VS Code', description: 'Code Editor' },
+    { src: 'https://img.shields.io/badge/Git-F05032?logo=git&logoColor=white', alt: 'Git', description: 'Version Control' }
+  ];
 
-            <a href="https://www.credly.com/badges/8a945539-5d36-4de4-b454-1989656b282f/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
-                <img src="https://images.credly.com/size/340x340/images/80d8a06a-c384-42bf-ad36-db81bce5adce/blob" border="0" alt="CompTIA Security+ Certificate" style={{width: "140px", height: "140px"}}/>
-            </a>
+  const languagesTools = [
+    { src: 'https://img.shields.io/badge/-JavaScript-%23F7DF1C?style=flat&logo=javascript&logoColor=000000&labelColor=%23F7DF1C&color=%23FFCE5A', alt: 'JavaScript', description: 'Scripting Language' },
+    { src: 'https://img.shields.io/badge/C%2B%2B-00599C?style=flat&logo=c%2B%2B&logoColor=white', alt: 'C++', description: 'Systems Programming Language' },
+    { src: 'https://img.shields.io/badge/-Python-3776AB?style=flat&logo=python&logoColor=ffffff', alt: 'Python', description: 'General Purpose Language' },
+    { src: 'https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white', alt: 'Dart', description: 'Dart Language' },
+    { src: 'https://img.shields.io/badge/-HTML5-%23E44D27?style=flat&logo=html5&logoColor=ffffff', alt: 'HTML5', description: 'Markup Language' },
+    { src: 'https://img.shields.io/badge/CSS-1572B6?logo=css3&logoColor=fff', alt: 'CSS', description: 'Stylesheet Language' },
+    { src: 'https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=fff', alt: 'MySQL', description: 'Relational Database' },
+    { src: 'https://img.shields.io/badge/Java-%23ED8B00.svg?logo=openjdk&logoColor=white', alt: 'Java', description: 'Java Programming Language' },
+    { src: 'https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white', alt: 'TypeScript', description: 'Typed JavaScript' },
+    { src: 'https://img.shields.io/badge/Go-00ADD8?logo=go&logoColor=white', alt: 'Go', description: 'Go Programming Language' },
+    { src: 'https://img.shields.io/badge/Rust-000000?logo=rust&logoColor=white', alt: 'Rust', description: 'Rust Programming Language' },
+    { src: 'https://img.shields.io/badge/Bash-121011?logo=gnubash&logoColor=white', alt: 'Bash', description: 'Unix Shell' }
+  ];
 
-            <a href="https://www.credly.com/badges/783aed9a-91a7-4a2e-a4b8-11dbd0d25fc2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
-                <img src="https://images.credly.com/size/110x110/images/0bf0f2da-a699-4c82-82e2-56dcf1f2e1c7/image.png" border="0" alt="Google Cybersecurity Certificate" style={{width: "140px", height: "140px"}}/>
-            </a>
+  const frameworksLibraries = [
+    { src: 'https://img.shields.io/badge/Next-black?style=flat&logo=next.js&logoColor=ffffff', alt: 'Next.js', description: 'React Framework' },
+    { src: 'https://img.shields.io/badge/-React-61DAFB?style=flat&logo=react&logoColor=ffffff', alt: 'React', description: 'UI Library' },
+    { src: 'https://img.shields.io/badge/Flutter-02569B?style=flat&logo=flutter&logoColor=white', alt: 'Flutter', description: 'UI Toolkit' },
+    { src: 'https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white', alt: 'Tailwind CSS', description: 'Utility-first CSS' },
+    { src: 'https://img.shields.io/badge/-Nodejs-339933?style=flat&logo=Node.js&logoColor=ffffff', alt: 'Node.js', description: 'JavaScript Runtime' },
+    { src: 'https://img.shields.io/badge/jQuery-0769AD?style=flat&logo=jquery&logoColor=white', alt: 'jQuery', description: 'JavaScript Library' },
+    { src: 'https://img.shields.io/badge/Hydrogen-7AB55C?logo=shopify&logoColor=fff', alt: 'Hydrogen', description: 'Shopify Framework' },
+    { src: 'https://img.shields.io/badge/NIST-black?style=flat&logo=netapp&logoColor=ffffff', alt: 'NIST', description: 'Cybersecurity Framework' },
+    { src: 'https://img.shields.io/badge/Express.js-000000?logo=express&logoColor=white', alt: 'Express.js', description: 'Web Framework' },
+    { src: 'https://img.shields.io/badge/Django-092E20?logo=django&logoColor=white', alt: 'Django', description: 'Python Framework' },
+    { src: 'https://img.shields.io/badge/Bootstrap-7952B3?logo=bootstrap&logoColor=white', alt: 'Bootstrap', description: 'CSS Framework' },
+    { src: 'https://img.shields.io/badge/Redux-764ABC?logo=redux&logoColor=white', alt: 'Redux', description: 'State Management Library' },
+    { src: 'https://img.shields.io/badge/TensorFlow-FF6F00?logo=tensorflow&logoColor=white', alt: 'TensorFlow', description: 'Machine Learning Library' }
+  ];
 
-            <a href="https://www.credly.com/badges/53415f6e-162e-414e-971d-942aefc755d2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
-                <img src="https://images.credly.com/size/340x340/images/70675aed-31be-4c30-add7-b99905a34005/image.png" border="0" alt="BM AI Developer Professional Certificate" style={{width: "120px", height: "120px"}}/>
-            </a>
-            <a href="https://www.credly.com/badges/f1ec265d-6798-4fc0-b98e-ad5ac71f58c0" target="_blank" rel="noopener noreferrer" className="mr-4">
-                <img src="https://images.credly.com/size/110x110/images/9180921d-4a13-429e-9357-6f9706a554f0/image.png" border="0" alt="ISC2 Candidate" style={{width: "120px", height: "120px"}}/>
-            </a>
-            </div>
-                        
-        </>
-    )
+  return (
+    <>
+      <div className=" font-medium relative text-2xl mt-2 md:mt-4 mb-4">
+        Technical Skills
+        <div className="absolute pt-px bg-white mt-px top-full w-full">
+          <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-full"></div>
+          <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full"></div>
+        </div>
+      </div>
+      <ul className=" tracking-tight text-sm md:text-base w-10/12 emoji-list">
+        <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
+          <div>I&apos;ve learned a variety of programming languages and frameworks while <strong className="text-ubt-gedit-blue">specializing in network security</strong></div>
+        </li>
+        <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
+          <div>Below are some skills I&apos;ve learned over the years</div>
+        </li>
+      </ul>
+      <div className="w-full md:w-10/12 grid grid-cols-1 md:grid-cols-2 mt-4 gap-4">
+        <SkillSection title="Networking & Security" badges={networkingSecurity} />
+        <SkillSection title="Softwares & Operating Systems" badges={softwaresOperating} />
+        <SkillSection title="Languages & Tools" badges={languagesTools} />
+        <SkillSection title="Frameworks & Libraries" badges={frameworksLibraries} />
+      </div>
+      <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
+        <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
+        <img
+          src="https://ghchart.rshah.org/Alex-Unnippillil"
+          alt="Alex Unnippillil's GitHub contribution graph"
+          className="w-full"
+        />
+      </div>
+      <div className="tracking-tight text-sm md:text-base w-10/12 emoji-list mt-4 flex">
+        <span className="list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight mr-4">
+          ...and current certs and typing speed
+        </span>
+
+      <a href="https://data.typeracer.com/pit/profile?user=ulexa&ref=badge" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://data.typeracer.com/misc/badge?user=ulexa" border="0" alt="TypeRacer.com scorecard for user ulexa"/>
+      </a>
+
+      <a href="https://www.credly.com/badges/8a945539-5d36-4de4-b454-1989656b282f/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://images.credly.com/size/340x340/images/80d8a06a-c384-42bf-ad36-db81bce5adce/blob" border="0" alt="CompTIA Security+ Certificate" style={{width: "140px", height: "140px"}}/>
+      </a>
+
+      <a href="https://www.credly.com/badges/783aed9a-91a7-4a2e-a4b8-11dbd0d25fc2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://images.credly.com/size/110x110/images/0bf0f2da-a699-4c82-82e2-56dcf1f2e1c7/image.png" border="0" alt="Google Cybersecurity Certificate" style={{width: "140px", height: "140px"}}/>
+      </a>
+
+      <a href="https://www.credly.com/badges/53415f6e-162e-414e-971d-942aefc755d2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://images.credly.com/size/340x340/images/70675aed-31be-4c30-add7-b99905a34005/image.png" border="0" alt="BM AI Developer Professional Certificate" style={{width: "120px", height: "120px"}}/>
+      </a>
+      <a href="https://www.credly.com/badges/f1ec265d-6798-4fc0-b98e-ad5ac71f58c0" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://images.credly.com/size/110x110/images/9180921d-4a13-429e-9357-6f9706a554f0/image.png" border="0" alt="ISC2 Candidate" style={{width: "120px", height: "120px"}}/>
+      </a>
+      </div>
+
+    </>
+  )
 }
-
 function Projects() {
     const project_list = [
         {
