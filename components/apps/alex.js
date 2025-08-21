@@ -3,7 +3,7 @@ import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
 
-export class AboutVivek extends Component {
+export class AboutAlex extends Component {
 
     constructor() {
         super();
@@ -138,10 +138,10 @@ export class AboutVivek extends Component {
     }
 }
 
-export default AboutVivek;
+export default AboutAlex;
 
-export const displayAboutVivek = () => {
-    return <AboutVivek />;
+export const displayAboutAlex = () => {
+    return <AboutAlex />;
 }
 
 
