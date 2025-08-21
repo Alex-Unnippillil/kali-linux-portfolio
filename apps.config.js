@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const CalendarPeekApp = dynamic(
+  () =>
+    import('./components/apps/calendar_peek').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Calendar Peek' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Calendar...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayCalendarPeek = (addFolder, openApp) => (
+  <CalendarPeekApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -104,6 +124,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'calendar_peek',
+    title: 'Calendar Peek',
+    icon: './themes/Yaru/apps/calendar.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCalendarPeek,
   },
   {
     id: 'about-alex',
