@@ -12,6 +12,7 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayMarkdownPreviewer } from './components/apps/markdown_previewer';
 
 const TerminalApp = dynamic(
   () =>
@@ -167,6 +168,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTodoist,
+  },
+  {
+    id: 'markdown-previewer',
+    title: 'Markdown Previewer',
+    icon: './themes/Yaru/apps/vscode.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMarkdownPreviewer,
   },
   {
     id: 'settings',
