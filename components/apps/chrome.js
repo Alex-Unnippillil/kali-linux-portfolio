@@ -4,10 +4,10 @@ import Image from 'next/image';
 export class Chrome extends Component {
     constructor() {
         super();
-        this.home_url = 'https://example.com';
+        this.home_url = 'https://www.google.com';
         this.state = {
-            url: 'https://example.com',
-            display_url: 'https://example.com',
+            url: 'https://www.google.com',
+            display_url: 'https://www.google.com',
         }
     }
 
@@ -42,10 +42,10 @@ export class Chrome extends Component {
             }
 
             const display_url = encodeURI(url);
-            window.open(display_url, '_blank');
-            this.setState({ url: this.home_url, display_url: this.home_url });
-            this.storeVisitedUrl(display_url, display_url);
-            document.getElementById("chrome-url-bar").blur();
+            this.setState({ url: display_url, display_url }, () => {
+                this.storeVisitedUrl(display_url, display_url);
+                document.getElementById("chrome-url-bar").blur();
+            });
         }
     }
 

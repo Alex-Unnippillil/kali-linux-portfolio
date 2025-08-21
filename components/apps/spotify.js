@@ -1,43 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
-
-const TwitterTimeline = dynamic(
-  () => import('react-twitter-embed').then((m) => m.TwitterTimelineEmbed),
-  { ssr: false }
-);
+import React from 'react';
 
 export default function XApp() {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      });
-    });
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <div ref={ref} className="h-full w-full bg-ub-cool-grey">
-      {visible ? (
-        <TwitterTimeline
-          sourceType="profile"
-          screenName="AUnnippillil"
-          options={{ height: '1200%' }}
-        />
-      ) : (
-        <div className="h-full w-full flex items-center justify-center text-white">Loading...</div>
-      )}
-    </div>
+    <iframe
+      src="https://twitter.com/AUnnippillil"
+      className="h-full w-full bg-ub-cool-grey"
+      title="AUnnippillil on X"
+      frameBorder="0"
+    />
   );
 }
 
 export const displayX = () => <XApp />;
+
