@@ -12,6 +12,8 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayConverter } from './components/apps/converter';
+
 import { displayQrTool } from './components/apps/qr_tool';
 
 import { displayMusicPlayer } from './components/apps/music_player';
@@ -25,6 +27,7 @@ import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayShowcase } from './components/apps/showcase';
 
 import { displayProjectGallery } from './components/apps/project-gallery';
+
 
 const TerminalApp = dynamic(
   () =>
@@ -119,6 +122,14 @@ const apps = [
     screen: displayTicTacToe,
   },
   {
+    id: 'converter',
+    title: 'Converter',
+    icon: './themes/Yaru/apps/calc.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayConverter,
+
     id: 'qr-tool',
     title: 'QR Tool',
     icon: './themes/Yaru/apps/qr.svg',
