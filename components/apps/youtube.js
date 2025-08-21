@@ -43,26 +43,29 @@ export default function YouTubeApp({ initialVideos = [] }) {
         list.push({ id: favoritesId, title: 'Favorites' });
         setPlaylists(list);
 
-        const allVideos = [];
-        for (const pl of list) {
-          const itemsRes = await fetch(
-            `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${pl.id}&maxResults=50&key=${apiKey}`
-          );
-          const itemsData = await itemsRes.json();
-          itemsData.items?.forEach((item) => {
-            const id = item.snippet.resourceId.videoId;
-            allVideos.push({
-              id,
-              title: item.snippet.title,
-              playlist: pl.title,
-              publishedAt: item.snippet.publishedAt,
-              thumbnail: item.snippet.thumbnails?.medium?.url,
-              channelTitle: item.snippet.channelTitle,
-              url: `https://www.youtube.com/watch?v=${id}`,
-            });
-          });
-        }
-        setVideos(allVideos);
+        const allVideosData = await Promise.all(
+          list.map((pl) =>
+            fetch(
+              `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${pl.id}&maxResults=50&key=${apiKey}`
+            )
+              .then((res) => res.json())
+              .then((itemsData) =>
+                itemsData.items?.map((item) => {
+                  const id = item.snippet.resourceId.videoId;
+                  return {
+                    id,
+                    title: item.snippet.title,
+                    playlist: pl.title,
+                    publishedAt: item.snippet.publishedAt,
+                    thumbnail: item.snippet.thumbnails?.medium?.url,
+                    channelTitle: item.snippet.channelTitle,
+                    url: `https://www.youtube.com/watch?v=${id}`,
+                  };
+                }) || []
+              )
+          )
+        );
+        setVideos(allVideosData.flat());
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Failed to load YouTube data', err);
@@ -112,10 +115,10 @@ export default function YouTubeApp({ initialVideos = [] }) {
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
       {/* Search + sorting */}
-      <div className="p-2 flex items-center space-x-2">
+      <div className="p-3 flex flex-wrap items-center gap-2">
         <input
           placeholder="Search"
-          className="flex-1 text-black px-2 py-1 rounded"
+          className="flex-1 min-w-[150px] text-black px-3 py-2 rounded"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -124,7 +127,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
         </label>
         <select
           id="sort"
-          className="text-black px-2 py-1 rounded"
+          className="text-black px-3 py-2 rounded"
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
         >
@@ -136,13 +139,13 @@ export default function YouTubeApp({ initialVideos = [] }) {
       </div>
 
       {/* Category tabs */}
-      <div className="overflow-x-auto flex space-x-4 px-2">
+      <div className="overflow-x-auto px-3 pb-2 flex flex-wrap gap-2">
         {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}
-            className={`whitespace-nowrap pb-1 ${
-              activeCategory === cat ? 'border-b-2 border-red-500 font-bold' : ''
+            className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
+              activeCategory === cat ? 'bg-red-600 text-white' : 'bg-gray-700 hover:bg-gray-600'
             }`}
           >
             {cat}
@@ -151,16 +154,20 @@ export default function YouTubeApp({ initialVideos = [] }) {
       </div>
 
       {/* Video list */}
-      <div className="p-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
         {sorted.map((video) => (
-          <div key={video.id} data-testid="video-card" className="flex flex-col space-y-1">
+          <div
+            key={video.id}
+            data-testid="video-card"
+            className="bg-gray-800 rounded-lg overflow-hidden shadow flex flex-col hover:shadow-lg transition"
+          >
             <a href={video.url} target="_blank" rel="noreferrer" className="block">
               {video.thumbnail && (
-                <img src={video.thumbnail} alt={video.title} className="w-full rounded" />
+                <img src={video.thumbnail} alt={video.title} className="w-full" />
               )}
-              <div className="font-semibold line-clamp-2">{video.title}</div>
+              <div className="p-2 font-semibold text-sm line-clamp-2">{video.title}</div>
             </a>
-            <div className="text-xs text-gray-300">
+            <div className="px-2 pb-2 text-xs text-gray-300">
               {video.playlist} • {new Date(video.publishedAt).toLocaleDateString()}
             </div>
           </div>
