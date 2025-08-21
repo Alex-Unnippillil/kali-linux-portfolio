@@ -12,6 +12,9 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+
+import { displayQuoteGenerator } from './components/apps/quote_generator';
+
 import { displayShowcase } from './components/apps/showcase';
 
 import { displayProjectGallery } from './components/apps/project-gallery';
@@ -107,6 +110,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'quote-generator',
+    title: 'Quote Generator',
+    icon: './themes/Yaru/apps/quote.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayQuoteGenerator,
   },
   {
     id: 'about-alex',
