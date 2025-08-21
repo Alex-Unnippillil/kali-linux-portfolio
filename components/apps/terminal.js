@@ -166,7 +166,7 @@ export class Terminal extends Component {
         } else {
           result = (
             <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands:[ cd, ls, pwd, echo, clear, exit, mkdir, code, spotify, chrome, about-alex, todoist, trash, settings, sendmsg]`}</pre>
+              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands:[ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg]`}</pre>
             </div>
           );
         }
@@ -178,6 +178,18 @@ export class Terminal extends Component {
           </div>
         );
         break;
+      case 'x':
+        if (words[0] === '.' || words.length === 0) {
+          this.props.openApp('x');
+          result = null;
+        } else {
+          result = (
+            <div className="my-2 font-normal">
+              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
+            </div>
+          );
+        }
+        break;
       case 'spotify':
         if (words[0] === '.' || words.length === 0) {
           this.props.openApp('spotify');
@@ -185,7 +197,7 @@ export class Terminal extends Component {
         } else {
           result = (
             <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
+              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
             </div>
           );
         }
@@ -197,7 +209,7 @@ export class Terminal extends Component {
         } else {
           result = (
             <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
+              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
             </div>
           );
         }
@@ -209,7 +221,7 @@ export class Terminal extends Component {
         } else {
           result = (
             <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
+              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
             </div>
           );
         }
@@ -221,7 +233,7 @@ export class Terminal extends Component {
         } else {
           result = (
             <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
+              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
             </div>
           );
         }
@@ -233,7 +245,7 @@ export class Terminal extends Component {
         } else {
           result = (
             <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
+              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
             </div>
           );
         }
@@ -245,7 +257,7 @@ export class Terminal extends Component {
         } else {
           result = (
             <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
+              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
             </div>
           );
         }
@@ -257,7 +269,7 @@ export class Terminal extends Component {
         } else {
           result = (
             <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
+              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
             </div>
           );
         }
@@ -269,7 +281,7 @@ export class Terminal extends Component {
         } else {
           result = (
             <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, spotify, chrome, about-, todoist, trash, settings, sendmsg ]`}</pre>
+              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-, todoist, trash, settings, sendmsg ]`}</pre>
             </div>
           );
         }
@@ -291,7 +303,7 @@ export class Terminal extends Component {
       default:
         result = (
           <div className="my-2 font-normal">
-            <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
+            <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
           </div>
         );
     }
