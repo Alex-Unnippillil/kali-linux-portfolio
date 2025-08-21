@@ -281,7 +281,8 @@ function Skills() {
                     <div className="flex flex-wrap justify-center items-start w-full mt-2">
                         <img className="m-1" src="https://img.shields.io/badge/-JavaScript-%23F7DF1C?style=flat&logo=javascript&logoColor=000000&labelColor=%23F7DF1C&color=%23FFCE5A" alt="unnippillil javascript" />
                         <img className="m-1" src="https://img.shields.io/badge/C%2B%2B-00599C?style=flat&logo=c%2B%2B&logoColor=white" alt="unnippillil c++" />
-                        <img className="m-1" src="http://img.shields.io/badge/-Python-3776AB?style=flat&logo=python&logoColor=ffffff" alt="unnippillil python" />
+                        {/* Use HTTPS to avoid mixed-content errors */}
+                        <img className="m-1" src="https://img.shields.io/badge/-Python-3776AB?style=flat&logo=python&logoColor=ffffff" alt="unnippillil python" />
                         <img className="m-1" src="https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white" alt="unnippillil dart" />
                         <a href="https://www.google.com/search?q=is+html+a+language%3F" target="_blank" rel="noopener noreferrer"><img title="yes it's a language!" className="m-1" src="https://img.shields.io/badge/-HTML5-%23E44D27?style=flat&logo=html5&logoColor=ffffff" alt="unnippillil HTML" /></a>
                         <img src="https://img.shields.io/badge/CSS-1572B6?logo=css3&logoColor=fff" alt="unnippillil css" className="m-1" />
