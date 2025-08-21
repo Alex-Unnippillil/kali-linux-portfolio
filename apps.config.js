@@ -13,6 +13,22 @@ import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
 
+const ChatbotApp = dynamic(
+  () =>
+    import('./components/apps/chatbot').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Chatbot' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Chatbot...
+      </div>
+    ),
+  }
+);
+
 const TerminalApp = dynamic(
   () =>
     import('./components/apps/terminal').then((mod) => {
@@ -51,6 +67,10 @@ const displayTerminal = (addFolder, openApp) => (
 
 const displayTerminalCalc = (addFolder, openApp) => (
   <CalcApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayChatbot = (addFolder, openApp) => (
+  <ChatbotApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -156,6 +176,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayTrash,
+  },
+  {
+    id: 'chatbot',
+    title: 'Chatbot',
+    icon: './themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayChatbot,
   },
   {
     id: 'gedit',
