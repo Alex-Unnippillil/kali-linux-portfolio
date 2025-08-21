@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const SokobanApp = dynamic(
+  () =>
+    import('./components/apps/sokoban').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Sokoban' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Sokoban...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displaySokoban = (addFolder, openApp) => (
+  <SokobanApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -197,4 +217,25 @@ const apps = [
   },
 ];
 
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'sokoban',
+    title: 'Sokoban',
+    icon: './themes/Yaru/apps/sokoban.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySokoban,
+  },
+];
 export default apps;
+export { games };
