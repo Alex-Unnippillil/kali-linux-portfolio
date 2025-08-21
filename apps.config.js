@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const FlappyBirdApp = dynamic(
+  () =>
+    import('./components/apps/flappy-bird').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Flappy Bird' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Flappy Bird...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -72,6 +88,30 @@ const displayTerminalCalc = (addFolder, openApp) => (
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
+
+const displayFlappyBird = (addFolder, openApp) => (
+  <FlappyBirdApp addFolder={addFolder} openApp={openApp} />
+);
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'flappy-bird',
+    title: 'Flappy Bird',
+    icon: './themes/Yaru/apps/flappy-bird.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFlappyBird,
+  },
+];
 
 const apps = [
   {
@@ -96,15 +136,7 @@ const apps = [
     defaultWidth: 25,
     defaultHeight: 40,
   },
-  {
-    id: 'tictactoe',
-    title: 'Tic Tac Toe',
-    icon: './themes/Yaru/apps/tictactoe.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayTicTacToe,
-  },
+  ...games,
   {
     id: 'about-alex',
     title: 'About Alex',
@@ -198,3 +230,4 @@ const apps = [
 ];
 
 export default apps;
+export { games };
