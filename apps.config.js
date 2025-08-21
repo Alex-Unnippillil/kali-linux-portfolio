@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const SpaceInvadersApp = dynamic(
+  () =>
+    import('./components/apps/space-invaders').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Space Invaders' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Space Invaders...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displaySpaceInvaders = (addFolder, openApp) => (
+  <SpaceInvadersApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -104,6 +124,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'space-invaders',
+    title: 'Space Invaders',
+    icon: './themes/Yaru/apps/space-invaders.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySpaceInvaders,
   },
   {
     id: 'about-alex',
@@ -197,4 +226,26 @@ const apps = [
   },
 ];
 
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'space-invaders',
+    title: 'Space Invaders',
+    icon: './themes/Yaru/apps/space-invaders.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySpaceInvaders,
+  },
+];
+
 export default apps;
+export { games };
