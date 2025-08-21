@@ -12,6 +12,8 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayAsciiArt } from './components/apps/ascii_art';
+
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 
 import { displayQuoteGenerator } from './components/apps/quote_generator';
@@ -113,6 +115,14 @@ const apps = [
     screen: displayTicTacToe,
   },
   {
+    id: 'ascii-art',
+    title: 'ASCII Art',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAsciiArt,
+
     id: 'quote-generator',
     title: 'Quote Generator',
     icon: './themes/Yaru/apps/quote.svg',
@@ -120,6 +130,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+ 
   },
   {
     id: 'about-alex',
