@@ -75,11 +75,22 @@ export default function YouTubeApp() {
   }, [inputValue]);
 
   const sortedVideos = [...videos].sort((a, b) => {
+    switch (sortBy) {
+      case 'playlist':
+        return a.playlist.localeCompare(b.playlist);
+      case 'title':
+        return a.title.localeCompare(b.title);
+      case 'dateAsc':
+        return new Date(a.publishedAt) - new Date(b.publishedAt);
+      case 'date':
+      default:
+        return new Date(b.publishedAt) - new Date(a.publishedAt);
+
 
     if (sortBy === 'playlist') {
       return a.playlist.localeCompare(b.playlist);
+
     }
-    return new Date(b.publishedAt) - new Date(a.publishedAt);
   });
 
   const filteredVideos = sortedVideos.filter((video) =>
@@ -96,6 +107,22 @@ export default function YouTubeApp() {
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
+      <div className="p-2 flex justify-end space-x-2">
+        <label htmlFor="sort" className="self-center">
+          Sort by:
+        </label>
+        <select
+          id="sort"
+          className="text-black"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+        >
+          <option value="date">Newest First</option>
+          <option value="dateAsc">Oldest First</option>
+          <option value="title">Title (A-Z)</option>
+          <option value="playlist">Playlist</option>
+        </select>
+
       <div className="p-2 flex justify-between items-center space-x-2">
         <div className="flex-1 max-w-xs">
           <label htmlFor="youtube-search" className="sr-only">
