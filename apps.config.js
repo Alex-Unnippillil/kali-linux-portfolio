@@ -12,6 +12,7 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayClock } from './components/apps/clock';
 
 const TerminalApp = dynamic(
   () =>
@@ -75,6 +76,15 @@ const apps = [
     allowMaximize: false,
     defaultWidth: 25,
     defaultHeight: 40,
+  },
+  {
+    id: 'clock',
+    title: 'Clock',
+    icon: 'https://img.icons8.com/fluency/48/clock.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayClock,
   },
   {
     id: 'about-alex',
