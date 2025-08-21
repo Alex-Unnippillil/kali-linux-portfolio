@@ -299,9 +299,17 @@ function Skills() {
                         <img src="https://img.shields.io/badge/-Nodejs-339933?style=flat&logo=Node.js&logoColor=ffffff" alt="unnippillil node.js" className="m-1" />
                         <img src="https://img.shields.io/badge/jQuery-0769AD?style=flat&logo=jquery&logoColor=white" alt="unnippillil jquery" className="m-1" />
                         <img className="m-1" src="https://img.shields.io/badge/Hydrogen-7AB55C?logo=shopify&logoColor=fff" alt="unnippillil hydrogen" />
-                        <img className=" m-1" src="https://img.shields.io/badge/NIST-black?style=flat&logo=netapp&logoColor=ffffff" alt="unnippillil NIST" />
+                    <img className=" m-1" src="https://img.shields.io/badge/NIST-black?style=flat&logo=netapp&logoColor=ffffff" alt="unnippillil NIST" />
                     </div>
                 </div>
+            </div>
+            <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
+                <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
+                <img
+                    src="https://ghchart.rshah.org/Alex-Unnippillil"
+                    alt="Alex Unnippillil's GitHub contribution graph"
+                    className="w-full"
+                />
             </div>
             <div className="tracking-tight text-sm md:text-base w-10/12 emoji-list mt-4 flex">
                 <span className="list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight mr-4">
