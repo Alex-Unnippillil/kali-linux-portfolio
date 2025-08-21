@@ -12,6 +12,8 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayTodoChecklist } from './components/apps/todo_checklist';
+
 import { displayMusicPlayer } from './components/apps/music_player';
 
 import { displayAsciiArt } from './components/apps/ascii_art';
@@ -23,6 +25,8 @@ import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayShowcase } from './components/apps/showcase';
 
 import { displayProjectGallery } from './components/apps/project-gallery';
+
+
 
 const TerminalApp = dynamic(
   () =>
@@ -236,6 +240,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTodoist,
+  },
+  {
+    id: 'todo-checklist',
+    title: 'Todo Checklist',
+    icon: './themes/Yaru/apps/todoist.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTodoChecklist,
   },
   {
     id: 'settings',
