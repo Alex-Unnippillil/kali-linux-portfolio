@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const BlackjackApp = dynamic(
+  () =>
+    import('./components/apps/blackjack').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Blackjack' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Blackjack...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayBlackjack = (addFolder, openApp) => (
+  <BlackjackApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -104,6 +124,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'blackjack',
+    title: 'Blackjack',
+    icon: './themes/Yaru/apps/blackjack.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBlackjack,
   },
   {
     id: 'about-alex',
