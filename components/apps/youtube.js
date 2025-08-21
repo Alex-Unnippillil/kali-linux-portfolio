@@ -44,6 +44,8 @@ export default function YouTubeApp() {
               playlist: pl.title,
               publishedAt: item.snippet.publishedAt,
               url: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
+              thumbnail: item.snippet.thumbnails?.medium?.url,
+              channelTitle: item.snippet.channelTitle,
             });
           });
         }
@@ -87,23 +89,31 @@ export default function YouTubeApp() {
           <option value="playlist">Playlist</option>
         </select>
       </div>
-      <ul className="p-2 space-y-2">
+      <div className="p-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
         {sortedVideos.map((video) => (
-          <li key={video.id}>
-            <a
-              href={video.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline text-blue-400"
-            >
-              {video.title}
-            </a>
-            <div className="text-xs text-gray-300">
-              {video.playlist} • {new Date(video.publishedAt).toLocaleDateString()}
+          <a
+            key={video.id}
+            href={video.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block bg-ub-cool-grey hover:bg-ub-grey rounded overflow-hidden"
+          >
+            {video.thumbnail && (
+              <img
+                src={video.thumbnail}
+                alt={video.title}
+                className="w-full rounded-t"
+              />
+            )}
+            <div className="p-2">
+              <h3 className="text-sm font-medium line-clamp-2">{video.title}</h3>
+              <div className="text-xs text-gray-300">
+                {video.channelTitle} • {new Date(video.publishedAt).toLocaleDateString()}
+              </div>
             </div>
-          </li>
+          </a>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
