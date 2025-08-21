@@ -53,6 +53,33 @@ export class AllApplications extends React.Component {
                 query: ""
             };
         });
+
+    openApp = (objId) => {
+        let frequentApps = localStorage.getItem('frequentApps') ? JSON.parse(localStorage.getItem('frequentApps')) : [];
+        let currentApp = frequentApps.find(app => app.id === objId);
+        if (currentApp) {
+            frequentApps.forEach((app) => {
+                if (app.id === currentApp.id) {
+                    app.frequency += 1;
+                }
+            });
+        } else {
+            frequentApps.push({ id: objId, frequency: 1 });
+        }
+
+        frequentApps.sort((a, b) => {
+            if (a.frequency < b.frequency) {
+                return 1;
+            }
+            if (a.frequency > b.frequency) {
+                return -1;
+            }
+            return 0;
+        });
+
+        localStorage.setItem("frequentApps", JSON.stringify(frequentApps));
+
+        this.props.openApp(objId);
     }
 
     renderApps = () => {
@@ -79,6 +106,8 @@ export class AllApplications extends React.Component {
                 id: app.id,
                 icon: app.icon,
                 openApp: Array.isArray(app.apps) ? this.openFolder.bind(this, app) : this.props.openApp
+
+                openApp: this.openApp
             }
 
             appsJsx.push(
