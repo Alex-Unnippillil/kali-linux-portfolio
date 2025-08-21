@@ -69,6 +69,10 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayTerminalCalc,
+    resizable: false,
+    allowMaximize: false,
+    defaultWidth: 25,
+    defaultHeight: 40,
   },
   {
     id: 'about-alex',
