@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const AsteroidsApp = dynamic(
+  () =>
+    import('./components/apps/asteroids').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Asteroids' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Asteroids...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayAsteroids = (addFolder, openApp) => (
+  <AsteroidsApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -104,6 +124,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'asteroids',
+    title: 'Asteroids',
+    icon: './themes/Yaru/apps/asteroids.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAsteroids,
   },
   {
     id: 'about-alex',
