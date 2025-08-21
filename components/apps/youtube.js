@@ -4,6 +4,8 @@ const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
 export default function YouTubeApp() {
   const [videos, setVideos] = useState([]);
+  const [playlistInfos, setPlaylistInfos] = useState([]);
+  const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('date');
   const [inputValue, setInputValue] = useState('');
   const [query, setQuery] = useState('');
@@ -28,13 +30,14 @@ export default function YouTubeApp() {
         const playlists = playlistsData.items || [];
 
         const favoritesId = `LL${channelId}`; // Liked videos playlist
-        const playlistInfos = [
+        const infos = [
           ...playlists.map((p) => ({ id: p.id, title: p.snippet.title })),
           { id: favoritesId, title: 'Favorites' },
         ];
+        setPlaylistInfos(infos);
 
         const allVideos = [];
-        for (const pl of playlistInfos) {
+        for (const pl of infos) {
           const plRes = await fetch(
             `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${pl.id}&maxResults=50&key=${apiKey}`
           );
@@ -60,12 +63,19 @@ export default function YouTubeApp() {
     fetchData();
   }, [apiKey]);
 
+
+  const filteredVideos = videos.filter(
+    (v) => activeCategory === 'All' || v.playlist === activeCategory
+  );
+  const sortedVideos = [...filteredVideos].sort((a, b) => {
+
   useEffect(() => {
     const handler = setTimeout(() => setQuery(inputValue), 300);
     return () => clearTimeout(handler);
   }, [inputValue]);
 
   const sortedVideos = [...videos].sort((a, b) => {
+
     if (sortBy === 'playlist') {
       return a.playlist.localeCompare(b.playlist);
     }
@@ -115,6 +125,21 @@ export default function YouTubeApp() {
           </select>
         </div>
       </div>
+      <div className="overflow-x-auto flex space-x-4 p-2">
+        {['All', ...playlistInfos.map((p) => p.title)].map((title) => (
+          <button
+            key={title}
+            onClick={() => setActiveCategory(title)}
+            className={`whitespace-nowrap ${
+              activeCategory === title ? 'font-bold underline' : ''
+            }`}
+          >
+            {title}
+          </button>
+        ))}
+      </div>
+      <ul className="p-2 space-y-2">
+
 
       <div className="p-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
         {sortedVideos.map((video) => (
