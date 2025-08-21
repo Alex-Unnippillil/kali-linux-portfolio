@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const TetrisApp = dynamic(
+  () =>
+    import('./components/apps/tetris').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Tetris' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Tetris...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -72,6 +88,25 @@ const displayTerminalCalc = (addFolder, openApp) => (
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
+
+const displayTetris = (addFolder, openApp) => (
+  <TetrisApp addFolder={addFolder} openApp={openApp} />
+);
+
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'tetris',
+    title: 'Tetris',
+    icon: './themes/Yaru/apps/tetris.svg',
+    screen: displayTetris,
+  },
+];
 
 const apps = [
   {
@@ -104,6 +139,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'tetris',
+    title: 'Tetris',
+    icon: './themes/Yaru/apps/tetris.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTetris,
   },
   {
     id: 'about-alex',
@@ -197,4 +241,5 @@ const apps = [
   },
 ];
 
+export { games };
 export default apps;
