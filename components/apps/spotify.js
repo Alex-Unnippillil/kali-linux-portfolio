@@ -1,13 +1,17 @@
 import React from 'react';
+import { TwitterTimelineEmbed } from 'react-twitter-embed';
 
 export default function XApp() {
   return (
-    <iframe
-      src="https://twitter.com/AUnnippillil"
-      className="h-full w-full bg-ub-cool-grey"
-      title="AUnnippillil on X"
-      frameBorder="0"
-    />
+    <div className="h-full w-full overflow-auto bg-ub-cool-grey">
+      <TwitterTimelineEmbed
+        sourceType="profile"
+        screenName="AUnnippillil"
+        noHeader
+        noBorders
+        options={{ height: 600 }}
+      />
+    </div>
   );
 }
 
