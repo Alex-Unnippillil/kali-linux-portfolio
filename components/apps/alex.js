@@ -2,6 +2,9 @@ import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
+import dynamic from 'next/dynamic';
+
+const GitHubCalendar = dynamic(() => import('react-github-calendar'), { ssr: false });
 
 export class AboutAlex extends Component {
 
@@ -151,7 +154,7 @@ function About() {
             <div className="w-20 md:w-28 my-4 full">
                 <Image
                     className="w-full"
-                    src="/images/logos/bitmoji.png"
+                    src="/images/logos/fevicon.svg"
                     alt="Alex Unnippillil Logo"
                     width={256}
                     height={256}
@@ -254,6 +257,10 @@ function Skills() {
                         <img className="m-1" src="https://img.shields.io/badge/Wireshark-%230072C6.svg?logo=wireshark&logoColor=white" alt="alex wireshark" />
                         <img className=" m-1" src="https://img.shields.io/badge/OWASP-black?style=flat&logo=OWASP&logoColor=ffffff" alt="unnippillil OWASP" />
                         
+                        <img className="m-1" src="https://img.shields.io/badge/Nmap-004489?style=flat&logo=nmap&logoColor=white" alt="alex nmap" />
+                        <img className="m-1" src="https://img.shields.io/badge/Metasploit-1688C4?style=flat&logo=metasploit&logoColor=white" alt="alex metasploit" />
+                        <img className="m-1" src="https://img.shields.io/badge/Burp_Suite-FF6633?style=flat&logo=burpsuite&logoColor=white" alt="alex burp suite" />
+                        <img className="m-1" src="https://img.shields.io/badge/Splunk-000000?style=flat&logo=splunk&logoColor=white" alt="alex splunk" />
                       
                     </div>
                 </div>
@@ -269,6 +276,10 @@ function Skills() {
                         <img className="m-1" src="https://img.shields.io/badge/Unity-%23000000.svg?logo=unity&logoColor=white" alt="unity alex" />
                         <img className="m-1" src="https://img.shields.io/badge/Xcode-007ACC?logo=Xcode&logoColor=white" alt="xcode alex" />
                         <img className="m-1" src="https://img.shields.io/badge/Android%20Studio-3DDC84?logo=android-studio&logoColor=white" alt="alex android studio" />
+                        <img className="m-1" src="https://img.shields.io/badge/Visual_Studio_Code-007ACC?logo=visualstudiocode&logoColor=white" alt="alex vscode" />
+                        <img className="m-1" src="https://img.shields.io/badge/Ubuntu-E95420?logo=ubuntu&logoColor=white" alt="alex ubuntu" />
+                        <img className="m-1" src="https://img.shields.io/badge/Git-F05032?logo=git&logoColor=white" alt="alex git" />
+                        <img className="m-1" src="https://img.shields.io/badge/Postman-FF6C37?logo=postman&logoColor=white" alt="alex postman" />
                     </div>
                 </div>
             </div>
@@ -288,6 +299,10 @@ function Skills() {
                         <img src="https://img.shields.io/badge/CSS-1572B6?logo=css3&logoColor=fff" alt="unnippillil css" className="m-1" />
                         <img src="https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=fff" alt="unnippillil mysql" className="m-1" />
                         <img src="https://img.shields.io/badge/Java-%23ED8B00.svg?logo=openjdk&logoColor=white" alt="unnippillil Java" className="m-1" />
+                        <img className="m-1" src="https://img.shields.io/badge/Bash-121011?logo=gnubash&logoColor=white" alt="unnippillil bash" />
+                        <img className="m-1" src="https://img.shields.io/badge/Go-00ADD8?logo=go&logoColor=white" alt="unnippillil go" />
+                        <img className="m-1" src="https://img.shields.io/badge/Rust-000000?logo=rust&logoColor=white" alt="unnippillil rust" />
+                        <img className="m-1" src="https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white" alt="unnippillil typescript" />
                     </div>
                 </div>
                 <div className="px-2 flex flex-wrap items-start w-1/2">
@@ -300,16 +315,18 @@ function Skills() {
                         <img src="https://img.shields.io/badge/jQuery-0769AD?style=flat&logo=jquery&logoColor=white" alt="unnippillil jquery" className="m-1" />
                         <img className="m-1" src="https://img.shields.io/badge/Hydrogen-7AB55C?logo=shopify&logoColor=fff" alt="unnippillil hydrogen" />
                     <img className=" m-1" src="https://img.shields.io/badge/NIST-black?style=flat&logo=netapp&logoColor=ffffff" alt="unnippillil NIST" />
+                        <img className="m-1" src="https://img.shields.io/badge/Express.js-000000?logo=express&logoColor=white" alt="unnippillil express" />
+                        <img className="m-1" src="https://img.shields.io/badge/Bootstrap-7952B3?logo=bootstrap&logoColor=white" alt="unnippillil bootstrap" />
+                        <img className="m-1" src="https://img.shields.io/badge/Django-092E20?logo=django&logoColor=white" alt="unnippillil django" />
+                        <img className="m-1" src="https://img.shields.io/badge/TensorFlow-FF6F00?logo=tensorflow&logoColor=white" alt="unnippillil tensorflow" />
                     </div>
                 </div>
             </div>
             <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
                 <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
-                <img
-                    src="https://ghchart.rshah.org/Alex-Unnippillil"
-                    alt="Alex Unnippillil's GitHub contribution graph"
-                    className="w-full"
-                />
+                <div className="w-full overflow-auto">
+                    <GitHubCalendar username="Alex-Unnippillil" blockSize={14} blockMargin={4} color="#38BDF8" fontSize={16} />
+                </div>
             </div>
             <div className="tracking-tight text-sm md:text-base w-10/12 emoji-list mt-4 flex">
                 <span className="list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight mr-4">
@@ -321,18 +338,18 @@ function Skills() {
             </a>
 
             <a href="https://www.credly.com/badges/8a945539-5d36-4de4-b454-1989656b282f/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
-                <img src="https://images.credly.com/size/340x340/images/80d8a06a-c384-42bf-ad36-db81bce5adce/blob" border="0" alt="CompTIA Security+ Certificate" style={{width: "140px", height: "140px"}}/>
+                <img src="https://img.shields.io/badge/CompTIA_Security%2B-ED1C24?style=for-the-badge&logo=comptia&logoColor=white" alt="CompTIA Security+ Certificate"/>
             </a>
 
             <a href="https://www.credly.com/badges/783aed9a-91a7-4a2e-a4b8-11dbd0d25fc2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
-                <img src="https://images.credly.com/size/110x110/images/0bf0f2da-a699-4c82-82e2-56dcf1f2e1c7/image.png" border="0" alt="Google Cybersecurity Certificate" style={{width: "140px", height: "140px"}}/>
+                <img src="https://img.shields.io/badge/Google_Cybersecurity-1A73E8?style=for-the-badge&logo=google&logoColor=white" alt="Google Cybersecurity Certificate"/>
             </a>
 
             <a href="https://www.credly.com/badges/53415f6e-162e-414e-971d-942aefc755d2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
-                <img src="https://images.credly.com/size/340x340/images/70675aed-31be-4c30-add7-b99905a34005/image.png" border="0" alt="BM AI Developer Professional Certificate" style={{width: "120px", height: "120px"}}/>
+                <img src="https://img.shields.io/badge/IBM_AI_Developer-052FAD?style=for-the-badge&logo=ibm&logoColor=white" alt="IBM AI Developer Professional Certificate"/>
             </a>
             <a href="https://www.credly.com/badges/f1ec265d-6798-4fc0-b98e-ad5ac71f58c0" target="_blank" rel="noopener noreferrer" className="mr-4">
-                <img src="https://images.credly.com/size/110x110/images/9180921d-4a13-429e-9357-6f9706a554f0/image.png" border="0" alt="ISC2 Candidate" style={{width: "120px", height: "120px"}}/>
+                <img src="https://img.shields.io/badge/ISC2_Candidate-00A1E0?style=for-the-badge&logo=isc2&logoColor=white" alt="ISC2 Candidate"/>
             </a>
             </div>
                         
