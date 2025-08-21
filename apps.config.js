@@ -14,6 +14,8 @@ import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
 import { displayShowcase } from './components/apps/showcase';
 
+import { displayProjectGallery } from './components/apps/project-gallery';
+
 const TerminalApp = dynamic(
   () =>
     import('./components/apps/terminal').then((mod) => {
@@ -46,12 +48,32 @@ const CalcApp = dynamic(
   }
 );
 
+const TicTacToeApp = dynamic(
+  () =>
+    import('./components/apps/tictactoe').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded TicTacToe' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Tic Tac Toe...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
 
 const displayTerminalCalc = (addFolder, openApp) => (
   <CalcApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayTicTacToe = (addFolder, openApp) => (
+  <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -76,6 +98,15 @@ const apps = [
     allowMaximize: false,
     defaultWidth: 25,
     defaultHeight: 40,
+  },
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
   },
   {
     id: 'about-alex',
@@ -139,6 +170,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayShowcase,
+
+    id: 'project-gallery',
+    title: 'Project Gallery',
+    icon: './themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayProjectGallery,
+
   },
   {
     id: 'todoist',
