@@ -45,12 +45,17 @@ export class Calc extends Component {
         this.setState({ currentInput: e.target.value });
     }
 
+    appendTerminalRow = () => {
+        // React handles terminal rows via state; this is a no-op for compatibility.
+    }
+
     handleKeyDown = (e) => {
         const { history, historyIndex } = this.state;
         if (e.key === 'Enter') {
             const command = this.state.currentInput.trim();
             if (command.length === 0) return;
-            this.processCommand(command);
+            const rowId = this.state.lines.length + 2;
+            this.handleCommands(command, rowId);
         } else if (e.key === 'ArrowUp') {
             if (history.length === 0) return;
             const newIndex = historyIndex <= 0 ? history.length - 1 : historyIndex - 1;
@@ -68,7 +73,7 @@ export class Calc extends Component {
         }
     }
 
-    processCommand = (command) => {
+    handleCommands = (command, rowId) => {
         let result = '';
         switch (command) {
             case 'clear':
@@ -84,11 +89,13 @@ export class Calc extends Component {
                 result = this.evaluateExp(command);
         }
 
-        document.getElementById(`row-calculator-result-${rowId}`).textContent = result;
+        const resultEl = document.getElementById(`row-calculator-result-${rowId}`);
+        if (resultEl) {
+            resultEl.textContent = String(result);
+        }
         this.appendTerminalRow();
-=======
         this.setState(prev => ({
-            lines: [...prev.lines, { id: prev.lines.length, command, result }],
+            lines: [...prev.lines, { id: rowId, command, result: this.xss(String(result)) }],
             currentInput: '',
             history: [...prev.history, command],
             historyIndex: -1,
@@ -122,8 +129,6 @@ export class Calc extends Component {
         }
         return result;
     }
-    
-=======
 
     xss(str) {
         if (!str) return '';
@@ -164,7 +169,7 @@ export class Calc extends Component {
                                 <span className=" float-left whitespace-pre pb-1 opacity-100 font-normal tracking-wider">{line.command}</span>
                             </div>
                         </div>
-                        <div className="my-2 font-normal" dangerouslySetInnerHTML={{ __html: line.result }}></div>
+                        <div id={`row-calculator-result-${line.id}`} className="my-2 font-normal" dangerouslySetInnerHTML={{ __html: line.result }}></div>
                     </React.Fragment>
                 ))}
                 <div className=" flex p-2 text-ubt-grey opacity-100 mt-1 float-left font-normal "></div>
@@ -172,6 +177,7 @@ export class Calc extends Component {
                         <div className=" flex text-ubt-green h-1 mr-2"> {'$'} </div>
                     <div className="bg-transparent flex-1 overflow-hidden">
                         <input
+                            id={`calculator-input-${this.state.lines.length + 2}`}
                             ref={this.inputRef}
                             value={this.state.currentInput}
                             onChange={this.handleInputChange}
