@@ -12,6 +12,8 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayMusicPlayer } from './components/apps/music_player';
+
 import { displayAsciiArt } from './components/apps/ascii_art';
 
 import { displayResourceMonitor } from './components/apps/resource_monitor';
@@ -176,6 +178,19 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySpotify,
+  },
+  {
+    id: 'music-player',
+    title: 'Music Player',
+    icon: './themes/Yaru/apps/music.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayMusicPlayer,
+    resizable: false,
+    allowMaximize: false,
+    defaultWidth: 25,
+    defaultHeight: 40,
   },
   {
     id: 'youtube',
