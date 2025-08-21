@@ -47,8 +47,8 @@ const CalcApp = dynamic(
 
 const TicTacToeApp = dynamic(
   () =>
-    import('./components/apps/tictactoe').then((mod) => {
-      ReactGA.event({ category: 'Application', action: 'Loaded TicTacToe' });
+    import('./components/apps/tic-tac-toe').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Tic Tac Toe' });
       return mod.default;
     }),
   {
@@ -95,15 +95,6 @@ const apps = [
     allowMaximize: false,
     defaultWidth: 25,
     defaultHeight: 40,
-  },
-  {
-    id: 'tictactoe',
-    title: 'Tic Tac Toe',
-    icon: './themes/Yaru/apps/tictactoe.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayTicTacToe,
   },
   {
     id: 'about-alex',
@@ -197,4 +188,17 @@ const apps = [
   },
 ];
 
+const games = [
+  {
+    id: 'tic-tac-toe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tic-tac-toe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+];
+
 export default apps;
+export { games };
