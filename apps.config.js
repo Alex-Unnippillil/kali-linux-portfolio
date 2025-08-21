@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const BreakoutApp = dynamic(
+  () =>
+    import('./components/apps/breakout').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Breakout' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Breakout...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayBreakout = (addFolder, openApp) => (
+  <BreakoutApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -104,6 +124,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'breakout',
+    title: 'Breakout',
+    icon: './themes/Yaru/apps/breakout.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBreakout,
   },
   {
     id: 'about-alex',
