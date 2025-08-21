@@ -8,24 +8,51 @@ export class AllApplications extends React.Component {
         this.state = {
             query: "",
             apps: [],
+            unfilteredApps: [],
+            stack: [], // stack of previous folders
             category: 0 // 0 for all, 1 for frequent
         }
     }
 
     componentDidMount() {
         this.setState({
-            apps: this.props.apps
+            apps: this.props.apps,
+            unfilteredApps: this.props.apps
         })
     }
 
     handleChange = (e) => {
+        const baseApps = this.state.category === 0 ? this.state.unfilteredApps : this.props.apps;
         this.setState({
             query: e.target.value,
             apps: e.target.value === "" || e.target.value === null ?
-                this.props.apps : this.state.apps.filter(
+                baseApps : baseApps.filter(
                     (app) => app.title.toLowerCase().includes(e.target.value.toLowerCase())
                 )
         })
+    }
+
+    openFolder = (folder) => {
+        if (!Array.isArray(folder.apps)) return;
+        this.setState(prev => ({
+            stack: [...prev.stack, prev.unfilteredApps],
+            apps: folder.apps,
+            unfilteredApps: folder.apps,
+            query: ""
+        }));
+    }
+
+    goBack = () => {
+        this.setState(prev => {
+            if (prev.stack.length === 0) return {};
+            const previous = prev.stack[prev.stack.length - 1];
+            return {
+                stack: prev.stack.slice(0, -1),
+                apps: previous,
+                unfilteredApps: previous,
+                query: ""
+            };
+        });
     }
 
     renderApps = () => {
@@ -51,7 +78,7 @@ export class AllApplications extends React.Component {
                 name: app.title,
                 id: app.id,
                 icon: app.icon,
-                openApp: this.props.openApp
+                openApp: Array.isArray(app.apps) ? this.openFolder.bind(this, app) : this.props.openApp
             }
 
             appsJsx.push(
@@ -73,6 +100,7 @@ export class AllApplications extends React.Component {
         return (
             <div className={"absolute h-full top-7 w-full z-20 pl-12 justify-center md:pl-20 border-black border-opacity-60 bg-black bg-opacity-70"}>
                 <div className={"flex md:pr-20 pt-5 align-center justify-center"}>
+                    {this.state.stack.length > 0 && <div className="text-white mr-2 cursor-pointer" onClick={this.goBack}>Back</div>}
                     <div className={"flex w-2/3 h-full items-center pl-2 pr-2 bg-white border-black border-width-2 rounded-xl overflow-hidden md:w-1/3 "}>
                         <Image
                             className={"w-5 h-5"}
