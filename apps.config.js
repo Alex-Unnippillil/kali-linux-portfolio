@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const Game2048App = dynamic(
+  () =>
+    import('./components/apps/2048').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded 2048' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading 2048...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -72,6 +88,31 @@ const displayTerminalCalc = (addFolder, openApp) => (
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
+
+const display2048 = (addFolder, openApp) => (
+  <Game2048App addFolder={addFolder} openApp={openApp} />
+);
+
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+    id: '2048',
+    title: '2048',
+    icon: './themes/Yaru/apps/2048.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: display2048,
+  },
+];
 
 const apps = [
   {
@@ -96,15 +137,7 @@ const apps = [
     defaultWidth: 25,
     defaultHeight: 40,
   },
-  {
-    id: 'tictactoe',
-    title: 'Tic Tac Toe',
-    icon: './themes/Yaru/apps/tictactoe.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayTicTacToe,
-  },
+  ...games,
   {
     id: 'about-alex',
     title: 'About Alex',
@@ -197,4 +230,5 @@ const apps = [
   },
 ];
 
+export { games };
 export default apps;
