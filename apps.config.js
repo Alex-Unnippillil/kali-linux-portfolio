@@ -2,7 +2,8 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import ReactGA from 'react-ga4';
 
-import { displayX } from './components/apps/spotify';
+import { displayX } from './components/apps/x';
+import { displaySpotify } from './components/apps/spotify';
 import { displayVsCode } from './components/apps/vscode';
 import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/chrome';
@@ -109,6 +110,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayX,
+  },
+  {
+    id: 'spotify',
+    title: 'Spotify',
+    icon: './themes/Yaru/apps/spotify.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displaySpotify,
   },
   {
     id: 'todoist',
