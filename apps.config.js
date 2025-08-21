@@ -59,6 +59,22 @@ const TicTacToeApp = dynamic(
       </div>
     ),
   }
+  );
+
+const ChessApp = dynamic(
+  () =>
+    import('./components/apps/chess').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Chess' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Chess...
+      </div>
+    ),
+  }
 );
 
 const displayTerminal = (addFolder, openApp) => (
@@ -72,6 +88,31 @@ const displayTerminalCalc = (addFolder, openApp) => (
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
+
+const displayChess = (addFolder, openApp) => (
+  <ChessApp addFolder={addFolder} openApp={openApp} />
+);
+
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'chess',
+    title: 'Chess',
+    icon: './themes/Yaru/apps/chess.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayChess,
+  },
+];
 
 const apps = [
   {
@@ -96,15 +137,7 @@ const apps = [
     defaultWidth: 25,
     defaultHeight: 40,
   },
-  {
-    id: 'tictactoe',
-    title: 'Tic Tac Toe',
-    icon: './themes/Yaru/apps/tictactoe.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayTicTacToe,
-  },
+  ...games,
   {
     id: 'about-alex',
     title: 'About Alex',
@@ -197,4 +230,5 @@ const apps = [
   },
 ];
 
+export { games };
 export default apps;
