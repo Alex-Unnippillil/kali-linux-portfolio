@@ -1,19 +1,5 @@
 import React, { useState } from 'react';
 const Parser = require('expr-eval').Parser;
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  LineElement,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-
-if (typeof window !== 'undefined') {
-  ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement, Tooltip, Legend);
-}
 
 // configure parser similar to previous implementation
 const parser = new Parser({
@@ -47,50 +33,12 @@ export const evaluateExpression = (expression) => {
 
 const Calc = () => {
   const [display, setDisplay] = useState('');
-  const [showGraph, setShowGraph] = useState(false);
-  const [graphData, setGraphData] = useState(null);
-
-  const generateGraph = (expression) => {
-    try {
-      const expr = parser.parse(expression);
-      const fn = expr.toJSFunction('x');
-      const labels = [];
-      const data = [];
-      for (let x = -10; x <= 10; x += 1) {
-        labels.push(x);
-        data.push(fn(x));
-      }
-      return {
-        labels,
-        datasets: [
-          {
-            label: 'f(x)',
-            data,
-            borderColor: 'rgb(34,197,94)',
-            backgroundColor: 'rgba(34,197,94,0.3)',
-          },
-        ],
-      };
-    } catch (e) {
-      return null;
-    }
-  };
 
   const handleClick = (btn) => {
     if (btn.type === 'clear') {
       setDisplay('');
-      setShowGraph(false);
     } else if (btn.label === '=') {
       setDisplay(evaluateExpression(display));
-      setShowGraph(false);
-    } else if (btn.type === 'graph') {
-      const data = generateGraph(display);
-      if (data) {
-        setGraphData(data);
-        setShowGraph(true);
-      } else {
-        setDisplay('Invalid Expression');
-      }
     } else {
       setDisplay((prev) => prev + (btn.value || btn.label));
     }
@@ -103,22 +51,22 @@ const Calc = () => {
     { label: '0' }, { label: '.' }, { label: '=' }, { label: '+' },
     { label: '(' }, { label: ')' }, { label: '^' }, { label: 'sqrt', value: 'sqrt(' },
     { label: 'sin', value: 'sin(' }, { label: 'cos', value: 'cos(' }, { label: 'tan', value: 'tan(' }, { label: 'log', value: 'log(' },
-    { label: 'x' }, { label: 'Graph', type: 'graph', colSpan: 2 }, { label: 'C', type: 'clear', colSpan: 1 },
+    { label: 'C', type: 'clear', colSpan: 2 },
   ];
 
   return (
-    <div className="w-72 mx-auto p-4 bg-gray-900 text-white rounded-lg shadow-lg">
+    <div className="h-full w-full p-4 bg-gray-900 text-white flex flex-col">
       <div
         data-testid="calc-display"
-        className="mb-4 h-10 bg-black text-right px-2 py-1 rounded overflow-x-auto"
+        className="mb-4 h-16 bg-black text-right px-2 py-1 rounded overflow-x-auto flex items-end justify-end text-2xl"
       >
         {display}
       </div>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-2 flex-grow">
         {buttons.map((btn, idx) => (
           <button
             key={idx}
-            className={`bg-gray-700 hover:bg-gray-600 p-2 rounded text-sm sm:text-xl ${
+            className={`bg-gray-700 hover:bg-gray-600 rounded text-xl flex items-center justify-center ${
               btn.colSpan ? `col-span-${btn.colSpan}` : ''
             }`}
             onClick={() => handleClick(btn)}
@@ -127,11 +75,6 @@ const Calc = () => {
           </button>
         ))}
       </div>
-      {showGraph && graphData && (
-        <div className="mt-4 bg-white p-2 rounded">
-          <Line data={graphData} />
-        </div>
-      )}
     </div>
   );
 };
