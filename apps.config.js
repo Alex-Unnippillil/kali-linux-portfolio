@@ -12,6 +12,7 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayShowcase } from './components/apps/showcase';
 
 const TerminalApp = dynamic(
   () =>
@@ -129,6 +130,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayYouTube,
+  },
+  {
+    id: 'showcase',
+    title: '3D Showcase',
+    icon: './themes/Yaru/apps/showcase.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: true,
+    screen: displayShowcase,
   },
   {
     id: 'todoist',
