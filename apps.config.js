@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const NonogramApp = dynamic(
+  () =>
+    import('./components/apps/nonogram').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Nonogram' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Nonogram...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayNonogram = (addFolder, openApp) => (
+  <NonogramApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -104,6 +124,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'nonogram',
+    title: 'Nonogram',
+    icon: './themes/Yaru/apps/nonogram.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNonogram,
   },
   {
     id: 'about-alex',
@@ -197,4 +226,7 @@ const apps = [
   },
 ];
 
+const games = apps.filter((app) => ['tictactoe', 'nonogram'].includes(app.id));
+
+export { games };
 export default apps;
