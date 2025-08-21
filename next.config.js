@@ -9,15 +9,10 @@ const ContentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline'",
   // External scripts required for embedded timelines
   "script-src 'self' https://platform.twitter.com",
-  // Allow outbound connections for embeds and for the in-browser Chrome app
-  "connect-src 'self' https://* http://* ws://* wss://*",
-  // Permit iframes from any website so the Chrome and StackBlitz apps can load arbitrary content
-  "frame-src 'self' https://* http://*",
-
-  // Allow outbound connections for embeds
-  "connect-src 'self' https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.google.com https://stackblitz.com",
-  // Allow embedding external sites such as StackBlitz, Google and X
-  "frame-src 'self' https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com",
+  // Allow outbound connections for embeds, the in-browser Chrome app, and specific providers
+  "connect-src 'self' https://* http://* ws://* wss://* https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.google.com https://stackblitz.com",
+  // Allow iframes from any website and specific providers so the Chrome and StackBlitz apps can load arbitrary content
+  "frame-src 'self' https://* http://* https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com",
 
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
