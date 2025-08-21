@@ -12,6 +12,7 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayImageViewer } from './components/apps/image_viewer';
 
 const TerminalApp = dynamic(
   () =>
@@ -158,6 +159,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayYouTube,
+  },
+  {
+    id: 'image-viewer',
+    title: 'Image Viewer',
+    icon: './themes/Yaru/apps/image-viewer.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayImageViewer,
   },
   {
     id: 'todoist',
