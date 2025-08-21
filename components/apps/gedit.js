@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
-import emailjs from '@emailjs/browser';
 
 export class Gedit extends Component {
 
@@ -15,10 +14,6 @@ export class Gedit extends Component {
             nameError: false,
             messageError: false,
         }
-    }
-
-    componentDidMount() {
-        emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
     }
 
     handleChange = (field) => (e) => {
@@ -47,16 +42,14 @@ export class Gedit extends Component {
 
         this.setState({ sending: true });
 
-        const serviceID = process.env.NEXT_PUBLIC_SERVICE_ID;
-        const templateID = process.env.NEXT_PUBLIC_TEMPLATE_ID;
-        const templateParams = {
-            'name': name,
-            'subject': subject,
-            'message': message,
-        }
+        try {
+            const res = await fetch('/api/contact', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, subject, message }),
+            });
 
-        emailjs.send(serviceID, templateID, templateParams)
-            .then(() => {
+            if (res.ok) {
                 this.setState({ sending: false, name: '', subject: '', message: '' });
                 document.getElementById('close-gedit')?.click();
 
@@ -64,11 +57,14 @@ export class Gedit extends Component {
                     category: "contact",
                     action: "submit_success",
                 });
-            })
-            .catch(() => {
+            } else {
                 this.setState({ sending: false });
                 document.getElementById('close-gedit')?.click();
-            });
+            }
+        } catch (e) {
+            this.setState({ sending: false });
+            document.getElementById('close-gedit')?.click();
+        }
 
     }
 
