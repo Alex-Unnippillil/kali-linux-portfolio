@@ -12,6 +12,7 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayNotes } from './components/apps/notes';
 
 const TerminalApp = dynamic(
   () =>
@@ -195,6 +196,16 @@ const apps = [
     desktop_shortcut: true,
     screen: displayGedit,
   },
+  {
+    id: 'notes',
+    title: 'Notes',
+    icon: 'https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/notepad.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNotes,
+  },
+
 ];
 
 export default apps;
