@@ -105,6 +105,16 @@ const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
 
+const tictactoeApp = {
+  id: 'tictactoe',
+  title: 'Tic Tac Toe',
+  icon: './themes/Yaru/apps/tictactoe.svg',
+  disabled: false,
+  favourite: false,
+  desktop_shortcut: false,
+  screen: displayTicTacToe,
+};
+
 const display2048 = (addFolder, openApp) => (
   <Game2048App addFolder={addFolder} openApp={openApp} />
 );
@@ -153,6 +163,8 @@ const apps = [
     defaultWidth: 25,
     defaultHeight: 40,
   },
+  tictactoeApp,
+
   ...games,
   {
     id: 'converter',
@@ -319,6 +331,9 @@ const apps = [
     screen: displayGedit,
   },
 ];
+
+export const games = [tictactoeApp];
+
 
 export { games };
 export default apps;

@@ -8,6 +8,12 @@ export class AllApplications extends React.Component {
         this.state = {
             query: "",
             apps: [],
+            category: 0, // 0 for all, 1 for frequent
+            folders: [
+                { id: 'games', title: 'Games', icon: './themes/Yaru/system/folder.png', isFolder: true }
+            ],
+            currentFolder: null
+
             unfilteredApps: [],
             stack: [], // stack of previous folders
             category: 0 // 0 for all, 1 for frequent
@@ -22,6 +28,31 @@ export class AllApplications extends React.Component {
     }
 
     handleChange = (e) => {
+        const value = e.target.value;
+        const sourceApps = this.state.currentFolder ? this.props[this.state.currentFolder] : this.props.apps;
+        this.setState({
+            query: value,
+            apps: value === "" || value === null
+                ? sourceApps
+                : sourceApps.filter((app) => app.title.toLowerCase().includes(value.toLowerCase()))
+        })
+    }
+
+    openFolder = (id) => {
+        this.setState({
+            currentFolder: id,
+            query: "",
+            category: 0,
+            apps: this.props[id] || []
+        })
+    }
+
+    closeFolder = () => {
+        this.setState({
+            currentFolder: null,
+            query: "",
+            apps: this.props.apps
+
         const baseApps = this.state.category === 0 ? this.state.unfilteredApps : this.props.apps;
         this.setState({
             query: e.target.value,
@@ -99,8 +130,30 @@ export class AllApplications extends React.Component {
             return frequentApps;
         }
 
-        let apps = this.state.category === 0 ? [...this.state.apps] : getFrequentApps();
-        apps.forEach((app, index) => {
+        let apps = [];
+        if (this.state.currentFolder) {
+            apps = [...this.state.apps];
+        } else {
+            apps = this.state.category === 0 ? [...this.state.apps] : getFrequentApps();
+            const gameIds = (this.props.games || []).map(g => g.id);
+            apps = apps.filter(app => !gameIds.includes(app.id));
+        }
+
+        if (!this.state.currentFolder) {
+            this.state.folders.forEach((folder, index) => {
+                const fProps = {
+                    name: folder.title,
+                    id: folder.id,
+                    icon: folder.icon,
+                    openApp: this.openFolder
+                };
+                appsJsx.push(
+                    <UbuntuApp key={`folder-${index}`} {...fProps} />
+                );
+            });
+        }
+
+        apps.forEach((app) => {
             const props = {
                 name: app.title,
                 id: app.id,
@@ -111,7 +164,7 @@ export class AllApplications extends React.Component {
             }
 
             appsJsx.push(
-                <UbuntuApp key={index} {...props} />
+                <UbuntuApp key={app.id} {...props} />
             );
         });
         return appsJsx;
@@ -145,21 +198,28 @@ export class AllApplications extends React.Component {
                             onChange={this.handleChange} />
                     </div>
                 </div>
+                {this.state.currentFolder && (
+                    <div className={"flex md:px-20 px-5 pt-4"}>
+                        <button className={"text-white"} onClick={this.closeFolder}>Back</button>
+                    </div>
+                )}
                 <div className={"grid md:grid-cols-6 md:grid-rows-3 grid-cols-3 grid-rows-6 md:gap-4 gap-1 md:px-20 px-5 pt-10 justify-center"}>
                     {this.renderApps()}
                 </div>
-                <div className={"flex align-center justify-center w-full fixed bottom-0 mb-15 pr-20  md:pr-20 "}>
-                    <div className={"w-1/4 text-center group text-white bg-transparent cursor-pointer items-center"} onClick={this.handleSwitch.bind(this, 1)}>
-                        <h4>Frequent</h4>
-                        {this.state.category === 1 ? <div className={"h-1 mt-1 bg-ub-gedit-light self-center"} />
-                            : <div className={"h-1 mt-1 bg-transparent group-hover:bg-white "} />}
+                {!this.state.currentFolder && (
+                    <div className={"flex align-center justify-center w-full fixed bottom-0 mb-15 pr-20  md:pr-20 "}>
+                        <div className={"w-1/4 text-center group text-white bg-transparent cursor-pointer items-center"} onClick={this.handleSwitch.bind(this, 1)}>
+                            <h4>Frequent</h4>
+                            {this.state.category === 1 ? <div className={"h-1 mt-1 bg-ub-gedit-light self-center"} />
+                                : <div className={"h-1 mt-1 bg-transparent group-hover:bg-white "} />}
+                        </div>
+                        <div className={"w-1/4 text-center group text-white bg-transparent cursor-pointer items-center"} onClick={this.handleSwitch.bind(this, 0)}>
+                            <h4>All</h4>
+                            {this.state.category === 0 ? <div className={"h-1 mt-1 bg-ub-gedit-light self-center"} />
+                                : <div className={"h-1 mt-1 bg-transparent group-hover:bg-white"} />}
+                        </div>
                     </div>
-                    <div className={"w-1/4 text-center group text-white bg-transparent cursor-pointer items-center"} onClick={this.handleSwitch.bind(this, 0)}>
-                        <h4>All</h4>
-                        {this.state.category === 0 ? <div className={"h-1 mt-1 bg-ub-gedit-light self-center"} />
-                            : <div className={"h-1 mt-1 bg-transparent group-hover:bg-white"} />}
-                    </div>
-                </div>
+                )}
             </div>
         )
     }
