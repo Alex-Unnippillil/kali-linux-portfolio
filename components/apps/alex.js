@@ -2,6 +2,8 @@ import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
+import { ActivityCalendar } from 'react-activity-calendar';
+import useSWR from 'swr';
 
 export class AboutAlex extends Component {
 
@@ -305,11 +307,7 @@ function Skills() {
             </div>
             <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
                 <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
-                <img
-                    src="https://ghchart.rshah.org/Alex-Unnippillil"
-                    alt="Alex Unnippillil's GitHub contribution graph"
-                    className="w-full"
-                />
+                <GitHubContributions username="Alex-Unnippillil" />
             </div>
             <div className="tracking-tight text-sm md:text-base w-10/12 emoji-list mt-4 flex">
                 <span className="list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight mr-4">
@@ -652,4 +650,36 @@ function Resume() {
             </p>
         </object>
     )
+}
+
+function GitHubContributions({ username }) {
+    const fetcher = (url) => fetch(url).then((res) => res.json());
+    const { data, error } = useSWR(`https://github-contributions-api.jogruber.de/v4/${username}`, fetcher);
+
+    if (error) {
+        return <div className="text-center">Failed to load contributions.</div>;
+    }
+
+    if (!data) {
+        return <div className="text-center">Loading contributions...</div>;
+    }
+
+    return (
+        <ActivityCalendar
+            data={data.contributions}
+            style={{ width: '100%' }}
+            eventHandlers={{
+                onClick: () => (activity) =>
+                    window.open(
+                        `https://github.com/${username}?tab=overview&from=${activity.date}&to=${activity.date}`,
+                        '_blank'
+                    )
+            }}
+            renderBlock={(block, activity) =>
+                React.cloneElement(block, {
+                    title: `${activity.count} contributions on ${activity.date}\nClick to see details`
+                })
+            }
+        />
+    );
 }
