@@ -5,15 +5,15 @@ import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 
 export class Window extends Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.id = null;
         this.startX = 60;
         this.startY = 10;
         this.state = {
             cursorType: "cursor-default",
-            width: 60,
-            height: 85,
+            width: props.defaultWidth || 60,
+            height: props.defaultHeight || 85,
             closed: false,
             maximized: false,
             parentSize: {
@@ -41,7 +41,10 @@ export class Window extends Component {
     }
 
     setDefaultWindowDimenstion = () => {
-        if (window.innerWidth < 640) {
+        if (this.props.defaultHeight && this.props.defaultWidth) {
+            this.setState({ height: this.props.defaultHeight, width: this.props.defaultWidth }, this.resizeBoundries);
+        }
+        else if (window.innerWidth < 640) {
             this.setState({ height: 60, width: 85 }, this.resizeBoundries);
         }
         else {
@@ -75,10 +78,12 @@ export class Window extends Component {
     }
 
     handleVerticleResize = () => {
+        if (this.props.resizable === false) return;
         this.setState({ height: this.state.height + 0.1 }, this.resizeBoundries);
     }
 
     handleHorizontalResize = () => {
+        if (this.props.resizable === false) return;
         this.setState({ width: this.state.width + 0.1 }, this.resizeBoundries);
     }
 
@@ -135,6 +140,7 @@ export class Window extends Component {
     }
 
     maximizeWindow = () => {
+        if (this.props.allowMaximize === false) return;
         if (this.state.maximized) {
             this.restoreWindow();
         }
@@ -177,10 +183,10 @@ export class Window extends Component {
                     className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                     id={this.id}
                 >
-                    <WindowYBorder resize={this.handleHorizontalResize} />
-                    <WindowXBorder resize={this.handleVerticleResize} />
+                    {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
+                    {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                     <WindowTopBar title={this.props.title} />
-                    <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} />
+                    <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
                     {(this.id === "settings"
                         ? <Settings changeBackgroundImage={this.props.changeBackgroundImage} currBgImgName={this.props.bg_image_name} />
                         : <WindowMainScreen screen={this.props.screen} title={this.props.title}
@@ -251,32 +257,32 @@ export function WindowEditButtons(props) {
                     sizes="20px"
                 />
             </span>
-            {
-                (props.isMaximised
-                    ?
-                    <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
-                        <NextImage
-                            src="/themes/Yaru/window/window-restore-symbolic.svg"
-                            alt="Kali window restore"
-                            className="h-5 w-5 inline"
-                            width={20}
-                            height={20}
-                            sizes="20px"
-                        />
-                    </span>
-                    :
-                    <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
-                        <NextImage
-                            src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                            alt="Kali window maximize"
-                            className="h-5 w-5 inline"
-                            width={20}
-                            height={20}
-                            sizes="20px"
-                        />
-                    </span>
-                )
-            }
+            {props.allowMaximize && (
+                props.isMaximised
+                    ? (
+                        <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
+                            <NextImage
+                                src="/themes/Yaru/window/window-restore-symbolic.svg"
+                                alt="Kali window restore"
+                                className="h-5 w-5 inline"
+                                width={20}
+                                height={20}
+                                sizes="20px"
+                            />
+                        </span>
+                    ) : (
+                        <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
+                            <NextImage
+                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
+                                alt="Kali window maximize"
+                                className="h-5 w-5 inline"
+                                width={20}
+                                height={20}
+                                sizes="20px"
+                            />
+                        </span>
+                    )
+            )}
             <button tabIndex="-1" id={`close-${props.id}`} className="mx-1.5 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.close}>
                 <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"
