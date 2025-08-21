@@ -11,6 +11,7 @@ import { displayTrash } from './components/apps/trash';
 import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
+import { displayYouTube } from './components/apps/youtube';
 
 const TerminalApp = dynamic(
   () =>
@@ -119,6 +120,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySpotify,
+  },
+  {
+    id: 'youtube',
+    title: 'YouTube',
+    icon: './themes/Yaru/apps/youtube.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayYouTube,
   },
   {
     id: 'todoist',
