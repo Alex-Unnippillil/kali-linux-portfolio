@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const PlatformerApp = dynamic(
+  () =>
+    import('./components/apps/platformer').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Platformer' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Platformer...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayPlatformer = (addFolder, openApp) => (
+  <PlatformerApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -104,6 +124,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'platformer',
+    title: 'Platformer',
+    icon: './themes/Yaru/apps/platformer.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPlatformer,
   },
   {
     id: 'about-alex',
