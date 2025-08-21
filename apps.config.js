@@ -73,6 +73,16 @@ const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
 
+const tictactoeApp = {
+  id: 'tictactoe',
+  title: 'Tic Tac Toe',
+  icon: './themes/Yaru/apps/tictactoe.svg',
+  disabled: false,
+  favourite: false,
+  desktop_shortcut: false,
+  screen: displayTicTacToe,
+};
+
 const apps = [
   {
     id: 'chrome',
@@ -96,15 +106,7 @@ const apps = [
     defaultWidth: 25,
     defaultHeight: 40,
   },
-  {
-    id: 'tictactoe',
-    title: 'Tic Tac Toe',
-    icon: './themes/Yaru/apps/tictactoe.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayTicTacToe,
-  },
+  tictactoeApp,
   {
     id: 'about-alex',
     title: 'About Alex',
@@ -196,5 +198,7 @@ const apps = [
     screen: displayGedit,
   },
 ];
+
+export const games = [tictactoeApp];
 
 export default apps;
