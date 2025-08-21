@@ -1,14 +1,20 @@
 import React from 'react';
+import dynamic from 'next/dynamic';
+
+// Load the Twitter embed only on the client to avoid SSR issues.
+const TwitterTimelineEmbed = dynamic(
+  () => import('react-twitter-embed').then((mod) => mod.TwitterTimelineEmbed),
+  { ssr: false }
+);
 
 export default function XApp() {
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey">
-      <iframe
-        src="https://platform.twitter.com/widgets/timeline.html?screen_name=AUnnippillil&ref_src=twsrc%5Etfw&chrome=noheader%20noborders"
-        title="X Timeline"
+      <TwitterTimelineEmbed
+        sourceType="profile"
+        screenName="AUnnippillil"
+        options={{ chrome: 'noheader noborders' }}
         className="w-full h-full"
-        frameBorder="0"
-        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
       />
     </div>
   );
