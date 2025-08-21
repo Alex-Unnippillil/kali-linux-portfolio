@@ -94,4 +94,24 @@ describe('YouTubeApp', () => {
       'React Tutorial',
     ]);
   });
+
+  it('allows toggling sort direction', async () => {
+    const user = userEvent.setup();
+    render(<YouTubeApp initialVideos={mockVideos} />);
+    const getTitles = () =>
+      screen.getAllByRole('link').map((a) => a.textContent);
+
+    expect(getTitles()).toEqual([
+      'Cooking with React',
+      'React Tutorial',
+      'Advanced React',
+    ]);
+
+    await user.click(screen.getByLabelText(/toggle sort direction/i));
+    expect(getTitles()).toEqual([
+      'Advanced React',
+      'React Tutorial',
+      'Cooking with React',
+    ]);
+  });
 });

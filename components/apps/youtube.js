@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
@@ -9,8 +9,10 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const [videos, setVideos] = useState(initialVideos);
   const [playlists, setPlaylists] = useState([]); // [{id,title}]
   const [activeCategory, setActiveCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('date');
+  const [sortKey, setSortKey] = useState('date'); // 'date' | 'title' | 'playlist'
+  const [sortDir, setSortDir] = useState('desc'); // 'asc' | 'desc'
   const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -21,6 +23,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
     if (!apiKey || initialVideos.length) return;
 
     async function fetchData() {
+      setLoading(true);
       try {
         const channelRes = await fetch(
           `https://www.googleapis.com/youtube/v3/channels?part=snippet&forHandle=${CHANNEL_HANDLE}&key=${apiKey}`
@@ -33,22 +36,28 @@ export default function YouTubeApp({ initialVideos = [] }) {
           `https://www.googleapis.com/youtube/v3/playlists?part=snippet&channelId=${channelId}&maxResults=50&key=${apiKey}`
         );
         const playlistsData = await playlistsRes.json();
-        const list = playlistsData.items?.map((p) => ({
-          id: p.id,
-          title: p.snippet.title,
-        })) || [];
+        const list =
+          playlistsData.items?.map((p) => ({
+            id: p.id,
+            title: p.snippet.title,
+          })) || [];
 
         // Include the automatically generated "Liked videos" playlist
         const favoritesId = `LL${channelId}`;
         list.push({ id: favoritesId, title: 'Favorites' });
         setPlaylists(list);
 
-        const allVideos = [];
-        for (const pl of list) {
-          const itemsRes = await fetch(
+        // Fetch all playlist items concurrently for faster load times.
+        const itemsPromises = list.map((pl) =>
+          fetch(
             `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${pl.id}&maxResults=50&key=${apiKey}`
-          );
-          const itemsData = await itemsRes.json();
+          ).then((res) => res.json())
+        );
+
+        const itemsResults = await Promise.all(itemsPromises);
+        const allVideos = [];
+        itemsResults.forEach((itemsData, idx) => {
+          const pl = list[idx];
           itemsData.items?.forEach((item) => {
             const id = item.snippet.resourceId.videoId;
             allVideos.push({
@@ -61,11 +70,13 @@ export default function YouTubeApp({ initialVideos = [] }) {
               url: `https://www.youtube.com/watch?v=${id}`,
             });
           });
-        }
+        });
         setVideos(allVideos);
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Failed to load YouTube data', err);
+      } finally {
+        setLoading(false);
       }
     }
 
@@ -81,6 +92,48 @@ export default function YouTubeApp({ initialVideos = [] }) {
     }
   }, [initialVideos]);
 
+  const categories = useMemo(
+    () => [
+      'All',
+      ...Array.from(
+        new Set([
+          ...playlists.map((p) => p.title),
+          ...videos.map((v) => v.playlist),
+        ])
+      ),
+    ],
+    [playlists, videos]
+  );
+
+  const filtered = useMemo(
+    () =>
+      videos
+        .filter(
+          (v) => activeCategory === 'All' || v.playlist === activeCategory
+        )
+        .filter((v) => v.title.toLowerCase().includes(search.toLowerCase())),
+    [videos, activeCategory, search]
+  );
+
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      let comparison = 0;
+      switch (sortKey) {
+        case 'title':
+          comparison = a.title.localeCompare(b.title);
+          break;
+        case 'playlist':
+          comparison = a.playlist.localeCompare(b.playlist);
+          break;
+        case 'date':
+        default:
+          comparison =
+            new Date(a.publishedAt) - new Date(b.publishedAt);
+      }
+      return sortDir === 'asc' ? comparison : -comparison;
+    });
+  }, [filtered, sortKey, sortDir]);
+
   if (!apiKey && videos.length === 0) {
     return (
       <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white p-2">
@@ -89,30 +142,10 @@ export default function YouTubeApp({ initialVideos = [] }) {
     );
   }
 
-  const categories = ['All', ...Array.from(new Set([...playlists.map((p) => p.title), ...videos.map((v) => v.playlist)]))];
-
-  const filtered = videos
-    .filter((v) => activeCategory === 'All' || v.playlist === activeCategory)
-    .filter((v) => v.title.toLowerCase().includes(search.toLowerCase()));
-
-  const sorted = [...filtered].sort((a, b) => {
-    switch (sortBy) {
-      case 'dateAsc':
-        return new Date(a.publishedAt) - new Date(b.publishedAt);
-      case 'title':
-        return a.title.localeCompare(b.title);
-      case 'playlist':
-        return a.playlist.localeCompare(b.playlist);
-      case 'date':
-      default:
-        return new Date(b.publishedAt) - new Date(a.publishedAt);
-    }
-  });
-
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
       {/* Search + sorting */}
-      <div className="p-2 flex items-center space-x-2">
+      <div className="p-2 sticky top-0 z-10 flex flex-wrap items-center gap-2 bg-ub-cool-grey">
         <input
           placeholder="Search"
           className="flex-1 text-black px-2 py-1 rounded"
@@ -122,17 +155,31 @@ export default function YouTubeApp({ initialVideos = [] }) {
         <label htmlFor="sort" className="sr-only">
           Sort by
         </label>
-        <select
-          id="sort"
-          className="text-black px-2 py-1 rounded"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-        >
-          <option value="date">Newest First</option>
-          <option value="dateAsc">Oldest First</option>
-          <option value="title">Title (A-Z)</option>
-          <option value="playlist">Playlist</option>
-        </select>
+        <div className="flex items-center space-x-1">
+          <select
+            id="sort"
+            className="text-black px-2 py-1 rounded"
+            value={sortKey}
+            onChange={(e) => {
+              const key = e.target.value;
+              setSortKey(key);
+              setSortDir(key === 'date' ? 'desc' : 'asc');
+            }}
+          >
+            <option value="date">Date</option>
+            <option value="title">Title</option>
+            <option value="playlist">Playlist</option>
+          </select>
+          <button
+            aria-label="Toggle sort direction"
+            className="p-1 rounded bg-white/20 text-black"
+            onClick={() =>
+              setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+            }
+          >
+            {sortDir === 'asc' ? '▲' : '▼'}
+          </button>
+        </div>
       </div>
 
       {/* Category tabs */}
@@ -151,10 +198,19 @@ export default function YouTubeApp({ initialVideos = [] }) {
       </div>
 
       {/* Video list */}
-      <div className="p-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="p-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {sorted.map((video) => (
-          <div key={video.id} data-testid="video-card" className="flex flex-col space-y-1">
-            <a href={video.url} target="_blank" rel="noreferrer" className="block">
+          <div
+            key={video.id}
+            data-testid="video-card"
+            className="flex flex-col space-y-1 bg-black/20 p-2 rounded transition hover:shadow-md"
+          >
+            <a
+              href={video.url}
+              target="_blank"
+              rel="noreferrer"
+              className="block"
+            >
               {video.thumbnail && (
                 <img src={video.thumbnail} alt={video.title} className="w-full rounded" />
               )}
@@ -166,6 +222,9 @@ export default function YouTubeApp({ initialVideos = [] }) {
           </div>
         ))}
       </div>
+      {loading && (
+        <div className="p-2 text-center text-sm text-gray-300">Loading…</div>
+      )}
     </div>
   );
 }
