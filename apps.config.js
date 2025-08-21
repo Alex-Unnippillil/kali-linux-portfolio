@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const SnakeApp = dynamic(
+  () =>
+    import('./components/apps/snake').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Snake' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Snake...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displaySnake = (addFolder, openApp) => (
+  <SnakeApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -194,6 +214,21 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayGedit,
+  },
+];
+
+export const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'snake',
+    title: 'Snake',
+    icon: './themes/Yaru/apps/snake.svg',
+    screen: displaySnake,
   },
 ];
 
