@@ -67,9 +67,9 @@ export class Terminal extends Component {
 
   childDirectories = parent => (
     <div className="flex justify-start flex-wrap">
-      {this.child_directories[parent].map(file => (
-        <span key={file} className="font-bold mr-2 text-ubt-blue">'{file}'</span>
-      ))}
+        {this.child_directories[parent].map(file => (
+          <span key={file} className="font-bold mr-2 text-ubt-blue">&apos;{file}&apos;</span>
+        ))}
     </div>
   );
 
@@ -104,7 +104,7 @@ export class Terminal extends Component {
         } else if (rest === '.' || rest === '..' || rest === '../') {
           result = (
             <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">Type 'cd' to go back 😅</pre>
+                <pre className="whitespace-pre-wrap">Type &apos;cd&apos; to go back 😅</pre>
             </div>
           );
         } else {

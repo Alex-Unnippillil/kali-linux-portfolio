@@ -158,7 +158,7 @@ export class Calc extends Component {
             <div className="h-full w-full bg-ub-drk-abrgn text-ubt-grey opacity-100 p-1 float-left font-normal">
                 <div>C-style arbitary precision calculator (version 2.12.7.2)</div>
                 <div>Calc is open software.</div>
-                <div>[ type "exit" to exit, "clear" to clear, "help" for help.]</div>
+                 <div>[ type &quot;exit&quot; to exit, &quot;clear&quot; to clear, &quot;help&quot; for help.]</div>
             <div className="text-white text-sm font-bold bg-ub-drk-abrgn" id="calculator-body">
                 {this.state.lines.map(line => (
                     <React.Fragment key={line.id}>
