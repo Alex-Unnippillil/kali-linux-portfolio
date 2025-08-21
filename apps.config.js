@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const PongApp = dynamic(
+  () =>
+    import('./components/apps/pong').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Pong' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Pong...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -72,6 +88,31 @@ const displayTerminalCalc = (addFolder, openApp) => (
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
+
+const displayPong = (addFolder, openApp) => (
+  <PongApp addFolder={addFolder} openApp={openApp} />
+);
+
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'pong',
+    title: 'Pong',
+    icon: './themes/Yaru/apps/pong.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPong,
+  },
+];
 
 const apps = [
   {
@@ -96,15 +137,7 @@ const apps = [
     defaultWidth: 25,
     defaultHeight: 40,
   },
-  {
-    id: 'tictactoe',
-    title: 'Tic Tac Toe',
-    icon: './themes/Yaru/apps/tictactoe.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayTicTacToe,
-  },
+  ...games,
   {
     id: 'about-alex',
     title: 'About Alex',
@@ -197,4 +230,5 @@ const apps = [
   },
 ];
 
+export { games };
 export default apps;
