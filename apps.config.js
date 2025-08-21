@@ -73,6 +73,26 @@ const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
 
+const FileCompressorApp = dynamic(
+  () =>
+    import('./components/apps/file-compressor').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded File Compressor' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading File Compressor...
+      </div>
+    ),
+  }
+);
+
+const displayFileCompressor = (addFolder, openApp) => (
+  <FileCompressorApp addFolder={addFolder} openApp={openApp} />
+);
+
 const apps = [
   {
     id: 'chrome',
@@ -104,6 +124,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'file-compressor',
+    title: 'File Compressor',
+    icon: './themes/Yaru/apps/file-compressor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFileCompressor,
   },
   {
     id: 'about-alex',
