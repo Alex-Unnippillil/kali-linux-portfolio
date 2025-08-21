@@ -19,7 +19,6 @@
     "@emailjs/browser": "^3.10.0",
     "autoprefixer": "^10.4.13",
     "expr-eval": "^2.0.2",
-    "jquery": "^3.6.3",
     "next": "^13.1.2",
     "postcss": "^8.4.21",
     "prop-types": "^15.8.1",
