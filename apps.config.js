@@ -12,6 +12,8 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayShowcase } from './components/apps/showcase';
+
 import { displayProjectGallery } from './components/apps/project-gallery';
 
 const TerminalApp = dynamic(
@@ -161,6 +163,14 @@ const apps = [
     screen: displayYouTube,
   },
   {
+    id: 'showcase',
+    title: '3D Showcase',
+    icon: './themes/Yaru/apps/showcase.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: true,
+    screen: displayShowcase,
+
     id: 'project-gallery',
     title: 'Project Gallery',
     icon: './themes/Yaru/apps/project-gallery.svg',
@@ -168,6 +178,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+
   },
   {
     id: 'todoist',
