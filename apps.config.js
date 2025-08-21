@@ -71,8 +71,8 @@ const apps = [
     screen: displayTerminalCalc,
   },
   {
-    id: 'about-alex',
-    title: 'About Alex',
+    id: 'about-vivek',
+    title: 'About Vivek',
     icon: './themes/Yaru/system/user-home.png',
     disabled: false,
     favourite: true,
