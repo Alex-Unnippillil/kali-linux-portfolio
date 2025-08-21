@@ -12,6 +12,7 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayQrTool } from './components/apps/qr_tool';
 
 const TerminalApp = dynamic(
   () =>
@@ -104,6 +105,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'qr-tool',
+    title: 'QR Tool',
+    icon: './themes/Yaru/apps/qr.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayQrTool,
   },
   {
     id: 'about-alex',
