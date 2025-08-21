@@ -4,10 +4,10 @@ import Image from 'next/image';
 export class Chrome extends Component {
     constructor() {
         super();
-        this.home_url = 'https://www.google.com';
+        this.home_url = 'https://www.google.com/webhp?igu=1';
         this.state = {
-            url: 'https://www.google.com',
-            display_url: 'https://www.google.com',
+            url: this.home_url,
+            display_url: this.home_url,
         }
     }
 
@@ -15,6 +15,7 @@ export class Chrome extends Component {
         // Previously the component attempted to restore the last visited URL,
         // but many sites restrict being loaded inside an iframe which resulted
         // in error pages on reload. Default to the home page instead.
+        // The "igu=1" parameter allows Google Search to load inside an iframe.
         this.setState({ url: this.home_url, display_url: this.home_url }, this.refreshChrome);
     }
 
