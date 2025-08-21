@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const BattleshipApp = dynamic(
+  () =>
+    import('./components/apps/battleship').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Battleship' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Battleship...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayBattleship = (addFolder, openApp) => (
+  <BattleshipApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -104,6 +124,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'battleship',
+    title: 'Battleship',
+    icon: './themes/Yaru/apps/battleship.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBattleship,
   },
   {
     id: 'about-alex',
