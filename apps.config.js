@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const MinesweeperApp = dynamic(
+  () =>
+    import('./components/apps/minesweeper').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Minesweeper' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Minesweeper...
+      </div>
+    ),
+  },
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -71,6 +87,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayMinesweeper = (addFolder, openApp) => (
+  <MinesweeperApp addFolder={addFolder} openApp={openApp} />
 );
 
 const apps = [
@@ -105,6 +125,15 @@ const apps = [
     desktop_shortcut: false,
     screen: displayTicTacToe,
   },
+    {
+      id: 'minesweeper',
+      title: 'Minesweeper',
+      icon: './themes/Yaru/apps/minesweeper.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayMinesweeper,
+    },
   {
     id: 'about-alex',
     title: 'About Alex',
