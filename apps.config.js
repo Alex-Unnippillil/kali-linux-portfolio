@@ -61,6 +61,22 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const FroggerApp = dynamic(
+  () =>
+    import('./components/apps/frogger').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Frogger' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Frogger...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -72,6 +88,31 @@ const displayTerminalCalc = (addFolder, openApp) => (
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
+
+const displayFrogger = (addFolder, openApp) => (
+  <FroggerApp addFolder={addFolder} openApp={openApp} />
+);
+
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'frogger',
+    title: 'Frogger',
+    icon: './themes/Yaru/apps/frogger.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFrogger,
+  },
+];
 
 const apps = [
   {
@@ -95,15 +136,6 @@ const apps = [
     allowMaximize: false,
     defaultWidth: 25,
     defaultHeight: 40,
-  },
-  {
-    id: 'tictactoe',
-    title: 'Tic Tac Toe',
-    icon: './themes/Yaru/apps/tictactoe.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayTicTacToe,
   },
   {
     id: 'about-alex',
@@ -195,6 +227,8 @@ const apps = [
     desktop_shortcut: true,
     screen: displayGedit,
   },
+  ...games,
 ];
 
+export { games };
 export default apps;
