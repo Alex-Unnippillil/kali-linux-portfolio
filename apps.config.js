@@ -45,6 +45,22 @@ const CalcApp = dynamic(
   }
 );
 
+const GameApp = dynamic(
+  () =>
+    import('./components/apps/game').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Game' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Game...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -52,6 +68,8 @@ const displayTerminal = (addFolder, openApp) => (
 const displayTerminalCalc = (addFolder, openApp) => (
   <CalcApp addFolder={addFolder} openApp={openApp} />
 );
+
+const displayGame = () => <GameApp />;
 
 const apps = [
   {
@@ -75,6 +93,15 @@ const apps = [
     allowMaximize: false,
     defaultWidth: 25,
     defaultHeight: 40,
+  },
+  {
+    id: 'game',
+    title: 'Game',
+    icon: './themes/Yaru/apps/game.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayGame,
   },
   {
     id: 'about-alex',
