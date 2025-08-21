@@ -7,7 +7,8 @@ export default function VsCode() {
             frameBorder="0"
             title="VsCode"
             className="h-full w-full bg-ub-cool-grey"
-            allow="accelerometer; camera; gyroscope;"
+            allow="accelerometer; camera; microphone; gyroscope; clipboard-write"
+            allowFullScreen
         ></iframe>
     );
 }
