@@ -172,7 +172,9 @@ function About() {
                  <li className=" mt-3 list-building">  If you&apos;re looking for the type of person that always wants to help others. That&apos;ll be there putting in the work 24/7. Please feel free to send an email <a className='text-underline'
                                href='mailto:alex.unnippillil@hotmail.com'><u>@alex.unnippillil@hotmail.com</u></a></li>
                 <li className=" mt-3 list-time"> When I am not learning my next technical skill, I like to spend my time reading books, rock climbing or watching <u className=' cursor-pointer '><a href="https://www.youtube.com/@Alex-Unnippillil/playlists" target={"_blank"}>Youtube Videos</a></u> and <u className=' cursor-pointer '><a href="https://myanimelist.net/animelist/alex_u" target={"_blank"}>Anime</a></u></li> 
-                <li className=" mt-3 list-star"> And I also have interests in Deep Learning, Software Development & Animation!</li> </ul>  </>
+                <li className=" mt-3 list-star"> And I also have interests in Deep Learning, Software Development & Animation!</li>
+            </ul>
+        </>
     )
 }
 function Education() {
@@ -627,6 +629,18 @@ function Projects() {
 }
 function Resume() {
     return (
-        <iframe className="h-full w-full" src="/files/Alex-Unnippillil-Resume.pdf" title="Alex Unnippillil Resume" frameBorder="0"></iframe>
+        <object className="h-full w-full" data="/files/Alex-Unnippillil-Resume.pdf" type="application/pdf">
+            <p className="p-4 text-center">
+                Unable to display PDF.&nbsp;
+                <a
+                    href="/files/Alex-Unnippillil-Resume.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-ubt-blue"
+                >
+                    Download the resume
+                </a>
+            </p>
+        </object>
     )
 }
