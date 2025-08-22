@@ -228,6 +228,22 @@ const SudokuApp = dynamic(
   }
 );
 
+const SpaceInvadersApp = dynamic(
+  () =>
+    import('./components/apps/space-invaders').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Space Invaders' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Space Invaders...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -238,6 +254,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displaySpaceInvaders = (addFolder, openApp) => (
+  <SpaceInvadersApp addFolder={addFolder} openApp={openApp} />
 );
 
 const displaySudoku = (addFolder, openApp) => (
@@ -415,6 +435,16 @@ const apps = [
     screen: displayQrTool,
   },
   {
+    id: 'space-invaders',
+    title: 'Space Invaders',
+    icon: './themes/Yaru/apps/space-invaders.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySpaceInvaders,
+  },
+  {
+
     id: 'memory',
     title: 'Memory',
     icon: './themes/Yaru/apps/memory.svg',
@@ -622,11 +652,30 @@ const apps = [
   ...games,
 ];
 
+const games = [
+=======
 export const games = [
   {
     id: 'tictactoe',
     title: 'Tic Tac Toe',
     icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'space-invaders',
+    title: 'Space Invaders',
+    icon: './themes/Yaru/apps/space-invaders.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySpaceInvaders,
+  },
+];
+
+
     screen: displayTicTacToe,
   },
   {
@@ -645,3 +694,4 @@ export { games };
 
 export { games };
 export default apps;
+export { games };
