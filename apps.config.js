@@ -67,6 +67,22 @@ const TicTacToeApp = dynamic(
       </div>
     ),
   }
+  );
+
+const ChessApp = dynamic(
+  () =>
+    import('./components/apps/chess').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Chess' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Chess...
+      </div>
+    ),
+  }
 );
 
 const HangmanApp = dynamic(
@@ -110,6 +126,11 @@ const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
 
+const displayChess = (addFolder, openApp) => (
+  <ChessApp addFolder={addFolder} openApp={openApp} />
+);
+
+
 const displayHangman = (addFolder, openApp) => (
   <HangmanApp addFolder={addFolder} openApp={openApp} />
 );
@@ -134,6 +155,17 @@ const games = [
     screen: displayTicTacToe,
   },
   {
+    id: 'chess',
+    title: 'Chess',
+    icon: './themes/Yaru/apps/chess.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayChess,
+  },
+];
+
+
     id: 'hangman',
     title: 'Hangman',
     icon: './themes/Yaru/apps/hangman.svg',
@@ -190,6 +222,8 @@ const apps = [
     defaultWidth: 25,
     defaultHeight: 40,
   },
+  ...games,
+
   // Games are included so they appear alongside apps
   ...games,
   {
