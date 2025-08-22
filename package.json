@@ -19,11 +19,12 @@
     "@emailjs/browser": "^3.10.0",
     "@vercel/analytics": "^1.5.0",
     "autoprefixer": "^10.4.13",
-    "canvas-confetti": "1.9.3",
     "bad-words": "^3.0.4",
+    "canvas-confetti": "1.9.3",
     "chess.js": "^1.0.0",
     "expr-eval": "^2.0.2",
     "html-to-image": "^1.11.13",
+    "matter-js": "^0.20.0",
     "next": "^13.1.2",
     "postcss": "^8.4.21",
     "prop-types": "^15.8.1",
@@ -40,7 +41,8 @@
     "stockfish": "^16.0.0",
     "swr": "^2.2.5",
     "tailwindcss": "^3.2.4",
-    "three": "^0.179.1"
+    "three": "^0.179.1",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",
