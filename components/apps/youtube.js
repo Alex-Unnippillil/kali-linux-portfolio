@@ -106,14 +106,6 @@ export default function YouTubeApp({ initialVideos = [] }) {
     }
   }, [initialVideos]);
 
-  if (!apiKey && videos.length === 0) {
-    return (
-      <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white p-2">
-        <p>YouTube API key is not configured.</p>
-      </div>
-    );
-  }
-
   const categories = useMemo(
     () => [
       'All',
@@ -176,6 +168,14 @@ export default function YouTubeApp({ initialVideos = [] }) {
     },
     [startTransition]
   );
+
+  if (!apiKey && videos.length === 0) {
+    return (
+      <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white p-2">
+        <p>YouTube API key is not configured.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">

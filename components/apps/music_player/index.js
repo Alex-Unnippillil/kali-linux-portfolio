@@ -78,11 +78,18 @@ export default function MusicPlayer() {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.load();
-      if (playing) {
-        audioRef.current.play();
-      }
     }
   }, [current]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      if (playing) {
+        audioRef.current.play();
+      } else {
+        audioRef.current.pause();
+      }
+    }
+  }, [playing]);
 
   const track = playlist[current];
 
