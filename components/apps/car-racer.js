@@ -1,47 +1,60 @@
 import React, { useRef, useEffect, useState } from 'react';
 import ReactGA from 'react-ga4';
 
-// Tile based track: 1 = road, 0 = off road
-const TILE_SIZE = 40;
-const TRACK_MAP = [
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [0,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
-  [0,1,0,0,0,0,0,0,0,0,0,0,0,1,0],
-  [0,1,0,1,1,1,1,1,1,1,1,1,0,1,0],
-  [0,1,0,1,0,0,0,0,0,0,0,1,0,1,0],
-  [0,1,0,1,0,0,0,0,0,0,0,1,0,1,0],
-  [0,1,0,1,1,1,1,1,1,1,1,1,0,1,0],
-  [0,1,0,0,0,0,0,0,0,0,0,0,0,1,0],
-  [0,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-];
-const WIDTH = TRACK_MAP[0].length * TILE_SIZE;
-const HEIGHT = TRACK_MAP.length * TILE_SIZE;
+// Track constants - circular course
+const WIDTH = 800;
+const HEIGHT = 800;
+const TRACK_RADIUS = 250;
+const TRACK_WIDTH = 120;
+const CENTER_X = WIDTH / 2;
+const CENTER_Y = HEIGHT / 2;
+const INNER_RADIUS = TRACK_RADIUS - TRACK_WIDTH / 2;
+const OUTER_RADIUS = TRACK_RADIUS + TRACK_WIDTH / 2;
 
 const STEP = 1 / 60;
 
 // Checkpoints used to validate laps
 export const CHECKPOINTS = [
-  { axis: 'x', x: TILE_SIZE * 2, y1: TILE_SIZE * 1, y2: TILE_SIZE * 8 }, // start/finish
-  { axis: 'y', y: TILE_SIZE * 2, x1: TILE_SIZE * 2, x2: TILE_SIZE * 13 },
-  { axis: 'x', x: TILE_SIZE * 13, y1: TILE_SIZE * 1, y2: TILE_SIZE * 8 },
-  { axis: 'y', y: TILE_SIZE * 7, x1: TILE_SIZE * 2, x2: TILE_SIZE * 13 },
+  {
+    axis: 'x',
+    x: CENTER_X - TRACK_RADIUS,
+    y1: CENTER_Y - TRACK_WIDTH / 2,
+    y2: CENTER_Y + TRACK_WIDTH / 2,
+  }, // start/finish
+  {
+    axis: 'y',
+    y: CENTER_Y - TRACK_RADIUS,
+    x1: CENTER_X - TRACK_WIDTH / 2,
+    x2: CENTER_X + TRACK_WIDTH / 2,
+  },
+  {
+    axis: 'x',
+    x: CENTER_X + TRACK_RADIUS,
+    y1: CENTER_Y - TRACK_WIDTH / 2,
+    y2: CENTER_Y + TRACK_WIDTH / 2,
+  },
+  {
+    axis: 'y',
+    y: CENTER_Y + TRACK_RADIUS,
+    x1: CENTER_X - TRACK_WIDTH / 2,
+    x2: CENTER_X + TRACK_WIDTH / 2,
+  },
 ];
 
 // Racing line waypoints used by AI
 const WAYPOINTS = [
-  { x: TILE_SIZE * 8, y: TILE_SIZE * 2 },
-  { x: TILE_SIZE * 13, y: TILE_SIZE * 5 },
-  { x: TILE_SIZE * 8, y: TILE_SIZE * 7 },
-  { x: TILE_SIZE * 2, y: TILE_SIZE * 5 },
+  { x: CENTER_X, y: CENTER_Y - TRACK_RADIUS },
+  { x: CENTER_X + TRACK_RADIUS, y: CENTER_Y },
+  { x: CENTER_X, y: CENTER_Y + TRACK_RADIUS },
+  { x: CENTER_X - TRACK_RADIUS, y: CENTER_Y },
 ];
 
 const NUM_AI = 6;
 
-const createCar = (x, y, color, isAI = false) => ({
+const createCar = (x, y, color, isAI = false, angle = -Math.PI / 2) => ({
   x,
   y,
-  angle: 0,
+  angle,
   speed: 0,
   steer: 0,
   slip: 0,
@@ -53,10 +66,10 @@ const createCar = (x, y, color, isAI = false) => ({
 });
 
 const getTile = (x, y) => {
-  const tx = Math.floor(x / TILE_SIZE);
-  const ty = Math.floor(y / TILE_SIZE);
-  if (ty < 0 || ty >= TRACK_MAP.length || tx < 0 || tx >= TRACK_MAP[0].length) return 0;
-  return TRACK_MAP[ty][tx];
+  const dx = x - CENTER_X;
+  const dy = y - CENTER_Y;
+  const d = Math.hypot(dx, dy);
+  return d >= INNER_RADIUS && d <= OUTER_RADIUS ? 1 : 0;
 };
 
 export const advanceCheckpoints = (
@@ -82,10 +95,17 @@ export const advanceCheckpoints = (
           if (nextCheckpoint === 1) lapLineCrossed = false;
         }
       }
-    } else {
+    } else if (cp.axis === 'y') {
       if (prev.y < cp.y && curr.y >= cp.y && curr.x > cp.x1 && curr.x < cp.x2) {
-        nextCheckpoint = (nextCheckpoint + 1) % checkpoints.length;
-        if (nextCheckpoint === 1) lapLineCrossed = false;
+        if (nextCheckpoint === 0) {
+          if (lapLineCrossed) lapCompleted = true;
+          lapStarted = true;
+          lapLineCrossed = true;
+          nextCheckpoint = 1;
+        } else {
+          nextCheckpoint = (nextCheckpoint + 1) % checkpoints.length;
+          if (nextCheckpoint === 1) lapLineCrossed = false;
+        }
       }
     }
   }
@@ -111,20 +131,24 @@ const CarRacer = () => {
     let lastTime = performance.now();
     let accumulator = 0;
 
-    // Create player and AI cars
+    // Create player and AI cars lined up on start line
     const cars = [];
-    const startX = TILE_SIZE * 3;
-    const startY = TILE_SIZE * 5;
-    cars.push(createCar(startX, startY, 'red'));
-    for (let i = 0; i < NUM_AI; i++) {
+    const totalCars = NUM_AI + 1;
+    const startX = CHECKPOINTS[0].x + 5;
+    const baseY = CENTER_Y - ((totalCars - 1) * 20) / 2;
+    cars.push(createCar(startX, baseY + Math.floor(totalCars / 2) * 20, 'red'));
+    let aiIdx = 0;
+    for (let i = 0; i < totalCars; i++) {
+      if (i === Math.floor(totalCars / 2)) continue;
       cars.push(
         createCar(
-          startX - (i + 1) * 20,
-          startY + (i % 2) * 20,
-          `hsl(${i * 60},70%,50%)`,
+          startX,
+          baseY + i * 20,
+          `hsl(${aiIdx * 60},70%,50%)`,
           true
         )
       );
+      aiIdx++;
     }
 
     const keys = {};
@@ -192,7 +216,7 @@ const CarRacer = () => {
         const targetAngle = Math.atan2(dy, dx);
         let diff = ((targetAngle - car.angle + Math.PI) % (Math.PI * 2)) - Math.PI;
         car.steer += (diff - car.steer) * dt * 2;
-        if (Math.hypot(dx, dy) < TILE_SIZE) {
+        if (Math.hypot(dx, dy) < 40) {
           car.wp = (car.wp + 1) % WAYPOINTS.length;
         }
         car.accel = 80;
@@ -222,12 +246,16 @@ const CarRacer = () => {
     };
 
     const renderTrack = () => {
-      for (let y = 0; y < TRACK_MAP.length; y++) {
-        for (let x = 0; x < TRACK_MAP[0].length; x++) {
-          ctx.fillStyle = TRACK_MAP[y][x] === 1 ? '#555' : '#137c13';
-          ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        }
-      }
+      ctx.fillStyle = '#137c13';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = '#555';
+      ctx.beginPath();
+      ctx.arc(CENTER_X, CENTER_Y, OUTER_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#137c13';
+      ctx.beginPath();
+      ctx.arc(CENTER_X, CENTER_Y, INNER_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
       const cp0 = CHECKPOINTS[0];
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 2;
@@ -322,35 +350,37 @@ const CarRacer = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
+    <div className="relative h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
       <canvas ref={canvasRef} width={WIDTH} height={HEIGHT} className="bg-black" />
-      <div className="mt-2 flex items-center gap-2">
-        <label htmlFor="ctrl">Control:</label>
-        <select
-          id="ctrl"
-          value={control}
-          onChange={(e) => setControl(e.target.value)}
-          className="text-black"
-        >
-          <option value="keys">Keyboard</option>
-          <option value="wheel">Touch Wheel</option>
-          <option value="tilt">Tilt</option>
-          <option value="buttons">Buttons</option>
-        </select>
+      <div className="absolute top-2 left-2 bg-black/60 p-2 rounded text-xs space-y-1">
+        <div className="flex items-center gap-2">
+          <label htmlFor="ctrl">Control:</label>
+          <select
+            id="ctrl"
+            value={control}
+            onChange={(e) => setControl(e.target.value)}
+            className="text-black"
+          >
+            <option value="keys">Keyboard</option>
+            <option value="wheel">Touch Wheel</option>
+            <option value="tilt">Tilt</option>
+            <option value="buttons">Buttons</option>
+          </select>
+        </div>
+        <div>Laps: {laps}</div>
+        <div>Speed: {Math.round(speed)}</div>
+        <div>Lap Time: {lapTime.toFixed(2)}s</div>
+        {lastLap !== null && <div>Last Lap: {lastLap.toFixed(2)}s</div>}
+        {bestLap !== null && <div>Best Lap: {bestLap.toFixed(2)}s</div>}
       </div>
-      <div className="mt-1">Laps: {laps}</div>
-      <div>Speed: {Math.round(speed)}</div>
-      <div>Lap Time: {lapTime.toFixed(2)}s</div>
-      {lastLap !== null && <div>Last Lap: {lastLap.toFixed(2)}s</div>}
-      {bestLap !== null && <div>Best Lap: {bestLap.toFixed(2)}s</div>}
       {control === 'wheel' && (
         <div
           ref={wheelRef}
-          className="mt-2 w-24 h-24 rounded-full border-2 border-white"
+          className="absolute bottom-24 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full border-2 border-white"
         />
       )}
       {control === 'buttons' && (
-        <div className="mt-2 flex items-center gap-2">
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex items-center gap-2">
           <button
             onPointerDown={() => (steerButtonRef.current = -1)}
             onPointerUp={() => (steerButtonRef.current = 0)}
@@ -377,6 +407,9 @@ const CarRacer = () => {
           </button>
         </div>
       )}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 px-3 py-1 rounded text-xs">
+        Controls: ←/→ steer, ↑ accelerate, ↓ brake, Space throttle
+      </div>
     </div>
   );
 };
