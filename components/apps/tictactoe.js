@@ -89,6 +89,13 @@ const TicTacToe = () => {
             key={idx}
             className="h-20 w-20 bg-gray-700 hover:bg-gray-600 text-4xl flex items-center justify-center"
             onClick={() => handleClick(idx)}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleClick(idx);
+              }
+            }}
           >
             {cell}
           </button>

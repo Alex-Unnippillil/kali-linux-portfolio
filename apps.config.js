@@ -12,6 +12,14 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayConverter } from './components/apps/converter';
+import { displayQrTool } from './components/apps/qr_tool';
+import { displayMusicPlayer } from './components/apps/music_player';
+import { displayAsciiArt } from './components/apps/ascii_art';
+import { displayResourceMonitor } from './components/apps/resource_monitor';
+import { displayQuoteGenerator } from './components/apps/quote_generator';
+import { displayShowcase } from './components/apps/showcase';
+import { displayProjectGallery } from './components/apps/project-gallery';
 
 const TerminalApp = dynamic(
   () =>
@@ -59,6 +67,69 @@ const TicTacToeApp = dynamic(
       </div>
     ),
   }
+  );
+
+const ChessApp = dynamic(
+  () =>
+    import('./components/apps/chess').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Chess' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Chess...
+      </div>
+    ),
+  }
+
+);
+
+const HangmanApp = dynamic(
+  () =>
+    import('./components/apps/hangman').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Hangman' });
+
+const FroggerApp = dynamic(
+  () =>
+    import('./components/apps/frogger').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Frogger' });
+
+const Game2048App = dynamic(
+  () =>
+    import('./components/apps/2048').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded 2048' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Hangman...
+
+        Loading Frogger...
+        Loading 2048...
+      </div>
+    ),
+  }
+);
+
+const HangmanApp = dynamic(
+  () =>
+    import('./components/apps/hangman').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Hangman' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Hangman...
+      </div>
+    ),
+  }
+
 );
 
 const SnakeApp = dynamic(
@@ -93,6 +164,90 @@ const displaySnake = (addFolder, openApp) => (
   <SnakeApp addFolder={addFolder} openApp={openApp} />
 );
 
+
+
+const displayHangman = (addFolder, openApp) => (
+  <HangmanApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+const displayChess = (addFolder, openApp) => (
+  <ChessApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+
+const displayHangman = (addFolder, openApp) => (
+  <HangmanApp addFolder={addFolder} openApp={openApp} />
+);
+const displayFrogger = (addFolder, openApp) => (
+  <FroggerApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+const display2048 = (addFolder, openApp) => (
+  <Game2048App addFolder={addFolder} openApp={openApp} />
+);
+
+// Games list used for the "Games" folder on the desktop
+
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+
+    id: 'chess',
+    title: 'Chess',
+    icon: './themes/Yaru/apps/chess.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayChess,
+  },
+];
+
+
+    id: 'hangman',
+    title: 'Hangman',
+    icon: './themes/Yaru/apps/hangman.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHangman,
+  },
+];
+
+
+
+    id: 'frogger',
+    title: 'Frogger',
+    icon: './themes/Yaru/apps/frogger.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFrogger,
+  },
+];
+
+
+    id: '2048',
+    title: '2048',
+    icon: './themes/Yaru/apps/2048.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: display2048,
+  },
+];
+
+
 const apps = [
   {
     id: 'chrome',
@@ -116,15 +271,67 @@ const apps = [
     defaultWidth: 25,
     defaultHeight: 40,
   },
+  ...games,
+
+
+  // Games are included so they appear alongside apps
+  ...games,
   {
-    id: 'tictactoe',
-    title: 'Tic Tac Toe',
-    icon: './themes/Yaru/apps/tictactoe.svg',
+
+    id: 'converter',
+    title: 'Converter',
+    icon: './themes/Yaru/apps/calc.png',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayTicTacToe,
+    screen: displayConverter,
   },
+  {
+    id: 'qr-tool',
+    title: 'QR Tool',
+    icon: './themes/Yaru/apps/qr.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayQrTool,
+  },
+  {
+    id: 'ascii-art',
+    title: 'ASCII Art',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAsciiArt,
+  },
+  {
+    id: 'quote-generator',
+    title: 'Quote Generator',
+    icon: './themes/Yaru/apps/quote.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayQuoteGenerator,
+  },
+  {
+    id: 'hangman',
+    title: 'Hangman',
+    icon: './themes/Yaru/apps/hangman.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHangman,
+  },
+  {
+    id: 'hangman',
+    title: 'Hangman',
+    icon: './themes/Yaru/apps/hangman.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHangman,
+  },
+
   {
     id: 'about-alex',
     title: 'About Alex',
@@ -171,6 +378,19 @@ const apps = [
     screen: displaySpotify,
   },
   {
+    id: 'music-player',
+    title: 'Music Player',
+    icon: './themes/Yaru/apps/music.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayMusicPlayer,
+    resizable: false,
+    allowMaximize: false,
+    defaultWidth: 25,
+    defaultHeight: 40,
+  },
+  {
     id: 'youtube',
     title: 'YouTube',
     icon: './themes/Yaru/apps/youtube.svg',
@@ -178,6 +398,33 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayYouTube,
+  },
+  {
+    id: 'resource-monitor',
+    title: 'Resource Monitor',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayResourceMonitor,
+  },
+  {
+    id: 'showcase',
+    title: '3D Showcase',
+    icon: './themes/Yaru/apps/showcase.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: true,
+    screen: displayShowcase,
+  },
+  {
+    id: 'project-gallery',
+    title: 'Project Gallery',
+    icon: './themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayProjectGallery,
   },
   {
     id: 'todoist',
@@ -215,6 +462,7 @@ const apps = [
     desktop_shortcut: true,
     screen: displayGedit,
   },
+  ...games,
 ];
 
 export const games = [
@@ -232,4 +480,7 @@ export const games = [
   },
 ];
 
+
+
+export { games };
 export default apps;
