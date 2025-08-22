@@ -74,6 +74,8 @@ const SudokuApp = createDynamicApp('sudoku', 'Sudoku');
 const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
+const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
+
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 
@@ -110,9 +112,12 @@ const displaySudoku = createDisplay(SudokuApp);
 const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
+const displayCandyCrush = createDisplay(CandyCrushApp);
+
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+
 
 // Default window sizing for games to prevent oversized frames
 const gameDefaults = {
@@ -393,6 +398,14 @@ const gameList = [
     screen: displayFlappyBird,
   },
   {
+    id: 'candy-crush',
+    title: 'Candy Crush',
+    icon: './themes/Yaru/apps/candy-crush.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCandyCrush,
+
     id: 'gomoku',
     title: 'Gomoku',
     icon: './themes/Yaru/apps/gomoku.svg',
