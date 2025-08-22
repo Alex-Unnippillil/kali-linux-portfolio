@@ -1,0 +1,8 @@
+{
+  "name": "Default Table",
+  "elements": [
+    { "type": "flipper", "x": 120, "y": 550, "width": 80, "height": 20 },
+    { "type": "flipper", "x": 280, "y": 550, "width": 80, "height": 20 },
+    { "type": "bumper", "x": 200, "y": 300, "radius": 30 }
+  ]
+}
