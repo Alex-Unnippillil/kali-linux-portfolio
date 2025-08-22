@@ -62,6 +62,16 @@ describe('Game actions', () => {
     expect(game.bankroll).toBe(1000);
     expect(game.stats.losses).toBe(1);
   });
+
+  test('dealer stands on soft 17 when configured', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000, hitSoft17: false });
+    const deck = [card('10'), card('7'), card('A'), card('6'), card('5')];
+    game.startRound(100, deck);
+    game.stand();
+    expect(game.dealerHand.length).toBe(2);
+    expect(game.bankroll).toBe(1000);
+    expect(game.playerHands[0].result).toBe('push');
+  });
 });
 
 describe('Basic strategy', () => {
@@ -77,6 +87,15 @@ describe('Basic strategy', () => {
 });
 
 describe('Bankroll integrity', () => {
+  test('blackjack pays 3:2', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('A'), card('K'), card('9'), card('10')];
+    game.startRound(100, deck);
+    game.stand();
+    expect(game.bankroll).toBe(1150);
+    expect(game.playerHands[0].result).toBe('win');
+  });
+
   test('blackjack payout uses integers', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
     const deck = [card('A'), card('10'), card('9'), card('6'), card('10')];
@@ -84,5 +103,14 @@ describe('Bankroll integrity', () => {
     game.stand();
     expect(game.bankroll).toBe(1150);
     expect(Number.isInteger(game.bankroll)).toBe(true);
+  });
+});
+
+describe('Split rules', () => {
+  test('cannot split different ranks', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('8'), card('9'), card('5'), card('7')];
+    game.startRound(100, deck);
+    expect(() => game.split()).toThrow('Cannot split');
   });
 });

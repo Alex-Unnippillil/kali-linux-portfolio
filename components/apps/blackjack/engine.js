@@ -133,10 +133,11 @@ export function basicStrategy(playerCards, dealerUpCard, options = {}) {
 }
 
 export class BlackjackGame {
-  constructor({ decks = 6, bankroll = 10000 } = {}) {
+  constructor({ decks = 6, bankroll = 10000, hitSoft17 = true } = {}) {
     this.shoe = new Shoe(decks);
     this.bankroll = bankroll; // in chips (integers)
     this.stats = { wins: 0, losses: 0, pushes: 0, hands: 0 };
+    this.hitSoft17 = hitSoft17;
     this.resetRound();
   }
 
@@ -245,7 +246,10 @@ export class BlackjackGame {
 
   dealerPlayAndSettle() {
     if (!this.dealerBlackjack) {
-      while (handValue(this.dealerHand) < 17 || (handValue(this.dealerHand) === 17 && isSoft(this.dealerHand) && this.dealerHand.some(c=>c.value==='A'))) {
+      while (
+        handValue(this.dealerHand) < 17 ||
+        (this.hitSoft17 && handValue(this.dealerHand) === 17 && isSoft(this.dealerHand) && this.dealerHand.some((c) => c.value === 'A'))
+      ) {
         this.dealerHand.push(this.shoe.draw());
       }
     }
@@ -254,23 +258,29 @@ export class BlackjackGame {
       if (hand.surrendered) {
         this.stats.losses += 1;
         this.stats.hands += 1;
+        hand.result = 'lose';
         return;
       }
       const playerTotal = handValue(hand.cards);
       const blackjack = hand.cards.length === 2 && playerTotal === 21;
       if (hand.busted || (!this.dealerBlackjack && dealerTotal > playerTotal && dealerTotal <= 21)) {
         this.stats.losses += 1;
+        hand.result = 'lose';
       } else if (blackjack && !this.dealerBlackjack) {
         this.bankroll += Math.floor(hand.bet * 5 / 2);
         this.stats.wins += 1;
+        hand.result = 'win';
       } else if (dealerTotal > 21 || playerTotal > dealerTotal) {
         this.bankroll += hand.bet * 2;
         this.stats.wins += 1;
+        hand.result = 'win';
       } else if (playerTotal === dealerTotal) {
         this.bankroll += hand.bet;
         this.stats.pushes += 1;
+        hand.result = 'push';
       } else {
         this.stats.losses += 1;
+        hand.result = 'lose';
       }
       this.stats.hands += 1;
     });
