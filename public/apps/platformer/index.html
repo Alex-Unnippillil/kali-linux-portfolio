@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Platformer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <canvas id="game" width="640" height="360"></canvas>
+  <div id="ui">
+    <button id="mode">Edit</button>
+    <button id="export">Export</button>
+    <div id="palette" class="hidden">
+      <button data-tile="0">Empty</button>
+      <button data-tile="1">Solid</button>
+      <button data-tile="2">Slope \/</button>
+      <button data-tile="3">Slope /</button>
+      <button data-tile="4">Checkpoint</button>
+    </div>
+  </div>
+  <script src="main.js"></script>
+</body>
+</html>
