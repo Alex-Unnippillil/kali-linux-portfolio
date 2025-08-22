@@ -13,7 +13,7 @@
     "lint": "next lint"
   },
   "engines": {
-    "node": ">=16.x"
+    "node": ">=18.17.0"
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
@@ -21,33 +21,29 @@
     "@vercel/analytics": "^1.5.0",
     "autoprefixer": "^10.4.13",
     "bad-words": "^3.0.4",
-
     "cannon-es": "^0.20.0",
-
     "canvas-confetti": "1.9.3",
     "chess.js": "^1.0.0",
-    "socket.io": "^4.7.5",
-    "socket.io-client": "^4.7.5",
     "expr-eval": "^2.0.2",
     "html-to-image": "^1.11.13",
     "jsonwebtoken": "^9.0.2",
-
-    "matter-js": "^0.20.0",
-
     "jspdf": "^2.5.1",
-    "next": "^13.1.2",
+    "matter-js": "^0.20.0",
+    "next": "^15.5.0",
     "postcss": "^8.4.21",
     "prop-types": "^15.8.1",
     "qr-scanner": "^1.4.2",
     "qrcode": "^1.5.4",
-    "react": "^18.2.0",
+    "react": "^19.1.1",
     "react-activity-calendar": "^2.7.13",
-    "react-dom": "^18.2.0",
+    "react-dom": "^19.1.1",
     "react-draggable": "^4.4.5",
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
     "react-onclickoutside": "^6.12.2",
     "react-twitter-embed": "^4.0.4",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5",
     "stockfish": "^16.0.0",
     "swr": "^2.2.5",
     "tailwindcss": "^3.2.4",
@@ -64,8 +60,8 @@
     "@types/node": "^24.2.1",
     "@types/react": "^19.1.10",
     "@types/three": "^0.179.0",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "^13.1.2",
+    "eslint": "^9.34.0",
+    "eslint-config-next": "^15.5.0",
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
     "typescript": "^5.9.2"
