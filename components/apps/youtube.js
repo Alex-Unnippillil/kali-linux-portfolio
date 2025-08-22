@@ -110,10 +110,12 @@ export default function YouTubeApp({ initialVideos = [] }) {
     () => [
       'All',
       ...Array.from(
-        new Set([
-          ...playlists.map((p) => p.title),
-          ...videos.map((v) => v.playlist),
-        ])
+        new Set(
+          [
+            ...playlists.map((p) => p.title),
+            ...videos.map((v) => v.playlist),
+          ].filter(Boolean)
+        )
       ),
     ],
     [playlists, videos]
@@ -124,7 +126,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
       videos
         .filter((v) => activeCategory === 'All' || v.playlist === activeCategory)
         .filter((v) =>
-          v.title.toLowerCase().includes(search.toLowerCase())
+          (v.title || '').toLowerCase().includes(search.toLowerCase())
         ),
     [videos, activeCategory, search]
   );
@@ -133,17 +135,21 @@ export default function YouTubeApp({ initialVideos = [] }) {
     const list = [...filtered];
     switch (sortBy) {
       case 'dateAsc':
-        return list.sort(
-          (a, b) => new Date(a.publishedAt) - new Date(b.publishedAt)
+        return list.sort((a, b) =>
+          new Date(a.publishedAt || 0) - new Date(b.publishedAt || 0)
         );
       case 'title':
-        return list.sort((a, b) => a.title.localeCompare(b.title));
+        return list.sort((a, b) =>
+          (a.title || '').localeCompare(b.title || '')
+        );
       case 'playlist':
-        return list.sort((a, b) => a.playlist.localeCompare(b.playlist));
+        return list.sort((a, b) =>
+          (a.playlist || '').localeCompare(b.playlist || '')
+        );
       case 'date':
       default:
-        return list.sort(
-          (a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)
+        return list.sort((a, b) =>
+          new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0)
         );
     }
   }, [filtered, sortBy]);

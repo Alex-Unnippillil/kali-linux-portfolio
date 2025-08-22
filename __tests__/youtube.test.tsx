@@ -111,6 +111,25 @@ describe('YouTubeApp', () => {
     ]);
   });
 
+  it('handles videos missing metadata when sorting', async () => {
+    const user = userEvent.setup();
+    const videosWithMissing = [
+      ...mockVideos,
+      { id: '4', thumbnail: 'thumb4.jpg', url: 'https://youtu.be/4' },
+    ];
+    render(<YouTubeApp initialVideos={videosWithMissing} />);
+    const select = screen.getByLabelText(/sort by/i);
+
+    await user.selectOptions(select, 'title');
+    expect(screen.getAllByTestId('video-card')).toHaveLength(4);
+
+    await user.selectOptions(select, 'playlist');
+    expect(screen.getAllByTestId('video-card')).toHaveLength(4);
+
+    await user.selectOptions(select, 'date');
+    expect(screen.getAllByTestId('video-card')).toHaveLength(4);
+  });
+
   it('fetches all pages from a playlist', async () => {
     const responses = {
       channel: { items: [{ id: 'chan' }] },
