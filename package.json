@@ -26,6 +26,7 @@
     "chess.js": "^1.0.0",
     "expr-eval": "^2.0.2",
     "html-to-image": "^1.11.13",
+    "jose": "^5.2.3",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.1",
     "matter-js": "^0.20.0",
