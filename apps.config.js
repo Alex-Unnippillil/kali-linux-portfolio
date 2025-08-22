@@ -148,6 +148,22 @@ const SnakeApp = dynamic(
   }
 );
 
+const MemoryApp = dynamic(
+  () =>
+    import('./components/apps/memory').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Memory' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Memory...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -159,6 +175,11 @@ const displayTerminalCalc = (addFolder, openApp) => (
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
+
+const displayMemory = (addFolder, openApp) => (
+  <MemoryApp addFolder={addFolder} openApp={openApp} />
+);
+
 
 const displaySnake = (addFolder, openApp) => (
   <SnakeApp addFolder={addFolder} openApp={openApp} />
@@ -296,6 +317,16 @@ const apps = [
     screen: displayQrTool,
   },
   {
+    id: 'memory',
+    title: 'Memory',
+    icon: './themes/Yaru/apps/memory.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMemory,
+  },
+  {
+
     id: 'ascii-art',
     title: 'ASCII Art',
     icon: './themes/Yaru/apps/gedit.png',
@@ -479,6 +510,9 @@ export const games = [
     screen: displaySnake,
   },
 ];
+const games = apps.filter((app) => ['tictactoe', 'memory'].includes(app.id));
+
+export { games };
 
 
 
