@@ -75,6 +75,22 @@ describe('YouTubeApp', () => {
     expect(screen.queryByText('React Tutorial')).not.toBeInTheDocument();
   });
 
+  it('allows sorting after switching categories', async () => {
+    const user = userEvent.setup();
+    render(<YouTubeApp initialVideos={mockVideos} />);
+
+    // Filter to a category with multiple videos then change sort order
+    await user.click(screen.getByRole('button', { name: 'Dev' }));
+    const getTitles = () =>
+      screen.getAllByRole('link').map((a) => a.textContent);
+
+    // Initial order should be newest first
+    expect(getTitles()).toEqual(['React Tutorial', 'Advanced React']);
+
+    await user.selectOptions(screen.getByLabelText(/sort by/i), 'title');
+    expect(getTitles()).toEqual(['Advanced React', 'React Tutorial']);
+  });
+
   it('sort options reorder videos', async () => {
     const user = userEvent.setup();
     render(<YouTubeApp initialVideos={mockVideos} />);
