@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import {
   evaluateLine,
@@ -41,24 +41,30 @@ const Nonogram = () => {
   const touchTimer = useRef(null);
   const touchCross = useRef(false);
 
-  const updateStorage = (g, r = rows, c = cols) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(
-        'nonogram-progress',
-        JSON.stringify({ rows: r, cols: c, grid: g })
-      );
-    }
-  };
-
-  const evaluate = (g) => {
-    setRowState(rows.map((clue, i) => evaluateLine(g[i], clue)));
-    setColState(
-      cols.map((clue, i) => {
-        const column = g.map((row) => row[i]);
-        return evaluateLine(column, clue);
-      })
+    const updateStorage = useCallback(
+      (g, r = rows, c = cols) => {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(
+            'nonogram-progress',
+            JSON.stringify({ rows: r, cols: c, grid: g })
+          );
+        }
+      },
+      [rows, cols]
     );
-  };
+
+    const evaluate = useCallback(
+      (g) => {
+        setRowState(rows.map((clue, i) => evaluateLine(g[i], clue)));
+        setColState(
+          cols.map((clue, i) => {
+            const column = g.map((row) => row[i]);
+            return evaluateLine(column, clue);
+          })
+        );
+      },
+      [rows, cols]
+    );
 
   const startGame = () => {
     const r = parseClues(rowInput);
@@ -82,36 +88,39 @@ const Nonogram = () => {
     });
   };
 
-  const scheduleToggle = (i, j, mode) => {
-    pending.current.push({ i, j, mode });
-    if (!raf.current) {
-      raf.current = requestAnimationFrame(() => {
-        setGrid((g) => {
-          let ng = g.map((row) => row.slice());
-          pending.current.forEach(({ i, j, mode }) => {
-            if (mode === 'cross') ng[i][j] = ng[i][j] === -1 ? 0 : -1;
-            else if (mode === 'pencil') ng[i][j] = ng[i][j] === 2 ? 0 : 2;
-            else ng[i][j] = ng[i][j] === 1 ? 0 : 1;
-          });
-          pending.current = [];
-          ng = autoFillLines(ng, rows, cols);
-          evaluate(ng);
-          updateStorage(ng);
-          if (validateSolution(ng, rows, cols) && !completed.current) {
-            completed.current = true;
-            const time = Math.floor((Date.now() - startTime.current) / 1000);
-            ReactGA.event({
-              category: 'nonogram',
-              action: 'puzzle_complete',
-              value: time,
+    const scheduleToggle = useCallback(
+      (i, j, mode) => {
+        pending.current.push({ i, j, mode });
+        if (!raf.current) {
+          raf.current = requestAnimationFrame(() => {
+            setGrid((g) => {
+              let ng = g.map((row) => row.slice());
+              pending.current.forEach(({ i, j, mode }) => {
+                if (mode === 'cross') ng[i][j] = ng[i][j] === -1 ? 0 : -1;
+                else if (mode === 'pencil') ng[i][j] = ng[i][j] === 2 ? 0 : 2;
+                else ng[i][j] = ng[i][j] === 1 ? 0 : 1;
+              });
+              pending.current = [];
+              ng = autoFillLines(ng, rows, cols);
+              evaluate(ng);
+              updateStorage(ng);
+              if (validateSolution(ng, rows, cols) && !completed.current) {
+                completed.current = true;
+                const time = Math.floor((Date.now() - startTime.current) / 1000);
+                ReactGA.event({
+                  category: 'nonogram',
+                  action: 'puzzle_complete',
+                  value: time,
+                });
+              }
+              return ng;
             });
-          }
-          return ng;
-        });
-        raf.current = null;
-      });
-    }
-  };
+            raf.current = null;
+          });
+        }
+      },
+      [rows, cols, evaluate, updateStorage]
+    );
 
   const painting = useRef(false);
   const paintMode = useRef('fill');
@@ -122,123 +131,123 @@ const Nonogram = () => {
     setSelected({ i, j });
     scheduleToggle(i, j, mode);
   };
-  const handleMouseEnter = (i, j) => {
-    if (painting.current) scheduleToggle(i, j, paintMode.current);
-  };
-  useEffect(() => {
-    const up = () => {
-      painting.current = false;
+    const handleMouseEnter = (i, j) => {
+      if (painting.current) scheduleToggle(i, j, paintMode.current);
     };
-    window.addEventListener('mouseup', up);
-    return () => window.removeEventListener('mouseup', up);
-  }, []);
+    useEffect(() => {
+      const up = () => {
+        painting.current = false;
+      };
+      window.addEventListener('mouseup', up);
+      return () => window.removeEventListener('mouseup', up);
+    }, []);
 
-  // keyboard shortcuts
-  useEffect(() => {
-    if (!started) return;
-    const handler = (e) => {
-      if (
-        [
-          'ArrowUp',
-          'ArrowDown',
-          'ArrowLeft',
-          'ArrowRight',
-          ' ',
-          'Enter',
-          'x',
-          'p',
-          'h',
-          'e',
-        ].includes(e.key)
-      )
-        e.preventDefault();
-      switch (e.key) {
-        case 'ArrowUp':
-          setSelected((s) => ({ i: Math.max(0, s.i - 1), j: s.j }));
-          break;
-        case 'ArrowDown':
-          setSelected((s) => ({ i: Math.min(rows.length - 1, s.i + 1), j: s.j }));
-          break;
-        case 'ArrowLeft':
-          setSelected((s) => ({ i: s.i, j: Math.max(0, s.j - 1) }));
-          break;
-        case 'ArrowRight':
-          setSelected((s) => ({ i: s.i, j: Math.min(cols.length - 1, s.j + 1) }));
-          break;
-        case ' ': // fallthrough
-        case 'Enter':
-          scheduleToggle(selected.i, selected.j, pencil ? 'pencil' : 'fill');
-          break;
-        case 'x':
-          scheduleToggle(selected.i, selected.j, 'cross');
-          break;
-        case 'p':
-          setPencil((p) => !p);
-          break;
-        case 'h':
-          handleHint();
-          break;
-        case 'e':
-          toggleMistakes();
-          break;
-        default:
-          break;
+    const toggleMistakes = useCallback(() => {
+      ReactGA.event({
+        category: 'nonogram',
+        action: 'error_toggle',
+        value: showMistakes ? 0 : 1,
+      });
+      setShowMistakes(!showMistakes);
+    }, [showMistakes]);
+
+    const handleHint = useCallback(() => {
+      const h = findHint(rows, cols, grid);
+      if (h) {
+        ReactGA.event({ category: 'nonogram', action: 'hint' });
+        scheduleToggle(h.i, h.j, 'fill');
+      } else {
+        alert('No hints available');
       }
+    }, [rows, cols, grid, scheduleToggle]);
+
+    // keyboard shortcuts
+    useEffect(() => {
+      if (!started) return;
+      const handler = (e) => {
+        if (
+          [
+            'ArrowUp',
+            'ArrowDown',
+            'ArrowLeft',
+            'ArrowRight',
+            ' ',
+            'Enter',
+            'x',
+            'p',
+            'h',
+            'e',
+          ].includes(e.key)
+        )
+          e.preventDefault();
+        switch (e.key) {
+          case 'ArrowUp':
+            setSelected((s) => ({ i: Math.max(0, s.i - 1), j: s.j }));
+            break;
+          case 'ArrowDown':
+            setSelected((s) => ({ i: Math.min(rows.length - 1, s.i + 1), j: s.j }));
+            break;
+          case 'ArrowLeft':
+            setSelected((s) => ({ i: s.i, j: Math.max(0, s.j - 1) }));
+            break;
+          case 'ArrowRight':
+            setSelected((s) => ({ i: s.i, j: Math.min(cols.length - 1, s.j + 1) }));
+            break;
+          case ' ': // fallthrough
+          case 'Enter':
+            scheduleToggle(selected.i, selected.j, pencil ? 'pencil' : 'fill');
+            break;
+          case 'x':
+            scheduleToggle(selected.i, selected.j, 'cross');
+            break;
+          case 'p':
+            setPencil((p) => !p);
+            break;
+          case 'h':
+            handleHint();
+            break;
+          case 'e':
+            toggleMistakes();
+            break;
+          default:
+            break;
+        }
+      };
+      window.addEventListener('keydown', handler);
+      return () => window.removeEventListener('keydown', handler);
+    }, [started, rows, cols, selected, pencil, scheduleToggle, handleHint, toggleMistakes]);
+
+    const handleTouchStart = (i, j) => {
+      touchCross.current = false;
+      touchTimer.current = setTimeout(() => {
+        scheduleToggle(i, j, 'cross');
+        touchCross.current = true;
+      }, 500);
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [started, rows, cols, selected, pencil]);
-
-  const toggleMistakes = () => {
-    ReactGA.event({
-      category: 'nonogram',
-      action: 'error_toggle',
-      value: showMistakes ? 0 : 1,
-    });
-    setShowMistakes(!showMistakes);
-  };
-
-  const handleHint = () => {
-    const h = findHint(rows, cols, grid);
-    if (h) {
-      ReactGA.event({ category: 'nonogram', action: 'hint' });
-      scheduleToggle(h.i, h.j, 'fill');
-    } else {
-      alert('No hints available');
-    }
-  };
-
-  const handleTouchStart = (i, j) => {
-    touchCross.current = false;
-    touchTimer.current = setTimeout(() => {
-      scheduleToggle(i, j, 'cross');
-      touchCross.current = true;
-    }, 500);
-  };
   const handleTouchEnd = (i, j) => {
     if (touchTimer.current) clearTimeout(touchTimer.current);
     if (!touchCross.current) scheduleToggle(i, j, pencil ? 'pencil' : 'fill');
     touchCross.current = false;
   };
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const saved = localStorage.getItem('nonogram-progress');
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        if (data.rows && data.cols && data.grid) {
-          setRows(data.rows);
-          setCols(data.cols);
-          setGrid(data.grid);
-          evaluate(data.grid);
-          setStarted(true);
+    useEffect(() => {
+      if (typeof window === 'undefined') return;
+      const saved = localStorage.getItem('nonogram-progress');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          if (data.rows && data.cols && data.grid) {
+            setRows(data.rows);
+            setCols(data.cols);
+            setGrid(data.grid);
+            evaluate(data.grid);
+            setStarted(true);
+          }
+        } catch (e) {
+          // ignore
         }
-      } catch (e) {
-        // ignore
       }
-    }
-  }, []);
+    }, [evaluate]);
 
   const validate = () => {
     alert(validateSolution(grid, rows, cols) ? 'Puzzle solved!' : 'Not yet solved');

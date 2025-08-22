@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import confetti from 'canvas-confetti';
 import ReactGA from 'react-ga4';
 
@@ -148,10 +148,12 @@ const Hangman = () => {
     setHintsUsed((h) => h + 1);
   };
 
-  const isWinner = () =>
-    word && word.split('').every((l) => guessed.includes(l));
-  const isLoser = () => wrong >= 6;
-  const isGameOver = () => isWinner() || isLoser();
+    const isWinner = useCallback(
+      () => word && word.split('').every((l) => guessed.includes(l)),
+      [word, guessed]
+    );
+    const isLoser = useCallback(() => wrong >= 6, [wrong]);
+    const isGameOver = useCallback(() => isWinner() || isLoser(), [isWinner, isLoser]);
 
   const reset = () => {
     initGame();
@@ -175,17 +177,17 @@ const Hangman = () => {
     }
   }, [word, guessed]);
 
-  useEffect(() => {
-    if (!gameEnded && isGameOver()) {
-      ReactGA.event({
-        category: 'hangman',
-        action: 'game_over',
-        label: isWinner() ? 'win' : 'lose',
-        value: guessed.length,
-      });
-      setGameEnded(true);
-    }
-  }, [guessed, wrong]);
+    useEffect(() => {
+      if (!gameEnded && isGameOver()) {
+        ReactGA.event({
+          category: 'hangman',
+          action: 'game_over',
+          label: isWinner() ? 'win' : 'lose',
+          value: guessed.length,
+        });
+        setGameEnded(true);
+      }
+    }, [gameEnded, guessed, isGameOver, isWinner]);
 
   useEffect(() => {
     ReactGA.event({

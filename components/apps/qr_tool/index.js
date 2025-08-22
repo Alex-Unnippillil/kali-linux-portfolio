@@ -2,8 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import QrScanner from 'qr-scanner';
 
-QrScanner.WORKER_PATH = '/qr-scanner-worker.min.js';
-
 const QRTool = () => {
   const [text, setText] = useState('');
   const [decodedText, setDecodedText] = useState('');

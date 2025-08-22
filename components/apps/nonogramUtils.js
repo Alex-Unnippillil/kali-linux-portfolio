@@ -147,7 +147,7 @@ export const getPuzzleBySeed = (seed) => {
   return puzzles[hash % puzzles.length];
 };
 
-export default {
+const nonogramUtils = {
   lineToClues,
   evaluateLine,
   generateLinePatterns,
@@ -158,3 +158,5 @@ export default {
   validateSolution,
   getPuzzleBySeed,
 };
+
+export default nonogramUtils;

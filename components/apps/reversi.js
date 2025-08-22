@@ -16,7 +16,8 @@ const Reversi = () => {
   const [aiDepth, setAiDepth] = useState(2);
   const [mustPass, setMustPass] = useState(false);
   const [gameOver, setGameOver] = useState(null);
-  const workerRef = useRef();
+    const workerRef = useRef();
+    const handleMoveRef = useRef((r, c) => {});
 
   const legalMoves = useMemo(() => computeLegalMoves(board, player), [board, player]);
 
@@ -24,15 +25,15 @@ const Reversi = () => {
     workerRef.current = new Worker(new URL('./reversi.worker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
       const { move } = e.data;
-      if (move) {
-        const [r, c] = move;
-        handleMove(r, c);
-      } else {
-        setPlayer('B');
-      }
-    };
-    return () => workerRef.current.terminate();
-  }, []);
+        if (move) {
+          const [r, c] = move;
+          handleMoveRef.current(r, c);
+        } else {
+          setPlayer('B');
+        }
+      };
+      return () => workerRef.current.terminate();
+    }, []);
 
   useEffect(() => {
     if (Object.keys(legalMoves).length === 0) {
@@ -71,7 +72,7 @@ const Reversi = () => {
     }
   }, [player, legalMoves, board, mustPass, aiDepth]);
 
-  const handleMove = (r, c) => {
+    const handleMove = (r, c) => {
     const key = `${r}-${c}`;
     const toFlip = legalMoves[key];
     if (!toFlip || gameOver) return;
@@ -82,7 +83,9 @@ const Reversi = () => {
     ReactGA.event({ category: 'reversi', action: 'move', label: `${player}:${r}-${c}` });
     setTimeout(() => setFlipping([]), 400);
     setPlayer(opponent);
-  };
+    };
+
+    handleMoveRef.current = handleMove;
 
   const handlePreview = (r, c) => {
     const key = `${r}-${c}`;
