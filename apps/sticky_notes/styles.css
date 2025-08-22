@@ -1,0 +1,51 @@
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  background: #f0f0f0;
+}
+
+#add-note {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  padding: 8px 12px;
+}
+
+#notes {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.note {
+  position: absolute;
+  width: 200px;
+  min-height: 200px;
+  padding: 10px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  border-radius: 4px;
+}
+
+.note textarea {
+  width: 100%;
+  height: 150px;
+  border: none;
+  background: transparent;
+  resize: none;
+  outline: none;
+}
+
+.note .controls {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.note .delete-note {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}

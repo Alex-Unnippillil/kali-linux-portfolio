@@ -12,7 +12,7 @@ export default function XApp() {
     <div className="h-full w-full overflow-auto bg-ub-cool-grey">
       <TwitterTimelineEmbed
         sourceType="profile"
-        screenName="AUnnippillil"
+        screenName="aunnippillil"
         options={{ chrome: 'noheader noborders' }}
         className="w-full h-full"
       />
