@@ -437,8 +437,8 @@ export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 const apps = [
   {
     id: 'chrome',
-    title: 'Google Chrome',
-    icon: './themes/Yaru/apps/chrome.png',
+    title: 'Firefox',
+    icon: './themes/Yaru/apps/kali-browser.svg',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,

@@ -61,7 +61,7 @@ export class Chrome extends Component {
                     <Image
                         className="w-5"
                         src="/themes/Yaru/status/chrome_refresh.svg"
-                        alt="Ubuntu Chrome Refresh"
+                        alt="Kali Browser Refresh"
                         width={20}
                         height={20}
                         sizes="20px"
@@ -71,7 +71,7 @@ export class Chrome extends Component {
                     <Image
                         className="w-5"
                         src="/themes/Yaru/status/chrome_home.svg"
-                        alt="Ubuntu Chrome Home"
+                        alt="Kali Browser Home"
                         width={20}
                         height={20}
                         sizes="20px"
@@ -84,9 +84,9 @@ export class Chrome extends Component {
 
     render() {
         return (
-            <div className="h-full w-full flex flex-col bg-ub-cool-grey">
+            <div className="h-full w-full flex flex-col bg-ub-grey">
                 {this.displayUrlBar()}
-                <iframe src={this.state.url} className="flex-grow" id="chrome-screen" frameBorder="0" title="Ubuntu Chrome Url"></iframe>
+                <iframe src={this.state.url} className="flex-grow" id="chrome-screen" frameBorder="0" title="Kali Browser Url"></iframe>
             </div>
         )
     }
