@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
+import ReactGA from 'react-ga4';
 
 const dictionaries = {
   tech: {
@@ -58,10 +59,16 @@ const Hangman = () => {
   const [guessed, setGuessed] = useState([]);
   const [wrong, setWrong] = useState(0);
   const [hint, setHint] = useState('');
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [score, setScore] = useState(0);
+  const [revealed, setRevealed] = useState([]);
+  const [gameEnded, setGameEnded] = useState(false);
   const [shake, setShake] = useState(false);
   const usedWordsRef = useRef([]);
 
   const length = lengthOptions[lengthIndex];
+
+  const hintLimits = { easy: Infinity, medium: 1, hard: 0 };
 
   const getFilteredWords = () => {
     const base = dictionaries[theme][difficulty];
@@ -88,6 +95,10 @@ const Hangman = () => {
     setGuessed([]);
     setWrong(0);
     setHint('');
+    setHintsUsed(0);
+    setScore(0);
+    setRevealed([]);
+    setGameEnded(false);
     setWord(selectWord());
   };
 
@@ -104,16 +115,24 @@ const Hangman = () => {
       setTimeout(() => btn.classList.remove('key-press'), 100);
     }
     if (guessed.includes(letter) || isGameOver()) return;
+    ReactGA.event({ category: 'hangman', action: 'guess', label: letter });
     setGuessed((g) => [...g, letter]);
     if (!word.includes(letter)) {
       setWrong((w) => w + 1);
+      setScore((s) => s - 1);
       setShake(true);
       setTimeout(() => setShake(false), 500);
+    } else {
+      setScore((s) => s + 2);
+      setRevealed((r) => [...r, letter]);
+      setTimeout(() =>
+        setRevealed((r) => r.filter((l) => l !== letter)),
+      500);
     }
   };
 
   const useHint = () => {
-    if (isGameOver()) return;
+    if (isGameOver() || hintsUsed >= hintLimits[difficulty]) return;
     const remaining = word
       .split('')
       .filter((l) => !guessed.includes(l));
@@ -123,8 +142,10 @@ const Hangman = () => {
       return acc;
     }, {});
     const best = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+    ReactGA.event({ category: 'hangman', action: 'hint' });
     setHint(`Try letter ${best.toUpperCase()}`);
-    setWrong((w) => w + 1);
+    setScore((s) => s - 5);
+    setHintsUsed((h) => h + 1);
   };
 
   const isWinner = () =>
@@ -153,6 +174,27 @@ const Hangman = () => {
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     }
   }, [word, guessed]);
+
+  useEffect(() => {
+    if (!gameEnded && isGameOver()) {
+      ReactGA.event({
+        category: 'hangman',
+        action: 'game_over',
+        label: isWinner() ? 'win' : 'lose',
+        value: guessed.length,
+      });
+      setGameEnded(true);
+    }
+  }, [guessed, wrong]);
+
+  useEffect(() => {
+    ReactGA.event({
+      category: 'hangman',
+      action: 'category_select',
+      label: `${theme}-${difficulty}`,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme, difficulty]);
 
   return (
     <div
@@ -195,10 +237,16 @@ const Hangman = () => {
           ))}
         </select>
       </div>
+      <div className="mb-2">Score: {score}</div>
       <HangmanDrawing wrong={wrong} />
       <div className="flex space-x-2 mb-4 text-2xl">
         {word.split('').map((letter, idx) => (
-          <span key={idx} className="border-b-2 border-white px-1">
+          <span
+            key={idx}
+            className={`border-b-2 border-white px-1 ${
+              revealed.includes(letter) ? 'reveal' : ''
+            }`}
+          >
             {guessed.includes(letter) || isLoser() ? letter : ''}
           </span>
         ))}
@@ -232,10 +280,12 @@ const Hangman = () => {
       <div className="flex space-x-2">
         <button
           onClick={useHint}
-          disabled={isGameOver()}
+          disabled={
+            isGameOver() || hintsUsed >= hintLimits[difficulty]
+          }
           className="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded disabled:bg-blue-500"
         >
-          Hint (-1)
+          Hint (-5)
         </button>
         <button
           onClick={reset}
