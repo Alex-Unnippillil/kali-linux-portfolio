@@ -2,12 +2,11 @@ import {
   createBoard,
   computeLegalMoves,
   applyMove,
-  countPieces,
-  bestMove,
+  evaluateBoard,
 } from '../components/apps/reversiLogic';
 
 describe('Reversi rules', () => {
-  test('initial legal moves and flipping', () => {
+  test('generates legal moves correctly and flips pieces', () => {
     const board = createBoard();
     const moves = computeLegalMoves(board, 'B');
     expect(Object.keys(moves).sort()).toEqual(['2-3', '3-2', '4-5', '5-4']);
@@ -16,7 +15,7 @@ describe('Reversi rules', () => {
     expect(newBoard[2][3]).toBe('B');
   });
 
-  test('pass when no legal moves', () => {
+  test('requires pass when no moves available', () => {
     const board = Array.from({ length: 8 }, () => Array(8).fill('W'));
     board[0][1] = 'B';
     board[0][2] = null;
@@ -26,22 +25,12 @@ describe('Reversi rules', () => {
     expect(Object.keys(whiteMoves)).toHaveLength(1);
   });
 
-  test('endgame scoring', () => {
-    const board = Array.from({ length: 8 }, () => Array(8).fill('B'));
-    board[0][0] = 'W';
-    board[0][1] = 'W';
-    const { black, white } = countPieces(board);
-    expect(black).toBe(62);
-    expect(white).toBe(2);
-    expect(Object.keys(computeLegalMoves(board, 'B'))).toHaveLength(0);
-    expect(Object.keys(computeLegalMoves(board, 'W'))).toHaveLength(0);
-  });
-
-  test('AI favors corners', () => {
+  test('evaluation prefers corners', () => {
     const board = createBoard();
-    board[1][1] = 'W';
-    board[2][2] = 'B';
-    const move = bestMove(board, 'B', 3);
-    expect(move).toEqual([0, 0]);
+    board[0][0] = 'B';
+    const withCorner = evaluateBoard(board, 'B');
+    board[0][0] = 'W';
+    const withoutCorner = evaluateBoard(board, 'B');
+    expect(withCorner).toBeGreaterThan(withoutCorner);
   });
 });

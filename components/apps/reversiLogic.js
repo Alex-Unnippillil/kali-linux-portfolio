@@ -75,6 +75,51 @@ const corners = [
   [SIZE - 1, SIZE - 1],
 ];
 
+const stableFromCorner = (board, r, c, dr, dc, player) => {
+  let i = r;
+  let j = c;
+  let count = 0;
+  while (inside(i, j) && board[i][j] === player) {
+    count += 1;
+    i += dr;
+    j += dc;
+  }
+  return count;
+};
+
+const stabilityCount = (board, player) => {
+  let score = 0;
+  // Top-left corner
+  if (board[0][0] === player) {
+    score +=
+      stableFromCorner(board, 0, 0, 1, 0, player) +
+      stableFromCorner(board, 0, 0, 0, 1, player) -
+      1;
+  }
+  // Top-right corner
+  if (board[0][SIZE - 1] === player) {
+    score +=
+      stableFromCorner(board, 0, SIZE - 1, 1, 0, player) +
+      stableFromCorner(board, 0, SIZE - 1, 0, -1, player) -
+      1;
+  }
+  // Bottom-left corner
+  if (board[SIZE - 1][0] === player) {
+    score +=
+      stableFromCorner(board, SIZE - 1, 0, -1, 0, player) +
+      stableFromCorner(board, SIZE - 1, 0, 0, 1, player) -
+      1;
+  }
+  // Bottom-right corner
+  if (board[SIZE - 1][SIZE - 1] === player) {
+    score +=
+      stableFromCorner(board, SIZE - 1, SIZE - 1, -1, 0, player) +
+      stableFromCorner(board, SIZE - 1, SIZE - 1, 0, -1, player) -
+      1;
+  }
+  return score;
+};
+
 export const evaluateBoard = (board, player) => {
   const opponent = player === 'B' ? 'W' : 'B';
   let cornerScore = 0;
@@ -85,9 +130,11 @@ export const evaluateBoard = (board, player) => {
   const mobility =
     Object.keys(computeLegalMoves(board, player)).length -
     Object.keys(computeLegalMoves(board, opponent)).length;
+  const stability =
+    stabilityCount(board, player) - stabilityCount(board, opponent);
   const { black, white } = countPieces(board);
   const parity = player === 'B' ? black - white : white - black;
-  return 25 * cornerScore + 5 * mobility + parity;
+  return 25 * cornerScore + 5 * mobility + 10 * stability + parity;
 };
 
 export const minimax = (
