@@ -18,7 +18,6 @@ import { displayQrTool } from './components/apps/qr_tool';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
-import { displayShowcase } from './components/apps/showcase';
 import { displayProjectGallery } from './components/apps/project-gallery';
 
 const createDynamicApp = (path, name) =>
@@ -422,15 +421,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
-  },
-  {
-    id: 'showcase',
-    title: '3D Showcase',
-    icon: './themes/Yaru/apps/showcase.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: true,
-    screen: displayShowcase,
   },
   {
     id: 'project-gallery',
