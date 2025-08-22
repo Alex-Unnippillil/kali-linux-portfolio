@@ -1,0 +1,4 @@
+[
+  {"id":"easy","file":"easy.xsb","name":"Easy Start","difficulty":"easy"},
+  {"id":"hard","file":"hard.xsb","name":"Hard Challenge","difficulty":"hard"}
+]
