@@ -83,6 +83,7 @@ const ChessApp = dynamic(
       </div>
     ),
   }
+
 );
 
 const HangmanApp = dynamic(
@@ -128,6 +129,7 @@ const HangmanApp = dynamic(
       </div>
     ),
   }
+
 );
 
 const displayTerminal = (addFolder, openApp) => (
@@ -142,13 +144,16 @@ const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
 
+
 const displayHangman = (addFolder, openApp) => (
   <HangmanApp addFolder={addFolder} openApp={openApp} />
 );
 
+
 const displayChess = (addFolder, openApp) => (
   <ChessApp addFolder={addFolder} openApp={openApp} />
 );
+
 
 
 const displayHangman = (addFolder, openApp) => (
@@ -164,6 +169,7 @@ const display2048 = (addFolder, openApp) => (
 );
 
 // Games list used for the "Games" folder on the desktop
+
 const games = [
   {
     id: 'tictactoe',
@@ -221,6 +227,7 @@ const games = [
 ];
 
 // Main application list displayed on the desktop and app launcher
+
 const apps = [
   {
     id: 'chrome',
@@ -245,6 +252,7 @@ const apps = [
     defaultHeight: 40,
   },
   ...games,
+
 
   // Games are included so they appear alongside apps
   ...games,
@@ -303,6 +311,7 @@ const apps = [
     desktop_shortcut: false,
     screen: displayHangman,
   },
+
   {
     id: 'about-alex',
     title: 'About Alex',
