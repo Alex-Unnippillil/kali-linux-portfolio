@@ -69,6 +69,11 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const FroggerApp = dynamic(
+  () =>
+    import('./components/apps/frogger').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Frogger' });
+
 const Game2048App = dynamic(
   () =>
     import('./components/apps/2048').then((mod) => {
@@ -79,6 +84,7 @@ const Game2048App = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Frogger...
         Loading 2048...
       </div>
     ),
@@ -97,6 +103,11 @@ const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
 
+const displayFrogger = (addFolder, openApp) => (
+  <FroggerApp addFolder={addFolder} openApp={openApp} />
+);
+
+
 const display2048 = (addFolder, openApp) => (
   <Game2048App addFolder={addFolder} openApp={openApp} />
 );
@@ -113,6 +124,17 @@ const games = [
     screen: displayTicTacToe,
   },
   {
+    id: 'frogger',
+    title: 'Frogger',
+    icon: './themes/Yaru/apps/frogger.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFrogger,
+  },
+];
+
+
     id: '2048',
     title: '2048',
     icon: './themes/Yaru/apps/2048.png',
@@ -150,6 +172,7 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
   {
+
     id: 'converter',
     title: 'Converter',
     icon: './themes/Yaru/apps/calc.png',
@@ -315,6 +338,7 @@ const apps = [
     desktop_shortcut: true,
     screen: displayGedit,
   },
+  ...games,
 ];
 
 export { games };
