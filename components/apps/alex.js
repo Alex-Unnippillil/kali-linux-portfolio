@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
+import Certs from './certs';
 
 export class AboutAlex extends Component {
 
@@ -20,6 +21,7 @@ export class AboutAlex extends Component {
             "about": <About />,
             "education": <Education />,
             "skills": <Skills />,
+            "certs": <Certs />,
             "projects": <Projects />,
             "resume": <Resume />,
         }
@@ -88,6 +90,17 @@ export class AboutAlex extends Component {
                         sizes="16px"
                     />
                     <span className=" ml-1 md:ml-2 text-gray-50 ">Skills</span>
+                </div>
+                <div id="certs" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "certs" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
+                    <Image
+                        className=" w-3 md:w-4"
+                        alt="Unnippillil's certifications"
+                        src="/themes/Yaru/status/experience.svg"
+                        width={16}
+                        height={16}
+                        sizes="16px"
+                    />
+                    <span className=" ml-1 md:ml-2 text-gray-50 ">Certs</span>
                 </div>
                 <div id="projects" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "projects" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
                     <Image
@@ -361,38 +374,16 @@ function Skills() {
         <SkillSection title="Languages & Tools" badges={languagesTools} />
         <SkillSection title="Frameworks & Libraries" badges={frameworksLibraries} />
       </div>
-      <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
-        <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
-        <img
-          src="https://ghchart.rshah.org/Alex-Unnippillil"
-          alt="Alex Unnippillil's GitHub contribution graph"
-          className="w-full"
-        />
-      </div>
-      <div className="tracking-tight text-sm md:text-base w-10/12 emoji-list mt-4 flex">
-        <span className="list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight mr-4">
-          ...and current certs and typing speed
-        </span>
-
-      <a href="https://data.typeracer.com/pit/profile?user=ulexa&ref=badge" target="_blank" rel="noopener noreferrer" className="mr-4">
-        <img src="https://data.typeracer.com/misc/badge?user=ulexa" border="0" alt="TypeRacer.com scorecard for user ulexa"/>
-      </a>
-
-      <a href="https://www.credly.com/badges/8a945539-5d36-4de4-b454-1989656b282f/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
-        <img src="https://images.credly.com/size/340x340/images/80d8a06a-c384-42bf-ad36-db81bce5adce/blob" border="0" alt="CompTIA Security+ Certificate" style={{width: "140px", height: "140px"}}/>
-      </a>
-
-      <a href="https://www.credly.com/badges/783aed9a-91a7-4a2e-a4b8-11dbd0d25fc2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
-        <img src="https://images.credly.com/size/110x110/images/0bf0f2da-a699-4c82-82e2-56dcf1f2e1c7/image.png" border="0" alt="Google Cybersecurity Certificate" style={{width: "140px", height: "140px"}}/>
-      </a>
-
-      <a href="https://www.credly.com/badges/53415f6e-162e-414e-971d-942aefc755d2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
-        <img src="https://images.credly.com/size/340x340/images/70675aed-31be-4c30-add7-b99905a34005/image.png" border="0" alt="BM AI Developer Professional Certificate" style={{width: "120px", height: "120px"}}/>
-      </a>
-      <a href="https://www.credly.com/badges/f1ec265d-6798-4fc0-b98e-ad5ac71f58c0" target="_blank" rel="noopener noreferrer" className="mr-4">
-        <img src="https://images.credly.com/size/110x110/images/9180921d-4a13-429e-9357-6f9706a554f0/image.png" border="0" alt="ISC2 Candidate" style={{width: "120px", height: "120px"}}/>
-      </a>
-      </div>
+        <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
+          <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
+          <div className="bg-ub-gedit-light bg-opacity-20 p-1 md:p-2 rounded-md shadow-md">
+            <img
+              src="https://ghchart.rshah.org/Alex-Unnippillil"
+              alt="Alex Unnippillil's GitHub contribution graph"
+              className="w-full rounded"
+            />
+          </div>
+        </div>
 
     </>
   )
