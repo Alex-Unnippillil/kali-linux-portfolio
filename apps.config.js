@@ -91,7 +91,55 @@ const TicTacToeApp = dynamic(
       </div>
     ),
   }
-  );
+);
+
+const ChessApp = dynamic(
+  () =>
+    import('./components/apps/chess').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Chess' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Chess...
+      </div>
+    ),
+  }
+);
+
+const HangmanApp = dynamic(
+  () =>
+    import('./components/apps/hangman').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Hangman' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Hangman...
+      </div>
+    ),
+  }
+);
+
+const FroggerApp = dynamic(
+  () =>
+    import('./components/apps/frogger').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Frogger' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Frogger...
+      </div>
+    ),
+  }
+);
 
 const createDisplay = (Component) => (addFolder, openApp) => (
   <Component addFolder={addFolder} openApp={openApp} />
@@ -148,21 +196,20 @@ const displayWordSearch = createDisplay(WordSearchApp);
 const displayBlackjack = createDisplay(BlackjackApp);
 const displayAsteroids = createDisplay(AsteroidsApp);
 
-const HangmanApp = dynamic(
+const Game2048App = dynamic(
   () =>
-    import('./components/apps/hangman').then((mod) => {
-      ReactGA.event({ category: 'Application', action: 'Loaded Hangman' });
+    import('./components/apps/2048').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded 2048' });
       return mod.default;
     }),
   {
     ssr: false,
     loading: () => (
       <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-        Loading Hangman...
+        Loading 2048...
       </div>
     ),
   }
-
 );
 
 const SnakeApp = dynamic(
@@ -210,7 +257,7 @@ const MinesweeperApp = dynamic(
         Loading Minesweeper...
       </div>
     ),
-  },
+  }
 );
 
 const PongApp = dynamic(
@@ -307,6 +354,9 @@ const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
 
+const displayChess = (addFolder, openApp) => (
+  <ChessApp addFolder={addFolder} openApp={openApp} />
+
 const displayNonogram = (addFolder, openApp) => (
   <NonogramApp addFolder={addFolder} openApp={openApp} />
 );
@@ -325,50 +375,38 @@ const displayPacman = (addFolder, openApp) => (
   <PacmanApp addFolder={addFolder} openApp={openApp} />
 );
 
-
-const displayPong = (addFolder, openApp) => (
-  <PongApp addFolder={addFolder} openApp={openApp} />
+const displayHangman = (addFolder, openApp) => (
+  <HangmanApp addFolder={addFolder} openApp={openApp} />
 );
 
-
-const displayMinesweeper = (addFolder, openApp) => (
-  <MinesweeperApp addFolder={addFolder} openApp={openApp} />
+const displayFrogger = (addFolder, openApp) => (
+  <FroggerApp addFolder={addFolder} openApp={openApp} />
 );
 
-
-const displayMemory = (addFolder, openApp) => (
-  <MemoryApp addFolder={addFolder} openApp={openApp} />
+const display2048 = (addFolder, openApp) => (
+  <Game2048App addFolder={addFolder} openApp={openApp} />
 );
-
 
 const displaySnake = (addFolder, openApp) => (
   <SnakeApp addFolder={addFolder} openApp={openApp} />
 );
 
-
-
-const displayHangman = (addFolder, openApp) => (
-  <HangmanApp addFolder={addFolder} openApp={openApp} />
+const displayMemory = (addFolder, openApp) => (
+  <MemoryApp addFolder={addFolder} openApp={openApp} />
 );
 
-
-const displayChess = (addFolder, openApp) => (
-  <ChessApp addFolder={addFolder} openApp={openApp} />
+const displayMinesweeper = (addFolder, openApp) => (
+  <MinesweeperApp addFolder={addFolder} openApp={openApp} />
 );
 
-
-
-const displayHangman = (addFolder, openApp) => (
-  <HangmanApp addFolder={addFolder} openApp={openApp} />
-);
-const displayFrogger = (addFolder, openApp) => (
-  <FroggerApp addFolder={addFolder} openApp={openApp} />
+const displayPong = (addFolder, openApp) => (
+  <PongApp addFolder={addFolder} openApp={openApp} />
 );
 
-
-const display2048 = (addFolder, openApp) => (
-  <Game2048App addFolder={addFolder} openApp={openApp} />
+const displayPacman = (addFolder, openApp) => (
+  <PacmanApp addFolder={addFolder} openApp={openApp} />
 );
+
 
 // Games list used for the "Games" folder on the desktop
 export const games = [
@@ -436,6 +474,7 @@ export const games = [
     screen: displayChess,
   },
   {
+
     id: 'frogger',
     title: 'Frogger',
     icon: './themes/Yaru/apps/frogger.svg',
@@ -452,6 +491,15 @@ export const games = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayHangman,
+  },
+  {
+    id: 'snake',
+    title: 'Snake',
+    icon: './themes/Yaru/apps/snake.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySnake,
   },
   {
     id: 'memory',
@@ -472,6 +520,54 @@ export const games = [
     screen: displayMinesweeper,
   },
   {
+    id: 'pong',
+    title: 'Pong',
+    icon: './themes/Yaru/apps/pong.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPong,
+  },
+  {
+    id: 'pacman',
+    title: 'Pacman',
+    icon: './themes/Yaru/apps/pacman.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPacman,
+  },
+  {
+    id: 'frogger',
+    title: 'Frogger',
+    icon: './themes/Yaru/apps/frogger.svg',
+
+    id: 'memory',
+    title: 'Memory',
+    icon: './themes/Yaru/apps/memory.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMemory,
+  },
+  {
+    id: '2048',
+    title: '2048',
+    icon: './themes/Yaru/apps/2048.png',
+
+    id: 'minesweeper',
+    title: 'Minesweeper',
+    icon: './themes/Yaru/apps/minesweeper.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMinesweeper,
+  },
+];
+
+const apps = [
+
+  {
     id: 'pacman',
     title: 'Pacman',
     icon: './themes/Yaru/apps/pacman.svg',
@@ -490,6 +586,10 @@ export const games = [
     screen: displayPlatformer,
   },
   {
+    id: 'converter',
+    title: 'Converter',
+    icon: './themes/Yaru/apps/calc.png',
+
     id: 'pong',
     title: 'Pong',
     icon: './themes/Yaru/apps/pong.svg',
@@ -508,6 +608,7 @@ export const games = [
     screen: displayReversi,
   },
   {
+
     id: 'simon',
     title: 'Simon',
     icon: './themes/Yaru/apps/simon.svg',
@@ -555,6 +656,10 @@ export const games = [
     screen: displaySnake,
   },
   {
+    id: 'quote-generator',
+    title: 'Quote Generator',
+    icon: './themes/Yaru/apps/quote.svg',
+
     id: 'sokoban',
     title: 'Sokoban',
     icon: './themes/Yaru/apps/sokoban.svg',
@@ -573,6 +678,7 @@ export const games = [
     screen: displaySolitaire,
   },
   {
+
     id: 'tictactoe',
     title: 'Tic Tac Toe',
     icon: './themes/Yaru/apps/tictactoe.svg',
@@ -775,6 +881,51 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayAboutAlex,
+  },
+  {
+    id: 'vscode',
+    title: 'Visual Studio Code',
+    icon: './themes/Yaru/apps/vscode.png',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayVsCode,
+  },
+  {
+    id: 'terminal',
+    title: 'Terminal',
+    icon: './themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayTerminal,
+  },
+  {
+    id: 'x',
+    title: 'X',
+    icon: './themes/Yaru/apps/x.png',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayX,
+  },
+  {
+    id: 'spotify',
+    title: 'Spotify',
+    icon: './themes/Yaru/apps/spotify.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displaySpotify,
+
+  {
+    id: 'about-alex',
+    title: 'About Alex',
+    icon: './themes/Yaru/system/user-home.png',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: true,
+    screen: displayAboutAlex,
   {
     id: 'weather',
     title: 'Weather',
@@ -809,7 +960,9 @@ export const games = [
     desktop_shortcut: false,
     screen: displaySpaceInvaders,
   },
+  ...games,
 ];
+
 
 
     screen: displayTicTacToe,
