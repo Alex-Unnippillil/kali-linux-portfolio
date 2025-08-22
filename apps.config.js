@@ -53,6 +53,11 @@ const CalcApp = dynamic(
   }
 );
 
+const GameApp = dynamic(
+  () =>
+    import('./components/apps/game').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Game' });
+
 const TicTacToeApp = dynamic(
   () =>
     import('./components/apps/tictactoe').then((mod) => {
@@ -63,6 +68,8 @@ const TicTacToeApp = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Game...
+
         Loading Tic Tac Toe...
       </div>
     ),
@@ -251,6 +258,8 @@ const displayTerminal = (addFolder, openApp) => (
 const displayTerminalCalc = (addFolder, openApp) => (
   <CalcApp addFolder={addFolder} openApp={openApp} />
 );
+
+const displayGame = () => <GameApp />;
 
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
@@ -520,6 +529,15 @@ const apps = [
     },
 
   {
+    id: 'game',
+    title: 'Game',
+    icon: './themes/Yaru/apps/game.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayGame,
+  },
+  {
     id: 'about-alex',
     title: 'About Alex',
     icon: './themes/Yaru/system/user-home.png',
@@ -653,7 +671,7 @@ const apps = [
 ];
 
 const games = [
-=======
+
 export const games = [
   {
     id: 'tictactoe',
