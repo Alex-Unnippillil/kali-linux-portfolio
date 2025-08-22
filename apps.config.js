@@ -67,7 +67,7 @@ const TicTacToeApp = dynamic(
       </div>
     ),
   }
-  );
+);
 
 const ChessApp = dynamic(
   () =>
@@ -83,18 +83,39 @@ const ChessApp = dynamic(
       </div>
     ),
   }
-
 );
 
 const HangmanApp = dynamic(
   () =>
     import('./components/apps/hangman').then((mod) => {
       ReactGA.event({ category: 'Application', action: 'Loaded Hangman' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Hangman...
+      </div>
+    ),
+  }
+);
 
 const FroggerApp = dynamic(
   () =>
     import('./components/apps/frogger').then((mod) => {
       ReactGA.event({ category: 'Application', action: 'Loaded Frogger' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Frogger...
+      </div>
+    ),
+  }
+);
 
 const Game2048App = dynamic(
   () =>
@@ -106,30 +127,10 @@ const Game2048App = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-        Loading Hangman...
-
-        Loading Frogger...
         Loading 2048...
       </div>
     ),
   }
-);
-
-const HangmanApp = dynamic(
-  () =>
-    import('./components/apps/hangman').then((mod) => {
-      ReactGA.event({ category: 'Application', action: 'Loaded Hangman' });
-      return mod.default;
-    }),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-        Loading Hangman...
-      </div>
-    ),
-  }
-
 );
 
 const SnakeApp = dynamic(
@@ -177,7 +178,7 @@ const MinesweeperApp = dynamic(
         Loading Minesweeper...
       </div>
     ),
-  },
+  }
 );
 
 const PongApp = dynamic(
@@ -224,59 +225,43 @@ const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
 
-const displayPacman = (addFolder, openApp) => (
-  <PacmanApp addFolder={addFolder} openApp={openApp} />
-);
-
-
-const displayPong = (addFolder, openApp) => (
-  <PongApp addFolder={addFolder} openApp={openApp} />
-);
-
-
-const displayMinesweeper = (addFolder, openApp) => (
-  <MinesweeperApp addFolder={addFolder} openApp={openApp} />
-);
-
-
-const displayMemory = (addFolder, openApp) => (
-  <MemoryApp addFolder={addFolder} openApp={openApp} />
-);
-
-
-const displaySnake = (addFolder, openApp) => (
-  <SnakeApp addFolder={addFolder} openApp={openApp} />
-);
-
-
-
-const displayHangman = (addFolder, openApp) => (
-  <HangmanApp addFolder={addFolder} openApp={openApp} />
-);
-
-
 const displayChess = (addFolder, openApp) => (
   <ChessApp addFolder={addFolder} openApp={openApp} />
 );
 
-
-
 const displayHangman = (addFolder, openApp) => (
   <HangmanApp addFolder={addFolder} openApp={openApp} />
 );
+
 const displayFrogger = (addFolder, openApp) => (
   <FroggerApp addFolder={addFolder} openApp={openApp} />
 );
-
 
 const display2048 = (addFolder, openApp) => (
   <Game2048App addFolder={addFolder} openApp={openApp} />
 );
 
-// Games list used for the "Games" folder on the desktop
+const displaySnake = (addFolder, openApp) => (
+  <SnakeApp addFolder={addFolder} openApp={openApp} />
+);
 
+const displayMemory = (addFolder, openApp) => (
+  <MemoryApp addFolder={addFolder} openApp={openApp} />
+);
 
-const games = [
+const displayMinesweeper = (addFolder, openApp) => (
+  <MinesweeperApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayPong = (addFolder, openApp) => (
+  <PongApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayPacman = (addFolder, openApp) => (
+  <PacmanApp addFolder={addFolder} openApp={openApp} />
+);
+
+export const games = [
   {
     id: 'tictactoe',
     title: 'Tic Tac Toe',
@@ -287,19 +272,6 @@ const games = [
     screen: displayTicTacToe,
   },
   {
-
-    id: 'pong',
-    title: 'Pong',
-    icon: './themes/Yaru/apps/pong.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayPong,
-  },
-];
-
-
-
     id: 'chess',
     title: 'Chess',
     icon: './themes/Yaru/apps/chess.svg',
@@ -308,9 +280,7 @@ const games = [
     desktop_shortcut: false,
     screen: displayChess,
   },
-];
-
-
+  {
     id: 'hangman',
     title: 'Hangman',
     icon: './themes/Yaru/apps/hangman.svg',
@@ -319,10 +289,52 @@ const games = [
     desktop_shortcut: false,
     screen: displayHangman,
   },
-];
-
-
-
+  {
+    id: 'snake',
+    title: 'Snake',
+    icon: './themes/Yaru/apps/snake.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySnake,
+  },
+  {
+    id: 'memory',
+    title: 'Memory',
+    icon: './themes/Yaru/apps/memory.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMemory,
+  },
+  {
+    id: 'minesweeper',
+    title: 'Minesweeper',
+    icon: './themes/Yaru/apps/minesweeper.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMinesweeper,
+  },
+  {
+    id: 'pong',
+    title: 'Pong',
+    icon: './themes/Yaru/apps/pong.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPong,
+  },
+  {
+    id: 'pacman',
+    title: 'Pacman',
+    icon: './themes/Yaru/apps/pacman.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPacman,
+  },
+  {
     id: 'frogger',
     title: 'Frogger',
     icon: './themes/Yaru/apps/frogger.svg',
@@ -331,9 +343,7 @@ const games = [
     desktop_shortcut: false,
     screen: displayFrogger,
   },
-];
-
-
+  {
     id: '2048',
     title: '2048',
     icon: './themes/Yaru/apps/2048.png',
@@ -343,7 +353,6 @@ const games = [
     screen: display2048,
   },
 ];
-
 
 const apps = [
   {
@@ -368,14 +377,7 @@ const apps = [
     defaultWidth: 25,
     defaultHeight: 40,
   },
-  ...games,
-
-
-
-  // Games are included so they appear alongside apps
-  ...games,
   {
-
     id: 'converter',
     title: 'Converter',
     icon: './themes/Yaru/apps/calc.png',
@@ -394,16 +396,6 @@ const apps = [
     screen: displayQrTool,
   },
   {
-    id: 'memory',
-    title: 'Memory',
-    icon: './themes/Yaru/apps/memory.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayMemory,
-  },
-  {
-
     id: 'ascii-art',
     title: 'ASCII Art',
     icon: './themes/Yaru/apps/gedit.png',
@@ -413,16 +405,6 @@ const apps = [
     screen: displayAsciiArt,
   },
   {
-    id: 'pacman',
-    title: 'Pacman',
-    icon: './themes/Yaru/apps/pacman.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayPacman,
-  },
-  {
-
     id: 'quote-generator',
     title: 'Quote Generator',
     icon: './themes/Yaru/apps/quote.svg',
@@ -430,78 +412,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
-  },
-  {
-    id: 'hangman',
-    title: 'Hangman',
-    icon: './themes/Yaru/apps/hangman.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayHangman,
-  },
-  {
-    id: 'hangman',
-    title: 'Hangman',
-    icon: './themes/Yaru/apps/hangman.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayHangman,
-  },    {
-      id: 'minesweeper',
-      title: 'Minesweeper',
-      icon: './themes/Yaru/apps/minesweeper.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayMinesweeper,
-    },
-
-  {
-    id: 'about-alex',
-    title: 'About Alex',
-    icon: './themes/Yaru/system/user-home.png',
-    disabled: false,
-    favourite: true,
-    desktop_shortcut: true,
-    screen: displayAboutAlex,
-  },
-  {
-    id: 'vscode',
-    title: 'Visual Studio Code',
-    icon: './themes/Yaru/apps/vscode.png',
-    disabled: false,
-    favourite: true,
-    desktop_shortcut: false,
-    screen: displayVsCode,
-  },
-  {
-    id: 'terminal',
-    title: 'Terminal',
-    icon: './themes/Yaru/apps/bash.png',
-    disabled: false,
-    favourite: true,
-    desktop_shortcut: false,
-    screen: displayTerminal,
-  },
-  {
-    id: 'x',
-    title: 'X',
-    icon: './themes/Yaru/apps/x.png',
-    disabled: false,
-    favourite: true,
-    desktop_shortcut: false,
-    screen: displayX,
-  },
-  {
-    id: 'spotify',
-    title: 'Spotify',
-    icon: './themes/Yaru/apps/spotify.svg',
-    disabled: false,
-    favourite: true,
-    desktop_shortcut: false,
-    screen: displaySpotify,
   },
   {
     id: 'music-player',
@@ -588,29 +498,52 @@ const apps = [
     desktop_shortcut: true,
     screen: displayGedit,
   },
+  {
+    id: 'about-alex',
+    title: 'About Alex',
+    icon: './themes/Yaru/system/user-home.png',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: true,
+    screen: displayAboutAlex,
+  },
+  {
+    id: 'vscode',
+    title: 'Visual Studio Code',
+    icon: './themes/Yaru/apps/vscode.png',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayVsCode,
+  },
+  {
+    id: 'terminal',
+    title: 'Terminal',
+    icon: './themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayTerminal,
+  },
+  {
+    id: 'x',
+    title: 'X',
+    icon: './themes/Yaru/apps/x.png',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayX,
+  },
+  {
+    id: 'spotify',
+    title: 'Spotify',
+    icon: './themes/Yaru/apps/spotify.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displaySpotify,
+  },
   ...games,
 ];
 
-export const games = [
-  {
-    id: 'tictactoe',
-    title: 'Tic Tac Toe',
-    icon: './themes/Yaru/apps/tictactoe.svg',
-    screen: displayTicTacToe,
-  },
-  {
-    id: 'snake',
-    title: 'Snake',
-    icon: './themes/Yaru/apps/snake.svg',
-    screen: displaySnake,
-  },
-];
-const games = apps.filter((app) => ['tictactoe', 'memory'].includes(app.id));
-
-export { games };
-
-
-
-
-export { games };
 export default apps;
