@@ -103,7 +103,7 @@ export const games = [
   {
     id: '2048',
     title: '2048',
-    icon: './themes/Yaru/apps/2048.png',
+    icon: './themes/Yaru/apps/2048.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -497,7 +497,7 @@ const apps = [
   {
     id: 'weather',
     title: 'Weather',
-    icon: 'https://img.icons8.com/fluency/96/partly-cloudy-day.png',
+    icon: './themes/Yaru/apps/weather.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
