@@ -37,9 +37,13 @@ const createDynamicApp = (path, name) =>
     }
   );
 
-const createDisplay = (Component) => (addFolder, openApp) => (
-  <Component addFolder={addFolder} openApp={openApp} />
-);
+const createDisplay = (Component) => {
+  const DisplayComponent = (addFolder, openApp) => (
+    <Component addFolder={addFolder} openApp={openApp} />
+  );
+  DisplayComponent.displayName = Component.displayName || Component.name || 'Component';
+  return DisplayComponent;
+};
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
@@ -407,7 +411,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayCandyCrush,
-
+  },
+  {
     id: 'gomoku',
     title: 'Gomoku',
     icon: './themes/Yaru/apps/gomoku.svg',
@@ -415,7 +420,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayGomoku,
-
+  },
+  {
     id: 'pinball',
     title: 'Pinball',
     icon: './themes/Yaru/apps/pinball.svg',
