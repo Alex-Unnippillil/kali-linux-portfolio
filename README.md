@@ -85,3 +85,10 @@ The GitHub Actions workflow relies on the following secrets configured in the re
 - `NEXT_PUBLIC_USER_ID`
 
 These secrets provide the values for the corresponding environment variables during the build step.
+
+## Rendering Strategy on Vercel
+
+- **Static Generation (SSG/ISR)** – Marketing pages like `/` and light-weight games such as the password generator are pre-rendered at build time and revalidated every minute. This keeps latency low and avoids cold starts.
+- **Server-side Rendering (SSR)** – Authenticated or highly personalized pages should render on demand to ensure fresh data for each visitor.
+- **Edge Functions** – Read-heavy endpoints such as `/api/leaderboard` run at the Vercel Edge with caching headers for sub‑100ms global latency.
+- **Serverless Functions** – Write endpoints like `/api/submit-score` stay in regional serverless functions where rate limiting and durable writes are easier to control.
