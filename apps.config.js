@@ -1,3 +1,5 @@
+﻿// File cleared by nuclear merger
+
 import React from 'react';
 import dynamic from 'next/dynamic';
 import ReactGA from 'react-ga4';
