@@ -15,6 +15,7 @@ import { displayYouTube } from './components/apps/youtube';
 import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
 import { displayQrTool } from './components/apps/qr_tool';
+import { displayRegexRedactor } from './components/apps/regex-redactor';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
@@ -582,6 +583,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQrTool,
+  },
+  {
+    id: 'regex-redactor',
+    title: 'Regex Redactor',
+    icon: './themes/Yaru/apps/regex-redactor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayRegexRedactor,
   },
   {
     id: 'ascii-art',
