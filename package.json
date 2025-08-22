@@ -24,6 +24,8 @@
 
     "canvas-confetti": "1.9.3",
     "chess.js": "^1.0.0",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5",
     "expr-eval": "^2.0.2",
     "html-to-image": "^1.11.13",
     "matter-js": "^0.20.0",
