@@ -1,7 +1,9 @@
-import React, { Component } from 'react';
+import React, { Component, useEffect, useState } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
+import ActivityCalendar from 'react-activity-calendar';
+
 import BadgeList from '../BadgeList';
 
 import dynamic from 'next/dynamic';
@@ -150,6 +152,53 @@ export const displayAboutAlex = () => {
     return <AboutAlex />;
 }
 
+
+function GitHubContributions() {
+    const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        fetch('https://github-contributions-api.jogruber.de/v4/Alex-Unnippillil')
+            .then((res) => {
+                if (!res.ok) throw new Error('Failed to fetch contributions');
+                return res.json();
+            })
+            .then((json) => {
+                setData(json.contributions || []);
+                setLoading(false);
+            })
+            .catch(() => {
+                setError(true);
+                setLoading(false);
+            });
+    }, []);
+
+    if (loading) {
+        return <div className="w-full text-center">Loading contributions...</div>;
+    }
+
+    if (error) {
+        return <div className="w-full text-center">Failed to load contributions.</div>;
+    }
+
+    return (
+        <ActivityCalendar
+            className="w-full"
+            data={data}
+            renderBlock={(block, activity) =>
+                React.cloneElement(block, {
+                    title: `${activity.count} contributions on ${activity.date}${activity.count ? ' - click to view' : ''}`,
+                    onClick: () => {
+                        if (activity.count > 0) {
+                            window.open(`https://github.com/Alex-Unnippillil?tab=overview&from=${activity.date}&to=${activity.date}`, '_blank');
+                        }
+                    },
+                })
+            }
+        />
+    );
+}
 
 function About() {
     return (
@@ -395,6 +444,8 @@ function Skills() {
             </div>
             <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
                 <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
+                <GitHubContributions />
+
                 <div className="w-full overflow-auto">
                     <GitHubCalendar username="Alex-Unnippillil" blockSize={14} blockMargin={4} color="#38BDF8" fontSize={16} />
                 </div>
