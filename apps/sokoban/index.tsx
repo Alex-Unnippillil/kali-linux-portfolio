@@ -137,7 +137,7 @@ const Sokoban: React.FC = () => {
             );
           })
         )}
-        {[...state.boxes].map((b) => {
+        {Array.from(state.boxes).map((b) => {
           const [x, y] = b.split(',').map(Number);
           const dead = state.deadlocks.has(b);
           return (

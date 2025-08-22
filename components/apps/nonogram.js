@@ -176,7 +176,7 @@ const Nonogram = () => {
           setPencil((p) => !p);
           break;
         case 'h':
-          useHint();
+          handleHint();
           break;
         case 'e':
           toggleMistakes();
@@ -198,7 +198,7 @@ const Nonogram = () => {
     setShowMistakes(!showMistakes);
   };
 
-  const useHint = () => {
+  const handleHint = () => {
     const h = findHint(rows, cols, grid);
     if (h) {
       ReactGA.event({ category: 'nonogram', action: 'hint' });
@@ -415,7 +415,7 @@ const Nonogram = () => {
         </button>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={useHint}
+          onClick={handleHint}
         >
           Hint
         </button>

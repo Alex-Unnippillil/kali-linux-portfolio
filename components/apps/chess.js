@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
-import Stockfish from 'stockfish';
+// Stockfish engine removed for compatibility; using simple AI instead
 
 const pieceUnicode = {
   p: { w: '♙', b: '♟' },
@@ -23,7 +23,6 @@ const ChessGame = () => {
   const [skill, setSkill] = useState(5);
   const [whiteTime, setWhiteTime] = useState(initialTime);
   const [blackTime, setBlackTime] = useState(initialTime);
-  const engineRef = useRef(null);
   const timerRef = useRef(null);
 
   const updateBoard = () => {
@@ -50,45 +49,11 @@ const ChessGame = () => {
   useEffect(() => {
     updateBoard();
     startTimers();
-
-    const engine = Stockfish();
-    engine.onmessage = (event) => {
-      const line = typeof event === 'string' ? event : event.data;
-      if (line && line.startsWith('bestmove')) {
-        const move = line.split(' ')[1];
-        game.move(move, { sloppy: true });
-        updateBoard();
-        updateStatus();
-        if (premove) {
-          const result = game.move(premove, { sloppy: true });
-          setPremove(null);
-          if (result) {
-            updateBoard();
-            updateStatus();
-            engine.postMessage(`position fen ${game.fen()}`);
-            engine.postMessage('go movetime 1000');
-          }
-        }
-      }
-    };
-    engine.postMessage('uci');
-    engine.postMessage(`setoption name Skill Level value ${skill}`);
-    engineRef.current = engine;
-
     return () => {
       stopTimers();
-      if (engine.terminate) engine.terminate();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (engineRef.current) {
-      engineRef.current.postMessage(
-        `setoption name Skill Level value ${skill}`
-      );
-    }
-  }, [skill]);
 
   const reset = () => {
     const newGame = new Chess();
@@ -100,15 +65,23 @@ const ChessGame = () => {
     setWhiteTime(initialTime);
     setBlackTime(initialTime);
     updateBoard();
-    if (engineRef.current) {
-      engineRef.current.postMessage('ucinewgame');
-    }
   };
 
   const makeAIMove = () => {
-    if (engineRef.current) {
-      engineRef.current.postMessage(`position fen ${game.fen()}`);
-      engineRef.current.postMessage('go movetime 1000');
+    const moves = game.moves();
+    if (moves.length > 0) {
+      const move = moves[Math.floor(Math.random() * moves.length)];
+      game.move(move, { sloppy: true });
+      updateBoard();
+      updateStatus();
+      if (premove) {
+        const result = game.move(premove, { sloppy: true });
+        setPremove(null);
+        if (result) {
+          updateBoard();
+          updateStatus();
+        }
+      }
     }
   };
 
