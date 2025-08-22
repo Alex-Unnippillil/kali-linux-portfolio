@@ -27,6 +27,48 @@ const displayMyApp = (addFolder, openApp) => (
 
 Add the `displayMyApp` function to `apps.config.js` and reference it in the `apps` array to make the app available to the desktop.
 
+## Adding New Games
+
+Games are organized in `apps.config.js` using a `games` array that mirrors the structure of the main `apps` list. Each game entry defines metadata such as an `id`, `title`, `icon`, and the component used to render the game.
+
+To introduce a new game:
+
+1. **Icon** – Add the game's icon to `public/themes/Yaru/apps/` and reference it with a relative path like `./themes/Yaru/apps/my-game.png`.
+2. **Dynamic import** – Create the game component in `components/apps/` and load it with `next/dynamic` to keep the initial bundle small:
+
+    ```js
+    const MyGame = dynamic(() =>
+      import('./components/apps/my-game').then(mod => {
+        ReactGA.event({ category: 'Application', action: 'Loaded My Game' });
+        return mod.default;
+      }), {
+        ssr: false,
+        loading: () => (
+          <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+            Loading My Game...
+          </div>
+        ),
+      }
+    );
+
+    const displayMyGame = (addFolder, openApp) => (
+      <MyGame addFolder={addFolder} openApp={openApp} />
+    );
+    ```
+
+3. **Register** – Append the game's configuration object to the `games` array:
+
+    ```js
+    games.push({
+      id: 'my-game',
+      title: 'My Game',
+      icon: './themes/Yaru/apps/my-game.png',
+      screen: displayMyGame,
+    });
+    ```
+
+The new game will then appear alongside the other games on the desktop.
+
 ## Privacy
 
 The contact application records only non-PII metadata in Google Analytics.
