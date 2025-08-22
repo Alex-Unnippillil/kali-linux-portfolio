@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import ReactGA from 'react-ga4';
 
 // Tile based track: 1 = road, 0 = off road
 const TILE_SIZE = 40;
@@ -17,8 +18,10 @@ const TRACK_MAP = [
 const WIDTH = TRACK_MAP[0].length * TILE_SIZE;
 const HEIGHT = TRACK_MAP.length * TILE_SIZE;
 
+const STEP = 1 / 60;
+
 // Checkpoints used to validate laps
-const CHECKPOINTS = [
+export const CHECKPOINTS = [
   { axis: 'x', x: TILE_SIZE * 2, y1: TILE_SIZE * 1, y2: TILE_SIZE * 8 }, // start/finish
   { axis: 'y', y: TILE_SIZE * 2, x1: TILE_SIZE * 2, x2: TILE_SIZE * 13 },
   { axis: 'x', x: TILE_SIZE * 13, y1: TILE_SIZE * 1, y2: TILE_SIZE * 8 },
@@ -56,17 +59,57 @@ const getTile = (x, y) => {
   return TRACK_MAP[ty][tx];
 };
 
+export const advanceCheckpoints = (
+  prev,
+  curr,
+  nextCheckpoint,
+  lapLineCrossed,
+  checkpoints = CHECKPOINTS
+) => {
+  const cp = checkpoints[nextCheckpoint];
+  let lapCompleted = false;
+  let lapStarted = false;
+  if (cp) {
+    if (cp.axis === 'x') {
+      if (prev.x < cp.x && curr.x >= cp.x && curr.y > cp.y1 && curr.y < cp.y2) {
+        if (nextCheckpoint === 0) {
+          if (lapLineCrossed) lapCompleted = true;
+          lapStarted = true;
+          lapLineCrossed = true;
+          nextCheckpoint = 1;
+        } else {
+          nextCheckpoint = (nextCheckpoint + 1) % checkpoints.length;
+          if (nextCheckpoint === 1) lapLineCrossed = false;
+        }
+      }
+    } else {
+      if (prev.y < cp.y && curr.y >= cp.y && curr.x > cp.x1 && curr.x < cp.x2) {
+        nextCheckpoint = (nextCheckpoint + 1) % checkpoints.length;
+        if (nextCheckpoint === 1) lapLineCrossed = false;
+      }
+    }
+  }
+  return { nextCheckpoint, lapCompleted, lapStarted, lapLineCrossed };
+};
+
 const CarRacer = () => {
   const canvasRef = useRef(null);
   const wheelRef = useRef(null);
+  const steerButtonRef = useRef(0);
+  const sensitivityRef = useRef(1);
   const [laps, setLaps] = useState(0);
-  const [lapTimes, setLapTimes] = useState([]);
   const [control, setControl] = useState('keys');
+  const [speed, setSpeed] = useState(0);
+  const [lapTime, setLapTime] = useState(0);
+  const [lastLap, setLastLap] = useState(null);
+  const [bestLap, setBestLap] = useState(null);
+  const [mobileSensitivity, setMobileSensitivity] = useState(1);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     let lastTime = performance.now();
+    let accumulator = 0;
 
     // Create player and AI cars
     const cars = [];
@@ -74,7 +117,14 @@ const CarRacer = () => {
     const startY = TILE_SIZE * 5;
     cars.push(createCar(startX, startY, 'red'));
     for (let i = 0; i < NUM_AI; i++) {
-      cars.push(createCar(startX - (i + 1) * 20, startY + (i % 2) * 20, `hsl(${i * 60},70%,50%)`, true));
+      cars.push(
+        createCar(
+          startX - (i + 1) * 20,
+          startY + (i % 2) * 20,
+          `hsl(${i * 60},70%,50%)`,
+          true
+        )
+      );
     }
 
     const keys = {};
@@ -102,14 +152,18 @@ const CarRacer = () => {
     };
     window.addEventListener('deviceorientation', handleOrientation);
 
-    // Lap handling
+    // Lap handling and ghost
     let nextCheckpoint = 0;
+    let lapLineCrossed = false;
     let lapStart = performance.now();
     let prevPos = { x: cars[0].x, y: cars[0].y };
+    let currentLapTrace = [];
+    let bestLapTrace = null;
+    let bestLapTime = null;
+    let ghostIndex = 0;
 
     const updateCar = (car, dt) => {
       if (!car.isAI) {
-        // Player input
         let steerInput = 0;
         let accelInput = 0;
         let brakeInput = 0;
@@ -124,12 +178,14 @@ const CarRacer = () => {
         } else if (control === 'tilt') {
           steerInput = tilt;
           if (keys[' ']) accelInput = 1;
+        } else if (control === 'buttons') {
+          steerInput = steerButtonRef.current * sensitivityRef.current;
+          if (keys[' ']) accelInput = 1;
         }
-        car.steer += (steerInput - car.steer) * dt * 5; // steering rate
+        car.steer += (steerInput - car.steer) * dt * 5;
         car.accel = accelInput * 100;
         car.brake = brakeInput * 200;
       } else {
-        // AI logic
         const target = WAYPOINTS[car.wp];
         const dx = target.x - car.x;
         const dy = target.y - car.y;
@@ -143,49 +199,25 @@ const CarRacer = () => {
         car.brake = 0;
       }
 
-      // Car physics with slip angle
-      const grip = getTile(car.x, car.y) === 1 ? 1 : 0.5; // off-road friction
-      car.speed += (car.accel - car.brake - car.speed * 2) * dt * grip;
-      const max = 200 * grip;
-      if (car.speed > max) car.speed = max;
+      const surface = getTile(car.x, car.y) === 1 ? 1 : 0.4;
+      const drag = 2 - surface;
+      car.speed += (car.accel - car.brake - car.speed * drag) * dt;
       if (car.speed < 0) car.speed = 0;
-      car.slip += car.steer * dt * car.speed / 100;
-      car.slip *= 0.9;
-      const vx = Math.cos(car.angle + car.slip) * car.speed * dt;
-      const vy = Math.sin(car.angle + car.slip) * car.speed * dt;
+      const turnRate = 2 / (1 + car.speed / 200);
+      car.angle += car.steer * dt * turnRate;
+      car.slip += (car.steer * car.speed * 0.002 - car.slip * surface) * dt;
+      if (car.slip > 0.3) car.slip = 0.3;
+      if (car.slip < -0.3) car.slip = -0.3;
+      const drift = car.angle + car.slip;
+      const vx = Math.cos(drift) * car.speed * dt;
+      const vy = Math.sin(drift) * car.speed * dt;
       const newX = car.x + vx;
       const newY = car.y + vy;
       if (getTile(newX, newY) === 1) {
         car.x = newX;
         car.y = newY;
       } else {
-        car.speed = 0; // hit wall
-      }
-      car.angle += car.steer * dt * 2;
-    };
-
-    const checkCheckpoints = (car, prev) => {
-      const cp = CHECKPOINTS[nextCheckpoint];
-      if (cp.axis === 'x') {
-        if (prev.x < cp.x && car.x >= cp.x && car.y > cp.y1 && car.y < cp.y2) {
-          nextCheckpoint = (nextCheckpoint + 1) % CHECKPOINTS.length;
-          if (nextCheckpoint === 0) {
-            const now = performance.now();
-            setLapTimes((t) => [...t, (now - lapStart) / 1000]);
-            lapStart = now;
-            setLaps((l) => l + 1);
-          }
-        }
-      } else {
-        if (prev.y < cp.y && car.y >= cp.y && car.x > cp.x1 && car.x < cp.x2) {
-          nextCheckpoint = (nextCheckpoint + 1) % CHECKPOINTS.length;
-          if (nextCheckpoint === 0) {
-            const now = performance.now();
-            setLapTimes((t) => [...t, (now - lapStart) / 1000]);
-            lapStart = now;
-            setLaps((l) => l + 1);
-          }
-        }
+        car.speed = 0;
       }
     };
 
@@ -196,7 +228,6 @@ const CarRacer = () => {
           ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
         }
       }
-      // Start line
       const cp0 = CHECKPOINTS[0];
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 2;
@@ -207,6 +238,19 @@ const CarRacer = () => {
     };
 
     const renderCars = () => {
+      if (bestLapTrace && bestLapTrace.length > 0) {
+        const g = bestLapTrace[ghostIndex];
+        if (g) {
+          ctx.save();
+          ctx.globalAlpha = 0.5;
+          ctx.translate(g.x, g.y);
+          ctx.rotate(g.angle);
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(-10, -5, 20, 10);
+          ctx.restore();
+          ctx.globalAlpha = 1;
+        }
+      }
       cars.forEach((c) => {
         ctx.save();
         ctx.translate(c.x, c.y);
@@ -221,12 +265,43 @@ const CarRacer = () => {
     const frame = (time) => {
       const dt = (time - lastTime) / 1000;
       lastTime = time;
+      accumulator += dt;
+      while (accumulator >= STEP) {
+        cars.forEach((car) => updateCar(car, STEP));
+        currentLapTrace.push({ x: cars[0].x, y: cars[0].y, angle: cars[0].angle });
+        const res = advanceCheckpoints(prevPos, { x: cars[0].x, y: cars[0].y }, nextCheckpoint, lapLineCrossed);
+        nextCheckpoint = res.nextCheckpoint;
+        lapLineCrossed = res.lapLineCrossed;
+        if (res.lapCompleted) {
+          const now = performance.now();
+          const t = (now - lapStart) / 1000;
+          setLaps((l) => l + 1);
+          setLastLap(t);
+          ReactGA.event('lap_complete', { time: t });
+          if (bestLapTime === null || t < bestLapTime) {
+            bestLapTime = t;
+            setBestLap(t);
+            bestLapTrace = currentLapTrace.slice();
+            ReactGA.event('best_lap', { time: t });
+          }
+        }
+        if (res.lapStarted) {
+          lapStart = performance.now();
+          setLapTime(0);
+          currentLapTrace = [];
+          ghostIndex = 0;
+          ReactGA.event('lap_start');
+        }
+        prevPos = { x: cars[0].x, y: cars[0].y };
+        if (bestLapTrace) ghostIndex = (ghostIndex + 1) % bestLapTrace.length;
+        accumulator -= STEP;
+      }
+
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
       renderTrack();
-      cars.forEach((car) => updateCar(car, dt));
-      checkCheckpoints(cars[0], prevPos);
-      prevPos = { x: cars[0].x, y: cars[0].y };
       renderCars();
+      setSpeed(cars[0].speed);
+      setLapTime((performance.now() - lapStart) / 1000);
       animationId = requestAnimationFrame(frame);
     };
     animationId = requestAnimationFrame(frame);
@@ -240,7 +315,11 @@ const CarRacer = () => {
     };
   }, [control]);
 
-  const lastLap = lapTimes.length > 0 ? lapTimes[lapTimes.length - 1].toFixed(2) : null;
+  const handleSensitivity = (e) => {
+    const val = parseFloat(e.target.value);
+    setMobileSensitivity(val);
+    sensitivityRef.current = val;
+  };
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
@@ -256,15 +335,47 @@ const CarRacer = () => {
           <option value="keys">Keyboard</option>
           <option value="wheel">Touch Wheel</option>
           <option value="tilt">Tilt</option>
+          <option value="buttons">Buttons</option>
         </select>
       </div>
       <div className="mt-1">Laps: {laps}</div>
-      {lastLap && <div>Last Lap: {lastLap}s</div>}
+      <div>Speed: {Math.round(speed)}</div>
+      <div>Lap Time: {lapTime.toFixed(2)}s</div>
+      {lastLap !== null && <div>Last Lap: {lastLap.toFixed(2)}s</div>}
+      {bestLap !== null && <div>Best Lap: {bestLap.toFixed(2)}s</div>}
       {control === 'wheel' && (
         <div
           ref={wheelRef}
           className="mt-2 w-24 h-24 rounded-full border-2 border-white"
         />
+      )}
+      {control === 'buttons' && (
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            onPointerDown={() => (steerButtonRef.current = -1)}
+            onPointerUp={() => (steerButtonRef.current = 0)}
+            onPointerLeave={() => (steerButtonRef.current = 0)}
+            className="px-2 py-1 bg-gray-700"
+          >
+            Left
+          </button>
+          <input
+            type="range"
+            min="0.5"
+            max="2"
+            step="0.1"
+            value={mobileSensitivity}
+            onChange={handleSensitivity}
+          />
+          <button
+            onPointerDown={() => (steerButtonRef.current = 1)}
+            onPointerUp={() => (steerButtonRef.current = 0)}
+            onPointerLeave={() => (steerButtonRef.current = 0)}
+            className="px-2 py-1 bg-gray-700"
+          >
+            Right
+          </button>
+        </div>
       )}
     </div>
   );
