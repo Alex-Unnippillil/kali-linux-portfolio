@@ -1,94 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
-
-// Grid configuration
-const GRID_SIZE = 10;
-const START = { x: 0, y: 4 };
-const GOAL = { x: GRID_SIZE - 1, y: 4 };
-
-// Tower configuration for each level
-const TOWER_STATS = [
-  { damage: 1, range: 2, fireRate: 1 },
-  { damage: 2, range: 3, fireRate: 0.8 },
-  { damage: 3, range: 3, fireRate: 0.6, dot: { damage: 1, duration: 3 } },
-];
+import ReactGA from 'react-ga4';
+import Quadtree from './quadtree';
+import {
+  GRID_SIZE,
+  START,
+  GOAL,
+  TOWER_TYPES,
+  getPath,
+  createProjectilePool,
+  fireProjectile,
+} from './tower-defense-core';
 
 const MAX_PROJECTILES = 100;
-
-// A* pathfinding taking towers as obstacles
-const computePath = (towers) => {
-  const obstacles = new Set(towers.map((t) => `${t.x},${t.y}`));
-  const key = (p) => `${p.x},${p.y}`;
-  const open = [
-    {
-      x: START.x,
-      y: START.y,
-      g: 0,
-      f: Math.abs(START.x - GOAL.x) + Math.abs(START.y - GOAL.y),
-      parent: null,
-    },
-  ];
-  const closed = new Set();
-
-  while (open.length) {
-    open.sort((a, b) => a.f - b.f);
-    const current = open.shift();
-    if (current.x === GOAL.x && current.y === GOAL.y) {
-      const path = [];
-      let node = current;
-      while (node) {
-        path.unshift({ x: node.x, y: node.y });
-        node = node.parent;
-      }
-      return path;
-    }
-
-    closed.add(key(current));
-    const dirs = [
-      { x: 1, y: 0 },
-      { x: -1, y: 0 },
-      { x: 0, y: 1 },
-      { x: 0, y: -1 },
-    ];
-    dirs.forEach((d) => {
-      const nx = current.x + d.x;
-      const ny = current.y + d.y;
-      const nKey = `${nx},${ny}`;
-      if (
-        nx < 0 ||
-        ny < 0 ||
-        nx >= GRID_SIZE ||
-        ny >= GRID_SIZE ||
-        obstacles.has(nKey) ||
-        closed.has(nKey)
-      )
-        return;
-      const g = current.g + 1;
-      const h = Math.abs(nx - GOAL.x) + Math.abs(ny - GOAL.y);
-      const existing = open.find((n) => n.x === nx && n.y === ny);
-      if (existing) {
-        if (g < existing.g) {
-          existing.g = g;
-          existing.f = g + h;
-          existing.parent = current;
-        }
-      } else {
-        open.push({ x: nx, y: ny, g, f: g + h, parent: current });
-      }
-    });
-  }
-  return null;
-};
 
 const TowerDefense = () => {
   const [towers, setTowers] = useState([]);
   const [enemies, setEnemies] = useState([]);
   const [projectiles, setProjectiles] = useState(
-    Array.from({ length: MAX_PROJECTILES }, () => ({ active: false }))
+    createProjectilePool(MAX_PROJECTILES)
   );
-  const [path, setPath] = useState(() => computePath([]));
+  const [path, setPath] = useState(() => getPath([]));
   const [wave, setWave] = useState(1);
   const [speed, setSpeed] = useState(1);
+  const [lives, setLives] = useState(20);
+  const [towerType, setTowerType] = useState('single');
   const enemyId = useRef(0);
+  const victory = useRef(false);
 
   const towersRef = useRef(towers);
   const enemiesRef = useRef(enemies);
@@ -105,18 +42,21 @@ const TowerDefense = () => {
   }, [projectiles]);
 
   const spawnWave = (waveNum) => {
+    ReactGA.event({ category: 'tower-defense', action: 'wave_start', value: waveNum });
     const count = 5 + waveNum;
     const newEnemies = [];
     for (let i = 0; i < count; i += 1) {
-      const isBoss = i === 0 && waveNum % 5 === 0;
+      const baseSpeed = 0.5 + waveNum * 0.05;
       newEnemies.push({
         id: enemyId.current++,
         x: START.x,
         y: START.y,
         pathIndex: 0,
-        health: isBoss ? 20 + waveNum * 5 : 5 + waveNum,
-        resistance: isBoss ? 0.5 : waveNum % 3 === 0 ? 0.25 : 0,
-        boss: isBoss,
+        progress: 0,
+        health: 5 + waveNum,
+        resistance: 0,
+        baseSpeed,
+        slow: null,
         dot: null,
       });
     }
@@ -132,24 +72,24 @@ const TowerDefense = () => {
       setWave((w) => {
         const next = w + 1;
         spawnWave(next);
+        if (next === 10) ReactGA.event({ category: 'tower-defense', action: 'victory' });
         return next;
       });
     }, 15000 / speed);
     return () => clearInterval(interval);
   }, [speed]);
 
-  // recompute path when towers change
   useEffect(() => {
-    const newPath = computePath(towers);
-    if (newPath) setPath(newPath);
+    setPath(getPath(towers));
   }, [towers]);
 
-  // adjust enemies to new path
   useEffect(() => {
     setEnemies((prev) =>
       prev.map((e) => {
         const idx = path.findIndex((p) => p.x === e.x && p.y === e.y);
-        return idx === -1 ? { ...e, pathIndex: 0, x: START.x, y: START.y } : { ...e, pathIndex: idx };
+        return idx === -1
+          ? { ...e, pathIndex: 0, x: START.x, y: START.y, progress: 0 }
+          : { ...e, pathIndex: idx };
       })
     );
   }, [path]);
@@ -158,95 +98,136 @@ const TowerDefense = () => {
     if (path.some((p) => p.x === x && p.y === y)) return;
     const existing = towers.find((t) => t.x === x && t.y === y);
     if (existing) {
-      setTowers(
-        towers.map((t) =>
-          t.x === x && t.y === y
-            ? { ...t, level: Math.min(t.level + 1, 3) }
-            : t
-        )
-      );
+      const maxLevel = TOWER_TYPES[existing.type].length;
+      if (existing.level < maxLevel) {
+        setTowers(
+          towers.map((t) =>
+            t.x === x && t.y === y ? { ...t, level: t.level + 1 } : t
+          )
+        );
+        ReactGA.event({ category: 'tower-defense', action: 'upgrade' });
+      }
       return;
     }
-    const newTower = { x, y, level: 1, cooldown: 0 };
+    const newTower = { x, y, level: 1, type: towerType, cooldown: 0 };
     const newTowers = [...towers, newTower];
-    const newPath = computePath(newTowers);
+    const newPath = getPath(newTowers);
     if (newPath) {
       setTowers(newTowers);
       setPath(newPath);
+      ReactGA.event({ category: 'tower-defense', action: 'tower_place', label: towerType });
+    }
+  };
+
+  const handleCellRightClick = (x, y, e) => {
+    e.preventDefault();
+    const existing = towers.find((t) => t.x === x && t.y === y);
+    if (existing) {
+      setTowers(towers.filter((t) => !(t.x === x && t.y === y)));
     }
   };
 
   const tick = () => {
-    // Move enemies and apply DOT
+    // Move enemies and apply effects
     enemiesRef.current = enemiesRef.current
       .map((e) => {
-        const next = path[e.pathIndex + 1];
-        if (next) {
+        const effSpeed = e.baseSpeed * (e.slow ? 1 - e.slow.amount : 1);
+        e.progress += effSpeed * 0.1 * speed;
+        while (e.progress >= 1) {
+          const next = path[e.pathIndex + 1];
+          if (!next) break;
           e.x = next.x;
           e.y = next.y;
           e.pathIndex += 1;
+          e.progress -= 1;
         }
         if (e.dot) {
           e.dot.remaining -= 0.1 * speed;
-          if (e.dot.remaining <= 0) {
-            e.dot = null;
-          } else {
-            e.health -= Math.max(0, e.dot.damage - e.resistance) * 0.1 * speed;
-          }
+          if (e.dot.remaining <= 0) e.dot = null;
+          else e.health -= Math.max(0, e.dot.damage - e.resistance) * 0.1 * speed;
+        }
+        if (e.slow) {
+          e.slow.remaining -= 0.1 * speed;
+          if (e.slow.remaining <= 0) e.slow = null;
         }
         return e;
       })
-      .filter((e) => e.health > 0 && e.pathIndex < path.length - 1);
+      .filter((e) => {
+        if (e.health <= 0) return false;
+        if (e.pathIndex >= path.length - 1) {
+          setLives((l) => {
+            const nl = l - 1;
+            if (nl <= 0 && !victory.current) {
+              ReactGA.event({ category: 'tower-defense', action: 'defeat' });
+            }
+            return nl;
+          });
+          return false;
+        }
+        return true;
+      });
+
+    // Build quadtree
+    const qt = new Quadtree(0, 0, GRID_SIZE, GRID_SIZE);
+    enemiesRef.current.forEach((e) => qt.insert({ x: e.x, y: e.y, r: 0.5, ref: e }));
 
     // Towers attack
     towersRef.current = towersRef.current.map((tower) => {
-      const stats = TOWER_STATS[tower.level - 1];
+      const stats = TOWER_TYPES[tower.type][tower.level - 1];
       tower.cooldown -= 0.1 * speed;
       if (tower.cooldown <= 0) {
-        const target = enemiesRef.current.find(
-          (e) => Math.abs(e.x - tower.x) + Math.abs(e.y - tower.y) <= stats.range
+        const candidates = qt.retrieve({ x: tower.x, y: tower.y, r: stats.range });
+        const targetObj = candidates.find(
+          (c) =>
+            Math.abs(c.x - tower.x) + Math.abs(c.y - tower.y) <= stats.range
         );
-        if (target) {
-          const idx = projectilesRef.current.findIndex((p) => !p.active);
-          if (idx !== -1) {
-            projectilesRef.current[idx] = {
-              active: true,
-              x: tower.x,
-              y: tower.y,
-              targetId: target.id,
-              damage: stats.damage,
-              speed: 1,
-              dot: stats.dot,
-            };
-          }
+        if (targetObj) {
+          fireProjectile(projectilesRef.current, {
+            x: tower.x,
+            y: tower.y,
+            targetId: targetObj.ref.id,
+            damage: stats.damage,
+            speed: 1,
+            splash: stats.splash || 0,
+            slow: stats.slow || null,
+          });
           tower.cooldown = stats.fireRate;
         }
       }
       return tower;
     });
 
-    // Update projectiles and apply damage
-    projectilesRef.current = projectilesRef.current.map((p) => {
-      if (!p.active) return p;
+    // Update projectiles
+    projectilesRef.current.forEach((p) => {
+      if (!p.active) return;
       const target = enemiesRef.current.find((e) => e.id === p.targetId);
-      if (!target) return { ...p, active: false };
+      if (!target) {
+        p.active = false;
+        return;
+      }
       const dx = target.x - p.x;
       const dy = target.y - p.y;
       if (Math.abs(dx) + Math.abs(dy) <= p.speed * speed) {
         target.health -= Math.max(0, p.damage - target.resistance);
-        if (p.dot) {
-          target.dot = { damage: p.dot.damage, remaining: p.dot.duration };
+        if (p.slow) {
+          target.slow = { amount: p.slow.amount, remaining: p.slow.duration };
         }
-        return { ...p, active: false };
+        if (p.splash) {
+          enemiesRef.current.forEach((e) => {
+            if (
+              e.id !== target.id &&
+              Math.abs(e.x - target.x) + Math.abs(e.y - target.y) <= p.splash
+            ) {
+              e.health -= Math.max(0, p.damage - e.resistance);
+            }
+          });
+        }
+        p.active = false;
+      } else {
+        p.x += Math.sign(dx) * p.speed * speed;
+        p.y += Math.sign(dy) * p.speed * speed;
       }
-      return {
-        ...p,
-        x: p.x + Math.sign(dx) * p.speed * speed,
-        y: p.y + Math.sign(dy) * p.speed * speed,
-      };
     });
-
-    enemiesRef.current = enemiesRef.current.filter((e) => e.health > 0);
 
     // Sync state
     setEnemies([...enemiesRef.current]);
@@ -279,6 +260,7 @@ const TowerDefense = () => {
         key={`${x}-${y}`}
         className={`w-8 h-8 border border-gray-900 ${bg}`}
         onClick={() => handleCellClick(x, y)}
+        onContextMenu={(e) => handleCellRightClick(x, y, e)}
       />
     );
   };
@@ -287,6 +269,7 @@ const TowerDefense = () => {
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <div className="mb-2 flex items-center space-x-2">
         <span>Wave: {wave}</span>
+        <span>Lives: {lives}</span>
         <button
           type="button"
           onClick={() => setSpeed(0.5)}
@@ -309,19 +292,30 @@ const TowerDefense = () => {
           2x
         </button>
       </div>
+      <div className="mb-2 flex space-x-2">
+        {Object.keys(TOWER_TYPES).map((type) => (
+          <button
+            key={type}
+            type="button"
+            onClick={() => setTowerType(type)}
+            className={`px-2 ${towerType === type ? 'bg-blue-500' : 'bg-gray-700'}`}
+          >
+            {type}
+          </button>
+        ))}
+      </div>
       <div className="grid grid-cols-10" style={{ lineHeight: 0 }}>
         {Array.from({ length: GRID_SIZE }).map((_, y) =>
           Array.from({ length: GRID_SIZE }).map((_, x) => renderCell(x, y))
         )}
       </div>
       <div className="mt-2 text-sm text-center">
-        Click to place towers or upgrade existing ones. Towers attack enemies
-        within range. Boss enemies appear every 5 waves. Speed controls at the
-        top adjust game speed.
+        Click to place towers or upgrade existing ones. Right-click to sell.
+        Towers attack enemies within range. Speed controls at the top adjust
+        game speed.
       </div>
     </div>
   );
 };
 
 export default TowerDefense;
-
