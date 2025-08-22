@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import {
   initializeGame,
@@ -32,15 +32,18 @@ const Solitaire = () => {
   const [time, setTime] = useState(0);
   const timer = useRef<NodeJS.Timeout | null>(null);
 
-  const start = (mode: 1 | 3 = drawMode) => {
-    setGame(initializeGame(mode));
-    setWon(false);
-    setTime(0);
-  };
+    const start = useCallback(
+      (mode: 1 | 3 = drawMode) => {
+        setGame(initializeGame(mode));
+        setWon(false);
+        setTime(0);
+      },
+      [drawMode]
+    );
 
-  useEffect(() => {
-    start(drawMode);
-  }, [drawMode]);
+    useEffect(() => {
+      start(drawMode);
+    }, [drawMode, start]);
 
   useEffect(() => {
     if (won) {
@@ -55,7 +58,7 @@ const Solitaire = () => {
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [won, game]);
+    }, [won, game, time]);
 
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {

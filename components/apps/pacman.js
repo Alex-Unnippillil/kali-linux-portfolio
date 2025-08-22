@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 /**
  * Small Pacman implementation used inside the portfolio.  The goal of this
@@ -108,15 +108,15 @@ const Pacman = () => {
     }
   };
 
-  const availableDirs = (gx, gy, dir) => {
-    const rev = { x: -dir.x, y: -dir.y };
-    return dirs.filter((d) => {
-      if (d.x === rev.x && d.y === rev.y) return false;
-      const nx = gx + d.x;
-      const ny = gy + d.y;
-      return tileAt(nx, ny) !== 1;
-    });
-  };
+    const availableDirs = useCallback((gx, gy, dir) => {
+      const rev = { x: -dir.x, y: -dir.y };
+      return dirs.filter((d) => {
+        if (d.x === rev.x && d.y === rev.y) return false;
+        const nx = gx + d.x;
+        const ny = gy + d.y;
+        return tileAt(nx, ny) !== 1;
+      });
+    }, []);
 
   const draw = () => {
     const canvas = canvasRef.current;
@@ -166,7 +166,7 @@ const Pacman = () => {
     });
   };
 
-  const step = () => {
+  const step = useCallback(() => {
     const pac = pacRef.current;
     const maze = mazeRef.current;
 
@@ -269,7 +269,12 @@ const Pacman = () => {
         }
       }
     });
-  };
+  }, [pellets, score, availableDirs]);
+
+  const stepRef = useRef(step);
+  useEffect(() => {
+    stepRef.current = step;
+  }, [step]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -312,9 +317,9 @@ const Pacman = () => {
     canvas.addEventListener('touchstart', handleTouch);
     let id;
     const loop = () => {
-      if (statusRef.current === 'Playing') {
-        step();
-        draw();
+        if (statusRef.current === 'Playing') {
+          stepRef.current();
+          draw();
         // simple gamepad polling
         const pads = navigator.getGamepads ? navigator.getGamepads() : [];
         if (pads) {

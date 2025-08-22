@@ -197,10 +197,10 @@ const Frogger = () => {
     ReactGA.event({ category: 'Frogger', action: 'level_start', value: 1 });
   }, []);
 
-  const reset = (full = false) => {
-    setFrog(initialFrog);
-    setCars(carLaneDefs.map((l, i) => initLane(l, i + 1)));
-    setLogs(logLaneDefs.map((l, i) => initLane(l, i + 101)));
+    const reset = useCallback((full = false) => {
+      setFrog(initialFrog);
+      setCars(carLaneDefs.map((l, i) => initLane(l, i + 1)));
+      setLogs(logLaneDefs.map((l, i) => initLane(l, i + 101)));
     setStatus('');
     if (full) {
       setScore(0);
@@ -210,25 +210,25 @@ const Frogger = () => {
       nextLife.current = 500;
       ReactGA.event({ category: 'Frogger', action: 'level_start', value: 1 });
     }
-  };
+    }, []);
 
-  const loseLife = () => {
-    ReactGA.event({ category: 'Frogger', action: 'death', value: level });
-    setLives((l) => {
-      const newLives = l - 1;
-      if (newLives <= 0) {
-        setStatus('Game Over');
-        setTimeout(() => reset(true), 1000);
-        return 0;
-      }
-      reset();
-      return newLives;
-    });
-  };
+    const loseLife = useCallback(() => {
+      ReactGA.event({ category: 'Frogger', action: 'death', value: level });
+      setLives((l) => {
+        const newLives = l - 1;
+        if (newLives <= 0) {
+          setStatus('Game Over');
+          setTimeout(() => reset(true), 1000);
+          return 0;
+        }
+        reset();
+        return newLives;
+      });
+    }, [level, reset]);
 
 
-  useEffect(() => {
-    let last = performance.now();
+    useEffect(() => {
+      let last = performance.now();
     let raf;
     const loop = (time) => {
       const dt = (time - last) / 1000;
@@ -281,7 +281,7 @@ const Frogger = () => {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, []);
+    }, [level, loseLife, reset]);
 
   useEffect(() => {
     if (score >= nextLife.current) {

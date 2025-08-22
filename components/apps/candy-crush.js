@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const width = 8;
 const candyColors = ['#ff6666', '#66b3ff', '#66ff66', '#ffcc66'];
@@ -15,7 +15,7 @@ const CandyCrush = () => {
     setBoard(randomBoard);
   };
 
-  const checkForRowOfThree = () => {
+  const checkForRowOfThree = useCallback(() => {
     for (let i = 0; i < width * width; i++) {
       const row = [i, i + 1, i + 2];
       const color = board[i];
@@ -27,9 +27,9 @@ const CandyCrush = () => {
       }
     }
     return false;
-  };
+  }, [board]);
 
-  const checkForColumnOfThree = () => {
+  const checkForColumnOfThree = useCallback(() => {
     for (let i = 0; i <= width * (width - 3); i++) {
       const column = [i, i + width, i + width * 2];
       const color = board[i];
@@ -39,9 +39,9 @@ const CandyCrush = () => {
       }
     }
     return false;
-  };
+  }, [board]);
 
-  const moveDown = () => {
+  const moveDown = useCallback(() => {
     for (let i = board.length - 1; i >= 0; i--) {
       if (board[i] === '' && i >= width) {
         board[i] = board[i - width];
@@ -51,7 +51,7 @@ const CandyCrush = () => {
         board[i] = candyColors[Math.floor(Math.random() * candyColors.length)];
       }
     }
-  };
+  }, [board]);
 
   const dragStart = (e) => setDragged(e.target);
   const dragDrop = (e) => setReplaced(e.target);
@@ -87,7 +87,7 @@ const CandyCrush = () => {
       setBoard([...board]);
     }, 200);
     return () => clearInterval(timer);
-  }, [board]);
+  }, [board, checkForRowOfThree, checkForColumnOfThree, moveDown]);
 
   return (
     <div className="flex justify-center items-center p-4 select-none">

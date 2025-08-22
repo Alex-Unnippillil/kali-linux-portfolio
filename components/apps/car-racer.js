@@ -158,15 +158,17 @@ const CarRacer = () => {
     window.addEventListener('keyup', keyUp);
 
     // Touch steering wheel
-    let wheelAngle = 0;
-    const handleWheel = (e) => {
-      if (control !== 'wheel') return;
-      const rect = wheelRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left - rect.width / 2;
-      const y = e.clientY - rect.top - rect.height / 2;
-      wheelAngle = Math.atan2(y, x) / Math.PI; // -1..1
-    };
-    wheelRef.current && wheelRef.current.addEventListener('pointermove', handleWheel);
+      let wheelAngle = 0;
+      const handleWheel = (e) => {
+        if (control !== 'wheel') return;
+        const rect = wheel?.getBoundingClientRect();
+        if (!rect) return;
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        wheelAngle = Math.atan2(y, x) / Math.PI; // -1..1
+      };
+      const wheel = wheelRef.current;
+      wheel && wheel.addEventListener('pointermove', handleWheel);
 
     // Tilt control
     let tilt = 0;
@@ -336,12 +338,12 @@ const CarRacer = () => {
 
     return () => {
       cancelAnimationFrame(animationId);
-      window.removeEventListener('keydown', keyDown);
-      window.removeEventListener('keyup', keyUp);
-      window.removeEventListener('deviceorientation', handleOrientation);
-      wheelRef.current && wheelRef.current.removeEventListener('pointermove', handleWheel);
-    };
-  }, [control]);
+        window.removeEventListener('keydown', keyDown);
+        window.removeEventListener('keyup', keyUp);
+        window.removeEventListener('deviceorientation', handleOrientation);
+        wheel && wheel.removeEventListener('pointermove', handleWheel);
+      };
+    }, [control]);
 
   const handleSensitivity = (e) => {
     const val = parseFloat(e.target.value);

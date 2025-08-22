@@ -23,9 +23,10 @@ const Checkers = () => {
   const [noCapture, setNoCapture] = useState(0);
   const [hint, setHint] = useState<Move | null>(null);
   const [lastMove, setLastMove] = useState<[number, number][]>([]);
-  const workerRef = useRef<Worker | null>(null);
-  const hintRequest = useRef(false);
-  const pathRef = useRef<[number, number][]>([]);
+    const workerRef = useRef<Worker | null>(null);
+    const hintRequest = useRef(false);
+    const pathRef = useRef<[number, number][]>([]);
+    const makeMoveRef = useRef<((move: Move) => void) | null>(null);
 
   useEffect(() => {
     workerRef.current = new Worker('/checkers-worker.js');
@@ -34,12 +35,12 @@ const Checkers = () => {
       if (hintRequest.current) {
         setHint(move);
         hintRequest.current = false;
-      } else if (move) {
-        makeMove(move);
-      }
-    };
-    return () => workerRef.current?.terminate();
-  }, []);
+        } else if (move) {
+          makeMoveRef.current?.(move);
+        }
+      };
+      return () => workerRef.current?.terminate();
+    }, []);
 
   const allMoves = useMemo(() => getAllMoves(board, turn), [board, turn]);
 
@@ -61,7 +62,7 @@ const Checkers = () => {
     makeMove(move);
   };
 
-  const makeMove = (move: Move) => {
+    const makeMove = (move: Move) => {
     if (pathRef.current.length === 0) pathRef.current = [move.from, move.to];
     else pathRef.current.push(move.to);
     const { board: newBoard, capture, king } = applyMove(board, move);
@@ -114,7 +115,9 @@ const Checkers = () => {
     setHint(null);
     setLastMove(pathRef.current);
     pathRef.current = [];
-  };
+    };
+
+    makeMoveRef.current = makeMove;
 
   const reset = () => {
     setBoard(createBoard());

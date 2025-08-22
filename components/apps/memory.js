@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createDeck } from './memory_utils';
 
 const modes = [2, 4, 6];
@@ -15,33 +15,36 @@ const Memory = () => {
   const [stats, setStats] = useState({ games: 0, bestTime: null, bestMoves: null });
   const timerRef = useRef(null);
 
-  const key = (s = size, t = timed) => `memory_${s}_${t ? 'timed' : 'casual'}`;
+    const key = useCallback(
+      (s = size, t = timed) => `memory_${s}_${t ? 'timed' : 'casual'}`,
+      [size, timed]
+    );
 
-  const reset = (newSize = size) => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    setTime(0);
-    setMoves(0);
-    setFlipped([]);
-    setMatched([]);
-    setCards(createDeck(newSize));
-  };
+    const reset = useCallback((newSize = size) => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setTime(0);
+      setMoves(0);
+      setFlipped([]);
+      setMatched([]);
+      setCards(createDeck(newSize));
+    }, [size]);
 
-  useEffect(() => {
-    reset(size);
-  }, [size]);
+    useEffect(() => {
+      reset(size);
+    }, [size, reset]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = JSON.parse(localStorage.getItem(key()) || '{}');
-    setStats({
-      games: stored.games || 0,
-      bestTime: stored.bestTime ?? null,
-      bestMoves: stored.bestMoves ?? null,
-    });
-  }, [size, timed]);
+    useEffect(() => {
+      if (typeof window === 'undefined') return;
+      const stored = JSON.parse(localStorage.getItem(key()) || '{}');
+      setStats({
+        games: stored.games || 0,
+        bestTime: stored.bestTime ?? null,
+        bestMoves: stored.bestMoves ?? null,
+      });
+    }, [key]);
 
   const startTimer = () => {
     if (timed && !timerRef.current) {
@@ -49,35 +52,35 @@ const Memory = () => {
     }
   };
 
-  const saveStats = () => {
-    if (typeof window === 'undefined') return;
-    const current = JSON.parse(localStorage.getItem(key()) || '{}');
-    const updated = {
-      games: (current.games || 0) + 1,
-      bestTime: timed
-        ? current.bestTime
-          ? Math.min(current.bestTime, time)
-          : time
-        : current.bestTime || null,
-      bestMoves: !timed
-        ? current.bestMoves
-          ? Math.min(current.bestMoves, moves)
-          : moves
-        : current.bestMoves || null,
-    };
-    localStorage.setItem(key(), JSON.stringify(updated));
-    setStats(updated);
-  };
+    const saveStats = useCallback(() => {
+      if (typeof window === 'undefined') return;
+      const current = JSON.parse(localStorage.getItem(key()) || '{}');
+      const updated = {
+        games: (current.games || 0) + 1,
+        bestTime: timed
+          ? current.bestTime
+            ? Math.min(current.bestTime, time)
+            : time
+          : current.bestTime || null,
+        bestMoves: !timed
+          ? current.bestMoves
+            ? Math.min(current.bestMoves, moves)
+            : moves
+          : current.bestMoves || null,
+      };
+      localStorage.setItem(key(), JSON.stringify(updated));
+      setStats(updated);
+    }, [timed, time, moves, key]);
 
-  useEffect(() => {
-    if (cards.length && matched.length === cards.length) {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
+    useEffect(() => {
+      if (cards.length && matched.length === cards.length) {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        saveStats();
       }
-      saveStats();
-    }
-  }, [matched, cards]);
+    }, [matched, cards, saveStats]);
 
   const handleFlip = (idx) => {
     if (flipped.includes(idx) || matched.includes(idx)) return;
