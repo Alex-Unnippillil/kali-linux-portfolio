@@ -1,53 +1,243 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import Filter from 'bad-words';
+import { toPng } from 'html-to-image';
 
-const quotes = [
-  "The only limit to our realization of tomorrow is our doubts of today.",
-  "In the middle of difficulty lies opportunity.",
-  "Life is 10% what happens to us and 90% how we react to it.",
-  "The purpose of our lives is to be happy.",
+import offlineQuotes from './quotes.json';
+
+const SAFE_CATEGORIES = [
+  'inspirational',
+  'life',
+  'love',
+  'wisdom',
+  'technology',
+  'humor',
+  'general',
 ];
 
+const CATEGORY_KEYWORDS = {
+  inspirational: [
+    'inspire',
+    'dream',
+    'goal',
+    'courage',
+    'success',
+    'motivation',
+    'believe',
+    'achieve',
+  ],
+  life: ['life', 'living', 'journey', 'experience'],
+  love: ['love', 'heart', 'passion'],
+  wisdom: ['wisdom', 'knowledge', 'learn', 'education'],
+  technology: ['technology', 'science', 'computer'],
+  humor: ['laugh', 'funny', 'humor'],
+};
+
+const processQuotes = (data) => {
+  const filter = new Filter();
+  return data
+    .map((q) => {
+      const lower = q.quote.toLowerCase();
+      const tags = [];
+      Object.entries(CATEGORY_KEYWORDS).forEach(([cat, keywords]) => {
+        if (keywords.some((k) => lower.includes(k))) tags.push(cat);
+      });
+      if (!tags.length) tags.push('general');
+      return { content: q.quote, author: q.author, tags };
+    })
+    .filter(
+      (q) =>
+        !filter.isProfane(q.content) &&
+        q.tags.some((t) => SAFE_CATEGORIES.includes(t))
+    );
+};
+
+const allOfflineQuotes = processQuotes(offlineQuotes);
+
 const QuoteGenerator = () => {
-  const [quote, setQuote] = useState('');
-  const [fade, setFade] = useState(true);
-
-  const getRandomQuote = () => quotes[Math.floor(Math.random() * quotes.length)];
-
-  const changeQuote = () => {
-    setFade(true);
-    setTimeout(() => {
-      setQuote(getRandomQuote());
-      setFade(false);
-    }, 300);
-  };
+  const [quotes, setQuotes] = useState(allOfflineQuotes);
+  const [current, setCurrent] = useState(null);
+  const [category, setCategory] = useState('');
+  const [search, setSearch] = useState('');
+  const [fade, setFade] = useState(false);
+  const [prefersReduced, setPrefersReduced] = useState(false);
 
   useEffect(() => {
-    changeQuote();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = () => setPrefersReduced(media.matches);
+    handler();
+    media.addEventListener('change', handler);
+    return () => media.removeEventListener('change', handler);
   }, []);
 
-  const copyQuote = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(quote);
+  useEffect(() => {
+    const etag = localStorage.getItem('quotesEtag');
+    const stored = localStorage.getItem('quotesData');
+    if (stored) {
+      try {
+        setQuotes(processQuotes(JSON.parse(stored)));
+      } catch {
+        // ignore parse error
+      }
+    }
+
+    fetch('https://dummyjson.com/quotes?limit=500', {
+      headers: etag ? { 'If-None-Match': etag } : {},
+    })
+      .then((res) => {
+        if (res.status === 200) {
+          const newEtag = res.headers.get('ETag');
+          res.json().then((d) => {
+            localStorage.setItem('quotesData', JSON.stringify(d.quotes));
+            if (newEtag) localStorage.setItem('quotesEtag', newEtag);
+            setQuotes(processQuotes(d.quotes));
+          });
+        }
+      })
+      .catch(() => {
+        /* ignore network errors */
+      });
+  }, []);
+
+  const filteredQuotes = useMemo(
+    () =>
+      quotes.filter(
+        (q) =>
+          (!category || q.tags.includes(category)) &&
+          (!search ||
+            q.content.toLowerCase().includes(search.toLowerCase()) ||
+            q.author.toLowerCase().includes(search.toLowerCase()))
+      ),
+    [quotes, category, search]
+  );
+
+  useEffect(() => {
+    if (!filteredQuotes.length) {
+      setCurrent(null);
+      return;
+    }
+    const seed = new Date().toISOString().slice(0, 10);
+    const index =
+      Math.abs(
+        seed
+          .split('')
+          .reduce((a, c) => Math.imul(a, 31) + c.charCodeAt(0), 0)
+      ) % filteredQuotes.length;
+    setCurrent(filteredQuotes[index]);
+  }, [filteredQuotes]);
+
+  const changeQuote = () => {
+    if (!filteredQuotes.length) return;
+    const newQuote =
+      filteredQuotes[Math.floor(Math.random() * filteredQuotes.length)];
+    if (prefersReduced) {
+      setCurrent(newQuote);
+    } else {
+      setFade(true);
+      setTimeout(() => {
+        setCurrent(newQuote);
+        setFade(false);
+      }, 300);
     }
   };
 
+  const copyQuote = () => {
+    if (current && navigator.clipboard) {
+      navigator.clipboard.writeText(
+        `"${current.content}" - ${current.author}`
+      );
+    }
+  };
+
+  const shareOnX = () => {
+    if (!current) return;
+    const text = `"${current.content}" - ${current.author}`;
+    const url = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const exportImage = () => {
+    const node = document.getElementById('quote-card');
+    if (!node) return;
+    toPng(node).then((dataUrl) => {
+      const link = document.createElement('a');
+      link.download = 'quote.png';
+      link.href = dataUrl;
+      link.click();
+    });
+  };
+
+  const categories = useMemo(
+    () =>
+      Array.from(new Set(quotes.flatMap((q) => q.tags))).filter((c) =>
+        SAFE_CATEGORIES.includes(c)
+      ),
+    [quotes]
+  );
+
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <p className={`text-center text-lg mb-4 transition-opacity duration-300 ${fade ? 'opacity-0' : 'opacity-100'}`}>{quote}</p>
-      <div className="flex space-x-2">
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={changeQuote}
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 overflow-auto">
+      <div className="w-full max-w-md flex flex-col items-center">
+        <div
+          id="quote-card"
+          className={`p-4 text-center transition-opacity duration-300 ${
+            fade && !prefersReduced ? 'opacity-0' : 'opacity-100'
+          }`}
         >
-          New Quote
-        </button>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={copyQuote}
-        >
-          Copy Quote
-        </button>
+          {current ? (
+            <>
+              <p className="text-lg mb-2">&quot;{current.content}&quot;</p>
+              <p className="text-sm text-gray-300">- {current.author}</p>
+            </>
+          ) : (
+            <p>No quotes found.</p>
+          )}
+        </div>
+        <div className="flex flex-wrap justify-center gap-2 mt-4">
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={changeQuote}
+          >
+            New Quote
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={copyQuote}
+          >
+            Copy
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={shareOnX}
+          >
+            X
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={exportImage}
+          >
+            Image
+          </button>
+        </div>
+        <div className="mt-4 flex flex-col w-full gap-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search"
+            className="px-2 py-1 rounded text-black"
+          />
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="px-2 py-1 rounded text-black"
+          >
+            <option value="">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </div>
   );
