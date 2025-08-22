@@ -5537,6 +5537,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"libyara-wasm@npm:^1.2.1":
+  version: 1.2.1
+  resolution: "libyara-wasm@npm:1.2.1"
+  checksum: 10c0/1e925e1aa955a2a94d0528f3d05502e49ef34befc1ac76f470af1bf99ae2f6e7ad6577659538a3bca9b9ced1ea86e95657806f49c295aa3cc8dff4c1410ab4dc
+  languageName: node
+  linkType: hard
+
 "lilconfig@npm:^2.0.5, lilconfig@npm:^2.0.6":
   version: 2.0.6
   resolution: "lilconfig@npm:2.0.6"
@@ -7957,6 +7964,7 @@ __metadata:
     jest-environment-jsdom: "npm:^30.0.5"
     jsonwebtoken: "npm:^9.0.2"
     jspdf: "npm:^2.5.1"
+    libyara-wasm: "npm:^1.2.1"
     matter-js: "npm:^0.20.0"
     next: "npm:^15.5.0"
     postcss: "npm:^8.4.21"

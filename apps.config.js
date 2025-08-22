@@ -82,7 +82,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
-
+const YaraTesterApp = createDynamicApp('yara-tester', 'YARA Tester');
 
 const displayTerminal = createDisplay(TerminalApp);
 const displayTerminalCalc = createDisplay(CalcApp);
@@ -119,9 +119,8 @@ const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 
 const displayGomoku = createDisplay(GomokuApp);
-
 const displayPinball = createDisplay(PinballApp);
-
+const displayYaraTester = createDisplay(YaraTesterApp);
 
 // Default window sizing for games to prevent oversized frames
 const gameDefaults = {
@@ -600,6 +599,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'yara-tester',
+    title: 'YARA Tester',
+    icon: './themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayYaraTester,
   },
   {
     id: 'weather',
