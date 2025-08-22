@@ -69,6 +69,11 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const SimonApp = dynamic(
+  () =>
+    import('./components/apps/simon').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Simon' });
+
 const SolitaireApp = dynamic(
   () =>
     import('./components/apps/solitaire').then((mod) => {
@@ -78,12 +83,15 @@ const Game2048App = dynamic(
   () =>
     import('./components/apps/2048').then((mod) => {
       ReactGA.event({ category: 'Application', action: 'Loaded 2048' });
+ 
       return mod.default;
     }),
   {
     ssr: false,
     loading: () => (
       <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Simon...
+
         Loading Solitaire...
       </div>
     ),
@@ -114,6 +122,11 @@ const displaySolitaire = (addFolder, openApp) => (
 const display2048 = (addFolder, openApp) => (
   <Game2048App addFolder={addFolder} openApp={openApp} />
 );
+
+const displaySimon = (addFolder, openApp) => (
+  <SimonApp addFolder={addFolder} openApp={openApp} />
+);
+
 
 // Games list used for the "Games" folder on the desktop
 const games = [
@@ -208,6 +221,15 @@ const apps = [
     desktop_shortcut: false,
     screen: displaySolitaire,
     category: 'games',
+  },
+  {
+    id: 'simon',
+    title: 'Simon',
+    icon: './themes/Yaru/apps/simon.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySimon,
   },
   {
     id: 'about-alex',
@@ -338,6 +360,21 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayGedit,
+  },
+];
+
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'simon',
+    title: 'Simon',
+    icon: './themes/Yaru/apps/simon.svg',
+    screen: displaySimon,
   },
 ];
 
