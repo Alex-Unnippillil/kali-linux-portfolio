@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { act } from 'react';
 import { render, screen } from '@testing-library/react';
-import { act } from 'react-dom/test-utils';
 import Ubuntu from '../components/ubuntu';
 
 jest.mock('../components/screen/desktop', () => () => <div data-testid="desktop" />);
