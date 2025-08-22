@@ -5,6 +5,8 @@ import {
   moveWasteToTableau,
   moveToFoundation,
   autoMove,
+  autoComplete,
+  isWin,
   suits,
   Card,
   GameState,
@@ -24,6 +26,7 @@ const emptyState = (): GameState => ({
   foundations: Array.from({ length: 4 }, () => []),
   draw: 1,
   score: 0,
+  redeals: 3,
 });
 
 describe('Solitaire engine', () => {
@@ -43,10 +46,11 @@ describe('Solitaire engine', () => {
     const afterDraw = drawFromStock(game);
     expect(afterDraw.waste.length).toBe(3);
     expect(afterDraw.stock.length).toBe(game.stock.length - 3);
-    const recycled = drawFromStock({ ...afterDraw, stock: [], waste: afterDraw.waste });
+    const recycled = drawFromStock({ ...afterDraw, stock: [], waste: afterDraw.waste, redeals: 3 });
     expect(recycled.stock.length).toBe(afterDraw.waste.length);
     expect(recycled.waste.length).toBe(0);
     expect(recycled.stock.every((c) => !c.faceUp)).toBe(true);
+    expect(recycled.redeals).toBe(2);
   });
 
   test('moveTableauToTableau obeys rules and flips card', () => {
@@ -65,6 +69,19 @@ describe('Solitaire engine', () => {
     expect(result.tableau[1].length).toBe(1);
   });
 
+  test('moveWasteToTableau enforces rules', () => {
+    const state = emptyState();
+    state.waste = [card('♠', 5, true)];
+    state.tableau[0] = [card('♥', 6, true)];
+    let r = moveWasteToTableau(state, 0);
+    expect(r.tableau[0].length).toBe(2);
+    const state2 = emptyState();
+    state2.waste = [card('♠', 5, true)];
+    state2.tableau[0] = [card('♠', 6, true)];
+    r = moveWasteToTableau(state2, 0);
+    expect(r.tableau[0].length).toBe(1);
+  });
+
   test('moveToFoundation builds correctly', () => {
     const state = emptyState();
     state.tableau[0] = [card('♠', 1, true)];
@@ -80,5 +97,24 @@ describe('Solitaire engine', () => {
     state.waste = [card('♦', 1, true)];
     const r = autoMove(state, 'waste', null);
     expect(r.foundations[suits.indexOf('♦')].length).toBe(1);
+  });
+
+  test('autoComplete moves all possible cards to foundation', () => {
+    const state = emptyState();
+    state.foundations[suits.indexOf('♠')] = [card('♠', 1, true), card('♠', 2, true)];
+    state.waste = [card('♠', 3, true)];
+    state.tableau[0] = [card('♠', 4, true)];
+    const r = autoComplete(state);
+    expect(r.foundations[suits.indexOf('♠')].length).toBe(4);
+    expect(r.waste.length).toBe(0);
+    expect(r.tableau[0].length).toBe(0);
+  });
+
+  test('isWin detects completed game', () => {
+    const state = emptyState();
+    suits.forEach((s, i) => {
+      state.foundations[i] = Array.from({ length: 13 }, (_, v) => card(s, v + 1, true));
+    });
+    expect(isWin(state)).toBe(true);
   });
 });

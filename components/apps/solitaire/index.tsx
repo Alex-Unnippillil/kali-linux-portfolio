@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactGA from 'react-ga4';
 import {
   initializeGame,
   drawFromStock,
@@ -12,7 +13,7 @@ import {
 } from './engine';
 
 const renderCard = (card: Card) => (
-  <div className="w-16 h-24 rounded border border-black bg-white flex items-center justify-center" >
+  <div className="w-16 h-24 rounded border border-black bg-white flex items-center justify-center transition-transform duration-300" >
     <span className={card.color === 'red' ? 'text-red-600' : ''}>
       {valueToString(card.value)}{card.suit}
     </span>
@@ -59,10 +60,16 @@ const Solitaire = () => {
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {
       setWon(true);
+      ReactGA.event({ category: 'Solitaire', action: 'win' });
     }
   }, [game]);
 
-  const draw = () => setGame((g) => drawFromStock(g));
+  const draw = () =>
+    setGame((g) => {
+      const n = drawFromStock(g);
+      if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+      return n;
+    });
 
   const handleDragStart = (source: 'tableau' | 'waste', pile: number, index: number) => {
     if (source === 'tableau') {
@@ -79,9 +86,17 @@ const Solitaire = () => {
   const dropToTableau = (pileIndex: number) => {
     if (!drag) return;
     if (drag.source === 'tableau') {
-      setGame((g) => moveTableauToTableau(g, drag.pile, drag.index, pileIndex));
+      setGame((g) => {
+        const n = moveTableauToTableau(g, drag.pile, drag.index, pileIndex);
+        if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+        return n;
+      });
     } else {
-      setGame((g) => moveWasteToTableau(g, pileIndex));
+      setGame((g) => {
+        const n = moveWasteToTableau(g, pileIndex);
+        if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+        return n;
+      });
     }
     finishDrag();
   };
@@ -89,15 +104,27 @@ const Solitaire = () => {
   const dropToFoundation = (pileIndex: number) => {
     if (!drag) return;
     if (drag.source === 'tableau') {
-      setGame((g) => moveToFoundation(g, 'tableau', drag.pile));
+      setGame((g) => {
+        const n = moveToFoundation(g, 'tableau', drag.pile);
+        if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+        return n;
+      });
     } else {
-      setGame((g) => moveToFoundation(g, 'waste', null));
+      setGame((g) => {
+        const n = moveToFoundation(g, 'waste', null);
+        if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
+        return n;
+      });
     }
     finishDrag();
   };
 
   const handleDoubleClick = (source: 'tableau' | 'waste', pile: number) => {
-    setGame((g) => autoMove(g, source, source === 'tableau' ? pile : null));
+    setGame((g) => {
+      const n = autoMove(g, source, source === 'tableau' ? pile : null);
+      if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+      return n;
+    });
   };
 
   const best = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('solitaireBest') || '{}' : '{}');
@@ -112,10 +139,15 @@ const Solitaire = () => {
       <div className="flex justify-between mb-2">
         <div>Score: {game.score}</div>
         <div>Time: {time}s</div>
+        <div>Redeals: {game.redeals}</div>
         <div>Best: {best.score ? `${best.score} (${best.time}s)` : 'N/A'}</div>
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => setDrawMode(drawMode === 1 ? 3 : 1)}
+          onClick={() => {
+            const mode = drawMode === 1 ? 3 : 1;
+            ReactGA.event({ category: 'Solitaire', action: 'variant_select', label: mode === 1 ? 'draw1' : 'draw3' });
+            setDrawMode(mode);
+          }}
         >
           Draw {drawMode === 1 ? '1' : '3'}
         </button>
@@ -161,7 +193,7 @@ const Solitaire = () => {
             {pile.map((card, idx) => (
               <div
                 key={idx}
-                className="absolute"
+                className="absolute transition-all duration-300"
                 style={{ top: idx * 24 }}
                 draggable={card.faceUp}
                 onDoubleClick={() => handleDoubleClick('tableau', i)}

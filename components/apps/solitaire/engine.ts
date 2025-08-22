@@ -13,6 +13,7 @@ export type GameState = {
   foundations: Card[][];
   draw: 1 | 3;
   score: number;
+  redeals: number; // remaining times waste can be recycled into stock
 };
 
 export const suits: Suit[] = ['♠', '♥', '♦', '♣'];
@@ -58,17 +59,24 @@ export const initializeGame = (draw: 1 | 3 = 1, deck: Card[] = createDeck()): Ga
     foundations: Array.from({ length: 4 }, () => []),
     draw,
     score: 0,
+    redeals: 3,
   };
 };
 
 export const drawFromStock = (state: GameState): GameState => {
   if (state.stock.length === 0) {
-    if (state.waste.length === 0) return state;
+    if (state.waste.length === 0 || state.redeals === 0) return state;
     const newStock = state.waste
       .slice()
       .reverse()
       .map((c) => ({ ...c, faceUp: false }));
-    return { ...state, stock: newStock, waste: [], score: state.score - 100 };
+    return {
+      ...state,
+      stock: newStock,
+      waste: [],
+      redeals: state.redeals - 1,
+      score: state.score - 100,
+    };
   }
   const drawCount = Math.min(state.draw, state.stock.length);
   const newStock = state.stock.slice(0, state.stock.length - drawCount);
@@ -175,6 +183,30 @@ export const autoMove = (
   }
   return moveToFoundation(state, 'tableau', index);
 };
+
+export const autoComplete = (state: GameState): GameState => {
+  let current = state;
+  let moved = true;
+  while (moved) {
+    moved = false;
+    const fromWaste = moveToFoundation(current, 'waste', null);
+    if (fromWaste !== current) {
+      current = fromWaste;
+      moved = true;
+    }
+    for (let i = 0; i < current.tableau.length; i += 1) {
+      const next = moveToFoundation(current, 'tableau', i);
+      if (next !== current) {
+        current = next;
+        moved = true;
+      }
+    }
+  }
+  return current;
+};
+
+export const isWin = (state: GameState): boolean =>
+  state.foundations.every((p) => p.length === 13);
 
 export const valueToString = (value: number): string => {
   if (value === 1) return 'A';
