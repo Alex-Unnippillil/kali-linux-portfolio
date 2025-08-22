@@ -35,7 +35,7 @@ export default function ProjectGallery() {
   }, []);
 
   return (
-    <div className="p-4 w-full h-full overflow-y-auto bg-ub-cool-grey text-white">
+    <div className="p-4 w-full h-full overflow-y-auto bg-panel text-white">
       {projects.length === 0 ? (
         <p className="text-center">Loading projects...</p>
       ) : (
@@ -43,7 +43,7 @@ export default function ProjectGallery() {
           {projects.map((project, index) => (
             <div
               key={index}
-              className="rounded-md bg-ub-grey bg-opacity-20 border border-gray-700 overflow-hidden flex flex-col"
+              className="rounded-md bg-surface bg-opacity-20 border border-gray-700 overflow-hidden flex flex-col"
             >
               <div className="relative h-40 w-full">
                 <Image

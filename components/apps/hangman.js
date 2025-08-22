@@ -238,7 +238,7 @@ const Hangman = () => {
 
   return (
     <div
-      className={`h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none ${
+      className={`h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4 select-none ${
         shake ? 'shake' : ''
       }`}
     >

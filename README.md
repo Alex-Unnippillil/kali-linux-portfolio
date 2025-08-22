@@ -13,7 +13,7 @@ const MyApp = dynamic(() =>
     }), {
         ssr: false,
         loading: () => (
-            <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+            <div className="h-full w-full flex items-center justify-center bg-panel text-white">
                 Loading My App...
             </div>
         ),
@@ -44,7 +44,7 @@ To introduce a new game:
       }), {
         ssr: false,
         loading: () => (
-          <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+          <div className="h-full w-full flex items-center justify-center bg-panel text-white">
             Loading My Game...
           </div>
         ),
