@@ -106,14 +106,6 @@ export default function YouTubeApp({ initialVideos = [] }) {
     }
   }, [initialVideos]);
 
-  if (!apiKey && videos.length === 0) {
-    return (
-      <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white p-2">
-        <p>YouTube API key is not configured.</p>
-      </div>
-    );
-  }
-
   const categories = useMemo(
     () => [
       'All',
@@ -179,65 +171,77 @@ export default function YouTubeApp({ initialVideos = [] }) {
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
-      {/* Search + sorting */}
-      <div className="p-3 flex flex-wrap items-center gap-2">
-        <input
-          placeholder="Search"
-          className="flex-1 min-w-[150px] text-black px-3 py-2 rounded"
-          value={search}
-          onChange={handleSearchChange}
-        />
-        <label htmlFor="sort" className="sr-only">
-          Sort by
-        </label>
-        <select
-          id="sort"
-          className="text-black px-3 py-2 rounded"
-          value={sortBy}
-          onChange={handleSortChange}
-        >
-          <option value="date">Newest First</option>
-          <option value="dateAsc">Oldest First</option>
-          <option value="title">Title (A-Z)</option>
-          <option value="playlist">Playlist</option>
-        </select>
-      </div>
-
-      {/* Category tabs */}
-      <div className="overflow-x-auto px-3 pb-2 flex flex-wrap gap-2">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => handleCategoryClick(cat)}
-            className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
-              activeCategory === cat ? 'bg-red-600 text-white' : 'bg-gray-700 hover:bg-gray-600'
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-
-      {/* Video list */}
-      <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-        {sorted.map((video) => (
-          <div
-            key={video.id}
-            data-testid="video-card"
-            className="bg-gray-800 rounded-lg overflow-hidden shadow flex flex-col hover:shadow-lg transition"
-          >
-            <a href={video.url} target="_blank" rel="noreferrer" className="block">
-              {video.thumbnail && (
-                <img src={video.thumbnail} alt={video.title} className="w-full" />
-              )}
-              <div className="p-2 font-semibold text-sm line-clamp-2">{video.title}</div>
-            </a>
-            <div className="px-2 pb-2 text-xs text-gray-300">
-              {video.playlist} • {new Date(video.publishedAt).toLocaleDateString()}
-            </div>
+      {!apiKey && videos.length === 0 ? (
+        <div className="p-2">
+          <p>YouTube API key is not configured.</p>
+        </div>
+      ) : (
+        <>
+          {/* Search + sorting */}
+          <div className="p-3 flex flex-wrap items-center gap-2">
+            <input
+              placeholder="Search"
+              className="flex-1 min-w-[150px] text-black px-3 py-2 rounded"
+              value={search}
+              onChange={handleSearchChange}
+            />
+            <label htmlFor="sort" className="sr-only">
+              Sort by
+            </label>
+            <select
+              id="sort"
+              className="text-black px-3 py-2 rounded"
+              value={sortBy}
+              onChange={handleSortChange}
+            >
+              <option value="date">Newest First</option>
+              <option value="dateAsc">Oldest First</option>
+              <option value="title">Title (A-Z)</option>
+              <option value="playlist">Playlist</option>
+            </select>
           </div>
-        ))}
-      </div>
+
+          {/* Category tabs */}
+          <div className="overflow-x-auto px-3 pb-2 flex flex-wrap gap-2">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => handleCategoryClick(cat)}
+                className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
+                  activeCategory === cat
+                    ? 'bg-red-600 text-white'
+                    : 'bg-gray-700 hover:bg-gray-600'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Video list */}
+          <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+            {sorted.map((video) => (
+              <div
+                key={video.id}
+                data-testid="video-card"
+                className="bg-gray-800 rounded-lg overflow-hidden shadow flex flex-col hover:shadow-lg transition"
+              >
+                <a href={video.url} target="_blank" rel="noreferrer" className="block">
+                  {video.thumbnail && (
+                    <img src={video.thumbnail} alt={video.title} className="w-full" />
+                  )}
+                  <div className="p-2 font-semibold text-sm line-clamp-2">
+                    {video.title}
+                  </div>
+                </a>
+                <div className="px-2 pb-2 text-xs text-gray-300">
+                  {video.playlist} • {new Date(video.publishedAt).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
