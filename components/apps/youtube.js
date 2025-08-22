@@ -147,12 +147,18 @@ export default function YouTubeApp({ initialVideos = [] }) {
   );
 
   const handleSortChange = useCallback(
-    (e) => startTransition(() => setSortBy(e.target.value)),
+    (e) => {
+      const { value } = e.target;
+      startTransition(() => setSortBy(value));
+    },
     [startTransition]
   );
 
   const handleSearchChange = useCallback(
-    (e) => startTransition(() => setSearch(e.target.value)),
+    (e) => {
+      const { value } = e.target;
+      startTransition(() => setSearch(value));
+    },
     [startTransition]
   );
 
