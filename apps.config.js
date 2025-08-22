@@ -66,6 +66,7 @@ const SokobanApp = createDynamicApp('sokoban', 'Sokoban');
 const SolitaireApp = createDynamicApp('solitaire', 'Solitaire');
 const TowerDefenseApp = createDynamicApp('tower-defense', 'Tower Defense');
 const WordSearchApp = createDynamicApp('word-search', 'Word Search');
+const WordleApp = createDynamicApp('wordle', 'Wordle');
 const BlackjackApp = createDynamicApp('blackjack', 'Blackjack');
 const BreakoutApp = createDynamicApp('breakout', 'Breakout');
 const AsteroidsApp = createDynamicApp('asteroids', 'Asteroids');
@@ -74,6 +75,10 @@ const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
+
+const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
+const PinballApp = createDynamicApp('pinball', 'Pinball');
+
 
 const displayTerminal = createDisplay(TerminalApp);
 const displayTerminalCalc = createDisplay(CalcApp);
@@ -99,6 +104,7 @@ const displaySokoban = createDisplay(SokobanApp);
 const displaySolitaire = createDisplay(SolitaireApp);
 const displayTowerDefense = createDisplay(TowerDefenseApp);
 const displayWordSearch = createDisplay(WordSearchApp);
+const displayWordle = createDisplay(WordleApp);
 const displayBlackjack = createDisplay(BlackjackApp);
 const displayBreakout = createDisplay(BreakoutApp);
 const displayAsteroids = createDisplay(AsteroidsApp);
@@ -107,6 +113,11 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+
+const displayGomoku = createDisplay(GomokuApp);
+
+const displayPinball = createDisplay(PinballApp);
+
 
 // Default window sizing for games to prevent oversized frames
 const gameDefaults = {
@@ -342,6 +353,15 @@ const gameList = [
     screen: displayWordSearch,
   },
   {
+    id: 'wordle',
+    title: 'Wordle',
+    icon: './themes/Yaru/apps/wordle.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWordle,
+  },
+  {
     id: 'nonogram',
     title: 'Nonogram',
     icon: './themes/Yaru/apps/nonogram.svg',
@@ -385,6 +405,22 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayCandyCrush,
+
+    id: 'gomoku',
+    title: 'Gomoku',
+    icon: './themes/Yaru/apps/gomoku.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayGomoku,
+
+    id: 'pinball',
+    title: 'Pinball',
+    icon: './themes/Yaru/apps/pinball.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPinball,
   },
 ];
 
