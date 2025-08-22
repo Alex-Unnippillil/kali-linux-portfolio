@@ -106,8 +106,14 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 
+// Default window sizing for games to prevent oversized frames
+const gameDefaults = {
+  defaultWidth: 50,
+  defaultHeight: 60,
+};
+
 // Games list used for the "Games" folder on the desktop
-export const games = [
+const gameList = [
   {
     id: '2048',
     title: '2048',
@@ -370,6 +376,8 @@ export const games = [
     screen: displayFlappyBird,
   },
 ];
+
+export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
 const apps = [
   {
