@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import ReactGA from 'react-ga4';
-import { defaultLevels, parseLevels } from './levels';
+import { defaultLevelMetas, parseLevels, loadPublicLevels, LevelMeta, defaultLevels } from './levels';
 import {
   loadLevel,
   move,
   undo as undoMove,
+  redo as redoMove,
   reset as resetLevel,
   reachable,
   isSolved,
@@ -15,49 +16,112 @@ import {
 const CELL = 32;
 
 const Sokoban: React.FC = () => {
-  const [levels, setLevels] = useState<string[][]>(defaultLevels);
+  const [levels, setLevels] = useState<LevelMeta[]>(defaultLevelMetas);
   const [index, setIndex] = useState(0);
-  const [state, setState] = useState<State>(() => loadLevel(defaultLevels[0]));
-  const [reach, setReach] = useState<Set<string>>(reachable(loadLevel(defaultLevels[0])));
+  const [state, setState] = useState<State>(() => loadLevel(defaultLevelMetas[0].lines));
+  const [reach, setReach] = useState<Set<string>>(reachable(loadLevel(defaultLevelMetas[0].lines)));
   const [best, setBest] = useState<number | null>(null);
+  const [completed, setCompleted] = useState<Record<string, boolean>>(() => {
+    const c: Record<string, boolean> = {};
+    defaultLevelMetas.forEach((l) => {
+      c[l.id] = localStorage.getItem(`sokoban-complete-${l.id}`) === 'true';
+    });
+    return c;
+  });
 
   useEffect(() => {
-    const k = `sokoban-best-${index}`;
+    loadPublicLevels().then((lvls) => {
+      setLevels(lvls);
+      const comp: Record<string, boolean> = {};
+      lvls.forEach((l) => {
+        comp[l.id] = localStorage.getItem(`sokoban-complete-${l.id}`) === 'true';
+      });
+      setCompleted(comp);
+      const st = loadLevel(lvls[0].lines);
+      setIndex(0);
+      setState(st);
+      setReach(reachable(st));
+    });
+  }, []);
+
+  useEffect(() => {
+    const lvl = levels[index];
+    if (!lvl) return;
+    const k = `sokoban-best-${lvl.id}`;
     const b = localStorage.getItem(k);
     setBest(b ? Number(b) : null);
-  }, [index]);
+  }, [index, levels]);
+
+  const handleMove = (dir: (typeof directionKeys)[number]) => {
+    const newState = move(state, dir);
+    if (newState === state) return;
+    setState(newState);
+    setReach(reachable(newState));
+    if (newState.pushes > state.pushes) {
+      ReactGA.event('push');
+    }
+    if (isSolved(newState)) {
+      const lvl = levels[index];
+      ReactGA.event('level_complete', { moves: newState.pushes });
+      const bestKey = `sokoban-best-${lvl.id}`;
+      const prevBest = localStorage.getItem(bestKey);
+      if (!prevBest || newState.pushes < Number(prevBest)) {
+        localStorage.setItem(bestKey, String(newState.pushes));
+        setBest(newState.pushes);
+      }
+      localStorage.setItem(`sokoban-complete-${lvl.id}`, 'true');
+      setCompleted((c) => ({ ...c, [lvl.id]: true }));
+      const efficiency = newState.pushes / newState.moves;
+      localStorage.setItem(
+        `sokoban-analytics-${lvl.id}`,
+        JSON.stringify({ pushes: newState.pushes, moves: newState.moves, efficiency })
+      );
+    }
+  };
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!directionKeys.includes(e.key as any)) return;
       e.preventDefault();
-      const newState = move(state, e.key as any);
-      if (newState === state) return;
-      setState(newState);
-      setReach(reachable(newState));
-      if (newState.pushes > state.pushes) {
-        ReactGA.event('push');
-      }
-      if (isSolved(newState)) {
-        ReactGA.event('level_complete', { moves: newState.pushes });
-        const bestKey = `sokoban-best-${index}`;
-        const prevBest = localStorage.getItem(bestKey);
-        if (!prevBest || newState.pushes < Number(prevBest)) {
-          localStorage.setItem(bestKey, String(newState.pushes));
-          setBest(newState.pushes);
-        }
-      }
+      handleMove(e.key as any);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [state, index]);
+  }, [state, index, levels]);
+
+  useEffect(() => {
+    let sx = 0;
+    let sy = 0;
+    const ts = (e: TouchEvent) => {
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+    };
+    const te = (e: TouchEvent) => {
+      const dx = e.changedTouches[0].clientX - sx;
+      const dy = e.changedTouches[0].clientY - sy;
+      const absX = Math.abs(dx);
+      const absY = Math.abs(dy);
+      if (Math.max(absX, absY) < 30) return;
+      if (absX > absY) handleMove(dx > 0 ? 'ArrowRight' : 'ArrowLeft');
+      else handleMove(dy > 0 ? 'ArrowDown' : 'ArrowUp');
+    };
+    window.addEventListener('touchstart', ts);
+    window.addEventListener('touchend', te);
+    return () => {
+      window.removeEventListener('touchstart', ts);
+      window.removeEventListener('touchend', te);
+    };
+  }, [state, index, levels]);
 
   const selectLevel = (i: number) => {
-    const st = loadLevel(levels[i]);
+    const lvl = levels[i];
+    const st = loadLevel(lvl.lines);
     setIndex(i);
     setState(st);
     setReach(reachable(st));
-    ReactGA.event('level_select', { level: i });
+    ReactGA.event('level_select', { level: i, id: lvl.id });
+    const b = localStorage.getItem(`sokoban-best-${lvl.id}`);
+    setBest(b ? Number(b) : null);
   };
 
   const handleUndo = () => {
@@ -69,8 +133,17 @@ const Sokoban: React.FC = () => {
     }
   };
 
+  const handleRedo = () => {
+    const st = redoMove(state);
+    if (st !== state) {
+      setState(st);
+      setReach(reachable(st));
+      ReactGA.event('redo');
+    }
+  };
+
   const handleReset = () => {
-    const st = resetLevel(levels[index]);
+    const st = resetLevel(levels[index].lines);
     setState(st);
     setReach(reachable(st));
   };
@@ -79,10 +152,18 @@ const Sokoban: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const text = await file.text();
-    const lvl = parseLevels(text);
-    if (lvl.length) {
-      setLevels(lvl);
-      selectLevel(0);
+    const parsed = parseLevels(text).map((lines, idx) => ({
+      id: `custom-${idx}`,
+      name: `Custom ${idx + 1}`,
+      difficulty: 'custom',
+      lines,
+    }));
+    if (parsed.length) {
+      setLevels(parsed);
+      const st = loadLevel(parsed[0].lines);
+      setIndex(0);
+      setState(st);
+      setReach(reachable(st));
     }
   };
 
@@ -95,13 +176,18 @@ const Sokoban: React.FC = () => {
     <div className="p-4 space-y-2 select-none">
       <div className="flex space-x-2 mb-2">
         <select value={index} onChange={(e) => selectLevel(Number(e.target.value))}>
-          {levels.map((_, i) => (
-            <option key={i} value={i}>{`Level ${i + 1}`}</option>
+          {levels.map((lvl, i) => (
+            <option key={lvl.id} value={i}>{`${lvl.name} (${lvl.difficulty})${
+              completed[lvl.id] ? ' ✓' : ''
+            }`}</option>
           ))}
         </select>
-        <input type="file" accept=".txt,.sas" onChange={handleFile} />
+        <input type="file" accept=".txt,.sas,.xsb" onChange={handleFile} />
         <button type="button" onClick={handleUndo} className="px-2 py-1 bg-gray-300 rounded">
           Undo
+        </button>
+        <button type="button" onClick={handleRedo} className="px-2 py-1 bg-gray-300 rounded">
+          Redo
         </button>
         <button type="button" onClick={handleReset} className="px-2 py-1 bg-gray-300 rounded">
           Reset

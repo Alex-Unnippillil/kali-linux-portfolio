@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Flappy Bird</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    #ui { position: absolute; top: 10px; left: 10px; z-index: 10; font-family: sans-serif; }
+    #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; flex-direction: column; background: rgba(0,0,0,0.5); color: #fff; font-family: sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <select id="modeSelect">
+      <option value="normal">Normal</option>
+      <option value="reverse">Reverse Gravity</option>
+      <option value="time">Time Attack</option>
+    </select>
+    <select id="skinSelect"></select>
+    <span id="points"></span>
+  </div>
+  <canvas id="game" width="400" height="300"></canvas>
+  <div id="overlay">
+    <div>Game Over</div>
+    <button id="restart">Restart</button>
+    <div id="leaderboards">
+      <h4>Global</h4>
+      <ol id="globalBoard"></ol>
+      <h4>Friends</h4>
+      <ol id="friendsBoard"></ol>
+    </div>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

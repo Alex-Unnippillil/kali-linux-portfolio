@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import React, { useEffect, useRef, useState } from 'react';
 import { generateGrid } from './generator';
-import type { Position, WordPlacement } from './types';
+import type { Position } from './types';
+import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
 
-const DEFAULT_WORDS = ['REACT', 'NODE', 'JAVASCRIPT', 'CODE', 'NEXTJS'];
 const GRID_SIZE = 12;
 
 function key(p: Position) {
@@ -25,36 +25,102 @@ function computePath(start: Position, end: Position): Position[] {
 }
 
 const WordSearch: React.FC = () => {
-  const router = useRouter();
-  const { seed: seedQuery, words: wordsQuery } = router.query as { seed?: string; words?: string };
+  const [packs, setPacks] = useState<{ id: string; name: string }[]>([]);
+  const [theme, setTheme] = useState('');
   const [seed, setSeed] = useState('');
-  const [words, setWords] = useState<string[]>(DEFAULT_WORDS);
+  const [words, setWords] = useState<string[]>([]);
   const [grid, setGrid] = useState<string[][]>([]);
-  const [placements, setPlacements] = useState<WordPlacement[]>([]);
   const [found, setFound] = useState<Set<string>>(new Set());
   const [foundCells, setFoundCells] = useState<Set<string>>(new Set());
   const [selecting, setSelecting] = useState(false);
   const [start, setStart] = useState<Position | null>(null);
   const [selection, setSelection] = useState<Position[]>([]);
+  const [startTime, setStartTime] = useState<number>(0);
+  const [elapsed, setElapsed] = useState<number>(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const queryWords =
-      typeof wordsQuery === 'string'
-        ? wordsQuery.split(',').map((w) => w.trim().toUpperCase()).filter(Boolean)
-        : [];
-    const s = typeof seedQuery === 'string' ? seedQuery : Math.random().toString(36).slice(2);
-    setSeed(s);
-    setWords(queryWords.length ? queryWords : DEFAULT_WORDS);
-  }, [seedQuery, wordsQuery]);
+    fetch('/wordlists/packs.json')
+      .then((res) => res.json())
+      .then((data) => {
+        const arr = Object.entries(data).map(([id, name]) => ({ id, name }));
+        setPacks(arr);
+        if (arr.length) setTheme(arr[0].id);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!theme) return;
+    fetch(`/wordlists/${theme}.txt`)
+      .then((res) => res.text())
+      .then((text) => {
+        const all = text
+          .split(/\r?\n/)
+          .map((w) => w.trim().toUpperCase())
+          .filter(Boolean);
+        const shuffled = all.sort(() => Math.random() - 0.5);
+        setWords(shuffled.slice(0, Math.min(10, shuffled.length)));
+        setSeed(Math.random().toString(36).slice(2));
+      });
+  }, [theme]);
+
+  const storageKey = `${theme}-${seed}`;
 
   useEffect(() => {
     if (!seed || !words.length) return;
-    const { grid: g, placements: p } = generateGrid(words, GRID_SIZE, seed);
+    const { grid: g } = generateGrid(words, GRID_SIZE, seed);
     setGrid(g);
-    setPlacements(p);
+
+    const saved = typeof window !== 'undefined'
+      ? window.localStorage.getItem(`word-search-${storageKey}`)
+      : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setFound(new Set(parsed.found || []));
+        setFoundCells(new Set(parsed.foundCells || []));
+        setStartTime(parsed.startTime || Date.now());
+        return;
+      } catch {
+        // ignore
+      }
+    }
+    const now = Date.now();
     setFound(new Set());
     setFoundCells(new Set());
-  }, [seed, words]);
+    setStartTime(now);
+    window.localStorage.setItem(
+      `word-search-${storageKey}`,
+      JSON.stringify({ found: [], foundCells: [], startTime: now })
+    );
+  }, [seed, words, storageKey]);
+
+  useEffect(() => {
+    if (!startTime) return;
+    const id = setInterval(() => setElapsed(Date.now() - startTime), 1000);
+    return () => clearInterval(id);
+  }, [startTime]);
+
+  useEffect(() => {
+    if (!startTime) return;
+    window.localStorage.setItem(
+      `word-search-${storageKey}`,
+      JSON.stringify({
+        found: Array.from(found),
+        foundCells: Array.from(foundCells),
+        startTime,
+      })
+    );
+  }, [found, foundCells, startTime, storageKey]);
+
+  useEffect(() => {
+    if (found.size === words.length && words.length) {
+      window.localStorage.setItem(
+        `word-search-${storageKey}-completed`,
+        JSON.stringify({ time: Date.now() - startTime })
+      );
+    }
+  }, [found, words.length, startTime, storageKey]);
 
   const handleMouseDown = (r: number, c: number) => {
     setSelecting(true);
@@ -92,28 +158,58 @@ const WordSearch: React.FC = () => {
     setSelection([]);
   };
 
-  const copyLink = async () => {
-    const params = new URLSearchParams({ seed, words: words.join(',') });
-    const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
-    try {
-      await navigator.clipboard?.writeText(url);
-    } catch (e) {
-      // ignore
-    }
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!selecting) return;
+    const touch = e.touches[0];
+    const target = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null;
+    const pos = target?.dataset?.pos;
+    if (!pos) return;
+    const [r, c] = pos.split('-').map(Number);
+    handleMouseEnter(r, c);
+  };
+
+  const handleTouchEnd = () => {
+    handleMouseUp();
   };
 
   const newPuzzle = () => {
-    const newSeed = Math.random().toString(36).slice(2);
-    router.replace(
-      { pathname: router.pathname, query: { seed: newSeed, words: words.join(',') } },
-      undefined,
-      { shallow: true }
-    );
+    setSeed(Math.random().toString(36).slice(2));
+  };
+
+  const exportPDF = async () => {
+    if (!containerRef.current) return;
+    const dataUrl = await toPng(containerRef.current);
+    const pdf = new jsPDF('p', 'pt', 'a4');
+    const imgProps = pdf.getImageProperties(dataUrl);
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+    pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`word-search-${theme}.pdf`);
+  };
+
+  const formatTime = (ms: number) => {
+    const total = Math.floor(ms / 1000);
+    const m = Math.floor(total / 60)
+      .toString()
+      .padStart(2, '0');
+    const s = (total % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
   };
 
   return (
-    <div className="p-4 select-none">
-      <div className="flex space-x-2 mb-2 print:hidden">
+    <div className="p-4 select-none" ref={containerRef} id="word-search-container">
+      <div className="flex flex-wrap space-x-2 mb-2 print:hidden">
+        <select
+          value={theme}
+          onChange={(e) => setTheme(e.target.value)}
+          className="px-2 py-1 border rounded mb-2"
+        >
+          {packs.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           onClick={newPuzzle}
@@ -123,26 +219,23 @@ const WordSearch: React.FC = () => {
         </button>
         <button
           type="button"
-          onClick={copyLink}
-          className="px-2 py-1 bg-green-600 text-white rounded"
-        >
-          Copy Link
-        </button>
-        <button
-          type="button"
-          onClick={() => window.print()}
+          onClick={exportPDF}
           className="px-2 py-1 bg-gray-600 text-white rounded"
         >
-          Print
+          Export PDF
         </button>
+        <span className="px-2 py-1">{formatTime(elapsed)}</span>
       </div>
       <div
         style={{
-          gridTemplateColumns: `repeat(${GRID_SIZE}, 2rem)`,
+          gridTemplateColumns: `repeat(${GRID_SIZE}, 2rem)` ,
           gridTemplateRows: `repeat(${GRID_SIZE}, 2rem)`,
         }}
         className="grid border w-max"
         onMouseLeave={handleMouseUp}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
       >
         {grid.map((row, r) =>
           row.map((letter, c) => {
@@ -152,10 +245,17 @@ const WordSearch: React.FC = () => {
             return (
               <div
                 key={posKey}
+                data-pos={posKey}
                 onMouseDown={() => handleMouseDown(r, c)}
                 onMouseEnter={() => handleMouseEnter(r, c)}
                 onMouseUp={handleMouseUp}
-                className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none ${isFound ? 'bg-green-300' : isSelected ? 'bg-yellow-300' : 'bg-white'}`}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleMouseDown(r, c);
+                }}
+                className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none ${
+                  isFound ? 'bg-green-300' : isSelected ? 'bg-yellow-300' : 'bg-white'
+                }`}
               >
                 {letter}
               </div>
@@ -175,3 +275,4 @@ const WordSearch: React.FC = () => {
 };
 
 export default WordSearch;
+
