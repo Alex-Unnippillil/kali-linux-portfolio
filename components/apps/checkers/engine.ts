@@ -82,6 +82,9 @@ export const getAllMoves = (board: Board, color: Color): Move[] => {
   return anyCapture ? result.filter((m) => m.captured) : result;
 };
 
+export const hasMoves = (board: Board, color: Color): boolean =>
+  getAllMoves(board, color).length > 0;
+
 export const applyMove = (
   board: Board,
   move: Move
@@ -138,9 +141,14 @@ export const evaluateBoard = (board: Board): number => {
   const { red, black, kings } = boardToBitboards(board);
   const redKings = red & kings;
   const blackKings = black & kings;
+  const redMen = bitCount(red) - bitCount(redKings);
+  const blackMen = bitCount(black) - bitCount(blackKings);
+  const mobility =
+    getAllMoves(board, 'red').length - getAllMoves(board, 'black').length;
   return (
-    bitCount(red) - bitCount(black) +
-    (bitCount(redKings) - bitCount(blackKings))
+    redMen - blackMen +
+    1.5 * (bitCount(redKings) - bitCount(blackKings)) +
+    0.1 * mobility
   );
 };
 
