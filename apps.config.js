@@ -115,16 +115,24 @@ const Game2048App = dynamic(
   }
 );
 
+const CarRacerApp = dynamic(
+  () =>
+    import('./components/apps/car-racer').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Car Racer' });
+
 const AsteroidsApp = dynamic(
   () =>
     import('./components/apps/asteroids').then((mod) => {
       ReactGA.event({ category: 'Application', action: 'Loaded Asteroids' });
+ 
       return mod.default;
     }),
   {
     ssr: false,
     loading: () => (
       <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Car Racer...
+
         Loading Asteroids...
       </div>
     ),
@@ -171,6 +179,12 @@ const displaySokoban = (addFolder, openApp) => (
 const display2048 = (addFolder, openApp) => (
   <Game2048App addFolder={addFolder} openApp={openApp} />
 );
+
+const displayCarRacer = (addFolder, openApp) => (
+  <CarRacerApp addFolder={addFolder} openApp={openApp} />
+);
+
+
 
 const displayAsteroids = (addFolder, openApp) => (
   <AsteroidsApp addFolder={addFolder} openApp={openApp} />
@@ -465,6 +479,16 @@ const games = [
     screen: displayTicTacToe,
   },
   {
+    id: 'car-racer',
+    title: 'Car Racer',
+    icon: './themes/Yaru/apps/car-racer.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCarRacer,
+  },
+];
+
     id: 'sokoban',
     title: 'Sokoban',
     icon: './themes/Yaru/apps/sokoban.svg',
