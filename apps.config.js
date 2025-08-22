@@ -212,6 +212,22 @@ const PacmanApp = dynamic(
   }
 );
 
+const SudokuApp = dynamic(
+  () =>
+    import('./components/apps/sudoku').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Sudoku' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Sudoku...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -223,6 +239,11 @@ const displayTerminalCalc = (addFolder, openApp) => (
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
+
+const displaySudoku = (addFolder, openApp) => (
+  <SudokuApp addFolder={addFolder} openApp={openApp} />
+);
+
 
 const displayPacman = (addFolder, openApp) => (
   <PacmanApp addFolder={addFolder} openApp={openApp} />
@@ -403,6 +424,16 @@ const apps = [
     screen: displayMemory,
   },
   {
+    id: 'sudoku',
+    title: 'Sudoku',
+    icon: './themes/Yaru/apps/sudoku.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySudoku,
+  },
+  {
+
 
     id: 'ascii-art',
     title: 'ASCII Art',
