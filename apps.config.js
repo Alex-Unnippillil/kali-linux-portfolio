@@ -68,6 +68,10 @@ const TicTacToeApp = dynamic(
     ),
   }
 );
+const BattleshipApp = dynamic(
+  () =>
+    import('./components/apps/battleship').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Battleship' });
 
 const BlackjackApp = dynamic(
   () =>
@@ -95,6 +99,8 @@ const Game2048App = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Battleship...
+
         Loading Blackjack...
         Loading Simon...
 
@@ -160,6 +166,11 @@ const games = [
     screen: display2048,
   },
 ];
+
+const displayBattleship = (addFolder, openApp) => (
+  <BattleshipApp addFolder={addFolder} openApp={openApp} />
+);
+
 
 // Main application list displayed on the desktop and app launcher
 const apps = [
@@ -250,6 +261,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayBlackjack,
+  },
+  {
+    id: 'battleship',
+    title: 'Battleship',
+    icon: './themes/Yaru/apps/battleship.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBattleship,
   },
   {
     id: 'about-alex',
