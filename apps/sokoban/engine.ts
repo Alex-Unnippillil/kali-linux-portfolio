@@ -24,7 +24,7 @@ export function loadLevel(lines: string[]): State {
   const boxes = new Set<string>();
   let player: Position = { x: 0, y: 0 };
   lines.forEach((line, y) => {
-    [...line].forEach((ch, x) => {
+    line.split('').forEach((ch, x) => {
       const k = key({ x, y });
       switch (ch) {
         case '#':
@@ -175,10 +175,13 @@ export function reachable(state: State): Set<string> {
 }
 
 export function isSolved(state: State): boolean {
-  for (const b of state.boxes) {
-    if (!state.targets.has(b)) return false;
-  }
-  return true;
+  let solved = true;
+  state.boxes.forEach((b) => {
+    if (!state.targets.has(b)) {
+      solved = false;
+    }
+  });
+  return solved;
 }
 
 export const directionKeys = Object.keys(DIRS) as (keyof typeof DIRS)[];
