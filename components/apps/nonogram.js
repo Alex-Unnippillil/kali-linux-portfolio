@@ -1,4 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactGA from 'react-ga4';
+import {
+  evaluateLine,
+  autoFillLines,
+  findHint,
+  validateSolution,
+  getPuzzleBySeed,
+} from './nonogramUtils';
 
 const parseClues = (text) =>
   text
@@ -12,85 +20,6 @@ const parseClues = (text) =>
         .map((n) => parseInt(n, 10))
     );
 
-const lineToClues = (line) => {
-  const clues = [];
-  let count = 0;
-  line.forEach((cell) => {
-    if (cell === 1) count += 1;
-    else if (count) {
-      clues.push(count);
-      count = 0;
-    }
-  });
-  if (count) clues.push(count);
-  return clues.length ? clues : [];
-};
-
-const evaluateLine = (line, clue) => {
-  const clues = lineToClues(line);
-  const solved = JSON.stringify(clues) === JSON.stringify(clue);
-  let contradiction = false;
-  for (let i = 0; i < clues.length; i++) {
-    if (i >= clue.length || clues[i] > clue[i]) contradiction = true;
-  }
-  if (clues.length > clue.length) contradiction = true;
-  return { solved, contradiction };
-};
-
-const generateLinePatterns = (clue, length, prefix = []) => {
-  if (!clue.length) return [Array(length).fill(0)];
-  const [first, ...rest] = clue;
-  const patterns = [];
-  for (let offset = 0; offset <= length - first; offset++) {
-    const head = Array(offset).fill(0).concat(Array(first).fill(1));
-    if (rest.length) {
-      const tails = generateLinePatterns(rest, length - offset - first - 1);
-      tails.forEach((t) => patterns.push(head.concat([0], t)));
-    } else if (head.length < length) {
-      patterns.push(head.concat(Array(length - head.length).fill(0)));
-    } else patterns.push(head);
-  }
-  return patterns;
-};
-
-const solveNonogram = (rows, cols) => {
-  const rowPatterns = rows.map((clue) => generateLinePatterns(clue, cols.length));
-  let count = 0;
-  const grid = Array(rows.length)
-    .fill(null)
-    .map(() => Array(cols.length).fill(0));
-
-  const backtrack = (r) => {
-    if (r === rows.length) {
-      const colsValid = cols.every((clue, i) =>
-        JSON.stringify(lineToClues(grid.map((row) => row[i]))) ===
-        JSON.stringify(clue)
-      );
-      if (colsValid) count += 1;
-      return;
-    }
-    rowPatterns[r].forEach((pattern) => {
-      grid[r] = pattern;
-      let ok = true;
-      for (let j = 0; j < cols.length && ok; j++) {
-        const colClue = cols[j];
-        const col = grid.slice(0, r + 1).map((row) => row[j]);
-        const cClues = lineToClues(col);
-        for (let k = 0; k < cClues.length; k++) {
-          if (k >= colClue.length || cClues[k] > colClue[k]) {
-            ok = false;
-            break;
-          }
-        }
-        if (cClues.length > colClue.length) ok = false;
-      }
-      if (ok) backtrack(r + 1);
-    });
-  };
-  backtrack(0);
-  return count;
-};
-
 const Nonogram = () => {
   const [rowInput, setRowInput] = useState('1\n3\n5\n3\n1');
   const [colInput, setColInput] = useState('1 1\n3\n5\n3\n1 1');
@@ -102,12 +31,22 @@ const Nonogram = () => {
   const [started, setStarted] = useState(false);
   const [pencil, setPencil] = useState(false);
   const [showMistakes, setShowMistakes] = useState(true);
+  const [cellSize, setCellSize] = useState(32);
+  const [selected, setSelected] = useState({ i: 0, j: 0 });
+
   const pending = useRef([]);
   const raf = useRef(null);
+  const startTime = useRef(0);
+  const completed = useRef(false);
+  const touchTimer = useRef(null);
+  const touchCross = useRef(false);
 
   const updateStorage = (g, r = rows, c = cols) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('nonogram-progress', JSON.stringify({ rows: r, cols: c, grid: g }));
+      localStorage.setItem(
+        'nonogram-progress',
+        JSON.stringify({ rows: r, cols: c, grid: g })
+      );
     }
   };
 
@@ -134,8 +73,13 @@ const Nonogram = () => {
     evaluate(g);
     updateStorage(g, r, c);
     setStarted(true);
-    const solutions = solveNonogram(r, c);
-    if (solutions !== 1) alert('Warning: puzzle does not have a unique solution');
+    startTime.current = Date.now();
+    completed.current = false;
+    ReactGA.event({
+      category: 'nonogram',
+      action: 'puzzle_start',
+      label: `${r.length}x${c.length}`,
+    });
   };
 
   const scheduleToggle = (i, j, mode) => {
@@ -143,15 +87,25 @@ const Nonogram = () => {
     if (!raf.current) {
       raf.current = requestAnimationFrame(() => {
         setGrid((g) => {
-          const ng = g.map((row) => row.slice());
+          let ng = g.map((row) => row.slice());
           pending.current.forEach(({ i, j, mode }) => {
             if (mode === 'cross') ng[i][j] = ng[i][j] === -1 ? 0 : -1;
             else if (mode === 'pencil') ng[i][j] = ng[i][j] === 2 ? 0 : 2;
             else ng[i][j] = ng[i][j] === 1 ? 0 : 1;
           });
           pending.current = [];
+          ng = autoFillLines(ng, rows, cols);
           evaluate(ng);
           updateStorage(ng);
+          if (validateSolution(ng, rows, cols) && !completed.current) {
+            completed.current = true;
+            const time = Math.floor((Date.now() - startTime.current) / 1000);
+            ReactGA.event({
+              category: 'nonogram',
+              action: 'puzzle_complete',
+              value: time,
+            });
+          }
           return ng;
         });
         raf.current = null;
@@ -165,6 +119,7 @@ const Nonogram = () => {
   const handleMouseDown = (i, j, mode) => {
     painting.current = true;
     paintMode.current = mode;
+    setSelected({ i, j });
     scheduleToggle(i, j, mode);
   };
   const handleMouseEnter = (i, j) => {
@@ -177,6 +132,94 @@ const Nonogram = () => {
     window.addEventListener('mouseup', up);
     return () => window.removeEventListener('mouseup', up);
   }, []);
+
+  // keyboard shortcuts
+  useEffect(() => {
+    if (!started) return;
+    const handler = (e) => {
+      if (
+        [
+          'ArrowUp',
+          'ArrowDown',
+          'ArrowLeft',
+          'ArrowRight',
+          ' ',
+          'Enter',
+          'x',
+          'p',
+          'h',
+          'e',
+        ].includes(e.key)
+      )
+        e.preventDefault();
+      switch (e.key) {
+        case 'ArrowUp':
+          setSelected((s) => ({ i: Math.max(0, s.i - 1), j: s.j }));
+          break;
+        case 'ArrowDown':
+          setSelected((s) => ({ i: Math.min(rows.length - 1, s.i + 1), j: s.j }));
+          break;
+        case 'ArrowLeft':
+          setSelected((s) => ({ i: s.i, j: Math.max(0, s.j - 1) }));
+          break;
+        case 'ArrowRight':
+          setSelected((s) => ({ i: s.i, j: Math.min(cols.length - 1, s.j + 1) }));
+          break;
+        case ' ': // fallthrough
+        case 'Enter':
+          scheduleToggle(selected.i, selected.j, pencil ? 'pencil' : 'fill');
+          break;
+        case 'x':
+          scheduleToggle(selected.i, selected.j, 'cross');
+          break;
+        case 'p':
+          setPencil((p) => !p);
+          break;
+        case 'h':
+          useHint();
+          break;
+        case 'e':
+          toggleMistakes();
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [started, rows, cols, selected, pencil]);
+
+  const toggleMistakes = () => {
+    ReactGA.event({
+      category: 'nonogram',
+      action: 'error_toggle',
+      value: showMistakes ? 0 : 1,
+    });
+    setShowMistakes(!showMistakes);
+  };
+
+  const useHint = () => {
+    const h = findHint(rows, cols, grid);
+    if (h) {
+      ReactGA.event({ category: 'nonogram', action: 'hint' });
+      scheduleToggle(h.i, h.j, 'fill');
+    } else {
+      alert('No hints available');
+    }
+  };
+
+  const handleTouchStart = (i, j) => {
+    touchCross.current = false;
+    touchTimer.current = setTimeout(() => {
+      scheduleToggle(i, j, 'cross');
+      touchCross.current = true;
+    }, 500);
+  };
+  const handleTouchEnd = (i, j) => {
+    if (touchTimer.current) clearTimeout(touchTimer.current);
+    if (!touchCross.current) scheduleToggle(i, j, pencil ? 'pencil' : 'fill');
+    touchCross.current = false;
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -198,14 +241,7 @@ const Nonogram = () => {
   }, []);
 
   const validate = () => {
-    const rowsValid = grid.every((row, i) =>
-      JSON.stringify(lineToClues(row)) === JSON.stringify(rows[i])
-    );
-    const colsValid = cols.every((col, i) => {
-      const column = grid.map((row) => row[i]);
-      return JSON.stringify(lineToClues(column)) === JSON.stringify(col);
-    });
-    alert(rowsValid && colsValid ? 'Puzzle solved!' : 'Not yet solved');
+    alert(validateSolution(grid, rows, cols) ? 'Puzzle solved!' : 'Not yet solved');
   };
 
   if (!started)
@@ -260,6 +296,18 @@ const Nonogram = () => {
           >
             Import
           </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={() => {
+              const { rows: r, cols: c } = getPuzzleBySeed(
+                new Date().toISOString().slice(0, 10)
+              );
+              setRowInput(r.map((row) => row.join(' ')).join('\n'));
+              setColInput(c.map((col) => col.join(' ')).join('\n'));
+            }}
+          >
+            Daily
+          </button>
         </div>
       </div>
     );
@@ -273,7 +321,9 @@ const Nonogram = () => {
               key={i}
               className={`h-8 flex items-center justify-end pr-1 ${
                 rowState[i]?.solved ? 'line-through' : ''
-              } ${showMistakes && rowState[i]?.contradiction ? 'text-red-500' : ''}`}
+              } ${
+                showMistakes && rowState[i]?.contradiction ? 'text-red-500' : ''
+              }`}
             >
               {clue.join(' ')}
             </div>
@@ -284,9 +334,12 @@ const Nonogram = () => {
             {cols.map((clue, i) => (
               <div
                 key={i}
-                className={`w-8 text-center ${
+                className={`text-center ${
                   colState[i]?.solved ? 'line-through' : ''
-                } ${showMistakes && colState[i]?.contradiction ? 'text-red-500' : ''}`}
+                } ${
+                  showMistakes && colState[i]?.contradiction ? 'text-red-500' : ''
+                }`}
+                style={{ width: cellSize }}
               >
                 {clue.join(' ')}
               </div>
@@ -294,7 +347,7 @@ const Nonogram = () => {
           </div>
           <div
             className="grid"
-            style={{ gridTemplateColumns: `repeat(${cols.length}, 2rem)` }}
+            style={{ gridTemplateColumns: `repeat(${cols.length}, ${cellSize}px)` }}
           >
             {grid.map((row, i) =>
               row.map((cell, j) => (
@@ -311,16 +364,24 @@ const Nonogram = () => {
                     handleMouseDown(i, j, mode);
                   }}
                   onMouseEnter={() => handleMouseEnter(i, j)}
+                  onTouchStart={() => handleTouchStart(i, j)}
+                  onTouchEnd={() => handleTouchEnd(i, j)}
                   onContextMenu={(e) => e.preventDefault()}
-                  className={`w-8 h-8 border border-gray-600 flex items-center justify-center cursor-pointer ${
+                  className={`border border-gray-600 flex items-center justify-center cursor-pointer ${
                     cell === 1 ? 'bg-gray-200' : ''
                   } ${cell === -1 ? 'text-gray-500' : ''} ${
                     cell === 2 ? 'text-gray-400' : ''
                   } ${
-                    showMistakes && (rowState[i]?.contradiction || colState[j]?.contradiction)
+                    showMistakes &&
+                    (rowState[i]?.contradiction || colState[j]?.contradiction)
                       ? 'bg-red-300'
                       : ''
+                  } ${
+                    selected.i === i && selected.j === j
+                      ? 'ring-2 ring-yellow-400'
+                      : ''
                   }`}
+                  style={{ width: cellSize, height: cellSize }}
                 >
                   {cell === -1 ? 'X' : cell === 2 ? '·' : ''}
                 </div>
@@ -329,7 +390,7 @@ const Nonogram = () => {
           </div>
         </div>
       </div>
-      <div className="mt-4 space-x-2">
+      <div className="mt-4 space-x-2 flex items-center">
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={validate}
@@ -337,7 +398,9 @@ const Nonogram = () => {
           Check
         </button>
         <button
-          className={`px-4 py-2 rounded ${pencil ? 'bg-gray-500' : 'bg-gray-700 hover:bg-gray-600'}`}
+          className={`px-4 py-2 rounded ${
+            pencil ? 'bg-gray-500' : 'bg-gray-700 hover:bg-gray-600'
+          }`}
           onClick={() => setPencil(!pencil)}
         >
           {pencil ? 'Pencil On' : 'Pencil Off'}
@@ -346,9 +409,15 @@ const Nonogram = () => {
           className={`px-4 py-2 rounded ${
             showMistakes ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500'
           }`}
-          onClick={() => setShowMistakes(!showMistakes)}
+          onClick={toggleMistakes}
         >
           {showMistakes ? 'Hide Mistakes' : 'Show Mistakes'}
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={useHint}
+        >
+          Hint
         </button>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
@@ -359,6 +428,18 @@ const Nonogram = () => {
           }}
         >
           Export
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setCellSize((s) => Math.max(16, s - 4))}
+        >
+          -
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setCellSize((s) => Math.min(64, s + 4))}
+        >
+          +
         </button>
       </div>
     </div>
