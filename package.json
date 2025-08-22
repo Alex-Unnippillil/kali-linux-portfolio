@@ -34,6 +34,7 @@
     "react-github-calendar": "^4.5.9",
     "react-onclickoutside": "^6.12.2",
     "react-twitter-embed": "^4.0.4",
+    "stockfish": "^16.0.0",
     "swr": "^2.2.5",
     "tailwindcss": "^3.2.4",
     "three": "^0.179.1"
