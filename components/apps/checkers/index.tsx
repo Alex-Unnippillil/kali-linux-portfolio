@@ -1,19 +1,30 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
+// @ts-ignore - socket.io-client has no types in this project
+import { io } from 'socket.io-client';
 import {
   createBoard,
   getPieceMoves,
   getAllMoves,
   applyMove,
   isDraw,
-  hasMoves,
+  getWinner,
+  createConfig,
+  Variant,
   Move,
   Board,
-} from './engine';
+  Config,
+} from '../../../apps/checkers/engine';
 
 const Checkers = () => {
-  const [board, setBoard] = useState<Board>(createBoard());
+  const [variant, setVariant] = useState<Variant>('standard');
+  const [difficulty, setDifficulty] = useState(4);
+  const config = useMemo<Config>(() => createConfig(variant), [variant]);
+  const [board, setBoard] = useState<Board>(() => createBoard(config));
   const [turn, setTurn] = useState<'red' | 'black'>('red');
+  const socketRef = useRef<any>(null);
+  const [gameId, setGameId] = useState('');
+  const [spectate, setSpectate] = useState(false);
   const [selected, setSelected] = useState<[number, number] | null>(null);
   const [moves, setMoves] = useState<Move[]>([]);
   const [winner, setWinner] = useState<string | null>(null);
@@ -26,7 +37,7 @@ const Checkers = () => {
     const workerRef = useRef<Worker | null>(null);
     const hintRequest = useRef(false);
     const pathRef = useRef<[number, number][]>([]);
-    const makeMoveRef = useRef<((move: Move) => void) | null>(null);
+  const makeMoveRef = useRef<((move: Move) => void) | null>(null);
 
   useEffect(() => {
     workerRef.current = new Worker('/checkers-worker.js');
@@ -42,12 +53,39 @@ const Checkers = () => {
       return () => workerRef.current?.terminate();
     }, []);
 
-  const allMoves = useMemo(() => getAllMoves(board, turn), [board, turn]);
+  useEffect(() => {
+    socketRef.current = io();
+    socketRef.current.on('state', (state: { board: Board; turn: 'red' | 'black' }) => {
+      setBoard(state.board);
+      setTurn(state.turn);
+    });
+    return () => socketRef.current?.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (gameId) socketRef.current?.emit('join', { gameId, variant });
+  }, [gameId, variant]);
+
+  const allMoves = useMemo(() => getAllMoves(board, turn, config), [board, turn, config]);
+
+  useEffect(() => {
+    setBoard(createBoard(config));
+    setTurn('red');
+    setHistory([]);
+    setFuture([]);
+    setWinner(null);
+    setDraw(false);
+    setSelected(null);
+    setMoves([]);
+    setHint(null);
+    setLastMove([]);
+    pathRef.current = [];
+  }, [config]);
 
   const selectPiece = (r: number, c: number) => {
     const piece = board[r][c];
-    if (winner || draw || !piece || piece.color !== turn) return;
-    const pieceMoves = getPieceMoves(board, r, c);
+    if (winner || draw || spectate || !piece || piece.color !== turn) return;
+    const pieceMoves = getPieceMoves(board, r, c, config);
     const mustCapture = allMoves.some((m) => m.captured);
     const filtered = mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
     if (filtered.length) {
@@ -67,7 +105,7 @@ const Checkers = () => {
     else pathRef.current.push(move.to);
     const { board: newBoard, capture, king } = applyMove(board, move);
     const further = capture
-      ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
+      ? getPieceMoves(newBoard, move.to[0], move.to[1], config).filter((m) => m.captured)
       : [];
     setBoard(newBoard);
     if (capture && further.length) {
@@ -101,13 +139,14 @@ const Checkers = () => {
       pathRef.current = [];
       return;
     }
-    if (!hasMoves(newBoard, next)) {
-      setWinner(turn);
+    const winnerColor = getWinner(newBoard, turn, config);
+    if (winnerColor) {
+      setWinner(winnerColor);
       ReactGA.event({ category: 'Checkers', action: 'game_over', label: turn });
     } else {
       setTurn(next);
-      if (next === 'black') {
-        workerRef.current?.postMessage({ board: newBoard, color: 'black', maxDepth: 8 });
+      if (!gameId && next === 'black') {
+        workerRef.current?.postMessage({ board: newBoard, color: 'black', maxDepth: difficulty, config });
       }
     }
     setSelected(null);
@@ -115,12 +154,15 @@ const Checkers = () => {
     setHint(null);
     setLastMove(pathRef.current);
     pathRef.current = [];
+    if (gameId) {
+      socketRef.current?.emit('move', { gameId, board: newBoard, turn: next });
+    }
     };
 
     makeMoveRef.current = makeMove;
 
   const reset = () => {
-    setBoard(createBoard());
+    setBoard(createBoard(config));
     setTurn('red');
     setSelected(null);
     setMoves([]);
@@ -149,6 +191,7 @@ const Checkers = () => {
     setHint(null);
     setLastMove([]);
     pathRef.current = [];
+    if (gameId) socketRef.current?.emit('undo', { gameId });
   };
 
   const redo = () => {
@@ -166,21 +209,59 @@ const Checkers = () => {
     setHint(null);
     setLastMove([]);
     pathRef.current = [];
-    if (next.turn === 'black') {
-      workerRef.current?.postMessage({ board: next.board, color: 'black', maxDepth: 8 });
+    if (!gameId && next.turn === 'black') {
+      workerRef.current?.postMessage({ board: next.board, color: 'black', maxDepth: difficulty, config });
     }
+    if (gameId) socketRef.current?.emit('state', { gameId, board: next.board, turn: next.turn });
   };
 
   const hintMove = () => {
     hintRequest.current = true;
-    workerRef.current?.postMessage({ board, color: turn, maxDepth: 8 });
+    workerRef.current?.postMessage({ board, color: turn, maxDepth: difficulty, config });
   };
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <div className="mb-2 flex space-x-2 items-center">
+        <select
+          value={variant}
+          onChange={(e) => setVariant(e.target.value as Variant)}
+          className="bg-gray-700 p-1 rounded"
+        >
+          <option value="standard">Standard</option>
+          <option value="international">International</option>
+          <option value="giveaway">Giveaway</option>
+        </select>
+        <select
+          value={difficulty}
+          onChange={(e) => setDifficulty(Number(e.target.value))}
+          className="bg-gray-700 p-1 rounded"
+        >
+          <option value={2}>Easy</option>
+          <option value={4}>Medium</option>
+          <option value={6}>Hard</option>
+        </select>
+        <input
+          value={gameId}
+          onChange={(e) => setGameId(e.target.value)}
+          placeholder="Game ID"
+          className="bg-gray-700 p-1 rounded text-white"
+        />
+        <label className="flex items-center space-x-1">
+          <input
+            type="checkbox"
+            checked={spectate}
+            onChange={(e) => setSpectate(e.target.checked)}
+          />
+          <span>Spectate</span>
+        </label>
+      </div>
       {winner && <div className="mb-2 text-xl">{winner} wins!</div>}
       {draw && <div className="mb-2 text-xl">Draw!</div>}
-      <div className="grid grid-cols-8 gap-0">
+      <div
+        className="grid gap-0"
+        style={{ gridTemplateColumns: `repeat(${config.size}, minmax(0,1fr))` }}
+      >
         {board.map((row, r) =>
           row.map((cell, c) => {
             const isDark = (r + c) % 2 === 1;

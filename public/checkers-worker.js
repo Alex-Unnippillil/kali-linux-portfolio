@@ -9,7 +9,9 @@ const directions = {
   ],
 };
 
-const inBounds = (r, c) => r >= 0 && r < 8 && c >= 0 && c < 8;
+let SIZE = 8;
+let GIVEAWAY = false;
+const inBounds = (r, c) => r >= 0 && r < SIZE && c >= 0 && c < SIZE;
 
 const cloneBoard = (board) => board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
 
@@ -39,8 +41,8 @@ const getPieceMoves = (board, r, c) => {
 
 const getAllMoves = (board, color) => {
   let result = [];
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
       if (board[r][c]?.color === color) {
         const moves = getPieceMoves(board, r, c);
         if (moves.length) result = result.concat(moves);
@@ -63,7 +65,7 @@ const applyMove = (board, move) => {
   if (
     !piece.king &&
     ((piece.color === 'red' && move.to[0] === 0) ||
-      (piece.color === 'black' && move.to[0] === 7))
+      (piece.color === 'black' && move.to[0] === SIZE - 1))
   ) {
     piece.king = true;
   }
@@ -74,11 +76,11 @@ const boardToBitboards = (board) => {
   let red = 0n;
   let black = 0n;
   let kings = 0n;
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
       const piece = board[r][c];
       if (!piece) continue;
-      const bit = 1n << BigInt((7 - r) * 8 + c);
+      const bit = 1n << BigInt((SIZE - 1 - r) * SIZE + c);
       if (piece.color === 'red') red |= bit;
       else black |= bit;
       if (piece.king) kings |= bit;
@@ -104,11 +106,11 @@ const evaluate = (board) => {
   const blackMen = bitCount(black) - bitCount(blackKings);
   const mobility =
     getAllMoves(board, 'red').length - getAllMoves(board, 'black').length;
-  return (
+  const score =
     redMen - blackMen +
     1.5 * (bitCount(redKings) - bitCount(blackKings)) +
-    0.1 * mobility
-  );
+    0.1 * mobility;
+  return GIVEAWAY ? -score : score;
 };
 
 const minimax = (board, depth, maximizing, alpha, beta) => {
@@ -138,7 +140,9 @@ const minimax = (board, depth, maximizing, alpha, beta) => {
 };
 
 self.onmessage = (e) => {
-  const { board, color, maxDepth } = e.data;
+  const { board, color, maxDepth, config } = e.data;
+  SIZE = config?.size || 8;
+  GIVEAWAY = config?.giveaway || false;
   const start = Date.now();
   let best = null;
   for (let d = 1; d <= maxDepth; d++) {

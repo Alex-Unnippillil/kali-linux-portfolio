@@ -41,6 +41,10 @@ export class Desktop extends Component {
         this.setContextListeners();
         this.setEventListeners();
         this.checkForNewFolders();
+
+        setTimeout(() => {
+            this.openApp("about-alex");
+        }, 500);
     }
 
     componentWillUnmount() {
