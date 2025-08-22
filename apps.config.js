@@ -13,21 +13,13 @@ import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
 import { displayConverter } from './components/apps/converter';
-
 import { displayQrTool } from './components/apps/qr_tool';
-
 import { displayMusicPlayer } from './components/apps/music_player';
-
 import { displayAsciiArt } from './components/apps/ascii_art';
-
 import { displayResourceMonitor } from './components/apps/resource_monitor';
-
 import { displayQuoteGenerator } from './components/apps/quote_generator';
-
 import { displayShowcase } from './components/apps/showcase';
-
 import { displayProjectGallery } from './components/apps/project-gallery';
-
 
 const TerminalApp = dynamic(
   () =>
@@ -77,6 +69,11 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const SolitaireApp = dynamic(
+  () =>
+    import('./components/apps/solitaire').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Solitaire' });
+
 const Game2048App = dynamic(
   () =>
     import('./components/apps/2048').then((mod) => {
@@ -87,6 +84,11 @@ const Game2048App = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Solitaire...
+      </div>
+    ),
+  },
+
         Loading 2048...
       </div>
     ),
@@ -104,21 +106,16 @@ const displayTerminalCalc = (addFolder, openApp) => (
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
+const displaySolitaire = (addFolder, openApp) => (
+  <SolitaireApp addFolder={addFolder} openApp={openApp} />
+);
 
-const tictactoeApp = {
-  id: 'tictactoe',
-  title: 'Tic Tac Toe',
-  icon: './themes/Yaru/apps/tictactoe.svg',
-  disabled: false,
-  favourite: false,
-  desktop_shortcut: false,
-  screen: displayTicTacToe,
-};
 
 const display2048 = (addFolder, openApp) => (
   <Game2048App addFolder={addFolder} openApp={openApp} />
 );
 
+// Games list used for the "Games" folder on the desktop
 const games = [
   {
     id: 'tictactoe',
@@ -140,6 +137,7 @@ const games = [
   },
 ];
 
+// Main application list displayed on the desktop and app launcher
 const apps = [
   {
     id: 'chrome',
@@ -163,8 +161,7 @@ const apps = [
     defaultWidth: 25,
     defaultHeight: 40,
   },
-  tictactoeApp,
-
+  // Games are included so they appear alongside apps
   ...games,
   {
     id: 'converter',
@@ -174,7 +171,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayConverter,
-
+  },
+  {
     id: 'qr-tool',
     title: 'QR Tool',
     icon: './themes/Yaru/apps/qr.svg',
@@ -182,7 +180,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQrTool,
-
+  },
+  {
     id: 'ascii-art',
     title: 'ASCII Art',
     icon: './themes/Yaru/apps/gedit.png',
@@ -190,7 +189,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayAsciiArt,
-
+  },
+  {
     id: 'quote-generator',
     title: 'Quote Generator',
     icon: './themes/Yaru/apps/quote.svg',
@@ -198,7 +198,16 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
- 
+  },
+  {
+    id: 'solitaire',
+    title: 'Solitaire',
+    icon: './themes/Yaru/apps/solitaire.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySolitaire,
+    category: 'games',
   },
   {
     id: 'about-alex',
@@ -275,7 +284,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
-
+  },
+  {
     id: 'showcase',
     title: '3D Showcase',
     icon: './themes/Yaru/apps/showcase.svg',
@@ -283,7 +293,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayShowcase,
-
+  },
+  {
     id: 'project-gallery',
     title: 'Project Gallery',
     icon: './themes/Yaru/apps/project-gallery.svg',
@@ -291,8 +302,6 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayProjectGallery,
-
-
   },
   {
     id: 'todoist',
@@ -331,9 +340,6 @@ const apps = [
     screen: displayGedit,
   },
 ];
-
-export const games = [tictactoeApp];
-
 
 export { games };
 export default apps;
