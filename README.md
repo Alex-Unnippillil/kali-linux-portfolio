@@ -27,6 +27,37 @@ const displayMyApp = (addFolder, openApp) => (
 
 Add the `displayMyApp` function to `apps.config.js` and reference it in the `apps` array to make the app available to the desktop.
 
+### Minimal Example
+
+1. **Create the component** in `components/apps/hello.tsx`:
+
+```tsx
+export default function Hello() {
+  return <div className="p-4">Hello world!</div>;
+}
+```
+
+2. **Register it** in `apps.config.js` with [`next/dynamic`](https://nextjs.org/docs/advanced-features/dynamic-import):
+
+```js
+import dynamic from 'next/dynamic';
+
+const HelloApp = dynamic(() => import('./components/apps/hello'), { ssr: false });
+
+const displayHello = (addFolder, openApp) => (
+  <HelloApp addFolder={addFolder} openApp={openApp} />
+);
+
+apps.push({
+  id: 'hello',
+  title: 'Hello',
+  icon: './themes/Yaru/apps/hello.png',
+  screen: displayHello,
+});
+```
+
+Keep new apps client-side only. If realtime or server-like features are needed, rely on a provider-based solution instead of adding backend logic.
+
 ## Adding New Games
 
 Games are organized in `apps.config.js` using a `games` array that mirrors the structure of the main `apps` list. Each game entry defines metadata such as an `id`, `title`, `icon`, and the component used to render the game.
