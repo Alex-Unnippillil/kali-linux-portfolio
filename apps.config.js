@@ -173,6 +173,22 @@ const CheckersApp = dynamic(
   }
 );
 
+const TowerDefenseApp = dynamic(
+  () =>
+    import('./components/apps/tower-defense').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Tower Defense' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Tower Defense...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -248,6 +264,11 @@ const games = [
 
 const displayBattleship = (addFolder, openApp) => (
   <BattleshipApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+const displayTowerDefense = (addFolder, openApp) => (
+  <TowerDefenseApp addFolder={addFolder} openApp={openApp} />
 );
 
 
@@ -511,6 +532,14 @@ const games = [
     screen: displayTicTacToe,
   },
   {
+    id: 'tower-defense',
+    title: 'Tower Defense',
+    icon: './themes/Yaru/apps/tower-defense.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTowerDefense,
+
     id: 'car-racer',
     title: 'Car Racer',
     icon: './themes/Yaru/apps/car-racer.svg',
