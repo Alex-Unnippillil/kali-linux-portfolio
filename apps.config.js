@@ -65,6 +65,7 @@ const SolitaireApp = createDynamicApp('solitaire', 'Solitaire');
 const TowerDefenseApp = createDynamicApp('tower-defense', 'Tower Defense');
 const WordSearchApp = createDynamicApp('word-search', 'Word Search');
 const BlackjackApp = createDynamicApp('blackjack', 'Blackjack');
+const BreakoutApp = createDynamicApp('breakout', 'Breakout');
 const AsteroidsApp = createDynamicApp('asteroids', 'Asteroids');
 const SudokuApp = createDynamicApp('sudoku', 'Sudoku');
 const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
@@ -93,6 +94,7 @@ const displaySolitaire = createDisplay(SolitaireApp);
 const displayTowerDefense = createDisplay(TowerDefenseApp);
 const displayWordSearch = createDisplay(WordSearchApp);
 const displayBlackjack = createDisplay(BlackjackApp);
+const displayBreakout = createDisplay(BreakoutApp);
 const displayAsteroids = createDisplay(AsteroidsApp);
 const displaySudoku = createDisplay(SudokuApp);
 const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
@@ -135,6 +137,15 @@ export const games = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayBlackjack,
+  },
+  {
+    id: 'breakout',
+    title: 'Breakout',
+    icon: './themes/Yaru/apps/breakout.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBreakout,
   },
   {
     id: 'car-racer',
