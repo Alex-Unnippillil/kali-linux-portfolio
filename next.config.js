@@ -42,6 +42,11 @@ const securityHeaders = [
 ];
 
 module.exports = {
+  // Enable modern image formats for automatic optimization.
+  images: {
+    formats: ['image/avif', 'image/webp'],
+  },
+  reactStrictMode: true,
   async headers() {
     return [
       {
