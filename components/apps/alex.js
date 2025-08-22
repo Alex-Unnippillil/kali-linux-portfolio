@@ -1,14 +1,7 @@
-import React, { Component, useEffect, useState } from 'react';
+import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
-import useSWR from 'swr';
-import ActivityCalendar from 'react-activity-calendar';
-import BadgeList from '../BadgeList';
-import dynamic from 'next/dynamic';
-
-const GitHubCalendar = dynamic(() => import('react-github-calendar'), { ssr: false });
-
 
 export class AboutAlex extends Component {
 
@@ -152,60 +145,13 @@ export const displayAboutAlex = () => {
 }
 
 
-function GitHubContributions() {
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
-
-    useEffect(() => {
-        fetch('https://github-contributions-api.jogruber.de/v4/Alex-Unnippillil')
-            .then((res) => {
-                if (!res.ok) throw new Error('Failed to fetch contributions');
-                return res.json();
-            })
-            .then((json) => {
-                setData(json.contributions || []);
-                setLoading(false);
-            })
-            .catch(() => {
-                setError(true);
-                setLoading(false);
-            });
-    }, []);
-
-    if (loading) {
-        return <div className="w-full text-center">Loading contributions...</div>;
-    }
-
-    if (error) {
-        return <div className="w-full text-center">Failed to load contributions.</div>;
-    }
-
-    return (
-        <ActivityCalendar
-            className="w-full"
-            data={data}
-            renderBlock={(block, activity) =>
-                React.cloneElement(block, {
-                    title: `${activity.count} contributions on ${activity.date}${activity.count ? ' - click to view' : ''}`,
-                    onClick: () => {
-                        if (activity.count > 0) {
-                            window.open(`https://github.com/Alex-Unnippillil?tab=overview&from=${activity.date}&to=${activity.date}`, '_blank');
-                        }
-                    },
-                })
-            }
-        />
-    );
-}
-
 function About() {
     return (
         <>
             <div className="w-20 md:w-28 my-4 full">
                 <Image
                     className="w-full"
-                    src="/images/logos/fevicon.svg"
+                    src="/images/logos/bitmoji.png"
                     alt="Alex Unnippillil Logo"
                     width={256}
                     height={256}
@@ -428,10 +374,28 @@ function Skills() {
           ...and current certs and typing speed
         </span>
 
+      <a href="https://data.typeracer.com/pit/profile?user=ulexa&ref=badge" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://data.typeracer.com/misc/badge?user=ulexa" border="0" alt="TypeRacer.com scorecard for user ulexa"/>
+      </a>
+
+      <a href="https://www.credly.com/badges/8a945539-5d36-4de4-b454-1989656b282f/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://images.credly.com/size/340x340/images/80d8a06a-c384-42bf-ad36-db81bce5adce/blob" border="0" alt="CompTIA Security+ Certificate" style={{width: "140px", height: "140px"}}/>
+      </a>
+
+      <a href="https://www.credly.com/badges/783aed9a-91a7-4a2e-a4b8-11dbd0d25fc2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://images.credly.com/size/110x110/images/0bf0f2da-a699-4c82-82e2-56dcf1f2e1c7/image.png" border="0" alt="Google Cybersecurity Certificate" style={{width: "140px", height: "140px"}}/>
+      </a>
+
+      <a href="https://www.credly.com/badges/53415f6e-162e-414e-971d-942aefc755d2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://images.credly.com/size/340x340/images/70675aed-31be-4c30-add7-b99905a34005/image.png" border="0" alt="BM AI Developer Professional Certificate" style={{width: "120px", height: "120px"}}/>
+      </a>
+      <a href="https://www.credly.com/badges/f1ec265d-6798-4fc0-b98e-ad5ac71f58c0" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://images.credly.com/size/110x110/images/9180921d-4a13-429e-9357-6f9706a554f0/image.png" border="0" alt="ISC2 Candidate" style={{width: "120px", height: "120px"}}/>
+      </a>
       </div>
 
     </>
-  );
+  )
 }
 function Projects() {
     const project_list = [
@@ -746,4 +710,3 @@ function Resume() {
         </object>
     )
 }
-
