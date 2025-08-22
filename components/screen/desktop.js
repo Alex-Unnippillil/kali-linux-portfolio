@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import BackgroundImage from '../util-components/background-image';
 import SideBar from './side_bar';
-import apps from '../../apps.config';
+import apps, { games } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
@@ -542,6 +542,7 @@ export class Desktop extends Component {
 
                 { this.state.allAppsView ?
                     <AllApplications apps={apps}
+                        games={games}
                         recentApps={this.app_stack}
                         openApp={this.openApp} /> : null}
 
