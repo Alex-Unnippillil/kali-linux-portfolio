@@ -11,7 +11,11 @@ interface XTimelineProps {
 
 declare global {
   interface Window {
-    twttr: any;
+    twttr?: {
+      widgets: {
+        load: (element?: HTMLElement | null) => void;
+      };
+    };
   }
 }
 
