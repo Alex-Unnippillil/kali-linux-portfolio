@@ -1,73 +1,33 @@
-import React, { useState, useMemo, useEffect } from 'react';
-
-const SIZE = 8;
-const DIRECTIONS = [
-  [0, 1],
-  [1, 0],
-  [0, -1],
-  [-1, 0],
-  [1, 1],
-  [1, -1],
-  [-1, 1],
-  [-1, -1],
-];
-
-const createBoard = () => {
-  const board = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
-  board[3][3] = 'W';
-  board[3][4] = 'B';
-  board[4][3] = 'B';
-  board[4][4] = 'W';
-  return board;
-};
-
-const inside = (r, c) => r >= 0 && r < SIZE && c >= 0 && c < SIZE;
-
-const computeLegalMoves = (board, player) => {
-  const opponent = player === 'B' ? 'W' : 'B';
-  const moves = {};
-  for (let r = 0; r < SIZE; r += 1) {
-    for (let c = 0; c < SIZE; c += 1) {
-      if (board[r][c]) continue;
-      const flips = [];
-      DIRECTIONS.forEach(([dr, dc]) => {
-        let i = r + dr;
-        let j = c + dc;
-        const cells = [];
-        while (inside(i, j) && board[i][j] === opponent) {
-          cells.push([i, j]);
-          i += dr;
-          j += dc;
-        }
-        if (cells.length && inside(i, j) && board[i][j] === player) {
-          flips.push(...cells);
-        }
-      });
-      if (flips.length) moves[`${r}-${c}`] = flips;
-    }
-  }
-  return moves;
-};
-
-const countPieces = (board) => {
-  let black = 0;
-  let white = 0;
-  board.forEach((row) =>
-    row.forEach((cell) => {
-      if (cell === 'B') black += 1;
-      if (cell === 'W') white += 1;
-    }),
-  );
-  return { black, white };
-};
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import {
+  createBoard,
+  computeLegalMoves,
+  countPieces,
+  applyMove,
+} from './reversiLogic';
 
 const Reversi = () => {
   const [board, setBoard] = useState(createBoard);
   const [player, setPlayer] = useState('B');
   const [status, setStatus] = useState("Black's turn");
   const [flipping, setFlipping] = useState([]);
+  const workerRef = useRef();
 
   const legalMoves = useMemo(() => computeLegalMoves(board, player), [board, player]);
+
+  useEffect(() => {
+    workerRef.current = new Worker(new URL('./reversi.worker.js', import.meta.url));
+    workerRef.current.onmessage = (e) => {
+      const { move } = e.data;
+      if (move) {
+        const [r, c] = move;
+        handleMove(r, c);
+      } else {
+        setPlayer('B');
+      }
+    };
+    return () => workerRef.current.terminate();
+  }, []);
 
   useEffect(() => {
     if (Object.keys(legalMoves).length === 0) {
@@ -93,17 +53,16 @@ const Reversi = () => {
     const opponent = player === 'B' ? 'W' : 'B';
     const flipInfo = toFlip.map(([fr, fc]) => ({ key: `${fr}-${fc}`, from: opponent }));
     setFlipping(flipInfo);
-    setBoard((prev) => {
-      const newBoard = prev.map((row) => row.slice());
-      newBoard[r][c] = player;
-      toFlip.forEach(([fr, fc]) => {
-        newBoard[fr][fc] = player;
-      });
-      return newBoard;
-    });
+    setBoard(applyMove(board, r, c, player, toFlip));
     setTimeout(() => setFlipping([]), 400);
     setPlayer(opponent);
   };
+
+  useEffect(() => {
+    if (player === 'W' && Object.keys(legalMoves).length && workerRef.current) {
+      workerRef.current.postMessage({ board, player, depth: 7 });
+    }
+  }, [player, legalMoves, board]);
 
   const reset = () => {
     setBoard(createBoard());
