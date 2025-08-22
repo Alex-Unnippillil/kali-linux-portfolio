@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import useHighScore from './hooks/useHighScore';
 
 const SIZE = 4;
 
@@ -22,11 +23,12 @@ const addRandomTile = (board) => {
   return board;
 };
 
-const slide = (row) => {
+const slide = (row, addScore) => {
   const arr = row.filter((n) => n !== 0);
   for (let i = 0; i < arr.length - 1; i++) {
     if (arr[i] === arr[i + 1]) {
       arr[i] *= 2;
+      addScore(arr[i]);
       arr[i + 1] = 0;
     }
   }
@@ -40,10 +42,10 @@ const transpose = (board) =>
 
 const flip = (board) => board.map((row) => [...row].reverse());
 
-const moveLeft = (board) => board.map((row) => slide(row));
-const moveRight = (board) => flip(moveLeft(flip(board)));
-const moveUp = (board) => transpose(moveLeft(transpose(board)));
-const moveDown = (board) => transpose(moveRight(transpose(board)));
+const moveLeft = (board, addScore) => board.map((row) => slide(row, addScore));
+const moveRight = (board, addScore) => flip(moveLeft(flip(board), addScore));
+const moveUp = (board, addScore) => transpose(moveLeft(transpose(board), addScore));
+const moveDown = (board, addScore) => transpose(moveRight(transpose(board), addScore));
 
 const boardsEqual = (a, b) =>
   a.every((row, r) => row.every((cell, c) => cell === b[r][c]));
@@ -65,15 +67,17 @@ const Game2048 = () => {
   const [board, setBoard] = useState(initBoard);
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
+  const { score, setScore, highScore, resetScore } = useHighScore('game2048');
 
   const handleKey = useCallback(
     (e) => {
       if (won || lost) return;
+      const addScore = (gain) => setScore((s) => s + gain);
       let newBoard;
-      if (e.key === 'ArrowLeft') newBoard = moveLeft(board);
-      else if (e.key === 'ArrowRight') newBoard = moveRight(board);
-      else if (e.key === 'ArrowUp') newBoard = moveUp(board);
-      else if (e.key === 'ArrowDown') newBoard = moveDown(board);
+      if (e.key === 'ArrowLeft') newBoard = moveLeft(board, addScore);
+      else if (e.key === 'ArrowRight') newBoard = moveRight(board, addScore);
+      else if (e.key === 'ArrowUp') newBoard = moveUp(board, addScore);
+      else if (e.key === 'ArrowDown') newBoard = moveDown(board, addScore);
       else return;
       if (!boardsEqual(board, newBoard)) {
         addRandomTile(newBoard);
@@ -94,10 +98,12 @@ const Game2048 = () => {
     setBoard(initBoard());
     setWon(false);
     setLost(false);
+    resetScore();
   };
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
+      <div className="mb-2">Score: {score} | High Score: {highScore}</div>
       <div className="grid grid-cols-4 gap-2">
         {board.map((row, rIdx) =>
           row.map((cell, cIdx) => (

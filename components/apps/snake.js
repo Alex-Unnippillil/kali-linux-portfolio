@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import useHighScore from './hooks/useHighScore';
 
 const gridSize = 20;
 const createFood = () => ({
@@ -11,6 +12,7 @@ const Snake = () => {
   const [food, setFood] = useState(createFood());
   const [direction, setDirection] = useState({ x: 0, y: -1 });
   const [gameOver, setGameOver] = useState(false);
+  const { score, setScore, highScore, resetScore } = useHighScore('snake');
   const moveRef = useRef();
 
   const moveSnake = useCallback(() => {
@@ -29,6 +31,7 @@ const Snake = () => {
       const newSnake = [head, ...prev];
       if (head.x === food.x && head.y === food.y) {
         setFood(createFood());
+        setScore((s) => s + 1);
       } else {
         newSnake.pop();
       }
@@ -52,10 +55,17 @@ const Snake = () => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [direction]);
 
+  useEffect(() => {
+    if (gameOver) {
+      clearInterval(moveRef.current);
+    }
+  }, [gameOver]);
+
   const reset = () => {
     setSnake([{ x: 10, y: 10 }]);
     setFood(createFood());
     setDirection({ x: 0, y: -1 });
+    resetScore();
     setGameOver(false);
   };
 
@@ -77,6 +87,9 @@ const Snake = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
+      <div className="mb-2">
+        Score: {score} | High Score: {highScore}
+      </div>
       <div
         className="grid"
         style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}

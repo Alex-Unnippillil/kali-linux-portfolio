@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import useHighScore from './hooks/useHighScore';
 
 const winningLines = [
   [0, 1, 2],
@@ -50,6 +51,7 @@ const minimax = (board, player) => {
 const TicTacToe = () => {
   const [board, setBoard] = useState(Array(9).fill(null));
   const [status, setStatus] = useState('Your turn');
+  const { score, setScore, highScore } = useHighScore('tictactoe');
 
   const handleClick = (idx) => {
     if (board[idx] || checkWinner(board)) return;
@@ -61,6 +63,7 @@ const TicTacToe = () => {
   useEffect(() => {
     const winner = checkWinner(board);
     if (winner) {
+      if (winner === 'X') setScore((s) => s + 1);
       setStatus(winner === 'draw' ? "It's a draw" : `${winner} wins!`);
       return;
     }
@@ -83,6 +86,7 @@ const TicTacToe = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <div className="mb-2">Wins: {score} | Best: {highScore}</div>
       <div className="grid grid-cols-3 gap-1 w-60 mb-4">
         {board.map((cell, idx) => (
           <button
