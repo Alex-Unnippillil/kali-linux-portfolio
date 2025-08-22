@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactGA from 'react-ga4';
 import { BlackjackGame, handValue, basicStrategy, cardValue } from './engine';
 
 const CHIP_VALUES = [1, 5, 25, 100];
@@ -12,6 +13,7 @@ const Blackjack = () => {
   const [current, setCurrent] = useState(0);
   const [showInsurance, setShowInsurance] = useState(false);
   const [stats, setStats] = useState(gameRef.current.stats);
+  const [showHints, setShowHints] = useState(true);
 
   const bankroll = gameRef.current.bankroll;
 
@@ -25,6 +27,7 @@ const Blackjack = () => {
   const start = () => {
     try {
       gameRef.current.startRound(bet);
+      ReactGA.event({ category: 'Blackjack', action: 'hand_start', value: bet });
       setMessage('Hit, Stand, Double, Split or Surrender');
       setShowInsurance(gameRef.current.dealerHand[0].value === 'A');
       update();
@@ -36,13 +39,25 @@ const Blackjack = () => {
   const act = (type) => {
     try {
       if (type === 'hit') gameRef.current.hit();
-      if (type === 'stand') gameRef.current.stand();
-      if (type === 'double') gameRef.current.double();
-      if (type === 'split') gameRef.current.split();
+      if (type === 'stand') {
+        gameRef.current.stand();
+        ReactGA.event({ category: 'Blackjack', action: 'stand' });
+      }
+      if (type === 'double') {
+        gameRef.current.double();
+        ReactGA.event({ category: 'Blackjack', action: 'double' });
+      }
+      if (type === 'split') {
+        gameRef.current.split();
+        ReactGA.event({ category: 'Blackjack', action: 'split' });
+      }
       if (type === 'surrender') gameRef.current.surrender();
       update();
       if (gameRef.current.current >= gameRef.current.playerHands.length) {
         setMessage('Round complete');
+        gameRef.current.playerHands.forEach((h) => {
+          if (h.result) ReactGA.event({ category: 'Blackjack', action: 'result', label: h.result });
+        });
       }
     } catch (e) {
       setMessage(e.message);
@@ -99,11 +114,16 @@ const Blackjack = () => {
     </div>
   );
 
-  const rec = recommended();
+  const rec = showHints ? recommended() : '';
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
       <div className="mb-2">Bankroll: {bankroll}</div>
+      <div className="mb-2">
+        <button className="px-2 py-1 bg-gray-700" onClick={() => setShowHints(!showHints)}>
+          {showHints ? 'Hide Hints' : 'Show Hints'}
+        </button>
+      </div>
       {playerHands.length === 0 ? (
         <div className="mb-4">
           <div className="mb-2">Bet: {bet}</div>
