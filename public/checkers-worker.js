@@ -100,9 +100,14 @@ const evaluate = (board) => {
   const { red, black, kings } = boardToBitboards(board);
   const redKings = red & kings;
   const blackKings = black & kings;
+  const redMen = bitCount(red) - bitCount(redKings);
+  const blackMen = bitCount(black) - bitCount(blackKings);
+  const mobility =
+    getAllMoves(board, 'red').length - getAllMoves(board, 'black').length;
   return (
-    bitCount(red) - bitCount(black) +
-    (bitCount(redKings) - bitCount(blackKings))
+    redMen - blackMen +
+    1.5 * (bitCount(redKings) - bitCount(blackKings)) +
+    0.1 * mobility
   );
 };
 

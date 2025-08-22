@@ -6,6 +6,7 @@ import {
   boardToBitboards,
   evaluateBoard,
   bitCount,
+  hasMoves,
 } from '../components/apps/checkers/engine';
 
 test('forced jumps are enforced', () => {
@@ -118,4 +119,14 @@ test('capture blocked when landing square occupied', () => {
   board[3][2] = { color: 'black', king: false };
   const moves = getPieceMoves(board, 5, 0);
   expect(moves).toEqual([]);
+});
+
+test('stalemate detection', () => {
+  const board = createBoard();
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) board[r][c] = null;
+  board[0][1] = { color: 'black', king: false };
+  board[1][0] = { color: 'red', king: false };
+  board[1][2] = { color: 'red', king: false };
+  board[2][3] = { color: 'red', king: false };
+  expect(hasMoves(board, 'black')).toBe(false);
 });

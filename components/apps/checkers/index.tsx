@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import ReactGA from 'react-ga4';
 import {
   createBoard,
   getPieceMoves,
   getAllMoves,
   applyMove,
   isDraw,
+  hasMoves,
   Move,
   Board,
 } from './engine';
@@ -20,8 +22,10 @@ const Checkers = () => {
   const [future, setFuture] = useState<{ board: Board; turn: string; no: number }[]>([]);
   const [noCapture, setNoCapture] = useState(0);
   const [hint, setHint] = useState<Move | null>(null);
+  const [lastMove, setLastMove] = useState<[number, number][]>([]);
   const workerRef = useRef<Worker | null>(null);
   const hintRequest = useRef(false);
+  const pathRef = useRef<[number, number][]>([]);
 
   useEffect(() => {
     workerRef.current = new Worker('/checkers-worker.js');
@@ -58,6 +62,8 @@ const Checkers = () => {
   };
 
   const makeMove = (move: Move) => {
+    if (pathRef.current.length === 0) pathRef.current = [move.from, move.to];
+    else pathRef.current.push(move.to);
     const { board: newBoard, capture, king } = applyMove(board, move);
     const further = capture
       ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
@@ -75,12 +81,28 @@ const Checkers = () => {
     const next = turn === 'red' ? 'black' : 'red';
     const newNo = capture || king ? 0 : noCapture + 1;
     setNoCapture(newNo);
+    ReactGA.event({
+      category: 'Checkers',
+      action: 'move',
+      label: turn === 'red' ? 'player' : 'ai',
+    });
+    if (capture) {
+      ReactGA.event({
+        category: 'Checkers',
+        action: 'capture',
+        label: turn === 'red' ? 'player' : 'ai',
+      });
+    }
     if (isDraw(newNo)) {
       setDraw(true);
+      ReactGA.event({ category: 'Checkers', action: 'game_over', label: 'draw' });
+      setLastMove(pathRef.current);
+      pathRef.current = [];
       return;
     }
-    if (!getAllMoves(newBoard, next).length) {
+    if (!hasMoves(newBoard, next)) {
       setWinner(turn);
+      ReactGA.event({ category: 'Checkers', action: 'game_over', label: turn });
     } else {
       setTurn(next);
       if (next === 'black') {
@@ -90,6 +112,8 @@ const Checkers = () => {
     setSelected(null);
     setMoves([]);
     setHint(null);
+    setLastMove(pathRef.current);
+    pathRef.current = [];
   };
 
   const reset = () => {
@@ -103,6 +127,8 @@ const Checkers = () => {
     setFuture([]);
     setNoCapture(0);
     setHint(null);
+    setLastMove([]);
+    pathRef.current = [];
   };
 
   const undo = () => {
@@ -118,6 +144,8 @@ const Checkers = () => {
     setSelected(null);
     setMoves([]);
     setHint(null);
+    setLastMove([]);
+    pathRef.current = [];
   };
 
   const redo = () => {
@@ -133,6 +161,8 @@ const Checkers = () => {
     setSelected(null);
     setMoves([]);
     setHint(null);
+    setLastMove([]);
+    pathRef.current = [];
     if (next.turn === 'black') {
       workerRef.current?.postMessage({ board: next.board, color: 'black', maxDepth: 8 });
     }
@@ -154,6 +184,8 @@ const Checkers = () => {
             const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
             const isHint = hint && hint.from[0] === r && hint.from[1] === c;
             const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
+            const isSelected = selected && selected[0] === r && selected[1] === c;
+            const isLast = lastMove.some((p) => p[0] === r && p[1] === c);
             return (
               <div
                 key={`${r}-${c}`}
@@ -162,6 +194,8 @@ const Checkers = () => {
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
                 } ${isMove ? 'ring-2 ring-yellow-300' : ''} ${
                   isHint || isHintDest ? 'ring-2 ring-blue-400' : ''
+                } ${isSelected ? 'ring-2 ring-green-400' : ''} ${
+                  isLast ? 'ring-2 ring-red-400' : ''
                 }`}
               >
                 {cell && (
