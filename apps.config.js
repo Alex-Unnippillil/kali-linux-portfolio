@@ -205,6 +205,22 @@ const PlatformerApp = dynamic(
   }
 );
 
+const WordSearchApp = dynamic(
+  () =>
+    import('./components/apps/word-search').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Word Search' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Word Search...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -285,6 +301,11 @@ const games = [
 const displayBattleship = (addFolder, openApp) => (
   <BattleshipApp addFolder={addFolder} openApp={openApp} />
 );
+
+const displayWordSearch = (addFolder, openApp) => (
+  <WordSearchApp addFolder={addFolder} openApp={openApp} />
+);
+
 
 
 const displayTowerDefense = (addFolder, openApp) => (
@@ -417,6 +438,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayPlatformer,
+  },
+  {
+    id: 'word-search',
+    title: 'Word Search',
+    icon: './themes/Yaru/apps/word-search.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWordSearch,
   },
   {
     id: 'about-alex',
