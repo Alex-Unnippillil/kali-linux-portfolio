@@ -12,6 +12,7 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
 import { displayQrTool } from './components/apps/qr_tool';
 import { displayMusicPlayer } from './components/apps/music_player';
@@ -697,6 +698,14 @@ const apps = [
     desktop_shortcut: true,
     screen: displayGedit,
   },
+  {
+    id: 'weather',
+    title: 'Weather',
+    icon: 'https://img.icons8.com/fluency/96/partly-cloudy-day.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWeather,
   ...games,
 ];
 
