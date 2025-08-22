@@ -15,7 +15,6 @@ import { displayYouTube } from './components/apps/youtube';
 import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
 import { displayQrTool } from './components/apps/qr_tool';
-import { displayMusicPlayer } from './components/apps/music_player';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
@@ -787,19 +786,6 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySpotify,
-  },
-  {
-    id: 'music-player',
-    title: 'Music Player',
-    icon: './themes/Yaru/apps/music.svg',
-    disabled: false,
-    favourite: true,
-    desktop_shortcut: false,
-    screen: displayMusicPlayer,
-    resizable: false,
-    allowMaximize: false,
-    defaultWidth: 25,
-    defaultHeight: 40,
   },
   {
     id: 'youtube',
