@@ -132,6 +132,22 @@ const HangmanApp = dynamic(
 
 );
 
+const SnakeApp = dynamic(
+  () =>
+    import('./components/apps/snake').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Snake' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Snake...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -143,6 +159,11 @@ const displayTerminalCalc = (addFolder, openApp) => (
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
+
+const displaySnake = (addFolder, openApp) => (
+  <SnakeApp addFolder={addFolder} openApp={openApp} />
+);
+
 
 
 const displayHangman = (addFolder, openApp) => (
@@ -226,7 +247,6 @@ const games = [
   },
 ];
 
-// Main application list displayed on the desktop and app launcher
 
 const apps = [
   {
@@ -444,6 +464,22 @@ const apps = [
   },
   ...games,
 ];
+
+export const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'snake',
+    title: 'Snake',
+    icon: './themes/Yaru/apps/snake.svg',
+    screen: displaySnake,
+  },
+];
+
 
 
 export { games };
