@@ -230,7 +230,16 @@ export default function YouTubeApp({ initialVideos = [] }) {
                   {video.thumbnail && (
                     <img src={video.thumbnail} alt={video.title} className="w-full" />
                   )}
-                  <div className="p-2 font-semibold text-sm line-clamp-2">
+                  <div
+                    className="p-2 font-semibold text-sm"
+                    title={video.title}
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
                     {video.title}
                   </div>
                 </a>
