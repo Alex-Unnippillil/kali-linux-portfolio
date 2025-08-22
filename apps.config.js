@@ -180,6 +180,22 @@ const MinesweeperApp = dynamic(
   },
 );
 
+const PongApp = dynamic(
+  () =>
+    import('./components/apps/pong').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Pong' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Pong...
+      </div>
+    ),
+  }
+);
+
 const displayTerminal = (addFolder, openApp) => (
   <TerminalApp addFolder={addFolder} openApp={openApp} />
 );
@@ -192,11 +208,16 @@ const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
 
+const displayPong = (addFolder, openApp) => (
+  <PongApp addFolder={addFolder} openApp={openApp} />
+);
+
+
 const displayMinesweeper = (addFolder, openApp) => (
   <MinesweeperApp addFolder={addFolder} openApp={openApp} />
 );
 
-=======
+
 const displayMemory = (addFolder, openApp) => (
   <MemoryApp addFolder={addFolder} openApp={openApp} />
 );
@@ -233,6 +254,7 @@ const display2048 = (addFolder, openApp) => (
 
 // Games list used for the "Games" folder on the desktop
 
+
 const games = [
   {
     id: 'tictactoe',
@@ -244,6 +266,18 @@ const games = [
     screen: displayTicTacToe,
   },
   {
+
+    id: 'pong',
+    title: 'Pong',
+    icon: './themes/Yaru/apps/pong.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPong,
+  },
+];
+
+
 
     id: 'chess',
     title: 'Chess',
@@ -290,7 +324,6 @@ const games = [
 ];
 
 
-
 const apps = [
   {
     id: 'chrome',
@@ -315,6 +348,7 @@ const apps = [
     defaultHeight: 40,
   },
   ...games,
+
 
 
   // Games are included so they appear alongside apps
@@ -543,6 +577,7 @@ export const games = [
 const games = apps.filter((app) => ['tictactoe', 'memory'].includes(app.id));
 
 export { games };
+
 
 
 
