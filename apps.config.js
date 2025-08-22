@@ -46,6 +46,7 @@ const TerminalApp = createDynamicApp('terminal', 'Terminal');
 const CalcApp = createDynamicApp('calc', 'Calc');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
+const ConnectFourApp = createDynamicApp('connect-four', 'Connect Four');
 const HangmanApp = createDynamicApp('hangman', 'Hangman');
 const FroggerApp = createDynamicApp('frogger', 'Frogger');
 const FlappyBirdApp = createDynamicApp('flappy-bird', 'Flappy Bird');
@@ -76,6 +77,7 @@ const displayTerminal = createDisplay(TerminalApp);
 const displayTerminalCalc = createDisplay(CalcApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
+const displayConnectFour = createDisplay(ConnectFourApp);
 const displayHangman = createDisplay(HangmanApp);
 const displayFrogger = createDisplay(FroggerApp);
 const displayFlappyBird = createDisplay(FlappyBirdApp);
@@ -175,6 +177,15 @@ export const games = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayChess,
+  },
+  {
+    id: 'connect-four',
+    title: 'Connect Four',
+    icon: './themes/Yaru/apps/connect-four.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayConnectFour,
   },
   {
     id: 'frogger',
