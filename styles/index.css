@@ -173,6 +173,42 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     }
 }
 
+/* Show Applications overlay animation */
+.all-apps-anim {
+    animation: allAppsScale 200ms ease-out;
+}
+
+@keyframes allAppsScale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* App icon click animation */
+.app-icon-launch {
+    animation: appIconLaunch 200ms ease-in-out;
+}
+
+@keyframes appIconLaunch {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(0.9);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
 /* Context Menu */
 .context-menu-bg {
     background-color: rgb(43, 43, 43);
