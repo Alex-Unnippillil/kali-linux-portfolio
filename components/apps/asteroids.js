@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { wrap, createBulletPool, spawnBullet, updateBullets, createGA } from './asteroids-utils';
 
 // Simple Quadtree for collision queries
 class Quadtree {
@@ -98,8 +99,9 @@ const Asteroids = () => {
     let score = 0;
     let level = 1;
     let extraLifeScore = 10000;
-    const bullets = [];
+    const bullets = createBulletPool(40);
     const asteroids = [];
+    const ga = createGA();
     const particles = Array.from({ length: 256 }, () => ({ active: false, x: 0, y: 0, dx: 0, dy: 0, life: 0, color: 'white' }));
     const ufo = { active: false, x: 0, y: 0, dx: 0, dy: 0, r: 15, cooldown: 0 };
     const ufoBullets = [];
@@ -155,6 +157,7 @@ const Asteroids = () => {
     };
 
     spawnAsteroids(4);
+    ga.start();
 
     // Input handling
     const handleKeyDown = (e) => {
@@ -214,14 +217,14 @@ const Asteroids = () => {
 
     function fireBullet() {
       if (ship.cooldown > 0) return;
-      bullets.push({
-        x: ship.x + Math.cos(ship.angle) * 12,
-        y: ship.y + Math.sin(ship.angle) * 12,
-        dx: Math.cos(ship.angle) * 6 + ship.velX,
-        dy: Math.sin(ship.angle) * 6 + ship.velY,
-        r: 2,
-        life: 60,
-      });
+      spawnBullet(
+        bullets,
+        ship.x + Math.cos(ship.angle) * 12,
+        ship.y + Math.sin(ship.angle) * 12,
+        Math.cos(ship.angle) * 6 + ship.velX,
+        Math.sin(ship.angle) * 6 + ship.velY,
+        60,
+      );
       ship.cooldown = 15;
       playSound(880);
     }
@@ -229,6 +232,7 @@ const Asteroids = () => {
     function destroyShip() {
       spawnParticles(ship.x, ship.y, 40, 'orange');
       lives -= 1;
+      ga.death();
       playSound(110);
       ship.x = canvas.width / 2;
       ship.y = canvas.height / 2;
@@ -241,6 +245,7 @@ const Asteroids = () => {
         level = 1;
         asteroids.length = 0;
         spawnAsteroids(4);
+        ga.start();
       }
     }
 
@@ -248,6 +253,7 @@ const Asteroids = () => {
       const a = asteroids[index];
       spawnParticles(a.x, a.y, 20, 'white');
       score += 100;
+      ga.split(a.r);
       if (a.r > 20) {
         for (let i = 0; i < 2; i += 1) {
           const angle = Math.random() * Math.PI * 2;
@@ -262,6 +268,7 @@ const Asteroids = () => {
       }
       if (!asteroids.length) {
         level += 1;
+        ga.level_up();
         spawnAsteroids(3 + level);
       }
     }
@@ -291,20 +298,10 @@ const Asteroids = () => {
       ship.x += ship.velX;
       ship.y += ship.velY;
       ship.cooldown = Math.max(0, ship.cooldown - 1);
-      if (ship.x < 0) ship.x = canvas.width;
-      if (ship.x > canvas.width) ship.x = 0;
-      if (ship.y < 0) ship.y = canvas.height;
-      if (ship.y > canvas.height) ship.y = 0;
+      ship.x = wrap(ship.x, canvas.width);
+      ship.y = wrap(ship.y, canvas.height);
 
-      bullets.forEach((b) => {
-        b.x += b.dx;
-        b.y += b.dy;
-        b.life -= 1;
-      });
-      for (let i = bullets.length - 1; i >= 0; i -= 1) {
-        const b = bullets[i];
-        if (b.life <= 0) bullets.splice(i, 1);
-      }
+      updateBullets(bullets);
 
       asteroids.forEach((a) => {
         a.x += a.dx;
@@ -356,7 +353,8 @@ const Asteroids = () => {
       asteroids.forEach((a) => qt.insert(a));
       ufo.active && qt.insert(ufo);
 
-      bullets.forEach((b, bi) => {
+      bullets.forEach((b) => {
+        if (!b.active) return;
         qt.retrieve(b).forEach((obj) => {
           if (obj === b) return;
           const dist = Math.hypot(obj.x - b.x, obj.y - b.y);
@@ -366,7 +364,7 @@ const Asteroids = () => {
               const index = asteroids.indexOf(obj);
               if (index >= 0) destroyAsteroid(index);
             }
-            bullets.splice(bi, 1);
+            b.active = false;
           }
         });
       });
@@ -401,6 +399,7 @@ const Asteroids = () => {
       // Bullets
       ctx.fillStyle = 'white';
       bullets.forEach((b) => {
+        if (!b.active) return;
         ctx.beginPath();
         ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
         ctx.fill();
