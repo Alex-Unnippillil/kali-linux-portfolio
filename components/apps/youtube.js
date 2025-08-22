@@ -3,7 +3,6 @@ import React, {
   useState,
   useMemo,
   useCallback,
-  useTransition,
 } from 'react';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
@@ -17,7 +16,6 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('date');
   const [search, setSearch] = useState('');
-  const [, startTransition] = useTransition();
 
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -87,7 +85,12 @@ export default function YouTubeApp({ initialVideos = [] }) {
         const allVideosData = await Promise.all(
           list.map((pl) => fetchPlaylistVideos(pl))
         );
-        setVideos(allVideosData.flat());
+
+        // Replace the existing feed and deduplicate by video ID to
+        // prevent stale entries from accumulating in the list.
+        const flat = allVideosData.flat();
+        const unique = Array.from(new Map(flat.map((v) => [v.id, v])).values());
+        setVideos(unique);
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Failed to load YouTube data', err);
@@ -154,26 +157,17 @@ export default function YouTubeApp({ initialVideos = [] }) {
     }
   }, [filtered, sortBy]);
 
-  const handleCategoryClick = useCallback(
-    (cat) => startTransition(() => setActiveCategory(cat)),
-    [startTransition]
-  );
+  const handleCategoryClick = useCallback((cat) => setActiveCategory(cat), []);
 
-  const handleSortChange = useCallback(
-    (e) => {
-      const { value } = e.target;
-      startTransition(() => setSortBy(value));
-    },
-    [startTransition]
-  );
+  const handleSortChange = useCallback((e) => {
+    const { value } = e.target;
+    setSortBy(value);
+  }, []);
 
-  const handleSearchChange = useCallback(
-    (e) => {
-      const { value } = e.target;
-      startTransition(() => setSearch(value));
-    },
-    [startTransition]
-  );
+  const handleSearchChange = useCallback((e) => {
+    const { value } = e.target;
+    setSearch(value);
+  }, []);
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
