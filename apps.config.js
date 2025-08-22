@@ -119,6 +119,12 @@ const CarRacerApp = dynamic(
   () =>
     import('./components/apps/car-racer').then((mod) => {
       ReactGA.event({ category: 'Application', action: 'Loaded Car Racer' });
+
+const AsteroidsApp = dynamic(
+  () =>
+    import('./components/apps/asteroids').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Asteroids' });
+ 
       return mod.default;
     }),
   {
@@ -126,6 +132,24 @@ const CarRacerApp = dynamic(
     loading: () => (
       <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
         Loading Car Racer...
+
+        Loading Asteroids...
+      </div>
+    ),
+  }
+);
+
+const SokobanApp = dynamic(
+  () =>
+    import('./components/apps/sokoban').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Sokoban' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Sokoban...
       </div>
     ),
   }
@@ -146,6 +170,11 @@ const displaySolitaire = (addFolder, openApp) => (
   <SolitaireApp addFolder={addFolder} openApp={openApp} />
 );
 
+const displaySokoban = (addFolder, openApp) => (
+  <SokobanApp addFolder={addFolder} openApp={openApp} />
+);
+
+
 
 const display2048 = (addFolder, openApp) => (
   <Game2048App addFolder={addFolder} openApp={openApp} />
@@ -155,7 +184,13 @@ const displayCarRacer = (addFolder, openApp) => (
   <CarRacerApp addFolder={addFolder} openApp={openApp} />
 );
 
-=======
+
+
+const displayAsteroids = (addFolder, openApp) => (
+  <AsteroidsApp addFolder={addFolder} openApp={openApp} />
+);
+
+
 const displaySimon = (addFolder, openApp) => (
   <SimonApp addFolder={addFolder} openApp={openApp} />
 );
@@ -291,6 +326,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayBattleship,
+  },
+  {
+    id: 'asteroids',
+    title: 'Asteroids',
+    icon: './themes/Yaru/apps/asteroids.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAsteroids,
   },
   {
     id: 'about-alex',
@@ -445,7 +489,16 @@ const games = [
   },
 ];
 
-=======
+    id: 'sokoban',
+    title: 'Sokoban',
+    icon: './themes/Yaru/apps/sokoban.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySokoban,
+  },
+];
+
     screen: displayTicTacToe,
   },
   {
