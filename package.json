@@ -24,6 +24,7 @@
     "chess.js": "^1.0.0",
     "expr-eval": "^2.0.2",
     "html-to-image": "^1.11.13",
+    "jspdf": "^2.5.1",
     "next": "^13.1.2",
     "postcss": "^8.4.21",
     "prop-types": "^15.8.1",
