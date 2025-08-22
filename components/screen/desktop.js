@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import BackgroundImage from '../util-components/background-image';
 import SideBar from './side_bar';
-import apps, { games } from '../../apps.config';
+import apps, { games, sys } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
@@ -62,7 +62,7 @@ export class Desktop extends Component {
                 apps.push({
                     id: `new-folder-${folder.id}`,
                     title: folder.name,
-                    icon: './themes/Yaru/system/folder.png',
+                    icon: sys('folder.png'),
                     disabled: true,
                     favourite: false,
                     desktop_shortcut: true,
@@ -465,7 +465,7 @@ export class Desktop extends Component {
         apps.push({
             id: `new-folder-${folder_id}`,
             title: folder_name,
-            icon: './themes/Yaru/system/folder.png',
+            icon: sys('folder.png'),
             disabled: true,
             favourite: false,
             desktop_shortcut: true,

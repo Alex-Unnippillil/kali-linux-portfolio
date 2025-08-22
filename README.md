@@ -33,7 +33,7 @@ Games are organized in `apps.config.js` using a `games` array that mirrors the s
 
 To introduce a new game:
 
-1. **Icon** – Add the game's icon to `public/themes/Yaru/apps/` and reference it with a relative path like `./themes/Yaru/apps/my-game.png`.
+1. **Icon** – Add the game's icon to `public/themes/Yaru/apps/` and reference it with the helper `icon('my-game.png')`.
 2. **Dynamic import** – Create the game component in `components/apps/` and load it with `next/dynamic` to keep the initial bundle small:
 
     ```js
@@ -62,12 +62,19 @@ To introduce a new game:
     games.push({
       id: 'my-game',
       title: 'My Game',
-      icon: './themes/Yaru/apps/my-game.png',
+      icon: icon('my-game.png'),
       screen: displayMyGame,
     });
     ```
 
 The new game will then appear alongside the other games on the desktop.
+
+## Theme Selection
+
+Icon themes can be changed at runtime by setting the `NEXT_PUBLIC_THEME`
+environment variable. It should correspond to a directory inside
+`public/themes/`. When unspecified, the application defaults to the
+`Yaru` theme.
 
 ## Privacy
 
