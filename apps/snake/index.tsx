@@ -1,0 +1,241 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+type Point = { x: number; y: number };
+const GRID_SIZE = 20;
+const CELL_SIZE = 20;
+const OBSTACLES = 5;
+
+const themes = {
+  classic: { bg: '#000000', snake: '#00ff00', food: '#ff0000', obstacle: '#555555' },
+  neon: { bg: '#222222', snake: '#0fffff', food: '#ff00ff', obstacle: '#ffff00' },
+  dark: { bg: '#111111', snake: '#ffffff', food: '#ff6600', obstacle: '#666666' },
+};
+
+type ThemeName = keyof typeof themes;
+
+const randomCell = (occupied: Point[]): Point => {
+  let cell: Point;
+  do {
+    cell = { x: Math.floor(Math.random() * GRID_SIZE), y: Math.floor(Math.random() * GRID_SIZE) };
+  } while (occupied.some((p) => p.x === cell.x && p.y === cell.y));
+  return cell;
+};
+
+const Snake: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [snake, setSnake] = useState<Point[]>([{ x: 10, y: 10 }]);
+  const [direction, setDirection] = useState<Point>({ x: 0, y: -1 });
+  const dirQueue = useRef<Point[]>([]);
+
+  const [food, setFood] = useState<Point>(() => randomCell([{ x: 10, y: 10 }]));
+  const [obstacles, setObstacles] = useState<Point[]>(() => {
+    const obs: Point[] = [];
+    while (obs.length < OBSTACLES) obs.push(randomCell([{ x: 10, y: 10 }, ...obs]));
+    return obs;
+  });
+
+  const [wrap, setWrap] = useState(false);
+  const [score, setScore] = useState(0);
+  const [speed, setSpeed] = useState(200);
+  const [paused, setPaused] = useState(false);
+  const [gameOver, setGameOver] = useState(false);
+  const [highScore, setHighScore] = useState(0);
+  const [theme, setTheme] = useState<ThemeName>('classic');
+
+  const audioCtx = useRef<AudioContext>();
+  const playSound = useCallback((type: 'eat' | 'die') => {
+    if (typeof window === 'undefined') return;
+    if (!audioCtx.current) {
+      audioCtx.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    const ctx = audioCtx.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = type === 'eat' ? 600 : 200;
+    osc.start();
+    gain.gain.setValueAtTime(1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
+    osc.stop(ctx.currentTime + 0.2);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/snake/scores')
+      .then((r) => r.json())
+      .then((d) => setHighScore(d.scores?.[0] ?? 0))
+      .catch(() => {});
+  }, []);
+
+  const enqueue = useCallback(
+    (dir: Point) => {
+      const last = dirQueue.current.length ? dirQueue.current[dirQueue.current.length - 1] : direction;
+      if (last.x + dir.x === 0 && last.y + dir.y === 0) return;
+      dirQueue.current.push(dir);
+    },
+    [direction]
+  );
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowUp') enqueue({ x: 0, y: -1 });
+      if (e.key === 'ArrowDown') enqueue({ x: 0, y: 1 });
+      if (e.key === 'ArrowLeft') enqueue({ x: -1, y: 0 });
+      if (e.key === 'ArrowRight') enqueue({ x: 1, y: 0 });
+      if (e.key === ' ') setPaused((p) => !p);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [enqueue]);
+
+  useEffect(() => {
+    let sx = 0;
+    let sy = 0;
+    const start = (e: TouchEvent) => {
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+    };
+    const end = (e: TouchEvent) => {
+      const dx = e.changedTouches[0].clientX - sx;
+      const dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 30) enqueue({ x: 1, y: 0 });
+        else if (dx < -30) enqueue({ x: -1, y: 0 });
+      } else {
+        if (dy > 30) enqueue({ x: 0, y: 1 });
+        else if (dy < -30) enqueue({ x: 0, y: -1 });
+      }
+    };
+    window.addEventListener('touchstart', start);
+    window.addEventListener('touchend', end);
+    return () => {
+      window.removeEventListener('touchstart', start);
+      window.removeEventListener('touchend', end);
+    };
+  }, [enqueue]);
+
+  const step = useCallback(() => {
+    setSnake((prev) => {
+      let dir = direction;
+      if (dirQueue.current.length) {
+        dir = dirQueue.current.shift()!;
+        setDirection(dir);
+      }
+      let head = { x: prev[0].x + dir.x, y: prev[0].y + dir.y };
+      if (wrap) {
+        head.x = (head.x + GRID_SIZE) % GRID_SIZE;
+        head.y = (head.y + GRID_SIZE) % GRID_SIZE;
+      }
+      const hitWall = head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE;
+      const hitSelf = prev.some((p) => p.x === head.x && p.y === head.y);
+      const hitObstacle = obstacles.some((o) => o.x === head.x && o.y === head.y);
+      if ((!wrap && hitWall) || hitSelf || hitObstacle) {
+        setGameOver(true);
+        playSound('die');
+        return prev;
+      }
+      const newSnake = [head, ...prev];
+      if (head.x === food.x && head.y === food.y) {
+        const occupied = [...newSnake, ...obstacles];
+        setFood(randomCell(occupied));
+        setScore((s) => s + 1);
+        setSpeed((s) => Math.max(50, s - 10));
+        playSound('eat');
+      } else {
+        newSnake.pop();
+      }
+      return newSnake;
+    });
+  }, [direction, food, obstacles, wrap, playSound]);
+
+  useEffect(() => {
+    if (paused || gameOver) return;
+    const id = setInterval(step, speed);
+    return () => clearInterval(id);
+  }, [step, speed, paused, gameOver]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const t = themes[theme];
+    ctx.fillStyle = t.bg;
+    ctx.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+    ctx.fillStyle = t.obstacle;
+    obstacles.forEach((o) => ctx.fillRect(o.x * CELL_SIZE, o.y * CELL_SIZE, CELL_SIZE, CELL_SIZE));
+    ctx.fillStyle = t.food;
+    ctx.fillRect(food.x * CELL_SIZE, food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+    ctx.fillStyle = t.snake;
+    snake.forEach((s) => ctx.fillRect(s.x * CELL_SIZE, s.y * CELL_SIZE, CELL_SIZE, CELL_SIZE));
+  }, [snake, food, obstacles, theme]);
+
+  const reset = () => {
+    setSnake([{ x: 10, y: 10 }]);
+    setDirection({ x: 0, y: -1 });
+    dirQueue.current = [];
+    const start: Point[] = [{ x: 10, y: 10 }];
+    setFood(randomCell(start));
+    setObstacles(() => {
+      const obs: Point[] = [];
+      while (obs.length < OBSTACLES) obs.push(randomCell([...start, ...obs]));
+      return obs;
+    });
+    setScore(0);
+    setSpeed(200);
+    setGameOver(false);
+    setPaused(false);
+  };
+
+  useEffect(() => {
+    if (gameOver && score > highScore) {
+      fetch('/api/snake/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ score }),
+      })
+        .then((r) => r.json())
+        .then((d) => setHighScore(d.scores?.[0] ?? score))
+        .catch(() => {});
+    }
+  }, [gameOver, score, highScore]);
+
+  return (
+    <div className="p-4 flex flex-col items-center text-white space-y-2 select-none">
+      <canvas
+        ref={canvasRef}
+        width={GRID_SIZE * CELL_SIZE}
+        height={GRID_SIZE * CELL_SIZE}
+        className="border border-gray-600"
+      />
+      <div className="space-x-2">
+        <span>Score: {score}</span>
+        <span>High: {highScore}</span>
+        <button className="ml-2 px-2 py-1 bg-gray-700 rounded" onClick={() => setPaused((p) => !p)}>
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button className="ml-2 px-2 py-1 bg-gray-700 rounded" onClick={() => setWrap((w) => !w)}>
+          {wrap ? 'Solid' : 'Wrap'}
+        </button>
+        <button className="ml-2 px-2 py-1 bg-gray-700 rounded" onClick={reset}>
+          Reset
+        </button>
+        <select
+          className="ml-2 bg-gray-700 rounded"
+          value={theme}
+          onChange={(e) => setTheme(e.target.value as ThemeName)}
+        >
+          {Object.keys(themes).map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </div>
+      {gameOver && <div className="text-red-400">Game Over</div>}
+    </div>
+  );
+};
+
+export default Snake;
+
