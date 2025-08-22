@@ -66,6 +66,7 @@ const SokobanApp = createDynamicApp('sokoban', 'Sokoban');
 const SolitaireApp = createDynamicApp('solitaire', 'Solitaire');
 const TowerDefenseApp = createDynamicApp('tower-defense', 'Tower Defense');
 const WordSearchApp = createDynamicApp('word-search', 'Word Search');
+const WordleApp = createDynamicApp('wordle', 'Wordle');
 const BlackjackApp = createDynamicApp('blackjack', 'Blackjack');
 const BreakoutApp = createDynamicApp('breakout', 'Breakout');
 const AsteroidsApp = createDynamicApp('asteroids', 'Asteroids');
@@ -99,6 +100,7 @@ const displaySokoban = createDisplay(SokobanApp);
 const displaySolitaire = createDisplay(SolitaireApp);
 const displayTowerDefense = createDisplay(TowerDefenseApp);
 const displayWordSearch = createDisplay(WordSearchApp);
+const displayWordle = createDisplay(WordleApp);
 const displayBlackjack = createDisplay(BlackjackApp);
 const displayBreakout = createDisplay(BreakoutApp);
 const displayAsteroids = createDisplay(AsteroidsApp);
@@ -340,6 +342,15 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWordSearch,
+  },
+  {
+    id: 'wordle',
+    title: 'Wordle',
+    icon: './themes/Yaru/apps/wordle.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWordle,
   },
   {
     id: 'nonogram',
