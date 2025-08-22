@@ -12,6 +12,14 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayConverter } from './components/apps/converter';
+import { displayQrTool } from './components/apps/qr_tool';
+import { displayMusicPlayer } from './components/apps/music_player';
+import { displayAsciiArt } from './components/apps/ascii_art';
+import { displayResourceMonitor } from './components/apps/resource_monitor';
+import { displayQuoteGenerator } from './components/apps/quote_generator';
+import { displayShowcase } from './components/apps/showcase';
+import { displayProjectGallery } from './components/apps/project-gallery';
 
 const TerminalApp = dynamic(
   () =>
@@ -65,6 +73,11 @@ const SolitaireApp = dynamic(
   () =>
     import('./components/apps/solitaire').then((mod) => {
       ReactGA.event({ category: 'Application', action: 'Loaded Solitaire' });
+
+const Game2048App = dynamic(
+  () =>
+    import('./components/apps/2048').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded 2048' });
       return mod.default;
     }),
   {
@@ -75,6 +88,11 @@ const SolitaireApp = dynamic(
       </div>
     ),
   },
+
+        Loading 2048...
+      </div>
+    ),
+  }
 );
 
 const displayTerminal = (addFolder, openApp) => (
@@ -93,6 +111,33 @@ const displaySolitaire = (addFolder, openApp) => (
 );
 
 
+const display2048 = (addFolder, openApp) => (
+  <Game2048App addFolder={addFolder} openApp={openApp} />
+);
+
+// Games list used for the "Games" folder on the desktop
+const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+    id: '2048',
+    title: '2048',
+    icon: './themes/Yaru/apps/2048.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: display2048,
+  },
+];
+
+// Main application list displayed on the desktop and app launcher
 const apps = [
   {
     id: 'chrome',
@@ -116,14 +161,43 @@ const apps = [
     defaultWidth: 25,
     defaultHeight: 40,
   },
+  // Games are included so they appear alongside apps
+  ...games,
   {
-    id: 'tictactoe',
-    title: 'Tic Tac Toe',
-    icon: './themes/Yaru/apps/tictactoe.svg',
+    id: 'converter',
+    title: 'Converter',
+    icon: './themes/Yaru/apps/calc.png',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayTicTacToe,
+    screen: displayConverter,
+  },
+  {
+    id: 'qr-tool',
+    title: 'QR Tool',
+    icon: './themes/Yaru/apps/qr.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayQrTool,
+  },
+  {
+    id: 'ascii-art',
+    title: 'ASCII Art',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAsciiArt,
+  },
+  {
+    id: 'quote-generator',
+    title: 'Quote Generator',
+    icon: './themes/Yaru/apps/quote.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayQuoteGenerator,
   },
   {
     id: 'solitaire',
@@ -181,6 +255,19 @@ const apps = [
     screen: displaySpotify,
   },
   {
+    id: 'music-player',
+    title: 'Music Player',
+    icon: './themes/Yaru/apps/music.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayMusicPlayer,
+    resizable: false,
+    allowMaximize: false,
+    defaultWidth: 25,
+    defaultHeight: 40,
+  },
+  {
     id: 'youtube',
     title: 'YouTube',
     icon: './themes/Yaru/apps/youtube.svg',
@@ -188,6 +275,33 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayYouTube,
+  },
+  {
+    id: 'resource-monitor',
+    title: 'Resource Monitor',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayResourceMonitor,
+  },
+  {
+    id: 'showcase',
+    title: '3D Showcase',
+    icon: './themes/Yaru/apps/showcase.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: true,
+    screen: displayShowcase,
+  },
+  {
+    id: 'project-gallery',
+    title: 'Project Gallery',
+    icon: './themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: true,
+    desktop_shortcut: false,
+    screen: displayProjectGallery,
   },
   {
     id: 'todoist',
@@ -227,4 +341,5 @@ const apps = [
   },
 ];
 
+export { games };
 export default apps;
