@@ -12,6 +12,7 @@ import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
+import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
 import { displayQrTool } from './components/apps/qr_tool';
 import { displayMusicPlayer } from './components/apps/music_player';
@@ -36,6 +37,60 @@ const createDynamicApp = (path, name) =>
         </div>
       ),
     }
+
+const TerminalApp = dynamic(
+  () =>
+    import('./components/apps/terminal').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Terminal' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Terminal...
+      </div>
+    ),
+  }
+);
+
+const CalcApp = dynamic(
+  () =>
+    import('./components/apps/calc').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Calc' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Calc...
+      </div>
+    ),
+  }
+);
+
+const GameApp = dynamic(
+  () =>
+    import('./components/apps/game').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Game' });
+
+const TicTacToeApp = dynamic(
+  () =>
+    import('./components/apps/tictactoe').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded TicTacToe' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Game...
+
+        Loading Tic Tac Toe...
+      </div>
+    ),
+  }
   );
 
 const createDisplay = (Component) => (addFolder, openApp) => (
@@ -92,6 +147,228 @@ const displayTowerDefense = createDisplay(TowerDefenseApp);
 const displayWordSearch = createDisplay(WordSearchApp);
 const displayBlackjack = createDisplay(BlackjackApp);
 const displayAsteroids = createDisplay(AsteroidsApp);
+
+const HangmanApp = dynamic(
+  () =>
+    import('./components/apps/hangman').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Hangman' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Hangman...
+      </div>
+    ),
+  }
+
+);
+
+const SnakeApp = dynamic(
+  () =>
+    import('./components/apps/snake').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Snake' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Snake...
+      </div>
+    ),
+  }
+);
+
+const MemoryApp = dynamic(
+  () =>
+    import('./components/apps/memory').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Memory' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Memory...
+      </div>
+    ),
+  }
+);
+
+const MinesweeperApp = dynamic(
+  () =>
+    import('./components/apps/minesweeper').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Minesweeper' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Minesweeper...
+      </div>
+    ),
+  },
+);
+
+const PongApp = dynamic(
+  () =>
+    import('./components/apps/pong').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Pong' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Pong...
+      </div>
+    ),
+  }
+);
+
+const PacmanApp = dynamic(
+  () =>
+    import('./components/apps/pacman').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Pacman' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Pacman...
+      </div>
+    ),
+  }
+);
+
+const SudokuApp = dynamic(
+  () =>
+    import('./components/apps/sudoku').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Sudoku' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Sudoku...
+      </div>
+    ),
+  }
+);
+
+const SpaceInvadersApp = dynamic(
+  () =>
+    import('./components/apps/space-invaders').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Space Invaders' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Space Invaders...
+      </div>
+    ),
+  }
+);
+
+const NonogramApp = dynamic(
+  () =>
+    import('./components/apps/nonogram').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Nonogram' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Nonogram...
+      </div>
+    ),
+  }
+);
+
+const displayTerminal = (addFolder, openApp) => (
+  <TerminalApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayTerminalCalc = (addFolder, openApp) => (
+  <CalcApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayGame = () => <GameApp />;
+
+const displayTicTacToe = (addFolder, openApp) => (
+  <TicTacToeApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displayNonogram = (addFolder, openApp) => (
+  <NonogramApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+const displaySpaceInvaders = (addFolder, openApp) => (
+  <SpaceInvadersApp addFolder={addFolder} openApp={openApp} />
+);
+
+const displaySudoku = (addFolder, openApp) => (
+  <SudokuApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+const displayPacman = (addFolder, openApp) => (
+  <PacmanApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+const displayPong = (addFolder, openApp) => (
+  <PongApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+const displayMinesweeper = (addFolder, openApp) => (
+  <MinesweeperApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+const displayMemory = (addFolder, openApp) => (
+  <MemoryApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+const displaySnake = (addFolder, openApp) => (
+  <SnakeApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+
+const displayHangman = (addFolder, openApp) => (
+  <HangmanApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+const displayChess = (addFolder, openApp) => (
+  <ChessApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+
+const displayHangman = (addFolder, openApp) => (
+  <HangmanApp addFolder={addFolder} openApp={openApp} />
+);
+const displayFrogger = (addFolder, openApp) => (
+  <FroggerApp addFolder={addFolder} openApp={openApp} />
+);
+
+
+const display2048 = (addFolder, openApp) => (
+  <Game2048App addFolder={addFolder} openApp={openApp} />
+);
 
 // Games list used for the "Games" folder on the desktop
 export const games = [
@@ -234,6 +511,20 @@ export const games = [
     id: 'simon',
     title: 'Simon',
     icon: './themes/Yaru/apps/simon.svg',
+
+    id: 'space-invaders',
+    title: 'Space Invaders',
+    icon: './themes/Yaru/apps/space-invaders.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySpaceInvaders,
+  },
+  {
+
+    id: 'memory',
+    title: 'Memory',
+    icon: './themes/Yaru/apps/memory.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -243,6 +534,21 @@ export const games = [
     id: 'snake',
     title: 'Snake',
     icon: './themes/Yaru/apps/snake.svg',
+
+    id: 'sudoku',
+    title: 'Sudoku',
+    icon: './themes/Yaru/apps/sudoku.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySudoku,
+  },
+  {
+
+
+    id: 'ascii-art',
+    title: 'ASCII Art',
+    icon: './themes/Yaru/apps/gedit.png',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -300,6 +606,28 @@ const apps = [
     id: 'chrome',
     title: 'Google Chrome',
     icon: './themes/Yaru/apps/chrome.png',
+
+    id: 'game',
+    title: 'Game',
+    icon: './themes/Yaru/apps/game.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayGame,
+  },
+  {
+    id: 'nonogram',
+    title: 'Nonogram',
+    icon: './themes/Yaru/apps/nonogram.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNonogram,
+  },
+  {
+    id: 'about-alex',
+    title: 'About Alex',
+    icon: './themes/Yaru/system/user-home.png',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
@@ -447,6 +775,44 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayAboutAlex,
+  {
+    id: 'weather',
+    title: 'Weather',
+    icon: 'https://img.icons8.com/fluency/96/partly-cloudy-day.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWeather,
+  ...games,
+];
+
+const games = apps.filter((app) => ['tictactoe', 'nonogram'].includes(app.id));
+
+const games = [
+
+export const games = [
+  {
+    id: 'tictactoe',
+    title: 'Tic Tac Toe',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe,
+  },
+  {
+    id: 'space-invaders',
+    title: 'Space Invaders',
+    icon: './themes/Yaru/apps/space-invaders.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySpaceInvaders,
+  },
+];
+
+
+    screen: displayTicTacToe,
   },
   {
     id: 'converter',
@@ -489,3 +855,4 @@ const apps = [
 ];
 
 export default apps;
+export { games };
