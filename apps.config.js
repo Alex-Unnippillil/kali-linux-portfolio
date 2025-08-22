@@ -74,7 +74,9 @@ const SudokuApp = createDynamicApp('sudoku', 'Sudoku');
 const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
+const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+
 
 const displayTerminal = createDisplay(TerminalApp);
 const displayTerminalCalc = createDisplay(CalcApp);
@@ -108,6 +110,8 @@ const displaySudoku = createDisplay(SudokuApp);
 const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
+const displayGomoku = createDisplay(GomokuApp);
+
 const displayPinball = createDisplay(PinballApp);
 
 // Default window sizing for games to prevent oversized frames
@@ -389,6 +393,14 @@ const gameList = [
     screen: displayFlappyBird,
   },
   {
+    id: 'gomoku',
+    title: 'Gomoku',
+    icon: './themes/Yaru/apps/gomoku.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayGomoku,
+
     id: 'pinball',
     title: 'Pinball',
     icon: './themes/Yaru/apps/pinball.svg',
