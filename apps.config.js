@@ -69,6 +69,7 @@ const AsteroidsApp = createDynamicApp('asteroids', 'Asteroids');
 const SudokuApp = createDynamicApp('sudoku', 'Sudoku');
 const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
+const TetrisApp = createDynamicApp('tetris', 'Tetris');
 
 const displayTerminal = createDisplay(TerminalApp);
 const displayTerminalCalc = createDisplay(CalcApp);
@@ -97,6 +98,7 @@ const displayAsteroids = createDisplay(AsteroidsApp);
 const displaySudoku = createDisplay(SudokuApp);
 const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
+const displayTetris = createDisplay(TetrisApp);
 
 // Games list used for the "Games" folder on the desktop
 export const games = [
@@ -279,6 +281,15 @@ export const games = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'tetris',
+    title: 'Tetris',
+    icon: './themes/Yaru/apps/tetris.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTetris,
   },
   {
     id: 'tower-defense',
