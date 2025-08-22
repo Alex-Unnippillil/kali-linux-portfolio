@@ -1,4 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  useTransition,
+} from 'react';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
@@ -11,6 +17,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('date');
   const [search, setSearch] = useState('');
+  const [, startTransition] = useTransition();
 
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -92,25 +99,68 @@ export default function YouTubeApp({ initialVideos = [] }) {
     );
   }
 
-  const categories = ['All', ...Array.from(new Set([...playlists.map((p) => p.title), ...videos.map((v) => v.playlist)]))];
+  const categories = useMemo(
+    () => [
+      'All',
+      ...Array.from(
+        new Set([
+          ...playlists.map((p) => p.title),
+          ...videos.map((v) => v.playlist),
+        ])
+      ),
+    ],
+    [playlists, videos]
+  );
 
-  const filtered = videos
-    .filter((v) => activeCategory === 'All' || v.playlist === activeCategory)
-    .filter((v) => v.title.toLowerCase().includes(search.toLowerCase()));
+  const filtered = useMemo(
+    () =>
+      videos
+        .filter((v) => activeCategory === 'All' || v.playlist === activeCategory)
+        .filter((v) =>
+          v.title.toLowerCase().includes(search.toLowerCase())
+        ),
+    [videos, activeCategory, search]
+  );
 
-  const sorted = [...filtered].sort((a, b) => {
+  const sorted = useMemo(() => {
+    const list = [...filtered];
     switch (sortBy) {
       case 'dateAsc':
-        return new Date(a.publishedAt) - new Date(b.publishedAt);
+        return list.sort(
+          (a, b) => new Date(a.publishedAt) - new Date(b.publishedAt)
+        );
       case 'title':
-        return a.title.localeCompare(b.title);
+        return list.sort((a, b) => a.title.localeCompare(b.title));
       case 'playlist':
-        return a.playlist.localeCompare(b.playlist);
+        return list.sort((a, b) => a.playlist.localeCompare(b.playlist));
       case 'date':
       default:
-        return new Date(b.publishedAt) - new Date(a.publishedAt);
+        return list.sort(
+          (a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)
+        );
     }
-  });
+  }, [filtered, sortBy]);
+
+  const handleCategoryClick = useCallback(
+    (cat) => startTransition(() => setActiveCategory(cat)),
+    [startTransition]
+  );
+
+  const handleSortChange = useCallback(
+    (e) => {
+      const { value } = e.target;
+      startTransition(() => setSortBy(value));
+    },
+    [startTransition]
+  );
+
+  const handleSearchChange = useCallback(
+    (e) => {
+      const { value } = e.target;
+      startTransition(() => setSearch(value));
+    },
+    [startTransition]
+  );
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
@@ -120,7 +170,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
           placeholder="Search"
           className="flex-1 min-w-[150px] text-black px-3 py-2 rounded"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={handleSearchChange}
         />
         <label htmlFor="sort" className="sr-only">
           Sort by
@@ -129,7 +179,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
           id="sort"
           className="text-black px-3 py-2 rounded"
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
+          onChange={handleSortChange}
         >
           <option value="date">Newest First</option>
           <option value="dateAsc">Oldest First</option>
@@ -143,7 +193,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
         {categories.map((cat) => (
           <button
             key={cat}
-            onClick={() => setActiveCategory(cat)}
+            onClick={() => handleCategoryClick(cat)}
             className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
               activeCategory === cat ? 'bg-red-600 text-white' : 'bg-gray-700 hover:bg-gray-600'
             }`}
