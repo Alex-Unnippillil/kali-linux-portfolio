@@ -82,6 +82,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const PcapViewerApp = createDynamicApp('pcap-viewer', 'PCAP Viewer');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -119,8 +120,8 @@ const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 
 const displayGomoku = createDisplay(GomokuApp);
-
 const displayPinball = createDisplay(PinballApp);
+const displayPcapViewer = createDisplay(PcapViewerApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -600,6 +601,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'pcap-viewer',
+    title: 'PCAP Viewer',
+    icon: './themes/Yaru/apps/pcap-viewer.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPcapViewer,
   },
   {
     id: 'weather',
