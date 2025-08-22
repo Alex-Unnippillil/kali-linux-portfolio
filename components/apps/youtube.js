@@ -50,27 +50,42 @@ export default function YouTubeApp({ initialVideos = [] }) {
         list.push({ id: favoritesId, title: 'Favorites' });
         setPlaylists(list);
 
+        // Helper to fetch *all* videos from a playlist by following the
+        // YouTube API's `nextPageToken` pagination.
+        async function fetchPlaylistVideos(pl) {
+          let pageToken;
+          const items = [];
+
+          do {
+            const tokenParam = pageToken ? `&pageToken=${pageToken}` : '';
+            const res = await fetch(
+              `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${pl.id}&maxResults=50&key=${apiKey}${tokenParam}`
+            );
+            const data = await res.json();
+
+            items.push(
+              ...(data.items?.map((item) => {
+                const id = item.snippet.resourceId.videoId;
+                return {
+                  id,
+                  title: item.snippet.title,
+                  playlist: pl.title,
+                  publishedAt: item.snippet.publishedAt,
+                  thumbnail: item.snippet.thumbnails?.medium?.url,
+                  channelTitle: item.snippet.channelTitle,
+                  url: `https://www.youtube.com/watch?v=${id}`,
+                };
+              }) || [])
+            );
+
+            pageToken = data.nextPageToken;
+          } while (pageToken);
+
+          return items;
+        }
+
         const allVideosData = await Promise.all(
-          list.map((pl) =>
-            fetch(
-              `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${pl.id}&maxResults=50&key=${apiKey}`
-            )
-              .then((res) => res.json())
-              .then((itemsData) =>
-                itemsData.items?.map((item) => {
-                  const id = item.snippet.resourceId.videoId;
-                  return {
-                    id,
-                    title: item.snippet.title,
-                    playlist: pl.title,
-                    publishedAt: item.snippet.publishedAt,
-                    thumbnail: item.snippet.thumbnails?.medium?.url,
-                    channelTitle: item.snippet.channelTitle,
-                    url: `https://www.youtube.com/watch?v=${id}`,
-                  };
-                }) || []
-              )
-          )
+          list.map((pl) => fetchPlaylistVideos(pl))
         );
         setVideos(allVideosData.flat());
       } catch (err) {

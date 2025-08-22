@@ -110,4 +110,63 @@ describe('YouTubeApp', () => {
       'React Tutorial',
     ]);
   });
+
+  it('fetches all pages from a playlist', async () => {
+    const responses = {
+      channel: { items: [{ id: 'chan' }] },
+      playlists: { items: [{ id: 'pl1', snippet: { title: 'PL1' } }] },
+      pl1Page1: {
+        items: [
+          {
+            snippet: {
+              resourceId: { videoId: 'a' },
+              title: 'Video A',
+              publishedAt: '2020-01-01T00:00:00Z',
+              thumbnails: { medium: { url: 'a.jpg' } },
+              channelTitle: 'x',
+            },
+          },
+        ],
+        nextPageToken: 'page2',
+      },
+      pl1Page2: {
+        items: [
+          {
+            snippet: {
+              resourceId: { videoId: 'b' },
+              title: 'Video B',
+              publishedAt: '2020-02-01T00:00:00Z',
+              thumbnails: { medium: { url: 'b.jpg' } },
+              channelTitle: 'x',
+            },
+          },
+        ],
+      },
+      favorites: { items: [] },
+    };
+
+    global.fetch = jest.fn(async (url) => {
+      if (url.includes('channels')) return { json: async () => responses.channel };
+      if (url.includes('playlists?'))
+        return { json: async () => responses.playlists };
+      if (url.includes('playlistItems')) {
+        const u = new URL(url);
+        const plId = u.searchParams.get('playlistId');
+        const token = u.searchParams.get('pageToken');
+        if (plId === 'pl1' && !token)
+          return { json: async () => responses.pl1Page1 };
+        if (plId === 'pl1' && token === 'page2')
+          return { json: async () => responses.pl1Page2 };
+        return { json: async () => responses.favorites };
+      }
+      return { json: async () => ({}) };
+    });
+
+    render(<YouTubeApp />);
+
+    const cards = await screen.findAllByTestId('video-card');
+    expect(cards).toHaveLength(2);
+    expect(screen.getByText('Video A')).toBeInTheDocument();
+    expect(screen.getByText('Video B')).toBeInTheDocument();
+  });
 });
