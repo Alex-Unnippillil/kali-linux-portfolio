@@ -69,6 +69,11 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const HangmanApp = dynamic(
+  () =>
+    import('./components/apps/hangman').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Hangman' });
+
 const FroggerApp = dynamic(
   () =>
     import('./components/apps/frogger').then((mod) => {
@@ -84,6 +89,8 @@ const Game2048App = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Hangman...
+
         Loading Frogger...
         Loading 2048...
       </div>
@@ -103,6 +110,9 @@ const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
 
+const displayHangman = (addFolder, openApp) => (
+  <HangmanApp addFolder={addFolder} openApp={openApp} />
+);
 const displayFrogger = (addFolder, openApp) => (
   <FroggerApp addFolder={addFolder} openApp={openApp} />
 );
@@ -124,6 +134,17 @@ const games = [
     screen: displayTicTacToe,
   },
   {
+    id: 'hangman',
+    title: 'Hangman',
+    icon: './themes/Yaru/apps/hangman.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHangman,
+  },
+];
+
+
     id: 'frogger',
     title: 'Frogger',
     icon: './themes/Yaru/apps/frogger.svg',
@@ -207,6 +228,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'hangman',
+    title: 'Hangman',
+    icon: './themes/Yaru/apps/hangman.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHangman,
   },
   {
     id: 'about-alex',
