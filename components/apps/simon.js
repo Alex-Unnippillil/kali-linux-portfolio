@@ -1,13 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const padColors = [
-  { base: 'bg-green-700', active: 'bg-green-500' },
-  { base: 'bg-red-700', active: 'bg-red-500' },
-  { base: 'bg-yellow-500', active: 'bg-yellow-300' },
-  { base: 'bg-blue-700', active: 'bg-blue-500' },
+const padStyles = [
+  {
+    color: { base: 'bg-green-700', active: 'bg-green-500' },
+    symbol: '▲',
+  },
+  {
+    color: { base: 'bg-red-700', active: 'bg-red-500' },
+    symbol: '■',
+  },
+  {
+    color: { base: 'bg-yellow-500', active: 'bg-yellow-300' },
+    symbol: '●',
+  },
+  {
+    color: { base: 'bg-blue-700', active: 'bg-blue-500' },
+    symbol: '◆',
+  },
 ];
 
 const tones = [329.63, 261.63, 220, 164.81];
+
+export const createToneSchedule = (length, start, step) =>
+  Array.from({ length }, (_, i) => start + i * step);
 
 const Simon = () => {
   const [sequence, setSequence] = useState([]);
@@ -15,40 +30,59 @@ const Simon = () => {
   const [isPlayerTurn, setIsPlayerTurn] = useState(false);
   const [activePad, setActivePad] = useState(null);
   const [status, setStatus] = useState('Press Start');
+  const [mode, setMode] = useState('classic');
   const audioCtx = useRef(null);
 
-  const playTone = (freq) => {
-    const ctx = audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
+  const scheduleTone = (freq, startTime) => {
+    const ctx =
+      audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.current = ctx;
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
     oscillator.frequency.value = freq;
     oscillator.connect(gain);
     gain.connect(ctx.destination);
-    oscillator.start();
-    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.5, ctx.currentTime + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
-    oscillator.stop(ctx.currentTime + 0.5);
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.5, startTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.4);
+    oscillator.start(startTime);
+    oscillator.stop(startTime + 0.5);
   };
 
   const flashPad = (idx) => {
     setActivePad(idx);
-    playTone(tones[idx]);
+    if ('vibrate' in navigator) navigator.vibrate(50);
     setTimeout(() => setActivePad(null), 500);
   };
 
-  const playSequence = async () => {
+  const stepDuration = () => {
+    if (mode === 'speed') {
+      return Math.max(0.6 - sequence.length * 0.02, 0.2);
+    }
+    return 0.6;
+  };
+
+  const playSequence = () => {
+    const ctx =
+      audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.current = ctx;
     setIsPlayerTurn(false);
     setStatus('Listen...');
-    for (let i = 0; i < sequence.length; i++) {
-      flashPad(sequence[i]);
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise((resolve) => setTimeout(resolve, 600));
-    }
-    setStatus('Your turn');
-    setIsPlayerTurn(true);
-    setStep(0);
+    const start = ctx.currentTime + 0.1;
+    const delta = stepDuration();
+    const schedule = createToneSchedule(sequence.length, start, delta);
+    schedule.forEach((time, i) => {
+      const idx = sequence[i];
+      scheduleTone(tones[idx], time);
+      const delay = (time - ctx.currentTime) * 1000;
+      setTimeout(() => flashPad(idx), delay);
+    });
+    const totalDelay = (schedule[schedule.length - 1] - ctx.currentTime + delta) * 1000;
+    setTimeout(() => {
+      setStatus('Your turn');
+      setIsPlayerTurn(true);
+      setStep(0);
+    }, totalDelay);
   };
 
   useEffect(() => {
@@ -66,6 +100,7 @@ const Simon = () => {
   const handlePadClick = (idx) => {
     if (!isPlayerTurn) return;
     flashPad(idx);
+    scheduleTone(tones[idx], audioCtx.current.currentTime);
     if (sequence[step] === idx) {
       if (step + 1 === sequence.length) {
         setIsPlayerTurn(false);
@@ -83,27 +118,47 @@ const Simon = () => {
     }
   };
 
+  const padClass = (pad, idx) => {
+    const colors = mode === 'colorblind'
+      ? { base: 'bg-gray-700', active: 'bg-gray-500' }
+      : pad.color;
+    return `h-32 w-32 rounded flex items-center justify-center text-3xl ${
+      activePad === idx ? colors.active : colors.base
+    }`;
+  };
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <div className="grid grid-cols-2 gap-4 mb-4">
-        {padColors.map((pad, idx) => (
+        {padStyles.map((pad, idx) => (
           <button
             // eslint-disable-next-line react/no-array-index-key
             key={idx}
-            className={`h-24 w-24 rounded ${
-              activePad === idx ? pad.active : pad.base
-            }`}
-            onClick={() => handlePadClick(idx)}
-          />
+            className={padClass(pad, idx)}
+            onPointerDown={() => handlePadClick(idx)}
+          >
+            {mode === 'colorblind' ? pad.symbol : ''}
+          </button>
         ))}
       </div>
       <div className="mb-4">{status}</div>
-      <button
-        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={startGame}
-      >
-        Start
-      </button>
+      <div className="flex gap-4">
+        <select
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          value={mode}
+          onChange={(e) => setMode(e.target.value)}
+        >
+          <option value="classic">Classic</option>
+          <option value="speed">Speed Up</option>
+          <option value="colorblind">Colorblind</option>
+        </select>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={startGame}
+        >
+          Start
+        </button>
+      </div>
     </div>
   );
 };
