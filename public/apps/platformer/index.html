@@ -8,6 +8,8 @@
 <body>
   <canvas id="game" width="640" height="360"></canvas>
   <div id="ui">
+    <select id="levelSelect"></select>
+    <div id="timer"></div>
     <button id="mode">Edit</button>
     <button id="export">Export</button>
     <div id="palette" class="hidden">
@@ -16,8 +18,9 @@
       <button data-tile="2">Slope \/</button>
       <button data-tile="3">Slope /</button>
       <button data-tile="4">Checkpoint</button>
+      <button data-tile="5">Coin</button>
     </div>
   </div>
-  <script src="main.js"></script>
+  <script type="module" src="main.js"></script>
 </body>
 </html>

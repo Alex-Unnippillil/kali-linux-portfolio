@@ -1,131 +1,133 @@
+import { Player, updatePhysics, collectCoin } from './engine.js';
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const tileSize = 16;
-const mapWidth = 80;
-const mapHeight = 45;
 
-// level data
-let tiles = Array(mapHeight).fill(0).map(() => Array(mapWidth).fill(0));
-let checkpoints = [];
-let spawn = { x: 2 * tileSize, y: 2 * tileSize };
+let mapWidth = 0;
+let mapHeight = 0;
+let tiles = [];
+let spawn = { x: 0, y: 0 };
+let coinTotal = 0;
+let score = 0;
+let currentLevel = '';
+let levelStart = 0;
 
-// input
+const player = new Player();
+const camera = { x: 0, y: 0, deadZone: { w: 100, h: 60 } };
 const keys = {};
+const effects = [];
+
+const timerEl = document.getElementById('timer');
+const levelSelect = document.getElementById('levelSelect');
+
+// levels list
+const levels = ['level1.json', 'level2.json'];
+levels.forEach((lvl, i) => {
+  const opt = document.createElement('option');
+  opt.value = lvl;
+  opt.textContent = `Level ${i + 1}`;
+  levelSelect.appendChild(opt);
+});
+levelSelect.onchange = () => loadLevel(levelSelect.value);
+
+// input handling
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
-  if (e.code === 'Space') jumpBufferTimer = jumpBufferTime;
 });
 window.addEventListener('keyup', e => {
   keys[e.code] = false;
 });
 
-// player
-const player = {
-  x: spawn.x,
-  y: spawn.y,
-  w: 14,
-  h: 14,
-  vx: 0,
-  vy: 0,
-  onGround: false,
-  coyoteTimer: 0,
-};
+function gaEvent(action, params = {}) {
+  try {
+    window.parent.ReactGA?.event({ category: 'platformer', action, ...params });
+  } catch (e) {}
+}
 
-const gravity = 2000;
-const moveSpeed = 200;
-const jumpSpeed = 600;
-const coyoteTime = 0.1;
-const jumpBufferTime = 0.1;
-let jumpBufferTimer = 0;
+function playCoinSound() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.frequency.value = 800;
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.2);
+    osc.stop(ac.currentTime + 0.2);
+  } catch (e) {}
+}
 
-// camera
-const camera = { x: 0, y: 0 };
+function loadLevel(name) {
+  fetch(`levels/${name}`)
+    .then(r => r.json())
+    .then(data => {
+      mapWidth = data.width;
+      mapHeight = data.height;
+      tiles = data.tiles;
+      spawn = data.spawn;
+      player.x = spawn.x;
+      player.y = spawn.y;
+      player.vx = player.vy = 0;
+      score = 0;
+      coinTotal = 0;
+      for (let y = 0; y < mapHeight; y++) {
+        for (let x = 0; x < mapWidth; x++) if (tiles[y][x] === 5) coinTotal++;
+      }
+      currentLevel = name;
+      levelStart = performance.now();
+      gaEvent('level_start', { level: name });
+    });
+}
 
-// editor
-let mode = 'play';
-let currentTile = 1;
-const modeBtn = document.getElementById('mode');
-const exportBtn = document.getElementById('export');
-const palette = document.getElementById('palette');
-modeBtn.onclick = () => {
-  mode = mode === 'play' ? 'edit' : 'play';
-  modeBtn.textContent = mode === 'play' ? 'Edit' : 'Play';
-  palette.classList.toggle('hidden', mode === 'play');
-};
-exportBtn.onclick = () => {
-  const data = {
-    tiles,
-    spawn,
-    checkpoints,
-    width: mapWidth,
-    height: mapHeight,
-  };
-  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'level.json';
-  a.click();
-};
-palette.addEventListener('click', e => {
-  if (e.target.dataset.tile) currentTile = Number(e.target.dataset.tile);
-});
-
-canvas.addEventListener('click', e => {
-  if (mode !== 'edit') return;
-  const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left + camera.x) / tileSize);
-  const y = Math.floor((e.clientY - rect.top + camera.y) / tileSize);
-  if (x >= 0 && y >= 0 && x < mapWidth && y < mapHeight) {
-    tiles[y][x] = currentTile;
-    if (currentTile === 4) checkpoints.push({ x: x * tileSize, y: y * tileSize });
-  }
-});
+// initial level
+loadLevel(levels[0]);
 
 // game loop
 let last = 0;
 function loop(ts) {
   const dt = Math.min((ts - last) / 1000, 0.1);
   last = ts;
-  if (mode === 'play') update(dt);
+  update(dt);
   draw();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
 function update(dt) {
-  // horizontal movement
-  player.vx = (keys['ArrowRight'] - keys['ArrowLeft']) * moveSpeed;
-
-  // coyote time
-  if (player.onGround) player.coyoteTimer = coyoteTime;
-  else player.coyoteTimer -= dt;
-
-  // jump buffering
-  if (jumpBufferTimer > 0) jumpBufferTimer -= dt;
-
-  // jump
-  if (jumpBufferTimer > 0 && (player.onGround || player.coyoteTimer > 0)) {
-    player.vy = -jumpSpeed;
-    player.onGround = false;
-    jumpBufferTimer = 0;
-  }
-
-  // variable jump height
-  if (!keys['Space'] && player.vy < 0) player.vy += gravity * dt * 0.5;
-
-  // apply gravity
-  player.vy += gravity * dt;
-
+  const input = {
+    left: keys['ArrowLeft'],
+    right: keys['ArrowRight'],
+    jump: keys['Space']
+  };
+  updatePhysics(player, input, dt);
   movePlayer(dt);
+  updateEffects(dt);
 
-  // respawn if fallen
   if (player.y > mapHeight * tileSize) respawn();
 
-  // camera
-  camera.x = player.x - canvas.width / 2;
-  camera.y = player.y - canvas.height / 2;
-  if (camera.x < 0) camera.x = 0;
-  if (camera.y < 0) camera.y = 0;
+  // camera with dead zone
+  const centerX = camera.x + canvas.width / 2;
+  const centerY = camera.y + canvas.height / 2;
+  if (player.x < centerX - camera.deadZone.w / 2)
+    camera.x = player.x - (canvas.width / 2 - camera.deadZone.w / 2);
+  if (player.x + player.w > centerX + camera.deadZone.w / 2)
+    camera.x = player.x + player.w - (canvas.width / 2 + camera.deadZone.w / 2);
+  if (player.y < centerY - camera.deadZone.h / 2)
+    camera.y = player.y - (canvas.height / 2 - camera.deadZone.h / 2);
+  if (player.y + player.h > centerY + camera.deadZone.h / 2)
+    camera.y = player.y + player.h - (canvas.height / 2 + camera.deadZone.h / 2);
+  camera.x = Math.max(0, Math.min(camera.x, mapWidth * tileSize - canvas.width));
+  camera.y = Math.max(0, Math.min(camera.y, mapHeight * tileSize - canvas.height));
+
+  const elapsed = ((performance.now() - levelStart) / 1000).toFixed(2);
+  timerEl.textContent = `Time: ${elapsed}s`;
+
+  if (coinTotal === 0 && score > 0) {
+    gaEvent('level_complete', { level: currentLevel, time: elapsed });
+    coinTotal = -1; // prevent repeat
+  }
 }
 
 function respawn() {
@@ -135,31 +137,8 @@ function respawn() {
 }
 
 function movePlayer(dt) {
-  let nx = player.x + player.vx * dt;
+  // vertical move first
   let ny = player.y + player.vy * dt;
-  // horizontal sweep
-  const dirX = Math.sign(player.vx);
-  if (dirX !== 0) {
-    const rangeX = dirX > 0 ? [player.x + player.w, nx + player.w] : [nx, player.x];
-    const startTileX = Math.floor(rangeX[0] / tileSize);
-    const endTileX = Math.floor(rangeX[1] / tileSize);
-    for (let tx = startTileX; dirX > 0 ? tx <= endTileX : tx >= endTileX; tx += dirX) {
-      const minX = tx * tileSize;
-      const maxX = minX + tileSize;
-      const tilesTop = Math.floor(player.y / tileSize);
-      const tilesBottom = Math.floor((player.y + player.h - 1) / tileSize);
-      for (let ty = tilesTop; ty <= tilesBottom; ty++) {
-        const t = getTile(tx, ty);
-        if (t === 1 || t === 2 || t === 3) {
-          if (dirX > 0) nx = Math.min(nx, minX - player.w);
-          else nx = Math.max(nx, maxX);
-        }
-      }
-    }
-  }
-  player.x = nx;
-
-  // vertical sweep
   player.onGround = false;
   const dirY = Math.sign(player.vy);
   if (dirY !== 0) {
@@ -178,34 +157,71 @@ function movePlayer(dt) {
             ny = Math.min(ny, minY - player.h);
             player.onGround = true;
           } else ny = Math.max(ny, maxY);
-        } else if (dirY >= 0 && (t === 2 || t === 3)) {
-          // slopes
-          const localX = (player.x + player.w / 2) - tx * tileSize;
-          let floorY;
-          if (t === 2) floorY = minY + localX; // \ slope
-          else floorY = maxY - localX; // / slope
-          if (ny + player.h > floorY) {
-            ny = floorY - player.h;
-            player.onGround = true;
-          }
         }
       }
     }
   }
   player.y = ny;
 
-  // checkpoints
-  const footX = Math.floor((player.x + player.w / 2) / tileSize);
-  const footY = Math.floor((player.y + player.h + 1) / tileSize);
-  const tileBelow = getTile(footX, footY);
-  if (tileBelow === 4) {
-    spawn = { x: footX * tileSize, y: footY * tileSize - player.h };
+  // horizontal move
+  let nx = player.x + player.vx * dt;
+  const dirX = Math.sign(player.vx);
+  if (dirX !== 0) {
+    const rangeX = dirX > 0 ? [player.x + player.w, nx + player.w] : [nx, player.x];
+    const startTileX = Math.floor(rangeX[0] / tileSize);
+    const endTileX = Math.floor(rangeX[1] / tileSize);
+    for (let tx = startTileX; dirX > 0 ? tx <= endTileX : tx >= endTileX; tx += dirX) {
+      const minX = tx * tileSize;
+      const maxX = minX + tileSize;
+      const tilesTop = Math.floor(player.y / tileSize);
+      const tilesBottom = Math.floor((player.y + player.h - 1) / tileSize);
+      for (let ty = tilesTop; ty <= tilesBottom; ty++) {
+        const t = getTile(tx, ty);
+        if (t === 1) {
+          if (dirX > 0) nx = Math.min(nx, minX - player.w);
+          else nx = Math.max(nx, maxX);
+        }
+      }
+    }
+  }
+  player.x = nx;
+
+  // coin collection
+  const cx = Math.floor((player.x + player.w / 2) / tileSize);
+  const cy = Math.floor((player.y + player.h / 2) / tileSize);
+  if (collectCoin(tiles, cx, cy)) {
+    score++;
+    coinTotal--;
+    effects.push({ x: cx * tileSize + tileSize / 2, y: cy * tileSize + tileSize / 2, life: 0 });
+    playCoinSound();
+    gaEvent('coin_collect', { total: score });
   }
 }
 
 function getTile(x, y) {
   if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight) return 0;
   return tiles[y][x];
+}
+
+function updateEffects(dt) {
+  for (let i = effects.length - 1; i >= 0; i--) {
+    effects[i].life += dt * 4;
+    if (effects[i].life > 1) effects.splice(i, 1);
+  }
+}
+
+function drawEffects() {
+  effects.forEach(e => {
+    ctx.save();
+    ctx.translate(e.x - camera.x, e.y - camera.y);
+    ctx.scale(1 + e.life * 2, 1 + e.life * 2);
+    ctx.globalAlpha = 1 - e.life;
+    ctx.fillStyle = 'yellow';
+    ctx.beginPath();
+    ctx.arc(0, 0, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
 }
 
 function draw() {
@@ -216,7 +232,6 @@ function draw() {
   ctx.fillStyle = '#141414';
   ctx.fillRect(-camera.x * 0.2, -camera.y * 0.2, canvas.width * 2, canvas.height * 2);
 
-  // tiles
   for (let y = 0; y < mapHeight; y++) {
     for (let x = 0; x < mapWidth; x++) {
       const t = tiles[y][x];
@@ -226,28 +241,20 @@ function draw() {
       if (t === 1) {
         ctx.fillStyle = '#888';
         ctx.fillRect(screenX, screenY, tileSize, tileSize);
-      } else if (t === 2 || t === 3) {
-        ctx.fillStyle = '#888';
-        ctx.beginPath();
-        if (t === 2) {
-          ctx.moveTo(screenX, screenY);
-          ctx.lineTo(screenX + tileSize, screenY + tileSize);
-          ctx.lineTo(screenX, screenY + tileSize);
-        } else {
-          ctx.moveTo(screenX + tileSize, screenY);
-          ctx.lineTo(screenX + tileSize, screenY + tileSize);
-          ctx.lineTo(screenX, screenY + tileSize);
-        }
-        ctx.closePath();
-        ctx.fill();
       } else if (t === 4) {
         ctx.fillStyle = 'yellow';
         ctx.fillRect(screenX, screenY, tileSize, tileSize);
+      } else if (t === 5) {
+        ctx.fillStyle = 'gold';
+        ctx.beginPath();
+        ctx.arc(screenX + tileSize / 2, screenY + tileSize / 2, 4, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
   }
 
-  // player
+  drawEffects();
+
   ctx.fillStyle = '#0f0';
   ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
 }
