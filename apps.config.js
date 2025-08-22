@@ -48,6 +48,7 @@ const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
 const HangmanApp = createDynamicApp('hangman', 'Hangman');
 const FroggerApp = createDynamicApp('frogger', 'Frogger');
+const FlappyBirdApp = createDynamicApp('flappy-bird', 'Flappy Bird');
 const Game2048App = createDynamicApp('2048', '2048');
 const SnakeApp = createDynamicApp('snake', 'Snake');
 const MemoryApp = createDynamicApp('memory', 'Memory');
@@ -76,6 +77,7 @@ const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
 const displayHangman = createDisplay(HangmanApp);
 const displayFrogger = createDisplay(FroggerApp);
+const displayFlappyBird = createDisplay(FlappyBirdApp);
 const display2048 = createDisplay(Game2048App);
 const displaySnake = createDisplay(SnakeApp);
 const displayMemory = createDisplay(MemoryApp);
@@ -324,6 +326,15 @@ export const games = [
     favourite: false,
     desktop_shortcut: false,
     screen: displaySudoku,
+  },
+  {
+    id: 'flappy-bird',
+    title: 'Flappy Bird',
+    icon: './themes/Yaru/apps/flappy-bird.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFlappyBird,
   },
 ];
 
