@@ -1,8 +1,40 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactGA from 'react-ga4';
 
 const WIDTH = 7;
 const HEIGHT = 8;
 const SUB_STEP = 0.5;
+
+const PAD_POSITIONS = [1, 3, 5];
+
+const makeRng = (seed) => {
+  let t = seed;
+  return () => {
+    t += 0x6d2b79f5;
+    let r = t;
+    r = Math.imul(r ^ (r >>> 15), r | 1);
+    r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+const handlePads = (frogPos, pads) => {
+  if (frogPos.y !== 0) return { pads, dead: false, levelComplete: false, padHit: false };
+  const idx = PAD_POSITIONS.indexOf(Math.floor(frogPos.x));
+  if (idx === -1 || pads[idx]) {
+    return { pads, dead: true, levelComplete: false, padHit: false };
+  }
+  const newPads = [...pads];
+  newPads[idx] = true;
+  const levelComplete = newPads.every(Boolean);
+  return { pads: newPads, dead: false, levelComplete, padHit: true };
+};
+
+const rampLane = (base, level, minSpawn) => ({
+  ...base,
+  speed: base.speed * (1 + (level - 1) * 0.2),
+  spawnRate: Math.max(minSpawn, base.spawnRate * (1 - (level - 1) * 0.1)),
+});
 
 const initialFrog = { x: Math.floor(WIDTH / 2), y: HEIGHT - 1 };
 
@@ -16,23 +48,92 @@ const logLaneDefs = [
   { y: 2, dir: 1, speed: 0.7, spawnRate: 2.2, length: 2 },
 ];
 
-const initLane = (lane) => ({ ...lane, entities: [], timer: lane.spawnRate });
+const initLane = (lane, seed) => {
+  const rng = makeRng(seed);
+  return {
+    ...lane,
+    entities: [],
+    rng,
+    timer: lane.spawnRate * (0.5 + rng()),
+  };
+};
+
+const updateCars = (prev, frogPos, dt) => {
+  let dead = false;
+  const newLanes = prev.map((lane) => {
+    let timer = lane.timer - dt;
+    let entities = lane.entities;
+    const dist = lane.dir * lane.speed * dt;
+    const steps = Math.max(1, Math.ceil(Math.abs(dist) / SUB_STEP));
+    const stepDist = dist / steps;
+    for (let i = 0; i < steps; i += 1) {
+      entities = entities.map((e) => ({ ...e, x: e.x + stepDist }));
+      if (
+        lane.y === frogPos.y &&
+        entities.some((e) => frogPos.x < e.x + lane.length && frogPos.x + 1 > e.x)
+      )
+        dead = true;
+    }
+    entities = entities.filter((e) => e.x + lane.length > 0 && e.x < WIDTH);
+    if (timer <= 0) {
+      entities.push({ x: lane.dir === 1 ? -lane.length : WIDTH });
+      timer += lane.spawnRate * (0.5 + lane.rng());
+    }
+    return { ...lane, entities, timer };
+  });
+  return { lanes: newLanes, dead };
+};
+
+const updateLogs = (prev, frogPos, dt) => {
+  let newFrog = { ...frogPos };
+  let safe = false;
+  const newLanes = prev.map((lane) => {
+    let timer = lane.timer - dt;
+    let entities = lane.entities;
+    const dist = lane.dir * lane.speed * dt;
+    const steps = Math.max(1, Math.ceil(Math.abs(dist) / SUB_STEP));
+    const stepDist = dist / steps;
+    for (let i = 0; i < steps; i += 1) {
+      entities = entities.map((e) => ({ ...e, x: e.x + stepDist }));
+      if (
+        newFrog.y === lane.y &&
+        entities.some((e) => e.x <= newFrog.x && newFrog.x < e.x + lane.length)
+      ) {
+        newFrog.x += stepDist;
+        safe = true;
+      }
+    }
+    entities = entities.filter((e) => e.x + lane.length > 0 && e.x < WIDTH);
+    if (timer <= 0) {
+      entities.push({ x: lane.dir === 1 ? -lane.length : WIDTH });
+      timer += lane.spawnRate * (0.5 + lane.rng());
+    }
+    return { ...lane, entities, timer };
+  });
+  const dead = (newFrog.y === 1 || newFrog.y === 2) && !safe;
+  return { lanes: newLanes, frog: newFrog, dead };
+};
 
 const Frogger = () => {
   const [frog, setFrog] = useState(initialFrog);
   const frogRef = useRef(frog);
-  const [cars, setCars] = useState(carLaneDefs.map(initLane));
+  const [cars, setCars] = useState(carLaneDefs.map((l, i) => initLane(l, i + 1)));
   const carsRef = useRef(cars);
-  const [logs, setLogs] = useState(logLaneDefs.map(initLane));
+  const [logs, setLogs] = useState(logLaneDefs.map((l, i) => initLane(l, i + 101)));
   const logsRef = useRef(logs);
+  const [pads, setPads] = useState(PAD_POSITIONS.map(() => false));
+  const padsRef = useRef(pads);
   const [status, setStatus] = useState('');
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
+  const [level, setLevel] = useState(1);
   const nextLife = useRef(500);
+  const holdRef = useRef();
 
   useEffect(() => { frogRef.current = frog; }, [frog]);
   useEffect(() => { carsRef.current = cars; }, [cars]);
   useEffect(() => { logsRef.current = logs; }, [logs]);
+  useEffect(() => { padsRef.current = pads; }, [pads]);
 
   const moveFrog = (dx, dy) => {
     setFrog((prev) => {
@@ -43,6 +144,15 @@ const Frogger = () => {
       if (dy === -1) setScore((s) => s + 10);
       return { x, y };
     });
+  };
+
+  const startHold = (dx, dy) => {
+    moveFrog(dx, dy);
+    holdRef.current = setInterval(() => moveFrog(dx, dy), 220);
+  };
+
+  const endHold = () => {
+    clearInterval(holdRef.current);
   };
 
   useEffect(() => {
@@ -83,19 +193,27 @@ const Frogger = () => {
     };
   }, []);
 
+  useEffect(() => {
+    ReactGA.event({ category: 'Frogger', action: 'level_start', value: 1 });
+  }, []);
+
   const reset = (full = false) => {
     setFrog(initialFrog);
-    setCars(carLaneDefs.map(initLane));
-    setLogs(logLaneDefs.map(initLane));
+    setCars(carLaneDefs.map((l, i) => initLane(l, i + 1)));
+    setLogs(logLaneDefs.map((l, i) => initLane(l, i + 101)));
     setStatus('');
     if (full) {
       setScore(0);
       setLives(3);
+      setPads(PAD_POSITIONS.map(() => false));
+      setLevel(1);
       nextLife.current = 500;
+      ReactGA.event({ category: 'Frogger', action: 'level_start', value: 1 });
     }
   };
 
   const loseLife = () => {
+    ReactGA.event({ category: 'Frogger', action: 'death', value: level });
     setLives((l) => {
       const newLives = l - 1;
       if (newLives <= 0) {
@@ -108,45 +226,6 @@ const Frogger = () => {
     });
   };
 
-  const updateCars = (prev, dt) =>
-    prev.map((lane) => {
-      let timer = lane.timer - dt;
-      let entities = lane.entities
-        .map((e) => ({ ...e, x: e.x + lane.dir * lane.speed * dt }))
-        .filter((e) => e.x + lane.length > 0 && e.x < WIDTH);
-      if (timer <= 0) {
-        entities.push({ x: lane.dir === 1 ? -lane.length : WIDTH });
-        timer += lane.spawnRate;
-      }
-      return { ...lane, entities, timer };
-    });
-
-  const updateLogs = (prev, frogPos, dt) => {
-    let newFrog = { ...frogPos };
-    let safe = false;
-    const newLanes = prev.map((lane) => {
-      let timer = lane.timer - dt;
-      let entities = lane.entities;
-      const dist = lane.dir * lane.speed * dt;
-      const steps = Math.max(1, Math.ceil(Math.abs(dist) / SUB_STEP));
-      const stepDist = dist / steps;
-      for (let i = 0; i < steps; i += 1) {
-        entities = entities.map((e) => ({ ...e, x: e.x + stepDist }));
-        if (newFrog.y === lane.y && entities.some((e) => e.x <= newFrog.x && newFrog.x < e.x + lane.length)) {
-          newFrog.x += stepDist;
-          safe = true;
-        }
-      }
-      entities = entities.filter((e) => e.x + lane.length > 0 && e.x < WIDTH);
-      if (timer <= 0) {
-        entities.push({ x: lane.dir === 1 ? -lane.length : WIDTH });
-        timer += lane.spawnRate;
-      }
-      return { ...lane, entities, timer };
-    });
-    const dead = (newFrog.y === 1 || newFrog.y === 2) && !safe;
-    return { lanes: newLanes, frog: newFrog, dead };
-  };
 
   useEffect(() => {
     let last = performance.now();
@@ -155,28 +234,43 @@ const Frogger = () => {
       const dt = (time - last) / 1000;
       last = time;
 
-      carsRef.current = updateCars(carsRef.current, dt);
+      const carResult = updateCars(carsRef.current, frogRef.current, dt);
+      carsRef.current = carResult.lanes;
       const logResult = updateLogs(logsRef.current, frogRef.current, dt);
       logsRef.current = logResult.lanes;
       frogRef.current = logResult.frog;
-      if (logResult.dead || frogRef.current.x < 0 || frogRef.current.x >= WIDTH) {
+      if (
+        carResult.dead ||
+        logResult.dead ||
+        frogRef.current.x < 0 ||
+        frogRef.current.x >= WIDTH
+      ) {
         loseLife();
         frogRef.current = { ...initialFrog };
       } else {
-        const carHit = carsRef.current.some(
-          (lane) =>
-            lane.y === frogRef.current.y &&
-            lane.entities.some((e) => frogRef.current.x < e.x + lane.length && frogRef.current.x + 1 > e.x),
-        );
-        if (carHit) {
+        const padResult = handlePads(frogRef.current, padsRef.current);
+        padsRef.current = padResult.pads;
+        if (padResult.dead) {
           loseLife();
           frogRef.current = { ...initialFrog };
-        } else if (frogRef.current.y === 0) {
-          setStatus('You Win!');
+        } else if (padResult.levelComplete) {
+          setStatus('Level Complete!');
           setScore((s) => s + 100);
+          ReactGA.event({ category: 'Frogger', action: 'level_complete', value: level });
+          setLevel((l) => {
+            const newLevel = l + 1;
+            ReactGA.event({ category: 'Frogger', action: 'level_start', value: newLevel });
+            return newLevel;
+          });
+          setPads(PAD_POSITIONS.map(() => false));
           reset();
           frogRef.current = { ...initialFrog };
         } else {
+          if (padResult.padHit) {
+            setScore((s) => s + 100);
+            setPads([...padsRef.current]);
+            frogRef.current = { ...initialFrog };
+          }
           setCars([...carsRef.current]);
           setLogs([...logsRef.current]);
           setFrog({ ...frogRef.current });
@@ -194,22 +288,22 @@ const Frogger = () => {
       setLives((l) => l + 1);
       nextLife.current += 500;
     }
-    const level = Math.floor(score / 200);
+  }, [score]);
+
+  useEffect(() => {
     setCars((prev) =>
       prev.map((lane, i) => ({
         ...lane,
-        speed: carLaneDefs[i].speed * (1 + level * 0.2),
-        spawnRate: Math.max(0.3, carLaneDefs[i].spawnRate * (1 - level * 0.1)),
+        ...rampLane(carLaneDefs[i], level, 0.3),
       }))
     );
     setLogs((prev) =>
       prev.map((lane, i) => ({
         ...lane,
-        speed: logLaneDefs[i].speed * (1 + level * 0.2),
-        spawnRate: Math.max(0.5, logLaneDefs[i].spawnRate * (1 - level * 0.1)),
+        ...rampLane(logLaneDefs[i], level, 0.5),
       }))
     );
-  }, [score]);
+  }, [level]);
 
   const renderCell = (x, y) => {
     const isFrog = Math.floor(frog.x) === x && frog.y === y;
@@ -217,7 +311,11 @@ const Frogger = () => {
     const logLane = logs.find((l) => l.y === y);
 
     let className = 'w-8 h-8';
-    if (y === 0 || y === 3 || y === 6) className += ' bg-green-700';
+    if (y === 0) {
+      const idx = PAD_POSITIONS.indexOf(x);
+      if (idx >= 0) className += pads[idx] ? ' bg-green-400' : ' bg-green-700';
+      else className += ' bg-blue-700';
+    } else if (y === 3 || y === 6) className += ' bg-green-700';
     else if (y >= 4 && y <= 5) className += ' bg-gray-700';
     else className += ' bg-blue-700';
 
@@ -243,6 +341,18 @@ const Frogger = () => {
     }
   }
 
+  const mobileControls = [
+    null,
+    { dx: 0, dy: -1, label: '↑' },
+    null,
+    { dx: -1, dy: 0, label: '←' },
+    null,
+    { dx: 1, dy: 0, label: '→' },
+    null,
+    { dx: 0, dy: 1, label: '↓' },
+    null,
+  ];
+
   return (
     <div
       id="frogger-container"
@@ -252,12 +362,38 @@ const Frogger = () => {
       <div className="mt-4">Score: {score} Lives: {lives}</div>
       <div className="mt-1">{status}</div>
       <div className="grid grid-cols-3 gap-1 mt-4 sm:hidden">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className="w-12 h-12 bg-gray-700 opacity-50" />
-        ))}
+        {mobileControls.map((c, i) =>
+          c ? (
+            <button
+              key={i}
+              className="w-12 h-12 bg-gray-700 opacity-50 flex items-center justify-center"
+              onTouchStart={() => startHold(c.dx, c.dy)}
+              onTouchEnd={endHold}
+              onMouseDown={() => startHold(c.dx, c.dy)}
+              onMouseUp={endHold}
+              onMouseLeave={endHold}
+            >
+              {c.label}
+            </button>
+          ) : (
+            <div key={i} className="w-12 h-12" />
+          ),
+        )}
       </div>
     </div>
   );
 };
 
 export default Frogger;
+
+export {
+  makeRng,
+  initLane,
+  updateCars,
+  updateLogs,
+  handlePads,
+  PAD_POSITIONS,
+  carLaneDefs,
+  logLaneDefs,
+  rampLane,
+};
