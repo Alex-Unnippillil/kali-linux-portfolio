@@ -1,12 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import confetti from 'canvas-confetti';
 
-const words = [
-  'javascript',
-  'nextjs',
-  'portfolio',
-  'linux',
-  'hangman',
-  'react',
+const dictionaries = {
+  tech: {
+    easy: ['code', 'bug', 'html', 'css', 'linux'],
+    medium: ['react', 'nextjs', 'python', 'docker', 'node'],
+    hard: ['javascript', 'typescript', 'portfolio', 'framework', 'terminal'],
+  },
+  animals: {
+    easy: ['cat', 'dog', 'cow', 'bat', 'hen'],
+    medium: ['giraffe', 'monkey', 'rabbit', 'eagle'],
+    hard: ['alligator', 'chimpanzee', 'hippopotamus', 'rhinoceros'],
+  },
+};
+
+const lengthOptions = [
+  { label: 'Any', min: 0, max: Infinity },
+  { label: '4-6', min: 4, max: 6 },
+  { label: '7-9', min: 7, max: 9 },
+  { label: '10+', min: 10, max: Infinity },
 ];
 
 const HangmanDrawing = ({ wrong }) => (
@@ -38,24 +50,81 @@ const HangmanDrawing = ({ wrong }) => (
 
 const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
-const getRandomWord = () =>
-  words[Math.floor(Math.random() * words.length)];
-
 const Hangman = () => {
+  const [theme, setTheme] = useState('tech');
+  const [difficulty, setDifficulty] = useState('easy');
+  const [lengthIndex, setLengthIndex] = useState(0);
   const [word, setWord] = useState('');
   const [guessed, setGuessed] = useState([]);
   const [wrong, setWrong] = useState(0);
+  const [hint, setHint] = useState('');
+  const [shake, setShake] = useState(false);
+  const usedWordsRef = useRef([]);
+
+  const length = lengthOptions[lengthIndex];
+
+  const getFilteredWords = () => {
+    const base = dictionaries[theme][difficulty];
+    return base.filter(
+      (w) => w.length >= length.min && w.length <= length.max,
+    );
+  };
+
+  const selectWord = () => {
+    const options = getFilteredWords();
+    let available = options.filter(
+      (w) => !usedWordsRef.current.includes(w),
+    );
+    if (available.length === 0) {
+      usedWordsRef.current = [];
+      available = options;
+    }
+    const choice = available[Math.floor(Math.random() * available.length)];
+    usedWordsRef.current.push(choice);
+    return choice;
+  };
+
+  const initGame = () => {
+    setGuessed([]);
+    setWrong(0);
+    setHint('');
+    setWord(selectWord());
+  };
 
   useEffect(() => {
-    setWord(getRandomWord());
-  }, []);
+    usedWordsRef.current = [];
+    initGame();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme, difficulty, lengthIndex]);
 
   const handleGuess = (letter) => {
+    const btn = document.getElementById(`key-${letter}`);
+    if (btn) {
+      btn.classList.add('key-press');
+      setTimeout(() => btn.classList.remove('key-press'), 100);
+    }
     if (guessed.includes(letter) || isGameOver()) return;
     setGuessed((g) => [...g, letter]);
     if (!word.includes(letter)) {
       setWrong((w) => w + 1);
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
     }
+  };
+
+  const useHint = () => {
+    if (isGameOver()) return;
+    const remaining = word
+      .split('')
+      .filter((l) => !guessed.includes(l));
+    if (!remaining.length) return;
+    const counts = remaining.reduce((acc, l) => {
+      acc[l] = (acc[l] || 0) + 1;
+      return acc;
+    }, {});
+    const best = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+    setHint(`Try letter ${best.toUpperCase()}`);
+    setWrong((w) => w + 1);
   };
 
   const isWinner = () =>
@@ -64,9 +133,7 @@ const Hangman = () => {
   const isGameOver = () => isWinner() || isLoser();
 
   const reset = () => {
-    setWord(getRandomWord());
-    setGuessed([]);
-    setWrong(0);
+    initGame();
   };
 
   useEffect(() => {
@@ -80,8 +147,54 @@ const Hangman = () => {
     return () => window.removeEventListener('keydown', handler);
   });
 
+  useEffect(() => {
+    const winner = word && word.split('').every((l) => guessed.includes(l));
+    if (winner) {
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    }
+  }, [word, guessed]);
+
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <div
+      className={`h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none ${
+        shake ? 'shake' : ''
+      }`}
+    >
+      <div className="flex space-x-2 mb-4">
+        <select
+          value={theme}
+          onChange={(e) => setTheme(e.target.value)}
+          className="bg-gray-700 p-1 rounded"
+        >
+          {Object.keys(dictionaries).map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+        <select
+          value={difficulty}
+          onChange={(e) => setDifficulty(e.target.value)}
+          className="bg-gray-700 p-1 rounded"
+        >
+          {['easy', 'medium', 'hard'].map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
+        <select
+          value={lengthIndex}
+          onChange={(e) => setLengthIndex(Number(e.target.value))}
+          className="bg-gray-700 p-1 rounded"
+        >
+          {lengthOptions.map((opt, idx) => (
+            <option key={opt.label} value={idx}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <HangmanDrawing wrong={wrong} />
       <div className="flex space-x-2 mb-4 text-2xl">
         {word.split('').map((letter, idx) => (
@@ -93,25 +206,44 @@ const Hangman = () => {
       <div className="grid grid-cols-7 gap-2 mb-4">
         {letters.map((letter) => (
           <button
+            id={`key-${letter}`}
             key={letter}
             onClick={() => handleGuess(letter)}
             disabled={guessed.includes(letter) || isGameOver()}
-            className="px-2 py-1 bg-gray-700 disabled:bg-gray-600 hover:bg-gray-600 rounded"
+            className={`px-2 py-1 rounded text-white ${
+              guessed.includes(letter)
+                ? word.includes(letter)
+                  ? 'bg-green-700'
+                  : 'bg-red-700'
+                : 'bg-gray-700 hover:bg-gray-600'
+            } disabled:bg-gray-600`}
           >
             {letter.toUpperCase()}
           </button>
         ))}
       </div>
-      <div className="mb-4 h-6">
+      <div className="mb-2 h-6">
         {isWinner() && 'You won!'}
         {isLoser() && `You lost! The word was ${word}.`}
       </div>
-      <button
-        onClick={reset}
-        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-      >
-        Reset
-      </button>
+      {hint && !isGameOver() && (
+        <div className="mb-2 h-6">Hint: {hint}</div>
+      )}
+      <div className="flex space-x-2">
+        <button
+          onClick={useHint}
+          disabled={isGameOver()}
+          className="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded disabled:bg-blue-500"
+        >
+          Hint (-1)
+        </button>
+        <button
+          onClick={reset}
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+        >
+          Reset
+        </button>
+      </div>
     </div>
   );
 };
