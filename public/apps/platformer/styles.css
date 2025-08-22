@@ -1,0 +1,23 @@
+body {
+  margin: 0;
+  background: #202020;
+  color: #fff;
+  font-family: sans-serif;
+}
+#game {
+  border: 1px solid #555;
+  display: block;
+  margin: 0 auto;
+}
+#ui {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
+#palette.hidden {
+  display: none;
+}
+#palette button {
+  display: block;
+  margin-top: 4px;
+}

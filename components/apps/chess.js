@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
+import Stockfish from 'stockfish';
 
 const pieceUnicode = {
   p: { w: '♙', b: '♟' },
@@ -10,53 +11,131 @@ const pieceUnicode = {
   k: { w: '♔', b: '♚' },
 };
 
+const initialTime = 5 * 60;
+
 const ChessGame = () => {
   const [game, setGame] = useState(new Chess());
   const [board, setBoard] = useState(game.board());
   const [selected, setSelected] = useState(null);
   const [status, setStatus] = useState('Your move');
+  const [highlight, setHighlight] = useState([]);
+  const [premove, setPremove] = useState(null);
+  const [skill, setSkill] = useState(5);
+  const [whiteTime, setWhiteTime] = useState(initialTime);
+  const [blackTime, setBlackTime] = useState(initialTime);
+  const engineRef = useRef(null);
+  const timerRef = useRef(null);
+
+  const updateBoard = () => {
+    setBoard(game.board());
+  };
+
+  const updateStatus = () => {
+    if (game.in_checkmate()) setStatus('Checkmate');
+    else if (game.in_draw()) setStatus('Draw');
+    else setStatus(game.turn() === 'w' ? 'Your move' : 'AI thinking...');
+  };
+
+  const startTimers = () => {
+    timerRef.current = setInterval(() => {
+      setWhiteTime((t) => (game.turn() === 'w' ? t - 1 : t));
+      setBlackTime((t) => (game.turn() === 'b' ? t - 1 : t));
+    }, 1000);
+  };
+
+  const stopTimers = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
 
   useEffect(() => {
-    setBoard(game.board());
-  }, [game]);
+    updateBoard();
+    startTimers();
+
+    const engine = Stockfish();
+    engine.onmessage = (event) => {
+      const line = typeof event === 'string' ? event : event.data;
+      if (line && line.startsWith('bestmove')) {
+        const move = line.split(' ')[1];
+        game.move(move, { sloppy: true });
+        updateBoard();
+        updateStatus();
+        if (premove) {
+          const result = game.move(premove, { sloppy: true });
+          setPremove(null);
+          if (result) {
+            updateBoard();
+            updateStatus();
+            engine.postMessage(`position fen ${game.fen()}`);
+            engine.postMessage('go movetime 1000');
+          }
+        }
+      }
+    };
+    engine.postMessage('uci');
+    engine.postMessage(`setoption name Skill Level value ${skill}`);
+    engineRef.current = engine;
+
+    return () => {
+      stopTimers();
+      if (engine.terminate) engine.terminate();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.postMessage(
+        `setoption name Skill Level value ${skill}`
+      );
+    }
+  }, [skill]);
 
   const reset = () => {
     const newGame = new Chess();
     setGame(newGame);
     setSelected(null);
+    setHighlight([]);
+    setPremove(null);
     setStatus('Your move');
+    setWhiteTime(initialTime);
+    setBlackTime(initialTime);
+    updateBoard();
+    if (engineRef.current) {
+      engineRef.current.postMessage('ucinewgame');
+    }
   };
 
   const makeAIMove = () => {
-    const moves = game.moves();
-    if (moves.length === 0) {
-      setStatus('Game over');
-      return;
-    }
-    const move = moves[Math.floor(Math.random() * moves.length)];
-    game.move(move);
-    setBoard(game.board());
-    if (game.game_over()) {
-      setStatus('Game over');
-    } else {
-      setStatus('Your move');
+    if (engineRef.current) {
+      engineRef.current.postMessage(`position fen ${game.fen()}`);
+      engineRef.current.postMessage('go movetime 1000');
     }
   };
 
   const handleSquareClick = (file, rank) => {
     const square = 'abcdefgh'[file] + (8 - rank);
+
+    if (game.turn() === 'b') {
+      if (selected) {
+        const move = { from: selected, to: square, promotion: 'q' };
+        setPremove(move);
+        setSelected(null);
+        setHighlight([]);
+      } else {
+        setSelected(square);
+      }
+      return;
+    }
+
     if (selected) {
       const move = { from: selected, to: square, promotion: 'q' };
       const result = game.move(move);
       if (result) {
-        setBoard(game.board());
+        updateBoard();
         setSelected(null);
-        if (game.game_over()) {
-          setStatus('Game over');
-        } else {
-          setStatus('AI thinking...');
-          setTimeout(() => makeAIMove(), 300);
-        }
+        setHighlight([]);
+        updateStatus();
+        makeAIMove();
       } else {
         setSelected(square);
       }
@@ -64,21 +143,94 @@ const ChessGame = () => {
       const piece = game.get(square);
       if (piece && piece.color === game.turn()) {
         setSelected(square);
+        const moves = game.moves({ square, verbose: true });
+        setHighlight(moves.map((m) => m.to));
       }
     }
+  };
+
+  const undo = () => {
+    game.undo();
+    game.undo();
+    updateBoard();
+    updateStatus();
+  };
+
+  const exportFen = () => {
+    // eslint-disable-next-line no-alert
+    alert(game.fen());
+  };
+
+  const exportPgn = () => {
+    // eslint-disable-next-line no-alert
+    alert(game.pgn());
+  };
+
+  const importFen = () => {
+    // eslint-disable-next-line no-alert
+    const fen = prompt('Enter FEN');
+    if (fen) {
+      game.load(fen);
+      updateBoard();
+      updateStatus();
+    }
+  };
+
+  const importPgn = () => {
+    // eslint-disable-next-line no-alert
+    const pgn = prompt('Enter PGN');
+    if (pgn) {
+      game.load_pgn(pgn, { sloppy: true });
+      updateBoard();
+      updateStatus();
+    }
+  };
+
+  const loadPuzzle = async () => {
+    const text = await fetch('/chess/puzzles.pgn').then((res) => res.text());
+    const blocks = text.trim().split(/\n\n/);
+    const block = blocks[Math.floor(Math.random() * blocks.length)];
+    const fenMatch = block.match(/\[FEN "(.*)"\]/);
+    if (fenMatch) {
+      game.load(fenMatch[1]);
+      setPremove(null);
+      setSelected(null);
+      setHighlight([]);
+      updateBoard();
+      updateStatus();
+    }
+  };
+
+  const exploreOpenings = async () => {
+    const text = await fetch('/chess/openings.pgn').then((res) => res.text());
+    const games = text.trim().split(/\n\n\n/);
+    const counts = {};
+    games.forEach((pgn) => {
+      const cg = new Chess();
+      cg.load_pgn(pgn, { sloppy: true });
+      const history = cg.history();
+      const move = history[game.history().length];
+      if (move) counts[move] = (counts[move] || 0) + 1;
+    });
+    const message = Object.keys(counts)
+      .map((m) => `${m} (${counts[m]})`)
+      .join(', ') || 'No data';
+    // eslint-disable-next-line no-alert
+    alert(message);
   };
 
   const renderSquare = (piece, file, rank) => {
     const squareName = 'abcdefgh'[file] + (8 - rank);
     const isSelected = selected === squareName;
     const squareColor = (file + rank) % 2 === 0 ? 'bg-gray-300' : 'bg-gray-700';
+    const isHighlight = highlight.includes(squareName);
     return (
       <div
         key={squareName}
         onClick={() => handleSquareClick(file, rank)}
         className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center select-none ${squareColor} ${
           isSelected ? 'ring-2 ring-yellow-400' : ''
-        }`}
+        } ${isHighlight ? 'bg-green-500 bg-opacity-50' : ''}`}
       >
         {piece ? pieceUnicode[piece.type][piece.color] : ''}
       </div>
@@ -86,19 +238,56 @@ const ChessGame = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-2">
       <div className="grid grid-cols-8">
         {board.map((row, rank) =>
           row.map((piece, file) => renderSquare(piece, file, rank))
         )}
       </div>
-      <div className="mt-4">{status}</div>
-      <button
-        className="mt-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={reset}
-      >
-        Reset
-      </button>
+      <div className="mt-2 flex space-x-2">
+        <div>White: {whiteTime}s</div>
+        <div>Black: {blackTime}s</div>
+      </div>
+      <div className="mt-2">{status}</div>
+      <div className="mt-2 flex flex-wrap gap-2 justify-center">
+        <button className="px-2 py-1 bg-gray-700" onClick={reset}>
+          Reset
+        </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={undo}>
+          Undo
+        </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={loadPuzzle}>
+          Puzzle
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700"
+          onClick={exploreOpenings}
+        >
+          Opening Explorer
+        </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={exportFen}>
+          Export FEN
+        </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={exportPgn}>
+          Export PGN
+        </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={importFen}>
+          Import FEN
+        </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={importPgn}>
+          Import PGN
+        </button>
+      </div>
+      <div className="mt-2 flex items-center">
+        <label className="mr-2">Skill: {skill}</label>
+        <input
+          type="range"
+          min="0"
+          max="20"
+          value={skill}
+          onChange={(e) => setSkill(Number(e.target.value))}
+        />
+      </div>
     </div>
   );
 };
