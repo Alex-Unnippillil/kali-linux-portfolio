@@ -80,6 +80,8 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
+const CveDashboardApp = createDynamicApp('cve-dashboard', 'CVE Dashboard');
+
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 
@@ -117,6 +119,8 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+
+const displayCveDashboard = createDisplay(CveDashboardApp);
 
 const displayGomoku = createDisplay(GomokuApp);
 
@@ -602,14 +606,16 @@ const apps = [
     screen: displayQuoteGenerator,
   },
   {
-    id: 'weather',
-    title: 'Weather',
-    icon: './themes/Yaru/apps/weather.svg',
+    id: 'cve-dashboard',
+    title: 'CVE Dashboard',
+    icon: './themes/Yaru/apps/calc.png',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayWeather,
+    screen: displayCveDashboard,
   },
+
+
   // Games are included so they appear alongside apps
   ...games,
 ];
