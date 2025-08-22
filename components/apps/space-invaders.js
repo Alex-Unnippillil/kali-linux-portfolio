@@ -1,22 +1,23 @@
 import React, { useRef, useEffect } from 'react';
+import Player from '../../apps/space-invaders/player';
+import Invader from '../../apps/space-invaders/invader';
+import Projectile from '../../apps/space-invaders/projectile';
 
 const SpaceInvaders = () => {
   const canvasRef = useRef(null);
   const reqRef = useRef();
   const keys = useRef({});
   const touch = useRef({ left: false, right: false, fire: false });
-
-  const player = useRef({ x: 0, y: 0, w: 20, h: 10, cooldown: 0 });
-  const invaders = useRef([]);
-  const invDir = useRef(1);
+  const playerRef = useRef(null);
+  const invadersRef = useRef([]);
+  const playerBulletsRef = useRef([]);
+  const enemyBulletsRef = useRef([]);
+  const powerUpsRef = useRef([]);
+  const enemyDir = useRef(1);
   const enemyCooldown = useRef(1);
-  const baseSpeed = 20;
-  const playerBullets = useRef([]);
-  const enemyBullets = useRef([]);
-  const shelters = useRef([]);
-  const ufo = useRef({ active: false, x: 0, y: 15, dir: 1 });
-  const ufoTimer = useRef(0);
-  const initialCount = useRef(0);
+  const wave = useRef(1);
+  const gameOver = useRef(false);
+  const audioCtxRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -26,34 +27,37 @@ const SpaceInvaders = () => {
     const w = canvas.width;
     const h = canvas.height;
 
-    player.current.x = w / 2 - player.current.w / 2;
-    player.current.y = h - 30;
-
-    const createBulletPool = (n, dy) => {
-      const arr = [];
-      for (let i = 0; i < n; i += 1) arr.push({ x: 0, y: 0, dy, active: false });
-      return arr;
+    playerRef.current = new Player(w / 2 - 10, h - 30);
+    audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    const playSound = (freq) => {
+      const actx = audioCtxRef.current;
+      const osc = actx.createOscillator();
+      const gain = actx.createGain();
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(actx.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.2);
+      osc.stop(actx.currentTime + 0.2);
     };
-    playerBullets.current = createBulletPool(20, -200);
-    enemyBullets.current = createBulletPool(20, 200);
 
-    const rows = 4;
-    const cols = 8;
-    const spacing = 30;
-    const invArr = [];
-    for (let r = 0; r < rows; r += 1) {
-      for (let c = 0; c < cols; c += 1) {
-        invArr.push({ x: 30 + c * spacing, y: 30 + r * spacing, alive: true });
+    const spawnWave = () => {
+      invadersRef.current = [];
+      if (wave.current % 3 === 0) {
+        invadersRef.current.push(new Invader(w / 2 - 30, 50, 60, 30, 20));
+      } else {
+        const rows = 4;
+        const cols = 8;
+        for (let r = 0; r < rows; r += 1) {
+          for (let c = 0; c < cols; c += 1) {
+            invadersRef.current.push(new Invader(30 + c * 30, 30 + r * 30));
+          }
+        }
       }
-    }
-    invaders.current = invArr;
-    initialCount.current = invArr.length;
+      enemyDir.current = 1;
+    };
 
-    shelters.current = [
-      { x: w * 0.2 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
-      { x: w * 0.5 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
-      { x: w * 0.8 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
-    ];
+    spawnWave();
 
     const handleKey = (e) => {
       keys.current[e.code] = e.type === 'keydown';
@@ -61,43 +65,18 @@ const SpaceInvaders = () => {
     window.addEventListener('keydown', handleKey);
     window.addEventListener('keyup', handleKey);
 
-    const shoot = (pool, x, y) => {
-      for (const b of pool) {
-        if (!b.active) {
-          b.x = x;
-          b.y = y;
-          b.active = true;
-          break;
-        }
-      }
-    };
-
-    const moveBullets = (pool, dt) => {
-      for (const b of pool) {
-        if (!b.active) continue;
-        b.y += b.dy * dt;
-        if (b.y < 0 || b.y > h) b.active = false;
-      }
-    };
-
-    const reset = () => {
-      invaders.current.forEach((inv, i) => {
-        inv.x = 30 + (i % cols) * spacing;
-        inv.y = 30 + Math.floor(i / cols) * spacing;
-        inv.alive = true;
-      });
-      player.current.x = w / 2 - player.current.w / 2;
-      player.current.cooldown = 0;
-      playerBullets.current.forEach((b) => {
-        b.active = false;
-      });
-      enemyBullets.current.forEach((b) => {
-        b.active = false;
-      });
-      shelters.current.forEach((s) => {
-        s.hp = 6;
-      });
-      ufo.current.active = false;
+    const endGame = () => {
+      if (gameOver.current) return;
+      gameOver.current = true;
+      cancelAnimationFrame(reqRef.current);
+      fetch('/api/space-invaders/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          score: playerRef.current.score,
+          accuracy: playerRef.current.accuracy(),
+        }),
+      }).catch(() => {});
     };
 
     let last = performance.now();
@@ -105,158 +84,128 @@ const SpaceInvaders = () => {
       const dt = (time - last) / 1000;
       last = time;
 
-      const p = player.current;
-      p.cooldown -= dt;
-
-      const left = keys.current['ArrowLeft'] || touch.current.left;
-      const right = keys.current['ArrowRight'] || touch.current.right;
-      if (left) p.x -= 100 * dt;
-      if (right) p.x += 100 * dt;
-      p.x = Math.max(0, Math.min(w - p.w, p.x));
+      const p = playerRef.current;
+      p.update(dt);
+      const dir =
+        (keys.current['ArrowRight'] || touch.current.right ? 1 : 0) -
+        (keys.current['ArrowLeft'] || touch.current.left ? 1 : 0);
+      if (dir) p.move(dir, dt, w);
 
       const fire = keys.current['Space'] || touch.current.fire;
-      if (fire && p.cooldown <= 0) {
-        shoot(playerBullets.current, p.x + p.w / 2, p.y);
-        p.cooldown = 0.5;
+      if (fire) {
+        const before = p.shots;
+        p.shoot(playerBulletsRef.current);
+        if (p.shots > before) playSound(440);
       }
 
       enemyCooldown.current -= dt;
-      const aliveInv = invaders.current.filter((i) => i.alive);
-      if (enemyCooldown.current <= 0 && aliveInv.length) {
-        const inv = aliveInv[Math.floor(Math.random() * aliveInv.length)];
-        shoot(enemyBullets.current, inv.x + 10, inv.y + 10);
-        enemyCooldown.current = 1;
+      const difficulty = 1 + p.accuracy() + wave.current * 0.1;
+      if (enemyCooldown.current <= 0 && invadersRef.current.some((i) => i.alive)) {
+        const shooters = invadersRef.current.filter((i) => i.alive);
+        const inv = shooters[Math.floor(Math.random() * shooters.length)];
+        enemyBulletsRef.current.push(
+          new Projectile(inv.x + inv.w / 2, inv.y + inv.h, 150 * difficulty)
+        );
+        enemyCooldown.current = Math.max(0.2, 1 / difficulty);
       }
 
-      moveBullets(playerBullets.current, dt);
-      moveBullets(enemyBullets.current, dt);
-
-      // Player bullets collisions
-      for (const b of playerBullets.current) {
-        if (!b.active) continue;
-        for (const inv of invaders.current) {
-          if (
-            inv.alive &&
-            b.x >= inv.x &&
-            b.x <= inv.x + 20 &&
-            b.y >= inv.y &&
-            b.y <= inv.y + 15
-          ) {
-            inv.alive = false;
-            b.active = false;
-            break;
-          }
-        }
-        if (!b.active) continue;
-        for (const s of shelters.current) {
-          if (
-            s.hp > 0 &&
-            b.x >= s.x &&
-            b.x <= s.x + s.w &&
-            b.y >= s.y &&
-            b.y <= s.y + s.h
-          ) {
-            s.hp -= 1;
-            b.active = false;
-            break;
-          }
-        }
-        if (!b.active) continue;
-        if (
-          ufo.current.active &&
-          b.x >= ufo.current.x &&
-          b.x <= ufo.current.x + 30 &&
-          b.y >= ufo.current.y &&
-          b.y <= ufo.current.y + 15
-        ) {
-          ufo.current.active = false;
-          b.active = false;
-        }
-      }
-
-      // Enemy bullets collisions
-      for (const b of enemyBullets.current) {
-        if (!b.active) continue;
-        if (b.x >= p.x && b.x <= p.x + p.w && b.y >= p.y && b.y <= p.y + p.h) {
-          reset();
-          return requestAnimationFrame(loop);
-        }
-        for (const s of shelters.current) {
-          if (
-            s.hp > 0 &&
-            b.x >= s.x &&
-            b.x <= s.x + s.w &&
-            b.y >= s.y &&
-            b.y <= s.y + s.h
-          ) {
-            s.hp -= 1;
-            b.active = false;
-            break;
-          }
-        }
-      }
-
-      const aliveCount = aliveInv.length;
-      const speed = baseSpeed * (initialCount.current / (aliveCount || 1));
+      const speed = 20 * difficulty;
       let hitEdge = false;
-      for (const inv of invaders.current) {
-        if (!inv.alive) continue;
-        inv.x += invDir.current * speed * dt;
-        if (inv.x < 10 || inv.x > w - 30) hitEdge = true;
-      }
+      invadersRef.current.forEach((inv) => {
+        if (!inv.alive) return;
+        inv.x += enemyDir.current * speed * dt;
+        if (inv.x < 10 || inv.x + inv.w > w - 10) hitEdge = true;
+      });
       if (hitEdge) {
-        invDir.current *= -1;
-        for (const inv of invaders.current) {
+        enemyDir.current *= -1;
+        invadersRef.current.forEach((inv) => {
           if (inv.alive) inv.y += 10;
+        });
+      }
+
+      playerBulletsRef.current.forEach((b) => b.update(dt, h));
+      enemyBulletsRef.current.forEach((b) => b.update(dt, h));
+      powerUpsRef.current.forEach((pu) => {
+        pu.y += 40 * dt;
+      });
+
+      playerBulletsRef.current.forEach((b) => {
+        if (!b.active) return;
+        for (const inv of invadersRef.current) {
+          if (inv.alive && b.collides(inv)) {
+            inv.hit();
+            b.active = false;
+            if (!inv.alive) {
+              p.addScore(10);
+              playSound(220);
+              if (Math.random() < 0.1) {
+                powerUpsRef.current.push({
+                  x: inv.x,
+                  y: inv.y,
+                  type: Math.random() < 0.5 ? 'shield' : 'rapid',
+                  active: true,
+                });
+              }
+            }
+            break;
+          }
+        }
+      });
+
+      for (const b of enemyBulletsRef.current) {
+        if (b.collides(p)) {
+          b.active = false;
+          playSound(110);
+          if (p.takeHit()) {
+            endGame();
+            return;
+          }
         }
       }
 
-      ufoTimer.current += dt;
-      if (!ufo.current.active && ufoTimer.current > 10) {
-        ufo.current.active = true;
-        ufo.current.x = 0;
-        ufo.current.dir = 1;
-        ufoTimer.current = 0;
-      }
-      if (ufo.current.active) {
-        ufo.current.x += 60 * dt * ufo.current.dir;
-        if (ufo.current.x > w) ufo.current.active = false;
+      powerUpsRef.current.forEach((pu) => {
+        if (
+          pu.active &&
+          p.x < pu.x + 10 &&
+          p.x + p.w > pu.x &&
+          p.y < pu.y + 10 &&
+          p.y + p.h > pu.y
+        ) {
+          p.applyPowerUp(pu.type);
+          pu.active = false;
+          playSound(880);
+        }
+      });
+
+      playerBulletsRef.current = playerBulletsRef.current.filter((b) => b.active);
+      enemyBulletsRef.current = enemyBulletsRef.current.filter((b) => b.active);
+      powerUpsRef.current = powerUpsRef.current.filter((pu) => pu.active && pu.y < h);
+
+      if (invadersRef.current.every((inv) => !inv.alive)) {
+        wave.current += 1;
+        spawnWave();
       }
 
-      ctx.clearRect(0, 0, w, h);
-
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, w, h);
       ctx.fillStyle = 'white';
       ctx.fillRect(p.x, p.y, p.w, p.h);
-
-      ctx.fillStyle = 'lime';
-      invaders.current.forEach((inv) => {
-        if (inv.alive) ctx.fillRect(inv.x, inv.y, 20, 15);
+      invadersRef.current.forEach((inv) => {
+        ctx.fillStyle = inv.hp > 1 ? 'purple' : 'lime';
+        inv.draw(ctx);
+      });
+      playerBulletsRef.current.forEach((b) => b.draw(ctx, 'red'));
+      enemyBulletsRef.current.forEach((b) => b.draw(ctx, 'yellow'));
+      powerUpsRef.current.forEach((pu) => {
+        ctx.fillStyle = pu.type === 'shield' ? 'cyan' : 'orange';
+        ctx.fillRect(pu.x, pu.y, 10, 10);
       });
 
-      ctx.fillStyle = 'red';
-      playerBullets.current.forEach((b) => {
-        if (b.active) ctx.fillRect(b.x - 1, b.y - 4, 2, 4);
-      });
+      ctx.fillStyle = 'white';
+      ctx.fillText(`Score: ${p.score}`, 10, 20);
+      ctx.fillText(`Accuracy: ${Math.round(p.accuracy() * 100)}%`, 10, 40);
 
-      ctx.fillStyle = 'yellow';
-      enemyBullets.current.forEach((b) => {
-        if (b.active) ctx.fillRect(b.x - 1, b.y, 2, 4);
-      });
-
-      shelters.current.forEach((s) => {
-        if (s.hp > 0) {
-          const shade = ['#555', '#666', '#777', '#888', '#aaa', '#ccc'][s.hp - 1];
-          ctx.fillStyle = shade;
-          ctx.fillRect(s.x, s.y, s.w, s.h);
-        }
-      });
-
-      if (ufo.current.active) {
-        ctx.fillStyle = 'purple';
-        ctx.fillRect(ufo.current.x, ufo.current.y, 30, 15);
-      }
-
-      reqRef.current = requestAnimationFrame(loop);
+      if (!gameOver.current) reqRef.current = requestAnimationFrame(loop);
     };
 
     reqRef.current = requestAnimationFrame(loop);
