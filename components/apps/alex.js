@@ -2,6 +2,9 @@ import React, { Component, useEffect, useState } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
+import { ActivityCalendar } from 'react-activity-calendar';
+import useSWR from 'swr';
+
 import ActivityCalendar from 'react-activity-calendar';
 
 import BadgeList from '../BadgeList';
@@ -444,6 +447,8 @@ function Skills() {
             </div>
             <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
                 <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
+                <GitHubContributions username="Alex-Unnippillil" />
+
                 <GitHubContributions />
 
                 <div className="w-full overflow-auto">
@@ -791,4 +796,36 @@ function Resume() {
             </p>
         </object>
     )
+}
+
+function GitHubContributions({ username }) {
+    const fetcher = (url) => fetch(url).then((res) => res.json());
+    const { data, error } = useSWR(`https://github-contributions-api.jogruber.de/v4/${username}`, fetcher);
+
+    if (error) {
+        return <div className="text-center">Failed to load contributions.</div>;
+    }
+
+    if (!data) {
+        return <div className="text-center">Loading contributions...</div>;
+    }
+
+    return (
+        <ActivityCalendar
+            data={data.contributions}
+            style={{ width: '100%' }}
+            eventHandlers={{
+                onClick: () => (activity) =>
+                    window.open(
+                        `https://github.com/${username}?tab=overview&from=${activity.date}&to=${activity.date}`,
+                        '_blank'
+                    )
+            }}
+            renderBlock={(block, activity) =>
+                React.cloneElement(block, {
+                    title: `${activity.count} contributions on ${activity.date}\nClick to see details`
+                })
+            }
+        />
+    );
 }
