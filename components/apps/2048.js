@@ -61,13 +61,31 @@ const hasMoves = (board) => {
   return false;
 };
 
+const tileColors = {
+  2: 'bg-gray-300 text-gray-800',
+  4: 'bg-gray-400 text-gray-800',
+  8: 'bg-yellow-400 text-white',
+  16: 'bg-yellow-500 text-white',
+  32: 'bg-orange-500 text-white',
+  64: 'bg-orange-600 text-white',
+  128: 'bg-red-500 text-white',
+  256: 'bg-red-600 text-white',
+  512: 'bg-red-700 text-white',
+  1024: 'bg-green-500 text-white',
+  2048: 'bg-green-600 text-white',
+};
+
 const Game2048 = () => {
-  const [board, setBoard] = useState(initBoard);
+  const [board, setBoard] = useState(() => initBoard());
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
 
   const handleKey = useCallback(
     (e) => {
+      if (e.key === 'Escape') {
+        document.getElementById('close-2048')?.click();
+        return;
+      }
       if (won || lost) return;
       let newBoard;
       if (e.key === 'ArrowLeft') newBoard = moveLeft(board);
@@ -96,14 +114,20 @@ const Game2048 = () => {
     setLost(false);
   };
 
+  const close = () => {
+    document.getElementById('close-2048')?.click();
+  };
+
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
+    <div className="h-full w-full p-4 flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
       <div className="grid grid-cols-4 gap-2">
         {board.map((row, rIdx) =>
           row.map((cell, cIdx) => (
             <div
               key={`${rIdx}-${cIdx}`}
-              className="h-16 w-16 bg-gray-700 flex items-center justify-center text-2xl font-bold"
+              className={`h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
+                cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
+              }`}
             >
               {cell !== 0 ? cell : ''}
             </div>
@@ -113,12 +137,20 @@ const Game2048 = () => {
       {(won || lost) && (
         <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
       )}
-      <button
-        className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={reset}
-      >
-        Reset
-      </button>
+      <div className="mt-4 space-x-2">
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={reset}
+        >
+          Reset
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={close}
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
 };

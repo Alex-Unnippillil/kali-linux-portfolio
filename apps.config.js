@@ -135,6 +135,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: display2048,
+    defaultWidth: 35,
+    defaultHeight: 45,
   },
   {
     id: 'asteroids',
