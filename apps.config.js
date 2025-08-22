@@ -69,6 +69,11 @@ const TicTacToeApp = dynamic(
   }
 );
 
+const SolitaireApp = dynamic(
+  () =>
+    import('./components/apps/solitaire').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded Solitaire' });
+
 const Game2048App = dynamic(
   () =>
     import('./components/apps/2048').then((mod) => {
@@ -79,6 +84,11 @@ const Game2048App = dynamic(
     ssr: false,
     loading: () => (
       <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Solitaire...
+      </div>
+    ),
+  },
+
         Loading 2048...
       </div>
     ),
@@ -96,6 +106,10 @@ const displayTerminalCalc = (addFolder, openApp) => (
 const displayTicTacToe = (addFolder, openApp) => (
   <TicTacToeApp addFolder={addFolder} openApp={openApp} />
 );
+const displaySolitaire = (addFolder, openApp) => (
+  <SolitaireApp addFolder={addFolder} openApp={openApp} />
+);
+
 
 const display2048 = (addFolder, openApp) => (
   <Game2048App addFolder={addFolder} openApp={openApp} />
@@ -184,6 +198,16 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'solitaire',
+    title: 'Solitaire',
+    icon: './themes/Yaru/apps/solitaire.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySolitaire,
+    category: 'games',
   },
   {
     id: 'about-alex',
