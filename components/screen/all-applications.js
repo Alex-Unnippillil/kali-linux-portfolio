@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
 
 class AllApplications extends React.Component {
@@ -18,6 +19,17 @@ class AllApplications extends React.Component {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
         this.setState({ apps: combined, unfilteredApps: combined });
+        window.addEventListener('keydown', this.handleKeyDown);
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener('keydown', this.handleKeyDown);
+    }
+
+    handleKeyDown = (e) => {
+        if (e.key === 'Escape' && typeof this.props.closeAllApps === 'function') {
+            this.props.closeAllApps();
+        }
     }
 
     handleChange = (e) => {
@@ -54,6 +66,18 @@ class AllApplications extends React.Component {
     render() {
         return (
             <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
+                <button
+                    onClick={this.props.closeAllApps}
+                    className="absolute top-4 right-4 p-1 rounded hover:bg-white hover:bg-opacity-10 focus:outline-none"
+                    aria-label="Close all applications"
+                >
+                    <Image
+                        width={16}
+                        height={16}
+                        src="/themes/Yaru/window/window-close-symbolic.svg"
+                        alt="close"
+                    />
+                </button>
                 <input
                     className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
                     placeholder="Search"
