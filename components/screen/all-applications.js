@@ -7,54 +7,29 @@ class AllApplications extends React.Component {
         this.state = {
             query: '',
             apps: [],
-            folders: [
-                { id: 'games', title: 'Games', icon: './themes/Yaru/status/New folder/ubuntu_white_hex.svg', isFolder: true }
-            ],
-            currentFolder: null,
             unfilteredApps: [],
-            stack: [],
-            category: 0, // 0 for all, 1 for frequent
         };
     }
 
     componentDidMount() {
-        const { apps } = this.props;
-        this.setState({ apps, unfilteredApps: apps });
+        const { apps = [], games = [] } = this.props;
+        const combined = [...apps];
+        games.forEach((game) => {
+            if (!combined.some((app) => app.id === game.id)) combined.push(game);
+        });
+        this.setState({ apps: combined, unfilteredApps: combined });
     }
 
     handleChange = (e) => {
         const value = e.target.value;
-        const sourceApps = this.state.currentFolder ? this.props[this.state.currentFolder] : this.state.unfilteredApps;
+        const { unfilteredApps } = this.state;
         const apps =
             value === '' || value === null
-                ? sourceApps
-                : sourceApps.filter((app) => app.title.toLowerCase().includes(value.toLowerCase()));
+                ? unfilteredApps
+                : unfilteredApps.filter((app) =>
+                      app.title.toLowerCase().includes(value.toLowerCase())
+                  );
         this.setState({ query: value, apps });
-    };
-
-    openFolder = (folder) => {
-        if (!Array.isArray(folder.apps)) return;
-        this.setState((prev) => ({
-            stack: [...prev.stack, prev.unfilteredApps],
-            apps: folder.apps,
-            unfilteredApps: folder.apps,
-            query: '',
-            currentFolder: folder.id,
-        }));
-    };
-
-    goBack = () => {
-        this.setState((prev) => {
-            if (prev.stack.length === 0) return {};
-            const previous = prev.stack[prev.stack.length - 1];
-            return {
-                stack: prev.stack.slice(0, -1),
-                apps: previous,
-                unfilteredApps: previous,
-                query: '',
-                currentFolder: null,
-            };
-        });
     };
 
     openApp = (id) => {
@@ -78,19 +53,20 @@ class AllApplications extends React.Component {
 
     render() {
         return (
-            <div className="all-applications">
+            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95">
                 <input
-                    className="search-bar"
+                    className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
                     placeholder="Search"
                     value={this.state.query}
                     onChange={this.handleChange}
                 />
-                <div className="apps-container">{this.renderApps()}</div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
+                    {this.renderApps()}
+                </div>
             </div>
         );
     }
 }
-
 
 export default AllApplications;
 
