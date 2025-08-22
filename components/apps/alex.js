@@ -2,9 +2,13 @@ import React, { Component, useEffect, useState } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
+import { ActivityCalendar } from 'react-activity-calendar';
 import useSWR from 'swr';
+
 import ActivityCalendar from 'react-activity-calendar';
+
 import BadgeList from '../BadgeList';
+
 import dynamic from 'next/dynamic';
 
 const GitHubCalendar = dynamic(() => import('react-github-calendar'), { ssr: false });
@@ -428,10 +432,237 @@ function Skills() {
           ...and current certs and typing speed
         </span>
 
+    const networkingSecurityBadges = [
+        { src: 'https://img.shields.io/badge/AWS-%23FF9900.svg?logo=amazon-aws&logoColor=white', alt: 'alex aws', label: 'AWS', description: 'Amazon Web Services cloud platform' },
+        { src: 'https://img.shields.io/badge/Azure-%230072C6.svg?logo=microsoftazure&logoColor=white', alt: 'alex azure', label: 'Azure', description: 'Microsoft Azure cloud services' },
+        { src: 'https://img.shields.io/badge/Windows_Server-0078D6?logo=windows', alt: 'unnippillil server', label: 'Windows Server', description: 'Microsoft server operating system' },
+        { src: 'https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=fff', alt: 'alex docker', label: 'Docker', description: 'Containerization platform' },
+        { src: 'https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=fff', alt: 'alex  kubernetes', label: 'Kubernetes', description: 'Container orchestration' },
+        { src: 'https://img.shields.io/badge/Tor-7D4698?logo=Tor-Browser&logoColor=white', alt: 'alex tor', label: 'Tor', description: 'Anonymous networking' },
+        { src: 'https://img.shields.io/badge/CCNA-007ACC?logo=Cisco&logoColor=fff', alt: 'CCNA unnippillil', label: 'CCNA', description: 'Cisco Certified Network Associate' },
+        { src: 'https://img.shields.io/badge/CCNP-007ACC?logo=Cisco&logoColor=fff', alt: 'ccnp unnippillil', label: 'CCNP', description: 'Cisco Certified Network Professional' },
+        { src: 'https://img.shields.io/badge/PuTTY-7D4698?logo=gnometerminal&logoColor=white', alt: 'unnippillil PuTTY', label: 'PuTTY', description: 'SSH and telnet client' },
+        { src: 'https://img.shields.io/badge/Wireshark-%230072C6.svg?logo=wireshark&logoColor=white', alt: 'alex wireshark', label: 'Wireshark', description: 'Network protocol analyzer' },
+        { src: 'https://img.shields.io/badge/OWASP-black?style=flat&logo=OWASP&logoColor=ffffff', alt: 'unnippillil OWASP', label: 'OWASP', description: 'Security standards and tools' },
+        { src: 'https://img.shields.io/badge/Metasploit-2e9fff?logo=metasploit&logoColor=white', alt: 'alex metasploit', label: 'Metasploit', description: 'Penetration testing framework' },
+        { src: 'https://img.shields.io/badge/Nmap-5A9FD4?logo=nmap&logoColor=white', alt: 'alex nmap', label: 'Nmap', description: 'Network scanner' },
+        { src: 'https://img.shields.io/badge/Burp%20Suite-FF6633?logo=burp-suite&logoColor=white', alt: 'alex burp suite', label: 'Burp Suite', description: 'Web vulnerability scanner' },
+    ];
+
+    const softwareOSBadges = [
+        { src: 'https://img.shields.io/badge/PowerShell-%235391FE.svg?logo=powershell&logoColor=white', alt: 'alex powershell', label: 'PowerShell', description: 'Automation and scripting' },
+        { src: 'https://img.shields.io/badge/-VMware-FFCA28?style=flat&logo=vmware&logoColor=ffffff', alt: 'unnippillil alex', label: 'VMware', description: 'Virtualization platform' },
+        { src: 'https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white', alt: 'unnippillil windows', label: 'Windows', description: 'Microsoft operating system' },
+        { src: 'https://img.shields.io/badge/Kali%20Linux-557C94?logo=kalilinux&logoColor=fff', alt: 'kali linux unnippillil', label: 'Kali Linux', description: 'Security-focused Linux distribution' },
+        { src: 'https://img.shields.io/badge/Fedora-51A2DA?logo=fedora&logoColor=fff', alt: 'unnippillil fedora', label: 'Fedora', description: 'Linux distribution' },
+        { src: 'https://img.shields.io/badge/macOS-000000?logo=macos&logoColor=F0F0F0', alt: 'unnippillil macos', label: 'macOS', description: 'Apple operating system' },
+        { src: 'https://img.shields.io/badge/PyCharm-143?logo=pycharm&logoColor=black&color=black&labelColor=green', alt: 'pycharm alex', label: 'PyCharm', description: 'Python IDE' },
+        { src: 'https://img.shields.io/badge/Unity-%23000000.svg?logo=unity&logoColor=white', alt: 'unity alex', label: 'Unity', description: 'Game engine' },
+        { src: 'https://img.shields.io/badge/Xcode-007ACC?logo=Xcode&logoColor=white', alt: 'xcode alex', label: 'Xcode', description: 'Apple IDE' },
+        { src: 'https://img.shields.io/badge/Android%20Studio-3DDC84?logo=android-studio&logoColor=white', alt: 'alex android studio', label: 'Android Studio', description: 'Android development IDE' },
+        { src: 'https://img.shields.io/badge/Git-F05032?logo=git&logoColor=white', alt: 'alex git', label: 'Git', description: 'Version control system' },
+        { src: 'https://img.shields.io/badge/Ubuntu-E95420?logo=ubuntu&logoColor=white', alt: 'alex ubuntu', label: 'Ubuntu', description: 'Popular Linux distribution' },
+        { src: 'https://img.shields.io/badge/Visual%20Studio%20Code-007ACC?logo=visual-studio-code&logoColor=white', alt: 'alex vscode', label: 'VS Code', description: 'Code editor' },
+    ];
+
+    const languageToolBadges = [
+        { src: 'https://img.shields.io/badge/-JavaScript-%23F7DF1C?style=flat&logo=javascript&logoColor=000000&labelColor=%23F7DF1C&color=%23FFCE5A', alt: 'unnippillil javascript', label: 'JavaScript', description: 'Scripting language' },
+        { src: 'https://img.shields.io/badge/C%2B%2B-00599C?style=flat&logo=c%2B%2B&logoColor=white', alt: 'unnippillil c++', label: 'C++', description: 'General-purpose programming language' },
+        { src: 'https://img.shields.io/badge/-Python-3776AB?style=flat&logo=python&logoColor=ffffff', alt: 'unnippillil python', label: 'Python', description: 'High-level programming language' },
+        { src: 'https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white', alt: 'unnippillil dart', label: 'Dart', description: 'Programming language for Flutter' },
+        { src: 'https://img.shields.io/badge/-HTML5-%23E44D27?style=flat&logo=html5&logoColor=ffffff', alt: 'unnippillil HTML', label: 'HTML5', description: 'Markup language' },
+        { src: 'https://img.shields.io/badge/CSS-1572B6?logo=css3&logoColor=fff', alt: 'unnippillil css', label: 'CSS', description: 'Style sheet language' },
+        { src: 'https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=fff', alt: 'unnippillil mysql', label: 'MySQL', description: 'Relational database' },
+        { src: 'https://img.shields.io/badge/Java-%23ED8B00.svg?logo=openjdk&logoColor=white', alt: 'unnippillil Java', label: 'Java', description: 'Programming language' },
+        { src: 'https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white', alt: 'unnippillil typescript', label: 'TypeScript', description: 'Typed superset of JavaScript' },
+        { src: 'https://img.shields.io/badge/Bash-4EAA25?logo=gnu-bash&logoColor=white', alt: 'unnippillil bash', label: 'Bash', description: 'Unix shell and command language' },
+        { src: 'https://img.shields.io/badge/Go-00ADD8?logo=go&logoColor=white', alt: 'unnippillil go', label: 'Go', description: 'Compiled programming language' },
+    ];
+
+    const frameworkLibraryBadges = [
+        { src: 'https://img.shields.io/badge/Next-black?style=flat&logo=next.js&logoColor=ffffff', alt: 'unnippillil next', label: 'Next.js', description: 'React framework' },
+        { src: 'https://img.shields.io/badge/-React-61DAFB?style=flat&logo=react&logoColor=ffffff', alt: 'unnippillil react', label: 'React', description: 'JavaScript library' },
+        { src: 'https://img.shields.io/badge/Flutter-02569B?style=flat&logo=flutter&logoColor=white', alt: 'unnippillil flutter', label: 'Flutter', description: 'UI toolkit' },
+        { src: 'https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white', alt: 'unnippillil tailwind css', label: 'Tailwind CSS', description: 'Utility-first CSS framework' },
+        { src: 'https://img.shields.io/badge/-Nodejs-339933?style=flat&logo=Node.js&logoColor=ffffff', alt: 'unnippillil node.js', label: 'Node.js', description: 'JavaScript runtime' },
+        { src: 'https://img.shields.io/badge/jQuery-0769AD?style=flat&logo=jquery&logoColor=white', alt: 'unnippillil jquery', label: 'jQuery', description: 'JavaScript library' },
+        { src: 'https://img.shields.io/badge/Hydrogen-7AB55C?logo=shopify&logoColor=fff', alt: 'unnippillil hydrogen', label: 'Hydrogen', description: 'Shopify React framework' },
+        { src: 'https://img.shields.io/badge/NIST-black?style=flat&logo=netapp&logoColor=ffffff', alt: 'unnippillil NIST', label: 'NIST', description: 'Security framework' },
+        { src: 'https://img.shields.io/badge/Express.js-000000?logo=express&logoColor=white', alt: 'unnippillil express', label: 'Express.js', description: 'Web framework for Node.js' },
+        { src: 'https://img.shields.io/badge/Redux-764ABC?logo=redux&logoColor=white', alt: 'unnippillil redux', label: 'Redux', description: 'State management library' },
+        { src: 'https://img.shields.io/badge/Three.js-black?logo=three.js&logoColor=white', alt: 'unnippillil three.js', label: 'Three.js', description: '3D JavaScript library' },
+        { src: 'https://img.shields.io/badge/TensorFlow-FF6F00?logo=tensorflow&logoColor=white', alt: 'unnippillil tensorflow', label: 'TensorFlow', description: 'Machine learning framework' },
+    ];
+
+    return (
+        <>
+            <div className=" font-medium relative text-2xl mt-2 md:mt-4 mb-4">
+                Technical Skills
+                <div className="absolute pt-px bg-white mt-px top-full w-full">
+                    <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-full"></div>
+                    <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full"></div>
+                </div>
+            </div>
+            <ul className=" tracking-tight text-sm md:text-base w-10/12 emoji-list">
+
+                <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
+                    <div>I&apos;ve learned a variety of programming languages and frameworks while <strong className="text-ubt-gedit-blue">specializing in network security</strong></div>
+                </li>
+                <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
+                    <div>Below are some skills I&apos;ve learned over the years</div>
+                </li>
+            </ul>
+            <div className="w-full md:w-10/12 flex mt-4">
+                <div className=" text-sm text-center md:text-base w-1/2 font-bold">Networking & Security</div>
+                <div className=" text-sm text-center md:text-base w-1/2 font-bold">Softwares & Operating Systems</div>
+            </div>
+            <div className="w-full md:w-10/12 flex justify-center items-start font-bold text-center">
+                <BadgeList badges={networkingSecurityBadges} className="px-2 w-1/2" />
+                <BadgeList badges={softwareOSBadges} className="px-2 w-1/2" />
+
+                <div className="px-2 w-1/2">
+                    <div className="flex flex-wrap justify-center items-start w-full mt-2">
+                        <img className="m-1" src="https://img.shields.io/badge/AWS-%23FF9900.svg?logo=amazon-aws&logoColor=white" alt="alex aws" />
+                        <img className="m-1" src="https://img.shields.io/badge/Azure-%230072C6.svg?logo=microsoftazure&logoColor=white" alt="alex azure" />
+                        <img className=" m-1" src="https://img.shields.io/badge/Windows_Server-0078D6?logo=windows" alt="unnippillil server" />
+                        <img className="m-1" src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=fff" alt="alex docker" />
+                        <img className="m-1" src="https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=fff" alt="alex  kubernetes" />
+                        <img className="m-1" src="https://img.shields.io/badge/Tor-7D4698?logo=Tor-Browser&logoColor=white" alt="alex tor" />
+                        <img className="m-1" src="https://img.shields.io/badge/CCNA-007ACC?logo=Cisco&logoColor=fff" alt="CCNA unnippillil" />
+                        <img className="m-1" src="https://img.shields.io/badge/CCNP-007ACC?logo=Cisco&logoColor=fff" alt="ccnp unnippillil" />
+                        <img className="m-1" src="https://img.shields.io/badge/PuTTY-7D4698?logo=gnometerminal&logoColor=white" alt="unnippillil PuTTY" />
+                        <img className="m-1" src="https://img.shields.io/badge/Wireshark-%230072C6.svg?logo=wireshark&logoColor=white" alt="alex wireshark" />
+                        <img className=" m-1" src="https://img.shields.io/badge/OWASP-black?style=flat&logo=OWASP&logoColor=ffffff" alt="unnippillil OWASP" />
+                        
+                        <img className="m-1" src="https://img.shields.io/badge/Nmap-004489?style=flat&logo=nmap&logoColor=white" alt="alex nmap" />
+                        <img className="m-1" src="https://img.shields.io/badge/Metasploit-1688C4?style=flat&logo=metasploit&logoColor=white" alt="alex metasploit" />
+                        <img className="m-1" src="https://img.shields.io/badge/Burp_Suite-FF6633?style=flat&logo=burpsuite&logoColor=white" alt="alex burp suite" />
+                        <img className="m-1" src="https://img.shields.io/badge/Splunk-000000?style=flat&logo=splunk&logoColor=white" alt="alex splunk" />
+                      
+                    </div>
+                </div>
+                <div className="px-2 flex flex-wrap items-start w-1/2">
+                    <div className="flex flex-wrap justify-center items-start w-full mt-2">
+                        <img className=" m-1" src="https://img.shields.io/badge/PowerShell-%235391FE.svg?logo=powershell&logoColor=white" alt="alex powershell" />
+                        <img src="https://img.shields.io/badge/-VMware-FFCA28?style=flat&logo=vmware&logoColor=ffffff" alt="unnippillil alex" className="m-1" />
+                        <img className="m-1" src="https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white" alt="unnippillil windows" />
+                        <img className="m-1" src="https://img.shields.io/badge/Kali%20Linux-557C94?logo=kalilinux&logoColor=fff" alt="kali linux unnippillil" />
+                        <img src="https://img.shields.io/badge/Fedora-51A2DA?logo=fedora&logoColor=fff" alt="unnippillil fedora" className="m-1" />
+                        <img src="https://img.shields.io/badge/macOS-000000?logo=macos&logoColor=F0F0F0" alt="unnippillil macos" className="m-1" />
+                        <img className="m-1" src="https://img.shields.io/badge/PyCharm-143?logo=pycharm&logoColor=black&color=black&labelColor=green" alt="pycharm alex" />
+                        <img className="m-1" src="https://img.shields.io/badge/Unity-%23000000.svg?logo=unity&logoColor=white" alt="unity alex" />
+                        <img className="m-1" src="https://img.shields.io/badge/Xcode-007ACC?logo=Xcode&logoColor=white" alt="xcode alex" />
+                        <img className="m-1" src="https://img.shields.io/badge/Android%20Studio-3DDC84?logo=android-studio&logoColor=white" alt="alex android studio" />
+                        <img className="m-1" src="https://img.shields.io/badge/Visual_Studio_Code-007ACC?logo=visualstudiocode&logoColor=white" alt="alex vscode" />
+                        <img className="m-1" src="https://img.shields.io/badge/Ubuntu-E95420?logo=ubuntu&logoColor=white" alt="alex ubuntu" />
+                        <img className="m-1" src="https://img.shields.io/badge/Git-F05032?logo=git&logoColor=white" alt="alex git" />
+                        <img className="m-1" src="https://img.shields.io/badge/Postman-FF6C37?logo=postman&logoColor=white" alt="alex postman" />
+                    </div>
+                </div>
+            </div>
+            <div className="w-full md:w-10/12 flex mt-4">
+                <div className=" text-sm text-center md:text-base w-1/2 font-bold">Languages & Tools</div>
+                <div className=" text-sm text-center md:text-base w-1/2 font-bold">Frameworks & Libraries</div>
+            </div>
+            <div className="w-full md:w-10/12 flex justify-center items-start font-bold text-center">
+                <BadgeList badges={languageToolBadges} className="px-2 w-1/2" />
+                <BadgeList badges={frameworkLibraryBadges} className="px-2 w-1/2" />
+
+                <div className="px-2 w-1/2">
+                    <div className="flex flex-wrap justify-center items-start w-full mt-2">
+                        <img className="m-1" src="https://img.shields.io/badge/-JavaScript-%23F7DF1C?style=flat&logo=javascript&logoColor=000000&labelColor=%23F7DF1C&color=%23FFCE5A" alt="unnippillil javascript" />
+                        <img className="m-1" src="https://img.shields.io/badge/C%2B%2B-00599C?style=flat&logo=c%2B%2B&logoColor=white" alt="unnippillil c++" />
+                        {/* Use HTTPS to avoid mixed-content errors */}
+                        <img className="m-1" src="https://img.shields.io/badge/-Python-3776AB?style=flat&logo=python&logoColor=ffffff" alt="unnippillil python" />
+                        <img className="m-1" src="https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white" alt="unnippillil dart" />
+                        <a href="https://www.google.com/search?q=is+html+a+language%3F" target="_blank" rel="noopener noreferrer"><img title="yes it's a language!" className="m-1" src="https://img.shields.io/badge/-HTML5-%23E44D27?style=flat&logo=html5&logoColor=ffffff" alt="unnippillil HTML" /></a>
+                        <img src="https://img.shields.io/badge/CSS-1572B6?logo=css3&logoColor=fff" alt="unnippillil css" className="m-1" />
+                        <img src="https://img.shields.io/badge/MySQL-4479A1?logo=mysql&logoColor=fff" alt="unnippillil mysql" className="m-1" />
+                        <img src="https://img.shields.io/badge/Java-%23ED8B00.svg?logo=openjdk&logoColor=white" alt="unnippillil Java" className="m-1" />
+                        <img className="m-1" src="https://img.shields.io/badge/Bash-121011?logo=gnubash&logoColor=white" alt="unnippillil bash" />
+                        <img className="m-1" src="https://img.shields.io/badge/Go-00ADD8?logo=go&logoColor=white" alt="unnippillil go" />
+                        <img className="m-1" src="https://img.shields.io/badge/Rust-000000?logo=rust&logoColor=white" alt="unnippillil rust" />
+                        <img className="m-1" src="https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white" alt="unnippillil typescript" />
+                    </div>
+                </div>
+                <div className="px-2 flex flex-wrap items-start w-1/2">
+                    <div className="flex flex-wrap justify-center items-start w-full mt-2">
+                        <img className=" m-1" src="https://img.shields.io/badge/Next-black?style=flat&logo=next.js&logoColor=ffffff" alt="unnippillil next" />
+                        <img className=" m-1" src="https://img.shields.io/badge/-React-61DAFB?style=flat&logo=react&logoColor=ffffff" alt="unnippillil react" />
+                        <img className="m-1" src="https://img.shields.io/badge/Flutter-02569B?style=flat&logo=flutter&logoColor=white" alt="unnippillil flutter" />
+                        <img className="m-1" src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat&logo=tailwind-css&logoColor=white" alt="unnippillil tailwind css" />
+                        <img src="https://img.shields.io/badge/-Nodejs-339933?style=flat&logo=Node.js&logoColor=ffffff" alt="unnippillil node.js" className="m-1" />
+                        <img src="https://img.shields.io/badge/jQuery-0769AD?style=flat&logo=jquery&logoColor=white" alt="unnippillil jquery" className="m-1" />
+                        <img className="m-1" src="https://img.shields.io/badge/Hydrogen-7AB55C?logo=shopify&logoColor=fff" alt="unnippillil hydrogen" />
+                    <img className=" m-1" src="https://img.shields.io/badge/NIST-black?style=flat&logo=netapp&logoColor=ffffff" alt="unnippillil NIST" />
+                        <img className="m-1" src="https://img.shields.io/badge/Express.js-000000?logo=express&logoColor=white" alt="unnippillil express" />
+                        <img className="m-1" src="https://img.shields.io/badge/Bootstrap-7952B3?logo=bootstrap&logoColor=white" alt="unnippillil bootstrap" />
+                        <img className="m-1" src="https://img.shields.io/badge/Django-092E20?logo=django&logoColor=white" alt="unnippillil django" />
+                        <img className="m-1" src="https://img.shields.io/badge/TensorFlow-FF6F00?logo=tensorflow&logoColor=white" alt="unnippillil tensorflow" />
+                    </div>
+                </div>
+            </div>
+            <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
+                <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
+                <GitHubContributions username="Alex-Unnippillil" />
+
+                <GitHubContributions />
+
+                <div className="w-full overflow-auto">
+                    <GitHubCalendar username="Alex-Unnippillil" blockSize={14} blockMargin={4} color="#38BDF8" fontSize={16} />
+                </div>
+            </div>
+            <div className="tracking-tight text-sm md:text-base w-10/12 emoji-list mt-4 flex">
+                <span className="list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight mr-4">
+                    ...and current certs and typing speed
+                </span>
+
+            <a href="https://data.typeracer.com/pit/profile?user=ulexa&ref=badge" target="_blank" rel="noopener noreferrer" className="mr-4">
+                <img src="https://data.typeracer.com/misc/badge?user=ulexa" border="0" alt="TypeRacer.com scorecard for user ulexa"/>
+            </a>
+
+            <a href="https://www.credly.com/badges/8a945539-5d36-4de4-b454-1989656b282f/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
+                <img src="https://img.shields.io/badge/CompTIA_Security%2B-ED1C24?style=for-the-badge&logo=comptia&logoColor=white" alt="CompTIA Security+ Certificate"/>
+            </a>
+
+            <a href="https://www.credly.com/badges/783aed9a-91a7-4a2e-a4b8-11dbd0d25fc2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
+                <img src="https://img.shields.io/badge/Google_Cybersecurity-1A73E8?style=for-the-badge&logo=google&logoColor=white" alt="Google Cybersecurity Certificate"/>
+            </a>
+
+            <a href="https://www.credly.com/badges/53415f6e-162e-414e-971d-942aefc755d2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
+                <img src="https://img.shields.io/badge/IBM_AI_Developer-052FAD?style=for-the-badge&logo=ibm&logoColor=white" alt="IBM AI Developer Professional Certificate"/>
+            </a>
+            <a href="https://www.credly.com/badges/f1ec265d-6798-4fc0-b98e-ad5ac71f58c0" target="_blank" rel="noopener noreferrer" className="mr-4">
+                <img src="https://img.shields.io/badge/ISC2_Candidate-00A1E0?style=for-the-badge&logo=isc2&logoColor=white" alt="ISC2 Candidate"/>
+            </a>
+            </div>
+
+        </>
+    )
+}
+
+      <a href="https://data.typeracer.com/pit/profile?user=ulexa&ref=badge" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://data.typeracer.com/misc/badge?user=ulexa" border="0" alt="TypeRacer.com scorecard for user ulexa"/>
+      </a>
+
+      <a href="https://www.credly.com/badges/8a945539-5d36-4de4-b454-1989656b282f/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://images.credly.com/size/340x340/images/80d8a06a-c384-42bf-ad36-db81bce5adce/blob" border="0" alt="CompTIA Security+ Certificate" style={{width: "140px", height: "140px"}}/>
+      </a>
+
+      <a href="https://www.credly.com/badges/783aed9a-91a7-4a2e-a4b8-11dbd0d25fc2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://images.credly.com/size/110x110/images/0bf0f2da-a699-4c82-82e2-56dcf1f2e1c7/image.png" border="0" alt="Google Cybersecurity Certificate" style={{width: "140px", height: "140px"}}/>
+      </a>
+
+      <a href="https://www.credly.com/badges/53415f6e-162e-414e-971d-942aefc755d2/public_url" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://images.credly.com/size/340x340/images/70675aed-31be-4c30-add7-b99905a34005/image.png" border="0" alt="BM AI Developer Professional Certificate" style={{width: "120px", height: "120px"}}/>
+      </a>
+      <a href="https://www.credly.com/badges/f1ec265d-6798-4fc0-b98e-ad5ac71f58c0" target="_blank" rel="noopener noreferrer" className="mr-4">
+        <img src="https://images.credly.com/size/110x110/images/9180921d-4a13-429e-9357-6f9706a554f0/image.png" border="0" alt="ISC2 Candidate" style={{width: "120px", height: "120px"}}/>
+      </a>
       </div>
 
     </>
-  );
+  )
 }
 function Projects() {
     const project_list = [
@@ -747,3 +978,34 @@ function Resume() {
     )
 }
 
+function GitHubContributions({ username }) {
+    const fetcher = (url) => fetch(url).then((res) => res.json());
+    const { data, error } = useSWR(`https://github-contributions-api.jogruber.de/v4/${username}`, fetcher);
+
+    if (error) {
+        return <div className="text-center">Failed to load contributions.</div>;
+    }
+
+    if (!data) {
+        return <div className="text-center">Loading contributions...</div>;
+    }
+
+    return (
+        <ActivityCalendar
+            data={data.contributions}
+            style={{ width: '100%' }}
+            eventHandlers={{
+                onClick: () => (activity) =>
+                    window.open(
+                        `https://github.com/${username}?tab=overview&from=${activity.date}&to=${activity.date}`,
+                        '_blank'
+                    )
+            }}
+            renderBlock={(block, activity) =>
+                React.cloneElement(block, {
+                    title: `${activity.count} contributions on ${activity.date}\nClick to see details`
+                })
+            }
+        />
+    );
+}
