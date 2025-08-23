@@ -22,6 +22,8 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displaySpfFlattener } from './components/apps/spf-flattener';
+
 import { displayHibpCheck } from './components/apps/hibp-check';
 
 import { displayJwsJweWorkbench } from './components/apps/jws-jwe-workbench';
@@ -844,6 +846,16 @@ const apps = [
     screen: displayReportViewer,
 
   },
+  {
+    id: 'spf-flattener',
+    title: 'SPF Flattener',
+    icon: './themes/Yaru/apps/spf-flattener.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySpfFlattener,
+  },
+
 
 
   {
