@@ -9,9 +9,13 @@ const PKCEHelper: React.FC = () => {
 
   const generate = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    const array = new Uint8Array(length);
+    if (window.crypto && window.crypto.getRandomValues) {
       window.crypto.getRandomValues(array);
     } else {
-      throw new Error('Secure random number generation is not available. PKCE code verifier cannot be generated.');
+      throw new Error(
+        'Secure random number generation is not available. PKCE code verifier cannot be generated.'
+      );
     }
     let verifier = '';
     for (let i = 0; i < length; i += 1) {

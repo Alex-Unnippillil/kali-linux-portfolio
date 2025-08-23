@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import * as pkijs from 'pkijs';
 import * as asn1js from 'asn1js';
-import { toBase64 } from 'pvutils';
 
 function formatPEM(str: string): string {
   return str.replace(/(.{64})/g, '$1\n');
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)));
 }
 
 const CSRGenerator: React.FC = () => {
@@ -66,11 +69,11 @@ const CSRGenerator: React.FC = () => {
       await pkcs10.sign(keyPair.privateKey, 'SHA-256');
 
       const csrBuffer = pkcs10.toSchema(true).toBER(false);
-      const csrPem = `-----BEGIN CERTIFICATE REQUEST-----\n${formatPEM(toBase64(csrBuffer))}\n-----END CERTIFICATE REQUEST-----`;
+      const csrPem = `-----BEGIN CERTIFICATE REQUEST-----\n${formatPEM(arrayBufferToBase64(csrBuffer))}\n-----END CERTIFICATE REQUEST-----`;
       const privBuffer = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
-      const privPem = `-----BEGIN PRIVATE KEY-----\n${formatPEM(toBase64(privBuffer))}\n-----END PRIVATE KEY-----`;
+      const privPem = `-----BEGIN PRIVATE KEY-----\n${formatPEM(arrayBufferToBase64(privBuffer))}\n-----END PRIVATE KEY-----`;
       const pubBuffer = await crypto.subtle.exportKey('spki', keyPair.publicKey);
-      const pubPem = `-----BEGIN PUBLIC KEY-----\n${formatPEM(toBase64(pubBuffer))}\n-----END PUBLIC KEY-----`;
+      const pubPem = `-----BEGIN PUBLIC KEY-----\n${formatPEM(arrayBufferToBase64(pubBuffer))}\n-----END PUBLIC KEY-----`;
 
       setCsr(csrPem);
       setPrivateKeyPem(privPem);

@@ -45,6 +45,17 @@ module.exports = {
   images: {
     domains: ['opengraph.githubassets.com', 'raw.githubusercontent.com', 'avatars.githubusercontent.com'],
   },
+  webpack: (config) => {
+    config.resolve = config.resolve || {};
+    config.resolve.fallback = { ...(config.resolve.fallback || {}), fs: false };
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      mermaid: require('path').resolve(__dirname, 'lib/mermaidStub.js'),
+      'argon2-browser': require('path').resolve(__dirname, 'lib/argon2Stub.js'),
+    };
+    config.experiments = { ...(config.experiments || {}), asyncWebAssembly: true };
+    return config;
+  },
   async headers() {
     return [
       {

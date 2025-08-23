@@ -1,8 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import Papa from 'papaparse';
-import mermaid from 'mermaid';
-
-mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
 
 interface TimelineEvent {
   time: string;
@@ -11,34 +8,9 @@ interface TimelineEvent {
 
 const TimelineBuilder: React.FC = () => {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
-  const diagramRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!events.length) {
-      if (diagramRef.current) diagramRef.current.innerHTML = '';
-      return;
-    }
-    const sorted = [...events].sort(
-      (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
-    );
-    const lines = ['timeline', '    title Timeline'];
-    sorted.forEach((e) => lines.push(`    ${e.time} : ${e.event}`));
-    const id = `timeline-${Date.now()}`;
-    try {
-      mermaid
-        .render(id, lines.join('\n'))
-        .then(({ svg }) => {
-          if (diagramRef.current) diagramRef.current.innerHTML = svg;
-        })
-        .catch((err) => {
-          if (diagramRef.current)
-            diagramRef.current.innerHTML = `<pre class="text-red-400">${err}</pre>`;
-        });
-    } catch (err) {
-      if (diagramRef.current)
-        diagramRef.current.innerHTML = `<pre class="text-red-400">${err}</pre>`;
-    }
-  }, [events]);
+  const sortedEvents = [...events].sort(
+    (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+  );
 
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
@@ -48,7 +20,7 @@ const TimelineBuilder: React.FC = () => {
           Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
-            complete: (results) => {
+            complete: (results: any) => {
               const rows = results.data as any[];
               const parsed = rows
                 .map((r) => ({
@@ -97,7 +69,13 @@ const TimelineBuilder: React.FC = () => {
           Export CSV
         </button>
       </div>
-      <div className="flex-1 overflow-auto bg-white rounded" ref={diagramRef} />
+      <div className="flex-1 overflow-auto bg-white rounded p-2 text-black">
+        <ul>
+          {sortedEvents.map((e) => (
+            <li key={`${e.time}-${e.event}`}>{`${e.time}: ${e.event}`}</li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 };

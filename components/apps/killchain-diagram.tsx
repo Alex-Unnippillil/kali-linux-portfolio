@@ -1,8 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import mermaid from 'mermaid';
+import React, { useState } from 'react';
 import { toPng } from 'html-to-image';
-
-mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
 
 const defaultStages = [
   'Reconnaissance',
@@ -16,55 +13,25 @@ const defaultStages = [
 
 const KillchainDiagram: React.FC = () => {
   const [stages, setStages] = useState<string>(defaultStages);
-  const diagramRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const items = stages
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const graph = items.length
-      ? `graph LR\n${items
-          .map((stage, i) => `${i}["${stage}"]`)
-          .join(' --> ')}`
-      : 'graph LR';
-    const id = `mermaid-${Date.now()}`;
-    try {
-      mermaid
-        .render(id, graph)
-        .then(({ svg }) => {
-          if (diagramRef.current) {
-            diagramRef.current.innerHTML = svg;
-          }
-        })
-        .catch((err) => {
-          if (diagramRef.current) {
-            diagramRef.current.innerHTML = '';
-            const pre = document.createElement('pre');
-            pre.className = 'text-red-400';
-            pre.textContent = String(err);
-            diagramRef.current.appendChild(pre);
-          }
-        });
-    } catch (err) {
-      if (diagramRef.current) {
-        diagramRef.current.innerHTML = '';
-        const pre = document.createElement('pre');
-        pre.className = 'text-red-400';
-        pre.textContent = String(err);
-        diagramRef.current.appendChild(pre);
-      }
-    }
-  }, [stages]);
+  const items = stages
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   const exportPng = async () => {
-    if (diagramRef.current) {
-      const dataUrl = await toPng(diagramRef.current);
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = 'killchain.png';
-      link.click();
-    }
+    const container = document.createElement('div');
+    const list = document.createElement('ol');
+    items.forEach((stage) => {
+      const li = document.createElement('li');
+      li.textContent = stage;
+      list.appendChild(li);
+    });
+    container.appendChild(list);
+    const dataUrl = await toPng(container);
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = 'killchain.png';
+    link.click();
   };
 
   return (
@@ -83,8 +50,12 @@ const KillchainDiagram: React.FC = () => {
           Export PNG
         </button>
       </div>
-      <div className="flex-1 overflow-auto bg-white rounded p-2 flex items-center justify-center">
-        <div ref={diagramRef} />
+      <div className="flex-1 overflow-auto bg-white rounded p-2 text-black">
+        <ol>
+          {items.map((stage, i) => (
+            <li key={i}>{stage}</li>
+          ))}
+        </ol>
       </div>
     </div>
   );

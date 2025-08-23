@@ -39,7 +39,7 @@ const SpfFlattener: React.FC = () => {
     }
   };
 
-  const renderNode = (node: Node, depth = 0): JSX.Element => {
+  const renderNode = (node: Node, depth = 0): React.ReactElement => {
     return (
       <div key={node.domain + depth} style={{ marginLeft: depth * 20 }} className="mb-2">
         <div className="font-semibold">

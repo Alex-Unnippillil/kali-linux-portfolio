@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { totp } from 'otplib';
 
-totp.options = { step: 30, digits: 6, algorithm: 'SHA1' };
+type HashAlg = 'SHA1' | 'SHA256' | 'SHA512';
 
 const TOTPApp = () => {
   const [secret, setSecret] = useState('');
   const [period, setPeriod] = useState(30);
   const [digits, setDigits] = useState(6);
-  const [algorithm, setAlgorithm] = useState('SHA1');
+  const [algorithm, setAlgorithm] = useState<HashAlg>('SHA1');
   const [code, setCode] = useState('');
   const [remaining, setRemaining] = useState(totp.timeRemaining());
 
   useEffect(() => {
-    totp.options = { step: period, digits, algorithm };
+    totp.options = { step: period, digits, algorithm: algorithm as any };
     const update = () => {
       setCode(secret ? totp.generate(secret) : '');
       setRemaining(totp.timeRemaining());
@@ -55,7 +55,7 @@ const TOTPApp = () => {
           Algorithm
           <select
             value={algorithm}
-            onChange={(e) => setAlgorithm(e.target.value)}
+            onChange={(e) => setAlgorithm(e.target.value as HashAlg)}
             className="w-full p-2 rounded text-black"
           >
             <option value="SHA1">SHA1</option>

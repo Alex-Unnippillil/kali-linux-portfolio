@@ -6,6 +6,11 @@ interface UrlEntry {
   lastmod?: string;
 }
 
+interface SitemapUrl {
+  loc?: string;
+  lastmod?: string;
+}
+
 interface HeatmapResponse {
   ok: boolean;
   urls: UrlEntry[];
@@ -45,10 +50,10 @@ export default async function handler(
     const urls: UrlEntry[] = [];
     if (Array.isArray(urlset)) {
       urlset.forEach((u: SitemapUrl) => {
-        if (u?.loc) urls.push({ loc: u.loc, lastmod: u.lastmod });
+        if (u.loc) urls.push({ loc: u.loc, lastmod: u.lastmod });
       });
-    } else if (urlset?.loc) {
-      urls.push({ loc: (urlset as SitemapUrl).loc, lastmod: (urlset as SitemapUrl).lastmod });
+    } else if (urlset && urlset.loc) {
+      urls.push({ loc: urlset.loc, lastmod: urlset.lastmod });
     }
 
     res.status(200).json({ ok: true, urls });
