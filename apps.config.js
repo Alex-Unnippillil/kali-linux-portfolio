@@ -108,6 +108,11 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 
+const RedirectVisualizerApp = createDynamicApp(
+  'redirect-visualizer',
+  'Redirect Visualizer'
+);
+
 const Http3ProbeApp = createDynamicApp('http3-probe', 'HTTP/3 Probe');
 
 
@@ -167,6 +172,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+
+const displayRedirectVisualizer = createDisplay(RedirectVisualizerApp);
 
 const displayHttp3Probe = createDisplay(Http3ProbeApp);
  
@@ -816,15 +823,15 @@ const apps = [
       screen: displayContentFingerprint,
     },
     {
-
-id: 'nmap-viewer',
+      id: 'nmap-viewer',
       title: 'Nmap Viewer',
       icon: './themes/Yaru/apps/resource-monitor.svg',
       disabled: false,
       favourite: false,
       desktop_shortcut: false,
       screen: displayNmapViewer,
-
+    },
+    {
       id: 'report-viewer',
       title: 'Report Viewer',
       icon: './themes/Yaru/apps/gedit.png',
@@ -834,12 +841,17 @@ id: 'nmap-viewer',
       screen: displayReportViewer,
     },
     {
+      id: 'redirect-visualizer',
+      title: 'Redirect Visualizer',
+
       id: 'http3-probe',
       title: 'HTTP/3 Probe',
       icon: './themes/Yaru/apps/resource-monitor.svg',
       disabled: false,
       favourite: false,
       desktop_shortcut: false,
+      screen: displayRedirectVisualizer,
+
       screen: displayHttp3Probe,
     },
     // Games are included so they appear alongside apps
