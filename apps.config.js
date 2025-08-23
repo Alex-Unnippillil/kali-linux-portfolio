@@ -14,12 +14,21 @@ import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
 import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
+import { displayKeyConverter } from './components/apps/key-converter';
 import { displayQrTool } from './components/apps/qr_tool';
 import { displayRegexRedactor } from './components/apps/regex-redactor';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
+import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displaySpfFlattener } from './components/apps/spf-flattener';
+
+import { displayHibpCheck } from './components/apps/hibp-check';
+
+import { displayJwsJweWorkbench } from './components/apps/jws-jwe-workbench';
+
+import { displayCaaChecker } from './components/apps/caa-checker';
 
 export const THEME = process.env.NEXT_PUBLIC_THEME || 'Yaru';
 export const icon = (name) => `./themes/${THEME}/apps/${name}`;
@@ -85,6 +94,12 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const MailAuthApp = createDynamicApp('mail-auth', 'Mail Auth');
+const MailSecurityMatrixApp = createDynamicApp(
+  'mail-security-matrix',
+  'Mail Security Matrix'
+);
+
+const DnssecValidatorApp = createDynamicApp('dnssec-validator', 'DNSSEC Validator');
 
 const CveDashboardApp = createDynamicApp('cve-dashboard', 'CVE Dashboard');
 
@@ -101,11 +116,41 @@ const YaraTesterApp = createDynamicApp('yara-tester', 'YARA Tester');
 const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
 
 const ContentFingerprintApp = createDynamicApp('content-fingerprint', 'Content Fingerprint');
+const SshFingerprintApp = createDynamicApp('ssh-fingerprint', 'SSH Fingerprint');
 const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
+const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const Ipv6SlaacApp = createDynamicApp('ipv6-slaac', 'IPv6 SLAAC');
+
+const AsnExplorerApp = createDynamicApp('asn-explorer', 'ASN Explorer');
+
+const ArgonBcryptDemoApp = createDynamicApp('argon-bcrypt-demo', 'Argon/Bcrypt Demo');
+
+const PkceHelperApp = createDynamicApp('pkce-helper', 'PKCE Helper');
+
+const CsrGeneratorApp = createDynamicApp('csr-generator', 'CSR Generator');
+
+const OpenRedirectLabApp = createDynamicApp('open-redirect-lab', 'Open Redirect Lab');
+
+const SameSiteLabApp = createDynamicApp('samesite-lab', 'SameSite Lab');
+
+const SitemapHeatmapApp = createDynamicApp('sitemap-heatmap', 'Sitemap Heatmap');
+
+const MetaInspectorApp = createDynamicApp('meta-inspector', 'Meta Inspector');
+
+const RedirectVisualizerApp = createDynamicApp(
+  'redirect-visualizer',
+  'Redirect Visualizer'
+);
+
+const Http3ProbeApp = createDynamicApp('http3-probe', 'HTTP/3 Probe');
+
+const CspReporterApp = createDynamicApp('csp-reporter', 'CSP Reporter');
+
+const IpDnsLeakApp = createDynamicApp('ip-dns-leak', 'IP/DNS Leak');
 
 
 
@@ -143,6 +188,9 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayMailAuth = createDisplay(MailAuthApp);
+const displayMailSecurityMatrix = createDisplay(MailSecurityMatrixApp);
+
+const displayDnssecValidator = createDisplay(DnssecValidatorApp);
 
 const displayCveDashboard = createDisplay(CveDashboardApp);
 
@@ -159,11 +207,41 @@ const displayYaraTester = createDisplay(YaraTesterApp);
 const displayThreatModeler = createDisplay(ThreatModelerApp);
 
 const displayContentFingerprint = createDisplay(ContentFingerprintApp);
+const displaySshFingerprint = createDisplay(SshFingerprintApp);
 const displayNmapViewer = createDisplay(NmapViewerApp);
 
 const displayReportViewer = createDisplay(ReportViewerApp);
 
+const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayIpDnsLeak = createDisplay(IpDnsLeakApp);
+
+const displayIpv6Slaac = createDisplay(Ipv6SlaacApp);
+
+const displayAsnExplorer = createDisplay(AsnExplorerApp);
+
+const displayArgonBcryptDemo = createDisplay(ArgonBcryptDemoApp);
+
+const displayPkceHelper = createDisplay(PkceHelperApp);
+
+const displayCsrGenerator = createDisplay(CsrGeneratorApp);
+
+const displayOpenRedirectLab = createDisplay(OpenRedirectLabApp);
+
+const displaySameSiteLab = createDisplay(SameSiteLabApp);
+
+
+const displayCspReporter = createDisplay(CspReporterApp);
+
+const displaySitemapHeatmap = createDisplay(SitemapHeatmapApp);
+
+const displayMetaInspector = createDisplay(MetaInspectorApp);
+
+
+const displayRedirectVisualizer = createDisplay(RedirectVisualizerApp);
+
+const displayHttp3Probe = createDisplay(Http3ProbeApp);
+
  
 
 
@@ -574,6 +652,15 @@ const apps = [
     screen: displayResourceMonitor,
   },
   {
+    id: 'ip-dns-leak',
+    title: 'IP/DNS Leak',
+    icon: icon('resource-monitor.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayIpDnsLeak,
+  },
+  {
     id: 'project-gallery',
     title: 'Project Gallery',
     icon: icon('project-gallery.svg'),
@@ -619,6 +706,15 @@ const apps = [
     screen: displayConverter,
   },
   {
+    id: 'key-converter',
+    title: 'Key Converter',
+    icon: icon('hash.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKeyConverter,
+  },
+  {
     id: 'qr-tool',
     title: 'QR Tool',
     icon: icon('qr.svg'),
@@ -652,7 +748,39 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayQuoteGenerator,
+  {
+    id: 'cvss-calculator',
+    title: 'CVSS Calculator',
+    icon: icon('calc.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCvssCalculator,
+    id: 'caa-checker',
+    title: 'CAA Checker',
+    icon: icon('mail-auth.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCaaChecker,
+  },
+  {
+    id: 'jws-jwe-workbench',
+    title: 'JWS/JWE Workbench',
+    icon: icon('hash.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayJwsJweWorkbench,
+  },
+  {
+    id: 'pkce-helper',
+    title: 'PKCE Helper',
+    icon: icon('calc.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPkceHelper,
   },
   {
     id: 'favicon-hash',
@@ -662,10 +790,20 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayFaviconHash,
+  },
+  {
+
+    icon: icon('calc.png'),
 
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
     icon: './themes/Yaru/apps/calc.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCveDashboard,
+  },
+  {
     id: 'pcap-viewer',
     title: 'PCAP Viewer',
     icon: './themes/Yaru/apps/pcap-viewer.svg',
@@ -682,6 +820,10 @@ const apps = [
     desktop_shortcut: false,
     screen: displaySqliteViewer,
 
+
+    screen: displayPcapViewer,
+  },
+  {
     id: 'yara-tester',
     title: 'YARA Tester',
     icon: './themes/Yaru/apps/bash.png',
@@ -693,11 +835,70 @@ const apps = [
   {
     id: 'weather',
     title: 'Weather',
-    icon: icon('weather.svg'),
+    icon: './themes/Yaru/apps/weather.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayCveDashboard,
+    screen: displayWeather,
+  },
+
+  {
+    id: 'cookie-jar',
+    title: 'Cookie Jar',
+    icon: './themes/Yaru/apps/cookie-jar.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCookieJar,
+  },
+  {
+    id: 'content-fingerprint',
+    title: 'Content Fingerprint',
+    icon: './themes/Yaru/apps/content-fingerprint.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayContentFingerprint,
+  },
+  {
+    id: 'nmap-viewer',
+    title: 'Nmap Viewer',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNmapViewer,
+  },
+  {
+    id: 'report-viewer',
+    title: 'Report Viewer',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReportViewer,
+
+  },
+  {
+    id: 'spf-flattener',
+    title: 'SPF Flattener',
+    icon: './themes/Yaru/apps/spf-flattener.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySpfFlattener,
+  },
+
+
+
+  {
+    id: 'sitemap-heatmap',
+    title: 'Sitemap Heatmap',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySitemapHeatmap,
   },
 
 
@@ -709,6 +910,18 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayMailAuth,
+  },
+  {
+
+    id: 'mail-security-matrix',
+    title: 'Mail Security Matrix',
+    icon: './themes/Yaru/apps/mail-auth.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMailSecurityMatrix,
+  },
+  {
 
     id: 'threat-modeler',
     title: 'Threat Modeler',
@@ -718,9 +931,100 @@ const apps = [
     desktop_shortcut: false,
     screen: displayThreatModeler,
   },
+  {
+
+    id: 'ipv6-slaac',
+    title: 'IPv6 SLAAC',
+    icon: icon('calc.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayIpv6Slaac,
+
+
+    id: 'csp-reporter',
+    title: 'CSP Reporter',
+
+    id: 'cookie-jar',
+    title: 'Cookie Jar',
+    icon: './themes/Yaru/apps/cookie-jar.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCookieJar,
+  },
+  {
+    id: 'content-fingerprint',
+    title: 'Content Fingerprint',
+    icon: './themes/Yaru/apps/content-fingerprint.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayContentFingerprint,
+  },
+  {
+    id: 'nmap-viewer',
+    title: 'Nmap Viewer',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNmapViewer,
+  },
+  {
+    id: 'report-viewer',
+    title: 'Report Viewer',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReportViewer,
+  },
+  {
+
+    id: 'hibp-check',
+    title: 'HIBP Check',
+    icon: icon('hash.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHibpCheck,
+
+    id: 'open-redirect-lab',
+    title: 'Open Redirect Lab',
+    icon: icon('gedit.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayOpenRedirectLab,
+
+    screen: displayCspReporter,
+
+    screen: displayReportViewer,
+  },
+  {
+    id: 'hsts-preload',
+    title: 'HSTS Preload',
+    icon: './themes/Yaru/apps/hash.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHstsPreload,
+
+    id: 'dnssec-validator',
+    title: 'DNSSEC Validator',
+    icon: './themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDnssecValidator,
+
+  },
   // Games are included so they appear alongside apps
   ...games,
 ];
+
+
 
     {
       id: 'weather',
@@ -741,6 +1045,30 @@ const apps = [
       screen: displayCookieJar,
     },
     {
+      id: 'asn-explorer',
+      title: 'ASN Explorer',
+      icon: './themes/Yaru/apps/resource-monitor.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayAsnExplorer,
+      id: 'argon-bcrypt-demo',
+      title: 'Argon/Bcrypt Demo',
+      icon: './themes/Yaru/apps/hash.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayArgonBcryptDemo,
+
+      id: 'samesite-lab',
+      title: 'SameSite Lab',
+      icon: './themes/Yaru/apps/cookie-jar.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displaySameSiteLab,
+    },
+    {
       id: 'content-fingerprint',
       title: 'Content Fingerprint',
       icon: './themes/Yaru/apps/content-fingerprint.svg',
@@ -750,15 +1078,40 @@ const apps = [
       screen: displayContentFingerprint,
     },
     {
+      id: 'ssh-fingerprint',
+      title: 'SSH Fingerprint',
 
-id: 'nmap-viewer',
+      id: 'csr-generator',
+      title: 'CSR Generator',
+      icon: './themes/Yaru/apps/hash.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displaySshFingerprint,
+
+      screen: displayCsrGenerator,
+    },
+    {
+
+      id: 'meta-inspector',
+      title: 'Meta Inspector',
+      icon: './themes/Yaru/apps/kali-browser.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayMetaInspector,
+    },
+    {
+
+      id: 'nmap-viewer',
       title: 'Nmap Viewer',
       icon: './themes/Yaru/apps/resource-monitor.svg',
       disabled: false,
       favourite: false,
       desktop_shortcut: false,
       screen: displayNmapViewer,
-
+    },
+    {
       id: 'report-viewer',
       title: 'Report Viewer',
       icon: './themes/Yaru/apps/gedit.png',
@@ -767,8 +1120,25 @@ id: 'nmap-viewer',
       desktop_shortcut: false,
       screen: displayReportViewer,
     },
+    {
+      id: 'redirect-visualizer',
+      title: 'Redirect Visualizer',
+
+      id: 'http3-probe',
+      title: 'HTTP/3 Probe',
+      icon: './themes/Yaru/apps/resource-monitor.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayRedirectVisualizer,
+
+      screen: displayHttp3Probe,
+    },
     // Games are included so they appear alongside apps
     ...games,
   ];
+
+
+
 
 export default apps;
