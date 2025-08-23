@@ -46,10 +46,10 @@ export default class Navbar extends Component {
 						shutDown={this.props.shutDown}
 						lockScreen={this.props.lockScreen}
 						visible={this.state.status_card}
-						toggleVisible={() => {
-							// this prop is used in statusCard component in handleClickOutside callback using react-onclickoutside
-							this.setState({ status_card: false });
-						}}
+                                                toggleVisible={() => {
+                                                        // StatusCard listens for outside clicks and calls this to hide itself
+                                                        this.setState({ status_card: false });
+                                                }}
 					/>
 				</div>
 			</div>
