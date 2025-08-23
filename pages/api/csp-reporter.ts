@@ -1,7 +1,23 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
+// Interface for CSP reports
+interface CSPReport {
+  "document-uri": string;
+  "referrer"?: string;
+  "violated-directive": string;
+  "effective-directive"?: string;
+  "original-policy"?: string;
+  "disposition"?: string;
+  "blocked-uri": string;
+  "line-number"?: number;
+  "column-number"?: number;
+  "source-file"?: string;
+  "status-code"?: number;
+  [key: string]: any; // Allow additional fields if present
+}
+
 // In-memory store for CSP reports
-const reports: any[] = [];
+const reports: CSPReport[] = [];
 
 export default function handler(
   req: NextApiRequest,
