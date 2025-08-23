@@ -152,6 +152,8 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
+const JwksFetcherApp = createDynamicApp('jwks-fetcher', 'JWKS Fetcher');
+
 const LicenseClassifierApp = createDynamicApp('license-classifier', 'License Classifier');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
@@ -270,6 +272,8 @@ const displaySshFingerprint = createDisplay(SshFingerprintApp);
 const displayNmapViewer = createDisplay(NmapViewerApp);
 
 const displayReportViewer = createDisplay(ReportViewerApp);
+
+const displayJwksFetcher = createDisplay(JwksFetcherApp);
 
 const displayLicenseClassifier = createDisplay(LicenseClassifierApp);
 
@@ -1173,6 +1177,15 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+    id: 'jwks-fetcher',
+    title: 'JWKS Fetcher',
+    icon: './themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayJwksFetcher,
+  },
+
 
     id: 'exploit-explainer',
     title: 'Exploit Explainer',
