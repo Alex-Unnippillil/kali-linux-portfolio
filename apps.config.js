@@ -104,6 +104,7 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const SameSiteLabApp = createDynamicApp('samesite-lab', 'SameSite Lab');
 
 
 
@@ -160,6 +161,7 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+const displaySameSiteLab = createDisplay(SameSiteLabApp);
  
 
 
@@ -727,6 +729,15 @@ const apps = [
       favourite: false,
       desktop_shortcut: false,
       screen: displayCookieJar,
+    },
+    {
+      id: 'samesite-lab',
+      title: 'SameSite Lab',
+      icon: './themes/Yaru/apps/cookie-jar.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displaySameSiteLab,
     },
     {
       id: 'content-fingerprint',
