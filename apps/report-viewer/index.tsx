@@ -112,18 +112,24 @@ const ReportViewer: React.FC = () => {
   );
 
   const exportCSV = () => {
-    const rows = [
-      ['Type', 'Severity', 'Description'],
-      ...filtered.map((f) => [f.type, f.severity, f.description]),
-    ];
-    const csv = rows
-      .map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'report.csv';
-    link.click();
+    try {
+      const rows = [
+        ['Type', 'Severity', 'Description'],
+        ...filtered.map((f) => [f.type, f.severity, f.description]),
+      ];
+      const csv = rows
+        .map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'report.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert('Failed to export CSV. Please try again or check your browser settings.');
+    }
   };
 
   return (
