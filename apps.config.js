@@ -90,6 +90,8 @@ const CveDashboardApp = createDynamicApp('cve-dashboard', 'CVE Dashboard');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const FaviconHashApp = createDynamicApp('favicon-hash', 'Favicon Hash');
+
 const PcapViewerApp = createDynamicApp('pcap-viewer', 'PCAP Viewer');
 
 const YaraTesterApp = createDynamicApp('yara-tester', 'YARA Tester');
@@ -142,6 +144,8 @@ const displayCveDashboard = createDisplay(CveDashboardApp);
 
 const displayGomoku = createDisplay(GomokuApp);
 const displayPinball = createDisplay(PinballApp);
+const displayFaviconHash = createDisplay(FaviconHashApp);
+
 const displayPcapViewer = createDisplay(PcapViewerApp);
 
 const displayYaraTester = createDisplay(YaraTesterApp);
@@ -642,6 +646,14 @@ const apps = [
     screen: displayQuoteGenerator,
   },
   {
+    id: 'favicon-hash',
+    title: 'Favicon Hash',
+    icon: './themes/Yaru/apps/hash.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFaviconHash,
+
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
     icon: './themes/Yaru/apps/calc.png',
