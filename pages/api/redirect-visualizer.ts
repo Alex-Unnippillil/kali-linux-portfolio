@@ -9,13 +9,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ ok: false, chain: [] });
   }
 
-  const { url, method = 'GET' } = req.body || {};
+  const { url, method } = req.body || {};
 
   if (typeof url !== 'string' || !url) {
     return res.status(400).json({ ok: false, chain: [] });
   }
 
-  const upperMethod = typeof method === 'string' ? method.toUpperCase() : '';
+  const upperMethod =
+    typeof method === 'string' && method.trim()
+      ? method.toUpperCase()
+      : 'GET';
   if (!ALLOWED_METHODS.includes(upperMethod)) {
     return res.status(400).json({ ok: false, chain: [] });
   }
