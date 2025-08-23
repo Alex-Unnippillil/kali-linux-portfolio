@@ -82,6 +82,8 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const PcapViewerApp = createDynamicApp('pcap-viewer', 'PCAP Viewer');
+
 const YaraTesterApp = createDynamicApp('yara-tester', 'YARA Tester');
 
 const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
@@ -129,6 +131,8 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 
 const displayGomoku = createDisplay(GomokuApp);
 const displayPinball = createDisplay(PinballApp);
+const displayPcapViewer = createDisplay(PcapViewerApp);
+
 const displayYaraTester = createDisplay(YaraTesterApp);
 
 const displayThreatModeler = createDisplay(ThreatModelerApp);
@@ -618,6 +622,14 @@ const apps = [
     screen: displayQuoteGenerator,
   },
   {
+    id: 'pcap-viewer',
+    title: 'PCAP Viewer',
+    icon: './themes/Yaru/apps/pcap-viewer.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPcapViewer,
+
     id: 'yara-tester',
     title: 'YARA Tester',
     icon: './themes/Yaru/apps/bash.png',
