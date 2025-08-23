@@ -129,6 +129,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const RobotsAuditorApp = createDynamicApp('robots-auditor', 'Robots Auditor');
+
 const Ipv6SlaacApp = createDynamicApp('ipv6-slaac', 'IPv6 SLAAC');
 
 const AsnExplorerApp = createDynamicApp('asn-explorer', 'ASN Explorer');
@@ -232,6 +234,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayRobotsAuditor = createDisplay(RobotsAuditorApp);
+
 
 const displayTimelineBuilder = createDisplay(TimelineBuilderApp);
 
@@ -839,8 +843,6 @@ const apps = [
     screen: displayFaviconHash,
   },
   {
-==================
-
 
 
 
@@ -906,7 +908,6 @@ const apps = [
     screen: displayWeather,
   },
 
-  },
 
   {
     id: 'cookie-jar',
@@ -978,7 +979,6 @@ const apps = [
     screen: displaySitemapHeatmap,
 
   },
-
   {
     id: 'mail-auth',
     title: 'Mail Auth',
@@ -989,6 +989,7 @@ const apps = [
     screen: displayMailAuth,
   },
   {
+
 
     id: 'mail-security-matrix',
     title: 'Mail Security Matrix',
@@ -1001,6 +1002,7 @@ const apps = [
   {
 
 
+
     id: 'threat-modeler',
     title: 'Threat Modeler',
     icon: './themes/Yaru/apps/threat-modeler.svg',
@@ -1010,6 +1012,9 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+
+    id: 'robots-auditor',
+    title: 'Robots Auditor',
 
     id: 'eml-msg-parser',
     title: 'EML/MSG Parser',
@@ -1115,9 +1120,13 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+
+    screen: displayRobotsAuditor,
+  },
     screen: displayDnssecValidator,
 
   },
+
 
   // Games are included so they appear alongside apps
   ...games,
