@@ -33,7 +33,6 @@ export default async function handler(
       }
     }
     return res.status(200).json({ prefix, count });
-  } catch (e: any) {
-    return res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: 'Service temporarily unavailable' });
   }
 }
