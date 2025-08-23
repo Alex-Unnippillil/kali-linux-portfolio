@@ -104,6 +104,7 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const AsnExplorerApp = createDynamicApp('asn-explorer', 'ASN Explorer');
 
 
 
@@ -160,6 +161,7 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayAsnExplorer = createDisplay(AsnExplorerApp);
  
 
 
@@ -727,6 +729,15 @@ const apps = [
       favourite: false,
       desktop_shortcut: false,
       screen: displayCookieJar,
+    },
+    {
+      id: 'asn-explorer',
+      title: 'ASN Explorer',
+      icon: './themes/Yaru/apps/resource-monitor.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayAsnExplorer,
     },
     {
       id: 'content-fingerprint',
