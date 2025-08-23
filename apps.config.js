@@ -859,6 +859,8 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    screen: displayQuoteGenerator,
+  },
   {
     id: 'cvss-calculator',
     title: 'CVSS Calculator',
@@ -867,6 +869,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayCvssCalculator,
+  },
+  {
     id: 'caa-checker',
     title: 'CAA Checker',
     icon: icon('mail-auth.svg'),
@@ -911,7 +915,6 @@ const apps = [
     desktop_shortcut: false,
     screen: displayCtSearch,
   },
-
   {
     id: 'evidence-notebook',
     title: 'Evidence Notebook',
@@ -958,16 +961,6 @@ const apps = [
     screen: displayBaseEncoders,
   },
   {
-    id: 'ct-search',
-    title: 'CT Search',
-    icon: icon('hash.svg'),
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayCtSearch,
-  },
-
-  {
     id: 'favicon-hash',
     title: 'Favicon Hash',
     icon: './themes/Yaru/apps/hash.svg',
@@ -977,13 +970,6 @@ const apps = [
     screen: displayFaviconHash,
   },
   {
-
-
-
-
-    icon: icon('calc.png'),
-
-
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
     icon: './themes/Yaru/apps/calc.png',
@@ -999,9 +985,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-
-
-
+    screen: displayPcapViewer,
   },
   {
     id: 'sqlite-viewer',
@@ -1011,8 +995,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displaySqliteViewer,
-
-    screen: displayPcapViewer,
   },
   {
     id: 'yara-tester',
@@ -1031,7 +1013,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayDgaDemo,
-
+  },
+  {
     id: 'git-secrets-tester',
     title: 'Git Secrets Tester',
     icon: './themes/Yaru/apps/git-secrets-tester.svg',
@@ -1039,7 +1022,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayGitSecretsTester,
-
+  },
+  {
     id: 'plist-inspector',
     title: 'Plist Inspector',
     icon: icon('gedit.png'),
@@ -1047,7 +1031,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayPlistInspector,
-
   },
   {
     id: 'weather',
@@ -1058,7 +1041,6 @@ const apps = [
     desktop_shortcut: false,
     screen: displayWeather,
   },
-
   {
     id: 'cookie-jar',
     title: 'Cookie Jar',
@@ -1085,7 +1067,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayNmapViewer,
-
   },
   {
     id: 'report-viewer',
@@ -1095,29 +1076,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayReportViewer,
-  },
-
-  },
-  {
-    id: 'report-viewer',
-    title: 'Report Viewer',
-    icon: './themes/Yaru/apps/gedit.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayReportViewer,
-  },
-
-  },
-  {
-    id: 'report-viewer',
-    title: 'Report Viewer',
-    icon: './themes/Yaru/apps/gedit.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayReportViewer,
-
   },
   {
     id: 'prefetch-jumplist',
@@ -1128,9 +1086,6 @@ const apps = [
     desktop_shortcut: false,
     screen: displayPrefetchJumplist,
   },
-
-
-  },
   {
     id: 'spf-flattener',
     title: 'SPF Flattener',
@@ -1140,9 +1095,6 @@ const apps = [
     desktop_shortcut: false,
     screen: displaySpfFlattener,
   },
-
-
-
   {
     id: 'sitemap-heatmap',
     title: 'Sitemap Heatmap',
@@ -1151,10 +1103,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displaySitemapHeatmap,
-
   },
-
-
   {
     id: 'mail-auth',
     title: 'Mail Auth',
@@ -1165,10 +1114,6 @@ const apps = [
     screen: displayMailAuth,
   },
   {
-
-
-
-
     id: 'mail-security-matrix',
     title: 'Mail Security Matrix',
     icon: './themes/Yaru/apps/mail-auth.svg',
@@ -1178,7 +1123,6 @@ const apps = [
     screen: displayMailSecurityMatrix,
   },
   {
-
     id: 'threat-modeler',
     title: 'Threat Modeler',
     icon: './themes/Yaru/apps/threat-modeler.svg',
@@ -1190,7 +1134,13 @@ const apps = [
   {
     id: 'mixed-content',
     title: 'Mixed Content',
-
+    icon: './themes/Yaru/apps/hash.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMixedContent,
+  },
+  {
     id: 'jwks-fetcher',
     title: 'JWKS Fetcher',
     icon: './themes/Yaru/apps/bash.png',
@@ -1199,44 +1149,52 @@ const apps = [
     desktop_shortcut: false,
     screen: displayJwksFetcher,
   },
-
-
-    id: 'exploit-explainer',
-    title: 'Exploit Explainer',
-    id: 'killchain-diagram',
-    title: 'Killchain Diagram',
-
-    id: 'mitre-selector',
-    title: 'MITRE Selector',
-    icon: './themes/Yaru/apps/threat-modeler.svg',
+  {
+    id: 'sbom-viewer',
+    title: 'SBOM Viewer',
+    icon: './themes/Yaru/apps/gedit.png',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayExploitExplainer,
+    screen: displaySbomViewer,
   },
-
-    screen: displayKillchainDiagram,
-  },
-    screen: displayMitreSelector,
-  },
-
-    id: 'tor-exit-check',
-    title: 'Tor Exit Check',
-
-
-    id: 'wayback-viewer',
-    title: 'Wayback Viewer',
-    icon: './themes/Yaru/apps/kali-browser.svg',
+  {
+    id: 'redirect-visualizer',
+    title: 'Redirect Visualizer',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayWaybackViewer,
+    screen: displayRedirectVisualizer,
   },
-
-
+  {
+    id: 'http3-probe',
+    title: 'HTTP/3 Probe',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHttp3Probe,
+  },
+  {
+    id: 'csp-reporter',
+    title: 'CSP Reporter',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCspReporter,
+  },
+  {
     id: 'robots-auditor',
     title: 'Robots Auditor',
-
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayRobotsAuditor,
+  },
+  {
     id: 'eml-msg-parser',
     title: 'EML/MSG Parser',
     icon: './themes/Yaru/apps/mail-auth.svg',
@@ -1244,8 +1202,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayEmlMsgParser,
-
-
+  },
+  {
     id: 'ipv6-slaac',
     title: 'IPv6 SLAAC',
     icon: icon('calc.png'),
@@ -1253,249 +1211,18 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayIpv6Slaac,
-
-
-    id: 'csp-reporter',
-    title: 'CSP Reporter',
-
-    id: 'cookie-jar',
-    title: 'Cookie Jar',
-    icon: './themes/Yaru/apps/cookie-jar.svg',
+  },
+  {
+    id: 'wayback-viewer',
+    title: 'Wayback Viewer',
+    icon: './themes/Yaru/apps/hash.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayCookieJar,
+    screen: displayWaybackViewer,
   },
-  {
-    id: 'content-fingerprint',
-    title: 'Content Fingerprint',
-    icon: './themes/Yaru/apps/content-fingerprint.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayContentFingerprint,
-  },
-  {
-
-    id: 'file-signature',
-    title: 'File Signature',
+  // Games are included so they appear alongside apps
+  ...games,
+];
  
-    icon: './themes/Yaru/apps/hash.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayMixedContent,
-
-    screen: displayFileSignature,
-  },
-  {
-
-    id: 'nmap-viewer',
-    title: 'Nmap Viewer',
-    icon: './themes/Yaru/apps/resource-monitor.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayNmapViewer,
-  },
-  {
-    id: 'report-viewer',
-    title: 'Report Viewer',
-    icon: './themes/Yaru/apps/gedit.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayReportViewer,
-  },
-  // Games are included so they appear alongside apps
-  ...games,
-];
-
-
-  {
-
-    id: 'hibp-check',
-    title: 'HIBP Check',
-    icon: icon('hash.svg'),
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayHibpCheck,
-
-    id: 'open-redirect-lab',
-    title: 'Open Redirect Lab',
-    icon: icon('gedit.png'),
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayOpenRedirectLab,
-
-    screen: displayCspReporter,
-
-    screen: displayReportViewer,
-  },
-  {
-    id: 'hsts-preload',
-    title: 'HSTS Preload',
-    icon: './themes/Yaru/apps/hash.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayTorExitCheck,
-  },
-
-    screen: displayHstsPreload,
-
-    id: 'dnssec-validator',
-    title: 'DNSSEC Validator',
-    icon: './themes/Yaru/apps/bash.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-
-    screen: displayRobotsAuditor,
-  },
-    screen: displayDnssecValidator,
-
-  },
-
-
-
-  // Games are included so they appear alongside apps
-  ...games,
-];
-
-
-
-    {
-      id: 'weather',
-      title: 'Weather',
-      icon: './themes/Yaru/apps/weather.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayWeather,
-    },
-    {
-      id: 'cookie-jar',
-      title: 'Cookie Jar',
-      icon: './themes/Yaru/apps/cookie-jar.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayCookieJar,
-    },
-    {
-      id: 'cache-policy',
-      title: 'Cache Policy',
-      icon: './themes/Yaru/apps/gedit.png',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayCachePolicy,
-
-      id: 'asn-explorer',
-      title: 'ASN Explorer',
-      icon: './themes/Yaru/apps/resource-monitor.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayAsnExplorer,
-      id: 'argon-bcrypt-demo',
-      title: 'Argon/Bcrypt Demo',
-      icon: './themes/Yaru/apps/hash.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayArgonBcryptDemo,
-
-      id: 'samesite-lab',
-      title: 'SameSite Lab',
-      icon: './themes/Yaru/apps/cookie-jar.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displaySameSiteLab,
-    },
-    {
-      id: 'content-fingerprint',
-      title: 'Content Fingerprint',
-      icon: './themes/Yaru/apps/content-fingerprint.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayContentFingerprint,
-    },
-    {
-
-      id: 'ssh-fingerprint',
-      title: 'SSH Fingerprint',
-
-      id: 'csr-generator',
-      title: 'CSR Generator',
-      icon: './themes/Yaru/apps/hash.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displaySshFingerprint,
-
-      screen: displayCsrGenerator,
-    },
-    {
-
-      id: 'meta-inspector',
-      title: 'Meta Inspector',
-      icon: './themes/Yaru/apps/kali-browser.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayMetaInspector,
-    },
-    {
-
-      id: 'nmap-viewer',
-      title: 'Nmap Viewer',
-      icon: './themes/Yaru/apps/resource-monitor.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayNmapViewer,
-    },
-    {
-      id: 'report-viewer',
-      title: 'Report Viewer',
-      icon: './themes/Yaru/apps/gedit.png',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayReportViewer,
-    },
-    {
-      id: 'sbom-viewer',
-      title: 'SBOM Viewer',
-      icon: './themes/Yaru/apps/gedit.png',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displaySbomViewer,
-
-      id: 'redirect-visualizer',
-      title: 'Redirect Visualizer',
-
-      id: 'http3-probe',
-      title: 'HTTP/3 Probe',
-      icon: './themes/Yaru/apps/resource-monitor.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayRedirectVisualizer,
-
-      screen: displayHttp3Probe,
-    },
-    // Games are included so they appear alongside apps
-    ...games,
-  ];
-
-
-
 export default apps;
