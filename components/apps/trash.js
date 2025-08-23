@@ -54,7 +54,7 @@ export class Trash extends Component {
         const children = e.currentTarget.children;
         if (children[0]) children[0].classList.toggle("opacity-60");
         // file name
-        if (children[1]) children[1].classList.toggle("bg-ub-orange");
+        if (children[1]) children[1].classList.toggle("bg-accent");
     }
 
     emptyTrash = () => {
@@ -105,8 +105,8 @@ export class Trash extends Component {
 
     render() {
         return (
-            <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
-                <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
+            <div className="w-full h-full flex flex-col bg-panel text-white select-none">
+                <div className="flex items-center justify-between w-full bg-warm bg-opacity-40 text-sm">
                     <span className="font-bold ml-2">Trash</span>
                     <div className="flex">
                         <div className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded text-gray-300">Restore</div>

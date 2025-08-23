@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EXIF Tool</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    #meta div { margin: 0.25rem 0; }
+    .highlight { color: green; font-weight: bold; }
+    #downloadBtn { margin-top: 1rem; }
+    #message { margin-top: 1rem; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>EXIF Tool</h1>
+  <input type="file" id="fileInput" accept="image/*" />
+  <div id="sizes"></div>
+  <div id="meta"></div>
+  <button id="downloadBtn" disabled>Download Scrubbed Image</button>
+  <div id="message"></div>
+  <a id="downloadLink" style="display:none"></a>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>

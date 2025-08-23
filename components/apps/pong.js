@@ -298,7 +298,7 @@ const Pong = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white">
       <canvas ref={canvasRef} width={600} height={400} className="bg-black" />
       <div className="mt-2">Player: {scores.player} | Opponent: {scores.opponent}</div>
 

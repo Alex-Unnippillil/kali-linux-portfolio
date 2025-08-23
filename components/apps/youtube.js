@@ -170,7 +170,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
   }, []);
 
   return (
-    <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
+    <div className="h-full w-full overflow-auto bg-panel text-white">
       {!apiKey && videos.length === 0 ? (
         <div className="p-2">
           <p>YouTube API key is not configured.</p>

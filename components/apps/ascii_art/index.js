@@ -223,7 +223,7 @@ export default function AsciiArt() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col p-4 bg-ub-cool-grey text-white overflow-auto">
+    <div className="h-full w-full flex flex-col p-4 bg-panel text-white overflow-auto">
       <div className="mb-2 flex flex-wrap gap-2">
         <input
           type="file"

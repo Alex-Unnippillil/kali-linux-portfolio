@@ -255,7 +255,7 @@ const Nonogram = () => {
 
   if (!started)
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4">
         <div className="flex mb-4 space-x-4">
           <textarea
             className="bg-gray-700 p-2"
@@ -322,7 +322,7 @@ const Nonogram = () => {
     );
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4 select-none">
       <div className="flex">
         <div className="flex flex-col mr-2 text-right">
           {rows.map((clue, i) => (

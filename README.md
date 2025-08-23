@@ -13,7 +13,7 @@ const MyApp = dynamic(() =>
     }), {
         ssr: false,
         loading: () => (
-            <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+            <div className="h-full w-full flex items-center justify-center bg-panel text-white">
                 Loading My App...
             </div>
         ),
@@ -27,13 +27,44 @@ const displayMyApp = (addFolder, openApp) => (
 
 Add the `displayMyApp` function to `apps.config.js` and reference it in the `apps` array to make the app available to the desktop.
 
+### Minimal Example
+
+1. **Create the component** in `components/apps/hello.tsx`:
+
+```tsx
+export default function Hello() {
+  return <div className="p-4">Hello world!</div>;
+}
+```
+
+2. **Register it** in `apps.config.js` with [`next/dynamic`](https://nextjs.org/docs/advanced-features/dynamic-import):
+
+```js
+import dynamic from 'next/dynamic';
+
+const HelloApp = dynamic(() => import('./components/apps/hello'), { ssr: false });
+
+const displayHello = (addFolder, openApp) => (
+  <HelloApp addFolder={addFolder} openApp={openApp} />
+);
+
+apps.push({
+  id: 'hello',
+  title: 'Hello',
+  icon: './themes/Yaru/apps/hello.png',
+  screen: displayHello,
+});
+```
+
+Keep new apps client-side only. If realtime or server-like features are needed, rely on a provider-based solution instead of adding backend logic.
+
 ## Adding New Games
 
 Games are organized in `apps.config.js` using a `games` array that mirrors the structure of the main `apps` list. Each game entry defines metadata such as an `id`, `title`, `icon`, and the component used to render the game.
 
 To introduce a new game:
 
-1. **Icon** – Add the game's icon to `public/themes/Yaru/apps/` and reference it with a relative path like `./themes/Yaru/apps/my-game.png`.
+1. **Icon** – Add the game's icon to `public/themes/Yaru/apps/` and reference it with the helper `icon('my-game.png')`.
 2. **Dynamic import** – Create the game component in `components/apps/` and load it with `next/dynamic` to keep the initial bundle small:
 
     ```js
@@ -44,7 +75,7 @@ To introduce a new game:
       }), {
         ssr: false,
         loading: () => (
-          <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+          <div className="h-full w-full flex items-center justify-center bg-panel text-white">
             Loading My Game...
           </div>
         ),
@@ -62,12 +93,19 @@ To introduce a new game:
     games.push({
       id: 'my-game',
       title: 'My Game',
-      icon: './themes/Yaru/apps/my-game.png',
+      icon: icon('my-game.png'),
       screen: displayMyGame,
     });
     ```
 
 The new game will then appear alongside the other games on the desktop.
+
+## Theme Selection
+
+Icon themes can be changed at runtime by setting the `NEXT_PUBLIC_THEME`
+environment variable. It should correspond to a directory inside
+`public/themes/`. When unspecified, the application defaults to the
+`Yaru` theme.
 
 ## Privacy
 

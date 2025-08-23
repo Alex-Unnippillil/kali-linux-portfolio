@@ -79,7 +79,7 @@ const ResourceMonitor = () => {
   }, []);
 
   return (
-    <div className="h-full w-full flex justify-evenly items-center bg-ub-cool-grey text-white">
+    <div className="h-full w-full flex justify-evenly items-center bg-panel text-white">
       <Gauge value={batteryLevel} label="Battery" />
       {cpuUsage !== null && <Gauge value={cpuUsage} label="CPU" />}
       <Gauge value={memoryUsage} label="Memory" />

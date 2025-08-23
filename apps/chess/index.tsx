@@ -214,7 +214,7 @@ const ChessApp: React.FC = () => {
   };
 
   return (
-    <div className="p-2 text-white bg-ub-cool-grey h-full w-full flex flex-col items-center">
+    <div className="p-2 text-white bg-panel h-full w-full flex flex-col items-center">
       {!user && (
         <button className="mb-2 px-2 py-1 bg-gray-700" onClick={login}>
           Login

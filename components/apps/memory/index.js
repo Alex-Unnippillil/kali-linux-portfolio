@@ -130,7 +130,7 @@ const Memory = () => {
   const cardSize = 64;
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 select-none overflow-auto">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-panel text-white p-4 select-none overflow-auto">
       <div className="mb-4 flex flex-wrap gap-2 items-center justify-center">
         <select
           className="bg-gray-700 px-2 py-1"
