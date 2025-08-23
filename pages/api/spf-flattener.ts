@@ -10,13 +10,20 @@ interface SPFNode {
   ips: string[];
 }
 
+interface DnsAnswer {
+  name: string;
+  type: number;
+  TTL: number;
+  data: string;
+}
+
 async function lookupSpf(domain: string): Promise<{ record: string; ttl: number } | null> {
   const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=TXT`;
   const res = await fetch(url, { headers: { Accept: 'application/dns-json' } });
   if (!res.ok) throw new Error('DNS query failed');
   const data = await res.json();
-  const answers = data.Answer || [];
-  const entry = answers.find((a: any) =>
+  const answers: DnsAnswer[] = data.Answer || [];
+  const entry = answers.find((a: DnsAnswer) =>
     String(a.data)
       .replace(/^"|"$/g, '')
       .replace(/"\s"/g, '')
