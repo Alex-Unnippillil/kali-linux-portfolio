@@ -37,11 +37,12 @@ const KeyConverter: React.FC = () => {
       } else {
         const b64 = key.replace(/\s+/g, '');
         const body = b64.match(/.{1,64}/g)?.join('\n') || '';
-        const pem = `-----BEGIN KEY-----\n${body}\n-----END KEY-----`;
+        const pkcs8Pem = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----`;
+        const spkiPem = `-----BEGIN PUBLIC KEY-----\n${body}\n-----END PUBLIC KEY-----`;
         try {
-          cryptoKey = await importPKCS8(pem, alg);
+          cryptoKey = await importPKCS8(pkcs8Pem, alg);
         } catch {
-          cryptoKey = await importSPKI(pem, alg);
+          cryptoKey = await importSPKI(spkiPem, alg);
         }
       }
 
