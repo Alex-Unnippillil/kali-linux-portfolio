@@ -8,6 +8,16 @@ import {
   getPuzzleBySeed,
 } from './nonogramUtils';
 
+const gaEvent = (params) => {
+  if (
+    typeof window !== 'undefined' &&
+    ReactGA &&
+    typeof ReactGA.event === 'function'
+  ) {
+    ReactGA.event(params);
+  }
+};
+
 const parseClues = (text) =>
   text
     .trim()
@@ -81,11 +91,15 @@ const Nonogram = () => {
     setStarted(true);
     startTime.current = Date.now();
     completed.current = false;
-    ReactGA.event({
-      category: 'nonogram',
-      action: 'puzzle_start',
-      label: `${r.length}x${c.length}`,
-    });
+    try {
+      gaEvent({
+        category: 'nonogram',
+        action: 'puzzle_start',
+        label: `${r.length}x${c.length}`,
+      });
+    } catch {
+      // ignore
+    }
   };
 
     const scheduleToggle = useCallback(
@@ -107,11 +121,15 @@ const Nonogram = () => {
               if (validateSolution(ng, rows, cols) && !completed.current) {
                 completed.current = true;
                 const time = Math.floor((Date.now() - startTime.current) / 1000);
-                ReactGA.event({
-                  category: 'nonogram',
-                  action: 'puzzle_complete',
-                  value: time,
-                });
+                try {
+                  gaEvent({
+                    category: 'nonogram',
+                    action: 'puzzle_complete',
+                    value: time,
+                  });
+                } catch {
+                  // ignore
+                }
               }
               return ng;
             });
@@ -143,18 +161,26 @@ const Nonogram = () => {
     }, []);
 
     const toggleMistakes = useCallback(() => {
-      ReactGA.event({
-        category: 'nonogram',
-        action: 'error_toggle',
-        value: showMistakes ? 0 : 1,
-      });
+      try {
+        gaEvent({
+          category: 'nonogram',
+          action: 'error_toggle',
+          value: showMistakes ? 0 : 1,
+        });
+      } catch {
+        // ignore
+      }
       setShowMistakes(!showMistakes);
     }, [showMistakes]);
 
     const handleHint = useCallback(() => {
       const h = findHint(rows, cols, grid);
       if (h) {
-        ReactGA.event({ category: 'nonogram', action: 'hint' });
+        try {
+          gaEvent({ category: 'nonogram', action: 'hint' });
+        } catch {
+          // ignore
+        }
         scheduleToggle(h.i, h.j, 'fill');
       } else {
         alert('No hints available');
