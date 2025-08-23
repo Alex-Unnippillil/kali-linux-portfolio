@@ -661,9 +661,7 @@ const apps = [
     screen: displayFaviconHash,
   },
   {
-    id: 'cve-dashboard',
-    title: 'CVE Dashboard',
-    icon: './themes/Yaru/apps/calc.png',
+    icon: icon('calc.png'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
