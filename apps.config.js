@@ -129,6 +129,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const WaybackViewerApp = createDynamicApp('wayback-viewer', 'Wayback Viewer');
+
 const RobotsAuditorApp = createDynamicApp('robots-auditor', 'Robots Auditor');
 
 const Ipv6SlaacApp = createDynamicApp('ipv6-slaac', 'IPv6 SLAAC');
@@ -234,6 +236,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayWaybackViewer = createDisplay(WaybackViewerApp);
+
 const displayRobotsAuditor = createDisplay(RobotsAuditorApp);
 
 
@@ -878,6 +882,7 @@ const apps = [
     screen: displaySqliteViewer,
 
 
+
     screen: displayPcapViewer,
   },
   {
@@ -907,8 +912,6 @@ const apps = [
     desktop_shortcut: false,
     screen: displayWeather,
   },
-
-
   {
     id: 'cookie-jar',
     title: 'Cookie Jar',
@@ -1012,6 +1015,16 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+
+    id: 'wayback-viewer',
+    title: 'Wayback Viewer',
+    icon: './themes/Yaru/apps/kali-browser.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWaybackViewer,
+  },
+
 
     id: 'robots-auditor',
     title: 'Robots Auditor',
@@ -1126,6 +1139,7 @@ const apps = [
     screen: displayDnssecValidator,
 
   },
+
 
 
   // Games are included so they appear alongside apps
@@ -1245,7 +1259,6 @@ const apps = [
     // Games are included so they appear alongside apps
     ...games,
   ];
-
 
 
 export default apps;
