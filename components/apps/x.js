@@ -9,7 +9,7 @@ const TwitterTimelineEmbed = dynamic(
 
 export default function XApp() {
   return (
-    <div className="h-full w-full overflow-auto bg-ub-cool-grey">
+    <div className="h-full w-full overflow-auto bg-panel">
       <TwitterTimelineEmbed
         sourceType="profile"
         screenName="AUnnippillil"

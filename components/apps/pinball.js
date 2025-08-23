@@ -107,7 +107,7 @@ const Pinball = () => {
   }, []);
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey">
+    <div className="h-full w-full flex items-center justify-center bg-panel">
       <canvas ref={canvasRef} width={400} height={500} className="bg-black" />
     </div>
   );

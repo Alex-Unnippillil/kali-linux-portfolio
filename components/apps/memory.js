@@ -107,7 +107,7 @@ const Memory = () => {
   const gridStyle = { gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4 select-none">
       <div className="mb-2 flex flex-wrap items-center justify-center space-x-4">
         <label className="flex items-center">
           Size

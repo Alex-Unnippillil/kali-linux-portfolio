@@ -117,7 +117,7 @@ const Blackjack = () => {
   const rec = showHints ? recommended() : '';
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4 select-none">
       <div className="mb-2">Bankroll: {bankroll}</div>
       <div className="mb-2">
         <button className="px-2 py-1 bg-gray-700" onClick={() => setShowHints(!showHints)}>

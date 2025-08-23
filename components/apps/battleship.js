@@ -114,7 +114,7 @@ const Battleship = () => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-panel text-white p-4 overflow-auto">
       <div className="mb-2">{message}</div>
       {phase==='placement' && (
         <div className="flex space-x-4">
