@@ -109,6 +109,8 @@ const FaviconHashApp = createDynamicApp('favicon-hash', 'Favicon Hash');
 
 const PcapViewerApp = createDynamicApp('pcap-viewer', 'PCAP Viewer');
 
+const SqliteViewerApp = createDynamicApp('sqlite-viewer', 'SQLite Viewer');
+
 const YaraTesterApp = createDynamicApp('yara-tester', 'YARA Tester');
 
 const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
@@ -197,6 +199,8 @@ const displayPinball = createDisplay(PinballApp);
 const displayFaviconHash = createDisplay(FaviconHashApp);
 
 const displayPcapViewer = createDisplay(PcapViewerApp);
+
+const displaySqliteViewer = createDisplay(SqliteViewerApp);
 
 const displayYaraTester = createDisplay(YaraTesterApp);
 
@@ -806,6 +810,17 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+  },
+  {
+    id: 'sqlite-viewer',
+    title: 'SQLite Viewer',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySqliteViewer,
+
+
     screen: displayPcapViewer,
   },
   {
