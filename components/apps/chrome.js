@@ -77,14 +77,14 @@ export class Chrome extends Component {
                         sizes="20px"
                     />
                 </div>
-                <input onKeyDown={this.checkKey} onChange={this.handleDisplayUrl} value={this.state.display_url} id="chrome-url-bar" className="outline-none bg-ub-grey rounded-full pl-3 py-0.5 mr-3 w-5/6 text-gray-300 focus:text-white" type="url" spellCheck={false} autoComplete="off" />
+                <input onKeyDown={this.checkKey} onChange={this.handleDisplayUrl} value={this.state.display_url} id="chrome-url-bar" className="outline-none bg-surface rounded-full pl-3 py-0.5 mr-3 w-5/6 text-gray-300 focus:text-white" type="url" spellCheck={false} autoComplete="off" />
             </div>
         );
     }
 
     render() {
         return (
-            <div className="h-full w-full flex flex-col bg-ub-grey">
+            <div className="h-full w-full flex flex-col bg-surface">
                 {this.displayUrlBar()}
                 <iframe src={this.state.url} className="flex-grow" id="chrome-screen" frameBorder="0" title="Kali Browser Url"></iframe>
             </div>

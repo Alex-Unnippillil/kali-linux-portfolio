@@ -198,7 +198,7 @@ const Simon = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4">
       <div className="grid grid-cols-2 gap-4 mb-4">
         {padStyles.map((pad, idx) => (
           <button

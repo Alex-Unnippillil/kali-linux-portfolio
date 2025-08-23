@@ -50,14 +50,14 @@ const Tetris = () => {
       cells.push(
         <div
           key={`${x}-${y}`}
-          className={`w-4 h-4 border border-gray-700 ${filled ? 'bg-blue-500' : 'bg-ub-cool-grey'}`}
+          className={`w-4 h-4 border border-gray-700 ${filled ? 'bg-blue-500' : 'bg-panel'}`}
         />
       );
     }
   }
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+    <div className="h-full w-full flex items-center justify-center bg-panel text-white">
       <div className="grid" style={{ gridTemplateColumns: `repeat(${WIDTH}, minmax(0, 1fr))` }}>
         {cells}
       </div>

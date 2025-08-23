@@ -316,7 +316,7 @@ const Sokoban = () => {
 
   return (
     <div
-      className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4"
+      className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4"
       tabIndex={0}
       onKeyDown={handleKeyDown}
       ref={containerRef}

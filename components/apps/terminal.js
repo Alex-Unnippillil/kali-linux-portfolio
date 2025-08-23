@@ -68,7 +68,7 @@ export class Terminal extends Component {
   childDirectories = parent => (
     <div className="flex justify-start flex-wrap">
         {this.child_directories[parent].map(file => (
-          <span key={file} className="font-bold mr-2 text-ubt-blue">&apos;{file}&apos;</span>
+          <span key={file} className="font-bold mr-2 text-blue">&apos;{file}&apos;</span>
         ))}
     </div>
   );
@@ -359,14 +359,14 @@ export class Terminal extends Component {
 
   render() {
     return (
-      <div className="h-full w-full bg-ub-cool-grey text-white text-sm font-bold" id="terminal-body">
+      <div className="h-full w-full bg-panel text-white text-sm font-bold" id="terminal-body">
         {this.state.history.map((item, idx) => (
           <React.Fragment key={idx}>
             <div className="flex w-full h-5">
               <div className="flex">
-                <div className="text-ubt-blue">alex@kali</div>
+                <div className="text-blue">alex@kali</div>
                 <div className="text-white mx-px font-medium">:</div>
-                <div className="text-ubt-blue">{item.directory}</div>
+                <div className="text-blue">{item.directory}</div>
                 <div className="text-white mx-px font-medium mr-1">$</div>
               </div>
               <pre className="flex-1 whitespace-pre-wrap">{item.command}</pre>
@@ -376,9 +376,9 @@ export class Terminal extends Component {
         ))}
         <div className="flex w-full h-5">
           <div className="flex">
-            <div className="text-ubt-blue">alex@kali</div>
+            <div className="text-blue">alex@kali</div>
             <div className="text-white mx-px font-medium">:</div>
-            <div className="text-ubt-blue">{this.state.currentDirectory}</div>
+            <div className="text-blue">{this.state.currentDirectory}</div>
             <div className="text-white mx-px font-medium mr-1">$</div>
           </div>
           <input

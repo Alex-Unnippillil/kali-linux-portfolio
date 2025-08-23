@@ -221,7 +221,7 @@ const Checkers = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4">
       <div className="mb-2 flex space-x-2 items-center">
         <select
           value={variant}

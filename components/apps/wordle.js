@@ -10,7 +10,7 @@ const Wordle = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 space-y-4">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4 space-y-4">
       <h1 className="text-xl font-bold">Wordle</h1>
       <form onSubmit={handleSubmit} className="flex space-x-2">
         <input
