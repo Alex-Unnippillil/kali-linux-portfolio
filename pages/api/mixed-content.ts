@@ -22,7 +22,7 @@ export default async function handler(
     target = `https://${target}`;
   }
 
-  let pageUrl: URLParse;
+  let pageUrl: any;
   try {
     pageUrl = new URLParse(target);
   } catch (e) {

@@ -22,13 +22,14 @@ interface DiffResult {
 }
 
 function escapeHtml(str: string): string {
-  return str.replace(/[&<>"']/g, (c) => ({
+  const map: Record<string, string> = {
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
     '"': '&quot;',
     "'": '&#39;',
-  })[c as keyof Record<string, string>]);
+  };
+  return str.replace(/[&<>"']/g, (c) => map[c] || c);
 }
 
 function renderSideBySide(diff: DiffPart[]) {

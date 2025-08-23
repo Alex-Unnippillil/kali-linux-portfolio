@@ -75,7 +75,7 @@ async function parseFile(name: string, buffer: ArrayBuffer): Promise<ParsedResul
 }
 
 const PrefetchJumplistApp: React.FC = () => {
-  const [results, setResults] = useState<ParsedResult & { name: string }[]>([]);
+  const [results, setResults] = useState<(ParsedResult & { name: string })[]>([]);
 
   const handleFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;

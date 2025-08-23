@@ -47,6 +47,7 @@ const SameSiteLab: React.FC = () => {
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const setLabCookie = () => {

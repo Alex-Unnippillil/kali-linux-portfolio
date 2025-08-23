@@ -11,24 +11,29 @@ const createDynamicApp = (path: string, name: string) =>
           return mod.default;
         })
         .catch((error) => {
-          ReactGA.exception({
-            description: `Failed to load ${name}: ${error.message}`,
-            fatal: false,
+          ReactGA.event({
+            category: 'Application',
+            action: `Failed to load ${name}`,
+            label: error.message,
           });
-          return () => (
-            <div className="h-full w-full flex items-center justify-center bg-panel text-white">
-              {`Failed to load ${name}.`}
-            </div>
-          );
+          return function DynamicAppError() {
+            return (
+              <div className="h-full w-full flex items-center justify-center bg-panel text-white">
+                {`Failed to load ${name}.`}
+              </div>
+            );
+          };
         }),
-    {
-      ssr: false,
-      loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-panel text-white">
-          {`Loading ${name}...`}
-        </div>
-      ),
-    }
-  );
+      {
+        ssr: false,
+      loading: function Loading() {
+        return (
+          <div className="h-full w-full flex items-center justify-center bg-panel text-white">
+            {`Loading ${name}...`}
+          </div>
+        );
+      },
+      }
+    );
 
 export default createDynamicApp;

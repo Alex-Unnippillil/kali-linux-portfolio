@@ -87,6 +87,10 @@ async function resolveSpf(
   return { node, allIps: uniqueIps, minTtl };
 }
 
+function buildFlattenedSpfRecord(ips: string[]): string {
+  return `v=spf1 ${ips.join(' ')} -all`;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse

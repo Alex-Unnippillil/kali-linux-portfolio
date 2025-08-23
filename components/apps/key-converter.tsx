@@ -25,14 +25,14 @@ const KeyConverter: React.FC = () => {
   const convert = async () => {
     try {
       setError('');
-      let cryptoKey;
+      let cryptoKey: CryptoKey;
       if (inputFormat === 'jwk') {
-        cryptoKey = await importJWK(JSON.parse(key), alg);
+        cryptoKey = (await importJWK(JSON.parse(key), alg)) as CryptoKey;
       } else if (inputFormat === 'pem') {
         try {
-          cryptoKey = await importPKCS8(key, alg);
+          cryptoKey = (await importPKCS8(key, alg)) as CryptoKey;
         } catch {
-          cryptoKey = await importSPKI(key, alg);
+          cryptoKey = (await importSPKI(key, alg)) as CryptoKey;
         }
       } else {
         const b64 = key.replace(/\s+/g, '');
@@ -40,9 +40,9 @@ const KeyConverter: React.FC = () => {
         const pkcs8Pem = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----`;
         const spkiPem = `-----BEGIN PUBLIC KEY-----\n${body}\n-----END PUBLIC KEY-----`;
         try {
-          cryptoKey = await importPKCS8(pkcs8Pem, alg);
+          cryptoKey = (await importPKCS8(pkcs8Pem, alg)) as CryptoKey;
         } catch {
-          cryptoKey = await importSPKI(spkiPem, alg);
+          cryptoKey = (await importSPKI(spkiPem, alg)) as CryptoKey;
         }
       }
 

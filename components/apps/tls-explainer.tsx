@@ -140,6 +140,4 @@ const TLSExplainer: React.FC = () => {
 
 export default TLSExplainer;
 
-export const displayTlsExplainer = (addFolder, openApp) => (
-  <TLSExplainer addFolder={addFolder} openApp={openApp} />
-);
+export const displayTlsExplainer = () => <TLSExplainer />;
