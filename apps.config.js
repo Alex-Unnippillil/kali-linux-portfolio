@@ -20,6 +20,7 @@ import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayMitreSelector } from './components/apps/mitre-selector';
 
 export const THEME = process.env.NEXT_PUBLIC_THEME || 'Yaru';
 export const icon = (name) => `./themes/${THEME}/apps/${name}`;
@@ -705,6 +706,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayThreatModeler,
+  },
+  {
+    id: 'mitre-selector',
+    title: 'MITRE Selector',
+    icon: './themes/Yaru/apps/threat-modeler.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMitreSelector,
   },
   // Games are included so they appear alongside apps
   ...games,
