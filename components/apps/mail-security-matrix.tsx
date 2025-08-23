@@ -39,9 +39,18 @@ const MailSecurityMatrix: React.FC = () => {
   };
 
   const issuers =
-    data?.caa?.Answer?.map((a) =>
-      String(a.data).split(' ')[2]?.replace(/"/g, '') || a.data
-    ) || [];
+    data?.caa?.Answer?.map((a) => {
+      // Robustly parse CAA record: flags tag value (value may be quoted and may contain spaces)
+      // Example: '0 issue "letsencrypt.org"'
+      const match = String(a.data).match(/^(\d+)\s+(\w+)\s+(.+)$/);
+      if (match) {
+        // Remove surrounding quotes from value if present
+        const value = match[3].replace(/^"(.*)"$/, '$1');
+        return value;
+      }
+      // Fallback: show raw data or indicate invalid record
+      return String(a.data);
+    }) || [];
   const mxHosts =
     data?.mx?.Answer?.map((a) =>
       String(a.data).split(' ').pop()?.replace(/\.$/, '') || a.data
