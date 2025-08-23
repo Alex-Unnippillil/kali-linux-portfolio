@@ -104,6 +104,7 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const MixedContentApp = createDynamicApp('mixed-content', 'Mixed Content');
 
 
 
@@ -160,6 +161,7 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayMixedContent = createDisplay(MixedContentApp);
  
 
 
@@ -658,10 +660,17 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayFaviconHash,
-
+  },
+  {
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
     icon: './themes/Yaru/apps/calc.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCveDashboard,
+  },
+  {
     id: 'pcap-viewer',
     title: 'PCAP Viewer',
     icon: './themes/Yaru/apps/pcap-viewer.svg',
@@ -669,7 +678,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayPcapViewer,
-
+  },
+  {
     id: 'yara-tester',
     title: 'YARA Tester',
     icon: './themes/Yaru/apps/bash.png',
@@ -685,10 +695,8 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayCveDashboard,
+    screen: displayWeather,
   },
-
-
   {
     id: 'mail-auth',
     title: 'Mail Auth',
@@ -697,7 +705,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayMailAuth,
-
+  },
+  {
     id: 'threat-modeler',
     title: 'Threat Modeler',
     icon: './themes/Yaru/apps/threat-modeler.svg',
@@ -705,6 +714,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayThreatModeler,
+  },
+  {
+    id: 'mixed-content',
+    title: 'Mixed Content',
+    icon: './themes/Yaru/apps/hash.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMixedContent,
   },
   // Games are included so they appear alongside apps
   ...games,
