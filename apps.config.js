@@ -122,6 +122,10 @@ const SqliteViewerApp = createDynamicApp('sqlite-viewer', 'SQLite Viewer');
 const YaraTesterApp = createDynamicApp('yara-tester', 'YARA Tester');
 
 const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
+const KillchainDiagramApp = createDynamicApp(
+  'killchain-diagram',
+  'Killchain Diagram'
+);
 
 const ContentFingerprintApp = createDynamicApp('content-fingerprint', 'Content Fingerprint');
 const SshFingerprintApp = createDynamicApp('ssh-fingerprint', 'SSH Fingerprint');
@@ -231,6 +235,7 @@ const displaySqliteViewer = createDisplay(SqliteViewerApp);
 const displayYaraTester = createDisplay(YaraTesterApp);
 
 const displayThreatModeler = createDisplay(ThreatModelerApp);
+const displayKillchainDiagram = createDisplay(KillchainDiagramApp);
 
 const displayContentFingerprint = createDisplay(ContentFingerprintApp);
 const displaySshFingerprint = createDisplay(SshFingerprintApp);
@@ -1021,12 +1026,17 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+    id: 'killchain-diagram',
+    title: 'Killchain Diagram',
+
     id: 'mitre-selector',
     title: 'MITRE Selector',
     icon: './themes/Yaru/apps/threat-modeler.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    screen: displayKillchainDiagram,
+  },
     screen: displayMitreSelector,
   },
 
