@@ -87,8 +87,8 @@ const ReportViewer: React.FC = () => {
         const idx = cells.findIndex((c) => /(critical|high|medium|low|info)/i.test(c));
         if (idx !== -1) {
           const severity = cells[idx].match(/(Critical|High|Medium|Low|Info)/i)?.[0] || cells[idx];
-          const type = cells[(idx + 1) % cells.length] || 'Unknown';
-          const description = cells[(idx + 2) % cells.length] || '';
+          const type = cells[idx + 1] !== undefined ? cells[idx + 1] : 'Unknown';
+          const description = cells[idx + 2] !== undefined ? cells[idx + 2] : '';
           findings.push({ description, severity, type });
         }
       }
