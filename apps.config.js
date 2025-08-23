@@ -85,6 +85,7 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const MailAuthApp = createDynamicApp('mail-auth', 'Mail Auth');
+const DnssecValidatorApp = createDynamicApp('dnssec-validator', 'DNSSEC Validator');
 
 const CveDashboardApp = createDynamicApp('cve-dashboard', 'CVE Dashboard');
 
@@ -141,6 +142,7 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayMailAuth = createDisplay(MailAuthApp);
+const displayDnssecValidator = createDisplay(DnssecValidatorApp);
 
 const displayCveDashboard = createDisplay(CveDashboardApp);
 
@@ -705,6 +707,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayThreatModeler,
+  },
+  {
+    id: 'dnssec-validator',
+    title: 'DNSSEC Validator',
+    icon: './themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDnssecValidator,
   },
   // Games are included so they appear alongside apps
   ...games,
