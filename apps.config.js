@@ -26,6 +26,8 @@ import { displayImportGraph } from './components/apps/import-graph';
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
 
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayBaseEncoders } from './components/apps/base-encoders';
+
 import { displayDgaDemo } from './components/apps/dga-demo';
 
 import { displayEvidenceNotebook } from './components/apps/evidence-notebook';
@@ -926,6 +928,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayPcreRe2Lab,
+  },
+  {
+    id: 'base-encoders',
+    title: 'Base Encoders',
+    icon: icon('hash.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBaseEncoders,
   },
   {
     id: 'favicon-hash',

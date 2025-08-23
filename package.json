@@ -21,8 +21,12 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/zxcvbn": "^4.4.5",
     "@vercel/analytics": "^1.5.0",
+    "ascii85": "^1.0.2",
     "autoprefixer": "^10.4.13",
     "bad-words": "^3.0.4",
+    "bech32": "^2.0.0",
+    "bs58": "^6.0.0",
+
     "bplist-parser": "^0.3.2",
     "cannon-es": "^0.20.0",
     "canvas-confetti": "1.9.3",

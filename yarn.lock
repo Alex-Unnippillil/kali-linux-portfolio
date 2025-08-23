@@ -9742,6 +9742,34 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ascii85@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "ascii85@npm:1.0.2"
+  checksum: 10c0/9258b022d40bf1ab9e2f2d97c060d173a53814bad9b922af73735885a4e7504b25f098e392f30d609d96981a199d460c133ea7bd9f721a1aeea2e7da55c3409f
+  languageName: node
+  linkType: hard
+
+"base-x@npm:^5.0.0":
+  version: 5.0.1
+  resolution: "base-x@npm:5.0.1"
+  checksum: 10c0/33bba2a3c66dfbe7a0de33e3fab1cc7c20be22eca04071c2394f8862c56d8a4e855a3b98a55b7ff8c44a720b0030787c98c140c2707e06cfa64eb1625e33332a
+  languageName: node
+  linkType: hard
+
+"bech32@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "bech32@npm:2.0.0"
+  checksum: 10c0/2dc9274a29612066ad0c0b18d5a93623c56d19a1cd860312615c45ac62d7bfec4b1f2b5a29929c694249504eea981afb877de8e584303f9e69308d319a4a49c2
+  languageName: node
+  linkType: hard
+
+"bs58@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "bs58@npm:6.0.0"
+  dependencies:
+    base-x: "npm:^5.0.0"
+  checksum: 10c0/3c3d3012711883a8a3b33c3fbbcb3e888dc7d7b713ca696bc242a10e13d9abe4a8925dc053886dc811538c078d0250829a0d1fe7783a8a1de3013c8229fb537f
+
 "re2-wasm@npm:^1.0.2":
   version: 1.0.2
   resolution: "re2-wasm@npm:1.0.2"
