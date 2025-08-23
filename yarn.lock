@@ -9742,6 +9742,11 @@ __metadata:
   languageName: node
   linkType: hard
 
+"jose@npm:^5.2.3":
+  version: 5.2.3
+  resolution: "jose@npm:5.2.3"
+  checksum: 10c0/2945dd6dcb66d6e1d52fc058867c87920a77cc35f9296f198402951447d46d4d8ff00969ce36fee3c847be339d408c8fb21a1b961cecbaa3b010401bb47562ac
+
 "cvss@npm:^1.0.5":
   version: 1.0.5
   resolution: "cvss@npm:1.0.5"
