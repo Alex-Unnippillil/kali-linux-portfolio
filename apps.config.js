@@ -20,6 +20,7 @@ import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displaySpfFlattener } from './components/apps/spf-flattener';
 
 export const THEME = process.env.NEXT_PUBLIC_THEME || 'Yaru';
 export const icon = (name) => `./themes/${THEME}/apps/${name}`;
@@ -687,6 +688,16 @@ const apps = [
     desktop_shortcut: false,
     screen: displayCveDashboard,
   },
+  {
+    id: 'spf-flattener',
+    title: 'SPF Flattener',
+    icon: './themes/Yaru/apps/spf-flattener.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySpfFlattener,
+  },
+
 
 
   {
