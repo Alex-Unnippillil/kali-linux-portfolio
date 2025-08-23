@@ -148,6 +148,8 @@ const Http3ProbeApp = createDynamicApp('http3-probe', 'HTTP/3 Probe');
 
 const CspReporterApp = createDynamicApp('csp-reporter', 'CSP Reporter');
 
+const IpDnsLeakApp = createDynamicApp('ip-dns-leak', 'IP/DNS Leak');
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -208,6 +210,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayIpDnsLeak = createDisplay(IpDnsLeakApp);
+
 const displayIpv6Slaac = createDisplay(Ipv6SlaacApp);
 
 const displayAsnExplorer = createDisplay(AsnExplorerApp);
@@ -642,6 +646,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'ip-dns-leak',
+    title: 'IP/DNS Leak',
+    icon: icon('resource-monitor.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayIpDnsLeak,
   },
   {
     id: 'project-gallery',
