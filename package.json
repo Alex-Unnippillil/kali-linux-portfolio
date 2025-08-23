@@ -38,10 +38,7 @@
     "cvss": "^1.0.5",
 
     "diff": "^8.0.2",
-    "fast-xml-parser": "^4.4.2",
-
     "eml-format": "^0.6.1",
-
     "expr-eval": "^2.0.2",
     "fast-xml-parser": "^5.2.5",
     "html-to-image": "^1.11.13",
@@ -49,10 +46,6 @@
     "jose": "^6.0.13",
     "jspdf": "^2.5.1",
     "jszip": "^3.10.1",
-
-    "jose": "^5.2.3",
-
-    "cheerio": "^1.1.2",
     "libyara-wasm": "^1.2.1",
     "matter-js": "^0.20.0",
     "mermaid": "^11.10.1",
