@@ -19,6 +19,7 @@ import { displayRegexRedactor } from './components/apps/regex-redactor';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
+import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
 import { displayCaaChecker } from './components/apps/caa-checker';
 
@@ -674,6 +675,13 @@ const apps = [
     screen: displayQuoteGenerator,
   },
   {
+    id: 'cvss-calculator',
+    title: 'CVSS Calculator',
+    icon: icon('calc.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCvssCalculator,
     id: 'caa-checker',
     title: 'CAA Checker',
     icon: icon('mail-auth.svg'),
