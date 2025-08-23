@@ -76,8 +76,12 @@ const CSRGenerator: React.FC = () => {
       setPrivateKeyPem(privPem);
       setPublicKeyPem(pubPem);
       setError('');
-    } catch (err: any) {
-      setError(err.message || String(err));
+    } catch (err: unknown) {
+      if (typeof err === 'object' && err !== null && 'message' in err && typeof (err as any).message === 'string') {
+        setError((err as { message: string }).message);
+      } else {
+        setError(String(err));
+      }
     }
   };
 
