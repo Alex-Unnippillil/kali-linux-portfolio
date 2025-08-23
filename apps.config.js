@@ -19,6 +19,7 @@ import { displayRegexRedactor } from './components/apps/regex-redactor';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
+import { displayImportGraph } from './components/apps/import-graph';
 import { displayProjectGallery } from './components/apps/project-gallery';
 
 export const THEME = process.env.NEXT_PUBLIC_THEME || 'Yaru';
@@ -649,6 +650,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'import-graph',
+    title: 'Import Graph',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayImportGraph,
   },
   {
     id: 'favicon-hash',
