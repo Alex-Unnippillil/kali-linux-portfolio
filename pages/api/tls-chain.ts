@@ -32,8 +32,8 @@ function formatCert(cert: PeerCertificate): FormattedCert {
   const daysRemaining = Math.round((validTo.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 
   return {
-    subject: cert.subject || {},
-    issuer: cert.issuer || {},
+    subject: (cert.subject as unknown as Record<string, string>) || {},
+    issuer: (cert.issuer as unknown as Record<string, string>) || {},
     san,
     validFrom: validFrom.toISOString(),
     validTo: validTo.toISOString(),
@@ -57,7 +57,9 @@ function collectChain(cert: PeerCertificate): PeerCertificate[] {
 
 function getTLSInfo(host: string, port: number): Promise<any> {
   return new Promise((resolve, reject) => {
-    const socket = tls.connect({ host, port, servername: host, rejectUnauthorized: false, requestOCSP: true }, () => {
+    const socket = tls.connect(
+      { host, port, servername: host, rejectUnauthorized: false, requestOCSP: true } as any,
+      () => {
       try {
         const peer = socket.getPeerCertificate(true);
         const chain = collectChain(peer).map(formatCert);

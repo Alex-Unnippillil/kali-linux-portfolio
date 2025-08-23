@@ -42,7 +42,7 @@ const Snake: React.FC = () => {
   const [highScore, setHighScore] = useState(0);
   const [theme, setTheme] = useState<ThemeName>('classic');
 
-  const audioCtx = useRef<AudioContext>();
+  const audioCtx = useRef<AudioContext | null>(null);
   const playSound = useCallback((type: 'eat' | 'die') => {
     if (typeof window === 'undefined') return;
     if (!audioCtx.current) {

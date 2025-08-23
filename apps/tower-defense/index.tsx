@@ -8,7 +8,7 @@ const SIZE = 10;
 const TowerDefense: React.FC = () => {
   const [map, setMap] = useState<MapData>(() => createEmptyMap(SIZE));
   const [enemies, setEnemies] = useState<Enemy[]>([]);
-  const workerRef = useRef<Worker>();
+  const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('./waveWorker.ts', import.meta.url), {

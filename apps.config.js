@@ -981,10 +981,7 @@ const apps = [
 
 
 
-
-
     icon: icon('calc.png'),
-
 
 
     id: 'cve-dashboard',
@@ -1157,6 +1154,7 @@ const apps = [
 
   },
 
+
   {
     id: 'mail-auth',
     title: 'Mail Auth',
@@ -1180,7 +1178,6 @@ const apps = [
     screen: displayMailSecurityMatrix,
   },
   {
-
 
     id: 'threat-modeler',
     title: 'Threat Modeler',

@@ -43,7 +43,10 @@ const WordSearch: React.FC = () => {
     fetch('/wordlists/packs.json')
       .then((res) => res.json())
       .then((data) => {
-        const arr = Object.entries(data).map(([id, name]) => ({ id, name }));
+        const arr = Object.entries(data as Record<string, string>).map(([id, name]) => ({
+          id,
+          name,
+        }));
         setPacks(arr);
         if (arr.length) setTheme(arr[0].id);
       });

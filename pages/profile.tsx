@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 interface Stats {
   wins: number;
@@ -12,7 +12,7 @@ const Profile: React.FC = () => {
   const [token, setToken] = useState('');
   const [stats, setStats] = useState<Stats | null>(null);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     if (!token) return;
     const res = await fetch(`/api/users/${userId}/blackjack`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -20,11 +20,11 @@ const Profile: React.FC = () => {
     if (res.ok) {
       setStats(await res.json());
     }
-  };
+  }, [token, userId]);
 
   useEffect(() => {
     fetchStats();
-  }, [token]);
+  }, [fetchStats]);
 
   return (
     <div className="p-4" aria-label="Profile dashboard">

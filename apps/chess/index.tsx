@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Chess } from 'chess.js';
-import Stockfish from 'stockfish';
+import { Chess, Square, PieceSymbol, Piece } from 'chess.js';
 
-const pieceUnicode: Record<string, { w: string; b: string }> = {
+const pieceUnicode: Record<PieceSymbol, { w: string; b: string }> = {
   p: { w: '♙', b: '♟' },
   r: { w: '♖', b: '♜' },
   n: { w: '♘', b: '♞' },
@@ -38,7 +37,7 @@ const ChessApp: React.FC = () => {
   const [blunder, setBlunder] = useState(false);
   const [user, setUser] = useState<User | null>(loadUser);
 
-  const engine = useRef<any>();
+  const engine = useRef<any>(null);
   const lastEval = useRef<number>(0);
 
   // Puzzle state
@@ -52,9 +51,17 @@ const ChessApp: React.FC = () => {
   const openingsRef = useRef<string[][] | null>(null);
 
   useEffect(() => {
-    engine.current = Stockfish();
-    engine.current.postMessage('uci');
+    let mounted = true;
+    (async () => {
+      const StockfishModule: any = await import(
+        /* webpackIgnore: true */ 'stockfish/src/stockfish-nnue-16.js'
+      );
+      if (!mounted) return;
+      engine.current = StockfishModule();
+      engine.current.postMessage('uci');
+    })();
     return () => {
+      mounted = false;
       if (engine.current) engine.current.terminate();
     };
   }, []);
@@ -64,7 +71,7 @@ const ChessApp: React.FC = () => {
   };
 
   const updateStatus = () => {
-    if (game.in_checkmate()) {
+    if (game.isCheckmate()) {
       setStatus('Checkmate');
       if (user) {
         const history = [...user.history, game.pgn()];
@@ -73,7 +80,7 @@ const ChessApp: React.FC = () => {
         setUser(newUser);
         saveUser(newUser);
       }
-    } else if (game.in_draw()) setStatus('Draw');
+    } else if (game.isDraw()) setStatus('Draw');
     else setStatus(game.turn() === 'w' ? 'Your move' : 'Waiting');
   };
 
@@ -101,7 +108,7 @@ const ChessApp: React.FC = () => {
   const handleSquareClick = (file: number, rank: number) => {
     const square = 'abcdefgh'[file] + (8 - rank);
     if (selected) {
-      const move = game.move({ from: selected, to: square, promotion: 'q' });
+      const move = game.move({ from: selected as Square, to: square as Square, promotion: 'q' });
       if (move) {
         setSelected(null);
         setHighlight([]);
@@ -121,14 +128,14 @@ const ChessApp: React.FC = () => {
         }
       } else {
         setSelected(square);
-        const moves = game.moves({ square, verbose: true });
+        const moves = game.moves({ square: square as Square, verbose: true });
         setHighlight(moves.map((m) => m.to));
       }
     } else {
-      const piece = game.get(square);
+      const piece: Piece | undefined = game.get(square as Square);
       if (piece && piece.color === game.turn()) {
         setSelected(square);
-        const moves = game.moves({ square, verbose: true });
+        const moves = game.moves({ square: square as Square, verbose: true });
         setHighlight(moves.map((m) => m.to));
       }
     }
@@ -208,7 +215,7 @@ const ChessApp: React.FC = () => {
           isSelected ? 'ring-2 ring-yellow-400' : ''
         } ${isHighlight ? 'bg-green-500 bg-opacity-50' : ''}`}
       >
-        {piece ? pieceUnicode[piece.type][piece.color] : ''}
+        {piece ? pieceUnicode[piece.type as PieceSymbol][piece.color as 'w' | 'b'] : ''}
       </div>
     );
   };

@@ -22,7 +22,7 @@ const YaraTester: React.FC = () => {
   useEffect(() => {
     let mounted = true;
     if (typeof window !== 'undefined') {
-      import('libyara-wasm')
+      import(/* webpackIgnore: true */ 'libyara-wasm')
         .then((m) => (m.default ? m.default() : m()))
         .then((mod) => {
           if (mounted) setYara(mod);

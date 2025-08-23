@@ -103,7 +103,7 @@ const Checkers = () => {
     const makeMove = (move: Move) => {
     if (pathRef.current.length === 0) pathRef.current = [move.from, move.to];
     else pathRef.current.push(move.to);
-    const { board: newBoard, capture, king } = applyMove(board, move);
+    const { board: newBoard, capture, king } = applyMove(board, move, config);
     const further = capture
       ? getPieceMoves(newBoard, move.to[0], move.to[1], config).filter((m) => m.captured)
       : [];

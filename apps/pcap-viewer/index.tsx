@@ -14,7 +14,8 @@ const PcapViewer: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    import('./pcap-wasm/pkg/pcap_wasm.js').then(async (mod) => {
+    // @ts-ignore - WASM module is generated at build time
+    import(/* webpackIgnore: true */ './pcap-wasm/pkg/pcap_wasm.js').then(async (mod) => {
       await mod.default();
       setParser(() => mod.parse_pcap);
     });

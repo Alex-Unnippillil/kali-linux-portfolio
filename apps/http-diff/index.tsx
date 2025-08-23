@@ -28,7 +28,7 @@ function escapeHtml(str: string): string {
     '>': '&gt;',
     '"': '&quot;',
     "'": '&#39;',
-  })[c as keyof Record<string, string>]);
+  })[c as keyof Record<string, string>] ?? c);
 }
 
 function renderSideBySide(diff: DiffPart[]) {

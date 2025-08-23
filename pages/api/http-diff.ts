@@ -14,7 +14,7 @@ const MAX_REDIRECTS = 10;
 async function fetchWithRedirects(url: string): Promise<FetchResult> {
   const redirects: { url: string; status: number }[] = [];
   let current = url;
-  let response: Response;
+  let response: Response | null = null;
 
   for (let i = 0; i < MAX_REDIRECTS; i += 1) {
     response = await fetch(current, { redirect: 'manual' });
@@ -27,6 +27,7 @@ async function fetchWithRedirects(url: string): Promise<FetchResult> {
     }
   }
 
+  if (!response) throw new Error('No response');
   const body = await response.text();
   const headers = Object.fromEntries(response.headers.entries());
 
