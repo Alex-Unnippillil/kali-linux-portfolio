@@ -104,6 +104,7 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const SitemapHeatmapApp = createDynamicApp('sitemap-heatmap', 'Sitemap Heatmap');
 
 
 
@@ -160,6 +161,7 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+const displaySitemapHeatmap = createDisplay(SitemapHeatmapApp);
  
 
 
@@ -686,6 +688,16 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayCveDashboard,
+  },
+
+  {
+    id: 'sitemap-heatmap',
+    title: 'Sitemap Heatmap',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySitemapHeatmap,
   },
 
 
