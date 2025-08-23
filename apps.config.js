@@ -85,6 +85,8 @@ const PinballApp = createDynamicApp('pinball', 'Pinball');
 const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
 
 const ContentFingerprintApp = createDynamicApp('content-fingerprint', 'Content Fingerprint');
+const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
+
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 
 
@@ -129,6 +131,8 @@ const displayPinball = createDisplay(PinballApp);
 const displayThreatModeler = createDisplay(ThreatModelerApp);
 
 const displayContentFingerprint = createDisplay(ContentFingerprintApp);
+const displayReportViewer = createDisplay(ReportViewerApp);
+
 const displayCookieJar = createDisplay(CookieJarApp);
 
 
@@ -658,6 +662,15 @@ const apps = [
       favourite: false,
       desktop_shortcut: false,
       screen: displayContentFingerprint,
+    },
+    {
+      id: 'report-viewer',
+      title: 'Report Viewer',
+      icon: './themes/Yaru/apps/gedit.png',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayReportViewer,
     },
     // Games are included so they appear alongside apps
     ...games,
