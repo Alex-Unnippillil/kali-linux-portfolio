@@ -45,8 +45,12 @@ export default async function handler(
       cd: data.CD ?? 0,
       status: statusText,
     });
-  } catch (e: any) {
-    return res.status(500).json({ ok: false, error: e.message || 'Request failed' });
+  } catch (e: unknown) {
+    let errorMessage = 'Request failed';
+    if (e instanceof Error) {
+      errorMessage = e.message;
+    }
+    return res.status(500).json({ ok: false, error: errorMessage });
   }
 }
 
