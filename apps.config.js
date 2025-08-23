@@ -22,6 +22,8 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayEvidenceNotebook } from './components/apps/evidence-notebook';
+
 import { displayExploitExplainer } from './components/apps/exploit-explainer';
 
 import { displayMitreSelector } from './components/apps/mitre-selector';
@@ -850,6 +852,15 @@ const apps = [
     screen: displayCtSearch,
   },
 
+  {
+    id: 'evidence-notebook',
+    title: 'Evidence Notebook',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEvidenceNotebook,
+  },
   {
     id: 'favicon-hash',
     title: 'Favicon Hash',
