@@ -101,7 +101,7 @@ class DynamicAppErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error) {
-    ReactGA.exception({
+    ReactGA.event('exception', {
       description: `Dynamic app render error: ${error.message}`,
       fatal: false,
     });
