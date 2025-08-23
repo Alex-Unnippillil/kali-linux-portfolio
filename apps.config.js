@@ -83,6 +83,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const ContentFingerprintApp = createDynamicApp('content-fingerprint', 'Content Fingerprint');
+const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -123,6 +124,7 @@ const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
 const displayContentFingerprint = createDisplay(ContentFingerprintApp);
+const displayCookieJar = createDisplay(CookieJarApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -611,6 +613,15 @@ const apps = [
       favourite: false,
       desktop_shortcut: false,
       screen: displayWeather,
+    },
+    {
+      id: 'cookie-jar',
+      title: 'Cookie Jar',
+      icon: './themes/Yaru/apps/cookie-jar.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayCookieJar,
     },
     {
       id: 'content-fingerprint',
