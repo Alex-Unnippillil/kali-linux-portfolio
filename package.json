@@ -30,6 +30,7 @@
     "diff": "^8.0.2",
     "expr-eval": "^2.0.2",
     "html-to-image": "^1.11.13",
+    "jose": "^5.2.3",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.1",
     "libyara-wasm": "^1.2.1",
