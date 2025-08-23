@@ -78,6 +78,7 @@
     "react-github-calendar": "^4.5.9",
     "react-onclickoutside": "^6.12.2",
     "react-twitter-embed": "^4.0.4",
+    "re2-wasm": "^1.0.2",
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",
     "stockfish": "^16.0.0",

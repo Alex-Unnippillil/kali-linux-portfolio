@@ -9742,6 +9742,11 @@ __metadata:
   languageName: node
   linkType: hard
 
+"re2-wasm@npm:^1.0.2":
+  version: 1.0.2
+  resolution: "re2-wasm@npm:1.0.2"
+  checksum: 10c0/55751d812894ac4fd66579fa814215548b20d3e1e9e953d93ce68709acbe3ae14acbabbff24b6678d11ff94e6a480f23cc6185b20f23ac336ed41787a73da924
+
 "jose@npm:^5.2.3":
   version: 5.2.3
   resolution: "jose@npm:5.2.3"

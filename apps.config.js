@@ -24,6 +24,7 @@ import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayImportGraph } from './components/apps/import-graph';
 
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
+
 import { displayProjectGallery } from './components/apps/project-gallery';
 import { displayDgaDemo } from './components/apps/dga-demo';
 
@@ -123,6 +124,7 @@ const CveDashboardApp = createDynamicApp('cve-dashboard', 'CVE Dashboard');
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const FaviconHashApp = createDynamicApp('favicon-hash', 'Favicon Hash');
+const PcreRe2LabApp = createDynamicApp('pcre-re2-lab', 'PCRE RE2 Lab');
 
 const PcapViewerApp = createDynamicApp('pcap-viewer', 'PCAP Viewer');
 
@@ -247,6 +249,7 @@ const displayCveDashboard = createDisplay(CveDashboardApp);
 const displayGomoku = createDisplay(GomokuApp);
 const displayPinball = createDisplay(PinballApp);
 const displayFaviconHash = createDisplay(FaviconHashApp);
+const displayPcreRe2Lab = createDisplay(PcreRe2LabApp);
 
 const displayPcapViewer = createDisplay(PcapViewerApp);
 
@@ -916,6 +919,15 @@ const apps = [
     screen: displayImportGraph,
   },
   {
+    id: 'pcre-re2-lab',
+    title: 'PCRE RE2 Lab',
+    icon: './themes/Yaru/apps/regex-redactor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPcreRe2Lab,
+  },
+  {
     id: 'favicon-hash',
     title: 'Favicon Hash',
     icon: './themes/Yaru/apps/hash.svg',
@@ -928,7 +940,9 @@ const apps = [
 
 
 
+
     icon: icon('calc.png'),
+
 
 
     id: 'cve-dashboard',
@@ -957,9 +971,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displaySqliteViewer,
-
-
-
 
     screen: displayPcapViewer,
   },
@@ -1033,6 +1044,18 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayNmapViewer,
+
+  },
+  {
+    id: 'report-viewer',
+    title: 'Report Viewer',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReportViewer,
+  },
+
   },
   {
     id: 'report-viewer',
@@ -1100,6 +1123,7 @@ const apps = [
     screen: displayMailAuth,
   },
   {
+
 
 
 
@@ -1280,6 +1304,7 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
+
 
 
     {
