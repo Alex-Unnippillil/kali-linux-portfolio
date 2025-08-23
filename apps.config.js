@@ -22,6 +22,8 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayMitreSelector } from './components/apps/mitre-selector';
+
 import { displayFileSignature } from './components/apps/file-signature';
 
 import { displayPlistInspector } from './components/apps/plist-inspector';
@@ -1019,6 +1021,15 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+    id: 'mitre-selector',
+    title: 'MITRE Selector',
+    icon: './themes/Yaru/apps/threat-modeler.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMitreSelector,
+  },
+
     id: 'tor-exit-check',
     title: 'Tor Exit Check',
 
