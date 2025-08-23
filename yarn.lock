@@ -8319,16 +8319,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-onclickoutside@npm:^6.12.2":
-  version: 6.13.2
-  resolution: "react-onclickoutside@npm:6.13.2"
-  peerDependencies:
-    react: ^15.5.x || ^16.x || ^17.x || ^18.x
-    react-dom: ^15.5.x || ^16.x || ^17.x || ^18.x
-  checksum: 10c0/fafe6fd036729d7e8f6b5d59046aa0dbc7b547269e167f3c7ab3fa30508ce768133ad46654014449bc1a697d1473bad78a1b869071bd81256c89f225c7c4f2ed
-  languageName: node
-  linkType: hard
-
 "react-twitter-embed@npm:^4.0.4":
   version: 4.0.4
   resolution: "react-twitter-embed@npm:4.0.4"
@@ -9819,7 +9809,6 @@ __metadata:
     react-draggable: "npm:^4.4.5"
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
-    react-onclickoutside: "npm:^6.12.2"
     react-twitter-embed: "npm:^4.0.4"
     socket.io: "npm:^4.7.5"
     socket.io-client: "npm:^4.7.5"

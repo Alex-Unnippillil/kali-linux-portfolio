@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
 import SmallArrow from './small_arrow';
-import onClickOutside from 'react-onclickoutside';
+// React 19 removed findDOMNode, so handle outside clicks without relying on
+// libraries that call it (e.g. react-onclickoutside).
 
 class Slider extends Component {
 	render() {
@@ -29,18 +30,30 @@ export class StatusCard extends Component {
 			brightness_level: 100 // setting default value to 100 so that by default its always full.
 		};
 	}
-	handleClickOutside = () => {
-		this.props.toggleVisible();
-	};
-	componentDidMount() {
-		this.setState({
-			sound_level: localStorage.getItem('sound-level') || 75,
-			brightness_level: localStorage.getItem('brightness-level') || 100
-		}, () => {
-			document.getElementById('monitor-screen').style.filter = `brightness(${3 / 400 * this.state.brightness_level +
-				0.25})`;
-		})
-	}
+        handleClickOutside = (event) => {
+                if (
+                        this.wrapperRef.current &&
+                        !this.wrapperRef.current.contains(event.target)
+                ) {
+                        this.props.toggleVisible();
+                }
+        };
+        componentDidMount() {
+                document.addEventListener('mousedown', this.handleClickOutside);
+                document.addEventListener('touchstart', this.handleClickOutside);
+                this.setState({
+                        sound_level: localStorage.getItem('sound-level') || 75,
+                        brightness_level: localStorage.getItem('brightness-level') || 100
+                }, () => {
+                        document.getElementById('monitor-screen').style.filter = `brightness(${(3 / 400) * this.state.brightness_level +
+                                0.25})`;
+                });
+        }
+
+        componentWillUnmount() {
+                document.removeEventListener('mousedown', this.handleClickOutside);
+                document.removeEventListener('touchstart', this.handleClickOutside);
+        }
 
 	handleBrightness = (e) => {
 		this.setState({ brightness_level: e.target.value });
@@ -208,4 +221,4 @@ export class StatusCard extends Component {
 	}
 }
 
-export default onClickOutside(StatusCard);
+export default StatusCard;
