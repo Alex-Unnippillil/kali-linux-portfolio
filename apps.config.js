@@ -105,6 +105,7 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 
+const CachePolicyApp = createDynamicApp('cache-policy', 'Cache Policy');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -160,7 +161,8 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
- 
+
+const displayCachePolicy = createDisplay(CachePolicyApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -727,6 +729,15 @@ const apps = [
       favourite: false,
       desktop_shortcut: false,
       screen: displayCookieJar,
+    },
+    {
+      id: 'cache-policy',
+      title: 'Cache Policy',
+      icon: './themes/Yaru/apps/gedit.png',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayCachePolicy,
     },
     {
       id: 'content-fingerprint',
