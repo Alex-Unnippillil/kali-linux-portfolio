@@ -137,7 +137,10 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
+const LicenseClassifierApp = createDynamicApp('license-classifier', 'License Classifier');
+
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
+
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 const TorExitCheckApp = createDynamicApp('tor-exit-check', 'Tor Exit Check');
 
@@ -246,7 +249,10 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 
 const displayReportViewer = createDisplay(ReportViewerApp);
 
+const displayLicenseClassifier = createDisplay(LicenseClassifierApp);
+
 const displayHstsPreload = createDisplay(HstsPreloadApp);
+
 const displayCookieJar = createDisplay(CookieJarApp);
 
 const displayTorExitCheck = createDisplay(TorExitCheckApp);
@@ -792,6 +798,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayAsciiArt,
+  },
+  {
+    id: 'license-classifier',
+    title: 'License Classifier',
+    icon: icon('gedit.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayLicenseClassifier,
   },
   {
     id: 'quote-generator',
