@@ -97,6 +97,10 @@ const PcapViewerApp = createDynamicApp('pcap-viewer', 'PCAP Viewer');
 const YaraTesterApp = createDynamicApp('yara-tester', 'YARA Tester');
 
 const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
+const KillchainDiagramApp = createDynamicApp(
+  'killchain-diagram',
+  'Killchain Diagram'
+);
 
 const ContentFingerprintApp = createDynamicApp('content-fingerprint', 'Content Fingerprint');
 const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
@@ -153,6 +157,7 @@ const displayPcapViewer = createDisplay(PcapViewerApp);
 const displayYaraTester = createDisplay(YaraTesterApp);
 
 const displayThreatModeler = createDisplay(ThreatModelerApp);
+const displayKillchainDiagram = createDisplay(KillchainDiagramApp);
 
 const displayContentFingerprint = createDisplay(ContentFingerprintApp);
 const displayNmapViewer = createDisplay(NmapViewerApp);
@@ -697,7 +702,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayMailAuth,
-
+  },
+  {
     id: 'threat-modeler',
     title: 'Threat Modeler',
     icon: './themes/Yaru/apps/threat-modeler.svg',
@@ -705,6 +711,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayThreatModeler,
+  },
+  {
+    id: 'killchain-diagram',
+    title: 'Killchain Diagram',
+    icon: './themes/Yaru/apps/threat-modeler.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKillchainDiagram,
   },
   // Games are included so they appear alongside apps
   ...games,
