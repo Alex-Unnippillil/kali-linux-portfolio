@@ -5,7 +5,6 @@ import ReactGA from 'react-ga4';
 
 jest.mock('react-ga4', () => ({
   event: jest.fn(),
-  exception: jest.fn(),
 }));
 
 jest.mock('next/dynamic', () => {
@@ -35,6 +34,9 @@ describe('createDynamicApp', () => {
     await waitFor(() =>
       expect(screen.getByText('Failed to load FailApp.')).toBeInTheDocument()
     );
-    expect(ReactGA.exception).toHaveBeenCalled();
+    expect(ReactGA.event).toHaveBeenCalledWith(
+      'exception',
+      expect.objectContaining({ description: expect.any(String) })
+    );
   });
 });
