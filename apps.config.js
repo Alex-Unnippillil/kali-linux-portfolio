@@ -108,6 +108,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const SameSiteLabApp = createDynamicApp('samesite-lab', 'SameSite Lab');
+
 const SitemapHeatmapApp = createDynamicApp('sitemap-heatmap', 'Sitemap Heatmap');
 
 const MetaInspectorApp = createDynamicApp('meta-inspector', 'Meta Inspector');
@@ -178,6 +180,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displaySameSiteLab = createDisplay(SameSiteLabApp);
+
 
 const displayCspReporter = createDisplay(CspReporterApp);
 
@@ -850,6 +854,15 @@ const apps = [
       favourite: false,
       desktop_shortcut: false,
       screen: displayCookieJar,
+    },
+    {
+      id: 'samesite-lab',
+      title: 'SameSite Lab',
+      icon: './themes/Yaru/apps/cookie-jar.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displaySameSiteLab,
     },
     {
       id: 'content-fingerprint',
