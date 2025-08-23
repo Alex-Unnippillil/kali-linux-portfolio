@@ -53,26 +53,43 @@ export const THEME = process.env.NEXT_PUBLIC_THEME || 'Yaru';
 export const icon = (name) => `./themes/${THEME}/apps/${name}`;
 export const sys = (name) => `./themes/${THEME}/system/${name}`;
 
-const createDynamicApp = (path, name) =>
-  dynamic(
-    () =>
-      import(`./components/apps/${path}`).then((mod) => {
-        ReactGA.event({ category: 'Application', action: `Loaded ${name}` });
-        return mod.default;
-      }),
-    {
-      ssr: false,
-      loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-panel text-white">
-          {`Loading ${name}...`}
-        </div>
-      ),
-    }
-  );
+import createDynamicApp from './lib/createDynamicApp';
 
-const createDisplay = (Component) => {
+class DynamicAppErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error) {
+    ReactGA.exception({
+      description: `Dynamic app render error: ${error.message}`,
+      fatal: false,
+    });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-full w-full flex items-center justify-center bg-panel text-white">
+          {`An error occurred while rendering ${this.props.name}.`}
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+const createDisplay = (Component, name) => {
   const DisplayComponent = (addFolder, openApp) => (
-    <Component addFolder={addFolder} openApp={openApp} />
+    <DynamicAppErrorBoundary name={name}>
+      <Component addFolder={addFolder} openApp={openApp} />
+    </DynamicAppErrorBoundary>
   );
   DisplayComponent.displayName = Component.displayName || Component.name || 'Component';
   return DisplayComponent;
@@ -163,7 +180,7 @@ const dynamicAppEntries = [
 const dynamicScreens = Object.fromEntries(
   dynamicAppEntries.map(([id, name]) => [
     id,
-    createDisplay(createDynamicApp(id, name)),
+    createDisplay(createDynamicApp(id, name), name),
   ])
 );
 
