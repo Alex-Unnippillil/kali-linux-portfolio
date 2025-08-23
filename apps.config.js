@@ -22,6 +22,8 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayExploitExplainer } from './components/apps/exploit-explainer';
+
 import { displayMitreSelector } from './components/apps/mitre-selector';
 
 import { displayFileSignature } from './components/apps/file-signature';
@@ -860,10 +862,7 @@ const apps = [
   {
 
 
-
     icon: icon('calc.png'),
-
-
 
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
@@ -891,6 +890,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displaySqliteViewer,
+
 
 
 
@@ -958,6 +958,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayReportViewer,
+
   },
   {
     id: 'prefetch-jumplist',
@@ -993,6 +994,7 @@ const apps = [
     screen: displaySitemapHeatmap,
 
   },
+
   {
     id: 'mail-auth',
     title: 'Mail Auth',
@@ -1017,6 +1019,7 @@ const apps = [
 
 
 
+
     id: 'threat-modeler',
     title: 'Threat Modeler',
     icon: './themes/Yaru/apps/threat-modeler.svg',
@@ -1026,6 +1029,8 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+    id: 'exploit-explainer',
+    title: 'Exploit Explainer',
     id: 'killchain-diagram',
     title: 'Killchain Diagram',
 
@@ -1035,6 +1040,9 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    screen: displayExploitExplainer,
+  },
+
     screen: displayKillchainDiagram,
   },
     screen: displayMitreSelector,
