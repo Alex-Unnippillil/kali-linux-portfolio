@@ -73,8 +73,14 @@ const JwsJweWorkbench = () => {
         setCompact('');
         setJson('');
       }
-    } catch (e: any) {
-      setResult(`Error: ${e.message}`);
+    } catch (e: unknown) {
+      let errorMsg = 'Unknown error';
+      if (e instanceof Error) {
+        errorMsg = e.message;
+      } else if (typeof e === 'string') {
+        errorMsg = e;
+      }
+      setResult(`Error: ${errorMsg}`);
       setCompact('');
       setJson('');
     }
