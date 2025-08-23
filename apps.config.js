@@ -84,6 +84,10 @@ const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
 
+const ContentFingerprintApp = createDynamicApp('content-fingerprint', 'Content Fingerprint');
+const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+
+
 
 const displayTerminal = createDisplay(TerminalApp);
 const displayTerminalCalc = createDisplay(CalcApp);
@@ -123,6 +127,9 @@ const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
 const displayThreatModeler = createDisplay(ThreatModelerApp);
+
+const displayContentFingerprint = createDisplay(ContentFingerprintApp);
+const displayCookieJar = createDisplay(CookieJarApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -624,5 +631,36 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
+
+    {
+      id: 'weather',
+      title: 'Weather',
+      icon: './themes/Yaru/apps/weather.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayWeather,
+    },
+    {
+      id: 'cookie-jar',
+      title: 'Cookie Jar',
+      icon: './themes/Yaru/apps/cookie-jar.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayCookieJar,
+    },
+    {
+      id: 'content-fingerprint',
+      title: 'Content Fingerprint',
+      icon: './themes/Yaru/apps/content-fingerprint.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayContentFingerprint,
+    },
+    // Games are included so they appear alongside apps
+    ...games,
+  ];
 
 export default apps;
