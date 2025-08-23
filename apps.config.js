@@ -105,6 +105,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 
+const IpDnsLeakApp = createDynamicApp('ip-dns-leak', 'IP/DNS Leak');
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -160,6 +162,7 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayIpDnsLeak = createDisplay(IpDnsLeakApp);
  
 
 
@@ -568,6 +571,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'ip-dns-leak',
+    title: 'IP/DNS Leak',
+    icon: icon('resource-monitor.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayIpDnsLeak,
   },
   {
     id: 'project-gallery',
