@@ -159,6 +159,8 @@ const LicenseClassifierApp = createDynamicApp('license-classifier', 'License Cla
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const MixedContentApp = createDynamicApp('mixed-content', 'Mixed Content');
+
 const TlsExplainerApp = createDynamicApp('tls-explainer', 'TLS Explainer');
 
 const TorExitCheckApp = createDynamicApp('tor-exit-check', 'Tor Exit Check');
@@ -281,6 +283,8 @@ const displayLicenseClassifier = createDisplay(LicenseClassifierApp);
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayMixedContent = createDisplay(MixedContentApp);
+
 const displayTlsExplainer = createDisplay(TlsExplainerApp);
 
 
@@ -978,6 +982,7 @@ const apps = [
 
 
 
+
     icon: icon('calc.png'),
 
 
@@ -1177,8 +1182,6 @@ const apps = [
   {
 
 
-
-
     id: 'threat-modeler',
     title: 'Threat Modeler',
     icon: './themes/Yaru/apps/threat-modeler.svg',
@@ -1188,6 +1191,9 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+    id: 'mixed-content',
+    title: 'Mixed Content',
+
     id: 'jwks-fetcher',
     title: 'JWKS Fetcher',
     icon: './themes/Yaru/apps/bash.png',
@@ -1276,10 +1282,13 @@ const apps = [
 
     id: 'file-signature',
     title: 'File Signature',
+ 
     icon: './themes/Yaru/apps/hash.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    screen: displayMixedContent,
+
     screen: displayFileSignature,
   },
   {

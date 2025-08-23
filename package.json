@@ -93,6 +93,7 @@
     "papaparse": "^5.4.1",
     "tailwindcss": "^3.2.4",
     "three": "^0.179.1",
+    "url-parse": "^1.5.10",
     "ws": "^8.18.3",
     "zxcvbn": "^4.4.2"
   },
