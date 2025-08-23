@@ -142,6 +142,8 @@ const LicenseClassifierApp = createDynamicApp('license-classifier', 'License Cla
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const TlsExplainerApp = createDynamicApp('tls-explainer', 'TLS Explainer');
+
 const TorExitCheckApp = createDynamicApp('tor-exit-check', 'Tor Exit Check');
 
 const WaybackViewerApp = createDynamicApp('wayback-viewer', 'Wayback Viewer');
@@ -256,6 +258,8 @@ const displayLicenseClassifier = createDisplay(LicenseClassifierApp);
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayTlsExplainer = createDisplay(TlsExplainerApp);
+
 
 const displayCachePolicy = createDisplay(CachePolicyApp);
 
@@ -880,6 +884,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayEvidenceNotebook,
+  },
+  {
+    id: 'tls-explainer',
+    title: 'TLS Explainer',
+    icon: './themes/Yaru/apps/hash.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTlsExplainer,
   },
   {
     id: 'favicon-hash',
