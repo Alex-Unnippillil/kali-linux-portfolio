@@ -25,6 +25,8 @@ import { displayImportGraph } from './components/apps/import-graph';
 
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayDgaDemo } from './components/apps/dga-demo';
+
 import { displayEvidenceNotebook } from './components/apps/evidence-notebook';
 
 import { displayExploitExplainer } from './components/apps/exploit-explainer';
@@ -925,7 +927,9 @@ const apps = [
   {
 
 
+
     icon: icon('calc.png'),
+
 
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
@@ -969,6 +973,14 @@ const apps = [
     screen: displayYaraTester,
   },
   {
+    id: 'dga-demo',
+    title: 'DGA Demo',
+    icon: './themes/Yaru/apps/hash.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDgaDemo,
+
     id: 'git-secrets-tester',
     title: 'Git Secrets Tester',
     icon: './themes/Yaru/apps/git-secrets-tester.svg',
@@ -984,6 +996,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayPlistInspector,
+
   },
   {
     id: 'weather',
@@ -1020,6 +1033,17 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayNmapViewer,
+  },
+  {
+    id: 'report-viewer',
+    title: 'Report Viewer',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReportViewer,
+  },
+
   },
   {
     id: 'report-viewer',
@@ -1076,6 +1100,7 @@ const apps = [
     screen: displayMailAuth,
   },
   {
+
 
 
     id: 'mail-security-matrix',
@@ -1257,7 +1282,6 @@ const apps = [
 ];
 
 
-
     {
       id: 'weather',
       title: 'Weather',
@@ -1386,6 +1410,7 @@ const apps = [
     // Games are included so they appear alongside apps
     ...games,
   ];
+
 
 
 export default apps;
