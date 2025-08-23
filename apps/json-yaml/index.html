@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JSON ⇄ YAML Converter</title>
+  <link id="hljs-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+      color: #222;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    body.dark {
+      background: #1e1e1e;
+      color: #eee;
+    }
+    header {
+      padding: 1rem;
+      text-align: center;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      padding: 0 1rem 1rem;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 0.5rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-family: monospace;
+      resize: vertical;
+    }
+    pre {
+      flex: 1;
+      padding: 1rem;
+      overflow: auto;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background: #fff;
+    }
+    body.dark pre {
+      background: #2e2e2e;
+      border-color: #555;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      background: #007bff;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0069d9;
+    }
+    .error {
+      color: #c00;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>JSON ⇄ YAML Converter</h1>
+  </header>
+  <main>
+    <textarea id="input" placeholder="Enter JSON or YAML..."></textarea>
+    <textarea id="schema" placeholder="Optional JSON Schema..."></textarea>
+    <div class="controls">
+      <button id="toYaml">JSON → YAML</button>
+      <button id="toJson">YAML → JSON</button>
+      <button id="validate">Validate</button>
+      <button id="download">Download</button>
+      <button id="theme-toggle">Toggle Theme</button>
+    </div>
+    <pre><code id="output" class="hljs"></code></pre>
+    <div id="errors" class="error"></div>
+  </main>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/yaml.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ajv@8/dist/ajv.min.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
