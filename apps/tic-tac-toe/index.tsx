@@ -244,7 +244,7 @@ const TicTacToe: React.FC = () => {
 
   if (player === null) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4">
         {difficultySlider}
         <div className="mb-4">Choose X or O</div>
         <div className="flex space-x-4">
@@ -266,7 +266,7 @@ const TicTacToe: React.FC = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col md:flex-row items-center justify-center bg-ub-cool-grey text-white p-4 space-y-4 md:space-y-0 md:space-x-4">
+    <div className="h-full w-full flex flex-col md:flex-row items-center justify-center bg-panel text-white p-4 space-y-4 md:space-y-0 md:space-x-4">
       <div className="flex flex-col items-center">
         {difficultySlider}
         <div className="grid grid-cols-3 gap-1 w-60 mb-4">

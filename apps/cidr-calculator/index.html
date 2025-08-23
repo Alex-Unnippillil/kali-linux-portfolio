@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CIDR Calculator</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    h1 { margin-bottom: 1rem; }
+    section { margin-bottom: 2rem; }
+    input, textarea, button { margin: 0.25rem 0; padding: 0.5rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: left; }
+    th { background: #f4f4f4; }
+    .copy-btn { cursor: pointer; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <h1>CIDR Calculator</h1>
+
+  <section id="info-section">
+    <h2>CIDR Info</h2>
+    <input type="text" id="cidr-input" placeholder="e.g. 192.168.0.0/24 or 2001:db8::/48" size="40" />
+    <button id="info-btn">Analyze</button>
+    <div id="info-result"></div>
+  </section>
+
+  <section id="split-section">
+    <h2>Split Subnet</h2>
+    <input type="text" id="split-cidr" placeholder="CIDR" size="20" />
+    <input type="number" id="split-prefix" placeholder="New prefix" min="0" />
+    <button id="split-btn">Split</button>
+    <div id="split-result"></div>
+  </section>
+
+  <section id="merge-section">
+    <h2>Merge Subnets</h2>
+    <textarea id="merge-cidrs" rows="4" cols="40" placeholder="Enter CIDRs, one per line"></textarea><br />
+    <button id="merge-btn">Merge</button>
+    <div id="merge-result"></div>
+  </section>
+
+  <script src="main.js"></script>
+</body>
+</html>

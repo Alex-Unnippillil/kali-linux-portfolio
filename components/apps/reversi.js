@@ -123,7 +123,7 @@ const Reversi = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none relative">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4 select-none relative">
       <div className="mb-2">{status}</div>
       <div className="mb-2 flex items-center space-x-2">
         <label htmlFor="aiDepth">AI Level:</label>
@@ -210,7 +210,7 @@ const Reversi = () => {
       </button>
       {gameOver && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-ub-cool-grey p-4 rounded text-center">
+          <div className="bg-panel p-4 rounded text-center">
             <div className="mb-2">{gameOver.winner}</div>
             <div className="mb-2">Black: {gameOver.black} White: {gameOver.white}</div>
             <button

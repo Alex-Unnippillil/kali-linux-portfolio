@@ -169,7 +169,7 @@ export class Window extends Component {
         return (
             <Draggable
                 axis="both"
-                handle=".bg-ub-window-title"
+                handle=".bg-window-title"
                 grid={[1, 1]}
                 scale={1}
                 onStart={this.changeCursorToMove}
@@ -203,7 +203,7 @@ export default Window
 // Window's title bar
 export function WindowTopBar(props) {
     return (
-        <div className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}>
+        <div className={" relative bg-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}>
             <div className="flex justify-center text-sm font-bold">{props.title}</div>
         </div>
     )
@@ -283,7 +283,7 @@ export function WindowEditButtons(props) {
                         </span>
                     )
             )}
-            <button tabIndex="-1" id={`close-${props.id}`} className="mx-1.5 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.close}>
+            <button tabIndex="-1" id={`close-${props.id}`} className="mx-1.5 focus:outline-none cursor-default bg-panel bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.close}>
                 <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"
                     alt="Kali window close"
@@ -312,7 +312,7 @@ export class WindowMainScreen extends Component {
     }
     render() {
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-brand-dark " : " bg-panel")}>
                 {this.props.screen(this.props.addFolder, this.props.openApp)}
             </div>
         )

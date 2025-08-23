@@ -1,6 +1,13 @@
 body{
-    font-family: 'Ubuntu', sans-serif;
-    font-display: swap
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+    font-display: swap;
+}
+
+pre,
+code {
+    font-family: 'Fira Code', 'Fira Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
 /* Top NavBar styling */
@@ -265,4 +272,11 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 .reveal {
     animation: reveal 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+    }
 }

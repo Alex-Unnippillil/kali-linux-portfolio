@@ -119,7 +119,7 @@ const Game2048 = () => {
   };
 
   return (
-    <div className="h-full w-full p-4 flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
+    <div className="h-full w-full p-4 flex flex-col items-center justify-center bg-panel text-white select-none">
       <div className="grid grid-cols-4 gap-2">
         {board.map((row, rIdx) =>
           row.map((cell, cIdx) => (
