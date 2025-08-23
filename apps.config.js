@@ -50,8 +50,43 @@ import { displayCaaChecker } from './components/apps/caa-checker';
 
 
 export const THEME = process.env.NEXT_PUBLIC_THEME || 'Yaru';
-export const icon = (name) => `./themes/${THEME}/apps/${name}`;
-export const sys = (name) => `./themes/${THEME}/system/${name}`;
+
+const FALLBACK_THEME = 'Yaru';
+
+const resolveAsset = (section, name) => {
+  const themePath = `./themes/${THEME}/${section}/${name}`;
+  const fallbackPath = `./themes/${FALLBACK_THEME}/${section}/${name}`;
+
+  // Server side / build time check using fs
+  if (typeof window === 'undefined' || process.env.NODE_ENV === 'test') {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const fullPath = path.join(process.cwd(), 'public', 'themes', THEME, section, name);
+      return fs.existsSync(fullPath) ? themePath : fallbackPath;
+    } catch (_) {
+      return fallbackPath;
+    }
+  }
+
+  // Runtime check using Image error events
+  if (typeof Image !== 'undefined') {
+    const testImg = new Image();
+    testImg.onerror = () => {
+      document
+        .querySelectorAll(`img[src='${themePath}']`)
+        .forEach((el) => {
+          el.src = fallbackPath;
+        });
+    };
+    testImg.src = themePath;
+  }
+
+  return themePath;
+};
+
+export const icon = (name) => resolveAsset('apps', name);
+export const sys = (name) => resolveAsset('system', name);
 
 import createDynamicApp from './lib/createDynamicApp';
 
