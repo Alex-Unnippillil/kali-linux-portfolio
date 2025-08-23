@@ -104,6 +104,7 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const ArgonBcryptDemoApp = createDynamicApp('argon-bcrypt-demo', 'Argon/Bcrypt Demo');
 
 
 
@@ -160,6 +161,7 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayArgonBcryptDemo = createDisplay(ArgonBcryptDemoApp);
  
 
 
@@ -727,6 +729,15 @@ const apps = [
       favourite: false,
       desktop_shortcut: false,
       screen: displayCookieJar,
+    },
+    {
+      id: 'argon-bcrypt-demo',
+      title: 'Argon/Bcrypt Demo',
+      icon: './themes/Yaru/apps/hash.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayArgonBcryptDemo,
     },
     {
       id: 'content-fingerprint',
