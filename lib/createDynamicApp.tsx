@@ -16,7 +16,7 @@ const createDynamicApp = (path: string, name: string) =>
             action: `Failed to load ${name}`,
             label: error.message,
           });
-          ReactGA.exception({ description: error.message });
+          ReactGA.event('exception', { description: error.message });
           return function DynamicAppError() {
             return (
               <div className="h-full w-full flex items-center justify-center bg-panel text-white">
