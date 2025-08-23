@@ -111,6 +111,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const ArgonBcryptDemoApp = createDynamicApp('argon-bcrypt-demo', 'Argon/Bcrypt Demo');
+
 const PkceHelperApp = createDynamicApp('pkce-helper', 'PKCE Helper');
 
 const CsrGeneratorApp = createDynamicApp('csr-generator', 'CSR Generator');
@@ -189,6 +191,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayArgonBcryptDemo = createDisplay(ArgonBcryptDemoApp);
+
 const displayPkceHelper = createDisplay(PkceHelperApp);
 
 const displayCsrGenerator = createDisplay(CsrGeneratorApp);
@@ -947,6 +951,14 @@ const apps = [
       screen: displayCookieJar,
     },
     {
+      id: 'argon-bcrypt-demo',
+      title: 'Argon/Bcrypt Demo',
+      icon: './themes/Yaru/apps/hash.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayArgonBcryptDemo,
+
       id: 'samesite-lab',
       title: 'SameSite Lab',
       icon: './themes/Yaru/apps/cookie-jar.svg',
