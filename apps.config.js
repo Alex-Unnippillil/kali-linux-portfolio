@@ -155,10 +155,13 @@ const CspReporterApp = createDynamicApp('csp-reporter', 'CSP Reporter');
 
 const IpDnsLeakApp = createDynamicApp('ip-dns-leak', 'IP/DNS Leak');
 
+const EmlMsgParserApp = createDynamicApp('eml-msg-parser', 'EML/MSG Parser');
+
 const PrefetchJumplistApp = createDynamicApp(
   'prefetch-jumplist',
   'Prefetch JumpList'
 );
+
 
 
 
@@ -223,7 +226,11 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
 
+const displayEmlMsgParser = createDisplay(EmlMsgParserApp);
+
+
 const displayPrefetchJumplist = createDisplay(PrefetchJumplistApp);
+
 
 const displayIpDnsLeak = createDisplay(IpDnsLeakApp);
 
@@ -927,6 +934,7 @@ const apps = [
 
 
 
+
   {
     id: 'sitemap-heatmap',
     title: 'Sitemap Heatmap',
@@ -959,6 +967,7 @@ const apps = [
   },
   {
 
+
     id: 'threat-modeler',
     title: 'Threat Modeler',
     icon: './themes/Yaru/apps/threat-modeler.svg',
@@ -968,6 +977,14 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+    id: 'eml-msg-parser',
+    title: 'EML/MSG Parser',
+    icon: './themes/Yaru/apps/mail-auth.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEmlMsgParser,
+
 
     id: 'ipv6-slaac',
     title: 'IPv6 SLAAC',

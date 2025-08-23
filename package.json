@@ -33,6 +33,7 @@
     "cvss": "^1.0.5",
 
     "diff": "^8.0.2",
+    "eml-format": "^0.6.1",
     "expr-eval": "^2.0.2",
     "fast-xml-parser": "^5.2.5",
     "html-to-image": "^1.11.13",
@@ -45,10 +46,13 @@
     "libyara-wasm": "^1.2.1",
     "matter-js": "^0.20.0",
     "mermaid": "^11.10.1",
+    "msgreader": "^1.0.1",
+
     "argon2-browser": "^1.18.0",
     "bcryptjs": "^3.0.2",
 
     "asn1js": "^3.0.6",
+
     "next": "^15.5.0",
     "plist": "^3.1.0",
 
