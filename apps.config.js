@@ -160,6 +160,8 @@ const CsrGeneratorApp = createDynamicApp('csr-generator', 'CSR Generator');
 
 const OpenRedirectLabApp = createDynamicApp('open-redirect-lab', 'Open Redirect Lab');
 
+const CachePolicyApp = createDynamicApp('cache-policy', 'Cache Policy');
+
 const SameSiteLabApp = createDynamicApp('samesite-lab', 'SameSite Lab');
 
 const SitemapHeatmapApp = createDynamicApp('sitemap-heatmap', 'Sitemap Heatmap');
@@ -254,6 +256,8 @@ const displayLicenseClassifier = createDisplay(LicenseClassifierApp);
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+
+const displayCachePolicy = createDisplay(CachePolicyApp);
 
 const displayTorExitCheck = createDisplay(TorExitCheckApp);
 
@@ -1233,6 +1237,14 @@ const apps = [
       screen: displayCookieJar,
     },
     {
+      id: 'cache-policy',
+      title: 'Cache Policy',
+      icon: './themes/Yaru/apps/gedit.png',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayCachePolicy,
+
       id: 'asn-explorer',
       title: 'ASN Explorer',
       icon: './themes/Yaru/apps/resource-monitor.svg',
