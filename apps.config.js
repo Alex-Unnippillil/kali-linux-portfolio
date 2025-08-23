@@ -22,6 +22,8 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayHibpCheck } from './components/apps/hibp-check';
+
 import { displayJwsJweWorkbench } from './components/apps/jws-jwe-workbench';
 
 import { displayCaaChecker } from './components/apps/caa-checker';
@@ -756,6 +758,8 @@ const apps = [
     screen: displayFaviconHash,
   },
   {
+    icon: icon('calc.png'),
+
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
     icon: './themes/Yaru/apps/calc.png',
@@ -785,12 +789,13 @@ const apps = [
   {
     id: 'weather',
     title: 'Weather',
-    icon: icon('weather.svg'),
+    icon: './themes/Yaru/apps/weather.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
   },
+
   {
     id: 'cookie-jar',
     title: 'Cookie Jar',
@@ -901,6 +906,15 @@ const apps = [
     screen: displayReportViewer,
   },
   {
+
+    id: 'hibp-check',
+    title: 'HIBP Check',
+    icon: icon('hash.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHibpCheck,
+
     id: 'open-redirect-lab',
     title: 'Open Redirect Lab',
     icon: icon('gedit.png'),
@@ -933,6 +947,7 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
+
 
     {
       id: 'weather',
@@ -1038,6 +1053,7 @@ const apps = [
     // Games are included so they appear alongside apps
     ...games,
   ];
+
 
 
 
