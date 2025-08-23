@@ -91,6 +91,7 @@ const CveDashboardApp = createDynamicApp('cve-dashboard', 'CVE Dashboard');
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const FaviconHashApp = createDynamicApp('favicon-hash', 'Favicon Hash');
+const PcreRe2LabApp = createDynamicApp('pcre-re2-lab', 'PCRE RE2 Lab');
 
 const PcapViewerApp = createDynamicApp('pcap-viewer', 'PCAP Viewer');
 
@@ -147,6 +148,7 @@ const displayCveDashboard = createDisplay(CveDashboardApp);
 const displayGomoku = createDisplay(GomokuApp);
 const displayPinball = createDisplay(PinballApp);
 const displayFaviconHash = createDisplay(FaviconHashApp);
+const displayPcreRe2Lab = createDisplay(PcreRe2LabApp);
 
 const displayPcapViewer = createDisplay(PcapViewerApp);
 
@@ -651,6 +653,15 @@ const apps = [
     screen: displayQuoteGenerator,
   },
   {
+    id: 'pcre-re2-lab',
+    title: 'PCRE RE2 Lab',
+    icon: './themes/Yaru/apps/regex-redactor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPcreRe2Lab,
+  },
+  {
     id: 'favicon-hash',
     title: 'Favicon Hash',
     icon: './themes/Yaru/apps/hash.svg',
@@ -658,10 +669,17 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayFaviconHash,
-
+  },
+  {
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
     icon: './themes/Yaru/apps/calc.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCveDashboard,
+  },
+  {
     id: 'pcap-viewer',
     title: 'PCAP Viewer',
     icon: './themes/Yaru/apps/pcap-viewer.svg',
@@ -669,7 +687,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayPcapViewer,
-
+  },
+  {
     id: 'yara-tester',
     title: 'YARA Tester',
     icon: './themes/Yaru/apps/bash.png',
@@ -685,10 +704,44 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayCveDashboard,
+    screen: displayWeather,
   },
-
-
+  {
+    id: 'cookie-jar',
+    title: 'Cookie Jar',
+    icon: './themes/Yaru/apps/cookie-jar.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCookieJar,
+  },
+  {
+    id: 'content-fingerprint',
+    title: 'Content Fingerprint',
+    icon: './themes/Yaru/apps/content-fingerprint.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayContentFingerprint,
+  },
+  {
+    id: 'nmap-viewer',
+    title: 'Nmap Viewer',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNmapViewer,
+  },
+  {
+    id: 'report-viewer',
+    title: 'Report Viewer',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReportViewer,
+  },
   {
     id: 'mail-auth',
     title: 'Mail Auth',
@@ -697,7 +750,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayMailAuth,
-
+  },
+  {
     id: 'threat-modeler',
     title: 'Threat Modeler',
     icon: './themes/Yaru/apps/threat-modeler.svg',
@@ -709,54 +763,5 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
-
-    {
-      id: 'weather',
-      title: 'Weather',
-      icon: './themes/Yaru/apps/weather.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayWeather,
-    },
-    {
-      id: 'cookie-jar',
-      title: 'Cookie Jar',
-      icon: './themes/Yaru/apps/cookie-jar.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayCookieJar,
-    },
-    {
-      id: 'content-fingerprint',
-      title: 'Content Fingerprint',
-      icon: './themes/Yaru/apps/content-fingerprint.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayContentFingerprint,
-    },
-    {
-
-id: 'nmap-viewer',
-      title: 'Nmap Viewer',
-      icon: './themes/Yaru/apps/resource-monitor.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayNmapViewer,
-
-      id: 'report-viewer',
-      title: 'Report Viewer',
-      icon: './themes/Yaru/apps/gedit.png',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayReportViewer,
-    },
-    // Games are included so they appear alongside apps
-    ...games,
-  ];
 
 export default apps;
