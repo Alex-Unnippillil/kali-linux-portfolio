@@ -40,15 +40,15 @@ export default async function handler(
     const xml = await response.text();
     const parser = new XMLParser();
     const data = parser.parse(xml);
-    const urlset = data.urlset?.url;
+    const urlset: SitemapUrl[] | SitemapUrl | undefined = data.urlset?.url;
 
     const urls: UrlEntry[] = [];
     if (Array.isArray(urlset)) {
-      urlset.forEach((u: any) => {
+      urlset.forEach((u: SitemapUrl) => {
         if (u?.loc) urls.push({ loc: u.loc, lastmod: u.lastmod });
       });
     } else if (urlset?.loc) {
-      urls.push({ loc: urlset.loc, lastmod: urlset.lastmod });
+      urls.push({ loc: (urlset as SitemapUrl).loc, lastmod: (urlset as SitemapUrl).lastmod });
     }
 
     res.status(200).json({ ok: true, urls });
