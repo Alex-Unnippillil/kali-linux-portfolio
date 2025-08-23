@@ -111,6 +111,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const PkceHelperApp = createDynamicApp('pkce-helper', 'PKCE Helper');
+
 const CsrGeneratorApp = createDynamicApp('csr-generator', 'CSR Generator');
 
 const OpenRedirectLabApp = createDynamicApp('open-redirect-lab', 'Open Redirect Lab');
@@ -187,6 +189,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayPkceHelper = createDisplay(PkceHelperApp);
+
 const displayCsrGenerator = createDisplay(CsrGeneratorApp);
 
 const displayOpenRedirectLab = createDisplay(OpenRedirectLabApp);
@@ -726,6 +730,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayJwsJweWorkbench,
+  },
+  {
+    id: 'pkce-helper',
+    title: 'PKCE Helper',
+    icon: icon('calc.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPkceHelper,
   },
   {
     id: 'favicon-hash',
