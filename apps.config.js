@@ -104,6 +104,7 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const TorExitCheckApp = createDynamicApp('tor-exit-check', 'Tor Exit Check');
 
 
 
@@ -160,6 +161,7 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayTorExitCheck = createDisplay(TorExitCheckApp);
  
 
 
@@ -705,6 +707,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayThreatModeler,
+  },
+  {
+    id: 'tor-exit-check',
+    title: 'Tor Exit Check',
+    icon: './themes/Yaru/apps/hash.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTorExitCheck,
   },
   // Games are included so they appear alongside apps
   ...games,
