@@ -105,6 +105,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 
+const EmlMsgParserApp = createDynamicApp('eml-msg-parser', 'EML/MSG Parser');
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -160,7 +162,9 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
- 
+
+const displayEmlMsgParser = createDisplay(EmlMsgParserApp);
+
 
 
 // Default window sizing for games to prevent oversized frames
@@ -687,8 +691,6 @@ const apps = [
     desktop_shortcut: false,
     screen: displayCveDashboard,
   },
-
-
   {
     id: 'mail-auth',
     title: 'Mail Auth',
@@ -697,7 +699,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayMailAuth,
-
+  },
+  {
     id: 'threat-modeler',
     title: 'Threat Modeler',
     icon: './themes/Yaru/apps/threat-modeler.svg',
@@ -705,6 +708,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayThreatModeler,
+  },
+  {
+    id: 'eml-msg-parser',
+    title: 'EML/MSG Parser',
+    icon: './themes/Yaru/apps/mail-auth.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEmlMsgParser,
   },
   // Games are included so they appear alongside apps
   ...games,
