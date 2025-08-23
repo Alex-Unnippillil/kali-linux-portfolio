@@ -32,6 +32,7 @@
     "html-to-image": "^1.11.13",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.1",
+    "jose": "^5.2.3",
     "libyara-wasm": "^1.2.1",
     "matter-js": "^0.20.0",
     "mermaid": "^11.10.1",

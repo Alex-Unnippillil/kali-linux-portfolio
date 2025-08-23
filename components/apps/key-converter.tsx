@@ -1,0 +1,139 @@
+import React, { useState } from 'react';
+import {
+  importJWK,
+  importPKCS8,
+  importSPKI,
+  exportJWK,
+  exportPKCS8,
+  exportSPKI,
+} from 'jose';
+
+const formats = [
+  { label: 'PEM', value: 'pem' },
+  { label: 'DER (base64)', value: 'der' },
+  { label: 'JWK', value: 'jwk' },
+];
+
+const KeyConverter: React.FC = () => {
+  const [inputFormat, setInputFormat] = useState('pem');
+  const [outputFormat, setOutputFormat] = useState('jwk');
+  const [alg, setAlg] = useState('RS256');
+  const [key, setKey] = useState('');
+  const [result, setResult] = useState('');
+  const [error, setError] = useState('');
+
+  const convert = async () => {
+    try {
+      setError('');
+      let cryptoKey;
+      if (inputFormat === 'jwk') {
+        cryptoKey = await importJWK(JSON.parse(key), alg);
+      } else if (inputFormat === 'pem') {
+        try {
+          cryptoKey = await importPKCS8(key, alg);
+        } catch {
+          cryptoKey = await importSPKI(key, alg);
+        }
+      } else {
+        const b64 = key.replace(/\s+/g, '');
+        const body = b64.match(/.{1,64}/g)?.join('\n') || '';
+        const pem = `-----BEGIN KEY-----\n${body}\n-----END KEY-----`;
+        try {
+          cryptoKey = await importPKCS8(pem, alg);
+        } catch {
+          cryptoKey = await importSPKI(pem, alg);
+        }
+      }
+
+      if (outputFormat === 'jwk') {
+        const jwk = await exportJWK(cryptoKey);
+        setResult(JSON.stringify(jwk, null, 2));
+      } else if (outputFormat === 'pem') {
+        try {
+          const pem = await exportPKCS8(cryptoKey);
+          setResult(pem);
+        } catch {
+          const pem = await exportSPKI(cryptoKey);
+          setResult(pem);
+        }
+      } else {
+        try {
+          const pem = await exportSPKI(cryptoKey);
+          const b64 = pem.replace(/-----(BEGIN|END)[^\n]+-----/g, '').replace(/\s+/g, '');
+          setResult(b64);
+        } catch {
+          const pem = await exportPKCS8(cryptoKey);
+          const b64 = pem.replace(/-----(BEGIN|END)[^\n]+-----/g, '').replace(/\s+/g, '');
+          setResult(b64);
+        }
+      }
+    } catch (e: any) {
+      setError(e.message);
+      setResult('');
+    }
+  };
+
+  const copy = () => {
+    navigator.clipboard.writeText(result);
+  };
+
+  return (
+    <div className="h-full w-full p-4 bg-panel text-white flex flex-col space-y-2">
+      <div className="flex flex-wrap gap-2">
+        <select
+          value={inputFormat}
+          onChange={(e) => setInputFormat(e.target.value)}
+          className="px-2 py-1 text-black rounded"
+        >
+          {formats.map((f) => (
+            <option key={f.value} value={f.value}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={outputFormat}
+          onChange={(e) => setOutputFormat(e.target.value)}
+          className="px-2 py-1 text-black rounded"
+        >
+          {formats.map((f) => (
+            <option key={f.value} value={f.value}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+        <input
+          value={alg}
+          onChange={(e) => setAlg(e.target.value)}
+          className="px-2 py-1 text-black rounded"
+          placeholder="Algorithm"
+        />
+        <button onClick={convert} className="px-3 py-1 bg-blue-600 rounded">
+          Convert
+        </button>
+        {result && (
+          <button onClick={copy} className="px-3 py-1 bg-green-600 rounded">
+            Copy
+          </button>
+        )}
+      </div>
+      <textarea
+        value={key}
+        onChange={(e) => setKey(e.target.value)}
+        className="flex-1 text-black p-2 rounded"
+        placeholder="Key material"
+      />
+      <textarea
+        value={result}
+        readOnly
+        className="flex-1 text-black p-2 rounded"
+        placeholder="Result"
+      />
+      {error && <div className="text-red-500">{error}</div>}
+    </div>
+  );
+};
+
+export default KeyConverter;
+export const displayKeyConverter = () => <KeyConverter />;
+

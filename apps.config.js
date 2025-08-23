@@ -14,6 +14,7 @@ import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
 import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
+import { displayKeyConverter } from './components/apps/key-converter';
 import { displayQrTool } from './components/apps/qr_tool';
 import { displayRegexRedactor } from './components/apps/regex-redactor';
 import { displayAsciiArt } from './components/apps/ascii_art';
@@ -613,6 +614,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayConverter,
+  },
+  {
+    id: 'key-converter',
+    title: 'Key Converter',
+    icon: icon('hash.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKeyConverter,
   },
   {
     id: 'qr-tool',
