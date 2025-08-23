@@ -22,6 +22,8 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayJwsJweWorkbench } from './components/apps/jws-jwe-workbench';
+
 import { displayCaaChecker } from './components/apps/caa-checker';
 
 export const THEME = process.env.NEXT_PUBLIC_THEME || 'Yaru';
@@ -717,6 +719,15 @@ const apps = [
     screen: displayCaaChecker,
   },
   {
+    id: 'jws-jwe-workbench',
+    title: 'JWS/JWE Workbench',
+    icon: icon('hash.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayJwsJweWorkbench,
+  },
+  {
     id: 'favicon-hash',
     title: 'Favicon Hash',
     icon: './themes/Yaru/apps/hash.svg',
@@ -760,6 +771,43 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'cookie-jar',
+    title: 'Cookie Jar',
+    icon: './themes/Yaru/apps/cookie-jar.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCookieJar,
+  },
+  {
+    id: 'content-fingerprint',
+    title: 'Content Fingerprint',
+    icon: './themes/Yaru/apps/content-fingerprint.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayContentFingerprint,
+  },
+  {
+    id: 'nmap-viewer',
+    title: 'Nmap Viewer',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNmapViewer,
+  },
+  {
+    id: 'report-viewer',
+    title: 'Report Viewer',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReportViewer,
+
   },
 
 
