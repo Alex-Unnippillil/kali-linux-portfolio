@@ -672,8 +672,8 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayPcapViewer,
-
+  },
+  {
     id: 'sqlite-viewer',
     title: 'SQLite Viewer',
     icon: './themes/Yaru/apps/gedit.png',
