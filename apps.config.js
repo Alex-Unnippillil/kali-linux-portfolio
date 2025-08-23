@@ -105,6 +105,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 
+const Http3ProbeApp = createDynamicApp('http3-probe', 'HTTP/3 Probe');
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -160,6 +162,8 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+
+const displayHttp3Probe = createDisplay(Http3ProbeApp);
  
 
 
@@ -754,6 +758,15 @@ id: 'nmap-viewer',
       favourite: false,
       desktop_shortcut: false,
       screen: displayReportViewer,
+    },
+    {
+      id: 'http3-probe',
+      title: 'HTTP/3 Probe',
+      icon: './themes/Yaru/apps/resource-monitor.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayHttp3Probe,
     },
     // Games are included so they appear alongside apps
     ...games,
