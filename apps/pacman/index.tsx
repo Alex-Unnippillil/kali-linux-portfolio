@@ -11,7 +11,7 @@ const Pacman: React.FC = () => {
   const [ghosts, setGhosts] = useState<Ghost[]>([]);
   const [score, setScore] = useState(0);
   const [showEditor, setShowEditor] = useState(false);
-  const animRef = useRef<number>();
+  const animRef = useRef<number>(0);
 
   useEffect(() => {
     Maze.load('default').then((m) => {

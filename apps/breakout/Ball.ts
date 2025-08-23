@@ -1,14 +1,13 @@
 export default class Ball {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  r: number;
+  x = 0;
+  y = 0;
+  vx = 0;
+  vy = 0;
+  r = 5;
   canvasWidth: number;
   canvasHeight: number;
 
   constructor(canvasWidth: number, canvasHeight: number) {
-    this.r = 5;
     this.canvasWidth = canvasWidth;
     this.canvasHeight = canvasHeight;
     this.reset();

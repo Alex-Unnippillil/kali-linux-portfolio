@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import Matter, { Engine, Render, World, Bodies, Body } from 'matter-js';
+import Matter from 'matter-js';
+
+const { Engine, Render, World, Bodies, Body } = Matter as any;
 
 interface TableElement {
   type: 'flipper' | 'bumper';
@@ -22,10 +24,10 @@ export default function Pinball() {
   const hitsRef = useRef(0);
 
   useEffect(() => {
-    let engine: Engine;
-    let render: Render;
-    let flippers: Body[] = [];
-    let bumpers: Body[] = [];
+    let engine: any;
+    let render: any;
+    let flippers: any[] = [];
+    let bumpers: any[] = [];
     let raf: number;
 
     async function init() {
@@ -79,8 +81,8 @@ export default function Pinball() {
       });
       World.add(engine.world, ball);
 
-      Matter.Events.on(engine, 'collisionStart', (event) => {
-        event.pairs.forEach((pair) => {
+      Matter.Events.on(engine, 'collisionStart', (event: any) => {
+        event.pairs.forEach((pair: any) => {
           if (bumpers.includes(pair.bodyA) || bumpers.includes(pair.bodyB)) {
             hitsRef.current += 1;
             if (hitsRef.current % 5 === 0) {
