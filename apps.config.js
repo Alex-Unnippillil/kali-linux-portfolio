@@ -105,6 +105,11 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 
+const PrefetchJumplistApp = createDynamicApp(
+  'prefetch-jumplist',
+  'Prefetch JumpList'
+);
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -160,6 +165,8 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+
+const displayPrefetchJumplist = createDisplay(PrefetchJumplistApp);
  
 
 
@@ -658,10 +665,17 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayFaviconHash,
-
+  },
+  {
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
     icon: './themes/Yaru/apps/calc.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCveDashboard,
+  },
+  {
     id: 'pcap-viewer',
     title: 'PCAP Viewer',
     icon: './themes/Yaru/apps/pcap-viewer.svg',
@@ -669,7 +683,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayPcapViewer,
-
+  },
+  {
     id: 'yara-tester',
     title: 'YARA Tester',
     icon: './themes/Yaru/apps/bash.png',
@@ -685,10 +700,53 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayCveDashboard,
+    screen: displayWeather,
   },
-
-
+  {
+    id: 'cookie-jar',
+    title: 'Cookie Jar',
+    icon: './themes/Yaru/apps/cookie-jar.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCookieJar,
+  },
+  {
+    id: 'content-fingerprint',
+    title: 'Content Fingerprint',
+    icon: './themes/Yaru/apps/content-fingerprint.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayContentFingerprint,
+  },
+  {
+    id: 'nmap-viewer',
+    title: 'Nmap Viewer',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNmapViewer,
+  },
+  {
+    id: 'report-viewer',
+    title: 'Report Viewer',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReportViewer,
+  },
+  {
+    id: 'prefetch-jumplist',
+    title: 'Prefetch JumpList',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPrefetchJumplist,
+  },
   {
     id: 'mail-auth',
     title: 'Mail Auth',
@@ -709,54 +767,5 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
-
-    {
-      id: 'weather',
-      title: 'Weather',
-      icon: './themes/Yaru/apps/weather.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayWeather,
-    },
-    {
-      id: 'cookie-jar',
-      title: 'Cookie Jar',
-      icon: './themes/Yaru/apps/cookie-jar.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayCookieJar,
-    },
-    {
-      id: 'content-fingerprint',
-      title: 'Content Fingerprint',
-      icon: './themes/Yaru/apps/content-fingerprint.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayContentFingerprint,
-    },
-    {
-
-id: 'nmap-viewer',
-      title: 'Nmap Viewer',
-      icon: './themes/Yaru/apps/resource-monitor.svg',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayNmapViewer,
-
-      id: 'report-viewer',
-      title: 'Report Viewer',
-      icon: './themes/Yaru/apps/gedit.png',
-      disabled: false,
-      favourite: false,
-      desktop_shortcut: false,
-      screen: displayReportViewer,
-    },
-    // Games are included so they appear alongside apps
-    ...games,
-  ];
 
 export default apps;
