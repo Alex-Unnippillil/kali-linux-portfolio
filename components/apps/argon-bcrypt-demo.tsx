@@ -52,21 +52,30 @@ const ArgonBcryptDemo: React.FC = () => {
             <input
               type="number"
               value={timeCost}
-              onChange={(e) => setTimeCost(parseInt(e.target.value, 10))}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                setTimeCost(Number.isNaN(val) ? 1 : val);
+              }}
               placeholder="Time"
               className="w-20 text-black px-2 py-1 rounded"
             />
             <input
               type="number"
               value={memoryCost}
-              onChange={(e) => setMemoryCost(parseInt(e.target.value, 10))}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                setMemoryCost(Number.isNaN(val) ? 1024 : val);
+              }}
               placeholder="Memory (KB)"
               className="w-28 text-black px-2 py-1 rounded"
             />
             <input
               type="number"
               value={parallelism}
-              onChange={(e) => setParallelism(parseInt(e.target.value, 10))}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                setParallelism(Number.isNaN(val) ? 1 : val);
+              }}
               placeholder="Parallel"
               className="w-24 text-black px-2 py-1 rounded"
             />
