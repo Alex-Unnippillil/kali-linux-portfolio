@@ -155,6 +155,11 @@ const CspReporterApp = createDynamicApp('csp-reporter', 'CSP Reporter');
 
 const IpDnsLeakApp = createDynamicApp('ip-dns-leak', 'IP/DNS Leak');
 
+const PrefetchJumplistApp = createDynamicApp(
+  'prefetch-jumplist',
+  'Prefetch JumpList'
+);
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -217,6 +222,9 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+
+const displayPrefetchJumplist = createDisplay(PrefetchJumplistApp);
+
 const displayIpDnsLeak = createDisplay(IpDnsLeakApp);
 
 const displayIpv6Slaac = createDisplay(Ipv6SlaacApp);
@@ -801,6 +809,7 @@ const apps = [
 
     icon: icon('calc.png'),
 
+
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
     icon: './themes/Yaru/apps/calc.png',
@@ -893,6 +902,16 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayReportViewer,
+  },
+  {
+    id: 'prefetch-jumplist',
+    title: 'Prefetch JumpList',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPrefetchJumplist,
+  },
 
 
   },
@@ -918,6 +937,7 @@ const apps = [
     screen: displaySitemapHeatmap,
 
   },
+
   {
     id: 'mail-auth',
     title: 'Mail Auth',
@@ -1152,8 +1172,6 @@ const apps = [
     // Games are included so they appear alongside apps
     ...games,
   ];
-
-
 
 
 export default apps;
