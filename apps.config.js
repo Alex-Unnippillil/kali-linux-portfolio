@@ -82,6 +82,8 @@ const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const MailAuthApp = createDynamicApp('mail-auth', 'Mail Auth');
 
+const CveDashboardApp = createDynamicApp('cve-dashboard', 'CVE Dashboard');
+
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const PcapViewerApp = createDynamicApp('pcap-viewer', 'PCAP Viewer');
@@ -131,6 +133,8 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayMailAuth = createDisplay(MailAuthApp);
+
+const displayCveDashboard = createDisplay(CveDashboardApp);
 
 const displayGomoku = createDisplay(GomokuApp);
 const displayPinball = createDisplay(PinballApp);
@@ -634,6 +638,9 @@ const apps = [
     screen: displayQuoteGenerator,
   },
   {
+    id: 'cve-dashboard',
+    title: 'CVE Dashboard',
+    icon: './themes/Yaru/apps/calc.png',
     id: 'pcap-viewer',
     title: 'PCAP Viewer',
     icon: './themes/Yaru/apps/pcap-viewer.svg',
@@ -657,8 +664,10 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayWeather,
+    screen: displayCveDashboard,
   },
+
+
   {
     id: 'mail-auth',
     title: 'Mail Auth',
