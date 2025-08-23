@@ -16,6 +16,7 @@ import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
 import { displayKeyConverter } from './components/apps/key-converter';
 import { displayQrTool } from './components/apps/qr_tool';
+import { displayTotp } from './components/apps/totp';
 import { displayRegexRedactor } from './components/apps/regex-redactor';
 import { displayGitSecretsTester } from './components/apps/git-secrets-tester';
 import { displayAsciiArt } from './components/apps/ascii_art';
@@ -807,6 +808,15 @@ const apps = [
     screen: displayQrTool,
   },
   {
+    id: 'totp',
+    title: 'TOTP',
+    icon: icon('calc.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTotp,
+  },
+  {
     id: 'regex-redactor',
     title: 'Regex Redactor',
     icon: './themes/Yaru/apps/regex-redactor.svg',
@@ -952,6 +962,7 @@ const apps = [
 
 
 
+
     icon: icon('calc.png'),
 
 
@@ -971,6 +982,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+
 
 
   },
@@ -1029,6 +1041,7 @@ const apps = [
     desktop_shortcut: false,
     screen: displayWeather,
   },
+
   {
     id: 'cookie-jar',
     title: 'Cookie Jar',
@@ -1160,6 +1173,7 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+
     id: 'exploit-explainer',
     title: 'Exploit Explainer',
     id: 'killchain-diagram',
@@ -1235,6 +1249,7 @@ const apps = [
     screen: displayContentFingerprint,
   },
   {
+
     id: 'file-signature',
     title: 'File Signature',
     icon: './themes/Yaru/apps/hash.svg',
@@ -1262,6 +1277,10 @@ const apps = [
     desktop_shortcut: false,
     screen: displayReportViewer,
   },
+  // Games are included so they appear alongside apps
+  ...games,
+];
+
 
   {
 
