@@ -121,6 +121,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const Ipv6SlaacApp = createDynamicApp('ipv6-slaac', 'IPv6 SLAAC');
+
 const AsnExplorerApp = createDynamicApp('asn-explorer', 'ASN Explorer');
 
 const ArgonBcryptDemoApp = createDynamicApp('argon-bcrypt-demo', 'Argon/Bcrypt Demo');
@@ -206,6 +208,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayIpv6Slaac = createDisplay(Ipv6SlaacApp);
+
 const displayAsnExplorer = createDisplay(AsnExplorerApp);
 
 const displayArgonBcryptDemo = createDisplay(ArgonBcryptDemoApp);
@@ -771,6 +775,7 @@ const apps = [
     screen: displayFaviconHash,
   },
   {
+
     icon: icon('calc.png'),
 
     id: 'cve-dashboard',
@@ -869,7 +874,6 @@ const apps = [
   },
 
 
-
   {
     id: 'mail-auth',
     title: 'Mail Auth',
@@ -880,6 +884,7 @@ const apps = [
     screen: displayMailAuth,
   },
   {
+
     id: 'mail-security-matrix',
     title: 'Mail Security Matrix',
     icon: './themes/Yaru/apps/mail-auth.svg',
@@ -899,6 +904,15 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+
+    id: 'ipv6-slaac',
+    title: 'IPv6 SLAAC',
+    icon: icon('calc.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayIpv6Slaac,
+
 
     id: 'csp-reporter',
     title: 'CSP Reporter',
@@ -976,10 +990,12 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayDnssecValidator,
+
   },
   // Games are included so they appear alongside apps
   ...games,
 ];
+
 
 
     {
