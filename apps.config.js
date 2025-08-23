@@ -17,6 +17,7 @@ import { displayConverter } from './components/apps/converter';
 import { displayKeyConverter } from './components/apps/key-converter';
 import { displayQrTool } from './components/apps/qr_tool';
 import { displayRegexRedactor } from './components/apps/regex-redactor';
+import { displayGitSecretsTester } from './components/apps/git-secrets-tester';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
@@ -124,6 +125,11 @@ const PcapViewerApp = createDynamicApp('pcap-viewer', 'PCAP Viewer');
 const SqliteViewerApp = createDynamicApp('sqlite-viewer', 'SQLite Viewer');
 
 const YaraTesterApp = createDynamicApp('yara-tester', 'YARA Tester');
+
+const GitSecretsTesterApp = createDynamicApp(
+  'git-secrets-tester',
+  'Git Secrets Tester'
+);
 
 const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
 const KillchainDiagramApp = createDynamicApp(
@@ -243,6 +249,8 @@ const displayPcapViewer = createDisplay(PcapViewerApp);
 const displaySqliteViewer = createDisplay(SqliteViewerApp);
 
 const displayYaraTester = createDisplay(YaraTesterApp);
+
+const displayGitSecretsTester = createDisplay(GitSecretsTesterApp);
 
 const displayThreatModeler = createDisplay(ThreatModelerApp);
 const displayKillchainDiagram = createDisplay(KillchainDiagramApp);
@@ -950,6 +958,14 @@ const apps = [
     screen: displayYaraTester,
   },
   {
+    id: 'git-secrets-tester',
+    title: 'Git Secrets Tester',
+    icon: './themes/Yaru/apps/git-secrets-tester.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayGitSecretsTester,
+
     id: 'plist-inspector',
     title: 'Plist Inspector',
     icon: icon('gedit.png'),
