@@ -22,6 +22,8 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayFileSignature } from './components/apps/file-signature';
+
 import { displayPlistInspector } from './components/apps/plist-inspector';
 
 import { displaySpfFlattener } from './components/apps/spf-flattener';
@@ -824,11 +826,13 @@ const apps = [
     screen: displayFaviconHash,
   },
   {
+==================
 
 
 
 
     icon: icon('calc.png'),
+
 
 
     id: 'cve-dashboard',
@@ -846,6 +850,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+
 
   },
   {
@@ -886,6 +891,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+
   },
 
   {
@@ -948,7 +955,6 @@ const apps = [
 
 
 
-
   {
     id: 'sitemap-heatmap',
     title: 'Sitemap Heatmap',
@@ -991,6 +997,7 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+
     id: 'eml-msg-parser',
     title: 'EML/MSG Parser',
     icon: './themes/Yaru/apps/mail-auth.svg',
@@ -1030,6 +1037,16 @@ const apps = [
     screen: displayContentFingerprint,
   },
   {
+    id: 'file-signature',
+    title: 'File Signature',
+    icon: './themes/Yaru/apps/hash.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFileSignature,
+  },
+  {
+
     id: 'nmap-viewer',
     title: 'Nmap Viewer',
     icon: './themes/Yaru/apps/resource-monitor.svg',
@@ -1047,6 +1064,7 @@ const apps = [
     desktop_shortcut: false,
     screen: displayReportViewer,
   },
+
   {
 
     id: 'hibp-check',
@@ -1087,9 +1105,11 @@ const apps = [
     screen: displayDnssecValidator,
 
   },
+
   // Games are included so they appear alongside apps
   ...games,
 ];
+
 
 
     {
@@ -1203,6 +1223,7 @@ const apps = [
     // Games are included so they appear alongside apps
     ...games,
   ];
+
 
 
 export default apps;
