@@ -108,6 +108,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 
+const Http3ProbeApp = createDynamicApp('http3-probe', 'HTTP/3 Probe');
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -165,6 +167,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+
+const displayHttp3Probe = createDisplay(Http3ProbeApp);
  
 
 
@@ -783,5 +787,64 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
+
+    {
+      id: 'weather',
+      title: 'Weather',
+      icon: './themes/Yaru/apps/weather.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayWeather,
+    },
+    {
+      id: 'cookie-jar',
+      title: 'Cookie Jar',
+      icon: './themes/Yaru/apps/cookie-jar.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayCookieJar,
+    },
+    {
+      id: 'content-fingerprint',
+      title: 'Content Fingerprint',
+      icon: './themes/Yaru/apps/content-fingerprint.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayContentFingerprint,
+    },
+    {
+
+id: 'nmap-viewer',
+      title: 'Nmap Viewer',
+      icon: './themes/Yaru/apps/resource-monitor.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayNmapViewer,
+
+      id: 'report-viewer',
+      title: 'Report Viewer',
+      icon: './themes/Yaru/apps/gedit.png',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayReportViewer,
+    },
+    {
+      id: 'http3-probe',
+      title: 'HTTP/3 Probe',
+      icon: './themes/Yaru/apps/resource-monitor.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayHttp3Probe,
+    },
+    // Games are included so they appear alongside apps
+    ...games,
+  ];
+
 
 export default apps;
