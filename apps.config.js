@@ -105,6 +105,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 
+const TimelineBuilderApp = createDynamicApp('timeline-builder', 'Timeline Builder');
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -160,6 +162,8 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+
+const displayTimelineBuilder = createDisplay(TimelineBuilderApp);
  
 
 
@@ -649,6 +653,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'timeline-builder',
+    title: 'Timeline Builder',
+    icon: icon('project-gallery.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTimelineBuilder,
   },
   {
     id: 'favicon-hash',
