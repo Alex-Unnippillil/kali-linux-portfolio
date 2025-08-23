@@ -114,6 +114,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const AsnExplorerApp = createDynamicApp('asn-explorer', 'ASN Explorer');
+
 const ArgonBcryptDemoApp = createDynamicApp('argon-bcrypt-demo', 'Argon/Bcrypt Demo');
 
 const PkceHelperApp = createDynamicApp('pkce-helper', 'PKCE Helper');
@@ -195,6 +197,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayAsnExplorer = createDisplay(AsnExplorerApp);
+
 const displayArgonBcryptDemo = createDisplay(ArgonBcryptDemoApp);
 
 const displayPkceHelper = createDisplay(PkceHelperApp);
@@ -968,6 +972,13 @@ const apps = [
       screen: displayCookieJar,
     },
     {
+      id: 'asn-explorer',
+      title: 'ASN Explorer',
+      icon: './themes/Yaru/apps/resource-monitor.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayAsnExplorer,
       id: 'argon-bcrypt-demo',
       title: 'Argon/Bcrypt Demo',
       icon: './themes/Yaru/apps/hash.svg',
