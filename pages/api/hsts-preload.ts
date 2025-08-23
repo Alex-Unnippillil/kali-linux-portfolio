@@ -25,9 +25,26 @@ export default async function handler(
   }
 
   try {
-    const statusRes = await fetch(
-      `https://hstspreload.org/api/v2/status?domain=${encodeURIComponent(domain)}`
-    );
+    // Add timeout to external API call
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000); // 5 seconds
+    let statusRes;
+    try {
+      statusRes = await fetch(
+        `https://hstspreload.org/api/v2/status?domain=${encodeURIComponent(domain)}`,
+        { signal: controller.signal }
+      );
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        res.status(504).json({ error: 'hstspreload.org request timed out' });
+        return;
+      } else {
+        res.status(502).json({ error: 'Failed to fetch hstspreload.org status' });
+        return;
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
     const statusData = await statusRes.json();
 
     const siteRes = await fetch(`https://${domain}/`, { method: 'GET' });
