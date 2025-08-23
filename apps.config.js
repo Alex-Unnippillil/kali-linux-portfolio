@@ -104,6 +104,7 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const CsrGeneratorApp = createDynamicApp('csr-generator', 'CSR Generator');
 
 
 
@@ -160,6 +161,7 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayCsrGenerator = createDisplay(CsrGeneratorApp);
  
 
 
@@ -738,15 +740,24 @@ const apps = [
       screen: displayContentFingerprint,
     },
     {
-
-id: 'nmap-viewer',
+      id: 'csr-generator',
+      title: 'CSR Generator',
+      icon: './themes/Yaru/apps/hash.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayCsrGenerator,
+    },
+    {
+      id: 'nmap-viewer',
       title: 'Nmap Viewer',
       icon: './themes/Yaru/apps/resource-monitor.svg',
       disabled: false,
       favourite: false,
       desktop_shortcut: false,
       screen: displayNmapViewer,
-
+    },
+    {
       id: 'report-viewer',
       title: 'Report Viewer',
       icon: './themes/Yaru/apps/gedit.png',
