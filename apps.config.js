@@ -184,8 +184,7 @@ const PrefetchJumplistApp = createDynamicApp(
 
 const TimelineBuilderApp = createDynamicApp('timeline-builder', 'Timeline Builder');
 
-
-
+const SbomViewerApp = createDynamicApp('sbom-viewer', 'SBOM Viewer');
 const displayTerminal = createDisplay(TerminalApp);
 const displayTerminalCalc = createDisplay(CalcApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
@@ -249,6 +248,7 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+
 const displayTorExitCheck = createDisplay(TorExitCheckApp);
 
 const displayWaybackViewer = createDisplay(WaybackViewerApp);
@@ -295,6 +295,7 @@ const displayHttp3Probe = createDisplay(Http3ProbeApp);
 
  
 
+const displaySbomViewer = createDisplay(SbomViewerApp);
 
 // Default window sizing for games to prevent oversized frames
 const gameDefaults = {
@@ -1250,6 +1251,7 @@ const apps = [
       screen: displayContentFingerprint,
     },
     {
+
       id: 'ssh-fingerprint',
       title: 'SSH Fingerprint',
 
@@ -1293,6 +1295,14 @@ const apps = [
       screen: displayReportViewer,
     },
     {
+      id: 'sbom-viewer',
+      title: 'SBOM Viewer',
+      icon: './themes/Yaru/apps/gedit.png',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displaySbomViewer,
+
       id: 'redirect-visualizer',
       title: 'Redirect Visualizer',
 
