@@ -94,13 +94,15 @@ export default async function handler(
   }
   try {
     const result = await resolveSpf(domain.toLowerCase());
-    const length = `v=spf1 ${result.allIps.join(' ')} -all`.length;
+    const flattenedSpfRecord = buildFlattenedSpfRecord(result.allIps);
+    const length = flattenedSpfRecord.length;
     const ttl = result.minTtl === Infinity ? 0 : result.minTtl;
     return res.status(200).json({
       chain: result.node,
       ips: result.allIps,
       ttl,
       length,
+      flattenedSpfRecord,
     });
   } catch (e: any) {
     return res.status(500).json({ error: e.message || 'Lookup failed' });
