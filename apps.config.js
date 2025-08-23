@@ -99,6 +99,7 @@ const YaraTesterApp = createDynamicApp('yara-tester', 'YARA Tester');
 const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
 
 const ContentFingerprintApp = createDynamicApp('content-fingerprint', 'Content Fingerprint');
+const SshFingerprintApp = createDynamicApp('ssh-fingerprint', 'SSH Fingerprint');
 const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
@@ -155,6 +156,7 @@ const displayYaraTester = createDisplay(YaraTesterApp);
 const displayThreatModeler = createDisplay(ThreatModelerApp);
 
 const displayContentFingerprint = createDisplay(ContentFingerprintApp);
+const displaySshFingerprint = createDisplay(SshFingerprintApp);
 const displayNmapViewer = createDisplay(NmapViewerApp);
 
 const displayReportViewer = createDisplay(ReportViewerApp);
@@ -736,6 +738,15 @@ const apps = [
       favourite: false,
       desktop_shortcut: false,
       screen: displayContentFingerprint,
+    },
+    {
+      id: 'ssh-fingerprint',
+      title: 'SSH Fingerprint',
+      icon: './themes/Yaru/apps/hash.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displaySshFingerprint,
     },
     {
 
