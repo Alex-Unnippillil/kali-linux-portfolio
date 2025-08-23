@@ -108,6 +108,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const CsrGeneratorApp = createDynamicApp('csr-generator', 'CSR Generator');
+
 const OpenRedirectLabApp = createDynamicApp('open-redirect-lab', 'Open Redirect Lab');
 
 const SameSiteLabApp = createDynamicApp('samesite-lab', 'SameSite Lab');
@@ -182,6 +184,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayCsrGenerator = createDisplay(CsrGeneratorApp);
+
 const displayOpenRedirectLab = createDisplay(OpenRedirectLabApp);
 
 const displaySameSiteLab = createDisplay(SameSiteLabApp);
@@ -890,6 +894,16 @@ const apps = [
       screen: displayContentFingerprint,
     },
     {
+      id: 'csr-generator',
+      title: 'CSR Generator',
+      icon: './themes/Yaru/apps/hash.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayCsrGenerator,
+    },
+    {
+
       id: 'meta-inspector',
       title: 'Meta Inspector',
       icon: './themes/Yaru/apps/kali-browser.svg',
