@@ -163,6 +163,8 @@ const PrefetchJumplistApp = createDynamicApp(
 );
 
 
+const TimelineBuilderApp = createDynamicApp('timeline-builder', 'Timeline Builder');
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -226,6 +228,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
 
+const displayTimelineBuilder = createDisplay(TimelineBuilderApp);
+
 const displayEmlMsgParser = createDisplay(EmlMsgParserApp);
 
 
@@ -259,6 +263,7 @@ const displayMetaInspector = createDisplay(MetaInspectorApp);
 const displayRedirectVisualizer = createDisplay(RedirectVisualizerApp);
 
 const displayHttp3Probe = createDisplay(Http3ProbeApp);
+
 
  
 
@@ -799,6 +804,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayPkceHelper,
+  },
+  {
+    id: 'timeline-builder',
+    title: 'Timeline Builder',
+    icon: icon('project-gallery.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTimelineBuilder,
   },
   {
     id: 'favicon-hash',
