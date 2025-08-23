@@ -119,6 +119,8 @@ const RedirectVisualizerApp = createDynamicApp(
 
 const Http3ProbeApp = createDynamicApp('http3-probe', 'HTTP/3 Probe');
 
+const CspReporterApp = createDynamicApp('csp-reporter', 'CSP Reporter');
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -176,6 +178,9 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+
+const displayCspReporter = createDisplay(CspReporterApp);
+
 const displaySitemapHeatmap = createDisplay(SitemapHeatmapApp);
 
 const displayMetaInspector = createDisplay(MetaInspectorApp);
@@ -767,6 +772,9 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+    id: 'csp-reporter',
+    title: 'CSP Reporter',
+
     id: 'cookie-jar',
     title: 'Cookie Jar',
     icon: './themes/Yaru/apps/cookie-jar.svg',
@@ -800,6 +808,8 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    screen: displayCspReporter,
+
     screen: displayReportViewer,
   },
   {
@@ -895,6 +905,7 @@ const apps = [
     // Games are included so they appear alongside apps
     ...games,
   ];
+
 
 
 export default apps;
