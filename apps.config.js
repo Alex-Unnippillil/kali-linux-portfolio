@@ -99,6 +99,7 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const MailAuthApp = createDynamicApp('mail-auth', 'Mail Auth');
+
 const MailSecurityMatrixApp = createDynamicApp(
   'mail-security-matrix',
   'Mail Security Matrix'
@@ -202,6 +203,8 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+const displayCtSearch = createDisplay(CtSearchApp);
+
 const displayMailAuth = createDisplay(MailAuthApp);
 const displayMailSecurityMatrix = createDisplay(MailSecurityMatrixApp);
 
@@ -816,6 +819,16 @@ const apps = [
     desktop_shortcut: false,
     screen: displayTimelineBuilder,
   },
+  {
+    id: 'ct-search',
+    title: 'CT Search',
+    icon: icon('hash.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCtSearch,
+  },
+
   {
     id: 'favicon-hash',
     title: 'Favicon Hash',
