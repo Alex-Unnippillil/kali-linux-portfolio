@@ -39,12 +39,20 @@ const KillchainDiagram: React.FC = () => {
         })
         .catch((err) => {
           if (diagramRef.current) {
-            diagramRef.current.innerHTML = `<pre class="text-red-400">${err}</pre>`;
+            diagramRef.current.innerHTML = '';
+            const pre = document.createElement('pre');
+            pre.className = 'text-red-400';
+            pre.textContent = String(err);
+            diagramRef.current.appendChild(pre);
           }
         });
     } catch (err) {
       if (diagramRef.current) {
-        diagramRef.current.innerHTML = `<pre class="text-red-400">${err}</pre>`;
+        diagramRef.current.innerHTML = '';
+        const pre = document.createElement('pre');
+        pre.className = 'text-red-400';
+        pre.textContent = String(err);
+        diagramRef.current.appendChild(pre);
       }
     }
   }, [stages]);
