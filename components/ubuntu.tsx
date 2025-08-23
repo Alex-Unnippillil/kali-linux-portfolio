@@ -93,8 +93,12 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
     ReactGA.send({ hitType: 'pageview', page: '/desktop', title: 'Custom Title' });
 
     if (typeof window !== 'undefined') {
-      window.removeEventListener('click', this.unLockScreen);
-      window.removeEventListener('keypress', this.unLockScreen);
+      try {
+        window.removeEventListener('click', this.unLockScreen);
+        window.removeEventListener('keypress', this.unLockScreen);
+      } catch (e) {
+        console.error('Error removing event listeners', e);
+      }
     }
 
     this.setState({ screen_locked: false });
