@@ -26,12 +26,12 @@
     "canvas-confetti": "1.9.3",
     "chess.js": "^1.0.0",
     "crypto-js": "4",
-
     "diff": "^8.0.2",
     "expr-eval": "^2.0.2",
     "html-to-image": "^1.11.13",
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^2.5.1",
+    "jszip": "^3.10.1",
     "libyara-wasm": "^1.2.1",
     "matter-js": "^0.20.0",
     "mermaid": "^11.10.1",
