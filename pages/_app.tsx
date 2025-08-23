@@ -2,8 +2,11 @@ import type { AppProps } from 'next/app';
 import { useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
+import { Inter } from 'next/font/google';
 import 'tailwindcss/tailwind.css';
 import '../styles/index.css';
+
+const inter = Inter({ subsets: ['latin'] });
 
 function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
@@ -16,10 +19,10 @@ function MyApp({ Component, pageProps }: AppProps) {
     }
   }, []);
   return (
-    <>
+    <main className={inter.className}>
       <Component {...pageProps} />
       <Analytics />
-    </>
+    </main>
   );
 }
 
