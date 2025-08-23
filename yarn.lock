@@ -9149,6 +9149,7 @@ __metadata:
     canvas-confetti: "npm:1.9.3"
     chess.js: "npm:^1.0.0"
     crypto-js: "npm:4"
+    cvss: "npm:^1.0.5"
 
     diff: "npm:^8.0.2"
     eslint: "npm:^9.34.0"
@@ -9738,5 +9739,17 @@ __metadata:
   version: 4.4.2
   resolution: "zxcvbn@npm:4.4.2"
   checksum: 10c0/862f101cc95247b30290bad67ade333e430a16763bb771ce4e4c5414396d987f9a64288225675c96bd6f8d3eba65da0dee119b2a4eaa2e249da3f540b036942e
+  languageName: node
+  linkType: hard
+
+"jose@npm:^5.2.3":
+  version: 5.2.3
+  resolution: "jose@npm:5.2.3"
+  checksum: 10c0/2945dd6dcb66d6e1d52fc058867c87920a77cc35f9296f198402951447d46d4d8ff00969ce36fee3c847be339d408c8fb21a1b961cecbaa3b010401bb47562ac
+
+"cvss@npm:^1.0.5":
+  version: 1.0.5
+  resolution: "cvss@npm:1.0.5"
+  checksum: 10c0/7d5a9e6b9064abef3f4fdf0a9a19d05779fa5fef61934be2f903867ad05129bd8a5ae15d58588ee9c01fdd9492174cf22eed5ecb010c2ff1b44cd32e2fa74edb
   languageName: node
   linkType: hard
