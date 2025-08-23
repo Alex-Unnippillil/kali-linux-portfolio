@@ -82,8 +82,13 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
+
 const ContentFingerprintApp = createDynamicApp('content-fingerprint', 'Content Fingerprint');
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
+
+const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -123,8 +128,12 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayThreatModeler = createDisplay(ThreatModelerApp);
+
 const displayContentFingerprint = createDisplay(ContentFingerprintApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
+
+const displayCookieJar = createDisplay(CookieJarApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -605,6 +614,28 @@ const apps = [
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
   },
+  {
+    id: 'weather',
+    title: 'Weather',
+    icon: './themes/Yaru/apps/weather.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWeather,
+  },
+  {
+    id: 'threat-modeler',
+    title: 'Threat Modeler',
+    icon: './themes/Yaru/apps/threat-modeler.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayThreatModeler,
+  },
+  // Games are included so they appear alongside apps
+  ...games,
+];
+
     {
       id: 'weather',
       title: 'Weather',
@@ -613,6 +644,15 @@ const apps = [
       favourite: false,
       desktop_shortcut: false,
       screen: displayWeather,
+    },
+    {
+      id: 'cookie-jar',
+      title: 'Cookie Jar',
+      icon: './themes/Yaru/apps/cookie-jar.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayCookieJar,
     },
     {
       id: 'content-fingerprint',
