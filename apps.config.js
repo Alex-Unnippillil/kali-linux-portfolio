@@ -108,6 +108,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const OpenRedirectLabApp = createDynamicApp('open-redirect-lab', 'Open Redirect Lab');
+
 const SameSiteLabApp = createDynamicApp('samesite-lab', 'SameSite Lab');
 
 const SitemapHeatmapApp = createDynamicApp('sitemap-heatmap', 'Sitemap Heatmap');
@@ -180,6 +182,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayOpenRedirectLab = createDisplay(OpenRedirectLabApp);
+
 const displaySameSiteLab = createDisplay(SameSiteLabApp);
 
 
@@ -193,6 +197,7 @@ const displayMetaInspector = createDisplay(MetaInspectorApp);
 const displayRedirectVisualizer = createDisplay(RedirectVisualizerApp);
 
 const displayHttp3Probe = createDisplay(Http3ProbeApp);
+
  
 
 
@@ -681,8 +686,6 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayQuoteGenerator,
-  },
   {
     id: 'cvss-calculator',
     title: 'CVSS Calculator',
@@ -745,6 +748,7 @@ const apps = [
     screen: displayWeather,
   },
 
+
   {
     id: 'sitemap-heatmap',
     title: 'Sitemap Heatmap',
@@ -776,6 +780,7 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+
     id: 'csp-reporter',
     title: 'CSP Reporter',
 
@@ -812,6 +817,17 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    screen: displayReportViewer,
+  },
+  {
+    id: 'open-redirect-lab',
+    title: 'Open Redirect Lab',
+    icon: icon('gedit.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayOpenRedirectLab,
+
     screen: displayCspReporter,
 
     screen: displayReportViewer,
