@@ -19,7 +19,9 @@ import { displayRegexRedactor } from './components/apps/regex-redactor';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
+import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayCaaChecker } from './components/apps/caa-checker';
 
 export const THEME = process.env.NEXT_PUBLIC_THEME || 'Yaru';
 export const icon = (name) => `./themes/${THEME}/apps/${name}`;
@@ -85,6 +87,7 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const MailAuthApp = createDynamicApp('mail-auth', 'Mail Auth');
+const DnssecValidatorApp = createDynamicApp('dnssec-validator', 'DNSSEC Validator');
 
 const CveDashboardApp = createDynamicApp('cve-dashboard', 'CVE Dashboard');
 
@@ -103,7 +106,18 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
+const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const SitemapHeatmapApp = createDynamicApp('sitemap-heatmap', 'Sitemap Heatmap');
+
+const MetaInspectorApp = createDynamicApp('meta-inspector', 'Meta Inspector');
+
+const RedirectVisualizerApp = createDynamicApp(
+  'redirect-visualizer',
+  'Redirect Visualizer'
+);
+
+const Http3ProbeApp = createDynamicApp('http3-probe', 'HTTP/3 Probe');
 
 const CspReporterApp = createDynamicApp('csp-reporter', 'CSP Reporter');
 
@@ -143,6 +157,7 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayMailAuth = createDisplay(MailAuthApp);
+const displayDnssecValidator = createDisplay(DnssecValidatorApp);
 
 const displayCveDashboard = createDisplay(CveDashboardApp);
 
@@ -161,9 +176,19 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 
 const displayReportViewer = createDisplay(ReportViewerApp);
 
+const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
 
 const displayCspReporter = createDisplay(CspReporterApp);
+
+const displaySitemapHeatmap = createDisplay(SitemapHeatmapApp);
+
+const displayMetaInspector = createDisplay(MetaInspectorApp);
+
+
+const displayRedirectVisualizer = createDisplay(RedirectVisualizerApp);
+
+const displayHttp3Probe = createDisplay(Http3ProbeApp);
  
 
 
@@ -655,6 +680,22 @@ const apps = [
     screen: displayQuoteGenerator,
   },
   {
+    id: 'cvss-calculator',
+    title: 'CVSS Calculator',
+    icon: icon('calc.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCvssCalculator,
+    id: 'caa-checker',
+    title: 'CAA Checker',
+    icon: icon('mail-auth.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCaaChecker,
+  },
+  {
     id: 'favicon-hash',
     title: 'Favicon Hash',
     icon: './themes/Yaru/apps/hash.svg',
@@ -662,10 +703,17 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayFaviconHash,
-
+  },
+  {
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
     icon: './themes/Yaru/apps/calc.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCveDashboard,
+  },
+  {
     id: 'pcap-viewer',
     title: 'PCAP Viewer',
     icon: './themes/Yaru/apps/pcap-viewer.svg',
@@ -673,7 +721,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayPcapViewer,
-
+  },
+  {
     id: 'yara-tester',
     title: 'YARA Tester',
     icon: './themes/Yaru/apps/bash.png',
@@ -689,8 +738,19 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayCveDashboard,
+    screen: displayWeather,
   },
+
+  {
+    id: 'sitemap-heatmap',
+    title: 'Sitemap Heatmap',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySitemapHeatmap,
+  },
+
 
 
   {
@@ -714,14 +774,138 @@ const apps = [
   {
     id: 'csp-reporter',
     title: 'CSP Reporter',
+
+    id: 'cookie-jar',
+    title: 'Cookie Jar',
+    icon: './themes/Yaru/apps/cookie-jar.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCookieJar,
+  },
+  {
+    id: 'content-fingerprint',
+    title: 'Content Fingerprint',
+    icon: './themes/Yaru/apps/content-fingerprint.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayContentFingerprint,
+  },
+  {
+    id: 'nmap-viewer',
+    title: 'Nmap Viewer',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNmapViewer,
+  },
+  {
+    id: 'report-viewer',
+    title: 'Report Viewer',
     icon: './themes/Yaru/apps/gedit.png',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
     screen: displayCspReporter,
+
+    screen: displayReportViewer,
+  },
+  {
+    id: 'hsts-preload',
+    title: 'HSTS Preload',
+    icon: './themes/Yaru/apps/hash.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHstsPreload,
+
+    id: 'dnssec-validator',
+    title: 'DNSSEC Validator',
+    icon: './themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDnssecValidator,
   },
   // Games are included so they appear alongside apps
   ...games,
 ];
+
+    {
+      id: 'weather',
+      title: 'Weather',
+      icon: './themes/Yaru/apps/weather.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayWeather,
+    },
+    {
+      id: 'cookie-jar',
+      title: 'Cookie Jar',
+      icon: './themes/Yaru/apps/cookie-jar.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayCookieJar,
+    },
+    {
+      id: 'content-fingerprint',
+      title: 'Content Fingerprint',
+      icon: './themes/Yaru/apps/content-fingerprint.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayContentFingerprint,
+    },
+    {
+      id: 'meta-inspector',
+      title: 'Meta Inspector',
+      icon: './themes/Yaru/apps/kali-browser.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayMetaInspector,
+    },
+    {
+
+      id: 'nmap-viewer',
+      title: 'Nmap Viewer',
+      icon: './themes/Yaru/apps/resource-monitor.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayNmapViewer,
+    },
+    {
+      id: 'report-viewer',
+      title: 'Report Viewer',
+      icon: './themes/Yaru/apps/gedit.png',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayReportViewer,
+    },
+    {
+      id: 'redirect-visualizer',
+      title: 'Redirect Visualizer',
+
+      id: 'http3-probe',
+      title: 'HTTP/3 Probe',
+      icon: './themes/Yaru/apps/resource-monitor.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayRedirectVisualizer,
+
+      screen: displayHttp3Probe,
+    },
+    // Games are included so they appear alongside apps
+    ...games,
+  ];
+
+
 
 export default apps;
