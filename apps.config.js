@@ -103,7 +103,7 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
-const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const JwksFetcherApp = createDynamicApp('jwks-fetcher', 'JWKS Fetcher');
 
 
 
@@ -159,7 +159,7 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 
 const displayReportViewer = createDisplay(ReportViewerApp);
 
-const displayCookieJar = createDisplay(CookieJarApp);
+const displayJwksFetcher = createDisplay(JwksFetcherApp);
  
 
 
@@ -706,7 +706,15 @@ const apps = [
     desktop_shortcut: false,
     screen: displayThreatModeler,
   },
-  // Games are included so they appear alongside apps
+  {
+    id: 'jwks-fetcher',
+    title: 'JWKS Fetcher',
+    icon: './themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayJwksFetcher,
+  },
   ...games,
 ];
 
