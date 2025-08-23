@@ -22,6 +22,8 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayPlistInspector } from './components/apps/plist-inspector';
+
 import { displaySpfFlattener } from './components/apps/spf-flattener';
 
 import { displayHibpCheck } from './components/apps/hibp-check';
@@ -29,6 +31,7 @@ import { displayHibpCheck } from './components/apps/hibp-check';
 import { displayJwsJweWorkbench } from './components/apps/jws-jwe-workbench';
 
 import { displayCaaChecker } from './components/apps/caa-checker';
+
 
 export const THEME = process.env.NEXT_PUBLIC_THEME || 'Yaru';
 export const icon = (name) => `./themes/${THEME}/apps/${name}`;
@@ -793,6 +796,9 @@ const apps = [
   },
   {
 
+
+
+
     icon: icon('calc.png'),
 
     id: 'cve-dashboard',
@@ -810,6 +816,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+
   },
   {
     id: 'sqlite-viewer',
@@ -831,6 +838,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayYaraTester,
+  },
+  {
+    id: 'plist-inspector',
+    title: 'Plist Inspector',
+    icon: icon('gedit.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPlistInspector,
   },
   {
     id: 'weather',
@@ -878,6 +894,7 @@ const apps = [
     desktop_shortcut: false,
     screen: displayReportViewer,
 
+
   },
   {
     id: 'spf-flattener',
@@ -899,9 +916,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displaySitemapHeatmap,
+
   },
-
-
   {
     id: 'mail-auth',
     title: 'Mail Auth',
@@ -1023,7 +1039,6 @@ const apps = [
   // Games are included so they appear alongside apps
   ...games,
 ];
-
 
 
     {
