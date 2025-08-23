@@ -83,6 +83,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const ContentFingerprintApp = createDynamicApp('content-fingerprint', 'Content Fingerprint');
+const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -123,6 +124,7 @@ const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
 const displayContentFingerprint = createDisplay(ContentFingerprintApp);
+const displayNmapViewer = createDisplay(NmapViewerApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -620,6 +622,15 @@ const apps = [
       favourite: false,
       desktop_shortcut: false,
       screen: displayContentFingerprint,
+    },
+    {
+      id: 'nmap-viewer',
+      title: 'Nmap Viewer',
+      icon: './themes/Yaru/apps/resource-monitor.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayNmapViewer,
     },
     // Games are included so they appear alongside apps
     ...games,
