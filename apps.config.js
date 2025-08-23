@@ -84,8 +84,7 @@ const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
-const CtSearchApp = createDynamicApp('ct-search', 'CT Search');
-
+const MailAuthApp = createDynamicApp('mail-auth', 'Mail Auth');
 const CveDashboardApp = createDynamicApp('cve-dashboard', 'CVE Dashboard');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
