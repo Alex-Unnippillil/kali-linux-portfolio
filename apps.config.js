@@ -104,6 +104,7 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const MetaInspectorApp = createDynamicApp('meta-inspector', 'Meta Inspector');
 
 
 
@@ -160,6 +161,7 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayMetaInspector = createDisplay(MetaInspectorApp);
  
 
 
@@ -738,15 +740,24 @@ const apps = [
       screen: displayContentFingerprint,
     },
     {
-
-id: 'nmap-viewer',
+      id: 'meta-inspector',
+      title: 'Meta Inspector',
+      icon: './themes/Yaru/apps/kali-browser.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayMetaInspector,
+    },
+    {
+      id: 'nmap-viewer',
       title: 'Nmap Viewer',
       icon: './themes/Yaru/apps/resource-monitor.svg',
       disabled: false,
       favourite: false,
       desktop_shortcut: false,
       screen: displayNmapViewer,
-
+    },
+    {
       id: 'report-viewer',
       title: 'Report Viewer',
       icon: './themes/Yaru/apps/gedit.png',
