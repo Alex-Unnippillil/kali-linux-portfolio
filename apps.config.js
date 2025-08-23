@@ -82,6 +82,8 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const YaraTesterApp = createDynamicApp('yara-tester', 'YARA Tester');
+
 const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
 
 const ContentFingerprintApp = createDynamicApp('content-fingerprint', 'Content Fingerprint');
@@ -126,8 +128,9 @@ const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 
 const displayGomoku = createDisplay(GomokuApp);
-
 const displayPinball = createDisplay(PinballApp);
+const displayYaraTester = createDisplay(YaraTesterApp);
+
 const displayThreatModeler = createDisplay(ThreatModelerApp);
 
 const displayContentFingerprint = createDisplay(ContentFingerprintApp);
@@ -613,6 +616,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'yara-tester',
+    title: 'YARA Tester',
+    icon: './themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayYaraTester,
   },
   {
     id: 'weather',
