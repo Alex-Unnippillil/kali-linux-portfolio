@@ -21,6 +21,8 @@ import { displayGitSecretsTester } from './components/apps/git-secrets-tester';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
+import { displayImportGraph } from './components/apps/import-graph';
+
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
 import { displayProjectGallery } from './components/apps/project-gallery';
 import { displayEvidenceNotebook } from './components/apps/evidence-notebook';
@@ -901,6 +903,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTlsExplainer,
+  },
+  {
+    id: 'import-graph',
+    title: 'Import Graph',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayImportGraph,
   },
   {
     id: 'favicon-hash',
