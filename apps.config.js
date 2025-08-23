@@ -103,6 +103,7 @@ const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
 
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
+const LicenseClassifierApp = createDynamicApp('license-classifier', 'License Classifier');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 
 
@@ -159,6 +160,7 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 
 const displayReportViewer = createDisplay(ReportViewerApp);
 
+const displayLicenseClassifier = createDisplay(LicenseClassifierApp);
 const displayCookieJar = createDisplay(CookieJarApp);
  
 
@@ -640,6 +642,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayAsciiArt,
+  },
+  {
+    id: 'license-classifier',
+    title: 'License Classifier',
+    icon: icon('gedit.png'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayLicenseClassifier,
   },
   {
     id: 'quote-generator',
