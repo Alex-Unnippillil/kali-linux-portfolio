@@ -107,6 +107,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const SitemapHeatmapApp = createDynamicApp('sitemap-heatmap', 'Sitemap Heatmap');
+
 const MetaInspectorApp = createDynamicApp('meta-inspector', 'Meta Inspector');
 
 const RedirectVisualizerApp = createDynamicApp(
@@ -173,6 +175,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displaySitemapHeatmap = createDisplay(SitemapHeatmapApp);
+
 const displayMetaInspector = createDisplay(MetaInspectorApp);
 
 
@@ -723,6 +727,19 @@ const apps = [
     desktop_shortcut: false,
     screen: displayWeather,
   },
+
+  {
+    id: 'sitemap-heatmap',
+    title: 'Sitemap Heatmap',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySitemapHeatmap,
+  },
+
+
+
   {
     id: 'mail-auth',
     title: 'Mail Auth',
