@@ -14,7 +14,7 @@
     "lint": "next lint"
   },
   "engines": {
-    "node": ">=18.17.0"
+    "node": "20.x"
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
