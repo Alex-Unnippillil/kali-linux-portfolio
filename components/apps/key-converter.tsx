@@ -68,8 +68,12 @@ const KeyConverter: React.FC = () => {
           setResult(b64);
         }
       }
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      let errorMsg = 'Unknown error';
+      if (typeof e === 'object' && e !== null && 'message' in e && typeof (e as any).message === 'string') {
+        errorMsg = (e as any).message;
+      }
+      setError(errorMsg);
       setResult('');
     }
   };
