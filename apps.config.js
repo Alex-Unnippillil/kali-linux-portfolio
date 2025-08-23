@@ -129,6 +129,8 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const TorExitCheckApp = createDynamicApp('tor-exit-check', 'Tor Exit Check');
+
 const WaybackViewerApp = createDynamicApp('wayback-viewer', 'Wayback Viewer');
 
 const RobotsAuditorApp = createDynamicApp('robots-auditor', 'Robots Auditor');
@@ -236,6 +238,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayTorExitCheck = createDisplay(TorExitCheckApp);
+
 const displayWaybackViewer = createDisplay(WaybackViewerApp);
 
 const displayRobotsAuditor = createDisplay(RobotsAuditorApp);
@@ -1015,6 +1019,9 @@ const apps = [
     screen: displayThreatModeler,
   },
   {
+    id: 'tor-exit-check',
+    title: 'Tor Exit Check',
+
 
     id: 'wayback-viewer',
     title: 'Wayback Viewer',
@@ -1125,6 +1132,9 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
+    screen: displayTorExitCheck,
+  },
+
     screen: displayHstsPreload,
 
     id: 'dnssec-validator',
