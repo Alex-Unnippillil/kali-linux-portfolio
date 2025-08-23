@@ -107,6 +107,7 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const HstsPreloadApp = createDynamicApp('hsts-preload', 'HSTS Preload');
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+const MetaInspectorApp = createDynamicApp('meta-inspector', 'Meta Inspector');
 
 const RedirectVisualizerApp = createDynamicApp(
   'redirect-visualizer',
@@ -172,6 +173,8 @@ const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayHstsPreload = createDisplay(HstsPreloadApp);
 const displayCookieJar = createDisplay(CookieJarApp);
+const displayMetaInspector = createDisplay(MetaInspectorApp);
+
 
 const displayRedirectVisualizer = createDisplay(RedirectVisualizerApp);
 
@@ -823,6 +826,16 @@ const apps = [
       screen: displayContentFingerprint,
     },
     {
+      id: 'meta-inspector',
+      title: 'Meta Inspector',
+      icon: './themes/Yaru/apps/kali-browser.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayMetaInspector,
+    },
+    {
+
       id: 'nmap-viewer',
       title: 'Nmap Viewer',
       icon: './themes/Yaru/apps/resource-monitor.svg',
