@@ -17,8 +17,20 @@ const TorExitCheck: React.FC = () => {
     setLoading(true);
     try {
       const res = await fetch(`/api/tor-exit-check?ip=${encodeURIComponent(ip)}`);
-      const data = await res.json();
-      setResult(data);
+      let data;
+      if (res.ok) {
+        data = await res.json();
+        setResult(data);
+      } else {
+        // Try to parse error response as JSON, fallback to text
+        try {
+          const errData = await res.json();
+          setResult({ error: errData.error || 'Failed to check IP', ip, isExit: false, fetchedAt: new Date().toISOString() });
+        } catch {
+          const errText = await res.text();
+          setResult({ error: errText || 'Failed to check IP', ip, isExit: false, fetchedAt: new Date().toISOString() });
+        }
+      }
     } finally {
       setLoading(false);
     }
