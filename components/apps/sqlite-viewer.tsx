@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 
 // SQLite viewer using sql.js loaded from CDN
+// Minimal interface for sql.js Database object
+interface SqlJsDatabase {
+  exec: (sql: string) => Array<{ columns: string[]; values: any[] }>;
+}
+
 const SqliteViewer: React.FC = () => {
-  const [db, setDb] = useState<any | null>(null);
+  const [db, setDb] = useState<SqlJsDatabase | null>(null);
   const [tables, setTables] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [result, setResult] = useState<any | null>(null);
