@@ -105,8 +105,7 @@ const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
 
-
-
+const SbomViewerApp = createDynamicApp('sbom-viewer', 'SBOM Viewer');
 const displayTerminal = createDisplay(TerminalApp);
 const displayTerminalCalc = createDisplay(CalcApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
@@ -160,8 +159,8 @@ const displayNmapViewer = createDisplay(NmapViewerApp);
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
- 
 
+const displaySbomViewer = createDisplay(SbomViewerApp);
 
 // Default window sizing for games to prevent oversized frames
 const gameDefaults = {
@@ -738,15 +737,15 @@ const apps = [
       screen: displayContentFingerprint,
     },
     {
-
-id: 'nmap-viewer',
+      id: 'nmap-viewer',
       title: 'Nmap Viewer',
       icon: './themes/Yaru/apps/resource-monitor.svg',
       disabled: false,
       favourite: false,
       desktop_shortcut: false,
       screen: displayNmapViewer,
-
+    },
+    {
       id: 'report-viewer',
       title: 'Report Viewer',
       icon: './themes/Yaru/apps/gedit.png',
@@ -754,6 +753,15 @@ id: 'nmap-viewer',
       favourite: false,
       desktop_shortcut: false,
       screen: displayReportViewer,
+    },
+    {
+      id: 'sbom-viewer',
+      title: 'SBOM Viewer',
+      icon: './themes/Yaru/apps/gedit.png',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displaySbomViewer,
     },
     // Games are included so they appear alongside apps
     ...games,
