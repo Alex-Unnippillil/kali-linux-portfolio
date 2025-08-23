@@ -15,6 +15,7 @@ import { displayYouTube } from './components/apps/youtube';
 import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
 import { displayQrTool } from './components/apps/qr_tool';
+import { displayRegexRedactor } from './components/apps/regex-redactor';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
@@ -79,11 +80,23 @@ const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
+const MailAuthApp = createDynamicApp('mail-auth', 'Mail Auth');
 
 const CveDashboardApp = createDynamicApp('cve-dashboard', 'CVE Dashboard');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const PcapViewerApp = createDynamicApp('pcap-viewer', 'PCAP Viewer');
+
+const YaraTesterApp = createDynamicApp('yara-tester', 'YARA Tester');
+
+const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
+
+const ContentFingerprintApp = createDynamicApp('content-fingerprint', 'Content Fingerprint');
+const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
+
+const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -119,12 +132,22 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+const displayMailAuth = createDisplay(MailAuthApp);
 
 const displayCveDashboard = createDisplay(CveDashboardApp);
 
 const displayGomoku = createDisplay(GomokuApp);
-
 const displayPinball = createDisplay(PinballApp);
+const displayPcapViewer = createDisplay(PcapViewerApp);
+
+const displayYaraTester = createDisplay(YaraTesterApp);
+
+const displayThreatModeler = createDisplay(ThreatModelerApp);
+
+const displayContentFingerprint = createDisplay(ContentFingerprintApp);
+const displayReportViewer = createDisplay(ReportViewerApp);
+
+const displayCookieJar = createDisplay(CookieJarApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -588,6 +611,15 @@ const apps = [
     screen: displayQrTool,
   },
   {
+    id: 'regex-redactor',
+    title: 'Regex Redactor',
+    icon: './themes/Yaru/apps/regex-redactor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayRegexRedactor,
+  },
+  {
     id: 'ascii-art',
     title: 'ASCII Art',
     icon: './themes/Yaru/apps/gedit.png',
@@ -609,6 +641,26 @@ const apps = [
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
     icon: './themes/Yaru/apps/calc.png',
+    id: 'pcap-viewer',
+    title: 'PCAP Viewer',
+    icon: './themes/Yaru/apps/pcap-viewer.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayPcapViewer,
+
+    id: 'yara-tester',
+    title: 'YARA Tester',
+    icon: './themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayYaraTester,
+  },
+  {
+    id: 'weather',
+    title: 'Weather',
+    icon: './themes/Yaru/apps/weather.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -616,8 +668,65 @@ const apps = [
   },
 
 
+  {
+    id: 'mail-auth',
+    title: 'Mail Auth',
+    icon: './themes/Yaru/apps/mail-auth.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMailAuth,
+
+    id: 'threat-modeler',
+    title: 'Threat Modeler',
+    icon: './themes/Yaru/apps/threat-modeler.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayThreatModeler,
+  },
   // Games are included so they appear alongside apps
   ...games,
 ];
+
+    {
+      id: 'weather',
+      title: 'Weather',
+      icon: './themes/Yaru/apps/weather.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayWeather,
+    },
+    {
+      id: 'cookie-jar',
+      title: 'Cookie Jar',
+      icon: './themes/Yaru/apps/cookie-jar.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayCookieJar,
+    },
+    {
+      id: 'content-fingerprint',
+      title: 'Content Fingerprint',
+      icon: './themes/Yaru/apps/content-fingerprint.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayContentFingerprint,
+    },
+    {
+      id: 'report-viewer',
+      title: 'Report Viewer',
+      icon: './themes/Yaru/apps/gedit.png',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayReportViewer,
+    },
+    // Games are included so they appear alongside apps
+    ...games,
+  ];
 
 export default apps;
