@@ -26,6 +26,7 @@
     "canvas-confetti": "1.9.3",
     "chess.js": "^1.0.0",
     "crypto-js": "4",
+    "cvss": "^1.0.5",
 
     "diff": "^8.0.2",
     "expr-eval": "^2.0.2",
