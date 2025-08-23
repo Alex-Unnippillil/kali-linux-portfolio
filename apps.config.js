@@ -99,6 +99,8 @@ const YaraTesterApp = createDynamicApp('yara-tester', 'YARA Tester');
 const ThreatModelerApp = createDynamicApp('threat-modeler', 'Threat Modeler');
 
 const ContentFingerprintApp = createDynamicApp('content-fingerprint', 'Content Fingerprint');
+const NmapViewerApp = createDynamicApp('nmap-viewer', 'Nmap Viewer');
+
 const ReportViewerApp = createDynamicApp('report-viewer', 'Report Viewer');
 
 const CookieJarApp = createDynamicApp('cookie-jar', 'Cookie Jar');
@@ -153,9 +155,12 @@ const displayYaraTester = createDisplay(YaraTesterApp);
 const displayThreatModeler = createDisplay(ThreatModelerApp);
 
 const displayContentFingerprint = createDisplay(ContentFingerprintApp);
+const displayNmapViewer = createDisplay(NmapViewerApp);
+
 const displayReportViewer = createDisplay(ReportViewerApp);
 
 const displayCookieJar = createDisplay(CookieJarApp);
+ 
 
 
 // Default window sizing for games to prevent oversized frames
@@ -733,6 +738,15 @@ const apps = [
       screen: displayContentFingerprint,
     },
     {
+
+id: 'nmap-viewer',
+      title: 'Nmap Viewer',
+      icon: './themes/Yaru/apps/resource-monitor.svg',
+      disabled: false,
+      favourite: false,
+      desktop_shortcut: false,
+      screen: displayNmapViewer,
+
       id: 'report-viewer',
       title: 'Report Viewer',
       icon: './themes/Yaru/apps/gedit.png',
