@@ -27,8 +27,12 @@ export default async function handler(
       .trim()
       .split('\n')
       .reduce<TraceInfo>((acc, line) => {
-        const [key, value] = line.split('=');
-        if (key && value) acc[key] = value;
+        const sepIdx = line.indexOf('=');
+        if (sepIdx !== -1) {
+          const key = line.substring(0, sepIdx);
+          const value = line.substring(sepIdx + 1);
+          if (key && value) acc[key] = value;
+        }
         return acc;
       }, {});
 
