@@ -4,10 +4,6 @@ import { act } from 'react';
 import Window from '../components/base/window';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
-jest.mock('react-draggable', () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
 describe('Window lifecycle', () => {

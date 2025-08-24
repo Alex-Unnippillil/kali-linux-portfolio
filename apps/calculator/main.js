@@ -1,3 +1,6 @@
+import { Parser } from 'expr-eval';
+
+const parser = new Parser();
 const display = document.getElementById('display');
 const buttons = document.querySelectorAll('.btn');
 const toggle = document.getElementById('toggle-scientific');
@@ -28,8 +31,8 @@ buttons.forEach((btn) => {
 
 function evaluate(expression) {
   try {
-    return Function('with (Math) { return (' + expression + ') }')();
-  } catch (e) {
+    return parser.evaluate(expression);
+  } catch {
     return 'Error';
   }
 }
