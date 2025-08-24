@@ -126,12 +126,20 @@ const Frogger = () => {
         else moveFrog(0, dy > 0 ? 1 : -1);
       } else {
         moveFrog(0, -1);
+        suppressClick = true;
+        setTimeout(() => { suppressClick = false; }, 400);
       }
       touchStart = null;
     };
     fg.addEventListener('touchstart', handleTouchStart);
     fg.addEventListener('touchend', handleTouchEnd);
-    const handleTap = () => moveFrog(0, -1);
+    const handleTap = (e) => {
+      if (suppressClick) {
+        e.preventDefault && e.preventDefault();
+        return;
+      }
+      moveFrog(0, -1);
+    };
     fg.addEventListener('click', handleTap);
 
     let tilt = { x: 0, y: 0 };
