@@ -13,7 +13,7 @@ export async function generateMetadata(
   const ogUrl = `/apps/quote-generator/og?${params.toString()}`;
   return {
     title: 'Quote Generator',
-    description: 'Generate and share inspirational quotes',
+    description: 'Browse, filter, and share inspirational quotes',
     openGraph: {
       images: [{ url: ogUrl }],
     },
