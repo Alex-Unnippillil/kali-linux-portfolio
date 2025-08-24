@@ -1,188 +1,232 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import * as PIXI from 'pixi.js';
 
-const themePacks: Record<string, string[]> = {
-  emoji: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼'],
-  icons: ['★','♥','♦','♣','♠','☀','☂','☁'],
-};
+const ITEMS = [
+  '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮',
+  '🐷','🐸','🐵','🐔','🐧','🐦','🐤','🐺','🐗','🐴','🦄','🐝',
+  '🐛','🦋','🐌','🐞','🐜','🪲','🐢','🐍'
+];
 
-const COMBO_WINDOW = 3000; // ms
+const DIFFICULTIES = {
+  easy: 4,
+  medium: 6,
+  hard: 8,
+} as const;
+
+type Difficulty = keyof typeof DIFFICULTIES;
+
+const CARD_SIZE = 64;
+const GAP = 8;
+const CARD_BACK_COLOR = 0x3b82f6;
+const ASSIST_COLOR = 0xff6666;
+const FLIP_BACK_DELAY = 800;
 
 interface Card {
   id: number;
-  content: string;
-  flipped: boolean;
+  value: string;
   matched: boolean;
+  container: PIXI.Container;
 }
 
-const shuffle = <T,>(array: T[]): T[] => {
-  for (let i = array.length - 1; i > 0; i--) {
+const shuffle = <T,>(arr: T[]): T[] => {
+  for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
-  return array;
-};
-
-const createDeck = (theme: string): Card[] => {
-  const items = themePacks[theme];
-  const deck = [...items, ...items].map((content, idx) => ({
-    id: idx,
-    content,
-    flipped: false,
-    matched: false,
-  }));
-  return shuffle(deck);
+  return arr;
 };
 
 const Memory: React.FC = () => {
-  const [theme, setTheme] = useState('emoji');
-  const [cards, setCards] = useState<Card[]>(() => createDeck('emoji'));
-  const [flipped, setFlipped] = useState<number[]>([]);
-  const [moves, setMoves] = useState(0);
-  const [combo, setCombo] = useState(0);
-  const [comboExpiry, setComboExpiry] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(0);
+  const divRef = useRef<HTMLDivElement>(null);
+  const appRef = useRef<PIXI.Application>();
+  const cardsRef = useRef<Card[]>([]);
+  const flippedRef = useRef<number[]>([]);
+  const timerRef = useRef<NodeJS.Timeout>();
+  const lastMismatchRef = useRef<number[] | null>(null);
+
+  const [difficulty, setDifficulty] = useState<Difficulty>('easy');
+  const [turns, setTurns] = useState(0);
+  const [time, setTime] = useState(0);
+  const [assist, setAssist] = useState(false);
 
   useEffect(() => {
-    if (!comboExpiry) return;
-    const tick = () => setTimeLeft(Math.max(0, comboExpiry - Date.now()));
-    tick();
-    const id = setInterval(tick, 100);
-    return () => clearInterval(id);
-  }, [comboExpiry]);
+    const app = new PIXI.Application();
+    appRef.current = app;
+    const container = divRef.current as HTMLDivElement;
+    container.innerHTML = '';
+    container.appendChild(app.view as HTMLCanvasElement);
+    return () => {
+      clearInterval(timerRef.current);
+      app.destroy(true);
+    };
+  }, []);
 
-  const resetGame = (t = theme) => {
-    setCards(createDeck(t));
-    setFlipped([]);
-    setMoves(0);
-    setCombo(0);
-    setComboExpiry(0);
+  const startTimer = () => {
+    clearInterval(timerRef.current);
+    const start = performance.now();
+    timerRef.current = setInterval(() => {
+      setTime(Math.floor((performance.now() - start) / 1000));
+    }, 1000);
   };
 
-  const handleTheme = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const t = e.target.value;
-    setTheme(t);
-    resetGame(t);
+  const resetHighlights = () => {
+    if (lastMismatchRef.current) {
+      lastMismatchRef.current.forEach((idx) => {
+        const back = cardsRef.current[idx].container
+          .children[0] as PIXI.Graphics;
+        back.tint = CARD_BACK_COLOR;
+      });
+      lastMismatchRef.current = null;
+    }
   };
 
-  const flipCard = (index: number) => {
-    if (cards[index].flipped || cards[index].matched || flipped.length === 2) return;
-    const newCards = cards.slice();
-    newCards[index].flipped = true;
-    const newFlipped = [...flipped, index];
-    setCards(newCards);
-    setFlipped(newFlipped);
+  const setup = () => {
+    const app = appRef.current as PIXI.Application;
+    app.stage.removeChildren();
+    cardsRef.current.forEach((c) => c.container.destroy());
 
-    if (newFlipped.length === 2) {
-      setMoves((m) => m + 1);
-      const [a, b] = newFlipped;
-      if (newCards[a].content === newCards[b].content) {
-        newCards[a].matched = newCards[b].matched = true;
-        setCards([...newCards]);
-        const now = Date.now();
-        if (now < comboExpiry) {
-          setCombo((c) => c + 1);
-        } else {
-          setCombo(1);
+    const size = DIFFICULTIES[difficulty];
+    const total = size * size;
+    const needed = total / 2;
+    const pool = shuffle(ITEMS.slice(0, needed));
+    const deckValues = shuffle([...pool, ...pool]);
+
+    cardsRef.current = deckValues.map((val, idx) => {
+      const container = new PIXI.Container();
+      const back = new PIXI.Graphics();
+      back
+        .beginFill(CARD_BACK_COLOR)
+        .drawRoundedRect(0, 0, CARD_SIZE, CARD_SIZE, 8)
+        .endFill();
+      const front = new PIXI.Text(val, { fontSize: CARD_SIZE * 0.5 });
+      front.anchor.set(0.5);
+      front.position.set(CARD_SIZE / 2, CARD_SIZE / 2);
+      front.visible = false;
+      container.addChild(back);
+      container.addChild(front);
+      container.x = (idx % size) * (CARD_SIZE + GAP);
+      container.y = Math.floor(idx / size) * (CARD_SIZE + GAP);
+      container.eventMode = 'static';
+      container.cursor = 'pointer';
+      container.on('pointertap', () => flip(idx));
+      app.stage.addChild(container);
+      return { id: idx, value: val, matched: false, container };
+    });
+
+    app.renderer.resize(
+      size * (CARD_SIZE + GAP) - GAP,
+      size * (CARD_SIZE + GAP) - GAP
+    );
+
+    flippedRef.current = [];
+    resetHighlights();
+    setTurns(0);
+    setTime(0);
+    clearInterval(timerRef.current);
+  };
+
+  useEffect(() => {
+    if (appRef.current) {
+      setup();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [difficulty]);
+
+  const flip = (idx: number) => {
+    const cards = cardsRef.current;
+    const card = cards[idx];
+    if (card.matched || flippedRef.current.includes(idx)) return;
+
+    if (flippedRef.current.length === 0) {
+      resetHighlights();
+    }
+
+    const container = card.container;
+    const back = container.children[0] as PIXI.Graphics;
+    const front = container.children[1] as PIXI.Text;
+
+    back.visible = false;
+    front.visible = true;
+    flippedRef.current.push(idx);
+
+    if (turns === 0 && flippedRef.current.length === 1 && time === 0) {
+      startTimer();
+    }
+
+    if (flippedRef.current.length === 2) {
+      setTurns((t) => t + 1);
+      const [a, b] = flippedRef.current;
+      const cardA = cards[a];
+      const cardB = cards[b];
+      if (cardA.value === cardB.value) {
+        cardA.matched = cardB.matched = true;
+        flippedRef.current = [];
+        if (cards.every((c) => c.matched)) {
+          clearInterval(timerRef.current);
         }
-        setComboExpiry(now + COMBO_WINDOW);
-        setFlipped([]);
       } else {
+        if (assist) {
+          resetHighlights();
+          lastMismatchRef.current = [a, b];
+          [a, b].forEach((i) => {
+            const g = cards[i].container.children[0] as PIXI.Graphics;
+            g.tint = ASSIST_COLOR;
+          });
+        }
         setTimeout(() => {
-          newCards[a].flipped = false;
-          newCards[b].flipped = false;
-          setCards([...newCards]);
-          setFlipped([]);
-          setCombo(0);
-          setComboExpiry(0);
-        }, 800);
+          [a, b].forEach((i) => {
+            const cont = cards[i].container;
+            (cont.children[1] as PIXI.Text).visible = false;
+            (cont.children[0] as PIXI.Graphics).visible = true;
+          });
+          flippedRef.current = [];
+        }, FLIP_BACK_DELAY);
       }
     }
   };
 
-  const allMatched = cards.every((c) => c.matched);
+  const handleAssist = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAssist(e.target.checked);
+    if (!e.target.checked) {
+      resetHighlights();
+    }
+  };
 
   return (
     <div className="p-4 select-none">
-      <div className="mb-2 flex items-center gap-4">
-        <div>Moves: {moves}</div>
-        <div>
-          Combo: {combo}
-          {combo > 0 && (
-            <span className="text-xs"> ({(timeLeft / 1000).toFixed(1)}s)</span>
-          )}
-        </div>
-        <select
-          aria-label="Theme"
-          value={theme}
-          onChange={handleTheme}
-          className="border p-1 text-sm"
-        >
-          {Object.keys(themePacks).map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
+      <div className="mb-2 flex items-center gap-4 flex-wrap">
+        <label className="flex items-center gap-1">
+          Difficulty:
+          <select
+            className="border p-1 text-sm"
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value as Difficulty)}
+          >
+            {Object.keys(DIFFICULTIES).map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={assist}
+            onChange={handleAssist}
+          />
+          Assist
+        </label>
         <button
-          onClick={() => resetGame()}
+          onClick={setup}
           className="border px-2 py-1 text-sm"
         >
           Reset
         </button>
+        <div>Turns: {turns}</div>
+        <div>Time: {time}s</div>
       </div>
-      {allMatched && <div className="mb-2">🎉 Completed in {moves} moves!</div>}
-      <div className="grid grid-cols-4 gap-2">
-        {cards.map((card, idx) => (
-          <button
-            key={card.id}
-            onClick={() => flipCard(idx)}
-            className={`card w-16 h-16 relative focus:outline-none ${
-              card.flipped || card.matched ? 'flipped' : ''
-            }`}
-            aria-label={
-              card.flipped || card.matched ? card.content : 'hidden card'
-            }
-          >
-            <div className="card-inner w-full h-full">
-              <div className="card-face card-back" />
-              <div className="card-face card-front">{card.content}</div>
-            </div>
-          </button>
-        ))}
-      </div>
-      <style jsx>{`
-        .card {
-          perspective: 600px;
-        }
-        .card-inner {
-          position: relative;
-          transform-style: preserve-3d;
-          transition: transform 0.3s;
-          will-change: transform;
-        }
-        .card.flipped .card-inner {
-          transform: rotateY(180deg);
-        }
-        .card-face {
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          backface-visibility: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 2rem;
-          border-radius: 0.25rem;
-        }
-        .card-back {
-          background: #3b82f6;
-          color: white;
-        }
-        .card-front {
-          background: white;
-          transform: rotateY(180deg);
-        }
-      `}</style>
+      <div ref={divRef} />
     </div>
   );
 };
