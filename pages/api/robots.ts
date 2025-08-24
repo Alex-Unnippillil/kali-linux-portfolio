@@ -1,11 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { validateRequest } from '../../lib/validate';
-import {
-  UserInputError,
-  withErrorHandler,
-} from '../../lib/errors';
-import { fetchRobots } from '../../lib/robots';
+import { UserInputError, withErrorHandler } from '../../lib/errors';
+import { fetchRobots, RobotsData } from '../../lib/robots';
+
 import { XMLParser } from 'fast-xml-parser';
 
 interface SitemapEntry {
@@ -15,9 +13,17 @@ interface SitemapEntry {
   status?: number;
 }
 
+interface RuleInfo {
+  rule: string;
+  type: 'allow' | 'disallow';
+  overriddenBy?: string;
+}
+
 interface RobotsResponse {
-  disallows: string[];
+  sitemaps: string[];
   sitemapEntries: SitemapEntry[];
+  unsupported: string[];
+  profiles: Record<string, RuleInfo[]>;
   missingRobots?: boolean;
   robotsUrl: string;
 }
@@ -28,6 +34,32 @@ export const config = {
 
 const querySchema = z.object({ url: z.string().url() });
 const bodySchema = z.object({});
+
+function buildProfile(data: RobotsData, ua: string): RuleInfo[] {
+  const rules: RuleInfo[] = [];
+  data.groups.forEach((g) => {
+    if (g.userAgents.includes(ua) || g.userAgents.includes('*')) {
+      g.allows.forEach((r) => rules.push({ rule: r, type: 'allow' }));
+      g.disallows.forEach((r) => rules.push({ rule: r, type: 'disallow' }));
+    }
+  });
+  // determine precedence
+  for (const a of rules) {
+    for (const b of rules) {
+      if (a === b || a.type === b.type) continue;
+      const allow = a.type === 'allow' ? a : b;
+      const disallow = a.type === 'disallow' ? a : b;
+      if (disallow.rule.startsWith(allow.rule)) {
+        if (allow.rule.length >= disallow.rule.length) {
+          disallow.overriddenBy = allow.rule;
+        } else {
+          allow.overriddenBy = disallow.rule;
+        }
+      }
+    }
+  }
+  return rules;
+}
 
 export default withErrorHandler(async function handler(
   req: NextApiRequest,
@@ -46,77 +78,43 @@ export default withErrorHandler(async function handler(
     throw new UserInputError('Missing url query parameter');
   }
 
-  const originUrl = new URL(url);
-  const origin = originUrl.origin;
-  const robotsUrl = `${origin}/robots.txt`;
+  const origin = new URL(url).origin;
+  const robots = await fetchRobots(origin);
 
-  const robotsData = await fetchRobots(origin);
-
-  const disallows = robotsData.groups.flatMap((g) => g.disallows);
-  const sitemapUrls = robotsData.sitemaps.length
-    ? robotsData.sitemaps
-    : [`${origin}/sitemap.xml`];
-
-  const parser = new XMLParser({ ignoreAttributes: false });
-  const visited = new Set<string>();
-
-  async function crawlSitemap(sitemapUrl: string): Promise<SitemapEntry[]> {
-    if (visited.has(sitemapUrl)) return [];
-    visited.add(sitemapUrl);
+  const sitemapEntries: SitemapEntry[] = [];
+  const parser = new XMLParser();
+  for (const sm of robots.sitemaps) {
     try {
-      const res = await fetch(sitemapUrl);
-      if (!res.ok) return [];
-      const text = await res.text();
-      const xml = parser.parse(text);
-      if (xml.urlset) {
-        const urls = Array.isArray(xml.urlset.url)
-          ? xml.urlset.url
-          : [xml.urlset.url];
-        const entries: SitemapEntry[] = [];
-        for (const u of urls) {
-          const loc: string = u.loc;
-          const lastmod: string | undefined = u.lastmod;
-          let status: number | undefined;
-          try {
-            const head = await fetch(loc, { method: 'HEAD' });
-            status = head.status;
-          } catch {
-            status = undefined;
-          }
-          const depth = new URL(loc).pathname.split('/').filter(Boolean)
-            .length;
-          entries.push({ loc, lastmod, status, depth });
-        }
-        return entries;
-      } else if (xml.sitemapindex) {
-        const maps = Array.isArray(xml.sitemapindex.sitemap)
-          ? xml.sitemapindex.sitemap
-          : [xml.sitemapindex.sitemap];
-        let all: SitemapEntry[] = [];
-        for (const m of maps) {
-          const loc: string = m.loc;
-          const sub = await crawlSitemap(loc);
-          all = all.concat(sub);
-        }
-        return all;
+      const resp = await fetch(sm);
+      if (!resp.ok) continue;
+      const xml = await resp.text();
+      const data = parser.parse(xml);
+      const urlset = data.urlset?.url;
+      if (Array.isArray(urlset)) {
+        urlset.forEach((u: any) => {
+          if (u.loc) sitemapEntries.push({ loc: u.loc, lastmod: u.lastmod });
+        });
+      } else if (urlset?.loc) {
+        sitemapEntries.push({ loc: urlset.loc, lastmod: urlset.lastmod });
       }
     } catch {
-      return [];
+      // ignore errors fetching individual sitemaps
     }
-    return [];
   }
 
-  let sitemapEntries: SitemapEntry[] = [];
-  for (const sm of sitemapUrls) {
-    const entries = await crawlSitemap(sm);
-    sitemapEntries = sitemapEntries.concat(entries);
-  }
+  const crawlers = ['googlebot', 'bingbot', 'duckduckbot', 'yandexbot'];
+  const profiles: Record<string, RuleInfo[]> = {};
+  crawlers.forEach((ua) => {
+    profiles[ua] = buildProfile(robots, ua);
+  });
 
   res.status(200).json({
-    disallows,
+    sitemaps: robots.sitemaps,
     sitemapEntries,
-    missingRobots: robotsData.missing,
-    robotsUrl,
+    unsupported: robots.unsupported,
+    profiles,
+    missingRobots: robots.missing || undefined,
+
   });
 });
 
