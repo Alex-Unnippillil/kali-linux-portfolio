@@ -8,6 +8,7 @@ const MixedContent: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [rewritten, setRewritten] = useState('');
+  const [simulateUpgrade, setSimulateUpgrade] = useState(false);
   const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
@@ -26,8 +27,10 @@ const MixedContent: React.FC = () => {
   const scan = () => {
     setError(null);
     setResults([]);
-    setRewritten(html.replace(/http:\/\//gi, 'https://'));
-    workerRef.current?.postMessage(html);
+    const rewrittenHtml = html.replace(/http:\/\//gi, 'https://');
+    setRewritten(rewrittenHtml);
+    const toScan = simulateUpgrade ? rewrittenHtml : html;
+    workerRef.current?.postMessage(toScan);
   };
 
   const fetchAndScan = async () => {
@@ -42,8 +45,10 @@ const MixedContent: React.FC = () => {
         setError(data.error || 'Fetch failed');
       } else {
         setHtml(data.body);
-        setRewritten(data.body.replace(/http:\/\//gi, 'https://'));
-        workerRef.current?.postMessage(data.body);
+        const rewrittenHtml = data.body.replace(/http:\/\//gi, 'https://');
+        setRewritten(rewrittenHtml);
+        const toScan = simulateUpgrade ? rewrittenHtml : data.body;
+        workerRef.current?.postMessage(toScan);
       }
     } catch (e) {
       setError('Request failed');
@@ -70,6 +75,15 @@ const MixedContent: React.FC = () => {
         >
           {loading ? 'Fetching...' : 'Fetch & Scan'}
         </button>
+      </div>
+      <div className="flex items-center space-x-2">
+        <input
+          id="simulate-upgrade"
+          type="checkbox"
+          checked={simulateUpgrade}
+          onChange={(e) => setSimulateUpgrade(e.target.checked)}
+        />
+        <label htmlFor="simulate-upgrade">Simulate upgrade-insecure-requests</label>
       </div>
       <textarea
         className="w-full h-40 text-black p-2"
@@ -100,6 +114,7 @@ const MixedContent: React.FC = () => {
                 <th className="px-2 py-1 text-left">Attribute</th>
                 <th className="px-2 py-1 text-left">HTTP URL</th>
                 <th className="px-2 py-1 text-left">HTTPS Hint</th>
+                <th className="px-2 py-1 text-left">Suggestion</th>
                 <th className="px-2 py-1 text-left">Category</th>
                 <th className="px-2 py-1 text-left">Browser Note</th>
               </tr>
@@ -115,6 +130,7 @@ const MixedContent: React.FC = () => {
                     </a>
                   </td>
                   <td className="px-2 py-1 break-all">{r.httpsUrl}</td>
+                  <td className="px-2 py-1 break-all">{r.suggestion}</td>
                   <td className="px-2 py-1">{r.category}</td>
                   <td className="px-2 py-1">
                     {r.category === 'active'
