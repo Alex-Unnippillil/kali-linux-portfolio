@@ -1,14 +1,9 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Fuse from 'fuse.js';
 import Papa from 'papaparse';
 import { FixedSizeList as List } from 'react-window';
-import { ParsedSbom } from '@lib/sbom';
+import { ParsedSbom, fetchOsv } from '@lib/sbom';
+
 
 interface TreeProps {
   id: string;
@@ -35,39 +30,52 @@ const SbomViewer: React.FC = () => {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [isParsing, setIsParsing] = useState(false);
+  const [worker, setWorker] = useState<Worker | null>(null);
   const [error, setError] = useState('');
-  const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
-    const w = new Worker(new URL('./sbom-viewer.worker.ts', import.meta.url));
-    w.onmessage = (e: MessageEvent<any>) => {
+    const w = new Worker(new URL('./sbom-parser.worker.ts', import.meta.url), {
+      type: 'module',
+    });
+    w.onmessage = (e) => {
+
       const { type } = e.data;
       if (type === 'progress') {
         setProgress(e.data.progress);
       } else if (type === 'done') {
-        setSbom(e.data.sbom);
-        setProgress(0);
+        const parsed: ParsedSbom = e.data.sbom;
+        Promise.all(parsed.components.map(fetchOsv)).then(() => {
+          setSbom(parsed);
+          setIsParsing(false);
+        });
       } else if (type === 'error') {
-        setError(e.data.error || 'Parse error');
-        setProgress(0);
+        setError(e.data.error);
+        setIsParsing(false);
       } else if (type === 'cancelled') {
-        setProgress(0);
+        setIsParsing(false);
       }
     };
-    workerRef.current = w;
+    setWorker(w);
     return () => w.terminate();
+
   }, []);
 
-  const handleFile = useCallback((file: File) => {
-    setSbom(null);
-    setError('');
-    setProgress(0);
-    workerRef.current?.postMessage({ type: 'parse', file });
-  }, []);
+  const handleFile = useCallback(
+    (file: File) => {
+      if (!worker) return;
+      setProgress(0);
+      setError('');
+      setSbom(null);
+      setIsParsing(true);
+      worker.postMessage({ type: 'parse', file });
+    },
+    [worker]
+  );
 
   const cancel = useCallback(() => {
-    workerRef.current?.postMessage({ type: 'cancel' });
-  }, []);
+    worker?.postMessage({ type: 'cancel' });
+  }, [worker]);
 
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
@@ -156,40 +164,33 @@ const SbomViewer: React.FC = () => {
   };
 
   if (!sbom) {
+    if (isParsing) {
+      return (
+        <div className="h-full w-full flex flex-col items-center justify-center border-2 border-dashed">
+          <div className="mb-2">Parsing... {Math.round(progress * 100)}%</div>
+          <button onClick={cancel} className="px-2 py-1 bg-red-600 text-white">
+            Cancel
+          </button>
+          {error && <div className="text-red-500 mt-2">{error}</div>}
+        </div>
+      );
+    }
     return (
       <div
         className="h-full w-full flex items-center justify-center border-2 border-dashed"
         onDrop={onDrop}
         onDragOver={(e) => e.preventDefault()}
       >
-        {progress > 0 ? (
-          <div className="text-center">
-            Parsing... {Math.round(progress * 100)}%
-            <button
-              onClick={cancel}
-              className="ml-2 text-blue-300 underline"
-            >
-              Cancel
-            </button>
-            {error && (
-              <div className="text-red-500 mt-2">{error}</div>
-            )}
-          </div>
-        ) : (
-          <label className="text-center">
-            Drop SBOM JSON here or{' '}
-            <input
-              data-testid="file-input"
-              type="file"
-              onChange={(e) =>
-                e.target.files && handleFile(e.target.files[0])
-              }
-            />
-            {error && (
-              <div className="text-red-500 mt-2">{error}</div>
-            )}
-          </label>
-        )}
+        <label className="text-center">
+          Drop SBOM JSON here or{' '}
+          <input
+            data-testid="file-input"
+            type="file"
+            onChange={(e) => e.target.files && handleFile(e.target.files[0])}
+          />
+        </label>
+        {error && <div className="text-red-500 mt-2">{error}</div>}
+
       </div>
     );
   }

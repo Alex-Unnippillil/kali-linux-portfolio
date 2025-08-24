@@ -13,10 +13,13 @@ import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import SbomViewer from '@components/apps/sbom-viewer';
 
 class MockWorker {
-  onmessage: ((e: any) => void) | null = null;
-  postMessage() {
-    const parsed = parseSbomObject(cyclonedxSample);
-    this.onmessage?.({ data: { type: 'done', sbom: parsed } });
+  onmessage: (e: any) => void = () => {};
+  constructor(_url: string | URL, _opts?: any) {}
+  postMessage(msg: any) {
+    if (msg.type === 'parse') {
+      const parsed = parseSbomObject(cyclonedxSample);
+      setTimeout(() => this.onmessage({ data: { type: 'done', sbom: parsed } }), 0);
+    }
   }
   terminate() {}
 }
