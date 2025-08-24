@@ -1,6 +1,9 @@
 // Security headers configuration for Next.js.
 // Allows external badges and same-origin PDF embedding without inline styles.
 
+const { validateEnv } = require('./lib/validate.js');
+validateEnv(process.env);
+
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -18,7 +21,8 @@ const ContentSecurityPolicy = [
   // Allow outbound connections for embeds and the in-browser Chrome app
   "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.googleapis.com https://api.axiom.co https://stackblitz.com https://api64.ipify.org https://cloudflare-dns.com https://dns.google https://www.googleapis.com https://crt.sh https://services.nvd.nist.gov https://osv.dev https://data.typeracer.com https://ghbtns.com stun:stun.l.google.com:19302",
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load arbitrary content
-    "frame-src 'self' https://stackblitz.com https://*.google.com https://ghbtns.com https://*.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
+  "frame-src 'self' https://stackblitz.com https://*.google.com https://ghbtns.com https://platform.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
+
 
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
@@ -82,20 +86,17 @@ module.exports = {
   bundlePagesRouterDependencies: true,
   productionBrowserSourceMaps: true,
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'opengraph.githubassets.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'raw.githubusercontent.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'avatars.githubusercontent.com',
-      },
+    // Keep unoptimized if you serve static assets without the Next image optimizer.
+    unoptimized: true,
+    domains: [
+      'opengraph.githubassets.com',
+      'raw.githubusercontent.com',
+      'avatars.githubusercontent.com',
     ],
+  },
+  experimental: {
+    optimizePackageImports: ['chart.js', 'react-chartjs-2'],
+
   },
   webpack: (config) => {
     config.resolve = config.resolve || {};

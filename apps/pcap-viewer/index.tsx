@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FixedSizeList as List } from 'react-window';
-import { Bar } from 'react-chartjs-2';
-import 'chart.js/auto';
+import dynamic from 'next/dynamic';
+
+const Bar = dynamic(() => import('react-chartjs-2').then((mod) => mod.Bar), {
+  ssr: false,
+});
 
 const MAX_SIZE = 50 * 1024 * 1024; // 50MB
 
@@ -36,7 +39,10 @@ const protocolsList = ['TCP', 'UDP', 'DNS', 'HTTP', 'OTHER'];
 const PcapViewer: React.FC = () => {
   const [worker, setWorker] = useState<Worker | null>(null);
   const [packets, setPackets] = useState<PacketInfo[]>([]);
-  const [summary, setSummary] = useState<Summary>({ protocols: {}, malformed: 0 });
+  const [summary, setSummary] = useState<Summary>({
+    protocols: {},
+    malformed: 0,
+  });
   const [flows, setFlows] = useState<Flow[]>([]);
   const [filters, setFilters] = useState<Record<string, boolean>>({
     TCP: true,
@@ -51,11 +57,18 @@ const PcapViewer: React.FC = () => {
   const [timeRange, setTimeRange] = useState<[number, number]>([0, 0]);
 
   useEffect(() => {
+    import('chart.js/auto');
+  }, []);
+
+  useEffect(() => {
     const w = new Worker(new URL('./parserWorker.ts', import.meta.url));
     w.onmessage = (e) => {
       const { type } = e.data;
       if (type === 'summary') {
-        setSummary({ protocols: e.data.protocols, malformed: e.data.malformed });
+        setSummary({
+          protocols: e.data.protocols,
+          malformed: e.data.malformed,
+        });
       } else if (type === 'packet') {
         setPackets((prev) => [...prev, ...e.data.packets]);
       } else if (type === 'flows') {
@@ -87,7 +100,10 @@ const PcapViewer: React.FC = () => {
     setSummary({ protocols: {}, malformed: 0 });
     setFlows([]);
     const buffer = new Uint8Array(await file.arrayBuffer());
-    worker.postMessage({ type: 'parse', buffer }, { transfer: [buffer.buffer] });
+    worker.postMessage(
+      { type: 'parse', buffer },
+      { transfer: [buffer.buffer] }
+    );
   };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,7 +140,10 @@ const PcapViewer: React.FC = () => {
     setSliceEnd(filteredPackets.length);
   }, [filteredPackets]);
 
-  const times = useMemo(() => filteredPackets.map((p) => p.ts), [filteredPackets]);
+  const times = useMemo(
+    () => filteredPackets.map((p) => p.ts),
+    [filteredPackets]
+  );
   const histData = useMemo(() => {
     if (times.length === 0) return { labels: [], datasets: [] };
     const min = Math.min(...times);
@@ -156,7 +175,9 @@ const PcapViewer: React.FC = () => {
     const end = Math.min(filteredPackets.length, sliceEnd);
     if (end <= start) return;
     const slice = filteredPackets.slice(start, end);
-    const blob = new Blob([JSON.stringify(slice)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(slice)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -171,24 +192,34 @@ const PcapViewer: React.FC = () => {
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
     >
-      <input type="file" accept=".pcap,.pcapng" onChange={handleFile} disabled={!worker} className="mb-2" />
+      <input
+        type="file"
+        accept=".pcap,.pcapng"
+        onChange={handleFile}
+        disabled={!worker}
+        className="mb-2"
+      />
       {error && <div className="text-red-500 mb-2">{error}</div>}
       <div className="mb-2">
         {protocolsList.map((p) => (
           <label key={p} className="mr-2">
-            <input type="checkbox" checked={filters[p]} onChange={() => toggleFilter(p)} /> {p} ({summary.protocols[p] || 0})
+            <input
+              type="checkbox"
+              checked={filters[p]}
+              onChange={() => toggleFilter(p)}
+            />{' '}
+            {p} ({summary.protocols[p] || 0})
           </label>
         ))}
       </div>
-      <div className="mb-2">
-        Malformed packets: {summary.malformed}
-      </div>
+      <div className="mb-2">Malformed packets: {summary.malformed}</div>
       <div className="mb-2">
         <h3 className="font-bold">Flows</h3>
         <ul>
           {filteredFlows.map((f, idx) => (
             <li key={idx} className="mb-1">
-              {f.src}:{f.src_port} ↔ {f.dst}:{f.dst_port} [{f.proto}] ({f.packetIndices.length})
+              {f.src}:{f.src_port} ↔ {f.dst}:{f.dst_port} [{f.proto}] (
+              {f.packetIndices.length})
               {f.http &&
                 f.http.map((m, i) => (
                   <div key={i} className="ml-2 text-green-400">
@@ -200,7 +231,13 @@ const PcapViewer: React.FC = () => {
         </ul>
       </div>
       <div className="mb-2">
-        <Bar data={histData} options={{ responsive: true, plugins: { legend: { display: false } } }} />
+        <Bar
+          data={histData}
+          options={{
+            responsive: true,
+            plugins: { legend: { display: false } },
+          }}
+        />
         {timeRange[1] > timeRange[0] && (
           <div className="flex mt-1">
             <input
@@ -208,7 +245,9 @@ const PcapViewer: React.FC = () => {
               min={timeRange[0]}
               max={timeRange[1]}
               value={timeRange[0]}
-              onChange={(e) => setTimeRange([Number(e.target.value), timeRange[1]])}
+              onChange={(e) =>
+                setTimeRange([Number(e.target.value), timeRange[1]])
+              }
               className="flex-1 mr-1"
             />
             <input
@@ -216,17 +255,28 @@ const PcapViewer: React.FC = () => {
               min={timeRange[0]}
               max={timeRange[1]}
               value={timeRange[1]}
-              onChange={(e) => setTimeRange([timeRange[0], Number(e.target.value)])}
+              onChange={(e) =>
+                setTimeRange([timeRange[0], Number(e.target.value)])
+              }
               className="flex-1"
             />
           </div>
         )}
       </div>
-      <List height={300} itemCount={filteredPackets.length} itemSize={20} width={'100%'} className="border mb-2">
+      <List
+        height={300}
+        itemCount={filteredPackets.length}
+        itemSize={20}
+        width={'100%'}
+        className="border mb-2"
+      >
         {({ index, style }) => {
           const p = filteredPackets[index];
           return (
-            <div style={style} className="whitespace-nowrap overflow-hidden px-1">
+            <div
+              style={style}
+              className="whitespace-nowrap overflow-hidden px-1"
+            >
               {`#${p.index} ${p.src}:${p.src_port} -> ${p.dst}:${p.dst_port} [${p.proto}]`}
             </div>
           );
@@ -245,7 +295,10 @@ const PcapViewer: React.FC = () => {
           onChange={(e) => setSliceEnd(Number(e.target.value))}
           className="text-black mr-1 px-1 w-20"
         />
-        <button onClick={exportSlice} className="px-2 py-1 bg-ub-blue text-white">
+        <button
+          onClick={exportSlice}
+          className="px-2 py-1 bg-ub-blue text-white"
+        >
           Export Filtered
         </button>
       </div>
