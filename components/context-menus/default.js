@@ -2,7 +2,13 @@ import React from 'react'
 
 function DefaultMenu(props) {
     return (
-        <div id="default-menu" className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}>
+        <div
+            id="default-menu"
+            className={
+                (props.active ? "block pointer-events-auto " : "hidden pointer-events-none ") +
+                "cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-menu text-sm"
+            }
+        >
 
             <Devider />
             <a rel="noopener noreferrer" href="https://www.linkedin.com/in/unnippillil/" target="_blank" className="w-full block cursor-default py-0.5 hover:bg-warm hover:bg-opacity-20 mb-1.5">
