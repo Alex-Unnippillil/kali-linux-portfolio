@@ -1,0 +1,5 @@
+{
+  "easy": ["apple", "train", "chair", "light", "candy"],
+  "medium": ["heart", "ulcer", "nerve", "tumor", "virus"],
+  "hard": ["xenon", "quart", "glyph", "oxide", "nadir"]
+}
