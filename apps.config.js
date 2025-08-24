@@ -839,7 +839,7 @@ const apps = [
   {
     id: 'robots-auditor',
     title: 'Robots Auditor',
-    icon: './themes/Yaru/apps/resource-monitor.svg',
+    icon: icon('robots-auditor.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,

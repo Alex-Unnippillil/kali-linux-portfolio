@@ -1,0 +1,10 @@
+# Sample robots.txt
+User-agent: GoogleBot
+Allow: /public/
+Disallow: /private/
+
+User-agent: bingbot
+Disallow: /bing
+
+Sitemap: https://example.com/sitemap.xml
+Unknown: value

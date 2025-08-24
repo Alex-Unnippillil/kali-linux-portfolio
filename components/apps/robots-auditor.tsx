@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { RobotsData, testPath, TestDecision } from '../../lib/robots';
 
 interface Decision extends TestDecision {
@@ -15,6 +15,19 @@ const RobotsAuditor: React.FC = () => {
   const [path, setPath] = useState('');
   const [userAgent, setUserAgent] = useState('*');
   const [decisions, setDecisions] = useState<Decision[]>([]);
+
+  const uaRules = useMemo(() => {
+    if (!data) return {} as Record<string, { allows: string[]; disallows: string[] }>;
+    const map: Record<string, { allows: string[]; disallows: string[] }> = {};
+    data.groups.forEach((g) => {
+      g.userAgents.forEach((ua) => {
+        if (!map[ua]) map[ua] = { allows: [], disallows: [] };
+        map[ua].allows.push(...g.allows);
+        map[ua].disallows.push(...g.disallows);
+      });
+    });
+    return map;
+  }, [data]);
 
   const load = async () => {
     setLoading(true);
@@ -42,14 +55,15 @@ const RobotsAuditor: React.FC = () => {
     setDecisions([...decisions, { path, userAgent, ...result }]);
   };
 
-  const exportDecisions = () => {
-    const blob = new Blob([JSON.stringify(decisions, null, 2)], {
+  const exportReport = () => {
+    const report = { origin, data, decisions, uaRules };
+    const blob = new Blob([JSON.stringify(report, null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'decisions.json';
+    a.download = 'robots-report.json';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -119,6 +133,44 @@ const RobotsAuditor: React.FC = () => {
             )}
           </div>
           <div>
+            <h2 className="font-bold mb-1">User-Agent Rules</h2>
+            {Object.keys(uaRules).length ? (
+              <div className="space-y-2">
+                {Object.entries(uaRules).map(([ua, rules]) => (
+                  <div key={ua} className="border border-gray-700 p-2">
+                    <div className="font-semibold">{ua}</div>
+                    <div>
+                      <span className="font-semibold">Allow:</span>{' '}
+                      {rules.allows.length ? (
+                        <ul className="list-disc ml-5">
+                          {rules.allows.map((a) => (
+                            <li key={a}>{a}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span>None</span>
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Disallow:</span>{' '}
+                      {rules.disallows.length ? (
+                        <ul className="list-disc ml-5">
+                          {rules.disallows.map((d) => (
+                            <li key={d}>{d}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span>None</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>No user-agent rules</div>
+            )}
+          </div>
+          <div>
             <h2 className="font-bold mb-1">Sitemaps</h2>
             {data.sitemaps.length ? (
               <ul className="list-disc ml-5 break-all">
@@ -132,6 +184,18 @@ const RobotsAuditor: React.FC = () => {
               </ul>
             ) : (
               <div>No sitemaps</div>
+            )}
+          </div>
+          <div>
+            <h2 className="font-bold mb-1">Unsupported Directives</h2>
+            {data.unsupported.length ? (
+              <ul className="list-disc ml-5 break-all text-red-400">
+                {data.unsupported.map((u, i) => (
+                  <li key={i}>{u}</li>
+                ))}
+              </ul>
+            ) : (
+              <div>None</div>
             )}
           </div>
           <div>
@@ -162,10 +226,10 @@ const RobotsAuditor: React.FC = () => {
             {decisions.length > 0 && (
               <div className="space-y-2">
                 <button
-                  onClick={exportDecisions}
+                  onClick={exportReport}
                   className="px-3 py-1 bg-blue-700 rounded"
                 >
-                  Export
+                  Export Report
                 </button>
                 <ul className="list-disc ml-5 break-all">
                   {decisions.map((d, idx) => (
