@@ -20,6 +20,7 @@ jobs:
       - run: yarn dedupe:check
       - run: yarn lint:ci
       - run: yarn typecheck
+      - run: yarn validate:icons
       - run: yarn build:ci
       - name: Jest tests
         run: yarn test --ci | tee jest-report.txt
