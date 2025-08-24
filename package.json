@@ -62,12 +62,9 @@
     "qr-scanner": "^1.4.2",
     "qrcode": "^1.5.4",
     "re2-wasm": "^1.0.2",
-    "react": "^19.1.1",
+    "react": "18.2.0",
     "react-activity-calendar": "^2.7.13",
-    "react-dom": "^19.1.1",
-
-    "react-draggable": "^4.4.5",
-
+    "react-dom": "18.2.0",
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
     "react-twitter-embed": "^4.0.4",
@@ -94,12 +91,16 @@
     "@types/mermaid": "^9.2.0",
     "@types/node": "^24.2.1",
     "@types/plist": "^3.0.2",
-    "@types/react": "^19.1.10",
+    "@types/react": "^18.2.0",
     "@types/three": "^0.179.0",
     "eslint": "^9.34.0",
     "eslint-config-next": "^15.5.0",
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
     "typescript": "^5.9.2"
+  },
+  "resolutions": {
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
   }
 }
