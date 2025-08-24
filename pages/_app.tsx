@@ -1,5 +1,5 @@
 import type { AppProps } from 'next/app';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
 import { Inter } from 'next/font/google';
@@ -8,16 +8,64 @@ import '../styles/index.css';
 
 const inter = Inter({ subsets: ['latin'] });
 
+const shouldTrack = Math.random() < 0.1;
+
+const schedule = (cb: () => void) => {
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    (window as any).requestIdleCallback(cb);
+  } else {
+    setTimeout(cb, 0);
+  }
+};
+
+const sanitize = (params: any) => {
+  if (!params || typeof params !== 'object') return params;
+  const { payload, body, data, ...rest } = params;
+  return rest;
+};
+
+if (typeof window !== 'undefined') {
+  const originalEvent = ReactGA.event.bind(ReactGA);
+  const originalSend = ReactGA.send.bind(ReactGA);
+
+  ReactGA.event = (...args: any[]) => {
+    if (!shouldTrack) return;
+    schedule(() => {
+      if (typeof args[0] === 'string') {
+        originalEvent(args[0], sanitize(args[1]));
+      } else {
+        originalEvent(sanitize(args[0]));
+      }
+    });
+  };
+
+  ReactGA.send = (...args: any[]) => {
+    if (!shouldTrack) return;
+    schedule(() => {
+      originalSend(sanitize(args[0]));
+    });
+  };
+}
+
 function MyApp({ Component, pageProps }: AppProps) {
+  const [enableAnalytics, setEnableAnalytics] = useState(false);
+
   useEffect(() => {
-    const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-    if (trackingId) {
-      ReactGA.initialize(trackingId);
+    if (shouldTrack) {
+      schedule(() => {
+        const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
+        if (trackingId) {
+          ReactGA.initialize(trackingId);
+        }
+        setEnableAnalytics(true);
+      });
     }
+
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
   }, []);
+
   return (
     <main
       className={inter.className}
@@ -25,7 +73,7 @@ function MyApp({ Component, pageProps }: AppProps) {
       data-app-root
     >
       <Component {...pageProps} />
-      <Analytics />
+      {enableAnalytics && shouldTrack && <Analytics />}
     </main>
   );
 }

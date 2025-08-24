@@ -1,4 +1,7 @@
 import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { act } from 'react-dom/test-utils';
+
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import Window from '../components/base/window';
 
