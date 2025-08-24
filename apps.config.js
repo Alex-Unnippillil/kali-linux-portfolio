@@ -23,7 +23,7 @@ import { displayRegexLab } from './components/apps/regex-lab';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
-import { displayImportGraph } from './components/apps/import-graph';
+import { displayLexicalAnalyzer } from './components/apps/lexical-analyzer';
 
 import { displayCvssCalculator } from './components/apps/cvss-calculator';
 
@@ -871,6 +871,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: getScreen('wayback-viewer'),
+  },
+  {
+    id: 'lexical-analyzer',
+    title: 'Lexical Analyzer',
+    icon: icon('lexical-analyzer.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayLexicalAnalyzer,
   },
 ];
  
