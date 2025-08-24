@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { load } from 'cheerio';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { url } = req.query;

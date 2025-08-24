@@ -1,3 +1,10 @@
+import { setupUrlGuard } from "../../lib/urlGuard";
+import { loadKevSet } from '../../lib/kev';
+import { fetchEpssScores } from '../../lib/epss';
+import { rateLimitEdge } from '../../lib/rateLimiter';
+
+setupUrlGuard();
+
 export const config = {
   runtime: 'edge',
 };
@@ -8,10 +15,6 @@ interface ExploitInfo {
   description: string;
   source_url: string;
 }
-
-import { loadKevSet } from '../../lib/kev';
-import { fetchEpssScores } from '../../lib/epss';
-import { rateLimitEdge } from '../../lib/rateLimiter';
 
 const responseCache = new Map<string, { data: unknown; expiry: number }>();
 let exploitMapPromise: Promise<Map<string, ExploitInfo[]>> | null = null;

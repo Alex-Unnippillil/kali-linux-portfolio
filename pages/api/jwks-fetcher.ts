@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { decodeProtectedHeader, importJWK, jwtVerify } from 'jose';
 import { createHash } from 'crypto';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 import { z } from 'zod';
 import { validateRequest } from '../../lib/validate';

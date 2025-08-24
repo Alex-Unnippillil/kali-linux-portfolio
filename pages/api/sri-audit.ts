@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 interface ScriptResult {
   src: string;

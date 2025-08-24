@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 type Resource = {
   url: string;

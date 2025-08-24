@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { validateRequest } from '../../lib/validate';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 const MAX_LOOKUPS = 10;
 const CONCURRENCY_LIMIT = 5;
