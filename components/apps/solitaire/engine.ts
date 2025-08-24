@@ -207,6 +207,22 @@ export const autoMove = (
   return moveToFoundation(state, 'tableau', index);
 };
 
+export type AutoMoveHint =
+  | { source: 'waste' }
+  | { source: 'tableau'; index: number };
+
+export const autoMoveHint = (state: GameState): AutoMoveHint | null => {
+  if (state.waste.length) {
+    const moved = moveToFoundation(state, 'waste', null);
+    if (moved !== state) return { source: 'waste' };
+  }
+  for (let i = 0; i < state.tableau.length; i += 1) {
+    const moved = moveToFoundation(state, 'tableau', i);
+    if (moved !== state) return { source: 'tableau', index: i };
+  }
+  return null;
+};
+
 export const autoComplete = (state: GameState): GameState => {
   let current = state;
   let moved = true;
