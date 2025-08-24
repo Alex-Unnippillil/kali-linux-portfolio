@@ -19,8 +19,7 @@
     "incremental": true,
     "types": [
       "jest",
-      "node",
-      "vitest"
+      "node"
     ],
     "baseUrl": ".",
     "paths": {

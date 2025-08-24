@@ -14,7 +14,7 @@
     "test:e2e": "npx playwright test",
     "check:node-core": "node scripts/check-node-core-modules.js",
     "validate:icons": "node scripts/validate-icons.js",
-    "test:unit": "vitest",
+    "test:unit": "jest",
     "format": "prettier --write .",
     "lighthouse": "lhci autorun",
     "typecheck": "tsc --noEmit",
@@ -166,8 +166,7 @@
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
     "prettier": "^3.2.5",
-    "typescript": "^5.9.2",
-    "vitest": "^1.6.0"
+    "typescript": "^5.9.2"
   },
   "resolutions": {
     "react": "18.2.0",
