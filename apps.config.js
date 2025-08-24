@@ -1,6 +1,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import ReactGA from 'react-ga4';
+import ErrorPane from './components/ErrorPane';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
@@ -111,9 +112,10 @@ class DynamicAppErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="h-full w-full flex items-center justify-center bg-panel text-white">
-          {`An error occurred while rendering ${this.props.name}.`}
-        </div>
+        <ErrorPane
+          code="render_error"
+          message={`An error occurred while rendering ${this.props.name}.`}
+        />
       );
     }
 
