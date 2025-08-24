@@ -74,6 +74,7 @@ const securityHeaders = [
 ];
 
 module.exports = {
+  bundlePagesRouterDependencies: true,
   productionBrowserSourceMaps: true,
   images: {
     // Keep unoptimized if you serve static assets without the Next image optimizer.
