@@ -1,6 +1,10 @@
 ## Quick Start
 
-1. **Install dependencies** – ensure [Node.js 20](https://nodejs.org/) and Yarn 4 are available. `nvm install 20 && nvm use 20` sets the correct Node version, and `corepack enable` activates Yarn 4.
+1. **Enable Corepack & Node 20**
+   ```bash
+   corepack enable
+   nvm install 20 && nvm use 20
+   ```
 2. **Install packages** – run `yarn` to install project dependencies.
 3. **Environment** – copy `.env.example` to `.env.local` and fill in required variables like `JWT_SECRET`.
 4. **Run the app** – start the development server with `yarn dev`.
