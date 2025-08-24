@@ -1,46 +1,33 @@
-import React, { useState, useEffect, ChangeEvent } from 'react';
-
-interface Settings {
-  theme: string;
-  dataSaving: boolean;
-  locale: string;
-}
-
-const defaultSettings: Settings = {
-  theme: 'light',
-  dataSaving: false,
-  locale: 'en-US',
-};
+import React, { useState, useEffect, ChangeEvent, useRef } from 'react';
+import {
+  defaultPreferences,
+  exportPreferences,
+  importPreferences,
+  loadPreferences,
+  resetPreferences,
+  savePreferences,
+  subscribe,
+  type Preferences,
+} from '../../lib/preferences';
 
 const SettingsApp: React.FC = () => {
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [settings, setSettings] = useState<Preferences>(defaultPreferences);
   const [status, setStatus] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch('/api/settings')
-      .then((res) => res.json())
-      .then((data) => setSettings({ ...defaultSettings, ...data }))
-      .catch(() => setSettings(defaultSettings));
+    setSettings(loadPreferences());
+    const unsub = subscribe(setSettings);
+    return unsub;
   }, []);
 
-  const save = async () => {
-    setStatus('');
-    try {
-      await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
-      });
-      setStatus('Saved!');
-    } catch {
-      setStatus('Save failed');
-    }
+  const handleSave = () => {
+    savePreferences(settings);
+    setStatus('Saved!');
   };
 
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify(settings, null, 2)], {
-      type: 'application/json',
-    });
+  const handleExport = () => {
+    const blob = new Blob([exportPreferences()], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -49,26 +36,26 @@ const SettingsApp: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const importJson = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleImport = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async (ev) => {
+    reader.onload = (ev) => {
       try {
-        const imported = JSON.parse(ev.target?.result as string);
-        const newSettings = { ...defaultSettings, ...imported };
+        const newSettings = importPreferences(ev.target?.result as string);
         setSettings(newSettings);
-        await fetch('/api/settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newSettings),
-        });
       } catch {
-        // ignore invalid JSON
+        setStatus('Invalid file');
       }
     };
     reader.readAsText(file);
     e.target.value = '';
+  };
+
+  const handleReset = () => {
+    const defaults = resetPreferences();
+    setSettings(defaults);
+    setStatus('Reset to defaults');
   };
 
   return (
@@ -79,11 +66,42 @@ const SettingsApp: React.FC = () => {
         <span>Theme</span>
         <select
           value={settings.theme}
-          onChange={(e) => setSettings({ ...settings, theme: e.target.value })}
+          onChange={(e) =>
+            setSettings({ ...settings, theme: e.target.value as Preferences['theme'] })
+          }
           className="text-black p-1"
         >
           <option value="light">Light</option>
           <option value="dark">Dark</option>
+        </select>
+      </label>
+
+      <label className="flex items-center space-x-2">
+        <span>Language</span>
+        <select
+          value={settings.language}
+          onChange={(e) =>
+            setSettings({ ...settings, language: e.target.value })
+          }
+          className="text-black p-1"
+        >
+          <option value="en-US">English</option>
+          <option value="es-ES">Español</option>
+          <option value="fr-FR">Français</option>
+        </select>
+      </label>
+
+      <label className="flex items-center space-x-2">
+        <span>Units</span>
+        <select
+          value={settings.units}
+          onChange={(e) =>
+            setSettings({ ...settings, units: e.target.value as Preferences['units'] })
+          }
+          className="text-black p-1"
+        >
+          <option value="metric">Metric</option>
+          <option value="imperial">Imperial</option>
         </select>
       </label>
 
@@ -98,35 +116,29 @@ const SettingsApp: React.FC = () => {
         />
       </label>
 
-      <label className="flex items-center space-x-2">
-        <span>Locale</span>
-        <select
-          value={settings.locale}
-          onChange={(e) => setSettings({ ...settings, locale: e.target.value })}
-          className="text-black p-1"
-        >
-          <option value="en-US">English</option>
-          <option value="es-ES">Español</option>
-          <option value="fr-FR">Français</option>
-        </select>
-      </label>
-
       <div className="flex space-x-2">
-        <button onClick={save} className="px-3 py-1 bg-blue-600 rounded">
+        <button onClick={handleSave} className="px-3 py-1 bg-blue-600 rounded">
           Save
         </button>
-        <button onClick={exportJson} className="px-3 py-1 bg-green-600 rounded">
+        <button onClick={handleExport} className="px-3 py-1 bg-green-600 rounded">
           Export
         </button>
-        <label className="px-3 py-1 bg-gray-700 rounded cursor-pointer">
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="px-3 py-1 bg-gray-700 rounded"
+        >
           Import
-          <input
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={importJson}
-          />
-        </label>
+        </button>
+        <button onClick={handleReset} className="px-3 py-1 bg-red-700 rounded">
+          Reset
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json"
+          className="hidden"
+          onChange={handleImport}
+        />
       </div>
       {status && <div>{status}</div>}
     </div>

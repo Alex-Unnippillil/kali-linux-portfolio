@@ -7,9 +7,16 @@ const filePath = path.join(process.cwd(), 'data', 'settings.json');
 function readSettings() {
   try {
     const data = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    return {
+      theme: 'light',
+      language: 'en-US',
+      units: 'metric',
+      dataSaving: false,
+      ...parsed,
+    };
   } catch {
-    return { theme: 'light', dataSaving: false, locale: 'en-US' };
+    return { theme: 'light', language: 'en-US', units: 'metric', dataSaving: false };
   }
 }
 

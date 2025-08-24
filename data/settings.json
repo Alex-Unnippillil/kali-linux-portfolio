@@ -1,5 +1,6 @@
 {
   "theme": "light",
-  "dataSaving": false,
-  "locale": "en-US"
+  "language": "en-US",
+  "units": "metric",
+  "dataSaving": false
 }
