@@ -1,3 +1,10 @@
+## Setup
+
+1. Copy `.env.example` to `.env.local`.
+2. Set `JWT_SECRET` to a secure value.
+3. Optionally set analytics variables such as `NEXT_PUBLIC_TRACKING_ID`.
+4. Update `.env.example` whenever new environment variables are added.
+
 ## Adding New Apps
 
 Heavy applications should be loaded with [`next/dynamic`](https://nextjs.org/docs/advanced-features/dynamic-import) so that they do not bloat the initial bundle.
@@ -125,3 +132,14 @@ The GitHub Actions workflow relies on the following secrets configured in the re
 - `NEXT_PUBLIC_AXIOM_DATASET`
 
 These secrets provide the values for the corresponding environment variables during the build step.
+
+## Deployment
+
+This project relies on Next.js server features such as API routes and Socket.IO websockets. For production deployments, build and run the server:
+
+```bash
+yarn build
+yarn start
+```
+
+Deploy to any platform that can run a Next.js server; static export is not supported.
