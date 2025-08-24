@@ -151,7 +151,7 @@ export class Chrome extends Component {
                     <Image
                         className="w-5"
                         src="/themes/Yaru/status/chrome_refresh.svg"
-                        alt="Kali Browser Refresh"
+                        alt="Ubuntu Browser Refresh"
                         width={20}
                         height={20}
                         sizes="20px"
@@ -161,7 +161,7 @@ export class Chrome extends Component {
                     <Image
                         className="w-5"
                         src="/themes/Yaru/status/chrome_home.svg"
-                        alt="Kali Browser Home"
+                        alt="Ubuntu Browser Home"
                         width={20}
                         height={20}
                         sizes="20px"
@@ -182,7 +182,7 @@ export class Chrome extends Component {
                         className="w-full h-full"
                         id="chrome-screen"
                         frameBorder="0"
-                        title="Kali Browser Url"
+                        title="Ubuntu Browser Url"
                         sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms"
                         onError={this.handleIframeError}
                     ></iframe>

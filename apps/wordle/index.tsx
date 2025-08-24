@@ -23,7 +23,7 @@ interface SavedState {
 
 const keyboardRows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
 
-const KaliWordle = () => {
+const UbuntuWordle = () => {
   const seed = seedIndex();
   const [answer, setAnswer] = useState('');
   const [guesses, setGuesses] = useState<string[]>([]);
@@ -138,7 +138,7 @@ const KaliWordle = () => {
   }, [handleKey]);
 
   const share = async () => {
-    const header = `Kali Wordle ${seed} ${
+    const header = `Ubuntu Wordle ${seed} ${
       guesses.some((g, i) =>
         statuses[i]?.every((s) => s === 'correct'),
       )
@@ -191,7 +191,7 @@ const KaliWordle = () => {
 
   return (
     <div className="p-4 text-center text-white select-none">
-      <h1 className="text-2xl mb-2 font-bold text-purple-300">Kali Wordle</h1>
+      <h1 className="text-2xl mb-2 font-bold text-purple-300">Ubuntu Wordle</h1>
       <div className="space-y-1 mb-2">
         {Array.from({ length: ROWS }).map((_, r) => (
           <div key={r} className="flex justify-center space-x-1">
@@ -276,5 +276,5 @@ const KaliWordle = () => {
   );
 };
 
-export default KaliWordle;
+export default UbuntuWordle;
 

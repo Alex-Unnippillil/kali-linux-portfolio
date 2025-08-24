@@ -374,7 +374,7 @@ export function WindowEditButtons(props) {
             >
                 <NextImage
                     src="/themes/Yaru/window/window-minimize-symbolic.svg"
-                    alt="Kali window minimize"
+                    alt="Ubuntu window minimize"
                     className="h-5 w-5 inline"
                     width={20}
                     height={20}
@@ -391,7 +391,7 @@ export function WindowEditButtons(props) {
                     >
                         <NextImage
                             src="/themes/Yaru/window/window-restore-symbolic.svg"
-                            alt="Kali window restore"
+                            alt="Ubuntu window restore"
                             className="h-5 w-5 inline"
                             width={20}
                             height={20}
@@ -407,7 +407,7 @@ export function WindowEditButtons(props) {
                     >
                         <NextImage
                             src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                            alt="Kali window maximize"
+                            alt="Ubuntu window maximize"
                             className="h-5 w-5 inline"
                             width={20}
                             height={20}
@@ -425,7 +425,7 @@ export function WindowEditButtons(props) {
             >
                 <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"
-                    alt="Kali window close"
+                    alt="Ubuntu window close"
                     className="h-5 w-5 inline"
                     width={20}
                     height={20}

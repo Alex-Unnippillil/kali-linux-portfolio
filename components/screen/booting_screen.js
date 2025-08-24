@@ -24,7 +24,7 @@ function BootingScreen(props) {
                 height={100}
                 className="md:w-1/5 w-1/2"
                 src="/themes/Yaru/status/ubuntu_white_hex.svg"
-                alt="Kali Linux Name"
+                alt="Ubuntu Linux Name"
                 sizes="(max-width: 768px) 50vw, 20vw"
             />
             <div className="text-white mb-4">

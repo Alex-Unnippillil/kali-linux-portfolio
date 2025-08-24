@@ -5,13 +5,13 @@ const MENU_STRINGS = {
         defaultMenu: 'Main menu',
         follow: 'Follow on',
         contact: 'Contact Me',
-        reset: 'Reset Kali Linux',
+        reset: 'Reset Ubuntu Linux',
     },
     es: {
         defaultMenu: 'Menú principal',
         follow: 'Seguir en',
         contact: 'Contáctame',
-        reset: 'Restablecer Kali Linux',
+        reset: 'Restablecer Ubuntu Linux',
     },
 };
 
@@ -19,7 +19,7 @@ const MENU_LABELS = {
     followLinkedIn: 'Follow on Linkedin',
     followGithub: 'Follow on Github',
     contact: 'Contact Me',
-    reset: 'Reset Kali Linux',
+    reset: 'Reset Ubuntu Linux',
 }
 
 function DefaultMenu(props) {
@@ -60,7 +60,7 @@ function DefaultMenu(props) {
         }
     };
 
-    const resetKali = () => {
+    const resetUbuntu = () => {
         localStorage.clear();
         window.location.reload();
     };
@@ -119,7 +119,7 @@ function DefaultMenu(props) {
             </a>
             <Devider />
             <div
-                onClick={resetKali}
+                onClick={resetUbuntu}
                 role="menuitem"
                 tabIndex={-1}
                 ref={(el) => el && itemRefs.current.push(el)}

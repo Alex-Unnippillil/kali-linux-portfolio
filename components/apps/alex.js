@@ -308,7 +308,7 @@ function Skills() {
     { src: 'https://img.shields.io/badge/PowerShell-%235391FE.svg?logo=powershell&logoColor=white', alt: 'PowerShell', description: 'Automation Shell' },
     { src: 'https://img.shields.io/badge/-VMware-FFCA28?style=flat&logo=vmware&logoColor=ffffff', alt: 'VMware', description: 'Virtualization Platform' },
     { src: 'https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white', alt: 'Windows', description: 'Windows OS' },
-    { src: 'https://img.shields.io/badge/Kali%20Linux-557C94?logo=kalilinux&logoColor=fff', alt: 'Kali Linux', description: 'Penetration Testing Distribution' },
+    { src: 'https://img.shields.io/badge/Ubuntu%20Linux-557C94?logo=ubuntu&logoColor=fff', alt: 'Ubuntu Linux', description: 'Linux Distribution' },
     { src: 'https://img.shields.io/badge/Fedora-51A2DA?logo=fedora&logoColor=fff', alt: 'Fedora', description: 'Fedora Linux' },
     { src: 'https://img.shields.io/badge/macOS-000000?logo=macos&logoColor=F0F0F0', alt: 'macOS', description: 'Apple Operating System' },
     { src: 'https://img.shields.io/badge/PyCharm-143?logo=pycharm&logoColor=black&color=black&labelColor=green', alt: 'PyCharm', description: 'Python IDE' },
