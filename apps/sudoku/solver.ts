@@ -1,4 +1,4 @@
-import type { Board } from './types';
+import type { Board, Hint } from './types';
 
 // Dancing Links implementation of Algorithm X for Sudoku
 
@@ -197,10 +197,25 @@ export function solveAsync(board: Board): Promise<Board | null> {
   return new Promise((resolve) => {
     const worker = new Worker(new URL('./solver.worker.ts', import.meta.url));
     worker.onmessage = (e) => {
-      resolve(e.data as Board | null);
-      worker.terminate();
+      if (e.data.type === 'solve') {
+        resolve(e.data.solution as Board | null);
+        worker.terminate();
+      }
     };
-    worker.postMessage(board);
+    worker.postMessage({ type: 'solve', board });
+  });
+}
+
+export function getHintAsync(board: Board): Promise<Hint | null> {
+  return new Promise((resolve) => {
+    const worker = new Worker(new URL('./solver.worker.ts', import.meta.url));
+    worker.onmessage = (e) => {
+      if (e.data.type === 'hint') {
+        resolve(e.data.hint as Hint | null);
+        worker.terminate();
+      }
+    };
+    worker.postMessage({ type: 'hint', board });
   });
 }
 
