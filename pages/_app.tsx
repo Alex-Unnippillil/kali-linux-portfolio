@@ -1,3 +1,4 @@
+import '../lib/dev-ssr-logger';
 import type { AppProps, NextWebVitalsMetric } from 'next/app';
 import { useEffect, useState } from 'react';
 import { initAxiom, logEvent } from '../lib/axiom';
@@ -10,6 +11,8 @@ import '../styles/index.css';
 const inter = Inter({ subsets: ['latin'] });
 
 initAxiom();
+
+const analyticsEnabled = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true';
 
 const shouldTrack = Math.random() < 0.1;
 
@@ -28,39 +31,44 @@ const sanitize = (params: any) => {
 };
 
 if (typeof window !== 'undefined') {
-  const originalEvent = ReactGA.event.bind(ReactGA);
-  const originalSend = ReactGA.send.bind(ReactGA);
+  if (analyticsEnabled) {
+    const originalEvent = ReactGA.event.bind(ReactGA);
+    const originalSend = ReactGA.send.bind(ReactGA);
 
-  ReactGA.event = (...args: any[]) => {
-    if (!shouldTrack) return;
-    schedule(() => {
-      if (typeof args[0] === 'string') {
-        originalEvent(args[0], sanitize(args[1]));
-      } else {
-        originalEvent(sanitize(args[0]));
-      }
-    });
-  };
+    ReactGA.event = (...args: any[]) => {
+      if (!shouldTrack) return;
+      schedule(() => {
+        if (typeof args[0] === 'string') {
+          originalEvent(args[0], sanitize(args[1]));
+        } else {
+          originalEvent(sanitize(args[0]));
+        }
+      });
+    };
 
-  ReactGA.send = (...args: any[]) => {
-    if (!shouldTrack) return;
-    schedule(() => {
-      originalSend(sanitize(args[0]));
-    });
-  };
+    ReactGA.send = (...args: any[]) => {
+      if (!shouldTrack) return;
+      schedule(() => {
+        originalSend(sanitize(args[0]));
+      });
+    };
+  } else {
+    ReactGA.event = () => {};
+    ReactGA.send = () => {};
+  }
 }
 
 function MyApp({ Component, pageProps }: AppProps) {
   const [enableAnalytics, setEnableAnalytics] = useState(false);
 
   useEffect(() => {
-    if (shouldTrack) {
+    if (shouldTrack && analyticsEnabled) {
       schedule(() => {
         const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
         if (trackingId) {
           ReactGA.initialize(trackingId);
+          setEnableAnalytics(true);
         }
-        setEnableAnalytics(true);
       });
     }
 
@@ -79,7 +87,7 @@ function MyApp({ Component, pageProps }: AppProps) {
       data-app-root
     >
       <Component {...pageProps} />
-      {enableAnalytics && shouldTrack && <Analytics />}
+      {analyticsEnabled && enableAnalytics && shouldTrack && <Analytics />}
     </main>
   );
 }
