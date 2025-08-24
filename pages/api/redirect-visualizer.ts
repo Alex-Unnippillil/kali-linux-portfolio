@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Agent } from 'undici';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 import { setupUrlGuard } from '../../lib/urlGuard';
 import { fetchHead } from '../../lib/headCache';
 setupUrlGuard();
@@ -19,16 +21,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ ok: false, chain: [], error: 'Method Not Allowed' });
   }
 
-  const { url, method } = req.body || {};
+  const bodySchema = z.object({
+    url: z.string().url(),
+    method: z.string().optional(),
+  });
+  const parsed = validateRequest(req, res, { bodySchema });
+  if (!parsed) return;
+  const { url, method } = parsed.body as { url: string; method?: string };
 
-  if (typeof url !== 'string' || !url) {
-    return res.status(400).json({ ok: false, chain: [], error: 'Invalid URL' });
-  }
-
-  const upperMethod =
-    typeof method === 'string' && method.trim()
-      ? method.toUpperCase()
-      : 'GET';
+  const upperMethod = method?.trim().toUpperCase() || 'GET';
   if (!ALLOWED_METHODS.includes(upperMethod)) {
     return res.status(400).json({ ok: false, chain: [], error: 'Invalid method' });
   }

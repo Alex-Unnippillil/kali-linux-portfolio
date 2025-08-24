@@ -31,18 +31,24 @@ describe('tls-chain api', () => {
     issuerCertificate: rootCert,
   };
 
+  const onceHandlers: Record<string, Function> = {};
   const mockSocket: any = {
     getPeerCertificate: jest.fn(() => leafCert),
     getCipher: jest.fn(() => ({ name: 'TLS_AES_128_GCM_SHA256', version: 'TLSv1.3' })),
     getProtocol: jest.fn(() => 'TLSv1.3'),
     end: jest.fn(),
     on: jest.fn(),
+    once: jest.fn((event, handler) => {
+      onceHandlers[event] = handler;
+    }),
     ocspResponse: Buffer.from('00', 'hex'),
   };
 
   beforeAll(() => {
-    (tls.connect as any) = jest.fn((_opts: any, cb: () => void) => {
-      setTimeout(cb, 0);
+    (tls.connect as any) = jest.fn((_opts: any) => {
+      setTimeout(() => {
+        onceHandlers['secureConnect']?.();
+      }, 0);
       return mockSocket;
     });
   });
@@ -61,5 +67,11 @@ describe('tls-chain api', () => {
     expect(data.chain.length).toBeGreaterThan(0);
     expect(data.cipher.name).toBe('TLS_AES_128_GCM_SHA256');
     expect(data.ocspStapled).toBe(true);
+  });
+
+  it('validates query input', async () => {
+    const { req, res } = createReqRes('');
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
   });
 });

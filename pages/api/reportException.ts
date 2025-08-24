@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { logEvent } from '../../lib/axiom';
 import { maskPII } from '../../lib/analytics';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 export default async function handler(
   req: NextApiRequest,

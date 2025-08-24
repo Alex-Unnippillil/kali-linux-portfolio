@@ -2,6 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import madge from 'madge';
 import fs from 'fs/promises';
 import path from 'path';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
   const root = process.cwd();

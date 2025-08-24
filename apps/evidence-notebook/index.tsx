@@ -79,6 +79,7 @@ const EvidenceNotebook: React.FC = () => {
         <Link
           href="/apps/evidence-notebook/verify"
           className="px-3 py-1 bg-purple-600 rounded"
+          prefetch={false}
         >
           Verify
         </Link>

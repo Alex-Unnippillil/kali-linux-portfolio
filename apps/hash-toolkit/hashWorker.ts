@@ -1,7 +1,7 @@
 import CryptoJS from 'crypto-js';
 import ssdeep from 'ssdeep.js';
 import tlsh from 'tlsh';
-import createSimhash from 'simhash';
+import createSimhash from '@lib/simhash';
 
 const simhash = createSimhash();
 

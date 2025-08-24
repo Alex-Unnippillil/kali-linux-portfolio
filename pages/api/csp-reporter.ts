@@ -1,4 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 // Interface for normalized CSP reports
 interface CSPReport {

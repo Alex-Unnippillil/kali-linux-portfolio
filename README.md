@@ -1,3 +1,16 @@
+## Quick Start
+
+1. **Install dependencies** – ensure [Node.js 20](https://nodejs.org/) and Yarn 4 are available. `nvm install 20 && nvm use 20` sets the correct Node version, and `corepack enable` activates Yarn 4.
+2. **Install packages** – run `yarn` to install project dependencies.
+3. **Environment** – copy `.env.example` to `.env.local` and fill in required variables like `JWT_SECRET`.
+4. **Run the app** – start the development server with `yarn dev`.
+
+### Common Install Issues
+
+- **Node version mismatch** – run `nvm use 20` or upgrade Node to version 20.
+- **Yarn not found** – execute `corepack enable` to install Yarn 4.
+- **Slow or failed installs** – retry with `yarn install --network-timeout 100000` and ensure network connectivity.
+
 ## Setup
 
 1. Copy `.env.example` to `.env.local`.
@@ -169,7 +182,6 @@ defaults:
 - **Scaling limits** – serverless WebSockets have connection limits per region
   and may recycle instances under load. For heavy usage, monitor connection
   counts and consider a dedicated WebSocket host or external state store.
-=======
 ## E2E Testing
 
 The project uses [Playwright](https://playwright.dev/) for end-to-end tests.

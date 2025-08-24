@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { LRUCache } from 'lru-cache';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 import { setupUrlGuard } from '../../lib/urlGuard';
 
 setupUrlGuard();
@@ -49,6 +51,16 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const querySchema = z.object({
+    domain: z.string(),
+    subdomains: z.string().optional(),
+    issuer: z.string().optional(),
+    notAfter: z.string().optional(),
+    page: z.string().optional(),
+    perPage: z.string().optional(),
+  });
+  const parsed = validateRequest(req, res, { querySchema });
+  if (!parsed) return;
   const {
     domain,
     subdomains = 'true',
@@ -56,11 +68,7 @@ export default async function handler(
     notAfter,
     page = '1',
     perPage = '50',
-  } = req.query;
-
-  if (!domain || typeof domain !== 'string') {
-    return res.status(400).json({ error: 'Missing domain' });
-  }
+  } = parsed.query as any;
 
   const pageNum = Math.max(parseInt(page as string, 10) || 1, 1);
   const perPageNum = Math.min(

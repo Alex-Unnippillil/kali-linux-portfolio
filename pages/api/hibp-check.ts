@@ -2,6 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { createHash } from 'crypto';
 import { rateLimit } from '../../lib/rateLimiter';
 import { setupUrlGuard } from '../../lib/urlGuard';
+
+/**
+ * Check a password against the Have I Been Pwned API.
+ * Rate limited to 60 requests per minute.
+ */
 setupUrlGuard();
 
 export default async function handler(

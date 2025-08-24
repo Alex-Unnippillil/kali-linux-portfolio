@@ -41,7 +41,11 @@ describe('mail-auth api', () => {
         new Response(JSON.stringify({ Answer: answer }), { status: 200 })
       );
     });
-    const req = { query: { domain: 'example.com' } } as unknown as NextApiRequest;
+    const req = {
+      query: { domain: 'example.com' },
+      headers: {},
+      socket: { remoteAddress: '127.0.0.1' },
+    } as unknown as NextApiRequest;
     const res = createRes();
     await handler(req, res);
     expect(res.statusCode).toBe(200);
@@ -53,7 +57,11 @@ describe('mail-auth api', () => {
   test('handles network errors', async () => {
     const { default: handler } = await import('../pages/api/mail-auth');
     (global as any).fetch = jest.fn(() => Promise.reject(new Error('network')));
-    const req = { query: { domain: 'example.com' } } as unknown as NextApiRequest;
+    const req = {
+      query: { domain: 'example.com' },
+      headers: {},
+      socket: { remoteAddress: '127.0.0.1' },
+    } as unknown as NextApiRequest;
     const res = createRes();
     await handler(req, res);
     expect(res.statusCode).toBe(200);
@@ -71,12 +79,28 @@ describe('mail-auth api', () => {
       );
     });
     (global as any).fetch = fetchMock;
-    const req = { query: { domain: 'cache.com' } } as unknown as NextApiRequest;
+    const req = {
+      query: { domain: 'cache.com' },
+      headers: {},
+      socket: { remoteAddress: '127.0.0.1' },
+    } as unknown as NextApiRequest;
     const res1 = createRes();
     await handler(req, res1);
     const res2 = createRes();
     await handler(req, res2);
     expect(fetchMock).toHaveBeenCalledTimes(6);
 
+  });
+
+  test('validates input', async () => {
+    const { default: handler } = await import('../pages/api/mail-auth');
+    const req = {
+      query: {},
+      headers: {},
+      socket: { remoteAddress: '127.0.0.1' },
+    } as unknown as NextApiRequest;
+    const res = createRes();
+    await handler(req, res);
+    expect(res.statusCode).toBe(400);
   });
 });

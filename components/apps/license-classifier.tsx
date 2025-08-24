@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 
+import {
   getLicenseInfo,
   LicenseInfo,
   LicenseMatchResult,
@@ -28,7 +29,6 @@ const LicenseClassifier: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [processing, setProcessing] = useState(false);
   const workerRef = useRef<Worker>();
-n
 
   const analyze = () => {
     if (!text.trim()) {

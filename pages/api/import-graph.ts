@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs/promises';
 import path from 'path';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 export default async function handler(
   _req: NextApiRequest,

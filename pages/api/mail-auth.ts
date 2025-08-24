@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { LRUCache } from 'lru-cache';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
 
@@ -164,32 +166,6 @@ function parseDkim(records: string[]) {
   return { pass: true, record, bits, spec: DKIM_SPEC };
 }
 
-const SPF_SPEC = 'https://www.rfc-editor.org/rfc/rfc7208';
-
-function parseSpf(records: string[]) {
-  const record = records.find((r) => r.toLowerCase().startsWith('v=spf1'));
-  if (!record) {
-    return {
-      pass: false,
-      message: 'No SPF record found',
-      recommendation: 'Publish a TXT record with v=spf1',
-      example: 'v=spf1 mx -all',
-      spec: SPF_SPEC,
-    };
-  }
-  if (!/[-~?+]all/i.test(record)) {
-    return {
-      pass: false,
-      record,
-      message: 'SPF record missing all mechanism',
-      recommendation: 'End SPF record with -all',
-      example: 'v=spf1 mx -all',
-      spec: SPF_SPEC,
-    };
-  }
-  return { pass: true, record, spec: SPF_SPEC };
-}
-
 const DANE_SPEC = 'https://www.rfc-editor.org/rfc/rfc6698';
 
 function parseDane(records: string[]) {
@@ -348,11 +324,10 @@ export default async function handler(
     res.status(429).json({ error: 'Too Many Requests' });
     return;
   }
-  const { domain, selector } = req.query;
-  if (typeof domain !== 'string') {
-    res.status(400).json({ error: 'domain parameter required' });
-    return;
-  }
+  const querySchema = z.object({ domain: z.string(), selector: z.string().optional() });
+  const parsed = validateRequest(req, res, { querySchema });
+  if (!parsed) return;
+  const { domain, selector } = parsed.query as { domain: string; selector?: string };
 
   const response: any = {};
 
