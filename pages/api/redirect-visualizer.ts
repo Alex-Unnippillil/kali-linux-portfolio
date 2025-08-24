@@ -73,6 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const setCookie = response.headers.get('set-cookie') || undefined;
       const hsts = response.headers.get('strict-transport-security') || undefined;
       const altSvc = response.headers.get('alt-svc') || undefined;
+      const opaqueRedirect = response.status === 0;
 
       let alpn = 'http/1.1';
       if (urlObj.protocol === 'https:') {
@@ -116,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(200).json({ ok: false, chain });
       }
 
-      if (response.status >= 300 && response.status < 400 && location) {
+      if (((response.status >= 300 && response.status < 400) || opaqueRedirect) && location) {
         const nextUrl = new URL(location, current).toString();
         if (visited.has(nextUrl)) {
           return res.status(200).json({ ok: false, chain });
