@@ -11,6 +11,9 @@ const QRTool = () => {
   const [size, setSize] = useState(256);
   const [svgData, setSvgData] = useState('');
   const [error, setError] = useState('');
+  const [fgColor, setFgColor] = useState('#000000');
+  const [bgColor, setBgColor] = useState('#ffffff');
+  const [logoSrc, setLogoSrc] = useState(null);
   const canvasRef = useRef(null);
   const videoRef = useRef(null);
   const scannerRef = useRef(null);
@@ -33,17 +36,46 @@ const QRTool = () => {
       await QRCode.toCanvas(canvasRef.current, text, {
         width: size,
         errorCorrectionLevel: errorCorrection,
+        color: { dark: fgColor, light: bgColor },
       });
-      const svg = await QRCode.toString(text, {
+
+      if (logoSrc) {
+        await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const ctx = canvasRef.current.getContext('2d');
+            const logoSize = size * 0.2;
+            const x = (size - logoSize) / 2;
+            const y = (size - logoSize) / 2;
+            ctx.drawImage(img, x, y, logoSize, logoSize);
+            resolve();
+          };
+          img.src = logoSrc;
+        });
+      }
+
+      let svg = await QRCode.toString(text, {
         type: 'svg',
         width: size,
         errorCorrectionLevel: errorCorrection,
+        color: { dark: fgColor, light: bgColor },
       });
+
+      if (logoSrc) {
+        const logoSize = size * 0.2;
+        const x = (size - logoSize) / 2;
+        const y = (size - logoSize) / 2;
+        svg = svg.replace(
+          '</svg>',
+          `<image href="${logoSrc}" x="${x}" y="${y}" height="${logoSize}" width="${logoSize}"/></svg>`
+        );
+      }
+
       setSvgData(svg);
     } catch (err) {
       console.error(err);
     }
-  }, [text, size, errorCorrection]);
+  }, [text, size, errorCorrection, fgColor, bgColor, logoSrc]);
 
   const downloadPng = () => {
     const link = document.createElement('a');
@@ -59,6 +91,17 @@ const QRTool = () => {
     link.download = 'qr.svg';
     link.href = URL.createObjectURL(blob);
     link.click();
+  };
+
+  const handleLogo = (e) => {
+    const file = e.target.files[0];
+    if (!file) {
+      setLogoSrc(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setLogoSrc(reader.result);
+    reader.readAsDataURL(file);
   };
 
   const handleFile = async (e) => {
@@ -107,6 +150,15 @@ const QRTool = () => {
     scannerRef.current?.stop();
   };
 
+  const copyDecoded = async () => {
+    if (!decodedText) return;
+    try {
+      await navigator.clipboard?.writeText(decodedText);
+    } catch (_) {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     return () => {
       scannerRef.current?.stop();
@@ -125,7 +177,7 @@ const QRTool = () => {
       generate();
     }, 300);
     return () => clearTimeout(debounceRef.current);
-  }, [text, errorCorrection, size, generate]);
+  }, [text, errorCorrection, size, fgColor, bgColor, logoSrc, generate]);
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
@@ -160,12 +212,56 @@ const QRTool = () => {
             className="w-full"
           />
         </div>
+        <div className="flex space-x-4 mb-2">
+          <div>
+            <label htmlFor="fgColor" className="block text-sm">
+              Foreground
+            </label>
+            <input
+              id="fgColor"
+              aria-label="Foreground"
+              type="color"
+              value={fgColor}
+              onChange={(e) => setFgColor(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="bgColor" className="block text-sm">
+              Background
+            </label>
+            <input
+              id="bgColor"
+              aria-label="Background"
+              type="color"
+              value={bgColor}
+              onChange={(e) => setBgColor(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="logoInput" className="block text-sm">
+              Logo
+            </label>
+            <input
+              id="logoInput"
+              aria-label="Logo file"
+              type="file"
+              accept="image/*"
+              onChange={handleLogo}
+            />
+          </div>
+        </div>
         {error && <p className="text-red-400 mb-2">{error}</p>}
         <div className="flex space-x-2 mb-2">
-          <button onClick={downloadPng} className="px-4 py-2 bg-green-600 rounded">
+          <button
+            onClick={downloadPng}
+            className="px-4 py-2 bg-green-600 rounded"
+          >
             Download PNG
           </button>
-          <button onClick={downloadSvg} className="px-4 py-2 bg-green-600 rounded">
+          <button
+            onClick={downloadSvg}
+            className="px-4 py-2 bg-green-600 rounded"
+          >
             Download SVG
           </button>
         </div>
@@ -174,9 +270,18 @@ const QRTool = () => {
 
       <div>
         <h2 className="text-lg mb-2">Scan QR Code</h2>
-        <input type="file" accept="image/*" onChange={handleFile} className="mb-2" />
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFile}
+          className="mb-2"
+          aria-label="QR file"
+        />
         <div className="flex space-x-2 mb-2">
-          <button onClick={startCamera} className="px-4 py-2 bg-blue-600 rounded">
+          <button
+            onClick={startCamera}
+            className="px-4 py-2 bg-blue-600 rounded"
+          >
             Start Camera
           </button>
           <button onClick={stopCamera} className="px-4 py-2 bg-red-600 rounded">
@@ -185,7 +290,15 @@ const QRTool = () => {
         </div>
         <video ref={videoRef} className="w-64 h-64 bg-black" />
         {decodedText && (
-          <p className="mt-2 break-all">Decoded: {decodedText}</p>
+          <div className="mt-2 break-all flex items-center space-x-2">
+            <p className="flex-1">Decoded: {decodedText}</p>
+            <button
+              onClick={copyDecoded}
+              className="px-2 py-1 bg-gray-700 rounded"
+            >
+              Copy
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -197,4 +310,3 @@ export default QRTool;
 export const displayQrTool = () => {
   return <QRTool />;
 };
-
