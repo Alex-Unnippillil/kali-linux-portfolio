@@ -34,7 +34,8 @@ type ApiResponse = {
 };
 
 const CtSearch: React.FC = () => {
-  const [domain, setDomain] = useState('');
+  const [query, setQuery] = useState('');
+  const [searchType, setSearchType] = useState<'domain' | 'ski' | 'fingerprint'>('domain');
   const [excludeExpired, setExcludeExpired] = useState(true);
   const [uniqueOnly, setUniqueOnly] = useState(true);
   const [results, setResults] = useState<Result[]>([]);
@@ -46,14 +47,20 @@ const CtSearch: React.FC = () => {
   const cacheRef = useRef<Map<string, ApiResponse>>(new Map());
   const timerRef = useRef<NodeJS.Timeout>();
 
+  const placeholders: Record<'domain' | 'ski' | 'fingerprint', string> = {
+    domain: 'example.com',
+    ski: 'Subject Key Identifier',
+    fingerprint: 'SHA256 fingerprint',
+  };
+
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    if (!domain) {
+    if (!query) {
       setResults([]);
       return;
     }
     timerRef.current = setTimeout(async () => {
-      const key = `${domain}|${excludeExpired}|${uniqueOnly}`;
+      const key = `${query}|${searchType}|${excludeExpired}|${uniqueOnly}`;
       if (cacheRef.current.has(key)) {
         const cached = cacheRef.current.get(key)!;
         setResults(cached.results);
@@ -66,7 +73,7 @@ const CtSearch: React.FC = () => {
       setError(null);
       try {
         const res = await fetch(
-          `/api/ct-search?domain=${encodeURIComponent(domain)}&excludeExpired=${excludeExpired}&unique=${uniqueOnly}`
+          `/api/ct-search?query=${encodeURIComponent(query)}&type=${searchType}&excludeExpired=${excludeExpired}&unique=${uniqueOnly}`
         );
         if (res.status === 429) {
           setError('Rate limit exceeded');
@@ -103,18 +110,29 @@ const CtSearch: React.FC = () => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [domain, excludeExpired, uniqueOnly]);
+  }, [query, searchType, excludeExpired, uniqueOnly]);
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 space-y-4 overflow-hidden">
       <div className="flex flex-col gap-2">
-        <input
-          type="text"
-          className="px-2 py-1 rounded bg-gray-800 text-white"
-          placeholder="example.com"
-          value={domain}
-          onChange={(e) => setDomain(e.target.value)}
-        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            className="flex-1 px-2 py-1 rounded bg-gray-800 text-white"
+            placeholder={placeholders[searchType]}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <select
+            value={searchType}
+            onChange={(e) => setSearchType(e.target.value as 'domain' | 'ski' | 'fingerprint')}
+            className="px-2 py-1 rounded bg-gray-800 text-white"
+          >
+            <option value="domain">Domain</option>
+            <option value="ski">SKI</option>
+            <option value="fingerprint">Fingerprint</option>
+          </select>
+        </div>
         <div className="flex gap-4 text-sm">
           <label className="flex items-center gap-1">
             <input
@@ -199,14 +217,24 @@ const CtSearch: React.FC = () => {
                 ))}
               </div>
             )}
-            <a
-              href={`https://crt.sh/?id=${r.certId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-blue-400 underline"
-            >
-              View certificate
-            </a>
+            <div className="flex gap-2 text-xs">
+              <a
+                href={`https://crt.sh/?id=${r.certId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 underline"
+              >
+                View certificate
+              </a>
+              <a
+                href={`https://crt.sh/?id=${r.certId}&opt=ctv2`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 underline"
+              >
+                CTv2
+              </a>
+            </div>
           </div>
         ))}
         {!loading && results.length === 0 && !error && (
