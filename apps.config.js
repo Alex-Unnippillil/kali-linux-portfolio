@@ -605,7 +605,7 @@ const apps = [
   {
     id: 'favicon-hash',
     title: 'Favicon Hash',
-    icon: './themes/Yaru/apps/hash.svg',
+    icon: icon('favicon-hash.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
