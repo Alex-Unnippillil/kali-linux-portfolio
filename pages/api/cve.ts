@@ -9,6 +9,9 @@ interface ExploitInfo {
   source_url: string;
 }
 
+import { loadKevSet } from '../../lib/kev';
+import { fetchEpssScores } from '../../lib/epss';
+
 const responseCache = new Map<string, { data: unknown; expiry: number }>();
 let exploitMapPromise: Promise<Map<string, ExploitInfo[]>> | null = null;
 
@@ -67,11 +70,17 @@ function parseCSV(line: string): string[] {
 export default async function handler(req: Request): Promise<Response> {
   const { searchParams } = new URL(req.url);
   const keyword = searchParams.get('keyword') || '';
+  const domain = searchParams.get('domain') || '';
   const recent = parseInt(searchParams.get('recent') || '30', 10);
   const page = parseInt(searchParams.get('page') || '1', 10);
   const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
+  const severity = (searchParams.get('severity') || '')
+    .split(',')
+    .map((s) => s.toLowerCase())
+    .filter(Boolean);
+  const sort = searchParams.get('sort') || '';
 
-  const cacheKey = `${keyword}|${recent}|${page}|${pageSize}`;
+  const cacheKey = `${keyword}|${domain}|${recent}|${page}|${pageSize}|${severity.join(',')}`;
   const cached = responseCache.get(cacheKey);
   if (cached && cached.expiry > Date.now()) {
     return new Response(JSON.stringify(cached.data), {
@@ -81,19 +90,55 @@ export default async function handler(req: Request): Promise<Response> {
 
   const startIndex = (page - 1) * pageSize;
   const pubStartDate = new Date(Date.now() - recent * 86400000).toISOString();
-  const nvdUrl = `https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${encodeURIComponent(keyword)}&resultsPerPage=${pageSize}&startIndex=${startIndex}&pubStartDate=${encodeURIComponent(pubStartDate)}`;
+  const keywordParam = [keyword, domain].filter(Boolean).join(' ');
+  const nvdUrl = `https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${encodeURIComponent(keywordParam)}&resultsPerPage=${pageSize}&startIndex=${startIndex}&pubStartDate=${encodeURIComponent(pubStartDate)}`;
 
   const nvdRes = await fetch(nvdUrl);
+  if (nvdRes.status === 429) {
+    const retryAfter = nvdRes.headers.get('Retry-After') || '30';
+    if (cached) {
+      return new Response(JSON.stringify({ ...cached.data, retryAfter, fromCache: true }), {
+        status: 429,
+        headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter },
+      });
+    }
+    return new Response(JSON.stringify({ error: 'rate_limited', retryAfter }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter },
+    });
+  }
   const nvdData = await nvdRes.json();
 
   const exploits = await loadExploitMap();
-  const vulnerabilities = (nvdData.vulnerabilities || []).map((v: any) => {
+  const kevSet = await loadKevSet();
+  const ids = (nvdData.vulnerabilities || []).map((v: any) => v.cve?.id).filter(Boolean);
+  const epss = await fetchEpssScores(ids);
+
+  let vulnerabilities = (nvdData.vulnerabilities || []).map((v: any) => {
     const id = v.cve?.id;
+    const severityVal =
+      v.cve?.metrics?.cvssMetricV31?.[0]?.cvssData?.baseSeverity ||
+      v.cve?.metrics?.cvssMetricV30?.[0]?.cvssData?.baseSeverity ||
+      v.cve?.metrics?.cvssMetricV2?.[0]?.baseSeverity;
     return {
       ...v,
       exploits: exploits.get(id) || [],
+      kev: kevSet.has(id),
+      epss: epss[id]?.epss ?? null,
+      epssPercentile: epss[id]?.percentile ?? null,
+      severity: severityVal ? String(severityVal).toLowerCase() : undefined,
     };
   });
+
+  if (severity.length) {
+    vulnerabilities = vulnerabilities.filter((v: any) =>
+      v.severity && severity.includes(v.severity)
+    );
+  }
+
+  if (sort === 'epss') {
+    vulnerabilities.sort((a: any, b: any) => (b.epss || 0) - (a.epss || 0));
+  }
 
   const data = { totalResults: nvdData.totalResults, vulnerabilities };
   responseCache.set(cacheKey, { data, expiry: Date.now() + 3600 * 1000 });
