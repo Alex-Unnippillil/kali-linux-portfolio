@@ -10,6 +10,7 @@ export default function NmapViewerPage() {
     <>
       <Head>
         <title>Nmap Viewer</title>
+        <meta name="description" content="Parse and explore Nmap XML results" />
       </Head>
       <NmapViewerApp />
     </>

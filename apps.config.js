@@ -713,7 +713,7 @@ const apps = [
   {
     id: 'nmap-viewer',
     title: 'Nmap Viewer',
-    icon: './themes/Yaru/apps/resource-monitor.svg',
+    icon: './themes/Yaru/apps/nmap.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
