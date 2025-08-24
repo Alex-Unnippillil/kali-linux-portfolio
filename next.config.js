@@ -2,7 +2,6 @@
 // Allows external badges and same-origin PDF embedding without inline styles.
 
 const { validateEnv } = require('./lib/validate.js');
-validateEnv(process.env);
 
 
 const ContentSecurityPolicy = [
@@ -128,6 +127,7 @@ module.exports = {
     if (process.env.NODE_ENV !== 'production') {
       return [];
     }
+    validateEnv(process.env);
     return [
       {
         source: '/(.*)',
