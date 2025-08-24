@@ -141,7 +141,7 @@ const RegexRedactor = () => {
           patterns.
         </div>
       )}
-      {useRe2 && (
+      {engine === 're2' && (
         <div className="text-sm text-gray-300 mb-2">RE2 mode enabled.</div>
       )}
       <textarea
