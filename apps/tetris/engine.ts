@@ -7,7 +7,7 @@ export const CELL_SIZE = 24;
 
 export type PieceType = 'I' | 'J' | 'L' | 'O' | 'S' | 'T' | 'Z';
 
-interface Piece {
+export interface Piece {
   type: PieceType;
   rotation: number; // 0-3
   x: number;
@@ -172,6 +172,152 @@ const SHAPES: Record<PieceType, number[][][]> = {
   ],
 };
 
+// Super Rotation System (SRS) kick data
+// Source: Tetris Guideline
+const JLSTZ_KICKS: Record<number, Record<number, [number, number][]>> = {
+  0: {
+    1: [
+      [0, 0],
+      [-1, 0],
+      [-1, 1],
+      [0, -2],
+      [-1, -2],
+    ],
+    3: [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, -2],
+      [1, -2],
+    ],
+  },
+  1: {
+    0: [
+      [0, 0],
+      [1, 0],
+      [1, -1],
+      [0, 2],
+      [1, 2],
+    ],
+    2: [
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, -2],
+      [1, -2],
+    ],
+  },
+  2: {
+    1: [
+      [0, 0],
+      [-1, 0],
+      [-1, -1],
+      [0, 2],
+      [-1, 2],
+    ],
+    3: [
+      [0, 0],
+      [1, 0],
+      [1, -1],
+      [0, 2],
+      [1, 2],
+    ],
+  },
+  3: {
+    2: [
+      [0, 0],
+      [-1, 0],
+      [-1, 1],
+      [0, -2],
+      [-1, -2],
+    ],
+    0: [
+      [0, 0],
+      [-1, 0],
+      [-1, 1],
+      [0, -2],
+      [-1, -2],
+    ],
+  },
+};
+
+const I_KICKS: Record<number, Record<number, [number, number][]>> = {
+  0: {
+    1: [
+      [0, 0],
+      [-2, 0],
+      [1, 0],
+      [-2, -1],
+      [1, 2],
+    ],
+    3: [
+      [0, 0],
+      [-1, 0],
+      [2, 0],
+      [-1, 2],
+      [2, -1],
+    ],
+  },
+  1: {
+    0: [
+      [0, 0],
+      [2, 0],
+      [-1, 0],
+      [2, 1],
+      [-1, -2],
+    ],
+    2: [
+      [0, 0],
+      [-1, 0],
+      [2, 0],
+      [-1, 2],
+      [2, -1],
+    ],
+  },
+  2: {
+    1: [
+      [0, 0],
+      [1, 0],
+      [-2, 0],
+      [1, -2],
+      [-2, 1],
+    ],
+    3: [
+      [0, 0],
+      [2, 0],
+      [-1, 0],
+      [2, 1],
+      [-1, -2],
+    ],
+  },
+  3: {
+    2: [
+      [0, 0],
+      [-2, 0],
+      [1, 0],
+      [-2, -1],
+      [1, 2],
+    ],
+    0: [
+      [0, 0],
+      [1, 0],
+      [-2, 0],
+      [1, -2],
+      [-2, 1],
+    ],
+  },
+};
+
+// O piece has a simple kick which keeps it in place
+const O_KICKS: Record<number, Record<number, [number, number][]>> = {
+  0: { 1: [[0, 0]], 3: [[0, 0]] },
+  1: { 0: [[0, 0]], 2: [[0, 0]] },
+  2: { 1: [[0, 0]], 3: [[0, 0]] },
+  3: { 2: [[0, 0]], 0: [[0, 0]] },
+};
+
+const LOCK_DELAY = 30; // frames
+
 function createEmptyBoard(): Board {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
 }
@@ -207,6 +353,7 @@ export interface GameState {
   canHold: boolean;
   current: Piece;
   lastMoveRotation: boolean;
+  lockCounter: number;
 }
 
 export function createGame(): GameState {
@@ -218,7 +365,13 @@ export function createGame(): GameState {
     canHold: true,
     current: spawnPiece(queue),
     lastMoveRotation: false,
+    lockCounter: 0,
   };
+}
+
+export function createPiece(type: PieceType): Piece {
+  const shape = SHAPES[type][0].map((row) => [...row]);
+  return { type, rotation: 0, x: 3, y: 0, shape };
 }
 
 function spawnPiece(queue: PieceType[]): Piece {
@@ -226,8 +379,7 @@ function spawnPiece(queue: PieceType[]): Piece {
     queue.push(...generateBag());
   }
   const type = queue.shift() as PieceType;
-  const shape = SHAPES[type][0].map((row) => [...row]);
-  return { type, rotation: 0, x: 3, y: 0, shape };
+  return createPiece(type);
 }
 
 export function hold(state: GameState) {
@@ -236,13 +388,13 @@ export function hold(state: GameState) {
   if (state.hold) {
     const swap = state.hold;
     state.hold = current.type;
-    const shape = SHAPES[swap][0].map((row) => [...row]);
-    state.current = { type: swap, rotation: 0, x: 3, y: 0, shape };
+    state.current = createPiece(swap);
   } else {
     state.hold = current.type;
     state.current = spawnPiece(state.queue);
   }
   state.canHold = false;
+  state.lockCounter = 0;
 }
 
 function collision(state: GameState, piece: Piece): boolean {
@@ -265,22 +417,37 @@ export function move(state: GameState, dx: number, dy: number): boolean {
   if (!collision(state, piece)) {
     state.current = piece;
     state.lastMoveRotation = false;
+    state.lockCounter = 0;
     return true;
   }
   return false;
 }
 
 export function rotate(state: GameState, dir: number): boolean {
+  const from = state.current.rotation;
+  const to = (from + dir + 4) % 4;
   const piece = clonePiece(state.current);
   let shape = piece.shape;
   if (dir > 0) shape = rotateMatrix(shape);
   else shape = rotateMatrix(rotateMatrix(rotateMatrix(shape)));
   piece.shape = shape;
-  piece.rotation = (piece.rotation + dir + 4) % 4;
-  if (!collision(state, piece)) {
-    state.current = piece;
-    state.lastMoveRotation = true;
-    return true;
+  piece.rotation = to;
+
+  const kicks: [number, number][] = (() => {
+    if (piece.type === 'O') return O_KICKS[from][to];
+    if (piece.type === 'I') return I_KICKS[from][to] || [[0, 0]];
+    return JLSTZ_KICKS[from][to];
+  })();
+
+  for (const [dx, dy] of kicks) {
+    piece.x = state.current.x + dx;
+    piece.y = state.current.y + dy;
+    if (!collision(state, piece)) {
+      state.current = piece;
+      state.lastMoveRotation = true;
+      state.lockCounter = 0;
+      return true;
+    }
   }
   return false;
 }
@@ -358,6 +525,7 @@ export function lock(state: GameState) {
   state.current = spawnPiece(state.queue);
   state.canHold = true;
   state.lastMoveRotation = false;
+  state.lockCounter = 0;
   return { lines, tSpin };
 }
 
@@ -376,9 +544,17 @@ export function addGarbage(state: GameState, lines: number) {
   }
 }
 
+export function softDrop(state: GameState): boolean {
+  return move(state, 0, 1);
+}
+
 export function step(state: GameState): { lines: number; tSpin: boolean } | null {
   if (move(state, 0, 1)) return null;
-  return lock(state);
+  state.lockCounter++;
+  if (state.lockCounter >= LOCK_DELAY) {
+    return lock(state);
+  }
+  return null;
 }
 
 export function cloneState(state: GameState): GameState {
@@ -389,5 +565,6 @@ export function cloneState(state: GameState): GameState {
     canHold: state.canHold,
     current: clonePiece(state.current),
     lastMoveRotation: state.lastMoveRotation,
+    lockCounter: state.lockCounter,
   };
 }
