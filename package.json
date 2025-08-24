@@ -76,6 +76,8 @@
     "react-github-calendar": "^4.5.9",
     "react-markdown": "^10.1.0",
     "react-twitter-embed": "^4.0.4",
+    "sax": "^1.4.1",
+
 
     "react-window": "^1.8.11",
 
@@ -91,6 +93,8 @@
     "three": "^0.179.1",
     "url-parse": "^1.5.10",
     "ws": "^8.18.3",
+    "xmllint-wasm": "^5.0.0",
+
     "zod": "^4.1.0",
     "zxcvbn": "^4.4.2"
   },
@@ -107,6 +111,9 @@
     "@types/node": "^24.2.1",
     "@types/plist": "^3.0.2",
     "@types/react": "^18.2.0",
+
+    "@types/sax": "^1",
+
     "@types/react-window": "^1",
     "@types/three": "^0.179.0",
     "eslint": "^9.34.0",
