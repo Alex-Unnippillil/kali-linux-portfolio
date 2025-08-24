@@ -1,6 +1,11 @@
 module.exports = {
   mode: 'jit',
-  content: ['./pages/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}'],
+  content: [
+    './pages/**/*.{js,ts,jsx,tsx}',
+    './components/**/*.{js,ts,jsx,tsx}',
+    './apps/**/*.{js,ts,jsx,tsx}',
+    './lib/**/*.{js,ts,jsx,tsx}'
+  ],
   theme: {
     backgroundColor: theme => ({
       ...theme('colors'),
