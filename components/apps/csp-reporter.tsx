@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
 
+const BROWSER_SUPPORT = [
+  { name: 'Chrome', support: true },
+  { name: 'Edge', support: true },
+  { name: 'Firefox', support: true },
+  { name: 'Safari', support: false },
+];
+
 interface Report {
   [key: string]: any;
 }
@@ -28,6 +35,9 @@ const CspReporter: React.FC = () => {
   const [simResult, setSimResult] = useState<{ directive: string; uri: string }[] | null>(
     null,
   );
+  const [reportUriConfig, setReportUriConfig] = useState('');
+  const [reportToConfig, setReportToConfig] = useState('');
+  const [eventSupported, setEventSupported] = useState(false);
 
   const fetchReports = () => {
     fetch('/api/csp-reporter')
@@ -53,6 +63,36 @@ const CspReporter: React.FC = () => {
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
+  }, []);
+
+  useEffect(() => {
+    const endpoint = `${window.location.origin}/api/csp-reporter`;
+    setReportUriConfig(
+      `Content-Security-Policy: default-src 'self'; report-uri ${endpoint}`,
+    );
+    setReportToConfig(
+      `Content-Security-Policy: default-src 'self'; report-to csp-endpoint\\nReport-To: {"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"${endpoint}"}]}`,
+    );
+    setEventSupported('SecurityPolicyViolationEvent' in window);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      setTimeline((t) => [
+        ...t,
+        {
+          type: 'csp-violation',
+          time: Date.now(),
+          directive: e.effectiveDirective || e.violatedDirective,
+          blockedURI: e.blockedURI,
+          sourceFile: e.sourceFile,
+          lineNumber: e.lineNumber,
+          columnNumber: e.columnNumber,
+        },
+      ]);
+    };
+    document.addEventListener('securitypolicyviolation', handler);
+    return () => document.removeEventListener('securitypolicyviolation', handler);
   }, []);
 
   const demoDoc = `
@@ -97,13 +137,35 @@ document.addEventListener('securitypolicyviolation', function(e){
 
       <h2 className="mt-4 mb-1 font-semibold">report-uri</h2>
       <pre className="bg-gray-800 p-2 rounded text-sm overflow-auto mb-4">
-{`Content-Security-Policy: default-src 'self'; report-uri /api/csp-reporter`}
+{reportUriConfig}
       </pre>
 
       <h2 className="mt-4 mb-1 font-semibold">report-to</h2>
       <pre className="bg-gray-800 p-2 rounded text-sm overflow-auto mb-4">
-{`Content-Security-Policy: default-src 'self'; report-to csp-endpoint\nReport-To: {"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/api/csp-reporter"}]}`}
+{reportToConfig}
       </pre>
+
+      <h2 className="mt-6 mb-2 text-lg">Browser support</h2>
+      <table className="w-full text-sm mb-4">
+        <thead>
+          <tr className="text-left border-b border-gray-700">
+            <th className="pr-2">Browser</th>
+            <th>Support</th>
+          </tr>
+        </thead>
+        <tbody>
+          {BROWSER_SUPPORT.map((b) => (
+            <tr key={b.name} className="border-b border-gray-800">
+              <td className="pr-2">{b.name}</td>
+              <td>{b.support ? '✅' : '❌'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="text-sm mb-4">
+        This browser: {eventSupported ? '✅ supports' : '❌ does not support'}
+        {' '}SecurityPolicyViolationEvent
+      </p>
 
       <button
         type="button"
