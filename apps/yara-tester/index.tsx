@@ -223,6 +223,38 @@ const YaraTester: React.FC = () => {
     }, 5000);
   };
 
+  const scanFiles = async () => {
+    if (!workerRef.current) return;
+    if (!(window as any).showOpenFilePicker) {
+      setRuntimeError('File System Access API not supported');
+      return;
+    }
+    try {
+      const handles = await (window as any).showOpenFilePicker({ multiple: true });
+      setRunning(true);
+      setRuntimeError(null);
+      setMatches([]);
+      setFileTimes([]);
+      setHeatmap({});
+      const ruleMap = Object.fromEntries(rules.map((r) => [r.name, r.content]));
+      workerRef.current.postMessage({
+        type: 'scanFiles',
+        rules: ruleMap,
+        handles,
+        limits: { cpu: 5000, mem: 50 * 1024 * 1024 },
+        chunkSize: 1024 * 1024,
+      });
+      runTimer.current = setTimeout(() => {
+        workerRef.current?.terminate();
+        workerRef.current = createWorker();
+        setRuntimeError('Scan timed out');
+        setRunning(false);
+      }, 5000);
+    } catch {
+      // user cancelled
+    }
+  };
+
   const addRule = () => {
     const name = `rule${rules.length + 1}.yar`;
     setRules([...rules, { name, content: '' }]);
@@ -341,6 +373,14 @@ const YaraTester: React.FC = () => {
           disabled={running}
         >
           Run Corpus
+        </button>
+        <button
+          type="button"
+          className="bg-blue-600 px-4 py-2 rounded disabled:opacity-50"
+          onClick={scanFiles}
+          disabled={running}
+        >
+          Scan Files
         </button>
         <button type="button" className="bg-gray-700 px-2" onClick={addRule}>
           +

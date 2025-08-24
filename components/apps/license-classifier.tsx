@@ -1,13 +1,13 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import {
+
   getLicenseInfo,
-  matchLicense,
   LicenseInfo,
   LicenseMatchResult,
   parseSpdxExpression,
   detectLicenseConflicts,
   LicenseConflict,
 } from '../../lib/licenseMatcher';
+import { matchLicenseWorker } from '../../lib/licenseMatcher.worker-client';
 
 interface AnalysisResult {
   detected: LicenseInfo[];
@@ -28,6 +28,7 @@ const LicenseClassifier: React.FC = () => {
   const [progress, setProgress] = useState(0);
   const [processing, setProcessing] = useState(false);
   const workerRef = useRef<Worker>();
+n
 
   const analyze = () => {
     if (!text.trim()) {
@@ -36,9 +37,27 @@ const LicenseClassifier: React.FC = () => {
     }
     const parsed = parseSpdxExpression(text);
     const detected = parsed.ids.map((id) => getLicenseInfo(id));
-    const fuzzy = matchLicense(text);
-    const conflicts = detectLicenseConflicts(parsed.ids, parsed.hasAnd && !parsed.hasOr);
-    setAnalysis({ detected, fuzzy, conflicts });
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setProgress(0);
+    setRunning(true);
+    matchLicenseWorker(text, {
+      signal: controller.signal,
+      onProgress: (p) => setProgress(Math.round(p * 100)),
+    })
+      .then((fuzzy) => {
+        const conflicts = detectLicenseConflicts(
+          parsed.ids,
+          parsed.hasAnd && !parsed.hasOr
+        );
+        setAnalysis({ detected, fuzzy, conflicts });
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') console.error(err);
+      })
+      .finally(() => {
+        setRunning(false);
+      });
   };
 
   useEffect(() => {
@@ -80,6 +99,7 @@ const LicenseClassifier: React.FC = () => {
   const cancelProcessing = useCallback(() => {
     workerRef.current?.postMessage({ type: 'cancel' });
   }, []);
+
 
   const repoConflicts = useMemo(() => {
     const ids = Object.values(files).flatMap((r) =>
@@ -124,6 +144,15 @@ const LicenseClassifier: React.FC = () => {
         >
           Analyze
         </button>
+        <button
+          type="button"
+          onClick={() => controllerRef.current?.abort()}
+          disabled={!running}
+          className="px-4 py-1 bg-red-600 rounded disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        {running && <span>{progress}%</span>}
       </div>
 
       {analysis.detected.length > 0 && (
