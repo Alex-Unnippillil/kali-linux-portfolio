@@ -69,6 +69,7 @@
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
     "react-twitter-embed": "^4.0.4",
+    "safe-regex": "^2.1.1",
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",
     "spdx-license-ids": "^3.0.17",
