@@ -52,3 +52,22 @@ export const step = (state: GameState, dir: Point): 'moved' | 'ate' | 'dead' => 
   state.snake.pop();
   return 'moved';
 };
+
+export class InputBuffer {
+  private queue: Point[] = [];
+
+  enqueue(dir: Point, last: Point) {
+    const prev = this.queue.length ? this.queue[this.queue.length - 1] : last;
+    if (prev.x + dir.x === 0 && prev.y + dir.y === 0) return;
+    if (this.queue.length >= 3) return;
+    this.queue.push(dir);
+  }
+
+  next(fallback: Point): Point {
+    return this.queue.shift() ?? fallback;
+  }
+
+  clear() {
+    this.queue = [];
+  }
+}

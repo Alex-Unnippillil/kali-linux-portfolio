@@ -9,7 +9,7 @@ const ctxCache: { ctx?: OffscreenCanvasRenderingContext2D } = {};
   }
   const ctx = ctxCache.ctx;
   if (!ctx) return;
-  const { snake, food, obstacles, colors, gridSize, cellSize } = data;
+  const { snake, food, obstacles, particles, colors, gridSize, cellSize } = data;
   ctx.fillStyle = colors.bg;
   ctx.fillRect(0, 0, gridSize * cellSize, gridSize * cellSize);
   ctx.fillStyle = colors.obstacle;
@@ -18,5 +18,13 @@ const ctxCache: { ctx?: OffscreenCanvasRenderingContext2D } = {};
   ctx.fillRect(food.x * cellSize, food.y * cellSize, cellSize, cellSize);
   ctx.fillStyle = colors.snake;
   snake.forEach((s: any) => ctx.fillRect(s.x * cellSize, s.y * cellSize, cellSize, cellSize));
+  if (particles) {
+    ctx.fillStyle = colors.particle || '#ffffff';
+    particles.forEach((p: any) => {
+      ctx.globalAlpha = p.life / 30;
+      ctx.fillRect(p.x * cellSize, p.y * cellSize, cellSize, cellSize);
+    });
+    ctx.globalAlpha = 1;
+  }
 };
 export {};
