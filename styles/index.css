@@ -279,3 +279,16 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
         transition: none !important;
     }
 }
+
+canvas.crt {
+    background-image: repeating-linear-gradient(
+        rgba(255, 255, 255, 0.05) 0px,
+        rgba(255, 255, 255, 0.05) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+}
+
+canvas.safe-mode {
+    filter: brightness(0.8);
+}

@@ -20,7 +20,7 @@ const Tetris: React.FC = () => {
   const [state, setState] = useState<GameState>(() => createGame());
   const boardRef = useRef<HTMLCanvasElement>(null);
   const replay = useRef<string[]>([]);
-  const stats = useRef({ lines: 0, tSpins: 0 });
+  const stats = useRef({ lines: 0, tSpins: 0, score: 0 });
   const socketRef = useRef<WebSocket | null>(null);
   const workerRef = useRef<Worker | null>(null);
 
@@ -165,9 +165,10 @@ const Tetris: React.FC = () => {
     const update = (time: number) => {
       if (time - last > dropInterval) {
         setState((s) => {
-          const res = step(s);
+          const res = s.gameOver ? null : step(s);
           if (res) {
             stats.current.lines += res.lines;
+            stats.current.score = s.score;
             if (res.tSpin) stats.current.tSpins += 1;
             if (res.lines && socketRef.current) {
               socketRef.current.send(
@@ -204,7 +205,8 @@ const Tetris: React.FC = () => {
     <div className="p-4">
       <canvas ref={boardRef} className="absolute" />
       <div className="mt-4 text-white">
-        <div>Lines: {stats.current.lines}</div>
+        <div>Score: {state.score}</div>
+        <div>Lines: {state.linesCleared}</div>
         <div>T-Spins: {stats.current.tSpins}</div>
       </div>
     </div>

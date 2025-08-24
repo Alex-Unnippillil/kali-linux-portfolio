@@ -3,6 +3,9 @@ import React, { useState } from 'react';
 interface Snapshot {
   timestamp: string;
   original: string;
+  statuscode: string;
+  mimetype: string;
+  robotflags?: string | null;
 }
 
 interface ApiResponse {
@@ -93,6 +96,9 @@ const WaybackViewer: React.FC = () => {
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [diffError, setDiffError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [mimeFilter, setMimeFilter] = useState('');
+  const [excludeRobots, setExcludeRobots] = useState(false);
   const limit = 50;
 
   const fetchSnapshots = async (pageNum = 0) => {
@@ -102,9 +108,15 @@ const WaybackViewer: React.FC = () => {
     setDiff(null);
     setError(null);
     try {
-      const res = await fetch(
-        `/api/wayback-viewer?url=${encodeURIComponent(url)}&page=${pageNum}&limit=${limit}`,
-      );
+      const params = new URLSearchParams({
+        url,
+        page: String(pageNum),
+        limit: String(limit),
+      });
+      if (statusFilter) params.append('status', statusFilter);
+      if (mimeFilter) params.append('mime', mimeFilter);
+      if (excludeRobots) params.append('noRobot', '1');
+      const res = await fetch(`/api/wayback-viewer?${params.toString()}`);
       const json: ApiResponse = await res.json();
       if (json.error) {
         setError(json.error);
@@ -156,44 +168,74 @@ const WaybackViewer: React.FC = () => {
     }
   };
 
-  const renderTimeline = () => {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  const renderHeatmap = () => {
     if (snapshots.length === 0) return null;
-    const times = snapshots.map((s) => parseTimestamp(s.timestamp).getTime());
-    const min = Math.min(...times);
-    const max = Math.max(...times);
-    const range = max - min || 1;
+    const counts = Array.from({ length: 12 }, () => Array(31).fill(0));
+    snapshots.forEach((s) => {
+      const d = parseTimestamp(s.timestamp);
+      const m = d.getUTCMonth();
+      const day = d.getUTCDate() - 1;
+      if (m >= 0 && m < 12 && day >= 0 && day < 31) counts[m][day] += 1;
+    });
+    const max = Math.max(...counts.flat());
     return (
-      <div className="relative w-full h-8 bg-gray-800 rounded overflow-hidden">
-        {snapshots.map((s) => {
-          const t = parseTimestamp(s.timestamp).getTime();
-          const left = ((t - min) / range) * 100;
-          const selectedCls = selected.includes(s.timestamp)
-            ? 'bg-yellow-400'
-            : 'bg-blue-400';
-          return (
-            <button
-              type="button"
-              key={s.timestamp}
-              title={s.timestamp}
-              className={`absolute top-0 h-full w-1 ${selectedCls}`}
-              style={{ left: `${left}%` }}
-              onClick={() => toggleSelect(s.timestamp)}
-            />
-          );
-        })}
+      <div className="overflow-auto">
+        <div className="grid grid-cols-12 gap-1">
+          {months.map((m, mi) => (
+            <div key={m} className="flex flex-col gap-1">
+              {Array.from({ length: 31 }).map((_, di) => {
+                const count = counts[mi][di];
+                const opacity = max ? count / max : 0;
+                return (
+                  <div
+                    key={di}
+                    className="w-4 h-4"
+                    style={{
+                      backgroundColor: '#3b82f6',
+                      opacity: count ? 0.2 + 0.8 * opacity : 0.1,
+                    }}
+                    title={`${m} ${di + 1}: ${count}`}
+                  />
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
 
   return (
     <div className="h-full w-full flex flex-col bg-gray-900 text-white p-4 space-y-4">
-      <div className="flex space-x-2">
+      <div className="flex flex-wrap gap-2">
         <input
           className="flex-1 text-black px-2 py-1"
           placeholder="https://example.com"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
         />
+        <input
+          className="w-24 text-black px-2 py-1"
+          placeholder="status"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        />
+        <input
+          className="w-32 text-black px-2 py-1"
+          placeholder="mime"
+          value={mimeFilter}
+          onChange={(e) => setMimeFilter(e.target.value)}
+        />
+        <label className="flex items-center space-x-1">
+          <input
+            type="checkbox"
+            checked={excludeRobots}
+            onChange={(e) => setExcludeRobots(e.target.checked)}
+          />
+          <span className="text-sm">no robots</span>
+        </label>
         <button
           type="button"
           onClick={() => fetchSnapshots(0)}
@@ -207,7 +249,7 @@ const WaybackViewer: React.FC = () => {
       {error && <div className="text-red-400">{error}</div>}
       {snapshots.length > 0 && (
         <div className="flex flex-col flex-1 space-y-2">
-          {renderTimeline()}
+          {renderHeatmap()}
           <div className="flex justify-between items-center">
             <button
               type="button"
@@ -243,6 +285,8 @@ const WaybackViewer: React.FC = () => {
                 >
                   {s.timestamp}
                 </a>
+                <span className="text-xs">{s.statuscode}</span>
+                <span className="text-xs">{s.mimetype}</span>
               </li>
             ))}
           </ul>

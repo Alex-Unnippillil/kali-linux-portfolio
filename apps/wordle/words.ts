@@ -27,8 +27,7 @@ export const ANSWERS = [
   'zebra',
 ];
 
-export const GUESSES = Array.from(new Set([
-  ...ANSWERS,
+export const GUESSES = [
   'about',
   'other',
   'which',
@@ -55,4 +54,4 @@ export const GUESSES = Array.from(new Set([
   'woven',
   'yield',
   'zesty',
-]));
+];

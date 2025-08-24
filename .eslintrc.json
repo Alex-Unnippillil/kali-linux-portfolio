@@ -1,5 +1,6 @@
 {
-  "extends": ["next/core-web-vitals"],
+  "extends": ["next/core-web-vitals", "prettier"],
+  "ignorePatterns": ["components/apps/breakout.js"],
   "rules": {
     "@next/next/no-page-custom-font": "off",
     "@next/next/no-img-element": "off",
@@ -18,5 +19,4 @@
       }
     }
   ]
-
 }

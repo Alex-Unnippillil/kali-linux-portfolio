@@ -36,14 +36,45 @@ const Simon = () => {
   const [editing, setEditing] = useState(false);
   const [customPattern, setCustomPattern] = useState([]);
   const [sharedPatterns, setSharedPatterns] = useState([]);
+  const [strictMode, setStrictMode] = useState(false);
   const audioCtx = useRef(null);
 
   useEffect(() => {
+    const settings = JSON.parse(
+      typeof window !== 'undefined'
+        ? localStorage.getItem('simon-settings') || '{}'
+        : '{}'
+    );
+    if (settings.difficulty) setDifficulty(settings.difficulty);
+    if (settings.accessibility) setAccessibility(settings.accessibility);
+    if (settings.strictMode) setStrictMode(settings.strictMode);
+    const storedScore =
+      typeof window !== 'undefined'
+        ? Number(localStorage.getItem('simon-highScore')) || 0
+        : 0;
+    setHighScore(storedScore);
     fetch('/api/simon/high-scores')
       .then((res) => res.json())
-      .then((data) => setHighScore(data.highScore || 0))
+      .then((data) => {
+        if (data.highScore) setHighScore(data.highScore);
+      })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(
+        'simon-settings',
+        JSON.stringify({ difficulty, accessibility, strictMode })
+      );
+    }
+  }, [difficulty, accessibility, strictMode]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('simon-highScore', String(highScore));
+    }
+  }, [highScore]);
 
   const submitScore = async (score) => {
     try {
@@ -82,12 +113,13 @@ const Simon = () => {
     }
   };
 
-  const scheduleTone = (freq, startTime) => {
+  const scheduleTone = (freq, startTime, type = 'sine') => {
     const ctx =
       audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.current = ctx;
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
+    oscillator.type = type;
     oscillator.frequency.value = freq;
     oscillator.connect(gain);
     gain.connect(ctx.destination);
@@ -98,40 +130,50 @@ const Simon = () => {
     oscillator.stop(startTime + 0.5);
   };
 
+  const playError = (time) => {
+    scheduleTone(110, time, 'square');
+  };
+
   const flashPad = (idx) => {
     setActivePad(idx);
     if ('vibrate' in navigator) navigator.vibrate(50);
     setTimeout(() => setActivePad(null), 500);
   };
 
-  const stepDuration = () => {
-    if (difficulty === 'speed') {
-      return Math.max(0.6 - sequence.length * 0.02, 0.2);
-    }
-    return 0.6;
+  const stepDuration = (len = sequence.length) => {
+    const rate = difficulty === 'speed' ? 0.04 : 0.02;
+    return Math.max(0.7 - len * rate, 0.2);
   };
 
-  const playSequence = () => {
+  const playPattern = (pattern, { onComplete } = {}) => {
     const ctx =
       audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.current = ctx;
-    setIsPlayerTurn(false);
-    setStatus('Listen...');
     const start = ctx.currentTime + 0.1;
-    const delta = stepDuration();
-    const schedule = createToneSchedule(sequence.length, start, delta);
+    const delta = stepDuration(pattern.length);
+    const schedule = createToneSchedule(pattern.length, start, delta);
     schedule.forEach((time, i) => {
-      const idx = sequence[i];
+      const idx = pattern[i];
       scheduleTone(tones[idx], time);
       const delay = (time - ctx.currentTime) * 1000;
       setTimeout(() => flashPad(idx), delay);
     });
     const totalDelay = (schedule[schedule.length - 1] - ctx.currentTime + delta) * 1000;
-    setTimeout(() => {
-      setStatus('Your turn');
-      setIsPlayerTurn(true);
-      setStep(0);
-    }, totalDelay);
+    if (onComplete) setTimeout(onComplete, totalDelay);
+    return totalDelay;
+  };
+
+  const playSequence = () => {
+    setIsPlayerTurn(false);
+    setStatus('Listen...');
+    const totalDelay = playPattern(sequence, {
+      onComplete: () => {
+        setStatus('Your turn');
+        setIsPlayerTurn(true);
+        setStep(0);
+      },
+    });
+    return totalDelay;
   };
 
   useEffect(() => {
@@ -177,11 +219,21 @@ const Simon = () => {
         setStep(step + 1);
       }
     } else {
-      submitScore(sequence.length - 1);
-      setStatus('Wrong! Press Start');
-      setSequence([]);
-      setIsPlayerTurn(false);
-      setStep(0);
+      playError(audioCtx.current.currentTime);
+      if (strictMode) {
+        submitScore(sequence.length - 1);
+        setStatus('Wrong! Press Start');
+        setSequence([]);
+        setIsPlayerTurn(false);
+        setStep(0);
+      } else {
+        setStatus('Wrong! Watch again');
+        setIsPlayerTurn(false);
+        setStep(0);
+        setTimeout(() => {
+          playSequence();
+        }, 1000);
+      }
     }
   };
 
@@ -204,6 +256,8 @@ const Simon = () => {
           <button
             // eslint-disable-next-line react/no-array-index-key
             key={idx}
+            type="button"
+            aria-label={`Pad ${idx + 1}`}
             className={padClass(pad, idx)}
             onPointerDown={() => handlePadClick(idx)}
           >
@@ -211,7 +265,7 @@ const Simon = () => {
           </button>
         ))}
       </div>
-      <div className="mb-2">{status}</div>
+      <div className="mb-2" aria-live="polite">{status}</div>
       <div className="mb-4 text-sm">High Score: {highScore}</div>
       <div className="flex flex-wrap gap-4 justify-center">
         <select
@@ -231,11 +285,26 @@ const Simon = () => {
           <option value="normal">Normal</option>
           <option value="colorblind">Colorblind</option>
         </select>
+        <select
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          value={strictMode ? 'strict' : 'normal'}
+          onChange={(e) => setStrictMode(e.target.value === 'strict')}
+        >
+          <option value="normal">Normal</option>
+          <option value="strict">Strict</option>
+        </select>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={startGame}
         >
           Start
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
+          onClick={playSequence}
+          disabled={!sequence.length || !isPlayerTurn}
+        >
+          Repeat
         </button>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
@@ -266,6 +335,13 @@ const Simon = () => {
               onClick={loadPatterns}
             >
               Load Shared
+            </button>
+            <button
+              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
+              onClick={() => playPattern(customPattern)}
+              disabled={!customPattern.length}
+            >
+              Preview
             </button>
             <button
               className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"

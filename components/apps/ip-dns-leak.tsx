@@ -7,6 +7,15 @@ type DnsResult = {
   error?: string;
 };
 
+type ResolverInfo = {
+  transport: 'DoH' | 'DoT' | 'plain';
+  resolver: string;
+  asn?: string;
+  ip?: string;
+  error?: string;
+  mismatch?: boolean;
+};
+
 const STUN_TIMEOUT = 3000; // ms
 
 async function fetchPublicIp(): Promise<string> {
@@ -104,6 +113,7 @@ const IpDnsLeak: React.FC = () => {
   const [localIps, setLocalIps] = useState<string[]>([]);
   const [dnsInput, setDnsInput] = useState('example.com');
   const [dnsResults, setDnsResults] = useState<DnsResult[]>([]);
+  const [resolverInfo, setResolverInfo] = useState<ResolverInfo[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
 
   const runCheck = async () => {
@@ -112,6 +122,7 @@ const IpDnsLeak: React.FC = () => {
     setPublicIp(null);
     setLocalIps([]);
     setDnsResults([]);
+    setResolverInfo([]);
 
     const hostnames = dnsInput
       .split(/\s+/)
@@ -132,21 +143,38 @@ const IpDnsLeak: React.FC = () => {
       errorList.push(`DNS test error: ${e.message}`);
       return [] as DnsResult[];
     });
+    const resolverPromise = fetch('/api/ip-dns-leak')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .catch((e) => {
+        errorList.push(`Resolver probe error: ${e.message}`);
+        return { resolvers: [] as ResolverInfo[] };
+      });
 
-    const [ip, local, dns] = await Promise.all([
+    const [ip, local, dns, resolverData] = await Promise.all([
       ipPromise,
       localPromise,
       dnsPromise,
+      resolverPromise,
     ]);
 
     if (ip) setPublicIp(ip);
     setLocalIps(local);
     setDnsResults(dns);
+    if (resolverData?.resolvers) {
+      const ipSet = new Set(local);
+      if (ip) ipSet.add(ip);
+      const enriched = resolverData.resolvers.map((r: ResolverInfo) => ({
+        ...r,
+        mismatch: r.ip ? !ipSet.has(r.ip) : true,
+      }));
+      setResolverInfo(enriched);
+    }
     setErrors(errorList);
     setLoading(false);
   };
 
   const hasDnsErrors = dnsResults.some((r) => r.error);
+  const resolverMismatch = resolverInfo.some((r) => r.mismatch);
 
   const summary: string[] = [];
   if (publicIp) summary.push(`Public IP detected: ${publicIp}`);
@@ -154,6 +182,12 @@ const IpDnsLeak: React.FC = () => {
   if (dnsResults.length)
     summary.push(
       hasDnsErrors ? 'Some DNS lookups failed.' : 'DNS lookups succeeded.'
+    );
+  if (resolverInfo.length)
+    summary.push(
+      resolverMismatch
+        ? 'Resolver IP mismatch detected.'
+        : 'Resolvers match WebRTC candidates.'
     );
 
   const tips: string[] = [];
@@ -163,6 +197,8 @@ const IpDnsLeak: React.FC = () => {
     tips.push('Disable WebRTC to prevent local IP disclosure.');
   if (hasDnsErrors)
     tips.push('Configure a secure DNS resolver or check for DNS leaks.');
+  if (resolverMismatch)
+    tips.push('Ensure DNS queries use your expected network/VPN.');
 
   return (
     <div className="h-full w-full bg-panel text-white p-4 overflow-auto space-y-4">
@@ -199,6 +235,39 @@ const IpDnsLeak: React.FC = () => {
         <div>
           <strong>Local Candidates:</strong> {localIps.join(', ')}
         </div>
+      )}
+
+      {resolverInfo.length > 0 && (
+        <table className="text-sm w-full">
+          <thead>
+            <tr>
+              <th className="text-left">Transport</th>
+              <th className="text-left">Resolver IP</th>
+              <th className="text-left">ASN</th>
+              <th className="text-left">Client IP</th>
+              <th className="text-left">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {resolverInfo.map((r, i) => (
+              <tr key={i}>
+                <td>{r.transport}</td>
+                <td>{r.resolver}</td>
+                <td>{r.asn || 'Unknown'}</td>
+                <td>{r.ip || (r.error ? 'n/a' : '')}</td>
+                <td>
+                  {r.error ? (
+                    <span className="text-red-400">{r.error}</span>
+                  ) : r.mismatch ? (
+                    <span className="text-yellow-300">Mismatch</span>
+                  ) : (
+                    <span className="text-green-400">OK</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
       {dnsResults.length > 0 && (

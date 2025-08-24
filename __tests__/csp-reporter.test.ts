@@ -1,4 +1,9 @@
-import { normalizeReports, computeTop, validateReport } from '@pages/api/csp-reporter';
+import {
+  normalizeReports,
+  computeTop,
+  validateReport,
+  simulatePolicy,
+} from '@pages/api/csp-reporter';
 
 describe('csp-reporter utilities', () => {
   test('normalizes report-uri format', () => {
@@ -53,6 +58,30 @@ describe('csp-reporter utilities', () => {
   test('validate report returns helpful errors', () => {
     const errors = validateReport({ 'blocked-uri': '' } as any);
     expect(errors.length).toBeGreaterThan(0);
+  });
+
+  test('simulatePolicy flags violations', () => {
+    const list = [
+      {
+        'document-uri': 'https://example.com',
+        'violated-directive': 'img-src',
+        'blocked-uri': 'https://evil.com/img.png',
+      },
+    ];
+    const sim = simulatePolicy("img-src 'self'", list as any);
+    expect(sim.blocked.length).toBe(1);
+  });
+
+  test('simulatePolicy allows matching hosts', () => {
+    const list = [
+      {
+        'document-uri': 'https://example.com',
+        'violated-directive': 'img-src',
+        'blocked-uri': 'https://cdn.example.com/img.png',
+      },
+    ];
+    const sim = simulatePolicy('img-src https://cdn.example.com', list as any);
+    expect(sim.blocked.length).toBe(0);
   });
 });
 
