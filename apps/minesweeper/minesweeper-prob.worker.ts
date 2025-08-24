@@ -1,4 +1,4 @@
-import { deserialize, computeProbabilities } from '../../apps/minesweeper/engine';
+import { deserialize, computeProbabilities } from './engine';
 
 self.onmessage = (e: MessageEvent) => {
   const g = deserialize(e.data.game);
