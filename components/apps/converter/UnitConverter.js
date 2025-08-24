@@ -118,8 +118,23 @@ const UnitConverter = ({ onConvert }) => {
           </select>
         </label>
       </div>
-      <div data-testid="unit-result" className="mt-2">
-        {result && `${value} ${fromUnit} = ${result} ${toUnit}`}
+      <div
+        data-testid="unit-result"
+        className="mt-2 flex items-center gap-2"
+      >
+        {result && (
+          <>
+            <span>{`${value} ${fromUnit} = ${result} ${toUnit}`}</span>
+            <button
+              onClick={() =>
+                navigator.clipboard.writeText(`${result} ${toUnit}`)
+              }
+              className="bg-blue-600 text-white px-2 py-1 rounded"
+            >
+              Copy
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,22 +1,25 @@
 import React, { useRef, useState } from 'react';
 import Papa from 'papaparse';
 import { toPng } from 'html-to-image';
-import { FixedSizeList as List } from 'react-window';
+import jsPDF from 'jspdf';
+import ReactMarkdown from 'react-markdown';
 
 interface TimelineEvent {
   time: string;
   end?: string;
   event: string;
   group?: string;
+  link?: string;
 }
 
-const TimelineBuilder: React.FC = () => {
+interface Props {
+  openApp?: (id: string) => void;
+}
+
+const TimelineBuilder: React.FC<Props> = ({ openApp }) => {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [snap, setSnap] = useState<'none' | 'day' | 'week'>('none');
   const listRef = useRef<HTMLDivElement>(null);
-  const sortedEvents = [...events].sort(
-    (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
-  );
 
   const validateEvent = (e: TimelineEvent) => {
     const start = Date.parse(e.time);
@@ -40,40 +43,77 @@ const TimelineBuilder: React.FC = () => {
     return d.toISOString();
   };
 
+  const sortEvents = (evts: TimelineEvent[]) =>
+    evts.sort(
+      (a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()
+    );
+
+  const parseCsv = (file: File): Promise<TimelineEvent[]> =>
+    new Promise((resolve) => {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results: any) => {
+          const rows = results.data as any[];
+          const parsed = rows
+            .map((r) => ({
+              time: r.time || r.start || r.date || r.timestamp,
+              end: r.end || r.finish,
+              event: r.event || r.title || r.description,
+              group: r.group || r.category,
+              link: r.link || r.evidence || r.url,
+            }))
+            .map((e) => ({
+              ...e,
+              time: snapDate(e.time),
+              end: e.end ? snapDate(e.end) : undefined,
+            }))
+            .filter((e) => e.time && e.event && validateEvent(e));
+          resolve(parsed);
+        },
+      });
+    });
+
+  const parseJson = (file: File): Promise<TimelineEvent[]> =>
+    new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result as string);
+          const arr = Array.isArray(data) ? data : data.events || [];
+          const parsed = arr
+            .map((r: any) => ({
+              time: r.time || r.start || r.date || r.timestamp,
+              end: r.end || r.finish,
+              event: r.event || r.title || r.description,
+              group: r.group || r.category,
+              link: r.link || r.evidence || r.url,
+            }))
+            .map((e: any) => ({
+              ...e,
+              time: snapDate(e.time),
+              end: e.end ? snapDate(e.end) : undefined,
+            }))
+            .filter((e: TimelineEvent) => e.time && e.event && validateEvent(e));
+          resolve(parsed);
+        } catch {
+          resolve([]);
+        }
+      };
+      reader.readAsText(file);
+    });
+
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
-    const promises = Array.from(files).map(
-      (file) =>
-        new Promise<TimelineEvent[]>((resolve) => {
-          Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results: any) => {
-              const rows = results.data as any[];
-              const parsed = rows
-                .map((r) => ({
-                  time: r.time || r.start || r.date || r.timestamp,
-                  end: r.end || r.finish,
-                  event: r.event || r.title || r.description,
-                  group: r.group || r.category,
-                }))
-                .map((e) => ({
-                  ...e,
-                  time: snapDate(e.time),
-                  end: e.end ? snapDate(e.end) : undefined,
-                }))
-                .filter((e) => e.time && e.event && validateEvent(e));
-              resolve(parsed);
-            },
-          });
-        })
+    const promises = Array.from(files).map((file) =>
+      file.name.toLowerCase().endsWith('.json') ? parseJson(file) : parseCsv(file)
     );
     Promise.all(promises).then((all) => {
       const merged = [...events, ...all.flat()];
       const unique = Array.from(
         new Map(merged.map((e) => [`${e.time}-${e.event}`, e])).values()
       );
-      setEvents(unique);
+      setEvents(sortEvents(unique));
     });
   };
 
@@ -109,6 +149,19 @@ const TimelineBuilder: React.FC = () => {
     link.click();
   };
 
+  const exportPdf = async () => {
+    if (!listRef.current) return;
+    const dataUrl = await toPng(listRef.current);
+    const width = listRef.current.clientWidth;
+    const height = listRef.current.clientHeight;
+    const pdf = new jsPDF({
+      orientation: width > height ? 'landscape' : 'portrait',
+      unit: 'px',
+      format: [width, height],
+    });
+    pdf.addImage(dataUrl, 'PNG', 0, 0, width, height);
+    pdf.save('timeline.pdf');
+  };
   const onDragStart = (index: number) => (ev: React.DragEvent) => {
     ev.dataTransfer.setData('text/plain', index.toString());
   };
@@ -116,32 +169,34 @@ const TimelineBuilder: React.FC = () => {
   const onDrop = (index: number) => (ev: React.DragEvent) => {
     const from = Number(ev.dataTransfer.getData('text/plain'));
     if (isNaN(from)) return;
-    const updated = [...sortedEvents];
+    const updated = [...events];
     const [moved] = updated.splice(from, 1);
     updated.splice(index, 0, moved);
     setEvents(updated);
   };
 
-  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
-    const e = sortedEvents[index];
-    return (
-      <li
-        style={style}
-        key={`${e.time}-${e.event}`}
-        draggable
-        onDragStart={onDragStart(index)}
-        onDragOver={(ev) => ev.preventDefault()}
-        onDrop={onDrop(index)}
-        tabIndex={0}
-        onKeyDown={(ev) => {
-          if (ev.key === 'ArrowUp' && index > 0) {
-            (listRef.current?.querySelectorAll('li')[index - 1] as HTMLElement)?.focus();
-          } else if (ev.key === 'ArrowDown' && index < sortedEvents.length - 1) {
-            (listRef.current?.querySelectorAll('li')[index + 1] as HTMLElement)?.focus();
-          }
-        }}
-      >{`${e.time}${e.end ? ` - ${e.end}` : ''}: ${e.event}${e.group ? ` [${e.group}]` : ''}`}</li>
-    );
+  const handleLinkClick = (e: React.MouseEvent, link: string) => {
+    e.preventDefault();
+    if (link.startsWith('app:')) {
+      const appId = link.replace('app:', '');
+      openApp?.(appId);
+    } else {
+      window.open(link, '_blank');
+    }
+  };
+
+  const grouped = () => {
+    const order: string[] = [];
+    const groups: Record<string, TimelineEvent[]> = {};
+    events.forEach((evt) => {
+      const g = evt.group || 'Ungrouped';
+      if (!groups[g]) {
+        groups[g] = [];
+        order.push(g);
+      }
+      groups[g].push(evt);
+    });
+    return { order, groups };
   };
 
   return (
@@ -149,7 +204,7 @@ const TimelineBuilder: React.FC = () => {
       <div className="flex space-x-2 items-center">
         <input
           type="file"
-          accept=".csv"
+          accept=".csv,.json"
           multiple
           onChange={(e) => handleFiles(e.target.files)}
         />
@@ -180,14 +235,75 @@ const TimelineBuilder: React.FC = () => {
         >
           Export PNG
         </button>
+        <button
+          className="bg-gray-700 hover:bg-gray-600 px-2 rounded"
+          onClick={exportPdf}
+        >
+          Export PDF
+        </button>
       </div>
       <div
         ref={listRef}
         className="flex-1 overflow-auto bg-white rounded p-2 text-black"
+        onDragOver={(e) => e.preventDefault()}
       >
-        <List height={400} itemCount={sortedEvents.length} itemSize={24} width="100%">
-          {Row}
-        </List>
+        <ul className="space-y-1">
+          {(() => {
+            const { order, groups } = grouped();
+            const items: React.ReactNode[] = [];
+            order.forEach((g) => {
+              items.push(
+                <li key={`group-${g}`} className="font-bold mt-2">
+                  {g}
+                </li>
+              );
+              groups[g].forEach((e) => {
+                const eventIndex = events.indexOf(e);
+                items.push(
+                  <li
+                    key={`${e.time}-${e.event}`}
+                    draggable
+                    onDragStart={onDragStart(eventIndex)}
+                    onDrop={onDrop(eventIndex)}
+                    onDragOver={(ev) => ev.preventDefault()}
+                    tabIndex={0}
+                    className="pl-2"
+                  >
+                    {`${e.time}${e.end ? ` - ${e.end}` : ''}: `}
+                    <span className="inline">
+                      <ReactMarkdown
+                        components={{
+                          p: 'span',
+                          a: ({ href, children }) => (
+                            <a
+                              href={href}
+                              onClick={(ev) => href && handleLinkClick(ev, href)}
+                              className="text-blue-600 underline"
+                            >
+                              {children}
+                            </a>
+                          ),
+                        }}
+                      >
+                        {e.event}
+                      </ReactMarkdown>
+                    </span>
+                    {e.link && (
+                      <a
+                        href={e.link}
+                        onClick={(ev) => handleLinkClick(ev, e.link!)}
+                        className="text-blue-600 underline ml-2"
+                      >
+                        evidence
+                      </a>
+                    )}
+                  </li>
+                );
+              });
+            });
+            return items;
+          })()}
+        </ul>
       </div>
     </div>
   );
@@ -195,5 +311,7 @@ const TimelineBuilder: React.FC = () => {
 
 export default TimelineBuilder;
 
-export const displayTimelineBuilder = () => <TimelineBuilder />;
+export const displayTimelineBuilder = (_addFolder?: any, openApp?: any) => (
+  <TimelineBuilder openApp={openApp} />
+);
 

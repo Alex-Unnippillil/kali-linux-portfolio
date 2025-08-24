@@ -54,12 +54,31 @@ const processQuotes = (data) => {
 const allOfflineQuotes = processQuotes(offlineQuotes);
 
 const QuoteGenerator = () => {
-  const [quotes, setQuotes] = useState(allOfflineQuotes);
+  const [quotes, setQuotes] = useState([]);
   const [current, setCurrent] = useState(null);
-  const [category, setCategory] = useState('');
+  const [inspiration, setInspiration] = useState('');
   const [search, setSearch] = useState('');
   const [fade, setFade] = useState(false);
   const [prefersReduced, setPrefersReduced] = useState(false);
+  const [newQuote, setNewQuote] = useState('');
+  const [newAuthor, setNewAuthor] = useState('');
+
+  const loadLocalQuotes = () => {
+    const base = [...allOfflineQuotes];
+    try {
+      const user = JSON.parse(localStorage.getItem('userQuotes') || '[]');
+      base.push(...processQuotes(user));
+    } catch {
+      /* ignore */
+    }
+    try {
+      const stored = JSON.parse(localStorage.getItem('quotesData') || '[]');
+      base.push(...processQuotes(stored));
+    } catch {
+      /* ignore */
+    }
+    setQuotes(base);
+  };
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -70,16 +89,8 @@ const QuoteGenerator = () => {
   }, []);
 
   useEffect(() => {
+    loadLocalQuotes();
     const etag = localStorage.getItem('quotesEtag');
-    const stored = localStorage.getItem('quotesData');
-    if (stored) {
-      try {
-        setQuotes(processQuotes(JSON.parse(stored)));
-      } catch {
-        // ignore parse error
-      }
-    }
-
     fetch('https://dummyjson.com/quotes?limit=500', {
       headers: etag ? { 'If-None-Match': etag } : {},
     })
@@ -89,7 +100,7 @@ const QuoteGenerator = () => {
           res.json().then((d) => {
             localStorage.setItem('quotesData', JSON.stringify(d.quotes));
             if (newEtag) localStorage.setItem('quotesEtag', newEtag);
-            setQuotes(processQuotes(d.quotes));
+            loadLocalQuotes();
           });
         }
       })
@@ -102,12 +113,12 @@ const QuoteGenerator = () => {
     () =>
       quotes.filter(
         (q) =>
-          (!category || q.tags.includes(category)) &&
+          (!inspiration || q.tags.includes(inspiration)) &&
           (!search ||
             q.content.toLowerCase().includes(search.toLowerCase()) ||
             q.author.toLowerCase().includes(search.toLowerCase()))
       ),
-    [quotes, category, search]
+    [quotes, inspiration, search]
   );
 
   useEffect(() => {
@@ -166,7 +177,22 @@ const QuoteGenerator = () => {
     });
   };
 
-  const categories = useMemo(
+  const addOfflineQuote = () => {
+    if (!newQuote.trim() || !newAuthor.trim()) return;
+    const entry = { quote: newQuote.trim(), author: newAuthor.trim() };
+    try {
+      const stored = JSON.parse(localStorage.getItem('userQuotes') || '[]');
+      stored.push(entry);
+      localStorage.setItem('userQuotes', JSON.stringify(stored));
+    } catch {
+      localStorage.setItem('userQuotes', JSON.stringify([entry]));
+    }
+    setNewQuote('');
+    setNewAuthor('');
+    loadLocalQuotes();
+  };
+
+  const inspirations = useMemo(
     () =>
       Array.from(new Set(quotes.flatMap((q) => q.tags))).filter((c) =>
         SAFE_CATEGORIES.includes(c)
@@ -185,8 +211,8 @@ const QuoteGenerator = () => {
         >
           {current ? (
             <>
-              <p className="text-lg mb-2">&quot;{current.content}&quot;</p>
-              <p className="text-sm text-gray-300">- {current.author}</p>
+              <p className="text-2xl font-serif italic leading-relaxed mb-4">&quot;{current.content}&quot;</p>
+              <p className="text-lg font-semibold text-gray-300">- {current.author}</p>
             </>
           ) : (
             <p>No quotes found.</p>
@@ -226,17 +252,38 @@ const QuoteGenerator = () => {
             className="px-2 py-1 rounded text-black"
           />
           <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            value={inspiration}
+            onChange={(e) => setInspiration(e.target.value)}
             className="px-2 py-1 rounded text-black"
           >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
+            <option value="">All Inspirations</option>
+            {inspirations.map((cat) => (
               <option key={cat} value={cat}>
                 {cat}
               </option>
             ))}
           </select>
+        </div>
+        <div className="mt-6 flex flex-col w-full gap-2">
+          <textarea
+            value={newQuote}
+            onChange={(e) => setNewQuote(e.target.value)}
+            placeholder="Your quote"
+            className="px-2 py-1 rounded text-black"
+            rows={2}
+          />
+          <input
+            value={newAuthor}
+            onChange={(e) => setNewAuthor(e.target.value)}
+            placeholder="Author"
+            className="px-2 py-1 rounded text-black"
+          />
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded self-center"
+            onClick={addOfflineQuote}
+          >
+            Add Quote
+          </button>
         </div>
       </div>
     </div>

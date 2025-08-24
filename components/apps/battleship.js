@@ -26,17 +26,19 @@ const Battleship = () => {
   const [playerBoard, setPlayerBoard] = useState(createBoard());
   const [enemyBoard, setEnemyBoard] = useState(createBoard());
   const [ships, setShips] = useState([]); // player's ship objects
+  const [noTouch, setNoTouch] = useState(false);
   const [ai, setAi] = useState(new MonteCarloAI());
   const [heat, setHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
   const [message, setMessage] = useState('Place your ships');
 
   useEffect(() => {
     // init player ships
-    const layout = randomizePlacement();
+    const layout = randomizePlacement(noTouch);
     setShips(layout.map((s, i) => ({ id: i, ...s })));
     // enemy ships
-    setEnemyBoard(placeShips(createBoard(), randomizePlacement()));
-  }, []);
+    setEnemyBoard(placeShips(createBoard(), randomizePlacement(noTouch)));
+    setAi(new MonteCarloAI(noTouch));
+  }, [noTouch]);
 
   const placeShips = (board, layout) => {
     const newBoard = board.slice();
@@ -58,6 +60,16 @@ const Battleship = () => {
       for(const s of ships){
         if(s.id!==ship.id && s.cells && s.cells.includes(idx)) return;
       }
+      // adjacency check when noTouch enabled
+      if(noTouch){
+        for(const s of ships){
+          if(s.id===ship.id || !s.cells) continue;
+          for(const c of s.cells){
+            const sx=c%BOARD_SIZE, sy=Math.floor(c/BOARD_SIZE);
+            if(Math.abs(sx-cx)<=1 && Math.abs(sy-cy)<=1) return;
+          }
+        }
+      }
       cells.push(idx);
     }
     const updated = ships.map(s=>s.id===ship.id?{...s,x,y,cells}:s);
@@ -76,7 +88,7 @@ const Battleship = () => {
   };
 
   const randomize = () => {
-    const layout = randomizePlacement();
+    const layout = randomizePlacement(noTouch);
     const newShips = layout.map((s,i)=>({...s,id:i}));
     setShips(newShips);
     setPlayerBoard(placeShips(createBoard(), newShips));
@@ -151,6 +163,10 @@ const Battleship = () => {
               ))}
             </div>
             <div className="flex flex-col space-y-2">
+              <label className="flex items-center space-x-2">
+                <input type="checkbox" checked={noTouch} onChange={e=>setNoTouch(e.target.checked)} />
+                <span>No Touching</span>
+              </label>
               <button className="px-2 py-1 bg-gray-700" onClick={randomize}>Randomize</button>
               <button className="px-2 py-1 bg-gray-700" onClick={start}>Start</button>
             </div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ReactGA from 'react-ga4';
-import { defaultLevelMetas, parseLevels, loadPublicLevels, LevelMeta, defaultLevels } from './levels';
+import { defaultLevelMetas, parseLevels, loadPublicLevels, LevelMeta } from './levels';
 import {
   loadLevel,
   move,
@@ -32,6 +32,17 @@ const Sokoban: React.FC = () => {
   const workerRef = useRef<Worker>();
   const [hint, setHint] = useState<(typeof directionKeys)[number] | null>(null);
   const [animate, setAnimate] = useState(true);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    const pref = localStorage.getItem('sokoban-reduce-motion');
+    if (pref !== null) setReduceMotion(pref === 'true');
+    else if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) setReduceMotion(true);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('sokoban-reduce-motion', reduceMotion ? 'true' : 'false');
+  }, [reduceMotion]);
 
   useEffect(() => {
     if (typeof Worker !== 'undefined') {
@@ -53,6 +64,26 @@ const Sokoban: React.FC = () => {
         comp[l.id] = localStorage.getItem(`sokoban-complete-${l.id}`) === 'true';
       });
       setCompleted(comp);
+      const saved = localStorage.getItem('sokoban-progress');
+      if (saved) {
+        try {
+          const prog = JSON.parse(saved);
+          const idx = lvls.findIndex((l) => l.id === prog.id);
+          if (idx >= 0) {
+            const st = loadLevel(lvls[idx].lines);
+            st.player = prog.player;
+            st.boxes = new Set(prog.boxes);
+            st.pushes = prog.pushes;
+            st.moves = prog.moves;
+            setIndex(idx);
+            setState(st);
+            setReach(reachable(st));
+            return;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
       const st = loadLevel(lvls[0].lines);
       setIndex(0);
       setState(st);
@@ -75,33 +106,36 @@ const Sokoban: React.FC = () => {
     }
   }, [animate]);
 
-  const handleMove = (dir: (typeof directionKeys)[number]) => {
-    setHint(null);
-    const newState = move(state, dir);
-    if (newState === state) return;
-    setState(newState);
-    setReach(reachable(newState));
-    if (newState.pushes > state.pushes) {
-      ReactGA.event('push');
-    }
-    if (isSolved(newState)) {
-      const lvl = levels[index];
-      ReactGA.event('level_complete', { moves: newState.pushes });
-      const bestKey = `sokoban-best-${lvl.id}`;
-      const prevBest = localStorage.getItem(bestKey);
-      if (!prevBest || newState.pushes < Number(prevBest)) {
-        localStorage.setItem(bestKey, String(newState.pushes));
-        setBest(newState.pushes);
+  const handleMove = React.useCallback(
+    (dir: (typeof directionKeys)[number]) => {
+      setHint(null);
+      const newState = move(state, dir);
+      if (newState === state) return;
+      setState(newState);
+      setReach(reachable(newState));
+      if (newState.pushes > state.pushes) {
+        ReactGA.event('push');
       }
-      localStorage.setItem(`sokoban-complete-${lvl.id}`, 'true');
-      setCompleted((c) => ({ ...c, [lvl.id]: true }));
-      const efficiency = newState.pushes / newState.moves;
-      localStorage.setItem(
-        `sokoban-analytics-${lvl.id}`,
-        JSON.stringify({ pushes: newState.pushes, moves: newState.moves, efficiency })
-      );
-    }
-  };
+      if (isSolved(newState)) {
+        const lvl = levels[index];
+        ReactGA.event('level_complete', { moves: newState.pushes });
+        const bestKey = `sokoban-best-${lvl.id}`;
+        const prevBest = localStorage.getItem(bestKey);
+        if (!prevBest || newState.pushes < Number(prevBest)) {
+          localStorage.setItem(bestKey, String(newState.pushes));
+          setBest(newState.pushes);
+        }
+        localStorage.setItem(`sokoban-complete-${lvl.id}`, 'true');
+        setCompleted((c) => ({ ...c, [lvl.id]: true }));
+        const efficiency = newState.pushes / newState.moves;
+        localStorage.setItem(
+          `sokoban-analytics-${lvl.id}`,
+          JSON.stringify({ pushes: newState.pushes, moves: newState.moves, efficiency })
+        );
+      }
+    },
+    [state, index, levels]
+  );
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -111,7 +145,7 @@ const Sokoban: React.FC = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [state, index, levels]);
+  }, [state, index, levels, handleMove]);
 
   useEffect(() => {
     let sx = 0;
@@ -135,7 +169,7 @@ const Sokoban: React.FC = () => {
       window.removeEventListener('touchstart', ts);
       window.removeEventListener('touchend', te);
     };
-  }, [state, index, levels]);
+  }, [state, index, levels, handleMove]);
 
   const selectLevel = (i: number) => {
     const lvl = levels[i];
@@ -215,12 +249,38 @@ const Sokoban: React.FC = () => {
     }
   };
 
+  const handleExport = () => {
+    const lvl = levels[index];
+    const blob = new Blob([lvl.lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${lvl.id}.xsb`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const cellStyle = {
     width: CELL,
     height: CELL,
   } as React.CSSProperties;
 
   const hintPos = hint ? { x: state.player.x + DIRS[hint].x, y: state.player.y + DIRS[hint].y } : null;
+
+  useEffect(() => {
+    const lvl = levels[index];
+    if (!lvl) return;
+    localStorage.setItem(
+      'sokoban-progress',
+      JSON.stringify({
+        id: lvl.id,
+        player: state.player,
+        boxes: Array.from(state.boxes),
+        pushes: state.pushes,
+        moves: state.moves,
+      })
+    );
+  }, [state, index, levels]);
 
   return (
     <div className="p-4 space-y-2 select-none">
@@ -232,21 +292,65 @@ const Sokoban: React.FC = () => {
             }`}</option>
           ))}
         </select>
-        <input type="file" accept=".txt,.sas,.xsb" onChange={handleFile} />
-        <button type="button" onClick={handleUndo} className="px-2 py-1 bg-gray-300 rounded">
+        <input
+          type="file"
+          accept=".txt,.sas,.xsb"
+          onChange={handleFile}
+          aria-label="Import level file"
+        />
+        <button
+          type="button"
+          onClick={handleExport}
+          className="px-2 py-1 bg-gray-300 rounded"
+          aria-label="Export current level"
+        >
+          Export
+        </button>
+        <button
+          type="button"
+          onClick={handleUndo}
+          className="px-2 py-1 bg-gray-300 rounded"
+          aria-label="Undo move"
+        >
           Undo
         </button>
-        <button type="button" onClick={handleRedo} className="px-2 py-1 bg-gray-300 rounded">
+        <button
+          type="button"
+          onClick={handleRedo}
+          className="px-2 py-1 bg-gray-300 rounded"
+          aria-label="Redo move"
+        >
           Redo
         </button>
-        <button type="button" onClick={handleReset} className="px-2 py-1 bg-gray-300 rounded">
+        <button
+          type="button"
+          onClick={handleReset}
+          className="px-2 py-1 bg-gray-300 rounded"
+          aria-label="Reset level"
+        >
           Reset
         </button>
-        <button type="button" onClick={handleHint} className="px-2 py-1 bg-gray-300 rounded">
+        <button
+          type="button"
+          onClick={handleHint}
+          className="px-2 py-1 bg-gray-300 rounded"
+          aria-label="Get hint"
+        >
           Hint
         </button>
-        <div className="ml-4">Pushes: {state.pushes}</div>
+        <div className="ml-4">Moves: {state.moves}</div>
+        <div>Pushes: {state.pushes}</div>
         <div>Best: {best ?? '-'}</div>
+        {state.deadlocks.size > 0 && <div className="text-red-400">Deadlock!</div>}
+        <label className="flex items-center space-x-1 ml-4">
+          <input
+            type="checkbox"
+            checked={reduceMotion}
+            onChange={(e) => setReduceMotion(e.target.checked)}
+            aria-label="Reduce motion"
+          />
+          <span>Reduce motion</span>
+        </label>
       </div>
       <div
         className="relative bg-gray-700"
@@ -292,7 +396,7 @@ const Sokoban: React.FC = () => {
             <div
               key={b}
               className={`absolute ${
-                animate ? 'transition-transform duration-100' : ''
+                animate && !reduceMotion ? 'transition-transform duration-100' : ''
               } ${dead ? 'bg-red-500' : 'bg-orange-400'}`}
               style={{
                 ...cellStyle,
@@ -303,13 +407,43 @@ const Sokoban: React.FC = () => {
         })}
         <div
           className={`absolute bg-blue-400 ${
-            animate ? 'transition-transform duration-100' : ''
+            animate && !reduceMotion ? 'transition-transform duration-100' : ''
           }`}
           style={{
             ...cellStyle,
             transform: `translate(${state.player.x * CELL}px, ${state.player.y * CELL}px)`,
           }}
         />
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-1 w-24" aria-label="Move controls">
+        <button
+          className="col-start-2 bg-gray-300 rounded"
+          onClick={() => handleMove('ArrowUp')}
+          aria-label="Move up"
+        >
+          ↑
+        </button>
+        <button
+          className="bg-gray-300 rounded"
+          onClick={() => handleMove('ArrowLeft')}
+          aria-label="Move left"
+        >
+          ←
+        </button>
+        <button
+          className="col-start-3 bg-gray-300 rounded"
+          onClick={() => handleMove('ArrowRight')}
+          aria-label="Move right"
+        >
+          →
+        </button>
+        <button
+          className="col-start-2 bg-gray-300 rounded"
+          onClick={() => handleMove('ArrowDown')}
+          aria-label="Move down"
+        >
+          ↓
+        </button>
       </div>
     </div>
   );

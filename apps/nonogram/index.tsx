@@ -90,8 +90,8 @@ const Nonogram: React.FC = () => {
       let ng = prev.map((row) => row.slice());
       const current = ng[r][c];
       ng[r][c] = mark ? (current === -1 ? 0 : -1) : current === 1 ? 0 : 1;
-      ng = propagate(ng, puzzle);
-      return ng;
+      const { grid: pg, contradiction } = propagate(ng, puzzle);
+      return contradiction ? prev : pg;
     });
   };
 
@@ -205,7 +205,12 @@ const Nonogram: React.FC = () => {
         {puzzle && (
           <button
             className="border px-2 py-1"
-            onClick={() => setGrid((g) => propagate(g, puzzle))}
+            onClick={() =>
+              setGrid((g) => {
+                const { grid: pg } = propagate(g, puzzle);
+                return pg;
+              })
+            }
           >
             Auto Fill
           </button>

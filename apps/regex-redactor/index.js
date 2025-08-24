@@ -1,1 +1,5 @@
-export { default, displayRegexRedactor } from '../../components/apps/regex-redactor';
+export {
+  default,
+  displayRegexRedactor,
+  SAFE_PATTERNS,
+} from '../../components/apps/regex-redactor';

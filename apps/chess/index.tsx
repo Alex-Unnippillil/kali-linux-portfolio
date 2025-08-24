@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Chess, Square, PieceSymbol, Piece } from 'chess.js';
 
 const pieceUnicode: Record<PieceSymbol, { w: string; b: string }> = {
@@ -33,13 +33,15 @@ const ChessApp: React.FC = () => {
   const [selected, setSelected] = useState<string | null>(null);
   const [highlight, setHighlight] = useState<string[]>([]);
   const [status, setStatus] = useState('Your move');
-  const [evaluation, setEvaluation] = useState<number | null>(null);
-  const [bestLine, setBestLine] = useState('');
-  const [blunder, setBlunder] = useState(false);
   const [user, setUser] = useState<User | null>(loadUser);
+  const [premove, setPremove] = useState<{ from: string; to: string } | null>(
+    null
+  );
+  const [skill, setSkill] = useState(10);
+  const [announce, setAnnounce] = useState('');
 
-  const engine = useRef<any>(null);
-  const lastEval = useRef<number>(0);
+  const engine = useRef<Worker | null>(null);
+  const premoveRef = useRef<{ from: string; to: string } | null>(null);
 
   // Arrows/lines state
   const [arrows, setArrows] = useState<{ from: string; to: string }[]>([]);
@@ -63,18 +65,6 @@ const ChessApp: React.FC = () => {
   // Opening explorer data (parsed once)
   const openingsRef = useRef<string[][] | null>(null);
 
-  const stopAnalysis = useCallback(() => {
-    if (engine.current) engine.current.postMessage('stop');
-  }, []);
-
-  const startAnalysis = useCallback(() => {
-    if (!engine.current) return;
-    const fen = game.fen();
-    engine.current.postMessage('stop');
-    engine.current.postMessage(`position fen ${fen}`);
-    engine.current.postMessage('go infinite');
-  }, [game]);
-
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -84,24 +74,45 @@ const ChessApp: React.FC = () => {
       if (!mounted) return;
       engine.current = StockfishModule();
       engine.current.postMessage('uci');
+      engine.current.postMessage(`setoption name Skill Level value ${skill}`);
       engine.current.onmessage = (e: MessageEvent) => {
         const line = e.data as string;
-        const match = line.match(/info .*score cp (-?\d+).*pv (.*)/);
-        if (match) {
-          const cp = Number(match[1]);
-          setEvaluation(cp);
-          setBlunder(lastEval.current - cp > 300);
-          lastEval.current = cp;
-          setBestLine(match[2]);
+        if (line.startsWith('bestmove')) {
+          const move = line.split(' ')[1];
+          game.move({
+            from: move.slice(0, 2) as Square,
+            to: move.slice(2, 4) as Square,
+            promotion: move.slice(4) || 'q',
+          });
+          updateBoard();
+          updateStatus();
+          if (premoveRef.current) {
+            const res = game.move(premoveRef.current as any);
+            premoveRef.current = null;
+            setPremove(null);
+            if (res) {
+              updateBoard();
+              updateStatus();
+            }
+          }
+          setAnnounce(`Engine moves ${move}`);
         }
       };
-      startAnalysis();
     })();
     return () => {
       mounted = false;
       if (engine.current) engine.current.terminate();
     };
-  }, [startAnalysis]);
+  }, []);
+
+  useEffect(() => {
+    if (engine.current)
+      engine.current.postMessage(`setoption name Skill Level value ${skill}`);
+  }, [skill]);
+
+  useEffect(() => {
+    premoveRef.current = premove;
+  }, [premove]);
 
   const updateBoard = () => {
     setBoard(game.board());
@@ -121,16 +132,30 @@ const ChessApp: React.FC = () => {
     else setStatus(game.turn() === 'w' ? 'Your move' : 'Waiting');
   };
 
+  const engineMove = () => {
+    if (!engine.current || puzzle) return;
+    engine.current.postMessage(`position fen ${game.fen()}`);
+    engine.current.postMessage('go movetime 1000');
+  };
+
+  useEffect(() => {
+    setAnnounce(status);
+  }, [status]);
+
   const makeMove = (to: string) => {
     if (!selected) return;
-    const move = game.move({ from: selected as Square, to: to as Square, promotion: 'q' });
-    stopAnalysis();
+    const move = game.move({
+      from: selected as Square,
+      to: to as Square,
+      promotion: 'q',
+    });
     if (move) {
       setSelected(null);
       setHighlight([]);
       updateBoard();
       updateStatus();
-      startAnalysis();
+      setAnnounce(`You move ${move.san}`);
+      if (!puzzle) engineMove();
       if (puzzle && move.san === puzzle.solution) {
         const time = puzzleStart ? Math.floor((Date.now() - puzzleStart) / 1000) : 0;
         if (rushActive) {
@@ -157,6 +182,18 @@ const ChessApp: React.FC = () => {
 
   const handleSquareClick = (file: number, rank: number) => {
     const square = 'abcdefgh'[file] + (8 - rank);
+    if (!puzzle && game.turn() === 'b') {
+      if (selected) {
+        const move = { from: selected, to: square, promotion: 'q' };
+        setPremove(move);
+        premoveRef.current = move;
+        setSelected(null);
+        setHighlight([]);
+      } else {
+        setSelected(square);
+      }
+      return;
+    }
     if (selected) {
       makeMove(square);
     } else {
@@ -190,16 +227,15 @@ const ChessApp: React.FC = () => {
     setSelected(null);
     setHighlight([]);
     setStatus('Your move');
-    setBlunder(false);
-    setEvaluation(null);
-    setBestLine('');
     setPuzzle(null);
     setPuzzleScore(null);
     setRushActive(false);
     setRushScore(0);
     setRushTime(0);
-    stopAnalysis();
-    startAnalysis();
+    premoveRef.current = null;
+    setPremove(null);
+    setAnnounce('New game');
+    if (engine.current) engine.current.postMessage('ucinewgame');
   };
 
   const loadPuzzle = async (daily = false) => {
@@ -325,7 +361,7 @@ const ChessApp: React.FC = () => {
         setSelected(null);
         setHighlight([]);
         updateStatus();
-        startAnalysis();
+        if (game.turn() === 'b' && !puzzle) engineMove();
       } catch (e) {
         // eslint-disable-next-line no-alert
         alert('Invalid PGN');
@@ -333,11 +369,33 @@ const ChessApp: React.FC = () => {
     }
   };
 
+  const saveGame = () => {
+    localStorage.setItem('chess-saved-game', game.pgn());
+    // eslint-disable-next-line no-alert
+    alert('Game saved');
+  };
+
+  const loadSavedGame = () => {
+    const pgn = localStorage.getItem('chess-saved-game');
+    if (pgn) {
+      try {
+        game.loadPgn(pgn);
+        updateBoard();
+        setSelected(null);
+        setHighlight([]);
+        updateStatus();
+        if (game.turn() === 'b' && !puzzle) engineMove();
+      } catch (e) {
+        // eslint-disable-next-line no-alert
+        alert('Failed to load game');
+      }
+    }
+  };
+
   const exploreOpenings = async () => {
     if (!openingsRef.current) {
-      const text = await fetch('/openings/openings.pgn').then((r) => r.text());
-      const games = text.trim().split(/\n\n\n/).map((g) => g.split(/\s+/).filter((m) => /^[a-hKQRBNOP0-9]/.test(m)));
-      openingsRef.current = games;
+      const data = await fetch('/chess/openings.json').then((r) => r.json());
+      openingsRef.current = data.map((o: { line: string[] }) => o.line);
     }
     const moves = game.history();
     const counts: Record<string, number> = {};
@@ -370,8 +428,11 @@ const ChessApp: React.FC = () => {
     const squareColor = (file + rank) % 2 === 0 ? 'bg-gray-300' : 'bg-gray-700';
     const isHighlight = highlight.includes(squareName);
     const draggable = !!(piece && piece.color === game.turn());
+    const pieceName = piece
+      ? `${piece.color === 'w' ? 'white' : 'black'} ${piece.type}`
+      : 'empty';
     return (
-      <div
+      <button
         key={squareName}
         onClick={() => handleSquareClick(file, rank)}
         onContextMenu={(e) => handleContextMenu(file, rank, e)}
@@ -379,17 +440,22 @@ const ChessApp: React.FC = () => {
         onDragOver={(e) => e.preventDefault()}
         onDrop={() => handleDrop(file, rank)}
         draggable={draggable}
+        tabIndex={0}
+        aria-label={`${squareName} ${pieceName}`}
         className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center select-none ${squareColor} ${
           isSelected ? 'ring-2 ring-yellow-400' : ''
         } ${isHighlight ? 'bg-green-500 bg-opacity-50' : ''}`}
       >
         {piece ? pieceUnicode[piece.type as PieceSymbol][piece.color as 'w' | 'b'] : ''}
-      </div>
+      </button>
     );
   };
 
   return (
     <div className="p-2 text-white bg-panel h-full w-full flex flex-col items-center">
+      <div aria-live="polite" className="sr-only">
+        {announce}
+      </div>
       {!user && (
         <button className="mb-2 px-2 py-1 bg-gray-700" onClick={login}>
           Login
@@ -441,12 +507,6 @@ const ChessApp: React.FC = () => {
         </svg>
       </div>
       <div className="mt-2">{status}</div>
-      {evaluation !== null && (
-        <div className="mt-1">
-          Eval: {(evaluation / 100).toFixed(2)} {blunder && 'Blunder!'}
-          {bestLine && <div className="text-xs">PV: {bestLine}</div>}
-        </div>
-      )}
       {rushActive && (
         <div className="mt-1">Rush: {rushScore} – {rushTime}s</div>
       )}
@@ -475,9 +535,25 @@ const ChessApp: React.FC = () => {
         <button className="px-2 py-1 bg-gray-700" onClick={importPGN}>
           Import
         </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={saveGame}>
+          Save
+        </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={loadSavedGame}>
+          Load
+        </button>
         <button className="px-2 py-1 bg-gray-700" onClick={clearArrows}>
           Clear Arrows
         </button>
+      </div>
+      <div className="mt-2 flex items-center">
+        <label className="mr-2">Skill: {skill}</label>
+        <input
+          type="range"
+          min="0"
+          max="20"
+          value={skill}
+          onChange={(e) => setSkill(Number(e.target.value))}
+        />
       </div>
     </div>
   );

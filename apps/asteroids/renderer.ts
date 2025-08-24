@@ -20,21 +20,23 @@ self.onmessage = (e: MessageEvent) => {
   if (type === 'init') {
     ctx = (e.data.canvas as OffscreenCanvas).getContext('2d');
   } else if (type === 'render' && ctx) {
-    const { ship, bullets, saucerBullets, asteroids, saucer, score, level } = e.data.state as {
-      ship: { x: number; y: number; angle: number; r: number };
-      bullets: Bullet[];
-      saucerBullets: Bullet[];
-      asteroids: Asteroid[];
-      saucer: Saucer;
-      score: number;
-      level: number;
-    };
+    const { ship, bullets, saucerBullets, asteroids, saucer, score, level, safeMode } =
+      e.data.state as {
+        ship: { x: number; y: number; angle: number; r: number };
+        bullets: Bullet[];
+        saucerBullets: Bullet[];
+        asteroids: Asteroid[];
+        saucer: Saucer;
+        score: number;
+        level: number;
+        safeMode: boolean;
+      };
     const width = (ctx.canvas as OffscreenCanvas).width;
     const height = (ctx.canvas as OffscreenCanvas).height;
     ctx.clearRect(0, 0, width, height);
     ctx.lineWidth = 1.5;
     ctx.strokeStyle = '#ffffff';
-    ctx.shadowBlur = 4;
+    ctx.shadowBlur = safeMode ? 0 : 4;
     ctx.shadowColor = '#0ff';
     ctx.beginPath();
     ctx.moveTo(ship.x + Math.cos(ship.angle) * ship.r, ship.y + Math.sin(ship.angle) * ship.r);
