@@ -6,24 +6,20 @@ describe('apps.config.js icons', () => {
     const configPath = path.join(process.cwd(), 'apps.config.js');
     const content = fs.readFileSync(configPath, 'utf8');
 
-    const icons: { type: 'apps' | 'system' | 'direct'; name: string }[] = [];
-
-    const iconFn = /icon\('([^']+)'\)/g;
-    let match: RegExpExecArray | null;
-    while ((match = iconFn.exec(content)) !== null) {
-      icons.push({ type: 'apps', name: match[1] });
+    function extractIcons(content: string, regex: RegExp, type: 'apps' | 'system' | 'direct') {
+      const icons: { type: 'apps' | 'system' | 'direct'; name: string }[] = [];
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(content)) !== null) {
+        icons.push({ type, name: match[1] });
+      }
+      return icons;
     }
 
-    const sysFn = /sys\('([^']+)'\)/g;
-    while ((match = sysFn.exec(content)) !== null) {
-      icons.push({ type: 'system', name: match[1] });
-    }
-
-    const direct = /icon:\s*'\.\/themes\/Yaru\/([^']+)'/g;
-    while ((match = direct.exec(content)) !== null) {
-      icons.push({ type: 'direct', name: match[1] });
-    }
-
+    const icons = [
+      ...extractIcons(content, /icon\('([^']+)'\)/g, 'apps'),
+      ...extractIcons(content, /sys\('([^']+)'\)/g, 'system'),
+      ...extractIcons(content, /icon:\s*'\.\/themes\/Yaru\/([^']+)'/g, 'direct'),
+    ];
     const missing = icons
       .map((icon) => {
         let filePath: string;
