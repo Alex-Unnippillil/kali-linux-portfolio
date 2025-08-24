@@ -614,7 +614,7 @@ const apps = [
   {
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
-    icon: './themes/Yaru/apps/calc.png',
+    icon: icon('hash.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
