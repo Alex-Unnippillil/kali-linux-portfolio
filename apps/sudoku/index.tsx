@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import Board from './board';
 import type { Board as BoardType, UserStats } from './types';
-import { generatePuzzle, getSolution } from './generator';
+import { generatePuzzle } from './generator';
 import { getHint } from './hints';
+import { solveAsync } from './solver';
 
 const SudokuApp: React.FC = () => {
   const [user, setUser] = useState<string | null>(null);
@@ -27,10 +28,10 @@ const SudokuApp: React.FC = () => {
     }
   }, []);
 
-  const newPuzzle = () => {
+  const newPuzzle = async () => {
     const p = generatePuzzle(difficulty);
     setPuzzle(p);
-    const sol = getSolution(p);
+    const sol = await solveAsync(p);
     setSolution(sol);
   };
 
@@ -75,7 +76,7 @@ const SudokuApp: React.FC = () => {
       const newPuzzle = puzzle.map((row) => [...row]);
       newPuzzle[h.row][h.col] = h.value;
       setPuzzle(newPuzzle);
-      alert(`Hint: fill ${h.value} at (${h.row + 1},${h.col + 1}) [${h.type}]`);
+      alert(h.message);
     } else {
       alert('No hints available');
     }
