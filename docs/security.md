@@ -2,8 +2,8 @@
 
 ## Middleware subrequest header
 
-To prevent abuse of the Next.js middleware internals, block any public request carrying the `x-middleware-subrequest` header. This value is used solely by internal middleware logic and must not be exposed to the internet.
 
+If this header is not blocked, attackers could craft requests with the `x-middleware-subrequest` header to bypass middleware protections, interfere with internal routing, or gain unauthorized access to resources. This could lead to privilege escalation, information disclosure, or other security vulnerabilities.
 ### CDN/WAF configuration
 
 - **Cloudflare firewall rule**
