@@ -33,6 +33,9 @@ const Sokoban: React.FC = () => {
   const [hint, setHint] = useState<(typeof directionKeys)[number] | null>(null);
   const [animate, setAnimate] = useState(true);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorText, setEditorText] = useState('');
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const pref = localStorage.getItem('sokoban-reduce-motion');
@@ -57,6 +60,28 @@ const Sokoban: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const shared = params.get('level');
+    if (shared) {
+      try {
+        const lines: string[] = JSON.parse(shared);
+        const meta: LevelMeta = {
+          id: 'shared',
+          name: 'Shared',
+          difficulty: 'custom',
+          lines,
+        };
+        setLevels([meta]);
+        setIndex(0);
+        const st = loadLevel(lines);
+        setState(st);
+        setReach(reachable(st));
+        return;
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     loadPublicLevels().then((lvls) => {
       setLevels(lvls);
       const comp: Record<string, boolean> = {};
@@ -260,6 +285,36 @@ const Sokoban: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const openEditor = () => {
+    setEditorText(levels[index].lines.join('\n'));
+    setShareUrl(null);
+    setEditorOpen(true);
+  };
+
+  const applyEditor = () => {
+    const lines = editorText.replace(/\r/g, '').split('\n');
+    setLevels((lvls) => {
+      const copy = [...lvls];
+      copy[index] = { ...copy[index], lines };
+      return copy;
+    });
+    const st = loadLevel(lines);
+    setAnimate(false);
+    setHint(null);
+    setState(st);
+    setReach(reachable(st));
+    setEditorOpen(false);
+  };
+
+  const shareLevel = () => {
+    const lines = editorText.replace(/\r/g, '').split('\n');
+    const url = `${location.origin}${location.pathname}?level=${encodeURIComponent(
+      JSON.stringify(lines)
+    )}`;
+    setShareUrl(url);
+    if (navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {});
+  };
+
   const cellStyle = {
     width: CELL,
     height: CELL,
@@ -337,6 +392,14 @@ const Sokoban: React.FC = () => {
           aria-label="Get hint"
         >
           Hint
+        </button>
+        <button
+          type="button"
+          onClick={openEditor}
+          className="px-2 py-1 bg-gray-300 rounded"
+          aria-label="Edit level"
+        >
+          Edit
         </button>
         <div className="ml-4">Moves: {state.moves}</div>
         <div>Pushes: {state.pushes}</div>
@@ -419,6 +482,41 @@ const Sokoban: React.FC = () => {
           }}
         />
       </div>
+      {editorOpen && (
+        <div className="mt-2 space-y-2">
+          <textarea
+            className="w-full h-40 text-black p-2"
+            value={editorText}
+            onChange={(e) => setEditorText(e.target.value)}
+          />
+          {shareUrl && (
+            <input className="w-full text-black p-1" value={shareUrl} readOnly />
+          )}
+          <div className="space-x-2">
+            <button
+              type="button"
+              onClick={applyEditor}
+              className="px-2 py-1 bg-gray-300 rounded"
+            >
+              Apply
+            </button>
+            <button
+              type="button"
+              onClick={shareLevel}
+              className="px-2 py-1 bg-gray-300 rounded"
+            >
+              Share
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditorOpen(false)}
+              className="px-2 py-1 bg-gray-300 rounded"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       <div className="mt-2 grid grid-cols-3 gap-1 w-24" aria-label="Move controls">
         <button
           className="col-start-2 bg-gray-300 rounded"

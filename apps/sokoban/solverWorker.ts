@@ -51,18 +51,36 @@ export interface SimpleState {
   player: Position;
 }
 
-function heuristic(state: SimpleState): number {
-  const targetArr = Array.from(state.targets).map((t) => t.split(',').map(Number));
-  let h = 0;
-  state.boxes.forEach((b) => {
-    const [bx, by] = b.split(',').map(Number);
-    let min = Infinity;
-    for (const [tx, ty] of targetArr) {
-      const d = Math.abs(bx - tx) + Math.abs(by - ty);
-      if (d < min) min = d;
-    }
-    h += min;
+function buildPatternDB(state: SimpleState): Map<string, number> {
+  const dist = new Map<string, number>();
+  const q: Position[] = [];
+  state.targets.forEach((t) => {
+    const [x, y] = t.split(',').map(Number);
+    const p = { x, y };
+    q.push(p);
+    dist.set(t, 0);
   });
+  while (q.length) {
+    const p = q.shift()!;
+    const d = dist.get(key(p))!;
+    for (const dir of Object.values(DIRS)) {
+      const n = { x: p.x + dir.x, y: p.y + dir.y };
+      const k = key(n);
+      if (dist.has(k) || isWallOrBox({ ...state, boxes: new Set() }, n)) continue;
+      dist.set(k, d + 1);
+      q.push(n);
+    }
+  }
+  return dist;
+}
+
+function heuristic(state: SimpleState, pdb: Map<string, number>): number {
+  let h = 0;
+  for (const b of state.boxes) {
+    const d = pdb.get(b);
+    if (d === undefined) return Infinity;
+    h += d;
+  }
   return h;
 }
 
@@ -96,33 +114,49 @@ function isSolved(state: SimpleState): boolean {
   return solved;
 }
 
-interface Node {
-  state: SimpleState;
-  g: number;
-  f: number;
-  path: string[];
+const FOUND = Symbol('found');
+
+function idaSearch(
+  state: SimpleState,
+  g: number,
+  bound: number,
+  path: (keyof typeof DIRS)[],
+  pdb: Map<string, number>,
+  visited: Set<string>
+): number | typeof FOUND {
+  const f = g + heuristic(state, pdb);
+  if (f > bound) return f;
+  if (isSolved(state)) return FOUND;
+  let min = Infinity;
+  for (const dir of dirKeys) {
+    const next = moveState(state, dir);
+    if (!next) continue;
+    const k = stateKey(next);
+    if (visited.has(k)) continue;
+    visited.add(k);
+    path.push(dir);
+    const t = idaSearch(next, g + 1, bound, path, pdb, visited);
+    if (t === FOUND) return FOUND;
+    if (typeof t === 'number' && t < min) min = t;
+    path.pop();
+    visited.delete(k);
+  }
+  return min;
 }
 
 export function solve(start: SimpleState): string[] {
-  const open: Node[] = [{ state: start, g: 0, f: heuristic(start), path: [] }];
-  const visited = new Map<string, number>();
-  visited.set(stateKey(start), 0);
-  while (open.length) {
-    open.sort((a, b) => a.f - b.f);
-    const cur = open.shift()!;
-    if (isSolved(cur.state)) return cur.path;
-    for (const dir of dirKeys) {
-      const next = moveState(cur.state, dir);
-      if (!next) continue;
-      const g = cur.g + 1;
-      const keyStr = stateKey(next);
-      if (visited.has(keyStr) && visited.get(keyStr)! <= g) continue;
-      visited.set(keyStr, g);
-      const h = heuristic(next);
-      open.push({ state: next, g, f: g + h, path: [...cur.path, dir] });
-    }
+  const pdb = buildPatternDB(start);
+  let bound = heuristic(start, pdb);
+  const path: (keyof typeof DIRS)[] = [];
+  const visited = new Set<string>();
+  while (true) {
+    visited.clear();
+    visited.add(stateKey(start));
+    const t = idaSearch(start, 0, bound, path, pdb, visited);
+    if (t === FOUND) return path.slice();
+    if (typeof t === 'number' && t === Infinity) return [];
+    bound = t as number;
   }
-  return [];
 }
 
 ctx.onmessage = (e: MessageEvent<SolveRequest>) => {
