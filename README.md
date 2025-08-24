@@ -28,6 +28,12 @@ Some API routes persist data to the filesystem when running locally. This file-b
 
 See [New App Checklist](./docs/new-app-checklist.md) to ensure all required steps are completed.
 
+### Using the New-App Generator
+
+Run `yarn new-app <id>` to scaffold a new application. The generator creates a stub in
+`apps/<id>/` and a matching component under `components/apps/`, then injects an entry into
+`apps.config.js`.
+
 Heavy applications should be loaded with [`next/dynamic`](https://nextjs.org/docs/advanced-features/dynamic-import) so that they do not bloat the initial bundle.
 
 ```js
@@ -128,18 +134,37 @@ To introduce a new game:
 
 The new game will then appear alongside the other games on the desktop.
 
-## Theme Selection
+## Theming and Accent Switching
 
 Icon themes can be changed at runtime by setting the `NEXT_PUBLIC_THEME`
 environment variable. It should correspond to a directory inside
-`public/themes/`. When unspecified, the application defaults to the
-`Yaru` theme.
+`public/themes/`; when unspecified, the application defaults to the `Yaru`
+theme. Accent colours come from `styles/tokens.css` and can be overridden
+by updating the `--color-accent` token or extending the Settings app to
+persist a user-selected accent.
+
+## Accessibility Guidelines
+
+When adding features or applications:
+
+- Ensure all interactive elements are reachable via keyboard navigation.
+- Provide descriptive `aria-label`s for icons and unlabeled controls.
+- Maintain sufficient colour contrast, especially when introducing custom
+  themes or accent colours.
+- Use semantic HTML and test with screen readers when possible.
 
 ## Privacy
 
 The contact application records only non-PII metadata in Google Analytics.
 Submissions trigger an event with `{ category: "contact", action: "submit_success" }`, and the
 free-text fields (name, subject, message) are never sent to analytics.
+
+## CI Overview
+
+The [CI workflow](.github/workflows/ci.yml) installs dependencies, lints,
+type-checks, builds the project, runs Jest and Vitest tests, executes
+Playwright end-to-end tests, and collects Lighthouse metrics. Test and
+Lighthouse reports are uploaded as artifacts for inspection.
 
 ## Required CI Secrets
 
@@ -154,6 +179,13 @@ The GitHub Actions workflow relies on the following secrets configured in the re
 - `NEXT_PUBLIC_AXIOM_DATASET`
 
 These secrets provide the values for the corresponding environment variables during the build step.
+
+## Design Sources
+
+Reference colour and icon assets come from upstream Ubuntu resources:
+
+- [Ubuntu brand colour palette](https://design.ubuntu.com/brand/colour-palette/)
+- [Yaru icon theme](https://github.com/ubuntu/yaru)
 
 ## Deployment and WebSocket Support
 
