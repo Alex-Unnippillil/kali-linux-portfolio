@@ -25,9 +25,10 @@ type Response = {
 };
 
 const CONTROLS = [
-  { id: 'spf', label: 'SPF' },
   { id: 'dkim', label: 'DKIM' },
   { id: 'dmarc', label: 'DMARC' },
+  { id: 'mtaSts', label: 'MTA-STS' },
+  { id: 'tlsRpt', label: 'TLS-RPT' },
 ] as const;
 
 type ControlId = typeof CONTROLS[number]['id'];
@@ -70,7 +71,8 @@ const MailAuth: React.FC = () => {
           Status: r.pass ? 'PASS' : 'FAIL',
           Policy: r.policy || '',
           Message: r.message || '',
-          Remediation: r.spec,
+          Recommendation: r.recommendation || '',
+          Spec: r.spec,
         });
       });
     });
@@ -79,7 +81,7 @@ const MailAuth: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'mail-auth.csv';
+    a.download = 'deliverability-checklist.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -87,7 +89,7 @@ const MailAuth: React.FC = () => {
   const exportPdf = () => {
     const doc = new jsPDF();
     doc.setFontSize(12);
-    doc.text('Mail Auth Results', 10, 10);
+    doc.text('Deliverability Checklist', 10, 10);
     const domains = Object.keys(results).filter((d) => !results[d].error);
     let y = 20;
     doc.text('Control', 10, y);
@@ -107,7 +109,7 @@ const MailAuth: React.FC = () => {
       });
       y += 20;
     });
-    doc.save('mail-auth.pdf');
+    doc.save('deliverability-checklist.pdf');
   };
 
 
@@ -168,11 +170,19 @@ const MailAuth: React.FC = () => {
                       const badgeColor = r.pass ? 'bg-green-600' : 'bg-red-600';
                       return (
                         <td key={domain} className="py-2">
-                          <span
-                            className={`px-2 py-0.5 rounded text-white text-xs ${badgeColor}`}
-                          >
-                            {r.pass ? 'PASS' : 'FAIL'}
-                          </span>
+                          <div className="flex flex-col">
+                            <span
+                              className={`px-2 py-0.5 rounded text-white text-xs ${badgeColor}`}
+                            >
+                              {r.pass ? 'PASS' : 'FAIL'}
+                            </span>
+                            {!r.pass && (r.message || r.recommendation) && (
+                              <div className="mt-1 text-xs text-red-400 space-y-1">
+                                {r.message && <div>{r.message}</div>}
+                                {r.recommendation && <div>{r.recommendation}</div>}
+                              </div>
+                            )}
+                          </div>
                         </td>
                       );
                     })}
@@ -187,14 +197,14 @@ const MailAuth: React.FC = () => {
               className="px-4 py-1 bg-green-600 rounded"
               type="button"
             >
-              Export CSV
+              Export Checklist CSV
             </button>
             <button
               onClick={exportPdf}
               className="px-4 py-1 bg-purple-600 rounded"
               type="button"
             >
-              Export PDF
+              Export Checklist PDF
             </button>
           </div>
         </>
