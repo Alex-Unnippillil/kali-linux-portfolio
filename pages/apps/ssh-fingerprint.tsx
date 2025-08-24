@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic';
 
 const SshFingerprint = dynamic(
-  () => import('../../apps/ssh-fingerprint'),
+  () => import('../../components/apps/ssh-fingerprint'),
   { ssr: false }
 );
 

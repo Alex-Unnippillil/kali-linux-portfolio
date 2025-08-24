@@ -35,7 +35,8 @@ function parseJumpList(buffer: ArrayBuffer): ParseEvent[] {
   const cf = read(new Uint8Array(buffer), { type: 'array' });
   const dest = find(cf, 'DestList');
   if (!dest || !dest.content) throw new Error('Unsupported JumpList format');
-  const dv = new DataView(dest.content.buffer, dest.content.byteOffset, dest.content.byteLength);
+  const content = dest.content as Uint8Array;
+  const dv = new DataView(content.buffer, content.byteOffset, content.byteLength);
   const headerSize = 32;
   const entrySize = 160;
   const events: ParseEvent[] = [];

@@ -1,12 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import {
-import { setupUrlGuard } from '../../lib/urlGuard';
-setupUrlGuard();
   UserInputError,
   UpstreamError,
   withErrorHandler,
   fail,
 } from '../../lib/errors';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 export default withErrorHandler(async function handler(
   req: NextApiRequest,

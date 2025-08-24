@@ -60,7 +60,7 @@ async function parseKey(
     if (jwk.kty === 'EC' && !/^ES|ECDH/.test(alg)) {
       throw new Error(`Algorithm mismatch: EC key cannot be used with ${alg}`);
     }
-    return importJWK(jwk, alg);
+    return importJWK(jwk, alg) as Promise<CryptoKey>;
   }
   if (trimmed.includes('BEGIN')) {
     if (/EC PRIVATE|EC PUBLIC/.test(trimmed) && !/^ES|ECDH/.test(alg)) {

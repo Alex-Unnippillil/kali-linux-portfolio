@@ -31,7 +31,10 @@ function toArrayBuffer(u8: Uint8Array): ArrayBuffer {
     arr.set(u8, 1);
     return arr.buffer;
   }
-  return u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.length);
+  return (u8.buffer as ArrayBuffer).slice(
+    u8.byteOffset,
+    u8.byteOffset + u8.length,
+  );
 }
 
 function parseJwk(jwk: JWK) {
@@ -82,7 +85,7 @@ function parseJwk(jwk: JWK) {
   throw new Error('Unsupported JWK');
 }
 
-function getDetails(key: sshpk.Key) {
+function getDetails(key: any) {
   const result: any = {
     md5: key.fingerprint('md5').toString(),
     sha256: key.fingerprint('sha256').toString(),

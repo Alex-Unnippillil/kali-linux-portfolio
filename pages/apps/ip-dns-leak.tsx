@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const IpDnsLeak = dynamic(() => import('../../apps/ip-dns-leak'), {
+const IpDnsLeak = dynamic(() => import('../../components/apps/ip-dns-leak'), {
   ssr: false,
 });
 

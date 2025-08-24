@@ -113,7 +113,7 @@ const CookieSimulator: React.FC = () => {
         return { url: input, included: false, curl: '', reasons: ['Invalid URL'] };
       }
     });
-  }, [targetList, originUrl, domain, path, secure, sameSite, name, value, domainValid, sameSiteValid]);
+  }, [targetList, origin, domain, path, secure, sameSite, name, value, domainValid, sameSiteValid]);
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 space-y-4">

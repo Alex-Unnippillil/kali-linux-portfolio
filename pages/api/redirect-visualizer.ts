@@ -60,8 +60,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const response = await fetch(current, {
         method: upperMethod,
         redirect: 'manual',
+        // @ts-ignore - dispatcher is undici-specific
         dispatcher: agents[urlObj.protocol],
-      });
+      } as any);
       const time = Date.now() - start;
       const location = response.headers.get('location') || undefined;
       const setCookie = response.headers.get('set-cookie') || undefined;

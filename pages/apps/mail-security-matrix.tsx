@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const MailSecurityMatrix = dynamic(() => import('../../apps/mail-security-matrix'), {
+const MailSecurityMatrix = dynamic(() => import('../../components/apps/mail-security-matrix'), {
   ssr: false,
 });
 

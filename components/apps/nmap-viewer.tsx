@@ -35,8 +35,8 @@ const NmapViewer: React.FC = () => {
     setError(null);
     setHosts([]);
     const text = await file.text();
-    const dtd = await fetch('/nmap.dtd').then(r => r.text());
-    const validation = await validateXML({ xml: text, dtd });
+    const dtd = await fetch('/nmap.dtd').then((r) => r.text());
+    const validation = await validateXML({ xml: text, dtd } as any);
     if (!validation.valid) {
       setError(validation.errors.join('\n'));
       return;
@@ -268,6 +268,6 @@ const NmapViewer: React.FC = () => {
 
 export default NmapViewer;
 
-export const displayNmapViewer = (addFolder, openApp) => (
+export const displayNmapViewer = (addFolder: any, openApp: any) => (
   <NmapViewer />
 );

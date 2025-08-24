@@ -23,8 +23,9 @@ self.onmessage = async (e: MessageEvent) => {
         const mod = await import('re2-wasm');
         regex = new mod.RE2(pattern, flags);
       } else {
+        // @ts-ignore
         const mod = await import('@stephen-riley/pcre2-wasm');
-        regex = new mod.PCRE2(pattern, flags);
+        regex = new (mod as any).PCRE2(pattern, flags);
       }
     };
     await Promise.race([

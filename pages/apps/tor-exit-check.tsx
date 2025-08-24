@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const TorExitCheck = dynamic(() => import('../../apps/tor-exit-check'), {
+const TorExitCheck = dynamic(() => import('../../components/apps/tor-exit-check'), {
   ssr: false,
 });
 
