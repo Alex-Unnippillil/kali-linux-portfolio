@@ -1,4 +1,4 @@
-import { GhostConfig } from './Ghost';
+import { GhostType } from './Ghost';
 
 export interface LevelData {
   width: number;
@@ -8,7 +8,7 @@ export interface LevelData {
   powerUps: string[];
   fruit?: { x: number; y: number; score: number }[];
   player: { x: number; y: number };
-  ghosts: GhostConfig[];
+  ghosts: { x: number; y: number; color?: string; type: GhostType }[];
 }
 
 export default class Maze {
@@ -19,7 +19,7 @@ export default class Maze {
   pellets: Set<string>;
   powerUps: Set<string>;
   fruit: { x: number; y: number; score: number }[];
-  ghosts: GhostConfig[];
+  ghosts: { x: number; y: number; color?: string; type: GhostType }[];
   playerStart: { x: number; y: number };
 
   constructor(data: LevelData) {
@@ -49,6 +49,15 @@ export default class Maze {
     const tx = Math.floor(x / this.tileSize);
     const ty = Math.floor(y / this.tileSize);
     return this.walls.has(`${tx},${ty}`);
+  }
+
+  isWallTile(x: number, y: number) {
+    return this.walls.has(`${x},${y}`);
+  }
+
+  isTunnel(x: number, y: number) {
+    const ty = Math.floor(y / this.tileSize);
+    return ty === Math.floor(this.height / 2);
   }
 
   eat(x: number, y: number) {
