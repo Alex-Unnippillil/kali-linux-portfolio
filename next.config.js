@@ -1,10 +1,6 @@
 // Security headers configuration for Next.js.
 // Allows external badges and same-origin PDF embedding without inline styles.
 
-if (process.env.NODE_ENV !== 'test' && !process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET is required');
-
-}
 
 const ContentSecurityPolicy = [
   "default-src 'self'",

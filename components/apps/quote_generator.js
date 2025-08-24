@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 
@@ -68,7 +68,7 @@ const QuoteGenerator = () => {
   const [newAuthor, setNewAuthor] = useState('');
   const [pinned, setPinned] = useState(false);
 
-  const loadLocalQuotes = () => {
+  const loadLocalQuotes = useCallback(() => {
     const base = [...allOfflineQuotes];
     try {
       const user = JSON.parse(localStorage.getItem('userQuotes') || '[]');
@@ -83,7 +83,7 @@ const QuoteGenerator = () => {
       /* ignore */
     }
     setQuotes(base);
-  };
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -105,33 +105,36 @@ const QuoteGenerator = () => {
     }
   }, []);
 
-  const fetchQuotes = (force = false) => {
-    const last = Number(localStorage.getItem('quotesFetchedAt') || '0');
-    if (!force && Date.now() - last < RATE_LIMIT_MS) return;
-    const etag = localStorage.getItem('quotesEtag');
-    fetch('https://dummyjson.com/quotes?limit=500', {
-      headers: etag ? { 'If-None-Match': etag } : {},
-    })
-      .then((res) => {
-        if (res.status === 200) {
-          const newEtag = res.headers.get('ETag');
-          res.json().then((d) => {
-            localStorage.setItem('quotesData', JSON.stringify(d.quotes));
-            if (newEtag) localStorage.setItem('quotesEtag', newEtag);
-            localStorage.setItem('quotesFetchedAt', Date.now().toString());
-            loadLocalQuotes();
-          });
-        }
+  const fetchQuotes = useCallback(
+    (force = false) => {
+      const last = Number(localStorage.getItem('quotesFetchedAt') || '0');
+      if (!force && Date.now() - last < RATE_LIMIT_MS) return;
+      const etag = localStorage.getItem('quotesEtag');
+      fetch('https://dummyjson.com/quotes?limit=500', {
+        headers: etag ? { 'If-None-Match': etag } : {},
       })
-      .catch(() => {
-        /* ignore network errors */
-      });
-  };
+        .then((res) => {
+          if (res.status === 200) {
+            const newEtag = res.headers.get('ETag');
+            res.json().then((d) => {
+              localStorage.setItem('quotesData', JSON.stringify(d.quotes));
+              if (newEtag) localStorage.setItem('quotesEtag', newEtag);
+              localStorage.setItem('quotesFetchedAt', Date.now().toString());
+              loadLocalQuotes();
+            });
+          }
+        })
+        .catch(() => {
+          /* ignore network errors */
+        });
+    },
+    [loadLocalQuotes]
+  );
 
   useEffect(() => {
     loadLocalQuotes();
     fetchQuotes();
-  }, []);
+  }, [loadLocalQuotes, fetchQuotes]);
 
   const filteredQuotes = useMemo(
     () =>
