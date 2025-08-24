@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { LRUCache } from 'lru-cache';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
 
@@ -322,11 +324,10 @@ export default async function handler(
     res.status(429).json({ error: 'Too Many Requests' });
     return;
   }
-  const { domain, selector } = req.query;
-  if (typeof domain !== 'string') {
-    res.status(400).json({ error: 'domain parameter required' });
-    return;
-  }
+  const querySchema = z.object({ domain: z.string(), selector: z.string().optional() });
+  const parsed = validateRequest(req, res, { querySchema });
+  if (!parsed) return;
+  const { domain, selector } = parsed.query as { domain: string; selector?: string };
 
   const response: any = {};
 

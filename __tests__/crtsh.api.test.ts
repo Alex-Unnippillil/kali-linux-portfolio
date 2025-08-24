@@ -71,5 +71,11 @@ describe('crtsh api', () => {
     await handler(req, res);
     expect(res.status).toHaveBeenLastCalledWith(429);
   });
+
+  it('validates query parameters', async () => {
+    const { req, res } = createReqRes({});
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
 });
 

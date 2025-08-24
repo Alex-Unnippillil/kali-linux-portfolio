@@ -124,4 +124,11 @@ describe('spf flattener api', () => {
     expect(data.flattenedSpfRecord).not.toContain('10.0.0.10');
     expect(data.flattenedSpfRecord).not.toContain('10.0.0.11');
   });
+
+  test('validates input', async () => {
+    const req = { method: 'GET', query: {} } as unknown as NextApiRequest;
+    const res = createRes();
+    await handler(req, res);
+    expect(res.statusCode).toBe(400);
+  });
 });

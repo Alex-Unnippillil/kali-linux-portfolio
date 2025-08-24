@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { diffLines } from 'diff';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 import type { ApiResult, DiffPart, FetchMeta, HttpDiffResponse } from '@/types/http-diff';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
@@ -77,11 +79,10 @@ export default async function handler(
     return;
   }
 
-  const { url1, url2 } = req.body as { url1?: string; url2?: string };
-  if (!url1 || !url2) {
-    res.status(400).json({ error: 'Missing urls' });
-    return;
-  }
+  const bodySchema = z.object({ url1: z.string().url(), url2: z.string().url() });
+  const parsed = validateRequest(req, res, { bodySchema });
+  if (!parsed) return;
+  const { url1, url2 } = parsed.body as { url1: string; url2: string };
 
   try {
     const [r1, r2] = await Promise.all([fetchWithRedirects(url1), fetchWithRedirects(url2)]);

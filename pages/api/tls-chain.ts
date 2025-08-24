@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import tls, { PeerCertificate } from 'tls';
 import { LRUCache } from 'lru-cache';
-import { setupUrlGuard } from '../../lib/urlGuard';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 
-setupUrlGuard();
 
 interface FormattedCert {
   subject: Record<string, string>;
@@ -146,13 +146,11 @@ const cache = new LRUCache<string, any>({
 });
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { host, port } = req.query;
-  if (!host || typeof host !== 'string') {
-    res.status(400).json({ error: 'host query parameter required' });
-    return;
-  }
-
-  const portNum = typeof port === 'string' ? parseInt(port, 10) || 443 : 443;
+  const querySchema = z.object({ host: z.string().min(1), port: z.string().optional() });
+  const parsed = validateRequest(req, res, { querySchema });
+  if (!parsed) return;
+  const { host, port } = parsed.query as { host: string; port?: string };
+  const portNum = port ? parseInt(port, 10) || 443 : 443;
 
   const key = `${host}:${portNum}`;
   try {
