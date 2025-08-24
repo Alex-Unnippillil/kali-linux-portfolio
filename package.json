@@ -85,6 +85,8 @@
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",
     "spdx-license-ids": "^3.0.17",
+    "ssdeep.js": "^0.0.3",
+
     "spdx-license-list": "^6.10.0",
     "sshpk": "^1.18.0",
     "stockfish": "^16.0.0",
@@ -111,6 +113,7 @@
     "@types/node": "^24.2.1",
     "@types/plist": "^3.0.2",
     "@types/react": "^18.2.0",
+    "@types/ssdeep.js": "^0",
 
     "@types/sax": "^1",
 
