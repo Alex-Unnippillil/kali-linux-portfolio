@@ -1,72 +1,42 @@
 import React, { useState } from 'react';
-import licenseIds from 'spdx-license-ids';
+import {
+  extractSpdxIds,
+  getLicenseInfo,
+  matchLicense,
+  LicenseInfo,
+  LicenseMatchResult,
+} from '../../lib/licenseMatcher';
 
-interface Result {
-  counts: Record<string, number>;
-  unknowns: string[];
+interface AnalysisResult {
+  detected: LicenseInfo[];
+  fuzzy: LicenseMatchResult | null;
 }
 
 const LicenseClassifier: React.FC = () => {
-  const [treeText, setTreeText] = useState('');
-  const [result, setResult] = useState<Result>({ counts: {}, unknowns: [] });
-  const [error, setError] = useState('');
+  const [text, setText] = useState('');
+  const [analysis, setAnalysis] = useState<AnalysisResult>({
+    detected: [],
+    fuzzy: null,
+  });
 
   const analyze = () => {
-    try {
-      const tree = JSON.parse(treeText);
-      const counts: Record<string, number> = {};
-      const unknowns = new Set<string>();
-
-      const processLicense = (lic: any) => {
-        if (typeof lic !== 'string') return;
-        const normalized = lic.trim();
-        if (licenseIds.includes(normalized)) {
-          counts[normalized] = (counts[normalized] || 0) + 1;
-        } else if (normalized) {
-          unknowns.add(normalized);
-        }
-      };
-
-      const traverse = (node: any) => {
-        if (!node || typeof node !== 'object') return;
-        const license = node.license;
-        if (license) {
-          if (Array.isArray(license)) {
-            license.forEach((l) =>
-              typeof l === 'string'
-                ? processLicense(l)
-                : processLicense(l.type)
-            );
-          } else if (typeof license === 'object') {
-            processLicense(license.type);
-          } else {
-            processLicense(license);
-          }
-        }
-        if (node.dependencies && typeof node.dependencies === 'object') {
-          Object.values(node.dependencies).forEach(traverse);
-        }
-        if (node.packages && typeof node.packages === 'object') {
-          Object.values(node.packages).forEach(traverse);
-        }
-      };
-
-      traverse(tree);
-      setResult({ counts, unknowns: Array.from(unknowns).sort() });
-      setError('');
-    } catch (err) {
-      setError('Invalid JSON');
-      setResult({ counts: {}, unknowns: [] });
+    if (!text.trim()) {
+      setAnalysis({ detected: [], fuzzy: null });
+      return;
     }
+    const ids = extractSpdxIds(text);
+    const detected = ids.map((id) => getLicenseInfo(id));
+    const fuzzy = matchLicense(text);
+    setAnalysis({ detected, fuzzy });
   };
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
       <textarea
         className="flex-1 text-black p-2"
-        placeholder="Paste package tree JSON here..."
-        value={treeText}
-        onChange={(e) => setTreeText(e.target.value)}
+        placeholder="Paste text to analyze..."
+        value={text}
+        onChange={(e) => setText(e.target.value)}
       />
       <div className="flex space-x-2">
         <button
@@ -77,23 +47,47 @@ const LicenseClassifier: React.FC = () => {
           Analyze
         </button>
       </div>
-      {error && <div className="text-red-500">{error}</div>}
-      {Object.keys(result.counts).length > 0 && (
+
+      {analysis.detected.length > 0 && (
         <div>
-          <h3 className="font-bold mb-2">License Counts</h3>
-          <ul className="list-disc list-inside">
-            {Object.entries(result.counts).map(([lic, count]) => (
-              <li key={lic}>{`${lic}: ${count}`}</li>
+          <h3 className="font-bold mb-2">Detected SPDX Licenses</h3>
+          <ul className="list-disc list-inside space-y-1">
+            {analysis.detected.map((info) => (
+              <li key={info.spdxId}>
+                <a
+                  href={info.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-400 underline"
+                >
+                  {info.spdxId}
+                </a>{' '}
+                - {info.compatibility}; {info.obligations}
+              </li>
             ))}
           </ul>
         </div>
       )}
-      {result.unknowns.length > 0 && (
+
+      {analysis.fuzzy && (
         <div>
-          <h3 className="font-bold mt-4 mb-2">Unknown Licenses</h3>
-          <ul className="list-disc list-inside">
-            {result.unknowns.map((lic) => (
-              <li key={lic}>{lic}</li>
+          <h3 className="font-bold mt-4 mb-2">Fuzzy Matches</h3>
+          {analysis.fuzzy.message && (
+            <div className="mb-2 text-yellow-400">{analysis.fuzzy.message}</div>
+          )}
+          <ul className="list-disc list-inside space-y-1">
+            {analysis.fuzzy.matches.map((match) => (
+              <li key={match.spdxId}>
+                <a
+                  href={match.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-400 underline"
+                >
+                  {match.spdxId}
+                </a>{' '}
+                ({Math.round(match.confidence * 100)}%) - {match.compatibility}; {match.obligations}
+              </li>
             ))}
           </ul>
         </div>

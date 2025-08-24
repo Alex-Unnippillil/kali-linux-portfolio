@@ -7,6 +7,7 @@ const MixedContent: React.FC = () => {
   const [results, setResults] = useState<ScanResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [rewritten, setRewritten] = useState('');
   const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
@@ -25,6 +26,7 @@ const MixedContent: React.FC = () => {
   const scan = () => {
     setError(null);
     setResults([]);
+    setRewritten(html.replace(/http:\/\//gi, 'https://'));
     workerRef.current?.postMessage(html);
   };
 
@@ -40,6 +42,7 @@ const MixedContent: React.FC = () => {
         setError(data.error || 'Fetch failed');
       } else {
         setHtml(data.body);
+        setRewritten(data.body.replace(/http:\/\//gi, 'https://'));
         workerRef.current?.postMessage(data.body);
       }
     } catch (e) {
@@ -85,7 +88,11 @@ const MixedContent: React.FC = () => {
       </div>
       {error && <div className="text-red-400">{error}</div>}
       {results.length > 0 && (
-        <div className="overflow-auto text-sm flex-1">
+        <div className="overflow-auto text-sm flex-1 space-y-4">
+          <div>
+            <p>Active mixed content: {results.filter((r) => r.category === 'active').length}</p>
+            <p>Passive mixed content: {results.filter((r) => r.category === 'passive').length}</p>
+          </div>
           <table className="min-w-full">
             <thead>
               <tr>
@@ -93,6 +100,8 @@ const MixedContent: React.FC = () => {
                 <th className="px-2 py-1 text-left">Attribute</th>
                 <th className="px-2 py-1 text-left">HTTP URL</th>
                 <th className="px-2 py-1 text-left">HTTPS Hint</th>
+                <th className="px-2 py-1 text-left">Category</th>
+                <th className="px-2 py-1 text-left">Browser Note</th>
               </tr>
             </thead>
             <tbody>
@@ -106,10 +115,32 @@ const MixedContent: React.FC = () => {
                     </a>
                   </td>
                   <td className="px-2 py-1 break-all">{r.httpsUrl}</td>
+                  <td className="px-2 py-1">{r.category}</td>
+                  <td className="px-2 py-1">
+                    {r.category === 'active'
+                      ? 'Blocked by modern browsers'
+                      : 'Loaded with warnings'}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+
+          <div>
+            <h2 className="font-bold mb-1">Suggested CSP Header</h2>
+            <code className="block bg-gray-800 p-2 rounded">
+              Content-Security-Policy: upgrade-insecure-requests; block-all-mixed-content
+            </code>
+          </div>
+
+          <div>
+            <h2 className="font-bold mb-1">Automatic Rewrite Preview</h2>
+            <textarea
+              className="w-full h-40 text-black p-2"
+              value={rewritten}
+              readOnly
+            />
+          </div>
         </div>
       )}
     </div>

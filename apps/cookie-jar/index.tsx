@@ -3,11 +3,15 @@ import React, { useState } from 'react';
 interface CookieInfo {
   name: string;
   value: string;
+  domain: string | null;
+  path: string | null;
   secure: boolean;
   httpOnly: boolean;
   sameSite: string | null;
   expires: string | null;
+  maxAge: string | null;
   expired: boolean;
+  partitioned: boolean;
   issues: string[];
 }
 
@@ -28,10 +32,16 @@ function parseCookies(headers: string): CookieInfo[] {
     const attrsLower = attrs.map((a) => a.toLowerCase());
     const secure = attrsLower.includes('secure');
     const httpOnly = attrsLower.includes('httponly');
+    const partitioned = attrsLower.includes('partitioned');
     const sameSiteAttr = attrs.find((a) => a.toLowerCase().startsWith('samesite='));
     const sameSite = sameSiteAttr ? sameSiteAttr.split('=')[1] : null;
+    const domainAttr = attrs.find((a) => a.toLowerCase().startsWith('domain='));
+    const domain = domainAttr ? domainAttr.split('=')[1] : null;
+    const pathAttr = attrs.find((a) => a.toLowerCase().startsWith('path='));
+    const path = pathAttr ? pathAttr.split('=')[1] : null;
     const expiresAttr = attrs.find((a) => a.toLowerCase().startsWith('expires='));
     const maxAgeAttr = attrs.find((a) => a.toLowerCase().startsWith('max-age='));
+    const maxAge = maxAgeAttr ? maxAgeAttr.split('=')[1] : null;
 
     let expires: string | null = null;
     let expired = false;
@@ -42,10 +52,10 @@ function parseCookies(headers: string): CookieInfo[] {
       if (!Number.isNaN(date.getTime())) {
         expired = date.getTime() <= Date.now();
       }
-    } else if (maxAgeAttr) {
-      const age = parseInt(maxAgeAttr.split('=')[1], 10);
+    } else if (maxAge) {
+      const age = parseInt(maxAge, 10);
       const date = new Date(Date.now() + age * 1000);
-      expires = `Max-Age=${age} (exp: ${date.toUTCString()})`;
+      expires = date.toUTCString();
       expired = age <= 0;
     }
 
@@ -65,19 +75,56 @@ function parseCookies(headers: string): CookieInfo[] {
     if (sameSite && sameSite.toLowerCase() === 'none' && !secure) {
       issues.push('SameSite=None requires the Secure attribute.');
     }
+    if (expiresAttr && maxAgeAttr) {
+      issues.push('Avoid using both Expires and Max-Age.');
+    }
+    if (!path) {
+      issues.push('No Path attribute; cookie defaults to request path.');
+    }
+    if (domain && domain.startsWith('.')) {
+      issues.push('Domain with leading dot is deprecated.');
+    }
+    if (partitioned) {
+      if (!secure) issues.push('Partitioned cookies require the Secure attribute.');
+      if (!sameSite || sameSite.toLowerCase() !== 'none') {
+        issues.push('Partitioned cookies require SameSite=None.');
+      }
+      if (path !== '/') {
+        issues.push('Partitioned cookies require Path=/');
+      }
+    }
 
     results.push({
       name,
       value,
+       domain,
+       path,
       secure,
       httpOnly,
       sameSite,
       expires,
+      maxAge,
       expired,
+      partitioned,
       issues,
     });
   });
   return results;
+}
+
+function buildRecipe(c: CookieInfo): string {
+  const attrs: string[] = [];
+  const path = c.partitioned ? '/' : c.path || '/';
+  attrs.push(`Path=${path}`);
+  if (c.domain) attrs.push(`Domain=${c.domain}`);
+  attrs.push('Secure');
+  attrs.push('HttpOnly');
+  const sameSite = c.partitioned ? 'None' : c.sameSite && c.sameSite.toLowerCase() !== 'none' ? c.sameSite : 'Lax';
+  attrs.push(`SameSite=${sameSite}`);
+  if (c.partitioned) attrs.push('Partitioned');
+  if (c.expires) attrs.push(`Expires=${c.expires}`);
+  else if (c.maxAge) attrs.push(`Max-Age=${c.maxAge}`);
+  return `${c.name}=${c.value}; ${attrs.join('; ')}`;
 }
 
 const CookieJar: React.FC = () => {
@@ -130,20 +177,28 @@ const CookieJar: React.FC = () => {
             <thead>
               <tr>
                 <th className="px-2 py-1 text-left">Cookie</th>
+                <th className="px-2 py-1">Domain</th>
+                <th className="px-2 py-1">Path</th>
                 <th className="px-2 py-1">Secure</th>
                 <th className="px-2 py-1">HttpOnly</th>
                 <th className="px-2 py-1">SameSite</th>
-                <th className="px-2 py-1">Expiry</th>
+                <th className="px-2 py-1">Expires</th>
+                <th className="px-2 py-1">Max-Age</th>
+                <th className="px-2 py-1">Partitioned</th>
               </tr>
             </thead>
             <tbody>
               {cookies.map((c) => (
                 <tr key={c.name} className="odd:bg-gray-800">
                   <td className="px-2 py-1 text-left break-all">{c.name}</td>
+                  <td className="px-2 py-1 break-all">{c.domain || 'Host-only'}</td>
+                  <td className="px-2 py-1 break-all">{c.path || 'Default'}</td>
                   <td className={`px-2 py-1 ${c.secure ? 'text-green-500' : 'text-red-500'}`}>{c.secure ? 'Yes' : 'No'}</td>
                   <td className={`px-2 py-1 ${c.httpOnly ? 'text-green-500' : 'text-red-500'}`}>{c.httpOnly ? 'Yes' : 'No'}</td>
                   <td className={`px-2 py-1 ${c.sameSite && c.sameSite.toLowerCase() !== 'none' ? 'text-green-500' : 'text-red-500'}`}>{c.sameSite || 'Missing'}</td>
                   <td className={`px-2 py-1 ${c.expires ? (c.expired ? 'text-red-500' : 'text-green-500') : 'text-yellow-500'}`}>{c.expires || 'Session'}</td>
+                  <td className="px-2 py-1">{c.maxAge || '-'}</td>
+                  <td className={`px-2 py-1 ${c.partitioned ? 'text-green-500' : 'text-red-500'}`}>{c.partitioned ? 'Yes' : 'No'}</td>
                 </tr>
               ))}
             </tbody>
@@ -161,6 +216,14 @@ const CookieJar: React.FC = () => {
                 ) : (
                   <div className="text-green-500 text-sm">No issues detected.</div>
                 )}
+                <code className="block text-xs mt-1 break-all">{buildRecipe(c)}</code>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(buildRecipe(c))}
+                  className="mt-1 px-2 py-1 bg-blue-600 rounded"
+                >
+                  Copy recipe
+                </button>
               </div>
             ))}
           </div>
