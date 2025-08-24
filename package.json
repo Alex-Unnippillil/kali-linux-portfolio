@@ -76,6 +76,7 @@
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
     "react-markdown": "^10.1.0",
+    "react-simple-code-editor": "^0.14.1",
     "react-twitter-embed": "^4.0.4",
     "react-window": "^1.8.11",
     "rfc4648": "^1.5.4",

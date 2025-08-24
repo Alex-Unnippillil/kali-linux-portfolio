@@ -9134,6 +9134,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-simple-code-editor@npm:^0.14.1":
+  version: 0.14.1
+  resolution: "react-simple-code-editor@npm:0.14.1"
+  peerDependencies:
+    react: ">=16.8.0"
+    react-dom: ">=16.8.0"
+  checksum: 10c0/63264fce03315c80de4fc65b9e0a30b359cb0a6c269a90ad67ccff36c21d0f3ba1f9ac9bdfbe76477fc9a6d7033182debc64a58345f4914f0bc0b416eb686e61
+  languageName: node
+  linkType: hard
+
 "react-twitter-embed@npm:^4.0.4":
   version: 4.0.4
   resolution: "react-twitter-embed@npm:4.0.4"
@@ -10840,6 +10850,7 @@ __metadata:
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
     react-markdown: "npm:^10.1.0"
+    react-simple-code-editor: "npm:^0.14.1"
     react-twitter-embed: "npm:^4.0.4"
     react-window: "npm:^1.8.11"
     rfc4648: "npm:^1.5.4"
