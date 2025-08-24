@@ -83,6 +83,8 @@ export default async function handler(req: Request): Promise<Response> {
   const { searchParams } = new URL(req.url);
   const keyword = searchParams.get('keyword') || '';
   const domain = searchParams.get('domain') || '';
+  const cpe = searchParams.get('cpe') || '';
+  const cwe = searchParams.get('cwe') || '';
   const recent = parseInt(searchParams.get('recent') || '30', 10);
   const page = parseInt(searchParams.get('page') || '1', 10);
   const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
@@ -92,7 +94,7 @@ export default async function handler(req: Request): Promise<Response> {
     .filter(Boolean);
   const sort = searchParams.get('sort') || '';
 
-  const cacheKey = `${keyword}|${domain}|${recent}|${page}|${pageSize}|${severity.join(',')}`;
+  const cacheKey = `${keyword}|${domain}|${cpe}|${cwe}|${recent}|${page}|${pageSize}|${severity.join(',')}`;
   const cached = responseCache.get(cacheKey);
   if (cached && cached.expiry > Date.now()) {
     return new Response(JSON.stringify(cached.data), {
@@ -107,7 +109,9 @@ export default async function handler(req: Request): Promise<Response> {
   const startIndex = (page - 1) * pageSize;
   const pubStartDate = new Date(Date.now() - recent * 86400000).toISOString();
   const keywordParam = [keyword, domain].filter(Boolean).join(' ');
-  const nvdUrl = `https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${encodeURIComponent(keywordParam)}&resultsPerPage=${pageSize}&startIndex=${startIndex}&pubStartDate=${encodeURIComponent(pubStartDate)}`;
+  let nvdUrl = `https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${encodeURIComponent(keywordParam)}&resultsPerPage=${pageSize}&startIndex=${startIndex}&pubStartDate=${encodeURIComponent(pubStartDate)}`;
+  if (cpe) nvdUrl += `&cpeName=${encodeURIComponent(cpe)}`;
+  if (cwe) nvdUrl += `&cweId=${encodeURIComponent(cwe)}`;
 
   const nvdRes = await fetch(nvdUrl);
   if (nvdRes.status === 429) {
