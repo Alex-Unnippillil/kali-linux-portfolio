@@ -513,7 +513,7 @@ export class Desktop extends Component {
             <div className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
                 {/* Window Area */}
-                <div className="absolute h-full w-full bg-transparent" data-context="desktop-area">
+                <div className="pointer-events-none absolute h-full w-full bg-transparent" data-context="desktop-area">
                     {this.renderWindows()}
                 </div>
 
