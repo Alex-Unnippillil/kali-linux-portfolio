@@ -1,36 +1,59 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+
+const modes = [
+  { id: 'b64encode', label: 'Base64 Encode' },
+  { id: 'b64decode', label: 'Base64 Decode' },
+  { id: 'hex2b64', label: 'Hex to Base64' },
+  { id: 'b642hex', label: 'Base64 to Hex' },
+];
 
 const EncodingConverter = ({ onConvert }) => {
-  const [mode, setMode] = useState('encode');
+  const [mode, setMode] = useState('b64encode');
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
   const [error, setError] = useState('');
+  const workerRef = useRef();
+  const callbacks = useRef(new Map());
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    workerRef.current = new Worker(
+      new URL('./encoding.worker.js', import.meta.url)
+    );
+    workerRef.current.onmessage = (e) => {
+      const cb = callbacks.current.get(e.data.id);
+      if (cb) {
+        cb(e.data);
+        callbacks.current.delete(e.data.id);
+      }
+    };
+    return () => workerRef.current && workerRef.current.terminate();
+  }, []);
+
+  const callWorker = (payload) =>
+    new Promise((resolve) => {
+      const id = Math.random();
+      callbacks.current.set(id, resolve);
+      workerRef.current.postMessage({ id, ...payload });
+    });
+
+  useEffect(() => {
+    const timer = setTimeout(async () => {
       if (!input) {
         setOutput('');
         setError("Please enter text, e.g., hello");
         return;
       }
-      try {
-        let result;
-        if (mode === 'encode') {
-          result = btoa(unescape(encodeURIComponent(input)));
-        } else {
-          result = decodeURIComponent(escape(atob(input)));
-        }
-        setOutput(result);
+      const res = await callWorker({ mode, input });
+      if (res.error) {
+        setOutput('');
+        setError(res.error);
+      } else {
+        setOutput(res.result);
         setError('');
         if (onConvert) {
-          onConvert(
-            `${mode === 'encode' ? 'b64 encode' : 'b64 decode'} "${input}"`,
-            result
-          );
+          const m = modes.find((m) => m.id === mode);
+          onConvert(`${m?.label.toLowerCase()} "${input}"`, res.result);
         }
-      } catch {
-        setOutput('');
-        setError("Invalid input, e.g., 'SGVsbG8='");
       }
     }, 300);
     return () => clearTimeout(timer);
@@ -45,8 +68,11 @@ const EncodingConverter = ({ onConvert }) => {
           onChange={(e) => setMode(e.target.value)}
           className="text-black p-1 rounded"
         >
-          <option value="encode">Base64 Encode</option>
-          <option value="decode">Base64 Decode</option>
+          {modes.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
         </select>
       </div>
       <textarea
@@ -71,6 +97,14 @@ const EncodingConverter = ({ onConvert }) => {
           Copy
         </button>
       </div>
+      <a
+        href="/apps/base-encoders"
+        target="_blank"
+        rel="noreferrer"
+        className="text-sm underline"
+      >
+        Open full Base Encoders app
+      </a>
     </div>
   );
 };
