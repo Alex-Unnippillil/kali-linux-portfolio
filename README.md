@@ -34,24 +34,20 @@
 4. Update `.env.example` whenever new environment variables are added.
 5. Run `yarn validate:icons` to ensure all icon paths in `apps.config.js` exist under `public/themes/` before committing.
 
-## Design Tokens
+## Content Security Policy
 
-Color variables and spacing are centralized in `styles/tokens.css`. The file defines light and dark palettes, and the `--accent` color blends Ubuntu Orange (`#E95420`) with Aubergine (`#77216F`). Semantic tokens map to the active palette via `prefers-color-scheme`:
+External resources are tightly restricted by a Content Security Policy.
+The following origins are allowed:
 
-| Semantic token | Light | Dark |
-| -------------- | ----- | ---- |
-| `--color-bg` | `--color-light-bg` | `--color-dark-bg` |
-| `--color-surface` | `--color-light-surface` | `--color-dark-surface` |
-| `--color-text` | `--color-light-text` | `--color-dark-text` |
+- **Styles & fonts** – `https://fonts.googleapis.com`, `https://fonts.gstatic.com`
+- **Scripts** – `https://platform.twitter.com`
+- **Connections** – `https://cdn.syndication.twimg.com`, `https://*.twitter.com`, `https://stackblitz.com`, `https://api.axiom.co`
+- **Frames** – `https://stackblitz.com`, `https://ghbtns.com`, `https://platform.twitter.com`, `https://open.spotify.com`, `https://todoist.com`, `https://www.youtube.com`, `https://www.youtube-nocookie.com`
 
-These pairings meet or exceed WCAG contrast guidelines:
+Inline scripts require a nonce generated at request time. If an embed or widget
+fails to load, check the browser console for CSP errors and ensure the
+provider's origin is included in the relevant directive.
 
-| Pair | Contrast | Rating |
-| ---- | -------- | ------ |
-| Light `--color-bg` / `--color-text` | 18.88:1 | AAA |
-| Light `--color-surface` / `--color-text` | 16.87:1 | AAA |
-| Dark `--color-bg` / `--color-text` | 16.02:1 | AAA |
-| Dark `--color-surface` / `--color-text` | 13.39:1 | AAA |
 
 ## Local File Storage
 

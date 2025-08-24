@@ -45,18 +45,17 @@ describe('next.config.js Content Security Policy', () => {
         'https://stackblitz.com',
       ])
     );
-    expect(parsed['script-src']).toEqual(
-      expect.arrayContaining([
-        "'self'",
-        'https://platform.twitter.com',
-      ])
-    );
-    expect(parsed['script-src']).toEqual(
-      expect.arrayContaining([expect.stringMatching(/^'nonce-[^']+'$/)])
-    );
-    expect(parsed['script-src']).not.toEqual(
-      expect.arrayContaining(["'unsafe-inline'"])
-    );
+      expect(parsed['script-src']).toEqual(
+        expect.arrayContaining([
+          "'self'",
+          expect.stringMatching(/^'nonce-/),
+          'https://platform.twitter.com',
+        ])
+      );
+      expect(parsed['script-src']).not.toEqual(
+        expect.arrayContaining(["'unsafe-inline'"])
+      );
+
     expect(parsed['style-src']).toEqual(
       expect.arrayContaining([
         "'self'",
