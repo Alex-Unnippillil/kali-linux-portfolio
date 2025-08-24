@@ -1,5 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { LRUCache } from 'lru-cache';
+import { UserInputError, UpstreamError, withErrorHandler, fail } from '../../lib/errors';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 interface CachedResponse {
   status: number;
@@ -10,13 +14,13 @@ interface CachedResponse {
 
 const cache = new LRUCache<string, CachedResponse>({
   max: 100,
-  ttl: 60 * 1000, // 1 minute
+  ttl: 60 * 1000,
   allowStale: true,
 });
 
 const inflight = new Map<string, Promise<CachedResponse>>();
 
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_WINDOW = 60 * 1000;
 const RATE_LIMIT_MAX = 10;
 const rateLimit = new Map<string, { count: number; reset: number }>();
 
@@ -86,18 +90,6 @@ async function cachedFetch(
   return promise;
 }
 
-export default async function handler(
-
-import {
-  UserInputError,
-  UpstreamError,
-  withErrorHandler,
-  fail,
-} from '../../lib/errors';
-import { setupUrlGuard } from '../../lib/urlGuard';
-
-setupUrlGuard();
-
 export default withErrorHandler(async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -141,27 +133,5 @@ export default withErrorHandler(async function handler(
       error: error?.message || 'Request failed',
       duration,
     });
-
-  const response = await fetch(url, {
-    method,
-    headers,
-    body: ['GET', 'HEAD'].includes(method.toUpperCase()) ? undefined : body,
-  });
-
-  const text = await response.text();
-  const headersObj: Record<string, string> = {};
-  response.headers.forEach((value, key) => {
-    headersObj[key] = value;
-  });
-
-  if (!response.ok) {
-    throw new UpstreamError(response.statusText || 'Request failed');
   }
-
-  return res.status(200).json({
-    status: response.status,
-    statusText: response.statusText,
-    headers: headersObj,
-    body: text,
-  });
 });
