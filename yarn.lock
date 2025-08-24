@@ -14669,6 +14669,7 @@ __metadata:
     jspdf: "npm:^2.5.1"
     jszip: "npm:^3.10.1"
     libyara-wasm: "npm:^1.2.1"
+    lru-cache: "npm:^10.4.3"
     matter-js: "npm:^0.20.0"
     mermaid: "npm:^11.10.1"
     msgreader: "npm:^1.0.1"
