@@ -587,7 +587,7 @@ const apps = [
   {
     id: 'pcre-re2-lab',
     title: 'PCRE RE2 Lab',
-    icon: './themes/Yaru/apps/regex-redactor.svg',
+    icon: './themes/Yaru/apps/pcre-re2-lab.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
