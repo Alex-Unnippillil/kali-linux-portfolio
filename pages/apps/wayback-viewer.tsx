@@ -1,4 +1,5 @@
 import dynamic from 'next/dynamic';
+import Head from 'next/head';
 
 const WaybackViewer = dynamic(
   () => import('../../components/apps/wayback-viewer'),
@@ -6,5 +7,16 @@ const WaybackViewer = dynamic(
 );
 
 export default function WaybackViewerPage() {
-  return <WaybackViewer />;
+  return (
+    <>
+      <Head>
+        <title>Wayback Viewer</title>
+        <meta
+          name="description"
+          content="Browse and diff Internet Archive snapshots"
+        />
+      </Head>
+      <WaybackViewer />
+    </>
+  );
 }

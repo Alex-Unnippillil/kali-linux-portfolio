@@ -899,7 +899,7 @@ const apps = [
   {
     id: 'wayback-viewer',
     title: 'Wayback Viewer',
-    icon: './themes/Yaru/apps/hash.svg',
+    icon: './themes/Yaru/apps/wayback.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
