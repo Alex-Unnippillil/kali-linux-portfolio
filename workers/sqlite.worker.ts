@@ -38,9 +38,18 @@ async function init(stream?: ReadableStream<Uint8Array>) {
   }
 }
 
-function exec(query: string) {
+function exec(query: string, params?: any[]) {
   if (!db) throw new Error('Database not initialized');
-  return db.exec(query);
+  const stmt = db.prepare(query);
+  if (params && params.length > 0) {
+    stmt.bind(params);
+  }
+  const results = [];
+  while (stmt.step()) {
+    results.push(stmt.getAsObject());
+  }
+  stmt.free();
+  return results;
 }
 
 function close() {
