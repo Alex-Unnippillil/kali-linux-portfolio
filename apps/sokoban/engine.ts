@@ -80,7 +80,7 @@ function cloneState(state: State): HistoryEntry {
   };
 }
 
-const DIRS: Record<string, Position> = {
+export const DIRS: Record<string, Position> = {
   ArrowUp: { x: 0, y: -1 },
   ArrowDown: { x: 0, y: 1 },
   ArrowLeft: { x: -1, y: 0 },
