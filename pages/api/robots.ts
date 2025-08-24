@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 
 interface SitemapEntry {
   loc: string;
@@ -11,15 +13,25 @@ interface RobotsResponse {
   missingRobots?: boolean;
 }
 
+export const config = {
+  api: { bodyParser: { sizeLimit: '1kb' } },
+};
+
+const querySchema = z.object({ url: z.string().url() });
+const bodySchema = z.object({});
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<RobotsResponse | { error: string }>
 ) {
-  const { url } = req.query;
-  if (!url || typeof url !== 'string') {
-    res.status(400).json({ error: 'Missing url query parameter' });
-    return;
-  }
+  const parsed = validateRequest(req, res, {
+    querySchema,
+    bodySchema,
+    queryLimit: 1024,
+    bodyLimit: 1024,
+  });
+  if (!parsed) return;
+  const { url } = parsed.query as { url: string };
 
   const base = url.replace(/\/$/, '');
   let robotsText = '';

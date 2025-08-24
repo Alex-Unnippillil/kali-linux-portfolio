@@ -78,6 +78,7 @@
     "three": "^0.179.1",
     "url-parse": "^1.5.10",
     "ws": "^8.18.3",
+    "zod": "^4.1.0",
     "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
