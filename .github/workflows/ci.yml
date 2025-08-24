@@ -41,7 +41,7 @@ jobs:
         run: npx playwright install --with-deps
       - run: corepack enable
       - run: yarn install --immutable
-      - run: yarn dedupe --check
+      - run: yarn dedupe:check
 
       - run: yarn lint:ci
       - run: yarn typecheck

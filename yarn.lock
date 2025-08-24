@@ -15034,7 +15034,8 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tailwindcss@npm:^3.4.1":
+"tailwindcss@npm:^3.4.17":
+
   version: 3.4.17
   resolution: "tailwindcss@npm:3.4.17"
   dependencies:
@@ -15824,7 +15825,7 @@ __metadata:
     "@mdx-js/mdx": "npm:^3.1.0"
     "@mdx-js/react": "npm:^3.1.0"
     "@monaco-editor/react": "npm:^4.7.0"
-    "@next/eslint-plugin-next": "npm:^15.5.0"
+
     "@playwright/test": "npm:^1.55.0"
     "@stephen-riley/pcre2-wasm": "npm:^1.2.4"
     "@testing-library/dom": "npm:^10.4.1"
@@ -15948,7 +15949,8 @@ __metadata:
     sshpk: "npm:^1.18.0"
     stockfish: "npm:^16.0.0"
     swr: "npm:^2.2.5"
-    tailwindcss: "npm:^3.4.1"
+    tailwindcss: "npm:^3.4.17"
+
     three: "npm:^0.179.1"
     tlsh: "npm:^1.0.8"
     typescript: "npm:^5.9.2"
