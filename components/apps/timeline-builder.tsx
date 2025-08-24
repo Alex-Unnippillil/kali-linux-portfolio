@@ -1,10 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Papa from 'papaparse';
 import { toPng } from 'html-to-image';
-import jsPDF from 'jspdf';
-import ReactMarkdown from 'react-markdown';
+import Timeline from 'react-visjs-timeline';
 
-interface TimelineEvent {
+export interface TimelineEvent {
   time: string;
   end?: string;
   event: string;
@@ -19,7 +18,33 @@ interface Props {
 const TimelineBuilder: React.FC<Props> = ({ openApp }) => {
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [snap, setSnap] = useState<'none' | 'day' | 'week'>('none');
-  const listRef = useRef<HTMLDivElement>(null);
+  const [cluster, setCluster] = useState(true);
+  const [items, setItems] = useState<any[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
+  const workerRef = useRef<Worker>();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<any>(null);
+
+  useEffect(() => {
+    workerRef.current = new Worker(
+      new URL('./timeline-builder.worker.ts', import.meta.url)
+    );
+    workerRef.current.onmessage = (e: MessageEvent<any>) => {
+      setItems(e.data.items);
+      setGroups(e.data.groups);
+    };
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  useEffect(() => {
+    workerRef.current?.postMessage(events);
+  }, [events]);
+
+  useEffect(() => {
+    if (timelineRef.current?.visJsTimeline) {
+      timelineRef.current.visJsTimeline.setOptions({ cluster });
+    }
+  }, [cluster, items]);
 
   const validateEvent = (e: TimelineEvent) => {
     const start = Date.parse(e.time);
@@ -117,17 +142,6 @@ const TimelineBuilder: React.FC<Props> = ({ openApp }) => {
     });
   };
 
-  const exportCsv = () => {
-    const csv = Papa.unparse(events);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'timeline.csv';
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   const exportJson = () => {
     const blob = new Blob([JSON.stringify(events, null, 2)], {
       type: 'application/json',
@@ -141,62 +155,12 @@ const TimelineBuilder: React.FC<Props> = ({ openApp }) => {
   };
 
   const exportPng = async () => {
-    if (!listRef.current) return;
-    const dataUrl = await toPng(listRef.current);
+    if (!containerRef.current) return;
+    const dataUrl = await toPng(containerRef.current);
     const link = document.createElement('a');
     link.href = dataUrl;
     link.download = 'timeline.png';
     link.click();
-  };
-
-  const exportPdf = async () => {
-    if (!listRef.current) return;
-    const dataUrl = await toPng(listRef.current);
-    const width = listRef.current.clientWidth;
-    const height = listRef.current.clientHeight;
-    const pdf = new jsPDF({
-      orientation: width > height ? 'landscape' : 'portrait',
-      unit: 'px',
-      format: [width, height],
-    });
-    pdf.addImage(dataUrl, 'PNG', 0, 0, width, height);
-    pdf.save('timeline.pdf');
-  };
-  const onDragStart = (index: number) => (ev: React.DragEvent) => {
-    ev.dataTransfer.setData('text/plain', index.toString());
-  };
-
-  const onDrop = (index: number) => (ev: React.DragEvent) => {
-    const from = Number(ev.dataTransfer.getData('text/plain'));
-    if (isNaN(from)) return;
-    const updated = [...events];
-    const [moved] = updated.splice(from, 1);
-    updated.splice(index, 0, moved);
-    setEvents(updated);
-  };
-
-  const handleLinkClick = (e: React.MouseEvent, link: string) => {
-    e.preventDefault();
-    if (link.startsWith('app:')) {
-      const appId = link.replace('app:', '');
-      openApp?.(appId);
-    } else {
-      window.open(link, '_blank');
-    }
-  };
-
-  const grouped = () => {
-    const order: string[] = [];
-    const groups: Record<string, TimelineEvent[]> = {};
-    events.forEach((evt) => {
-      const g = evt.group || 'Ungrouped';
-      if (!groups[g]) {
-        groups[g] = [];
-        order.push(g);
-      }
-      groups[g].push(evt);
-    });
-    return { order, groups };
   };
 
   return (
@@ -217,12 +181,14 @@ const TimelineBuilder: React.FC<Props> = ({ openApp }) => {
           <option value="day">Snap Day</option>
           <option value="week">Snap Week</option>
         </select>
-        <button
-          className="bg-gray-700 hover:bg-gray-600 px-2 rounded"
-          onClick={exportCsv}
-        >
-          Export CSV
-        </button>
+        <label className="flex items-center space-x-1">
+          <input
+            type="checkbox"
+            checked={cluster}
+            onChange={(e) => setCluster(e.target.checked)}
+          />
+          <span>Cluster</span>
+        </label>
         <button
           className="bg-gray-700 hover:bg-gray-600 px-2 rounded"
           onClick={exportJson}
@@ -235,75 +201,19 @@ const TimelineBuilder: React.FC<Props> = ({ openApp }) => {
         >
           Export PNG
         </button>
-        <button
-          className="bg-gray-700 hover:bg-gray-600 px-2 rounded"
-          onClick={exportPdf}
-        >
-          Export PDF
-        </button>
       </div>
-      <div
-        ref={listRef}
-        className="flex-1 overflow-auto bg-white rounded p-2 text-black"
-        onDragOver={(e) => e.preventDefault()}
-      >
-        <ul className="space-y-1">
-          {(() => {
-            const { order, groups } = grouped();
-            const items: React.ReactNode[] = [];
-            order.forEach((g) => {
-              items.push(
-                <li key={`group-${g}`} className="font-bold mt-2">
-                  {g}
-                </li>
-              );
-              groups[g].forEach((e) => {
-                const eventIndex = events.indexOf(e);
-                items.push(
-                  <li
-                    key={`${e.time}-${e.event}`}
-                    draggable
-                    onDragStart={onDragStart(eventIndex)}
-                    onDrop={onDrop(eventIndex)}
-                    onDragOver={(ev) => ev.preventDefault()}
-                    tabIndex={0}
-                    className="pl-2"
-                  >
-                    {`${e.time}${e.end ? ` - ${e.end}` : ''}: `}
-                    <span className="inline">
-                      <ReactMarkdown
-                        components={{
-                          p: 'span',
-                          a: ({ href, children }) => (
-                            <a
-                              href={href}
-                              onClick={(ev) => href && handleLinkClick(ev, href)}
-                              className="text-blue-600 underline"
-                            >
-                              {children}
-                            </a>
-                          ),
-                        }}
-                      >
-                        {e.event}
-                      </ReactMarkdown>
-                    </span>
-                    {e.link && (
-                      <a
-                        href={e.link}
-                        onClick={(ev) => handleLinkClick(ev, e.link!)}
-                        className="text-blue-600 underline ml-2"
-                      >
-                        evidence
-                      </a>
-                    )}
-                  </li>
-                );
-              });
-            });
-            return items;
-          })()}
-        </ul>
+      <div ref={containerRef} className="flex-1 bg-white rounded text-black">
+        <Timeline
+          ref={timelineRef}
+          items={items}
+          groups={groups}
+          options={{
+            stack: true,
+            height: '100%',
+            width: '100%',
+            cluster,
+          }}
+        />
       </div>
     </div>
   );
@@ -314,4 +224,3 @@ export default TimelineBuilder;
 export const displayTimelineBuilder = (_addFolder?: any, openApp?: any) => (
   <TimelineBuilder openApp={openApp} />
 );
-
