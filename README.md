@@ -19,6 +19,10 @@
 4. Update `.env.example` whenever new environment variables are added.
 5. Run `yarn validate:icons` to ensure all icon paths in `apps.config.js` exist under `public/themes/` before committing.
 
+## Local File Storage
+
+Some API routes persist data to the filesystem when running locally. This file-based storage is best effort and may be cleared between runs. Production deployments fall back to a no-op implementation or external storage via `lib/store`.
+
 ## Adding New Apps
 
 See [New App Checklist](./docs/new-app-checklist.md) to ensure all required steps are completed.

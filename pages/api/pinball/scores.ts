@@ -1,29 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
 import path from 'path';
+import { readJson, writeJson } from '../../../lib/store';
 
 const filePath = path.join(process.cwd(), 'data', 'pinballScores.json');
 
-function readScores() {
-  try {
-    const data = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(data);
-  } catch {
-    return [];
-  }
-}
-
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
-    return res.status(200).json(readScores());
+    const scores = await readJson(filePath, [] as any[]);
+    return res.status(200).json(scores);
   }
 
   if (req.method === 'POST') {
     const { score, name = 'Anonymous', replay = [] } = req.body || {};
-    const scores = readScores();
+    const scores = await readJson(filePath, [] as any[]);
     scores.push({ name, score, replay, date: new Date().toISOString() });
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    fs.writeFileSync(filePath, JSON.stringify(scores, null, 2));
+    await writeJson(filePath, scores);
     return res.status(201).json({ ok: true });
   }
 
