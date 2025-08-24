@@ -38,4 +38,11 @@ describe('breakout levels api', () => {
     expect(Array.isArray(resGet.data)).toBe(true);
     expect(resGet.data.some((l: any) => JSON.stringify(l) === JSON.stringify(level))).toBe(true);
   });
+
+  test('rejects invalid level data', () => {
+    const req = { method: 'POST', body: 'bad' } as unknown as NextApiRequest;
+    const res: any = createRes();
+    handler(req, res);
+    expect(res.statusCode).toBe(400);
+  });
 });

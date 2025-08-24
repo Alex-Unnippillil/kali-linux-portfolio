@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
 
@@ -17,11 +19,17 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  const { url, page = '0', limit = '50', status, mime, noRobot } = req.query;
-  if (!url || typeof url !== 'string') {
-    res.status(400).json({ error: 'Missing url' });
-    return;
-  }
+  const querySchema = z.object({
+    url: z.string().url(),
+    page: z.string().optional(),
+    limit: z.string().optional(),
+    status: z.string().optional(),
+    mime: z.string().optional(),
+    noRobot: z.string().optional(),
+  });
+  const parsed = validateRequest(req, res, { querySchema });
+  if (!parsed) return;
+  const { url, page = '0', limit = '50', status, mime, noRobot } = parsed.query as any;
 
   const pageNum = Array.isArray(page) ? parseInt(page[0], 10) : parseInt(page, 10);
   const limitNum = Array.isArray(limit) ? parseInt(limit[0], 10) : parseInt(limit, 10);
