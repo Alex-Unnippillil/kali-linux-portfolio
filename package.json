@@ -72,6 +72,7 @@
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
     "react-twitter-embed": "^4.0.4",
+
     "safe-regex": "^2.1.1",
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",
@@ -99,6 +100,7 @@
     "@types/node": "^24.2.1",
     "@types/plist": "^3.0.2",
     "@types/react": "^18.2.0",
+    "@types/react-window": "^1",
     "@types/three": "^0.179.0",
     "eslint": "^9.34.0",
     "eslint-config-next": "^15.5.0",
