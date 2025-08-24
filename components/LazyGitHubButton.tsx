@@ -1,7 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const LazyGitHubButton = ({ user, repo }) => {
-  const ref = useRef(null);
+interface LazyGitHubButtonProps {
+  user: string;
+  repo: string;
+}
+
+const LazyGitHubButton: React.FC<LazyGitHubButtonProps> = ({ user, repo }) => {
+  const ref = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -13,8 +18,9 @@ const LazyGitHubButton = ({ user, repo }) => {
         }
       });
     });
-    if (ref.current) {
-      observer.observe(ref.current);
+    const current = ref.current;
+    if (current) {
+      observer.observe(current);
     }
     return () => observer.disconnect();
   }, []);
