@@ -20,12 +20,15 @@ export const convertUnit = (category, from, to, amount) => {
   return base / unitRates[category][to];
 };
 
-const UnitConverter = () => {
+// Converter plugin for units. Accepts an optional onConvert callback to
+// record conversions in a shared history list.
+const UnitConverter = ({ onConvert }) => {
   const [category, setCategory] = useState('length');
   const [fromUnit, setFromUnit] = useState('meter');
   const [toUnit, setToUnit] = useState('kilometer');
   const [value, setValue] = useState('');
   const [result, setResult] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const units = Object.keys(unitRates[category]);
@@ -34,13 +37,30 @@ const UnitConverter = () => {
   }, [category]);
 
   useEffect(() => {
-    if (value === '' || isNaN(parseFloat(value))) {
-      setResult('');
-      return;
-    }
-    const converted = convertUnit(category, fromUnit, toUnit, parseFloat(value));
-    setResult(converted.toFixed(4));
-  }, [value, fromUnit, toUnit, category]);
+    const timer = setTimeout(() => {
+      if (value === '' || isNaN(parseFloat(value))) {
+        setResult('');
+        setError('Please enter a number, e.g., 42');
+        return;
+      }
+      const converted = convertUnit(
+        category,
+        fromUnit,
+        toUnit,
+        parseFloat(value)
+      );
+      const formatted = converted.toFixed(4);
+      setResult(formatted);
+      setError('');
+      if (onConvert) {
+        onConvert(
+          `${value} ${fromUnit} -> ${toUnit}`,
+          `${formatted} ${toUnit}`
+        );
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [value, fromUnit, toUnit, category, onConvert]);
 
   const units = Object.keys(unitRates[category]);
 
@@ -67,6 +87,7 @@ const UnitConverter = () => {
           onChange={(e) => setValue(e.target.value)}
         />
       </label>
+      {error && <div className="text-red-400 text-sm">{error}</div>}
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col">
           From

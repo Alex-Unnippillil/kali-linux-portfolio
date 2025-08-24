@@ -1,6 +1,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import ReactGA from 'react-ga4';
+import ErrorPane from './components/ErrorPane';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
@@ -18,6 +19,7 @@ import { displayKeyConverter } from './components/apps/key-converter';
 import { displayQrTool } from './components/apps/qr_tool';
 import { displayTotp } from './components/apps/totp';
 import { displayRegexRedactor } from './components/apps/regex-redactor';
+import { displayRegexLab } from './components/apps/regex-lab';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
@@ -110,9 +112,10 @@ class DynamicAppErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="h-full w-full flex items-center justify-center bg-panel text-white">
-          {`An error occurred while rendering ${this.props.name}.`}
-        </div>
+        <ErrorPane
+          code="render_error"
+          message={`An error occurred while rendering ${this.props.name}.`}
+        />
       );
     }
 
@@ -460,6 +463,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayRegexRedactor,
+  },
+  {
+    id: 'regex-lab',
+    title: 'Regex Lab',
+    icon: './themes/Yaru/apps/hash.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayRegexLab,
   },
   {
     id: 'ascii-art',
