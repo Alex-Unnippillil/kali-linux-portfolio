@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
 
@@ -87,10 +89,10 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { domain } = req.query;
-  if (!domain || typeof domain !== 'string' || !/^[A-Za-z0-9.-]+$/.test(domain)) {
-    return res.status(400).json({ error: 'Invalid domain' });
-  }
+  const querySchema = z.object({ domain: z.string().regex(/^[A-Za-z0-9.-]+$/) });
+  const parsed = validateRequest(req, res, { querySchema });
+  if (!parsed) return;
+  const { domain } = parsed.query as { domain: string };
 
   try {
     const { records, policyDomain } = await getEffectiveCaa(domain);

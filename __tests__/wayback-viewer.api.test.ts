@@ -55,4 +55,10 @@ describe('wayback viewer api', () => {
     expect(res.status).toHaveBeenCalledWith(500);
     expect((res as any)._data.error).toBe('Failed to fetch snapshots');
   });
+
+  it('validates input', async () => {
+    const { req, res } = createReqRes({});
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
 });

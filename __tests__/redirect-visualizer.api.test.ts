@@ -61,4 +61,10 @@ describe('redirect-visualizer api', () => {
     expect(data.chain[1].method).toBe('GET');
     expect(data.chain[1].cacheControl).toBe('max-age=60');
   });
+
+  it('validates request body', async () => {
+    const { req, res } = createReqRes({});
+    await handler(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+  });
 });

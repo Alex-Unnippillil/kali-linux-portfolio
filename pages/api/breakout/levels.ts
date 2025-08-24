@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
+import { z } from 'zod';
+import { validateRequest } from '../../../lib/validate';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const dir = path.join(process.cwd(), 'apps', 'breakout', 'levels');
@@ -23,9 +25,12 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   if (req.method === 'POST') {
+    const bodySchema = z.array(z.array(z.number()));
+    const parsed = validateRequest(req, res, { bodySchema });
+    if (!parsed) return;
     try {
       const file = path.join(dir, `level-${Date.now()}.json`);
-      fs.writeFileSync(file, JSON.stringify(req.body));
+      fs.writeFileSync(file, JSON.stringify(parsed.body));
       res.status(200).json({ saved: true });
     } catch (e) {
       res.status(500).json({ error: 'Failed to save' });

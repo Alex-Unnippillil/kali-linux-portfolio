@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 import yaraFactory from 'libyara-wasm';
 
 interface MatchDetail {
@@ -51,11 +53,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
-  const { input = '', rules = {} } = req.body || {};
-  if (typeof input !== 'string' || typeof rules !== 'object') {
-    res.status(400).json({ error: 'Invalid payload' });
-    return;
-  }
+  const bodySchema = z.object({ input: z.string().optional(), rules: z.any().optional() });
+  const parsed = validateRequest(req, res, { bodySchema });
+  if (!parsed) return;
+  const { input = '', rules = {} } = parsed.body as {
+    input?: string;
+    rules?: Record<string, string>;
+  };
   if (input.length > 1024 * 1024) {
     res.status(400).json({ error: 'Sample too large' });
     return;
