@@ -327,9 +327,23 @@ const Breakout = () => {
     <div ref={containerRef} className="h-full w-full bg-black relative overflow-hidden">
       {editing ? (
         <LevelEditor
-          onSave={(layout) => {
+          onSave={async (layout) => {
             setCustomLayout(layout);
-            setLevels((l) => [...l, layout]);
+            try {
+              const res = await fetch('/api/breakout/levels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(layout),
+              });
+              if (res.ok) {
+                const savedLayout = await res.json();
+                setLevels((l) => [...l, savedLayout]);
+              } else {
+                // handle error, e.g. show a message
+              }
+            } catch (e) {
+              // handle error, e.g. show a message
+            }
             setEditing(false);
           }}
           onCancel={() => setEditing(false)}
