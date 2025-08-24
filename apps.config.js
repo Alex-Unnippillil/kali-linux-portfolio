@@ -542,7 +542,7 @@ const apps = [
   {
     id: 'timeline-builder',
     title: 'Timeline Builder',
-    icon: icon('project-gallery.svg'),
+    icon: icon('timeline-builder.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
