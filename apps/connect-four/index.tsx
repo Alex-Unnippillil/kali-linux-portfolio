@@ -160,8 +160,8 @@ const minimax = (
   const terminal = isTerminal(board);
   if (depth === 0 || terminal || performance.now() - start > limit) {
     if (terminal) {
-      if (checkWin(board, AI)) return 1_000_000;
-      if (checkWin(board, HUMAN)) return -1_000_000;
+      if (checkWin(board, AI)) return WIN_SCORE;
+      if (checkWin(board, HUMAN)) return -WIN_SCORE;
       return 0;
     }
     return scorePosition(board, AI);
