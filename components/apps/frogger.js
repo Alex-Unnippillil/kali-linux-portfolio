@@ -23,16 +23,45 @@ const Frogger = () => {
     const height = fg.height;
     const tile = TILE;
 
-    const prefersReducedMotion = window.matchMedia(
+    const safeMode = window.matchMedia(
       '(prefers-reduced-motion: reduce)'
     ).matches;
-    const speedScale = prefersReducedMotion ? 0.5 : 1;
+    const speedScale = safeMode ? 0.5 : 1;
 
-    let level = parseInt(localStorage.getItem('frogger-level') || '1', 10);
-    let score = 0;
-    let pads = PAD_POSITIONS.map(() => false);
+    const saved = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('frogger-save') || '{}');
+      } catch {
+        return {};
+      }
+    })();
+
+    let level =
+      saved.level || parseInt(localStorage.getItem('frogger-level') || '1', 10);
+    let score = saved.score || 0;
+    let pads = saved.pads || PAD_POSITIONS.map(() => false);
+    let replayMoves = saved.replay || [];
+
+    const save = () =>
+      localStorage.setItem(
+        'frogger-save',
+        JSON.stringify({ level, score, pads, replay: replayMoves })
+      );
 
     const lanes = [];
+    let paused = false;
+
+    const handleBlur = () => {
+      paused = true;
+    };
+    const handleFocus = () => {
+      if (paused) {
+        paused = false;
+        requestAnimationFrame(update);
+      }
+    };
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const playTone = (freq, duration = 0.1) => {
@@ -51,14 +80,14 @@ const Frogger = () => {
     };
 
     const drawBackground = () => {
-      bgCtx.fillStyle = '#222';
+      bgCtx.fillStyle = safeMode ? '#111' : '#222';
       bgCtx.fillRect(0, 0, width, height);
-      bgCtx.fillStyle = '#444';
+      bgCtx.fillStyle = safeMode ? '#333' : '#444';
       for (let i = 1; i < 9; i++) {
         if (i === 9) continue;
         bgCtx.fillRect(0, i * tile, width, 2);
       }
-      bgCtx.fillStyle = '#0a0';
+      bgCtx.fillStyle = safeMode ? '#060' : '#0a0';
       bgCtx.fillRect(0, 0, width, tile);
       bgCtx.fillRect(0, height - tile, width, tile);
     };
@@ -94,11 +123,33 @@ const Frogger = () => {
       resetFrog();
     };
 
-    const moveFrog = (dx, dy) => {
+    const moveFrog = (dx, dy, record = true) => {
       audioCtx.resume();
       frog.x = Math.min(Math.max(0, frog.x + dx * tile), width - tile);
       frog.y = Math.min(Math.max(0, frog.y + dy * tile), height - tile);
+      if (record) {
+        replayMoves.push([dx, dy]);
+        save();
+      }
       playTone(440, 0.05);
+    };
+
+    const startReplay = () => {
+      if (!replayMoves.length) return;
+      resetFrog();
+      let i = 0;
+      paused = true;
+      const step = () => {
+        if (i >= replayMoves.length) {
+          paused = false;
+          requestAnimationFrame(update);
+          return;
+        }
+        const [dx, dy] = replayMoves[i++];
+        moveFrog(dx, dy, false);
+        setTimeout(step, 200);
+      };
+      step();
     };
 
     const handleKey = (e) => {
@@ -148,11 +199,18 @@ const Frogger = () => {
     };
     window.addEventListener('deviceorientation', handleOrientation);
 
+    const replayBtn = document.getElementById('frogger-replay');
+    replayBtn?.addEventListener('click', startReplay);
+
     let tiltCooldown = 0;
     let padCooldown = 0;
 
     let lastTime = performance.now();
     const update = (time) => {
+      if (paused) {
+        requestAnimationFrame(update);
+        return;
+      }
       const dt = Math.min((time - lastTime) / (1000 / 60), 3);
       lastTime = time;
 
@@ -197,11 +255,39 @@ const Frogger = () => {
 
       ctx.clearRect(0, 0, width, height);
 
-      const result = updateCars(lanes, frog, dt);
+      const difficulty = 1 + score / 2000;
+      const result = updateCars(lanes, frog, dt * difficulty);
       lanes.splice(0, lanes.length, ...result.lanes);
       frog.x += result.frogDx;
+
+      const hitCar = lanes.some(
+        (lane) =>
+          lane.type === 'car' &&
+          lane.y === frog.y &&
+          lane.items.some(
+            (c) =>
+              frog.x < c.x + c.width && frog.x + TILE > c.x
+          )
+      );
+      const nearCar = lanes.some(
+        (lane) =>
+          lane.type === 'car' &&
+          lane.y === frog.y &&
+          lane.items.some(
+            (c) =>
+              Math.abs(c.x + c.width / 2 - (frog.x + TILE / 2)) < TILE
+          )
+      );
+      if (nearCar && !hitCar) playTone(700, 0.05);
+
       if (result.dead) {
-        playTone(200, 0.2);
+        if (!hitCar) {
+          ctx.fillStyle = '#00f';
+          ctx.beginPath();
+          ctx.arc(frog.x + TILE / 2, frog.y + TILE / 2, TILE / 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        playTone(hitCar ? 1000 : 200, 0.2);
         resetFrog();
         score = Math.max(0, score - 10);
       }
@@ -238,6 +324,7 @@ const Frogger = () => {
       ctx.font = '16px sans-serif';
       ctx.fillText(`Score: ${score} Level: ${level}`, 10, 20);
 
+      save();
       requestAnimationFrame(update);
     };
 
@@ -251,22 +338,38 @@ const Frogger = () => {
       fg.removeEventListener('touchend', handleTouchEnd);
       fg.removeEventListener('click', handleTap);
       window.removeEventListener('deviceorientation', handleOrientation);
+      replayBtn?.removeEventListener('click', startReplay);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 
   return (
-    <div className="w-full h-full relative">
+    <div
+      className="w-full h-full relative"
+      role="application"
+      aria-label="Frogger game"
+    >
+      <button
+        id="frogger-replay"
+        aria-label="Replay last run"
+        className="absolute top-2 right-2 z-10 bg-black text-white text-xs px-2 py-1 rounded"
+      >
+        Replay
+      </button>
       <canvas
         ref={bgRef}
         width={400}
         height={400}
         className="absolute inset-0 w-full h-full"
+        aria-hidden="true"
       />
       <canvas
         ref={spriteRef}
         width={400}
         height={400}
         className="absolute inset-0 w-full h-full"
+        aria-hidden="true"
       />
     </div>
   );

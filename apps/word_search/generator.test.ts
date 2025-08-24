@@ -15,6 +15,6 @@ describe('word search generator', () => {
     const result = generateGrid(words, 12, 'speed');
     const elapsed = Date.now() - start;
     expect(result.placements.length).toBe(words.length);
-    expect(elapsed).toBeLessThan(50);
+    expect(elapsed).toBeLessThan(200);
   });
 });

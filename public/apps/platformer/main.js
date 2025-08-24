@@ -16,6 +16,7 @@ let levelStart = 0;
 const player = new Player();
 const camera = { x: 0, y: 0, deadZone: { w: 100, h: 60 }, lookAhead: 40 };
 const keys = {};
+const touch = { left: false, right: false, jump: false };
 const effects = [];
 let replay = [];
 let progress = JSON.parse(localStorage.getItem('platformerProgress') || '{}');
@@ -32,6 +33,7 @@ const rightBtn = document.getElementById('rightBtn');
 const jumpBtn = document.getElementById('jumpBtn');
 const reducedToggle = document.getElementById('reduceMotion');
 const contrastToggle = document.getElementById('highContrast');
+
 
 // levels list
 const levels = ['level1.json', 'level2.json'];
@@ -70,6 +72,7 @@ reducedToggle.onchange = () => {
 contrastToggle.onchange = () => {
   highContrast = contrastToggle.checked;
   document.body.classList.toggle('high-contrast', highContrast);
+
 };
 
 // input handling
@@ -79,6 +82,48 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => {
   keys[e.code] = false;
 });
+
+canvas.addEventListener('touchstart', handleTouch, { passive: false });
+canvas.addEventListener('touchmove', handleTouch, { passive: false });
+canvas.addEventListener('touchend', handleTouch, { passive: false });
+
+function handleTouch(e) {
+  e.preventDefault();
+  touch.left = touch.right = touch.jump = false;
+  for (const t of e.touches) {
+    const rect = canvas.getBoundingClientRect();
+    const x = t.clientX - rect.left;
+    const y = t.clientY - rect.top;
+    if (x < rect.width / 3) touch.left = true;
+    else if (x > (rect.width * 2) / 3) touch.right = true;
+    if (y < rect.height / 2) touch.jump = true;
+  }
+}
+
+function pollGamepad() {
+  const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
+  if (!gp) return { left: false, right: false, jump: false };
+  const left = gp.axes[0] < -0.2 || gp.buttons[14]?.pressed;
+  const right = gp.axes[0] > 0.2 || gp.buttons[15]?.pressed;
+  const jump = gp.buttons[0]?.pressed;
+  return { left, right, jump };
+}
+
+function recordReplay(input) {
+  replay.push({ t: performance.now() - levelStart, ...input });
+}
+
+exportBtn.onclick = () => {
+  const blob = new Blob([
+    JSON.stringify({ level: currentLevel, replay }, null, 2),
+  ], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `replay-${currentLevel}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
 function gaEvent(action, params = {}) {
   try {
@@ -123,8 +168,14 @@ function loadLevel(name) {
     });
 }
 
-// initial level
-loadLevel(levels[0]);
+// initial level with persistence
+const savedProgress = JSON.parse(localStorage.getItem('platformer-progress') || 'null');
+if (savedProgress && levels.includes(savedProgress.level)) {
+  levelSelect.value = savedProgress.level;
+  loadLevel(savedProgress.level);
+} else {
+  loadLevel(levels[0]);
+}
 
 // game loop
 const FIXED_DT = 1 / 60;
@@ -137,6 +188,7 @@ function loop(ts) {
   while (acc >= FIXED_DT) {
     update(FIXED_DT);
     acc -= FIXED_DT;
+
   }
   draw();
   requestAnimationFrame(loop);
@@ -154,16 +206,18 @@ function pollGamepad(input) {
 }
 
 function update(dt) {
+  const pad = pollGamepad();
   const input = {
-    left: keys['ArrowLeft'],
-    right: keys['ArrowRight'],
-    jump: keys['Space']
+    left: keys['ArrowLeft'] || pad.left || touch.left,
+    right: keys['ArrowRight'] || pad.right || touch.right,
+    jump: keys['Space'] || pad.jump || touch.jump
   };
   pollGamepad(input);
   replay.push({ t: (performance.now() - levelStart) / 1000, ...input });
   updatePhysics(player, input, dt);
   movePlayer(dt);
-  updateEffects(dt);
+  if (!reduceMotion) updateEffects(dt);
+  recordReplay(input);
 
   if (player.y > mapHeight * tileSize) respawn();
 
@@ -181,6 +235,7 @@ function update(dt) {
     camera.y = targetY - (canvas.height / 2 - camera.deadZone.h / 2);
   if (targetY > centerY + camera.deadZone.h / 2)
     camera.y = targetY - (canvas.height / 2 + camera.deadZone.h / 2);
+
   camera.x = Math.max(0, Math.min(camera.x, mapWidth * tileSize - canvas.width));
   camera.y = Math.max(0, Math.min(camera.y, mapHeight * tileSize - canvas.height));
 
@@ -191,6 +246,7 @@ function update(dt) {
     gaEvent('level_complete', { level: currentLevel, time: elapsed });
     progress[currentLevel] = Math.min(progress[currentLevel] || Infinity, parseFloat(elapsed));
     localStorage.setItem('platformerProgress', JSON.stringify(progress));
+
     coinTotal = -1; // prevent repeat
   }
 }
@@ -223,6 +279,7 @@ function movePlayer(dt) {
             ny = Math.min(ny, minY - player.h);
             player.onGround = true;
             player.vy = 0;
+
           } else {
             ny = Math.max(ny, maxY);
             player.vy = 0; // head-bump smoothing
@@ -238,6 +295,7 @@ function movePlayer(dt) {
             ny = floorY - player.h;
             player.onGround = true;
             player.vy = 0;
+
           }
         }
       }
@@ -268,12 +326,14 @@ function movePlayer(dt) {
           } else {
             if (dirX > 0) nx = Math.min(nx, minX - player.w);
             else nx = Math.max(nx, maxX);
+
           }
         }
       }
     }
   }
   player.x = nx;
+  player.y = ny;
 
   // coin collection
   const cx = Math.floor((player.x + player.w / 2) / tileSize);
@@ -317,6 +377,7 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   // parallax background
   if (!reduceMotion) {
+
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(-camera.x * 0.5, -camera.y * 0.5, canvas.width * 2, canvas.height * 2);
     ctx.fillStyle = '#141414';
@@ -345,6 +406,7 @@ function draw() {
           ctx.lineTo(screenX, screenY + tileSize);
         }
         ctx.fill();
+
       } else if (t === 4) {
         ctx.fillStyle = 'yellow';
         ctx.fillRect(screenX, screenY, tileSize, 4);
@@ -357,7 +419,7 @@ function draw() {
     }
   }
 
-  drawEffects();
+  if (!reduceMotion) drawEffects();
 
   ctx.fillStyle = '#0f0';
   ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);

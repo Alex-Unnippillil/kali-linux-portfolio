@@ -1,4 +1,5 @@
 import type { Position, WordPlacement } from './types';
+import Filter from 'bad-words';
 
 // simple seeded RNG using xmur3 and mulberry32
 function xmur3(str: string) {
@@ -39,6 +40,8 @@ const DIRECTIONS = [
   { dx: 1, dy: -1 },
   { dx: -1, dy: 1 },
 ];
+
+const filter = new Filter();
 
 export interface GenerateResult {
   grid: string[][];
@@ -89,6 +92,33 @@ function randomLetter(rng: () => number) {
     if (r < CUM_WEIGHTS[i]) return LETTERS[i];
   }
   return 'Z';
+}
+
+function hasObscene(grid: string[][]) {
+  const size = grid.length;
+  const lines: string[] = [];
+  // rows and columns
+  for (let r = 0; r < size; r += 1) {
+    lines.push(grid[r].join(''));
+    let col = '';
+    for (let c = 0; c < size; c += 1) col += grid[c][r];
+    lines.push(col);
+  }
+  // diagonals
+  for (let r = 0; r < size; r += 1) {
+    let d1 = '';
+    let d2 = '';
+    for (let c = 0; c < size; c += 1) {
+      if (r + c < size) d1 += grid[r + c][c];
+      if (r + c < size) d2 += grid[size - 1 - (r + c)][c];
+    }
+    if (d1.length > 1) lines.push(d1);
+    if (d2.length > 1) lines.push(d2);
+  }
+  return lines.some((l) => {
+    const lower = l.toLowerCase();
+    return filter.isProfane(lower) || filter.isProfane(lower.split('').reverse().join(''));
+  });
 }
 
 export function generateGrid(
@@ -166,11 +196,27 @@ export function generateGrid(
 
   place(0);
 
-  for (let r = 0; r < size; r += 1) {
-    for (let c = 0; c < size; c += 1) {
-      if (!grid[r][c]) grid[r][c] = randomLetter(rng);
+  function fillRandom() {
+    for (let r = 0; r < size; r += 1) {
+      for (let c = 0; c < size; c += 1) {
+        if (!grid[r][c]) grid[r][c] = randomLetter(rng);
+      }
     }
   }
+
+  let attempts = 0;
+  do {
+    // clear previous filler letters
+    for (let r = 0; r < size; r += 1) {
+      for (let c = 0; c < size; c += 1) {
+        if (!placements.some((pl) => pl.positions.some((p) => p.row === r && p.col === c))) {
+          grid[r][c] = '';
+        }
+      }
+    }
+    fillRandom();
+    attempts += 1;
+  } while (hasObscene(grid) && attempts < 5);
 
   return { grid, placements };
 }

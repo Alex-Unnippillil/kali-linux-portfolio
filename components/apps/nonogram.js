@@ -44,6 +44,9 @@ const Nonogram = () => {
   const [cellSize, setCellSize] = useState(32);
   const [selected, setSelected] = useState({ i: 0, j: 0 });
 
+  const history = useRef([]);
+  const future = useRef([]);
+
   const pending = useRef([]);
   const raf = useRef(null);
   const startTime = useRef(0);
@@ -89,6 +92,8 @@ const Nonogram = () => {
     evaluate(g);
     updateStorage(g, r, c);
     setStarted(true);
+    history.current = [];
+    future.current = [];
     startTime.current = Date.now();
     completed.current = false;
     try {
@@ -108,6 +113,8 @@ const Nonogram = () => {
         if (!raf.current) {
           raf.current = requestAnimationFrame(() => {
             setGrid((g) => {
+              history.current.push(g.map((row) => row.slice()));
+              future.current = [];
               let ng = g.map((row) => row.slice());
               pending.current.forEach(({ i, j, mode }) => {
                 if (mode === 'cross') ng[i][j] = ng[i][j] === -1 ? 0 : -1;
@@ -139,6 +146,28 @@ const Nonogram = () => {
       },
       [rows, cols, evaluate, updateStorage]
     );
+
+  const undo = useCallback(() => {
+    setGrid((g) => {
+      if (!history.current.length) return g;
+      const prev = history.current.pop();
+      future.current.push(g);
+      evaluate(prev);
+      updateStorage(prev);
+      return prev;
+    });
+  }, [evaluate, updateStorage]);
+
+  const redo = useCallback(() => {
+    setGrid((g) => {
+      if (!future.current.length) return g;
+      history.current.push(g);
+      const next = future.current.pop();
+      evaluate(next);
+      updateStorage(next);
+      return next;
+    });
+  }, [evaluate, updateStorage]);
 
   const painting = useRef(false);
   const paintMode = useRef('fill');
@@ -235,13 +264,30 @@ const Nonogram = () => {
           case 'e':
             toggleMistakes();
             break;
+          case 'z':
+            if (e.ctrlKey) undo();
+            break;
+          case 'y':
+            if (e.ctrlKey) redo();
+            break;
           default:
             break;
         }
       };
       window.addEventListener('keydown', handler);
       return () => window.removeEventListener('keydown', handler);
-    }, [started, rows, cols, selected, pencil, scheduleToggle, handleHint, toggleMistakes]);
+    }, [
+      started,
+      rows,
+      cols,
+      selected,
+      pencil,
+      scheduleToggle,
+      handleHint,
+      toggleMistakes,
+      undo,
+      redo,
+    ]);
 
     const handleTouchStart = (i, j) => {
       touchCross.current = false;
@@ -268,6 +314,8 @@ const Nonogram = () => {
             setGrid(data.grid);
             evaluate(data.grid);
             setStarted(true);
+            history.current = [];
+            future.current = [];
           }
         } catch (e) {
           // ignore
@@ -382,12 +430,26 @@ const Nonogram = () => {
           </div>
           <div
             className="grid"
+            role="grid"
+            tabIndex={0}
+            aria-label="nonogram grid"
             style={{ gridTemplateColumns: `repeat(${cols.length}, ${cellSize}px)` }}
           >
             {grid.map((row, i) =>
               row.map((cell, j) => (
                 <div
                   key={`${i}-${j}`}
+                  role="gridcell"
+                  aria-label={
+                    cell === 1
+                      ? 'filled'
+                      : cell === -1
+                      ? 'marked'
+                      : cell === 2
+                      ? 'note'
+                      : 'empty'
+                  }
+                  aria-selected={selected.i === i && selected.j === j}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     const mode =
@@ -426,6 +488,20 @@ const Nonogram = () => {
         </div>
       </div>
       <div className="mt-4 space-x-2 flex items-center">
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={undo}
+          aria-label="Undo"
+        >
+          Undo
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={redo}
+          aria-label="Redo"
+        >
+          Redo
+        </button>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={validate}

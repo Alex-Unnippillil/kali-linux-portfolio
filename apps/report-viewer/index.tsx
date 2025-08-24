@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { run } from '@mdx-js/mdx';
+import * as runtime from 'react/jsx-runtime';
+import rehypeSanitize from 'rehype-sanitize';
 import { FixedSizeList as List } from 'react-window';
 import Papa from 'papaparse';
 
-type FileType = 'markdown' | 'json' | 'csv' | 'pdf' | 'text' | '';
+type FileType = 'markdown' | 'mdx' | 'json' | 'csv' | 'pdf' | 'text' | '';
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -18,10 +21,27 @@ const ReportViewer: React.FC = () => {
   const [rawText, setRawText] = useState('');
   const [search, setSearch] = useState('');
   const contentRef = useRef<HTMLDivElement>(null);
+  const [MdxContent, setMdxContent] = useState<React.ComponentType<any> | null>(null);
+  const [initialScroll, setInitialScroll] = useState<number | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    const s = params.get('scroll');
+    if (q) setSearch(q);
+    if (s) setInitialScroll(parseInt(s, 10));
+  }, []);
+
+  useEffect(() => {
+    if (initialScroll !== null && contentRef.current) {
+      contentRef.current.scrollTo(0, initialScroll);
+    }
+  }, [initialScroll, fileType]);
 
   const sniff = (file: File, text: string): FileType => {
     const name = file.name.toLowerCase();
     const type = file.type;
+    if (name.endsWith('.mdx')) return 'mdx';
     if (type.includes('markdown') || name.endsWith('.md') || name.endsWith('.markdown'))
       return 'markdown';
     if (type.includes('json') || name.endsWith('.json')) return 'json';
@@ -43,8 +63,9 @@ const ReportViewer: React.FC = () => {
       const kind = sniff(file, text);
       setFileType(kind);
       setSearch('');
-      if (kind === 'markdown') {
+      if (kind === 'markdown' || kind === 'mdx') {
         setMarkdown(text);
+        setMdxContent(null);
       } else if (kind === 'json') {
         try {
           const obj = JSON.parse(text);
@@ -101,7 +122,7 @@ const ReportViewer: React.FC = () => {
   };
 
   useEffect(() => {
-    if (fileType !== 'markdown') return;
+    if (fileType !== 'markdown' && fileType !== 'mdx') return;
     const el = contentRef.current;
     if (!el) return;
     // Remove old marks
@@ -123,6 +144,37 @@ const ReportViewer: React.FC = () => {
     });
   }, [search, markdown, fileType]);
 
+  useEffect(() => {
+    if (fileType !== 'mdx') return;
+    let cancelled = false;
+    (async () => {
+      const mod = await run(markdown, runtime, { rehypePlugins: [rehypeSanitize] });
+      if (!cancelled) setMdxContent(() => mod.default);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [markdown, fileType]);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const update = () => {
+      const params = new URLSearchParams(window.location.search);
+      if (search) params.set('q', search);
+      else params.delete('q');
+      if (el.scrollTop) params.set('scroll', String(el.scrollTop));
+      else params.delete('scroll');
+      const hash = window.location.hash;
+      const qs = params.toString();
+      const url = qs ? `?${qs}${hash}` : hash || '';
+      window.history.replaceState(null, '', url);
+    };
+    update();
+    el.addEventListener('scroll', update);
+    return () => el.removeEventListener('scroll', update);
+  }, [search]);
+
   const filteredCsv = useMemo(() => {
     if (!search) return csvData;
     const q = search.toLowerCase();
@@ -130,9 +182,9 @@ const ReportViewer: React.FC = () => {
   }, [csvData, search]);
 
   const Outline = () => {
-    if (fileType === 'markdown' && headings.length > 0) {
+    if ((fileType === 'markdown' || fileType === 'mdx') && headings.length > 0) {
       return (
-        <div className="w-48 overflow-auto pr-2 text-sm">
+        <div className="w-48 overflow-auto pr-2 text-sm sticky top-0 h-full">
           {headings.map((h) => (
             <div key={h.id} style={{ paddingLeft: (h.level - 1) * 8 }}>
               <a href={`#${h.id}`}>{h.text}</a>
@@ -143,7 +195,7 @@ const ReportViewer: React.FC = () => {
     }
     if (fileType === 'json' && Object.keys(jsonKeyMap).length > 0) {
       return (
-        <div className="w-48 overflow-auto pr-2 text-sm">
+        <div className="w-48 overflow-auto pr-2 text-sm sticky top-0 h-full">
           {Object.keys(jsonKeyMap).map((k) => (
             <div key={k}>
               <button
@@ -158,6 +210,28 @@ const ReportViewer: React.FC = () => {
       );
     }
     return null;
+  };
+
+  const makeHeading = (Tag: keyof JSX.IntrinsicElements) => ({ node, ...props }) => {
+    const text = String(props.children);
+    const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    return (
+      <Tag id={id} {...props}>
+        <a href={`#${id}`}>{props.children}</a>
+      </Tag>
+    );
+  };
+
+  const mdxComponents = {
+    h1: makeHeading('h1'),
+    h2: makeHeading('h2'),
+    h3: makeHeading('h3'),
+    h4: makeHeading('h4'),
+    h5: makeHeading('h5'),
+    h6: makeHeading('h6'),
+    p: ({ node, ...props }) => <p {...props}>{highlight(String(props.children))}</p>,
+    li: ({ node, ...props }) => <li {...props}>{highlight(String(props.children))}</li>,
+    span: ({ node, ...props }) => <span {...props}>{highlight(String(props.children))}</span>,
   };
 
   const jsonRenderer = () => (
@@ -193,47 +267,15 @@ const ReportViewer: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         <Outline />
         <div className="flex-1 overflow-auto" ref={contentRef}>
-          {fileType === 'markdown' && (
+          {(fileType === 'markdown' || fileType === 'mdx') && (
             <div className="prose prose-invert max-w-none">
-              <ReactMarkdown
-                components={{
-                  h1: ({ node, ...props }) => {
-                    const text = String(props.children);
-                    const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    return <h1 id={id} {...props} />;
-                  },
-                  h2: ({ node, ...props }) => {
-                    const text = String(props.children);
-                    const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    return <h2 id={id} {...props} />;
-                  },
-                  h3: ({ node, ...props }) => {
-                    const text = String(props.children);
-                    const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    return <h3 id={id} {...props} />;
-                  },
-                  h4: ({ node, ...props }) => {
-                    const text = String(props.children);
-                    const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    return <h4 id={id} {...props} />;
-                  },
-                  h5: ({ node, ...props }) => {
-                    const text = String(props.children);
-                    const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    return <h5 id={id} {...props} />;
-                  },
-                  h6: ({ node, ...props }) => {
-                    const text = String(props.children);
-                    const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                    return <h6 id={id} {...props} />;
-                  },
-                  p: ({ node, ...props }) => <p {...props}>{highlight(String(props.children))}</p>,
-                  li: ({ node, ...props }) => <li {...props}>{highlight(String(props.children))}</li>,
-                  span: ({ node, ...props }) => <span {...props}>{highlight(String(props.children))}</span>,
-                }}
-              >
-                {markdown}
-              </ReactMarkdown>
+              {fileType === 'markdown' ? (
+                <ReactMarkdown rehypePlugins={[rehypeSanitize]} components={mdxComponents}>
+                  {markdown}
+                </ReactMarkdown>
+              ) : (
+                MdxContent && <MdxContent components={mdxComponents} />
+              )}
             </div>
           )}
           {fileType === 'json' && jsonRenderer()}
