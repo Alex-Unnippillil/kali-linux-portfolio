@@ -194,6 +194,7 @@ const dynamicAppEntries = [
   ['cookie-simulator', 'Cookie Simulator'],
   ['mixed-content', 'Mixed Content'],
   ['tls-explainer', 'TLS Explainer'],
+  ['tls-inspector', 'TLS Inspector'],
   ['cache-policy', 'Cache Policy'],
   ['tor-exit-check', 'Tor Exit Check'],
   ['wayback-viewer', 'Wayback Viewer'],
@@ -574,6 +575,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: getScreen('tls-explainer'),
+  },
+  {
+    id: 'tls-inspector',
+    title: 'TLS Inspector',
+    icon: './themes/Yaru/apps/tls-inspector.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: getScreen('tls-inspector'),
   },
   {
     id: 'import-graph',
