@@ -86,7 +86,7 @@ const SbomViewer: React.FC = () => {
     [handleFile]
   );
 
-  const components = sbom?.components || [];
+    const components = useMemo(() => sbom?.components || [], [sbom]);
 
   const fuse = useMemo(
     () => new Fuse(components, { keys: ['name'], threshold: 0.3 }),

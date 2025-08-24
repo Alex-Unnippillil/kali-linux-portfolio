@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ChangeEvent } from 'react';
+import React, { ChangeEvent, useCallback, useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import JSZip from 'jszip';
 
@@ -24,7 +24,7 @@ const EvidenceNotebook: React.FC = () => {
   const [encryptionKey, setEncryptionKey] = useState<CryptoKey | null>(null);
   const [decryptedNotes, setDecryptedNotes] = useState<Record<number, string>>({});
 
-  useEffect(() => {
+    useEffect(() => {
     (async () => {
       const kp = await crypto.subtle.generateKey(
         { name: 'ECDSA', namedCurve: 'P-256' },
@@ -63,7 +63,7 @@ const EvidenceNotebook: React.FC = () => {
       }
       setDecryptedNotes(dec);
     })();
-  }, [entries, encryptionKey]);
+    }, [entries, encryptionKey, decryptNote]);
 
   const deriveKey = async (pass: string): Promise<CryptoKey> => {
     const enc = new TextEncoder();
@@ -104,14 +104,17 @@ const EvidenceNotebook: React.FC = () => {
     return { cipherText: toBase64(cipher), iv: toBase64(iv) };
   };
 
-  const decryptNote = async (cipherText: string, iv: string) => {
-    const buf = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: fromBase64(iv) },
-      encryptionKey!,
-      fromBase64(cipherText)
+    const decryptNote = useCallback(
+      async (cipherText: string, iv: string) => {
+        const buf = await crypto.subtle.decrypt(
+          { name: 'AES-GCM', iv: fromBase64(iv) },
+          encryptionKey!,
+          fromBase64(cipherText)
+        );
+        return new TextDecoder().decode(buf);
+      },
+      [encryptionKey]
     );
-    return new TextDecoder().decode(buf);
-  };
 
   const onFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

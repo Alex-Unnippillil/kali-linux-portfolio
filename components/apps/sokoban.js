@@ -209,7 +209,7 @@ const Sokoban = () => {
   };
 
   const getHint = () => {
-    setHint('...');
+    setHint('Calculating...');
     const dirs = [
       { dx: 0, dy: -1, key: 'Up' },
       { dx: 0, dy: 1, key: 'Down' },
