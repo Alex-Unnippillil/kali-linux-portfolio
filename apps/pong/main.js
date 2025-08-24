@@ -22,6 +22,8 @@ let stats = JSON.parse(localStorage.getItem('pongStats') || '{"wins":0,"losses":
 
 // inputs
 const keys = { up: false, down: false };
+const keys2 = { up: false, down: false };
+let humanOpponent = false;
 
 function handleKey(e, down) {
   if (e.key === 'ArrowUp' || e.key === 'w') keys.up = down;
@@ -40,13 +42,21 @@ canvas.addEventListener('touchmove', (e) => {
 });
 
 // gamepad support
-function pollGamepad() {
-  const gp = navigator.getGamepads()[0];
-  if (gp) {
-    const axis = gp.axes[1];
-    if (axis < -0.2) keys.up = true; else if (axis > 0.2) keys.down = true; else {
-      keys.up = keys.down = false;
-    }
+function pollGamepads() {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const gp1 = pads[0];
+  const gp2 = pads[1];
+  if (gp1) {
+    const axis = gp1.axes[1];
+    if (axis < -0.2) keys.up = true; else if (axis > 0.2) keys.down = true; else keys.up = keys.down = false;
+  }
+  if (gp2) {
+    humanOpponent = true;
+    const axis2 = gp2.axes[1];
+    if (axis2 < -0.2) keys2.up = true; else if (axis2 > 0.2) keys2.down = true; else keys2.up = keys2.down = false;
+  } else {
+    humanOpponent = false;
+    keys2.up = keys2.down = false;
   }
 }
 
@@ -55,18 +65,21 @@ function updateAI(dt) {
   lastAiUpdate += dt * 1000;
   if (lastAiUpdate < aiReaction) return;
   lastAiUpdate = 0;
-  // predict where ball will be when it reaches opponent
   const timeToReach = (opponent.x - ball.x) / ball.vx;
   let predictedY = ball.y + ball.vy * timeToReach;
-  // reflect off walls
   if (predictedY < 0 || predictedY > height) {
     const bounces = Math.floor(Math.abs(predictedY) / height);
-    if (bounces % 2 === 0) predictedY = Math.abs(predictedY) % height; else predictedY = height - (Math.abs(predictedY) % height);
+    predictedY = bounces % 2 === 0 ? Math.abs(predictedY) % height : height - (Math.abs(predictedY) % height);
   }
   const center = opponent.y + opponent.height / 2;
   if (predictedY > center + 10) opponent.move(dt, 1);
   else if (predictedY < center - 10) opponent.move(dt, -1);
   opponent.clamp(height);
+}
+
+function updateDifficulty() {
+  const total = playerScore + oppScore;
+  aiReaction = Math.max(50, 200 - total * 10);
 }
 
 // websocket
@@ -113,46 +126,55 @@ function resetRound(dir) {
   power = null;
 }
 
+const fixedDt = 1 / 120;
 let lastTime = performance.now();
+let accumulator = 0;
 
-function loop() {
-  const now = performance.now();
-  const dt = (now - lastTime) / 1000;
+function loop(now) {
+  accumulator += (now - lastTime) / 1000;
   lastTime = now;
 
-  pollGamepad();
-  // player movement
-  if (keys.up) player.move(dt, -1);
-  if (keys.down) player.move(dt, 1);
-  player.clamp(height);
+  pollGamepads();
+  while (accumulator >= fixedDt) {
+    if (keys.up) player.move(fixedDt, -1);
+    if (keys.down) player.move(fixedDt, 1);
+    player.clamp(height);
 
-  updateAI(dt);
+    if (humanOpponent) {
+      if (keys2.up) opponent.move(fixedDt, -1);
+      if (keys2.down) opponent.move(fixedDt, 1);
+      opponent.clamp(height);
+    } else {
+      updateAI(fixedDt);
+    }
 
-  ball.update(dt, [player, opponent], width, height);
+    ball.update(fixedDt, [player, opponent], width, height);
 
-  applyPowerUp(power, ball, player);
-  applyPowerUp(power, ball, opponent);
+    applyPowerUp(power, ball, player);
+    applyPowerUp(power, ball, opponent);
 
-  if (!power && Math.random() < 0.002) {
-    power = randomPowerUp(width, height);
-  }
+    if (!power && Math.random() < 0.002) {
+      power = randomPowerUp(width, height);
+    }
 
-  // scoring
-  if (ball.x < 0) {
-    oppScore++;
-    resetRound(1);
-  } else if (ball.x > width) {
-    playerScore++;
-    resetRound(-1);
-  }
+    if (ball.x < 0) {
+      oppScore++;
+      resetRound(1);
+    } else if (ball.x > width) {
+      playerScore++;
+      resetRound(-1);
+    }
 
-  // win condition
-  if (playerScore >= 5 || oppScore >= 5) {
-    stats.games++;
-    if (playerScore > oppScore) stats.wins++; else stats.losses++;
-    localStorage.setItem('pongStats', JSON.stringify(stats));
-    playerScore = oppScore = 0;
-    resetRound(Math.random()>0.5?1:-1);
+    if (playerScore >= 5 || oppScore >= 5) {
+      stats.games++;
+      if (playerScore > oppScore) stats.wins++; else stats.losses++;
+      localStorage.setItem('pongStats', JSON.stringify(stats));
+      playerScore = oppScore = 0;
+      resetRound(Math.random()>0.5?1:-1);
+    }
+
+    updateDifficulty();
+    accumulator -= fixedDt;
   }
 
   sendState();
@@ -169,7 +191,7 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-loop();
+requestAnimationFrame(loop);
 
 // expose for slider
 window.setReaction = (v) => (aiReaction = v);
