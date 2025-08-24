@@ -80,11 +80,18 @@ module.exports = {
       fs: false,
       net: false,
       tls: false,
+      worker_threads: false,
+      perf_hooks: false,
+      readline: false,
     };
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       mermaid: require('path').resolve(__dirname, 'lib/mermaidStub.js'),
       'argon2-browser': require('path').resolve(__dirname, 'lib/argon2Stub.js'),
+      'vis-timeline/dist/vis-timeline-graph2d.min.css': require('path').resolve(
+        __dirname,
+        'node_modules/vis-timeline/styles/vis-timeline-graph2d.min.css'
+      ),
     };
     config.experiments = { ...(config.experiments || {}), asyncWebAssembly: true };
     return config;

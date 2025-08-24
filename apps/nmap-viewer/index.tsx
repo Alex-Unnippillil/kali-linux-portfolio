@@ -3,7 +3,7 @@ import * as sax from 'sax';
 import { validateXML } from 'xmllint-wasm';
 import Papa from 'papaparse';
 import { FixedSizeList as List } from 'react-window';
-import ForceGraph2D from 'react-force-graph';
+import ForceGraph2D from 'react-force-graph-2d';
 
 interface VulnInfo {
   id: string;

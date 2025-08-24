@@ -1,1 +1,1 @@
-export { default } from '../../apps/platformer';
+export { default } from '../../apps/platformer/index.tsx';

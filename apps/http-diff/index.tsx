@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { ApiResult, DiffPart } from '@/types/http-diff';
+import DOMPurify from 'isomorphic-dompurify';
 
 function escapeHtml(str: string): string {
   return str.replace(/[&<>"']/g, (c) => ({
@@ -37,11 +38,11 @@ function renderSideBySide(diff: DiffPart[]) {
     <div className="grid grid-cols-2 gap-4">
       <pre
         className="bg-gray-800 text-white p-2 overflow-auto"
-        dangerouslySetInnerHTML={{ __html: left.join('\n') }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(left.join('\n')) }}
       />
       <pre
         className="bg-gray-800 text-white p-2 overflow-auto"
-        dangerouslySetInnerHTML={{ __html: right.join('\n') }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(right.join('\n')) }}
       />
     </div>
   );
