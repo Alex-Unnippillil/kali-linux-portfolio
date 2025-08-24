@@ -4,6 +4,7 @@
 2. **Install packages** – run `yarn` to install project dependencies.
 3. **Environment** – copy `.env.example` to `.env.local` and fill in required variables like `JWT_SECRET`.
 4. **Run the app** – start the development server with `yarn dev`.
+5. **Type-check** – run `yarn typecheck` to verify TypeScript types. This command also runs in CI.
 
 ### Common Install Issues
 

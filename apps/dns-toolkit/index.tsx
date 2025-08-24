@@ -64,7 +64,7 @@ const DnsToolkit: React.FC = () => {
           disabled={loading}
           className="px-3 py-1 bg-blue-600 rounded"
         >
-          {loading ? '...' : 'Lookup'}
+          {loading ? 'Looking up...' : 'Lookup'}
         </button>
       </form>
       {error && <div className="text-red-500">{error}</div>}
