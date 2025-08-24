@@ -1,8 +1,8 @@
 import '../lib/dev-ssr-logger';
 import type { AppProps, NextWebVitalsMetric } from 'next/app';
 import { useEffect, useState } from 'react';
-import { initAxiom, logEvent } from '../lib/axiom';
-import { maskPII } from '../lib/analytics';
+import { initAxiom } from '../lib/axiom';
+import { maskPII, trackWebVital } from '../lib/analytics';
 import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
 import { Inter } from 'next/font/google';
@@ -138,5 +138,11 @@ function MyApp({ Component, pageProps }: AppProps) {
 export default MyApp;
 
 export function reportWebVitals(metric: NextWebVitalsMetric): void {
-  logEvent({ type: 'web-vital', ...metric });
+  if (
+    analyticsEnabled &&
+    typeof window !== 'undefined' &&
+    window.localStorage.getItem('analytics-consent') === 'granted'
+  ) {
+    trackWebVital(metric);
+  }
 }
