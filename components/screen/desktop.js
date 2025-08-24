@@ -368,6 +368,15 @@ export class Desktop extends Component {
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
+        // ensure the window is created and not minimized on first open
+        const closed_windows = { ...this.state.closed_windows };
+        const minimized_windows = { ...this.state.minimized_windows };
+        if (closed_windows[objId] === true) {
+            closed_windows[objId] = false;
+            minimized_windows[objId] = false;
+        }
+        this.setState({ closed_windows, minimized_windows });
+
         if (this.state.minimized_windows[objId]) {
             // focus this app's window
             this.focus(objId);
@@ -377,9 +386,7 @@ export class Desktop extends Component {
             r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
 
             // tell childs that his app has been not minimised
-            let minimized_windows = this.state.minimized_windows;
-            minimized_windows[objId] = false;
-            this.setState({ minimized_windows: minimized_windows });
+            this.setState((s) => ({ minimized_windows: { ...s.minimized_windows, [objId]: false } }));
             return;
         }
 
@@ -434,28 +441,27 @@ export class Desktop extends Component {
         this.hideSideBar(null, false);
 
         // close window
-        let closed_windows = this.state.closed_windows;
-        let favourite_apps = this.state.favourite_apps;
-
-        if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
-        closed_windows[objId] = true; // closes the app's window
-
-        this.setState({ closed_windows, favourite_apps });
+        this.setState((s) => {
+            const closed_windows = { ...s.closed_windows, [objId]: true };
+            const favourite_apps = { ...s.favourite_apps };
+            if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
+            return { closed_windows, favourite_apps };
+        });
     }
 
     focus = (objId) => {
         // removes focus from all window and 
         // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
-        focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
+        this.setState((s) => {
+            const focused_windows = { ...s.focused_windows };
+            focused_windows[objId] = true;
+            for (let key in focused_windows) {
+                if (focused_windows.hasOwnProperty(key) && key !== objId) {
                     focused_windows[key] = false;
                 }
             }
-        }
-        this.setState({ focused_windows });
+            return { focused_windows };
+        });
     }
 
     addNewFolder = () => {
