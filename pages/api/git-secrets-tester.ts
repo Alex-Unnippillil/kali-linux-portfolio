@@ -1,7 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import JSZip from 'jszip';
 import { spawn, spawnSync } from 'child_process';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 import { defaultPatterns, redactSecret } from '../../components/apps/git-secrets-tester';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 interface ApiResult {
   file: string;
@@ -81,14 +86,15 @@ export default async function handler(
     return;
   }
 
-  const { patch, archive } = req.body as {
+  const bodySchema = z
+    .object({ patch: z.string().optional(), archive: z.string().optional() })
+    .refine((d) => d.patch || d.archive, { message: 'Missing patch or archive' });
+  const parsed = validateRequest(req, res, { bodySchema });
+  if (!parsed) return;
+  const { patch, archive } = parsed.body as {
     patch?: string;
     archive?: string;
   };
-  if (!patch && !archive) {
-    res.status(400).json({ error: 'Missing patch or archive' });
-    return;
-  }
 
   const logs: string[] = [];
   let combined = '';

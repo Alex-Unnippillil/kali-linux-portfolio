@@ -1,5 +1,4 @@
 import JSZip from 'jszip';
-import { describe, test, expect } from 'vitest';
 
 function mockReqRes(method: string, body: any) {
   const req: any = { method, body };
@@ -29,6 +28,13 @@ describe('git-secrets api', () => {
     await handler(req as any, res as any);
     expect(res.statusCode).toBe(200);
     expect(res.data.results.some((r: any) => r.pattern.includes('Slack'))).toBe(true);
+  });
+
+  test('validates input body', async () => {
+    const { req, res } = mockReqRes('POST', {});
+    const handler = (await import('../pages/api/git-secrets-tester')).default;
+    await handler(req as any, res as any);
+    expect(res.statusCode).toBe(400);
   });
 });
 

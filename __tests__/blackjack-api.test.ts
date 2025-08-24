@@ -82,4 +82,23 @@ describe('blackjack api', () => {
     }
     expect(res.statusCode).toBe(429);
   });
+
+  test('validates request body', async () => {
+    process.env.JWT_SECRET = 'secret';
+    jest.resetModules();
+
+    const { setKVAdapter, MemoryKV } = await import('../lib/kv');
+    setKVAdapter(new MemoryKV());
+    const { default: handler } = await import('../pages/api/users/[id]/blackjack');
+
+    const token = jwt.sign({ sub: id }, process.env.JWT_SECRET!);
+    const { req, res } = mockReqRes({
+      method: 'POST',
+      query: { id },
+      body: { result: 'invalid' },
+      headers: { authorization: `Bearer ${token}` },
+    });
+    await handler(req, res);
+    expect(res.statusCode).toBe(400);
+  });
 });

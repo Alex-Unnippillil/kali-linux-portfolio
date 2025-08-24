@@ -1,6 +1,6 @@
 'use client';
-import { Howl } from 'howler';
 
-export function loadSound(src: string) {
+export async function loadSound(src: string) {
+  const { Howl } = await import('howler');
   return new Howl({ src: [src] });
 }

@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/router';
+import Link from 'next/link';
 import apps, { games } from '../../apps.config';
 import ResponsiveGrid from '../util-components/ResponsiveGrid';
 
@@ -19,7 +19,6 @@ const allEntries: AppEntry[] = [
 ];
 
 export default function AllApps() {
-  const router = useRouter();
   const [search, setSearch] = useState('');
   const [tag, setTag] = useState('All');
 
@@ -67,14 +66,11 @@ export default function AllApps() {
       ) : (
         <ResponsiveGrid>
           {filtered.map(app => (
-            <div
+            <Link
               key={app.id}
+              href={`/apps/${app.id}`}
               className="flex flex-col items-center p-2 rounded hover:bg-gray-700 focus:bg-gray-700 cursor-pointer"
-              onClick={() => router.push(`/apps/${app.id}`)}
-              onMouseEnter={() => router.prefetch(`/apps/${app.id}`)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') router.push(`/apps/${app.id}`);
-              }}
+              prefetch={false}
             >
               <Image
                 src={app.icon.replace('./', '/')}
@@ -85,7 +81,7 @@ export default function AllApps() {
                 loading="lazy"
               />
               <span className="text-xs text-center">{app.title}</span>
-            </div>
+            </Link>
           ))}
         </ResponsiveGrid>
       )}

@@ -1,9 +1,16 @@
-import { Howl, Howler } from 'howler';
+let howler: typeof import('howler') | null = null;
+async function getHowler() {
+  if (!howler) {
+    howler = await import('howler');
+  }
+  return howler;
+}
 
 export class AudioManager {
-  private sounds = new Map<string, Howl>();
+  private sounds = new Map<string, import('howler').Howl>();
 
-  load(key: string, src: string) {
+  async load(key: string, src: string) {
+    const { Howl } = await getHowler();
     const sound = new Howl({ src: [src] });
     this.sounds.set(key, sound);
     return sound;
@@ -17,7 +24,8 @@ export class AudioManager {
     this.sounds.get(key)?.stop();
   }
 
-  setVolume(volume: number) {
+  async setVolume(volume: number) {
+    const { Howler } = await getHowler();
     Howler.volume(volume);
   }
 }

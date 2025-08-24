@@ -99,6 +99,7 @@ class DynamicAppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false };
+    this.handleRetry = this.handleRetry.bind(this);
   }
 
   static getDerivedStateFromError() {
@@ -117,12 +118,17 @@ class DynamicAppErrorBoundary extends React.Component {
       return (
         <ErrorPane
           code="render_error"
-          message={`An error occurred while rendering ${this.props.name}.`}
+          message={`An error occurred while rendering ${this.props.name}. Please try again.`}
+          onRetry={this.handleRetry}
         />
       );
     }
 
     return this.props.children;
+  }
+
+  handleRetry() {
+    this.setState({ hasError: false });
   }
 }
 
