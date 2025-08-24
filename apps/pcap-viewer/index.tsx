@@ -227,7 +227,7 @@ const PcapViewer: React.FC = () => {
           const p = filteredPackets[index];
           return (
             <div style={style} className="whitespace-nowrap overflow-hidden px-1">
-              #{p.index} {p.src}:{p.src_port} -> {p.dst}:{p.dst_port} [{p.proto}]
+              {`#${p.index} ${p.src}:${p.src_port} -> ${p.dst}:${p.dst_port} [${p.proto}]`}
             </div>
           );
         }}
