@@ -1,218 +1,168 @@
 'use client';
-
 import React, { useEffect, useRef, useState } from 'react';
-import Editor from '@monaco-editor/react';
 import safeRegex from 'safe-regex';
 
-const MAX_LEN = 1000;
+type EngineResult = {
+  compileTime: number | null;
+  matchTime: number | null;
+  match: string[] | null;
+  error: string | null;
+};
 
-interface Example {
-  pattern: string;
-  text: string;
-  explanation: string;
-}
-
-const examples: Example[] = [
-  {
-    pattern: '^(a+)+$',
-    text: 'aaaaaaaaaaaaaaaaaaaa!',
-    explanation: 'Nested quantifiers cause catastrophic backtracking.',
-  },
-  {
-    pattern: '(a|aa)+$',
-    text: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab',
-    explanation: 'Ambiguous alternation triggers extensive backtracking.',
-  },
-];
-
-const PcreRe2Lab: React.FC = () => {
+export default function PcreRe2Lab() {
   const [pattern, setPattern] = useState('');
+  const [flags, setFlags] = useState('');
   const [text, setText] = useState('');
-  const [re2Time, setRe2Time] = useState(0);
-  const [re2Result, setRe2Result] = useState<string[]>([]);
-  const [pcreTime, setPcreTime] = useState(0);
-  const [pcreResult, setPcreResult] = useState<string[]>([]);
-  const [msg, setMsg] = useState('');
-  const [usePcre, setUsePcre] = useState(false);
-  const [unsafe, setUnsafe] = useState(false);
-  const workerRef = useRef<Worker>();
-  const editorRef = useRef<any>();
-  const monacoRef = useRef<any>();
+  const [pcre, setPcre] = useState<EngineResult | null>(null);
+  const [re2, setRe2] = useState<EngineResult | null>(null);
+  const [isSafe, setIsSafe] = useState(true);
 
-  useEffect(() => {
-    workerRef.current = new Worker(new URL('./regex-worker.ts', import.meta.url));
-    workerRef.current.onmessage = (e: MessageEvent) => {
-      const { engine, event, match, matches, time, error } = e.data;
-      if (engine === 're2') {
-        if (event === 'match') {
-          setRe2Result((m) => [...m, match]);
-        } else if (event === 'done' || event === 'timeout') {
-          setRe2Time(time || 0);
-          if (error) setMsg((m) => m + ` RE2: ${error}`);
-          if (event === 'timeout') setMsg((m) => m + ' RE2 timed out.');
-        }
-      } else {
-        if (event === 'match') {
-          setPcreResult((m) => [...m, match]);
-        } else if (event === 'done' || event === 'timeout') {
-          setPcreTime(time || 0);
-          if (error) setMsg((m) => m + ` PCRE2: ${error}`);
-          if (event === 'timeout') setMsg((m) => m + ' PCRE2 timed out.');
-        }
-      }
-    };
-    return () => workerRef.current?.terminate();
-  }, []);
+  const workerRef = useRef<Worker | null>(null);
 
+  // Load state from URL or localStorage
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
-    const p = params.get('p');
-    const t = params.get('t');
-    if (p) setPattern(decodeURIComponent(p));
-    if (t) setText(decodeURIComponent(t));
+    const storedPattern =
+      params.get('pattern') || localStorage.getItem('pcreRe2Pattern') || '';
+    const storedFlags =
+      params.get('flags') || localStorage.getItem('pcreRe2Flags') || '';
+    const storedText =
+      params.get('text') || localStorage.getItem('pcreRe2Text') || '';
+    setPattern(storedPattern);
+    setFlags(storedFlags);
+    setText(storedText);
   }, []);
 
+  // Persist state
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (pattern) params.set('p', encodeURIComponent(pattern));
-    if (text) params.set('t', encodeURIComponent(text));
-    const url = `${window.location.pathname}?${params.toString()}`;
-    window.history.replaceState(null, '', url);
-  }, [pattern, text]);
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('pcreRe2Pattern', pattern);
+    localStorage.setItem('pcreRe2Flags', flags);
+    localStorage.setItem('pcreRe2Text', text);
+  }, [pattern, flags, text]);
 
+  // Evaluate
   useEffect(() => {
-    if (monacoRef.current && editorRef.current) {
-      const markers = safeRegex(pattern)
-        ? []
-        : [
-            {
-              startLineNumber: 1,
-              startColumn: 1,
-              endLineNumber: 1,
-              endColumn: pattern.length + 1,
-              message: 'Potential ReDoS pattern',
-              severity: monacoRef.current.MarkerSeverity.Warning,
-            },
-          ];
-      monacoRef.current.editor.setModelMarkers(
-        editorRef.current.getModel(),
-        'lint',
-        markers
-      );
+    if (typeof window === 'undefined') return;
+    setIsSafe(safeRegex(pattern));
+    if (!workerRef.current) {
+      workerRef.current = new Worker(new URL('./pcre-re2-lab.worker.ts', import.meta.url));
     }
-    setUnsafe(!safeRegex(pattern));
-  }, [pattern]);
-
-  const run = () => {
-    const limited = text.slice(0, MAX_LEN);
-    if (limited !== text) setText(limited);
-    setRe2Result([]);
-    setPcreResult([]);
-    setMsg('');
-    workerRef.current?.postMessage({ pattern, text: limited, engine: 're2' });
-    if (usePcre) {
-      workerRef.current?.postMessage({ pattern, text: limited, engine: 'pcre' });
-    }
-  };
-
-  useEffect(() => {
-    const cb = () => run();
-    const id =
-      (window as any).requestIdleCallback
-        ? (window as any).requestIdleCallback(cb)
-        : setTimeout(cb, 0);
-    return () => {
-      if ((window as any).cancelIdleCallback) {
-        (window as any).cancelIdleCallback(id);
-      } else {
-        clearTimeout(id);
-      }
+    const worker = workerRef.current;
+    const textBuffer = new TextEncoder().encode(text).buffer;
+    worker.onmessage = (e: MessageEvent) => {
+      const data = e.data as { pcre: EngineResult; re2: EngineResult };
+      if (data.pcre) setPcre(data.pcre);
+      if (data.re2) setRe2(data.re2);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pattern, text, usePcre]);
+    worker.postMessage({ pattern, flags, textBuffer });
+  }, [pattern, flags, text]);
 
-  const togglePcre = () => {
-    if (!usePcre && !window.confirm('PCRE2 may be vulnerable to ReDoS. Continue?'))
-      return;
-    setUsePcre((v) => !v);
-  };
+  const canned = [
+    {
+      label: 'Email',
+      pattern: '([\\w.-]+)@([\\w.-]+)\\.([a-zA-Z]{2,})',
+      text: 'contact me at foo@example.com',
+    },
+    {
+      label: 'IPv4',
+      pattern: '(\\d{1,3}(?:\\.\\d{1,3}){3})',
+      text: 'The IP is 192.168.0.1',
+    },
+    {
+      label: 'Catastrophic',
+      pattern: '(a+)+$',
+      text: 'aaaaaaaaaaaaaaaaaaaa!'
+    },
+  ];
 
-  const share = async () => {
-    await navigator.clipboard.writeText(window.location.href);
+  const share = () => {
+    if (typeof window === 'undefined') return;
+    const url = `${window.location.origin}${window.location.pathname}?pattern=${encodeURIComponent(
+      pattern,
+    )}&flags=${encodeURIComponent(flags)}&text=${encodeURIComponent(text)}`;
+    navigator.clipboard.writeText(url);
+    alert('Permalink copied to clipboard');
   };
 
   return (
-    <div className="h-full w-full p-4 bg-gray-900 text-white flex flex-col space-y-2">
-      <div className="flex space-x-2 items-center">
-        <div className="flex-1">
-          <Editor
-            height="40px"
-            defaultLanguage="regex"
-            value={pattern}
-            onChange={(v) => setPattern(v || '')}
-            onMount={(editor, monaco) => {
-              editorRef.current = editor;
-              monacoRef.current = monaco;
-            }}
-          />
-        </div>
-        <button className="px-2 py-1 bg-gray-700 rounded" onClick={togglePcre}>
-          {usePcre ? 'Disable PCRE2' : 'Enable PCRE2'}
-        </button>
-        <button className="px-2 py-1 bg-blue-700 rounded" onClick={share}>
+    <div className="h-full w-full p-4 bg-gray-900 text-white flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
+        <input
+          className="px-2 py-1 rounded text-black"
+          placeholder="Pattern"
+          value={pattern}
+          onChange={(e) => setPattern(e.target.value)}
+        />
+        <input
+          className="px-2 py-1 w-20 rounded text-black"
+          placeholder="Flags"
+          value={flags}
+          onChange={(e) => setFlags(e.target.value)}
+        />
+        <button className="px-3 py-1 bg-blue-600 rounded" onClick={share}>
           Share
         </button>
+        <div
+          className={`px-2 py-1 rounded text-sm ${
+            isSafe ? 'bg-green-600' : 'bg-red-600'
+          }`}
+        >
+          {isSafe ? 'Safe' : 'Unsafe'}
+        </div>
       </div>
       <textarea
-        className="w-full h-32 p-2 text-black rounded font-mono"
-        placeholder="Test text"
+        className="w-full h-40 p-2 rounded text-black"
+        placeholder="Sample text"
         value={text}
-        onChange={(e) => setText(e.target.value.slice(0, MAX_LEN))}
+        onChange={(e) => setText(e.target.value)}
       />
-      {unsafe && <div className="text-yellow-400">Potential ReDoS pattern</div>}
-      {msg && <div className="text-red-500 whitespace-pre-wrap">{msg}</div>}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 overflow-auto">
-        <div>
-          <h3 className="font-bold">RE2 (WASM)</h3>
-          <div>Time: {re2Time.toFixed(3)} ms</div>
-          <pre className="bg-gray-800 p-2 rounded overflow-auto whitespace-pre-wrap">
-            {JSON.stringify(re2Result)}
-          </pre>
+      <div className="flex gap-4 flex-wrap">
+        <div className="flex-1 min-w-[250px] bg-gray-800 p-2 rounded">
+          <h2 className="font-bold mb-2">PCRE2</h2>
+          {pcre?.error && <div className="text-red-400 text-sm">{pcre.error}</div>}
+          {pcre && !pcre.error && (
+            <div className="text-sm">
+              <div>Compile: {pcre.compileTime?.toFixed(2)}ms</div>
+              <div>Match: {pcre.matchTime?.toFixed(2)}ms</div>
+              {pcre.match && (
+                <pre className="whitespace-pre-wrap break-words">{JSON.stringify(pcre.match, null, 2)}</pre>
+              )}
+            </div>
+          )}
         </div>
-        {usePcre && (
-          <div>
-            <h3 className="font-bold">PCRE2 (WASM)</h3>
-            <div>Time: {pcreTime.toFixed(3)} ms</div>
-            <pre className="bg-gray-800 p-2 rounded overflow-auto whitespace-pre-wrap">
-              {JSON.stringify(pcreResult)}
-            </pre>
-          </div>
-        )}
+        <div className="flex-1 min-w-[250px] bg-gray-800 p-2 rounded">
+          <h2 className="font-bold mb-2">RE2</h2>
+          {re2?.error && <div className="text-red-400 text-sm">{re2.error}</div>}
+          {re2 && !re2.error && (
+            <div className="text-sm">
+              <div>Compile: {re2.compileTime?.toFixed(2)}ms</div>
+              <div>Match: {re2.matchTime?.toFixed(2)}ms</div>
+              {re2.match && (
+                <pre className="whitespace-pre-wrap break-words">{JSON.stringify(re2.match, null, 2)}</pre>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-      <details className="bg-gray-800 p-2 rounded">
-        <summary className="cursor-pointer">ReDoS examples</summary>
-        <ul className="space-y-1 mt-2">
-          {examples.map((ex, i) => (
-            <li key={i}>
-              <button
-                className="underline text-blue-400"
-                onClick={() => {
-                  setPattern(ex.pattern);
-                  setText(ex.text);
-                }}
-              >
-                {ex.pattern}
-              </button>{' '}
-              - {ex.explanation}
-            </li>
-          ))}
-        </ul>
-      </details>
+      <div className="flex gap-2 flex-wrap mt-2">
+        {canned.map((c) => (
+          <button
+            key={c.label}
+            className="px-2 py-1 bg-gray-700 rounded text-sm"
+            onClick={() => {
+              setPattern(c.pattern);
+              setText(c.text);
+              setFlags('');
+            }}
+          >
+            {c.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
-};
-
-export default PcreRe2Lab;
+}
 
 export const displayPcreRe2Lab = () => <PcreRe2Lab />;
-

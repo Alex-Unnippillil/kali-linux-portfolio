@@ -19,16 +19,26 @@ export interface ParsedSbom {
 }
 
 export async function readFileChunks(file: File): Promise<string> {
-  const reader = file.stream().getReader();
-  const decoder = new TextDecoder();
-  let text = '';
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    text += decoder.decode(value, { stream: true });
+  if (typeof (file as any).stream === 'function') {
+    const reader = (file as any).stream().getReader();
+    const decoder = new TextDecoder();
+    let text = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+    return text;
   }
-  text += decoder.decode();
-  return text;
+  if (typeof (file as any).text === 'function') {
+    return await (file as any).text();
+  }
+  if (typeof (file as any).arrayBuffer === 'function') {
+    const buf = await (file as any).arrayBuffer();
+    return new TextDecoder().decode(buf);
+  }
+  return '';
 }
 
 export function parseSbomObject(data: any): ParsedSbom {

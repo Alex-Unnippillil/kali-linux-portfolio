@@ -1,18 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { totp } from 'otplib';
+import { hotp } from 'otplib';
 import QRCode from 'qrcode';
+import { base32 } from 'rfc4648';
 
 type HashAlg = 'SHA1' | 'SHA256' | 'SHA512';
+type OtpType = 'totp' | 'hotp';
 
 const base32Regex = /^[A-Z2-7]+=*$/;
 
 const parseOtpauth = (uri: string) => {
   try {
     const url = new URL(uri);
-    if (url.protocol !== 'otpauth:' || url.host !== 'totp') return null;
+    if (url.protocol !== 'otpauth:') return null;
+    const type = url.host.toLowerCase() as OtpType;
+    if (type !== 'totp' && type !== 'hotp') return null;
     const params = url.searchParams;
     const secret = params.get('secret')?.replace(/\s+/g, '').toUpperCase() || '';
     const period = Number(params.get('period') || params.get('step') || '30');
+    const counter = Number(params.get('counter') || '0');
     const digits = Number(params.get('digits') || '6');
     const algorithm = (params.get('algorithm') || 'SHA1').toUpperCase() as HashAlg;
     const label = decodeURIComponent(url.pathname.slice(1));
@@ -21,7 +26,7 @@ const parseOtpauth = (uri: string) => {
       const [maybeIssuer] = label.split(':');
       if (!issuer) issuer = maybeIssuer;
     }
-    return { secret, period, digits, algorithm, label, issuer };
+    return { type, secret, period, counter, digits, algorithm, label, issuer };
   } catch {
     return null;
   }
@@ -29,10 +34,12 @@ const parseOtpauth = (uri: string) => {
 
 const isValidSecret = (s: string) => base32Regex.test(s) && s.length >= 16;
 
-const TOTPApp = () => {
+const OTPApp = () => {
   const [uri, setUri] = useState('');
+  const [mode, setMode] = useState<OtpType>('totp');
   const [secret, setSecret] = useState('');
   const [period, setPeriod] = useState(30);
+  const [counter, setCounter] = useState(0);
   const [digits, setDigits] = useState(6);
   const [algorithm, setAlgorithm] = useState<HashAlg>('SHA1');
   const [label, setLabel] = useState('');
@@ -41,7 +48,7 @@ const TOTPApp = () => {
   const [drift, setDrift] = useState(0);
   const [codes, setCodes] = useState<string[]>([]);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
-  const [remaining, setRemaining] = useState(totp.timeRemaining());
+  const [remaining, setRemaining] = useState(0);
   const qrRef = useRef<HTMLCanvasElement>(null);
   const secretValid = isValidSecret(secret);
 
@@ -49,8 +56,10 @@ const TOTPApp = () => {
     setUri(value);
     const cfg = parseOtpauth(value);
     if (cfg) {
+      setMode(cfg.type);
       setSecret(cfg.secret);
       setPeriod(cfg.period);
+      setCounter(cfg.counter);
       setDigits(cfg.digits);
       setAlgorithm(cfg.algorithm);
       setLabel(cfg.label);
@@ -67,11 +76,12 @@ const TOTPApp = () => {
     if (!secretValid) return '';
     const name = label || '';
     const path = issuer ? `${issuer}:${name}` : name;
-    const url = new URL(`otpauth://totp/${encodeURIComponent(path)}`);
+    const url = new URL(`otpauth://${mode}/${encodeURIComponent(path)}`);
     url.searchParams.set('secret', secret);
-    url.searchParams.set('period', String(period));
     url.searchParams.set('digits', String(digits));
     url.searchParams.set('algorithm', algorithm);
+    if (mode === 'totp') url.searchParams.set('period', String(period));
+    else url.searchParams.set('counter', String(counter));
     if (issuer) url.searchParams.set('issuer', issuer);
     return url.toString();
   };
@@ -99,26 +109,49 @@ const TOTPApp = () => {
   };
 
   useEffect(() => {
-    totp.options = { step: period, digits, algorithm: algorithm as any };
     const update = () => {
       if (secretValid) {
-        const now = Date.now() + drift * 1000;
-        const arr: string[] = [];
-        for (let w = -tolerance; w <= tolerance; w++) {
-          arr.push((totp as any).generate(secret, { epoch: now + w * period * 1000 }));
+        const hexSecret = Array.from(
+          base32.parse(secret),
+          (b) => b.toString(16).padStart(2, '0')
+        ).join('');
+        hotp.options = {
+          digits,
+          algorithm: algorithm.toLowerCase() as any,
+          encoding: 'hex',
+        };
+        if (mode === 'totp') {
+          const now = Date.now() + drift * 1000;
+          const baseCounter = Math.floor(now / 1000 / period);
+          const arr: string[] = [];
+          for (let w = -tolerance; w <= tolerance; w++) {
+            arr.push((hotp as any).generate(hexSecret, baseCounter + w));
+          }
+          setCodes(arr);
+          const rem = period - Math.floor((Math.floor(now / 1000)) % period);
+          setRemaining(rem === period ? 0 : rem);
+        } else {
+          const arr: string[] = [];
+          for (let w = -tolerance; w <= tolerance; w++) {
+            arr.push((hotp as any).generate(hexSecret, counter + w));
+          }
+          setCodes(arr);
+          setRemaining(0);
         }
-        setCodes(arr);
-        const rem = period - Math.floor((Math.floor(now / 1000)) % period);
-        setRemaining(rem === period ? 0 : rem);
       } else {
         setCodes([]);
         setRemaining(period);
       }
     };
     update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
-  }, [secret, period, digits, algorithm, secretValid, tolerance, drift]);
+    let interval: NodeJS.Timeout | undefined;
+    if (mode === 'totp') {
+      interval = setInterval(update, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [secret, period, digits, algorithm, secretValid, tolerance, drift, mode, counter]);
 
   const provisioningUri = buildUri();
 
@@ -128,8 +161,9 @@ const TOTPApp = () => {
     }
   }, [provisioningUri]);
 
-  const percentage = ((period - remaining) / period) * 100;
-  const color = `hsl(${(remaining / period) * 120}, 100%, 50%)`;
+  const percentage = mode === 'totp' ? ((period - remaining) / period) * 100 : 0;
+  const color =
+    mode === 'totp' ? `hsl(${(remaining / period) * 120}, 100%, 50%)` : '#ffffff';
   const currentCode = codes[tolerance] || '';
 
   return (
@@ -142,6 +176,17 @@ const TOTPApp = () => {
             onChange={(e) => handleUriChange(e.target.value)}
             className="w-full p-2 rounded text-black"
           />
+        </label>
+        <label className="block">
+          Type
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value as OtpType)}
+            className="w-full p-2 rounded text-black"
+          >
+            <option value="totp">TOTP</option>
+            <option value="hotp">HOTP</option>
+          </select>
         </label>
         <label className="block">
           Label
@@ -172,15 +217,28 @@ const TOTPApp = () => {
             </div>
           )}
         </label>
-        <label className="block">
-          Period
-          <input
-            type="number"
-            value={period}
-            onChange={(e) => setPeriod(Number(e.target.value))}
-            className="w-full p-2 rounded text-black"
-          />
-        </label>
+        {mode === 'totp' && (
+          <label className="block">
+            Period
+            <input
+              type="number"
+              value={period}
+              onChange={(e) => setPeriod(Number(e.target.value))}
+              className="w-full p-2 rounded text-black"
+            />
+          </label>
+        )}
+        {mode === 'hotp' && (
+          <label className="block">
+            Counter
+            <input
+              type="number"
+              value={counter}
+              onChange={(e) => setCounter(Number(e.target.value))}
+              className="w-full p-2 rounded text-black"
+            />
+          </label>
+        )}
         <label className="block">
           Digits
           <input
@@ -211,15 +269,17 @@ const TOTPApp = () => {
             className="w-full p-2 rounded text-black"
           />
         </label>
-        <label className="block">
-          Time Drift (s)
-          <input
-            type="number"
-            value={drift}
-            onChange={(e) => setDrift(Number(e.target.value))}
-            className="w-full p-2 rounded text-black"
-          />
-        </label>
+        {mode === 'totp' && (
+          <label className="block">
+            Time Drift (s)
+            <input
+              type="number"
+              value={drift}
+              onChange={(e) => setDrift(Number(e.target.value))}
+              className="w-full p-2 rounded text-black"
+            />
+          </label>
+        )}
         {provisioningUri && (
           <div className="block">
             <label>Provisioning URI</label>
@@ -244,21 +304,40 @@ const TOTPApp = () => {
             Copy
           </button>
         )}
-        <div className="h-2 bg-gray-700 mt-4">
-          <div
-            className="h-full"
-            style={{ width: `${percentage}%`, backgroundColor: color }}
-          />
-        </div>
+        {mode === 'totp' && (
+          <div className="h-2 bg-gray-700 mt-4">
+            <div
+              className="h-full"
+              style={{ width: `${percentage}%`, backgroundColor: color }}
+            />
+          </div>
+        )}
         <div className="flex justify-around mt-4 text-sm font-mono flex-wrap">
           {codes.map((c, idx) => {
             const offset = idx - tolerance;
             if (offset === 0) return null;
-            const lbl = offset < 0 ? `Prev ${Math.abs(offset)}` : `Next ${offset}`;
-            return <div key={idx}>{lbl}: {c}</div>;
+            const lbl =
+              mode === 'totp'
+                ? offset < 0
+                  ? `Prev ${Math.abs(offset)}`
+                  : `Next ${offset}`
+                : `Counter ${counter + offset}`;
+            return (
+              <div key={idx} className="flex items-center space-x-1 m-1">
+                <span>{lbl}: {c}</span>
+                <button
+                  className="px-2 py-0.5 bg-gray-700 rounded"
+                  onClick={() => navigator.clipboard.writeText(c)}
+                >
+                  Copy
+                </button>
+              </div>
+            );
           })}
         </div>
-        <div className="mt-1 text-sm">Refreshing in {remaining}s</div>
+        {mode === 'totp' && (
+          <div className="mt-1 text-sm">Refreshing in {remaining}s</div>
+        )}
         <div className="mt-6 space-y-2">
           <button
             className="px-3 py-1 bg-gray-700 rounded"
@@ -287,5 +366,5 @@ const TOTPApp = () => {
   );
 };
 
-export default TOTPApp;
-export const displayTotp = () => <TOTPApp />;
+export default OTPApp;
+export const displayOtp = () => <OTPApp />;

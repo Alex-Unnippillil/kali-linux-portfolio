@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import UnitConverter from './UnitConverter';
 import EncodingConverter from './EncodingConverter';
 import TextTransform from './TextTransform';
@@ -12,6 +12,25 @@ const plugins = [
 const Converter = () => {
   const [active, setActive] = useState(plugins[0].id);
   const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('converter-history');
+      if (stored) {
+        setHistory(JSON.parse(stored));
+      }
+    } catch (_) {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('converter-history', JSON.stringify(history));
+    } catch (_) {
+      // ignore
+    }
+  }, [history]);
 
   const addHistory = (description, result) => {
     setHistory((prev) => {

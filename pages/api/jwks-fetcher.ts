@@ -16,6 +16,7 @@ interface CacheEntry {
   jwk: any;
   expiry: number;
   thumbprint: string;
+  rotatedAt?: number;
 }
 
 const cache = new Map<string, CacheEntry>();
@@ -77,15 +78,22 @@ async function fetchAndCacheKeys(jwksUrl: string) {
   for (const k of keys) {
     if (!validateKey(k)) continue;
     const thumbprint = await calculateJwkThumbprint(k);
-    processed.push({ ...k, jwkThumbprint: thumbprint });
+    let rotatedAt: number | undefined;
     if (k.kid) {
       if (seenKids.has(k.kid)) collisions.add(k.kid);
       seenKids.add(k.kid);
       const keyId = cacheKey(jwksUrl, k.kid);
       const existing = cache.get(keyId);
-      if (existing && existing.thumbprint !== thumbprint) rotations.add(k.kid);
-      cache.set(keyId, { jwk: k, expiry, thumbprint });
+      if (existing) {
+        rotatedAt = existing.rotatedAt;
+        if (existing.thumbprint !== thumbprint) {
+          rotations.add(k.kid);
+          rotatedAt = Date.now();
+        }
+      }
+      cache.set(keyId, { jwk: k, expiry, thumbprint, rotatedAt });
     }
+    processed.push({ ...k, jwkThumbprint: thumbprint, rotatedAt });
   }
   return {
     keys: processed,
@@ -128,20 +136,27 @@ export const config = {
   api: { bodyParser: { sizeLimit: '1kb' } },
 };
 
-const querySchema = z.object({ jwksUrl: z.string().url() });
+const querySchema = z
+  .object({ jwksUrl: z.string().url().optional(), issuer: z.string().url().optional() })
+  .refine((d) => d.jwksUrl || d.issuer, { message: 'missing_url' });
 const bodySchema = z.object({});
+
+async function resolveIssuer(issuer: string) {
+  const url = issuer.replace(/\/$/, '');
+  const resp = await fetch(`${url}/.well-known/openid-configuration`);
+  if (!resp.ok) throw new Error('issuer_fetch_failed');
+  const data = await resp.json();
+  if (typeof data.jwks_uri !== 'string') throw new Error('invalid_openid');
+  return data.jwks_uri as string;
+}
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { jwksUrl: jwksUrlParam, jwt } =
+  const { jwt } =
     req.method === 'POST' ? req.body : (req.query as { [key: string]: any });
 
-  if (typeof jwksUrlParam !== 'string') {
-    res.status(400).json({ ok: false, error: 'invalid_url', keys: [] });
-    return;
-  }
   const parsed = validateRequest(req, res, {
     querySchema,
     bodySchema,
@@ -149,7 +164,24 @@ export default async function handler(
     bodyLimit: 1024,
   });
   if (!parsed) return;
-  const { jwksUrl } = parsed.query as { jwksUrl: string };
+  let { jwksUrl, issuer: issuerUrl } = parsed.query as {
+    jwksUrl?: string;
+    issuer?: string;
+  };
+
+  if (!jwksUrl && issuerUrl) {
+    try {
+      jwksUrl = await resolveIssuer(issuerUrl);
+    } catch {
+      res.status(400).json({ ok: false, error: 'invalid_issuer', keys: [] });
+      return;
+    }
+  }
+
+  if (typeof jwksUrl !== 'string') {
+    res.status(400).json({ ok: false, error: 'invalid_url', keys: [] });
+    return;
+  }
 
   try {
     const url = new URL(jwksUrl);

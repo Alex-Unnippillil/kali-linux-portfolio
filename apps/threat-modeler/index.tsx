@@ -1,7 +1,13 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import type { Metadata } from 'next';
 import { DndContext, useDraggable, DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { toPng } from 'html-to-image';
+
+export const metadata: Metadata = {
+  title: 'Threat Modeler',
+  description: 'Build threat diagrams with STRIDE and DREAD',
+};
 
 const NODE_W = 120;
 const NODE_H = 40;
@@ -151,12 +157,81 @@ const ThreatModeler: React.FC = () => {
   const [addingEdge, setAddingEdge] = useState(false);
   const [edgeStart, setEdgeStart] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentMethod = METHODOLOGIES[method];
 
   useEffect(() => {
     setNodes((ns) => ns.map((n) => ({ ...n, categories: createCategories(method) })));
   }, [method]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!selected) return;
+      const step = e.shiftKey ? 50 : 10;
+      setNodes((ns) =>
+        ns.map((n) =>
+          n.id === selected
+            ? {
+                ...n,
+                x:
+                  n.x +
+                  (e.key === 'ArrowRight'
+                    ? step
+                    : e.key === 'ArrowLeft'
+                      ? -step
+                      : 0),
+                y:
+                  n.y +
+                  (e.key === 'ArrowDown'
+                    ? step
+                    : e.key === 'ArrowUp'
+                      ? -step
+                      : 0),
+              }
+            : n,
+        ),
+      );
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selected]);
+
+  const importJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(String(ev.target?.result));
+        setMethod(data.methodology || 'STRIDE');
+        setNodes(data.nodes || []);
+        setEdges(data.edges || []);
+      } catch (_) {
+        /* noop */
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const saveLocal = () => {
+    const data = { methodology: method, nodes, edges };
+    try {
+      localStorage.setItem('threat-model', JSON.stringify(data));
+    } catch (_) {}
+  };
+
+  const loadLocal = () => {
+    try {
+      const raw = localStorage.getItem('threat-model');
+      if (raw) {
+        const data = JSON.parse(raw);
+        setMethod(data.methodology || 'STRIDE');
+        setNodes(data.nodes || []);
+        setEdges(data.edges || []);
+      }
+    } catch (_) {}
+  };
 
   const addNode = () => {
     const id = `n${Date.now()}`;
@@ -395,6 +470,25 @@ const ThreatModeler: React.FC = () => {
           <button className="bg-gray-700 px-2 rounded" onClick={exportMarkdown}>
             Export Markdown
           </button>
+          <button
+            className="bg-gray-700 px-2 rounded"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Import JSON
+          </button>
+          <button className="bg-gray-700 px-2 rounded" onClick={saveLocal}>
+            Save
+          </button>
+          <button className="bg-gray-700 px-2 rounded" onClick={loadLocal}>
+            Load
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            onChange={importJson}
+            className="hidden"
+          />
         </div>
         <div ref={canvasRef} className="flex-1 relative bg-gray-800 rounded">
           {boundaries.map((b) => (

@@ -7,8 +7,7 @@ export interface ScanResult {
   suggestion: string;
 }
 
-self.onmessage = (e: MessageEvent<string>) => {
-  const html = e.data;
+export function scan(html: string): ScanResult[] {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   const elements = Array.from(doc.querySelectorAll('[src],[href]'));
@@ -44,6 +43,11 @@ self.onmessage = (e: MessageEvent<string>) => {
     }
   });
 
+  return results;
+}
+
+self.onmessage = (e: MessageEvent<string>) => {
+  const results = scan(e.data);
   (self as any).postMessage(results);
 };
 

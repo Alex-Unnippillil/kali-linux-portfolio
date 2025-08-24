@@ -2,9 +2,27 @@ import { base16, base32, base64, base64url } from 'rfc4648';
 import bs58 from 'bs58';
 import { bech32 } from 'bech32';
 import ascii85 from 'ascii85';
+import { TextEncoder as NodeTextEncoder, TextDecoder as NodeTextDecoder } from 'util';
+import { webcrypto as nodeCrypto, createHash } from 'crypto';
 
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
+const encoder = typeof TextEncoder !== 'undefined'
+  ? new TextEncoder()
+  : new NodeTextEncoder();
+const decoder = typeof TextDecoder !== 'undefined'
+  ? new TextDecoder()
+  : new NodeTextDecoder();
+const cryptoObj: Crypto | undefined =
+  typeof crypto !== 'undefined' ? (crypto as any) : (nodeCrypto as any);
+
+async function sha256(data: Uint8Array | ArrayBuffer): Promise<Uint8Array> {
+  if (cryptoObj && cryptoObj.subtle) {
+    const res = await cryptoObj.subtle.digest('SHA-256', data);
+    return new Uint8Array(res);
+  }
+  const hash = createHash('sha256');
+  hash.update(Buffer.from(data instanceof ArrayBuffer ? data : data.buffer));
+  return new Uint8Array(hash.digest());
+}
 const PREVIEW_LIMIT = 256 * 1024; // 256 KiB
 
 function toBytes(str: string): Uint8Array {
@@ -17,9 +35,9 @@ function fromBytes(bytes: Uint8Array): string {
 
 async function encodeBase58Check(text: string): Promise<string> {
   const payload = toBytes(text);
-  const hash1 = await crypto.subtle.digest('SHA-256', payload);
-  const hash2 = await crypto.subtle.digest('SHA-256', hash1);
-  const checksum = new Uint8Array(hash2).slice(0, 4);
+  const hash1 = await sha256(payload);
+  const hash2 = await sha256(hash1);
+  const checksum = hash2.slice(0, 4);
   const buf = new Uint8Array(payload.length + 4);
   buf.set(payload);
   buf.set(checksum, payload.length);
@@ -31,9 +49,9 @@ async function decodeBase58Check(data: string): Promise<string> {
   if (bytes.length < 4) throw new Error('Data too short');
   const payload = bytes.subarray(0, -4);
   const checksum = bytes.subarray(-4);
-  const hash1 = await crypto.subtle.digest('SHA-256', payload);
-  const hash2 = await crypto.subtle.digest('SHA-256', hash1);
-  const expected = new Uint8Array(hash2).slice(0, 4);
+  const hash1 = await sha256(payload);
+  const hash2 = await sha256(hash1);
+  const expected = hash2.slice(0, 4);
   for (let i = 0; i < 4; i++)
     if (checksum[i] !== expected[i]) throw new Error('Invalid checksum');
   return fromBytes(payload);
@@ -53,6 +71,40 @@ function encodeZ85(text: string): string {
 
 function decodeZ85(data: string): string {
   return fromBytes(ascii85.ZeroMQ.decode(data));
+}
+
+function encodeBase36(text: string): string {
+  const bytes = toBytes(text);
+  let zeros = 0;
+  while (zeros < bytes.length && bytes[zeros] === 0) zeros++;
+  let hex = Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  if (!hex) hex = '0';
+  const value = BigInt('0x' + hex);
+  const encoded = value.toString(36);
+  return '0'.repeat(zeros) + encoded;
+}
+
+function decodeBase36(data: string): string {
+  let zeros = 0;
+  while (zeros < data.length && data[zeros] === '0') zeros++;
+  const body = data.slice(zeros) || '0';
+  let value = 0n;
+  for (const c of body.toLowerCase()) {
+    const digit = parseInt(c, 36);
+    if (Number.isNaN(digit)) throw new Error('Invalid character');
+    value = value * 36n + BigInt(digit);
+  }
+  let hex = value.toString(16);
+  if (hex.length % 2) hex = '0' + hex;
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+  const result = new Uint8Array(zeros + bytes.length);
+  result.set(bytes, zeros);
+  return fromBytes(result);
 }
 
 function decodeBase64Stream(
@@ -111,7 +163,8 @@ function decodeBase64Stream(
   return { result: decoded, overLimit };
 }
 
-self.onmessage = async (e: MessageEvent) => {
+if (typeof self !== 'undefined')
+  self.onmessage = async (e: MessageEvent) => {
   const { id, codec, mode, data, expanded } = e.data as {
     id: number;
     codec: string;
@@ -150,6 +203,10 @@ self.onmessage = async (e: MessageEvent) => {
             ? base64url.stringify(toBytes(data))
             : fromBytes(base64url.parse(data));
         break;
+      case 'base36':
+        result =
+          mode === 'encode' ? encodeBase36(data) : decodeBase36(data);
+        break;
       case 'ascii85':
         result = mode === 'encode' ? encodeAscii85(data) : decodeAscii85(data);
         break;
@@ -175,10 +232,23 @@ self.onmessage = async (e: MessageEvent) => {
       default:
         throw new Error('Unsupported codec');
     }
-    self.postMessage({ id, result, overLimit });
+    if (typeof self !== 'undefined')
+      self.postMessage({ id, result, overLimit });
   } catch (err: any) {
-    self.postMessage({ id, error: err.message || String(err) });
+    if (typeof self !== 'undefined')
+      self.postMessage({ id, error: err.message || String(err) });
   }
 };
 
-export {};
+export {
+  encodeBase58Check,
+  decodeBase58Check,
+  encodeAscii85,
+  decodeAscii85,
+  encodeZ85,
+  decodeZ85,
+  decodeBase64Stream,
+  encodeBase36,
+  decodeBase36,
+};
+
