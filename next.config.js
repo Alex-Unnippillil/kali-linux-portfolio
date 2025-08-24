@@ -45,6 +45,7 @@ const securityHeaders = [
 
 module.exports = {
   images: {
+    unoptimized: true,
     domains: ['opengraph.githubassets.com', 'raw.githubusercontent.com', 'avatars.githubusercontent.com'],
   },
   webpack: (config) => {
