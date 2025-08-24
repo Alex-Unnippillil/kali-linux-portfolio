@@ -7,15 +7,28 @@ export function createShip(x: number, y: number) {
   });
 }
 
+// Create an irregular asteroid using randomised vertices so every rock
+// has a slightly different shape. The average distance of the vertices
+// from the centre is still roughly `radius` so the physical size remains
+// consistent.
 export function createRock(x: number, y: number, radius: number) {
-  const body = Matter.Bodies.polygon(x, y, 6, radius, {
+  const verts: { x: number; y: number }[] = [];
+  const points = 8;
+  for (let i = 0; i < points; i += 1) {
+    const ang = (i / points) * Math.PI * 2;
+    const r = radius * (0.7 + Math.random() * 0.6);
+    verts.push({ x: Math.cos(ang) * r, y: Math.sin(ang) * r });
+  }
+  const body = Matter.Bodies.fromVertices(x, y, [verts], {
     label: 'rock',
-  });
-  (body as any).radius = radius;
+  }) as Matter.Body & { radius: number };
+  body.radius = radius;
   return body;
 }
 
-export function createBullet(x: number, y: number, angle: number) {
+// Bullet bodies are lightweight circles. Velocity is applied on creation
+// but can be reconfigured later when reusing pooled bullets.
+export function createBullet(x: number, y: number, angle = 0) {
   const speed = 5;
   const body = Matter.Bodies.circle(x, y, 2, {
     label: 'bullet',
