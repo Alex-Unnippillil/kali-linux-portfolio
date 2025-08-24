@@ -17,7 +17,8 @@ const ContentSecurityPolicy = [
   // Allow outbound connections for embeds and the in-browser Chrome app
   "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.googleapis.com https://stackblitz.com https://api64.ipify.org https://cloudflare-dns.com https://dns.google https://ghbtns.com stun:stun.l.google.com:19302",
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load arbitrary content
-  "frame-src 'self' https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://open.spotify.com https://todoist.com https://ghbtns.com https://www.youtube.com https://www.youtube-nocookie.com",
+    "frame-src 'self' https://stackblitz.com https://*.google.com https://ghbtns.com https://platform.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
+
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
   // Disallow plugins and limit base/submit targets
@@ -75,23 +76,10 @@ const securityHeaders = [
 module.exports = {
   productionBrowserSourceMaps: true,
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'opengraph.githubassets.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'raw.githubusercontent.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'avatars.githubusercontent.com',
-        pathname: '/**',
-      },
-    ],
+    // Keep unoptimized if you serve static assets without the Next image optimizer.
+    unoptimized: true,
+    domains: ['opengraph.githubassets.com', 'raw.githubusercontent.com', 'avatars.githubusercontent.com'],
+
   },
   webpack: (config) => {
     config.resolve = config.resolve || {};
