@@ -44,49 +44,6 @@ async function lookupTxt(name: string): Promise<string[]> {
   return promise;
 }
 
-const SPF_SPEC = 'https://datatracker.ietf.org/doc/html/rfc7208';
-
-function parseSpf(records: string[]) {
-  const spfRecords = records.filter((r) => r.toLowerCase().startsWith('v=spf1'));
-  if (spfRecords.length === 0) {
-    return {
-      pass: false,
-      message: 'No SPF record found',
-      recommendation:
-        'Add a TXT record starting with v=spf1 and ending with -all or ~all',
-      example: 'v=spf1 mx -all',
-      spec: SPF_SPEC,
-    };
-  }
-  if (spfRecords.length > 1) {
-    return {
-      pass: false,
-      record: spfRecords.join(' | '),
-      message: 'Multiple SPF records found',
-      recommendation: 'Consolidate into a single SPF record',
-      example: 'v=spf1 a mx -all',
-      spec: SPF_SPEC,
-    };
-  }
-  const record = spfRecords[0];
-  const policy = record.match(/\s([+-]?all)/)?.[1] || '';
-  let recommendation = '';
-  if (policy === '~all') {
-    recommendation = 'Consider using -all for strict enforcement';
-  } else if (policy !== '-all') {
-    recommendation = 'SPF record should end with -all or ~all';
-  }
-  const pass = policy === '-all' || policy === '~all';
-  return {
-    pass,
-    record,
-    policy,
-    recommendation,
-    example: pass ? undefined : 'v=spf1 mx -all',
-    spec: SPF_SPEC,
-  };
-}
-
 const DKIM_SPEC = 'https://datatracker.ietf.org/doc/html/rfc6376';
 
 function parseDkim(records: string[]) {
@@ -100,7 +57,8 @@ function parseDkim(records: string[]) {
       spec: DKIM_SPEC,
     };
   }
-  if (!record.includes('p=')) {
+  const key = record.match(/p=([^;]+)/)?.[1];
+  if (!key) {
     return {
       pass: false,
       record,
@@ -110,7 +68,28 @@ function parseDkim(records: string[]) {
       spec: DKIM_SPEC,
     };
   }
-  return { pass: true, record, spec: DKIM_SPEC };
+  let bits = 0;
+  try {
+    bits = Buffer.from(key, 'base64').length * 8;
+  } catch {
+    return {
+      pass: false,
+      record,
+      message: 'Invalid base64 in DKIM p= key',
+      recommendation: 'Ensure the p= value is a valid base64-encoded key',
+      spec: DKIM_SPEC,
+    };
+  }
+  if (bits < 1024) {
+    return {
+      pass: false,
+      record,
+      message: `DKIM key too short (${bits} bits)`,
+      recommendation: 'Use a key of at least 1024 bits',
+      spec: DKIM_SPEC,
+    };
+  }
+  return { pass: true, record, bits, spec: DKIM_SPEC };
 }
 
 const DMARC_SPEC = 'https://datatracker.ietf.org/doc/html/rfc7489';
@@ -167,6 +146,86 @@ function parseDmarc(records: string[]) {
   };
 }
 
+const MTA_STS_SPEC = 'https://datatracker.ietf.org/doc/html/rfc8461';
+
+function parseMtaSts(records: string[]) {
+  const record = records.find((r) => r.toLowerCase().startsWith('v=stsv1'));
+  if (!record) {
+    return {
+      pass: false,
+      message: 'No MTA-STS record found',
+      recommendation: 'Add TXT record at _mta-sts with v=STSv1; id=...',
+      example: 'v=STSv1; id=20220101T000000Z',
+      spec: MTA_STS_SPEC,
+    };
+  }
+  if (!/id=/i.test(record)) {
+    return {
+      pass: false,
+      record,
+      message: 'MTA-STS record missing id=',
+      recommendation: 'Include id= tag for policy versioning',
+      example: 'v=STSv1; id=20220101T000000Z',
+      spec: MTA_STS_SPEC,
+    };
+  }
+  return { pass: true, record, spec: MTA_STS_SPEC };
+}
+
+const TLS_RPT_SPEC = 'https://datatracker.ietf.org/doc/html/rfc8460';
+
+function parseTlsRpt(records: string[]) {
+  const record = records.find((r) => r.toLowerCase().startsWith('v=tlsrptv1'));
+  if (!record) {
+    return {
+      pass: false,
+      message: 'No TLS-RPT record found',
+      recommendation:
+        'Add TXT record at _smtp._tls with v=TLSRPTv1; rua=mailto:postmaster@domain.com',
+      example: 'v=TLSRPTv1; rua=mailto:postmaster@domain.com',
+      spec: TLS_RPT_SPEC,
+    };
+  }
+  if (!/rua=/i.test(record)) {
+    return {
+      pass: false,
+      record,
+      message: 'TLS-RPT record missing rua=',
+      recommendation: 'Specify rua=mailto: address for reports',
+      example: 'v=TLSRPTv1; rua=mailto:postmaster@domain.com',
+      spec: TLS_RPT_SPEC,
+    };
+  }
+  return { pass: true, record, spec: TLS_RPT_SPEC };
+}
+
+const BIMI_SPEC = 'https://datatracker.ietf.org/doc/html/draft-blank-ietf-bimi-02';
+
+function parseBimi(records: string[]) {
+  const record = records.find((r) => r.toLowerCase().startsWith('v=bimi1'));
+  if (!record) {
+    return {
+      pass: false,
+      message: 'No BIMI record found',
+      recommendation:
+        'Add TXT record at default._bimi with v=BIMI1; l=https://logo.svg; a=https://vmc.pem',
+      example: 'v=BIMI1; l=https://example.com/logo.svg; a=https://example.com/vmc.pem',
+      spec: BIMI_SPEC,
+    };
+  }
+  if (!/l=/i.test(record)) {
+    return {
+      pass: false,
+      record,
+      message: 'BIMI record missing l= logo URL',
+      recommendation: 'Specify l= URL to SVG logo',
+      example: 'v=BIMI1; l=https://example.com/logo.svg; a=https://example.com/vmc.pem',
+      spec: BIMI_SPEC,
+    };
+  }
+  return { pass: true, record, spec: BIMI_SPEC };
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -177,23 +236,31 @@ export default async function handler(
     return;
   }
   try {
-    const spfRecords = await lookupTxt(domain);
     const dmarcRecords = await lookupTxt(`_dmarc.${domain}`);
+    const mtaStsRecords = await lookupTxt(`_mta-sts.${domain}`);
+    const tlsRptRecords = await lookupTxt(`_smtp._tls.${domain}`);
+    const bimiRecords = await lookupTxt(`default._bimi.${domain}`);
     let dkimRecords: string[] = [];
     if (typeof selector === 'string' && selector) {
       dkimRecords = await lookupTxt(`${selector}._domainkey.${domain}`);
+    } else {
+      dkimRecords = await lookupTxt(`default._domainkey.${domain}`).catch(() => []);
     }
     res.status(200).json({
-      spf: parseSpf(spfRecords),
-      dkim: selector
-        ? parseDkim(dkimRecords)
-        : {
-            pass: false,
-            message: 'No selector provided',
-            recommendation: 'Provide a DKIM selector to check the record',
-            spec: DKIM_SPEC,
-          },
+      dkim:
+        dkimRecords.length > 0
+          ? parseDkim(dkimRecords)
+          : {
+              pass: false,
+              message: 'No DKIM record found',
+              recommendation: 'Publish a DKIM record or specify a selector',
+              example: 'v=DKIM1; k=rsa; p=base64publickey',
+              spec: DKIM_SPEC,
+            },
       dmarc: parseDmarc(dmarcRecords),
+      mtaSts: parseMtaSts(mtaStsRecords),
+      tlsRpt: parseTlsRpt(tlsRptRecords),
+      bimi: parseBimi(bimiRecords),
     });
   } catch (e: any) {
     res.status(500).json({ error: e.message || 'Lookup failed' });

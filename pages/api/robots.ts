@@ -3,11 +3,14 @@ import { z } from 'zod';
 import { validateRequest } from '../../lib/validate';
 import { UserInputError, withErrorHandler } from '../../lib/errors';
 import { fetchRobots, RobotsData } from '../../lib/robots';
+
 import { XMLParser } from 'fast-xml-parser';
 
 interface SitemapEntry {
   loc: string;
   lastmod?: string;
+  depth: number;
+  status?: number;
 }
 
 interface RuleInfo {
@@ -22,6 +25,7 @@ interface RobotsResponse {
   unsupported: string[];
   profiles: Record<string, RuleInfo[]>;
   missingRobots?: boolean;
+  robotsUrl: string;
 }
 
 export const config = {
@@ -110,6 +114,7 @@ export default withErrorHandler(async function handler(
     unsupported: robots.unsupported,
     profiles,
     missingRobots: robots.missing || undefined,
+
   });
 });
 

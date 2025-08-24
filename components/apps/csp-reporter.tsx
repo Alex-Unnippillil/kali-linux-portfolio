@@ -24,6 +24,10 @@ const CspReporter: React.FC = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [top, setTop] = useState<Record<string, TopOffender[]>>({});
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  const [policy, setPolicy] = useState('');
+  const [simResult, setSimResult] = useState<{ directive: string; uri: string }[] | null>(
+    null,
+  );
 
   const fetchReports = () => {
     fetch('/api/csp-reporter')
@@ -73,6 +77,16 @@ document.addEventListener('securitypolicyviolation', function(e){
 <script src="https://example.com/evil.js"></script>
 </body>
 </html>`;
+
+  const runSimulation = () => {
+    if (!policy.trim()) return;
+    fetch(`/api/csp-reporter?policy=${encodeURIComponent(policy)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setSimResult(data.simulate?.blocked || []);
+      })
+      .catch(() => {});
+  };
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
@@ -137,6 +151,38 @@ document.addEventListener('securitypolicyviolation', function(e){
       ) : (
         <p className="text-gray-400 text-sm">No data</p>
       )}
+
+      <div className="mt-6">
+        <h2 className="mb-2 text-lg">Policy simulation</h2>
+        <textarea
+          value={policy}
+          onChange={(e) => setPolicy(e.target.value)}
+          className="w-full h-24 p-2 text-black"
+          placeholder="default-src 'self';"
+        />
+        <button
+          type="button"
+          onClick={runSimulation}
+          className="mt-2 px-3 py-1 bg-blue-600 rounded"
+        >
+          Simulate
+        </button>
+        {simResult && (
+          simResult.length === 0 ? (
+            <p className="mt-2 text-green-500 text-sm">
+              Policy allows all recorded requests; safe to enforce.
+            </p>
+          ) : (
+            <ul className="mt-2 list-disc list-inside text-sm text-red-400">
+              {simResult.map((b, i) => (
+                <li key={i} className="break-all">
+                  {b.directive} would block {b.uri}
+                </li>
+              ))}
+            </ul>
+          )
+        )}
+      </div>
 
       <h2 className="mt-6 mb-2 text-lg">Received reports</h2>
       <table className="w-full text-sm">
