@@ -1,4 +1,5 @@
 import { validateSolution, findHint, getPuzzleBySeed, generateLinePatterns, lineToClues } from '@components/apps/nonogramUtils';
+import { solve, type Cell } from '@apps/nonogram/solver';
 
 describe('nonogram utilities', () => {
   test('validateSolution confirms grid matches clues', () => {
@@ -51,5 +52,16 @@ describe('nonogram utilities', () => {
     const a = getPuzzleBySeed('2024-01-01');
     const b = getPuzzleBySeed('2024-01-01');
     expect(a).toEqual(b);
+  });
+
+  test('solver completes puzzle', () => {
+    const { rows, cols } = getPuzzleBySeed('0');
+    const puzzle = { width: cols.length, height: rows.length, rows, cols };
+    const grid: Cell[][] = Array.from({ length: puzzle.height }, () =>
+      Array(puzzle.width).fill(0)
+    );
+    const { grid: solved, contradiction } = solve(grid, puzzle);
+    expect(contradiction).toBe(false);
+    expect(validateSolution(solved, rows, cols)).toBe(true);
   });
 });

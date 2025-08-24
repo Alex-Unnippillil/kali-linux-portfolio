@@ -20,6 +20,7 @@ type ApiResponse = {
   length: number;
   flattenedSpfRecord: string;
   split: { root: string; parts: Record<string, string> };
+  redirect?: { root: string; domain: string; record: string } | null;
   lookups: number;
   warnings: string[];
   lookupLog: { domain: string; type: string; count: number }[];
@@ -31,6 +32,25 @@ const SpfFlattener: React.FC = () => {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const exportTxt = () => {
+    if (!data) return;
+    const lines: string[] = [`${domain} TXT "${data.flattenedSpfRecord}"`];
+    Object.entries(data.split.parts).forEach(([k, v]) => {
+      lines.push(`${k} TXT "${v}"`);
+    });
+    if (data.redirect) {
+      lines.push(`${domain} TXT "${data.redirect.root}"`);
+      lines.push(`${data.redirect.domain} TXT "${data.redirect.record}"`);
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${domain}-spf.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const lookup = async () => {
     if (!domain) return;
@@ -128,6 +148,13 @@ const SpfFlattener: React.FC = () => {
           <div className="mt-2 break-words">
             <div className="font-semibold">Flattened SPF</div>
             <div className="text-xs">{data.flattenedSpfRecord}</div>
+            <button
+              type="button"
+              onClick={exportTxt}
+              className="mt-1 px-2 py-0.5 bg-green-600 rounded text-xs"
+            >
+              Export TXT
+            </button>
           </div>
           {data.chain.record && (
             <div className="mt-2 break-words">
@@ -146,6 +173,15 @@ const SpfFlattener: React.FC = () => {
                   {k}: {v}
                 </div>
               ))}
+            </div>
+          )}
+          {data.redirect && (
+            <div className="mt-2 break-words">
+              <div className="font-semibold">Redirect Suggestion</div>
+              <div className="text-xs">{data.redirect.root}</div>
+              <div className="text-xs">
+                {data.redirect.domain}: {data.redirect.record}
+              </div>
             </div>
           )}
           <div className="mt-4">Flattened length: {data.length}</div>

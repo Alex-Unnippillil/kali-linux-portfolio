@@ -7,14 +7,18 @@ import {
   moveWasteToTableau,
   moveToFoundation,
   autoMove,
+  autoMoveHint,
   autoComplete,
   valueToString,
   GameState,
   Card,
+  suits,
 } from './engine';
 
-const renderCard = (card: Card) => (
-  <div className="w-16 h-24 rounded border border-black bg-white flex items-center justify-center transition-transform duration-300" >
+const renderCard = (card: Card, highlight = false) => (
+  <div
+    className={`w-16 h-24 rounded border border-black bg-white flex items-center justify-center transition-transform duration-300 ${highlight ? 'ring-2 ring-yellow-400' : ''}`}
+  >
     <span className={card.color === 'red' ? 'text-red-600' : ''}>
       {valueToString(card.value)}{card.suit}
     </span>
@@ -34,6 +38,7 @@ const Solitaire = () => {
   const [drag, setDrag] = useState<{ source: 'tableau' | 'waste'; pile: number; index: number } | null>(null);
   const [won, setWon] = useState(false);
   const [time, setTime] = useState(0);
+  const [hint, setHint] = useState<ReturnType<typeof autoMoveHint> | null>(null);
   const timer = useRef<NodeJS.Timeout | null>(null);
 
     const start = useCallback(
@@ -76,6 +81,7 @@ const Solitaire = () => {
       setWon(true);
       ReactGA.event({ category: 'Solitaire', action: 'win' });
     }
+    setHint(autoMoveHint(game));
   }, [game]);
 
   const update = (fn: (g: GameState) => GameState) =>
@@ -198,17 +204,41 @@ const Solitaire = () => {
         </button>
       </div>
       <div className="flex space-x-4 mb-4">
-        <div className="w-16 h-24" onClick={draw}>
+        <div
+          className="w-16 h-24"
+          onClick={draw}
+          tabIndex={0}
+          role="button"
+          aria-label="Stock pile"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') draw();
+          }}
+        >
           {game.stock.length ? renderFaceDown() : <div />}
         </div>
-        <div className="w-16 h-24" onDragOver={(e) => e.preventDefault()}>
+        <div
+          className="w-16 h-24"
+          onDragOver={(e) => e.preventDefault()}
+          tabIndex={0}
+          role="button"
+          aria-label="Waste pile"
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && game.waste.length)
+              handleDoubleClick('waste', 0);
+          }}
+        >
           {game.waste.length ? (
             <div
               draggable
               onDoubleClick={() => handleDoubleClick('waste', 0)}
-              onDragStart={() => handleDragStart('waste', -1, game.waste.length - 1)}
+              onDragStart={() =>
+                handleDragStart('waste', -1, game.waste.length - 1)
+              }
             >
-              {renderCard(game.waste[game.waste.length - 1])}
+              {renderCard(
+                game.waste[game.waste.length - 1],
+                hint?.source === 'waste'
+              )}
             </div>
           ) : (
             <div className="w-16 h-24" />
@@ -220,8 +250,13 @@ const Solitaire = () => {
             className="w-16 h-24"
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToFoundation(i)}
+            tabIndex={0}
+            role="button"
+            aria-label={`Foundation ${suits[i]}`}
           >
-            {pile.length ? renderCard(pile[pile.length - 1]) : (
+            {pile.length ? (
+              renderCard(pile[pile.length - 1])
+            ) : (
               <div className="w-16 h-24 border border-dashed border-white rounded" />
             )}
           </div>
@@ -234,6 +269,13 @@ const Solitaire = () => {
             className="relative w-16 h-96 border border-black"
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToTableau(i)}
+            tabIndex={0}
+            role="button"
+            aria-label={`Tableau ${i + 1}`}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ')
+                handleDoubleClick('tableau', i);
+            }}
           >
             {pile.map((card, idx) => (
               <div
@@ -244,7 +286,15 @@ const Solitaire = () => {
                 onDoubleClick={() => handleDoubleClick('tableau', i)}
                 onDragStart={() => handleDragStart('tableau', i, idx)}
               >
-                {card.faceUp ? renderCard(card) : renderFaceDown()}
+                {card.faceUp
+                  ? renderCard(
+                      card,
+                      hint &&
+                        hint.source === 'tableau' &&
+                        hint.index === i &&
+                        idx === pile.length - 1,
+                    )
+                  : renderFaceDown()}
               </div>
             ))}
           </div>

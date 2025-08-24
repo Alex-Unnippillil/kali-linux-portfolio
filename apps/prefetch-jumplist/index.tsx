@@ -11,6 +11,7 @@ interface TimelineEvent {
     target?: string;
     created?: number;
   };
+  anomaly?: boolean;
   selected?: boolean;
 }
 
@@ -25,7 +26,10 @@ const PrefetchJumpList: React.FC = () => {
     const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
     workerRef.current = worker;
     worker.onmessage = (e) => {
-      const { events: evts, error: err } = e.data as { events?: Omit<TimelineEvent, 'id' | 'selected'>[]; error?: string };
+      const { events: evts, error: err } = e.data as {
+        events?: Omit<TimelineEvent, 'id' | 'selected'>[];
+        error?: string;
+      };
       if (err) {
         setError(`${err}. See docs/forensics-samples.md for sample files.`);
       } else if (evts) {
@@ -63,6 +67,7 @@ const PrefetchJumpList: React.FC = () => {
         runCount: ev.runCount ?? '',
         lnkTarget: ev.lnk?.target ?? '',
         lnkCreated: ev.lnk?.created ? new Date(ev.lnk.created).toISOString() : '',
+        anomaly: ev.anomaly ? 'yes' : '',
       }));
     const csv = Papa.unparse(rows);
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -100,7 +105,10 @@ const PrefetchJumpList: React.FC = () => {
             </thead>
             <tbody>
               {sorted.map((ev) => (
-                <tr key={ev.id} className="border-b border-gray-700">
+                <tr
+                  key={ev.id}
+                  className={`border-b border-gray-700 ${ev.anomaly ? 'bg-red-900 bg-opacity-40' : ''}`}
+                >
                   <td>
                     <input
                       type="checkbox"

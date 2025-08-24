@@ -1,5 +1,5 @@
 import BadWords from 'bad-words';
-import curated from '../../public/wordlists/curated.json';
+import original from '../../public/wordlists/original.json';
 
 const medicalAllow = ['heart', 'ulcer', 'nerve', 'tumor', 'virus'];
 const filter = new BadWords();
@@ -8,8 +8,8 @@ filter.removeWords(...medicalAllow);
 const levels = ['easy', 'medium', 'hard'] as const;
 export type Difficulty = typeof levels[number];
 
-type Curated = Record<Difficulty, string[]>;
-const data = curated as Curated;
+type Original = Record<Difficulty, string[]>;
+const data = original as Original;
 
 const filtered = levels.reduce((acc, level) => {
   acc[level] = data[level].filter((w) => !filter.isProfane(w));

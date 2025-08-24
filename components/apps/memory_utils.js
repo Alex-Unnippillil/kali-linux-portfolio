@@ -67,8 +67,16 @@ export const THEME_PACKS = {
     '\u{1F989}', // owl
     '\u{1F98B}', // butterfly
   ],
+  photos: Array.from(
+    { length: 30 },
+    (_, i) => `https://picsum.photos/seed/memory${i}/100`
+  ),
   'high-contrast': Array.from({ length: 30 }, (_, i) => String(i + 1)),
 };
+
+// Delays used by the game. Exported for tests and component reuse.
+export const MATCH_PAUSE = 600;
+export const FLIP_BACK_DELAY = 200;
 
 // Fisher–Yates shuffle implementation.
 export function fisherYatesShuffle(array) {

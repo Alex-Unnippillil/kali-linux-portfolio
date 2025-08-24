@@ -83,6 +83,15 @@ function hamming(a: string, b: string): number {
   return dist;
 }
 
+function diffBits(a: string, b: string): number[] {
+  const x = BigInt('0x' + a) ^ BigInt('0x' + b);
+  const bits: number[] = [];
+  for (let i = 63; i >= 0; i -= 1) {
+    bits.push(Number((x >> BigInt(i)) & 1n));
+  }
+  return bits;
+}
+
 async function diffOverlay(fileA: File, fileB: File) {
   const size = 256;
   const a = await getImageData(fileA, size, size);
@@ -126,8 +135,14 @@ self.onmessage = async (e: MessageEvent<{ fileA: File; fileB: File }>) => {
       pHash: hamming(hashesA.pHash, hashesB.pHash),
       simHash: hamming(hashesA.simHash, hashesB.simHash),
     };
+    const heatmaps = {
+      aHash: diffBits(hashesA.aHash, hashesB.aHash),
+      dHash: diffBits(hashesA.dHash, hashesB.dHash),
+      pHash: diffBits(hashesA.pHash, hashesB.pHash),
+      simHash: diffBits(hashesA.simHash, hashesB.simHash),
+    };
     // @ts-ignore
-    self.postMessage({ hashesA, hashesB, distances, diff }, [diff.data]);
+    self.postMessage({ hashesA, hashesB, distances, diff, heatmaps }, [diff.data]);
   } catch (err) {
     // @ts-ignore
     self.postMessage({ error: (err as Error).message });

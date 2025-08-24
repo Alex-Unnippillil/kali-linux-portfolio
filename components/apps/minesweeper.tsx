@@ -25,7 +25,9 @@ const defaultSettings = { width: 8, height: 8, mines: 10 };
 
 const Minesweeper: React.FC = () => {
   const [settings, setSettings] = useState(defaultSettings);
-  const [game, setGame] = useState<MinesweeperGame | null>(null);
+  const [game, setGame] = useState<MinesweeperGame | null>(
+    createGame(defaultSettings.width, defaultSettings.height, defaultSettings.mines),
+  );
   const [status, setStatus] = useState<'ready' | 'playing' | 'won' | 'lost'>('ready');
   const [elapsed, setElapsed] = useState(0);
   const [start, setStart] = useState<number | null>(null);
@@ -33,6 +35,9 @@ const Minesweeper: React.FC = () => {
   const [selected, setSelected] = useState({ x: 0, y: 0 });
   const [dark, setDark] = useState(false);
   const [scores, setScores] = useState<{ name: string; time: number }[]>([]);
+  const [showProbs, setShowProbs] = useState(false);
+  const [probabilities, setProbabilities] = useState<number[]>([]);
+  const workerRef = useRef<Worker>();
   const boardRef = useRef<HTMLDivElement>(null);
 
   const flagged = React.useMemo(() => {
@@ -88,25 +93,44 @@ const Minesweeper: React.FC = () => {
     localStorage.setItem('minesweeper-save', JSON.stringify(data));
   }, [game, elapsed, status, settings]);
 
-  const startGame = (x: number, y: number) => {
-    const newGame = createGame(settings.width, settings.height, settings.mines, x, y);
-    reveal(newGame, x, y);
-    setGame(newGame);
-    setStatus('playing');
-    setStart(Date.now());
-  };
+  useEffect(() => {
+    if (!showProbs) {
+      workerRef.current?.terminate();
+      workerRef.current = undefined;
+      setProbabilities([]);
+      return;
+    }
+    workerRef.current = new Worker(
+      new URL('./minesweeper-prob.worker.ts', import.meta.url),
+      { type: 'module' },
+    );
+    const w = workerRef.current;
+    w.onmessage = (e) => setProbabilities(e.data.probabilities);
+    return () => w.terminate();
+  }, [showProbs]);
+
+  useEffect(() => {
+    if (showProbs && game && workerRef.current) {
+      workerRef.current.postMessage({ game: serialize(game) });
+    }
+  }, [game, showProbs]);
 
   const handleReveal = (x: number, y: number) => {
     if (status === 'lost' || status === 'won') return;
-    if (!game) {
-      startGame(x, y);
-      return;
+    let g = game;
+    if (!g) {
+      g = createGame(settings.width, settings.height, settings.mines);
+      setGame(g);
     }
-    const hit = reveal(game, x, y);
-    setGame({ ...game });
+    if (status !== 'playing') {
+      setStatus('playing');
+      setStart(Date.now());
+    }
+    const hit = reveal(g, x, y);
+    setGame({ ...g });
     if (hit) {
       setStatus('lost');
-    } else if (isComplete(game)) {
+    } else if (isComplete(g)) {
       setStatus('won');
       saveScore(elapsed);
     }
@@ -159,7 +183,8 @@ const Minesweeper: React.FC = () => {
   };
 
   const newGame = () => {
-    setGame(null);
+    const g = createGame(settings.width, settings.height, settings.mines);
+    setGame(g);
     setStatus('ready');
     setElapsed(0);
     setStart(null);
@@ -237,6 +262,9 @@ const Minesweeper: React.FC = () => {
           <button className="px-2 py-1 border" onClick={() => setDark((d) => !d)}>
             Toggle Theme
           </button>
+          <button className="px-2 py-1 border" onClick={() => setShowProbs((p) => !p)}>
+            {showProbs ? 'Hide Hints' : 'Show Hints'}
+          </button>
           <span>Mines left: {settings.mines - flagged}</span>
           <span>Time: {elapsed.toFixed(1)}</span>
         </div>
@@ -252,6 +280,7 @@ const Minesweeper: React.FC = () => {
               const revealed = game && isRevealed(game, x, y);
               const flag = game && isFlagged(game, x, y);
               const adj = game ? adjacent(game, x, y) : 0;
+              const idx = x * settings.width + y;
               const sel = selected.x === x && selected.y === y;
               return (
                 <div
@@ -267,6 +296,11 @@ const Minesweeper: React.FC = () => {
                   {revealed && !isMine(game!, x, y) && adj > 0 && adj}
                   {!revealed && flag && '🚩'}
                   {revealed && isMine(game!, x, y) && '💣'}
+                  {!revealed && !flag && showProbs && probabilities[idx] != null && (
+                    <span className="text-[0.6rem] text-blue-800">
+                      {(probabilities[idx] * 100).toFixed(0)}
+                    </span>
+                  )}
                 </div>
               );
             }),

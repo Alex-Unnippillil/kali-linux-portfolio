@@ -42,7 +42,7 @@ function isDeadlock(state: SimpleState, pos: Position): boolean {
   return (up && left) || (up && right) || (down && left) || (down && right);
 }
 
-interface SimpleState {
+export interface SimpleState {
   width: number;
   height: number;
   walls: Set<string>;
@@ -103,7 +103,7 @@ interface Node {
   path: string[];
 }
 
-function solve(start: SimpleState): string[] {
+export function solve(start: SimpleState): string[] {
   const open: Node[] = [{ state: start, g: 0, f: heuristic(start), path: [] }];
   const visited = new Map<string, number>();
   visited.set(stateKey(start), 0);
@@ -139,5 +139,3 @@ ctx.onmessage = (e: MessageEvent<SolveRequest>) => {
   const res: SolveResponse = { moves };
   ctx.postMessage(res);
 };
-
-export {};

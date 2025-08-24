@@ -5,6 +5,8 @@ import * as runtime from 'react/jsx-runtime';
 import rehypeSanitize from 'rehype-sanitize';
 import { FixedSizeList as List } from 'react-window';
 import Papa from 'papaparse';
+import mermaid from 'mermaid';
+import DOMPurify from 'dompurify';
 
 type FileType = 'markdown' | 'mdx' | 'json' | 'csv' | 'pdf' | 'text' | '';
 
@@ -18,18 +20,42 @@ const ReportViewer: React.FC = () => {
   const listRef = useRef<List>(null);
   const [csvData, setCsvData] = useState<string[][]>([]);
   const [pdfUrl, setPdfUrl] = useState('');
+  const [pdfPages, setPdfPages] = useState(0);
   const [rawText, setRawText] = useState('');
   const [search, setSearch] = useState('');
   const contentRef = useRef<HTMLDivElement>(null);
   const [MdxContent, setMdxContent] = useState<React.ComponentType<any> | null>(null);
   const [initialScroll, setInitialScroll] = useState<number | null>(null);
+  const [safeMode, setSafeMode] = useState(false);
+  const pdfDocRef = useRef<any>(null);
+
+  const Mermaid = ({ chart }: { chart: string }) => {
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+      const id = `mermaid-${Math.random().toString(36).slice(2)}`;
+      mermaid.initialize({ startOnLoad: false });
+      mermaid
+        .render(id, chart)
+        .then(({ svg }) => {
+          if (ref.current) {
+            ref.current.innerHTML = DOMPurify.sanitize(svg, {
+              USE_PROFILES: { svg: true, svgFilters: true },
+            });
+          }
+        })
+        .catch(() => {});
+    }, [chart]);
+    return <div ref={ref} />;
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
     const s = params.get('scroll');
+     const safe = params.get('safe');
     if (q) setSearch(q);
     if (s) setInitialScroll(parseInt(s, 10));
+     if (safe === '1') setSafeMode(true);
   }, []);
 
   useEffect(() => {
@@ -37,6 +63,17 @@ const ReportViewer: React.FC = () => {
       contentRef.current.scrollTo(0, initialScroll);
     }
   }, [initialScroll, fileType]);
+
+  useEffect(() => {
+    if (!safeMode) return;
+    const meta = document.createElement('meta');
+    meta.httpEquiv = 'Content-Security-Policy';
+    meta.content = "sandbox allow-scripts";
+    document.head.appendChild(meta);
+    return () => {
+      document.head.removeChild(meta);
+    };
+  }, [safeMode]);
 
   const sniff = (file: File, text: string): FileType => {
     const name = file.name.toLowerCase();
@@ -145,6 +182,25 @@ const ReportViewer: React.FC = () => {
   }, [search, markdown, fileType]);
 
   useEffect(() => {
+    if (fileType !== 'pdf' || !pdfUrl) return;
+    let cancelled = false;
+    (async () => {
+      const pdfjsLib = await import('pdfjs-dist/build/pdf');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+      const loadingTask = pdfjsLib.getDocument(pdfUrl);
+      const pdf = await loadingTask.promise;
+      if (cancelled) return;
+      pdfDocRef.current = pdf;
+      setPdfPages(pdf.numPages);
+    })();
+    return () => {
+      cancelled = true;
+      pdfDocRef.current = null;
+      setPdfPages(0);
+    };
+  }, [fileType, pdfUrl]);
+
+  useEffect(() => {
     if (fileType !== 'mdx') return;
     let cancelled = false;
     (async () => {
@@ -163,6 +219,8 @@ const ReportViewer: React.FC = () => {
       const params = new URLSearchParams(window.location.search);
       if (search) params.set('q', search);
       else params.delete('q');
+      if (safeMode) params.set('safe', '1');
+      else params.delete('safe');
       if (el.scrollTop) params.set('scroll', String(el.scrollTop));
       else params.delete('scroll');
       const hash = window.location.hash;
@@ -173,7 +231,7 @@ const ReportViewer: React.FC = () => {
     update();
     el.addEventListener('scroll', update);
     return () => el.removeEventListener('scroll', update);
-  }, [search]);
+  }, [search, safeMode]);
 
   const filteredCsv = useMemo(() => {
     if (!search) return csvData;
@@ -232,6 +290,17 @@ const ReportViewer: React.FC = () => {
     p: ({ node, ...props }) => <p {...props}>{highlight(String(props.children))}</p>,
     li: ({ node, ...props }) => <li {...props}>{highlight(String(props.children))}</li>,
     span: ({ node, ...props }) => <span {...props}>{highlight(String(props.children))}</span>,
+    code: ({ node, inline, className, children, ...props }) => {
+      const match = /language-(\w+)/.exec(className || '');
+      if (!inline && match && match[1] === 'mermaid') {
+        return <Mermaid chart={String(children)} />;
+      }
+      return (
+        <code className={className} {...props}>
+          {String(children)}
+        </code>
+      );
+    },
   };
 
   const jsonRenderer = () => (
@@ -263,6 +332,14 @@ const ReportViewer: React.FC = () => {
             className="text-black p-1"
           />
         )}
+        <label className="flex items-center space-x-1">
+          <input
+            type="checkbox"
+            checked={safeMode}
+            onChange={(e) => setSafeMode(e.target.checked)}
+          />
+          <span className="text-sm">Safe Render</span>
+        </label>
       </div>
       <div className="flex flex-1 overflow-hidden">
         <Outline />
@@ -295,14 +372,27 @@ const ReportViewer: React.FC = () => {
             </table>
           )}
           {fileType === 'pdf' && pdfUrl && (
-            <iframe
-              title="pdf"
-              src={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(
-                pdfUrl
-              )}`}
-              className="w-full h-full"
-              sandbox="allow-scripts allow-same-origin allow-downloads"
-            />
+            <div className="space-y-4">
+              {Array.from({ length: pdfPages }, (_, i) => (
+                <canvas
+                  key={i}
+                  ref={(el) => {
+                    if (!el) return;
+                    (async () => {
+                      const pdf = pdfDocRef.current;
+                      if (!pdf) return;
+                      const page = await pdf.getPage(i + 1);
+                      const viewport = page.getViewport({ scale: 1.5 });
+                      const ctx = el.getContext('2d');
+                      el.height = viewport.height;
+                      el.width = viewport.width;
+                      await page.render({ canvasContext: ctx!, viewport }).promise;
+                    })();
+                  }}
+                  className="w-full"
+                />
+              ))}
+            </div>
           )}
           {fileType === 'text' && (
             <pre className="whitespace-pre-wrap font-mono text-sm">{highlight(rawText)}</pre>

@@ -6,6 +6,10 @@ interface SitemapEntry {
   lastmod?: string;
   depth: number;
   status?: number;
+  priority?: number;
+  types?: string[];
+  freshness?: number;
+  searchConsole?: string;
 }
 
 interface RuleInfo {
@@ -21,6 +25,7 @@ interface RobotsData {
   profiles: Record<string, RuleInfo[]>;
   missingRobots?: boolean;
   robotsUrl: string;
+  errorCategories: Record<string, number>;
 }
 
 const RobotsSitemap: React.FC = () => {
@@ -75,6 +80,16 @@ const RobotsSitemap: React.FC = () => {
   const coverageGaps = useMemo(() => {
     if (!data) return [] as SitemapEntry[];
     return data.sitemapEntries.filter((e) => !e.status || e.status >= 400);
+  }, [data]);
+
+  const priorityFreshness = useMemo(() => {
+    if (!data) return [] as SitemapEntry[];
+    return data.sitemapEntries;
+  }, [data]);
+
+  const errorCategories = useMemo(() => {
+    if (!data) return [] as [string, number][];
+    return Object.entries(data.errorCategories);
   }, [data]);
 
   const maxCount = Math.max(0, ...heatmap.map((d) => d.count));
@@ -198,6 +213,37 @@ const RobotsSitemap: React.FC = () => {
             )}
           </div>
           <div>
+            <h2 className="font-bold mb-1">URL Priority & Freshness</h2>
+            {priorityFreshness.length ? (
+              <div className="flex flex-wrap gap-1">
+                {priorityFreshness.map((e, i) => {
+                  const priority = e.priority ?? 0;
+                  const color = `rgba(34,197,94,${priority})`;
+                  const age = e.freshness ?? Infinity;
+                  const border =
+                    age < 30
+                      ? 'border-green-400'
+                      : age < 90
+                      ? 'border-yellow-400'
+                      : 'border-red-400';
+                  return (
+                    <a
+                      key={i}
+                      href={e.searchConsole || e.loc}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={`${e.loc} (priority ${priority || 'n/a'}, ${age} days)`}
+                      className={`w-4 h-4 border ${border}`}
+                      style={{ backgroundColor: color }}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <div>No sitemap entries</div>
+            )}
+          </div>
+          <div>
             <h2 className="font-bold mb-1">Sitemap Treemap by Depth/Status</h2>
             {depthGroups.length ? (
               <div className="space-y-2">
@@ -229,6 +275,20 @@ const RobotsSitemap: React.FC = () => {
               Coverage gaps: {coverageGaps.length} URLs with non-200 status.
             </div>
           )}
+          <div>
+            <h2 className="font-bold mb-1">Error Categories</h2>
+            {errorCategories.length ? (
+              <ul className="list-disc ml-5 break-all">
+                {errorCategories.map(([code, count]) => (
+                  <li key={code}>
+                    {code}: {count}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div>None</div>
+            )}
+          </div>
         </div>
       )}
     </div>

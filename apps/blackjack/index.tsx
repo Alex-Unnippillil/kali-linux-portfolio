@@ -68,6 +68,7 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
   const [preset, setPreset] = useState<'custom' | 'vegas' | 'atlantic'>('custom');
   const [showCount, setShowCount] = useState(false);
   const [showStrategy, setShowStrategy] = useState(false);
+  const strategyKey = useMemo(() => `blackjack:strategy:${userId ?? 'guest'}`, [userId]);
   const [showPractice, setShowPractice] = useState(false);
   const [deck, setDeck] = useState<Card[]>(() => shuffle(createDeck(1)));
   const [dealer, setDealer] = useState<Card[]>([]);
@@ -79,6 +80,15 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
   const [history, setHistory] = useState<any[]>([]);
   const [betting, setBetting] = useState(false);
   const trueCount = useMemo(() => runningCount / Math.max(1, deck.length / 52), [runningCount, deck.length]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(strategyKey);
+    if (stored !== null) setShowStrategy(stored === 'true');
+  }, [strategyKey]);
+
+  useEffect(() => {
+    localStorage.setItem(strategyKey, String(showStrategy));
+  }, [showStrategy, strategyKey]);
 
   useEffect(() => {
     if (preset === 'vegas') {
@@ -249,6 +259,20 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
     setTookInsurance(true);
   }, [bet, saveHistory]);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (playerHands.length === 0) return;
+      const k = e.key.toLowerCase();
+      if (k === 'h') hit();
+      else if (k === 's') stand();
+      else if (k === 'd' && canDouble) doubleDown();
+      else if (k === 'p' && canSplit) split();
+      else if (k === 'r' && canSurrender) surrender();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [hit, stand, doubleDown, split, surrender, playerHands, canDouble, canSplit, canSurrender]);
+
   const canUndo = history.length > 0;
   const undo = useCallback(() => {
     const prev = history[history.length - 1];
@@ -351,6 +375,21 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
         </label>
       </div>
       {showStrategy && strategy && <div className="mb-2">Strategy: {strategy}</div>}
+      <div className="mb-2" aria-label="Bet controls">
+        <div>Bet: {bet}</div>
+        <div className="space-x-1 mt-1">
+          {[5, 25, 100].map((v) => (
+            <button
+              key={v}
+              className="btn"
+              aria-label={`Set bet to ${v}`}
+              onClick={() => setBet(v)}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+      </div>
       {dealer.length > 0 && (
         <Dealer hand={dealer} hideHoleCard={playerHands.some((h) => !h.isFinished)} />
       )}

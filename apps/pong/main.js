@@ -18,16 +18,21 @@ let aiReaction = 200; // ms
 let lastAiUpdate = 0;
 
 // stats
-let stats = JSON.parse(localStorage.getItem('pongStats') || '{"wins":0,"losses":0,"games":0}');
+let stats = JSON.parse(
+  localStorage.getItem('pongStats') || '{"wins":0,"losses":0,"games":0}'
+);
 
 // inputs
 const keys = { up: false, down: false };
 const keys2 = { up: false, down: false };
+const inputBuffer = [];
 let humanOpponent = false;
 
 function handleKey(e, down) {
-  if (e.key === 'ArrowUp' || e.key === 'w') keys.up = down;
-  if (e.key === 'ArrowDown' || e.key === 's') keys.down = down;
+  if (e.key === 'ArrowUp' || e.key === 'w')
+    inputBuffer.push({ key: 'up', value: down });
+  if (e.key === 'ArrowDown' || e.key === 's')
+    inputBuffer.push({ key: 'down', value: down });
 }
 
 window.addEventListener('keydown', (e) => handleKey(e, true));
@@ -48,12 +53,16 @@ function pollGamepads() {
   const gp2 = pads[1];
   if (gp1) {
     const axis = gp1.axes[1];
-    if (axis < -0.2) keys.up = true; else if (axis > 0.2) keys.down = true; else keys.up = keys.down = false;
+    if (axis < -0.2) keys.up = true;
+    else if (axis > 0.2) keys.down = true;
+    else keys.up = keys.down = false;
   }
   if (gp2) {
     humanOpponent = true;
     const axis2 = gp2.axes[1];
-    if (axis2 < -0.2) keys2.up = true; else if (axis2 > 0.2) keys2.down = true; else keys2.up = keys2.down = false;
+    if (axis2 < -0.2) keys2.up = true;
+    else if (axis2 > 0.2) keys2.down = true;
+    else keys2.up = keys2.down = false;
   } else {
     humanOpponent = false;
     keys2.up = keys2.down = false;
@@ -69,11 +78,16 @@ function updateAI(dt) {
   let predictedY = ball.y + ball.vy * timeToReach;
   if (predictedY < 0 || predictedY > height) {
     const bounces = Math.floor(Math.abs(predictedY) / height);
-    predictedY = bounces % 2 === 0 ? Math.abs(predictedY) % height : height - (Math.abs(predictedY) % height);
+    predictedY =
+      bounces % 2 === 0
+        ? Math.abs(predictedY) % height
+        : height - (Math.abs(predictedY) % height);
   }
   const center = opponent.y + opponent.height / 2;
-  if (predictedY > center + 10) opponent.move(dt, 1);
-  else if (predictedY < center - 10) opponent.move(dt, -1);
+  let dir = 0;
+  if (predictedY > center + 10) dir = 1;
+  else if (predictedY < center - 10) dir = -1;
+  opponent.move(dt, dir);
   opponent.clamp(height);
 }
 
@@ -129,6 +143,21 @@ function resetRound(dir) {
 const fixedDt = 1 / 120;
 let lastTime = performance.now();
 let accumulator = 0;
+let shakeTime = 0;
+let particles = [];
+
+function spawnGoalEffects(x, y) {
+  shakeTime = 0.5;
+  for (let i = 0; i < 20; i++) {
+    particles.push({
+      x,
+      y,
+      vx: (Math.random() * 2 - 1) * 200,
+      vy: (Math.random() * 2 - 1) * 200,
+      life: 1,
+    });
+  }
+}
 
 function loop(now) {
   accumulator += (now - lastTime) / 1000;
@@ -136,13 +165,22 @@ function loop(now) {
 
   pollGamepads();
   while (accumulator >= fixedDt) {
-    if (keys.up) player.move(fixedDt, -1);
-    if (keys.down) player.move(fixedDt, 1);
+    while (inputBuffer.length) {
+      const evt = inputBuffer.shift();
+      keys[evt.key] = evt.value;
+    }
+
+    let dir = 0;
+    if (keys.up) dir -= 1;
+    if (keys.down) dir += 1;
+    player.move(fixedDt, dir);
     player.clamp(height);
 
     if (humanOpponent) {
-      if (keys2.up) opponent.move(fixedDt, -1);
-      if (keys2.down) opponent.move(fixedDt, 1);
+      let dir2 = 0;
+      if (keys2.up) dir2 -= 1;
+      if (keys2.down) dir2 += 1;
+      opponent.move(fixedDt, dir2);
       opponent.clamp(height);
     } else {
       updateAI(fixedDt);
@@ -159,21 +197,32 @@ function loop(now) {
 
     if (ball.x < 0) {
       oppScore++;
+      spawnGoalEffects(ball.x, ball.y);
       resetRound(1);
     } else if (ball.x > width) {
       playerScore++;
+      spawnGoalEffects(ball.x, ball.y);
       resetRound(-1);
     }
 
     if (playerScore >= 5 || oppScore >= 5) {
       stats.games++;
-      if (playerScore > oppScore) stats.wins++; else stats.losses++;
+      if (playerScore > oppScore) stats.wins++;
+      else stats.losses++;
       localStorage.setItem('pongStats', JSON.stringify(stats));
       playerScore = oppScore = 0;
-      resetRound(Math.random()>0.5?1:-1);
+      resetRound(Math.random() > 0.5 ? 1 : -1);
     }
 
     updateDifficulty();
+
+    particles = particles.filter((p) => {
+      p.x += p.vx * fixedDt;
+      p.y += p.vy * fixedDt;
+      p.life -= fixedDt;
+      return p.life > 0;
+    });
+    if (shakeTime > 0) shakeTime -= fixedDt;
     accumulator -= fixedDt;
   }
 
@@ -181,9 +230,23 @@ function loop(now) {
 
   ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, width, height);
+
+  ctx.save();
+  if (shakeTime > 0) {
+    const mag = shakeTime * 5;
+    ctx.translate((Math.random() * 2 - 1) * mag, (Math.random() * 2 - 1) * mag);
+  }
   player.draw(ctx);
   opponent.draw(ctx);
   ball.draw(ctx);
+  particles.forEach((p) => {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(p.x, p.y, 2, 2);
+  });
+  ctx.restore();
+  ctx.globalAlpha = 1;
+
   drawPowerUp(ctx, power);
   ctx.fillStyle = 'white';
   ctx.fillText(`${playerScore} : ${oppScore}`, width / 2 - 10, 20);

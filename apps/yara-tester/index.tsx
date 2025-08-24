@@ -37,6 +37,7 @@ interface MatchDetail {
   tags?: string[];
   meta?: Record<string, string>;
   matches: { identifier: string; data: string; offset: number; length: number }[];
+  file?: string;
 }
 
 interface CompileError {
@@ -70,6 +71,8 @@ const YaraTester: React.FC = () => {
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState<number | null>(null);
+  const [fileTimes, setFileTimes] = useState<{ name: string; elapsed: number }[]>([]);
+  const [heatmap, setHeatmap] = useState<Record<string, number>>({});
 
   const createWorker = () => {
     const w = new Worker(new URL('./worker.ts', import.meta.url));
@@ -77,9 +80,20 @@ const YaraTester: React.FC = () => {
       const data = ev.data as any;
       if (data.type === 'lintResult') {
         setCompileErrors(data.errors);
+      } else if (data.type === 'match') {
+        const m: MatchDetail = data.match;
+        if (data.file) m.file = data.file;
+        setMatches((prev) => [...prev, m]);
+      } else if (data.type === 'fileResult') {
+        setFileTimes((prev) => [...prev, { name: data.file, elapsed: data.elapsed }]);
+      } else if (data.type === 'corpusDone') {
+        if (runTimer.current) clearTimeout(runTimer.current);
+        setCompileErrors(data.compileErrors);
+        setHeatmap(data.heatmap);
+        setRuntimeError(null);
+        setRunning(false);
       } else if (data.type === 'result') {
         if (runTimer.current) clearTimeout(runTimer.current);
-        setMatches(data.matches);
         setCompileErrors(data.compileErrors);
         setElapsed(data.elapsed ?? null);
         setRuntimeError(null);
@@ -87,6 +101,8 @@ const YaraTester: React.FC = () => {
       } else if (data.type === 'runtimeError') {
         if (runTimer.current) clearTimeout(runTimer.current);
         setMatches([]);
+        setFileTimes([]);
+        setHeatmap({});
         setElapsed(null);
         setRuntimeError(data.error);
         setRunning(false);
@@ -137,8 +153,38 @@ const YaraTester: React.FC = () => {
     if (!workerRef.current) return;
     setRunning(true);
     setRuntimeError(null);
+    setMatches([]);
+    setFileTimes([]);
+    setHeatmap({});
     const ruleMap = Object.fromEntries(rules.map((r) => [r.name, r.content]));
-    workerRef.current.postMessage({ type: 'run', rules: ruleMap, input, timeout: 5000 });
+    workerRef.current.postMessage({
+      type: 'run',
+      rules: ruleMap,
+      input,
+      limits: { cpu: 5000, mem: 50 * 1024 * 1024 },
+    });
+    runTimer.current = setTimeout(() => {
+      workerRef.current?.terminate();
+      workerRef.current = createWorker();
+      setRuntimeError('Scan timed out');
+      setRunning(false);
+    }, 5000);
+  };
+
+  const runCorpus = () => {
+    if (!workerRef.current) return;
+    setRunning(true);
+    setRuntimeError(null);
+    setMatches([]);
+    setFileTimes([]);
+    setHeatmap({});
+    const ruleMap = Object.fromEntries(rules.map((r) => [r.name, r.content]));
+    workerRef.current.postMessage({
+      type: 'runCorpus',
+      rules: ruleMap,
+      corpus: sampleArtifacts,
+      limits: { cpu: 5000, mem: 50 * 1024 * 1024 },
+    });
     runTimer.current = setTimeout(() => {
       workerRef.current?.terminate();
       workerRef.current = createWorker();
@@ -230,6 +276,14 @@ const YaraTester: React.FC = () => {
           disabled={running}
         >
           Run
+        </button>
+        <button
+          type="button"
+          className="bg-blue-600 px-4 py-2 rounded disabled:opacity-50"
+          onClick={runCorpus}
+          disabled={running}
+        >
+          Run Corpus
         </button>
         <button type="button" className="bg-gray-700 px-2" onClick={addRule}>
           +
@@ -331,6 +385,9 @@ const YaraTester: React.FC = () => {
               <li key={idx} className="mb-2">
                 <div className="font-bold">
                   {m.rule}
+                  {m.file && (
+                    <span className="ml-2 text-sm text-orange-300">[{m.file}]</span>
+                  )}
                   {m.tags && m.tags.length > 0 && (
                     <span className="ml-2 text-sm text-yellow-300">[{m.tags.join(', ')}]</span>
                   )}
@@ -345,6 +402,30 @@ const YaraTester: React.FC = () => {
                     </li>
                   ))}
                 </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {fileTimes.length > 0 && (
+        <div className="bg-gray-800 p-2 overflow-auto">
+          <strong>File timings:</strong>
+          <ul>
+            {fileTimes.map((f) => (
+              <li key={f.name}>
+                {f.name}: {f.elapsed.toFixed(2)} ms
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {Object.keys(heatmap).length > 0 && (
+        <div className="bg-gray-800 p-2 overflow-auto">
+          <strong>Rule heatmap:</strong>
+          <ul>
+            {Object.entries(heatmap).map(([rule, count]) => (
+              <li key={rule}>
+                {rule}: {count}
               </li>
             ))}
           </ul>

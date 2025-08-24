@@ -205,7 +205,7 @@ const SpaceInvaders = () => {
         const shooters = invadersRef.current.filter((i) => i.alive);
         const inv = shooters[Math.floor(Math.random() * shooters.length)];
         enemyBulletsRef.current.push(
-          new Projectile(inv.x + inv.w / 2, inv.y + inv.h, 150 * difficulty)
+          Projectile.get(inv.x + inv.w / 2, inv.y + inv.h, 150 * difficulty)
         );
         enemyCooldown.current = Math.max(0.2, 1 / difficulty);
       }
@@ -223,8 +223,13 @@ const SpaceInvaders = () => {
         });
         if (hitEdge) {
           enemyDir.current *= -1;
+          const totalRows = invaderRowsRef.current.length;
+          const aliveRows = invaderRowsRef.current.filter((row) =>
+            row.some((i) => i.alive)
+          ).length;
+          const drop = 10 + (totalRows - aliveRows) * 5;
           invadersRef.current.forEach((inv) => {
-            if (inv.alive) inv.y += 10;
+            if (inv.alive) inv.y += drop;
           });
         }
         const ratio = alive / totalInvaders.current;
@@ -253,7 +258,7 @@ const SpaceInvaders = () => {
         for (const s of shieldsRef.current) {
           if (s.alive && b.collides(s)) {
             s.hit();
-            b.active = false;
+            b.release();
             spawnExplosion(s.x + s.w / 2, s.y + s.h / 2, 'yellow');
             break;
           }
@@ -261,7 +266,7 @@ const SpaceInvaders = () => {
         if (!b.active) return;
         if (mothershipRef.current && b.collides(mothershipRef.current)) {
           mothershipRef.current.active = false;
-          b.active = false;
+          b.release();
           p.addScore(50);
           playSound(500);
           spawnExplosion(
@@ -274,7 +279,7 @@ const SpaceInvaders = () => {
         for (const inv of invadersRef.current) {
           if (inv.alive && b.collides(inv)) {
             inv.hit();
-            b.active = false;
+            b.release();
             if (!inv.alive) {
               p.addScore(10);
               playSound(220);
@@ -298,7 +303,7 @@ const SpaceInvaders = () => {
         for (const s of shieldsRef.current) {
           if (s.alive && b.collides(s)) {
             s.hit();
-            b.active = false;
+            b.release();
             blocked = true;
             spawnExplosion(s.x + s.w / 2, s.y + s.h / 2, 'yellow');
             break;
@@ -306,7 +311,7 @@ const SpaceInvaders = () => {
         }
         if (blocked) continue;
         if (b.collides(p)) {
-          b.active = false;
+          b.release();
           playSound(110);
           spawnExplosion(p.x + p.w / 2, p.y, 'white');
           if (p.takeHit()) {
@@ -345,14 +350,34 @@ const SpaceInvaders = () => {
       ctx.fillRect(0, 0, w, h);
       ctx.fillStyle = 'white';
       ctx.fillRect(p.x, p.y, p.w, p.h);
-      invadersRef.current.forEach((inv) => {
-        ctx.fillStyle = inv.hp > 1 ? 'purple' : 'lime';
-        inv.draw(ctx);
-      });
+
+      const batchRects = (items, color) => {
+        if (!items.length) return;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        items.forEach((it) => ctx.rect(it.x, it.y, it.w, it.h));
+        ctx.fill();
+      };
+      const strongInv = invadersRef.current.filter(
+        (inv) => inv.alive && inv.hp > 1
+      );
+      const weakInv = invadersRef.current.filter(
+        (inv) => inv.alive && inv.hp <= 1
+      );
+      batchRects(strongInv, 'purple');
+      batchRects(weakInv, 'lime');
       if (mothershipRef.current) mothershipRef.current.draw(ctx);
       shieldsRef.current.forEach((s) => s.draw(ctx));
-      playerBulletsRef.current.forEach((b) => b.draw(ctx, 'red'));
-      enemyBulletsRef.current.forEach((b) => b.draw(ctx, 'yellow'));
+      const activePlayerBullets = playerBulletsRef.current.filter((b) => b.active);
+      const activeEnemyBullets = enemyBulletsRef.current.filter((b) => b.active);
+      batchRects(
+        activePlayerBullets.map((b) => ({ x: b.x - 1, y: b.y - 4, w: 2, h: 4 })),
+        'red'
+      );
+      batchRects(
+        activeEnemyBullets.map((b) => ({ x: b.x - 1, y: b.y - 4, w: 2, h: 4 })),
+        'yellow'
+      );
       powerUpsRef.current.forEach((pu) => {
         ctx.fillStyle = pu.type === 'shield' ? 'cyan' : 'orange';
         ctx.fillRect(pu.x, pu.y, 10, 10);
