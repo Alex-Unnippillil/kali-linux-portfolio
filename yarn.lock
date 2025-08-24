@@ -9037,6 +9037,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"spdx-license-list@npm:^6.10.0":
+  version: 6.10.0
+  resolution: "spdx-license-list@npm:6.10.0"
+  checksum: 10c0/6cb6b2e6753134ea2f8f8e42afc8fe94ddc9e15433bf235bc782f26ee297eae0e670a6481d09b111cd84782374b079f9d5858767ef7a07bcbff51939b4cac58a
+  languageName: node
+  linkType: hard
+
 "sprintf-js@npm:~1.0.2":
   version: 1.0.3
   resolution: "sprintf-js@npm:1.0.3"
@@ -9838,6 +9845,7 @@ __metadata:
     socket.io: "npm:^4.7.5"
     socket.io-client: "npm:^4.7.5"
     spdx-license-ids: "npm:^3.0.17"
+    spdx-license-list: "npm:^6.10.0"
     sshpk: "npm:^1.18.0"
     stockfish: "npm:^16.0.0"
     swr: "npm:^2.2.5"
