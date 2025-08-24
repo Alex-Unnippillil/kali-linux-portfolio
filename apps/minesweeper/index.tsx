@@ -12,7 +12,7 @@ import {
   serialize,
   deserialize,
   chord,
-} from '../../apps/minesweeper/engine';
+} from './engine';
 
 interface SaveData {
   game: string;
@@ -265,8 +265,8 @@ const Minesweeper: React.FC = () => {
           <button className="px-2 py-1 border" onClick={() => setShowProbs((p) => !p)}>
             {showProbs ? 'Hide Hints' : 'Show Hints'}
           </button>
-          <span>Mines left: {settings.mines - flagged}</span>
-          <span>Time: {elapsed.toFixed(1)}</span>
+          <span aria-live="polite">Mines left: {settings.mines - flagged}</span>
+          <span aria-live="polite">Time: {elapsed.toFixed(1)}</span>
         </div>
         {status === 'won' && <div className="mb-2">You win!</div>}
         {status === 'lost' && <div className="mb-2">Game over</div>}
