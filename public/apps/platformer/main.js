@@ -16,10 +16,15 @@ let levelStart = 0;
 const player = new Player();
 const camera = { x: 0, y: 0, deadZone: { w: 100, h: 60 } };
 const keys = {};
+const touch = { left: false, right: false, jump: false };
 const effects = [];
+let replay = [];
+let reduceMotion = false;
 
 const timerEl = document.getElementById('timer');
 const levelSelect = document.getElementById('levelSelect');
+const reduceMotionToggle = document.getElementById('reduceMotion');
+const exportBtn = document.getElementById('export');
 
 // levels list
 const levels = ['level1.json', 'level2.json'];
@@ -30,6 +35,12 @@ levels.forEach((lvl, i) => {
   levelSelect.appendChild(opt);
 });
 levelSelect.onchange = () => loadLevel(levelSelect.value);
+reduceMotion = localStorage.getItem('platformer-reduceMotion') === '1';
+reduceMotionToggle.checked = reduceMotion;
+reduceMotionToggle.onchange = () => {
+  reduceMotion = reduceMotionToggle.checked;
+  localStorage.setItem('platformer-reduceMotion', reduceMotion ? '1' : '0');
+};
 
 // input handling
 window.addEventListener('keydown', e => {
@@ -38,6 +49,48 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => {
   keys[e.code] = false;
 });
+
+canvas.addEventListener('touchstart', handleTouch, { passive: false });
+canvas.addEventListener('touchmove', handleTouch, { passive: false });
+canvas.addEventListener('touchend', handleTouch, { passive: false });
+
+function handleTouch(e) {
+  e.preventDefault();
+  touch.left = touch.right = touch.jump = false;
+  for (const t of e.touches) {
+    const rect = canvas.getBoundingClientRect();
+    const x = t.clientX - rect.left;
+    const y = t.clientY - rect.top;
+    if (x < rect.width / 3) touch.left = true;
+    else if (x > (rect.width * 2) / 3) touch.right = true;
+    if (y < rect.height / 2) touch.jump = true;
+  }
+}
+
+function pollGamepad() {
+  const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
+  if (!gp) return { left: false, right: false, jump: false };
+  const left = gp.axes[0] < -0.2 || gp.buttons[14]?.pressed;
+  const right = gp.axes[0] > 0.2 || gp.buttons[15]?.pressed;
+  const jump = gp.buttons[0]?.pressed;
+  return { left, right, jump };
+}
+
+function recordReplay(input) {
+  replay.push({ t: performance.now() - levelStart, ...input });
+}
+
+exportBtn.onclick = () => {
+  const blob = new Blob([
+    JSON.stringify({ level: currentLevel, replay }, null, 2),
+  ], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `replay-${currentLevel}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
 function gaEvent(action, params = {}) {
   try {
@@ -77,33 +130,50 @@ function loadLevel(name) {
       }
       currentLevel = name;
       levelStart = performance.now();
+      replay = [];
       gaEvent('level_start', { level: name });
     });
 }
 
-// initial level
-loadLevel(levels[0]);
+// initial level with persistence
+const savedProgress = JSON.parse(localStorage.getItem('platformer-progress') || 'null');
+if (savedProgress && levels.includes(savedProgress.level)) {
+  levelSelect.value = savedProgress.level;
+  loadLevel(savedProgress.level);
+} else {
+  loadLevel(levels[0]);
+}
 
-// game loop
+// game loop with fixed timestep
+const STEP = 1 / 60;
 let last = 0;
+let acc = 0;
 function loop(ts) {
-  const dt = Math.min((ts - last) / 1000, 0.1);
+  if (!last) last = ts;
+  acc += Math.min((ts - last) / 1000, 0.05);
   last = ts;
-  update(dt);
+  let steps = 0;
+  while (acc >= STEP && steps < 3) {
+    update(STEP);
+    acc -= STEP;
+    steps++;
+  }
   draw();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
 function update(dt) {
+  const pad = pollGamepad();
   const input = {
-    left: keys['ArrowLeft'],
-    right: keys['ArrowRight'],
-    jump: keys['Space']
+    left: keys['ArrowLeft'] || pad.left || touch.left,
+    right: keys['ArrowRight'] || pad.right || touch.right,
+    jump: keys['Space'] || pad.jump || touch.jump
   };
   updatePhysics(player, input, dt);
   movePlayer(dt);
-  updateEffects(dt);
+  if (!reduceMotion) updateEffects(dt);
+  recordReplay(input);
 
   if (player.y > mapHeight * tileSize) respawn();
 
@@ -118,6 +188,8 @@ function update(dt) {
     camera.y = player.y - (canvas.height / 2 - camera.deadZone.h / 2);
   if (player.y + player.h > centerY + camera.deadZone.h / 2)
     camera.y = player.y + player.h - (canvas.height / 2 + camera.deadZone.h / 2);
+  camera.x += player.vx * 0.1;
+  camera.y += player.vy * 0.05;
   camera.x = Math.max(0, Math.min(camera.x, mapWidth * tileSize - canvas.width));
   camera.y = Math.max(0, Math.min(camera.y, mapHeight * tileSize - canvas.height));
 
@@ -126,6 +198,7 @@ function update(dt) {
 
   if (coinTotal === 0 && score > 0) {
     gaEvent('level_complete', { level: currentLevel, time: elapsed });
+    localStorage.setItem('platformer-progress', JSON.stringify({ level: currentLevel, time: elapsed }));
     coinTotal = -1; // prevent repeat
   }
 }
@@ -156,7 +229,24 @@ function movePlayer(dt) {
           if (dirY > 0) {
             ny = Math.min(ny, minY - player.h);
             player.onGround = true;
-          } else ny = Math.max(ny, maxY);
+          } else {
+            ny = Math.max(ny, maxY);
+            player.vy = 0; // head-bump smoothing
+          }
+        } else if (t === 6) {
+          if (dirY > 0 && player.y + player.h <= minY) {
+            ny = Math.min(ny, minY - player.h);
+            player.onGround = true;
+          }
+        } else if (t === 2 || t === 3) {
+          if (dirY > 0) {
+            const xOff = (player.x + player.w / 2) - tx * tileSize;
+            let surface = t === 2 ? maxY - xOff : minY + xOff;
+            if (ny + player.h > surface && player.y + player.h <= surface) {
+              ny = surface - player.h;
+              player.onGround = true;
+            }
+          }
         }
       }
     }
@@ -178,13 +268,27 @@ function movePlayer(dt) {
       for (let ty = tilesTop; ty <= tilesBottom; ty++) {
         const t = getTile(tx, ty);
         if (t === 1) {
-          if (dirX > 0) nx = Math.min(nx, minX - player.w);
-          else nx = Math.max(nx, maxX);
+          if (dirX > 0) {
+            if (player.y + player.h - maxY < 5 && !getTile(tx, ty - 1)) {
+              ny -= player.y + player.h - maxY; // ledge forgiveness step up
+              player.onGround = true;
+            } else {
+              nx = Math.min(nx, minX - player.w);
+            }
+          } else {
+            if (player.y + player.h - maxY < 5 && !getTile(tx, ty - 1)) {
+              ny -= player.y + player.h - maxY;
+              player.onGround = true;
+            } else {
+              nx = Math.max(nx, maxX);
+            }
+          }
         }
       }
     }
   }
   player.x = nx;
+  player.y = ny;
 
   // coin collection
   const cx = Math.floor((player.x + player.w / 2) / tileSize);
@@ -226,11 +330,13 @@ function drawEffects() {
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  // parallax background
-  ctx.fillStyle = '#0a0a0a';
-  ctx.fillRect(-camera.x * 0.5, -camera.y * 0.5, canvas.width * 2, canvas.height * 2);
-  ctx.fillStyle = '#141414';
-  ctx.fillRect(-camera.x * 0.2, -camera.y * 0.2, canvas.width * 2, canvas.height * 2);
+  if (!reduceMotion) {
+    // parallax background
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(-camera.x * 0.5, -camera.y * 0.5, canvas.width * 2, canvas.height * 2);
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(-camera.x * 0.2, -camera.y * 0.2, canvas.width * 2, canvas.height * 2);
+  }
 
   for (let y = 0; y < mapHeight; y++) {
     for (let x = 0; x < mapWidth; x++) {
@@ -241,6 +347,25 @@ function draw() {
       if (t === 1) {
         ctx.fillStyle = '#888';
         ctx.fillRect(screenX, screenY, tileSize, tileSize);
+      } else if (t === 2) {
+        ctx.fillStyle = '#888';
+        ctx.beginPath();
+        ctx.moveTo(screenX, screenY + tileSize);
+        ctx.lineTo(screenX + tileSize, screenY + tileSize);
+        ctx.lineTo(screenX + tileSize, screenY);
+        ctx.closePath();
+        ctx.fill();
+      } else if (t === 3) {
+        ctx.fillStyle = '#888';
+        ctx.beginPath();
+        ctx.moveTo(screenX, screenY);
+        ctx.lineTo(screenX, screenY + tileSize);
+        ctx.lineTo(screenX + tileSize, screenY + tileSize);
+        ctx.closePath();
+        ctx.fill();
+      } else if (t === 6) {
+        ctx.fillStyle = '#55f';
+        ctx.fillRect(screenX, screenY, tileSize, 4);
       } else if (t === 4) {
         ctx.fillStyle = 'yellow';
         ctx.fillRect(screenX, screenY, tileSize, tileSize);
@@ -253,7 +378,7 @@ function draw() {
     }
   }
 
-  drawEffects();
+  if (!reduceMotion) drawEffects();
 
   ctx.fillStyle = '#0f0';
   ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
