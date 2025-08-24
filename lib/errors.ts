@@ -1,4 +1,5 @@
 import type { NextApiHandler, NextApiRequest, NextApiResponse } from 'next';
+import { logEvent } from './axiom';
 
 export class UserInputError extends Error {
   code = 'user_input';
@@ -48,7 +49,17 @@ export const toErrorResponse = (err: any): ErrorResponse => ({
   message: err?.message || 'Unknown error',
 });
 
-export const handleApiError = (res: NextApiResponse, err: any): void => {
+export const handleApiError = (
+  req: NextApiRequest,
+  res: NextApiResponse,
+  err: any
+): void => {
+  logEvent({
+    type: 'api-error',
+    path: req.url,
+    code: err?.code || 'error',
+    message: err?.message || 'Unknown error',
+  });
   const status = typeof err?.status === 'number' ? err.status : 500;
   res.status(status).json(toErrorResponse(err));
 };
@@ -58,7 +69,7 @@ export const withErrorHandler = (handler: NextApiHandler) => {
     try {
       await handler(req, res);
     } catch (err) {
-      handleApiError(res, err);
+      handleApiError(req, res, err);
     }
   };
 };

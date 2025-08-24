@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { logEvent } from '../../lib/axiom';
 
 interface HeaderReport {
   header: string;
@@ -89,6 +90,11 @@ export default async function handler(
 
     res.status(200).json({ url: target, overallGrade, results });
   } catch (err: unknown) {
+    logEvent({
+      type: 'api-error',
+      path: req.url,
+      message: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ error: 'Failed to fetch url' });
   }
 }

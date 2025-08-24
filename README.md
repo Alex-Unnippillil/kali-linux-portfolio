@@ -121,5 +121,7 @@ The GitHub Actions workflow relies on the following secrets configured in the re
 - `NEXT_PUBLIC_SERVICE_ID`
 - `NEXT_PUBLIC_TEMPLATE_ID`
 - `NEXT_PUBLIC_USER_ID`
+- `NEXT_PUBLIC_AXIOM_TOKEN`
+- `NEXT_PUBLIC_AXIOM_DATASET`
 
 These secrets provide the values for the corresponding environment variables during the build step.
