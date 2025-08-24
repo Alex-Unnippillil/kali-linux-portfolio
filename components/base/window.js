@@ -297,6 +297,7 @@ export class Window extends Component {
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
+                        data-testid={`window-${this.id}`}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
