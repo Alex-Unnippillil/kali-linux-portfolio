@@ -4,6 +4,21 @@ setupUrlGuard();
 
 type DnsResponse = { Answer?: { data: string }[]; [key: string]: any };
 
+type CheckResult = {
+  status: 'pass' | 'warn' | 'fail';
+  record?: string;
+  error?: string;
+};
+
+type ApiResponse = {
+  spf: CheckResult;
+  dkim: CheckResult;
+  dmarc: CheckResult;
+  mtaSts: CheckResult;
+  tlsRpt: CheckResult;
+  bimi: CheckResult;
+};
+
 // simple in-memory cache for DNS lookups
 const cache = new Map<string, { timestamp: number; data: any }>();
 const TTL = 1000 * 60 * 5; // 5 minutes
@@ -34,61 +49,114 @@ export default async function handler(
     return;
   }
 
-  const errors: Record<string, string> = {};
-  let mx: DnsResponse | undefined;
-  let mtaSts: DnsResponse | undefined;
-  let tlsRpt: DnsResponse | undefined;
-  const dane: Record<string, DnsResponse | { error: string }> = {};
+  const extract = (r?: DnsResponse) =>
+    r?.Answer?.map((a) => a.data.replace(/"/g, '') ?? '').filter(Boolean) ||
+    [];
+
+  const response: ApiResponse = {
+    spf: { status: 'fail', error: 'lookup failed' },
+    dkim: { status: 'fail', error: 'lookup failed' },
+    dmarc: { status: 'fail', error: 'lookup failed' },
+    mtaSts: { status: 'fail', error: 'lookup failed' },
+    tlsRpt: { status: 'fail', error: 'lookup failed' },
+    bimi: { status: 'fail', error: 'lookup failed' },
+  };
 
   try {
-    mx = await lookup(domain, 'MX');
-    if (!mx.Answer) {
-      errors.mx = 'No MX records found';
+    const spf = extract(await lookup(domain, 'TXT'));
+    const record = spf.find((s) => s.toLowerCase().includes('v=spf1'));
+    if (!record) {
+      response.spf = { status: 'fail', error: 'No SPF record found' };
+    } else if (record.includes('-all')) {
+      response.spf = { status: 'pass', record };
+    } else {
+      response.spf = { status: 'warn', record };
     }
   } catch (e: any) {
-    errors.mx = e.message || 'MX lookup failed';
+    response.spf = { status: 'fail', error: e.message || 'SPF lookup failed' };
   }
 
   try {
-    mtaSts = await lookup(`_mta-sts.${domain}`, 'TXT');
-    if (!mtaSts.Answer) {
-      errors.mtaSts = 'No MTA-STS record found';
+    const dkim = extract(await lookup(`default._domainkey.${domain}`, 'TXT'));
+    const record = dkim.find((s) => s.toLowerCase().includes('v=dkim1'));
+    if (!record) {
+      response.dkim = { status: 'fail', error: 'No DKIM record found' };
+    } else {
+      response.dkim = { status: 'pass', record };
     }
   } catch (e: any) {
-    errors.mtaSts = e.message || 'MTA-STS lookup failed';
+    response.dkim = {
+      status: 'fail',
+      error: e.message || 'DKIM lookup failed',
+    };
   }
 
   try {
-    tlsRpt = await lookup(`_smtp._tls.${domain}`, 'TXT');
-    if (!tlsRpt.Answer) {
-      errors.tlsRpt = 'No TLS-RPT record found';
+    const dmarc = extract(await lookup(`_dmarc.${domain}`, 'TXT'));
+    const record = dmarc.find((s) => s.toLowerCase().includes('v=dmarc1'));
+    if (!record) {
+      response.dmarc = { status: 'fail', error: 'No DMARC record found' };
+    } else {
+      const policyMatch = record.match(/p=([a-zA-Z]+)/);
+      const policy = policyMatch?.[1]?.toLowerCase();
+      if (policy === 'reject' || policy === 'quarantine') {
+        response.dmarc = { status: 'pass', record };
+      } else {
+        response.dmarc = { status: 'warn', record };
+      }
     }
   } catch (e: any) {
-    errors.tlsRpt = e.message || 'TLS-RPT lookup failed';
+    response.dmarc = {
+      status: 'fail',
+      error: e.message || 'DMARC lookup failed',
+    };
   }
 
-  if (mx?.Answer) {
-    await Promise.all(
-      mx.Answer.map(async (a: any) => {
-        const host = String(a.data).split(' ').pop()?.replace(/\.$/, '');
-        if (!host) return;
-        try {
-          const tlsa = await lookup(`_25._tcp.${host}`, 'TLSA');
-          if (!tlsa.Answer) {
-            dane[host] = { error: 'No TLSA record found' };
-          } else {
-            dane[host] = tlsa;
-          }
-        } catch (e: any) {
-          dane[host] = { error: e.message || 'TLSA lookup failed' };
-        }
-      })
-    );
-  } else if (!errors.mx) {
-    errors.dane = 'No MX hosts available for TLSA lookup';
+  try {
+    const mtaSts = extract(await lookup(`_mta-sts.${domain}`, 'TXT'));
+    const record = mtaSts.find((s) => s.toLowerCase().includes('v=stsv1'));
+    if (!record) {
+      response.mtaSts = { status: 'fail', error: 'No MTA-STS record found' };
+    } else {
+      response.mtaSts = { status: 'pass', record };
+    }
+  } catch (e: any) {
+    response.mtaSts = {
+      status: 'fail',
+      error: e.message || 'MTA-STS lookup failed',
+    };
   }
 
-  const result = { mx, mtaSts, tlsRpt, dane, errors };
-  cache.set(domain, { timestamp: now, data: result });
-  res.status(200).json(result);
+  try {
+    const tlsRpt = extract(await lookup(`_smtp._tls.${domain}`, 'TXT'));
+    const record = tlsRpt.find((s) => s.toLowerCase().includes('v=tlsrptv1'));
+    if (!record) {
+      response.tlsRpt = { status: 'fail', error: 'No TLS-RPT record found' };
+    } else {
+      response.tlsRpt = { status: 'pass', record };
+    }
+  } catch (e: any) {
+    response.tlsRpt = {
+      status: 'fail',
+      error: e.message || 'TLS-RPT lookup failed',
+    };
+  }
+
+  try {
+    const bimi = extract(await lookup(`default._bimi.${domain}`, 'TXT'));
+    const record = bimi.find((s) => s.toLowerCase().includes('v=bimi1'));
+    if (!record) {
+      response.bimi = { status: 'fail', error: 'No BIMI record found' };
+    } else {
+      response.bimi = { status: 'pass', record };
+    }
+  } catch (e: any) {
+    response.bimi = {
+      status: 'fail',
+      error: e.message || 'BIMI lookup failed',
+    };
+  }
+
+  cache.set(domain, { timestamp: now, data: response });
+  res.status(200).json(response);
 }

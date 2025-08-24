@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import type { Metadata } from 'next';
 import type { ScanResult } from './worker';
+
+export const metadata: Metadata = {
+  title: 'Mixed Content',
+  description:
+    'Scan pages for insecure HTTP subresources and get upgrade-insecure-requests guidance',
+};
 
 const MixedContent: React.FC = () => {
   const [url, setUrl] = useState('');
@@ -7,6 +14,8 @@ const MixedContent: React.FC = () => {
   const [results, setResults] = useState<ScanResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [rewritten, setRewritten] = useState('');
+  const [simulateUpgrade, setSimulateUpgrade] = useState(false);
   const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
@@ -25,7 +34,10 @@ const MixedContent: React.FC = () => {
   const scan = () => {
     setError(null);
     setResults([]);
-    workerRef.current?.postMessage(html);
+    const rewrittenHtml = html.replace(/http:\/\//gi, 'https://');
+    setRewritten(rewrittenHtml);
+    const toScan = simulateUpgrade ? rewrittenHtml : html;
+    workerRef.current?.postMessage(toScan);
   };
 
   const fetchAndScan = async () => {
@@ -40,12 +52,25 @@ const MixedContent: React.FC = () => {
         setError(data.error || 'Fetch failed');
       } else {
         setHtml(data.body);
-        workerRef.current?.postMessage(data.body);
+        const rewrittenHtml = data.body.replace(/http:\/\//gi, 'https://');
+        setRewritten(rewrittenHtml);
+        const toScan = simulateUpgrade ? rewrittenHtml : data.body;
+        workerRef.current?.postMessage(toScan);
       }
     } catch (e) {
       setError('Request failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copyReport = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(results, null, 2),
+      );
+    } catch {
+      /* ignore */
     }
   };
 
@@ -68,6 +93,15 @@ const MixedContent: React.FC = () => {
           {loading ? 'Fetching...' : 'Fetch & Scan'}
         </button>
       </div>
+      <div className="flex items-center space-x-2">
+        <input
+          id="simulate-upgrade"
+          type="checkbox"
+          checked={simulateUpgrade}
+          onChange={(e) => setSimulateUpgrade(e.target.checked)}
+        />
+        <label htmlFor="simulate-upgrade">Simulate upgrade-insecure-requests</label>
+      </div>
       <textarea
         className="w-full h-40 text-black p-2"
         placeholder="Paste HTML here"
@@ -85,7 +119,27 @@ const MixedContent: React.FC = () => {
       </div>
       {error && <div className="text-red-400">{error}</div>}
       {results.length > 0 && (
-        <div className="overflow-auto text-sm flex-1">
+        <div className="overflow-auto text-sm flex-1 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p>
+                Active mixed content:{' '}
+                {results.filter((r) => r.category === 'active').length}
+              </p>
+              <p>
+                Passive mixed content:{' '}
+                {results.filter((r) => r.category === 'passive').length}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={copyReport}
+              data-testid="copy-report"
+              className="bg-gray-700 px-2 py-1 rounded"
+            >
+              Copy Report
+            </button>
+          </div>
           <table className="min-w-full">
             <thead>
               <tr>
@@ -93,6 +147,9 @@ const MixedContent: React.FC = () => {
                 <th className="px-2 py-1 text-left">Attribute</th>
                 <th className="px-2 py-1 text-left">HTTP URL</th>
                 <th className="px-2 py-1 text-left">HTTPS Hint</th>
+                <th className="px-2 py-1 text-left">Suggestion</th>
+                <th className="px-2 py-1 text-left">Category</th>
+                <th className="px-2 py-1 text-left">Browser Note</th>
               </tr>
             </thead>
             <tbody>
@@ -106,10 +163,33 @@ const MixedContent: React.FC = () => {
                     </a>
                   </td>
                   <td className="px-2 py-1 break-all">{r.httpsUrl}</td>
+                  <td className="px-2 py-1 break-all">{r.suggestion}</td>
+                  <td className="px-2 py-1">{r.category}</td>
+                  <td className="px-2 py-1">
+                    {r.category === 'active'
+                      ? 'Blocked by modern browsers'
+                      : 'Loaded with warnings'}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+
+          <div>
+            <h2 className="font-bold mb-1">Suggested CSP Header</h2>
+            <code className="block bg-gray-800 p-2 rounded">
+              Content-Security-Policy: upgrade-insecure-requests; block-all-mixed-content
+            </code>
+          </div>
+
+          <div>
+            <h2 className="font-bold mb-1">Automatic Rewrite Preview</h2>
+            <textarea
+              className="w-full h-40 text-black p-2"
+              value={rewritten}
+              readOnly
+            />
+          </div>
         </div>
       )}
     </div>

@@ -1,72 +1,140 @@
-import React, { useState } from 'react';
-import licenseIds from 'spdx-license-ids';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 
-interface Result {
-  counts: Record<string, number>;
-  unknowns: string[];
+  getLicenseInfo,
+  LicenseInfo,
+  LicenseMatchResult,
+  parseSpdxExpression,
+  detectLicenseConflicts,
+  LicenseConflict,
+} from '../../lib/licenseMatcher';
+import { matchLicenseWorker } from '../../lib/licenseMatcher.worker-client';
+
+interface AnalysisResult {
+  detected: LicenseInfo[];
+  fuzzy: LicenseMatchResult | null;
+  conflicts: LicenseConflict[];
 }
 
+type FileCache = Record<string, AnalysisResult>;
+
 const LicenseClassifier: React.FC = () => {
-  const [treeText, setTreeText] = useState('');
-  const [result, setResult] = useState<Result>({ counts: {}, unknowns: [] });
-  const [error, setError] = useState('');
+  const [text, setText] = useState('');
+  const [analysis, setAnalysis] = useState<AnalysisResult>({
+    detected: [],
+    fuzzy: null,
+    conflicts: [],
+  });
+  const [files, setFiles] = useState<FileCache>({});
+  const [progress, setProgress] = useState(0);
+  const [processing, setProcessing] = useState(false);
+  const workerRef = useRef<Worker>();
+n
 
   const analyze = () => {
-    try {
-      const tree = JSON.parse(treeText);
-      const counts: Record<string, number> = {};
-      const unknowns = new Set<string>();
-
-      const processLicense = (lic: any) => {
-        if (typeof lic !== 'string') return;
-        const normalized = lic.trim();
-        if (licenseIds.includes(normalized)) {
-          counts[normalized] = (counts[normalized] || 0) + 1;
-        } else if (normalized) {
-          unknowns.add(normalized);
-        }
-      };
-
-      const traverse = (node: any) => {
-        if (!node || typeof node !== 'object') return;
-        const license = node.license;
-        if (license) {
-          if (Array.isArray(license)) {
-            license.forEach((l) =>
-              typeof l === 'string'
-                ? processLicense(l)
-                : processLicense(l.type)
-            );
-          } else if (typeof license === 'object') {
-            processLicense(license.type);
-          } else {
-            processLicense(license);
-          }
-        }
-        if (node.dependencies && typeof node.dependencies === 'object') {
-          Object.values(node.dependencies).forEach(traverse);
-        }
-        if (node.packages && typeof node.packages === 'object') {
-          Object.values(node.packages).forEach(traverse);
-        }
-      };
-
-      traverse(tree);
-      setResult({ counts, unknowns: Array.from(unknowns).sort() });
-      setError('');
-    } catch (err) {
-      setError('Invalid JSON');
-      setResult({ counts: {}, unknowns: [] });
+    if (!text.trim()) {
+      setAnalysis({ detected: [], fuzzy: null, conflicts: [] });
+      return;
     }
+    const parsed = parseSpdxExpression(text);
+    const detected = parsed.ids.map((id) => getLicenseInfo(id));
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setProgress(0);
+    setRunning(true);
+    matchLicenseWorker(text, {
+      signal: controller.signal,
+      onProgress: (p) => setProgress(Math.round(p * 100)),
+    })
+      .then((fuzzy) => {
+        const conflicts = detectLicenseConflicts(
+          parsed.ids,
+          parsed.hasAnd && !parsed.hasOr
+        );
+        setAnalysis({ detected, fuzzy, conflicts });
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') console.error(err);
+      })
+      .finally(() => {
+        setRunning(false);
+      });
   };
 
+  useEffect(() => {
+    workerRef.current = new Worker(
+      new URL('./license-classifier.worker.ts', import.meta.url),
+    );
+    const worker = workerRef.current;
+    worker.onmessage = (e: MessageEvent) => {
+      const { type } = e.data as { type: string };
+      if (type === 'file') {
+        const { file, result } = e.data as {
+          file: string;
+          result: AnalysisResult;
+        };
+        setFiles((f) => ({ ...f, [file]: result }));
+      } else if (type === 'progress') {
+        const { processed, total } = e.data as {
+          processed: number;
+          total: number;
+        };
+        setProgress(Math.round((processed / total) * 100));
+      } else if (type === 'done' || type === 'cancelled') {
+        setProcessing(false);
+      }
+    };
+    return () => worker.terminate();
+  }, []);
+
+  const handleFiles = useCallback((fileList: FileList) => {
+    setFiles({});
+    setProgress(0);
+    setProcessing(true);
+    workerRef.current?.postMessage({
+      type: 'analyze',
+      files: Array.from(fileList),
+    });
+  }, []);
+
+  const cancelProcessing = useCallback(() => {
+    workerRef.current?.postMessage({ type: 'cancel' });
+  }, []);
+
+
+  const repoConflicts = useMemo(() => {
+    const ids = Object.values(files).flatMap((r) =>
+      r.detected.map((d) => d.spdxId)
+    );
+    return detectLicenseConflicts([...new Set(ids)], true);
+  }, [files]);
+
+  const exportReport = useCallback(() => {
+    const payload = {
+      files: Object.entries(files).map(([file, res]) => ({
+        file,
+        licenses: res.detected.map((d) => d.spdxId),
+        conflicts: res.conflicts,
+      })),
+      conflicts: repoConflicts,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'license-report.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [files, repoConflicts]);
+
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
+    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4 overflow-auto">
       <textarea
         className="flex-1 text-black p-2"
-        placeholder="Paste package tree JSON here..."
-        value={treeText}
-        onChange={(e) => setTreeText(e.target.value)}
+        placeholder="Paste text to analyze..."
+        value={text}
+        onChange={(e) => setText(e.target.value)}
       />
       <div className="flex space-x-2">
         <button
@@ -76,26 +144,148 @@ const LicenseClassifier: React.FC = () => {
         >
           Analyze
         </button>
+        <button
+          type="button"
+          onClick={() => controllerRef.current?.abort()}
+          disabled={!running}
+          className="px-4 py-1 bg-red-600 rounded disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        {running && <span>{progress}%</span>}
       </div>
-      {error && <div className="text-red-500">{error}</div>}
-      {Object.keys(result.counts).length > 0 && (
+
+      {analysis.detected.length > 0 && (
         <div>
-          <h3 className="font-bold mb-2">License Counts</h3>
-          <ul className="list-disc list-inside">
-            {Object.entries(result.counts).map(([lic, count]) => (
-              <li key={lic}>{`${lic}: ${count}`}</li>
+          <h3 className="font-bold mb-2">Detected SPDX Licenses</h3>
+          <ul className="list-disc list-inside space-y-1">
+            {analysis.detected.map((info) => (
+              <li key={info.spdxId}>
+                <a
+                  href={info.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-400 underline"
+                >
+                  {info.spdxId}
+                </a>{' '}
+                - {info.compatibility}; {info.obligations}
+              </li>
             ))}
           </ul>
         </div>
       )}
-      {result.unknowns.length > 0 && (
+
+      {analysis.fuzzy && (
         <div>
-          <h3 className="font-bold mt-4 mb-2">Unknown Licenses</h3>
-          <ul className="list-disc list-inside">
-            {result.unknowns.map((lic) => (
-              <li key={lic}>{lic}</li>
+          <h3 className="font-bold mt-4 mb-2">Fuzzy Matches</h3>
+          {analysis.fuzzy.message && (
+            <div className="mb-2 text-yellow-400">{analysis.fuzzy.message}</div>
+          )}
+          <ul className="list-disc list-inside space-y-1">
+            {analysis.fuzzy.matches.map((match) => (
+              <li key={match.spdxId}>
+                <a
+                  href={match.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-400 underline"
+                >
+                  {match.spdxId}
+                </a>{' '}
+                ({Math.round(match.confidence * 100)}%) - {match.compatibility}; {match.obligations}
+              </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {analysis.conflicts.length > 0 && (
+        <div>
+          <h3 className="font-bold mt-4 mb-2">Potential Conflicts</h3>
+          <ul className="list-disc list-inside space-y-1">
+            {analysis.conflicts.map((c) => (
+              <li key={c.licenses.join('-')}>
+                {c.message} {c.remediation}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div
+        className="mt-4 p-4 border-2 border-dashed border-gray-500 rounded"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          handleFiles(e.dataTransfer.files);
+        }}
+      >
+        <p className="mb-2">Drag & drop files or directories here</p>
+        <input
+          type="file"
+          multiple
+          webkitdirectory="true"
+          onChange={(e) => e.target.files && handleFiles(e.target.files)}
+        />
+      </div>
+
+      {processing && (
+        <div className="flex items-center space-x-2 mt-2">
+          <div className="flex-1 h-2 bg-gray-700 rounded">
+            <div
+              className="h-2 bg-green-500 rounded"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={cancelProcessing}
+            className="px-2 py-1 bg-red-600 rounded"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {Object.keys(files).length > 0 && (
+        <div className="mt-4">
+          <h3 className="font-bold mb-2">License Report</h3>
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr>
+                <th className="pr-2">File</th>
+                <th>Licenses</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(files).map(([file, res]) => (
+                <tr key={file}>
+                  <td className="pr-2 align-top">{file}</td>
+                  <td>{res.detected.map((d) => d.spdxId).join(', ') || 'Unknown'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {repoConflicts.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-bold mb-2">Repository Conflicts</h4>
+              <ul className="list-disc list-inside space-y-1">
+                {repoConflicts.map((c) => (
+                  <li key={c.licenses.join('-')}>{c.message}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={exportReport}
+            className="mt-4 px-4 py-1 bg-blue-600 rounded"
+          >
+            Export Report
+          </button>
         </div>
       )}
     </div>

@@ -6,6 +6,11 @@ import {
   fireProjectile,
   deactivateProjectile,
   getTowerDPS,
+  computeFlowField,
+  computeDistanceField,
+  generateWaveEnemies,
+  START,
+  GOAL,
 } from '@components/apps/tower-defense-core';
 
 describe('tower defense core', () => {
@@ -34,5 +39,25 @@ describe('tower defense core', () => {
     const d1 = getTowerDPS('single', 1);
     const d2 = getTowerDPS('single', 2);
     expect(d2).toBeGreaterThan(d1);
+  });
+
+  test('flow field respects obstacles', () => {
+    const { field } = computeFlowField([]);
+    expect(field[START.y][START.x]).toEqual({ dx: 1, dy: 0 });
+    const { field: field2 } = computeFlowField([{ x: START.x + 1, y: START.y }]);
+    expect(field2[START.y][START.x]).toEqual({ dx: 0, dy: -1 });
+  });
+
+  test('distance field matches Manhattan distance', () => {
+    const dist = computeDistanceField([]);
+    expect(dist[START.y][START.x]).toBe(GOAL.x - START.x);
+  });
+
+  test('wave progression increases difficulty', () => {
+    const w1 = generateWaveEnemies(1);
+    const w3 = generateWaveEnemies(3);
+    expect(w1.length).toBe(6);
+    expect(w3.length).toBe(8);
+    expect(w3[0].health).toBeGreaterThan(w1[0].health);
   });
 });

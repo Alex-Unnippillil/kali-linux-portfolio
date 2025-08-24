@@ -18,10 +18,16 @@
     </select>
     <select id="skinSelect"></select>
     <span id="points"></span>
+    <button id="flapBtn">Flap</button>
+    <label><input type="checkbox" id="shakeToggle" checked /> Shake</label>
+    <label><input type="checkbox" id="motionToggle" /> Reduce Motion</label>
+    <label><input type="checkbox" id="colorToggle" /> Color Blind</label>
   </div>
   <canvas id="game" width="400" height="300"></canvas>
   <div id="overlay">
     <div>Game Over</div>
+    <div id="bestScore"></div>
+    <div id="medal"></div>
     <button id="restart">Restart</button>
     <div id="leaderboards">
       <h4>Global</h4>

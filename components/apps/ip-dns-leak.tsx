@@ -7,32 +7,59 @@ type DnsResult = {
   error?: string;
 };
 
+type ResolverInfo = {
+  transport: 'DoH' | 'DoT' | 'plain';
+  resolver: string;
+  asn?: string;
+  ip?: string;
+  error?: string;
+  mismatch?: boolean;
+};
+
 const STUN_TIMEOUT = 3000; // ms
+type IpInfo = { local: string[]; public: string[]; mdns: boolean };
 
-async function fetchPublicIp(): Promise<string> {
-  const res = await fetch('https://api64.ipify.org?format=json');
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  return data.ip;
-}
-
-function gatherLocalIps(): Promise<string[]> {
+export const gatherIps = (): Promise<IpInfo> => {
   return new Promise((resolve, reject) => {
-    const ips = new Set<string>();
+    const locals = new Set<string>();
+    const publics = new Set<string>();
+    let mdns = false;
     let settled = false;
+    let stunError: string | null = null;
+
     try {
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
       });
       pc.createDataChannel('');
+      pc.onicecandidateerror = (e: any) => {
+        stunError = e.errorText || `code ${e.errorCode}`;
+      };
       pc.onicecandidate = (event) => {
         if (event.candidate && event.candidate.candidate) {
           const parts = event.candidate.candidate.split(' ');
-          if (parts[4]) ips.add(parts[4]);
+          const addr = parts[4];
+          const typeIndex = parts.indexOf('typ');
+          const candType = typeIndex >= 0 ? parts[typeIndex + 1] : '';
+          if (addr && addr.endsWith('.local')) {
+            mdns = true;
+          } else if (candType === 'srflx' || candType === 'relay') {
+            publics.add(addr);
+          } else if (addr) {
+            locals.add(addr);
+          }
         } else if (!event.candidate && !settled) {
           settled = true;
           pc.close();
-          resolve(Array.from(ips));
+          if (stunError) {
+            reject(new Error(stunError));
+          } else {
+            resolve({
+              local: Array.from(locals),
+              public: Array.from(publics),
+              mdns,
+            });
+          }
         }
       };
       pc.createOffer()
@@ -49,7 +76,15 @@ function gatherLocalIps(): Promise<string[]> {
         if (!settled) {
           settled = true;
           pc.close();
-          resolve(Array.from(ips));
+          if (stunError) {
+            reject(new Error(stunError));
+          } else {
+            resolve({
+              local: Array.from(locals),
+              public: Array.from(publics),
+              mdns,
+            });
+          }
         }
       }, STUN_TIMEOUT);
     } catch (err) {
@@ -59,9 +94,9 @@ function gatherLocalIps(): Promise<string[]> {
       }
     }
   });
-}
+};
 
-async function testDns(hostnames: string[]): Promise<DnsResult[]> {
+export const testDns = async (hostnames: string[]): Promise<DnsResult[]> => {
   const resolvers = [
     { name: 'Cloudflare', url: 'https://cloudflare-dns.com/dns-query' },
     { name: 'Google', url: 'https://dns.google/resolve' },
@@ -96,22 +131,77 @@ async function testDns(hostnames: string[]): Promise<DnsResult[]> {
   }
 
   return Promise.all(queries);
-}
+};
 
-const IpDnsLeak: React.FC = () => {
+export const fetchPublicIps = async (): Promise<{
+  ips: string[];
+  errors: string[];
+}> => {
+  const endpoints = [
+    'https://api.ipify.org?format=json',
+    'https://ipapi.co/json',
+  ];
+  const ips: string[] = [];
+  const errors: string[] = [];
+  await Promise.all(
+    endpoints.map(async (url) => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const ip = data.ip || data.IP;
+        if (ip) ips.push(ip);
+        else errors.push(`No IP from ${url}`);
+      } catch (e: any) {
+        const host = (() => {
+          try {
+            return new URL(url).hostname;
+          } catch {
+            return url;
+          }
+        })();
+        errors.push(`Public IP error (${host}): ${e.message || 'failed'}`);
+      }
+    })
+  );
+  return { ips, errors };
+};
+
+export const utils = {
+  gatherIps,
+  testDns,
+  fetchPublicIps,
+};
+type Props = {
+  utils?: typeof utils;
+};
+
+const IpDnsLeak: React.FC<Props> = ({ utils: u = utils }) => {
   const [loading, setLoading] = useState(false);
-  const [publicIp, setPublicIp] = useState<string | null>(null);
+  const [publicIps, setPublicIps] = useState<string[]>([]);
   const [localIps, setLocalIps] = useState<string[]>([]);
+  const [mdns, setMdns] = useState(false);
+  const [networkInfo, setNetworkInfo] = useState<{
+    type?: string;
+    effectiveType?: string;
+    downlink?: number;
+    rtt?: number;
+  } | null>(null);
   const [dnsInput, setDnsInput] = useState('example.com');
   const [dnsResults, setDnsResults] = useState<DnsResult[]>([]);
+  const [resolverInfo, setResolverInfo] = useState<ResolverInfo[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [copied, setCopied] = useState(false);
 
   const runCheck = async () => {
     setLoading(true);
     setErrors([]);
-    setPublicIp(null);
+    setPublicIps([]);
     setLocalIps([]);
+    setMdns(false);
+    setNetworkInfo(null);
     setDnsResults([]);
+    setResolverInfo([]);
 
     const hostnames = dnsInput
       .split(/\s+/)
@@ -120,52 +210,111 @@ const IpDnsLeak: React.FC = () => {
 
     const errorList: string[] = [];
 
-    const ipPromise = fetchPublicIp().catch((e) => {
-      errorList.push(`Public IP error: ${e.message}`);
-      return null;
+    const ipPromise = u.gatherIps().catch((e) => {
+      errorList.push(`WebRTC/STUN error: ${e.message}`);
+      return { local: [], public: [], mdns: false } as IpInfo;
     });
-    const localPromise = gatherLocalIps().catch((e) => {
-      errorList.push(`WebRTC error: ${e.message}`);
-      return [] as string[];
-    });
-    const dnsPromise = testDns(hostnames).catch((e) => {
+    const dnsPromise = u.testDns(hostnames).catch((e) => {
       errorList.push(`DNS test error: ${e.message}`);
       return [] as DnsResult[];
     });
+    const resolverPromise = fetch('/api/ip-dns-leak')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .catch((e) => {
+        errorList.push(`Resolver probe error: ${e.message}`);
+        return { resolvers: [] as ResolverInfo[] };
+      });
+    const pubIpPromise = u.fetchPublicIps();
 
-    const [ip, local, dns] = await Promise.all([
+    const [ipData, dns, resolverData, pubIps] = await Promise.all([
       ipPromise,
-      localPromise,
       dnsPromise,
+      resolverPromise,
+      pubIpPromise,
     ]);
 
-    if (ip) setPublicIp(ip);
-    setLocalIps(local);
+    setLocalIps(ipData.local);
+    setPublicIps(Array.from(new Set([...ipData.public, ...pubIps.ips])));
+    setMdns(ipData.mdns);
     setDnsResults(dns);
-    setErrors(errorList);
+
+    const conn =
+      (navigator as any).connection ||
+      (navigator as any).mozConnection ||
+      (navigator as any).webkitConnection;
+    if (conn) {
+      setNetworkInfo({
+        type: conn.type,
+        effectiveType: conn.effectiveType,
+        downlink: conn.downlink,
+        rtt: conn.rtt,
+      });
+    }
+
+    if (resolverData?.resolvers) {
+      const ipSet = new Set([...ipData.local, ...ipData.public]);
+      const enriched = resolverData.resolvers.map((r: ResolverInfo) => ({
+        ...r,
+        mismatch: r.ip ? !ipSet.has(r.ip) : true,
+      }));
+      setResolverInfo(enriched);
+    }
+    setErrors([...errorList, ...pubIps.errors]);
     setLoading(false);
   };
 
   const hasDnsErrors = dnsResults.some((r) => r.error);
+  const resolverMismatch = resolverInfo.some((r) => r.mismatch);
 
   const summary: string[] = [];
-  if (publicIp) summary.push(`Public IP detected: ${publicIp}`);
+  if (publicIps.length) summary.push(`Public IP detected: ${publicIps.join(', ')}`);
   if (localIps.length) summary.push(`Local IPs: ${localIps.join(', ')}`);
   if (dnsResults.length)
     summary.push(
       hasDnsErrors ? 'Some DNS lookups failed.' : 'DNS lookups succeeded.'
     );
+  if (resolverInfo.length)
+    summary.push(
+      resolverMismatch
+        ? 'Resolver IP mismatch detected.'
+        : 'Resolvers match WebRTC candidates.'
+    );
+  if (mdns) summary.push('mDNS obfuscation detected.');
+  if (networkInfo)
+    summary.push(
+      `Network: ${networkInfo.effectiveType || networkInfo.type}`
+    );
 
   const tips: string[] = [];
-  if (publicIp)
+  if (publicIps.length)
     tips.push('Use a VPN or proxy to mask your public IP.');
-  if (localIps.length)
-    tips.push('Disable WebRTC to prevent local IP disclosure.');
+  if (localIps.length && !mdns)
+    tips.push('Enable mDNS or disable WebRTC to prevent local IP disclosure.');
   if (hasDnsErrors)
     tips.push('Configure a secure DNS resolver or check for DNS leaks.');
+  if (resolverMismatch)
+    tips.push('Ensure DNS queries use your expected network/VPN.');
+
+  const copyReport = async () => {
+    const reportLines = [...summary];
+    if (tips.length) {
+      reportLines.push('', 'Remediation Tips:', ...tips);
+    }
+    try {
+      await navigator.clipboard.writeText(reportLines.join('\n'));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e: any) {
+      setErrors((prev) => [...prev, `Copy failed: ${e.message}`]);
+    }
+  };
 
   return (
     <div className="h-full w-full bg-panel text-white p-4 overflow-auto space-y-4">
+      <div className="text-yellow-300 text-sm">
+        Browser APIs provide limited visibility into network settings. Results
+        may be incomplete depending on your browser and extensions.
+      </div>
       <div className="flex flex-col sm:flex-row gap-2 items-start">
         <textarea
           className="text-black px-2 py-1 flex-1 h-24"
@@ -187,18 +336,75 @@ const IpDnsLeak: React.FC = () => {
         {errors.map((e, i) => (
           <div key={i}>{e}</div>
         ))}
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={runCheck}
+          disabled={loading}
+        >
+          Retry
+        </button>
       </div>
       )}
 
-      {publicIp && (
+      {publicIps.length > 0 && (
         <div>
-          <strong>Public IP:</strong> {publicIp}
+          <strong>Public Candidates:</strong> {publicIps.join(', ')}
         </div>
       )}
       {localIps.length > 0 && (
         <div>
           <strong>Local Candidates:</strong> {localIps.join(', ')}
         </div>
+      )}
+      {mdns && (
+        <div>
+          <strong>mDNS:</strong> Obfuscation detected
+        </div>
+      )}
+      {networkInfo && (
+        <div>
+          <strong>Network:</strong>{' '}
+          {networkInfo.effectiveType || networkInfo.type}
+          {typeof networkInfo.downlink === 'number' && (
+            <> ({networkInfo.downlink}Mb/s)</>
+          )}
+          {typeof networkInfo.rtt === 'number' && (
+            <> rtt {networkInfo.rtt}ms</>
+          )}
+        </div>
+      )}
+
+      {resolverInfo.length > 0 && (
+        <table className="text-sm w-full">
+          <thead>
+            <tr>
+              <th className="text-left">Transport</th>
+              <th className="text-left">Resolver IP</th>
+              <th className="text-left">ASN</th>
+              <th className="text-left">Client IP</th>
+              <th className="text-left">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {resolverInfo.map((r, i) => (
+              <tr key={i}>
+                <td>{r.transport}</td>
+                <td>{r.resolver}</td>
+                <td>{r.asn || 'Unknown'}</td>
+                <td>{r.ip || (r.error ? 'n/a' : '')}</td>
+                <td>
+                  {r.error ? (
+                    <span className="text-red-400">{r.error}</span>
+                  ) : r.mismatch ? (
+                    <span className="text-yellow-300">Mismatch</span>
+                  ) : (
+                    <span className="text-green-400">OK</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
       {dnsResults.length > 0 && (
@@ -244,6 +450,13 @@ const IpDnsLeak: React.FC = () => {
               </ul>
             </div>
           )}
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={copyReport}
+            disabled={copied}
+          >
+            {copied ? 'Copied!' : 'Copy Report'}
+          </button>
         </div>
       )}
     </div>

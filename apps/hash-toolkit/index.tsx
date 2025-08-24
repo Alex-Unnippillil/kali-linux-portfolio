@@ -1,34 +1,79 @@
 import React, { useEffect, useRef, useState } from 'react';
 import CryptoJS from 'crypto-js';
 import ssdeep from 'ssdeep.js';
+import tlsh from 'tlsh';
+import createSimhash from 'simhash';
+import DigestHashBuilder from 'tlsh/lib/digests/digest-hash-builder';
+
+const simhash = createSimhash();
+
+function bitsToHex(bits: number[]): string {
+  let hex = '';
+  for (let i = 0; i < bits.length; i += 4) {
+    hex += ((bits[i] << 3) | (bits[i + 1] << 2) | (bits[i + 2] << 1) | bits[i + 3]).toString(16);
+  }
+  return hex;
+}
+
+const bytesToBinary = (bytes: Uint8Array) => {
+  let str = '';
+  for (let i = 0; i < bytes.length; i += 65536) {
+    str += String.fromCharCode(...bytes.slice(i, i + 65536));
+  }
+  return str;
+};
 
 interface Hashes {
   md5: string;
   sha1: string;
   sha256: string;
+  sha512: string;
   ssdeep: string;
+  tlsh: string;
+  simhash: string;
 }
 
 const emptyHashes: Hashes = {
   md5: '',
   sha1: '',
   sha256: '',
+  sha512: '',
   ssdeep: '',
+  tlsh: '',
+  simhash: '',
 };
 
 const HashToolkit: React.FC = () => {
   const [text, setText] = useState('');
   const [hashes, setHashes] = useState<Hashes>(emptyHashes);
   const [error, setError] = useState('');
+  const [progress, setProgress] = useState(0);
+  const [working, setWorking] = useState(false);
   const workerRef = useRef<Worker>();
 
   useEffect(() => {
     if (typeof Worker !== 'undefined') {
       workerRef.current = new Worker(new URL('./hashWorker.ts', import.meta.url));
       workerRef.current.onmessage = (e) => {
-        const data = e.data as Partial<Hashes> & { error?: string };
-        if (data.error) setError(data.error);
-        else setHashes({ ...emptyHashes, ...data } as Hashes);
+        const data = e.data as
+          | { type: 'progress'; progress: number }
+          | { type: 'result'; hashes: Partial<Hashes> }
+          | { type: 'error'; error: string }
+          | { type: 'cancelled' };
+        if (data.type === 'progress') {
+          setProgress(data.progress);
+        } else if (data.type === 'result') {
+          setHashes({ ...emptyHashes, ...data.hashes } as Hashes);
+          setWorking(false);
+          setProgress(0);
+        } else if (data.type === 'error') {
+          setError(data.error);
+          setWorking(false);
+          setProgress(0);
+        } else if (data.type === 'cancelled') {
+          setWorking(false);
+          setProgress(0);
+        }
       };
     }
     return () => workerRef.current?.terminate();
@@ -39,12 +84,21 @@ const HashToolkit: React.FC = () => {
     const md5 = CryptoJS.MD5(wordArray);
     const sha1 = CryptoJS.SHA1(wordArray);
     const sha256 = CryptoJS.SHA256(wordArray);
+    const sha512 = CryptoJS.SHA512(wordArray);
     const fuzzy = ssdeep.digest(value);
+    let tlshHash = '';
+    try {
+      tlshHash = tlsh(value);
+    } catch {}
+    const simhashHex = bitsToHex(simhash(value.split(/\s+/)));
     setHashes({
       md5: md5.toString(),
       sha1: sha1.toString(),
       sha256: sha256.toString(),
+      sha512: sha512.toString(),
       ssdeep: fuzzy,
+      tlsh: tlshHash,
+      simhash: simhashHex,
     });
   };
 
@@ -53,12 +107,22 @@ const HashToolkit: React.FC = () => {
     const md5 = CryptoJS.MD5(wordArray);
     const sha1 = CryptoJS.SHA1(wordArray);
     const sha256 = CryptoJS.SHA256(wordArray);
-    const fuzzy = ssdeep.digest(new Uint8Array(buffer) as any);
+    const sha512 = CryptoJS.SHA512(wordArray);
+    const bytes = new Uint8Array(buffer);
+    const fuzzy = ssdeep.digest(bytes as any);
+    let tlshHash = '';
+    try {
+      tlshHash = tlsh(bytesToBinary(bytes));
+    } catch {}
+    const simhashHex = bitsToHex(simhash(Array.from(bytes).map((b) => b.toString())));
     setHashes({
       md5: md5.toString(),
       sha1: sha1.toString(),
       sha256: sha256.toString(),
+      sha512: sha512.toString(),
       ssdeep: fuzzy,
+      tlsh: tlshHash,
+      simhash: simhashHex,
     });
   };
 
@@ -78,7 +142,10 @@ const HashToolkit: React.FC = () => {
     if (!file) return;
     setError('');
     if (workerRef.current) {
-      workerRef.current.postMessage(file);
+      setHashes(emptyHashes);
+      setWorking(true);
+      setProgress(0);
+      workerRef.current.postMessage({ type: 'hash', file });
     } else {
       try {
         let buffer: ArrayBuffer;
@@ -99,6 +166,10 @@ const HashToolkit: React.FC = () => {
     }
   };
 
+  const cancel = () => {
+    workerRef.current?.postMessage({ type: 'cancel' });
+  };
+
   const copy = (value: string) => {
     if (!value) return;
     navigator.clipboard?.writeText(value).catch(() => {});
@@ -108,8 +179,37 @@ const HashToolkit: React.FC = () => {
     { label: 'MD5', key: 'md5' },
     { label: 'SHA-1', key: 'sha1' },
     { label: 'SHA-256', key: 'sha256' },
+    { label: 'SHA-512', key: 'sha512' },
     { label: 'ssdeep', key: 'ssdeep' },
+    { label: 'TLSH', key: 'tlsh' },
+    { label: 'SimHash', key: 'simhash' },
   ] as const;
+
+  const [cmpA, setCmpA] = useState('');
+  const [cmpB, setCmpB] = useState('');
+  const [cmpResult, setCmpResult] = useState<{ ssdeep: number | null; tlsh: number | null; simhash: number | null }>({
+    ssdeep: null,
+    tlsh: null,
+    simhash: null,
+  });
+
+  const compareFuzzy = () => {
+    let ss: number | null = null;
+    try {
+      ss = ssdeep.compare(cmpA, cmpB);
+    } catch {}
+    let tl: number | null = null;
+    try {
+      const d1 = new DigestHashBuilder().withHash(cmpA).build();
+      const d2 = new DigestHashBuilder().withHash(cmpB).build();
+      tl = d1.calculateDifference(d2, true);
+    } catch {}
+    let sh: number | null = null;
+    if (cmpA && cmpB && cmpA.length === cmpB.length) {
+      sh = hammingDistance(cmpA, cmpB);
+    }
+    setCmpResult({ ssdeep: ss, tlsh: tl, simhash: sh });
+  };
 
   // Image perceptual hash state
   const [imgA, setImgA] = useState('');
@@ -206,6 +306,22 @@ const HashToolkit: React.FC = () => {
           onChange={handleFile}
           className="mb-2"
         />
+        {working && (
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="flex-1 h-2 bg-gray-700">
+              <div
+                className="h-full bg-blue-600"
+                style={{ width: `${Math.round(progress * 100)}%` }}
+              />
+            </div>
+            <button
+              onClick={cancel}
+              className="px-2 py-1 bg-red-600 rounded"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
         {error && (
           <div role="alert" className="text-red-500">
             {error}
@@ -231,6 +347,39 @@ const HashToolkit: React.FC = () => {
             </button>
           </div>
         ))}
+      </div>
+      <div className="mt-6 space-y-2">
+        <div className="font-bold">Fuzzy hash comparison</div>
+        <div className="flex space-x-2">
+          <input
+            value={cmpA}
+            onChange={(e) => setCmpA(e.target.value)}
+            placeholder="Hash A"
+            className="flex-1 p-1 rounded text-black"
+          />
+          <input
+            value={cmpB}
+            onChange={(e) => setCmpB(e.target.value)}
+            placeholder="Hash B"
+            className="flex-1 p-1 rounded text-black"
+          />
+          <button onClick={compareFuzzy} className="px-2 py-1 bg-blue-600 rounded">
+            Compare
+          </button>
+        </div>
+        {cmpResult.ssdeep !== null && (
+          <div className="text-sm">ssdeep score: {cmpResult.ssdeep}</div>
+        )}
+        {cmpResult.tlsh !== null && (
+          <div className="text-sm">TLSH distance: {cmpResult.tlsh}</div>
+        )}
+        {cmpResult.simhash !== null && (
+          <div className="text-sm">SimHash hamming: {cmpResult.simhash}</div>
+        )}
+        <div className="text-xs text-gray-400">
+          ssdeep scores range 0-100 (higher means more similar). TLSH distance 0 indicates near-identical; above 200 means very
+          different. SimHash uses Hamming distance; lower values imply closer matches.
+        </div>
       </div>
       <div className="mt-6 space-y-2">
         <div className="font-bold">Image perceptual hash</div>

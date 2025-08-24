@@ -7,19 +7,23 @@ export interface RobotsRuleGroup {
 export interface RobotsData {
   groups: RobotsRuleGroup[];
   sitemaps: string[];
+  unsupported: string[];
   missing: boolean;
 }
 
 interface CacheEntry {
   etag?: string;
   data: RobotsData;
+  fetched: number;
 }
 
+const CACHE_TTL = 60 * 60 * 1000; // 1 hour
 const cache = new Map<string, CacheEntry>();
 
-function parseRobots(text: string): RobotsData {
+export function parseRobots(text: string): RobotsData {
   const groups: RobotsRuleGroup[] = [];
   const sitemaps: string[] = [];
+  const unsupported: string[] = [];
   let current: RobotsRuleGroup | null = null;
 
   text.split(/\r?\n/).forEach((line) => {
@@ -51,37 +55,48 @@ function parseRobots(text: string): RobotsData {
       current.disallows.push(value || '/');
     } else if (directive === 'sitemap') {
       sitemaps.push(value);
+    } else {
+      unsupported.push(cleaned);
     }
   });
 
-  return { groups, sitemaps, missing: false };
+  return { groups, sitemaps, unsupported, missing: false };
 }
 
 export async function fetchRobots(origin: string): Promise<RobotsData> {
   const base = origin.replace(/\/$/, '');
   const url = `${base}/robots.txt`;
   const cached = cache.get(url);
+
+  if (cached && Date.now() - cached.fetched < CACHE_TTL) {
+    return cached.data;
+  }
+
   const headers: Record<string, string> = {};
   if (cached?.etag) headers['If-None-Match'] = cached.etag;
 
   try {
     const res = await fetch(url, { headers });
     if (res.status === 304 && cached) {
+      cached.fetched = Date.now();
       return cached.data;
     }
     if (!res.ok) {
-      const data: RobotsData = { groups: [], sitemaps: [], missing: true };
-      cache.set(url, { etag: cached?.etag, data });
+      const data: RobotsData = { groups: [], sitemaps: [], unsupported: [], missing: true };
+      cache.set(url, { etag: cached?.etag, data, fetched: Date.now() });
       return data;
     }
     const text = await res.text();
     const data = parseRobots(text);
     const etag = res.headers.get('etag') || undefined;
-    cache.set(url, { etag, data });
+    cache.set(url, { etag, data, fetched: Date.now() });
     return data;
   } catch {
-    const data: RobotsData = { groups: [], sitemaps: [], missing: true };
-    cache.set(url, { etag: cached?.etag, data });
+    if (cached) {
+      return cached.data;
+    }
+    const data: RobotsData = { groups: [], sitemaps: [], unsupported: [], missing: true };
+    cache.set(url, { etag: cached?.etag, data, fetched: Date.now() });
     return data;
   }
 }

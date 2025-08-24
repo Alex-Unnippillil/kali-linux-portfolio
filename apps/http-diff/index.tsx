@@ -1,25 +1,5 @@
 import React, { useState } from 'react';
-
-interface DiffPart {
-  value: string;
-  added?: boolean;
-  removed?: boolean;
-}
-
-interface FetchMeta {
-  finalUrl: string;
-  status: number;
-  headers: Record<string, string>;
-  body: string;
-  redirects: { url: string; status: number }[];
-}
-
-interface ApiResult {
-  url1: FetchMeta;
-  url2: FetchMeta;
-  bodyDiff: DiffPart[];
-  headersDiff: DiffPart[];
-}
+import type { ApiResult, DiffPart } from '@/types/http-diff';
 
 function escapeHtml(str: string): string {
   return str.replace(/[&<>"']/g, (c) => ({
@@ -82,7 +62,7 @@ const HttpDiff: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url1, url2 }),
       });
-      const json = await res.json();
+      const json: ApiResult = await res.json();
       setData(json);
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -119,6 +99,27 @@ const HttpDiff: React.FC = () => {
       {loading && <div>Loading...</div>}
       {data && (
         <div className="flex flex-col space-y-4 overflow-auto">
+          <div>
+            <h2 className="font-bold mb-1">HTTP/3 Support</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {[data.url1, data.url2].map((info, idx) => (
+                <div key={idx} className="bg-gray-800 p-2 rounded space-y-1 break-words">
+                  <div className="font-semibold">{info.finalUrl}</div>
+                  <div>Alt-Svc: {info.altSvc ?? 'none'}</div>
+                  <div>
+                    {info.http3.supported
+                      ? `HTTP/3 latency ${Math.round(info.http3.h3 ?? 0)}ms (Δ ${Math.round(
+                          info.http3.delta ?? 0
+                        )}ms)`
+                      : 'HTTP/3 not supported'}
+                  </div>
+                  {info.http3.error && (
+                    <div className="text-red-400">{info.http3.error}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
           <div>
             <h2 className="font-bold mb-1">Body Diff</h2>
             {renderSideBySide(data.bodyDiff)}

@@ -37,8 +37,7 @@
       padding: 0.5rem;
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 </head>
 <body>
   <h1>QR Toolkit</h1>
@@ -53,6 +52,8 @@
     </select>
     <label for="size-slider">Size: <span id="size-value">256</span>px</label>
     <input type="range" id="size-slider" min="64" max="1024" step="32" value="256" />
+    <input type="file" id="logo-input" accept="image/*" />
+
     <p id="error-msg" style="color:red"></p>
     <button id="download-png-btn">Download PNG</button>
     <button id="download-svg-btn">Download SVG</button>
@@ -63,6 +64,7 @@
     <input type="file" id="file-input" accept="image/*" />
     <canvas id="decode-canvas" style="display:none"></canvas>
     <p id="decoded-text"></p>
+    <button id="copy-decoded-btn">Copy</button>
   </section>
   <script src="main.js"></script>
 </body>

@@ -1,5 +1,9 @@
 import licenseList from 'spdx-license-list/full';
-import { matchLicense } from '@lib/licenseMatcher';
+import {
+  matchLicense,
+  parseSpdxExpression,
+  detectLicenseConflicts,
+} from '@lib/licenseMatcher';
 
 describe('matchLicense', () => {
   it('identifies MIT license text', () => {
@@ -14,6 +18,21 @@ describe('matchLicense', () => {
     const result = matchLicense('This license text is too short to identify.');
     expect(result.ambiguous).toBe(true);
     expect(result.message).toBeDefined();
+  });
+});
+
+describe('SPDX expression handling', () => {
+  it('parses OR expressions', () => {
+    const parsed = parseSpdxExpression('MIT OR Apache-2.0');
+    expect(parsed.ids).toEqual(['MIT', 'Apache-2.0']);
+    expect(parsed.hasOr).toBe(true);
+  });
+
+  it('detects conflicts in AND expressions', () => {
+    const parsed = parseSpdxExpression('GPL-2.0-only AND Apache-2.0');
+    const conflicts = detectLicenseConflicts(parsed.ids, parsed.hasAnd);
+    expect(conflicts.length).toBeGreaterThan(0);
+    expect(conflicts[0].licenses).toEqual(['GPL-2.0-only', 'Apache-2.0']);
   });
 });
 

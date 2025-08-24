@@ -37,4 +37,5 @@ test('openApp flips closed_windows to false', () => {
   });
   expect(instance.state.closed_windows[appId]).toBe(false);
   jest.useRealTimers();
+
 });

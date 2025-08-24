@@ -1,20 +1,48 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
+import type { Metadata } from 'next';
 import { DndContext, useDraggable, DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { toPng } from 'html-to-image';
 
+export const metadata: Metadata = {
+  title: 'Threat Modeler',
+  description: 'Build threat diagrams with STRIDE and DREAD',
+};
+
 const NODE_W = 120;
 const NODE_H = 40;
-const STRIDE = [
-  'Spoofing',
-  'Tampering',
-  'Repudiation',
-  'Information Disclosure',
-  'Denial of Service',
-  'Elevation of Privilege',
-] as const;
+const BOUNDARY_W = 200;
+const BOUNDARY_H = 150;
+const METHODOLOGIES = {
+  STRIDE: {
+    categories: [
+      'Spoofing',
+      'Tampering',
+      'Repudiation',
+      'Information Disclosure',
+      'Denial of Service',
+      'Elevation of Privilege',
+    ],
+    mitigations: {
+      Spoofing: 'Use strong authentication',
+      Tampering: 'Validate input and integrity',
+      Repudiation: 'Employ auditing and logging',
+      'Information Disclosure': 'Encrypt and enforce access control',
+      'Denial of Service': 'Rate limit and add redundancy',
+      'Elevation of Privilege': 'Apply least privilege and patching',
+    },
+  },
+  CIA: {
+    categories: ['Confidentiality', 'Integrity', 'Availability'],
+    mitigations: {
+      Confidentiality: 'Encrypt data and limit access',
+      Integrity: 'Use checksums and validation',
+      Availability: 'Add redundancy and monitoring',
+    },
+  },
+} as const;
 
-type StrideKey = (typeof STRIDE)[number];
+type MethodologyKey = keyof typeof METHODOLOGIES;
 interface DreadScores {
   damage: number;
   reproducibility: number;
@@ -23,12 +51,21 @@ interface DreadScores {
   discoverability: number;
 }
 
+interface Boundary {
+  id: string;
+  x: number;
+  y: number;
+  label: string;
+  width: number;
+  height: number;
+}
+
 interface Node {
   id: string;
   x: number;
   y: number;
   label: string;
-  stride: Record<StrideKey, boolean>;
+  categories: Record<string, boolean>;
   dread: DreadScores;
 }
 
@@ -38,10 +75,10 @@ interface Edge {
   to: string;
 }
 
-const createStride = () =>
-  STRIDE.reduce(
+const createCategories = (m: MethodologyKey) =>
+  METHODOLOGIES[m].categories.reduce(
     (acc, k) => ({ ...acc, [k]: false }),
-    {} as Record<StrideKey, boolean>,
+    {} as Record<string, boolean>,
   );
 
 const createDread = (): DreadScores => ({
@@ -75,7 +112,7 @@ const NodeItem = React.memo(
         {...attributes}
         {...listeners}
         onClick={onSelect}
-        className="absolute px-2 py-1 bg-blue-600 rounded text-white cursor-move select-none flex items-center justify-center"
+        className="absolute z-10 px-2 py-1 bg-blue-600 rounded text-white cursor-move select-none flex items-center justify-center"
         style={style}
       >
         {node.label}
@@ -84,13 +121,117 @@ const NodeItem = React.memo(
   },
 );
 
+const BoundaryItem = React.memo(({ boundary }: { boundary: Boundary }) => {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: boundary.id,
+  });
+  const style = {
+    width: boundary.width,
+    height: boundary.height,
+    transform: CSS.Translate.toString({
+      x: boundary.x + (transform?.x ?? 0),
+      y: boundary.y + (transform?.y ?? 0),
+      scaleX: 1,
+      scaleY: 1,
+    }),
+  } as React.CSSProperties;
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className="absolute z-0 border-2 border-dashed border-red-500 text-red-500 cursor-move select-none flex items-start justify-start"
+      style={style}
+    >
+      <span className="bg-red-500 text-white text-xs px-1">{boundary.label}</span>
+    </div>
+  );
+});
+
 const ThreatModeler: React.FC = () => {
+  const [method, setMethod] = useState<MethodologyKey>('STRIDE');
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const [boundaries, setBoundaries] = useState<Boundary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [addingEdge, setAddingEdge] = useState(false);
   const [edgeStart, setEdgeStart] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const currentMethod = METHODOLOGIES[method];
+
+  useEffect(() => {
+    setNodes((ns) => ns.map((n) => ({ ...n, categories: createCategories(method) })));
+  }, [method]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!selected) return;
+      const step = e.shiftKey ? 50 : 10;
+      setNodes((ns) =>
+        ns.map((n) =>
+          n.id === selected
+            ? {
+                ...n,
+                x:
+                  n.x +
+                  (e.key === 'ArrowRight'
+                    ? step
+                    : e.key === 'ArrowLeft'
+                      ? -step
+                      : 0),
+                y:
+                  n.y +
+                  (e.key === 'ArrowDown'
+                    ? step
+                    : e.key === 'ArrowUp'
+                      ? -step
+                      : 0),
+              }
+            : n,
+        ),
+      );
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selected]);
+
+  const importJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(String(ev.target?.result));
+        setMethod(data.methodology || 'STRIDE');
+        setNodes(data.nodes || []);
+        setEdges(data.edges || []);
+      } catch (_) {
+        /* noop */
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const saveLocal = () => {
+    const data = { methodology: method, nodes, edges };
+    try {
+      localStorage.setItem('threat-model', JSON.stringify(data));
+    } catch (_) {}
+  };
+
+  const loadLocal = () => {
+    try {
+      const raw = localStorage.getItem('threat-model');
+      if (raw) {
+        const data = JSON.parse(raw);
+        setMethod(data.methodology || 'STRIDE');
+        setNodes(data.nodes || []);
+        setEdges(data.edges || []);
+      }
+    } catch (_) {}
+  };
 
   const addNode = () => {
     const id = `n${Date.now()}`;
@@ -101,8 +242,23 @@ const ThreatModeler: React.FC = () => {
         x: 20,
         y: 20,
         label: `Node ${n.length + 1}`,
-        stride: createStride(),
+        categories: createCategories(method),
         dread: createDread(),
+      },
+    ]);
+  };
+
+  const addBoundary = () => {
+    const id = `b${Date.now()}`;
+    setBoundaries((b) => [
+      ...b,
+      {
+        id,
+        x: 40,
+        y: 40,
+        label: `Boundary ${b.length + 1}`,
+        width: BOUNDARY_W,
+        height: BOUNDARY_H,
       },
     ]);
   };
@@ -110,11 +266,19 @@ const ThreatModeler: React.FC = () => {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, delta } = event;
     const id = String(active.id);
-    setNodes((ns) =>
-      ns.map((n) =>
-        n.id === id ? { ...n, x: n.x + delta.x, y: n.y + delta.y } : n,
-      ),
-    );
+    if (id.startsWith('n')) {
+      setNodes((ns) =>
+        ns.map((n) =>
+          n.id === id ? { ...n, x: n.x + delta.x, y: n.y + delta.y } : n,
+        ),
+      );
+    } else if (id.startsWith('b')) {
+      setBoundaries((bs) =>
+        bs.map((b) =>
+          b.id === id ? { ...b, x: b.x + delta.x, y: b.y + delta.y } : b,
+        ),
+      );
+    }
   };
 
   const selectNode = (id: string) => {
@@ -145,12 +309,58 @@ const ThreatModeler: React.FC = () => {
   };
 
   const exportJson = () => {
-    const data = JSON.stringify({ nodes, edges }, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
+    const data = {
+      methodology: method,
+      nodes,
+      edges,
+      threats: enumerateThreats(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = 'diagram.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const enumerateThreats = () => {
+    const ths: {
+      node: string;
+      category: string;
+      risk: number;
+      mitigation: string;
+      residual: number;
+    }[] = [];
+    nodes.forEach((n) => {
+      const values = Object.values(n.dread);
+      const risk = values.reduce((a, b) => a + b, 0) / values.length;
+      Object.entries(n.categories).forEach(([cat, enabled]) => {
+        if (enabled) {
+          const mitigation = currentMethod.mitigations[cat] || '';
+          const residual = Math.max(risk - 2, 0);
+          ths.push({ node: n.label, category: cat, risk, mitigation, residual });
+        }
+      });
+    });
+    return ths;
+  };
+
+  const exportMarkdown = () => {
+    const threats = enumerateThreats();
+    let md = `# Threat Model (${method})\n\n`;
+    md += '| Node | Threat | Risk | Mitigation | Residual Risk |\n';
+    md += '| ---- | ------ | ---- | ---------- | ------------- |\n';
+    threats.forEach((t) => {
+      md += `| ${t.node} | ${t.category} | ${t.risk.toFixed(1)} | ${t.mitigation} | ${t.residual.toFixed(1)} |\n`;
+    });
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'threats.md';
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -172,12 +382,12 @@ const ThreatModeler: React.FC = () => {
     return values.reduce((a, b) => a + b, 0) / values.length;
   }, [selectedNode]);
 
-  const updateStride = (k: StrideKey) => {
+  const toggleCategory = (k: string) => {
     if (!selectedNode) return;
     setNodes((ns) =>
       ns.map((n) =>
         n.id === selectedNode.id
-          ? { ...n, stride: { ...n.stride, [k]: !n.stride[k] } }
+          ? { ...n, categories: { ...n.categories, [k]: !n.categories[k] } }
           : n,
       ),
     );
@@ -225,8 +435,22 @@ const ThreatModeler: React.FC = () => {
           </div>
         )}
         <div className="flex space-x-2">
+          <select
+            className="bg-gray-700 px-2 rounded"
+            value={method}
+            onChange={(e) => setMethod(e.target.value as MethodologyKey)}
+          >
+            {Object.keys(METHODOLOGIES).map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
           <button className="bg-gray-700 px-2 rounded" onClick={addNode}>
             Add Node
+          </button>
+          <button className="bg-gray-700 px-2 rounded" onClick={addBoundary}>
+            Add Boundary
           </button>
           <button
             className="bg-gray-700 px-2 rounded"
@@ -243,8 +467,33 @@ const ThreatModeler: React.FC = () => {
           <button className="bg-gray-700 px-2 rounded" onClick={exportJson}>
             Export JSON
           </button>
+          <button className="bg-gray-700 px-2 rounded" onClick={exportMarkdown}>
+            Export Markdown
+          </button>
+          <button
+            className="bg-gray-700 px-2 rounded"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Import JSON
+          </button>
+          <button className="bg-gray-700 px-2 rounded" onClick={saveLocal}>
+            Save
+          </button>
+          <button className="bg-gray-700 px-2 rounded" onClick={loadLocal}>
+            Load
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            onChange={importJson}
+            className="hidden"
+          />
         </div>
         <div ref={canvasRef} className="flex-1 relative bg-gray-800 rounded">
+          {boundaries.map((b) => (
+            <BoundaryItem key={b.id} boundary={b} />
+          ))}
           <svg className="absolute inset-0 w-full h-full pointer-events-none">
             {edgeElements}
           </svg>
@@ -258,12 +507,12 @@ const ThreatModeler: React.FC = () => {
               {selectedNode.label} Risk {risk.toFixed(1)}
             </div>
             <div className="flex flex-wrap gap-2">
-              {STRIDE.map((cat) => (
+              {currentMethod.categories.map((cat) => (
                 <label key={cat} className="flex items-center space-x-1">
                   <input
                     type="checkbox"
-                    checked={selectedNode.stride[cat]}
-                    onChange={() => updateStride(cat)}
+                    checked={selectedNode.categories[cat]}
+                    onChange={() => toggleCategory(cat)}
                   />
                   <span>{cat}</span>
                 </label>

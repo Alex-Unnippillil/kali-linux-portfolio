@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import tls, { PeerCertificate } from 'tls';
+import { LRUCache } from 'lru-cache';
 
 interface FormattedCert {
   subject: Record<string, string>;
@@ -17,7 +18,9 @@ const explanations = {
   validFrom: 'The date when this certificate becomes valid.',
   validTo: 'The date when this certificate expires.',
   daysRemaining: 'Number of days until the certificate expires.',
-  ocspStapled: 'Whether the server provided an OCSP stapling response indicating revocation status.'
+  ocspStapled: 'Whether the server provided an OCSP stapling response indicating revocation status.',
+  cipher: 'The negotiated cipher suite for the TLS connection.',
+  protocol: 'The negotiated TLS protocol version.'
 };
 
 function parseSAN(input?: string): string[] {
@@ -57,22 +60,87 @@ function collectChain(cert: PeerCertificate): PeerCertificate[] {
 
 function getTLSInfo(host: string, port: number): Promise<any> {
   return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const timeline: { event: string; at: number; message?: string }[] = [
+      { event: 'start', at: 0 },
+    ];
+
     const socket = tls.connect(
-      { host, port, servername: host, rejectUnauthorized: false, requestOCSP: true } as any,
-      () => {
+      {
+        host,
+        port,
+        servername: host,
+        rejectUnauthorized: false,
+        requestOCSP: true,
+      } as any
+    );
+
+    socket.once('lookup', () =>
+      timeline.push({ event: 'lookup', at: Date.now() - start })
+    );
+    socket.once('connect', () =>
+      timeline.push({ event: 'connect', at: Date.now() - start })
+    );
+    socket.once('secureConnect', () => {
+      timeline.push({ event: 'secureConnect', at: Date.now() - start });
       try {
         const peer = socket.getPeerCertificate(true);
         const chain = collectChain(peer).map(formatCert);
-        const ocspStapled = Boolean((socket as any).ocspResponse || (socket as any).getOCSPResponse?.());
+        const ocspStapled = Boolean(
+          (socket as any).ocspResponse || (socket as any).getOCSPResponse?.()
+        );
+        const cipher = socket.getCipher();
+        const protocol = socket.getProtocol?.();
+        const keyInfo = (socket as any).getEphemeralKeyInfo?.();
+        const authorizationError = (socket as any).authorizationError || null;
         socket.end();
-        resolve({ host, port, ocspStapled, chain, explanations });
+        resolve({
+          host,
+          port,
+          ocspStapled,
+          cipher,
+          protocol,
+          key: keyInfo,
+          authorizationError,
+          chain,
+          explanations,
+          sslLabsUrl: `https://www.ssllabs.com/ssltest/analyze.html?d=${encodeURIComponent(host)}`,
+          testSites: [
+            {
+              name: 'Hardenize',
+              url: `https://www.hardenize.com/report/${encodeURIComponent(host)}`,
+            },
+            {
+              name: 'SSL Labs',
+              url: `https://www.ssllabs.com/ssltest/analyze.html?d=${encodeURIComponent(host)}`,
+            },
+            {
+              name: 'SSL Shopper',
+              url: `https://www.sslshopper.com/ssl-checker.html#hostname=${encodeURIComponent(host)}`,
+            },
+          ],
+          timeline,
+        });
       } catch (err) {
-        reject(err);
+        reject({ err, timeline });
       }
     });
-    socket.on('error', reject);
+
+    socket.on('OCSPResponse', () =>
+      timeline.push({ event: 'ocspResponse', at: Date.now() - start })
+    );
+
+    socket.on('error', (error) => {
+      timeline.push({ event: 'error', at: Date.now() - start, message: error.message });
+      reject({ err: error, timeline });
+    });
   });
 }
+
+const cache = new LRUCache<string, any>({
+  max: 100,
+  ttl: 60 * 60 * 1000,
+});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { host, port } = req.query;
@@ -83,11 +151,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const portNum = typeof port === 'string' ? parseInt(port, 10) || 443 : 443;
 
+  const key = `${host}:${portNum}`;
   try {
+    const cached = cache.get(key);
+    if (cached) {
+      res.status(200).json({ ...cached, cached: true });
+      return;
+    }
     const info = await getTLSInfo(host, portNum);
+    cache.set(key, info);
     res.status(200).json(info);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    res
+      .status(500)
+      .json({ error: e.err?.message || e.message || 'TLS lookup failed', timeline: e.timeline });
   }
 }
 

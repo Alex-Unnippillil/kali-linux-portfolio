@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { diffWords } from 'diff';
 
 type Node = {
   domain: string;
@@ -10,6 +11,8 @@ type Node = {
   warnings?: string[];
 };
 
+type DiffPart = { value: string; added?: boolean; removed?: boolean };
+
 type ApiResponse = {
   chain: Node;
   ips: string[];
@@ -17,9 +20,10 @@ type ApiResponse = {
   length: number;
   flattenedSpfRecord: string;
   split: { root: string; parts: Record<string, string> };
+  redirect?: { root: string; domain: string; record: string } | null;
   lookups: number;
   warnings: string[];
-  lookupLog: { domain: string; count: number }[];
+  lookupLog: { domain: string; type: string; count: number }[];
   error?: string;
 };
 
@@ -28,6 +32,25 @@ const SpfFlattener: React.FC = () => {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const exportTxt = () => {
+    if (!data) return;
+    const lines: string[] = [`${domain} TXT "${data.flattenedSpfRecord}"`];
+    Object.entries(data.split.parts).forEach(([k, v]) => {
+      lines.push(`${k} TXT "${v}"`);
+    });
+    if (data.redirect) {
+      lines.push(`${domain} TXT "${data.redirect.root}"`);
+      lines.push(`${data.redirect.domain} TXT "${data.redirect.record}"`);
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${domain}-spf.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const lookup = async () => {
     if (!domain) return;
@@ -68,6 +91,20 @@ const SpfFlattener: React.FC = () => {
     );
   };
 
+  const renderDiff = (parts: DiffPart[]) => (
+    <span className="whitespace-pre-wrap">
+      {parts.map((p, i) => (
+        <span
+          // eslint-disable-next-line react/no-array-index-key
+          key={i}
+          className={p.added ? 'bg-green-500/30' : p.removed ? 'bg-red-500/30' : ''}
+        >
+          {p.value}
+        </span>
+      ))}
+    </span>
+  );
+
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 space-y-4 overflow-auto">
       <div className="flex space-x-2">
@@ -103,7 +140,7 @@ const SpfFlattener: React.FC = () => {
             <div className="mt-2 text-xs">
               {data.lookupLog.map((l) => (
                 <div key={l.count}>
-                  #{l.count}: {l.domain}
+                  #{l.count} ({l.type}): {l.domain}
                 </div>
               ))}
             </div>
@@ -111,7 +148,22 @@ const SpfFlattener: React.FC = () => {
           <div className="mt-2 break-words">
             <div className="font-semibold">Flattened SPF</div>
             <div className="text-xs">{data.flattenedSpfRecord}</div>
+            <button
+              type="button"
+              onClick={exportTxt}
+              className="mt-1 px-2 py-0.5 bg-green-600 rounded text-xs"
+            >
+              Export TXT
+            </button>
           </div>
+          {data.chain.record && (
+            <div className="mt-2 break-words">
+              <div className="font-semibold">Diff</div>
+              <div className="text-xs">
+                {renderDiff(diffWords(data.chain.record, data.flattenedSpfRecord))}
+              </div>
+            </div>
+          )}
           {Object.keys(data.split.parts).length > 1 && (
             <div className="mt-2 break-words">
               <div className="font-semibold">Split Suggestions</div>
@@ -123,8 +175,20 @@ const SpfFlattener: React.FC = () => {
               ))}
             </div>
           )}
+          {data.redirect && (
+            <div className="mt-2 break-words">
+              <div className="font-semibold">Redirect Suggestion</div>
+              <div className="text-xs">{data.redirect.root}</div>
+              <div className="text-xs">
+                {data.redirect.domain}: {data.redirect.record}
+              </div>
+            </div>
+          )}
           <div className="mt-4">Flattened length: {data.length}</div>
           {data.ttl > 0 && <div>Minimum TTL: {data.ttl}</div>}
+          <div className="mt-2 text-xs">
+            Trade-off: reduces DNS lookups from {data.lookups} to 0 at the cost of a longer record.
+          </div>
         </div>
       )}
     </div>

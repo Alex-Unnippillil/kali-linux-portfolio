@@ -8,13 +8,20 @@ interface CaaRecord {
   value: string;
 }
 
+interface EffectivePolicy {
+  issue: string[];
+  issuewild: string[];
+  iodef: string | null;
+}
+
 interface CaaResponse {
   ok: boolean;
   records: CaaRecord[];
   issues: string[];
   policyDomain: string;
-  recommendation?: string;
+  examples?: string;
   notes: string[];
+  effective: EffectivePolicy;
 }
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // five minutes
@@ -88,33 +95,54 @@ export default async function handler(
   try {
     const { records, policyDomain } = await getEffectiveCaa(domain);
 
+    const issueValues = records
+      .filter((r) => r.tag === 'issue')
+      .map((r) => r.value);
+    const issuewildValues = records
+      .filter((r) => r.tag === 'issuewild')
+      .map((r) => r.value);
+    const iodefValues = records
+      .filter((r) => r.tag === 'iodef')
+      .map((r) => r.value);
+
+    const effective: EffectivePolicy = {
+      issue: issueValues,
+      issuewild: issuewildValues.length > 0 ? issuewildValues : issueValues,
+      iodef: iodefValues[0] || null,
+    };
+
     const issues: string[] = [];
     if (records.length === 0) {
       issues.push('No CAA records found');
     }
+    if (issueValues.length === 0) {
+      issues.push('No issue tag: any CA can issue non-wildcard certificates.');
+    }
+    if (effective.issuewild.length === 0) {
+      issues.push('No wildcard policy: any CA can issue wildcard certificates.');
+    }
+    if (iodefValues.length === 0) {
+      issues.push('No iodef contact defined.');
+    }
 
-    const hasIssue = records.some((r) => r.tag === 'issue');
-    const hasIssueWild = records.some((r) => r.tag === 'issuewild');
-    const hasIodef = records.some((r) => r.tag === 'iodef');
-
-    if (!hasIssue) issues.push('Missing issue record');
-    if (!hasIodef) issues.push('Missing iodef record');
-
-    const issuers = records.filter((r) => r.tag === 'issue').map((r) => r.value);
-    const uniqueIssuers = Array.from(new Set(issuers));
-    if (uniqueIssuers.length > 1) issues.push('Multiple issuers present');
-
-    const recParts: string[] = [];
-    if (!hasIssue) recParts.push(`0 issue "letsencrypt.org"`);
-    if (!hasIssueWild) recParts.push(`0 issuewild "letsencrypt.org"`);
-    if (!hasIodef) recParts.push(`0 iodef "mailto:security@${domain}"`);
-    const recommendation =
-      recParts.length > 0 ? recParts.join('\n') + '\n' : undefined;
+    const examplesParts: string[] = [];
+    if (issueValues.length === 0) examplesParts.push(`0 issue "letsencrypt.org"`);
+    if (issuewildValues.length === 0)
+      examplesParts.push(`0 issuewild "letsencrypt.org"`);
+    if (iodefValues.length === 0)
+      examplesParts.push(`0 iodef "mailto:security@${domain}"`);
+    const examples =
+      examplesParts.length > 0 ? examplesParts.join('\n') + '\n' : undefined;
 
     const notes: string[] = [];
     if (records.some((r) => (r.flags & 0x80) !== 0)) {
       notes.push(
         'Critical flag set: unrecognized tags must be understood by CAs or issuance is forbidden.'
+      );
+    }
+    if (!records.some((r) => r.tag === 'issuewild') && issueValues.length > 0) {
+      notes.push(
+        'Wildcard policy inherits non-wildcard issue tags when issuewild is absent.'
       );
     }
     notes.push(
@@ -126,8 +154,9 @@ export default async function handler(
       records,
       issues,
       policyDomain,
-      recommendation,
+      examples,
       notes,
+      effective,
     });
   } catch (e: any) {
     return res.status(500).json({ error: e.message || 'Request failed' });

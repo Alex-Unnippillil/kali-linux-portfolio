@@ -1,44 +1,76 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const apiKey = 'YOUR_API_KEY'; // Replace with your OpenWeather API key
-  const city = 'London';
   const widget = document.getElementById('weather');
   const tempEl = widget.querySelector('.temp');
-  const iconEl = widget.querySelector('.icon');
   const forecastEl = widget.querySelector('.forecast');
+  const unitBtns = widget.querySelectorAll('.unit-btn');
 
-  async function fetchWeather() {
-    try {
-      const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${apiKey}`
-      );
-      if (!response.ok) throw new Error('Failed to fetch weather');
-      const data = await response.json();
-      updateWeather(data);
-    } catch (err) {
-      console.error(err);
+  const city = widget.dataset.city || 'London';
+  let units = 'metric';
+
+  unitBtns.forEach((btn) =>
+    btn.addEventListener('click', () => {
+      unitBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      units = btn.dataset.unit;
+      loadWeather();
+    })
+  );
+
+  function showSkeleton() {
+    tempEl.classList.add('skeleton');
+    tempEl.textContent = '';
+    forecastEl.innerHTML = '';
+    for (let i = 0; i < 5; i++) {
+      const li = document.createElement('li');
+      li.className = 'skeleton';
+      forecastEl.appendChild(li);
     }
   }
 
-  function updateWeather(data) {
-    widget.classList.remove('fade-in');
-    widget.classList.add('fade-out');
-    widget.addEventListener(
-      'animationend',
-      function handler() {
-        widget.classList.remove('fade-out');
-        tempEl.textContent = `${Math.round(data.main.temp)}°C`;
-        const icon = data.weather[0].icon;
-        iconEl.src = `https://openweathermap.org/img/wn/${icon}@2x.png`;
-        iconEl.alt = data.weather[0].description;
-        forecastEl.textContent = data.weather[0].description;
-        widget.classList.add('fade-in');
-        widget.removeEventListener('animationend', handler);
-      },
-      { once: true }
-    );
+  function clearSkeleton() {
+    tempEl.classList.remove('skeleton');
+    forecastEl.querySelectorAll('.skeleton').forEach((el) => el.remove());
   }
 
-  fetchWeather();
-  // Refresh weather every 10 minutes
-  setInterval(fetchWeather, 10 * 60 * 1000);
+  async function geocode(loc) {
+    const res = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(loc)}&count=1`
+    );
+    if (!res.ok) throw new Error('Location lookup failed');
+    const data = await res.json();
+    if (!data.results || !data.results.length) throw new Error('Location not found');
+    return { lat: data.results[0].latitude, lon: data.results[0].longitude };
+  }
+
+  async function loadWeather() {
+    showSkeleton();
+    try {
+      const { lat, lon } = await geocode(city);
+      const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}&units=${units}`);
+      if (!res.ok) throw new Error('Failed to fetch weather');
+      const data = await res.json();
+      renderWeather(data);
+    } catch (err) {
+      console.error(err);
+      clearSkeleton();
+    }
+  }
+
+  function renderWeather(data) {
+    clearSkeleton();
+    const unitSymbol = units === 'metric' ? '°C' : '°F';
+    tempEl.textContent = `${Math.round(data.hourly.temperature_2m[0])}${unitSymbol}`;
+    forecastEl.innerHTML = '';
+    for (let i = 0; i < data.daily.time.length; i++) {
+      const li = document.createElement('li');
+      const day = data.daily.time[i];
+      const max = Math.round(data.daily.temperature_2m_max[i]);
+      const min = Math.round(data.daily.temperature_2m_min[i]);
+      li.textContent = `${day}: ${max}${unitSymbol} / ${min}${unitSymbol}`;
+      forecastEl.appendChild(li);
+    }
+  }
+
+  loadWeather();
 });
+

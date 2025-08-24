@@ -22,7 +22,13 @@ function singleCandidate(board: Board): Hint | null {
     for (let c = 0; c < 9; c += 1) {
       const cand = candidates(board, r, c);
       if (cand.length === 1) {
-        return { row: r, col: c, value: cand[0], type: 'single' };
+        return {
+          row: r,
+          col: c,
+          value: cand[0],
+          type: 'single',
+          message: `Only candidate for cell (${r + 1},${c + 1}) is ${cand[0]}`,
+        };
       }
     }
   }
@@ -49,7 +55,13 @@ function pointingPairs(board: Board): Hint | null {
           const sameRow = cells[0].r === cells[1].r;
           const sameCol = cells[0].c === cells[1].c;
           if (sameRow || sameCol) {
-            return { row: cells[0].r, col: cells[0].c, value: n, type: 'pointing' };
+            return {
+              row: cells[0].r,
+              col: cells[0].c,
+              value: n,
+              type: 'pointing',
+              message: `Pointing pair places ${n} at (${cells[0].r + 1},${cells[0].c + 1})`,
+            };
           }
         }
       }

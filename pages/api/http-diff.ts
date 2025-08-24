@@ -1,22 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { diffLines } from 'diff';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import type { ApiResult, DiffPart, FetchMeta, HttpDiffResponse } from '@/types/http-diff';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
 
-interface FetchResult {
-  finalUrl: string;
-  status: number;
-  headers: Record<string, string>;
-  body: string;
-  redirects: { url: string; status: number }[];
-}
+const execFileAsync = promisify(execFile);
 
 const MAX_REDIRECTS = 10;
 
-async function fetchWithRedirects(url: string): Promise<FetchResult> {
+async function fetchWithRedirects(url: string): Promise<FetchMeta> {
   const redirects: { url: string; status: number }[] = [];
   let current = url;
   let response: Response | null = null;
+  const start = Date.now();
 
   for (let i = 0; i < MAX_REDIRECTS; i += 1) {
     response = await fetch(current, { redirect: 'manual' });
@@ -32,6 +30,26 @@ async function fetchWithRedirects(url: string): Promise<FetchResult> {
   if (!response) throw new Error('No response');
   const body = await response.text();
   const headers = Object.fromEntries(response.headers.entries());
+  const h1 = Date.now() - start;
+  const altSvc = headers['alt-svc'];
+  let http3: FetchMeta['http3'] = { supported: false, h1 };
+  if (altSvc && /h3/i.test(altSvc)) {
+    try {
+      const { stdout } = await execFileAsync('curl', [
+        '-s',
+        '-o',
+        '/dev/null',
+        '-w',
+        '%{time_total}',
+        '--http3',
+        url,
+      ]);
+      const h3 = parseFloat(stdout.trim()) * 1000; // seconds to ms
+      http3 = { supported: true, h1, h3, delta: h3 - h1 };
+    } catch (e: unknown) {
+      http3 = { supported: false, h1, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
 
   return {
     finalUrl: current,
@@ -39,6 +57,8 @@ async function fetchWithRedirects(url: string): Promise<FetchResult> {
     headers,
     body,
     redirects,
+    altSvc,
+    http3,
   };
 }
 
@@ -48,7 +68,10 @@ function headersToString(headers: Record<string, string>): string {
     .join('\n');
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<HttpDiffResponse>,
+) {
   if (req.method !== 'POST') {
     res.status(405).end();
     return;
@@ -62,11 +85,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const [r1, r2] = await Promise.all([fetchWithRedirects(url1), fetchWithRedirects(url2)]);
-    const bodyDiff = diffLines(r1.body, r2.body);
-    const headersDiff = diffLines(headersToString(r1.headers), headersToString(r2.headers));
-    res.status(200).json({ url1: r1, url2: r2, bodyDiff, headersDiff });
-  } catch (e: any) {
-    res.status(500).json({ error: e.message || 'Error' });
+    const bodyDiff = diffLines(r1.body, r2.body) as DiffPart[];
+    const headersDiff = diffLines(
+      headersToString(r1.headers),
+      headersToString(r2.headers),
+    ) as DiffPart[];
+    const result: ApiResult = { url1: r1, url2: r2, bodyDiff, headersDiff };
+    res.status(200).json(result);
+  } catch (e: unknown) {
+    res
+      .status(500)
+      .json({ error: e instanceof Error ? e.message : 'Error' });
   }
 }
 

@@ -15,10 +15,12 @@ import {
   Board,
   Config,
 } from '../../../apps/checkers/engine';
+import { saveMatch } from '@lib/checkers-history';
 
 const Checkers = () => {
   const [variant, setVariant] = useState<Variant>('standard');
-  const [difficulty, setDifficulty] = useState(4);
+  const [depth, setDepth] = useState(4);
+  const [timeLimit, setTimeLimit] = useState(200);
   const config = useMemo<Config>(() => createConfig(variant), [variant]);
   const [board, setBoard] = useState<Board>(() => createBoard(config));
   const [turn, setTurn] = useState<'red' | 'black'>('red');
@@ -29,14 +31,18 @@ const Checkers = () => {
   const [moves, setMoves] = useState<Move[]>([]);
   const [winner, setWinner] = useState<string | null>(null);
   const [draw, setDraw] = useState(false);
-  const [history, setHistory] = useState<{ board: Board; turn: string; no: number }[]>([]);
-  const [future, setFuture] = useState<{ board: Board; turn: string; no: number }[]>([]);
+  const [history, setHistory] = useState<
+    { board: Board; turn: string; no: number }[]
+  >([]);
+  const [future, setFuture] = useState<
+    { board: Board; turn: string; no: number }[]
+  >([]);
   const [noCapture, setNoCapture] = useState(0);
   const [hint, setHint] = useState<Move | null>(null);
   const [lastMove, setLastMove] = useState<[number, number][]>([]);
-    const workerRef = useRef<Worker | null>(null);
-    const hintRequest = useRef(false);
-    const pathRef = useRef<[number, number][]>([]);
+  const workerRef = useRef<Worker | null>(null);
+  const hintRequest = useRef(false);
+  const pathRef = useRef<[number, number][]>([]);
   const makeMoveRef = useRef<((move: Move) => void) | null>(null);
 
   useEffect(() => {
@@ -46,19 +52,22 @@ const Checkers = () => {
       if (hintRequest.current) {
         setHint(move);
         hintRequest.current = false;
-        } else if (move) {
-          makeMoveRef.current?.(move);
-        }
-      };
-      return () => workerRef.current?.terminate();
-    }, []);
+      } else if (move) {
+        makeMoveRef.current?.(move);
+      }
+    };
+    return () => workerRef.current?.terminate();
+  }, []);
 
   useEffect(() => {
     socketRef.current = io();
-    socketRef.current.on('state', (state: { board: Board; turn: 'red' | 'black' }) => {
-      setBoard(state.board);
-      setTurn(state.turn);
-    });
+    socketRef.current.on(
+      'state',
+      (state: { board: Board; turn: 'red' | 'black' }) => {
+        setBoard(state.board);
+        setTurn(state.turn);
+      }
+    );
     return () => socketRef.current?.disconnect();
   }, []);
 
@@ -66,7 +75,15 @@ const Checkers = () => {
     if (gameId) socketRef.current?.emit('join', { gameId, variant });
   }, [gameId, variant]);
 
-  const allMoves = useMemo(() => getAllMoves(board, turn, config), [board, turn, config]);
+  const allMoves = useMemo(
+    () => getAllMoves(board, turn, config),
+    [board, turn, config]
+  );
+  const legalFrom = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of allMoves) set.add(`${m.from[0]},${m.from[1]}`);
+    return set;
+  }, [allMoves]);
 
   useEffect(() => {
     setBoard(createBoard(config));
@@ -86,8 +103,10 @@ const Checkers = () => {
     const piece = board[r][c];
     if (winner || draw || spectate || !piece || piece.color !== turn) return;
     const pieceMoves = getPieceMoves(board, r, c, config);
-    const mustCapture = allMoves.some((m) => m.captured);
-    const filtered = mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
+    const mustCapture = allMoves.some((m) => m.captures?.length);
+    const filtered = mustCapture
+      ? pieceMoves.filter((m) => m.captures?.length)
+      : pieceMoves;
     if (filtered.length) {
       setSelected([r, c]);
       setMoves(filtered);
@@ -100,20 +119,10 @@ const Checkers = () => {
     makeMove(move);
   };
 
-    const makeMove = (move: Move) => {
-    if (pathRef.current.length === 0) pathRef.current = [move.from, move.to];
-    else pathRef.current.push(move.to);
+  const makeMove = (move: Move) => {
+    pathRef.current = move.path ?? [move.from, move.to];
     const { board: newBoard, capture, king } = applyMove(board, move, config);
-    const further = capture
-      ? getPieceMoves(newBoard, move.to[0], move.to[1], config).filter((m) => m.captured)
-      : [];
     setBoard(newBoard);
-    if (capture && further.length) {
-      setSelected([move.to[0], move.to[1]]);
-      setMoves(further);
-      setNoCapture(0);
-      return;
-    }
     const newHistory = [...history, { board, turn, no: noCapture }];
     setHistory(newHistory);
     setFuture([]);
@@ -134,7 +143,12 @@ const Checkers = () => {
     }
     if (isDraw(newNo)) {
       setDraw(true);
-      ReactGA.event({ category: 'Checkers', action: 'game_over', label: 'draw' });
+      ReactGA.event({
+        category: 'Checkers',
+        action: 'game_over',
+        label: 'draw',
+      });
+      saveMatch([...newHistory, { board: newBoard, turn: next, no: newNo }]);
       setLastMove(pathRef.current);
       pathRef.current = [];
       return;
@@ -143,10 +157,17 @@ const Checkers = () => {
     if (winnerColor) {
       setWinner(winnerColor);
       ReactGA.event({ category: 'Checkers', action: 'game_over', label: turn });
+      saveMatch([...newHistory, { board: newBoard, turn: next, no: newNo }]);
     } else {
       setTurn(next);
       if (!gameId && next === 'black') {
-        workerRef.current?.postMessage({ board: newBoard, color: 'black', maxDepth: difficulty, config });
+        workerRef.current?.postMessage({
+          board: newBoard,
+          color: 'black',
+          maxDepth: depth,
+          timeLimit,
+          config,
+        });
       }
     }
     setSelected(null);
@@ -157,9 +178,9 @@ const Checkers = () => {
     if (gameId) {
       socketRef.current?.emit('move', { gameId, board: newBoard, turn: next });
     }
-    };
+  };
 
-    makeMoveRef.current = makeMove;
+  makeMoveRef.current = makeMove;
 
   const reset = () => {
     setBoard(createBoard(config));
@@ -210,14 +231,31 @@ const Checkers = () => {
     setLastMove([]);
     pathRef.current = [];
     if (!gameId && next.turn === 'black') {
-      workerRef.current?.postMessage({ board: next.board, color: 'black', maxDepth: difficulty, config });
+      workerRef.current?.postMessage({
+        board: next.board,
+        color: 'black',
+        maxDepth: depth,
+        timeLimit,
+        config,
+      });
     }
-    if (gameId) socketRef.current?.emit('state', { gameId, board: next.board, turn: next.turn });
+    if (gameId)
+      socketRef.current?.emit('state', {
+        gameId,
+        board: next.board,
+        turn: next.turn,
+      });
   };
 
   const hintMove = () => {
     hintRequest.current = true;
-    workerRef.current?.postMessage({ board, color: turn, maxDepth: difficulty, config });
+    workerRef.current?.postMessage({
+      board,
+      color: turn,
+      maxDepth: depth,
+      timeLimit,
+      config,
+    });
   };
 
   return (
@@ -232,15 +270,29 @@ const Checkers = () => {
           <option value="international">International</option>
           <option value="giveaway">Giveaway</option>
         </select>
-        <select
-          value={difficulty}
-          onChange={(e) => setDifficulty(Number(e.target.value))}
-          className="bg-gray-700 p-1 rounded"
-        >
-          <option value={2}>Easy</option>
-          <option value={4}>Medium</option>
-          <option value={6}>Hard</option>
-        </select>
+        <label className="flex items-center space-x-1">
+          <span>Depth</span>
+          <input
+            type="range"
+            min={1}
+            max={8}
+            value={depth}
+            onChange={(e) => setDepth(Number(e.target.value))}
+          />
+          <span>{depth}</span>
+        </label>
+        <label className="flex items-center space-x-1">
+          <span>Time</span>
+          <input
+            type="range"
+            min={100}
+            max={1000}
+            step={100}
+            value={timeLimit}
+            onChange={(e) => setTimeLimit(Number(e.target.value))}
+          />
+          <span>{timeLimit}ms</span>
+        </label>
         <input
           value={gameId}
           onChange={(e) => setGameId(e.target.value)}
@@ -266,9 +318,11 @@ const Checkers = () => {
           row.map((cell, c) => {
             const isDark = (r + c) % 2 === 1;
             const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
+            const isLegalSource = !selected && legalFrom.has(`${r},${c}`);
             const isHint = hint && hint.from[0] === r && hint.from[1] === c;
             const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
-            const isSelected = selected && selected[0] === r && selected[1] === c;
+            const isSelected =
+              selected && selected[0] === r && selected[1] === c;
             const isLast = lastMove.some((p) => p[0] === r && p[1] === c);
             return (
               <div
@@ -277,6 +331,8 @@ const Checkers = () => {
                 className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
                 } ${isMove ? 'ring-2 ring-yellow-300' : ''} ${
+                  isLegalSource ? 'ring-2 ring-indigo-400' : ''
+                } ${
                   isHint || isHintDest ? 'ring-2 ring-blue-400' : ''
                 } ${isSelected ? 'ring-2 ring-green-400' : ''} ${
                   isLast ? 'ring-2 ring-red-400' : ''
@@ -289,7 +345,9 @@ const Checkers = () => {
                     } ${cell.king ? 'border-4 border-yellow-300' : ''}`}
                   >
                     {cell.king && (
-                      <span className="text-yellow-300 text-sm font-bold">K</span>
+                      <span className="text-yellow-300 text-sm font-bold">
+                        K
+                      </span>
                     )}
                   </div>
                 )}

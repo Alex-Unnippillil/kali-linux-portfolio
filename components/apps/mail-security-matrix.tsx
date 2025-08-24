@@ -1,128 +1,127 @@
 import React, { useState } from 'react';
 
-type DnsAnswer = { data: string };
-type DnsResponse = { Answer?: DnsAnswer[]; error?: string };
+type CheckResult = {
+  status: 'pass' | 'warn' | 'fail';
+  error?: string;
+  record?: string;
+};
 
 type ApiResponse = {
-  mx?: DnsResponse;
-  mtaSts?: DnsResponse;
-  tlsRpt?: DnsResponse;
-  dane?: Record<string, DnsResponse>;
-  errors?: Record<string, string>;
+  spf: CheckResult;
+  dkim: CheckResult;
+  dmarc: CheckResult;
+  mtaSts: CheckResult;
+  tlsRpt: CheckResult;
+  bimi: CheckResult;
+};
+
+const CONTROLS = [
+  { key: 'spf', label: 'SPF', link: 'https://www.rfc-editor.org/rfc/rfc7208' },
+  { key: 'dkim', label: 'DKIM', link: 'https://www.rfc-editor.org/rfc/rfc6376' },
+  { key: 'dmarc', label: 'DMARC', link: 'https://www.rfc-editor.org/rfc/rfc7489' },
+  { key: 'mtaSts', label: 'MTA-STS', link: 'https://www.rfc-editor.org/rfc/rfc8461' },
+  { key: 'tlsRpt', label: 'TLS-RPT', link: 'https://www.rfc-editor.org/rfc/rfc8460' },
+  { key: 'bimi', label: 'BIMI', link: 'https://bimigroup.org/bimi-implementation-guide/' },
+] as const;
+
+const COLORS = {
+  pass: 'bg-green-600',
+  warn: 'bg-yellow-600',
+  fail: 'bg-red-600',
+};
+
+const SYMBOLS = {
+  pass: '✔',
+  warn: '⚠',
+  fail: '✖',
 };
 
 const MailSecurityMatrix: React.FC = () => {
-  const [domain, setDomain] = useState('');
-  const [data, setData] = useState<ApiResponse | null>(null);
+  const [domainsText, setDomainsText] = useState('');
+  const [results, setResults] = useState<Record<string, ApiResponse>>({});
   const [loading, setLoading] = useState(false);
 
   const check = async () => {
-    if (!domain) return;
+    const domains = domainsText.split(/\s+/).filter(Boolean);
+    if (domains.length === 0) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/mail-security-matrix?domain=${domain}`);
-      const dnsData = await res.json();
-      setData(dnsData);
-    } catch (e) {
-      setData({ errors: { general: 'Lookup failed' } });
+      const entries = await Promise.all(
+        domains.map(async (d) => {
+          const res = await fetch(`/api/mail-security-matrix?domain=${d}`);
+          const data = await res.json();
+          return [d, data as ApiResponse];
+        })
+      );
+      setResults(Object.fromEntries(entries));
+    } catch (_) {
+      // ignore errors
     } finally {
       setLoading(false);
     }
   };
 
-  const copy = (text: string) => navigator.clipboard.writeText(text);
-
-  const mtaStsStatus = data?.mtaSts?.Answer ? 'Present' : 'Missing';
-  const tlsRptStatus = data?.tlsRpt?.Answer ? 'Present' : 'Missing';
-  const daneHosts = Object.entries(data?.dane || {});
-  const daneStatus = daneHosts.some(([_, r]) => r.Answer) ? 'Present' : 'Missing';
-
-  const recommendedMtaSts = `_mta-sts.${domain}. IN TXT "v=STSv1; id=1"\n# https://mta-sts.${domain}/.well-known/mta-sts.txt\nversion: STSv1\nmode: enforce\nmx: mail.${domain}\nmax_age: 604800`;
-  const recommendedTlsRpt = `_smtp._tls.${domain}. IN TXT "v=TLSRPTv1; rua=mailto:tlsrpt@${domain}"`;
-  const recommendedDane = `_25._tcp.mail.${domain}. IN TLSA 3 1 1 <CERT_SHA256_HASH>`;
+  const hasResults = Object.keys(results).length > 0;
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 space-y-4">
-      <div className="flex flex-col sm:flex-row gap-2">
-        <input
-          className="px-2 py-1 rounded bg-gray-800 text-white flex-1"
-          placeholder="domain.com"
-          value={domain}
-          onChange={(e) => setDomain(e.target.value)}
-        />
-        <button
-          type="button"
-          onClick={check}
-          disabled={loading}
-          className="px-4 py-1 bg-blue-600 rounded disabled:opacity-50"
-        >
-          {loading ? 'Checking...' : 'Check'}
-        </button>
-      </div>
-      {data && !data.errors?.general && (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left">
-              <th className="pb-2">Check</th>
-              <th className="pb-2">Result</th>
-              <th className="pb-2">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-t border-gray-700">
-              <td className="py-2 font-semibold">MTA-STS</td>
-              <td className="py-2">
-                {mtaStsStatus}
-                {data?.errors?.mtaSts ? ` (${data.errors.mtaSts})` : ''}
-              </td>
-              <td className="py-2">
-                <button
-                  className="px-2 py-1 bg-gray-700 rounded"
-                  onClick={() => copy(recommendedMtaSts)}
-                >
-                  Copy
-                </button>
-              </td>
-            </tr>
-            <tr className="border-t border-gray-700">
-              <td className="py-2 font-semibold">TLS-RPT</td>
-              <td className="py-2">
-                {tlsRptStatus}
-                {data?.errors?.tlsRpt ? ` (${data.errors.tlsRpt})` : ''}
-              </td>
-              <td className="py-2">
-                <button
-                  className="px-2 py-1 bg-gray-700 rounded"
-                  onClick={() => copy(recommendedTlsRpt)}
-                >
-                  Copy
-                </button>
-              </td>
-            </tr>
-            <tr className="border-t border-gray-700">
-              <td className="py-2 font-semibold">DANE</td>
-              <td className="py-2">
-                {daneStatus}
-                {data?.errors?.dane && ` (${data.errors.dane})`}
-                {!data?.errors?.dane &&
-                  daneHosts.map(([host, r]) =>
-                    r.error ? ` (${host}: ${r.error})` : ''
-                  )}
-              </td>
-              <td className="py-2">
-                <button
-                  className="px-2 py-1 bg-gray-700 rounded"
-                  onClick={() => copy(recommendedDane)}
-                >
-                  Copy
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      )}
-      {data?.errors?.general && (
-        <div className="text-red-400">{data.errors.general}</div>
+      <textarea
+        className="w-full h-24 p-2 rounded bg-gray-800 text-white"
+        placeholder="example.com\nexample.net"
+        value={domainsText}
+        onChange={(e) => setDomainsText(e.target.value)}
+      />
+      <button
+        type="button"
+        onClick={check}
+        disabled={loading}
+        className="px-4 py-1 bg-blue-600 rounded disabled:opacity-50"
+      >
+        {loading ? 'Checking...' : 'Check'}
+      </button>
+
+      {hasResults && (
+        <div className="overflow-auto">
+          <table className="w-full text-sm mt-4">
+            <thead>
+              <tr>
+                <th className="text-left p-2">Domain</th>
+                {CONTROLS.map((c) => (
+                  <th key={c.key} className="text-left p-2">
+                    <a
+                      href={c.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      {c.label}
+                    </a>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(results).map(([d, r]) => (
+                <tr key={d} className="border-t border-gray-700">
+                  <td className="p-2 font-semibold">{d}</td>
+                  {CONTROLS.map((c) => {
+                    const status = r[c.key as keyof ApiResponse].status;
+                    const error = r[c.key as keyof ApiResponse].error;
+                    return (
+                      <td
+                        key={c.key}
+                        className={`p-2 text-center ${COLORS[status]}`}
+                        title={error || ''}
+                      >
+                        {SYMBOLS[status]}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

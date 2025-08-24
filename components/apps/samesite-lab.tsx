@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ExternalFrame from '../ExternalFrame';
 
 interface TestDef {
   id: string;
@@ -101,7 +102,7 @@ const SameSiteLab: React.FC = () => {
         </tbody>
       </table>
       {TESTS.map((t) => (
-        <iframe
+        <ExternalFrame
           key={t.id}
           title={t.label}
           src={`${t.src(cookieName)}&samesite=${sameSite}`}

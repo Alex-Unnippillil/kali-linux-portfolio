@@ -1,0 +1,38 @@
+{
+  "easy": [
+    {"word": "apple"},
+    {"word": "house"},
+    {"word": "water"},
+    {"word": "music"},
+    {"word": "chair"},
+    {"word": "green"},
+    {"word": "light"},
+    {"word": "phone"},
+    {"word": "train"},
+    {"word": "pizza"}
+  ],
+  "medium": [
+    {"word": "puzzle"},
+    {"word": "gadget"},
+    {"word": "forest"},
+    {"word": "rocket"},
+    {"word": "camera"},
+    {"word": "silver"},
+    {"word": "planet"},
+    {"word": "whisper"},
+    {"word": "jungle"},
+    {"word": "castle"}
+  ],
+  "hard": [
+    {"word": "xylophone"},
+    {"word": "quizzical"},
+    {"word": "zephyr"},
+    {"word": "mnemonic"},
+    {"word": "labyrinth"},
+    {"word": "sphinx"},
+    {"word": "paradox"},
+    {"word": "obfuscate"},
+    {"word": "axiom"},
+    {"word": "cryptic"}
+  ]
+}

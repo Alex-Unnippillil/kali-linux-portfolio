@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import type { RequestResponse } from '@/types/request';
 
 interface HistoryEntry {
   method: string;
@@ -7,14 +8,16 @@ interface HistoryEntry {
   body: string;
 }
 
+interface RequestBuilderProps {}
+
 const STORAGE_KEY = 'request-builder-history';
 
-const RequestBuilder: React.FC = () => {
+const RequestBuilder: React.FC<RequestBuilderProps> = () => {
   const [method, setMethod] = useState('GET');
   const [url, setUrl] = useState('');
   const [headers, setHeaders] = useState('{}');
   const [body, setBody] = useState('');
-  const [response, setResponse] = useState<any>(null);
+  const [response, setResponse] = useState<RequestResponse | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
   useEffect(() => {
@@ -46,7 +49,7 @@ const RequestBuilder: React.FC = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ method, url, headers: parsedHeaders, body }),
     });
-    const data = await res.json();
+    const data = (await res.json()) as RequestResponse;
     setResponse(data);
   };
 

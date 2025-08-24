@@ -1,82 +1,168 @@
 'use client';
+import React, { useEffect, useRef, useState } from 'react';
+import safeRegex from 'safe-regex';
 
-import React, { useState } from 'react';
-import { RE2 } from 're2-wasm';
+type EngineResult = {
+  compileTime: number | null;
+  matchTime: number | null;
+  match: string[] | null;
+  error: string | null;
+};
 
-const PcreRe2Lab: React.FC = () => {
+export default function PcreRe2Lab() {
   const [pattern, setPattern] = useState('');
+  const [flags, setFlags] = useState('');
   const [text, setText] = useState('');
-  const [nativeTime, setNativeTime] = useState(0);
-  const [re2Time, setRe2Time] = useState(0);
-  const [nativeResult, setNativeResult] = useState<string | null>(null);
-  const [re2Result, setRe2Result] = useState<string | null>(null);
-  const [error, setError] = useState('');
+  const [pcre, setPcre] = useState<EngineResult | null>(null);
+  const [re2, setRe2] = useState<EngineResult | null>(null);
+  const [isSafe, setIsSafe] = useState(true);
 
-  const run = () => {
-    setError('');
-    setNativeResult(null);
-    setRe2Result(null);
-    // Native RegExp
-    try {
-      const native = new RegExp(pattern, 'gu');
-      const start = performance.now();
-      const matches = text.match(native);
-      setNativeTime(performance.now() - start);
-      setNativeResult(matches ? JSON.stringify(matches) : 'null');
-    } catch (e: any) {
-      setError(`Native error: ${e.message}`);
-      setNativeTime(0);
+  const workerRef = useRef<Worker | null>(null);
+
+  // Load state from URL or localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const storedPattern =
+      params.get('pattern') || localStorage.getItem('pcreRe2Pattern') || '';
+    const storedFlags =
+      params.get('flags') || localStorage.getItem('pcreRe2Flags') || '';
+    const storedText =
+      params.get('text') || localStorage.getItem('pcreRe2Text') || '';
+    setPattern(storedPattern);
+    setFlags(storedFlags);
+    setText(storedText);
+  }, []);
+
+  // Persist state
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('pcreRe2Pattern', pattern);
+    localStorage.setItem('pcreRe2Flags', flags);
+    localStorage.setItem('pcreRe2Text', text);
+  }, [pattern, flags, text]);
+
+  // Evaluate
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsSafe(safeRegex(pattern));
+    if (!workerRef.current) {
+      workerRef.current = new Worker(new URL('./pcre-re2-lab.worker.ts', import.meta.url));
     }
-    // RE2 engine
-    try {
-      const re2 = new RE2(pattern, 'gu');
-      const start = performance.now();
-      const matches = re2.match(text);
-      setRe2Time(performance.now() - start);
-      setRe2Result(matches ? JSON.stringify(matches) : 'null');
-    } catch (e: any) {
-      setError((prev) => (prev ? prev + ' ' : '') + `RE2 error: ${e.message}`);
-      setRe2Time(0);
-    }
+    const worker = workerRef.current;
+    const textBuffer = new TextEncoder().encode(text).buffer;
+    worker.onmessage = (e: MessageEvent) => {
+      const data = e.data as { pcre: EngineResult; re2: EngineResult };
+      if (data.pcre) setPcre(data.pcre);
+      if (data.re2) setRe2(data.re2);
+    };
+    worker.postMessage({ pattern, flags, textBuffer });
+  }, [pattern, flags, text]);
+
+  const canned = [
+    {
+      label: 'Email',
+      pattern: '([\\w.-]+)@([\\w.-]+)\\.([a-zA-Z]{2,})',
+      text: 'contact me at foo@example.com',
+    },
+    {
+      label: 'IPv4',
+      pattern: '(\\d{1,3}(?:\\.\\d{1,3}){3})',
+      text: 'The IP is 192.168.0.1',
+    },
+    {
+      label: 'Catastrophic',
+      pattern: '(a+)+$',
+      text: 'aaaaaaaaaaaaaaaaaaaa!'
+    },
+  ];
+
+  const share = () => {
+    if (typeof window === 'undefined') return;
+    const url = `${window.location.origin}${window.location.pathname}?pattern=${encodeURIComponent(
+      pattern,
+    )}&flags=${encodeURIComponent(flags)}&text=${encodeURIComponent(text)}`;
+    navigator.clipboard.writeText(url);
+    alert('Permalink copied to clipboard');
   };
 
   return (
-    <div className="h-full w-full p-4 bg-gray-900 text-white flex flex-col space-y-2">
-      <div className="flex space-x-2">
+    <div className="h-full w-full p-4 bg-gray-900 text-white flex flex-col gap-2">
+      <div className="flex flex-wrap gap-2 items-center">
         <input
-          className="flex-1 px-2 py-1 text-black rounded"
+          className="px-2 py-1 rounded text-black"
           placeholder="Pattern"
           value={pattern}
           onChange={(e) => setPattern(e.target.value)}
         />
-        <button className="px-3 py-1 bg-blue-600 rounded" onClick={run}>
-          Run
+        <input
+          className="px-2 py-1 w-20 rounded text-black"
+          placeholder="Flags"
+          value={flags}
+          onChange={(e) => setFlags(e.target.value)}
+        />
+        <button className="px-3 py-1 bg-blue-600 rounded" onClick={share}>
+          Share
         </button>
+        <div
+          className={`px-2 py-1 rounded text-sm ${
+            isSafe ? 'bg-green-600' : 'bg-red-600'
+          }`}
+        >
+          {isSafe ? 'Safe' : 'Unsafe'}
+        </div>
       </div>
       <textarea
-        className="w-full h-32 p-2 text-black rounded"
-        placeholder="Test text"
+        className="w-full h-40 p-2 rounded text-black"
+        placeholder="Sample text"
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      {error && <div className="text-red-500">{error}</div>}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 overflow-auto">
-        <div>
-          <h3 className="font-bold">Native RegExp</h3>
-          <div>Time: {nativeTime.toFixed(3)} ms</div>
-          <pre className="bg-gray-800 p-2 rounded overflow-auto whitespace-pre-wrap">{nativeResult}</pre>
+      <div className="flex gap-4 flex-wrap">
+        <div className="flex-1 min-w-[250px] bg-gray-800 p-2 rounded">
+          <h2 className="font-bold mb-2">PCRE2</h2>
+          {pcre?.error && <div className="text-red-400 text-sm">{pcre.error}</div>}
+          {pcre && !pcre.error && (
+            <div className="text-sm">
+              <div>Compile: {pcre.compileTime?.toFixed(2)}ms</div>
+              <div>Match: {pcre.matchTime?.toFixed(2)}ms</div>
+              {pcre.match && (
+                <pre className="whitespace-pre-wrap break-words">{JSON.stringify(pcre.match, null, 2)}</pre>
+              )}
+            </div>
+          )}
         </div>
-        <div>
-          <h3 className="font-bold">RE2</h3>
-          <div>Time: {re2Time.toFixed(3)} ms</div>
-          <pre className="bg-gray-800 p-2 rounded overflow-auto whitespace-pre-wrap">{re2Result}</pre>
+        <div className="flex-1 min-w-[250px] bg-gray-800 p-2 rounded">
+          <h2 className="font-bold mb-2">RE2</h2>
+          {re2?.error && <div className="text-red-400 text-sm">{re2.error}</div>}
+          {re2 && !re2.error && (
+            <div className="text-sm">
+              <div>Compile: {re2.compileTime?.toFixed(2)}ms</div>
+              <div>Match: {re2.matchTime?.toFixed(2)}ms</div>
+              {re2.match && (
+                <pre className="whitespace-pre-wrap break-words">{JSON.stringify(re2.match, null, 2)}</pre>
+              )}
+            </div>
+          )}
         </div>
+      </div>
+      <div className="flex gap-2 flex-wrap mt-2">
+        {canned.map((c) => (
+          <button
+            key={c.label}
+            className="px-2 py-1 bg-gray-700 rounded text-sm"
+            onClick={() => {
+              setPattern(c.pattern);
+              setText(c.text);
+              setFlags('');
+            }}
+          >
+            {c.label}
+          </button>
+        ))}
       </div>
     </div>
   );
-};
-
-export default PcreRe2Lab;
+}
 
 export const displayPcreRe2Lab = () => <PcreRe2Lab />;
-

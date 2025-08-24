@@ -3,6 +3,7 @@ import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 
 import offlineQuotes from './quotes.json';
+import { TEMPLATES, DEFAULT_TEMPLATE } from './quote_templates';
 
 const SAFE_CATEGORIES = [
   'inspirational',
@@ -53,13 +54,36 @@ const processQuotes = (data) => {
 
 const allOfflineQuotes = processQuotes(offlineQuotes);
 
+const RATE_LIMIT_MS = 60 * 60 * 1000; // 1 hour
+
 const QuoteGenerator = () => {
-  const [quotes, setQuotes] = useState(allOfflineQuotes);
+  const [quotes, setQuotes] = useState([]);
   const [current, setCurrent] = useState(null);
-  const [category, setCategory] = useState('');
+  const [displayed, setDisplayed] = useState('');
+  const [tag, setTag] = useState('');
   const [search, setSearch] = useState('');
-  const [fade, setFade] = useState(false);
+  const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
   const [prefersReduced, setPrefersReduced] = useState(false);
+  const [newQuote, setNewQuote] = useState('');
+  const [newAuthor, setNewAuthor] = useState('');
+  const [pinned, setPinned] = useState(false);
+
+  const loadLocalQuotes = () => {
+    const base = [...allOfflineQuotes];
+    try {
+      const user = JSON.parse(localStorage.getItem('userQuotes') || '[]');
+      base.push(...processQuotes(user));
+    } catch {
+      /* ignore */
+    }
+    try {
+      const stored = JSON.parse(localStorage.getItem('quotesData') || '[]');
+      base.push(...processQuotes(stored));
+    } catch {
+      /* ignore */
+    }
+    setQuotes(base);
+  };
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -70,16 +94,21 @@ const QuoteGenerator = () => {
   }, []);
 
   useEffect(() => {
-    const etag = localStorage.getItem('quotesEtag');
-    const stored = localStorage.getItem('quotesData');
-    if (stored) {
-      try {
-        setQuotes(processQuotes(JSON.parse(stored)));
-      } catch {
-        // ignore parse error
-      }
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('quote');
+    const a = params.get('author');
+    const t = params.get('template');
+    if (t && TEMPLATES[t]) setTemplate(t);
+    if (q && a) {
+      setCurrent({ content: q, author: a });
+      setPinned(true);
     }
+  }, []);
 
+  const fetchQuotes = (force = false) => {
+    const last = Number(localStorage.getItem('quotesFetchedAt') || '0');
+    if (!force && Date.now() - last < RATE_LIMIT_MS) return;
+    const etag = localStorage.getItem('quotesEtag');
     fetch('https://dummyjson.com/quotes?limit=500', {
       headers: etag ? { 'If-None-Match': etag } : {},
     })
@@ -89,28 +118,36 @@ const QuoteGenerator = () => {
           res.json().then((d) => {
             localStorage.setItem('quotesData', JSON.stringify(d.quotes));
             if (newEtag) localStorage.setItem('quotesEtag', newEtag);
-            setQuotes(processQuotes(d.quotes));
+            localStorage.setItem('quotesFetchedAt', Date.now().toString());
+            loadLocalQuotes();
           });
         }
       })
       .catch(() => {
         /* ignore network errors */
       });
+  };
+
+  useEffect(() => {
+    loadLocalQuotes();
+    fetchQuotes();
   }, []);
 
   const filteredQuotes = useMemo(
     () =>
       quotes.filter(
         (q) =>
-          (!category || q.tags.includes(category)) &&
+          (!tag || q.tags.includes(tag)) &&
           (!search ||
             q.content.toLowerCase().includes(search.toLowerCase()) ||
-            q.author.toLowerCase().includes(search.toLowerCase()))
+            q.author.toLowerCase().includes(search.toLowerCase()) ||
+            q.tags.some((t) => t.includes(search.toLowerCase())))
       ),
-    [quotes, category, search]
+    [quotes, tag, search]
   );
 
   useEffect(() => {
+    if (pinned) return;
     if (!filteredQuotes.length) {
       setCurrent(null);
       return;
@@ -123,21 +160,34 @@ const QuoteGenerator = () => {
           .reduce((a, c) => Math.imul(a, 31) + c.charCodeAt(0), 0)
       ) % filteredQuotes.length;
     setCurrent(filteredQuotes[index]);
-  }, [filteredQuotes]);
+  }, [filteredQuotes, pinned]);
+
+  useEffect(() => {
+    if (!current) {
+      setDisplayed('');
+      return;
+    }
+    if (prefersReduced) {
+      setDisplayed(current.content);
+      return;
+    }
+    setDisplayed('');
+    let i = 0;
+    const text = current.content;
+    const id = setInterval(() => {
+      setDisplayed((prev) => prev + text[i]);
+      i += 1;
+      if (i >= text.length) clearInterval(id);
+    }, 30);
+    return () => clearInterval(id);
+  }, [current, prefersReduced]);
 
   const changeQuote = () => {
     if (!filteredQuotes.length) return;
     const newQuote =
       filteredQuotes[Math.floor(Math.random() * filteredQuotes.length)];
-    if (prefersReduced) {
-      setCurrent(newQuote);
-    } else {
-      setFade(true);
-      setTimeout(() => {
-        setCurrent(newQuote);
-        setFade(false);
-      }, 300);
-    }
+    setPinned(false);
+    setCurrent(newQuote);
   };
 
   const copyQuote = () => {
@@ -150,8 +200,37 @@ const QuoteGenerator = () => {
 
   const shareOnX = () => {
     if (!current) return;
+    const params = new URLSearchParams({
+      quote: current.content,
+      author: current.author,
+      template,
+    });
+    const shareUrl = `${window.location.origin}/apps/quote-generator?${params.toString()}`;
     const text = `"${current.content}" - ${current.author}`;
-    const url = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    const url =
+      `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+    window.open(url, '_blank');
+  };
+
+  const copyLink = () => {
+    if (!current || !navigator.clipboard) return;
+    const params = new URLSearchParams({
+      quote: current.content,
+      author: current.author,
+      template,
+    });
+    const url = `${window.location.origin}/apps/quote-generator?${params.toString()}`;
+    navigator.clipboard.writeText(url);
+  };
+
+  const openOgImage = () => {
+    if (!current) return;
+    const params = new URLSearchParams({
+      quote: current.content,
+      author: current.author,
+      template,
+    });
+    const url = `${window.location.origin}/apps/quote-generator/og?${params.toString()}`;
     window.open(url, '_blank');
   };
 
@@ -166,7 +245,22 @@ const QuoteGenerator = () => {
     });
   };
 
-  const categories = useMemo(
+  const addOfflineQuote = () => {
+    if (!newQuote.trim() || !newAuthor.trim()) return;
+    const entry = { quote: newQuote.trim(), author: newAuthor.trim() };
+    try {
+      const stored = JSON.parse(localStorage.getItem('userQuotes') || '[]');
+      stored.push(entry);
+      localStorage.setItem('userQuotes', JSON.stringify(stored));
+    } catch {
+      localStorage.setItem('userQuotes', JSON.stringify([entry]));
+    }
+    setNewQuote('');
+    setNewAuthor('');
+    loadLocalQuotes();
+  };
+
+  const tags = useMemo(
     () =>
       Array.from(new Set(quotes.flatMap((q) => q.tags))).filter((c) =>
         SAFE_CATEGORIES.includes(c)
@@ -179,14 +273,12 @@ const QuoteGenerator = () => {
       <div className="w-full max-w-md flex flex-col items-center">
         <div
           id="quote-card"
-          className={`p-4 text-center transition-opacity duration-300 ${
-            fade && !prefersReduced ? 'opacity-0' : 'opacity-100'
-          }`}
+          className={`p-4 text-center rounded ${TEMPLATES[template].card}`}
         >
           {current ? (
             <>
-              <p className="text-lg mb-2">&quot;{current.content}&quot;</p>
-              <p className="text-sm text-gray-300">- {current.author}</p>
+              <p className={TEMPLATES[template].quote}>&quot;{displayed}&quot;</p>
+              <p className={TEMPLATES[template].author}>- {current.author}</p>
             </>
           ) : (
             <p>No quotes found.</p>
@@ -201,9 +293,21 @@ const QuoteGenerator = () => {
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={() => fetchQuotes(true)}
+          >
+            Refresh
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={copyQuote}
           >
             Copy
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={copyLink}
+          >
+            Link
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
@@ -213,30 +317,80 @@ const QuoteGenerator = () => {
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={openOgImage}
+          >
+            OG
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={exportImage}
           >
             Image
           </button>
         </div>
+        <p className="mt-2 text-xs text-gray-400">
+          Quotes provided by{' '}
+          <a
+            href="https://dummyjson.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            dummyjson.com
+          </a>
+        </p>
         <div className="mt-4 flex flex-col w-full gap-2">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search"
+            placeholder="Search quotes, authors, or tags"
             className="px-2 py-1 rounded text-black"
           />
           <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            data-testid="tag-filter"
+            value={tag}
+            onChange={(e) => setTag(e.target.value)}
             className="px-2 py-1 rounded text-black"
           >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
+            <option value="">All Tags</option>
+            {tags.map((cat) => (
               <option key={cat} value={cat}>
                 {cat}
               </option>
             ))}
           </select>
+          <select
+            value={template}
+            onChange={(e) => setTemplate(e.target.value)}
+            className="px-2 py-1 rounded text-black"
+          >
+            {Object.keys(TEMPLATES).map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="mt-6 flex flex-col w-full gap-2">
+          <textarea
+            value={newQuote}
+            onChange={(e) => setNewQuote(e.target.value)}
+            placeholder="Your quote"
+            className="px-2 py-1 rounded text-black"
+            rows={2}
+          />
+          <input
+            value={newAuthor}
+            onChange={(e) => setNewAuthor(e.target.value)}
+            placeholder="Author"
+            className="px-2 py-1 rounded text-black"
+          />
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded self-center"
+            onClick={addOfflineQuote}
+          >
+            Add Quote
+          </button>
         </div>
       </div>
     </div>

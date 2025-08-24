@@ -59,13 +59,20 @@ export function generatePuzzle(difficulty: 'easy' | 'medium' | 'hard' = 'easy'):
     if (removed >= removeTarget) break;
     const r = Math.floor(idx / 9);
     const c = idx % 9;
-    const backup = puzzle[r][c];
+    const symR = 8 - r;
+    const symC = 8 - c;
+    const symIdx = symR * 9 + symC;
+    if (idx > symIdx) continue; // already processed pair
+    const backup1 = puzzle[r][c];
+    const backup2 = puzzle[symR][symC];
     puzzle[r][c] = 0;
+    puzzle[symR][symC] = 0;
     const solutions = countSolutions(puzzle, 2);
     if (solutions !== 1) {
-      puzzle[r][c] = backup;
+      puzzle[r][c] = backup1;
+      puzzle[symR][symC] = backup2;
     } else {
-      removed += 1;
+      removed += r === symR && c === symC ? 1 : 2;
     }
   }
   return puzzle;

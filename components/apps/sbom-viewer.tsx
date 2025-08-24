@@ -1,163 +1,243 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import mermaid from 'mermaid';
-import {
-  readFileChunks,
-  parseSbomObject,
-  fetchOsv,
-  severityRank,
-  ParsedSbom,
-} from '../../lib/sbom';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import Fuse from 'fuse.js';
+import Papa from 'papaparse';
+import { FixedSizeList as List } from 'react-window';
+import { ParsedSbom } from '@lib/sbom';
 
-const sanitize = (s: string) => s.replace(/[^A-Za-z0-9_]/g, '_');
+interface TreeProps {
+  id: string;
+  graph: Record<string, string[]>;
+}
+
+const DependencyTree: React.FC<TreeProps> = ({ id, graph }) => {
+  const deps = graph[id] || [];
+  if (!deps.length) return null;
+  return (
+    <ul className="ml-4 list-disc">
+      {deps.map((d) => (
+        <li key={d}>
+          {d}
+          <DependencyTree id={d} graph={graph} />
+        </li>
+      ))}
+    </ul>
+  );
+};
 
 const SbomViewer: React.FC = () => {
   const [sbom, setSbom] = useState<ParsedSbom | null>(null);
-  const [licenseFilter, setLicenseFilter] = useState('');
-  const [severityFilter, setSeverityFilter] = useState('');
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await readFileChunks(file);
-      const data = JSON.parse(text);
-      const parsed = parseSbomObject(data);
-      for (const c of parsed.components) {
-        await fetchOsv(c);
-      }
-      setSbom(parsed);
-    } catch (err: any) {
-      alert(err.message || 'Failed to parse SBOM file');
-    }
-  };
-
-  const components = useMemo(() => {
-    if (!sbom) return [];
-    return sbom.components.filter((c) => {
-      const licenseOk =
-        !licenseFilter ||
-        c.licenses.some((l) =>
-          l.toLowerCase().includes(licenseFilter.toLowerCase())
-        );
-      const severityOk =
-        !severityFilter ||
-        c.vulns.some(
-          (v) => severityRank(v.severity) >= severityRank(severityFilter)
-        );
-      return licenseOk && severityOk;
-    });
-  }, [sbom, licenseFilter, severityFilter]);
-
-  const graph = useMemo(() => {
-    if (!sbom) return {} as Record<string, string[]>;
-    const ids = new Set(components.map((c) => c.id));
-    const filtered: Record<string, string[]> = {};
-    ids.forEach((id) => {
-      const deps = sbom.graph[id]?.filter((d) => ids.has(d));
-      if (deps && deps.length) filtered[id] = deps;
-    });
-    return filtered;
-  }, [sbom, components]);
-
-  const graphText = useMemo(() => {
-    const lines = ['graph LR'];
-    Object.entries(graph).forEach(([from, tos]) => {
-      tos.forEach((to) => lines.push(`${sanitize(from)}-->${sanitize(to)}`));
-    });
-    return lines.join('\n');
-  }, [graph]);
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState('');
+  const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
-    if (!graphText || !sbom) return;
-    mermaid.initialize({ startOnLoad: false });
-    mermaid.contentLoaded();
-  }, [graphText, sbom]);
+    const w = new Worker(new URL('./sbom-viewer.worker.ts', import.meta.url));
+    w.onmessage = (e: MessageEvent<any>) => {
+      const { type } = e.data;
+      if (type === 'progress') {
+        setProgress(e.data.progress);
+      } else if (type === 'done') {
+        setSbom(e.data.sbom);
+        setProgress(0);
+      } else if (type === 'error') {
+        setError(e.data.error || 'Parse error');
+        setProgress(0);
+      } else if (type === 'cancelled') {
+        setProgress(0);
+      }
+    };
+    workerRef.current = w;
+    return () => w.terminate();
+  }, []);
 
-  const exportFiltered = () => {
-    const blob = new Blob(
-      [JSON.stringify({ components, dependencies: graph }, null, 2)],
-      { type: 'application/json' }
+  const handleFile = useCallback((file: File) => {
+    setSbom(null);
+    setError('');
+    setProgress(0);
+    workerRef.current?.postMessage({ type: 'parse', file });
+  }, []);
+
+  const cancel = useCallback(() => {
+    workerRef.current?.postMessage({ type: 'cancel' });
+  }, []);
+
+  const onDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files?.[0];
+      if (file) handleFile(file);
+    },
+    [handleFile]
+  );
+
+  const components = sbom?.components || [];
+
+  const fuse = useMemo(
+    () => new Fuse(components, { keys: ['name'], threshold: 0.3 }),
+    [components]
+  );
+
+  const filtered = useMemo(() => {
+    if (!query) return components;
+    return fuse.search(query).map((r) => r.item);
+  }, [components, query, fuse]);
+
+  const licenseMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    components.forEach((c) =>
+      c.licenses.forEach((l) => {
+        map[l] = (map[l] || 0) + 1;
+      })
     );
+    return map;
+  }, [components]);
+
+  const exportCsv = () => {
+    if (!sbom) return;
+    const rows = components.map((c) => ({
+      name: c.name,
+      version: c.version || '',
+      licenses: c.licenses.join(';'),
+      vulnerabilities: c.vulns.map((v) => v.id).join(';'),
+    }));
+    const csv = Papa.unparse(rows);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'filtered-sbom.json';
+    a.href = url;
+    a.download = 'sbom.csv';
     a.click();
-    URL.revokeObjectURL(a.href);
+    URL.revokeObjectURL(url);
   };
 
+  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const c = filtered[index];
+    return (
+      <div
+        style={style}
+        className="flex gap-2 px-2 py-1 border-b cursor-pointer"
+        onClick={() => setSelected(c.id)}
+      >
+        <div className="flex-1 truncate" title={c.name}>
+          {c.name}
+        </div>
+        <div className="w-24">{c.version}</div>
+        <div className="flex-1 truncate" title={c.licenses.join(', ')}>
+          {c.licenses.join(', ')}
+        </div>
+        <div className="flex-1 truncate">
+          {c.vulns.map((v) => {
+            const url = v.id.startsWith('CVE-')
+              ? `https://nvd.nist.gov/vuln/detail/${v.id}`
+              : `https://osv.dev/vulnerability/${v.id}`;
+            return (
+              <a
+                key={v.id}
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-300 underline mr-1"
+              >
+                {v.id}
+              </a>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  if (!sbom) {
+    return (
+      <div
+        className="h-full w-full flex items-center justify-center border-2 border-dashed"
+        onDrop={onDrop}
+        onDragOver={(e) => e.preventDefault()}
+      >
+        {progress > 0 ? (
+          <div className="text-center">
+            Parsing... {Math.round(progress * 100)}%
+            <button
+              onClick={cancel}
+              className="ml-2 text-blue-300 underline"
+            >
+              Cancel
+            </button>
+            {error && (
+              <div className="text-red-500 mt-2">{error}</div>
+            )}
+          </div>
+        ) : (
+          <label className="text-center">
+            Drop SBOM JSON here or{' '}
+            <input
+              data-testid="file-input"
+              type="file"
+              onChange={(e) =>
+                e.target.files && handleFile(e.target.files[0])
+              }
+            />
+            {error && (
+              <div className="text-red-500 mt-2">{error}</div>
+            )}
+          </label>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
-      <input
-        type="file"
-        accept=".json,.spdx,.cdx"
-        onChange={handleFileUpload}
-      />
-      <div className="flex space-x-2">
+    <div className="p-4 space-y-4 h-full w-full overflow-hidden text-white bg-ub-cool-grey">
+      <div className="flex gap-2">
         <input
-          type="text"
-          placeholder="Filter by license"
-          value={licenseFilter}
-          onChange={(e) => setLicenseFilter(e.target.value)}
-          className="text-black p-1"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search"
+          className="border p-1 text-black"
         />
-        <select
-          value={severityFilter}
-          onChange={(e) => setSeverityFilter(e.target.value)}
-          className="text-black p-1"
-        >
-          <option value="">All severities</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-          <option value="critical">Critical</option>
-        </select>
-        <button onClick={exportFiltered} className="bg-blue-600 px-2 py-1">
-          Export
+        <button onClick={exportCsv} className="border px-2 text-black">
+          Export CSV
         </button>
       </div>
-      <div className="overflow-auto flex-1">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr>
-              <th className="border-b p-2">Component</th>
-              <th className="border-b p-2">Licenses</th>
-              <th className="border-b p-2">Vulnerabilities</th>
-            </tr>
-          </thead>
-          <tbody>
-            {components.map((c, i) => (
-              <tr key={i} className="odd:bg-gray-800">
-                <td className="p-2">
-                  {c.name}
-                  {c.version ? `@${c.version}` : ''}
-                </td>
-                <td className="p-2">{c.licenses.join(', ') || 'N/A'}</td>
-                <td className="p-2">
-                  {c.vulns.length
-                    ? c.vulns
-                        .map((v) =>
-                          `${v.id}${v.severity ? ` (${v.severity})` : ''}`
-                        )
-                        .join(', ')
-                    : 'None'}
-                </td>
-              </tr>
-            ))}
-            {components.length === 0 && (
-              <tr>
-                <td colSpan={3} className="p-2 text-center">
-                  Upload an SBOM to view components
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      {graphText && (
-        <div className="mermaid overflow-auto bg-gray-800 p-2 rounded">
-          {graphText}
+      <div className="flex flex-1 overflow-hidden gap-4">
+        <div className="w-1/2 border overflow-hidden">
+          <List
+            height={400}
+            width={400}
+            itemCount={filtered.length}
+            itemSize={35}
+          >
+            {Row}
+          </List>
         </div>
-      )}
+        <div className="w-1/2 overflow-auto text-sm space-y-4">
+          {selected && (
+            <div>
+              <h3 className="font-bold mb-1">Dependency Tree</h3>
+              <div>{selected}</div>
+              <DependencyTree id={selected} graph={sbom.graph} />
+            </div>
+          )}
+          <div>
+            <h3 className="font-bold mb-1">License Map</h3>
+            <ul className="ml-4 list-disc">
+              {Object.entries(licenseMap).map(([lic, count]) => (
+                <li key={lic}>
+                  {lic}: {count}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

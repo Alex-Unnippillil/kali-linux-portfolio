@@ -1,7 +1,22 @@
 {
-  "extends": ["next/core-web-vitals"],
+  "extends": ["next/core-web-vitals", "prettier"],
+  "ignorePatterns": ["components/apps/breakout.js"],
   "rules": {
     "@next/next/no-page-custom-font": "off",
-    "@next/next/no-img-element": "off"
-  }
+    "@next/next/no-img-element": "off",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": ["../components/apps/*", "./components/apps/*", "components/apps/*"]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["apps.config.js"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
 }
