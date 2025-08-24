@@ -13,6 +13,19 @@ const JwsJweWorkbench: React.FC = () => {
   const [verifyResult, setVerifyResult] = useState('');
   const [jwe, setJwe] = useState('');
   const [decryptResult, setDecryptResult] = useState('');
+  const [detached, setDetached] = useState(false);
+  const [multiSig, setMultiSig] = useState(false);
+  const [jwsParts, setJwsParts] = useState<
+    | null
+    | {
+        payload: any;
+        signatures: { header: any; signature: string }[];
+      }
+  >(null);
+  const [keyInput, setKeyInput] = useState('');
+  const [keyAlg, setKeyAlg] = useState('RS256');
+  const [keyResult, setKeyResult] = useState('');
+  const [keyErr, setKeyErr] = useState('');
 
   const [signErr, setSignErr] = useState('');
   const [verifyErr, setVerifyErr] = useState('');
@@ -63,33 +76,37 @@ const JwsJweWorkbench: React.FC = () => {
 
   const signSnippet =
     format === 'pem'
-      ? `import { SignJWT, importPKCS8 } from 'jose';
+      ? `import { CompactSign, importPKCS8 } from 'jose';
 
 const privateKeyPem = \`${privateKeyData}\`;
 const privateKey = await importPKCS8(privateKeyPem, '${jwsAlg}');
-const jws = await new SignJWT({ msg: 'hello' })
+const payload = { msg: 'hello' };
+const jws = await new CompactSign(new TextEncoder().encode(JSON.stringify(payload)))
   .setProtectedHeader({ alg: '${jwsAlg}', kid: 'demo' })
   .sign(privateKey);`
-      : `import { SignJWT, importJWK } from 'jose';
+      : `import { CompactSign, importJWK } from 'jose';
 
 const jwks = ${privateKeyData};
 const privateKey = await importJWK(jwks.keys[0], '${jwsAlg}');
-const jws = await new SignJWT({ msg: 'hello' })
+const payload = { msg: 'hello' };
+const jws = await new CompactSign(new TextEncoder().encode(JSON.stringify(payload)))
   .setProtectedHeader({ alg: '${jwsAlg}', kid: 'demo' })
   .sign(privateKey);`;
 
   const verifySnippet =
     format === 'pem'
-      ? `import { jwtVerify, importSPKI } from 'jose';
+      ? `import { compactVerify, importSPKI } from 'jose';
 
 const publicKeyPem = \`${publicKeyData}\`;
 const publicKey = await importSPKI(publicKeyPem, '${jwsAlg}');
-const { payload } = await jwtVerify(jws, publicKey, { algorithms: ['${jwsAlg}'] });`
-      : `import { jwtVerify, importJWK } from 'jose';
+const { payload, protectedHeader } = await compactVerify(jws, publicKey);
+const data = JSON.parse(new TextDecoder().decode(payload));`
+      : `import { compactVerify, importJWK } from 'jose';
 
 const jwks = ${publicKeyData};
 const publicKey = await importJWK(jwks.keys[0], '${jwsAlg}');
-const { payload } = await jwtVerify(jws, publicKey, { algorithms: ['${jwsAlg}'] });`;
+const { payload, protectedHeader } = await compactVerify(jws, publicKey);
+const data = JSON.parse(new TextDecoder().decode(payload));`;
 
   const encryptSnippet =
     format === 'pem'
@@ -125,6 +142,33 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
 
   const copy = (text: string) => navigator.clipboard.writeText(text);
 
+  const b64UrlDecode = (str: string) => {
+    const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = base64.length % 4 ? '='.repeat(4 - (base64.length % 4)) : '';
+    return atob(base64 + pad);
+  };
+
+  const parseJws = (token: string) => {
+    try {
+      if (token.trim().startsWith('{')) {
+        const obj = JSON.parse(token);
+        const payload = obj.payload ? JSON.parse(b64UrlDecode(obj.payload)) : null;
+        const signatures = (obj.signatures || []).map((s: any) => ({
+          header: JSON.parse(b64UrlDecode(s.protected)),
+          signature: s.signature as string,
+        }));
+        setJwsParts({ payload, signatures });
+      } else {
+        const [h, p, s] = token.split('.');
+        const header = JSON.parse(b64UrlDecode(h));
+        const payload = p ? JSON.parse(b64UrlDecode(p)) : null;
+        setJwsParts({ payload, signatures: [{ header, signature: s }] });
+      }
+    } catch {
+      setJwsParts(null);
+    }
+  };
+
   const sign = async () => {
     setSignErr('');
     try {
@@ -133,8 +177,12 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
         key: privateKeyData,
         alg: jwsAlg,
         kid: 'demo',
+        detached,
+        multi: multiSig,
       });
-      setJws(token);
+      const tokenStr = typeof token === 'string' ? token : JSON.stringify(token);
+      setJws(tokenStr);
+      parseJws(tokenStr);
     } catch (e) {
       setSignErr(String(e));
     }
@@ -142,15 +190,48 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
 
   const verify = async () => {
     setVerifyErr('');
+    parseJws(jws);
     try {
       const res = await callWorker('verify', {
         token: jws,
         key: publicKeyData,
         alg: jwsAlg,
+        detached,
+        payload: { msg: 'hello' },
       });
       setVerifyResult(JSON.stringify(res, null, 2));
     } catch (e) {
       setVerifyErr(String(e));
+    }
+  };
+
+  const convertPemToJwk = async () => {
+    setKeyErr('');
+    try {
+      const res = await callWorker('convert', {
+        direction: 'pem2jwk',
+        key: keyInput,
+        alg: keyAlg,
+      });
+      setKeyResult(JSON.stringify(res, null, 2));
+    } catch (e) {
+      setKeyErr(String(e));
+      setKeyResult('');
+    }
+  };
+
+  const convertJwkToPem = async () => {
+    setKeyErr('');
+    try {
+      const res = await callWorker('convert', {
+        direction: 'jwk2pem',
+        key: keyInput,
+        alg: keyAlg,
+      });
+      setKeyResult(typeof res === 'string' ? res : JSON.stringify(res, null, 2));
+    } catch (e) {
+      setKeyErr(String(e));
+      setKeyResult('');
     }
   };
 
@@ -242,14 +323,84 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
       </div>
 
       <div>
+        <h3 className="font-bold mb-2">Convert PEM ↔ JWK</h3>
+        <div className="flex flex-wrap gap-2 mb-2">
+          <input
+            value={keyAlg}
+            onChange={(e) => setKeyAlg(e.target.value)}
+            className="p-1 text-black rounded w-32"
+            placeholder="Alg"
+          />
+          <button onClick={convertPemToJwk} className="px-3 py-1 bg-blue-600 rounded">
+            PEM→JWK
+          </button>
+          <button onClick={convertJwkToPem} className="px-3 py-1 bg-blue-600 rounded">
+            JWK→PEM
+          </button>
+        </div>
+        <textarea
+          value={keyInput}
+          onChange={(e) => setKeyInput(e.target.value)}
+          className="w-full h-32 p-2 text-black rounded"
+          placeholder="Key"
+        />
+        {keyResult && (
+          <pre className="bg-black p-2 rounded mt-2 whitespace-pre-wrap break-all">{keyResult}</pre>
+        )}
+        {keyErr && <div className="text-red-400 mt-2">{keyErr}</div>}
+      </div>
+
+      <div>
         <h2 className="text-xl font-bold mb-2">Step 1: Sign JWS</h2>
         <pre className="bg-black p-2 rounded whitespace-pre-wrap break-all">{signSnippet}</pre>
-        <div className="mt-2 flex gap-2">
+        <div className="mt-2 flex flex-wrap gap-2 items-center">
           <button onClick={() => copy(signSnippet)} className="px-3 py-1 bg-blue-600 rounded">Copy</button>
           <button onClick={sign} className="px-3 py-1 bg-green-600 rounded">Sign</button>
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              className="ml-2 mr-1"
+              checked={detached}
+              onChange={(e) => setDetached(e.target.checked)}
+            />
+            Detached
+          </label>
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              className="ml-2 mr-1"
+              checked={multiSig}
+              onChange={(e) => setMultiSig(e.target.checked)}
+            />
+            Multi-sig
+          </label>
         </div>
         {signErr && <div className="text-red-400 mt-2">{signErr}</div>}
-        {jws && <pre className="bg-black p-2 rounded mt-2 break-all whitespace-pre-wrap">{jws}</pre>}
+        {jws && (
+          <>
+            <pre className="bg-black p-2 rounded mt-2 break-all whitespace-pre-wrap">{jws}</pre>
+            {jwsParts && (
+              <div className="bg-black p-2 rounded mt-2 space-y-2">
+                <div>
+                  <div className="font-bold">Payload</div>
+                  <pre className="whitespace-pre-wrap break-all">{
+                    jwsParts.payload
+                      ? JSON.stringify(jwsParts.payload, null, 2)
+                      : '(detached)'
+                  }</pre>
+                </div>
+                {jwsParts.signatures.map((s, i) => (
+                  <div key={i} className="mt-2">
+                    <div className="font-bold">Header {i + 1}</div>
+                    <pre className="whitespace-pre-wrap break-all">{JSON.stringify(s.header, null, 2)}</pre>
+                    <div className="font-bold">Signature {i + 1}</div>
+                    <pre className="whitespace-pre-wrap break-all">{s.signature}</pre>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       <div>
