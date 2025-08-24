@@ -10,8 +10,8 @@ function pairings(players: string[]): string[][] {
   return pairs;
 }
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const db = readDB();
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const db = await readDB();
   if (req.method === 'GET') {
     res.status(200).json({ tournaments: db.tournaments });
     return;
@@ -25,7 +25,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     const id = Date.now();
     const bracket = pairings(players);
     db.tournaments.push({ id, players, bracket });
-    writeDB(db);
+    await writeDB(db);
     res.status(200).json({ id, bracket });
     return;
   }
