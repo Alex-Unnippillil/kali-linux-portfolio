@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Player from './Player';
-import Ghost from './Ghost';
+import Ghost, { GhostMode } from './Ghost';
 import Maze from './Maze';
 import Editor from './editor';
 
@@ -12,6 +12,11 @@ const Pacman: React.FC = () => {
   const [score, setScore] = useState(0);
   const [showEditor, setShowEditor] = useState(false);
   const animRef = useRef<number>(0);
+  const [mode, setMode] = useState<GhostMode>('scatter');
+  const modeTimer = useRef(0);
+  const modeIndex = useRef(0);
+  const audioRef = useRef<AudioContext | null>(null);
+  const oscRef = useRef<OscillatorNode | null>(null);
 
   useEffect(() => {
     Maze.load('default').then((m) => {
@@ -29,6 +34,8 @@ const Pacman: React.FC = () => {
               ...g,
               x: g.x * m.tileSize + m.tileSize / 2,
               y: g.y * m.tileSize + m.tileSize / 2,
+              mazeWidth: m.width,
+              mazeHeight: m.height,
             }),
         ),
       );
@@ -38,6 +45,16 @@ const Pacman: React.FC = () => {
   useEffect(() => {
     if (!canvasRef.current || !maze || !player) return;
     const ctx = canvasRef.current.getContext('2d')!;
+    const schedule = [
+      { mode: 'scatter' as GhostMode, duration: 7 },
+      { mode: 'chase' as GhostMode, duration: 20 },
+      { mode: 'scatter' as GhostMode, duration: 7 },
+      { mode: 'chase' as GhostMode, duration: 20 },
+      { mode: 'scatter' as GhostMode, duration: 5 },
+      { mode: 'chase' as GhostMode, duration: 20 },
+      { mode: 'scatter' as GhostMode, duration: 5 },
+      { mode: 'chase' as GhostMode, duration: Infinity },
+    ];
     const loop = () => {
       ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
       maze.draw(ctx);
@@ -45,13 +62,26 @@ const Pacman: React.FC = () => {
       const eaten = maze.eat(player.x, player.y);
       if (eaten === 'pellet') setScore((s) => s + 10);
       else if (eaten === 'power') {
-        player.powered = 60 * 10;
+        player.powered = 60 * 6;
         setScore((s) => s + 50);
+        ghosts.forEach((g) => g.frighten(60 * 6));
       } else if (eaten && typeof eaten === 'object') {
         setScore((s) => s + eaten.score);
       }
+      modeTimer.current++;
+      if (
+        modeIndex.current < schedule.length - 1 &&
+        modeTimer.current > schedule[modeIndex.current].duration * 60
+      ) {
+        modeIndex.current++;
+        modeTimer.current = 0;
+      }
+      const baseMode = schedule[modeIndex.current].mode;
+      const frightenedActive = ghosts.some((g) => g.frightenedTimer > 0);
+      const currentMode = frightenedActive ? 'frightened' : baseMode;
+      setMode(currentMode);
       ghosts.forEach((g) => {
-        g.update(player, maze);
+        g.update(player, maze, currentMode, ghosts[0]);
         const dx = g.x - player.x;
         const dy = g.y - player.y;
         const dist = Math.hypot(dx, dy);
@@ -68,7 +98,7 @@ const Pacman: React.FC = () => {
             });
           }
         }
-        g.draw(ctx, player.powered > 0);
+        g.draw(ctx, g.frightenedTimer > 0);
       });
       player.draw(ctx);
       animRef.current = requestAnimationFrame(loop);
@@ -76,6 +106,24 @@ const Pacman: React.FC = () => {
     animRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animRef.current!);
   }, [maze, player, ghosts, score]);
+
+  useEffect(() => {
+    // simple siren using oscillator
+    if (!audioRef.current) {
+      audioRef.current = new AudioContext();
+      oscRef.current = audioRef.current.createOscillator();
+      oscRef.current.connect(audioRef.current.destination);
+      oscRef.current.start();
+    }
+    if (!oscRef.current) return;
+    if (mode === 'frightened') {
+      oscRef.current.frequency.setValueAtTime(0, audioRef.current!.currentTime);
+    } else if (mode === 'scatter') {
+      oscRef.current.frequency.setValueAtTime(220, audioRef.current!.currentTime);
+    } else {
+      oscRef.current.frequency.setValueAtTime(440, audioRef.current!.currentTime);
+    }
+  }, [mode]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
