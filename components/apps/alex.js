@@ -3,6 +3,7 @@ import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
 import Certs from './certs';
+import { trackEvent } from '../../lib/analytics';
 
 export class AboutAlex extends Component {
 
@@ -183,7 +184,9 @@ function About() {
             <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
                  <li className=" list-pc">I&apos;m a <span className=" font-medium"> Technology Enthusiast </span> who thrives on the thrill of learning and mastering the rapidly evolving world of tech. I&apos;ve completed 4 years of a degree in <u className=' cursor-pointer '><a href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf" target={"_blank"}>Nuclear Engineering </a></u> at OntarioTech University before, I decided to my change my career goals to and pursue my passion of <u className=' cursor-pointer '> <a href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf" target={"_blank"}> Networking and I.T. Security</a> </u>.</li>
                  <li className=" mt-3 list-building">  If you&apos;re looking for the type of person that always wants to help others. That&apos;ll be there putting in the work 24/7. Please feel free to send an email <a className='text-underline'
-                               href='mailto:alex.unnippillil@hotmail.com'><u>@alex.unnippillil@hotmail.com</u></a></li>
+                               href='mailto:alex.unnippillil@hotmail.com'
+                               onClick={() => trackEvent('cta_contact_email', { email: 'alex.unnippillil@hotmail.com' })}
+                               ><u>@alex.unnippillil@hotmail.com</u></a></li>
                 <li className=" mt-3 list-time"> When I am not learning my next technical skill, I like to spend my time reading books, rock climbing or watching <u className=' cursor-pointer '><a href="https://www.youtube.com/@Alex-Unnippillil/playlists" target={"_blank"}>Youtube Videos</a></u> and <u className=' cursor-pointer '><a href="https://myanimelist.net/animelist/alex_u" target={"_blank"}>Anime</a></u></li> 
                 <li className=" mt-3 list-star"> And I also have interests in Deep Learning, Software Development & Animation!</li>
             </ul>
@@ -694,6 +697,7 @@ function Resume() {
                     target="_blank"
                     rel="noopener noreferrer"
                     className="underline text-blue"
+                    onClick={() => trackEvent('cta_download_resume')}
                 >
                     Download the resume
                 </a>

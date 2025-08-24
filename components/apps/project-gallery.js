@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import projectsData from '../../data/projects.json';
+import messages from './project-gallery.messages';
 
 const translations = {
   en: {
@@ -151,6 +152,7 @@ export default function ProjectGallery() {
           placeholder={strings.search}
           aria-label={strings.searchLabel}
           className="px-2 py-1 rounded bg-gray-800 text-white flex-grow"
+
         />
         <div
           className="flex flex-wrap gap-2"
@@ -164,6 +166,7 @@ export default function ProjectGallery() {
               aria-pressed={tag === tName}
               className={`px-2 py-0.5 text-sm rounded ${
                 tag === tName ? 'bg-blue-600' : 'bg-gray-700'
+
               }`}
             >
               {tName === 'All' ? strings.all : tName}
@@ -175,6 +178,7 @@ export default function ProjectGallery() {
         <p role="status" className="text-center">
           {strings.noProjects}
         </p>
+
       ) : (
         <div
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
@@ -194,6 +198,7 @@ export default function ProjectGallery() {
                 aria-label={strings.togglePinned}
                 aria-pressed={pinned.includes(project.title)}
                 className="absolute top-2 right-2 text-xl"
+
               >
                 {pinned.includes(project.title) ? '★' : '☆'}
               </button>
@@ -232,9 +237,11 @@ export default function ProjectGallery() {
                       href={project.live}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1 text-sm bg-blue-600 rounded hover:bg-blue-500"
+                      className="px-3 py-1 text-sm bg-blue-600 rounded hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
+<<<<<< codex/add-aria-roles-and-keyboard-support
                       {strings.liveDemo}
+
                     </a>
                   )}
                   {project.repo && (
@@ -242,9 +249,10 @@ export default function ProjectGallery() {
                       href={project.repo}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1 text-sm border border-blue-600 rounded hover:bg-blue-600 hover:text-white"
+                      className="px-3 py-1 text-sm border border-blue-600 rounded hover:bg-blue-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {strings.repo}
+
                     </a>
                   )}
                 </div>

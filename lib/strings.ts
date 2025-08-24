@@ -1,0 +1,25 @@
+export const vulnerabilitySearchStrings = {
+  keyword: 'Keyword',
+  domain: 'Domain',
+  severityOptions: [
+    { key: 'critical', label: 'critical' },
+    { key: 'high', label: 'high' },
+    { key: 'medium', label: 'medium' },
+    { key: 'low', label: 'low' },
+  ],
+  saveView: 'Save View',
+  loadView: 'Load View',
+  exportCsv: 'Export CSV',
+  viewNamePrompt: 'View name?',
+  columns: {
+    id: 'CVE',
+    description: 'Description',
+    severity: 'Severity',
+    epss: 'EPSS',
+    kev: 'CISA KEV',
+  },
+  tableLabel: 'Vulnerability results',
+  yes: 'yes',
+  no: 'no',
+  csvFileName: 'vulnerabilities.csv',
+};

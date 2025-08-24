@@ -3,6 +3,7 @@ import * as sax from 'sax';
 import { validateXML } from 'xmllint-wasm';
 import Papa from 'papaparse';
 import { FixedSizeList as List } from 'react-window';
+import ForceGraph2D from 'react-force-graph';
 
 interface VulnInfo {
   id: string;
@@ -89,10 +90,12 @@ const NmapViewer: React.FC = () => {
           currentHost = { address: '', hostnames: [], ports: [] };
           break;
         case 'address':
-          if (currentHost) currentHost.address = node.attributes['addr'] as string;
+          if (currentHost)
+            currentHost.address = node.attributes['addr'] as string;
           break;
         case 'hostname':
-          if (currentHost) currentHost.hostnames.push(node.attributes['name'] as string);
+          if (currentHost)
+            currentHost.hostnames.push(node.attributes['name'] as string);
           break;
         case 'port':
           if (currentHost) {
@@ -107,7 +110,8 @@ const NmapViewer: React.FC = () => {
           }
           break;
         case 'state':
-          if (currentPort) currentPort.state = node.attributes['state'] as string;
+          if (currentPort)
+            currentPort.state = node.attributes['state'] as string;
           break;
         case 'service':
           if (currentPort) {
@@ -271,7 +275,10 @@ const NmapViewer: React.FC = () => {
 
   const pivoted = useMemo(() => {
     if (pivot === 'host') return filteredHosts;
-    const map: Record<string, { key: string; items: { host: string; port: PortInfo }[] }> = {};
+    const map: Record<
+      string,
+      { key: string; items: { host: string; port: PortInfo }[] }
+    > = {};
     filteredHosts.forEach((h) =>
       h.ports.forEach((p) => {
         const key = pivot === 'port' ? p.portid : p.service || 'unknown';
@@ -281,6 +288,24 @@ const NmapViewer: React.FC = () => {
     );
     return Object.values(map);
   }, [filteredHosts, pivot]);
+
+  const graphData = useMemo(() => {
+    const nodes: { id: string; type: string }[] = [];
+    const links: { source: string; target: string }[] = [];
+    const ports = new Set<string>();
+    filteredHosts.forEach((h) => {
+      nodes.push({ id: h.address, type: 'host' });
+      h.ports.forEach((p) => {
+        const pid = `port-${p.portid}`;
+        if (!ports.has(pid)) {
+          ports.add(pid);
+          nodes.push({ id: pid, type: 'port' });
+        }
+        links.push({ source: h.address, target: pid });
+      });
+    });
+    return { nodes, links };
+  }, [filteredHosts]);
 
   const exportHtml = async () => {
     if (!xmlText) return;
@@ -353,8 +378,15 @@ const NmapViewer: React.FC = () => {
       data-testid="drop-zone"
     >
       <div className="mb-4 space-y-2">
-        <input type="file" accept=".xml" onChange={handleFile} data-testid="file-input" />
-        {error && <div className="text-red-500 whitespace-pre-wrap">{error}</div>}
+        <input
+          type="file"
+          accept=".xml"
+          onChange={handleFile}
+          data-testid="file-input"
+        />
+        {error && (
+          <div className="text-red-500 whitespace-pre-wrap">{error}</div>
+        )}
         <div className="flex space-x-2 flex-wrap">
           <input
             value={filters.host}
@@ -364,7 +396,9 @@ const NmapViewer: React.FC = () => {
           />
           <input
             value={filters.service}
-            onChange={(e) => setFilters({ ...filters, service: e.target.value })}
+            onChange={(e) =>
+              setFilters({ ...filters, service: e.target.value })
+            }
             placeholder="Service"
             className="text-black px-1"
           />
@@ -391,7 +425,9 @@ const NmapViewer: React.FC = () => {
           </select>
           <select
             value={filters.protocol}
-            onChange={(e) => setFilters({ ...filters, protocol: e.target.value })}
+            onChange={(e) =>
+              setFilters({ ...filters, protocol: e.target.value })
+            }
             className="text-black"
           >
             <option value="all">All Protocols</option>
@@ -447,15 +483,21 @@ const NmapViewer: React.FC = () => {
                     {({ index, style }) => {
                       const p = h.ports[index];
                       return (
-                        <div style={style} className="table-row odd:bg-gray-800">
+                        <div
+                          style={style}
+                          className="table-row odd:bg-gray-800"
+                        >
                           <div className="table-cell p-1">{p.portid}</div>
                           <div className="table-cell p-1">{p.protocol}</div>
                           <div className="table-cell p-1">{p.state}</div>
-                          <div className="table-cell p-1">{p.service || ''} {p.version || ''}</div>
+                          <div className="table-cell p-1">
+                            {p.service || ''} {p.version || ''}
+                          </div>
                           <div className="table-cell p-1 space-y-1">
                             {p.scripts.map((s) => (
                               <div key={s.id}>
-                                <span className="font-bold">{s.id}:</span> {s.output}
+                                <span className="font-bold">{s.id}:</span>{' '}
+                                {s.output}
                               </div>
                             ))}
                           </div>
@@ -516,8 +558,12 @@ const NmapViewer: React.FC = () => {
                   <thead>
                     <tr>
                       <th className="border-b p-1">Host</th>
-                      {pivot === 'port' && <th className="border-b p-1">Service</th>}
-                      {pivot === 'service' && <th className="border-b p-1">Port</th>}
+                      {pivot === 'port' && (
+                        <th className="border-b p-1">Service</th>
+                      )}
+                      {pivot === 'service' && (
+                        <th className="border-b p-1">Port</th>
+                      )}
                       <th className="border-b p-1">Protocol</th>
                       <th className="border-b p-1">State</th>
                       <th className="border-b p-1">Scripts</th>
@@ -540,7 +586,8 @@ const NmapViewer: React.FC = () => {
                         <td className="p-1 space-y-1">
                           {port.scripts.map((s) => (
                             <div key={s.id}>
-                              <span className="font-bold">{s.id}:</span> {s.output}
+                              <span className="font-bold">{s.id}:</span>{' '}
+                              {s.output}
                             </div>
                           ))}
                         </td>
@@ -574,7 +621,9 @@ const NmapViewer: React.FC = () => {
                             port.service && (
                               <a
                                 href={`https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=${encodeURIComponent(
-                                  (port.service || '') + ' ' + (port.version || '')
+                                  (port.service || '') +
+                                    ' ' +
+                                    (port.version || '')
                                 )}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -592,6 +641,16 @@ const NmapViewer: React.FC = () => {
               </div>
             ))}
       </div>
+      {graphData.nodes.length > 0 && (
+        <div className="mt-4" data-testid="network-graph">
+          <ForceGraph2D
+            graphData={graphData}
+            width={600}
+            height={400}
+            nodeAutoColorBy="type"
+          />
+        </div>
+      )}
       {pivot === 'host' && Object.keys(portCounts).length > 0 && (
         <div className="mt-4">
           <h4 className="font-bold">Port Distribution</h4>
