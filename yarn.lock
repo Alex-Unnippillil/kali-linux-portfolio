@@ -2167,6 +2167,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/ssdeep.js@npm:^0":
+  version: 0.0.2
+  resolution: "@types/ssdeep.js@npm:0.0.2"
+  checksum: 10c0/b6f45362a2124389b6521bdf5db9c526cc29f4a984dd13545a628c878d431fa32b0f76c01c87e860c4c1aeb46ac674ff7882112ef1e53c10ab12fa15c1e29a5f
+  languageName: node
+  linkType: hard
+
 "@types/stack-utils@npm:^2.0.3":
   version: 2.0.3
   resolution: "@types/stack-utils@npm:2.0.3"
@@ -9044,6 +9051,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ssdeep.js@npm:^0.0.3":
+  version: 0.0.3
+  resolution: "ssdeep.js@npm:0.0.3"
+  checksum: 10c0/167a5f8bbafaec2bcf65176073d5e9dd0e6a4c2ddcd61003f99e8a461f9f6479654d8dd143fbd8fb7d741b52a9ed1516eddcdf59beec1e734c9dc08d2d8388a7
+  languageName: node
+  linkType: hard
+
 "sshpk@npm:^1.18.0":
   version: 1.18.0
   resolution: "sshpk@npm:1.18.0"
@@ -9783,6 +9797,7 @@ __metadata:
     "@types/node": "npm:^24.2.1"
     "@types/plist": "npm:^3.0.2"
     "@types/react": "npm:^18.2.0"
+    "@types/ssdeep.js": "npm:^0"
     "@types/three": "npm:^0.179.0"
     "@types/zxcvbn": "npm:^4.4.5"
     "@vercel/analytics": "npm:^1.5.0"
@@ -9838,6 +9853,7 @@ __metadata:
     socket.io: "npm:^4.7.5"
     socket.io-client: "npm:^4.7.5"
     spdx-license-ids: "npm:^3.0.17"
+    ssdeep.js: "npm:^0.0.3"
     sshpk: "npm:^1.18.0"
     stockfish: "npm:^16.0.0"
     swr: "npm:^2.2.5"
