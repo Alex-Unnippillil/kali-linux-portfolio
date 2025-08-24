@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
+const ReactMarkdown = dynamic(() => import('react-markdown'), { suspense: true });
 import { run } from '@mdx-js/mdx';
 import * as runtime from 'react/jsx-runtime';
 import rehypeSanitize from 'rehype-sanitize';
-import { FixedSizeList as List } from 'react-window';
-import Papa from 'papaparse';
-import mermaid from 'mermaid';
-import DOMPurify from 'dompurify';
+const List = dynamic(
+  () => import('react-window').then((mod) => mod.FixedSizeList),
+  { ssr: false, suspense: true }
+);
+import type { FixedSizeList as ListType } from 'react-window';
 
 type FileType = 'markdown' | 'mdx' | 'json' | 'csv' | 'pdf' | 'text' | '';
 
@@ -17,7 +19,7 @@ const ReportViewer: React.FC = () => {
   const [markdown, setMarkdown] = useState('');
   const [jsonLines, setJsonLines] = useState<string[]>([]);
   const [jsonKeyMap, setJsonKeyMap] = useState<Record<string, number>>({});
-  const listRef = useRef<List>(null);
+  const listRef = useRef<ListType>(null);
   const [csvData, setCsvData] = useState<string[][]>([]);
   const [pdfUrl, setPdfUrl] = useState('');
   const [pdfPages, setPdfPages] = useState(0);
@@ -32,18 +34,28 @@ const ReportViewer: React.FC = () => {
   const Mermaid = ({ chart }: { chart: string }) => {
     const ref = useRef<HTMLDivElement>(null);
     useEffect(() => {
-      const id = `mermaid-${Math.random().toString(36).slice(2)}`;
-      mermaid.initialize({ startOnLoad: false });
-      mermaid
-        .render(id, chart)
-        .then(({ svg }) => {
-          if (ref.current) {
-            ref.current.innerHTML = DOMPurify.sanitize(svg, {
-              USE_PROFILES: { svg: true, svgFilters: true },
-            });
-          }
-        })
-        .catch(() => {});
+      let mounted = true;
+      (async () => {
+        const [{ default: mermaid }, { default: DOMPurify }] = await Promise.all([
+          import('mermaid'),
+          import('dompurify'),
+        ]);
+        const id = `mermaid-${Math.random().toString(36).slice(2)}`;
+        mermaid.initialize({ startOnLoad: false });
+        mermaid
+          .render(id, chart)
+          .then(({ svg }) => {
+            if (mounted && ref.current) {
+              ref.current.innerHTML = DOMPurify.sanitize(svg, {
+                USE_PROFILES: { svg: true, svgFilters: true },
+              });
+            }
+          })
+          .catch(() => {});
+      })();
+      return () => {
+        mounted = false;
+      };
     }, [chart]);
     return <div ref={ref} />;
   };
@@ -119,8 +131,10 @@ const ReportViewer: React.FC = () => {
           setJsonKeyMap({});
         }
       } else if (kind === 'csv') {
-        const parsed = Papa.parse(text.trim());
-        setCsvData(parsed.data as string[][]);
+        import('papaparse').then(({ default: Papa }) => {
+          const parsed = Papa.parse(text.trim());
+          setCsvData(parsed.data as string[][]);
+        });
       } else if (kind === 'pdf') {
         const urlReader = new FileReader();
         urlReader.onload = () => {
@@ -304,19 +318,21 @@ const ReportViewer: React.FC = () => {
   };
 
   const jsonRenderer = () => (
-    <List
-      height={400}
-      itemCount={jsonLines.length}
-      itemSize={20}
-      width="100%"
-      ref={listRef}
-    >
-      {({ index, style }) => (
-        <div style={style} className="font-mono text-sm">
-          {highlight(jsonLines[index])}
-        </div>
-      )}
-    </List>
+    <Suspense fallback={<div>Loading...</div>}>
+      <List
+        height={400}
+        itemCount={jsonLines.length}
+        itemSize={20}
+        width="100%"
+        ref={listRef}
+      >
+        {({ index, style }) => (
+          <div style={style} className="font-mono text-sm">
+            {highlight(jsonLines[index])}
+          </div>
+        )}
+      </List>
+    </Suspense>
   );
 
   return (
@@ -347,9 +363,11 @@ const ReportViewer: React.FC = () => {
           {(fileType === 'markdown' || fileType === 'mdx') && (
             <div className="prose prose-invert max-w-none">
               {fileType === 'markdown' ? (
-                <ReactMarkdown rehypePlugins={[rehypeSanitize]} components={mdxComponents}>
-                  {markdown}
-                </ReactMarkdown>
+                <Suspense fallback={<div>Loading...</div>}>
+                  <ReactMarkdown rehypePlugins={[rehypeSanitize]} components={mdxComponents}>
+                    {markdown}
+                  </ReactMarkdown>
+                </Suspense>
               ) : (
                 MdxContent && <MdxContent components={mdxComponents} />
               )}
