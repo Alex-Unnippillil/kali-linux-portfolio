@@ -2,6 +2,34 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import projectsData from '../../data/projects.json';
+import messages from './project-gallery.messages';
+
+const translations = {
+  en: {
+    search: 'Search...',
+    searchLabel: 'Search projects',
+    all: 'All',
+    noProjects: 'No projects found.',
+    liveDemo: 'Live Demo',
+    repo: 'Repo',
+    togglePinned: 'Toggle pinned',
+    filterLabel: 'Filter by tag',
+  },
+  es: {
+    search: 'Buscar...',
+    searchLabel: 'Buscar proyectos',
+    all: 'Todos',
+    noProjects: 'No se encontraron proyectos.',
+    liveDemo: 'Demostración',
+    repo: 'Repositorio',
+    togglePinned: 'Alternar fijado',
+    filterLabel: 'Filtrar por etiqueta',
+  },
+};
+
+const locale =
+  typeof navigator !== 'undefined' ? navigator.language.split('-')[0] : 'en';
+const strings = translations[locale] || translations.en;
 
 export default function ProjectGallery() {
   const [projects, setProjects] = useState([]);
@@ -12,7 +40,10 @@ export default function ProjectGallery() {
   const cardRefs = useRef([]);
 
   useEffect(() => {
-    ReactGA.event({ category: 'Application', action: 'Loaded Project Gallery' });
+    ReactGA.event({
+      category: 'Application',
+      action: 'Loaded Project Gallery',
+    });
   }, []);
 
   useEffect(() => {
@@ -80,7 +111,11 @@ export default function ProjectGallery() {
   };
 
   const handleKeyDown = (e, index) => {
-    if (e.key === 'ArrowRight') {
+    const project = sorted[index];
+    if (e.key === 'Enter' || e.key === ' ') {
+      togglePinned(project.title);
+      e.preventDefault();
+    } else if (e.key === 'ArrowRight') {
       const next = index + 1;
       if (next < sorted.length) {
         cardRefs.current[next]?.focus();
@@ -114,39 +149,56 @@ export default function ProjectGallery() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search..."
+          placeholder={strings.search}
+          aria-label={strings.searchLabel}
           className="px-2 py-1 rounded bg-gray-800 text-white flex-grow"
+
         />
-        <div className="flex flex-wrap gap-2">
-          {tags.map((t) => (
+        <div
+          className="flex flex-wrap gap-2"
+          role="group"
+          aria-label={strings.filterLabel}
+        >
+          {tags.map((tName) => (
             <button
-              key={t}
-              onClick={() => setTag(t)}
+              key={tName}
+              onClick={() => setTag(tName)}
+              aria-pressed={tag === tName}
               className={`px-2 py-0.5 text-sm rounded ${
-                tag === t ? 'bg-blue-600' : 'bg-gray-700'
+                tag === tName ? 'bg-blue-600' : 'bg-gray-700'
+
               }`}
             >
-              {t}
+              {tName === 'All' ? strings.all : tName}
             </button>
           ))}
         </div>
       </div>
       {sorted.length === 0 ? (
-        <p className="text-center">No projects found.</p>
+        <p role="status" className="text-center">
+          {strings.noProjects}
+        </p>
+
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+          role="list"
+        >
           {sorted.map((project, index) => (
             <div
               key={index}
               ref={(el) => (cardRefs.current[index] = el)}
               tabIndex={0}
               onKeyDown={(e) => handleKeyDown(e, index)}
+              role="listitem"
               className="relative rounded-md bg-surface bg-opacity-20 border border-gray-700 overflow-hidden flex flex-col"
             >
               <button
                 onClick={() => togglePinned(project.title)}
-                aria-label="Toggle pinned"
+                aria-label={strings.togglePinned}
+                aria-pressed={pinned.includes(project.title)}
                 className="absolute top-2 right-2 text-xl"
+
               >
                 {pinned.includes(project.title) ? '★' : '☆'}
               </button>
@@ -185,9 +237,11 @@ export default function ProjectGallery() {
                       href={project.live}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1 text-sm bg-blue-600 rounded hover:bg-blue-500"
+                      className="px-3 py-1 text-sm bg-blue-600 rounded hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      Live Demo
+<<<<<< codex/add-aria-roles-and-keyboard-support
+                      {strings.liveDemo}
+
                     </a>
                   )}
                   {project.repo && (
@@ -195,9 +249,10 @@ export default function ProjectGallery() {
                       href={project.repo}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1 text-sm border border-blue-600 rounded hover:bg-blue-600 hover:text-white"
+                      className="px-3 py-1 text-sm border border-blue-600 rounded hover:bg-blue-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      Repo
+                      {strings.repo}
+
                     </a>
                   )}
                 </div>
@@ -211,4 +266,3 @@ export default function ProjectGallery() {
 }
 
 export const displayProjectGallery = () => <ProjectGallery />;
-

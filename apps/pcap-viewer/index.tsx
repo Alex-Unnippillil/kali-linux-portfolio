@@ -3,7 +3,7 @@ import { FixedSizeList as List } from 'react-window';
 import { Bar } from 'react-chartjs-2';
 import 'chart.js/auto';
 
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_SIZE = 50 * 1024 * 1024; // 50MB
 
 export type PacketInfo = {
   index: number;
@@ -21,12 +21,23 @@ type Summary = {
   malformed: number;
 };
 
+type Flow = {
+  src: string;
+  dst: string;
+  src_port: number;
+  dst_port: number;
+  proto: string;
+  packetIndices: number[];
+  http?: string[];
+};
+
 const protocolsList = ['TCP', 'UDP', 'DNS', 'HTTP', 'OTHER'];
 
 const PcapViewer: React.FC = () => {
   const [worker, setWorker] = useState<Worker | null>(null);
   const [packets, setPackets] = useState<PacketInfo[]>([]);
   const [summary, setSummary] = useState<Summary>({ protocols: {}, malformed: 0 });
+  const [flows, setFlows] = useState<Flow[]>([]);
   const [filters, setFilters] = useState<Record<string, boolean>>({
     TCP: true,
     UDP: true,
@@ -47,6 +58,8 @@ const PcapViewer: React.FC = () => {
         setSummary({ protocols: e.data.protocols, malformed: e.data.malformed });
       } else if (type === 'packet') {
         setPackets((prev) => [...prev, ...e.data.packets]);
+      } else if (type === 'flows') {
+        setFlows(e.data.flows);
       } else if (type === 'error') {
         setError(e.data.error);
       }
@@ -64,8 +77,7 @@ const PcapViewer: React.FC = () => {
     }
   }, [packets, timeRange]);
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const processFile = async (file?: File) => {
     if (!file || !worker) return;
     if (file.size > MAX_SIZE) {
       setError('File too large');
@@ -73,8 +85,18 @@ const PcapViewer: React.FC = () => {
     }
     setPackets([]);
     setSummary({ protocols: {}, malformed: 0 });
+    setFlows([]);
     const buffer = new Uint8Array(await file.arrayBuffer());
     worker.postMessage({ type: 'parse', buffer }, { transfer: [buffer.buffer] });
+  };
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    await processFile(e.target.files?.[0]);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    await processFile(e.dataTransfer.files?.[0]);
   };
 
   const toggleFilter = (proto: string) => {
@@ -90,6 +112,11 @@ const PcapViewer: React.FC = () => {
           (timeRange[1] === 0 || p.ts <= timeRange[1])
       ),
     [packets, filters, timeRange]
+  );
+
+  const filteredFlows = useMemo(
+    () => flows.filter((f) => filters[f.proto]),
+    [flows, filters]
   );
 
   useEffect(() => {
@@ -139,18 +166,38 @@ const PcapViewer: React.FC = () => {
   };
 
   return (
-    <div className="p-2 text-white bg-ub-cool-grey h-full overflow-auto text-xs">
+    <div
+      className="p-2 text-white bg-ub-cool-grey h-full overflow-auto text-xs"
+      onDrop={handleDrop}
+      onDragOver={(e) => e.preventDefault()}
+    >
       <input type="file" accept=".pcap,.pcapng" onChange={handleFile} disabled={!worker} className="mb-2" />
       {error && <div className="text-red-500 mb-2">{error}</div>}
       <div className="mb-2">
         {protocolsList.map((p) => (
           <label key={p} className="mr-2">
-            <input type="checkbox" checked={filters[p]} onChange={() => toggleFilter(p)} /> {p}
+            <input type="checkbox" checked={filters[p]} onChange={() => toggleFilter(p)} /> {p} ({summary.protocols[p] || 0})
           </label>
         ))}
       </div>
       <div className="mb-2">
         Malformed packets: {summary.malformed}
+      </div>
+      <div className="mb-2">
+        <h3 className="font-bold">Flows</h3>
+        <ul>
+          {filteredFlows.map((f, idx) => (
+            <li key={idx} className="mb-1">
+              {f.src}:{f.src_port} ↔ {f.dst}:{f.dst_port} [{f.proto}] ({f.packetIndices.length})
+              {f.http &&
+                f.http.map((m, i) => (
+                  <div key={i} className="ml-2 text-green-400">
+                    {m.split('\r\n')[0]}
+                  </div>
+                ))}
+            </li>
+          ))}
+        </ul>
       </div>
       <div className="mb-2">
         <Bar data={histData} options={{ responsive: true, plugins: { legend: { display: false } } }} />

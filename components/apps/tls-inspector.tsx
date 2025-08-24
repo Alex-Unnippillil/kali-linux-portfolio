@@ -15,8 +15,12 @@ interface ApiResult {
   protocol?: string;
   cipher?: { name: string; version?: string };
   ocspStapled: boolean;
-  chain: CertInfo[];
+  authorizationError?: string;
+  key?: { type?: string; name?: string; size?: number };
+  chain?: CertInfo[];
   sslLabsUrl: string;
+  testSites: { name: string; url: string }[];
+  timeline: { event: string; at: number; message?: string }[];
   explanations: Record<string, string>;
 }
 
@@ -35,8 +39,12 @@ const TLSInspector: React.FC = () => {
     try {
       const res = await fetch(`/api/tls-chain?host=${encodeURIComponent(host)}`);
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || 'Request failed');
-      setResult(data);
+      if (!res.ok || data.error) {
+        setError(data.error || 'Request failed');
+        setResult(data);
+      } else {
+        setResult(data);
+      }
     } catch (err: any) {
       setError(err.message || 'Request failed');
     } finally {
@@ -69,25 +77,77 @@ const TLSInspector: React.FC = () => {
           <div className="text-sm space-y-1">
             <div><strong>Protocol:</strong> {result.protocol || 'Unknown'}</div>
             <div><strong>Cipher:</strong> {result.cipher?.name || 'Unknown'}</div>
-            <div><strong>OCSP Stapled:</strong> {result.ocspStapled ? 'Yes' : 'No'}</div>
             <div>
-              <a href={result.sslLabsUrl} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline">
-                SSL Labs Report
-              </a>
+              <strong>OCSP Stapled:</strong>{' '}
+              {result.ocspStapled !== undefined
+                ? result.ocspStapled
+                  ? 'Yes'
+                  : 'No'
+                : 'Unknown'}
             </div>
-          </div>
-          <div className="text-sm space-y-2 overflow-auto">
-            {result.chain.map((c, i) => (
-              <div key={i} className="border border-gray-700 p-2 rounded">
-                <div><strong>Subject:</strong> {c.subject.CN || JSON.stringify(c.subject)}</div>
-                <div><strong>Issuer:</strong> {c.issuer.CN || JSON.stringify(c.issuer)}</div>
-                <div><strong>SAN:</strong> {c.san.join(', ') || 'None'}</div>
-                <div><strong>Valid From:</strong> {new Date(c.validFrom).toUTCString()}</div>
-                <div><strong>Valid To:</strong> {new Date(c.validTo).toUTCString()}</div>
-                <div><strong>Days Remaining:</strong> {c.daysRemaining}</div>
+            <div><strong>Key:</strong> {result.key?.name || 'Unknown'}</div>
+            {result.sslLabsUrl && (
+              <div>
+                <a
+                  href={result.sslLabsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 underline"
+                >
+                  SSL Labs Report
+                </a>
               </div>
-            ))}
+            )}
+            {result.testSites && (
+              <div className="flex space-x-2 flex-wrap items-center">
+                <span>Other Tests:</span>
+                {result.testSites.map((s, i) => (
+                  <a
+                    key={i}
+                    href={s.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 underline"
+                  >
+                    {s.name}
+                  </a>
+                ))}
+              </div>
+            )}
+            {result.authorizationError && (
+              <div className="text-red-400">
+                Certificate validation error: {result.authorizationError}. Ensure the server
+                sends the full certificate chain and correct intermediates.
+              </div>
+            )}
           </div>
+          {result.chain && (
+            <div className="text-sm space-y-2 overflow-auto">
+              {result.chain.map((c, i) => (
+                <div key={i} className="border border-gray-700 p-2 rounded">
+                  <div><strong>Subject:</strong> {c.subject.CN || JSON.stringify(c.subject)}</div>
+                  <div><strong>Issuer:</strong> {c.issuer.CN || JSON.stringify(c.issuer)}</div>
+                  <div><strong>SAN:</strong> {c.san.join(', ') || 'None'}</div>
+                  <div><strong>Valid From:</strong> {new Date(c.validFrom).toUTCString()}</div>
+                  <div><strong>Valid To:</strong> {new Date(c.validTo).toUTCString()}</div>
+                  <div><strong>Days Remaining:</strong> {c.daysRemaining}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          {result.timeline && (
+            <div className="text-sm space-y-1">
+              <strong>Handshake Timeline (ms):</strong>
+              <ul className="list-disc ml-4">
+                {result.timeline.map((t, i) => (
+                  <li key={i} className={t.event === 'error' ? 'text-red-400' : ''}>
+                    {t.event}: {t.at}
+                    {t.message ? ` - ${t.message}` : ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <button
             type="button"
             onClick={copyReport}

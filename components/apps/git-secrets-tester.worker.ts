@@ -1,105 +1,254 @@
 import JSZip from 'jszip';
+import {
+  PatternInfo,
+  ScanResult,
+  DiffLine,
+  MAX_SIZE,
+  redactSecret,
+} from './git-secrets-tester.utils';
 
-interface Pattern {
-  name: string;
-  regex: string;
-  severity: string;
-  remediation: string;
-  whitelist: string;
-  tool: string;
-}
+let canceled = false;
 
-interface WorkerResult {
-  confidence: string;
-  file: string;
-  line: number;
-  index: number;
-  pattern: string;
-  match: string;
-  severity: string;
-  remediation: string;
-  whitelist: string;
-}
-
-const gitleaksPatterns: Omit<Pattern, 'tool'>[] = [
-  {
-    name: 'AWS Access Key',
-    regex: 'AKIA[0-9A-Z]{16}',
-    severity: 'high',
-    remediation: 'Rotate the key and remove from history.',
-    whitelist: 'git secrets --add "AKIA[0-9A-Z]{16}"',
-  },
-  {
-    name: 'Generic API Key',
-    regex: '[A-Za-z0-9-_]{32,45}',
-    severity: 'medium',
-    remediation: 'Rotate the key and remove from the repository.',
-    whitelist: 'git secrets --add "[A-Za-z0-9-_]{32,45}"',
-  },
-];
-
-const trufflehogPatterns: Omit<Pattern, 'tool'>[] = [
-  {
-    name: 'Slack Token',
-    regex: 'xox[baprs]-[0-9a-zA-Z]{10,48}',
-    severity: 'high',
-    remediation: 'Revoke the token and generate a new one.',
-    whitelist: 'git secrets --add "xox[baprs]-[0-9a-zA-Z]{10,48}"',
-  },
-  {
-    name: 'RSA Private Key',
-    regex: '-----BEGIN(?: RSA)? PRIVATE KEY-----',
-    severity: 'critical',
-    remediation: 'Remove private keys and generate new ones.',
-    whitelist: 'git secrets --add "-----BEGIN(?: RSA)? PRIVATE KEY-----"',
-  },
-];
-
-const allPatterns: Pattern[] = [
-  ...gitleaksPatterns.map((p) => ({ ...p, tool: 'gitleaks' })),
-  ...trufflehogPatterns.map((p) => ({ ...p, tool: 'trufflehog' })),
-];
-
-const redact = (secret: string): string => {
-  if (secret.length <= 4) return '***';
-  return `${secret.slice(0, 2)}***${secret.slice(-2)}`;
+const shannonEntropy = (str: string): number => {
+  const freq: Record<string, number> = {};
+  for (const c of str) freq[c] = (freq[c] || 0) + 1;
+  let e = 0;
+  const len = str.length;
+  Object.values(freq).forEach((f) => {
+    const p = f / len;
+    e -= p * Math.log2(p);
+  });
+  return e;
 };
 
-interface ScanMessage {
-  type: 'scan-archive';
-  buffer: ArrayBuffer;
-}
+const isBinary = (data: Uint8Array): boolean => {
+  for (let i = 0; i < data.length && i < 1000; i += 1) {
+    if (data[i] === 0) return true;
+  }
+  return false;
+};
 
-self.onmessage = async (e: MessageEvent<ScanMessage>) => {
-  if (e.data.type !== 'scan-archive') return;
-  const zip = await JSZip.loadAsync(e.data.buffer);
-  const entries = Object.values(zip.files);
-  const results: WorkerResult[] = [];
-  for (const entry of entries) {
-    if (entry.dir) continue;
-    const content = await entry.async('string');
-    const lines = content.split(/\r?\n/);
-    lines.forEach((line, idx) => {
-      allPatterns.forEach((pat) => {
-        const re = new RegExp(pat.regex, 'g');
-        let m: RegExpExecArray | null;
-        while ((m = re.exec(line)) !== null) {
-          results.push({
-            file: entry.name,
-            line: idx + 1,
-            index: m.index,
-            pattern: `${pat.tool}: ${pat.name}`,
-            match: redact(m[0]),
-            severity: pat.severity,
-            confidence: 'high',
-            remediation: pat.remediation,
-            whitelist: pat.whitelist,
+const scanLine = (
+  file: string,
+  lineContent: string,
+  lineNumber: number,
+  patterns: PatternInfo[],
+): { safe: string; results: ScanResult[] } => {
+  const lineResults: ScanResult[] = [];
+  let safe = lineContent;
+
+  patterns.forEach((pat) => {
+    try {
+      const re = new RegExp(pat.regex, 'g');
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(lineContent)) !== null) {
+        lineResults.push({
+          file,
+          pattern: pat.name,
+          match: redactSecret(m[0]),
+          index: m.index,
+          line: lineNumber,
+          severity: pat.severity,
+          confidence: 'high',
+          remediation: pat.remediation,
+          whitelist: pat.whitelist,
+        });
+        safe = safe.replace(m[0], redactSecret(m[0]));
+      }
+    } catch (e: any) {
+      lineResults.push({
+        file,
+        pattern: pat.regex,
+        match: '',
+        index: -1,
+        line: lineNumber,
+        severity: 'error',
+        confidence: 'low',
+        remediation: e.message,
+        whitelist: pat.whitelist,
+      });
+    }
+  });
+
+  const heur = /(password|secret|api[-_]?key|token)\s*[:=]\s*['"]?([^'"\s]+)/i.exec(
+    lineContent,
+  );
+  if (heur) {
+    const secret = heur[2];
+    lineResults.push({
+      file,
+      pattern: `Keyword ${heur[1]}`,
+      match: redactSecret(secret),
+      index: lineContent.indexOf(secret),
+      line: lineNumber,
+      severity: 'medium',
+      confidence: 'low',
+      remediation: 'Avoid hardcoding credentials.',
+      whitelist: 'git secrets --add -l "pattern"',
+    });
+    safe = safe.replace(secret, redactSecret(secret));
+  }
+
+  const tokens = lineContent.match(/[A-Za-z0-9\/+=]{20,}/g) || [];
+  tokens.forEach((token) => {
+    const ent = shannonEntropy(token);
+    if (ent > 4) {
+      lineResults.push({
+        file,
+        pattern: 'High Entropy String',
+        match: redactSecret(token),
+        index: lineContent.indexOf(token),
+        line: lineNumber,
+        severity: 'medium',
+        confidence: 'medium',
+        remediation: 'Verify this string is not a secret.',
+        whitelist: 'git secrets --add -l "pattern"',
+      });
+      safe = safe.replace(token, redactSecret(token));
+    }
+  });
+
+  return { safe, results: lineResults };
+};
+
+type WorkerMessage =
+  | { type: 'scan-text'; text: string; patterns: PatternInfo[] }
+  | { type: 'scan-file'; name: string; content: string; patterns: PatternInfo[] }
+  | { type: 'scan-patch'; patch: string; patterns: PatternInfo[] }
+  | { type: 'scan-archive'; buffer: ArrayBuffer; patterns: PatternInfo[] }
+  | { type: 'cancel' };
+
+self.onmessage = async (e: MessageEvent<WorkerMessage>) => {
+  const msg = e.data;
+  if (msg.type === 'cancel') {
+    canceled = true;
+    return;
+  }
+  canceled = false;
+  switch (msg.type) {
+    case 'scan-text': {
+      const lines = msg.text.split(/\r?\n/);
+      const total = lines.length;
+      const results: ScanResult[] = [];
+      for (let i = 0; i < lines.length; i += 1) {
+        if (canceled) {
+          (self as unknown as Worker).postMessage({ type: 'canceled' });
+          return;
+        }
+        const { results: r } = scanLine('input', lines[i], i + 1, msg.patterns);
+        results.push(...r);
+        if ((i + 1) % 50 === 0 || i + 1 === total) {
+          (self as unknown as Worker).postMessage({
+            type: 'progress',
+            current: i + 1,
+            total,
           });
         }
-      });
-    });
+      }
+      (self as unknown as Worker).postMessage({ type: 'results', results });
+      break;
+    }
+    case 'scan-file': {
+      const lines = msg.content.split(/\r?\n/);
+      const total = lines.length;
+      const results: ScanResult[] = [];
+      for (let i = 0; i < lines.length; i += 1) {
+        if (canceled) {
+          (self as unknown as Worker).postMessage({ type: 'canceled' });
+          return;
+        }
+        const { results: r } = scanLine(msg.name, lines[i], i + 1, msg.patterns);
+        results.push(...r);
+        if ((i + 1) % 50 === 0 || i + 1 === total) {
+          (self as unknown as Worker).postMessage({
+            type: 'progress',
+            current: i + 1,
+            total,
+          });
+        }
+      }
+      (self as unknown as Worker).postMessage({ type: 'results', results });
+      break;
+    }
+    case 'scan-patch': {
+      const lines = msg.patch.split(/\r?\n/);
+      const total = lines.length;
+      const diff: DiffLine[] = [];
+      const results: ScanResult[] = [];
+      let currentFile = '';
+      let ln = 0;
+      for (let i = 0; i < lines.length; i += 1) {
+        if (canceled) {
+          (self as unknown as Worker).postMessage({ type: 'canceled' });
+          return;
+        }
+        const line = lines[i];
+        if (line.startsWith('+++')) {
+          currentFile = line.replace('+++ b/', '').replace('+++ ', '');
+          diff.push({ file: currentFile, line, lineNumber: null, type: 'context' });
+        } else if (line.startsWith('@@')) {
+          const m = /@@ .* \+(\d+)/.exec(line);
+          ln = m ? parseInt(m[1], 10) - 1 : 0;
+          diff.push({ file: currentFile, line, lineNumber: null, type: 'context' });
+        } else if (line.startsWith('+') && !line.startsWith('+++')) {
+          ln += 1;
+          const { safe, results: r } = scanLine(currentFile, line.slice(1), ln, msg.patterns);
+          diff.push({ file: currentFile, line: `+${safe}`, lineNumber: ln, type: 'add' });
+          results.push(...r);
+        } else if (line.startsWith('-') && !line.startsWith('---')) {
+          const { safe } = scanLine(currentFile, line.slice(1), ln, msg.patterns);
+          diff.push({ file: currentFile, line: `-${safe}`, lineNumber: null, type: 'remove' });
+        } else {
+          ln += 1;
+          const { safe } = scanLine(currentFile, line, ln, msg.patterns);
+          diff.push({ file: currentFile, line: safe, lineNumber: ln, type: 'context' });
+        }
+        if ((i + 1) % 50 === 0 || i + 1 === total) {
+          (self as unknown as Worker).postMessage({
+            type: 'progress',
+            current: i + 1,
+            total,
+          });
+        }
+      }
+      (self as unknown as Worker).postMessage({ type: 'results', results, diff });
+      break;
+    }
+    case 'scan-archive': {
+      const zip = await JSZip.loadAsync(msg.buffer);
+      const entries = Object.values(zip.files).filter((e) => !e.dir);
+      const results: ScanResult[] = [];
+      const logs: string[] = [];
+      const total = entries.length;
+      for (let i = 0; i < entries.length; i += 1) {
+        if (canceled) {
+          (self as unknown as Worker).postMessage({ type: 'canceled' });
+          return;
+        }
+        const entry = entries[i];
+        const data = await entry.async('uint8array');
+        if (data.length > MAX_SIZE || isBinary(data)) {
+          logs.push(`Skipped ${entry.name}`);
+        } else {
+          const content = new TextDecoder().decode(data);
+          const lines = content.split(/\r?\n/);
+          lines.forEach((line, idx) => {
+            const { results: r } = scanLine(entry.name, line, idx + 1, msg.patterns);
+            results.push(...r);
+          });
+        }
+        (self as unknown as Worker).postMessage({
+          type: 'progress',
+          current: i + 1,
+          total,
+        });
+      }
+      (self as unknown as Worker).postMessage({ type: 'results', results, logs });
+      break;
+    }
+    default:
+      break;
   }
-  (self as unknown as Worker).postMessage({ results });
 };
 
 export default null as any;

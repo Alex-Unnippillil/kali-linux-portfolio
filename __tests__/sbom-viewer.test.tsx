@@ -23,6 +23,7 @@ class MockWorker {
   }
   terminate() {}
 }
+
 (global as any).Worker = MockWorker as any;
 
 describe('SBOM Viewer', () => {

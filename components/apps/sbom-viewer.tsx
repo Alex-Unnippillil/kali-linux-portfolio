@@ -4,6 +4,7 @@ import Papa from 'papaparse';
 import { FixedSizeList as List } from 'react-window';
 import { ParsedSbom, fetchOsv } from '@lib/sbom';
 
+
 interface TreeProps {
   id: string;
   graph: Record<string, string[]>;
@@ -38,6 +39,7 @@ const SbomViewer: React.FC = () => {
       type: 'module',
     });
     w.onmessage = (e) => {
+
       const { type } = e.data;
       if (type === 'progress') {
         setProgress(e.data.progress);
@@ -56,6 +58,7 @@ const SbomViewer: React.FC = () => {
     };
     setWorker(w);
     return () => w.terminate();
+
   }, []);
 
   const handleFile = useCallback(
@@ -187,6 +190,7 @@ const SbomViewer: React.FC = () => {
           />
         </label>
         {error && <div className="text-red-500 mt-2">{error}</div>}
+
       </div>
     );
   }

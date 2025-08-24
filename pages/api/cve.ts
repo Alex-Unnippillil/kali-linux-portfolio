@@ -2,6 +2,7 @@ import { setupUrlGuard } from "../../lib/urlGuard";
 import { loadKevSet } from '../../lib/kev';
 import { fetchEpssScores } from '../../lib/epss';
 import { rateLimitEdge } from '../../lib/rateLimiter';
+import { kv } from '../../lib/kv';
 
 setupUrlGuard();
 
@@ -16,7 +17,6 @@ interface ExploitInfo {
   source_url: string;
 }
 
-const responseCache = new Map<string, { data: unknown; expiry: number }>();
 let exploitMapPromise: Promise<Map<string, ExploitInfo[]>> | null = null;
 
 async function loadExploitMap(): Promise<Map<string, ExploitInfo[]>> {
@@ -71,6 +71,24 @@ function parseCSV(line: string): string[] {
   return result;
 }
 
+async function fetchWithBackoff(
+  url: string,
+  init: RequestInit,
+  retries = 3,
+): Promise<Response> {
+  let attempt = 0;
+  let delay = 1000;
+  while (true) {
+    const res = await fetch(url, init);
+    if (res.ok || attempt >= retries) return res;
+    const ra = res.headers.get('Retry-After');
+    const wait = ra ? parseInt(ra, 10) * 1000 : delay;
+    await new Promise((r) => setTimeout(r, wait));
+    attempt++;
+    delay *= 2;
+  }
+}
+
 export default async function handler(req: Request): Promise<Response> {
   const rate = await rateLimitEdge(req);
   if (rate.limited) {
@@ -83,8 +101,12 @@ export default async function handler(req: Request): Promise<Response> {
   const { searchParams } = new URL(req.url);
   const keyword = searchParams.get('keyword') || '';
   const domain = searchParams.get('domain') || '';
-  const cpe = searchParams.get('cpe') || '';
+  let cpe = searchParams.get('cpe') || '';
   const cwe = searchParams.get('cwe') || '';
+  const vendor = searchParams.get('vendor') || '';
+  const product = searchParams.get('product') || '';
+  const startDate = searchParams.get('startDate') || '';
+  const endDate = searchParams.get('endDate') || '';
   const recent = parseInt(searchParams.get('recent') || '30', 10);
   const page = parseInt(searchParams.get('page') || '1', 10);
   const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
@@ -93,9 +115,16 @@ export default async function handler(req: Request): Promise<Response> {
     .map((s) => s.toLowerCase())
     .filter(Boolean);
   const sort = searchParams.get('sort') || '';
+  const cvssMin = parseFloat(searchParams.get('cvss') || '0');
+  const epssMin = parseFloat(searchParams.get('epss') || '0');
+  const kevOnly = ['1', 'true'].includes((searchParams.get('kev') || '').toLowerCase());
 
-  const cacheKey = `${keyword}|${domain}|${cpe}|${cwe}|${recent}|${page}|${pageSize}|${severity.join(',')}`;
-  const cached = responseCache.get(cacheKey);
+  if (!cpe && vendor && product) {
+    cpe = `cpe:2.3:a:${vendor}:${product}:*:*:*:*:*:*:*:*`;
+  }
+
+  const cacheKey = `cve:${keyword}|${domain}|${cpe}|${cwe}|${vendor}|${product}|${startDate}|${endDate}|${recent}|${page}|${pageSize}|${severity.join(',')}|${cvssMin}|${epssMin}|${kevOnly}`;
+  const cached = await kv.get<{ data: unknown; expiry: number }>(cacheKey);
   if (cached && cached.expiry > Date.now()) {
     return new Response(JSON.stringify(cached.data), {
       headers: {
@@ -107,26 +136,32 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   const startIndex = (page - 1) * pageSize;
-  const pubStartDate = new Date(Date.now() - recent * 86400000).toISOString();
+  const pubStartDate = startDate
+    ? `${startDate}T00:00:00.000`
+    : new Date(Date.now() - recent * 86400000).toISOString();
   const keywordParam = [keyword, domain].filter(Boolean).join(' ');
   let nvdUrl = `https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${encodeURIComponent(keywordParam)}&resultsPerPage=${pageSize}&startIndex=${startIndex}&pubStartDate=${encodeURIComponent(pubStartDate)}`;
+  if (endDate) nvdUrl += `&pubEndDate=${encodeURIComponent(`${endDate}T00:00:00.000`)}`;
   if (cpe) nvdUrl += `&cpeName=${encodeURIComponent(cpe)}`;
   if (cwe) nvdUrl += `&cweId=${encodeURIComponent(cwe)}`;
 
-  const nvdRes = await fetch(nvdUrl);
-  if (nvdRes.status === 429) {
+  const headers: Record<string, string> = {};
+  if (process.env.NVD_API_KEY) headers['apiKey'] = process.env.NVD_API_KEY;
+
+  const nvdRes = await fetchWithBackoff(nvdUrl, { headers });
+  if (!nvdRes.ok) {
     const retryAfter = nvdRes.headers.get('Retry-After') || '30';
     if (cached) {
       return new Response(
         JSON.stringify({ ...(cached.data as any), retryAfter, fromCache: true }),
         {
-          status: 429,
+          status: nvdRes.status,
           headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter, ...rate.headers },
         },
       );
     }
-    return new Response(JSON.stringify({ error: 'rate_limited', retryAfter }), {
-      status: 429,
+    return new Response(JSON.stringify({ error: 'nvd_error', retryAfter }), {
+      status: nvdRes.status,
       headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter, ...rate.headers },
     });
   }
@@ -159,12 +194,30 @@ export default async function handler(req: Request): Promise<Response> {
     );
   }
 
+  if (cvssMin) {
+    vulnerabilities = vulnerabilities.filter((v: any) => {
+      const score =
+        v.cve?.metrics?.cvssMetricV31?.[0]?.cvssData?.baseScore ||
+        v.cve?.metrics?.cvssMetricV30?.[0]?.cvssData?.baseScore ||
+        v.cve?.metrics?.cvssMetricV2?.[0]?.baseScore || 0;
+      return score >= cvssMin;
+    });
+  }
+
+  if (epssMin) {
+    vulnerabilities = vulnerabilities.filter((v: any) => (v.epss || 0) >= epssMin);
+  }
+
+  if (kevOnly) {
+    vulnerabilities = vulnerabilities.filter((v: any) => v.kev);
+  }
+
   if (sort === 'epss') {
     vulnerabilities.sort((a: any, b: any) => (b.epss || 0) - (a.epss || 0));
   }
 
   const data = { totalResults: nvdData.totalResults, vulnerabilities };
-  responseCache.set(cacheKey, { data, expiry: Date.now() + 3600 * 1000 });
+  await kv.set(cacheKey, { data, expiry: Date.now() + 3600 * 1000 });
 
   return new Response(JSON.stringify(data), {
     headers: {
