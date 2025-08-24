@@ -133,6 +133,24 @@ The GitHub Actions workflow relies on the following secrets configured in the re
 
 These secrets provide the values for the corresponding environment variables during the build step.
 
+## E2E Testing
+
+The project uses [Playwright](https://playwright.dev/) for end-to-end tests.
+
+### Setup
+
+1. Install the Playwright browsers (Chromium is sufficient):
+   ```bash
+   npx playwright install chromium
+   npx playwright install-deps chromium  # on Linux
+   ```
+2. Run the tests:
+   ```bash
+   yarn test:e2e
+   ```
+
+The Playwright configuration automatically starts the development server before running the tests.
+
 ## Deployment
 
 This project relies on Next.js server features such as API routes and Socket.IO websockets. For production deployments, build and run the server:
