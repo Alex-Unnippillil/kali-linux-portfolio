@@ -90,11 +90,11 @@ const evaluateWindow = (window: number[], player: number) => {
   const countOpp = window.filter((v) => v === opponent).length;
   const countEmpty = window.filter((v) => v === 0).length;
   let score = 0;
-  if (countPlayer === 4) score += 1_000_000;
+  if (countPlayer === 4) score += WIN_SCORE;
   else if (countPlayer === 3 && countEmpty === 1) score += 100;
   else if (countPlayer === 2 && countEmpty === 2) score += 10;
   if (countOpp === 3 && countEmpty === 1) score -= 80;
-  if (countOpp === 4) score -= 1_000_000;
+  if (countOpp === 4) score -= WIN_SCORE;
   return score;
 };
 
