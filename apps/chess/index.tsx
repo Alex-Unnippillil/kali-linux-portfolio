@@ -299,9 +299,20 @@ const ChessApp: React.FC = () => {
 
   const exportPGN = () => {
     const pgn = game.pgn();
-    navigator.clipboard?.writeText(pgn);
-    // eslint-disable-next-line no-alert
-    alert('PGN copied');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(pgn)
+        .then(() => {
+          // eslint-disable-next-line no-alert
+          alert('PGN copied');
+        })
+        .catch(() => {
+          // eslint-disable-next-line no-alert
+          alert('Failed to copy PGN. Please copy manually.');
+        });
+    } else {
+      // eslint-disable-next-line no-alert
+      alert('Clipboard not supported. Please copy manually.');
+    }
   };
 
   const importPGN = () => {
