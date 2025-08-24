@@ -1,8 +1,51 @@
 import React, { Component } from 'react';
 import NextImage from 'next/image';
-import Draggable from 'react-draggable';
+import { DndContext, useDraggable } from '@dnd-kit/core';
+import { CSS } from '@dnd-kit/utilities';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
+
+function DraggableContainer({ id, defaultPosition, bounds, onDrag, onStart, onStop, children }) {
+    const [position, setPosition] = React.useState(defaultPosition);
+    const { attributes, listeners, setNodeRef, transform } = useDraggable({ id });
+    const style = {
+        transform: CSS.Translate.toString({
+            x: position.x + (transform ? transform.x : 0),
+            y: position.y + (transform ? transform.y : 0)
+        })
+    };
+
+    const handleDragEnd = (event) => {
+        const { delta } = event;
+        let newX = position.x + delta.x;
+        let newY = position.y + delta.y;
+        if (bounds) {
+            newX = Math.min(Math.max(newX, bounds.left), bounds.right);
+            newY = Math.min(Math.max(newY, bounds.top), bounds.bottom);
+        }
+        setPosition({ x: newX, y: newY });
+        if (onStop) onStop();
+    };
+
+    const handleDragMove = (event) => {
+        const { delta } = event;
+        let newX = position.x + delta.x;
+        let newY = position.y + delta.y;
+        if (bounds) {
+            newX = Math.min(Math.max(newX, bounds.left), bounds.right);
+            newY = Math.min(Math.max(newY, bounds.top), bounds.bottom);
+        }
+        if (onDrag) onDrag(null, { x: newX, y: newY });
+    };
+
+    return (
+        <DndContext onDragStart={onStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
+            <div ref={setNodeRef} style={style}>
+                {typeof children === 'function' ? children({ attributes, listeners }) : children}
+            </div>
+        </DndContext>
+    );
+}
 
 export class Window extends Component {
     constructor(props) {
@@ -167,33 +210,31 @@ export class Window extends Component {
 
     render() {
         return (
-            <Draggable
-                axis="both"
-                handle=".bg-window-title"
-                grid={[1, 1]}
-                scale={1}
+            <DraggableContainer
+                id={this.id}
+                defaultPosition={{ x: this.startX, y: this.startY }}
+                bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 onStart={this.changeCursorToMove}
                 onStop={this.changeCursorToDefault}
                 onDrag={this.checkOverlap}
-                allowAnyClick={false}
-                defaultPosition={{ x: this.startX, y: this.startY }}
-                bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
             >
-                <div style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                    className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
-                    id={this.id}
-                >
-                    {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                    {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                    <WindowTopBar title={this.props.title} />
-                    <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
-                    {(this.id === "settings"
-                        ? <Settings changeBackgroundImage={this.props.changeBackgroundImage} currBgImgName={this.props.bg_image_name} />
-                        : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                            addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                            openApp={this.props.openApp} />)}
-                </div>
-            </Draggable >
+                {({ attributes, listeners }) => (
+                    <div style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        id={this.id}
+                    >
+                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
+                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        <WindowTopBar title={this.props.title} handleProps={{ ...attributes, ...listeners }} />
+                        <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
+                        {(this.id === "settings"
+                            ? <Settings changeBackgroundImage={this.props.changeBackgroundImage} currBgImgName={this.props.bg_image_name} />
+                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                                openApp={this.props.openApp} />)}
+                    </div>
+                )}
+            </DraggableContainer >
         )
     }
 }
@@ -203,7 +244,7 @@ export default Window
 // Window's title bar
 export function WindowTopBar(props) {
     return (
-        <div className={" relative bg-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}>
+        <div className={" relative bg-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"} {...props.handleProps}>
             <div className="flex justify-center text-sm font-bold">{props.title}</div>
         </div>
     )
