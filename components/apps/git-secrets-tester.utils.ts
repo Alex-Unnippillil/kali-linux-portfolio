@@ -56,4 +56,3 @@ export const redactSecret = (secret: string): string => {
   return `${secret.slice(0, 2)}***${secret.slice(-2)}`;
 };
 
-export default null;

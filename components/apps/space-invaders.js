@@ -415,7 +415,7 @@ const SpaceInvaders = () => {
       window.removeEventListener('keydown', handleKey);
       window.removeEventListener('keyup', handleKey);
     };
-  }, []);
+    }, [crt]);
 
   const touchStart = (key) => () => {
     touch.current[key] = true;

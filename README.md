@@ -4,6 +4,7 @@
 2. **Install packages** – run `yarn` to install project dependencies.
 3. **Environment** – copy `.env.example` to `.env.local` and fill in required variables like `JWT_SECRET`.
 4. **Run the app** – start the development server with `yarn dev`.
+5. **Type-check** – run `yarn typecheck` to verify TypeScript types. This command also runs in CI.
 
 ### Common Install Issues
 
@@ -18,6 +19,10 @@
 3. Optionally set analytics variables such as `NEXT_PUBLIC_ENABLE_ANALYTICS` and `NEXT_PUBLIC_TRACKING_ID`.
 4. Update `.env.example` whenever new environment variables are added.
 5. Run `yarn validate:icons` to ensure all icon paths in `apps.config.js` exist under `public/themes/` before committing.
+
+## Local File Storage
+
+Some API routes persist data to the filesystem when running locally. This file-based storage is best effort and may be cleared between runs. Production deployments fall back to a no-op implementation or external storage via `lib/store`.
 
 ## Adding New Apps
 

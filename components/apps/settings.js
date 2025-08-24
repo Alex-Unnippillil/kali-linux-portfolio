@@ -2,6 +2,26 @@ import React, { useEffect, useState, lazy, Suspense } from 'react';
 import { z } from 'zod';
 const WallpaperPreview = lazy(() => import('./WallpaperPreview'));
 
+const settingsSchema = z
+    .object({
+        theme: z.enum(['light', 'dark']).default('dark'),
+        density: z.enum(['comfortable', 'compact']).default('comfortable'),
+        motion: z.boolean().default(true),
+        colorBlind: z
+            .enum(['none', 'protanopia', 'deuteranopia', 'tritanopia'])
+            .default('none'),
+        language: z.enum(['en', 'es', 'fr', 'de']).default('en'),
+        dataSharing: z.boolean().default(true),
+    })
+    .default({
+        theme: 'dark',
+        density: 'comfortable',
+        motion: true,
+        colorBlind: 'none',
+        language: 'en',
+        dataSharing: true,
+    });
+
 export function Settings(props) {
     const wallpapers = {
         "wall-1": "./images/wallpapers/wall-1.webp",
@@ -16,27 +36,6 @@ export function Settings(props) {
 
     const [bg, setBg] = useState(props.currBgImgName);
     const SETTINGS_KEY = 'settings';
-
-    const settingsSchema = z
-        .object({
-            theme: z.enum(['light', 'dark']).default('dark'),
-            density: z.enum(['comfortable', 'compact']).default('comfortable'),
-            motion: z.boolean().default(true),
-            colorBlind: z
-                .enum(['none', 'protanopia', 'deuteranopia', 'tritanopia'])
-                .default('none'),
-            language: z.enum(['en', 'es', 'fr', 'de']).default('en'),
-            dataSharing: z.boolean().default(true),
-        })
-        .default({
-            theme: 'dark',
-            density: 'comfortable',
-            motion: true,
-            colorBlind: 'none',
-            language: 'en',
-            dataSharing: true,
-        });
-
     const [settings, setSettings] = useState(settingsSchema.parse({}));
 
     useEffect(() => {

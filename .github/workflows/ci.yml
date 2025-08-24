@@ -20,5 +20,13 @@ jobs:
       - run: yarn lint:ci
       - run: yarn typecheck
       - run: yarn build:ci
+      - name: Run Lighthouse CI
+        run: yarn lighthouse
+      - name: Upload Lighthouse report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: .lighthouseci
       - run: yarn test
       - run: yarn test:e2e

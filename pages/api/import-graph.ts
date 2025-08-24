@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs/promises';
+import type { Dirent } from 'fs';
 import path from 'path';
 import { setupUrlGuard } from '../../lib/urlGuard';
+import { readDir, readFile } from '../../lib/store';
 
 setupUrlGuard();
 
@@ -17,10 +18,10 @@ export default async function handler(
   const files: Record<string, string> = {};
 
   async function walk(dir: string): Promise<void> {
-    let entries;
+    let entries: Dirent[];
     try {
       // eslint-disable-next-line security/detect-non-literal-fs-filename
-      entries = await fs.readdir(dir, { withFileTypes: true });
+      entries = (await readDir(dir, { withFileTypes: true })) as Dirent[];
     } catch {
       return;
     }
@@ -33,7 +34,7 @@ export default async function handler(
         try {
           const rel = path.relative(root, full).replace(/\\/g, '/');
           // eslint-disable-next-line security/detect-non-literal-fs-filename
-          files[rel] = await fs.readFile(full, 'utf8');
+          files[rel] = (await readFile(full)) ?? '';
         } catch {
           // ignore unreadable files
         }

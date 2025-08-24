@@ -1,0 +1,8 @@
+repos:
+  - repo: local
+    hooks:
+      - id: no-placeholder-tokens
+        name: "No placeholder tokens"
+        entry: "(//\\s*\\.{3,}|['\"]\\.{3}['\"]|<!--\\s*\\.{3,}\\s*-->)"
+        language: pygrep
+        types: [text]
