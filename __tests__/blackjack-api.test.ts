@@ -18,7 +18,7 @@ describe('blackjack api', () => {
     delete process.env.JWT_SECRET;
     process.env.USER_STORE_FILE = path.join(os.tmpdir(), `bj-${Date.now()}.json`);
     jest.resetModules();
-    const { default: handler } = await import('../pages/api/users/[id]/blackjack');
+    const { default: handler } = await import('@pages/api/users/[id]/blackjack');
     const token = jwt.sign({ sub: id }, 'temp');
     const { req, res } = mockReqRes({ method: 'GET', query: { id }, headers: { authorization: `Bearer ${token}` } });
     await handler(req, res);
@@ -29,7 +29,7 @@ describe('blackjack api', () => {
     process.env.JWT_SECRET = 'secret';
     process.env.USER_STORE_FILE = path.join(os.tmpdir(), `bj-${Date.now()}.json`);
     jest.resetModules();
-    const { default: handler } = await import('../pages/api/users/[id]/blackjack');
+    const { default: handler } = await import('@pages/api/users/[id]/blackjack');
     const token = jwt.sign({ sub: 'other' }, process.env.JWT_SECRET!);
     const { req, res } = mockReqRes({ method: 'GET', query: { id }, headers: { authorization: `Bearer ${token}` } });
     await handler(req, res);
@@ -41,7 +41,7 @@ describe('blackjack api', () => {
     const storePath = path.join(os.tmpdir(), `bj-${Date.now()}.json`);
     process.env.USER_STORE_FILE = storePath;
     jest.resetModules();
-    const { default: handler } = await import('../pages/api/users/[id]/blackjack');
+    const { default: handler } = await import('@pages/api/users/[id]/blackjack');
     const token = jwt.sign({ sub: id }, process.env.JWT_SECRET!);
 
     // initial update

@@ -1,4 +1,4 @@
-import { normalizeReports, computeTop, validateReport } from '../pages/api/csp-reporter';
+import { normalizeReports, computeTop, validateReport } from '@pages/api/csp-reporter';
 
 describe('csp-reporter utilities', () => {
   test('normalizes report-uri format', () => {

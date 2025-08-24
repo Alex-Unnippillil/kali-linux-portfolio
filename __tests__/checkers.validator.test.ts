@@ -9,7 +9,7 @@ import {
   hasMoves,
   createConfig,
   Config,
-} from '../apps/checkers/engine';
+} from '@apps/checkers/engine';
 
 const config: Config = createConfig('standard');
 

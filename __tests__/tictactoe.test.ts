@@ -1,4 +1,4 @@
-import { minimax, checkWinner } from '../components/apps/tictactoe';
+import { minimax, checkWinner } from '@components/apps/tictactoe';
 
 describe('tic tac toe AI', () => {
   const simulate = (firstMove: number) => {

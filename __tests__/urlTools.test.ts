@@ -1,4 +1,4 @@
-import { encodeUrl, decodeUrl, splitQuery } from '../apps/url-tools';
+import { encodeUrl, decodeUrl, splitQuery } from '@apps/url-tools';
 
 describe('url tools', () => {
   it('encodes and decodes text', () => {

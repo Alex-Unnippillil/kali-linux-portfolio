@@ -10,7 +10,7 @@ import {
   suits,
   Card,
   GameState,
-} from '../components/apps/solitaire/engine';
+} from '@components/apps/solitaire/engine';
 
 const card = (s: any, v: number, faceUp = true): Card => ({
   suit: s,

@@ -3,7 +3,7 @@ import {
   computeLegalMoves,
   applyMove,
   evaluateBoard,
-} from '../components/apps/reversiLogic';
+} from '@components/apps/reversiLogic';
 
 describe('Reversi rules', () => {
   test('generates legal moves correctly and flips pieces', () => {

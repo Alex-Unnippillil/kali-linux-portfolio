@@ -1,4 +1,4 @@
-import { validateSolution, findHint, getPuzzleBySeed, generateLinePatterns, lineToClues } from '../components/apps/nonogramUtils';
+import { validateSolution, findHint, getPuzzleBySeed, generateLinePatterns, lineToClues } from '@components/apps/nonogramUtils';
 
 describe('nonogram utilities', () => {
   test('validateSolution confirms grid matches clues', () => {

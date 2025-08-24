@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
-import PrefetchJumpList from '../apps/prefetch-jumplist';
+import PrefetchJumpList from '@apps/prefetch-jumplist';
 
 describe('PrefetchJumpList', () => {
   beforeEach(() => {

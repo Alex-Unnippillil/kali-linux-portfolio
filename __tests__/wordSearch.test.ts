@@ -1,4 +1,4 @@
-import { generateGrid } from '../apps/word_search/generator';
+import { generateGrid } from '@apps/word_search/generator';
 
 describe('word search generator', () => {
   it('places words without conflicts', () => {

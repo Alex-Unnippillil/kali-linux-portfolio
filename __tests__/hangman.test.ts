@@ -1,4 +1,4 @@
-import { createGame, guess, useHint, isWinner, isLoser } from '../apps/hangman/engine';
+import { createGame, guess, useHint, isWinner, isLoser } from '@apps/hangman/engine';
 
 describe('hangman engine', () => {
   test('repeated letters are solved with single guess', () => {

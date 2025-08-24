@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
-import PasswordStrength from '../apps/password-strength';
+import PasswordStrength from '@apps/password-strength';
 
 describe('PasswordStrength', () => {
   it('shows analysis details', () => {

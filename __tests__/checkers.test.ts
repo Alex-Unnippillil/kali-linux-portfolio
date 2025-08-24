@@ -1,4 +1,4 @@
-import { createConfig, createBoard } from '../apps/checkers/engine';
+import { createConfig, createBoard } from '@apps/checkers/engine';
 
 test('international board is 10x10', () => {
   const config = createConfig('international');

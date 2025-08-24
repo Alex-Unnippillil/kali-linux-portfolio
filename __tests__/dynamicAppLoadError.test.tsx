@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import createDynamicApp from '../lib/createDynamicApp';
+import createDynamicApp from '@lib/createDynamicApp';
 import ReactGA from 'react-ga4';
 
 jest.mock('react-ga4', () => ({

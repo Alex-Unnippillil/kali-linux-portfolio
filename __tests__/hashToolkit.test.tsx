@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
-import HashToolkit from '../apps/hash-toolkit';
+import HashToolkit from '@apps/hash-toolkit';
 
 describe('HashToolkit', () => {
   it('computes hashes for text input', () => {

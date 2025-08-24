@@ -1,4 +1,4 @@
-import { Shoe, BlackjackGame, basicStrategy } from '../components/apps/blackjack/engine';
+import { Shoe, BlackjackGame, basicStrategy } from '@components/apps/blackjack/engine';
 
 const card = (v: string) => ({ suit: '\u2660', value: v });
 

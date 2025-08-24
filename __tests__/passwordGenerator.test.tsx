@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
-import PasswordGenerator from '../apps/password_generator';
+import PasswordGenerator from '@apps/password_generator';
 
 describe('PasswordGenerator', () => {
   it('generates password of specified length', () => {

@@ -1,5 +1,5 @@
 import licenseList from 'spdx-license-list/full';
-import { matchLicense } from '../lib/licenseMatcher';
+import { matchLicense } from '@lib/licenseMatcher';
 
 describe('matchLicense', () => {
   it('identifies MIT license text', () => {
