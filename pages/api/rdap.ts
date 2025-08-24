@@ -4,7 +4,7 @@ setupUrlGuard();
 
 let tldCache: Set<string> | null = null;
 
-async function getTlds() {
+async function getTlds(): Promise<Set<string>> {
   if (tldCache) return tldCache;
   try {
     const resp = await fetch('https://data.iana.org/rdap/dns.json');
@@ -20,16 +20,43 @@ async function getTlds() {
   return tldCache;
 }
 
-function normalizeRdap(data: any) {
+interface RdapEvent {
+  eventAction: string;
+  eventDate: string;
+}
+
+interface RdapNameserver {
+  ldhName: string;
+  status?: string[];
+}
+
+interface RdapEntity {
+  handle: string;
+  roles: string[];
+  vcardArray: unknown;
+}
+
+interface RdapDomain {
+  objectClassName: string;
+  handle: string;
+  ldhName: string;
+  unicodeName?: string;
+  status?: string[];
+  events?: RdapEvent[];
+  nameservers?: RdapNameserver[];
+  entities?: RdapEntity[];
+}
+
+function normalizeRdap(data: RdapDomain): RdapDomain {
   return {
     objectClassName: data.objectClassName,
     handle: data.handle,
     ldhName: data.ldhName,
     unicodeName: data.unicodeName,
     status: data.status,
-    events: data.events?.map(({ eventAction, eventDate }: any) => ({ eventAction, eventDate })),
-    nameservers: data.nameservers?.map(({ ldhName, status }: any) => ({ ldhName, status })),
-    entities: data.entities?.map(({ handle, roles, vcardArray }: any) => ({ handle, roles, vcardArray })),
+    events: data.events?.map(({ eventAction, eventDate }) => ({ eventAction, eventDate })),
+    nameservers: data.nameservers?.map(({ ldhName, status }) => ({ ldhName, status })),
+    entities: data.entities?.map(({ handle, roles, vcardArray }) => ({ handle, roles, vcardArray })),
   };
 }
 
@@ -60,10 +87,11 @@ export default async function handler(
       res.status(response.status).json({ error: 'RDAP lookup failed' });
       return;
     }
-    const json = await response.json();
+    const json: RdapDomain = await response.json();
     res.status(200).json(normalizeRdap(json));
-  } catch {
-    res.status(500).json({ error: 'Internal server error' });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Internal server error';
+    res.status(500).json({ error: message });
   }
 }
 

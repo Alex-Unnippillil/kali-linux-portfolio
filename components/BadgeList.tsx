@@ -1,10 +1,22 @@
 import React, { useState } from 'react';
 
-const BadgeList = ({ badges, className = '' }) => {
-  const [filter, setFilter] = useState('');
-  const [selected, setSelected] = useState(null);
+interface Badge {
+  src: string;
+  alt: string;
+  label: string;
+  description?: string;
+}
 
-  const filteredBadges = badges.filter((badge) =>
+interface BadgeListProps {
+  badges: Badge[];
+  className?: string;
+}
+
+const BadgeList: React.FC<BadgeListProps> = ({ badges, className = '' }) => {
+  const [filter, setFilter] = useState('');
+  const [selected, setSelected] = useState<Badge | null>(null);
+
+  const filteredBadges = badges.filter((badge: Badge) =>
     badge.label.toLowerCase().includes(filter.toLowerCase())
   );
 

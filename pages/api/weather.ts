@@ -2,7 +2,24 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+interface WeatherApiResponse {
+  current_weather: {
+    temperature: number;
+    [key: string]: unknown;
+  };
+  hourly: {
+    temperature_2m: number[];
+  };
+  daily: {
+    temperature_2m_max: number[];
+    temperature_2m_min: number[];
+  };
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { lat, lon, units } = req.query;
   if (!lat || !lon) {
     res.status(400).json({ error: 'Missing latitude or longitude' });
@@ -22,15 +39,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const response = await fetch(url);
     if (!response.ok) {
       const text = await response.text();
-      res.status(response.status).json({ error: text || 'Weather API request failed' });
+      res
+        .status(response.status)
+        .json({ error: text || 'Weather API request failed' });
       return;
     }
-    const data = await response.json();
+    const data: WeatherApiResponse = await response.json();
 
     // Cache for 10 minutes at the edge; clients can also cache
     res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate');
     res.status(200).json(data);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || 'Unexpected error' });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unexpected error';
+    res.status(500).json({ error: message });
   }
 }
