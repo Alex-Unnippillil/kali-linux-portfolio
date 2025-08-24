@@ -34,6 +34,25 @@
 4. Update `.env.example` whenever new environment variables are added.
 5. Run `yarn validate:icons` to ensure all icon paths in `apps.config.js` exist under `public/themes/` before committing.
 
+## Design Tokens
+
+Color variables and spacing are centralized in `styles/tokens.css`. The file defines light and dark palettes, and the `--accent` color blends Ubuntu Orange (`#E95420`) with Aubergine (`#77216F`). Semantic tokens map to the active palette via `prefers-color-scheme`:
+
+| Semantic token | Light | Dark |
+| -------------- | ----- | ---- |
+| `--color-bg` | `--color-light-bg` | `--color-dark-bg` |
+| `--color-surface` | `--color-light-surface` | `--color-dark-surface` |
+| `--color-text` | `--color-light-text` | `--color-dark-text` |
+
+These pairings meet or exceed WCAG contrast guidelines:
+
+| Pair | Contrast | Rating |
+| ---- | -------- | ------ |
+| Light `--color-bg` / `--color-text` | 18.88:1 | AAA |
+| Light `--color-surface` / `--color-text` | 16.87:1 | AAA |
+| Dark `--color-bg` / `--color-text` | 16.02:1 | AAA |
+| Dark `--color-surface` / `--color-text` | 13.39:1 | AAA |
+
 ## Local File Storage
 
 Some API routes persist data to the filesystem when running locally. This file-based storage is best effort and may be cleared between runs. Production deployments fall back to a no-op implementation or external storage via `lib/store`.
