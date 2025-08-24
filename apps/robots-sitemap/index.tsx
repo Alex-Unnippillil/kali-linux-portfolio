@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import ErrorPane from '../../components/ErrorPane';
+import { testPath, RobotsData as RobotsFileData } from '../../lib/robots';
 
 interface SitemapEntry {
   loc: string;
@@ -18,7 +19,15 @@ interface RuleInfo {
   overriddenBy?: string;
 }
 
-interface RobotsData {
+interface Decision {
+  path: string;
+  userAgent: string;
+  allowed: boolean;
+  matchedRule: string | null;
+  type: 'allow' | 'disallow' | null;
+}
+
+interface RobotsAuditData {
   sitemaps: string[];
   sitemapEntries: SitemapEntry[];
   unsupported: string[];
@@ -30,14 +39,21 @@ interface RobotsData {
 
 const RobotsSitemap: React.FC = () => {
   const [url, setUrl] = useState('');
-  const [data, setData] = useState<RobotsData | null>(null);
+  const [data, setData] = useState<RobotsAuditData | null>(null);
+  const [raw, setRaw] = useState<RobotsFileData | null>(null);
   const [fault, setFault] = useState<{ code: string; message: string } | null>(
     null
   );
 
+  const [testPathInput, setTestPathInput] = useState('');
+  const [userAgent, setUserAgent] = useState('*');
+  const [decisions, setDecisions] = useState<Decision[]>([]);
+
   const load = async () => {
     setFault(null);
     setData(null);
+    setRaw(null);
+    setDecisions([]);
     if (!url) return;
     try {
       const res = await fetch(`/api/robots?url=${encodeURIComponent(url)}`);
@@ -46,6 +62,16 @@ const RobotsSitemap: React.FC = () => {
         setFault({ code: json.code, message: json.message });
       } else {
         setData(json);
+        try {
+          const origin = new URL(url).origin;
+          const rawRes = await fetch(
+            `/api/robots-auditor?origin=${encodeURIComponent(origin)}`
+          );
+          const rawJson = await rawRes.json();
+          setRaw(rawJson);
+        } catch {
+          // ignore
+        }
       }
     } catch (e) {
       setFault({ code: 'network_error', message: 'Failed to fetch' });
@@ -93,6 +119,20 @@ const RobotsSitemap: React.FC = () => {
   }, [data]);
 
   const maxCount = Math.max(0, ...heatmap.map((d) => d.count));
+
+  const runTest = () => {
+    if (!raw || !testPathInput) return;
+    const result = testPath(raw, userAgent, testPathInput);
+    setDecisions([...decisions, { path: testPathInput, userAgent, ...result }]);
+  };
+
+  const origin = useMemo(() => {
+    try {
+      return new URL(url).origin;
+    } catch {
+      return '';
+    }
+  }, [url]);
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 space-y-4">
@@ -189,6 +229,67 @@ const RobotsSitemap: React.FC = () => {
               </ul>
             ) : (
               <div>None</div>
+            )}
+          </div>
+          <div>
+            <h2 className="font-bold mb-1">Path Tester</h2>
+            <div className="flex space-x-2 mb-2">
+              <input
+                type="text"
+                value={testPathInput}
+                onChange={(e) => setTestPathInput(e.target.value)}
+                placeholder="/some/path"
+                className="flex-1 px-2 text-black"
+              />
+              <input
+                type="text"
+                value={userAgent}
+                onChange={(e) => setUserAgent(e.target.value)}
+                placeholder="User-Agent"
+                className="px-2 w-40 text-black"
+              />
+              <button
+                type="button"
+                onClick={runTest}
+                disabled={!testPathInput}
+                className="px-4 py-1 bg-green-600 rounded disabled:opacity-50"
+              >
+                Test
+              </button>
+            </div>
+            {origin && (
+              <div className="space-x-2 mb-2 text-sm">
+                <a
+                  href={`https://www.google.com/webmasters/tools/robots-testing-tool?hl=en&siteUrl=${encodeURIComponent(
+                    origin
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-400 underline"
+                >
+                  Google Tester
+                </a>
+                <a
+                  href={`https://www.bing.com/webmasters/robots-tester?siteUrl=${encodeURIComponent(
+                    origin
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-400 underline"
+                >
+                  Bing Tester
+                </a>
+              </div>
+            )}
+            {decisions.length > 0 && (
+              <ul className="list-disc ml-5 break-all">
+                {decisions.map((d, idx) => (
+                  <li key={idx}>
+                    {d.userAgent} {d.path} → {d.allowed ? 'Allow' : 'Disallow'}
+                    {d.matchedRule && ` (rule: ${d.matchedRule})`}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
           <div>
