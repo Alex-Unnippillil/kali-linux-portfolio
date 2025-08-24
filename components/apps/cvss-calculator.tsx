@@ -1,286 +1,281 @@
-import React, { useEffect, useState } from 'react';
-import {
-  calculateBaseScore,
-  humanizeBaseMetric,
-  humanizeBaseMetricValue,
-  validate,
-} from 'cvss4';
+import React, { useState } from 'react';
+import { calculateBaseScore, humanizeScore } from 'cvss4';
 
-type MetricMap = Record<string, string>;
+interface MetricOption {
+  value: string;
+  label: string;
+  tooltip: string;
+}
 
-const severityFromScore = (s: number) => {
-  if (s === 0) return 'None';
-  if (s <= 3.9) return 'Low';
-  if (s <= 6.9) return 'Medium';
-  if (s <= 8.9) return 'High';
-  return 'Critical';
+interface MetricDef {
+  key: string;
+  label: string;
+  options: MetricOption[];
+}
+
+const metricsV31: MetricDef[] = [
+  {
+    key: 'AV',
+    label: 'Attack Vector',
+    options: [
+      { value: 'N', label: 'Network', tooltip: 'Network - exploit remotely over the Internet' },
+      { value: 'A', label: 'Adjacent', tooltip: 'Adjacent - attacker must be on local network' },
+      { value: 'L', label: 'Local', tooltip: 'Local - requires local or shell access' },
+      { value: 'P', label: 'Physical', tooltip: 'Physical - requires physical interaction' },
+    ],
+  },
+  {
+    key: 'AC',
+    label: 'Attack Complexity',
+    options: [
+      { value: 'L', label: 'Low', tooltip: 'Low - no special conditions required' },
+      { value: 'H', label: 'High', tooltip: 'High - needs specific circumstances' },
+    ],
+  },
+  {
+    key: 'PR',
+    label: 'Privileges Required',
+    options: [
+      { value: 'N', label: 'None', tooltip: 'None - no authentication needed' },
+      { value: 'L', label: 'Low', tooltip: 'Low - requires basic user privileges' },
+      { value: 'H', label: 'High', tooltip: 'High - requires admin/root rights' },
+    ],
+  },
+  {
+    key: 'UI',
+    label: 'User Interaction',
+    options: [
+      { value: 'N', label: 'None', tooltip: 'None - runs without user action' },
+      { value: 'R', label: 'Required', tooltip: 'Required - user must click or open something' },
+    ],
+  },
+  {
+    key: 'S',
+    label: 'Scope',
+    options: [
+      { value: 'U', label: 'Unchanged', tooltip: 'Unchanged - impacts same component' },
+      { value: 'C', label: 'Changed', tooltip: 'Changed - can affect other components' },
+    ],
+  },
+  {
+    key: 'C',
+    label: 'Confidentiality',
+    options: [
+      { value: 'H', label: 'High', tooltip: 'High - complete data disclosure' },
+      { value: 'L', label: 'Low', tooltip: 'Low - some data leaked' },
+      { value: 'N', label: 'None', tooltip: 'None - no confidentiality impact' },
+    ],
+  },
+  {
+    key: 'I',
+    label: 'Integrity',
+    options: [
+      { value: 'H', label: 'High', tooltip: 'High - total data compromise' },
+      { value: 'L', label: 'Low', tooltip: 'Low - limited modification' },
+      { value: 'N', label: 'None', tooltip: 'None - no integrity impact' },
+    ],
+  },
+  {
+    key: 'A',
+    label: 'Availability',
+    options: [
+      { value: 'H', label: 'High', tooltip: 'High - service completely down' },
+      { value: 'L', label: 'Low', tooltip: 'Low - reduced performance' },
+      { value: 'N', label: 'None', tooltip: 'None - no availability impact' },
+    ],
+  },
+];
+
+const metricsV4: MetricDef[] = [
+  {
+    key: 'AV',
+    label: 'Attack Vector',
+    options: [
+      { value: 'N', label: 'Network', tooltip: 'Network - remotely exploitable' },
+      { value: 'A', label: 'Adjacent', tooltip: 'Adjacent - same network segment' },
+      { value: 'L', label: 'Local', tooltip: 'Local - local access required' },
+      { value: 'P', label: 'Physical', tooltip: 'Physical - physical access required' },
+    ],
+  },
+  {
+    key: 'AC',
+    label: 'Attack Complexity',
+    options: [
+      { value: 'L', label: 'Low', tooltip: 'Low - straightforward exploit' },
+      { value: 'H', label: 'High', tooltip: 'High - requires unusual conditions' },
+    ],
+  },
+  {
+    key: 'AT',
+    label: 'Attack Requirements',
+    options: [
+      { value: 'N', label: 'None', tooltip: 'None - no additional requirements' },
+      { value: 'P', label: 'Present', tooltip: 'Present - extra conditions like specific config' },
+    ],
+  },
+  {
+    key: 'PR',
+    label: 'Privileges Required',
+    options: [
+      { value: 'N', label: 'None', tooltip: 'None - attacker needs no privileges' },
+      { value: 'L', label: 'Low', tooltip: 'Low - basic user privileges' },
+      { value: 'H', label: 'High', tooltip: 'High - administrative privileges' },
+    ],
+  },
+  {
+    key: 'UI',
+    label: 'User Interaction',
+    options: [
+      { value: 'N', label: 'None', tooltip: 'None - no user involvement' },
+      { value: 'P', label: 'Passive', tooltip: 'Passive - user must be present' },
+      { value: 'A', label: 'Active', tooltip: 'Active - user must perform an action' },
+    ],
+  },
+  {
+    key: 'VC',
+    label: 'Vulnerability Confidentiality',
+    options: [
+      { value: 'H', label: 'High', tooltip: 'High - complete data loss' },
+      { value: 'L', label: 'Low', tooltip: 'Low - partial data loss' },
+      { value: 'N', label: 'None', tooltip: 'None - no confidentiality impact' },
+    ],
+  },
+  {
+    key: 'VI',
+    label: 'Vulnerability Integrity',
+    options: [
+      { value: 'H', label: 'High', tooltip: 'High - system integrity fully compromised' },
+      { value: 'L', label: 'Low', tooltip: 'Low - limited modification' },
+      { value: 'N', label: 'None', tooltip: 'None - no integrity impact' },
+    ],
+  },
+  {
+    key: 'VA',
+    label: 'Vulnerability Availability',
+    options: [
+      { value: 'H', label: 'High', tooltip: 'High - system unavailable' },
+      { value: 'L', label: 'Low', tooltip: 'Low - reduced performance' },
+      { value: 'N', label: 'None', tooltip: 'None - no availability impact' },
+    ],
+  },
+  {
+    key: 'SC',
+    label: 'System Confidentiality',
+    options: [
+      { value: 'H', label: 'High', tooltip: 'High - data on the impacted system exposed' },
+      { value: 'L', label: 'Low', tooltip: 'Low - limited data exposure' },
+      { value: 'N', label: 'None', tooltip: 'None - confidentiality unaffected' },
+    ],
+  },
+  {
+    key: 'SI',
+    label: 'System Integrity',
+    options: [
+      { value: 'H', label: 'High', tooltip: 'High - system integrity lost' },
+      { value: 'L', label: 'Low', tooltip: 'Low - partial tampering' },
+      { value: 'N', label: 'None', tooltip: 'None - integrity intact' },
+    ],
+  },
+  {
+    key: 'SA',
+    label: 'System Availability',
+    options: [
+      { value: 'H', label: 'High', tooltip: 'High - system unavailable' },
+      { value: 'L', label: 'Low', tooltip: 'Low - minor availability impact' },
+      { value: 'N', label: 'None', tooltip: 'None - availability unaffected' },
+    ],
+  },
+];
+
+const metricSets: Record<string, MetricDef[]> = {
+  '3.1': metricsV31,
+  '4.0': metricsV4,
 };
 
-const parseVector = (vector: string): MetricMap => {
-  const parts = vector.split('/');
-  const start = parts[0].startsWith('CVSS') ? 1 : 0;
-  const obj: MetricMap = {};
-  parts.slice(start).forEach((p) => {
-    const [k, v] = p.split(':');
-    if (k && v) obj[k] = v;
-  });
-  return obj;
-};
+const CvssBuilder: React.FC = () => {
+  const [version, setVersion] = useState<'3.1' | '4.0'>('3.1');
+  const [values, setValues] = useState<Record<string, string>>({});
 
-const metricExamplesV3: Record<string, Record<string, string>> = {
-  AV: {
-    N: 'Network - exploit remotely over the Internet',
-    A: 'Adjacent - attacker must be on local network',
-    L: 'Local - requires local or shell access',
-    P: 'Physical - requires physical interaction',
-  },
-  AC: {
-    L: 'Low - no special conditions required',
-    H: 'High - needs specific circumstances',
-  },
-  PR: {
-    N: 'None - no authentication needed',
-    L: 'Low - requires basic user privileges',
-    H: 'High - requires admin/root rights',
-  },
-  UI: {
-    N: 'None - runs without user action',
-    R: 'Required - user must click or open something',
-  },
-  S: {
-    U: 'Unchanged - impacts same component',
-    C: 'Changed - can affect other components',
-  },
-  C: {
-    H: 'High - complete data disclosure',
-    L: 'Low - some data leaked',
-    N: 'None - no confidentiality impact',
-  },
-  I: {
-    H: 'High - total data compromise',
-    L: 'Low - limited modification',
-    N: 'None - no integrity impact',
-  },
-  A: {
-    H: 'High - service completely down',
-    L: 'Low - reduced performance',
-    N: 'None - no availability impact',
-  },
-};
+  const metrics = metricSets[version];
+  const allSelected = metrics.every((m) => values[m.key]);
+  const vector =
+    `CVSS:${version}` +
+    metrics
+      .filter((m) => values[m.key])
+      .map((m) => `/${m.key}:${values[m.key]}`)
+      .join('');
+  const score = allSelected ? calculateBaseScore(vector) : null;
+  const severity = score !== null ? humanizeScore(vector) : '';
 
-const metricExamplesV4: Record<string, Record<string, string>> = {
-  AV: {
-    N: 'Network - remotely exploitable',
-    A: 'Adjacent - same network segment',
-    L: 'Local - local access required',
-    P: 'Physical - physical access required',
-  },
-  AC: {
-    L: 'Low - straightforward exploit',
-    H: 'High - requires unusual conditions',
-  },
-  AT: {
-    N: 'None - no additional requirements',
-    P: 'Present - extra conditions like specific config',
-  },
-  PR: {
-    N: 'None - attacker needs no privileges',
-    L: 'Low - basic user privileges',
-    H: 'High - administrative privileges',
-  },
-  UI: {
-    N: 'None - no user involvement',
-    P: 'Passive - user must be present',
-    A: 'Active - user must perform an action',
-  },
-  VC: {
-    H: 'High - complete data loss',
-    L: 'Low - partial data loss',
-    N: 'None - no confidentiality impact',
-  },
-  VI: {
-    H: 'High - system integrity fully compromised',
-    L: 'Low - limited modification',
-    N: 'None - no integrity impact',
-  },
-  VA: {
-    H: 'High - system unavailable',
-    L: 'Low - reduced performance',
-    N: 'None - no availability impact',
-  },
-  SC: {
-    H: 'High - data on the impacted system exposed',
-    L: 'Low - limited data exposure',
-    N: 'None - confidentiality unaffected',
-  },
-  SI: {
-    H: 'High - system integrity lost',
-    L: 'Low - partial tampering',
-    N: 'None - integrity intact',
-  },
-  SA: {
-    H: 'High - system unavailable',
-    L: 'Low - minor availability impact',
-    N: 'None - availability unaffected',
-  },
-};
-
-const CvssCalculator: React.FC = () => {
-  const [vectorV3, setVectorV3] = useState('');
-  const [vectorV4, setVectorV4] = useState('');
-  const [scoreV3, setScoreV3] = useState<number | null>(null);
-  const [scoreV4, setScoreV4] = useState<number | null>(null);
-  const [severityV3, setSeverityV3] = useState('');
-  const [severityV4, setSeverityV4] = useState('');
-  const [metricsV3, setMetricsV3] = useState<MetricMap>({});
-  const [metricsV4, setMetricsV4] = useState<MetricMap>({});
-
-  useEffect(() => {
-    const hash = window.location.hash.slice(1);
-    const params = new URLSearchParams(hash);
-    const v3 = params.get('v3');
-    const v4 = params.get('v4');
-    if (v3) setVectorV3(decodeURIComponent(v3));
-    if (v4) setVectorV4(decodeURIComponent(v4));
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (vectorV3) params.set('v3', vectorV3);
-    if (vectorV4) params.set('v4', vectorV4);
-    const h = params.toString();
-    window.history.replaceState(null, '', h ? `#${h}` : '');
-  }, [vectorV3, vectorV4]);
-
-  useEffect(() => {
-    if (!vectorV3) {
-      setScoreV3(null);
-      setSeverityV3('');
-      setMetricsV3({});
-      return;
-    }
-    try {
-      validate(vectorV3);
-      const s = calculateBaseScore(vectorV3);
-      setScoreV3(s);
-      setSeverityV3(severityFromScore(s));
-      setMetricsV3(parseVector(vectorV3));
-    } catch {
-      setScoreV3(null);
-      setSeverityV3('Invalid vector');
-      setMetricsV3({});
-    }
-  }, [vectorV3]);
-
-  useEffect(() => {
-    if (!vectorV4) {
-      setScoreV4(null);
-      setSeverityV4('');
-      setMetricsV4({});
-      return;
-    }
-    try {
-      validate(vectorV4);
-      const s = calculateBaseScore(vectorV4);
-      setScoreV4(s);
-      setSeverityV4(severityFromScore(s));
-      setMetricsV4(parseVector(vectorV4));
-    } catch {
-      setScoreV4(null);
-      setSeverityV4('Invalid vector');
-      setMetricsV4({});
-    }
-  }, [vectorV4]);
-
-  const pasteV3 = async () => {
-    const text = await navigator.clipboard.readText();
-    setVectorV3(text.trim());
+  const handleSelect = (metric: string, value: string) => {
+    setValues((prev) => ({ ...prev, [metric]: value }));
   };
 
-  const pasteV4 = async () => {
-    const text = await navigator.clipboard.readText();
-    setVectorV4(text.trim());
+  const copyVector = () => {
+    if (vector) navigator.clipboard?.writeText(vector);
   };
-
-  const copyPermalink = async () => {
-    await navigator.clipboard.writeText(window.location.href);
-  };
-
-  const renderTable = (metrics: MetricMap, examples: Record<string, Record<string, string>>) => (
-    <table className="w-full text-left border-collapse">
-      <thead>
-        <tr>
-          <th className="border-b pb-1">Metric</th>
-          <th className="border-b pb-1">Value</th>
-          <th className="border-b pb-1">Example</th>
-        </tr>
-      </thead>
-      <tbody>
-        {Object.entries(metrics).map(([k, v]) => (
-          <tr key={k}>
-            <td className="py-1 pr-4">{humanizeBaseMetric(k)}</td>
-            <td className="py-1 pr-4">{humanizeBaseMetricValue(v, k)}</td>
-            <td className="py-1">{examples[k]?.[v] || '-'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
 
   return (
-    <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
-      <div className="flex flex-col lg:flex-row gap-4">
-        <div className="flex-1">
-          <h2 className="text-lg mb-2">CVSS v3.1</h2>
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              value={vectorV3}
-              onChange={(e) => setVectorV3(e.target.value)}
-              placeholder="Enter CVSS v3.1 vector"
-              className="flex-grow p-2 rounded text-black"
-            />
-            <button onClick={pasteV3} className="px-2 rounded bg-gray-700">Paste</button>
-          </div>
-          <div className="mb-4">
-            <div>Base Score: {scoreV3 !== null ? scoreV3.toFixed(1) : '-'}</div>
-            <div>Severity: {severityV3 || '-'}</div>
-          </div>
-          {Object.keys(metricsV3).length > 0 && renderTable(metricsV3, metricExamplesV3)}
-        </div>
-        <div className="flex-1">
-          <h2 className="text-lg mb-2">CVSS v4</h2>
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              value={vectorV4}
-              onChange={(e) => setVectorV4(e.target.value)}
-              placeholder="Enter CVSS v4 vector"
-              className="flex-grow p-2 rounded text-black"
-            />
-            <button onClick={pasteV4} className="px-2 rounded bg-gray-700">Paste</button>
-          </div>
-          <div className="mb-4">
-            <div>Base Score: {scoreV4 !== null ? scoreV4.toFixed(1) : '-'}</div>
-            <div>Severity: {severityV4 || '-'}</div>
-          </div>
-          {Object.keys(metricsV4).length > 0 && renderTable(metricsV4, metricExamplesV4)}
-        </div>
+    <div className="h-full w-full p-4 overflow-auto bg-gray-900 text-white">
+      <div className="mb-4 flex items-center gap-2">
+        <label htmlFor="cvss-version" className="text-sm">
+          Version:
+        </label>
+        <select
+          id="cvss-version"
+          className="p-1 rounded text-black"
+          value={version}
+          onChange={(e) => {
+            setVersion(e.target.value as '3.1' | '4.0');
+            setValues({});
+          }}
+        >
+          <option value="3.1">3.1</option>
+          <option value="4.0">4.0</option>
+        </select>
       </div>
-      {scoreV3 !== null && scoreV4 !== null && (
-        <div className="mt-4">
-          <h3 className="text-lg mb-1">Comparison</h3>
-          <div>Score shift (v4 - v3.1): {(scoreV4 - scoreV3).toFixed(1)}</div>
+      {metrics.map((m) => (
+        <div key={m.key} className="mb-4">
+          <div className="font-semibold mb-1">{m.label}</div>
+          <div className="flex flex-wrap gap-2">
+            {m.options.map((opt) => (
+              <label
+                key={opt.value}
+                title={opt.tooltip}
+                className="flex items-center gap-1 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name={m.key}
+                  value={opt.value}
+                  checked={values[m.key] === opt.value}
+                  onChange={() => handleSelect(m.key, opt.value)}
+                />
+                <span>{opt.label}</span>
+              </label>
+            ))}
+          </div>
         </div>
-      )}
-      <button onClick={copyPermalink} className="mt-4 px-2 rounded bg-gray-700">
-        Copy Permalink
-      </button>
+      ))}
+      <div className="mt-4">
+        <div className="mb-1 flex items-center gap-2 flex-wrap">
+          <span>
+            Vector: <code className="break-all">{vector || '-'}</code>
+          </span>
+          <button
+            onClick={copyVector}
+            className="px-1 bg-gray-700 rounded"
+            disabled={!vector}
+          >
+            Copy
+          </button>
+        </div>
+        <div>Score: {score !== null ? score.toFixed(1) : '-'}</div>
+        {score !== null && <div>Severity: {severity}</div>}
+      </div>
     </div>
   );
 };
 
-export default CvssCalculator;
-
-export const displayCvssCalculator = () => <CvssCalculator />;
-
+export default CvssBuilder;
+export const displayCvssCalculator = () => <CvssBuilder />;
