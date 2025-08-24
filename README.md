@@ -141,3 +141,14 @@ The project uses [Playwright](https://playwright.dev/) for end-to-end tests.
    ```
 
 The Playwright configuration automatically starts the development server before running the tests.
+
+## Deployment
+
+This project relies on Next.js server features such as API routes and Socket.IO websockets. For production deployments, build and run the server:
+
+```bash
+yarn build
+yarn start
+```
+
+Deploy to any platform that can run a Next.js server; static export is not supported.
