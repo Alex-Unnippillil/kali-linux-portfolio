@@ -1,4 +1,5 @@
 import { logEvent } from './axiom';
+import type { NextWebVitalsMetric } from 'next/app';
 
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 const PHONE_REGEX = /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g;
@@ -29,5 +30,11 @@ export const trackEvent = async (
   } catch {
     // ignore logging errors
   }
+};
+
+export const trackWebVital = async (
+  metric: NextWebVitalsMetric,
+): Promise<void> => {
+  await trackEvent('web-vital', metric);
 };
 
