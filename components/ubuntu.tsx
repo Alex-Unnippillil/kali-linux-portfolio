@@ -77,7 +77,9 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
       action: `Set Screen to Locked`,
     });
 
-    document.getElementById('status-bar')?.blur();
+    if (typeof document !== 'undefined') {
+      document.getElementById('status-bar')?.blur();
+    }
     setTimeout(() => {
       this.setState({ screen_locked: true });
     }, 100);
@@ -131,7 +133,9 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
       action: `Switched off the Ubuntu`,
     });
 
-    document.getElementById('status-bar')?.blur();
+    if (typeof document !== 'undefined') {
+      document.getElementById('status-bar')?.blur();
+    }
     this.setState({ shutDownScreen: true });
     if (typeof window !== 'undefined') {
       try {
