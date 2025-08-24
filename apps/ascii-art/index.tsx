@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import DOMPurify from 'isomorphic-dompurify';
 
 // Preset character sets and color palettes
 const presetCharSets = {
@@ -421,7 +422,7 @@ export default function AsciiArt() {
             <pre
               className="font-mono whitespace-pre overflow-auto flex-1"
               style={{ fontSize: `${fontSize}px`, lineHeight: `${fontSize}px`, fontFamily }}
-              dangerouslySetInnerHTML={{ __html: asciiHtml }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(asciiHtml) }}
             />
           )}
           {!typingMode && (
