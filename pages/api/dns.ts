@@ -1,7 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { validateRequest } from '../../lib/validate';
+import { rateLimit } from '../../lib/rateLimiter';
 import { setupUrlGuard } from '../../lib/urlGuard';
+
+/**
+ * DNS lookup using Google's resolver.
+ * Rate limited to 60 requests per minute.
+ */
 setupUrlGuard();
 
 const ALLOWED_TYPES = ['A', 'AAAA', 'CNAME', 'TXT', 'NS'];
@@ -30,6 +36,8 @@ export default async function handler(
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  if (!(await rateLimit(req, res))) return;
 
   const parsed = validateRequest(req, res, {
     querySchema,
