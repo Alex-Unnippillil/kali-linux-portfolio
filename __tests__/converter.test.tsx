@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { convertUnit } from '../components/apps/converter/UnitConverter';
-import Converter from '../components/apps/converter';
+import { convertUnit } from '@components/apps/converter/UnitConverter';
+import Converter from '@components/apps/converter';
 
 describe('Unit conversion', () => {
   it('converts meters to kilometers', () => {

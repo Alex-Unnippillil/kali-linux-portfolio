@@ -1,5 +1,5 @@
-import { defaultLevels } from '../apps/sokoban/levels';
-import { loadLevel, move, undo, isSolved } from '../apps/sokoban/engine';
+import { defaultLevels } from '@apps/sokoban/levels';
+import { loadLevel, move, undo, isSolved } from '@apps/sokoban/engine';
 
 describe('sokoban engine', () => {
   test('simple level solvable', () => {

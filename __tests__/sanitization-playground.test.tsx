@@ -5,7 +5,7 @@ import SanitizationPlayground, {
   encodeJS,
   encodeURL,
   encodeSQL,
-} from '../apps/sanitization-playground';
+} from '@apps/sanitization-playground';
 
 describe('encoders', () => {
   const payload = "<script>alert('x')</script>";

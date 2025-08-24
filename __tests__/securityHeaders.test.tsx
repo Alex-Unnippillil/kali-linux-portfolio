@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
-import SecurityHeaders from '../apps/security-headers';
+import SecurityHeaders from '@apps/security-headers';
 
 describe('SecurityHeaders', () => {
   it('updates snippets based on input', () => {

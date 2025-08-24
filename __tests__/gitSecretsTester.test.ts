@@ -1,4 +1,4 @@
-import { redactSecret, defaultPatterns } from '../components/apps/git-secrets-tester';
+import { redactSecret, defaultPatterns } from '@components/apps/git-secrets-tester';
 
 describe('GitSecretsTester utilities', () => {
   test('redactSecret masks middle characters', () => {

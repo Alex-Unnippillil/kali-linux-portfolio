@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
-import Gedit from '../components/apps/gedit';
+import Gedit from '@components/apps/gedit';
 
 jest.mock('react-ga4', () => ({ event: jest.fn() }));
 const init = jest.fn();

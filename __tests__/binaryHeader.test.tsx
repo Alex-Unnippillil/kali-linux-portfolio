@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
-import BinaryHeader from '../apps/binary-header';
+import BinaryHeader from '@apps/binary-header';
 
 describe('BinaryHeader', () => {
   it('shows error for unsupported format', async () => {

@@ -1,4 +1,4 @@
-import { MonteCarloAI } from '../components/apps/battleship/ai';
+import { MonteCarloAI } from '@components/apps/battleship/ai';
 
 test('AI computes move under 200ms', () => {
   const ai = new MonteCarloAI();

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
-import WordlistWorkshop from '../apps/wordlist-workshop';
+import WordlistWorkshop from '@apps/wordlist-workshop';
 
 describe('WordlistWorkshop', () => {
   it('estimates and generates combinations', () => {

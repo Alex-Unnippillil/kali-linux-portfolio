@@ -1,4 +1,4 @@
-import { parseSbomObject } from '../lib/sbom';
+import { parseSbomObject } from '@lib/sbom';
 
 describe('SBOM parsing', () => {
   it('parses CycloneDX components and dependencies', () => {

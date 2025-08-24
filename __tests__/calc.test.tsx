@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
-import Calc from '../components/apps/calc';
+import Calc from '@components/apps/calc';
 
 describe('Calc component', () => {
   it('evaluates expressions correctly', () => {

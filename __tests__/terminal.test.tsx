@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react';
-import Terminal from '../components/apps/terminal';
+import Terminal from '@components/apps/terminal';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 

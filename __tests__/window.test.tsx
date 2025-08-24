@@ -5,10 +5,10 @@ import { act } from 'react-dom/test-utils';
 
 import { render, screen, fireEvent, act } from '@testing-library/react';
 
-import Window from '../components/base/window';
+import Window from '@components/base/window';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
-jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
+jest.mock('@components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {

@@ -1,4 +1,4 @@
-import { Player, updatePhysics, collectCoin, COYOTE_TIME, JUMP_BUFFER_TIME } from '../public/apps/platformer/engine.js';
+import { Player, updatePhysics, collectCoin, COYOTE_TIME, JUMP_BUFFER_TIME } from '@public/apps/platformer/engine.js';
 
 describe('platformer mechanics', () => {
   test('coyote time allows late jump', () => {

@@ -15,9 +15,12 @@ describe('blackjack api', () => {
   test('rejects when JWT secret missing', async () => {
     delete process.env.JWT_SECRET;
     jest.resetModules();
+
+    
     const { setKVAdapter, MemoryKV } = await import('../lib/kv');
     setKVAdapter(new MemoryKV());
     const { default: handler } = await import('../pages/api/users/[id]/blackjack');
+
     const token = jwt.sign({ sub: id }, 'temp');
     const { req, res } = mockReqRes({ method: 'GET', query: { id }, headers: { authorization: `Bearer ${token}` } });
     await handler(req, res);
@@ -27,9 +30,11 @@ describe('blackjack api', () => {
   test('validates token subject', async () => {
     process.env.JWT_SECRET = 'secret';
     jest.resetModules();
+
     const { setKVAdapter, MemoryKV } = await import('../lib/kv');
     setKVAdapter(new MemoryKV());
     const { default: handler } = await import('../pages/api/users/[id]/blackjack');
+
     const token = jwt.sign({ sub: 'other' }, process.env.JWT_SECRET!);
     const { req, res } = mockReqRes({ method: 'GET', query: { id }, headers: { authorization: `Bearer ${token}` } });
     await handler(req, res);
@@ -39,9 +44,11 @@ describe('blackjack api', () => {
   test('persists stats and rate limits', async () => {
     process.env.JWT_SECRET = 'secret';
     jest.resetModules();
+
     const { setKVAdapter, MemoryKV } = await import('../lib/kv');
     setKVAdapter(new MemoryKV());
     const { default: handler } = await import('../pages/api/users/[id]/blackjack');
+
     const token = jwt.sign({ sub: id }, process.env.JWT_SECRET!);
 
     // initial update

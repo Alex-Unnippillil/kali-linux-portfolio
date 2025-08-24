@@ -6,7 +6,7 @@ import {
   fireProjectile,
   deactivateProjectile,
   getTowerDPS,
-} from '../components/apps/tower-defense-core';
+} from '@components/apps/tower-defense-core';
 
 describe('tower defense core', () => {
   test('path computed once and reused', () => {

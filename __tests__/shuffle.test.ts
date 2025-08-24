@@ -1,4 +1,4 @@
-import { fisherYatesShuffle } from '../components/apps/memory_utils';
+import { fisherYatesShuffle } from '@components/apps/memory_utils';
 
 describe('fisherYatesShuffle fairness', () => {
   test('distribution is roughly uniform', () => {
