@@ -9349,6 +9349,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"rfc4648@npm:^1.5.4":
+  version: 1.5.4
+  resolution: "rfc4648@npm:1.5.4"
+  checksum: 10c0/8683e82ed9c3cb23844720d04eaeee12025146bfdfdf250b1cce80d56e16c6431530ba3033cbb0e7ca3a25223107847f14c6cac11a255ea7d219dc7ba11cd43d
+  languageName: node
+  linkType: hard
+
 "rgbcolor@npm:^1.0.1":
   version: 1.0.1
   resolution: "rgbcolor@npm:1.0.1"
@@ -10777,6 +10784,8 @@ __metadata:
     react-github-calendar: "npm:^4.5.9"
     react-markdown: "npm:^10.1.0"
     react-twitter-embed: "npm:^4.0.4"
+    rfc4648: "npm:^1.5.4"
+
     sax: "npm:^1.4.1"
     react-window: "npm:^1.8.11"
 
