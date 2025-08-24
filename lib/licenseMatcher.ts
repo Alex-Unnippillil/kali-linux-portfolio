@@ -19,6 +19,7 @@ export interface LicenseMatchResult {
 }
 
 const spdxIdSet = new Set(spdxLicenseIds.map(id => id.toUpperCase()));
+const spdxCanonicalMap = new Map(spdxLicenseIds.map(id => [id.toUpperCase(), id]));
 
 const TOKEN_REGEX = /\b[a-z0-9]+\b/g;
 
@@ -64,10 +65,62 @@ export function extractSpdxIds(text: string): string[] {
   for (const token of tokens) {
     const upper = token.toUpperCase();
     if (spdxIdSet.has(upper)) {
-      ids.add(upper);
+      ids.add(spdxCanonicalMap.get(upper) || upper);
     }
   }
   return Array.from(ids);
+}
+
+export interface ExpressionParseResult {
+  ids: string[];
+  hasAnd: boolean;
+  hasOr: boolean;
+}
+
+export function parseSpdxExpression(text: string): ExpressionParseResult {
+  const ids = extractSpdxIds(text);
+  const hasAnd = /\bAND\b/i.test(text);
+  const hasOr = /\bOR\b/i.test(text);
+  return { ids, hasAnd, hasOr };
+}
+
+export interface LicenseConflict {
+  licenses: [string, string];
+  message: string;
+  remediation: string;
+}
+
+const strongCopyleft = new Set(['GPL-2.0-only', 'GPL-3.0-only']);
+const incompatiblePairs: Record<string, string[]> = {
+  'GPL-2.0-only': ['Apache-2.0'],
+};
+
+export function detectLicenseConflicts(ids: string[], requireAll: boolean): LicenseConflict[] {
+  const conflicts: LicenseConflict[] = [];
+  if (!requireAll || ids.length < 2) return conflicts;
+  for (let i = 0; i < ids.length; i += 1) {
+    for (let j = i + 1; j < ids.length; j += 1) {
+      const a = ids[i];
+      const b = ids[j];
+      if (
+        (incompatiblePairs[a] && incompatiblePairs[a].includes(b)) ||
+        (incompatiblePairs[b] && incompatiblePairs[b].includes(a))
+      ) {
+        conflicts.push({
+          licenses: [a, b],
+          message: `${a} is not compatible with ${b}.`,
+          remediation: 'Consider selecting a different license or separating components.',
+        });
+      } else if (strongCopyleft.has(a) && strongCopyleft.has(b) && a !== b) {
+        conflicts.push({
+          licenses: [a, b],
+          message: `Multiple strong copyleft licenses detected: ${a} and ${b}.`,
+          remediation: 'Review obligations and consider using a single copyleft license.',
+        });
+      }
+    }
+  }
+  return conflicts;
 }
 
 // Pre-tokenize license texts for performance
