@@ -434,7 +434,7 @@ const apps = [
   {
     id: 'key-converter',
     title: 'Key Converter',
-    icon: icon('hash.svg'),
+    icon: icon('key-converter.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
