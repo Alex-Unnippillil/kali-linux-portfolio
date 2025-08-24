@@ -88,7 +88,8 @@ export class BattleshipAI {
   }
 
   // Generate probability density map for current board state
-  private probabilityMap(board: CellState[][]): number[][] {
+  // Exposed publicly so the UI can render heat maps for assistance
+  public probability(board: CellState[][]): number[][] {
     const map = Array.from({ length: this.size }, () => Array(this.size).fill(0));
     const ships = this.remainingShips(board);
     const valid = (r: number, c: number) => r >= 0 && c >= 0 && r < this.size && c < this.size;
@@ -179,7 +180,7 @@ export class BattleshipAI {
     const target = this.targetMode(board);
     if (target && difficulty > 0) return target;
 
-    const map = this.probabilityMap(board);
+    const map = this.probability(board);
     const cells: Shot[] = [];
     let best = 0;
     for (let r = 0; r < this.size; r++) {
@@ -216,7 +217,7 @@ export class BattleshipAI {
       for (const shot of cells) {
         const clone = board.map((row) => row.slice());
         clone[shot.row][shot.col] = 1; // assume miss
-        const placements = this.probabilityMap(clone)
+        const placements = this.probability(clone)
           .flat()
           .reduce((a, b) => a + b, 0);
         if (placements < minPlacements) {

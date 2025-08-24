@@ -3,6 +3,7 @@ import Player from "./Player";
 import Ghost, { GhostMode } from "./Ghost";
 import Maze from "./Maze";
 import Editor from "./editor";
+import { ModeController } from "./modes";
 
 const Pacman: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -14,8 +15,7 @@ const Pacman: React.FC = () => {
   const [showEditor, setShowEditor] = useState(false);
   const animRef = useRef<number>(0);
   const [mode, setMode] = useState<GhostMode>("scatter");
-  const modeTimer = useRef(0);
-  const modeIndex = useRef(0);
+  const modeCtrl = useRef(new ModeController());
   const audioRef = useRef<AudioContext | null>(null);
   const oscRef = useRef<OscillatorNode | null>(null);
   const pelletCount = useRef(0);
@@ -55,16 +55,6 @@ const Pacman: React.FC = () => {
   useEffect(() => {
     if (!canvasRef.current || !maze || !player || replayData) return;
     const ctx = canvasRef.current.getContext("2d")!;
-    const schedule = [
-      { mode: "scatter" as GhostMode, duration: 7 },
-      { mode: "chase" as GhostMode, duration: 20 },
-      { mode: "scatter" as GhostMode, duration: 7 },
-      { mode: "chase" as GhostMode, duration: 20 },
-      { mode: "scatter" as GhostMode, duration: 5 },
-      { mode: "chase" as GhostMode, duration: 20 },
-      { mode: "scatter" as GhostMode, duration: 5 },
-      { mode: "chase" as GhostMode, duration: Infinity },
-    ];
     const loop = () => {
       ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
       maze.tick();
@@ -89,15 +79,7 @@ const Pacman: React.FC = () => {
       } else if (eaten && typeof eaten === "object") {
         setScore((s) => s + eaten.score);
       }
-      modeTimer.current++;
-      if (
-        modeIndex.current < schedule.length - 1 &&
-        modeTimer.current > schedule[modeIndex.current].duration * 60
-      ) {
-        modeIndex.current++;
-        modeTimer.current = 0;
-      }
-      const baseMode = schedule[modeIndex.current].mode;
+      const baseMode = modeCtrl.current.tick();
       const frightenedActive = ghosts.some((g) => g.frightenedTimer > 0);
       const currentMode = frightenedActive ? "frightened" : baseMode;
       setMode(currentMode);

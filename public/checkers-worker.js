@@ -13,7 +13,8 @@ let SIZE = 8;
 let GIVEAWAY = false;
 const inBounds = (r, c) => r >= 0 && r < SIZE && c >= 0 && c < SIZE;
 
-const cloneBoard = (board) => board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
+const cloneBoard = (board) =>
+  board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
 
 const applyMove = (board, move) => {
   const newBoard = cloneBoard(board);
@@ -37,7 +38,8 @@ const applyMove = (board, move) => {
   newBoard[r][c] = piece;
   if (
     !piece.king &&
-    ((piece.color === 'red' && r === 0) || (piece.color === 'black' && r === SIZE - 1))
+    ((piece.color === 'red' && r === 0) ||
+      (piece.color === 'black' && r === SIZE - 1))
   ) {
     piece.king = true;
   }
@@ -84,13 +86,22 @@ const getPieceMoves = (board, r, c) => {
   if (captureMoves.length) return captureMoves;
 
   const dirs = [...directions[piece.color]];
-  if (piece.king) dirs.push(...directions[piece.color === 'red' ? 'black' : 'red']);
+  if (piece.king)
+    dirs.push(...directions[piece.color === 'red' ? 'black' : 'red']);
   const moves = [];
   for (const [dr, dc] of dirs) {
     const r1 = r + dr;
     const c1 = c + dc;
     if (!inBounds(r1, c1)) continue;
-    if (!board[r1][c1]) moves.push({ from: [r, c], to: [r1, c1], path: [[r, c], [r1, c1]] });
+    if (!board[r1][c1])
+      moves.push({
+        from: [r, c],
+        to: [r1, c1],
+        path: [
+          [r, c],
+          [r1, c1],
+        ],
+      });
   }
   return moves;
 };
@@ -109,6 +120,24 @@ const getAllMoves = (board, color) => {
   return anyCapture
     ? result.filter((m) => m.captures?.length || m.captured)
     : result;
+};
+
+const orderMoves = (board, moves, color) => {
+  const center = (SIZE - 1) / 2;
+  moves.sort((a, b) => {
+    const aCaps = a.captures?.length || (a.captured ? 1 : 0);
+    const bCaps = b.captures?.length || (b.captured ? 1 : 0);
+    if (aCaps !== bCaps) return bCaps - aCaps;
+    const aPiece = board[a.from[0]][a.from[1]];
+    const bPiece = board[b.from[0]][b.from[1]];
+    if (aPiece.king !== bPiece.king) return bPiece.king ? 1 : -1;
+    const aForward = color === 'red' ? -a.to[0] : a.to[0];
+    const bForward = color === 'red' ? -b.to[0] : b.to[0];
+    if (aForward !== bForward) return aForward - bForward;
+    const aDist = Math.abs(a.to[0] - center) + Math.abs(a.to[1] - center);
+    const bDist = Math.abs(b.to[0] - center) + Math.abs(b.to[1] - center);
+    return aDist - bDist;
+  });
 };
 
 const boardToBitboards = (board) => {
@@ -179,10 +208,13 @@ const minimax = (
   maximizing,
   start,
   limit,
-  table,
+  table
 ) => {
   if (Date.now() - start >= limit) return { score: evaluate(board) };
-  const key = transKey(board, maximizing ? color : color === 'red' ? 'black' : 'red');
+  const key = transKey(
+    board,
+    maximizing ? color : color === 'red' ? 'black' : 'red'
+  );
   const cached = table.get(key);
   if (cached && cached.depth >= depth) return { score: cached.score };
   if (depth === 0) {
@@ -193,6 +225,7 @@ const minimax = (
   const turn = maximizing ? color : color === 'red' ? 'black' : 'red';
   const moves = getAllMoves(board, turn);
   if (!moves.length) return { score: maximizing ? -Infinity : Infinity };
+  orderMoves(board, moves, turn);
   let bestMove;
   for (const move of moves) {
     const next = applyMove(board, move);
@@ -205,7 +238,7 @@ const minimax = (
       !maximizing,
       start,
       limit,
-      table,
+      table
     );
     if (maximizing) {
       if (score > alpha) {
@@ -236,7 +269,17 @@ self.onmessage = (e) => {
   const limit = timeLimit || 200;
   for (let d = 1; d <= maxDepth; d++) {
     if (Date.now() - start > limit) break;
-    const { move } = minimax(board, color, d, -Infinity, Infinity, true, start, limit, table);
+    const { move } = minimax(
+      board,
+      color,
+      d,
+      -Infinity,
+      Infinity,
+      true,
+      start,
+      limit,
+      table
+    );
     if (move) best = move;
   }
   postMessage(best);

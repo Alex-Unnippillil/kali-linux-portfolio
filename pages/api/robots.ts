@@ -11,6 +11,10 @@ interface SitemapEntry {
   lastmod?: string;
   depth: number;
   status?: number;
+  priority?: number;
+  types?: string[];
+  freshness?: number;
+  searchConsole?: string;
 }
 
 interface RuleInfo {
@@ -26,6 +30,7 @@ interface RobotsResponse {
   profiles: Record<string, RuleInfo[]>;
   missingRobots?: boolean;
   robotsUrl: string;
+  errorCategories: Record<string, number>;
 }
 
 export const config = {
@@ -81,26 +86,79 @@ export default withErrorHandler(async function handler(
   const origin = new URL(url).origin;
   const robots = await fetchRobots(origin);
 
-  const sitemapEntries: SitemapEntry[] = [];
-  const parser = new XMLParser();
-  for (const sm of robots.sitemaps) {
+  const parser = new XMLParser({ ignoreAttributes: false });
+
+  async function parseSitemap(url: string): Promise<SitemapEntry[]> {
     try {
-      const resp = await fetch(sm);
-      if (!resp.ok) continue;
+      const resp = await fetch(url);
+      if (!resp.ok) return [];
       const xml = await resp.text();
       const data = parser.parse(xml);
-      const urlset = data.urlset?.url;
-      if (Array.isArray(urlset)) {
-        urlset.forEach((u: any) => {
-          if (u.loc) sitemapEntries.push({ loc: u.loc, lastmod: u.lastmod });
-        });
-      } else if (urlset?.loc) {
-        sitemapEntries.push({ loc: urlset.loc, lastmod: urlset.lastmod });
+      const entries: SitemapEntry[] = [];
+
+      const sitemapIndex = data.sitemapindex?.sitemap;
+      if (sitemapIndex) {
+        const children = Array.isArray(sitemapIndex) ? sitemapIndex : [sitemapIndex];
+        for (const child of children) {
+          if (child.loc) {
+            const childEntries = await parseSitemap(child.loc);
+            entries.push(...childEntries);
+          }
+        }
+        return entries;
       }
+
+      const urlset = data.urlset?.url;
+      const urls = Array.isArray(urlset) ? urlset : urlset ? [urlset] : [];
+      for (const u of urls) {
+        if (!u.loc) continue;
+        const depth = new URL(u.loc).pathname.split('/').filter(Boolean).length;
+        const entry: SitemapEntry = {
+          loc: u.loc,
+          lastmod: u.lastmod,
+          depth,
+        };
+        if (u.priority) entry.priority = parseFloat(u.priority);
+        const types: string[] = [];
+        if (u['news:news'] || u.news) types.push('news');
+        if (u['image:image'] || u.image) types.push('image');
+        if (u['video:video'] || u.video) types.push('video');
+        if (types.length) entry.types = types;
+        try {
+          const head = await fetch(u.loc, { method: 'HEAD' });
+          entry.status = head.status;
+        } catch {
+          // ignore
+        }
+        if (entry.lastmod) {
+          entry.freshness = Math.floor(
+            (Date.now() - new Date(entry.lastmod).getTime()) / (1000 * 60 * 60 * 24)
+          );
+        }
+        entry.searchConsole =
+          'https://search.google.com/search-console/inspect?url=' +
+          encodeURIComponent(entry.loc);
+        entries.push(entry);
+      }
+      return entries;
     } catch {
-      // ignore errors fetching individual sitemaps
+      return [];
     }
   }
+
+  const sitemapEntries: SitemapEntry[] = [];
+  for (const sm of robots.sitemaps) {
+    const entries = await parseSitemap(sm);
+    sitemapEntries.push(...entries);
+  }
+
+  const errorCategories: Record<string, number> = {};
+  sitemapEntries.forEach((e) => {
+    if (e.status && e.status >= 400) {
+      const key = e.status.toString();
+      errorCategories[key] = (errorCategories[key] || 0) + 1;
+    }
+  });
 
   const crawlers = ['googlebot', 'bingbot', 'duckduckbot', 'yandexbot'];
   const profiles: Record<string, RuleInfo[]> = {};
@@ -114,7 +172,8 @@ export default withErrorHandler(async function handler(
     unsupported: robots.unsupported,
     profiles,
     missingRobots: robots.missing || undefined,
-
+    robotsUrl: `${origin.replace(/\/$/, '')}/robots.txt`,
+    errorCategories,
   });
 });
 

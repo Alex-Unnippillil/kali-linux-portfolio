@@ -21,25 +21,34 @@ let yara: any;
   (self as any).postMessage({ type: 'ready' });
 })();
 
-const resolveIncludes = (files: Record<string, string>): string => {
+const resolveIncludes = (files: Record<string, string>): { code: string; missing: string[] } => {
   const cache: Record<string, string> = {};
+  const missing: string[] = [];
   const resolve = (name: string, stack: string[] = []): string => {
     if (cache[name]) return cache[name];
     const src = files[name];
-    if (src === undefined) return '';
+    if (src === undefined) {
+      missing.push(name);
+      return '';
+    }
     if (stack.includes(name)) return '';
     const out = src.replace(/include\s+"([^"]+)"/g, (_m, inc) => resolve(inc, [...stack, name]));
     cache[name] = out;
     return out;
   };
-  return Object.keys(files)
+  const code = Object.keys(files)
     .map((k) => resolve(k))
     .join('\n');
+  return { code, missing };
 };
 
-const runYara = (input: string, files: Record<string, string>) => {
-  const rules = resolveIncludes(files);
-  const res = yara.run(input, rules);
+const runYara = (
+  input: string,
+  files: Record<string, string>,
+  onMatch?: (m: MatchDetail) => void,
+) => {
+  const { code, missing } = resolveIncludes(files);
+  const res = yara.run(input, code);
   const ruleVec = res.matchedRules;
   const found: MatchDetail[] = [];
   for (let i = 0; i < ruleVec.size(); i += 1) {
@@ -68,7 +77,9 @@ const runYara = (input: string, files: Record<string, string>) => {
     if (tagVec) {
       for (let k = 0; k < tagVec.size(); k += 1) tags.push(tagVec.get(k));
     }
-    found.push({ rule: r.ruleName, matches: det, meta, tags });
+    const match: MatchDetail = { rule: r.ruleName, matches: det, meta, tags };
+    onMatch?.(match);
+    found.push(match);
   }
   const errVec = res.compileErrors;
   const errArr: CompileError[] = [];
@@ -76,6 +87,7 @@ const runYara = (input: string, files: Record<string, string>) => {
     const e = errVec.get(i);
     errArr.push({ message: e.message, line: e.lineNumber, warning: e.warning });
   }
+  missing.forEach((m) => errArr.push({ message: `missing include: ${m}` }));
   return { matches: found, compileErrors: errArr };
 };
 
@@ -83,13 +95,73 @@ self.onmessage = (ev: MessageEvent) => {
   const data: any = ev.data;
   if (!yara) return;
   if (data.type === 'run') {
+    let aborted = false;
+    const limits = data.limits || {};
+    const timer =
+      limits.cpu !== undefined
+        ? setTimeout(() => {
+            aborted = true;
+            (self as any).postMessage({ type: 'runtimeError', error: 'CPU limit exceeded' });
+          }, limits.cpu)
+        : null;
     try {
       const start = performance.now();
-      const result = runYara(data.input, data.rules);
+      const result = runYara(data.input, data.rules, (m) => {
+        (self as any).postMessage({ type: 'match', match: m });
+        if (
+          limits.mem &&
+          (performance as any).memory &&
+          (performance as any).memory.usedJSHeapSize > limits.mem
+        ) {
+          aborted = true;
+          throw new Error('Memory limit exceeded');
+        }
+      });
       const elapsed = performance.now() - start;
-      (self as any).postMessage({ type: 'result', elapsed, ...result });
+      if (!aborted) (self as any).postMessage({ type: 'result', elapsed, ...result });
     } catch (e) {
-      (self as any).postMessage({ type: 'runtimeError', error: String(e) });
+      if (!aborted) (self as any).postMessage({ type: 'runtimeError', error: String(e) });
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  } else if (data.type === 'runCorpus') {
+    const limits = data.limits || {};
+    const heatmap: Record<string, number> = {};
+    const compileErrors: CompileError[] = [];
+    let aborted = false;
+    const timer =
+      limits.cpu !== undefined
+        ? setTimeout(() => {
+            aborted = true;
+            (self as any).postMessage({ type: 'runtimeError', error: 'CPU limit exceeded' });
+          }, limits.cpu)
+        : null;
+    try {
+      for (const file of data.corpus as { name: string; data: string }[]) {
+        const start = performance.now();
+        const res = runYara(file.data, data.rules, (m) => {
+          (self as any).postMessage({ type: 'match', file: file.name, match: m });
+          heatmap[m.rule] = (heatmap[m.rule] || 0) + 1;
+          if (
+            limits.mem &&
+            (performance as any).memory &&
+            (performance as any).memory.usedJSHeapSize > limits.mem
+          ) {
+            aborted = true;
+            throw new Error('Memory limit exceeded');
+          }
+        });
+        compileErrors.push(...res.compileErrors);
+        const elapsed = performance.now() - start;
+        (self as any).postMessage({ type: 'fileResult', file: file.name, elapsed });
+        if (aborted) break;
+      }
+      if (!aborted)
+        (self as any).postMessage({ type: 'corpusDone', heatmap, compileErrors });
+    } catch (e) {
+      if (!aborted) (self as any).postMessage({ type: 'runtimeError', error: String(e) });
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   } else if (data.type === 'lint') {
     try {

@@ -5,12 +5,30 @@ export default class Projectile {
   dy: number;
   active: boolean;
 
+  // pool of inactive projectiles for reuse
+  private static pool: Projectile[] = [];
+
   constructor(x: number, y: number, dy: number) {
     this.x = x;
     this.y = y;
-     this.prevY = y;
+    this.prevY = y;
     this.dy = dy;
     this.active = true;
+  }
+
+  static get(x: number, y: number, dy: number) {
+    const p = this.pool.pop() || new Projectile(x, y, dy);
+    p.x = x;
+    p.y = y;
+    p.prevY = y;
+    p.dy = dy;
+    p.active = true;
+    return p;
+  }
+
+  release() {
+    this.active = false;
+    Projectile.pool.push(this);
   }
 
   update(dt: number, boundsH: number) {
@@ -18,7 +36,7 @@ export default class Projectile {
     this.y += this.dy * dt;
     const minY = Math.min(this.prevY, this.y);
     const maxY = Math.max(this.prevY, this.y);
-    if (minY < 0 || maxY > boundsH) this.active = false;
+    if (minY < 0 || maxY > boundsH) this.release();
   }
 
   draw(ctx: CanvasRenderingContext2D, color: string) {

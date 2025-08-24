@@ -31,7 +31,8 @@ const Nonogram: React.FC = () => {
   const [puzzle, setPuzzle] = useState<NonogramPuzzle | null>(null);
   const [grid, setGrid] = useState<Cell[][]>([]);
   const [puzzleId, setPuzzleId] = useState('');
-  const [markMode, setMarkMode] = useState(false);
+  const [mode, setMode] = useState<'fill' | 'mark' | 'pencil'>('fill');
+  const workerRef = useRef<Worker>();
   const containerRef = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const last = useRef<{ x: number; y: number; dist?: number } | null>(null);
@@ -64,6 +65,8 @@ const Nonogram: React.FC = () => {
     updateTransform();
   }, []);
 
+  useEffect(() => () => workerRef.current?.terminate(), []);
+
   useEffect(() => {
     if (!puzzle) return;
     const saved = localStorage.getItem(`nonogram-${puzzleId}`);
@@ -84,21 +87,43 @@ const Nonogram: React.FC = () => {
     }
   }, [grid, puzzle, puzzleId]);
 
-  const updateCell = (r: number, c: number, mark: boolean) => {
+  const updateCell = (
+    r: number,
+    c: number,
+    m: 'fill' | 'mark' | 'pencil' = mode
+  ) => {
     if (!puzzle) return;
     setGrid((prev) => {
       let ng = prev.map((row) => row.slice());
       const current = ng[r][c];
-      ng[r][c] = mark ? (current === -1 ? 0 : -1) : current === 1 ? 0 : 1;
-      const { grid: pg, contradiction } = propagate(ng, puzzle);
-      return contradiction ? prev : pg;
+      if (m === 'mark') ng[r][c] = current === -1 ? 0 : -1;
+      else if (m === 'pencil') ng[r][c] = current === 2 ? 0 : 2;
+      else ng[r][c] = current === 1 ? 0 : 1;
+      const res = propagate(ng, puzzle);
+      return res.contradiction ? ng : res.grid;
     });
   };
 
-  const handleCellClick = (r: number, c: number) => updateCell(r, c, markMode);
+  const handleCellClick = (r: number, c: number) => updateCell(r, c);
   const handleRightClick = (r: number, c: number, e: React.MouseEvent) => {
     e.preventDefault();
-    updateCell(r, c, true);
+    updateCell(r, c, 'mark');
+  };
+
+  const handleSolve = () => {
+    if (!puzzle) return;
+    if (workerRef.current) workerRef.current.terminate();
+    workerRef.current = new Worker(new URL('./solver.worker.ts', import.meta.url));
+    workerRef.current.onmessage = (e: MessageEvent) => {
+      const { grid: sg, contradiction } = e.data as {
+        grid: Cell[][];
+        contradiction: boolean;
+      };
+      if (!contradiction) setGrid(sg);
+      workerRef.current?.terminate();
+      workerRef.current = undefined;
+    };
+    workerRef.current.postMessage({ grid, puzzle });
   };
 
   const rowStatus =
@@ -198,22 +223,33 @@ const Nonogram: React.FC = () => {
         />
         <button
           className="border px-2 py-1"
-          onClick={() => setMarkMode((m) => !m)}
+          onClick={() => setMode(mode === 'mark' ? 'fill' : 'mark')}
         >
-          {markMode ? 'Fill' : 'Mark X'}
+          {mode === 'mark' ? 'Fill' : 'Mark X'}
+        </button>
+        <button
+          className="border px-2 py-1"
+          onClick={() => setMode(mode === 'pencil' ? 'fill' : 'pencil')}
+        >
+          {mode === 'pencil' ? 'Fill' : 'Pencil'}
         </button>
         {puzzle && (
-          <button
-            className="border px-2 py-1"
-            onClick={() =>
-              setGrid((g) => {
-                const { grid: pg } = propagate(g, puzzle);
-                return pg;
-              })
-            }
-          >
-            Auto Fill
-          </button>
+          <>
+            <button
+              className="border px-2 py-1"
+              onClick={() =>
+                setGrid((g) => {
+                  const { grid: pg } = propagate(g, puzzle);
+                  return pg;
+                })
+              }
+            >
+              Auto Fill
+            </button>
+            <button className="border px-2 py-1" onClick={handleSolve}>
+              Solve
+            </button>
+          </>
         )}
       </div>
       {puzzle && (
@@ -239,6 +275,7 @@ const Nonogram: React.FC = () => {
                 <div className="flex mb-1">{topClues}</div>
                 <div
                   className="grid"
+                  role="grid"
                   style={{
                     gridTemplateColumns: `repeat(${puzzle.width}, ${CELL_SIZE}px)`,
                     gridTemplateRows: `repeat(${puzzle.height}, ${CELL_SIZE}px)`,
@@ -252,15 +289,18 @@ const Nonogram: React.FC = () => {
                       return (
                         <div
                           key={`${r}-${c}`}
+                          role="gridcell"
                           onClick={() => handleCellClick(r, c)}
                           onContextMenu={(e) => handleRightClick(r, c, e)}
                           className={`w-6 h-6 border flex items-center justify-center cursor-pointer ${
                             cell === 1 ? 'bg-black' : ''
                           } ${
                             cell === -1 ? 'text-gray-400' : ''
+                          } ${
+                            cell === 2 ? 'text-gray-400' : ''
                           } ${cellError ? 'bg-red-200' : ''}`}
                         >
-                          {cell === -1 ? 'X' : ''}
+                          {cell === -1 ? 'X' : cell === 2 ? '·' : ''}
                         </div>
                       );
                     })

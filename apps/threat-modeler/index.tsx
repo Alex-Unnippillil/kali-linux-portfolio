@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { DndContext, useDraggable, DragEndEvent } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { toPng } from 'html-to-image';
@@ -7,16 +7,36 @@ const NODE_W = 120;
 const NODE_H = 40;
 const BOUNDARY_W = 200;
 const BOUNDARY_H = 150;
-const STRIDE = [
-  'Spoofing',
-  'Tampering',
-  'Repudiation',
-  'Information Disclosure',
-  'Denial of Service',
-  'Elevation of Privilege',
-] as const;
+const METHODOLOGIES = {
+  STRIDE: {
+    categories: [
+      'Spoofing',
+      'Tampering',
+      'Repudiation',
+      'Information Disclosure',
+      'Denial of Service',
+      'Elevation of Privilege',
+    ],
+    mitigations: {
+      Spoofing: 'Use strong authentication',
+      Tampering: 'Validate input and integrity',
+      Repudiation: 'Employ auditing and logging',
+      'Information Disclosure': 'Encrypt and enforce access control',
+      'Denial of Service': 'Rate limit and add redundancy',
+      'Elevation of Privilege': 'Apply least privilege and patching',
+    },
+  },
+  CIA: {
+    categories: ['Confidentiality', 'Integrity', 'Availability'],
+    mitigations: {
+      Confidentiality: 'Encrypt data and limit access',
+      Integrity: 'Use checksums and validation',
+      Availability: 'Add redundancy and monitoring',
+    },
+  },
+} as const;
 
-type StrideKey = (typeof STRIDE)[number];
+type MethodologyKey = keyof typeof METHODOLOGIES;
 interface DreadScores {
   damage: number;
   reproducibility: number;
@@ -39,7 +59,7 @@ interface Node {
   x: number;
   y: number;
   label: string;
-  stride: Record<StrideKey, boolean>;
+  categories: Record<string, boolean>;
   dread: DreadScores;
 }
 
@@ -49,19 +69,10 @@ interface Edge {
   to: string;
 }
 
-const MITIGATIONS: Record<StrideKey, string> = {
-  Spoofing: 'Use strong authentication',
-  Tampering: 'Validate input and integrity',
-  Repudiation: 'Employ auditing and logging',
-  'Information Disclosure': 'Encrypt and enforce access control',
-  'Denial of Service': 'Rate limit and add redundancy',
-  'Elevation of Privilege': 'Apply least privilege and patching',
-};
-
-const createStride = () =>
-  STRIDE.reduce(
+const createCategories = (m: MethodologyKey) =>
+  METHODOLOGIES[m].categories.reduce(
     (acc, k) => ({ ...acc, [k]: false }),
-    {} as Record<StrideKey, boolean>,
+    {} as Record<string, boolean>,
   );
 
 const createDread = (): DreadScores => ({
@@ -132,6 +143,7 @@ const BoundaryItem = React.memo(({ boundary }: { boundary: Boundary }) => {
 });
 
 const ThreatModeler: React.FC = () => {
+  const [method, setMethod] = useState<MethodologyKey>('STRIDE');
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [boundaries, setBoundaries] = useState<Boundary[]>([]);
@@ -139,6 +151,12 @@ const ThreatModeler: React.FC = () => {
   const [addingEdge, setAddingEdge] = useState(false);
   const [edgeStart, setEdgeStart] = useState<string | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  const currentMethod = METHODOLOGIES[method];
+
+  useEffect(() => {
+    setNodes((ns) => ns.map((n) => ({ ...n, categories: createCategories(method) })));
+  }, [method]);
 
   const addNode = () => {
     const id = `n${Date.now()}`;
@@ -149,7 +167,7 @@ const ThreatModeler: React.FC = () => {
         x: 20,
         y: 20,
         label: `Node ${n.length + 1}`,
-        stride: createStride(),
+        categories: createCategories(method),
         dread: createDread(),
       },
     ]);
@@ -216,8 +234,15 @@ const ThreatModeler: React.FC = () => {
   };
 
   const exportJson = () => {
-    const data = JSON.stringify({ nodes, edges }, null, 2);
-    const blob = new Blob([data], { type: 'application/json' });
+    const data = {
+      methodology: method,
+      nodes,
+      edges,
+      threats: enumerateThreats(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -229,7 +254,7 @@ const ThreatModeler: React.FC = () => {
   const enumerateThreats = () => {
     const ths: {
       node: string;
-      category: StrideKey;
+      category: string;
       risk: number;
       mitigation: string;
       residual: number;
@@ -237,22 +262,20 @@ const ThreatModeler: React.FC = () => {
     nodes.forEach((n) => {
       const values = Object.values(n.dread);
       const risk = values.reduce((a, b) => a + b, 0) / values.length;
-      (Object.entries(n.stride) as [StrideKey, boolean][]).forEach(
-        ([cat, enabled]) => {
-          if (enabled) {
-            const mitigation = MITIGATIONS[cat];
-            const residual = Math.max(risk - 2, 0);
-            ths.push({ node: n.label, category: cat, risk, mitigation, residual });
-          }
-        },
-      );
+      Object.entries(n.categories).forEach(([cat, enabled]) => {
+        if (enabled) {
+          const mitigation = currentMethod.mitigations[cat] || '';
+          const residual = Math.max(risk - 2, 0);
+          ths.push({ node: n.label, category: cat, risk, mitigation, residual });
+        }
+      });
     });
     return ths;
   };
 
   const exportMarkdown = () => {
     const threats = enumerateThreats();
-    let md = '# Threat Model\n\n';
+    let md = `# Threat Model (${method})\n\n`;
     md += '| Node | Threat | Risk | Mitigation | Residual Risk |\n';
     md += '| ---- | ------ | ---- | ---------- | ------------- |\n';
     threats.forEach((t) => {
@@ -284,12 +307,12 @@ const ThreatModeler: React.FC = () => {
     return values.reduce((a, b) => a + b, 0) / values.length;
   }, [selectedNode]);
 
-  const updateStride = (k: StrideKey) => {
+  const toggleCategory = (k: string) => {
     if (!selectedNode) return;
     setNodes((ns) =>
       ns.map((n) =>
         n.id === selectedNode.id
-          ? { ...n, stride: { ...n.stride, [k]: !n.stride[k] } }
+          ? { ...n, categories: { ...n.categories, [k]: !n.categories[k] } }
           : n,
       ),
     );
@@ -337,6 +360,17 @@ const ThreatModeler: React.FC = () => {
           </div>
         )}
         <div className="flex space-x-2">
+          <select
+            className="bg-gray-700 px-2 rounded"
+            value={method}
+            onChange={(e) => setMethod(e.target.value as MethodologyKey)}
+          >
+            {Object.keys(METHODOLOGIES).map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
           <button className="bg-gray-700 px-2 rounded" onClick={addNode}>
             Add Node
           </button>
@@ -379,12 +413,12 @@ const ThreatModeler: React.FC = () => {
               {selectedNode.label} Risk {risk.toFixed(1)}
             </div>
             <div className="flex flex-wrap gap-2">
-              {STRIDE.map((cat) => (
+              {currentMethod.categories.map((cat) => (
                 <label key={cat} className="flex items-center space-x-1">
                   <input
                     type="checkbox"
-                    checked={selectedNode.stride[cat]}
-                    onChange={() => updateStride(cat)}
+                    checked={selectedNode.categories[cat]}
+                    onChange={() => toggleCategory(cat)}
                   />
                   <span>{cat}</span>
                 </label>
