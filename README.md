@@ -20,6 +20,20 @@
 4. Update `.env.example` whenever new environment variables are added.
 5. Run `yarn validate:icons` to ensure all icon paths in `apps.config.js` exist under `public/themes/` before committing.
 
+## Content Security Policy
+
+External resources are tightly restricted by a Content Security Policy.
+The following origins are allowed:
+
+- **Styles & fonts** – `https://fonts.googleapis.com`, `https://fonts.gstatic.com`
+- **Scripts** – `https://platform.twitter.com`
+- **Connections** – `https://cdn.syndication.twimg.com`, `https://*.twitter.com`, `https://stackblitz.com`, `https://api.axiom.co`
+- **Frames** – `https://stackblitz.com`, `https://ghbtns.com`, `https://platform.twitter.com`, `https://open.spotify.com`, `https://todoist.com`, `https://www.youtube.com`, `https://www.youtube-nocookie.com`
+
+Inline scripts require a nonce generated at request time. If an embed or widget
+fails to load, check the browser console for CSP errors and ensure the
+provider's origin is included in the relevant directive.
+
 ## Local File Storage
 
 Some API routes persist data to the filesystem when running locally. This file-based storage is best effort and may be cleared between runs. Production deployments fall back to a no-op implementation or external storage via `lib/store`.

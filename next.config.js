@@ -14,14 +14,14 @@ const ContentSecurityPolicy = [
   // Allow external font resources
   "font-src 'self' https://fonts.gstatic.com",
   // External script required for embedded timelines
-  "script-src 'self' 'unsafe-inline' https://platform.twitter.com",
+  "script-src 'self' 'nonce-__CSP_NONCE__' https://platform.twitter.com",
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
 
   // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.googleapis.com https://api.axiom.co https://stackblitz.com https://api64.ipify.org https://cloudflare-dns.com https://dns.google https://www.googleapis.com https://crt.sh https://services.nvd.nist.gov https://osv.dev https://data.typeracer.com https://ghbtns.com stun:stun.l.google.com:19302",
+  "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://stackblitz.com https://api.axiom.co",
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load arbitrary content
-  "frame-src 'self' https://stackblitz.com https://*.google.com https://ghbtns.com https://platform.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
+  "frame-src 'self' https://stackblitz.com https://ghbtns.com https://platform.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
 
 
   // Allow this site to embed its own resources (resume PDF)
