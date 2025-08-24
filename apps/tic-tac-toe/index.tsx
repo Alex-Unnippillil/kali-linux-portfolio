@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 
-// All possible winning line combinations on the board
+/**
+ * All possible winning line combinations on the board. Each array contains the
+ * indexes of squares that form a line. The board is represented as a flat array
+ * of nine cells:
+ *
+ * [0,1,2,
+ *  3,4,5,
+ *  6,7,8]
+ */
 const winningLines: number[][] = [
   [0, 1, 2],
   [3, 4, 5],
@@ -13,7 +21,15 @@ const winningLines: number[][] = [
   [2, 4, 6],
 ];
 
-// Determine the winner of the current board
+/**
+ * Determine the winner of the current board.
+ *
+ * @param board - Current board state represented as an array of nine cells. Each
+ * cell contains 'X', 'O', or `null`.
+ * @returns Object containing the winning player ('X', 'O', or 'draw') and the
+ * indices forming the winning line. If the game is not finished, `winner` is
+ * `null`.
+ */
 export const checkWinner = (
   board: (string | null)[],
 ): { winner: string | null; line: number[] } => {
@@ -26,7 +42,18 @@ export const checkWinner = (
   return { winner: null, line: [] };
 };
 
-// Minimax implementation – returns best move and score
+/**
+ * Recursive minimax implementation used by the AI to evaluate moves.
+ *
+ * The algorithm always scores the board from O's perspective:
+ *   - `1`  : O wins
+ *   - `-1` : X wins
+ *   - `0`  : Draw
+ *
+ * @param board - Current board state.
+ * @param player - The player whose turn it is at this depth.
+ * @returns Best move index and the associated score.
+ */
 export const minimax = (
   board: (string | null)[],
   player: 'X' | 'O',
@@ -45,11 +72,14 @@ export const minimax = (
       moves.push({ index: idx, score: result.score });
     }
   });
+
   if (player === 'O') {
+    // O tries to maximise the score
     return moves.reduce((best, move) => (move.score > best.score ? move : best), {
       score: -Infinity,
     });
   }
+  // X tries to minimise the score
   return moves.reduce((best, move) => (move.score < best.score ? move : best), {
     score: Infinity,
   });
@@ -63,8 +93,11 @@ const TicTacToe: React.FC = () => {
   const [status, setStatus] = useState('Choose X or O');
   const [player, setPlayer] = useState<'X' | 'O' | null>(null);
   const [ai, setAi] = useState<'X' | 'O' | null>(null);
-  const [difficulty, setDifficulty] = useState<'easy' | 'hard'>('hard');
+  // Difficulty ranges from 0 (easy) to 1 (hard). On hard the AI is unbeatable.
+  const [difficulty, setDifficulty] = useState(1);
   const [aiMoves, setAiMoves] = useState(0);
+  // Scores for each available move – used for visualisation
+  const [moveEvals, setMoveEvals] = useState<Record<number, number>>({});
   const [winningLine, setWinningLine] = useState<number[]>([]);
   const [leaderboard, setLeaderboard] = useState<{ X: number; O: number; draw: number }>(
     { X: 0, O: 0, draw: 0 },
@@ -125,6 +158,7 @@ const TicTacToe: React.FC = () => {
     setHistory([Array(9).fill(null)]);
     setStep(0);
     setAiMoves(0);
+    setMoveEvals({});
     setWinningLine([]);
   };
 
@@ -138,6 +172,7 @@ const TicTacToe: React.FC = () => {
     if (currentTurn !== player) return;
     applyMove(idx, player);
     sendMove(idx, player);
+    setMoveEvals({});
   };
 
   // Fetch leaderboard on mount
@@ -187,30 +222,46 @@ const TicTacToe: React.FC = () => {
       const available = board
         .map((v, i) => (v ? null : i))
         .filter((v) => v !== null) as number[];
-      let index: number | undefined;
-      if (difficulty === 'easy') {
-        index = available[Math.floor(Math.random() * available.length)];
-      } else if (aiMoves === 0) {
-        index = available[Math.floor(Math.random() * available.length)];
-      } else {
-        index = minimax(board, ai).index;
-      }
-      if (index !== undefined) {
+
+      const evaluations = available.map((idx) => {
+        const newBoard = board.slice();
+        newBoard[idx] = ai;
+        const result = minimax(newBoard, ai === 'X' ? 'O' : 'X');
+        const score = ai === 'X' ? -result.score : result.score;
+        return { index: idx, score };
+      });
+
+      setMoveEvals(Object.fromEntries(evaluations.map((e) => [e.index, e.score])));
+
+      const noisy = evaluations.map((e) => ({
+        index: e.index,
+        score: e.score + (Math.random() * 2 - 1) * (1 - difficulty),
+      }));
+
+      const best = noisy.reduce(
+        (a, b) => (b.score > a.score ? b : a),
+        { index: -1, score: -Infinity },
+      );
+      const index = best.index;
+
+      if (index !== undefined && index >= 0) {
         setTimeout(() => {
-          applyMove(index!, ai);
+          applyMove(index, ai);
           setAiMoves((m) => m + 1);
         }, 200);
       }
     } else {
+      setMoveEvals({});
       setStatus('Your turn');
     }
-  }, [board, player, ai, difficulty, aiMoves]);
+  }, [board, player, ai, difficulty]);
 
   // Jump to a specific move in history
   const jumpTo = (move: number) => {
     setHistory(history.slice(0, move + 1));
     setStep(move);
     setAiMoves(Math.floor(move / 2));
+    setMoveEvals({});
     setWinningLine([]);
   };
 
@@ -222,6 +273,7 @@ const TicTacToe: React.FC = () => {
     setHistory([Array(9).fill(null)]);
     setStep(0);
     setAiMoves(0);
+    setMoveEvals({});
     setWinningLine([]);
   };
 
@@ -231,8 +283,9 @@ const TicTacToe: React.FC = () => {
         type="range"
         min="0"
         max="1"
-        value={difficulty === 'easy' ? 0 : 1}
-        onChange={(e) => setDifficulty(e.target.value === '0' ? 'easy' : 'hard')}
+        step="0.01"
+        value={difficulty}
+        onChange={(e) => setDifficulty(parseFloat(e.target.value))}
         className="w-full"
       />
       <div className="flex justify-between text-xs">
@@ -278,7 +331,11 @@ const TicTacToe: React.FC = () => {
               }`}
               onClick={() => handleClick(idx)}
             >
-              {cell}
+              {cell || (
+                <span className="text-xs text-gray-400">
+                  {moveEvals[idx]?.toFixed(2)}
+                </span>
+              )}
             </button>
           ))}
         </div>
