@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import JSZip from 'jszip';
+import {
+  forceCenter,
+  forceLink,
+  forceManyBody,
+  forceSimulation,
+} from 'd3-force';
 
 interface GraphNode {
   deps: string[];
@@ -38,8 +44,13 @@ const ImportGraph: React.FC = () => {
         setErrors(e.data.errors);
         setCycles(e.data.cycles);
         const g: Record<string, GraphNode> = e.data.graph;
+        const cycleSet = new Set<string>(e.data.cycles.flat());
         const sugg: string[] = [];
         Object.entries(g).forEach(([path, node]) => {
+          if (cycleSet.has(path))
+            sugg.push(
+              `${path} is part of a cycle; consider next/dynamic to break it`,
+            );
           if (node.ssrUnsafe)
             sugg.push(
               `${path} uses browser globals; wrap with next/dynamic({ ssr: false })`,
@@ -172,18 +183,35 @@ const GraphView: React.FC<GraphViewProps> = ({ graph, cycles, depth }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
   const [panning, setPanning] = useState<null | { x: number; y: number }>(null);
+  const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
 
   const nodes = Object.keys(graph);
-  if (nodes.length === 0) return <div className="flex-1 border border-gray-700" />;
-
   const root = nodes[0];
-  const visible = filterByDepth(graph, root, depth);
-  const filteredNodes = nodes.filter((n) => visible.has(n));
+  const visible = root ? filterByDepth(graph, root, depth) : new Set<string>();
+  const filteredNodes = root ? nodes.filter((n) => visible.has(n)) : [];
   const edges = filteredNodes.flatMap((n) =>
     graph[n].deps.filter((d) => visible.has(d)).map((d) => [n, d] as [string, string]),
   );
 
-  const positions = computePositions(filteredNodes);
+  useEffect(() => {
+    const nodeData = filteredNodes.map((id) => ({ id }));
+    const linkData = edges.map(([source, target]) => ({ source, target }));
+    const sim = forceSimulation(nodeData)
+      .force('link', forceLink(linkData).id((d: any) => d.id))
+      .force('charge', forceManyBody().strength(-300))
+      .force('center', forceCenter(0, 0));
+    sim.on('tick', () => {
+      setPositions(
+        Object.fromEntries(
+          nodeData.map((n: any) => [n.id, { x: n.x || 0, y: n.y || 0 }]),
+        ),
+      );
+    });
+    return () => sim.stop();
+  }, [filteredNodes, edges]);
+
+  if (nodes.length === 0)
+    return <div className="flex-1 border border-gray-700" />;
   const cycleNodes = new Set(cycles.flat());
   const cycleEdges = new Set<string>();
   cycles.forEach((c) => {
@@ -222,19 +250,23 @@ const GraphView: React.FC<GraphViewProps> = ({ graph, cycles, depth }) => {
         {edges.map(([a, b]) => {
           const key = a + '->' + b;
           const col = cycleEdges.has(key) ? '#f87171' : '#fff';
+          const pa = positions[a];
+          const pb = positions[b];
+          if (!pa || !pb) return null;
           return (
             <line
               key={key}
-              x1={positions[a].x}
-              y1={positions[a].y}
-              x2={positions[b].x}
-              y2={positions[b].y}
+              x1={pa.x}
+              y1={pa.y}
+              x2={pb.x}
+              y2={pb.y}
               stroke={col}
             />
           );
         })}
         {filteredNodes.map((n) => {
           const pos = positions[n];
+          if (!pos) return null;
           const large = graph[n].size > LARGE_THRESHOLD;
           const fill = cycleNodes.has(n)
             ? '#f87171'
@@ -246,7 +278,12 @@ const GraphView: React.FC<GraphViewProps> = ({ graph, cycles, depth }) => {
           return (
             <g key={n}>
               <circle cx={pos.x} cy={pos.y} r={10} fill={fill} />
-              <text x={pos.x} y={pos.y + 15} textAnchor="middle" className="text-xs fill-white">
+              <text
+                x={pos.x}
+                y={pos.y + 15}
+                textAnchor="middle"
+                className="text-xs fill-white"
+              >
                 {n}
               </text>
             </g>
@@ -256,16 +293,6 @@ const GraphView: React.FC<GraphViewProps> = ({ graph, cycles, depth }) => {
     </svg>
   );
 };
-
-function computePositions(nodes: string[]): Record<string, { x: number; y: number }> {
-  const radius = 100 + nodes.length * 10;
-  return Object.fromEntries(
-    nodes.map((id, i) => {
-      const angle = (2 * Math.PI * i) / nodes.length;
-      return [id, { x: radius * Math.cos(angle), y: radius * Math.sin(angle) }];
-    }),
-  );
-}
 
 function filterByDepth(
   graph: Record<string, GraphNode>,
