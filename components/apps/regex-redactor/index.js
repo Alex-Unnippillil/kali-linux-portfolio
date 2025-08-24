@@ -1,50 +1,57 @@
-import React, { useMemo, useState } from 'react';
-
-const PRESETS = [
-  { label: 'Email', pattern: '\\b[\\w.-]+@[\\w.-]+\\.\\w+\\b' },
-  { label: 'IPv4', pattern: '\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b' },
-  { label: 'Credit Card', pattern: '\\b(?:\\d[ -]*?){13,16}\\b' },
-  { label: 'UUID', pattern: '\\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\b' },
-];
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { PRESETS } from './presets';
 
 const RegexRedactor = () => {
   const [pattern, setPattern] = useState('');
   const [text, setText] = useState('');
   const [redact, setRedact] = useState(false);
   const [error, setError] = useState('');
+  const [redacted, setRedacted] = useState('');
+  const [highlights, setHighlights] = useState([]);
+  const [diffParts, setDiffParts] = useState([]);
+  const [mask, setMask] = useState('full');
+  const [activePreset, setActivePreset] = useState(null);
+  const [unsafe, setUnsafe] = useState(false);
 
-  const regex = useMemo(() => {
-    if (!pattern) return null;
-    try {
-      setError('');
-      return new RegExp(pattern, 'g');
-    } catch (e) {
-      setError(e.message);
-      return null;
-    }
-  }, [pattern]);
+  const workerRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
+    workerRef.current.onmessage = (e) => {
+      const { redacted, highlights, diff, error, unsafe } = e.data;
+      setRedacted(redacted);
+      setHighlights(highlights || []);
+      setDiffParts(diff || []);
+      setError(error || '');
+      setUnsafe(unsafe);
+    };
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  useEffect(() => {
+    workerRef.current?.postMessage({
+      text,
+      pattern,
+      preset: activePreset?.label,
+      mask,
+    });
+  }, [text, pattern, mask, activePreset]);
 
   const highlighted = useMemo(() => {
-    if (!regex || !text) return text;
+    if (!highlights.length) return text;
     const parts = [];
     let last = 0;
-    let m;
-    while ((m = regex.exec(text)) !== null) {
-      const start = m.index;
+    highlights.forEach(({ start, end }) => {
       if (start > last) parts.push(text.slice(last, start));
       parts.push(
-        <mark key={start} className="bg-yellow-500 text-black">{m[0]}</mark>
+        <mark key={start} className="bg-yellow-500 text-black">{text.slice(start, end)}</mark>
       );
-      last = start + m[0].length;
-    }
+      last = end;
+    });
     if (last < text.length) parts.push(text.slice(last));
     return parts;
-  }, [regex, text]);
-
-  const redacted = useMemo(() => {
-    if (!regex || !text) return text;
-    return text.replace(regex, (match) => '█'.repeat(match.length));
-  }, [regex, text]);
+  }, [highlights, text]);
 
   const download = () => {
     const blob = new Blob([redacted], { type: 'text/plain' });
@@ -62,14 +69,21 @@ const RegexRedactor = () => {
         <input
           type="text"
           value={pattern}
-          onChange={(e) => setPattern(e.target.value)}
+          onChange={(e) => {
+            setPattern(e.target.value);
+            setActivePreset(null);
+          }}
           placeholder="Enter regex"
           className="px-2 py-1 rounded text-black"
         />
         <select
           className="px-2 py-1 rounded text-black"
           defaultValue=""
-          onChange={(e) => setPattern(e.target.value)}
+          onChange={(e) => {
+            const preset = PRESETS.find((p) => p.pattern === e.target.value);
+            setPattern(e.target.value);
+            setActivePreset(preset || null);
+          }}
         >
           <option value="" disabled>
             Presets
@@ -79,6 +93,14 @@ const RegexRedactor = () => {
               {p.label}
             </option>
           ))}
+        </select>
+        <select
+          className="px-2 py-1 rounded text-black"
+          value={mask}
+          onChange={(e) => setMask(e.target.value)}
+        >
+          <option value="full">Full Mask</option>
+          <option value="partial">Partial Mask</option>
         </select>
         <button
           className="px-3 py-1 bg-blue-600 rounded"
@@ -96,6 +118,12 @@ const RegexRedactor = () => {
         )}
       </div>
       {error && <div className="text-red-500 mb-2">{error}</div>}
+      {unsafe && !error && (
+        <div className="text-yellow-500 mb-2">
+          Potential catastrophic regex detected. Consider using RE2-compatible
+          patterns.
+        </div>
+      )}
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -105,6 +133,22 @@ const RegexRedactor = () => {
       <div className="flex-1 p-2 bg-gray-800 overflow-auto whitespace-pre-wrap rounded">
         {redact ? redacted : highlighted}
       </div>
+      {redact && diffParts.length > 0 && (
+        <div className="mt-2 p-2 bg-gray-700 overflow-auto whitespace-pre-wrap rounded">
+          {diffParts.map((part, i) => {
+            const cls = part.added
+              ? 'bg-green-700'
+              : part.removed
+              ? 'bg-red-700 line-through'
+              : '';
+            return (
+              <span key={i} className={cls}>
+                {part.value}
+              </span>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
@@ -114,4 +158,3 @@ export default RegexRedactor;
 export const displayRegexRedactor = () => {
   return <RegexRedactor />;
 };
-

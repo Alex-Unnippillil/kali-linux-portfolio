@@ -6,6 +6,8 @@ type Node = {
   ttl?: number;
   includes: Node[];
   ips: string[];
+  lookup?: number;
+  warnings?: string[];
 };
 
 type ApiResponse = {
@@ -13,6 +15,11 @@ type ApiResponse = {
   ips: string[];
   ttl: number;
   length: number;
+  flattenedSpfRecord: string;
+  split: { root: string; parts: Record<string, string> };
+  lookups: number;
+  warnings: string[];
+  lookupLog: { domain: string; count: number }[];
   error?: string;
 };
 
@@ -44,12 +51,18 @@ const SpfFlattener: React.FC = () => {
       <div key={node.domain + depth} style={{ marginLeft: depth * 20 }} className="mb-2">
         <div className="font-semibold">
           {node.domain}
+          {typeof node.lookup === 'number' && ` [#${node.lookup}]`}
           {typeof node.ttl === 'number' && node.ttl > 0 && ` (TTL ${node.ttl})`}
         </div>
         {node.record && <div className="text-xs break-words">{node.record}</div>}
         {node.ips.length > 0 && (
           <div className="text-xs">IPs: {node.ips.join(', ')}</div>
         )}
+        {node.warnings && node.warnings.map((w) => (
+          <div key={w} className="text-xs text-yellow-400">
+            {w}
+          </div>
+        ))}
         {node.includes.map((child) => renderNode(child, depth + 1))}
       </div>
     );
@@ -77,6 +90,39 @@ const SpfFlattener: React.FC = () => {
       {data && !error && (
         <div className="text-sm">
           {renderNode(data.chain)}
+          <div className="mt-4">
+            Lookup count:{' '}
+            <span className={data.lookups > 10 ? 'text-red-400' : ''}>{data.lookups}</span>
+          </div>
+          {data.warnings.length > 0 && (
+            <div className="text-red-400 mt-1">
+              Warnings: {data.warnings.join('; ')}
+            </div>
+          )}
+          {data.lookupLog.length > 0 && (
+            <div className="mt-2 text-xs">
+              {data.lookupLog.map((l) => (
+                <div key={l.count}>
+                  #{l.count}: {l.domain}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="mt-2 break-words">
+            <div className="font-semibold">Flattened SPF</div>
+            <div className="text-xs">{data.flattenedSpfRecord}</div>
+          </div>
+          {Object.keys(data.split.parts).length > 1 && (
+            <div className="mt-2 break-words">
+              <div className="font-semibold">Split Suggestions</div>
+              <div className="text-xs">{data.split.root}</div>
+              {Object.entries(data.split.parts).map(([k, v]) => (
+                <div key={k} className="text-xs">
+                  {k}: {v}
+                </div>
+              ))}
+            </div>
+          )}
           <div className="mt-4">Flattened length: {data.length}</div>
           {data.ttl > 0 && <div>Minimum TTL: {data.ttl}</div>}
         </div>
