@@ -5,7 +5,12 @@
     "prettier"
   ],
   "plugins": ["security"],
-  "ignorePatterns": ["components/apps/breakout.js"],
+  "ignorePatterns": [
+    "components/apps/breakout.js",
+    "public/apps/platformer/main.js",
+    "__tests__",
+    "apps/**"
+  ],
   "rules": {
     "@next/next/no-page-custom-font": "off",
     "@next/next/no-img-element": "off",
@@ -20,16 +25,21 @@
   "overrides": [
     {
       "files": ["*.config.js", "scripts/**/*.js"],
-      "extends": ["plugin:node/recommended"],
-      "plugins": ["node"],
+      "extends": ["plugin:n/recommended"],
+      "plugins": ["n"],
       "rules": {
-        "node/no-deprecated-api": "off"
+        "n/no-deprecated-api": "off",
+        "n/no-process-exit": "off"
       }
     },
     {
       "files": ["apps.config.js"],
+      "parserOptions": {
+        "sourceType": "module"
+      },
       "rules": {
-        "no-restricted-imports": "off"
+        "no-restricted-imports": "off",
+        "n/no-missing-import": "off"
       }
     }
   ]
