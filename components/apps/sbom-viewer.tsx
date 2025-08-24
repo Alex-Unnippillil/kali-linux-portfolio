@@ -1,13 +1,8 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Fuse from 'fuse.js';
 import Papa from 'papaparse';
 import { FixedSizeList as List } from 'react-window';
-import {
-  ParsedSbom,
-  fetchOsv,
-  parseSbomObject,
-  readFileChunks,
-} from '@lib/sbom';
+import { ParsedSbom, fetchOsv } from '@lib/sbom';
 
 interface TreeProps {
   id: string;
@@ -33,14 +28,51 @@ const SbomViewer: React.FC = () => {
   const [sbom, setSbom] = useState<ParsedSbom | null>(null);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [isParsing, setIsParsing] = useState(false);
+  const [worker, setWorker] = useState<Worker | null>(null);
+  const [error, setError] = useState('');
 
-  const handleFile = useCallback(async (file: File) => {
-    const text = await readFileChunks(file);
-    const data = JSON.parse(text);
-    const parsed = parseSbomObject(data);
-    await Promise.all(parsed.components.map(fetchOsv));
-    setSbom(parsed);
+  useEffect(() => {
+    const w = new Worker(new URL('./sbom-parser.worker.ts', import.meta.url), {
+      type: 'module',
+    });
+    w.onmessage = (e) => {
+      const { type } = e.data;
+      if (type === 'progress') {
+        setProgress(e.data.progress);
+      } else if (type === 'done') {
+        const parsed: ParsedSbom = e.data.sbom;
+        Promise.all(parsed.components.map(fetchOsv)).then(() => {
+          setSbom(parsed);
+          setIsParsing(false);
+        });
+      } else if (type === 'error') {
+        setError(e.data.error);
+        setIsParsing(false);
+      } else if (type === 'cancelled') {
+        setIsParsing(false);
+      }
+    };
+    setWorker(w);
+    return () => w.terminate();
   }, []);
+
+  const handleFile = useCallback(
+    (file: File) => {
+      if (!worker) return;
+      setProgress(0);
+      setError('');
+      setSbom(null);
+      setIsParsing(true);
+      worker.postMessage({ type: 'parse', file });
+    },
+    [worker]
+  );
+
+  const cancel = useCallback(() => {
+    worker?.postMessage({ type: 'cancel' });
+  }, [worker]);
 
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
@@ -129,6 +161,17 @@ const SbomViewer: React.FC = () => {
   };
 
   if (!sbom) {
+    if (isParsing) {
+      return (
+        <div className="h-full w-full flex flex-col items-center justify-center border-2 border-dashed">
+          <div className="mb-2">Parsing... {Math.round(progress * 100)}%</div>
+          <button onClick={cancel} className="px-2 py-1 bg-red-600 text-white">
+            Cancel
+          </button>
+          {error && <div className="text-red-500 mt-2">{error}</div>}
+        </div>
+      );
+    }
     return (
       <div
         className="h-full w-full flex items-center justify-center border-2 border-dashed"
@@ -143,6 +186,7 @@ const SbomViewer: React.FC = () => {
             onChange={(e) => e.target.files && handleFile(e.target.files[0])}
           />
         </label>
+        {error && <div className="text-red-500 mt-2">{error}</div>}
       </div>
     );
   }
