@@ -357,17 +357,19 @@ export default function Pinball() {
   }
 
   function triggerHaptics() {
-    if (navigator.vibrate) {
-      navigator.vibrate(50);
-    }
-    const pads = navigator.getGamepads();
-    const pad = pads[0];
-    if (pad && pad.vibrationActuator) {
-      pad.vibrationActuator.playEffect('dual-rumble', {
-        duration: 50,
-        strongMagnitude: 1,
-        weakMagnitude: 1,
-      });
+    if (typeof navigator !== 'undefined') {
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const pad = pads[0];
+      if (pad && pad.vibrationActuator) {
+        pad.vibrationActuator.playEffect('dual-rumble', {
+          duration: 50,
+          strongMagnitude: 1,
+          weakMagnitude: 1,
+        });
+      }
     }
   }
 
