@@ -11,12 +11,12 @@ describe('service worker registration', () => {
   const originalEnv = process.env.NODE_ENV;
 
   afterEach(() => {
-    process.env.NODE_ENV = originalEnv;
+    (process.env as any).NODE_ENV = originalEnv;
     delete (navigator as any).serviceWorker;
   });
 
   it('does not register service worker in development', async () => {
-    process.env.NODE_ENV = 'development';
+    (process.env as any).NODE_ENV = 'development';
     const register = jest.fn();
     Object.defineProperty(navigator, 'serviceWorker', {
       value: { register },
@@ -32,7 +32,7 @@ describe('service worker registration', () => {
   });
 
   it('registers service worker in production', async () => {
-    process.env.NODE_ENV = 'production';
+    (process.env as any).NODE_ENV = 'production';
     const register = jest.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'serviceWorker', {
       value: { register },
