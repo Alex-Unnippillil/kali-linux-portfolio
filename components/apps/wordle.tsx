@@ -7,6 +7,7 @@ import {
 } from '../../apps/wordle/words';
 import { loadState, saveState } from '../../lib/idb';
 
+
 const ROWS = 6;
 const COLS = 5;
 
@@ -14,7 +15,6 @@ const evaluateGuess = (guess: string, answer: string) => {
   const res: ('correct' | 'present' | 'absent')[] = Array(COLS).fill('absent');
   const ans = answer.split('');
   const used = Array(COLS).fill(false);
-
   for (let i = 0; i < COLS; i++) {
     if (guess[i] === ans[i]) {
       res[i] = 'correct';
@@ -32,14 +32,34 @@ const evaluateGuess = (guess: string, answer: string) => {
   return res;
 };
 
+type Settings = {
+  hardMode: boolean;
+  colorBlind: boolean;
+  reducedMotion: boolean;
+  mode: 'daily' | 'infinite';
+};
+
+type Stats = { played: number; wins: number; streak: number; maxStreak: number };
+
+const defaultSettings: Settings = {
+  hardMode: false,
+  colorBlind: false,
+  reducedMotion: false,
+  mode: 'daily',
+};
+
+const defaultStats: Stats = { played: 0, wins: 0, streak: 0, maxStreak: 0 };
+
 const Keyboard = ({
   onKey,
   keyStatuses,
   colorBlind,
+
 }: {
   onKey: (k: string) => void;
   keyStatuses: Record<string, string>;
   colorBlind: boolean;
+
 }) => {
   const rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
   const getKeyClass = (k: string) => {
@@ -49,13 +69,14 @@ const Keyboard = ({
     if (status === 'absent') return 'bg-gray-700';
     return 'bg-gray-500';
   };
+  const motionCls = reducedMotion ? 'transition-none' : 'transition-colors';
   return (
     <div className="space-y-1 mt-4">
       {rows.map((row, i) => (
         <div key={row} className="flex justify-center space-x-1">
           {i === 2 && (
             <button
-              className="px-3 py-2 bg-gray-500 rounded text-sm"
+              className={`px-3 py-2 rounded text-sm bg-gray-500 ${motionCls}`}
               onClick={() => onKey('ENTER')}
               aria-label="enter"
             >
@@ -65,7 +86,9 @@ const Keyboard = ({
           {row.split('').map((ch) => (
             <button
               key={ch}
-              className={`w-8 h-10 rounded text-sm ${getKeyClass(ch)}`}
+              className={`w-8 h-10 rounded text-sm ${getKeyClass(
+                ch,
+              )} ${motionCls}`}
               onClick={() => onKey(ch)}
               aria-label={`letter ${ch}`}
             >
@@ -74,7 +97,7 @@ const Keyboard = ({
           ))}
           {i === 2 && (
             <button
-              className="px-3 py-2 bg-gray-500 rounded text-sm"
+              className={`px-3 py-2 rounded text-sm bg-gray-500 ${motionCls}`}
               onClick={() => onKey('BACKSPACE')}
               aria-label="backspace"
             >
@@ -92,10 +115,10 @@ const difficulties = Object.keys(WORDS_BY_DIFFICULTY) as Difficulty[];
 const Wordle = () => {
   const [difficulty, setDifficulty] = useState<Difficulty>('easy');
   const [answer, setAnswer] = useState('');
+
   const [guesses, setGuesses] = useState<string[]>([]);
   const [statuses, setStatuses] = useState<string[][]>([]);
   const [current, setCurrent] = useState('');
-  const [hardMode, setHardMode] = useState(false);
   const [message, setMessage] = useState('');
   const [gameOver, setGameOver] = useState(false);
   const [keyStatuses, setKeyStatuses] = useState<Record<string, string>>({});
@@ -152,9 +175,10 @@ const Wordle = () => {
     difficulty,
   ]);
 
+
   const checkHardMode = useCallback(
     (g: string) => {
-      if (!hardMode) return true;
+      if (!settings.hardMode) return true;
       for (let r = 0; r < statuses.length; r++) {
         const s = statuses[r];
         const word = guesses[r];
@@ -165,18 +189,21 @@ const Wordle = () => {
       }
       return true;
     },
-    [hardMode, statuses, guesses],
+    [settings.hardMode, statuses, guesses],
   );
 
   const submitGuess = useCallback(() => {
     if (current.length !== COLS) return setMessage('Word must be 5 letters');
     const lower = current.toLowerCase();
     if (!ALL_GUESSES.includes(lower)) return setMessage('Word not in list');
+
     if (!checkHardMode(lower)) return setMessage('Use revealed hints');
 
     const evals = evaluateGuess(lower, answer);
-    setGuesses([...guesses, lower]);
-    setStatuses([...statuses, evals]);
+    const newGuesses = [...guesses, lower];
+    const newStatuses = [...statuses, evals];
+    setGuesses(newGuesses);
+    setStatuses(newStatuses);
     setCurrent('');
     setMessage('');
 
@@ -192,6 +219,8 @@ const Wordle = () => {
       return next;
     });
 
+    setCandidates(filterCandidates(newGuesses, newStatuses));
+
     if (lower === answer) {
       setGameOver(true);
       setMessage('You solved it!');
@@ -200,8 +229,17 @@ const Wordle = () => {
       setGameOver(true);
       setMessage(`Word was ${answer.toUpperCase()}`);
       setStreak(0);
+
     }
-  }, [current, guesses, statuses, answer, checkHardMode]);
+  }, [
+    current,
+    guesses,
+    statuses,
+    answer,
+    checkHardMode,
+    filterCandidates,
+    stats,
+  ]);
 
   const handleKey = useCallback(
     (k: string) => {
@@ -276,13 +314,44 @@ const Wordle = () => {
           .join(''),
       )
       .join('\n');
-    const text = `Daily Puzzle ${new Date()
+    const text = `Puzzle ${new Date()
       .toISOString()
       .slice(0, 10)}\n${grid}`;
     navigator.clipboard
       .writeText(text)
       .then(() => setMessage('Copied results'))
       .catch(() => setMessage('Copy failed'));
+  };
+
+  const exportReplay = () => {
+    const data = { mode: settings.mode, answer, guesses, statuses };
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'wordle-replay.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const getTileClass = (status?: string) => {
+    const base = `w-12 h-12 border-2 flex items-center justify-center text-xl font-bold ${
+      settings.reducedMotion ? 'transition-none' : ''
+    }`;
+    if (status === 'correct')
+      return `${base} ${
+        settings.colorBlind
+          ? 'bg-blue-600 border-blue-600'
+          : 'bg-green-600 border-green-600'
+      }`;
+    if (status === 'present')
+      return `${base} ${
+        settings.colorBlind
+          ? 'bg-orange-500 border-orange-500'
+          : 'bg-yellow-500 border-yellow-500'
+      }`;
+    if (status === 'absent') return `${base} bg-gray-700 border-gray-700`;
+    return `${base} border-gray-500`;
   };
 
   return (
@@ -327,6 +396,7 @@ const Wordle = () => {
           <span>Color blind</span>
         </label>
       </div>
+
       <div
         className="grid gap-1 mb-2"
         style={{ gridTemplateColumns: `repeat(${COLS},3rem)` }}
@@ -345,6 +415,7 @@ const Wordle = () => {
                   className={getCellClass(status)}
                   aria-label={`${letter || 'blank'} ${status || 'empty'}`}
                 >
+
                   {letter}
                 </div>
               );
@@ -358,16 +429,49 @@ const Wordle = () => {
         </div>
       )}
       {gameOver && (
-        <button
-          onClick={share}
-          className="px-3 py-1 bg-gray-600 rounded text-sm mb-2"
-        >
-          Share
-        </button>
+        <div className="flex space-x-2 mb-2">
+          <button
+            onClick={share}
+            className="px-3 py-1 bg-gray-600 rounded text-sm"
+          >
+            Share
+          </button>
+          <button
+            onClick={exportReplay}
+            className="px-3 py-1 bg-gray-600 rounded text-sm"
+          >
+            Export
+          </button>
+          {settings.mode === 'infinite' && (
+            <button
+              onClick={resetGame}
+              className="px-3 py-1 bg-gray-600 rounded text-sm"
+            >
+              New Game
+            </button>
+          )}
+        </div>
+      )}
+      <Keyboard
+        onKey={handleKey}
+        keyStatuses={keyStatuses}
+        colorBlind={settings.colorBlind}
+        reducedMotion={settings.reducedMotion}
+      />
+      {suggestions.length > 0 && (
+        <div className="mt-4 text-xs">
+          {suggestions.map((s) => (
+            <div key={s.word}>
+              {s.word.toUpperCase()} {s.entropy.toFixed(2)} bits
+            </div>
+          ))}
+        </div>
       )}
       <Keyboard onKey={handleKey} keyStatuses={keyStatuses} colorBlind={colorBlind} />
+
     </div>
   );
 };
 
 export default Wordle;
+

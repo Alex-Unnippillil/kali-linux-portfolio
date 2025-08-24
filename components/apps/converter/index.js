@@ -14,7 +14,20 @@ const Converter = () => {
   const [history, setHistory] = useState([]);
 
   const addHistory = (description, result) => {
-    setHistory((prev) => [{ description, result }, ...prev].slice(0, 10));
+    setHistory((prev) => {
+      const last = prev[0];
+      if (last && last.description === description && last.result === result) {
+        return prev;
+      }
+      return [{ description, result }, ...prev].slice(0, 10);
+    });
+  };
+
+  const undo = () => {
+    setHistory((prev) => {
+      const [, ...rest] = prev;
+      return rest;
+    });
   };
 
   const ActiveComponent = plugins.find((p) => p.id === active)?.component;
@@ -37,7 +50,17 @@ const Converter = () => {
       {ActiveComponent && <ActiveComponent onConvert={addHistory} />}
       {history.length > 0 && (
         <div>
-          <h3 className="text-lg mt-4 mb-2">History</h3>
+          <div className="flex items-center justify-between mt-4 mb-2">
+            <h3 className="text-lg">History</h3>
+            <button
+              type="button"
+              onClick={undo}
+              className="px-2 py-1 bg-gray-600 rounded"
+              data-testid="undo-btn"
+            >
+              Undo
+            </button>
+          </div>
           <ul className="space-y-1" data-testid="history-list">
             {history.map((h, i) => (
               <li key={i}>{h.description} = {h.result}</li>

@@ -1,10 +1,15 @@
 import spdxLicenseIds from 'spdx-license-ids';
 import licenseList from 'spdx-license-list/full';
 
-export interface LicenseMatch {
+export interface LicenseInfo {
   spdxId: string;
-  confidence: number;
   url: string;
+  compatibility: string;
+  obligations: string;
+}
+
+export interface LicenseMatch extends LicenseInfo {
+  confidence: number;
 }
 
 export interface LicenseMatchResult {
@@ -13,10 +18,56 @@ export interface LicenseMatchResult {
   message?: string;
 }
 
+const spdxIdSet = new Set(spdxLicenseIds.map(id => id.toUpperCase()));
+
 const TOKEN_REGEX = /\b[a-z0-9]+\b/g;
 
 function tokenize(text: string): Set<string> {
   return new Set((text.toLowerCase().match(TOKEN_REGEX)) || []);
+}
+
+// Basic metadata for common licenses. Defaults are used if a license isn't listed.
+const licenseMeta: Record<string, { compatibility: string; obligations: string }> = {
+  'MIT': {
+    compatibility: 'Permissive; compatible with most licenses',
+    obligations: 'Include copyright and license notice',
+  },
+  'Apache-2.0': {
+    compatibility: 'Permissive; GPLv3 compatible',
+    obligations: 'Include NOTICE file and license',
+  },
+  'GPL-2.0-only': {
+    compatibility: 'Strong copyleft',
+    obligations: 'Disclose source and include license',
+  },
+  'GPL-3.0-only': {
+    compatibility: 'Strong copyleft',
+    obligations: 'Disclose source and include license',
+  },
+};
+
+export function getLicenseInfo(spdxId: string): LicenseInfo {
+  const meta = licenseMeta[spdxId] || {
+    compatibility: 'Unknown',
+    obligations: 'Refer to SPDX page for obligations',
+  };
+  return {
+    spdxId,
+    url: `https://spdx.org/licenses/${spdxId}.html`,
+    ...meta,
+  };
+}
+
+export function extractSpdxIds(text: string): string[] {
+  const tokens = text.match(/[A-Za-z0-9-.+]+/g) || [];
+  const ids = new Set<string>();
+  for (const token of tokens) {
+    const upper = token.toUpperCase();
+    if (spdxIdSet.has(upper)) {
+      ids.add(upper);
+    }
+  }
+  return Array.from(ids);
 }
 
 // Pre-tokenize license texts for performance
@@ -37,10 +88,10 @@ export function matchLicense(licenseText: string): LicenseMatchResult {
     const intersectionSize = [...inputTokens].filter(t => tokens.has(t)).length;
     const unionSize = new Set([...inputTokens, ...tokens]).size;
     const confidence = unionSize === 0 ? 0 : intersectionSize / unionSize;
+    const info = getLicenseInfo(id);
     matches.push({
-      spdxId: id,
+      ...info,
       confidence,
-      url: `https://spdx.org/licenses/${id}.html`,
     });
   }
 

@@ -21,7 +21,13 @@ export default class Player {
     this.nextDir = { x: dx, y: dy };
   }
 
-  update(maze: { isWall: (x: number, y: number) => boolean; isWallTile?: (x: number, y: number) => boolean; isTunnel?: (x: number, y: number) => boolean; width: number; tileSize: number }) {
+  update(maze: {
+    isWall: (x: number, y: number) => boolean;
+    isWallTile?: (x: number, y: number) => boolean;
+    isTunnel?: (x: number, y: number) => boolean;
+    width: number;
+    tileSize: number;
+  }) {
     if (this.powered > 0) this.powered--;
     const ts = maze.tileSize;
     const tolerance = 2;
@@ -45,7 +51,10 @@ export default class Player {
         }
       }
     }
-    const speed = maze.isTunnel && maze.isTunnel(this.x, this.y) ? this.speed : this.speed;
+    const speed =
+      maze.isTunnel && maze.isTunnel(this.x, this.y)
+        ? this.speed * 0.8
+        : this.speed;
     const nx = this.x + this.dir.x * speed;
     const ny = this.y + this.dir.y * speed;
     if (!maze.isWall(nx, ny)) {
@@ -59,7 +68,7 @@ export default class Player {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = 'yellow';
+    ctx.fillStyle = "yellow";
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();

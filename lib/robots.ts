@@ -7,6 +7,7 @@ export interface RobotsRuleGroup {
 export interface RobotsData {
   groups: RobotsRuleGroup[];
   sitemaps: string[];
+  unsupported: string[];
   missing: boolean;
 }
 
@@ -20,6 +21,7 @@ const cache = new Map<string, CacheEntry>();
 function parseRobots(text: string): RobotsData {
   const groups: RobotsRuleGroup[] = [];
   const sitemaps: string[] = [];
+  const unsupported: string[] = [];
   let current: RobotsRuleGroup | null = null;
 
   text.split(/\r?\n/).forEach((line) => {
@@ -51,10 +53,12 @@ function parseRobots(text: string): RobotsData {
       current.disallows.push(value || '/');
     } else if (directive === 'sitemap') {
       sitemaps.push(value);
+    } else {
+      unsupported.push(cleaned);
     }
   });
 
-  return { groups, sitemaps, missing: false };
+  return { groups, sitemaps, unsupported, missing: false };
 }
 
 export async function fetchRobots(origin: string): Promise<RobotsData> {
@@ -70,7 +74,7 @@ export async function fetchRobots(origin: string): Promise<RobotsData> {
       return cached.data;
     }
     if (!res.ok) {
-      const data: RobotsData = { groups: [], sitemaps: [], missing: true };
+      const data: RobotsData = { groups: [], sitemaps: [], unsupported: [], missing: true };
       cache.set(url, { etag: cached?.etag, data });
       return data;
     }
@@ -80,7 +84,7 @@ export async function fetchRobots(origin: string): Promise<RobotsData> {
     cache.set(url, { etag, data });
     return data;
   } catch {
-    const data: RobotsData = { groups: [], sitemaps: [], missing: true };
+    const data: RobotsData = { groups: [], sitemaps: [], unsupported: [], missing: true };
     cache.set(url, { etag: cached?.etag, data });
     return data;
   }

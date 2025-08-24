@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { solveRandom, countSolutions, isValid } from './sudoku-dlx';
 
 const SIZE = 9;
 const range = (n) => Array.from({ length: n }, (_, i) => i);
@@ -23,53 +24,6 @@ const shuffle = (arr, rng) => {
   return a;
 };
 
-const isValid = (board, row, col, num) => {
-  for (let i = 0; i < SIZE; i++) {
-    if (board[row][i] === num || board[i][col] === num) return false;
-  }
-  const boxRow = Math.floor(row / 3) * 3;
-  const boxCol = Math.floor(col / 3) * 3;
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      if (board[boxRow + r][boxCol + c] === num) return false;
-    }
-  }
-  return true;
-};
-
-// Backtracking solver used for generation and uniqueness checks
-const solveBoard = (board, idx = 0, rng = Math.random) => {
-  if (idx === SIZE * SIZE) return true;
-  const row = Math.floor(idx / SIZE);
-  const col = idx % SIZE;
-  if (board[row][col] !== 0) return solveBoard(board, idx + 1, rng);
-  const nums = shuffle(range(SIZE).map((n) => n + 1), typeof rng === 'function' ? rng : Math.random);
-  for (const num of nums) {
-    if (isValid(board, row, col, num)) {
-      board[row][col] = num;
-      if (solveBoard(board, idx + 1, rng)) return true;
-      board[row][col] = 0;
-    }
-  }
-  return false;
-};
-
-const countSolutions = (board, idx = 0, limit = 2) => {
-  if (idx === SIZE * SIZE) return 1;
-  const row = Math.floor(idx / SIZE);
-  const col = idx % SIZE;
-  if (board[row][col] !== 0) return countSolutions(board, idx + 1, limit);
-  let count = 0;
-  for (let num = 1; num <= SIZE && count < limit; num++) {
-    if (isValid(board, row, col, num)) {
-      board[row][col] = num;
-      count += countSolutions(board, idx + 1, limit - count);
-      board[row][col] = 0;
-    }
-  }
-  return count;
-};
-
 const dailySeed = () => {
   const str = new Date().toISOString().slice(0, 10);
   let hash = 0;
@@ -83,14 +37,64 @@ const getCandidates = (board, r, c) => {
   return cand;
 };
 
+// IndexedDB helpers for saving progress
+const openDB = () =>
+  new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') {
+      resolve(null);
+      return;
+    }
+    const request = indexedDB.open('sudoku', 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore('games');
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+
+const idbGet = async (key) => {
+  const db = await openDB();
+  if (!db) return null;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('games', 'readonly');
+    const store = tx.objectStore('games');
+    const req = store.get(key);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+};
+
+const idbSet = async (key, val) => {
+  const db = await openDB();
+  if (!db) return;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('games', 'readwrite');
+    const store = tx.objectStore('games');
+    const req = store.put(val, key);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+};
+
+const idbDelete = async (key) => {
+  const db = await openDB();
+  if (!db) return;
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('games', 'readwrite');
+    const store = tx.objectStore('games');
+    const req = store.delete(key);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+};
+
 const generateSudoku = (difficulty = 'easy', seed = Date.now()) => {
   const rng = createRNG(seed);
-  const board = Array(SIZE)
+  const empty = Array(SIZE)
     .fill(0)
     .map(() => Array(SIZE).fill(0));
-  solveBoard(board, 0, rng);
-  const solution = board.map((row) => row.slice());
-  const puzzle = board.map((row) => row.slice());
+  const solution = solveRandom(empty, rng);
+  const puzzle = solution.map((row) => row.slice());
   const holesByDiff = { easy: 35, medium: 45, hard: 55 };
   let holes = holesByDiff[difficulty] || holesByDiff.easy;
   const positions = shuffle(range(SIZE * SIZE), rng);
@@ -113,19 +117,22 @@ const generateSudoku = (difficulty = 'easy', seed = Date.now()) => {
 const Sudoku = () => {
   const [difficulty, setDifficulty] = useState('easy');
   const [useDaily, setUseDaily] = useState(true);
+  const [seed, setSeed] = useState(useDaily ? dailySeed() : Date.now());
   const [{ puzzle, solution }, setGame] = useState({ puzzle: [], solution: [] });
   const [board, setBoard] = useState([]);
   const [notes, setNotes] = useState([]); // notes[r][c] = array of numbers
   const [noteMode, setNoteMode] = useState(false);
   const [autoNotes, setAutoNotes] = useState(false);
+  const [errorMode, setErrorMode] = useState(true);
   const [hint, setHint] = useState('');
   const [hintCell, setHintCell] = useState(null);
   const [completed, setCompleted] = useState(false);
   const [time, setTime] = useState(0);
   const timerRef = useRef(null);
 
-  const startGame = (seed) => {
-    const { puzzle, solution } = generateSudoku(difficulty, seed);
+  const startGame = (seedValue) => {
+    const { puzzle, solution } = generateSudoku(difficulty, seedValue);
+    setSeed(seedValue);
     setGame({ puzzle, solution });
     setBoard(puzzle.map((r) => r.slice()));
     setNotes(
@@ -144,9 +151,41 @@ const Sudoku = () => {
   };
 
   useEffect(() => {
-    startGame(useDaily ? dailySeed() : Date.now());
+    let mounted = true;
+    idbGet('current').then((data) => {
+      if (!mounted) return;
+      if (data && data.puzzle) {
+        setDifficulty(data.difficulty || 'easy');
+        setUseDaily(data.useDaily ?? true);
+        setSeed(data.seed);
+        setGame({ puzzle: data.puzzle, solution: data.solution });
+        setBoard(data.board);
+        setNotes(data.notes);
+        setTime(data.time || 0);
+      } else {
+        const s = useDaily ? dailySeed() : Date.now();
+        startGame(s);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (board.length === 0) return;
+    idbSet('current', {
+      difficulty,
+      useDaily,
+      seed,
+      puzzle,
+      solution,
+      board,
+      notes,
+      time,
+    });
+  }, [board, notes, time, puzzle, solution, difficulty, seed, useDaily]);
 
   useEffect(() => {
     if (completed) {
@@ -177,6 +216,7 @@ const Sudoku = () => {
     if (autoNotes) applyAutoNotes(newBoard);
     if (newBoard.flat().every((n, i) => n === solution[Math.floor(i / 9)][i % 9])) {
       setCompleted(true);
+      idbDelete('current');
     }
   };
 
@@ -264,6 +304,10 @@ const Sudoku = () => {
           />
           <span>Auto</span>
         </label>
+        <label className="flex items-center space-x-1">
+          <input type="checkbox" checked={errorMode} onChange={(e) => setErrorMode(e.target.checked)} />
+          <span>Errors</span>
+        </label>
         <button className="px-2 py-1 bg-gray-700 rounded" onClick={getHintHandler}>
           Hint
         </button>
@@ -282,23 +326,41 @@ const Sudoku = () => {
         >
           {useDaily ? 'Daily' : 'Random'}
         </button>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={() => {
+            const s = parseInt(prompt('Enter seed'), 10);
+            if (!Number.isNaN(s)) startGame(s);
+          }}
+        >
+          Use Seed
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={() => navigator.clipboard.writeText(String(seed))}
+        >
+          Copy Seed
+        </button>
       </div>
-      <div className="mb-2">Time: {Math.floor(time / 60)}:{('0' + (time % 60)).slice(-2)}</div>
-      <div className="grid grid-cols-9" style={{ gap: '2px' }}>
+      <div className="mb-2">Time: {Math.floor(time / 60)}:{('0' + (time % 60)).slice(-2)} | Seed: {seed}</div>
+      <div className="grid grid-cols-9" style={{ gap: '2px' }} role="grid">
         {board.map((row, r) =>
           row.map((val, c) => {
             const original = puzzle[r][c] !== 0;
-            const conflict = hasConflict(board, r, c, val);
+            const conflict = errorMode && hasConflict(board, r, c, val);
             const isHint = hintCell && hintCell.r === r && hintCell.c === c;
             return (
               <div
                 key={`${r}-${c}`}
+                role="gridcell"
                 className={`relative w-8 h-8 sm:w-10 sm:h-10 ${
                   original ? 'bg-gray-300' : 'bg-white'
                 } ${conflict ? 'bg-red-300' : ''} ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
               >
                 <input
                   className="w-full h-full text-center text-black outline-none"
+                  aria-label={`Row ${r + 1} Column ${c + 1}`}
+                  aria-readonly={original}
                   value={val === 0 ? '' : val}
                   onChange={(e) => handleValue(r, c, e.target.value)}
                   maxLength={1}
@@ -319,8 +381,14 @@ const Sudoku = () => {
           })
         )}
       </div>
-      {completed && <div className="mt-2">Completed!</div>}
-      {hint && <div className="mt-2 text-yellow-300">{hint}</div>}
+      {completed && (
+        <div className="mt-2" aria-live="polite">
+          Completed!
+        </div>
+      )}
+      {hint && (
+      <div className="mt-2 text-yellow-300" aria-live="polite">{hint}</div>
+      )}
     </div>
   );
 };

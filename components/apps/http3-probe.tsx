@@ -4,6 +4,10 @@ interface ProbeResult {
   ok: boolean;
   altSvc: string | null;
   alpnHints: string[];
+  negotiatedProtocol: string;
+  quicVersions: string[];
+  zeroRtt: boolean;
+  fallbackOk: boolean;
 }
 
 const Http3Probe: React.FC = () => {
@@ -51,11 +55,22 @@ const Http3Probe: React.FC = () => {
           {result.altSvc && (
             <div className="break-all">Alt-Svc: {result.altSvc}</div>
           )}
-          {!result.ok && (
-            <div className="mt-1">Fallback to HTTP/1.1/2</div>
-          )}
-          {result.ok && result.alpnHints.length > 0 && (
+          <div className="mt-1">
+            Fallback via: {result.negotiatedProtocol || 'unknown'}
+          </div>
+          {result.alpnHints.length > 0 && (
             <div className="mt-1">Protocols: {result.alpnHints.join(', ')}</div>
+          )}
+          {result.quicVersions.length > 0 && (
+            <div className="mt-1">
+              QUIC Versions: {result.quicVersions.join(', ')}
+            </div>
+          )}
+          <div className="mt-1">
+            0-RTT: {result.zeroRtt ? 'supported' : 'not supported'}
+          </div>
+          {!result.fallbackOk && (
+            <div className="mt-1 text-red-500">No HTTP/1.1/2 fallback</div>
           )}
         </div>
       )}
