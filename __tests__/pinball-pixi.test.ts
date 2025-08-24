@@ -1,6 +1,6 @@
 import { PinballPixiGame } from '../lib/pinball-pixi';
 import { Body } from 'matter-js';
-import { describe, test, expect } from 'vitest';
+import { describe, test, expect } from '@jest/globals';
 
 describe('PinballPixiGame physics', () => {
   test('ball restitution and friction tuned', () => {
@@ -29,4 +29,3 @@ describe('PinballPixiGame physics', () => {
     expect(game.isTilted()).toBe(true);
   });
 });
-
