@@ -1,15 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { load } from 'cheerio';
-import URLParse from 'url-parse';
 
-interface ApiResponse {
-  ok: boolean;
-  items: Record<string, string[]>;
-}
+// Simple in-memory rate limiter
+const RATE_LIMIT = 5; // requests
+const WINDOW_MS = 60_000; // 1 minute
+const requests = new Map<string, { count: number; start: number }>();
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ApiResponse | { error: string }>
+  res: NextApiResponse
 ) {
   const { url } = req.query;
   if (!url || typeof url !== 'string') {
@@ -17,42 +15,40 @@ export default async function handler(
     return;
   }
 
-  let target = url.trim();
-  if (!/^https?:\/\//i.test(target)) {
-    target = `https://${target}`;
-  }
-
-  let pageUrl: any;
+  let target: URL;
   try {
-    pageUrl = new URLParse(target);
+    target = new URL(url);
   } catch (e) {
     res.status(400).json({ error: 'Invalid url' });
     return;
   }
 
+  if (target.protocol !== 'http:' && target.protocol !== 'https:') {
+    res.status(400).json({ error: 'Unsupported protocol' });
+    return;
+  }
+
+  const ip =
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+    req.socket.remoteAddress ||
+    'unknown';
+  const now = Date.now();
+  const entry = requests.get(ip);
+  if (!entry || now - entry.start > WINDOW_MS) {
+    requests.set(ip, { count: 1, start: now });
+  } else if (entry.count >= RATE_LIMIT) {
+    res.status(429).json({ error: 'Rate limit exceeded' });
+    return;
+  } else {
+    entry.count += 1;
+  }
+
   try {
-    const response = await fetch(pageUrl.href);
-    const html = await response.text();
-    const $ = load(html);
-
-    const items: Record<string, string[]> = {};
-
-    if (pageUrl.protocol === 'https:') {
-      $('script[src], img[src], link[href], iframe[src], audio[src], video[src], source[src]').each((_, el) => {
-        const tag = (el.tagName || (el as any).name || '').toLowerCase();
-        const attr = tag === 'link' ? 'href' : 'src';
-        const val = $(el).attr(attr);
-        if (!val) return;
-        const parsed = new URLParse(val, pageUrl.href);
-        if (parsed.protocol === 'http:') {
-          if (!items[tag]) items[tag] = [];
-          items[tag].push(parsed.href);
-        }
-      });
-    }
-
-    res.status(200).json({ ok: Object.keys(items).length === 0, items });
+    const response = await fetch(target.toString());
+    const body = await response.text();
+    res.status(200).json({ status: response.status, body });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch url' });
+    res.status(500).json({ error: (err as Error).message });
   }
 }
+
