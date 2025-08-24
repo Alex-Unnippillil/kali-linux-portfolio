@@ -596,7 +596,7 @@ const apps = [
   {
     id: 'base-encoders',
     title: 'Base Encoders',
-    icon: icon('hash.svg'),
+    icon: icon('base-encoders.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
