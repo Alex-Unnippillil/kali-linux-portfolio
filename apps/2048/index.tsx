@@ -8,11 +8,20 @@ import {
   createRng,
   GameState,
   Direction,
+  moveBoard,
+  spawnTile,
+  Rng,
+  Board,
 } from './engine';
 
 const dailySeed = Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''));
 
-const Tile: React.FC<{ value: number; index: number; size: number }> = ({ value, index, size }) => {
+const Tile: React.FC<{ value: number; index: number; size: number; ghost?: boolean }> = ({
+  value,
+  index,
+  size,
+  ghost = false,
+}) => {
   const ref = useRef<HTMLDivElement>(null);
   const cell = 100;
   const x = (index % size) * cell;
@@ -43,9 +52,9 @@ const Tile: React.FC<{ value: number; index: number; size: number }> = ({ value,
   return (
     <div
       ref={ref}
-      className={`absolute flex items-center justify-center rounded bg-orange-200 text-xl font-bold ${
-        value ? 'opacity-100' : 'opacity-0'
-      }`}
+      className={`absolute flex items-center justify-center rounded text-xl font-bold ${
+        ghost ? 'bg-blue-200 opacity-50' : 'bg-orange-200'
+      } ${value ? 'opacity-100' : 'opacity-0'}`}
       style={{ width: 90, height: 90 }}
     >
       {value || ''}
@@ -66,7 +75,7 @@ const Game2048: React.FC = () => {
     }
     return dailySeed;
   });
-  const rngRef = useRef(createRng(seed));
+  const rngRef = useRef<Rng>(createRng(seed));
   const [state, setState] = useState<GameState>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -99,12 +108,65 @@ const Game2048: React.FC = () => {
   });
   const workerRef = useRef<Worker>();
   const startRef = useRef<{ x: number; y: number } | null>(null);
+  const [ghostPreview, setGhostPreview] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('2048_ghost') === '1';
+    }
+    return false;
+  });
+  const [ghostBoard, setGhostBoard] = useState<Board | null>(null);
+  const [depth, setDepth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return parseInt(localStorage.getItem('2048_depth') || '4', 10);
+    }
+    return 4;
+  });
+  const [auto, setAuto] = useState(false);
+  const [nextDir, setNextDir] = useState<Direction | null>(null);
+  const stateRef = useRef(state);
+  const autoRef = useRef(auto);
+  const depthRef = useRef(depth);
+  const modeRef = useRef<'auto' | 'preview' | 'step' | null>(null);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+  useEffect(() => {
+    autoRef.current = auto;
+  }, [auto]);
+  useEffect(() => {
+    depthRef.current = depth;
+  }, [depth]);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('./solver.worker.ts', import.meta.url));
     workerRef.current.onmessage = (e) => {
       const dir = e.data as Direction;
-      setState((s) => move(s, dir, rngRef.current));
+      if (modeRef.current === 'auto') {
+        setState((s) => {
+          const ns = move(s, dir, rngRef.current);
+          if (!isGameOver(ns.board) && autoRef.current) {
+            modeRef.current = 'auto';
+            workerRef.current?.postMessage({
+              board: ns.board,
+              depth: depthRef.current,
+              timeout: 200,
+            });
+          } else {
+            autoRef.current = false;
+            setAuto(false);
+          }
+          return ns;
+        });
+      } else if (modeRef.current === 'step') {
+        setState((s) => move(s, dir, rngRef.current));
+      } else if (modeRef.current === 'preview') {
+        setNextDir(dir);
+        const clone = createRng(rngRef.current.state());
+        const { board: moved } = moveBoard(stateRef.current.board, dir);
+        setGhostBoard(spawnTile(moved, clone));
+      }
+      modeRef.current = null;
     };
     return () => workerRef.current?.terminate();
   }, []);
@@ -128,8 +190,41 @@ const Game2048: React.FC = () => {
     if (newAch.length) setAchievements((a) => [...a, ...newAch]);
   }, [state, best, achievements]);
 
+  useEffect(() => {
+    if (ghostPreview && !auto) {
+      modeRef.current = 'preview';
+      workerRef.current?.postMessage({
+        board: state.board,
+        depth: depthRef.current,
+        timeout: 200,
+      });
+    } else {
+      setGhostBoard(null);
+      setNextDir(null);
+    }
+  }, [state.board, ghostPreview, auto, depth]);
+
+  useEffect(() => {
+    if (auto) {
+      modeRef.current = 'auto';
+      workerRef.current?.postMessage({
+        board: state.board,
+        depth: depthRef.current,
+        timeout: 200,
+      });
+    }
+  }, [auto, state.board, depth]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('2048_depth', String(depth));
+      localStorage.setItem('2048_ghost', ghostPreview ? '1' : '0');
+    }
+  }, [depth, ghostPreview]);
+
   const handleMove = (dir: Direction) => {
     setState((s) => move(s, dir, rngRef.current));
+    if (ghostPreview) setGhostBoard(null);
   };
 
   const onKey = (e: KeyboardEvent) => {
@@ -170,7 +265,12 @@ const Game2048: React.FC = () => {
   };
 
   const solver = () => {
-    workerRef.current?.postMessage({ board: state.board, depth: 4, timeout: 200 });
+    modeRef.current = 'step';
+    workerRef.current?.postMessage({
+      board: state.board,
+      depth: depthRef.current,
+      timeout: 200,
+    });
   };
 
   const reset = (n: number) => {
@@ -178,12 +278,29 @@ const Game2048: React.FC = () => {
     setSeed(newSeed);
     rngRef.current = createRng(newSeed);
     setState(initialState(rngRef.current, n));
+    setGhostBoard(null);
+    setAuto(false);
   };
 
   const changeSize = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const n = parseInt(e.target.value, 10);
     setSize(n);
     reset(n);
+  };
+
+  const changeDepth = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setDepth(parseInt(e.target.value, 10));
+  };
+
+  const toggleAuto = () => {
+    setAuto((a) => {
+      const na = !a;
+      if (na) {
+        setGhostPreview(false);
+        setGhostBoard(null);
+      }
+      return na;
+    });
   };
 
   const share = () => {
@@ -202,7 +319,7 @@ const Game2048: React.FC = () => {
         <div>Score: {state.score}</div>
         <div>Best: {best}</div>
       </div>
-      <div className="mb-2 flex gap-2">
+      <div className="mb-2 flex flex-wrap gap-2">
         <label>
           Size
           <select value={size} onChange={changeSize} className="ml-2 border p-1">
@@ -213,6 +330,27 @@ const Game2048: React.FC = () => {
             ))}
           </select>
         </label>
+        <label>
+          Depth
+          <select value={depth} onChange={changeDepth} className="ml-2 border p-1">
+            {[2, 3, 4, 5, 6].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={ghostPreview}
+            onChange={(e) => setGhostPreview(e.target.checked)}
+          />
+          Ghost
+        </label>
+        <button className="rounded bg-purple-500 px-2 py-1 text-white" onClick={toggleAuto}>
+          {auto ? 'Pause' : 'Auto'}
+        </button>
         <button className="rounded bg-green-500 px-2 py-1 text-white" onClick={share}>
           Share
         </button>
@@ -223,6 +361,10 @@ const Game2048: React.FC = () => {
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
       >
+        {ghostPreview && ghostBoard &&
+          ghostBoard.map((v, i) => (
+            <Tile key={`g${i}`} value={v} index={i} size={size} ghost />
+          ))}
         {state.board.map((v, i) => (
           <Tile key={i} value={v} index={i} size={size} />
         ))}
@@ -238,6 +380,7 @@ const Game2048: React.FC = () => {
           Solver
         </button>
       </div>
+      {ghostPreview && nextDir && <div className="mt-2 text-sm">Next: {nextDir}</div>}
       {achievements.length > 0 && (
         <div className="mt-2 text-sm">Achieved: {achievements.join(', ')}</div>
       )}
