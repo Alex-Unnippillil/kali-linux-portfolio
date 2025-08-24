@@ -6,6 +6,8 @@ let runner: any;
 let render: any;
 let flippers: any[] = [];
 let bumpers: any[] = [];
+let ball: any;
+let ballSave = true;
 const width = 400;
 const height = 600;
 
@@ -23,20 +25,23 @@ function setup(table: any) {
     if (el.type === 'bumper') {
       const bumper = Bodies.circle(el.x, el.y, el.radius || 20, {
         isStatic: true,
-        restitution: 1,
+        restitution: 1.2,
       });
       bumpers.push(bumper);
       World.add(engine.world, bumper);
     } else if (el.type === 'flipper') {
+      const widthF = el.width || 80;
       const flipper = Bodies.rectangle(
         el.x,
         el.y,
-        el.width || 80,
+        widthF,
         el.height || 20,
       );
+      const dir = el.x < width / 2 ? -1 : 1;
       const hinge = Constraint.create({
         bodyA: flipper,
-        pointB: { x: el.x, y: el.y },
+        pointA: { x: (widthF / 2) * dir, y: 0 },
+        pointB: { x: el.x + (widthF / 2) * dir, y: el.y },
         length: 0,
         stiffness: 1,
       });
@@ -49,17 +54,37 @@ function setup(table: any) {
       });
       bumpers.push(sling);
       World.add(engine.world, sling);
+    } else if (el.type === 'lane') {
+      const lane = Bodies.rectangle(
+        el.x,
+        el.y,
+        el.width || 100,
+        el.height || 20,
+        { isStatic: true, angle: el.radius || 0 },
+      );
+      World.add(engine.world, lane);
     }
   });
-  const ball = Bodies.circle(width / 2, height - 120, 10, { restitution: 0.9 });
+  ball = Bodies.circle(width / 2, height - 120, 10, { restitution: 0.9 });
   World.add(engine.world, ball);
+  ballSave = true;
+  setTimeout(() => (ballSave = false), 5000);
 
   Events.on(engine, 'collisionStart', (event: any) => {
     event.pairs.forEach((pair: any) => {
       if (bumpers.includes(pair.bodyA) || bumpers.includes(pair.bodyB)) {
-        (self as any).postMessage({ type: 'bumperHit' });
+        const p = bumpers.includes(pair.bodyA)
+          ? pair.bodyA.position
+          : pair.bodyB.position;
+        (self as any).postMessage({ type: 'bumperHit', x: p.x, y: p.y });
       }
     });
+  });
+  Events.on(engine, 'afterUpdate', () => {
+    if (ball.position.y > height && ballSave) {
+      Body.setPosition(ball, { x: width / 2, y: height - 120 });
+      Body.setVelocity(ball, { x: 0, y: -10 });
+    }
   });
 }
 
@@ -73,7 +98,7 @@ function setup(table: any) {
       options: { width, height, wireframes: false, background: '#111' },
     });
     setup(data.table);
-    runner = Runner.create({ isFixed: true, delta: 1000 / 100 });
+    runner = Runner.create({ isFixed: true, delta: 1000 / 60 });
     Runner.run(runner, engine);
     const renderLoop = () => {
       Render.world(render);
@@ -86,7 +111,7 @@ function setup(table: any) {
     renderLoop();
   } else if (data.type === 'flip') {
     const fl = flippers[data.index];
-    if (fl) Body.setAngularVelocity(fl, data.dir * 10);
+    if (fl) Body.applyAngularImpulse(fl, data.dir * 0.02);
   } else if (data.type === 'nudge') {
     Composite.allBodies(engine.world).forEach((b: any) => {
       if (!b.isStatic) Body.applyForce(b, b.position, data.force);
@@ -97,7 +122,7 @@ function setup(table: any) {
     if (data.hidden) {
       runner.delta = 1000 / 20;
     } else {
-      runner.delta = 1000 / 100;
+      runner.delta = 1000 / 60;
     }
   }
 };
