@@ -1,8 +1,8 @@
-import Player from './Player';
-import Maze from './Maze';
+import Player from "./Player";
+import Maze from "./Maze";
 
-export type GhostMode = 'scatter' | 'chase' | 'frightened';
-export type GhostType = 'blinky' | 'pinky' | 'inky' | 'clyde';
+export type GhostMode = "scatter" | "chase" | "frightened";
+export type GhostType = "blinky" | "pinky" | "inky" | "clyde";
 
 export interface GhostConfig {
   x: number;
@@ -31,6 +31,8 @@ export default class Ghost {
   spawnY: number;
   scatter: { x: number; y: number };
   frightenedTimer: number;
+  inHouse: boolean;
+  leaveTimer: number;
 
   constructor(cfg: GhostConfig) {
     this.x = cfg.x;
@@ -38,10 +40,12 @@ export default class Ghost {
     this.spawnX = cfg.x;
     this.spawnY = cfg.y;
     this.dir = { x: 1, y: 0 };
-    this.color = cfg.color || 'red';
+    this.color = cfg.color || "red";
     this.type = cfg.type;
     this.speed = 2;
     this.frightenedTimer = 0;
+    this.inHouse = this.type !== "blinky";
+    this.leaveTimer = this.inHouse ? 180 : 0;
     const w = cfg.mazeWidth;
     const h = cfg.mazeHeight;
     // scatter targets are the corners of the maze
@@ -66,11 +70,11 @@ export default class Ghost {
     const pdx = player.dir.x;
     const pdy = player.dir.y;
     switch (this.type) {
-      case 'blinky':
+      case "blinky":
         return { x: px, y: py };
-      case 'pinky':
+      case "pinky":
         return { x: px + 4 * pdx, y: py + 4 * pdy };
-      case 'inky': {
+      case "inky": {
         const bl = blinky ?? this;
         const bx = Math.floor(bl.x / ts);
         const by = Math.floor(bl.y / ts);
@@ -78,7 +82,7 @@ export default class Ghost {
         const ty = py + 2 * pdy;
         return { x: tx * 2 - bx, y: ty * 2 - by };
       }
-      case 'clyde': {
+      case "clyde": {
         const dx = Math.floor(this.x / ts) - px;
         const dy = Math.floor(this.y / ts) - py;
         const dist = Math.hypot(dx, dy);
@@ -114,15 +118,31 @@ export default class Ghost {
   }
 
   update(player: Player, maze: Maze, mode: GhostMode, blinky?: Ghost) {
+    if (this.inHouse) {
+      if (this.leaveTimer > 0) {
+        this.leaveTimer--;
+        return;
+      }
+      this.inHouse = false;
+    }
     if (this.frightenedTimer > 0) this.frightenedTimer--;
     let curMode: GhostMode = mode;
-    if (this.frightenedTimer > 0) curMode = 'frightened';
+    if (this.frightenedTimer > 0) curMode = "frightened";
     let dir = this.dir;
-    if (curMode === 'frightened') {
-      const choices = DIRS.filter((d) => !maze.isWall(this.x + d.x * maze.tileSize / 2, this.y + d.y * maze.tileSize / 2));
+    if (curMode === "frightened") {
+      const choices = DIRS.filter(
+        (d) =>
+          !maze.isWall(
+            this.x + (d.x * maze.tileSize) / 2,
+            this.y + (d.y * maze.tileSize) / 2,
+          ),
+      );
       dir = choices[Math.floor(Math.random() * choices.length)] || dir;
     } else {
-      const target = curMode === 'scatter' ? this.scatter : this.getChaseTarget(player, maze, blinky);
+      const target =
+        curMode === "scatter"
+          ? this.scatter
+          : this.getChaseTarget(player, maze, blinky);
       dir = this.pathfind(target, maze);
     }
     this.dir = dir;
@@ -135,8 +155,10 @@ export default class Ghost {
       this.y = ny;
     }
     // wrap around tunnels
-    if (this.x < -maze.tileSize / 2) this.x = maze.width * maze.tileSize + maze.tileSize / 2;
-    if (this.x > maze.width * maze.tileSize + maze.tileSize / 2) this.x = -maze.tileSize / 2;
+    if (this.x < -maze.tileSize / 2)
+      this.x = maze.width * maze.tileSize + maze.tileSize / 2;
+    if (this.x > maze.width * maze.tileSize + maze.tileSize / 2)
+      this.x = -maze.tileSize / 2;
   }
 
   reset() {
@@ -144,10 +166,12 @@ export default class Ghost {
     this.y = this.spawnY;
     this.dir = { x: 1, y: 0 };
     this.frightenedTimer = 0;
+    this.inHouse = this.type !== "blinky";
+    this.leaveTimer = this.inHouse ? 180 : 0;
   }
 
   draw(ctx: CanvasRenderingContext2D, frightened: boolean) {
-    ctx.fillStyle = frightened ? 'blue' : this.color;
+    ctx.fillStyle = frightened ? "blue" : this.color;
     ctx.beginPath();
     ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
     ctx.fill();
