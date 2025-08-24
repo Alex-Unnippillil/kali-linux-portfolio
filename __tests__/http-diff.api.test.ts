@@ -1,4 +1,4 @@
-/** @vitest-environment node */
+/** @jest-environment node */
 import { TextEncoder, TextDecoder } from 'util';
 import { ReadableStream } from 'stream/web';
 (global as any).TextEncoder = TextEncoder;

@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
 import { rateLimitedFetch } from './rateLimitedFetch';
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  jest.restoreAllMocks();
   if (typeof window !== 'undefined') {
     localStorage.clear();
   }
@@ -11,18 +10,22 @@ afterEach(() => {
 describe('rateLimitedFetch', () => {
   it('returns data on success', async () => {
     const mockData = { ok: true };
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(mockData), { status: 200 })));
+    global.fetch = jest.fn(async () =>
+      new Response(JSON.stringify(mockData), { status: 200 })
+    ) as any;
     const result = await rateLimitedFetch('https://example.com');
     expect(result).toEqual(mockData);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('throws on error', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => {
+    global.fetch = jest.fn(async () => {
       throw new Error('fail');
-    }));
-    await expect(rateLimitedFetch('https://example.com', { retries: 0 })).rejects.toThrow('fail');
-    expect(fetch).toHaveBeenCalledTimes(1);
+    }) as any;
+    await expect(
+      rateLimitedFetch('https://example.com', { retries: 0 })
+    ).rejects.toThrow('fail');
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 });
 

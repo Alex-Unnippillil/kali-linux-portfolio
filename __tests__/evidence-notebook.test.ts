@@ -1,5 +1,4 @@
 /** @jest-environment node */
-// @vitest-environment node
 import { hashEntry, verifyChain } from '../apps/evidence-notebook/utils';
 
 describe('evidence notebook hash chaining', () => {
