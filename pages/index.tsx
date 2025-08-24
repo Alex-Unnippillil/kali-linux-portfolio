@@ -4,13 +4,14 @@ import Meta from '../components/SEO/Meta';
 
 const Ubuntu = dynamic(() => import('../components/ubuntu'), {
   ssr: false,
-  suspense: true,
 });
 
 const App: React.FC = () => (
   <>
     <Meta />
-    <Suspense fallback={<div className="w-screen h-screen bg-gray-900 animate-pulse" />}>
+    <Suspense
+      fallback={<div className="w-screen h-screen bg-gray-900 animate-pulse" />}
+    >
       <Ubuntu />
     </Suspense>
   </>

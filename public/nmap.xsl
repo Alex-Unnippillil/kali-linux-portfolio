@@ -40,14 +40,11 @@
 />
 
 <!-- global variables      -->
-<!-- ............................................................ -->
 <xsl:variable name="nmap_xsl_version">0.9c</xsl:variable>
-<!-- ............................................................ -->
 <xsl:variable name="start"><xsl:value-of select="/nmaprun/@startstr" /></xsl:variable>
 <xsl:variable name="end"><xsl:value-of select="/nmaprun/runstats/finished/@timestr" /> </xsl:variable>
 <xsl:variable name="totaltime"><xsl:value-of select="/nmaprun/runstats/finished/@time -/nmaprun/@start" /></xsl:variable>
 <xsl:key name="portstatus" match="@state" use="."/>
-<!-- ............................................................ -->
 
 
 <xsl:template match="/">
@@ -56,7 +53,6 @@
 
 
 <!-- root -->
-<!-- ............................................................ -->
 <xsl:template match="/nmaprun">
 <html>
 <head>
@@ -495,10 +491,8 @@
 </body>
 </html>
 </xsl:template>
-<!-- ............................................................ -->
 
 <!-- host -->
-<!-- ............................................................ -->
 <xsl:template match="host">
 
   <hr class="print_only" />
@@ -645,26 +639,20 @@
   </xsl:element>
 	
 </xsl:template>
-<!-- ............................................................ -->
 
 
 
 <!-- hostnames -->
-<!-- ............................................................ -->
 <xsl:template match="hostnames">
   <xsl:if test="hostname/@name != ''"><h3>Hostnames</h3><ul>	<xsl:apply-templates/></ul></xsl:if>
 </xsl:template>
-<!-- ............................................................ -->
 
 <!-- hostname -->
-<!-- ............................................................ -->
 <xsl:template match="hostname">
   <li><xsl:value-of select="@name"/> (<xsl:value-of select="@type"/>)</li>
 </xsl:template>
-<!-- ............................................................ -->
 
 <!-- ports -->
-<!-- ............................................................ -->
 <xsl:template match="ports">
   <xsl:variable name="var_address" select="../address/@addr" />
   <h3>Ports</h3>
@@ -717,10 +705,8 @@
     </xsl:element>
   </xsl:if>
 </xsl:template>
-<!-- ............................................................ -->
 
 <!-- port -->
-<!-- ............................................................ -->
 <xsl:template match="port">
 
   <xsl:choose>
@@ -809,10 +795,8 @@
 
   </xsl:choose>
 </xsl:template>
-<!-- ............................................................ -->
 
 <!-- os -->
-<!-- ............................................................ -->
 <xsl:template match="os">
   <h3>Remote Operating System Detection</h3>
 		
@@ -831,11 +815,9 @@
   <xsl:apply-templates select="osfingerprint"/>
 
 </xsl:template>
-<!-- ............................................................ -->
 
 
 <!-- osfingerprint -->
-<!-- ............................................................ -->
 <xsl:template match="osfingerprint">
 
   <xsl:variable name="var_address" select="../../address/@addr" /> 
@@ -889,10 +871,8 @@
   </xsl:choose>
 
   </xsl:template>
-<!-- ............................................................ -->
 
 <!-- Pre-Scan script -->
-<!-- ............................................................ -->
 <xsl:template match="prescript">
 
   <hr class="print_only" />
@@ -924,10 +904,8 @@
   </xsl:for-each>
   </table>
 </xsl:template>
-<!-- ............................................................ -->
 
 <!-- Post-Scan script -->
-<!-- ............................................................ -->
 <xsl:template match="postscript">
 
   <hr class="print_only" />
@@ -959,11 +937,9 @@
   </xsl:for-each>
   </table>
 </xsl:template>
-<!-- ............................................................ -->
 
 
 <!-- Host Script Scan -->
-<!-- ............................................................ -->
 <xsl:template match="hostscript">
   <h3>Host Script Output</h3>
 
@@ -988,10 +964,8 @@
 
     </table>
 </xsl:template>
-<!-- ............................................................ -->
 
 <!-- smurf -->
-<!-- ............................................................ -->
 <xsl:template match="smurf">
   <xsl:if test="@responses != ''"><h3>Smurf Responses</h3>
     <ul>
@@ -999,11 +973,9 @@
     </ul>
   </xsl:if>
 </xsl:template>
-<!-- ............................................................ -->
 
 
 <!-- traceroute -->
-<!-- ............................................................ -->
 
 <xsl:template match="trace">
   <xsl:if test="@port">
@@ -1067,5 +1039,4 @@
 
   </xsl:if>
 </xsl:template>
-<!-- ............................................................ -->
 </xsl:stylesheet>
