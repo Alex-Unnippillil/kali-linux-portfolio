@@ -1,104 +1,66 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import util from 'util';
+import { execFile } from 'child_process';
 import { setupUrlGuard } from '../../lib/urlGuard';
-import { fetchHead } from '../../lib/headCache';
+
 setupUrlGuard();
 
+const execFileAsync = util.promisify(execFile);
+
 interface ProbeResult {
-  ok: boolean;
   altSvc: string | null;
-  alpnHints: string[];
-  negotiatedProtocol: string;
-  quicVersions: string[];
-  zeroRtt: boolean;
-  fallbackOk: boolean;
+  alpn: string | null;
+  h3Probe?: { ok: boolean; output: string };
 }
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ProbeResult>
+  res: NextApiResponse<ProbeResult | { error: string }>,
 ) {
-  const { url } = req.query;
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { url, probe } = req.query;
   if (!url || typeof url !== 'string') {
-    res.status(400).json({
-      ok: false,
-      altSvc: null,
-      alpnHints: [],
-      negotiatedProtocol: '',
-      quicVersions: [],
-      zeroRtt: false,
-      fallbackOk: false,
-    });
-    return;
-  }
-
-  let target: URL;
-  try {
-    target = new URL(`https://${url}`);
-  } catch {
-    res.status(400).json({
-      ok: false,
-      altSvc: null,
-      alpnHints: [],
-      negotiatedProtocol: '',
-      quicVersions: [],
-      zeroRtt: false,
-      fallbackOk: false,
-    });
-    return;
+    return res.status(400).json({ error: 'Invalid url' });
   }
 
   try {
-    const { headers, alpn } = await fetchHead(target.toString());
-    const altSvc = (headers['alt-svc'] as string | undefined) ?? null;
+    const response = await fetch(url, { method: 'GET' });
+    const altSvc = response.headers.get('alt-svc');
+    const hostname = new URL(url).hostname;
 
-    const alpnHints: string[] = [];
-    const quicVersions: string[] = [];
-    let zeroRtt = false;
+    let alpn: string | null = null;
+    try {
+      const { stdout } = await execFileAsync(
+        'openssl',
+        ['s_client', '-alpn', 'h3,h2,http/1.1', '-connect', `${hostname}:443`],
+        { timeout: 4000 },
+      );
+      const match = stdout.match(/ALPN protocol: (.*)/);
+      if (match) alpn = match[1].trim();
+    } catch {
+      // ignore openssl errors
+    }
 
-    if (altSvc) {
-      const entries = altSvc.split(',').map((s) => s.trim());
-      for (const entry of entries) {
-        const [protoPart, ...paramParts] = entry.split(';').map((p) => p.trim());
-        const proto = protoPart.split('=')[0];
-        if (proto) {
-          alpnHints.push(proto);
-          const m = proto.match(/^h3-(\d+)/i);
-          if (m) {
-            quicVersions.push(m[1]);
-          }
-        }
-        for (const param of paramParts) {
-          const [k, v = ''] = param.split('=').map((p) => p.trim());
-          if (k.toLowerCase() === 'v') {
-            const versions = v.replace(/"/g, '').split(/\s*,\s*/);
-            quicVersions.push(...versions);
-          }
-          if (k.toLowerCase() === '0rtt') {
-            zeroRtt = true;
-          }
-        }
+    let h3Probe: { ok: boolean; output: string } | undefined;
+    if (probe === '1' || probe === 'true') {
+      try {
+        const { stdout } = await execFileAsync(
+          'curl',
+          ['-I', '--http3', '--max-time', '5', url],
+          { timeout: 7000 },
+        );
+        h3Probe = { ok: true, output: stdout };
+      } catch (e: any) {
+        h3Probe = { ok: false, output: (e.stdout || e.stderr || e.message || '').toString() };
       }
     }
 
-    const uniqueVersions = Array.from(new Set(quicVersions));
-    res.status(200).json({
-      ok: alpnHints.some((p) => p.toLowerCase().startsWith('h3')),
-      altSvc,
-      alpnHints,
-      negotiatedProtocol: alpn,
-      quicVersions: uniqueVersions,
-      zeroRtt,
-      fallbackOk: ['h2', 'http/1.1', 'unknown'].includes(alpn),
-    });
-  } catch {
-    res.status(500).json({
-      ok: false,
-      altSvc: null,
-      alpnHints: [],
-      negotiatedProtocol: '',
-      quicVersions: [],
-      zeroRtt: false,
-      fallbackOk: false,
-    });
+    return res.status(200).json({ altSvc, alpn, h3Probe });
+  } catch (e: any) {
+    return res.status(500).json({ error: e.message || 'Request failed' });
   }
 }
