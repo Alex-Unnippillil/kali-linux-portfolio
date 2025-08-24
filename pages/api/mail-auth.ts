@@ -164,32 +164,6 @@ function parseDkim(records: string[]) {
   return { pass: true, record, bits, spec: DKIM_SPEC };
 }
 
-const SPF_SPEC = 'https://www.rfc-editor.org/rfc/rfc7208';
-
-function parseSpf(records: string[]) {
-  const record = records.find((r) => r.toLowerCase().startsWith('v=spf1'));
-  if (!record) {
-    return {
-      pass: false,
-      message: 'No SPF record found',
-      recommendation: 'Publish a TXT record with v=spf1',
-      example: 'v=spf1 mx -all',
-      spec: SPF_SPEC,
-    };
-  }
-  if (!/[-~?+]all/i.test(record)) {
-    return {
-      pass: false,
-      record,
-      message: 'SPF record missing all mechanism',
-      recommendation: 'End SPF record with -all',
-      example: 'v=spf1 mx -all',
-      spec: SPF_SPEC,
-    };
-  }
-  return { pass: true, record, spec: SPF_SPEC };
-}
-
 const DANE_SPEC = 'https://www.rfc-editor.org/rfc/rfc6698';
 
 function parseDane(records: string[]) {

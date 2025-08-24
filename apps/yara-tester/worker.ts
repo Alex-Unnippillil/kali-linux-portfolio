@@ -99,7 +99,7 @@ const runYara = (
   return { matches: found, compileErrors: errArr };
 };
 
-self.onmessage = (ev: MessageEvent) => {
+self.onmessage = async (ev: MessageEvent) => {
   const data: any = ev.data;
   if (!yara) return;
   if (data.type === 'run') {
