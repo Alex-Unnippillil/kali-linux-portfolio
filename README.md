@@ -123,3 +123,36 @@ The GitHub Actions workflow relies on the following secrets configured in the re
 - `NEXT_PUBLIC_USER_ID`
 
 These secrets provide the values for the corresponding environment variables during the build step.
+
+## Deployment and WebSocket Support
+
+The checkers game exposes a Socket.IO endpoint at `/api/checkers/socket`. To run it in
+production, deploy the project to a platform that supports Node.js serverless
+functions with WebSocket support.
+
+- **Recommended platform:** [Vercel](https://vercel.com/)
+- **Runtime:** `nodejs20.x` (Node.js 20 server runtime, not the Edge runtime)
+- **Region:** use a WebSocket-enabled region such as `iad1`
+
+Include the runtime and region in `vercel.json` if you need to override
+defaults:
+
+```json
+{
+  "functions": {
+    "api/checkers/socket.ts": {
+      "runtime": "nodejs20.x",
+      "region": "iad1"
+    }
+  }
+}
+```
+
+### Troubleshooting
+
+- **Reconnections** – if a client disconnects, Socket.IO will retry
+  automatically. Upon reconnection, the client should emit `join` with the
+  original `gameId` to resubscribe to the match.
+- **Scaling limits** – serverless WebSockets have connection limits per region
+  and may recycle instances under load. For heavy usage, monitor connection
+  counts and consider a dedicated WebSocket host or external state store.
