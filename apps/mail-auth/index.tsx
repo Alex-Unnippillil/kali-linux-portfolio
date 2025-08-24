@@ -8,6 +8,7 @@ type Result = {
   policy?: string;
   aspf?: string;
   adkim?: string;
+  bits?: number;
   message?: string;
   recommendation?: string;
   example?: string;
@@ -15,9 +16,11 @@ type Result = {
 };
 
 type Response = {
-  spf: Result;
   dkim: Result;
   dmarc: Result;
+  mtaSts: Result;
+  tlsRpt: Result;
+  bimi: Result;
   error?: string;
 };
 
@@ -107,6 +110,7 @@ const MailAuth: React.FC = () => {
     doc.save('mail-auth.pdf');
   };
 
+
   const hasResults = Object.keys(results).length > 0;
 
   return (
@@ -194,6 +198,9 @@ const MailAuth: React.FC = () => {
             </button>
           </div>
         </>
+
+          
+          
       )}
     </div>
   );

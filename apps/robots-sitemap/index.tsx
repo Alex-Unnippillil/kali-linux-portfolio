@@ -4,12 +4,15 @@ import ErrorPane from '../../components/ErrorPane';
 interface SitemapEntry {
   loc: string;
   lastmod?: string;
+  depth: number;
+  status?: number;
 }
 
 interface RobotsData {
   disallows: string[];
   sitemapEntries: SitemapEntry[];
   missingRobots?: boolean;
+  robotsUrl: string;
 }
 
 const RobotsSitemap: React.FC = () => {
@@ -49,6 +52,23 @@ const RobotsSitemap: React.FC = () => {
       .sort((a, b) => (a.date < b.date ? -1 : 1));
   }, [data]);
 
+  const depthGroups = useMemo(() => {
+    if (!data) return [] as { depth: number; entries: SitemapEntry[] }[];
+    const groups: Record<number, SitemapEntry[]> = {};
+    data.sitemapEntries.forEach((e) => {
+      groups[e.depth] = groups[e.depth] || [];
+      groups[e.depth].push(e);
+    });
+    return Object.entries(groups)
+      .map(([depth, entries]) => ({ depth: Number(depth), entries }))
+      .sort((a, b) => a.depth - b.depth);
+  }, [data]);
+
+  const coverageGaps = useMemo(() => {
+    if (!data) return [] as SitemapEntry[];
+    return data.sitemapEntries.filter((e) => !e.status || e.status >= 400);
+  }, [data]);
+
   const maxCount = Math.max(0, ...heatmap.map((d) => d.count));
 
   return (
@@ -72,6 +92,16 @@ const RobotsSitemap: React.FC = () => {
       {fault && <ErrorPane code={fault.code} message={fault.message} />}
       {data && !fault && (
         <div className="space-y-4">
+          <div>
+            <a
+              href={data.robotsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 underline"
+            >
+              robots.txt
+            </a>
+          </div>
           {data.missingRobots && (
             <div className="text-yellow-500">robots.txt not found</div>
           )}
@@ -108,6 +138,38 @@ const RobotsSitemap: React.FC = () => {
               <div>No sitemap entries</div>
             )}
           </div>
+          <div>
+            <h2 className="font-bold mb-1">Sitemap Treemap by Depth/Status</h2>
+            {depthGroups.length ? (
+              <div className="space-y-2">
+                {depthGroups.map(({ depth, entries }) => (
+                  <div key={depth}>
+                    <div className="mb-1">Depth {depth}</div>
+                    <div className="flex flex-wrap gap-1">
+                      {entries.map((e, i) => {
+                        const color = e.status && e.status < 400 ? '#4ade80' : '#f87171';
+                        return (
+                          <div
+                            key={i}
+                            title={`${e.loc} (${e.status || 'n/a'})`}
+                            className="w-4 h-4"
+                            style={{ backgroundColor: color }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>No sitemap entries</div>
+            )}
+          </div>
+          {coverageGaps.length > 0 && (
+            <div className="text-red-400">
+              Coverage gaps: {coverageGaps.length} URLs with non-200 status.
+            </div>
+          )}
         </div>
       )}
     </div>
