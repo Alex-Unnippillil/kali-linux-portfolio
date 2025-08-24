@@ -32,7 +32,10 @@ export default class Ghost {
   scatter: { x: number; y: number };
   frightenedTimer: number;
   inHouse: boolean;
-  leaveTimer: number;
+  /** pellets eaten before this ghost is allowed to leave the house */
+  leavePellets: number;
+  /** last non-frightened mode used, for turn-around logic */
+  private lastMode: GhostMode = "scatter";
 
   constructor(cfg: GhostConfig) {
     this.x = cfg.x;
@@ -45,7 +48,13 @@ export default class Ghost {
     this.speed = 2;
     this.frightenedTimer = 0;
     this.inHouse = this.type !== "blinky";
-    this.leaveTimer = this.inHouse ? 180 : 0;
+    const leave: Record<GhostType, number> = {
+      blinky: 0,
+      pinky: 0,
+      inky: 30,
+      clyde: 60,
+    };
+    this.leavePellets = leave[cfg.type];
     const w = cfg.mazeWidth;
     const h = cfg.mazeHeight;
     // scatter targets are the corners of the maze
@@ -107,69 +116,75 @@ export default class Ghost {
     return this.getChaseTarget(player, maze, blinky);
   }
 
-  private pathfind(target: { x: number; y: number }, maze: Maze) {
-    const ts = maze.tileSize;
-    const sx = Math.floor(this.x / ts);
-    const sy = Math.floor(this.y / ts);
-    const visited = new Set<string>([`${sx},${sy}`]);
-    const q: { x: number; y: number; first?: { x: number; y: number } }[] = [
-      { x: sx, y: sy },
-    ];
-    while (q.length) {
-      const cur = q.shift()!;
-      if (cur.x === target.x && cur.y === target.y)
-        return cur.first || { x: 0, y: 0 };
-      for (const d of DIRS) {
-        const nx = cur.x + d.x;
-        const ny = cur.y + d.y;
-        const key = `${nx},${ny}`;
-        if (visited.has(key) || maze.isWallTile(nx, ny)) continue;
-        visited.add(key);
-        q.push({ x: nx, y: ny, first: cur.first || d });
-      }
-    }
-    return { x: 0, y: 0 };
-  }
-
-  update(player: Player, maze: Maze, mode: GhostMode, blinky?: Ghost) {
+  update(
+    player: Player,
+    maze: Maze,
+    mode: GhostMode,
+    blinky?: Ghost,
+    pelletsEaten = 0,
+  ) {
     if (this.inHouse) {
-      if (this.leaveTimer > 0) {
-        this.leaveTimer--;
-        return;
-      }
-      this.inHouse = false;
+      if (pelletsEaten >= this.leavePellets) this.inHouse = false;
+      else return;
     }
     if (this.frightenedTimer > 0) this.frightenedTimer--;
     let curMode: GhostMode = mode;
     if (this.frightenedTimer > 0) curMode = "frightened";
-    let dir = this.dir;
-    if (curMode === "frightened") {
-      const choices = DIRS.filter(
-        (d) =>
-          !maze.isWall(
-            this.x + (d.x * maze.tileSize) / 2,
-            this.y + (d.y * maze.tileSize) / 2,
-          ),
-      );
-      dir = choices[Math.floor(Math.random() * choices.length)] || dir;
-    } else {
-      const target = this.getTargetTile(curMode, player, maze, blinky);
-      dir = target ? this.pathfind(target, maze) : dir;
+
+    if (curMode !== this.lastMode && curMode !== "frightened") {
+      // reverse on mode switch per dossier
+      this.dir = { x: -this.dir.x, y: -this.dir.y };
     }
-    this.dir = dir;
+    this.lastMode = curMode === "frightened" ? this.lastMode : curMode;
+
+    const ts = maze.tileSize;
+    const tileX = Math.floor(this.x / ts);
+    const tileY = Math.floor(this.y / ts);
+    const centerX = tileX * ts + ts / 2;
+    const centerY = tileY * ts + ts / 2;
+    const tolerance = this.speed;
+    if (
+      Math.abs(this.x - centerX) <= tolerance &&
+      Math.abs(this.y - centerY) <= tolerance
+    ) {
+      this.x = centerX;
+      this.y = centerY;
+      let dir = this.dir;
+      const opposite = { x: -this.dir.x, y: -this.dir.y };
+      const choices = DIRS.filter((d) =>
+        d.x === opposite.x && d.y === opposite.y ? false : !maze.isWallTile(
+              tileX + d.x,
+              tileY + d.y,
+            ),
+      );
+      if (curMode === "frightened") {
+        dir = choices[Math.floor(Math.random() * choices.length)] || dir;
+      } else {
+        const target = this.getTargetTile(curMode, player, maze, blinky);
+        if (target) {
+          let best = dir;
+          let bestDist = Infinity;
+          for (const c of choices) {
+            const nx = tileX + c.x;
+            const ny = tileY + c.y;
+            const dist = (nx - target.x) ** 2 + (ny - target.y) ** 2;
+            if (dist < bestDist) {
+              best = c;
+              bestDist = dist;
+            }
+          }
+          dir = best;
+        }
+      }
+      this.dir = dir;
+    }
+
     const tunnel = maze.isTunnel(this.x, this.y);
     const speed = tunnel ? this.speed * 0.5 : this.speed;
-    const nx = this.x + dir.x * speed;
-    const ny = this.y + dir.y * speed;
-    if (!maze.isWall(nx, ny)) {
-      this.x = nx;
-      this.y = ny;
-    }
-    // wrap around tunnels
-    if (this.x < -maze.tileSize / 2)
-      this.x = maze.width * maze.tileSize + maze.tileSize / 2;
-    if (this.x > maze.width * maze.tileSize + maze.tileSize / 2)
-      this.x = -maze.tileSize / 2;
+    this.x += this.dir.x * speed;
+    this.y += this.dir.y * speed;
+    if (this.x < -ts / 2) this.x = maze.width * ts + ts / 2;
+    if (this.x > maze.width * ts + ts / 2) this.x = -ts / 2;
   }
 
   reset() {
@@ -178,7 +193,6 @@ export default class Ghost {
     this.dir = { x: 1, y: 0 };
     this.frightenedTimer = 0;
     this.inHouse = this.type !== "blinky";
-    this.leaveTimer = this.inHouse ? 180 : 0;
   }
 
   draw(ctx: CanvasRenderingContext2D, frightened: boolean) {

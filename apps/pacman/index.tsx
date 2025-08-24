@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import Player from "./Player";
 import Ghost, { GhostMode } from "./Ghost";
 import Maze from "./Maze";
-import Editor from "./editor";
+const Editor = React.lazy(() => import("./editor"));
 import { ModeController } from "./modes";
 
 const Pacman: React.FC = () => {
@@ -11,6 +11,7 @@ const Pacman: React.FC = () => {
   const [player, setPlayer] = useState<Player | null>(null);
   const [ghosts, setGhosts] = useState<Ghost[]>([]);
   const [score, setScore] = useState(0);
+  const scoreRef = useRef(0);
   const [highScore, setHighScore] = useState(0);
   const [showEditor, setShowEditor] = useState(false);
   const animRef = useRef<number>(0);
@@ -19,6 +20,8 @@ const Pacman: React.FC = () => {
   const audioRef = useRef<AudioContext | null>(null);
   const oscRef = useRef<OscillatorNode | null>(null);
   const pelletCount = useRef(0);
+  const fruitTriggers = useRef([70, 170]);
+  const [crt, setCrt] = useState(false);
   const recordRef = useRef<
     { p: { x: number; y: number }; g: { x: number; y: number }[] }[]
   >([]);
@@ -49,21 +52,25 @@ const Pacman: React.FC = () => {
             }),
         ),
       );
+      pelletCount.current = 0;
+      fruitTriggers.current = [70, 170];
     });
   }, []);
 
   useEffect(() => {
     if (!canvasRef.current || !maze || !player || replayData) return;
     const ctx = canvasRef.current.getContext("2d")!;
-    const loop = () => {
-      ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+    const step = 1000 / 60;
+    let last = performance.now();
+    let acc = 0;
+    const update = () => {
       maze.tick();
-      maze.draw(ctx);
       player.update(maze);
       const eaten = maze.eat(player.x, player.y);
       if (eaten === "pellet") {
         pelletCount.current++;
-        if (pelletCount.current === 10 || pelletCount.current === 50) {
+        if (fruitTriggers.current[0] === pelletCount.current) {
+          fruitTriggers.current.shift();
           maze.spawnFruit({
             x: Math.floor(maze.width / 2),
             y: Math.floor(maze.height / 2),
@@ -71,33 +78,49 @@ const Pacman: React.FC = () => {
             timer: 60 * 10,
           });
         }
-        setScore((s) => s + 10);
+        setScore((s) => {
+          const ns = s + 10;
+          scoreRef.current = ns;
+          return ns;
+        });
       } else if (eaten === "power") {
         player.powered = 60 * 6;
-        setScore((s) => s + 50);
+        setScore((s) => {
+          const ns = s + 50;
+          scoreRef.current = ns;
+          return ns;
+        });
         ghosts.forEach((g) => g.frighten(60 * 6));
       } else if (eaten && typeof eaten === "object") {
-        setScore((s) => s + eaten.score);
+        setScore((s) => {
+          const ns = s + eaten.score;
+          scoreRef.current = ns;
+          return ns;
+        });
       }
       const baseMode = modeCtrl.current.tick();
       const frightenedActive = ghosts.some((g) => g.frightenedTimer > 0);
       const currentMode = frightenedActive ? "frightened" : baseMode;
       setMode(currentMode);
       ghosts.forEach((g) => {
-        g.update(player, maze, currentMode, ghosts[0]);
+        g.update(player, maze, currentMode, ghosts[0], pelletCount.current);
         const dx = g.x - player.x;
         const dy = g.y - player.y;
         const dist = Math.hypot(dx, dy);
         if (dist < 10) {
           if (player.powered > 0) {
             g.reset();
-            setScore((s) => s + 200);
+            setScore((s) => {
+              const ns = s + 200;
+              scoreRef.current = ns;
+              return ns;
+            });
           } else {
             cancelAnimationFrame(animRef.current!);
             fetch("/api/pacman/score", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ score }),
+              body: JSON.stringify({ score: scoreRef.current }),
             });
             localStorage.setItem(
               "pacmanReplay",
@@ -106,18 +129,33 @@ const Pacman: React.FC = () => {
             return;
           }
         }
-        g.draw(ctx, g.frightenedTimer > 0);
       });
+    };
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
+      maze.draw(ctx);
+      ghosts.forEach((g) => g.draw(ctx, g.frightenedTimer > 0));
+      player.draw(ctx);
       recordRef.current.push({
         p: { x: player.x, y: player.y },
         g: ghosts.map((g) => ({ x: g.x, y: g.y })),
       });
-      player.draw(ctx);
-      animRef.current = requestAnimationFrame(loop);
     };
-    animRef.current = requestAnimationFrame(loop);
+
+    const frame = (time: number) => {
+      acc += time - last;
+      last = time;
+      while (acc >= step) {
+        update();
+        acc -= step;
+      }
+      draw();
+      animRef.current = requestAnimationFrame(frame);
+    };
+    animRef.current = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(animRef.current!);
-  }, [maze, player, ghosts, score, replayData]);
+  }, [maze, player, ghosts, replayData]);
 
   useEffect(() => {
     if (score > highScore) {
@@ -225,12 +263,18 @@ const Pacman: React.FC = () => {
 
   return (
     <div className="p-4 space-y-2 select-none">
-      <canvas
-        ref={canvasRef}
-        width={maze?.width ? maze.width * maze.tileSize : 0}
-        height={maze?.height ? maze.height * maze.tileSize : 0}
-        className="border"
-      />
+      <div className="relative inline-block">
+        <canvas
+          ref={canvasRef}
+          width={maze?.width ? maze.width * maze.tileSize : 0}
+          height={maze?.height ? maze.height * maze.tileSize : 0}
+          className="border"
+          style={crt ? { filter: "contrast(1.2) brightness(1.1)" } : undefined}
+        />
+        {crt && (
+          <div className="pointer-events-none absolute inset-0 mix-blend-multiply opacity-40 bg-[repeating-linear-gradient(to_bottom,transparent,transparent_2px,rgba(0,0,0,0.3)_2px,rgba(0,0,0,0.3)_4px)]" />
+        )}
+      </div>
       <div className="flex space-x-2 items-center">
         <div>Score: {score}</div>
         <div>High: {highScore}</div>
@@ -254,8 +298,19 @@ const Pacman: React.FC = () => {
         >
           Replay
         </button>
+        <button
+          type="button"
+          onClick={() => setCrt((c) => !c)}
+          className="px-2 py-1 bg-gray-300 rounded"
+        >
+          {crt ? "CRT Off" : "CRT On"}
+        </button>
       </div>
-      {showEditor && <Editor />}
+      {showEditor && (
+        <Suspense fallback={null}>
+          <Editor />
+        </Suspense>
+      )}
     </div>
   );
 };
