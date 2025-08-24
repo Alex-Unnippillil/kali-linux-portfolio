@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import sshpk from 'sshpk';
+import React, { useState, useEffect, useRef } from 'react';
 
 const SshFingerprint: React.FC = () => {
   const [keyInput, setKeyInput] = useState('');
@@ -10,9 +9,34 @@ const SshFingerprint: React.FC = () => {
         sha256: string;
         type: string;
         size: number;
+        curve?: string;
+        x?: string;
+        y?: string;
+        exponent?: string;
+        modulus?: string;
       }
     | null
   >(null);
+  const workerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    workerRef.current = new Worker(
+      new URL('./ssh-fingerprint.worker.ts', import.meta.url),
+      { type: 'module' }
+    );
+    const worker = workerRef.current;
+    worker.onmessage = (e) => {
+      const { success, details, error } = e.data;
+      if (success) {
+        setDetails(details);
+        setError(null);
+      } else {
+        setDetails(null);
+        setError(error);
+      }
+    };
+    return () => worker.terminate();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -22,26 +46,14 @@ const SshFingerprint: React.FC = () => {
       setError(null);
       return;
     }
-    try {
-      const key = sshpk.parseKey(value, 'ssh');
-      setDetails({
-        md5: key.fingerprint('md5').toString(),
-        sha256: key.fingerprint('sha256').toString(),
-        type: key.type,
-        size: key.size,
-      });
-      setError(null);
-    } catch (err: any) {
-      setDetails(null);
-      setError(err.message);
-    }
+    workerRef.current?.postMessage({ key: value });
   };
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
       <textarea
         className="flex-grow text-black p-2"
-        placeholder="Paste SSH public key here..."
+        placeholder="Paste SSH, PEM, or JWK key here..."
         value={keyInput}
         onChange={handleChange}
       />
@@ -52,6 +64,11 @@ const SshFingerprint: React.FC = () => {
           <div>SHA-256: {details.sha256}</div>
           <div>Type: {details.type}</div>
           <div>Size: {details.size} bits</div>
+          {details.curve && <div>Curve: {details.curve}</div>}
+          {details.x && <div>X: {details.x}</div>}
+          {details.y && <div>Y: {details.y}</div>}
+          {details.exponent && <div>Exponent: {details.exponent}</div>}
+          {details.modulus && <div>Modulus: {details.modulus}</div>}
         </div>
       )}
     </div>
