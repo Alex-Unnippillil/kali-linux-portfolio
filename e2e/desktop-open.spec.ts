@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../playwright.config';
 
 test('open, minimize, restore, and focus windows', async ({ page }) => {
   await page.goto('/');
