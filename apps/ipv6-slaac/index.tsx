@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react';
 import CryptoJS from 'crypto-js';
 
 function memoize<T extends (...args: any[]) => any>(fn: T): T {
@@ -101,6 +107,13 @@ const combineMemo = memoize(combine);
 
 type RaFlags = { m: boolean; o: boolean; a: boolean; l: boolean };
 
+const osOptions = {
+  linux: { name: 'Linux', eui64: false, rfc7217: true, privacy: true },
+  windows: { name: 'Windows', eui64: false, rfc7217: true, privacy: true },
+  macos: { name: 'macOS', eui64: true, rfc7217: false, privacy: true },
+};
+type OsKey = keyof typeof osOptions;
+
 const raPresets = [
   {
     name: 'SLAAC',
@@ -159,8 +172,12 @@ function computeRfc7217(prefix: string, mac: string, secret: string): string {
   const prefixBytes = validatePrefix(prefix);
   if (!prefixBytes) return '';
   const macBytes = mac ? parseMacMemo(mac) : new Uint8Array();
-  const secretBytes = secret ? new TextEncoder().encode(secret) : new Uint8Array();
-  const all = new Uint8Array(prefixBytes.length + macBytes.length + secretBytes.length);
+  const secretBytes = secret
+    ? new TextEncoder().encode(secret)
+    : new Uint8Array();
+  const all = new Uint8Array(
+    prefixBytes.length + macBytes.length + secretBytes.length
+  );
   all.set(prefixBytes);
   all.set(macBytes, prefixBytes.length);
   all.set(secretBytes, prefixBytes.length + macBytes.length);
@@ -205,7 +222,10 @@ const AddressRow: React.FC<{
   preferred: number;
   onRefresh?: () => void;
 }> = ({ label, addr, valid, preferred, onRefresh }) => {
-  const copy = useCallback(() => navigator.clipboard.writeText(ipCommand(addr)), [addr]);
+  const copy = useCallback(
+    () => navigator.clipboard.writeText(ipCommand(addr)),
+    [addr]
+  );
   const [dad, setDad] = useState('tentative');
   useEffect(() => {
     if (!addr) return;
@@ -218,7 +238,9 @@ const AddressRow: React.FC<{
       {label}: {addr || '-'}
       {addr && (
         <>
-          <span className="ml-2 text-sm">[{dad}, v={valid}s p={preferred}s]</span>
+          <span className="ml-2 text-sm">
+            [{dad}, v={valid}s p={preferred}s]
+          </span>
           <button className="ml-2 px-2 py-1 bg-blue-600 rounded" onClick={copy}>
             Copy
           </button>
@@ -238,7 +260,12 @@ const AddressRow: React.FC<{
 
 const Ipv6Slaac: React.FC = () => {
   const [preset, setPreset] = useState('');
-  const [flags, setFlags] = useState<RaFlags>({ m: false, o: false, a: true, l: true });
+  const [flags, setFlags] = useState<RaFlags>({
+    m: false,
+    o: false,
+    a: true,
+    l: true,
+  });
   const [validLifetime, setValidLifetime] = useState(3600);
   const [preferredLifetime, setPreferredLifetime] = useState(1800);
   const [prefix, setPrefix] = useState('');
@@ -246,6 +273,14 @@ const Ipv6Slaac: React.FC = () => {
   const [secret, setSecret] = useState('');
   const [iid, setIid] = useState('');
   const [privacySeed, setPrivacySeed] = useState(0);
+  const [os, setOs] = useState<OsKey>('linux');
+  const [ndLog, setNdLog] = useState<string[]>([]);
+  const prevAddrs = useRef({
+    eui64: '',
+    rfc7217: '',
+    provided: '',
+    privacy: '',
+  });
 
   const handlePreset = useCallback((name: string) => {
     setPreset(name);
@@ -258,8 +293,40 @@ const Ipv6Slaac: React.FC = () => {
     }
   }, []);
 
-  const prefixValid = useMemo(() => !prefix || validatePrefix(prefix) !== null, [prefix]);
+  const prefixValid = useMemo(
+    () => !prefix || validatePrefix(prefix) !== null,
+    [prefix]
+  );
   const iidValid = useMemo(() => !iid || validateIID(iid) !== null, [iid]);
+
+  useEffect(() => {
+    if (!prefix) {
+      setNdLog([]);
+      prevAddrs.current = { eui64: '', rfc7217: '', provided: '', privacy: '' };
+      return;
+    }
+    const flagStr = `${flags.m ? 'M' : ''}${flags.o ? 'O' : ''}${
+      flags.a ? 'A' : ''
+    }${flags.l ? 'L' : ''}`;
+    setNdLog([`RA ${prefix} [${flagStr}]`]);
+    prevAddrs.current = { eui64: '', rfc7217: '', provided: '', privacy: '' };
+  }, [prefix, flags, validLifetime, preferredLifetime]);
+
+  useEffect(() => {
+    const logs: string[] = [];
+    const prev = prevAddrs.current;
+    const check = (label: string, addr: string, key: keyof typeof prev) => {
+      if (addr && addr !== prev[key]) {
+        logs.push(`NS ${addr} (${label})`, `NA ${addr} (${label})`);
+        prev[key] = addr;
+      }
+    };
+    check('EUI-64', eui64, 'eui64');
+    check('RFC7217', rfc7217, 'rfc7217');
+    check('IID', provided, 'provided');
+    check('Privacy', privacy, 'privacy');
+    if (logs.length) setNdLog((l) => [...l, ...logs]);
+  }, [eui64, rfc7217, provided, privacy]);
 
   const eui64 = useMemo(() => {
     if (!prefix || !mac || !flags.a) return '';
@@ -312,6 +379,17 @@ const Ipv6Slaac: React.FC = () => {
             </option>
           ))}
         </select>
+        <select
+          className="w-full p-2 text-black rounded"
+          value={os}
+          onChange={(e) => setOs(e.target.value as OsKey)}
+        >
+          {Object.entries(osOptions).map(([k, v]) => (
+            <option key={k} value={k}>
+              {v.name}
+            </option>
+          ))}
+        </select>
         <div className="flex space-x-2 text-sm">
           <label>
             <input
@@ -352,7 +430,9 @@ const Ipv6Slaac: React.FC = () => {
             placeholder="Valid lifetime (s)"
             type="number"
             value={validLifetime}
-            onChange={(e) => setValidLifetime(parseInt(e.target.value, 10) || 0)}
+            onChange={(e) =>
+              setValidLifetime(parseInt(e.target.value, 10) || 0)
+            }
           />
           <input
             className="w-1/2 p-2 text-black rounded"
@@ -396,10 +476,14 @@ const Ipv6Slaac: React.FC = () => {
         )}
       </div>
       <div className="font-mono">
-        Flags: {flags.m ? 'M' : ''}{flags.o ? 'O' : ''}{flags.a ? 'A' : ''}
+        Flags: {flags.m ? 'M' : ''}
+        {flags.o ? 'O' : ''}
+        {flags.a ? 'A' : ''}
         {flags.l ? 'L' : ''} v={validLifetime}s p={preferredLifetime}s
       </div>
-      <div className="font-mono">RA {prefix || '-'} → IID {iid || '-'} → {provided || '-'}</div>
+      <div className="font-mono">
+        RA {prefix || '-'} → IID {iid || '-'} → {provided || '-'}
+      </div>
       <div className="space-y-2 font-mono">
         <AddressRow
           label="Provided IID"
@@ -407,25 +491,39 @@ const Ipv6Slaac: React.FC = () => {
           valid={validLifetime}
           preferred={preferredLifetime}
         />
-        <AddressRow
-          label="EUI-64"
-          addr={eui64}
-          valid={validLifetime}
-          preferred={preferredLifetime}
-        />
-        <AddressRow
-          label="RFC7217"
-          addr={rfc7217}
-          valid={validLifetime}
-          preferred={preferredLifetime}
-        />
-        <AddressRow
-          label="Privacy (Temp)"
-          addr={privacy}
-          valid={validLifetime}
-          preferred={preferredLifetime}
-          onRefresh={() => setPrivacySeed((s) => s + 1)}
-        />
+        {osOptions[os].eui64 && (
+          <AddressRow
+            label="EUI-64"
+            addr={eui64}
+            valid={validLifetime}
+            preferred={preferredLifetime}
+          />
+        )}
+        {osOptions[os].rfc7217 && (
+          <AddressRow
+            label="RFC7217"
+            addr={rfc7217}
+            valid={validLifetime}
+            preferred={preferredLifetime}
+          />
+        )}
+        {osOptions[os].privacy && (
+          <AddressRow
+            label="Privacy (Temp)"
+            addr={privacy}
+            valid={validLifetime}
+            preferred={preferredLifetime}
+            onRefresh={() => setPrivacySeed((s) => s + 1)}
+          />
+        )}
+      </div>
+      <div className="font-mono">
+        <div>Neighbor Discovery:</div>
+        <ul className="list-disc pl-4">
+          {ndLog.map((l, i) => (
+            <li key={i}>{l}</li>
+          ))}
+        </ul>
       </div>
     </div>
   );
@@ -433,4 +531,3 @@ const Ipv6Slaac: React.FC = () => {
 
 export default Ipv6Slaac;
 export const displayIpv6Slaac = () => <Ipv6Slaac />;
-
