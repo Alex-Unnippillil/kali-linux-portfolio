@@ -6,9 +6,17 @@ interface SitemapEntry {
   lastmod?: string;
 }
 
+interface RuleInfo {
+  rule: string;
+  type: 'allow' | 'disallow';
+  overriddenBy?: string;
+}
+
 interface RobotsData {
-  disallows: string[];
+  sitemaps: string[];
   sitemapEntries: SitemapEntry[];
+  unsupported: string[];
+  profiles: Record<string, RuleInfo[]>;
   missingRobots?: boolean;
 }
 
@@ -76,15 +84,66 @@ const RobotsSitemap: React.FC = () => {
             <div className="text-yellow-500">robots.txt not found</div>
           )}
           <div>
-            <h2 className="font-bold mb-1">Disallowed Paths</h2>
-            {data.disallows.length ? (
-              <ul className="list-disc ml-5">
-                {data.disallows.map((d) => (
-                  <li key={d}>{d}</li>
+            <h2 className="font-bold mb-1">Sitemaps</h2>
+            {data.sitemaps.length ? (
+              <ul className="list-disc ml-5 break-all">
+                {data.sitemaps.map((s) => (
+                  <li key={s}>
+                    <a href={s} className="underline" target="_blank" rel="noreferrer">
+                      {s}
+                    </a>
+                  </li>
                 ))}
               </ul>
             ) : (
-              <div>No disallow rules</div>
+              <div>No sitemaps</div>
+            )}
+          </div>
+          <div>
+            <h2 className="font-bold mb-1">Crawler Profiles</h2>
+            {Object.keys(data.profiles).length ? (
+              <div className="space-y-2">
+                {Object.entries(data.profiles).map(([ua, rules]) => (
+                  <div key={ua} className="border border-gray-700 p-2">
+                    <div className="font-semibold mb-1">{ua}</div>
+                    {rules.length ? (
+                      <ul className="list-disc ml-5 break-all">
+                        {rules.map((r, i) => (
+                          <li
+                            key={i}
+                            className={
+                              r.overriddenBy
+                                ? 'text-yellow-400'
+                                : r.type === 'allow'
+                                ? 'text-green-400'
+                                : 'text-red-400'
+                            }
+                          >
+                            {r.type === 'allow' ? 'Allow' : 'Disallow'} {r.rule}
+                            {r.overriddenBy && ` (overridden by ${r.overriddenBy})`}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div>No rules</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div>No profiles</div>
+            )}
+          </div>
+          <div>
+            <h2 className="font-bold mb-1">Unsupported Directives</h2>
+            {data.unsupported.length ? (
+              <ul className="list-disc ml-5 break-all">
+                {data.unsupported.map((d, i) => (
+                  <li key={i}>{d}</li>
+                ))}
+              </ul>
+            ) : (
+              <div>None</div>
             )}
           </div>
           <div>
