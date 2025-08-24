@@ -13,7 +13,7 @@ export type PacketInfo = {
   dst: string;
   src_port: number;
   dst_port: number;
-  data: number[];
+  data: Uint8Array;
 };
 
 type Summary = {
@@ -92,6 +92,11 @@ const PcapViewer: React.FC = () => {
     [packets, filters, timeRange]
   );
 
+  useEffect(() => {
+    setSliceStart(0);
+    setSliceEnd(filteredPackets.length);
+  }, [filteredPackets]);
+
   const times = useMemo(() => filteredPackets.map((p) => p.ts), [filteredPackets]);
   const histData = useMemo(() => {
     if (times.length === 0) return { labels: [], datasets: [] };
@@ -121,9 +126,9 @@ const PcapViewer: React.FC = () => {
 
   const exportSlice = () => {
     const start = Math.max(0, sliceStart);
-    const end = Math.min(packets.length, sliceEnd);
+    const end = Math.min(filteredPackets.length, sliceEnd);
     if (end <= start) return;
-    const slice = packets.slice(start, end);
+    const slice = filteredPackets.slice(start, end);
     const blob = new Blob([JSON.stringify(slice)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -194,7 +199,7 @@ const PcapViewer: React.FC = () => {
           className="text-black mr-1 px-1 w-20"
         />
         <button onClick={exportSlice} className="px-2 py-1 bg-ub-blue text-white">
-          Export Slice
+          Export Filtered
         </button>
       </div>
     </div>
