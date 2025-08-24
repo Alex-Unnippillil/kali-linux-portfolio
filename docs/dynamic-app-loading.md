@@ -19,10 +19,10 @@ export default MyTool;
 1. Create your app under `components/apps/<id>` and export a default component.
 2. Add an entry to `dynamicAppEntries` in `apps.config.js`:
    ```js
-   const dynamicAppEntries = [
-     ['my-tool', 'My Tool'],
-     // ...existing entries
-   ];
+const dynamicAppEntries = [
+  ['terminal', 'Terminal'],
+  ['my-tool', 'My Tool'],
+];
    ```
    The configuration will call `createDynamicApp('my-tool', 'My Tool')` for you.
 3. Run `yarn lint` to ensure there are no direct imports from `components/apps`.
