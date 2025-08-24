@@ -1,3 +1,5 @@
+import type { Graphics, Container } from 'pixi.js';
+
 export default class Ball {
   x = 0;
   y = 0;
@@ -9,10 +11,23 @@ export default class Ball {
   maxSpeed = 600;
   stuck = false;
   spin = 0;
+  sprite?: Graphics;
 
-  constructor(canvasWidth: number, canvasHeight: number) {
+  constructor(
+    canvasWidth: number,
+    canvasHeight: number,
+    container?: Container
+  ) {
     this.canvasWidth = canvasWidth;
     this.canvasHeight = canvasHeight;
+    if (container) {
+      const { Graphics } = require('pixi.js') as typeof import('pixi.js');
+      this.sprite = new Graphics();
+      this.sprite.beginFill(0xffffff);
+      this.sprite.drawCircle(0, 0, this.r);
+      this.sprite.endFill();
+      container.addChild(this.sprite);
+    }
     this.reset();
   }
 
@@ -51,8 +66,13 @@ export default class Ball {
       }
       remaining -= dtStep;
     }
+    if (this.sprite) {
+      this.sprite.x = this.x;
+      this.sprite.y = this.y;
+    }
   }
 
+  // retain canvas draw for legacy callers
   draw(ctx: CanvasRenderingContext2D) {
     ctx.save();
     ctx.shadowBlur = 10;
