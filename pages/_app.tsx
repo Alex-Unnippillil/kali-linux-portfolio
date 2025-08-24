@@ -38,9 +38,10 @@ const sanitize = (params: any) => {
 ReactGA.event = () => {};
 ReactGA.send = () => {};
 
-function MyApp({ Component, pageProps }: AppProps) {
+function MyApp({ Component, pageProps }: AppProps & { pageProps: any }) {
   const [enableAnalytics, setEnableAnalytics] = useState(false);
   const [consent, setConsent] = useState<'granted' | 'denied' | null>(null);
+  const nonce = pageProps?.nonce;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -114,7 +115,8 @@ function MyApp({ Component, pageProps }: AppProps) {
             });
           };
 
-          ReactGA.initialize(trackingId);
+          const options = nonce ? { nonce } : undefined;
+          ReactGA.initialize(trackingId, options);
           setEnableAnalytics(true);
         });
       }
@@ -122,12 +124,14 @@ function MyApp({ Component, pageProps }: AppProps) {
       ReactGA.event = () => {};
       ReactGA.send = () => {};
     }
-  }, [consent]);
+  }, [consent, nonce]);
 
   return (
     <main className={inter.className} suppressHydrationWarning data-app-root>
       <Component {...pageProps} />
-      {analyticsEnabled && enableAnalytics && shouldTrack && <Analytics />}
+      {analyticsEnabled && enableAnalytics && shouldTrack && (
+        <Analytics nonce={nonce} />
+      )}
       {consent === null && (
         <ConsentBanner
           onConsent={(granted) => setConsent(granted ? 'granted' : 'denied')}

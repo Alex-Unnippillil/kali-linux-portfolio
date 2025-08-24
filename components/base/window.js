@@ -2,8 +2,7 @@ import React, { Component } from 'react';
 import NextImage from 'next/image';
 import { DndContext, useDraggable } from '@dnd-kit/core';
 import Settings from '../apps/settings';
-import ReactGA from 'react-ga4';
-import { trackEvent } from '../../lib/analytics';
+import { trackEvent, trackPageview } from '../../lib/analytics';
 
 function DraggableContainer({ id, defaultPosition, bounds, onDrag, onStart, onStop, children, position: controlledPosition, onPositionChange }) {
     const [internalPosition, setInternalPosition] = React.useState(defaultPosition);
@@ -82,7 +81,7 @@ export class Window extends Component {
         this.setDefaultWindowDimenstion();
 
         // google analytics
-        ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
+        trackPageview(`/${this.id}`, "Custom Title");
         trackEvent('window_open', { id: this.id, title: this.props.title });
 
         // on window resize, resize boundary
@@ -90,7 +89,7 @@ export class Window extends Component {
     }
 
     componentWillUnmount() {
-        ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        trackPageview('/desktop', 'Custom Title');
         window.removeEventListener('resize', this.resizeBoundries);
     }
 
