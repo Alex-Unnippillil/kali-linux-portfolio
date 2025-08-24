@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -72,38 +72,38 @@ const CtSearch: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(
-          `/api/ct-search?query=${encodeURIComponent(query)}&type=${searchType}&excludeExpired=${excludeExpired}&unique=${uniqueOnly}`
-        );
-        if (res.status === 429) {
-          setError('Rate limit exceeded');
-          setResults([]);
-          setIssuerStats([]);
-          setTimeSeries([]);
-          setSuspicious([]);
-        } else {
-          const data: ApiResponse | { error: string } = await res.json();
-          if (!res.ok || 'error' in data) {
-            setError((data as any).error || 'Request failed');
+          const res = await fetch(
+            `/api/ct-search?query=${encodeURIComponent(query)}&type=${searchType}&excludeExpired=${excludeExpired}&unique=${uniqueOnly}`
+          );
+          if (res.status === 429) {
+            setError('Rate limit exceeded');
             setResults([]);
             setIssuerStats([]);
             setTimeSeries([]);
             setSuspicious([]);
           } else {
-            setResults(data.results);
-            setIssuerStats(data.issuerStats);
-            setTimeSeries(data.timeSeries);
-            setSuspicious(data.suspicious);
-            cacheRef.current.set(key, data);
+            const data: ApiResponse | { error: string } = await res.json();
+            if (!res.ok || 'error' in data) {
+              setError('error' in data ? data.error : 'Request failed');
+              setResults([]);
+              setIssuerStats([]);
+              setTimeSeries([]);
+              setSuspicious([]);
+            } else {
+              setResults(data.results);
+              setIssuerStats(data.issuerStats);
+              setTimeSeries(data.timeSeries);
+              setSuspicious(data.suspicious);
+              cacheRef.current.set(key, data);
+            }
           }
-        }
-      } catch (e: any) {
-        setError(e.message || 'Request failed');
-        setResults([]);
-        setIssuerStats([]);
-        setTimeSeries([]);
-        setSuspicious([]);
-      } finally {
+        } catch (e: unknown) {
+          setError(e instanceof Error ? e.message : 'Request failed');
+          setResults([]);
+          setIssuerStats([]);
+          setTimeSeries([]);
+          setSuspicious([]);
+        } finally {
         setLoading(false);
       }
     }, 500);
