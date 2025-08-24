@@ -434,13 +434,18 @@ export class Desktop extends Component {
         this.hideSideBar(null, false);
 
         // close window
-        let closed_windows = this.state.closed_windows;
-        let favourite_apps = this.state.favourite_apps;
+        this.setState((state) => {
+            const favourite_updates =
+                this.initFavourite[objId] === false ? { [objId]: false } : {};
 
-        if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
-        closed_windows[objId] = true; // closes the app's window
-
-        this.setState({ closed_windows, favourite_apps });
+            return {
+                closed_windows: { ...state.closed_windows, [objId]: true },
+                favourite_apps: {
+                    ...state.favourite_apps,
+                    ...favourite_updates,
+                },
+            };
+        });
     }
 
     focus = (objId) => {
