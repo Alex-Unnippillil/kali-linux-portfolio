@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { LRUCache } from 'lru-cache';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
 
@@ -9,7 +10,23 @@ type CacheEntry = {
 };
 
 const TXT_CACHE: Record<string, CacheEntry> = {};
+const TLSA_CACHE: Record<string, CacheEntry> = {};
 const TXT_TTL = 5 * 60 * 1000; // 5 minutes
+
+const RESULT_CACHE = new LRUCache<string, any>({ ttl: TXT_TTL, max: 100 });
+const RATE_LIMIT = new LRUCache<string, { count: number }>({ ttl: 60_000, max: 500 });
+
+function checkRateLimit(req: NextApiRequest): boolean {
+  const ip =
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+    req.socket.remoteAddress ||
+    'unknown';
+  const entry = RATE_LIMIT.get(ip) || { count: 0 };
+  if (entry.count >= 30) return false;
+  entry.count += 1;
+  RATE_LIMIT.set(ip, entry);
+  return true;
+}
 
 async function lookupTxt(name: string): Promise<string[]> {
   const now = Date.now();
@@ -41,6 +58,35 @@ async function lookupTxt(name: string): Promise<string[]> {
     });
 
   TXT_CACHE[name] = { data: [], expires: 0, promise };
+  return promise;
+}
+
+async function lookupTlsa(name: string): Promise<string[]> {
+  const now = Date.now();
+  const cached = TLSA_CACHE[name];
+  if (cached) {
+    if (cached.data.length && cached.expires > now) return cached.data;
+    if (cached.promise) return cached.promise;
+  }
+
+  const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=TLSA`;
+  const promise = fetch(url, { headers: { Accept: 'application/dns-json' } })
+    .then((res) => {
+      if (!res.ok) throw new Error('DNS query failed');
+      return res.json();
+    })
+    .then((data) => {
+      const answers = data.Answer || [];
+      const records = answers.map((a: any) => String(a.data));
+      TLSA_CACHE[name] = { data: records, expires: now + TXT_TTL };
+      return records;
+    })
+    .catch((err) => {
+      delete TLSA_CACHE[name];
+      throw err;
+    });
+
+  TLSA_CACHE[name] = { data: [], expires: 0, promise };
   return promise;
 }
 
@@ -90,6 +136,47 @@ function parseDkim(records: string[]) {
     };
   }
   return { pass: true, record, bits, spec: DKIM_SPEC };
+}
+
+const SPF_SPEC = 'https://www.rfc-editor.org/rfc/rfc7208';
+
+function parseSpf(records: string[]) {
+  const record = records.find((r) => r.toLowerCase().startsWith('v=spf1'));
+  if (!record) {
+    return {
+      pass: false,
+      message: 'No SPF record found',
+      recommendation: 'Publish a TXT record with v=spf1',
+      example: 'v=spf1 mx -all',
+      spec: SPF_SPEC,
+    };
+  }
+  if (!/[-~?+]all/i.test(record)) {
+    return {
+      pass: false,
+      record,
+      message: 'SPF record missing all mechanism',
+      recommendation: 'End SPF record with -all',
+      example: 'v=spf1 mx -all',
+      spec: SPF_SPEC,
+    };
+  }
+  return { pass: true, record, spec: SPF_SPEC };
+}
+
+const DANE_SPEC = 'https://www.rfc-editor.org/rfc/rfc6698';
+
+function parseDane(records: string[]) {
+  if (!records.length) {
+    return {
+      pass: false,
+      message: 'No TLSA record found',
+      recommendation: 'Publish TLSA record at _25._tcp',
+      example: '3 1 1 base64hash',
+      spec: DANE_SPEC,
+    };
+  }
+  return { pass: true, record: records.join(' | '), spec: DANE_SPEC };
 }
 
 const DMARC_SPEC = 'https://datatracker.ietf.org/doc/html/rfc7489';
@@ -223,30 +310,72 @@ function parseBimi(records: string[]) {
       spec: BIMI_SPEC,
     };
   }
-  return { pass: true, record, spec: BIMI_SPEC };
+  const logo = record.match(/l=([^;]+)/i)?.[1];
+  return { pass: true, record, logo, spec: BIMI_SPEC };
 }
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (!checkRateLimit(req)) {
+    res.status(429).json({ error: 'Too Many Requests' });
+    return;
+  }
   const { domain, selector } = req.query;
   if (typeof domain !== 'string') {
     res.status(400).json({ error: 'domain parameter required' });
     return;
   }
+  const cacheKey = `${domain}|${selector || ''}`;
+  const cached = RESULT_CACHE.get(cacheKey);
+  if (cached) {
+    res.status(200).json(cached);
+    return;
+  }
   try {
-    const dmarcRecords = await lookupTxt(`_dmarc.${domain}`);
-    const mtaStsRecords = await lookupTxt(`_mta-sts.${domain}`);
-    const tlsRptRecords = await lookupTxt(`_smtp._tls.${domain}`);
-    const bimiRecords = await lookupTxt(`default._bimi.${domain}`);
+    const [spfRecords, dmarcRecords, mtaStsRecords, tlsRptRecords, bimiRecords, daneRecords] =
+      await Promise.all([
+        lookupTxt(domain),
+        lookupTxt(`_dmarc.${domain}`),
+        lookupTxt(`_mta-sts.${domain}`),
+        lookupTxt(`_smtp._tls.${domain}`),
+        lookupTxt(`default._bimi.${domain}`),
+        lookupTlsa(`_25._tcp.${domain}`),
+      ]);
     let dkimRecords: string[] = [];
     if (typeof selector === 'string' && selector) {
       dkimRecords = await lookupTxt(`${selector}._domainkey.${domain}`);
     } else {
       dkimRecords = await lookupTxt(`default._domainkey.${domain}`).catch(() => []);
     }
-    res.status(200).json({
+
+    const mtaStsResult = parseMtaSts(mtaStsRecords);
+    if (mtaStsResult.pass) {
+      const ok = await fetch(`https://mta-sts.${domain}/.well-known/mta-sts.txt`)
+        .then((r) => r.ok)
+        .catch(() => false);
+      if (!ok) {
+        mtaStsResult.pass = false;
+        mtaStsResult.message = 'MTA-STS policy file not accessible';
+        mtaStsResult.recommendation = `Serve policy at https://mta-sts.${domain}/.well-known/mta-sts.txt`;
+      }
+    }
+
+    const bimiResult = parseBimi(bimiRecords);
+    if (bimiResult.pass && bimiResult.logo) {
+      const ok = await fetch(bimiResult.logo)
+        .then((r) => r.ok)
+        .catch(() => false);
+      if (!ok) {
+        bimiResult.pass = false;
+        bimiResult.message = 'BIMI logo URL not reachable';
+        bimiResult.recommendation = 'Ensure logo URL is accessible via HTTPS';
+      }
+    }
+
+    const result = {
+      spf: parseSpf(spfRecords),
       dkim:
         dkimRecords.length > 0
           ? parseDkim(dkimRecords)
@@ -258,10 +387,13 @@ export default async function handler(
               spec: DKIM_SPEC,
             },
       dmarc: parseDmarc(dmarcRecords),
-      mtaSts: parseMtaSts(mtaStsRecords),
+      mtaSts: mtaStsResult,
       tlsRpt: parseTlsRpt(tlsRptRecords),
-      bimi: parseBimi(bimiRecords),
-    });
+      dane: parseDane(daneRecords),
+      bimi: bimiResult,
+    };
+    RESULT_CACHE.set(cacheKey, result);
+    res.status(200).json(result);
   } catch (e: any) {
     res.status(500).json({ error: e.message || 'Lookup failed' });
   }
