@@ -3,23 +3,61 @@ import QRCode from 'qrcode';
 import QrScanner from 'qr-scanner';
 
 const QRTool = () => {
+  const MAX_TEXT_LENGTH = 1000;
+
   const [text, setText] = useState('');
   const [decodedText, setDecodedText] = useState('');
+  const [errorCorrection, setErrorCorrection] = useState('M');
+  const [size, setSize] = useState(256);
+  const [svgData, setSvgData] = useState('');
+  const [error, setError] = useState('');
   const canvasRef = useRef(null);
   const videoRef = useRef(null);
   const scannerRef = useRef(null);
+  const debounceRef = useRef(null);
 
-  const generate = () => {
-    if (!text) return;
-    QRCode.toCanvas(canvasRef.current, text, { width: 256 }, (err) => {
-      if (err) console.error(err);
-    });
+  const clearCanvas = () => {
+    const ctx = canvasRef.current?.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    }
+    setSvgData('');
   };
 
-  const download = () => {
+  const generate = async () => {
+    if (!text) {
+      clearCanvas();
+      return;
+    }
+    try {
+      await QRCode.toCanvas(canvasRef.current, text, {
+        width: size,
+        errorCorrectionLevel: errorCorrection,
+      });
+      const svg = await QRCode.toString(text, {
+        type: 'svg',
+        width: size,
+        errorCorrectionLevel: errorCorrection,
+      });
+      setSvgData(svg);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const downloadPng = () => {
     const link = document.createElement('a');
     link.download = 'qr.png';
     link.href = canvasRef.current.toDataURL('image/png');
+    link.click();
+  };
+
+  const downloadSvg = () => {
+    if (!svgData) return;
+    const blob = new Blob([svgData], { type: 'image/svg+xml' });
+    const link = document.createElement('a');
+    link.download = 'qr.svg';
+    link.href = URL.createObjectURL(blob);
     link.click();
   };
 
@@ -27,10 +65,28 @@ const QRTool = () => {
     const file = e.target.files[0];
     if (!file) return;
     try {
-      const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true });
+      // Attempt to decode using a canvas for better compatibility
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      await img.decode();
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = img.width;
+      offCanvas.height = img.height;
+      const ctx = offCanvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const result = await QrScanner.scanImage(offCanvas, {
+        returnDetailedScanResult: true,
+      });
       setDecodedText(result.data);
     } catch (err) {
-      setDecodedText('No QR code found');
+      try {
+        const result = await QrScanner.scanImage(file, {
+          returnDetailedScanResult: true,
+        });
+        setDecodedText(result.data);
+      } catch {
+        setDecodedText('No QR code found');
+      }
     }
   };
 
@@ -57,6 +113,20 @@ const QRTool = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (text.length > MAX_TEXT_LENGTH) {
+      setError(`Text exceeds ${MAX_TEXT_LENGTH} characters`);
+      clearCanvas();
+      return;
+    }
+    setError('');
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      generate();
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [text, errorCorrection, size]);
+
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
       <div className="mb-6">
@@ -68,12 +138,35 @@ const QRTool = () => {
           className="w-full p-2 mb-2 rounded text-black"
           placeholder="Enter text"
         />
+        <select
+          value={errorCorrection}
+          onChange={(e) => setErrorCorrection(e.target.value)}
+          className="w-full p-2 mb-2 rounded text-black"
+        >
+          <option value="L">L - 7% redundancy</option>
+          <option value="M">M - 15% redundancy</option>
+          <option value="Q">Q - 25% redundancy</option>
+          <option value="H">H - 30% redundancy</option>
+        </select>
+        <div className="mb-2">
+          <label className="block mb-1">Size: {size}px</label>
+          <input
+            type="range"
+            min="64"
+            max="1024"
+            step="32"
+            value={size}
+            onChange={(e) => setSize(parseInt(e.target.value, 10))}
+            className="w-full"
+          />
+        </div>
+        {error && <p className="text-red-400 mb-2">{error}</p>}
         <div className="flex space-x-2 mb-2">
-          <button onClick={generate} className="px-4 py-2 bg-blue-600 rounded">
-            Generate
+          <button onClick={downloadPng} className="px-4 py-2 bg-green-600 rounded">
+            Download PNG
           </button>
-          <button onClick={download} className="px-4 py-2 bg-green-600 rounded">
-            Download
+          <button onClick={downloadSvg} className="px-4 py-2 bg-green-600 rounded">
+            Download SVG
           </button>
         </div>
         <canvas ref={canvasRef} className="bg-white" />

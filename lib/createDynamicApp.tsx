@@ -1,6 +1,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import ReactGA from 'react-ga4';
+import ErrorPane from '../components/ErrorPane';
 
 const createDynamicApp = (path: string, name: string) =>
   dynamic(
@@ -18,11 +19,7 @@ const createDynamicApp = (path: string, name: string) =>
           });
           ReactGA.event('exception', { description: error.message });
           return function DynamicAppError() {
-            return (
-              <div className="h-full w-full flex items-center justify-center bg-panel text-white">
-                {`Failed to load ${name}.`}
-              </div>
-            );
+            return <ErrorPane code="load_error" message={`Failed to load ${name}.`} />;
           };
         }),
       {

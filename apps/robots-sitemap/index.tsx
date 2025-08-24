@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import ErrorPane from '../../components/ErrorPane';
 
 interface SitemapEntry {
   loc: string;
@@ -14,18 +15,24 @@ interface RobotsData {
 const RobotsSitemap: React.FC = () => {
   const [url, setUrl] = useState('');
   const [data, setData] = useState<RobotsData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [fault, setFault] = useState<{ code: string; message: string } | null>(
+    null
+  );
 
   const load = async () => {
-    setError(null);
+    setFault(null);
     setData(null);
     if (!url) return;
     try {
       const res = await fetch(`/api/robots?url=${encodeURIComponent(url)}`);
       const json = await res.json();
-      setData(json);
+      if (json?.ok === false) {
+        setFault({ code: json.code, message: json.message });
+      } else {
+        setData(json);
+      }
     } catch (e) {
-      setError('Failed to fetch');
+      setFault({ code: 'network_error', message: 'Failed to fetch' });
     }
   };
 
@@ -62,8 +69,8 @@ const RobotsSitemap: React.FC = () => {
           Load
         </button>
       </div>
-      {error && <div className="text-red-500">{error}</div>}
-      {data && (
+      {fault && <ErrorPane code={fault.code} message={fault.message} />}
+      {data && !fault && (
         <div className="space-y-4">
           {data.missingRobots && (
             <div className="text-yellow-500">robots.txt not found</div>
