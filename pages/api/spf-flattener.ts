@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 
 const MAX_DEPTH = 10;
 
@@ -91,6 +93,13 @@ function buildFlattenedSpfRecord(ips: string[]): string {
   return `v=spf1 ${ips.join(' ')} -all`;
 }
 
+export const config = {
+  api: { bodyParser: { sizeLimit: '1kb' } },
+};
+
+const querySchema = z.object({ domain: z.string().min(1) });
+const bodySchema = z.object({});
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -99,10 +108,14 @@ export default async function handler(
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
   }
-  const { domain } = req.query;
-  if (typeof domain !== 'string' || !domain) {
-    return res.status(400).json({ error: 'domain parameter required' });
-  }
+  const parsed = validateRequest(req, res, {
+    querySchema,
+    bodySchema,
+    queryLimit: 1024,
+    bodyLimit: 1024,
+  });
+  if (!parsed) return;
+  const { domain } = parsed.query as { domain: string };
   try {
     const result = await resolveSpf(domain.toLowerCase());
     const flattenedSpfRecord = buildFlattenedSpfRecord(result.allIps);

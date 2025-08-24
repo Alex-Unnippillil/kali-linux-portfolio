@@ -9862,6 +9862,7 @@ __metadata:
     typescript: "npm:^5.9.2"
     url-parse: "npm:^1.5.10"
     ws: "npm:^8.18.3"
+    zod: "npm:^4.1.0"
     zxcvbn: "npm:^4.4.2"
   languageName: unknown
   linkType: soft
@@ -10422,6 +10423,13 @@ __metadata:
   version: 0.1.0
   resolution: "yocto-queue@npm:0.1.0"
   checksum: 10c0/dceb44c28578b31641e13695d200d34ec4ab3966a5729814d5445b194933c096b7ced71494ce53a0e8820685d1d010df8b2422e5bf2cdea7e469d97ffbea306f
+  languageName: node
+  linkType: hard
+
+"zod@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "zod@npm:4.1.0"
+  checksum: 10c0/b39bce830cf9864e33b00da2e3fee008e1abb96fff169936ba779648276b6a031d35ed5438d7659ac5d5e09b932d40dce6c255344184794d56f8bd22e501561b
   languageName: node
   linkType: hard
 
