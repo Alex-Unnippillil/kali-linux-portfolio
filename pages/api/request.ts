@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import {
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
   UserInputError,
   UpstreamError,
   withErrorHandler,

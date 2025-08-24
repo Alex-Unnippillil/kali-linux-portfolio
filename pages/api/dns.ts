@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { validateRequest } from '../../lib/validate';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 const ALLOWED_TYPES = ['A', 'AAAA', 'CNAME', 'TXT', 'NS'];
 

@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { diffLines } from 'diff';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 interface FetchResult {
   finalUrl: string;

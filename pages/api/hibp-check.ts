@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createHash } from 'crypto';
 import { rateLimit } from '../../lib/rateLimiter';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 export default async function handler(
   req: NextApiRequest,

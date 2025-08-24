@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { logEvent } from '../../lib/axiom';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 interface HeaderReport {
   header: string;

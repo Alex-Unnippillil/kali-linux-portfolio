@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { XMLParser } from 'fast-xml-parser';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 interface UrlEntry {
   loc: string;
