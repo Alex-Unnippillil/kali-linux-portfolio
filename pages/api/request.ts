@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { LRUCache } from 'lru-cache';
 import { UserInputError, UpstreamError, withErrorHandler, fail } from '../../lib/errors';
+import type { RequestResponse } from '@/types/request';
 import { setupUrlGuard } from '../../lib/urlGuard';
 
 setupUrlGuard();
@@ -92,7 +93,7 @@ async function cachedFetch(
 
 export default withErrorHandler(async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<RequestResponse>
 ) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
@@ -127,11 +128,18 @@ export default withErrorHandler(async function handler(
     });
     const duration = Date.now() - start;
     return res.status(200).json({ duration, ...data });
-  } catch (error: any) {
+  } catch (error: unknown) {
     const duration = Date.now() - start;
+    const message =
+      typeof error === 'object' && error && 'message' in error
+        ? String((error as { message?: unknown }).message)
+        : 'Request failed';
     return res.status(500).json({
-      error: error?.message || 'Request failed',
+      error: message,
       duration,
+      status: 0,
+      headers: {},
+      body: '',
     });
   }
 });
