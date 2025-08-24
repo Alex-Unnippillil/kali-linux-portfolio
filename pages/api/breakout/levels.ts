@@ -1,23 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
 import { validateRequest } from '../../../lib/validate';
+import { readDir, readJson, writeJson } from '../../../lib/store';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const dir = path.join(process.cwd(), 'apps', 'breakout', 'levels');
-  fs.mkdirSync(dir, { recursive: true });
 
   if (req.method === 'GET') {
     try {
-      const files = fs
-        .readdirSync(dir)
-        .filter((f) => f.endsWith('.json'));
-      const levels = files.map((f) => {
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
-        const data = fs.readFileSync(path.join(dir, f), 'utf8');
-        return JSON.parse(data);
-      });
+      const files = (await readDir(dir)).filter((f) => f.endsWith('.json'));
+      const levels = await Promise.all(
+        files.map((f) => readJson(path.join(dir, f), [])),
+      );
       res.status(200).json(levels);
     } catch (e) {
       res.status(500).json({ error: 'Failed to load' });
@@ -31,9 +26,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!parsed) return;
     try {
       const file = path.join(dir, `level-${Date.now()}.json`);
-      // eslint-disable-next-line security/detect-non-literal-fs-filename
-      fs.writeFileSync(file, JSON.stringify(req.body));
-
+      await writeJson(file, req.body);
       res.status(200).json({ saved: true });
     } catch (e) {
       res.status(500).json({ error: 'Failed to save' });

@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import madge from 'madge';
-import fs from 'fs/promises';
 import path from 'path';
 import { setupUrlGuard } from '../../lib/urlGuard';
+import { stat } from '../../lib/store';
 
 setupUrlGuard();
 
@@ -27,8 +27,8 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
       Object.keys(graph).map(async (file) => {
         try {
           // eslint-disable-next-line security/detect-non-literal-fs-filename
-          const stat = await fs.stat(path.join(root, file));
-          sizes[file] = stat.size;
+          const s = await stat(path.join(root, file));
+          sizes[file] = s?.size ?? 0;
         } catch {
           sizes[file] = 0;
         }
