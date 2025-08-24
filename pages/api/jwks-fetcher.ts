@@ -10,7 +10,7 @@ import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
 
 import { z } from 'zod';
-import { validateRequest } from '../../lib/validate';
+import { validateRequest } from '../../lib/validate-server';
 
 interface CacheEntry {
   jwk: any;

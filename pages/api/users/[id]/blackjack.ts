@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
-import { validateRequest } from '../../../../lib/validate';
+import { validateRequest } from '../../../../lib/validate-server';
 import { getStats, setStats, type Stats } from '../../../../lib/user-store';
 
 if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'test') {

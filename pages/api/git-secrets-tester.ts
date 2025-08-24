@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import JSZip from 'jszip';
 import { spawn, spawnSync } from 'child_process';
 import { z } from 'zod';
-import { validateRequest } from '../../lib/validate';
+import { validateRequest } from '../../lib/validate-server';
 import { defaultPatterns, redactSecret } from '../../components/apps/git-secrets-tester';
 import { setupUrlGuard } from '../../lib/urlGuard';
 
