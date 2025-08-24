@@ -785,7 +785,7 @@ const apps = [
   {
     id: 'mixed-content',
     title: 'Mixed Content',
-    icon: './themes/Yaru/apps/hash.svg',
+    icon: './themes/Yaru/apps/mixed-content.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
