@@ -17,7 +17,7 @@ import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
 import { displayKeyConverter } from './components/apps/key-converter';
 import { displayQrTool } from './components/apps/qr_tool';
-import { displayTotp } from './components/apps/totp';
+import { displayOtp } from './components/apps/otp';
 import { displayRegexRedactor } from './components/apps/regex-redactor';
 import { displayRegexLab } from './components/apps/regex-lab';
 import { displayAsciiArt } from './components/apps/ascii_art';
@@ -450,13 +450,13 @@ const apps = [
     screen: displayQrTool,
   },
   {
-    id: 'totp',
-    title: 'TOTP',
-    icon: icon('calc.png'),
+    id: 'otp',
+    title: 'OTP',
+    icon: icon('otp.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayTotp,
+    screen: displayOtp,
   },
   {
     id: 'regex-redactor',
