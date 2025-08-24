@@ -21,6 +21,7 @@ function scanFile(name: string, content: string): ApiResult[] {
   lines.forEach((line, idx) => {
     defaultPatterns.forEach((p) => {
       try {
+        // eslint-disable-next-line security/detect-non-literal-regexp
         const re = new RegExp(p.regex, 'g');
         let m: RegExpExecArray | null;
         while ((m = re.exec(line)) !== null) {

@@ -39,6 +39,7 @@ const scanLine = (
 
   patterns.forEach((pat) => {
     try {
+      // eslint-disable-next-line security/detect-non-literal-regexp
       const re = new RegExp(pat.regex, 'g');
       let m: RegExpExecArray | null;
       while ((m = re.exec(lineContent)) !== null) {

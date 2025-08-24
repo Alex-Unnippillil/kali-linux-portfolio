@@ -23,6 +23,7 @@ export default async function handler(_req: NextApiRequest, res: NextApiResponse
     await Promise.all(
       Object.keys(graph).map(async (file) => {
         try {
+          // eslint-disable-next-line security/detect-non-literal-fs-filename
           const stat = await fs.stat(path.join(root, file));
           sizes[file] = stat.size;
         } catch {

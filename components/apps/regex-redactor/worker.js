@@ -25,6 +25,7 @@ self.onmessage = async (e) => {
           warning =
             'Pattern may cause catastrophic backtracking. Consider using the RE2 engine or simplifying the expression.';
         }
+        // eslint-disable-next-line security/detect-non-literal-regexp
         regex = new RegExp(pattern, 'g');
       }
 
