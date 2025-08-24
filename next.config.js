@@ -17,13 +17,26 @@ const ContentSecurityPolicy = [
   "frame-src 'self' https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
+  // Disallow plugins and limit base/submit targets
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  // Enable Reporting API endpoint for violations
+  "report-to csp-endpoint",
 ].join('; ');
 
 // Omit the CSP in development to prevent dev tooling from breaking.
 const securityHeaders = [
   ...(process.env.NODE_ENV === 'development'
     ? []
-    : [{ key: 'Content-Security-Policy', value: ContentSecurityPolicy }]),
+    : [
+        { key: 'Content-Security-Policy', value: ContentSecurityPolicy },
+        {
+          key: 'Report-To',
+          value:
+            '{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/api/csp-reporter"}]}'
+        }
+      ]),
   {
     key: 'X-Content-Type-Options',
     value: 'nosniff',

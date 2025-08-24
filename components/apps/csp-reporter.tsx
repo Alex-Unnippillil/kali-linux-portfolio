@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { sendTelemetry } from '@lib/game';
 
 interface Report {
   [key: string]: any;
@@ -49,6 +50,13 @@ const CspReporter: React.FC = () => {
     const handler = (e: MessageEvent) => {
       if (e.data && e.data.type === 'csp-violation') {
         setTimeline((t) => [...t, e.data]);
+        sendTelemetry({
+          name: 'csp-violation',
+          data: {
+            directive: e.data.directive,
+            blocked: e.data.blockedURI,
+          },
+        });
       }
     };
     window.addEventListener('message', handler);
