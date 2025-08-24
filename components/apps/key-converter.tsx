@@ -3,6 +3,7 @@ import {
   importJWK,
   importPKCS8,
   importSPKI,
+  importX509,
   exportJWK,
   exportPKCS8,
   exportSPKI,
@@ -38,6 +39,13 @@ function b64UrlToUint8Array(s: string): Uint8Array {
   return bytes;
 }
 
+function b64ToUint8Array(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
 async function tryImportJwk(jwk: any): Promise<CryptoKey> {
   if (jwk.alg) {
     return (await importJWK(jwk, jwk.alg)) as CryptoKey;
@@ -52,13 +60,16 @@ async function tryImportJwk(jwk: any): Promise<CryptoKey> {
   throw new Error('Unsupported JWK');
 }
 
-async function tryImportPem(pem: string): Promise<CryptoKey> {
+async function tryImportPem(pem: string): Promise<{ key: CryptoKey; cert?: string }> {
   for (const alg of algorithms) {
     try {
-      return (await importPKCS8(pem, alg)) as CryptoKey;
+      return { key: (await importPKCS8(pem, alg)) as CryptoKey };
     } catch {}
     try {
-      return (await importSPKI(pem, alg)) as CryptoKey;
+      return { key: (await importSPKI(pem, alg)) as CryptoKey };
+    } catch {}
+    try {
+      return { key: (await importX509(pem, alg)) as CryptoKey, cert: pem };
     } catch {}
   }
   throw new Error('Unsupported PEM/DER key');
@@ -72,6 +83,9 @@ const KeyConverter: React.FC = () => {
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
   const [thumbprint, setThumbprint] = useState('');
+  const [x5c, setX5c] = useState('');
+  const [x5t, setX5t] = useState('');
+  const [x5tS256, setX5tS256] = useState('');
   const [warning, setWarning] = useState('');
 
   const convert = async () => {
@@ -79,26 +93,60 @@ const KeyConverter: React.FC = () => {
       setError('');
       setWarning('');
       setThumbprint('');
+      setX5c('');
+      setX5t('');
+      setX5tS256('');
       let cryptoKey: CryptoKey;
+      let cert: string | undefined;
       if (inputFormat === 'jwk') {
-        cryptoKey = await tryImportJwk(JSON.parse(key));
+        const jwkInput = JSON.parse(key);
+        cryptoKey = await tryImportJwk(jwkInput);
+        if (Array.isArray(jwkInput.x5c) && jwkInput.x5c.length > 0) {
+          cert = `-----BEGIN CERTIFICATE-----\n${jwkInput.x5c[0]}\n-----END CERTIFICATE-----`;
+        }
       } else if (inputFormat === 'pem') {
-        cryptoKey = await tryImportPem(key);
-
+        ({ key: cryptoKey, cert } = await tryImportPem(key));
       } else {
         const b64 = key.replace(/\s+/g, '');
         const body = b64.match(/.{1,64}/g)?.join('\n') || '';
         const pkcs8Pem = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----`;
         const spkiPem = `-----BEGIN PUBLIC KEY-----\n${body}\n-----END PUBLIC KEY-----`;
+        const certPem = `-----BEGIN CERTIFICATE-----\n${body}\n-----END CERTIFICATE-----`;
         try {
-          cryptoKey = await tryImportPem(pkcs8Pem);
+          ({ key: cryptoKey, cert } = await tryImportPem(pkcs8Pem));
         } catch {
-          cryptoKey = await tryImportPem(spkiPem);
+          try {
+            ({ key: cryptoKey, cert } = await tryImportPem(spkiPem));
+          } catch {
+            ({ key: cryptoKey, cert } = await tryImportPem(certPem));
+          }
         }
       }
 
       const jwk = await exportJWK(cryptoKey);
       setThumbprint(await calculateJwkThumbprint(jwk));
+
+      if (cert) {
+        const certB64 = cert
+          .replace(/-----(BEGIN|END)[^\n]+-----/g, '')
+          .replace(/\s+/g, '');
+        setX5c(certB64);
+        const der = b64ToUint8Array(certB64);
+        const sha1 = await crypto.subtle.digest('SHA-1', der);
+        const sha256 = await crypto.subtle.digest('SHA-256', der);
+        const toB64Url = (buf: ArrayBuffer) =>
+          btoa(String.fromCharCode(...new Uint8Array(buf)))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
+        const x5tSha1 = toB64Url(sha1);
+        const x5tSha256 = toB64Url(sha256);
+        setX5t(x5tSha1);
+        setX5tS256(x5tSha256);
+        jwk.x5c = [certB64];
+        jwk.x5t = x5tSha1;
+        jwk['x5t#S256'] = x5tSha256;
+      }
 
       let warn = '';
       if (jwk.kty === 'RSA' && jwk.n) {
@@ -116,23 +164,32 @@ const KeyConverter: React.FC = () => {
       setWarning(warn);
 
       if (outputFormat === 'jwk') {
-
         setResult(JSON.stringify(jwk, null, 2));
       } else if (outputFormat === 'pem') {
-        if ('d' in jwk) {
+        if (cert) {
+          setResult(cert);
+        } else if ('d' in jwk) {
           setResult(await exportPKCS8(cryptoKey));
         } else {
           setResult(await exportSPKI(cryptoKey));
         }
       } else {
-        let pem: string;
-        if ('d' in jwk) {
-          pem = await exportPKCS8(cryptoKey);
+        if (cert) {
+          setResult(
+            cert.replace(/-----(BEGIN|END)[^\n]+-----/g, '').replace(/\s+/g, '')
+          );
         } else {
-          pem = await exportSPKI(cryptoKey);
+          let pem: string;
+          if ('d' in jwk) {
+            pem = await exportPKCS8(cryptoKey);
+          } else {
+            pem = await exportSPKI(cryptoKey);
+          }
+          const b64 = pem
+            .replace(/-----(BEGIN|END)[^\n]+-----/g, '')
+            .replace(/\s+/g, '');
+          setResult(b64);
         }
-        const b64 = pem.replace(/-----(BEGIN|END)[^\n]+-----/g, '').replace(/\s+/g, '');
-        setResult(b64);
       }
     } catch (e: unknown) {
       let errorMsg = 'Unknown error';
@@ -142,6 +199,9 @@ const KeyConverter: React.FC = () => {
       setError(errorMsg);
       setResult('');
       setThumbprint('');
+      setX5c('');
+      setX5t('');
+      setX5tS256('');
       setWarning('');
     }
   };
@@ -200,6 +260,21 @@ const KeyConverter: React.FC = () => {
       {thumbprint && (
         <div>
           <strong>Thumbprint:</strong> {thumbprint}
+        </div>
+      )}
+      {x5c && (
+        <div>
+          <strong>x5c:</strong> {x5c}
+        </div>
+      )}
+      {x5t && (
+        <div>
+          <strong>x5t:</strong> {x5t}
+        </div>
+      )}
+      {x5tS256 && (
+        <div>
+          <strong>x5t#S256:</strong> {x5tS256}
         </div>
       )}
       {warning && <div className="text-yellow-400">{warning}</div>}

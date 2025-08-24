@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Key Converter',
-  description: 'Convert RSA/EC/OKP keys between PEM, DER, and JWK formats',
+  description:
+    'Convert RSA/EC/OKP keys between PEM, DER, and JWK formats, compute thumbprints and x5c/x5t, and warn on weak algorithms',
 };
 
 export { default, displayKeyConverter } from '../../components/apps/key-converter';
