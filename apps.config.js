@@ -380,7 +380,7 @@ const apps = [
   {
     id: 'ip-dns-leak',
     title: 'IP/DNS Leak',
-    icon: icon('resource-monitor.svg'),
+    icon: icon('ip-dns-leak.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
