@@ -9,6 +9,7 @@ export default function SpotifyApp() {
       className="h-full w-full bg-panel"
       allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
     />
+
   );
 }
 

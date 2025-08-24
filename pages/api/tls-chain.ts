@@ -60,34 +60,80 @@ function collectChain(cert: PeerCertificate): PeerCertificate[] {
 
 function getTLSInfo(host: string, port: number): Promise<any> {
   return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const timeline: { event: string; at: number; message?: string }[] = [
+      { event: 'start', at: 0 },
+    ];
+
     const socket = tls.connect(
-      { host, port, servername: host, rejectUnauthorized: false, requestOCSP: true } as any,
-      () => {
-        try {
-          const peer = socket.getPeerCertificate(true);
-          const chain = collectChain(peer).map(formatCert);
-          const ocspStapled = Boolean(
-            (socket as any).ocspResponse || (socket as any).getOCSPResponse?.()
-          );
-          const cipher = socket.getCipher();
-          const protocol = socket.getProtocol?.();
-          socket.end();
-          resolve({
-            host,
-            port,
-            ocspStapled,
-            cipher,
-            protocol,
-            chain,
-            explanations,
-            sslLabsUrl: `https://www.ssllabs.com/ssltest/analyze.html?d=${encodeURIComponent(host)}`,
-          });
-        } catch (err) {
-          reject(err);
-        }
-      }
+      {
+        host,
+        port,
+        servername: host,
+        rejectUnauthorized: false,
+        requestOCSP: true,
+      } as any
     );
-    socket.on('error', reject);
+
+    socket.once('lookup', () =>
+      timeline.push({ event: 'lookup', at: Date.now() - start })
+    );
+    socket.once('connect', () =>
+      timeline.push({ event: 'connect', at: Date.now() - start })
+    );
+    socket.once('secureConnect', () => {
+      timeline.push({ event: 'secureConnect', at: Date.now() - start });
+      try {
+        const peer = socket.getPeerCertificate(true);
+        const chain = collectChain(peer).map(formatCert);
+        const ocspStapled = Boolean(
+          (socket as any).ocspResponse || (socket as any).getOCSPResponse?.()
+        );
+        const cipher = socket.getCipher();
+        const protocol = socket.getProtocol?.();
+        const keyInfo = (socket as any).getEphemeralKeyInfo?.();
+        const authorizationError = (socket as any).authorizationError || null;
+        socket.end();
+        resolve({
+          host,
+          port,
+          ocspStapled,
+          cipher,
+          protocol,
+          key: keyInfo,
+          authorizationError,
+          chain,
+          explanations,
+          sslLabsUrl: `https://www.ssllabs.com/ssltest/analyze.html?d=${encodeURIComponent(host)}`,
+          testSites: [
+            {
+              name: 'Hardenize',
+              url: `https://www.hardenize.com/report/${encodeURIComponent(host)}`,
+            },
+            {
+              name: 'SSL Labs',
+              url: `https://www.ssllabs.com/ssltest/analyze.html?d=${encodeURIComponent(host)}`,
+            },
+            {
+              name: 'SSL Shopper',
+              url: `https://www.sslshopper.com/ssl-checker.html#hostname=${encodeURIComponent(host)}`,
+            },
+          ],
+          timeline,
+        });
+      } catch (err) {
+        reject({ err, timeline });
+      }
+    });
+
+    socket.on('OCSPResponse', () =>
+      timeline.push({ event: 'ocspResponse', at: Date.now() - start })
+    );
+
+    socket.on('error', (error) => {
+      timeline.push({ event: 'error', at: Date.now() - start, message: error.message });
+      reject({ err: error, timeline });
+    });
   });
 }
 
@@ -116,7 +162,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     cache.set(key, info);
     res.status(200).json(info);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    res
+      .status(500)
+      .json({ error: e.err?.message || e.message || 'TLS lookup failed', timeline: e.timeline });
   }
 }
 

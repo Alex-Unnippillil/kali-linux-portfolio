@@ -47,15 +47,33 @@ const HashToolkit: React.FC = () => {
   const [text, setText] = useState('');
   const [hashes, setHashes] = useState<Hashes>(emptyHashes);
   const [error, setError] = useState('');
+  const [progress, setProgress] = useState(0);
+  const [working, setWorking] = useState(false);
   const workerRef = useRef<Worker>();
 
   useEffect(() => {
     if (typeof Worker !== 'undefined') {
       workerRef.current = new Worker(new URL('./hashWorker.ts', import.meta.url));
       workerRef.current.onmessage = (e) => {
-        const data = e.data as Partial<Hashes> & { error?: string };
-        if (data.error) setError(data.error);
-        else setHashes({ ...emptyHashes, ...data } as Hashes);
+        const data = e.data as
+          | { type: 'progress'; progress: number }
+          | { type: 'result'; hashes: Partial<Hashes> }
+          | { type: 'error'; error: string }
+          | { type: 'cancelled' };
+        if (data.type === 'progress') {
+          setProgress(data.progress);
+        } else if (data.type === 'result') {
+          setHashes({ ...emptyHashes, ...data.hashes } as Hashes);
+          setWorking(false);
+          setProgress(0);
+        } else if (data.type === 'error') {
+          setError(data.error);
+          setWorking(false);
+          setProgress(0);
+        } else if (data.type === 'cancelled') {
+          setWorking(false);
+          setProgress(0);
+        }
       };
     }
     return () => workerRef.current?.terminate();
@@ -124,7 +142,10 @@ const HashToolkit: React.FC = () => {
     if (!file) return;
     setError('');
     if (workerRef.current) {
-      workerRef.current.postMessage(file);
+      setHashes(emptyHashes);
+      setWorking(true);
+      setProgress(0);
+      workerRef.current.postMessage({ type: 'hash', file });
     } else {
       try {
         let buffer: ArrayBuffer;
@@ -143,6 +164,10 @@ const HashToolkit: React.FC = () => {
         setError('File read error');
       }
     }
+  };
+
+  const cancel = () => {
+    workerRef.current?.postMessage({ type: 'cancel' });
   };
 
   const copy = (value: string) => {
@@ -281,6 +306,22 @@ const HashToolkit: React.FC = () => {
           onChange={handleFile}
           className="mb-2"
         />
+        {working && (
+          <div className="flex items-center space-x-2 mb-2">
+            <div className="flex-1 h-2 bg-gray-700">
+              <div
+                className="h-full bg-blue-600"
+                style={{ width: `${Math.round(progress * 100)}%` }}
+              />
+            </div>
+            <button
+              onClick={cancel}
+              className="px-2 py-1 bg-red-600 rounded"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
         {error && (
           <div role="alert" className="text-red-500">
             {error}

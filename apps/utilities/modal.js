@@ -8,6 +8,7 @@ function openModal(url, title) {
   lastFocused = document.activeElement;
   modal.classList.remove('hidden');
   modalTitle.textContent = title;
+  modalIframe.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms');
   modalIframe.src = url;
   closeBtn.focus();
   document.addEventListener('keydown', handleKeydown);

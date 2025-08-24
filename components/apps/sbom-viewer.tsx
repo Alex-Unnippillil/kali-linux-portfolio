@@ -1,13 +1,14 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import Fuse from 'fuse.js';
 import Papa from 'papaparse';
 import { FixedSizeList as List } from 'react-window';
-import {
-  ParsedSbom,
-  fetchOsv,
-  parseSbomObject,
-  readFileChunks,
-} from '@lib/sbom';
+import { ParsedSbom } from '@lib/sbom';
 
 interface TreeProps {
   id: string;
@@ -33,13 +34,39 @@ const SbomViewer: React.FC = () => {
   const [sbom, setSbom] = useState<ParsedSbom | null>(null);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState('');
+  const workerRef = useRef<Worker | null>(null);
 
-  const handleFile = useCallback(async (file: File) => {
-    const text = await readFileChunks(file);
-    const data = JSON.parse(text);
-    const parsed = parseSbomObject(data);
-    await Promise.all(parsed.components.map(fetchOsv));
-    setSbom(parsed);
+  useEffect(() => {
+    const w = new Worker(new URL('./sbom-viewer.worker.ts', import.meta.url));
+    w.onmessage = (e: MessageEvent<any>) => {
+      const { type } = e.data;
+      if (type === 'progress') {
+        setProgress(e.data.progress);
+      } else if (type === 'done') {
+        setSbom(e.data.sbom);
+        setProgress(0);
+      } else if (type === 'error') {
+        setError(e.data.error || 'Parse error');
+        setProgress(0);
+      } else if (type === 'cancelled') {
+        setProgress(0);
+      }
+    };
+    workerRef.current = w;
+    return () => w.terminate();
+  }, []);
+
+  const handleFile = useCallback((file: File) => {
+    setSbom(null);
+    setError('');
+    setProgress(0);
+    workerRef.current?.postMessage({ type: 'parse', file });
+  }, []);
+
+  const cancel = useCallback(() => {
+    workerRef.current?.postMessage({ type: 'cancel' });
   }, []);
 
   const onDrop = useCallback(
@@ -135,14 +162,34 @@ const SbomViewer: React.FC = () => {
         onDrop={onDrop}
         onDragOver={(e) => e.preventDefault()}
       >
-        <label className="text-center">
-          Drop SBOM JSON here or{' '}
-          <input
-            data-testid="file-input"
-            type="file"
-            onChange={(e) => e.target.files && handleFile(e.target.files[0])}
-          />
-        </label>
+        {progress > 0 ? (
+          <div className="text-center">
+            Parsing... {Math.round(progress * 100)}%
+            <button
+              onClick={cancel}
+              className="ml-2 text-blue-300 underline"
+            >
+              Cancel
+            </button>
+            {error && (
+              <div className="text-red-500 mt-2">{error}</div>
+            )}
+          </div>
+        ) : (
+          <label className="text-center">
+            Drop SBOM JSON here or{' '}
+            <input
+              data-testid="file-input"
+              type="file"
+              onChange={(e) =>
+                e.target.files && handleFile(e.target.files[0])
+              }
+            />
+            {error && (
+              <div className="text-red-500 mt-2">{error}</div>
+            )}
+          </label>
+        )}
       </div>
     );
   }
