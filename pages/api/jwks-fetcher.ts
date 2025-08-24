@@ -19,6 +19,7 @@ interface CacheEntry {
 }
 
 const cache = new Map<string, CacheEntry>();
+const cacheKey = (jwksUrl: string, kid: string) => `${jwksUrl}|${kid}`;
 const DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes fallback
 const SUPPORTED_ALGS = [
   'RS256',
@@ -36,6 +37,13 @@ const SUPPORTED_ALGS = [
 function validateKey(k: any) {
   if (!k || typeof k !== 'object') return false;
   if (typeof k.kty !== 'string') return false;
+  if (k.use && k.use !== 'sig') return false;
+  if (
+    k.key_ops &&
+    (!Array.isArray(k.key_ops) || !k.key_ops.includes('verify'))
+  )
+    return false;
+  if (k.alg && !SUPPORTED_ALGS.includes(k.alg)) return false;
   switch (k.kty) {
     case 'RSA':
       return typeof k.n === 'string' && typeof k.e === 'string';
@@ -73,9 +81,10 @@ async function fetchAndCacheKeys(jwksUrl: string) {
     if (k.kid) {
       if (seenKids.has(k.kid)) collisions.add(k.kid);
       seenKids.add(k.kid);
-      const existing = cache.get(k.kid);
+      const keyId = cacheKey(jwksUrl, k.kid);
+      const existing = cache.get(keyId);
       if (existing && existing.thumbprint !== thumbprint) rotations.add(k.kid);
-      cache.set(k.kid, { jwk: k, expiry, thumbprint });
+      cache.set(keyId, { jwk: k, expiry, thumbprint });
     }
   }
   return {
@@ -86,7 +95,11 @@ async function fetchAndCacheKeys(jwksUrl: string) {
 }
 
 function augmentKey(k: any) {
-  const result: any = { ...k };
+  const result: any = {
+    ...k,
+    useValid: !k.use || k.use === 'sig',
+    algValid: !k.alg || SUPPORTED_ALGS.includes(k.alg),
+  };
   const certB64 = k.x5c?.[0];
   if (certB64) {
     const der = Buffer.from(certB64, 'base64');
@@ -105,7 +118,7 @@ function augmentKey(k: any) {
 }
 
 async function getKey(jwksUrl: string, kid: string) {
-  const entry = cache.get(kid);
+  const entry = cache.get(cacheKey(jwksUrl, kid));
   if (entry && entry.expiry > Date.now()) return entry.jwk;
   const { keys } = await fetchAndCacheKeys(jwksUrl);
   return keys.find((k: any) => k.kid === kid);
