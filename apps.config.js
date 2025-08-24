@@ -169,6 +169,7 @@ const dynamicAppEntries = [
   ['candy-crush', 'Candy Crush'],
   ['match3', 'Match 3'],
   ['ct-search', 'CT Search'],
+  ['crtsh-lookup', 'crt.sh Lookup'],
   ['mail-auth', 'Mail Auth'],
   ['mail-security-matrix', 'Mail Security Matrix'],
   ['dnssec-validator', 'DNSSEC Validator'],
@@ -556,6 +557,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: getScreen('ct-search'),
+  },
+  {
+    id: 'crtsh-lookup',
+    title: 'crt.sh Lookup',
+    icon: icon('crtsh.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: getScreen('crtsh-lookup'),
   },
   {
     id: 'evidence-notebook',
