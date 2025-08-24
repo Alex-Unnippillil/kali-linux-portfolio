@@ -9,9 +9,11 @@ import { Inter } from 'next/font/google';
 import 'tailwindcss/tailwind.css';
 import '../styles/index.css';
 import ConsentBanner from '../components/ConsentBanner';
+import { validateEnv } from '../lib/validate';
 
 const inter = Inter({ subsets: ['latin'] });
 
+validateEnv(process.env);
 initAxiom();
 
 const analyticsEnabled = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true';
