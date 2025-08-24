@@ -13,11 +13,13 @@ const buildDeck = () => {
   return deck;
 };
 
-const shuffleArray = (array) => {
+// Fisher–Yates shuffle used throughout tests and the app
+export const fisherYates = (array) => {
   for (let i = array.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
+  return array;
 };
 
 export class Shoe {
@@ -33,7 +35,7 @@ export class Shoe {
     for (let i = 0; i < this.decks; i += 1) {
       this.cards.push(...buildDeck());
     }
-    shuffleArray(this.cards);
+    fisherYates(this.cards);
     this.shufflePoint = Math.floor(this.cards.length * this.penetration);
     this.dealt = 0;
     this.shuffleCount += 1;
