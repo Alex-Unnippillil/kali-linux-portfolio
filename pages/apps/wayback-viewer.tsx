@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic';
 
 const WaybackViewer = dynamic(
-  () => import('../../components/apps/wayback-viewer'),
+  () => import('../../apps/wayback-viewer'),
   { ssr: false },
 );
 

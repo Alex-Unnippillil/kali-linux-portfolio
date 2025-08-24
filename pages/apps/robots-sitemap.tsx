@@ -1,7 +1,10 @@
-import React from 'react';
-import RobotsSitemap from '../../apps/robots-sitemap';
+import dynamic from 'next/dynamic';
 
-const RobotsSitemapPage: React.FC = () => <RobotsSitemap />;
+const RobotsSitemap = dynamic(() => import('../../apps/robots-sitemap'), {
+  ssr: false,
+});
 
-export default RobotsSitemapPage;
+export default function RobotsSitemapPage() {
+  return <RobotsSitemap />;
+}
 

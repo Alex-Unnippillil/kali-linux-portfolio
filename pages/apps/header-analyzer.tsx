@@ -1,6 +1,9 @@
-import React from 'react';
-import HeaderAnalyzer from '../../apps/header-analyzer';
+import dynamic from 'next/dynamic';
 
-const HeaderAnalyzerPage: React.FC = () => <HeaderAnalyzer />;
+const HeaderAnalyzer = dynamic(() => import('../../apps/header-analyzer'), {
+  ssr: false,
+});
 
-export default HeaderAnalyzerPage;
+export default function HeaderAnalyzerPage() {
+  return <HeaderAnalyzer />;
+}

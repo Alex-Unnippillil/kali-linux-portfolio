@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const CachePolicy = dynamic(() => import('../../components/apps/cache-policy'), {
+const CachePolicy = dynamic(() => import('../../apps/cache-policy'), {
   ssr: false,
 });
 
