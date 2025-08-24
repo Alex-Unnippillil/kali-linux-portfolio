@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const DgaDemoApp = dynamic(() => import('../../components/apps/dga-demo'), {
+const DgaDemoApp = dynamic(() => import('../../apps/dga-demo'), {
   ssr: false,
 });
 

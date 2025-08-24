@@ -1,9 +1,10 @@
-import React from 'react';
-import WellKnown from '../../apps/well-known';
+import dynamic from 'next/dynamic';
 
-const WellKnownPage: React.FC = () => {
+const WellKnown = dynamic(() => import('../../apps/well-known'), {
+  ssr: false,
+});
+
+export default function WellKnownPage() {
   return <WellKnown />;
-};
-
-export default WellKnownPage;
+}
 

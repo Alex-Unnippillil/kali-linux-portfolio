@@ -1,9 +1,10 @@
-import React from 'react';
-import TLSViewer from '../../apps/tls-viewer';
+import dynamic from 'next/dynamic';
 
-const TLSViewerPage: React.FC = () => {
+const TLSViewer = dynamic(() => import('../../apps/tls-viewer'), {
+  ssr: false,
+});
+
+export default function TLSViewerPage() {
   return <TLSViewer />;
-};
-
-export default TLSViewerPage;
+}
 

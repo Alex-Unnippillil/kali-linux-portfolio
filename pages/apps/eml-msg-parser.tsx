@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic';
 
 const EmlMsgParser = dynamic(
-  () => import('../../components/apps/eml-msg-parser'),
+  () => import('../../apps/eml-msg-parser'),
   { ssr: false }
 );
 

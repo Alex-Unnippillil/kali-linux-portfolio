@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const CtSearch = dynamic(() => import('../../components/apps/ct-search'), {
+const CtSearch = dynamic(() => import('../../apps/ct-search'), {
   ssr: false,
 });
 
