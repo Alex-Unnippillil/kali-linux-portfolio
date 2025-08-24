@@ -11,7 +11,7 @@ import { kv } from '../../lib/kv';
 setupUrlGuard();
 
 export const config = {
-  runtime: 'edge',
+  runtime: 'nodejs',
 };
 
 interface ExploitInfo {
