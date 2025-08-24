@@ -1,13 +1,43 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+function usePersistentState(key: string, initial: string) {
+  const [value, setValue] = useState(() => {
+    if (typeof window === 'undefined') return initial;
+    return localStorage.getItem(key) ?? initial;
+  });
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(key, value);
+    }
+  }, [key, value]);
+  return [value, setValue] as const;
+}
+
 const JwsJweWorkbench: React.FC = () => {
   const workerRef = useRef<Worker>();
   const callbacks = useRef(new Map<string, { resolve: (v: any) => void; reject: (e: any) => void }>());
 
   const [keys, setKeys] = useState<null | { rsa: any; ec: any }>(null);
   const [format, setFormat] = useState<'pem' | 'jwks'>('pem');
-  const [jwsAlg, setJwsAlg] = useState('RS256');
-  const [jweAlg, setJweAlg] = useState('RSA-OAEP');
+  const [jwsAlg, setJwsAlg] = usePersistentState('jwsAlg', 'RS256');
+  const [jweAlg, setJweAlg] = usePersistentState('jweAlg', 'RSA-OAEP');
+  const [jwsHeader, setJwsHeader] = usePersistentState(
+    'jwsHeader',
+    '{"alg":"RS256","kid":"demo"}',
+  );
+  const [jwsPayload, setJwsPayload] = usePersistentState(
+    'jwsPayload',
+    '{"msg":"hello"}',
+  );
+  const [jweHeader, setJweHeader] = usePersistentState(
+    'jweHeader',
+    '{"alg":"RSA-OAEP","enc":"A256GCM","kid":"demo"}',
+  );
+  const [jwePayload, setJwePayload] = usePersistentState(
+    'jwePayload',
+    '{"msg":"secret"}',
+  );
+  const [aad, setAad] = usePersistentState('jweAad', '');
 
   const [jws, setJws] = useState('');
   const [verifyResult, setVerifyResult] = useState('');
@@ -143,6 +173,15 @@ const { plaintext } = await compactDecrypt(jwe, privateKey);
 const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
 
   const copy = (text: string) => navigator.clipboard.writeText(text);
+  const download = (filename: string, text: string) => {
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const b64UrlDecode = (str: string) => {
     const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
@@ -174,11 +213,14 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
   const sign = async () => {
     setSignErr('');
     try {
+      const header = JSON.parse(jwsHeader);
+      const payload = JSON.parse(jwsPayload);
       const token = await callWorker('sign', {
-        payload: { msg: 'hello' },
+        payload,
+        header,
         key: privateKeyData,
-        alg: jwsAlg,
-        kid: 'demo',
+        alg: header.alg || jwsAlg,
+        kid: header.kid || 'demo',
         detached,
         multi: multiSig,
       });
@@ -194,12 +236,14 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
     setVerifyErr('');
     parseJws(jws);
     try {
+      const payload = JSON.parse(jwsPayload);
+      const header = JSON.parse(jwsHeader);
       const res = await callWorker('verify', {
         token: jws,
         key: publicKeyData,
-        alg: jwsAlg,
+        alg: header.alg || jwsAlg,
         detached,
-        payload: { msg: 'hello' },
+        payload,
       });
       setVerifyResult(JSON.stringify(res, null, 2));
     } catch (e) {
@@ -240,12 +284,16 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
   const encrypt = async () => {
     setEncryptErr('');
     try {
+      const header = JSON.parse(jweHeader);
+      const payload = JSON.parse(jwePayload);
       const token = await callWorker('encrypt', {
-        payload: { msg: 'hello' },
+        payload,
+        header,
         key: publicKeyData,
-        alg: jweAlg,
-        enc: 'A256GCM',
-        kid: 'demo',
+        alg: header.alg || jweAlg,
+        enc: header.enc || 'A256GCM',
+        kid: header.kid || 'demo',
+        aad,
       });
       setJwe(token);
     } catch (e) {
@@ -256,10 +304,12 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
   const decrypt = async () => {
     setDecryptErr('');
     try {
+      const header = JSON.parse(jweHeader);
       const res = await callWorker('decrypt', {
         token: jwe,
         key: privateKeyData,
-        alg: jweAlg,
+        alg: header.alg || jweAlg,
+        aad,
       });
       setDecryptResult(JSON.stringify(res, null, 2));
     } catch (e) {
@@ -269,6 +319,10 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto space-y-6">
+      <div className="bg-yellow-900 text-yellow-200 p-2 rounded">
+        Tokens generated here are for educational purposes only. Do not reuse
+        keys or tokens in production environments.
+      </div>
       <div className="flex flex-wrap gap-4">
         <label className="flex items-center">
           Key Format:
@@ -283,19 +337,25 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
         </label>
         <label className="flex items-center">
           JWS alg:
-          <input
+          <select
             className="ml-2 p-1 text-black rounded w-32"
             value={jwsAlg}
             onChange={(e) => setJwsAlg(e.target.value)}
-          />
+          >
+            <option value="RS256">RS256</option>
+            <option value="ES256">ES256</option>
+          </select>
         </label>
         <label className="flex items-center">
           JWE alg:
-          <input
+          <select
             className="ml-2 p-1 text-black rounded w-32"
             value={jweAlg}
             onChange={(e) => setJweAlg(e.target.value)}
-          />
+          >
+            <option value="RSA-OAEP">RSA-OAEP</option>
+            <option value="ECDH-ES">ECDH-ES</option>
+          </select>
         </label>
       </div>
 
@@ -354,6 +414,20 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
 
       <div>
         <h2 className="text-xl font-bold mb-2">Step 1: Sign JWS</h2>
+        <div className="grid gap-2 mb-2">
+          <textarea
+            value={jwsHeader}
+            onChange={(e) => setJwsHeader(e.target.value)}
+            className="w-full h-24 p-2 text-black rounded"
+            placeholder="JWS Header"
+          />
+          <textarea
+            value={jwsPayload}
+            onChange={(e) => setJwsPayload(e.target.value)}
+            className="w-full h-24 p-2 text-black rounded"
+            placeholder="Claims"
+          />
+        </div>
         <pre className="bg-black p-2 rounded whitespace-pre-wrap break-all">{signSnippet}</pre>
         <div className="mt-2 flex flex-wrap gap-2 items-center">
           <button onClick={() => copy(signSnippet)} className="px-3 py-1 bg-blue-600 rounded">Copy</button>
@@ -381,6 +455,14 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
         {jws && (
           <>
             <pre className="bg-black p-2 rounded mt-2 break-all whitespace-pre-wrap">{jws}</pre>
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => copy(jws)} className="px-3 py-1 bg-blue-600 rounded">
+                Copy JWS
+              </button>
+              <button onClick={() => download('token.jws', jws)} className="px-3 py-1 bg-blue-600 rounded">
+                Download
+              </button>
+            </div>
             {jwsParts && (
               <div className="bg-black p-2 rounded mt-2 space-y-2">
                 <div>
@@ -418,13 +500,45 @@ const payload = JSON.parse(new TextDecoder().decode(plaintext));`;
 
       <div>
         <h2 className="text-xl font-bold mb-2">Step 3: Encrypt JWE</h2>
+        <div className="grid gap-2 mb-2">
+          <textarea
+            value={jweHeader}
+            onChange={(e) => setJweHeader(e.target.value)}
+            className="w-full h-24 p-2 text-black rounded"
+            placeholder="JWE Header"
+          />
+          <textarea
+            value={jwePayload}
+            onChange={(e) => setJwePayload(e.target.value)}
+            className="w-full h-24 p-2 text-black rounded"
+            placeholder="Payload"
+          />
+          <input
+            value={aad}
+            onChange={(e) => setAad(e.target.value)}
+            className="p-1 text-black rounded"
+            placeholder="AAD (optional)"
+          />
+        </div>
         <pre className="bg-black p-2 rounded whitespace-pre-wrap break-all">{encryptSnippet}</pre>
         <div className="mt-2 flex gap-2">
           <button onClick={() => copy(encryptSnippet)} className="px-3 py-1 bg-blue-600 rounded">Copy</button>
           <button onClick={encrypt} className="px-3 py-1 bg-green-600 rounded">Encrypt</button>
         </div>
         {encryptErr && <div className="text-red-400 mt-2">{encryptErr}</div>}
-        {jwe && <pre className="bg-black p-2 rounded mt-2 break-all whitespace-pre-wrap">{jwe}</pre>}
+        {jwe && (
+          <>
+            <pre className="bg-black p-2 rounded mt-2 break-all whitespace-pre-wrap">{jwe}</pre>
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => copy(jwe)} className="px-3 py-1 bg-blue-600 rounded">
+                Copy JWE
+              </button>
+              <button onClick={() => download('token.jwe', jwe)} className="px-3 py-1 bg-blue-600 rounded">
+                Download
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       <div>
