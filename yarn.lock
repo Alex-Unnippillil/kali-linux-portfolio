@@ -2092,6 +2092,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/howler@npm:^2":
+  version: 2.2.12
+  resolution: "@types/howler@npm:2.2.12"
+  checksum: 10c0/fb30e8c137ec03aa6a1e739be11b9d5b973f5f19d9f8a92eb11cff466170c9b5a314d73b8b34bb9a435e309ae880ba4847dee1029ec37d08c3f64b2219add462
+  languageName: node
+  linkType: hard
+
 "@types/istanbul-lib-coverage@npm:*, @types/istanbul-lib-coverage@npm:^2.0.1, @types/istanbul-lib-coverage@npm:^2.0.6":
   version: 2.0.6
   resolution: "@types/istanbul-lib-coverage@npm:2.0.6"
@@ -5853,6 +5860,13 @@ __metadata:
   dependencies:
     "@types/hast": "npm:^3.0.0"
   checksum: 10c0/b898bc9fe27884b272580d15260b6bbdabe239973a147e97fa98c45fa0ffec967a481aaa42291ec34fb56530dc2d484d473d7e2bae79f39c83f3762307edfea8
+  languageName: node
+  linkType: hard
+
+"howler@npm:^2.2.4":
+  version: 2.2.4
+  resolution: "howler@npm:2.2.4"
+  checksum: 10c0/74a295f56fd9b2abce122b27ed12c33fa195fb8a76832803e92d8e462a1eca803b55f44c14db052211d0cfab85c7c5249664c68d95bbbc16c775fac73866c6ef
   languageName: node
   linkType: hard
 
@@ -10774,6 +10788,7 @@ __metadata:
     "@types/canvas-confetti": "npm:^1"
     "@types/clarinet": "npm:^0"
     "@types/crypto-js": "npm:^4"
+    "@types/howler": "npm:^2"
     "@types/jest": "npm:^30.0.0"
     "@types/jsonwebtoken": "npm:^9.0.10"
     "@types/mermaid": "npm:^9.2.0"
@@ -10811,6 +10826,7 @@ __metadata:
     eslint-config-next: "npm:^15.5.0"
     expr-eval: "npm:^2.0.2"
     fast-xml-parser: "npm:^5.2.5"
+    howler: "npm:^2.2.4"
     html-to-image: "npm:^1.11.13"
     jest: "npm:^30.0.5"
     jest-environment-jsdom: "npm:^30.0.5"
