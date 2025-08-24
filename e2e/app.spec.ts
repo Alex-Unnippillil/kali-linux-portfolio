@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../playwright.config';
 
 test('renders CVE dashboard app', async ({ page }) => {
   await page.goto('/apps/cve-dashboard');

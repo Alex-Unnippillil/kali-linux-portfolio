@@ -1,25 +1,25 @@
-import '../lib/dev-ssr-logger';
-import type { AppProps, NextWebVitalsMetric } from 'next/app';
-import { useEffect, useState } from 'react';
-import { initAxiom } from '../lib/axiom';
-import { maskPII, trackWebVital } from '../lib/analytics';
+"use client";
+
+import '../../lib/dev-ssr-logger';
+import { useEffect, useState, type ReactNode } from 'react';
+import { initAxiom } from '../../lib/axiom';
+import { maskPII, trackWebVital } from '../../lib/analytics';
 import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
 import { Inter } from 'next/font/google';
 import 'tailwindcss/tailwind.css';
-import '../styles/index.css';
-import ConsentBanner from '../components/ConsentBanner';
-import { validatePublicEnv } from '../lib/validate';
+import '../../styles/index.css';
+import ConsentBanner from '../../components/ConsentBanner';
+import { validatePublicEnv } from '../../lib/validate';
+
+type Props = { children: ReactNode };
 
 const inter = Inter({ subsets: ['latin'] });
 
-const analyticsEnabled = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true';
-
 validatePublicEnv(process.env);
-if (analyticsEnabled) {
-  initAxiom();
-}
+initAxiom();
 
+const analyticsEnabled = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true';
 const shouldTrack = Math.random() < 0.1;
 
 const schedule = (cb: () => void) => {
@@ -40,10 +40,9 @@ const sanitize = (params: any) => {
 ReactGA.event = () => {};
 ReactGA.send = () => {};
 
-function MyApp({ Component, pageProps }: AppProps & { pageProps: any }) {
+export default function DesktopLayout({ children }: Props) {
   const [enableAnalytics, setEnableAnalytics] = useState(false);
   const [consent, setConsent] = useState<'granted' | 'denied' | null>(null);
-  const nonce = pageProps?.nonce;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -53,10 +52,7 @@ function MyApp({ Component, pageProps }: AppProps & { pageProps: any }) {
       }
     }
 
-    if (
-      process.env.NODE_ENV === 'production' &&
-      'serviceWorker' in navigator
-    ) {
+    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
 
@@ -117,8 +113,7 @@ function MyApp({ Component, pageProps }: AppProps & { pageProps: any }) {
             });
           };
 
-          const options = nonce ? { nonce } : undefined;
-          ReactGA.initialize(trackingId, options);
+          ReactGA.initialize(trackingId);
           setEnableAnalytics(true);
         });
       }
@@ -126,14 +121,24 @@ function MyApp({ Component, pageProps }: AppProps & { pageProps: any }) {
       ReactGA.event = () => {};
       ReactGA.send = () => {};
     }
-  }, [consent, nonce]);
+  }, [consent]);
+
+  useEffect(() => {
+    if (
+      analyticsEnabled &&
+      typeof window !== 'undefined' &&
+      window.localStorage.getItem('analytics-consent') === 'granted'
+    ) {
+      // Web Vitals reporting mirrors pages/_app.tsx
+      const handler = (metric: any) => trackWebVital(metric);
+      (window as any).__NEXT_REPORT_VITALS__ = handler;
+    }
+  }, []);
 
   return (
     <main className={inter.className} suppressHydrationWarning data-app-root>
-      <Component {...pageProps} />
-      {analyticsEnabled && enableAnalytics && shouldTrack && (
-        <Analytics nonce={nonce} />
-      )}
+      {children}
+      {analyticsEnabled && enableAnalytics && shouldTrack && <Analytics />}
       {consent === null && (
         <ConsentBanner
           onConsent={(granted) => setConsent(granted ? 'granted' : 'denied')}
@@ -141,16 +146,4 @@ function MyApp({ Component, pageProps }: AppProps & { pageProps: any }) {
       )}
     </main>
   );
-}
-
-export default MyApp;
-
-export function reportWebVitals(metric: NextWebVitalsMetric): void {
-  if (
-    analyticsEnabled &&
-    typeof window !== 'undefined' &&
-    window.localStorage.getItem('analytics-consent') === 'granted'
-  ) {
-    trackWebVital(metric);
-  }
 }

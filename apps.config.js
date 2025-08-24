@@ -95,11 +95,11 @@ export const sys = (name) => resolveAsset('system', name);
 
 import createDynamicApp from './lib/createDynamicApp';
 
-class DynamicAppErrorBoundary extends React.Component {
+export class DynamicAppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false };
-    this.handleRetry = this.handleRetry.bind(this);
+    this.handleReload = this.handleReload.bind(this);
   }
 
   static getDerivedStateFromError() {
@@ -119,7 +119,7 @@ class DynamicAppErrorBoundary extends React.Component {
         <ErrorPane
           code="render_error"
           message={`An error occurred while rendering ${this.props.name}. Please try again.`}
-          onRetry={this.handleRetry}
+          onReload={this.handleReload}
         />
       );
     }
@@ -127,7 +127,7 @@ class DynamicAppErrorBoundary extends React.Component {
     return this.props.children;
   }
 
-  handleRetry() {
+  handleReload() {
     this.setState({ hasError: false });
   }
 }

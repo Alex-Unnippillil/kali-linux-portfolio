@@ -2,85 +2,88 @@
 // Allows external badges and same-origin PDF embedding without inline styles.
 
 const { validateEnv } = require('./lib/validate.js');
-validateEnv(process.env);
+
+function getContentSecurityPolicy(nonce) {
+  return [
+    "default-src 'self'",
+    // Allow external images and data URIs for badges/icons
+    "img-src 'self' https: data:",
+    // Allow styles from self and Google Fonts
+    "style-src 'self' https://fonts.googleapis.com",
+    // Allow external font resources
+    "font-src 'self' https://fonts.gstatic.com",
+    // External script required for embedded timelines
+    `script-src 'self' 'nonce-${nonce}' https://platform.twitter.com`,
+    "worker-src 'self' blob:",
+    "child-src 'self' blob:",
+
+    // Allow outbound connections for embeds and the in-browser Chrome app
+    "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.googleapis.com https://api.axiom.co https://stackblitz.com https://api64.ipify.org https://cloudflare-dns.com https://dns.google https://www.googleapis.com https://crt.sh https://services.nvd.nist.gov https://osv.dev https://data.typeracer.com https://ghbtns.com stun:stun.l.google.com:19302",
+    // Allow iframes from specific providers so the Chrome and StackBlitz apps can load arbitrary content
+    "frame-src 'self' https://stackblitz.com https://*.google.com https://ghbtns.com https://platform.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
 
 
-const ContentSecurityPolicy = [
-  "default-src 'self'",
-  // Allow external images and data URIs for badges/icons
-  "img-src 'self' https: data:",
-  // Allow styles from self and Google Fonts
-  "style-src 'self' https://fonts.googleapis.com",
-  // Allow external font resources
-  "font-src 'self' https://fonts.gstatic.com",
-  // External script required for embedded timelines
-  "script-src 'self' 'unsafe-inline' https://platform.twitter.com",
-  "worker-src 'self' blob:",
-  "child-src 'self' blob:",
+    // Allow this site to embed its own resources (resume PDF)
+    "frame-ancestors 'self'",
+    // Disallow plugins and limit base/submit targets
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    // Enable Reporting API endpoint for violations
+    'report-to csp-endpoint',
+  ].join('; ');
+}
 
-  // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.googleapis.com https://api.axiom.co https://stackblitz.com https://api64.ipify.org https://cloudflare-dns.com https://dns.google https://www.googleapis.com https://crt.sh https://services.nvd.nist.gov https://osv.dev https://data.typeracer.com https://ghbtns.com stun:stun.l.google.com:19302",
-  // Allow iframes from specific providers so the Chrome and StackBlitz apps can load arbitrary content
-  "frame-src 'self' https://stackblitz.com https://*.google.com https://ghbtns.com https://platform.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
-
-
-  // Allow this site to embed its own resources (resume PDF)
-  "frame-ancestors 'self'",
-  // Disallow plugins and limit base/submit targets
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  // Enable Reporting API endpoint for violations
-  'report-to csp-endpoint',
-].join('; ');
-
-// Strict security headers sent only in production
-const securityHeaders = [
-  { key: 'Content-Security-Policy', value: ContentSecurityPolicy },
-  {
-    key: 'Report-To',
-    value:
-      '{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/api/csp-reporter"}]}',
-  },
-  {
-    key: 'X-Content-Type-Options',
-    value: 'nosniff',
-  },
-  {
-    key: 'Referrer-Policy',
-    value: 'strict-origin-when-cross-origin',
-  },
-  {
-    key: 'Permissions-Policy',
-    value:
-      'camera=(), microphone=(), geolocation=(), usb=(), payment=(), serial=()',
-  },
-  {
-    key: 'Strict-Transport-Security',
-    value: 'max-age=63072000; includeSubDomains; preload',
-  },
-  {
-    key: 'X-DNS-Prefetch-Control',
-    value: 'off',
-  },
-  {
-    key: 'X-Permitted-Cross-Domain-Policies',
-    value: 'none',
-  },
-  {
-    key: 'Cross-Origin-Opener-Policy',
-    value: 'same-origin',
-  },
-  {
-    key: 'Cross-Origin-Resource-Policy',
-    value: 'same-site',
-  },
-  {
-    // Allow same-origin framing so the PDF resume renders in an <object>
-    key: 'X-Frame-Options',
-    value: 'SAMEORIGIN',
-  },
-];
+async function getSecurityHeaders() {
+  const nonce = crypto.randomBytes(16).toString('base64');
+  const ContentSecurityPolicy = getContentSecurityPolicy(nonce);
+  return [
+    { key: 'Content-Security-Policy', value: ContentSecurityPolicy },
+    {
+      key: 'Report-To',
+      value:
+        '{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/api/csp-reporter"}]}',
+    },
+    {
+      key: 'X-Content-Type-Options',
+      value: 'nosniff',
+    },
+    {
+      key: 'Referrer-Policy',
+      value: 'strict-origin-when-cross-origin',
+    },
+    {
+      key: 'Permissions-Policy',
+      value:
+        'camera=(), microphone=(), geolocation=(), usb=(), payment=(), serial=()',
+    },
+    {
+      key: 'Strict-Transport-Security',
+      value: 'max-age=63072000; includeSubDomains; preload',
+    },
+    {
+      key: 'X-DNS-Prefetch-Control',
+      value: 'off',
+    },
+    {
+      key: 'X-Permitted-Cross-Domain-Policies',
+      value: 'none',
+    },
+    {
+      key: 'Cross-Origin-Opener-Policy',
+      value: 'same-origin',
+    },
+    {
+      key: 'Cross-Origin-Resource-Policy',
+      value: 'same-site',
+    },
+    {
+      // Allow same-origin framing so the PDF resume renders in an <object>
+      key: 'X-Frame-Options',
+      value: 'SAMEORIGIN',
+    },
+  ];
+}
 
 module.exports = {
   bundlePagesRouterDependencies: true,
@@ -128,6 +131,7 @@ module.exports = {
     if (process.env.NODE_ENV !== 'production') {
       return [];
     }
+    validateEnv(process.env);
     return [
       {
         source: '/(.*)',
@@ -136,3 +140,4 @@ module.exports = {
     ];
   },
 };
+
