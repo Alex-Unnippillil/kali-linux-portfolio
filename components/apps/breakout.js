@@ -69,6 +69,14 @@ const Breakout = () => {
   const [difficulty, setDifficulty] = useState('easy');
   const [editing, setEditing] = useState(false);
   const [customLayout, setCustomLayout] = useState(null);
+  const [levels, setLevels] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/breakout/levels')
+      .then((res) => res.json())
+      .then((data) => setLevels(data))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (editing) return; // don't run game loop while editing
@@ -101,15 +109,17 @@ const Breakout = () => {
     const powerUps = [];
     let particles = [];
 
-    const rows = customLayout ? customLayout.length : rowsByDifficulty[difficulty];
+    const layout = customLayout || levels[0] || null;
+    const rows = layout ? layout.length : rowsByDifficulty[difficulty];
     const cols = 10;
     const bw = width / cols;
     const bh = 20;
     for (let r = 0; r < rows; r += 1) {
       for (let c = 0; c < cols; c += 1) {
-        if (customLayout && !customLayout[r][c]) continue;
+        if (layout && !layout[r][c]) continue;
         const powerUp = Math.random() < 0.1 ? (Math.random() < 0.5 ? 'multiball' : 'laser') : null;
-        bricks.push(new Brick(c * bw, r * bh + 40, bw - 2, bh - 2, powerUp));
+        const hp = Math.random() < 0.05 ? 3 : 1;
+        bricks.push(new Brick(c * bw, r * bh + 40, bw - 2, bh - 2, powerUp, hp));
       }
     }
     balls[0].vx *= speedByDifficulty[difficulty] / 150;
@@ -167,12 +177,32 @@ const Breakout = () => {
       }
       return arr;
     };
+    const drawBricks = () => {
+      const groups = { normal: [], power: [], boss: [] };
+      bricks.forEach((br) => {
+        if (br.destroyed) return;
+        const arr = br.hp > 1 ? groups.boss : br.powerUp ? groups.power : groups.normal;
+        arr.push(br);
+      });
+      ctx.fillStyle = 'blue';
+      ctx.beginPath();
+      groups.normal.forEach((br) => ctx.rect(br.x, br.y, br.w, br.h));
+      ctx.fill();
+      ctx.fillStyle = 'gold';
+      ctx.beginPath();
+      groups.power.forEach((br) => ctx.rect(br.x, br.y, br.w, br.h));
+      ctx.fill();
+      ctx.fillStyle = 'purple';
+      ctx.beginPath();
+      groups.boss.forEach((br) => ctx.rect(br.x, br.y, br.w, br.h));
+      ctx.fill();
+    };
 
-    const loop = (time) => {
-      const dt = (time - lastTime) / 1000;
-      lastTime = time;
-      ctx.clearRect(0, 0, width, height);
+    let lastTime = 0;
+    let acc = 0;
+    const step = 1 / 60;
 
+    const update = (dt) => {
       paddle.move((keys.right ? 1 : 0) - (keys.left ? 1 : 0), dt);
       paddle.updateLasers(dt);
 
@@ -180,7 +210,11 @@ const Breakout = () => {
 
       balls.forEach((b) => {
         if (b.y + b.r > paddle.y && b.x > paddle.x && b.x < paddle.x + paddle.width && b.vy > 0) {
-          b.vy *= -1;
+          const relative = (b.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
+          const angle = relative * (Math.PI / 3);
+          const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+          b.vx = speed * Math.sin(angle);
+          b.vy = -Math.abs(speed * Math.cos(angle));
           b.y = paddle.y - b.r;
           playSound(200);
         }
@@ -190,34 +224,37 @@ const Breakout = () => {
       paddle.lasers.forEach((l) => {
         bricks.forEach((br) => {
           if (!br.destroyed && l.x > br.x && l.x < br.x + br.w && l.y > br.y && l.y < br.y + br.h) {
-            br.destroyed = true;
-            particles.push(...spawnParticles(br.x + br.w / 2, br.y + br.h / 2));
-            if (br.powerUp)
-              powerUps.push({ x: br.x + br.w / 2, y: br.y + br.h / 2, type: br.powerUp, vy: 50 });
+            br.hit();
+            if (br.destroyed) {
+              particles.push(...spawnParticles(br.x + br.w / 2, br.y + br.h / 2));
+              if (br.powerUp)
+                powerUps.push({ x: br.x + br.w / 2, y: br.y + br.h / 2, type: br.powerUp, vy: 50 });
+            }
           }
         });
       });
 
-      console.time('collision');
       balls.forEach((b) => {
         bricks.forEach((br) => {
-          if (
-            !br.destroyed &&
-            b.x > br.x &&
-            b.x < br.x + br.w &&
-            b.y - b.r < br.y + br.h &&
-            b.y + b.r > br.y
-          ) {
-            br.destroyed = true;
-            b.vy *= -1;
-            playSound(400);
-            particles.push(...spawnParticles(br.x + br.w / 2, br.y + br.h / 2));
-            if (br.powerUp)
-              powerUps.push({ x: br.x + br.w / 2, y: br.y + br.h / 2, type: br.powerUp, vy: 50 });
+          if (br.destroyed) return;
+          if (b.x + b.r > br.x && b.x - b.r < br.x + br.w && b.y + b.r > br.y && b.y - b.r < br.y + br.h) {
+            const overlapX = Math.min(b.x + b.r - br.x, br.x + br.w - (b.x - b.r));
+            const overlapY = Math.min(b.y + b.r - br.y, br.y + br.h - (b.y - b.r));
+            if (overlapX < overlapY) {
+              b.vx *= -1;
+            } else {
+              b.vy *= -1;
+            }
+            br.hit();
+            if (br.destroyed) {
+              playSound(400);
+              particles.push(...spawnParticles(br.x + br.w / 2, br.y + br.h / 2));
+              if (br.powerUp)
+                powerUps.push({ x: br.x + br.w / 2, y: br.y + br.h / 2, type: br.powerUp, vy: 50 });
+            }
           }
         });
       });
-      console.timeEnd('collision');
 
       for (let i = powerUps.length - 1; i >= 0; i -= 1) {
         const p = powerUps[i];
@@ -246,8 +283,11 @@ const Breakout = () => {
       particles = particles
         .map((pt) => ({ ...pt, x: pt.x + pt.vx * dt, y: pt.y + pt.vy * dt, life: pt.life - dt }))
         .filter((pt) => pt.life > 0);
+    };
 
-      bricks.forEach((br) => br.draw(ctx));
+    const render = () => {
+      ctx.clearRect(0, 0, width, height);
+      drawBricks();
       balls.forEach((b) => b.draw(ctx));
       paddle.draw(ctx);
       powerUps.forEach((p) => {
@@ -258,7 +298,17 @@ const Breakout = () => {
         ctx.fillStyle = `rgba(255,255,255,${pt.life})`;
         ctx.fillRect(pt.x, pt.y, 2, 2);
       });
+    };
 
+    const loop = (time) => {
+      const delta = (time - lastTime) / 1000;
+      lastTime = time;
+      acc += delta;
+      while (acc >= step) {
+        update(step);
+        acc -= step;
+      }
+      render();
       requestAnimationFrame(loop);
     };
     const id = requestAnimationFrame(loop);
@@ -271,7 +321,7 @@ const Breakout = () => {
       resizeObserver.disconnect();
       cancelAnimationFrame(id);
     };
-  }, [difficulty, editing, customLayout]);
+  }, [difficulty, editing, customLayout, levels]);
 
   return (
     <div ref={containerRef} className="h-full w-full bg-black relative overflow-hidden">
@@ -279,6 +329,7 @@ const Breakout = () => {
         <LevelEditor
           onSave={(layout) => {
             setCustomLayout(layout);
+            setLevels((l) => [...l, layout]);
             setEditing(false);
           }}
           onCancel={() => setEditing(false)}
