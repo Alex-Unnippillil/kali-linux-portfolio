@@ -560,7 +560,7 @@ const apps = [
   {
     id: 'evidence-notebook',
     title: 'Evidence Notebook',
-    icon: './themes/Yaru/apps/gedit.png',
+    icon: icon('hash.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
