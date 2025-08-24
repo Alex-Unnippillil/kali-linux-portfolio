@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import Modal from '../util-components/Modal';
 
 const SIZE = 4;
 
@@ -79,6 +80,7 @@ const Game2048 = () => {
   const [board, setBoard] = useState(() => initBoard());
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleKey = useCallback(
     (e) => {
@@ -119,7 +121,7 @@ const Game2048 = () => {
   };
 
   return (
-    <div className="h-full w-full p-4 flex flex-col items-center justify-center bg-panel text-white select-none">
+    <div className="h-full w-full p-4 flex flex-col items-center justify-center bg-[var(--color-surface)] text-[var(--color-text)] select-none">
       <div className="grid grid-cols-4 gap-2">
         {board.map((row, rIdx) =>
           row.map((cell, cIdx) => (
@@ -139,18 +141,27 @@ const Game2048 = () => {
       )}
       <div className="mt-4 space-x-2">
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-4 py-2 bg-[var(--color-accent)] text-black rounded hover:opacity-90"
           onClick={reset}
         >
           Reset
         </button>
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-4 py-2 bg-[var(--color-accent)] text-black rounded hover:opacity-90"
+          onClick={() => setShowHelp(true)}
+        >
+          Help
+        </button>
+        <button
+          className="px-4 py-2 bg-[var(--color-accent)] text-black rounded hover:opacity-90"
           onClick={close}
         >
           Close
         </button>
       </div>
+      <Modal isOpen={showHelp} onClose={() => setShowHelp(false)} title="How to play">
+        <p>Use arrow keys to combine tiles and reach 2048.</p>
+      </Modal>
     </div>
   );
 };
