@@ -1,6 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import plist from 'plist';
-import bplist from 'bplist-parser';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import YAML from 'js-yaml';
 import { Buffer } from 'buffer';
 
 type TreeNodeProps = {
@@ -21,6 +20,27 @@ const hexOf = (value: any) => {
     return Buffer.from(value).toString('hex');
   }
   return Buffer.from(JSON.stringify(value)).toString('hex');
+};
+
+const decodeHints = (value: any): string[] => {
+  const hints: string[] = [];
+  if (value instanceof Date) {
+    hints.push(`ISO: ${value.toISOString()}`);
+    hints.push(`Unix: ${Math.floor(value.getTime() / 1000)}`);
+  } else if (value instanceof Uint8Array || value instanceof Buffer) {
+    const buf = Buffer.from(value);
+    const ascii = buf.toString('utf-8');
+    if (/^[\x20-\x7E\r\n\t]*$/.test(ascii)) {
+      hints.push(`ASCII: ${ascii}`);
+    }
+    if (buf.length === 8) {
+      const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+      const float = view.getFloat64(0, false);
+      const date = new Date((float + 978307200) * 1000);
+      if (!isNaN(date.getTime())) hints.push(`Date: ${date.toISOString()}`);
+    }
+  }
+  return hints;
 };
 
 const nodeMatches = (value: any, path: string, search: string): boolean => {
@@ -130,51 +150,70 @@ const PlistInspector = () => {
     null,
   );
   const [corruption, setCorruption] = useState<string | null>(null);
+  const [format, setFormat] = useState('');
+  const workerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    const worker = new Worker(
+      new URL('./plist-inspector.worker.ts', import.meta.url),
+      { type: 'module' },
+    );
+    workerRef.current = worker;
+    worker.onmessage = (e: MessageEvent) => {
+      const { type } = e.data;
+      if (type === 'result') {
+        setRoot(e.data.root);
+        setError('');
+        setSelected(null);
+        setCorruption(null);
+        setFormat(e.data.format);
+      } else if (type === 'error') {
+        setError(e.data.error);
+        setRoot(null);
+        setSelected(null);
+        setCorruption(e.data.corruption || null);
+        setFormat(e.data.format);
+      }
+    };
+    return () => worker.terminate();
+  }, []);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !workerRef.current) return;
+    const buffer = await file.arrayBuffer();
+    workerRef.current.postMessage({ buffer }, [buffer]);
+  };
 
-    try {
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      const isBinary =
-        bytes.length > 6 &&
-        bytes[0] === 0x62 &&
-        bytes[1] === 0x70 &&
-        bytes[2] === 0x6c &&
-        bytes[3] === 0x69 &&
-        bytes[4] === 0x73 &&
-        bytes[5] === 0x74; // "bplist"
+  const exportJSON = () => {
+    if (!root) return;
+    const blob = new Blob([JSON.stringify(root, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plist.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-      let obj: unknown;
-      if (isBinary) {
-        try {
-          const parsed = bplist.parseBuffer(Buffer.from(bytes));
-          obj = parsed.length === 1 ? parsed[0] : parsed;
-          setCorruption(null);
-        } catch (err: any) {
-          setCorruption(Buffer.from(bytes.slice(-32)).toString('hex'));
-          throw err;
-        }
-      } else {
-        const text = new TextDecoder().decode(bytes);
-        obj = plist.parse(text);
-        setCorruption(null);
-      }
-      setRoot(obj);
-      setError('');
-      setSelected(null);
-    } catch (err: any) {
-      setError(err.message || 'Failed to parse plist');
-      setRoot(null);
-      setSelected(null);
-    }
+  const exportYAML = () => {
+    if (!root) return;
+    const blob = new Blob([YAML.dump(root)], {
+      type: 'application/x-yaml',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plist.yaml';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white flex flex-col">
-      <div className="mb-2 flex gap-2">
+      <div className="mb-2 flex gap-2 flex-wrap items-center">
         <input
           type="file"
           accept=".plist"
@@ -182,15 +221,32 @@ const PlistInspector = () => {
           className="mb-2"
         />
         {root && (
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 px-2 text-black rounded"
-          />
+          <>
+            <input
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="flex-1 px-2 text-black rounded"
+            />
+            <button
+              onClick={exportJSON}
+              className="bg-gray-700 px-2 py-1 rounded"
+            >
+              Export JSON
+            </button>
+            <button
+              onClick={exportYAML}
+              className="bg-gray-700 px-2 py-1 rounded"
+            >
+              Export YAML
+            </button>
+          </>
         )}
       </div>
+      {format && (
+        <div className="text-xs text-gray-400 mb-2">Format: {format}</div>
+      )}
       {error && <div className="text-red-500 mb-2">{error}</div>}
       {corruption && (
         <div className="text-red-400 text-xs mb-2">
@@ -243,6 +299,19 @@ const PlistInspector = () => {
                 {hexOf(selected.value)}
               </pre>
             </div>
+            {(() => {
+              const hints = decodeHints(selected.value);
+              return (
+                hints.length > 0 && (
+                  <div className="text-sm mt-2">
+                    <strong>Hints:</strong>
+                    {hints.map((h, i) => (
+                      <div key={i}>{h}</div>
+                    ))}
+                  </div>
+                )
+              );
+            })()}
           </div>
         )}
       </div>
