@@ -1,94 +1,194 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
-const Gauge = ({ value, label }) => {
-  const radius = 45;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (value / 100) * circumference;
+const HISTORY_LENGTH = 30;
+
+const Sparkline = ({ data, width = 100, height = 30 }) => {
+  if (data.length === 0) return <svg width={width} height={height} />;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const points = data
+    .map((d, i) => {
+      const x = (i / (data.length - 1)) * width;
+      const y = height - ((d - min) / (max - min || 1)) * height;
+      return `${x},${y}`;
+    })
+    .join(' ');
   return (
-    <div className="flex flex-col items-center">
-      <svg width="120" height="120">
-        <circle
-          cx="60"
-          cy="60"
-          r={radius}
-          stroke="#555"
-          strokeWidth="10"
+    <svg width={width} height={height}>
+      {data.length > 1 && (
+        <polyline
           fill="none"
-        />
-        <circle
-          cx="60"
-          cy="60"
-          r={radius}
           stroke="#4ade80"
-          strokeWidth="10"
-          fill="none"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          style={{ transition: 'stroke-dashoffset 1s ease' }}
+          strokeWidth="2"
+          points={points}
         />
-        <text
-          x="60"
-          y="65"
-          textAnchor="middle"
-          fill="#fff"
-          fontSize="20"
-        >
-          {value}%
-        </text>
-      </svg>
-      <span className="mt-2 text-white">{label}</span>
-    </div>
+      )}
+    </svg>
   );
 };
 
+const Metric = ({ label, value, history, unit }) => (
+  <div className="flex flex-col items-center m-2">
+    <div className="text-lg">{value !== null ? `${value}${unit || ''}` : 'N/A'}</div>
+    <Sparkline data={history} />
+    <div className="text-sm mt-1">{label}</div>
+  </div>
+);
+
 const ResourceMonitor = () => {
-  const [batteryLevel, setBatteryLevel] = useState(0);
-  const [memoryUsage, setMemoryUsage] = useState(0);
-  const [cpuUsage, setCpuUsage] = useState(null);
+  const [paused, setPaused] = useState(false);
+  const [fps, setFps] = useState(null);
+  const [longTasks, setLongTasks] = useState(null);
+  const [memory, setMemory] = useState(null);
+  const [networkBytes, setNetworkBytes] = useState(null);
+  const [connection, setConnection] = useState({ downlink: null, effectiveType: null });
 
-  const updateStats = async () => {
-    if (navigator.getBattery) {
-      try {
-        const battery = await navigator.getBattery();
-        setBatteryLevel(Math.round(battery.level * 100));
-      } catch (e) {
-        // navigator.getBattery may reject on unsupported browsers
-      }
-    }
+  const fpsHistory = useRef([]);
+  const longTaskHistory = useRef([]);
+  const memoryHistory = useRef([]);
+  const networkHistory = useRef([]);
 
-    if (performance && performance.memory) {
-      const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
-      setMemoryUsage(Math.round((usedJSHeapSize / totalJSHeapSize) * 100));
-    }
-
-    if (typeof performance !== 'undefined' && performance.now) {
-      const start = performance.now();
-      setTimeout(() => {
-        const end = performance.now();
-        const delay = end - start - 100;
-        const usage = Math.min(100, Math.max(0, (delay / 100) * 100));
-        setCpuUsage(Math.round(usage));
-      }, 100);
-    }
+  const pushHistory = (ref, value) => {
+    ref.current.push(value);
+    if (ref.current.length > HISTORY_LENGTH) ref.current.shift();
   };
 
   useEffect(() => {
-    updateStats();
-    const interval = setInterval(updateStats, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    if (paused || typeof window === 'undefined' || !window.requestAnimationFrame) return;
+    let frame = 0;
+    let last = performance.now();
+    let raf;
+    const loop = (now) => {
+      frame++;
+      if (now - last >= 1000) {
+        const fpsValue = Math.round((frame * 1000) / (now - last));
+        setFps(fpsValue);
+        pushHistory(fpsHistory, fpsValue);
+        frame = 0;
+        last = now;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [paused]);
+
+  useEffect(() => {
+    if (paused) return;
+    let longTaskObserver;
+    let longTaskCount = 0;
+    if (typeof PerformanceObserver !== 'undefined') {
+      try {
+        longTaskObserver = new PerformanceObserver((list) => {
+          longTaskCount += list.getEntries().length;
+        });
+        longTaskObserver.observe({ entryTypes: ['longtask'] });
+      } catch (_) {
+        /* unsupported */
+      }
+    }
+    const interval = setInterval(() => {
+      setLongTasks(longTaskCount);
+      pushHistory(longTaskHistory, longTaskCount);
+      longTaskCount = 0;
+    }, 1000);
+    return () => {
+      clearInterval(interval);
+      if (longTaskObserver) longTaskObserver.disconnect();
+    };
+  }, [paused]);
+
+  useEffect(() => {
+    if (paused) return;
+    let memInterval;
+    if (performance && performance.memory) {
+      const updateMem = () => {
+        const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
+        const perc = Math.round((usedJSHeapSize / totalJSHeapSize) * 100);
+        setMemory(perc);
+        pushHistory(memoryHistory, perc);
+      };
+      updateMem();
+      memInterval = setInterval(updateMem, 1000);
+    }
+    return () => {
+      if (memInterval) clearInterval(memInterval);
+    };
+  }, [paused]);
+
+  useEffect(() => {
+    if (paused) return;
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const updateConn = () => {
+      setConnection({
+        downlink: conn?.downlink || null,
+        effectiveType: conn?.effectiveType || null,
+      });
+    };
+    updateConn();
+    conn?.addEventListener('change', updateConn);
+
+    let bytes = 0;
+    let resourceObserver;
+    if (typeof PerformanceObserver !== 'undefined') {
+      try {
+        resourceObserver = new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (entry.transferSize) bytes += entry.transferSize;
+          }
+        });
+        resourceObserver.observe({ entryTypes: ['resource'] });
+      } catch (_) {
+        /* unsupported */
+      }
+    }
+    const interval = setInterval(() => {
+      setNetworkBytes(bytes);
+      pushHistory(networkHistory, bytes);
+      bytes = 0;
+    }, 1000);
+    return () => {
+      clearInterval(interval);
+      resourceObserver?.disconnect();
+      conn?.removeEventListener('change', updateConn);
+    };
+  }, [paused]);
+
+  const togglePause = () => setPaused((p) => !p);
 
   return (
-    <div className="h-full w-full flex justify-evenly items-center bg-panel text-white">
-      <Gauge value={batteryLevel} label="Battery" />
-      {cpuUsage !== null && <Gauge value={cpuUsage} label="CPU" />}
-      <Gauge value={memoryUsage} label="Memory" />
+    <div className="h-full w-full flex flex-col bg-panel text-white">
+      <button
+        className="self-end m-2 px-2 py-1 bg-gray-700 rounded"
+        onClick={togglePause}
+      >
+        {paused ? 'Resume' : 'Pause'}
+      </button>
+      <div className="flex flex-wrap justify-evenly">
+        <Metric label="FPS" value={fps} history={fpsHistory.current} />
+        <Metric label="Long Tasks" value={longTasks} history={longTaskHistory.current} />
+        <Metric label="Memory" value={memory} history={memoryHistory.current} unit="%" />
+        <div className="flex flex-col items-center m-2">
+          <div className="text-lg">
+            {networkBytes !== null ? `${Math.round(networkBytes / 1024)} KB/s` : 'N/A'}
+          </div>
+          <Sparkline data={networkHistory.current} />
+          <div className="text-sm mt-1">
+            Network
+            {connection.downlink && (
+              <span className="ml-1 text-xs">
+                {`${connection.downlink}Mbps ${connection.effectiveType || ''}`}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
 export default ResourceMonitor;
 
-export const displayResourceMonitor = (addFolder, openApp) => {
-  return <ResourceMonitor addFolder={addFolder} openApp={openApp} />;
-};
+export const displayResourceMonitor = (addFolder, openApp) => (
+  <ResourceMonitor addFolder={addFolder} openApp={openApp} />
+);

@@ -1,21 +1,19 @@
 import React, { useState } from 'react';
 
-type DnsResponse = {
-  Answer?: { data: string }[];
-  [key: string]: any;
-};
+type DnsAnswer = { data: string };
+type DnsResponse = { Answer?: DnsAnswer[]; error?: string };
 
 type ApiResponse = {
-  caa: DnsResponse;
-  mx: DnsResponse;
-  mtaSts: DnsResponse;
-  error?: string;
+  mx?: DnsResponse;
+  mtaSts?: DnsResponse;
+  tlsRpt?: DnsResponse;
+  dane?: Record<string, DnsResponse>;
+  errors?: Record<string, string>;
 };
 
 const MailSecurityMatrix: React.FC = () => {
   const [domain, setDomain] = useState('');
   const [data, setData] = useState<ApiResponse | null>(null);
-  const [hsts, setHsts] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const check = async () => {
@@ -25,37 +23,23 @@ const MailSecurityMatrix: React.FC = () => {
       const res = await fetch(`/api/mail-security-matrix?domain=${domain}`);
       const dnsData = await res.json();
       setData(dnsData);
-      const hstsRes = await fetch(`/api/headers?url=https://${domain}`);
-      const hstsJson = await hstsRes.json();
-      const hstsHeader = hstsJson.results?.find(
-        (r: any) => r.header === 'Strict-Transport-Security'
-      );
-      setHsts(hstsHeader?.grade === 'A' ? 'Present' : 'Missing');
     } catch (e) {
-      setData({ caa: {}, mx: {}, mtaSts: {}, error: 'Lookup failed' });
+      setData({ errors: { general: 'Lookup failed' } });
     } finally {
       setLoading(false);
     }
   };
 
-  const issuers =
-    data?.caa?.Answer?.map((a) => {
-      // Robustly parse CAA record: flags tag value (value may be quoted and may contain spaces)
-      // Example: '0 issue "letsencrypt.org"'
-      const match = String(a.data).match(/^(\d+)\s+(\w+)\s+(.+)$/);
-      if (match) {
-        // Remove surrounding quotes from value if present
-        const value = match[3].replace(/^"(.*)"$/, '$1');
-        return value;
-      }
-      // Fallback: show raw data or indicate invalid record
-      return String(a.data);
-    }) || [];
-  const mxHosts =
-    data?.mx?.Answer?.map((a) =>
-      String(a.data).split(' ').pop()?.replace(/\.$/, '') || a.data
-    ) || [];
+  const copy = (text: string) => navigator.clipboard.writeText(text);
+
   const mtaStsStatus = data?.mtaSts?.Answer ? 'Present' : 'Missing';
+  const tlsRptStatus = data?.tlsRpt?.Answer ? 'Present' : 'Missing';
+  const daneHosts = Object.entries(data?.dane || {});
+  const daneStatus = daneHosts.some(([_, r]) => r.Answer) ? 'Present' : 'Missing';
+
+  const recommendedMtaSts = `_mta-sts.${domain}. IN TXT "v=STSv1; id=1"\n# https://mta-sts.${domain}/.well-known/mta-sts.txt\nversion: STSv1\nmode: enforce\nmx: mail.${domain}\nmax_age: 604800`;
+  const recommendedTlsRpt = `_smtp._tls.${domain}. IN TXT "v=TLSRPTv1; rua=mailto:tlsrpt@${domain}"`;
+  const recommendedDane = `_25._tcp.mail.${domain}. IN TLSA 3 1 1 <CERT_SHA256_HASH>`;
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 space-y-4">
@@ -75,35 +59,71 @@ const MailSecurityMatrix: React.FC = () => {
           {loading ? 'Checking...' : 'Check'}
         </button>
       </div>
-      {data && !data.error && (
+      {data && !data.errors?.general && (
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left">
               <th className="pb-2">Check</th>
               <th className="pb-2">Result</th>
+              <th className="pb-2">Action</th>
             </tr>
           </thead>
           <tbody>
             <tr className="border-t border-gray-700">
-              <td className="py-2 font-semibold">CAA Issuers</td>
-              <td className="py-2">{issuers.length ? issuers.join(', ') : 'None'}</td>
-            </tr>
-            <tr className="border-t border-gray-700">
-              <td className="py-2 font-semibold">MX Hosts</td>
-              <td className="py-2">{mxHosts.length ? mxHosts.join(', ') : 'None'}</td>
-            </tr>
-            <tr className="border-t border-gray-700">
               <td className="py-2 font-semibold">MTA-STS</td>
-              <td className="py-2">{mtaStsStatus}</td>
+              <td className="py-2">
+                {mtaStsStatus}
+                {data?.errors?.mtaSts ? ` (${data.errors.mtaSts})` : ''}
+              </td>
+              <td className="py-2">
+                <button
+                  className="px-2 py-1 bg-gray-700 rounded"
+                  onClick={() => copy(recommendedMtaSts)}
+                >
+                  Copy
+                </button>
+              </td>
             </tr>
             <tr className="border-t border-gray-700">
-              <td className="py-2 font-semibold">Web HSTS</td>
-              <td className="py-2">{hsts ?? 'Unknown'}</td>
+              <td className="py-2 font-semibold">TLS-RPT</td>
+              <td className="py-2">
+                {tlsRptStatus}
+                {data?.errors?.tlsRpt ? ` (${data.errors.tlsRpt})` : ''}
+              </td>
+              <td className="py-2">
+                <button
+                  className="px-2 py-1 bg-gray-700 rounded"
+                  onClick={() => copy(recommendedTlsRpt)}
+                >
+                  Copy
+                </button>
+              </td>
+            </tr>
+            <tr className="border-t border-gray-700">
+              <td className="py-2 font-semibold">DANE</td>
+              <td className="py-2">
+                {daneStatus}
+                {data?.errors?.dane && ` (${data.errors.dane})`}
+                {!data?.errors?.dane &&
+                  daneHosts.map(([host, r]) =>
+                    r.error ? ` (${host}: ${r.error})` : ''
+                  )}
+              </td>
+              <td className="py-2">
+                <button
+                  className="px-2 py-1 bg-gray-700 rounded"
+                  onClick={() => copy(recommendedDane)}
+                >
+                  Copy
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
       )}
-      {data?.error && <div className="text-red-400">{data.error}</div>}
+      {data?.errors?.general && (
+        <div className="text-red-400">{data.errors.general}</div>
+      )}
     </div>
   );
 };
