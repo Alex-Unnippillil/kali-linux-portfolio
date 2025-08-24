@@ -88,8 +88,21 @@ async function parseKey(
 }
 
 (self as any).onmessage = async (e: MessageEvent) => {
-  const { id, action, payload, token, key, alg, enc, kid, detached, multi, direction } =
-    e.data as any;
+  const {
+    id,
+    action,
+    payload,
+    token,
+    key,
+    alg,
+    enc,
+    kid,
+    detached,
+    multi,
+    direction,
+    header,
+    aad,
+  } = e.data as any;
   if (id === 'init') return;
   try {
     let result: any;
@@ -112,14 +125,15 @@ async function parseKey(
         result = obj;
       } else {
         const cryptoKey = await parseKey(key, 'private', alg);
+        const hdr: any = { ...(header || {}), alg, kid };
+        if (detached) {
+          hdr.b64 = false;
+          hdr.crit = ['b64'];
+        }
         let jws = await new CompactSign(
           encoder.encode(JSON.stringify(payload)),
         )
-          .setProtectedHeader(
-            detached
-              ? { alg, kid, b64: false, crit: ['b64'] }
-              : { alg, kid },
-          )
+          .setProtectedHeader(hdr)
           .sign(cryptoKey);
         if (detached) {
           const parts = jws.split('.');
@@ -166,17 +180,22 @@ async function parseKey(
       }
     } else if (action === 'encrypt') {
       const cryptoKey = await parseKey(key, 'public', alg);
-      const jwe = await new CompactEncrypt(
+      const hdr: any = header || { alg, enc, kid };
+      const encrypter = new CompactEncrypt(
         encoder.encode(JSON.stringify(payload)),
-      )
-        .setProtectedHeader({ alg, enc, kid })
-        .encrypt(cryptoKey);
+      ).setProtectedHeader(hdr);
+      if (aad) encrypter.setAdditionalAuthenticatedData(encoder.encode(aad));
+      const jwe = await encrypter.encrypt(cryptoKey);
       result = jwe;
     } else if (action === 'decrypt') {
       const cryptoKey = await parseKey(key, 'private', alg);
+      const options = aad
+        ? { additionalAuthenticatedData: encoder.encode(aad) }
+        : undefined;
       const { plaintext, protectedHeader } = await compactDecrypt(
         token,
         cryptoKey,
+        options,
       );
       result = {
         payload: JSON.parse(decoder.decode(plaintext)),

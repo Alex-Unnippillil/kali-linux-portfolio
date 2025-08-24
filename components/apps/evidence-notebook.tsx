@@ -1,5 +1,6 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
+import JSZip from 'jszip';
 
 interface Entry {
   file: File;
@@ -132,6 +133,17 @@ const EvidenceNotebook: React.FC = () => {
     );
   };
 
+  const deleteEntry = (index: number) => {
+    setEntries((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const copyEntry = (index: number) => {
+    const { file, ...rest } = entries[index];
+    navigator.clipboard.writeText(
+      JSON.stringify({ ...rest, file: file.name })
+    );
+  };
+
   const bufferToHex = (buffer: ArrayBuffer): string =>
     Array.from(new Uint8Array(buffer))
       .map((b) => b.toString(16).padStart(2, '0'))
@@ -243,36 +255,37 @@ const EvidenceNotebook: React.FC = () => {
     return ok;
   };
 
-  const exportJsonl = async () => {
+  const exportBundle = async () => {
     const ok = await verifyEntries();
     if (!ok) {
       alert('Integrity check failed');
       return;
     }
-    const lines: string[] = [];
-    if (publicKey) lines.push(JSON.stringify({ publicKey }));
+    const zip = new JSZip();
+    const manifest = {
+      publicKey,
+      entries: entries.map((e) => ({
+        name: e.file.name,
+        note: e.note,
+        link: e.link,
+        hash: e.hash,
+        chain: e.chain,
+        signature: e.signature,
+        timestamp: e.timestamp,
+        iv: e.iv,
+        encrypted: e.encrypted,
+      })),
+    };
+    zip.file('manifest.json', JSON.stringify(manifest, null, 2));
     for (const e of entries) {
-      lines.push(
-        JSON.stringify({
-          name: e.file.name,
-          note: e.note,
-          link: e.link,
-          hash: e.hash,
-          chain: e.chain,
-          signature: e.signature,
-          timestamp: e.timestamp,
-          iv: e.iv,
-          encrypted: e.encrypted,
-        })
-      );
+      const buf = await e.file.arrayBuffer();
+      zip.file(e.file.name, buf);
     }
-    const blob = new Blob([lines.join('\n')], {
-      type: 'application/json',
-    });
+    const blob = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'evidence.jsonl';
+    a.download = 'audit.zip';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -327,6 +340,24 @@ const EvidenceNotebook: React.FC = () => {
                   onClick={() => copyDeepLink(idx)}
                 >
                   Copy Link
+                </button>
+              )}
+              {entry.locked && (
+                <button
+                  type="button"
+                  className="text-xs underline"
+                  onClick={() => copyEntry(idx)}
+                >
+                  Copy
+                </button>
+              )}
+              {!entry.locked && (
+                <button
+                  type="button"
+                  className="text-xs underline"
+                  onClick={() => deleteEntry(idx)}
+                >
+                  Delete
                 </button>
               )}
             </div>
@@ -385,10 +416,21 @@ const EvidenceNotebook: React.FC = () => {
         <button
           type="button"
           className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-2 rounded disabled:opacity-50"
-          onClick={exportJsonl}
+          onClick={async () => {
+            const ok = await verifyEntries();
+            alert(ok ? 'All entries verified' : 'Verification failed');
+          }}
+          disabled={entries.length === 0}
+        >
+          Verify
+        </button>
+        <button
+          type="button"
+          className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-2 rounded disabled:opacity-50"
+          onClick={exportBundle}
           disabled={entries.some((e) => !e.locked)}
         >
-          Export
+          Export Bundle
         </button>
       </div>
     </div>

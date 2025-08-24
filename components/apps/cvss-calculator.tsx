@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { calculateBaseScore, humanizeScore } from 'cvss4';
 
 interface MetricOption {
@@ -192,9 +192,39 @@ const metricSets: Record<string, MetricDef[]> = {
   '4.0': metricsV4,
 };
 
+const severityColor = (sev: string) => {
+  switch (sev) {
+    case 'Critical':
+      return 'bg-red-600';
+    case 'High':
+      return 'bg-orange-500';
+    case 'Medium':
+      return 'bg-yellow-500 text-black';
+    case 'Low':
+      return 'bg-green-600';
+    case 'None':
+      return 'bg-gray-500';
+    default:
+      return 'bg-gray-500';
+  }
+};
+
+const parseVector = (vec: string): Record<string, string> => {
+  const out: Record<string, string> = {};
+  vec
+    .split('/')
+    .slice(1)
+    .forEach((part) => {
+      const [k, v] = part.split(':');
+      if (k && v) out[k] = v;
+    });
+  return out;
+};
+
 const CvssBuilder: React.FC = () => {
   const [version, setVersion] = useState<'3.1' | '4.0'>('3.1');
   const [values, setValues] = useState<Record<string, string>>({});
+  const [cve, setCve] = useState('');
 
   const metrics = metricSets[version];
   const allSelected = metrics.every((m) => values[m.key]);
@@ -207,6 +237,25 @@ const CvssBuilder: React.FC = () => {
   const score = allSelected ? calculateBaseScore(vector) : null;
   const severity = score !== null ? humanizeScore(vector) : '';
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = localStorage.getItem(`cvss_vector_${version}`);
+      if (stored) setValues(parseVector(stored));
+    } catch (e) {
+      console.error('Error accessing localStorage', e);
+    }
+  }, [version]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      if (vector) localStorage.setItem(`cvss_vector_${version}`, vector);
+    } catch (e) {
+      console.error('Error accessing localStorage', e);
+    }
+  }, [vector, version]);
+
   const handleSelect = (metric: string, value: string) => {
     setValues((prev) => ({ ...prev, [metric]: value }));
   };
@@ -215,9 +264,29 @@ const CvssBuilder: React.FC = () => {
     if (vector) navigator.clipboard?.writeText(vector);
   };
 
+  const loadCve = async () => {
+    const id = cve.trim().toUpperCase();
+    if (!id) return;
+    try {
+      const res = await fetch(`/api/cve?keyword=${encodeURIComponent(id)}`);
+      const data = await res.json();
+      const vuln = (data.vulnerabilities || []).find((v: any) => v.cve?.id === id);
+      const vec =
+        vuln?.cve?.metrics?.cvssMetricV40?.[0]?.cvssData?.vectorString ||
+        vuln?.cve?.metrics?.cvssMetricV31?.[0]?.cvssData?.vectorString;
+      if (vec) {
+        const ver = vec.startsWith('CVSS:4.0') ? '4.0' : '3.1';
+        setVersion(ver);
+        setValues(parseVector(vec));
+      }
+    } catch (e) {
+      console.error('Failed to load CVE', e);
+    }
+  };
+
   return (
-    <div className="h-full w-full p-4 overflow-auto bg-gray-900 text-white">
-      <div className="mb-4 flex items-center gap-2">
+    <div className="h-full w-full p-4 overflow-auto bg-gray-900 text-white print:bg-white print:text-black">
+      <div className="mb-4 flex items-center gap-2 flex-wrap">
         <label htmlFor="cvss-version" className="text-sm">
           Version:
         </label>
@@ -233,6 +302,28 @@ const CvssBuilder: React.FC = () => {
           <option value="3.1">3.1</option>
           <option value="4.0">4.0</option>
         </select>
+        <input
+          className="p-1 rounded text-black"
+          placeholder="CVE-YYYY-XXXX"
+          value={cve}
+          onChange={(e) => setCve(e.target.value)}
+        />
+        <button onClick={loadCve} className="px-2 bg-gray-700 rounded">
+          Load CVE
+        </button>
+        {cve && (
+          <a
+            href={`https://www.cve.org/CVERecord?id=${cve}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline text-blue-400"
+          >
+            View CVE
+          </a>
+        )}
+        <button onClick={() => window.print()} className="px-2 bg-gray-700 rounded ml-auto">
+          Print
+        </button>
       </div>
       {metrics.map((m) => (
         <div key={m.key} className="mb-4">
@@ -271,8 +362,38 @@ const CvssBuilder: React.FC = () => {
           </button>
         </div>
         <div>Score: {score !== null ? score.toFixed(1) : '-'}</div>
-        {score !== null && <div>Severity: {severity}</div>}
+        {score !== null && (
+          <div className={`inline-block px-2 mt-1 rounded ${severityColor(severity)}`}>
+            {severity}
+          </div>
+        )}
+        <div className="mt-4 flex flex-wrap gap-1 text-xs">
+          <span className="px-2 rounded bg-gray-500">None</span>
+          <span className="px-2 rounded bg-green-600">Low</span>
+          <span className="px-2 rounded bg-yellow-500 text-black">Medium</span>
+          <span className="px-2 rounded bg-orange-500">High</span>
+          <span className="px-2 rounded bg-red-600">Critical</span>
+        </div>
       </div>
+      <details className="mt-4">
+        <summary className="cursor-pointer">Vector terms</summary>
+        <div className="mt-2 space-y-2 text-sm">
+          {metrics.map((m) => (
+            <div key={m.key}>
+              <div className="font-semibold">
+                {m.key} - {m.label}
+              </div>
+              <ul className="ml-4 list-disc">
+                {m.options.map((opt) => (
+                  <li key={opt.value}>
+                    {opt.value} - {opt.label}: {opt.tooltip}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </details>
     </div>
   );
 };

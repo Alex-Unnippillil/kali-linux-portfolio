@@ -8,7 +8,8 @@ const base64url = (buffer: ArrayBuffer | Buffer) =>
     .replace(/=+$/, '');
 
 const sha256 = async (verifier: string) => {
-  const TE = typeof TextEncoder !== 'undefined' ? TextEncoder : require('util').TextEncoder;
+  const TE =
+    typeof TextEncoder !== 'undefined' ? TextEncoder : require('util').TextEncoder;
   const data = new TE().encode(verifier);
   if (typeof window !== 'undefined' && window.crypto?.subtle) {
     const digest = await window.crypto.subtle.digest('SHA-256', data);
@@ -39,16 +40,46 @@ const PkceHelper: React.FC = () => {
   const [state, setState] = useState('');
   const [callback, setCallback] = useState('');
   const [result, setResult] = useState('');
+  const [verifierError, setVerifierError] = useState('');
 
   useEffect(() => {
-    if (verifier) {
+    if (typeof window !== 'undefined') {
+      const savedVerifier = window.localStorage.getItem('pkce-verifier');
+      const savedState = window.localStorage.getItem('pkce-state');
+      if (savedVerifier) setVerifier(savedVerifier);
+      if (savedState) setState(savedState);
+    }
+  }, []);
+
+  const verifierRegex = /^[A-Za-z0-9-._~]{43,128}$/;
+
+  useEffect(() => {
+    if (!verifier) {
+      setVerifierError('');
+      setChallenge('');
+      return;
+    }
+    if (verifierRegex.test(verifier)) {
+      setVerifierError('');
       sha256(verifier).then(setChallenge);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('pkce-verifier', verifier);
+      }
     } else {
+      setVerifierError(
+        'Verifier must be 43-128 characters using A-Z, a-z, 0-9, "-._~".'
+      );
       setChallenge('');
     }
   }, [verifier]);
 
-  const handleGenerate = async () => {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('pkce-state', state);
+    }
+  }, [state]);
+
+  const handleGenerate = () => {
     const v = randomString(64);
     setVerifier(v);
     const s = randomString(16);
@@ -64,6 +95,18 @@ const PkceHelper: React.FC = () => {
       setResult('Invalid URL');
     }
   };
+
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard?.writeText(text);
+    } catch {
+      // ignore
+    }
+  };
+
+  const authUrl = `https://auth.example.com/authorize?response_type=code&client_id=CLIENT_ID&redirect_uri=REDIRECT_URI&code_challenge=${challenge}&code_challenge_method=S256&state=${state}`;
+  const callbackExample = `https://client.example.com/callback?code=AUTH_CODE&state=${state}`;
+  const tokenCurl = `curl -X POST https://auth.example.com/token -H 'Content-Type: application/x-www-form-urlencoded' -d "client_id=CLIENT_ID&grant_type=authorization_code&code=CODE_FROM_CALLBACK&redirect_uri=REDIRECT_URI&code_verifier=${verifier}"`;
 
   return (
     <div className="h-full w-full p-4 overflow-y-auto bg-gray-900 text-white space-y-4">
@@ -83,6 +126,11 @@ const PkceHelper: React.FC = () => {
             onChange={(e) => setVerifier(e.target.value)}
             className="w-full p-2 rounded text-black"
           />
+          {verifierError && (
+            <div data-testid="verifier-error" className="text-xs text-yellow-300">
+              {verifierError}
+            </div>
+          )}
         </div>
         <div>
           <label className="block text-sm">Code Challenge (S256)</label>
@@ -129,18 +177,61 @@ const PkceHelper: React.FC = () => {
       </div>
       <div className="space-y-2">
         <div>
-          <div className="text-sm font-bold">Auth Request</div>
-          <pre
-            data-testid="auth-curl"
-            className="p-2 bg-gray-800 rounded text-xs overflow-auto"
-          >{`curl "https://auth.example.com/authorize?response_type=code&client_id=CLIENT_ID&redirect_uri=REDIRECT_URI&code_challenge=${challenge}&code_challenge_method=S256&state=${state}"`}</pre>
+          <div className="text-sm font-bold">Authorization Redirect</div>
+          <div className="flex items-center space-x-2">
+            <input
+              data-testid="auth-url"
+              readOnly
+              value={authUrl}
+              className="flex-1 p-2 rounded text-black"
+            />
+            <button
+              onClick={() => copy(authUrl)}
+              className="px-2 py-1 bg-blue-600 rounded"
+              type="button"
+              data-testid="copy-auth"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+        <div>
+          <div className="text-sm font-bold">Callback Example</div>
+          <div className="flex items-center space-x-2">
+            <input
+              data-testid="callback-example"
+              readOnly
+              value={callbackExample}
+              className="flex-1 p-2 rounded text-black"
+            />
+            <button
+              onClick={() => copy(callbackExample)}
+              className="px-2 py-1 bg-blue-600 rounded"
+              type="button"
+              data-testid="copy-callback"
+            >
+              Copy
+            </button>
+          </div>
         </div>
         <div>
           <div className="text-sm font-bold">Token Exchange</div>
-          <pre
-            data-testid="token-curl"
-            className="p-2 bg-gray-800 rounded text-xs overflow-auto"
-          >{`curl -X POST https://auth.example.com/token -H 'Content-Type: application/x-www-form-urlencoded' -d "client_id=CLIENT_ID&grant_type=authorization_code&code=CODE_FROM_CALLBACK&redirect_uri=REDIRECT_URI&code_verifier=${verifier}"`}</pre>
+          <div className="flex items-center space-x-2">
+            <input
+              data-testid="token-curl"
+              readOnly
+              value={tokenCurl}
+              className="flex-1 p-2 rounded text-black text-xs"
+            />
+            <button
+              onClick={() => copy(tokenCurl)}
+              className="px-2 py-1 bg-blue-600 rounded"
+              type="button"
+              data-testid="copy-token"
+            >
+              Copy
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -149,4 +240,3 @@ const PkceHelper: React.FC = () => {
 
 export default PkceHelper;
 export const displayPkceHelper = () => <PkceHelper />;
-

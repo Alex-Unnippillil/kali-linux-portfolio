@@ -1,0 +1,21 @@
+{
+  "bomFormat": "CycloneDX",
+  "components": [
+    {
+      "bomRef": "pkg1",
+      "name": "pkg1",
+      "version": "1.0.0",
+      "licenses": [{ "license": { "id": "MIT" } }]
+    },
+    {
+      "bomRef": "pkg2",
+      "name": "pkg2",
+      "version": "2.0.0",
+      "licenses": [{ "license": { "id": "Apache-2.0" } }],
+      "vulnerabilities": [{ "id": "CVE-2024-0001" }]
+    }
+  ],
+  "dependencies": [
+    { "ref": "pkg1", "dependsOn": ["pkg2"] }
+  ]
+}

@@ -12,7 +12,7 @@ import {
   logLaneDefs,
   EASINGS,
   rectsIntersect,
-} from '../../apps/frogger';
+} from '../../apps/frogger/engine';
 
 // Frogger game rendered with PixiJS sprites and basic HUD
 const Frogger = () => {

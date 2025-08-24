@@ -10,7 +10,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const temperature_unit = units === 'imperial' ? 'fahrenheit' : 'celsius';
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m&daily=temperature_2m_max,temperature_2m_min&temperature_unit=${temperature_unit}&timezone=auto`;
+
+  // Request current weather, hourly temps and a 7 day forecast from Open-Meteo
+  const url =
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+    `&current_weather=true&hourly=temperature_2m` +
+    `&daily=temperature_2m_max,temperature_2m_min&forecast_days=7` +
+    `&temperature_unit=${temperature_unit}&timezone=auto`;
 
   try {
     const response = await fetch(url);
@@ -20,6 +26,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
     const data = await response.json();
+
+    // Cache for 10 minutes at the edge; clients can also cache
+    res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate');
     res.status(200).json(data);
   } catch (err: any) {
     res.status(500).json({ error: err.message || 'Unexpected error' });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface Snapshot {
   timestamp: string;
@@ -100,9 +100,28 @@ const WaybackViewer: React.FC = () => {
   const [mimeFilter, setMimeFilter] = useState('');
   const [excludeRobots, setExcludeRobots] = useState(false);
   const [scrubIndex, setScrubIndex] = useState(0);
+  const [search, setSearch] = useState('');
+  const cacheRef = useRef(
+    new Map<string, { snapshots: Snapshot[]; hasMore: boolean }>(),
+  );
   const limit = 50;
 
   const fetchSnapshots = async (pageNum = 0) => {
+    const key = JSON.stringify({
+      url,
+      pageNum,
+      statusFilter,
+      mimeFilter,
+      excludeRobots,
+    });
+    const cached = cacheRef.current.get(key);
+    if (cached) {
+      setSnapshots(cached.snapshots);
+      setHasMore(cached.hasMore);
+      setPage(pageNum);
+      setScrubIndex(0);
+      return;
+    }
     setLoading(true);
     setSnapshots([]);
     setSelected([]);
@@ -126,6 +145,10 @@ const WaybackViewer: React.FC = () => {
         setScrubIndex(0);
         setHasMore(Boolean(json.hasMore));
         setPage(pageNum);
+        cacheRef.current.set(key, {
+          snapshots: json.snapshots,
+          hasMore: Boolean(json.hasMore),
+        });
         if (json.snapshots.length === 0) {
           setError('No snapshots available');
         }
@@ -136,6 +159,10 @@ const WaybackViewer: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    cacheRef.current.clear();
+  }, [url, statusFilter, mimeFilter, excludeRobots]);
 
   const toggleSelect = (ts: string) => {
     setDiff(null);
@@ -172,10 +199,20 @@ const WaybackViewer: React.FC = () => {
 
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+  const filteredSnapshots = snapshots.filter((s) =>
+    [s.timestamp, s.statuscode, s.mimetype].some((f) =>
+      f.toLowerCase().includes(search.toLowerCase()),
+    ),
+  );
+
+  useEffect(() => {
+    if (scrubIndex >= filteredSnapshots.length) setScrubIndex(0);
+  }, [filteredSnapshots.length, scrubIndex]);
+
   const renderHeatmap = () => {
-    if (snapshots.length === 0) return null;
+    if (filteredSnapshots.length === 0) return null;
     const counts = Array.from({ length: 12 }, () => Array(31).fill(0));
-    snapshots.forEach((s) => {
+    filteredSnapshots.forEach((s) => {
       const d = parseTimestamp(s.timestamp);
       const m = d.getUTCMonth();
       const day = d.getUTCDate() - 1;
@@ -230,6 +267,12 @@ const WaybackViewer: React.FC = () => {
           value={mimeFilter}
           onChange={(e) => setMimeFilter(e.target.value)}
         />
+        <input
+          className="w-32 text-black px-2 py-1"
+          placeholder="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
         <label className="flex items-center space-x-1">
           <input
             type="checkbox"
@@ -249,25 +292,25 @@ const WaybackViewer: React.FC = () => {
       </div>
       {loading && <div>Loading...</div>}
       {error && <div className="text-red-400">{error}</div>}
-      {snapshots.length > 0 && (
+      {filteredSnapshots.length > 0 && (
         <div className="flex flex-col flex-1 space-y-2">
           <div className="flex items-center space-x-2">
             <input
               type="range"
               min={0}
-              max={snapshots.length - 1}
+              max={filteredSnapshots.length - 1}
               value={scrubIndex}
               onChange={(e) => setScrubIndex(Number(e.target.value))}
               className="flex-1"
             />
-            {snapshots[scrubIndex] && (
+            {filteredSnapshots[scrubIndex] && (
               <a
-                href={`https://web.archive.org/web/${snapshots[scrubIndex].timestamp}/${url}`}
+                href={`https://web.archive.org/web/${filteredSnapshots[scrubIndex].timestamp}/${url}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-400 underline text-sm"
               >
-                {snapshots[scrubIndex].timestamp}
+                {filteredSnapshots[scrubIndex].timestamp}
               </a>
             )}
           </div>
@@ -292,7 +335,7 @@ const WaybackViewer: React.FC = () => {
             </button>
           </div>
           <ul className="space-y-1 overflow-auto flex-1">
-            {snapshots.map((s) => (
+            {filteredSnapshots.map((s) => (
               <li key={s.timestamp} className="flex items-center space-x-2">
                 <input
                   type="checkbox"

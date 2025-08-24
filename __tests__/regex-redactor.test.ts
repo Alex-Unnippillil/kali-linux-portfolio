@@ -52,3 +52,31 @@ describe('regex-redactor RE2 patterns', () => {
   });
 });
 
+
+const applyPreset = async (
+  label: string,
+  text: string,
+  mask: 'full' | 'partial' = 'full'
+) => {
+  const preset = PRESETS.find((p) => p.label === label);
+  if (!preset) throw new Error(`Preset ${label} not found`);
+  const { RE2 } = await import('re2-wasm');
+  const regex = new RE2(preset.pattern, 'gu');
+  return text.replace(regex, (match: string) => preset.mask(match, mask));
+};
+
+describe('regex-redactor masking', () => {
+  test('email preset fully masks username', async () => {
+    const text = 'Reach me at user.name@example.com for details.';
+    const redacted = await applyPreset('Email', text);
+    expect(redacted).toBe(
+      'Reach me at █████████@example.com for details.'
+    );
+  });
+
+  test('phone preset partially masks digits', async () => {
+    const text = 'Call +1 234-567-8901 soon.';
+    const redacted = await applyPreset('Phone', text, 'partial');
+    expect(redacted).toBe('Call ***-***-8901 soon.');
+  });
+});

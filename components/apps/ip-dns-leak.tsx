@@ -19,7 +19,7 @@ type ResolverInfo = {
 const STUN_TIMEOUT = 3000; // ms
 type IpInfo = { local: string[]; public: string[]; mdns: boolean };
 
-function gatherIps(): Promise<IpInfo> {
+export const gatherIps = (): Promise<IpInfo> => {
   return new Promise((resolve, reject) => {
     const locals = new Set<string>();
     const publics = new Set<string>();
@@ -94,9 +94,9 @@ function gatherIps(): Promise<IpInfo> {
       }
     }
   });
-}
+};
 
-async function testDns(hostnames: string[]): Promise<DnsResult[]> {
+export const testDns = async (hostnames: string[]): Promise<DnsResult[]> => {
   const resolvers = [
     { name: 'Cloudflare', url: 'https://cloudflare-dns.com/dns-query' },
     { name: 'Google', url: 'https://dns.google/resolve' },
@@ -131,9 +131,52 @@ async function testDns(hostnames: string[]): Promise<DnsResult[]> {
   }
 
   return Promise.all(queries);
-}
+};
 
-const IpDnsLeak: React.FC = () => {
+export const fetchPublicIps = async (): Promise<{
+  ips: string[];
+  errors: string[];
+}> => {
+  const endpoints = [
+    'https://api.ipify.org?format=json',
+    'https://ipapi.co/json',
+  ];
+  const ips: string[] = [];
+  const errors: string[] = [];
+  await Promise.all(
+    endpoints.map(async (url) => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const ip = data.ip || data.IP;
+        if (ip) ips.push(ip);
+        else errors.push(`No IP from ${url}`);
+      } catch (e: any) {
+        const host = (() => {
+          try {
+            return new URL(url).hostname;
+          } catch {
+            return url;
+          }
+        })();
+        errors.push(`Public IP error (${host}): ${e.message || 'failed'}`);
+      }
+    })
+  );
+  return { ips, errors };
+};
+
+export const utils = {
+  gatherIps,
+  testDns,
+  fetchPublicIps,
+};
+type Props = {
+  utils?: typeof utils;
+};
+
+const IpDnsLeak: React.FC<Props> = ({ utils: u = utils }) => {
   const [loading, setLoading] = useState(false);
   const [publicIps, setPublicIps] = useState<string[]>([]);
   const [localIps, setLocalIps] = useState<string[]>([]);
@@ -148,6 +191,7 @@ const IpDnsLeak: React.FC = () => {
   const [dnsResults, setDnsResults] = useState<DnsResult[]>([]);
   const [resolverInfo, setResolverInfo] = useState<ResolverInfo[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [copied, setCopied] = useState(false);
 
   const runCheck = async () => {
     setLoading(true);
@@ -166,11 +210,11 @@ const IpDnsLeak: React.FC = () => {
 
     const errorList: string[] = [];
 
-    const ipPromise = gatherIps().catch((e) => {
+    const ipPromise = u.gatherIps().catch((e) => {
       errorList.push(`WebRTC/STUN error: ${e.message}`);
       return { local: [], public: [], mdns: false } as IpInfo;
     });
-    const dnsPromise = testDns(hostnames).catch((e) => {
+    const dnsPromise = u.testDns(hostnames).catch((e) => {
       errorList.push(`DNS test error: ${e.message}`);
       return [] as DnsResult[];
     });
@@ -180,15 +224,17 @@ const IpDnsLeak: React.FC = () => {
         errorList.push(`Resolver probe error: ${e.message}`);
         return { resolvers: [] as ResolverInfo[] };
       });
+    const pubIpPromise = u.fetchPublicIps();
 
-    const [ipData, dns, resolverData] = await Promise.all([
+    const [ipData, dns, resolverData, pubIps] = await Promise.all([
       ipPromise,
       dnsPromise,
       resolverPromise,
+      pubIpPromise,
     ]);
 
     setLocalIps(ipData.local);
-    setPublicIps(ipData.public);
+    setPublicIps(Array.from(new Set([...ipData.public, ...pubIps.ips])));
     setMdns(ipData.mdns);
     setDnsResults(dns);
 
@@ -213,7 +259,7 @@ const IpDnsLeak: React.FC = () => {
       }));
       setResolverInfo(enriched);
     }
-    setErrors(errorList);
+    setErrors([...errorList, ...pubIps.errors]);
     setLoading(false);
   };
 
@@ -249,8 +295,26 @@ const IpDnsLeak: React.FC = () => {
   if (resolverMismatch)
     tips.push('Ensure DNS queries use your expected network/VPN.');
 
+  const copyReport = async () => {
+    const reportLines = [...summary];
+    if (tips.length) {
+      reportLines.push('', 'Remediation Tips:', ...tips);
+    }
+    try {
+      await navigator.clipboard.writeText(reportLines.join('\n'));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e: any) {
+      setErrors((prev) => [...prev, `Copy failed: ${e.message}`]);
+    }
+  };
+
   return (
     <div className="h-full w-full bg-panel text-white p-4 overflow-auto space-y-4">
+      <div className="text-yellow-300 text-sm">
+        Browser APIs provide limited visibility into network settings. Results
+        may be incomplete depending on your browser and extensions.
+      </div>
       <div className="flex flex-col sm:flex-row gap-2 items-start">
         <textarea
           className="text-black px-2 py-1 flex-1 h-24"
@@ -272,6 +336,13 @@ const IpDnsLeak: React.FC = () => {
         {errors.map((e, i) => (
           <div key={i}>{e}</div>
         ))}
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={runCheck}
+          disabled={loading}
+        >
+          Retry
+        </button>
       </div>
       )}
 
@@ -379,6 +450,13 @@ const IpDnsLeak: React.FC = () => {
               </ul>
             </div>
           )}
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={copyReport}
+            disabled={copied}
+          >
+            {copied ? 'Copied!' : 'Copy Report'}
+          </button>
         </div>
       )}
     </div>

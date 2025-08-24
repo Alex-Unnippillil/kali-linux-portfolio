@@ -10,6 +10,7 @@ interface MatchDetail {
 interface CompileError {
   message: string;
   line?: number;
+  column?: number;
   warning?: boolean;
 }
 
@@ -65,11 +66,13 @@ const runYara = (
       });
     }
     const meta: Record<string, string> = {};
-    const metas = r.metas;
+    const metas = (r as any).metas || (r as any).metadata;
     if (metas) {
       for (let k = 0; k < metas.size(); k += 1) {
         const m = metas.get(k);
-        meta[m.id] = m.value;
+        const id = (m as any).id ?? (m as any).identifier;
+        const val = (m as any).value ?? (m as any).data;
+        meta[id] = val;
       }
     }
     const tags: string[] = [];
@@ -85,7 +88,12 @@ const runYara = (
   const errArr: CompileError[] = [];
   for (let i = 0; i < errVec.size(); i += 1) {
     const e = errVec.get(i);
-    errArr.push({ message: e.message, line: e.lineNumber, warning: e.warning });
+    errArr.push({
+      message: e.message,
+      line: e.lineNumber,
+      column: (e as any).columnNumber,
+      warning: e.warning,
+    });
   }
   missing.forEach((m) => errArr.push({ message: `missing include: ${m}` }));
   return { matches: found, compileErrors: errArr };

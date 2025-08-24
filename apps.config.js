@@ -17,7 +17,7 @@ import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
 import { displayKeyConverter } from './components/apps/key-converter';
 import { displayQrTool } from './components/apps/qr_tool';
-import { displayTotp } from './components/apps/totp';
+import { displayOtp } from './components/apps/otp';
 import { displayRegexRedactor } from './components/apps/regex-redactor';
 import { displayRegexLab } from './components/apps/regex-lab';
 import { displayAsciiArt } from './components/apps/ascii_art';
@@ -29,6 +29,8 @@ import { displayCvssCalculator } from './components/apps/cvss-calculator';
 
 import { displayProjectGallery } from './components/apps/project-gallery';
 import { displayBaseEncoders } from './components/apps/base-encoders';
+
+import { displayAllApps } from './components/apps/all-apps';
 
 import { displayDgaDemo } from './components/apps/dga-demo';
 
@@ -49,6 +51,7 @@ import { displayHibpCheck } from './components/apps/hibp-check';
 import { displayJwsJweWorkbench } from './apps/jws-jwe-workbench';
 
 import { displayCaaChecker } from './components/apps/caa-checker';
+
 
 
 export const THEME = process.env.NEXT_PUBLIC_THEME || 'Yaru';
@@ -169,6 +172,7 @@ const dynamicAppEntries = [
   ['candy-crush', 'Candy Crush'],
   ['match3', 'Match 3'],
   ['ct-search', 'CT Search'],
+  ['crtsh-lookup', 'crt.sh Lookup'],
   ['mail-auth', 'Mail Auth'],
   ['mail-security-matrix', 'Mail Security Matrix'],
   ['dnssec-validator', 'DNSSEC Validator'],
@@ -176,6 +180,7 @@ const dynamicAppEntries = [
   ['gomoku', 'Gomoku'],
   ['pinball', 'Pinball'],
   ['favicon-hash', 'Favicon Hash'],
+  ['hash-toolkit', 'Hash Toolkit'],
   ['pcre-re2-lab', 'PCRE RE2 Lab'],
   ['pcap-viewer', 'PCAP Viewer'],
   ['sqlite-viewer', 'SQLite Viewer'],
@@ -192,8 +197,10 @@ const dynamicAppEntries = [
   ['hsts-preload', 'HSTS Preload'],
   ['cookie-jar', 'Cookie Jar'],
   ['cookie-simulator', 'Cookie Simulator'],
+  ['cookie-visualizer', 'Cookie Visualizer'],
   ['mixed-content', 'Mixed Content'],
   ['tls-explainer', 'TLS Explainer'],
+  ['tls-inspector', 'TLS Inspector'],
   ['cache-policy', 'Cache Policy'],
   ['tor-exit-check', 'Tor Exit Check'],
   ['wayback-viewer', 'Wayback Viewer'],
@@ -215,6 +222,7 @@ const dynamicAppEntries = [
   ['redirect-visualizer', 'Redirect Visualizer'],
   ['http3-probe', 'HTTP/3 Probe'],
   ['sbom-viewer', 'SBOM Viewer'],
+  ['utilities-demo', 'Utilities Demo'],
 ];
 
 const dynamicScreens = Object.fromEntries(
@@ -380,7 +388,7 @@ const apps = [
   {
     id: 'ip-dns-leak',
     title: 'IP/DNS Leak',
-    icon: icon('resource-monitor.svg'),
+    icon: icon('ip-dns-leak.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -394,6 +402,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'all-apps',
+    title: 'All Apps',
+    icon: icon('all-apps.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAllApps,
   },
   {
     id: 'todoist',
@@ -434,7 +451,7 @@ const apps = [
   {
     id: 'key-converter',
     title: 'Key Converter',
-    icon: icon('hash.svg'),
+    icon: icon('key-converter.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -450,13 +467,13 @@ const apps = [
     screen: displayQrTool,
   },
   {
-    id: 'totp',
-    title: 'TOTP',
-    icon: icon('calc.png'),
+    id: 'otp',
+    title: 'OTP',
+    icon: icon('otp.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayTotp,
+    screen: displayOtp,
   },
   {
     id: 'regex-redactor',
@@ -488,7 +505,7 @@ const apps = [
   {
     id: 'license-classifier',
     title: 'License Classifier',
-    icon: icon('gedit.png'),
+    icon: icon('license-classifier.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -506,7 +523,7 @@ const apps = [
   {
     id: 'cvss-calculator',
     title: 'CVSS Calculator',
-    icon: icon('calc.png'),
+    icon: icon('cvss.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -533,7 +550,7 @@ const apps = [
   {
     id: 'pkce-helper',
     title: 'PKCE Helper',
-    icon: icon('calc.png'),
+    icon: icon('pkce-helper.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -542,7 +559,7 @@ const apps = [
   {
     id: 'timeline-builder',
     title: 'Timeline Builder',
-    icon: icon('project-gallery.svg'),
+    icon: icon('timeline-builder.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -558,9 +575,18 @@ const apps = [
     screen: getScreen('ct-search'),
   },
   {
+    id: 'crtsh-lookup',
+    title: 'crt.sh Lookup',
+    icon: icon('crtsh.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: getScreen('crtsh-lookup'),
+  },
+  {
     id: 'evidence-notebook',
     title: 'Evidence Notebook',
-    icon: './themes/Yaru/apps/gedit.png',
+    icon: icon('hash.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -576,6 +602,15 @@ const apps = [
     screen: getScreen('tls-explainer'),
   },
   {
+    id: 'tls-inspector',
+    title: 'TLS Inspector',
+    icon: './themes/Yaru/apps/tls-inspector.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: getScreen('tls-inspector'),
+  },
+  {
     id: 'import-graph',
     title: 'Import Graph',
     icon: './themes/Yaru/apps/gedit.png',
@@ -587,7 +622,7 @@ const apps = [
   {
     id: 'pcre-re2-lab',
     title: 'PCRE RE2 Lab',
-    icon: './themes/Yaru/apps/regex-redactor.svg',
+    icon: './themes/Yaru/apps/pcre-re2-lab.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -596,16 +631,25 @@ const apps = [
   {
     id: 'base-encoders',
     title: 'Base Encoders',
-    icon: icon('hash.svg'),
+    icon: icon('base-encoders.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
     screen: displayBaseEncoders,
   },
   {
+    id: 'hash-toolkit',
+    title: 'Hash Toolkit',
+    icon: icon('hash.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: getScreen('hash-toolkit'),
+  },
+  {
     id: 'favicon-hash',
     title: 'Favicon Hash',
-    icon: './themes/Yaru/apps/hash.svg',
+    icon: icon('favicon-hash.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -614,7 +658,7 @@ const apps = [
   {
     id: 'cve-dashboard',
     title: 'CVE Dashboard',
-    icon: './themes/Yaru/apps/calc.png',
+    icon: icon('hash.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -641,7 +685,7 @@ const apps = [
   {
     id: 'yara-tester',
     title: 'YARA Tester',
-    icon: './themes/Yaru/apps/bash.png',
+    icon: './themes/Yaru/apps/yara.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -702,6 +746,15 @@ const apps = [
     screen: getScreen('cookie-simulator'),
   },
   {
+    id: 'cookie-visualizer',
+    title: 'Cookie Visualizer',
+    icon: './themes/Yaru/apps/cookie-jar.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: getScreen('cookie-visualizer'),
+  },
+  {
     id: 'content-fingerprint',
     title: 'Content Fingerprint',
     icon: './themes/Yaru/apps/content-fingerprint.svg',
@@ -713,7 +766,7 @@ const apps = [
   {
     id: 'nmap-viewer',
     title: 'Nmap Viewer',
-    icon: './themes/Yaru/apps/resource-monitor.svg',
+    icon: './themes/Yaru/apps/nmap.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -785,7 +838,7 @@ const apps = [
   {
     id: 'mixed-content',
     title: 'Mixed Content',
-    icon: './themes/Yaru/apps/hash.svg',
+    icon: './themes/Yaru/apps/mixed-content.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -803,7 +856,7 @@ const apps = [
   {
     id: 'sbom-viewer',
     title: 'SBOM Viewer',
-    icon: './themes/Yaru/apps/gedit.png',
+    icon: './themes/Yaru/apps/sbom.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -821,7 +874,7 @@ const apps = [
   {
     id: 'http3-probe',
     title: 'HTTP/3 Probe',
-    icon: './themes/Yaru/apps/resource-monitor.svg',
+    icon: './themes/Yaru/apps/http3-probe.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -830,7 +883,7 @@ const apps = [
   {
     id: 'csp-reporter',
     title: 'CSP Reporter',
-    icon: './themes/Yaru/apps/resource-monitor.svg',
+    icon: './themes/Yaru/apps/csp-reporter.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -839,7 +892,7 @@ const apps = [
   {
     id: 'robots-auditor',
     title: 'Robots Auditor',
-    icon: './themes/Yaru/apps/resource-monitor.svg',
+    icon: icon('robots-auditor.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -857,7 +910,7 @@ const apps = [
   {
     id: 'ipv6-slaac',
     title: 'IPv6 SLAAC',
-    icon: icon('calc.png'),
+    icon: icon('ipv6-slaac.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -866,7 +919,7 @@ const apps = [
   {
     id: 'wayback-viewer',
     title: 'Wayback Viewer',
-    icon: './themes/Yaru/apps/hash.svg',
+    icon: './themes/Yaru/apps/wayback.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
@@ -880,6 +933,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayLexicalAnalyzer,
+
   },
 ];
  
