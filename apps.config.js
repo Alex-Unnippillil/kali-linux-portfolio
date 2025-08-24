@@ -836,7 +836,7 @@ const apps = [
   {
     id: 'sbom-viewer',
     title: 'SBOM Viewer',
-    icon: './themes/Yaru/apps/gedit.png',
+    icon: './themes/Yaru/apps/sbom.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
