@@ -38,15 +38,21 @@ export const PRESETS = [
     },
   },
   {
-    label: 'SSN',
-    pattern: '\\b\\d{3}-\\d{2}-\\d{4}\\b',
+    label: 'Secret',
+    pattern:
+      '(?i)(?:api[_-]?key|secret|token)\\s*[:=]\\s*[A-Za-z0-9._-]{10,}',
     mask(match, option) {
+      const delimiter = match.includes(':') ? ':' : '=';
+      const [key, value] = match.split(delimiter);
+      const trimmed = value.trim();
       if (option === 'partial') {
-        return '***-**-' + match.slice(-4);
+        return `${key}${delimiter}${trimmed.slice(0, 4)}***`;
       }
-      return '█'.repeat(match.length);
+      return `${key}${delimiter}` + '█'.repeat(trimmed.length);
+
     },
   },
 ];
 
+export const SAFE_PRESETS = PRESETS;
 export default PRESETS;
