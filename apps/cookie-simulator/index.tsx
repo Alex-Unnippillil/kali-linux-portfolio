@@ -38,16 +38,22 @@ const CookieSimulator: React.FC = () => {
     [targets],
   );
 
-  let originUrl: URL | null = null;
-  try {
-    originUrl = new URL(origin);
-  } catch {
-    originUrl = null;
-  }
-
-  const originValid = originUrl !== null;
+  const originValid = useMemo(() => {
+    try {
+      new URL(origin);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [origin]);
 
   const results = useMemo(() => {
+    let originUrl: URL | null = null;
+    try {
+      originUrl = new URL(origin);
+    } catch {
+      originUrl = null;
+    }
     if (!originUrl) return [] as TargetResult[];
     const originSite = getSite(originUrl.hostname);
 
