@@ -1,13 +1,13 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   getLicenseInfo,
-  matchLicense,
   LicenseInfo,
   LicenseMatchResult,
   parseSpdxExpression,
   detectLicenseConflicts,
   LicenseConflict,
 } from '../../lib/licenseMatcher';
+import { matchLicenseWorker } from '../../lib/licenseMatcher.worker-client';
 
 interface AnalysisResult {
   detected: LicenseInfo[];
@@ -25,6 +25,9 @@ const LicenseClassifier: React.FC = () => {
     conflicts: [],
   });
   const [files, setFiles] = useState<FileCache>({});
+  const [progress, setProgress] = useState(0);
+  const [running, setRunning] = useState(false);
+  const controllerRef = useRef<AbortController | null>(null);
 
   const analyze = () => {
     if (!text.trim()) {
@@ -33,27 +36,61 @@ const LicenseClassifier: React.FC = () => {
     }
     const parsed = parseSpdxExpression(text);
     const detected = parsed.ids.map((id) => getLicenseInfo(id));
-    const fuzzy = matchLicense(text);
-    const conflicts = detectLicenseConflicts(parsed.ids, parsed.hasAnd && !parsed.hasOr);
-    setAnalysis({ detected, fuzzy, conflicts });
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    setProgress(0);
+    setRunning(true);
+    matchLicenseWorker(text, {
+      signal: controller.signal,
+      onProgress: (p) => setProgress(Math.round(p * 100)),
+    })
+      .then((fuzzy) => {
+        const conflicts = detectLicenseConflicts(
+          parsed.ids,
+          parsed.hasAnd && !parsed.hasOr
+        );
+        setAnalysis({ detected, fuzzy, conflicts });
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') console.error(err);
+      })
+      .finally(() => {
+        setRunning(false);
+      });
   };
 
   const handleFiles = useCallback(
     async (fileList: FileList) => {
       const cache: FileCache = { ...files };
-      for (const file of Array.from(fileList)) {
-        if (cache[file.name]) continue;
-        const content = await file.text();
-        const parsed = parseSpdxExpression(content);
-        const detected = parsed.ids.map((id) => getLicenseInfo(id));
-        const fuzzy = matchLicense(content);
-        const conflicts = detectLicenseConflicts(
-          parsed.ids,
-          parsed.hasAnd && !parsed.hasOr
-        );
-        cache[file.name] = { detected, fuzzy, conflicts };
+      const arr = Array.from(fileList);
+      const controller = new AbortController();
+      controllerRef.current = controller;
+      setProgress(0);
+      setRunning(true);
+      try {
+        for (let i = 0; i < arr.length; i += 1) {
+          const file = arr[i];
+          if (cache[file.name]) continue;
+          const content = await file.text();
+          const parsed = parseSpdxExpression(content);
+          const detected = parsed.ids.map((id) => getLicenseInfo(id));
+          const fuzzy = await matchLicenseWorker(content, {
+            signal: controller.signal,
+            onProgress: (p) =>
+              setProgress(Math.round(((i + p) / arr.length) * 100)),
+          });
+          const conflicts = detectLicenseConflicts(
+            parsed.ids,
+            parsed.hasAnd && !parsed.hasOr
+          );
+          cache[file.name] = { detected, fuzzy, conflicts };
+        }
+        setFiles(cache);
+      } catch (err: any) {
+        if (err.name !== 'AbortError') console.error(err);
+      } finally {
+        setRunning(false);
       }
-      setFiles(cache);
     },
     [files]
   );
@@ -101,6 +138,15 @@ const LicenseClassifier: React.FC = () => {
         >
           Analyze
         </button>
+        <button
+          type="button"
+          onClick={() => controllerRef.current?.abort()}
+          disabled={!running}
+          className="px-4 py-1 bg-red-600 rounded disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        {running && <span>{progress}%</span>}
       </div>
 
       {analysis.detected.length > 0 && (

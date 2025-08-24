@@ -7,8 +7,8 @@ Common helper utilities for apps and libraries are centralized in `lib/utilities
 - **fileGuards.ts** – basic size and MIME type checks for uploaded files.
 - **streamingParser.ts** – parse newline-delimited JSON streams via async
   iteration.
-- **workerWrapper.ts** – promise-based wrapper around Web Workers or compatible
-  interfaces.
+- **workerWrapper.ts** – promise-based wrapper around Web Workers with
+  progress callbacks and cancellation support.
 - **fetchWithRetry.ts** – `fetch` with timeout and retry semantics.
 - **useToastLogger.ts** – React hook combining console logging with a simple
   toast message state.

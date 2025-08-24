@@ -171,6 +171,56 @@ self.onmessage = (ev: MessageEvent) => {
     } finally {
       if (timer) clearTimeout(timer);
     }
+  } else if (data.type === 'scanFiles') {
+    const limits = data.limits || {};
+    const heatmap: Record<string, number> = {};
+    let aborted = false;
+    const timer =
+      limits.cpu !== undefined
+        ? setTimeout(() => {
+            aborted = true;
+            (self as any).postMessage({ type: 'runtimeError', error: 'CPU limit exceeded' });
+          }, limits.cpu)
+        : null;
+    const chunkSize: number = data.chunkSize || 1024 * 1024;
+    try {
+      const compileCheck = runYara('', data.rules);
+      const compileErrors = compileCheck.compileErrors;
+      if (compileErrors.length > 0) {
+        (self as any).postMessage({ type: 'corpusDone', heatmap, compileErrors });
+        return;
+      }
+      for (const handle of data.handles as any[]) {
+        const file = await (handle as any).getFile();
+        let offset = 0;
+        const start = performance.now();
+        for (let pos = 0; pos < file.size && !aborted; pos += chunkSize) {
+          const chunk = await file.slice(pos, pos + chunkSize).text();
+          runYara(chunk, data.rules, (m) => {
+            m.matches = m.matches.map((d) => ({ ...d, offset: d.offset + offset }));
+            (self as any).postMessage({ type: 'match', file: file.name, match: m });
+            heatmap[m.rule] = (heatmap[m.rule] || 0) + 1;
+            if (
+              limits.mem &&
+              (performance as any).memory &&
+              (performance as any).memory.usedJSHeapSize > limits.mem
+            ) {
+              aborted = true;
+              throw new Error('Memory limit exceeded');
+            }
+          });
+          offset += chunk.length;
+        }
+        const elapsed = performance.now() - start;
+        (self as any).postMessage({ type: 'fileResult', file: file.name, elapsed });
+        if (aborted) break;
+      }
+      if (!aborted) (self as any).postMessage({ type: 'corpusDone', heatmap, compileErrors: [] });
+    } catch (e) {
+      if (!aborted) (self as any).postMessage({ type: 'runtimeError', error: String(e) });
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   } else if (data.type === 'lint') {
     try {
       const result = runYara('', data.rules);

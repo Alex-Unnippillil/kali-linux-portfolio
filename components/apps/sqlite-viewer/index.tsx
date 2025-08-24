@@ -92,6 +92,8 @@ const SqliteViewer: React.FC = () => {
   const [page, setPage] = useState(0);
   const [history, setHistory] = useState<string[]>([]);
   const [views, setViews] = useState<View[]>([]);
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     loadSession().then((s) => {
@@ -116,8 +118,14 @@ const SqliteViewer: React.FC = () => {
         setSchema((prev) => [...prev, msg.table]);
       } else if (msg.type === 'result') {
         setResult({ columns: msg.columns, rows: msg.rows });
+        setRunning(false);
+      } else if (msg.type === 'progress') {
+        setProgress(msg.rows);
+      } else if (msg.type === 'cancelled') {
+        setRunning(false);
       } else if (msg.type === 'error') {
         console.error(msg.error);
+        setRunning(false);
       }
     };
     worker.postMessage({ type: 'init', buffer: data.buffer }, [data.buffer]);
@@ -129,6 +137,8 @@ const SqliteViewer: React.FC = () => {
 
   const runQuery = (p = page) => {
     if (!workerRef.current) return;
+    setProgress(0);
+    setRunning(true);
     workerRef.current.postMessage({
       type: 'exec',
       query,
@@ -138,6 +148,10 @@ const SqliteViewer: React.FC = () => {
     const newHistory = [query, ...history.filter((h) => h !== query)].slice(0, 50);
     setHistory(newHistory);
     saveSession({ history: newHistory, views });
+  };
+
+  const cancelQuery = () => {
+    workerRef.current?.postMessage({ type: 'cancel' });
   };
 
   const exportCSV = () => {
@@ -200,8 +214,19 @@ const SqliteViewer: React.FC = () => {
         className="w-full h-24 text-black p-1 mb-2"
       />
       <div className="flex space-x-2 mb-2">
-        <button onClick={() => runQuery(0)} className="px-2 py-1 bg-green-600">
+        <button
+          onClick={() => runQuery(0)}
+          className="px-2 py-1 bg-green-600"
+          disabled={running}
+        >
           Run
+        </button>
+        <button
+          onClick={cancelQuery}
+          className="px-2 py-1 bg-red-600"
+          disabled={!running}
+        >
+          Cancel
         </button>
         <button onClick={exportCSV} disabled={!result} className="px-2 py-1 bg-blue-600">
           CSV
@@ -213,6 +238,7 @@ const SqliteViewer: React.FC = () => {
           Save View
         </button>
       </div>
+      {running && <div className="mb-2 text-sm">Rows processed: {progress}</div>}
       {result && (
         <div className="overflow-auto">
           <table className="text-xs">

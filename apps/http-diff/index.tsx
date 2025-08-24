@@ -1,33 +1,5 @@
 import React, { useState } from 'react';
-
-interface DiffPart {
-  value: string;
-  added?: boolean;
-  removed?: boolean;
-}
-
-interface FetchMeta {
-  finalUrl: string;
-  status: number;
-  headers: Record<string, string>;
-  body: string;
-  redirects: { url: string; status: number }[];
-  altSvc?: string;
-  http3: {
-    supported: boolean;
-    h1: number;
-    h3?: number;
-    delta?: number;
-    error?: string;
-  };
-}
-
-interface ApiResult {
-  url1: FetchMeta;
-  url2: FetchMeta;
-  bodyDiff: DiffPart[];
-  headersDiff: DiffPart[];
-}
+import type { ApiResult, DiffPart } from '@/types/http-diff';
 
 function escapeHtml(str: string): string {
   return str.replace(/[&<>"']/g, (c) => ({
@@ -90,7 +62,7 @@ const HttpDiff: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url1, url2 }),
       });
-      const json = await res.json();
+      const json: ApiResult = await res.json();
       setData(json);
     } catch (e) {
       // eslint-disable-next-line no-console
