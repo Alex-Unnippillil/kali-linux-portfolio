@@ -51,6 +51,9 @@ describe('next.config.js Content Security Policy', () => {
         'https://platform.twitter.com',
       ])
     );
+    expect(parsed['script-src']).toEqual(
+      expect.arrayContaining([expect.stringMatching(/^'nonce-[^']+'$/)])
+    );
     expect(parsed['script-src']).not.toEqual(
       expect.arrayContaining(["'unsafe-inline'"])
     );
