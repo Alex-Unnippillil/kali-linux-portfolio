@@ -76,10 +76,20 @@ const securityHeaders = [
 module.exports = {
   productionBrowserSourceMaps: true,
   images: {
-    // Keep unoptimized if you serve static assets without the Next image optimizer.
-    unoptimized: true,
-    domains: ['opengraph.githubassets.com', 'raw.githubusercontent.com', 'avatars.githubusercontent.com'],
-
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'opengraph.githubassets.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'raw.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
+    ],
   },
   webpack: (config) => {
     config.resolve = config.resolve || {};

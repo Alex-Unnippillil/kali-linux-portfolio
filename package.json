@@ -113,6 +113,7 @@
     "rfc4648": "^1.5.4",
     "safe-regex": "^2.1.1",
     "sax": "^1.4.1",
+    "sharp": "^0.34.3",
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",
     "spdx-license-ids": "^3.0.17",
