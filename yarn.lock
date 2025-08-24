@@ -1590,6 +1590,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@stephen-riley/pcre2-wasm@npm:^1.2.4":
+  version: 1.2.4
+  resolution: "@stephen-riley/pcre2-wasm@npm:1.2.4"
+  checksum: 10c0/af98915c7f9c8ebc9889dbe8ea3bec1b29d8a041ebe026b2b9052eabd812b411ecb90a716dc4f002264632d1ca33fcc206ef86936bfa73588e9c09f69f812ce4
+  languageName: node
+  linkType: hard
+
 "@swc/helpers@npm:0.5.15":
   version: 0.5.15
   resolution: "@swc/helpers@npm:0.5.15"
@@ -9771,6 +9778,7 @@ __metadata:
     "@dnd-kit/core": "npm:^6.3.1"
     "@dnd-kit/utilities": "npm:^3.2.2"
     "@emailjs/browser": "npm:^3.10.0"
+    "@stephen-riley/pcre2-wasm": "npm:^1.2.4"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^6.6.4"
     "@testing-library/react": "npm:^16.3.0"

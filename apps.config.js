@@ -18,6 +18,7 @@ import { displayKeyConverter } from './components/apps/key-converter';
 import { displayQrTool } from './components/apps/qr_tool';
 import { displayTotp } from './components/apps/totp';
 import { displayRegexRedactor } from './components/apps/regex-redactor';
+import { displayRegexLab } from './components/apps/regex-lab';
 import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
@@ -460,6 +461,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayRegexRedactor,
+  },
+  {
+    id: 'regex-lab',
+    title: 'Regex Lab',
+    icon: './themes/Yaru/apps/hash.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayRegexLab,
   },
   {
     id: 'ascii-art',
