@@ -15,12 +15,19 @@ export interface GameState {
   future: HistoryEntry[];
 }
 
-export const createRng = (seed: number) => {
+export interface Rng {
+  (): number;
+  state: () => number;
+}
+
+export const createRng = (seed: number): Rng => {
   let s = seed >>> 0;
-  return () => {
+  const rng = (() => {
     s = (s * 1664525 + 1013904223) >>> 0;
     return s / 0xffffffff;
-  };
+  }) as Rng;
+  rng.state = () => s;
+  return rng;
 };
 
 export const spawnTile = (board: Board, rng: () => number): Board => {

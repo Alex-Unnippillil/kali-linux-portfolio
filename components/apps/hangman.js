@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import ReactGA from 'react-ga4';
+import { buildDictionary, selectWord as pickWord } from '../../apps/hangman/words';
 
 const lengthOptions = [
   { label: 'Any', min: 0, max: Infinity },
@@ -48,17 +49,23 @@ const Hangman = () => {
   const [gameEnded, setGameEnded] = useState(false);
   const [shake, setShake] = useState(false);
   const [highScore, setHighScore] = useState(0);
+  const [useEnable, setUseEnable] = useState(false);
+  const [feedback, setFeedback] = useState('');
   const usedWordsRef = useRef([]);
 
   const length = lengthOptions[lengthIndex];
   const hintLimits = useMemo(() => ({ easy: Infinity, medium: 1, hard: 0 }), []);
 
   useEffect(() => {
-    fetch('/wordlists/frequency.json')
+    const url = useEnable ? '/wordlists/enable.json' : '/wordlists/frequency.json';
+    fetch(url)
       .then((res) => res.json())
-      .then((data) => setDictionary(data))
+      .then((data) => {
+        if (useEnable) setDictionary(buildDictionary(data));
+        else setDictionary(data);
+      })
       .catch(() => setDictionary({ easy: [], medium: [], hard: [] }));
-  }, []);
+  }, [useEnable]);
 
   useEffect(() => {
     const key = `hangman-${difficulty}-highscore`;
@@ -75,12 +82,7 @@ const Hangman = () => {
 
   const selectWord = useCallback(() => {
     const options = getFilteredWords();
-    let available = options.filter((w) => !usedWordsRef.current.includes(w.word));
-    if (available.length === 0) {
-      usedWordsRef.current = [];
-      available = options;
-    }
-    const choice = available[Math.floor(Math.random() * available.length)];
+    const choice = pickWord(options, usedWordsRef.current);
     usedWordsRef.current.push(choice.word);
     return choice;
   }, [getFilteredWords]);
@@ -94,6 +96,7 @@ const Hangman = () => {
     setScore(0);
     setRevealed([]);
     setGameEnded(false);
+    setFeedback('');
     setWord(choice?.word || '');
   }, [selectWord]);
 
@@ -121,16 +124,21 @@ const Hangman = () => {
         btn.classList.add('key-press');
         setTimeout(() => btn.classList.remove('key-press'), 100);
       }
-      if (guessed.includes(letter) || isGameOver()) return;
+      if (guessed.includes(letter) || isGameOver()) {
+        setFeedback(`${letter.toUpperCase()} already guessed`);
+        return;
+      }
       ReactGA.event({ category: 'hangman', action: 'guess', label: letter });
       setGuessed((g) => [...g, letter]);
       if (!word.includes(letter)) {
         setWrong((w) => w + 1);
         setScore((s) => s - 1);
         setShake(true);
+        setFeedback(`${letter.toUpperCase()} is not in the word`);
         setTimeout(() => setShake(false), 500);
       } else {
         setScore((s) => s + 2);
+        setFeedback(`${letter.toUpperCase()} is in the word`);
         setRevealed((r) => [...r, letter]);
         setTimeout(() => setRevealed((r) => r.filter((l) => l !== letter)), 500);
       }
@@ -163,6 +171,7 @@ const Hangman = () => {
     setLetterHint(reveal);
     setScore((s) => s - 5);
     setHintsUsed((h) => h + 1);
+    setFeedback(`Revealed letter ${reveal.toUpperCase()}`);
     setRevealed((r) => [...r, reveal]);
     setTimeout(() => setRevealed((r) => r.filter((l) => l !== reveal)), 500);
   }, [difficulty, guessed, hintLimits, hintsUsed, isGameOver, word]);
@@ -197,11 +206,14 @@ const Hangman = () => {
       });
       if (isWinner()) {
         confetti({ particleCount: 100, spread: 70 });
+        setFeedback('You won!');
+      } else {
+        setFeedback(`You lost! The word was ${word}.`);
       }
       setGameEnded(true);
       saveHigh(score);
     }
-  }, [gameEnded, guessed, isGameOver, isWinner, saveHigh, score]);
+  }, [gameEnded, guessed, isGameOver, isWinner, saveHigh, score, word]);
 
   useEffect(() => {
     ReactGA.event({
@@ -236,12 +248,21 @@ const Hangman = () => {
           className="bg-gray-700 p-1 rounded"
           aria-label="Select word length"
         >
-          {lengthOptions.map((opt, idx) => (
-            <option key={opt.label} value={idx}>
-              {opt.label}
-            </option>
-          ))}
+      {lengthOptions.map((opt, idx) => (
+        <option key={opt.label} value={idx}>
+          {opt.label}
+        </option>
+      ))}
         </select>
+        <label className="flex items-center space-x-1">
+          <input
+            type="checkbox"
+            checked={useEnable}
+            onChange={() => setUseEnable(!useEnable)}
+            aria-label="Use ENABLE word list"
+          />
+          <span>ENABLE</span>
+        </label>
       </div>
       <div className="mb-2">Score: {score} (High: {highScore})</div>
       <HangmanDrawing wrong={wrong} />
@@ -264,6 +285,7 @@ const Hangman = () => {
             id={`key-${letter}`}
             key={letter}
             onClick={() => handleGuess(letter)}
+            onTouchStart={() => handleGuess(letter)}
             disabled={guessed.includes(letter) || isGameOver()}
             className={`px-2 py-1 rounded text-white ${
               guessed.includes(letter)
@@ -279,8 +301,7 @@ const Hangman = () => {
         ))}
       </div>
       <div className="mb-2 h-6" role="status" aria-live="polite">
-        {isWinner() && 'You won!'}
-        {isLoser() && `You lost! The word was ${word}.`}
+        {feedback}
       </div>
       {letterHint && !isGameOver() && <div className="mb-2 h-6">Hint: {letterHint}</div>}
       <div className="flex space-x-2">

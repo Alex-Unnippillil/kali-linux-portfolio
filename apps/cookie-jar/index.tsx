@@ -15,6 +15,15 @@ interface CookieInfo {
   issues: string[];
 }
 
+function normalizeSameSite(v: string | null): string | null {
+  if (!v) return null;
+  const lower = v.toLowerCase();
+  if (lower === 'lax') return 'Lax';
+  if (lower === 'strict') return 'Strict';
+  if (lower === 'none') return 'None';
+  return null;
+}
+
 function parseCookies(headers: string): CookieInfo[] {
   const results: CookieInfo[] = [];
   const lines = headers.split(/\r?\n/);
@@ -33,14 +42,14 @@ function parseCookies(headers: string): CookieInfo[] {
     const secure = attrsLower.includes('secure');
     const httpOnly = attrsLower.includes('httponly');
     const partitioned = attrsLower.includes('partitioned');
-    const sameSiteAttr = attrs.find((a) => a.toLowerCase().startsWith('samesite='));
-    const sameSite = sameSiteAttr ? sameSiteAttr.split('=')[1] : null;
-    const domainAttr = attrs.find((a) => a.toLowerCase().startsWith('domain='));
+    const sameSiteAttr = attrs.find((a) => /^samesite=/i.test(a));
+    const sameSite = normalizeSameSite(sameSiteAttr ? sameSiteAttr.split('=')[1] : null);
+    const domainAttr = attrs.find((a) => /^domain=/i.test(a));
     const domain = domainAttr ? domainAttr.split('=')[1] : null;
-    const pathAttr = attrs.find((a) => a.toLowerCase().startsWith('path='));
+    const pathAttr = attrs.find((a) => /^path=/i.test(a));
     const path = pathAttr ? pathAttr.split('=')[1] : null;
-    const expiresAttr = attrs.find((a) => a.toLowerCase().startsWith('expires='));
-    const maxAgeAttr = attrs.find((a) => a.toLowerCase().startsWith('max-age='));
+    const expiresAttr = attrs.find((a) => /^expires=/i.test(a));
+    const maxAgeAttr = attrs.find((a) => /^max-age=/i.test(a));
     const maxAge = maxAgeAttr ? maxAgeAttr.split('=')[1] : null;
 
     let expires: string | null = null;
@@ -119,7 +128,9 @@ function buildRecipe(c: CookieInfo): string {
   if (c.domain) attrs.push(`Domain=${c.domain}`);
   attrs.push('Secure');
   attrs.push('HttpOnly');
-  const sameSite = c.partitioned ? 'None' : c.sameSite && c.sameSite.toLowerCase() !== 'none' ? c.sameSite : 'Lax';
+  const sameSite = c.partitioned
+    ? 'None'
+    : normalizeSameSite(c.sameSite) || 'Lax';
   attrs.push(`SameSite=${sameSite}`);
   if (c.partitioned) attrs.push('Partitioned');
   if (c.expires) attrs.push(`Expires=${c.expires}`);
@@ -127,12 +138,74 @@ function buildRecipe(c: CookieInfo): string {
   return `${c.name}=${c.value}; ${attrs.join('; ')}`;
 }
 
+interface SimResult {
+  name: string;
+  sent: boolean;
+  reasons: string[];
+}
+
+function expiryProgress(c: CookieInfo): number {
+  if (c.expired) return 0;
+  if (c.maxAge && c.expires) {
+    const ageMs = parseInt(c.maxAge, 10) * 1000;
+    const remaining = new Date(c.expires).getTime() - Date.now();
+    return Math.max(0, Math.min(100, (remaining / ageMs) * 100));
+  }
+  if (c.expires) {
+    const remaining = new Date(c.expires).getTime() - Date.now();
+    const oneYear = 365 * 24 * 60 * 60 * 1000;
+    return Math.max(0, Math.min(100, (remaining / oneYear) * 100));
+  }
+  return 100;
+}
+
 const CookieJar: React.FC = () => {
   const [headers, setHeaders] = useState('');
   const [cookies, setCookies] = useState<CookieInfo[]>([]);
+  const [requestUrl, setRequestUrl] = useState('');
+  const [exposeHeaders, setExposeHeaders] = useState('');
+  const [simResults, setSimResults] = useState<SimResult[] | null>(null);
+  const [readableHeaders, setReadableHeaders] = useState<string[] | null>(null);
 
   const analyze = () => {
     setCookies(parseCookies(headers));
+  };
+
+  const simulate = () => {
+    try {
+      const url = new URL(requestUrl);
+      const host = url.hostname;
+      const path = url.pathname || '/';
+      const isSecure = url.protocol === 'https:';
+      const results = cookies.map((c) => {
+        const reasons: string[] = [];
+        if (c.expired) reasons.push('Expired');
+        if (c.secure && !isSecure) reasons.push('Requires HTTPS');
+        const cookieDomain = c.domain || host;
+        const domainMatch =
+          host === cookieDomain || host.endsWith(`.${cookieDomain}`);
+        if (!domainMatch) reasons.push('Domain mismatch');
+        const cookiePath = c.path || '/';
+        if (!path.startsWith(cookiePath)) reasons.push('Path mismatch');
+        if (!c.partitioned) {
+          if (!c.sameSite || c.sameSite.toLowerCase() !== 'none') {
+            reasons.push('SameSite blocks cross-site');
+          }
+        }
+        return { name: c.name, sent: reasons.length === 0, reasons };
+      });
+      const exposed = exposeHeaders
+        .split(',')
+        .map((h) => h.trim().toLowerCase())
+        .filter(Boolean);
+      const forbidden = ['set-cookie', 'set-cookie2'];
+      const readable = exposed.filter((h) => !forbidden.includes(h));
+      setSimResults(results);
+      setReadableHeaders(readable);
+    } catch {
+      setSimResults(null);
+      setReadableHeaders(null);
+    }
   };
 
   const exportReport = () => {
@@ -207,6 +280,16 @@ const CookieJar: React.FC = () => {
             {cookies.map((c) => (
               <div key={c.name}>
                 <div className="font-bold">{c.name}</div>
+                <div className="text-xs">Scope: {(c.domain || 'host-only') + (c.path || '/')}</div>
+                <div className="flex items-center space-x-2 mt-1">
+                  <div className="flex-1 bg-gray-700 h-2">
+                    <div
+                      className="bg-green-500 h-2"
+                      style={{ width: `${expiryProgress(c)}%` }}
+                    />
+                  </div>
+                  <div className="text-xs">{c.expires || 'Session'}</div>
+                </div>
                 {c.issues.length > 0 ? (
                   <ul className="list-disc list-inside text-sm">
                     {c.issues.map((issue) => (
@@ -226,6 +309,46 @@ const CookieJar: React.FC = () => {
                 </button>
               </div>
             ))}
+          </div>
+          <div className="mt-8">
+            <h2 className="font-bold mb-2">Cross-Site Request Simulator</h2>
+            <input
+              className="w-full text-black p-2 mb-2"
+              placeholder="Request URL (e.g., https://example.com/path)"
+              value={requestUrl}
+              onChange={(e) => setRequestUrl(e.target.value)}
+            />
+            <input
+              className="w-full text-black p-2 mb-2"
+              placeholder="Access-Control-Expose-Headers"
+              value={exposeHeaders}
+              onChange={(e) => setExposeHeaders(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={simulate}
+              className="px-4 py-1 bg-purple-600 rounded"
+            >
+              Simulate
+            </button>
+            {simResults && (
+              <div className="mt-4 text-sm">
+                <div className="font-bold">Cookies sent:</div>
+                <ul className="list-disc list-inside">
+                  {simResults.map((r) => (
+                    <li key={r.name}>
+                      {r.name} - {r.sent ? 'sent' : `blocked (${r.reasons.join(', ')})`}
+                    </li>
+                  ))}
+                </ul>
+                <div className="font-bold mt-2">Readable response headers:</div>
+                <div>{
+                  readableHeaders && readableHeaders.length > 0
+                    ? readableHeaders.join(', ')
+                    : 'None'
+                }</div>
+              </div>
+            )}
           </div>
         </div>
       )}

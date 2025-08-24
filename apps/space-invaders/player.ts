@@ -32,7 +32,7 @@ export default class Player {
 
   shoot(projectiles: Projectile[]) {
     if (this.cooldown > 0) return;
-    projectiles.push(new Projectile(this.x + this.w / 2, this.y, -200));
+    projectiles.push(Projectile.get(this.x + this.w / 2, this.y, -200));
     this.cooldown = this.rapid > 0 ? 0.1 : 0.5;
     this.shots += 1;
   }

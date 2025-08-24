@@ -9,12 +9,22 @@ export interface Piece {
   id: number;
 }
 
-export type Board = (Piece | null)[][];
+export interface Node {
+  x: number;
+  y: number;
+  piece: Piece | null;
+}
+
+export interface Board {
+  size: number;
+  nodes: Map<string, Node>;
+}
 
 const COLORS = ['#ff6666', '#66b3ff', '#66ff66', '#ffcc66', '#cc66ff'];
 const BOARD_SIZE = 8;
 const MAX_CHAIN = 10;
 let uid = 0;
+
 
 export const rngFactory = (seed = 1) => () => {
   seed = (seed * 1664525 + 1013904223) % 4294967296;
@@ -26,25 +36,33 @@ export const createBoard = (
   seedOrRand: number | (() => number) = Date.now(),
 ): Board => {
   const rand = typeof seedOrRand === 'function' ? seedOrRand : rngFactory(seedOrRand);
-  const board: Board = [];
+  const nodes = new Map<string, Node>();
   for (let y = 0; y < size; y++) {
-    const row: (Piece | null)[] = [];
     for (let x = 0; x < size; x++) {
-      row.push({
-        color: COLORS[Math.floor(rand() * COLORS.length)],
-        type: 'normal',
-        id: uid++,
+      nodes.set(key(x, y), {
+        x,
+        y,
+        piece: {
+          color: COLORS[Math.floor(rand() * COLORS.length)],
+          type: 'normal',
+          id: uid++,
+        },
       });
     }
-    board.push(row);
   }
-  return board;
+  return { size, nodes };
 };
 
-const cloneBoard = (b: Board): Board => b.map((r) => r.map((p) => (p ? { ...p } : null)));
+const cloneBoard = (b: Board): Board => {
+  const nodes = new Map<string, Node>();
+  b.nodes.forEach((n, k) => {
+    nodes.set(k, { x: n.x, y: n.y, piece: n.piece ? { ...n.piece } : null });
+  });
+  return { size: b.size, nodes };
+};
 
 export const hasValidMove = (board: Board): boolean => {
-  const size = board.length;
+  const size = board.size;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       if (
@@ -84,13 +102,13 @@ export const areAdjacent = (
 const key = (x: number, y: number) => `${x},${y}`;
 
 export const findMatches = (board: Board): Set<string> => {
-  const size = board.length;
+  const size = board.size;
   const matches = new Set<string>();
   // horizontal
   for (let y = 0; y < size; y++) {
     let x = 0;
     while (x < size) {
-      const piece = board[y][x];
+      const piece = board.nodes.get(key(x, y))?.piece;
       if (!piece) {
         x++;
         continue;
@@ -99,8 +117,8 @@ export const findMatches = (board: Board): Set<string> => {
       let len = 1;
       while (
         x + len < size &&
-        board[y][x + len] &&
-        board[y][x + len]!.color === color
+        board.nodes.get(key(x + len, y))?.piece &&
+        board.nodes.get(key(x + len, y))!.piece!.color === color
       )
         len++;
       if (len >= 3) {
@@ -113,7 +131,7 @@ export const findMatches = (board: Board): Set<string> => {
   for (let x = 0; x < size; x++) {
     let y = 0;
     while (y < size) {
-      const piece = board[y][x];
+      const piece = board.nodes.get(key(x, y))?.piece;
       if (!piece) {
         y++;
         continue;
@@ -122,8 +140,8 @@ export const findMatches = (board: Board): Set<string> => {
       let len = 1;
       while (
         y + len < size &&
-        board[y + len][x] &&
-        board[y + len][x]!.color === color
+        board.nodes.get(key(x, y + len))?.piece &&
+        board.nodes.get(key(x, y + len))!.piece!.color === color
       )
         len++;
       if (len >= 3) {
@@ -141,8 +159,8 @@ const triggerSpecial = (
   y: number,
   matches: Set<string>,
 ): void => {
-  const size = board.length;
-  const p = board[y][x];
+  const size = board.size;
+  const p = board.nodes.get(key(x, y))?.piece;
   if (!p) return;
   switch (p.type) {
     case 'stripedH':
@@ -162,8 +180,10 @@ const triggerSpecial = (
     case 'bomb':
       const color = p.color;
       for (let j = 0; j < size; j++)
-        for (let i = 0; i < size; i++)
-          if (board[j][i] && board[j][i]!.color === color) matches.add(key(i, j));
+        for (let i = 0; i < size; i++) {
+          const bp = board.nodes.get(key(i, j))?.piece;
+          if (bp && bp.color === color) matches.add(key(i, j));
+        }
       break;
   }
 };
@@ -171,31 +191,34 @@ const triggerSpecial = (
 const removeMatches = (board: Board, matches: Set<string>): void => {
   matches.forEach((k) => {
     const [x, y] = k.split(',').map(Number);
-    const p = board[y][x];
+    const p = board.nodes.get(key(x, y))?.piece;
     if (p && p.type !== 'normal') {
       triggerSpecial(board, x, y, matches);
     }
   });
   matches.forEach((k) => {
     const [x, y] = k.split(',').map(Number);
-    board[y][x] = null;
+    const node = board.nodes.get(key(x, y));
+    if (node) node.piece = null;
   });
 };
 
 const applyGravity = (board: Board, rand: () => number): void => {
-  const size = board.length;
+  const size = board.size;
   for (let x = 0; x < size; x++) {
     for (let y = size - 1; y >= 0; y--) {
-      if (!board[y][x]) {
+      const node = board.nodes.get(key(x, y));
+      if (node && !node.piece) {
         for (let k = y - 1; k >= 0; k--) {
-          if (board[k][x]) {
-            board[y][x] = board[k][x];
-            board[k][x] = null;
+          const above = board.nodes.get(key(x, k));
+          if (above && above.piece) {
+            node.piece = above.piece;
+            above.piece = null;
             break;
           }
         }
-        if (!board[y][x]) {
-          board[y][x] = {
+        if (!node.piece) {
+          node.piece = {
             color: COLORS[Math.floor(rand() * COLORS.length)],
             type: 'normal',
             id: uid++,
@@ -218,29 +241,25 @@ const createSpecialFromMatch = (
   const horizontal = coords.filter(([x, y]) => y === pos.y).length >= 3;
   const vertical = coords.filter(([x, y]) => x === pos.x).length >= 3;
   if (match.size >= 5) {
-    board[pos.y][pos.x] = {
-      color: board[pos.y][pos.x]!.color,
-      type: 'bomb',
-      id: uid++,
-    };
+    const node = board.nodes.get(key(pos.x, pos.y));
+    if (node && node.piece) {
+      node.piece = { color: node.piece.color, type: 'bomb', id: uid++ };
+    }
   } else if (horizontal && vertical) {
-    board[pos.y][pos.x] = {
-      color: board[pos.y][pos.x]!.color,
-      type: 'wrapped',
-      id: uid++,
-    };
+    const node = board.nodes.get(key(pos.x, pos.y));
+    if (node && node.piece) {
+      node.piece = { color: node.piece.color, type: 'wrapped', id: uid++ };
+    }
   } else if (horizontal) {
-    board[pos.y][pos.x] = {
-      color: board[pos.y][pos.x]!.color,
-      type: 'stripedH',
-      id: uid++,
-    };
+    const node = board.nodes.get(key(pos.x, pos.y));
+    if (node && node.piece) {
+      node.piece = { color: node.piece.color, type: 'stripedH', id: uid++ };
+    }
   } else if (vertical) {
-    board[pos.y][pos.x] = {
-      color: board[pos.y][pos.x]!.color,
-      type: 'stripedV',
-      id: uid++,
-    };
+    const node = board.nodes.get(key(pos.x, pos.y));
+    if (node && node.piece) {
+      node.piece = { color: node.piece.color, type: 'stripedV', id: uid++ };
+    }
   }
 };
 
@@ -250,10 +269,10 @@ const handleSpecialSwap = (
   b: { x: number; y: number },
 ): boolean => {
   const matches = new Set<string>();
-  const p1 = board[a.y][a.x];
-  const p2 = board[b.y][b.x];
+  const p1 = board.nodes.get(key(a.x, a.y))?.piece;
+  const p2 = board.nodes.get(key(b.x, b.y))?.piece;
   if (!p1 || !p2) return false;
-  const size = board.length;
+  const size = board.size;
   const addAll = () => {
     for (let y = 0; y < size; y++)
       for (let x = 0; x < size; x++) matches.add(key(x, y));
@@ -263,11 +282,11 @@ const handleSpecialSwap = (
   } else if (p1.type === 'bomb') {
     for (let y = 0; y < size; y++)
       for (let x = 0; x < size; x++)
-        if (board[y][x] && board[y][x]!.color === p2.color) matches.add(key(x, y));
+        if (board.nodes.get(key(x, y))?.piece?.color === p2.color) matches.add(key(x, y));
   } else if (p2.type === 'bomb') {
     for (let y = 0; y < size; y++)
       for (let x = 0; x < size; x++)
-        if (board[y][x] && board[y][x]!.color === p1.color) matches.add(key(x, y));
+        if (board.nodes.get(key(x, y))?.piece?.color === p1.color) matches.add(key(x, y));
   } else if (p1.type.startsWith('striped') && p2.type.startsWith('striped')) {
     for (let i = 0; i < size; i++) {
       matches.add(key(i, a.y));
@@ -338,11 +357,14 @@ export const swapPieces = (
 ): { board: Board; swapped: boolean } => {
   if (!areAdjacent(a, b)) return { board, swapped: false };
   const newBoard = cloneBoard(board);
-  const temp = newBoard[a.y][a.x];
-  newBoard[a.y][a.x] = newBoard[b.y][b.x];
-  newBoard[b.y][b.x] = temp;
-  const p1 = newBoard[a.y][a.x];
-  const p2 = newBoard[b.y][b.x];
+  const nodeA = newBoard.nodes.get(key(a.x, a.y));
+  const nodeB = newBoard.nodes.get(key(b.x, b.y));
+  const temp = nodeA?.piece;
+  if (!nodeA || !nodeB) return { board, swapped: false };
+  nodeA.piece = nodeB.piece;
+  nodeB.piece = temp;
+  const p1 = nodeA.piece;
+  const p2 = nodeB.piece;
 
   let matches = findMatches(newBoard);
   if (p1 && p2 && (p1.type !== 'normal' || p2.type !== 'normal')) {
@@ -358,6 +380,28 @@ export const swapPieces = (
   }
   resolveBoard(newBoard, rand, maxChain, a, b);
   return { board: newBoard, swapped: true };
+};
+
+export const resolveBoardAsync = (
+  board: Board,
+  seed: number,
+  maxChain = MAX_CHAIN,
+): Promise<{ board: Board; chain: number }> => {
+  if (typeof Worker === 'undefined') {
+    return Promise.resolve(resolveBoard(board, rngFactory(seed), maxChain));
+  }
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./worker.ts', import.meta.url));
+    worker.postMessage({ board, seed, maxChain });
+    worker.onmessage = (e) => {
+      resolve(e.data);
+      worker.terminate();
+    };
+    worker.onerror = (err) => {
+      worker.terminate();
+      reject(err);
+    };
+  });
 };
 
 // React component
@@ -396,9 +440,10 @@ const Match3: React.FC = () => {
         className="relative"
         style={{ width: BOARD_SIZE * cellSize, height: BOARD_SIZE * cellSize }}
       >
-        {board.map((row, y) =>
-          row.map((p, x) =>
-            p ? (
+        {Array.from({ length: board.size }).map((_, y) =>
+          Array.from({ length: board.size }).map((_, x) => {
+            const p = board.nodes.get(key(x, y))?.piece;
+            return p ? (
               <div
                 key={p.id}
                 onClick={() => handleClick(x, y)}
@@ -416,8 +461,8 @@ const Match3: React.FC = () => {
                       : 'none',
                 }}
               />
-            ) : null,
-          ),
+            ) : null;
+          }),
         )}
       </div>
     </div>
