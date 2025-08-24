@@ -7581,7 +7581,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-=
+
 "estree-walker@npm:^3.0.0, estree-walker@npm:^3.0.3":
   version: 3.0.3
   resolution: "estree-walker@npm:3.0.3"
@@ -12133,7 +12133,8 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pixi.js@npm:^7.2.4":
+"pixi.js@npm:^7.4.0":
+
   version: 7.4.3
   resolution: "pixi.js@npm:7.4.3"
   dependencies:
@@ -15185,7 +15186,7 @@ __metadata:
     parquet-wasm: "npm:^0.6.1"
 
     phash-js: "npm:^0.3.0"
-    pixi.js: "npm:^7.2.4"
+    pixi.js: "npm:^7.4.0"
 
     pkijs: "npm:^3.2.5"
     plist: "npm:^3.1.0"
