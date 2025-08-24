@@ -39,42 +39,63 @@ const Solitaire = () => {
   const [won, setWon] = useState(false);
   const [time, setTime] = useState(0);
   const [hint, setHint] = useState<ReturnType<typeof autoMoveHint> | null>(null);
+  const [best, setBest] = useState<{ score?: number; time?: number }>({});
+  const [stats, setStats] = useState<{ games: number; wins: number }>({ games: 0, wins: 0 });
   const timer = useRef<NodeJS.Timeout | null>(null);
 
-    const start = useCallback(
-      (mode: 1 | 3 = drawMode, seed?: number) => {
-        setGame(initializeGame(mode, undefined, { redeals: passes, scoring, seed }));
-        setWon(false);
-        setTime(0);
-        setHistory([]);
-        const stats = JSON.parse(localStorage.getItem('solitaireStats') || '{"games":0,"wins":0}');
-        stats.games += 1;
-        localStorage.setItem('solitaireStats', JSON.stringify(stats));
-      },
-      [drawMode, passes, scoring]
-    );
+  useEffect(() => {
+    try {
+      const storedBest = localStorage.getItem('solitaireBest');
+      if (storedBest) setBest(JSON.parse(storedBest));
+      const storedStats = localStorage.getItem('solitaireStats');
+      if (storedStats) setStats(JSON.parse(storedStats));
+    } catch {
+      // ignore parse errors
+    }
+  }, []);
 
-    useEffect(() => {
-      start(drawMode);
-    }, [drawMode, start]);
+  const start = useCallback(
+    (mode: 1 | 3 = drawMode, seed?: number) => {
+      setGame(initializeGame(mode, undefined, { redeals: passes, scoring, seed }));
+      setWon(false);
+      setTime(0);
+      setHistory([]);
+      setStats((s) => {
+        const updated = { ...s, games: s.games + 1 };
+        localStorage.setItem('solitaireStats', JSON.stringify(updated));
+        return updated;
+      });
+    },
+    [drawMode, passes, scoring]
+  );
+
+  useEffect(() => {
+    start(drawMode);
+  }, [drawMode, start]);
 
   useEffect(() => {
     if (won) {
       if (timer.current) clearInterval(timer.current);
-      const best = JSON.parse(localStorage.getItem('solitaireBest') || '{}');
-      if (!best.score || game.score > best.score) {
-        localStorage.setItem('solitaireBest', JSON.stringify({ score: game.score, time }));
-      }
-      const stats = JSON.parse(localStorage.getItem('solitaireStats') || '{"games":0,"wins":0}');
-      stats.wins += 1;
-      localStorage.setItem('solitaireStats', JSON.stringify(stats));
+      setBest((b) => {
+        if (!b.score || game.score > b.score) {
+          const updated = { score: game.score, time };
+          localStorage.setItem('solitaireBest', JSON.stringify(updated));
+          return updated;
+        }
+        return b;
+      });
+      setStats((s) => {
+        const updated = { ...s, wins: s.wins + 1 };
+        localStorage.setItem('solitaireStats', JSON.stringify(updated));
+        return updated;
+      });
       return;
     }
     timer.current = setInterval(() => setTime((t) => t + 1), 1000);
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-    }, [won, game, time]);
+  }, [won, game, time]);
 
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {
@@ -131,9 +152,6 @@ const Solitaire = () => {
   const handleDoubleClick = (source: 'tableau' | 'waste', pile: number) => {
     update((g) => autoMove(g, source, source === 'tableau' ? pile : null));
   };
-
-  const best = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('solitaireBest') || '{}' : '{}');
-  const stats = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('solitaireStats') || '{"games":0,"wins":0}' : '{"games":0,"wins":0}');
 
   const undo = () => {
     setHistory((h) => {

@@ -68,7 +68,7 @@ const TLSInspector: React.FC = () => {
           className="text-black px-2 py-1 flex-1"
         />
         <button type="submit" disabled={loading} className="px-3 py-1 bg-blue-600 rounded">
-          {loading ? '...' : 'Fetch'}
+          {loading ? 'Fetching...' : 'Fetch'}
         </button>
       </form>
       {error && <div className="text-red-500">{error}</div>}
