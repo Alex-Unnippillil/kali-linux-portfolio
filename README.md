@@ -123,3 +123,14 @@ The GitHub Actions workflow relies on the following secrets configured in the re
 - `NEXT_PUBLIC_USER_ID`
 
 These secrets provide the values for the corresponding environment variables during the build step.
+
+## Deployment
+
+This project relies on Next.js server features such as API routes and Socket.IO websockets. For production deployments, build and run the server:
+
+```bash
+yarn build
+yarn start
+```
+
+Deploy to any platform that can run a Next.js server; static export is not supported.

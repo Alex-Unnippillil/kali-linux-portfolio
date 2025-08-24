@@ -28,3 +28,12 @@ Action: Block
 ```
 
 By filtering this header, you ensure that only legitimate middleware invocations occur within the application.
+
+This application requires a running Next.js server to handle API routes and real-time features such as Socket.IO. Production builds should be created and started with:
+
+```bash
+yarn build
+yarn start
+```
+
+Platforms that support running a Node.js server (Vercel, Render, Fly.io, etc.) can host the application. Static export via `next export` is unsupported because WebSocket endpoints and API routes need server execution.
