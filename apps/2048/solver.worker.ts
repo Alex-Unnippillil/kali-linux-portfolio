@@ -3,28 +3,29 @@ import { moveBoard, isGameOver, Direction } from './engine';
 const dirs: Direction[] = ['up', 'down', 'left', 'right'];
 
 const heuristic = (board: number[]): number => {
+  const size = Math.sqrt(board.length);
   let empty = 0;
   let smooth = 0;
   let mono = 0;
   let max = 0;
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
-      const v = board[r * 4 + c];
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const v = board[r * size + c];
       if (v === 0) empty++;
       if (v > max) max = v;
-      if (c < 3) smooth -= Math.abs(v - board[r * 4 + c + 1]);
-      if (r < 3) smooth -= Math.abs(v - board[(r + 1) * 4 + c]);
+      if (c < size - 1) smooth -= Math.abs(v - board[r * size + c + 1]);
+      if (r < size - 1) smooth -= Math.abs(v - board[(r + 1) * size + c]);
     }
   }
   // monotonicity
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 3; c++) {
-      if (board[r * 4 + c] >= board[r * 4 + c + 1]) mono += 1;
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size - 1; c++) {
+      if (board[r * size + c] >= board[r * size + c + 1]) mono += 1;
     }
   }
-  for (let c = 0; c < 4; c++) {
-    for (let r = 0; r < 3; r++) {
-      if (board[r * 4 + c] >= board[(r + 1) * 4 + c]) mono += 1;
+  for (let c = 0; c < size; c++) {
+    for (let r = 0; r < size - 1; r++) {
+      if (board[r * size + c] >= board[(r + 1) * size + c]) mono += 1;
     }
   }
   return empty * 100 + mono * 1 + smooth * 0.1 + Math.log2(max) * 10;

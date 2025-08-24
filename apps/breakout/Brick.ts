@@ -4,7 +4,7 @@ export default class Brick {
   w: number;
   h: number;
   destroyed = false;
-  powerUp: 'multiball' | 'laser' | null;
+  powerUp: 'multiball' | 'laser' | 'expand' | 'sticky' | 'slow' | null;
   hp: number;
 
   constructor(
@@ -12,7 +12,7 @@ export default class Brick {
     y: number,
     w: number,
     h: number,
-    powerUp: 'multiball' | 'laser' | null = null,
+    powerUp: 'multiball' | 'laser' | 'expand' | 'sticky' | 'slow' | null = null,
     hp = 1,
   ) {
     this.x = x;

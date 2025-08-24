@@ -56,12 +56,21 @@ const EncodingConverter = ({ onConvert }) => {
         placeholder="Input"
       />
       {error && <div className="text-red-400 text-sm">{error}</div>}
-      <textarea
-        className="text-black p-1 rounded"
-        value={output}
-        readOnly
-        placeholder="Result"
-      />
+      <div className="flex flex-col gap-2">
+        <textarea
+          className="text-black p-1 rounded"
+          value={output}
+          readOnly
+          placeholder="Result"
+        />
+        <button
+          onClick={() => navigator.clipboard.writeText(output)}
+          disabled={!output}
+          className="bg-blue-600 text-white px-2 py-1 rounded disabled:opacity-50"
+        >
+          Copy
+        </button>
+      </div>
     </div>
   );
 };

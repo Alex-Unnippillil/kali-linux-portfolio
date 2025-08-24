@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 import { generateGrid } from './generator';
 import type { Position } from './types';
 import { toPng } from 'html-to-image';
@@ -25,6 +26,7 @@ function computePath(start: Position, end: Position): Position[] {
 }
 
 const WordSearch: React.FC = () => {
+  const router = useRouter();
   const [packs, setPacks] = useState<{ id: string; name: string }[]>([]);
   const [theme, setTheme] = useState('');
   const [seed, setSeed] = useState('');
@@ -38,8 +40,20 @@ const WordSearch: React.FC = () => {
   const [startTime, setStartTime] = useState<number>(0);
   const [elapsed, setElapsed] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const dailySeed = () => new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    if (!router.isReady) return;
+    const q = router.query;
+    if (typeof q.theme === 'string') setTheme(q.theme);
+    if (typeof q.seed === 'string') setSeed(q.seed);
+    if (typeof q.words === 'string') {
+      const qs = q.words.split(',').map((w) => w.toUpperCase()).filter(Boolean);
+      setWords(qs);
+    }
+  }, [router.isReady]);
 
   useEffect(() => {
     fetch('/wordlists/packs.json')
@@ -50,9 +64,9 @@ const WordSearch: React.FC = () => {
           name,
         }));
         setPacks(arr);
-        if (arr.length) setTheme(arr[0].id);
+        if (!router.query.theme && arr.length) setTheme(arr[0].id);
       });
-  }, []);
+  }, [router.query.theme]);
 
   useEffect(() => {
     if (!theme) return;
@@ -63,13 +77,28 @@ const WordSearch: React.FC = () => {
           .split(/\r?\n/)
           .map((w) => w.trim().toUpperCase())
           .filter(Boolean);
-        const shuffled = all.sort(() => Math.random() - 0.5);
-        setWords(shuffled.slice(0, Math.min(10, shuffled.length)));
-        setSeed(Math.random().toString(36).slice(2));
+        if (!words.length) {
+          const shuffled = all.sort(() => Math.random() - 0.5);
+          const selected = shuffled.slice(0, Math.min(10, shuffled.length));
+          setWords(selected);
+          if (!seed) setSeed(Math.random().toString(36).slice(2));
+        }
       });
-  }, [theme]);
+  }, [theme, words.length, seed]);
 
   const storageKey = `${theme}-${seed}`;
+
+  useEffect(() => {
+    if (!router.isReady || !theme || !seed || !words.length) return;
+    router.replace(
+      {
+        pathname: router.pathname,
+        query: { theme, seed, words: words.join(',') },
+      },
+      undefined,
+      { shallow: true }
+    );
+  }, [router, theme, seed, words]);
 
   useEffect(() => {
     if (!seed || !words.length) return;
@@ -196,6 +225,29 @@ const WordSearch: React.FC = () => {
     pdf.save(`word-search-${theme}.pdf`);
   };
 
+  const importWords = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    file.text().then((text) => {
+      const arr = text
+        .split(/\r?\n/)
+        .map((w) => w.trim().toUpperCase())
+        .filter(Boolean);
+      setWords(arr.slice(0, 20));
+      setSeed(Math.random().toString(36).slice(2));
+    });
+  };
+
+  const exportWords = () => {
+    const blob = new Blob([words.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'words.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const formatTime = (ms: number) => {
     const total = Math.floor(ms / 1000);
     const m = Math.floor(total / 60)
@@ -208,6 +260,13 @@ const WordSearch: React.FC = () => {
   return (
     <div className="p-4 select-none" ref={containerRef} id="word-search-container">
       <div className="flex flex-wrap space-x-2 mb-2 print:hidden">
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".txt"
+          className="hidden"
+          onChange={importWords}
+        />
         <select
           value={theme}
           onChange={(e) => setTheme(e.target.value)}
@@ -222,6 +281,7 @@ const WordSearch: React.FC = () => {
         <button
           type="button"
           onClick={newPuzzle}
+          aria-label="New puzzle"
           className="px-2 py-1 bg-blue-600 text-white rounded"
         >
           New
@@ -229,6 +289,7 @@ const WordSearch: React.FC = () => {
         <button
           type="button"
           onClick={dailyPuzzle}
+          aria-label="Daily puzzle"
           className="px-2 py-1 bg-purple-600 text-white rounded"
         >
           Daily
@@ -236,9 +297,26 @@ const WordSearch: React.FC = () => {
         <button
           type="button"
           onClick={exportPDF}
+          aria-label="Export PDF"
           className="px-2 py-1 bg-gray-600 text-white rounded"
         >
           Export PDF
+        </button>
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          aria-label="Import words"
+          className="px-2 py-1 bg-green-600 text-white rounded"
+        >
+          Import
+        </button>
+        <button
+          type="button"
+          onClick={exportWords}
+          aria-label="Export words"
+          className="px-2 py-1 bg-yellow-600 text-white rounded"
+        >
+          Export
         </button>
         <span className="px-2 py-1">{formatTime(elapsed)}</span>
       </div>

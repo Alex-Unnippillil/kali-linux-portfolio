@@ -41,6 +41,9 @@ export default function AsciiArt() {
   const [charSet, setCharSet] = useState('');
   const [paletteName, setPaletteName] = useState('grayscale');
   const [fontSize, setFontSize] = useState(8);
+  const [fontFamily, setFontFamily] = useState('monospace');
+  const [charWidth, setCharWidth] = useState(8);
+  const [isMono, setIsMono] = useState(true);
   const [useColor, setUseColor] = useState(true);
   const [altText, setAltText] = useState('');
   const [typingMode, setTypingMode] = useState(false);
@@ -56,8 +59,10 @@ export default function AsciiArt() {
     if (typeof window === 'undefined') return;
     const savedSet = window.localStorage.getItem('ascii_char_set');
     const savedPalette = window.localStorage.getItem('ascii_palette');
+    const savedFont = window.localStorage.getItem('ascii_font_family');
     setCharSet(savedSet || presetCharSets.standard);
     setPaletteName(savedPalette || 'grayscale');
+    setFontFamily(savedFont || 'monospace');
   }, []);
 
   // Persist preferences
@@ -65,8 +70,21 @@ export default function AsciiArt() {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('ascii_char_set', charSet);
       window.localStorage.setItem('ascii_palette', paletteName);
+      window.localStorage.setItem('ascii_font_family', fontFamily);
     }
-  }, [charSet, paletteName]);
+  }, [charSet, paletteName, fontFamily]);
+
+  // Measure character width and verify monospaced font
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.font = `${fontSize}px ${fontFamily}, monospace`;
+    const w = ctx.measureText('W').width;
+    const i = ctx.measureText('i').width;
+    setCharWidth(w);
+    setIsMono(Math.abs(w - i) < 0.01);
+  }, [fontFamily, fontSize]);
 
   // Cleanup image preview
   useEffect(
@@ -105,6 +123,7 @@ export default function AsciiArt() {
           bitmap,
           charSet,
           fontSize,
+          charWidth,
           useColor,
           palette: palettes[paletteName],
         },
@@ -117,14 +136,8 @@ export default function AsciiArt() {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         const maxDim = 1000;
-        const width = Math.max(
-          1,
-          Math.min(Math.floor(img.width / fontSize), maxDim)
-        );
-        const height = Math.max(
-          1,
-          Math.min(Math.floor(img.height / fontSize), maxDim)
-        );
+        const width = Math.max(1, Math.min(Math.floor(img.width / charWidth), maxDim));
+        const height = Math.max(1, Math.min(Math.floor(img.height / fontSize), maxDim));
         canvas.width = width;
         canvas.height = height;
         ctx.drawImage(img, 0, 0, width, height);
@@ -182,18 +195,30 @@ export default function AsciiArt() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadHtml = () => {
+    if (!asciiHtml) return;
+    const html = `<pre style="font-family:${fontFamily},monospace;font-size:${fontSize}px;line-height:${fontSize}px;background:#000;color:#fff;">${asciiHtml}</pre>`;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'ascii-art.html';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const downloadPng = () => {
     if (!plainAscii || !colors) return;
     const lines = plainAscii.trimEnd().split('\n');
     const width = colors.width;
     const height = colors.height;
     const canvas = canvasRef.current;
-    canvas.width = width * fontSize;
+    canvas.width = width * charWidth;
     canvas.height = height * fontSize;
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.font = `${fontSize}px monospace`;
+    ctx.font = `${fontSize}px ${fontFamily}, monospace`;
     ctx.textBaseline = 'top';
     for (let y = 0; y < height; y += 1) {
       for (let x = 0; x < width; x += 1) {
@@ -203,7 +228,7 @@ export default function AsciiArt() {
         const b = colors.data[cIdx + 2];
         ctx.fillStyle = useColor ? `rgb(${r},${g},${b})` : '#FFFFFF';
         const ch = lines[y][x];
-        ctx.fillText(ch, x * fontSize, y * fontSize);
+        ctx.fillText(ch, x * charWidth, y * fontSize);
       }
     }
     canvas.toBlob((blob) => {
@@ -285,6 +310,23 @@ export default function AsciiArt() {
           />
         </label>
         <label className="flex items-center gap-2">
+          Family:
+          <input
+            type="text"
+            value={fontFamily}
+            onChange={(e) => setFontFamily(e.target.value)}
+            className="px-1 bg-gray-700"
+          />
+        </label>
+        <span className="px-2 py-1 bg-gray-700 rounded">
+          <span
+            style={{ fontFamily, fontSize: `${fontSize}px`, lineHeight: `${fontSize}px` }}
+          >
+            AaBbCc123
+          </span>
+        </span>
+        {!isMono && <span className="text-red-400 text-xs">not mono</span>}
+        <label className="flex items-center gap-2">
           Palette:
           <select
             value={paletteName}
@@ -312,6 +354,13 @@ export default function AsciiArt() {
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
         >
           TXT
+        </button>
+        <button
+          type="button"
+          onClick={downloadHtml}
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+        >
+          HTML
         </button>
         <button
           type="button"
@@ -362,6 +411,7 @@ export default function AsciiArt() {
               style={{
                 lineHeight: `${fontSize}px`,
                 fontSize: `${fontSize}px`,
+                fontFamily,
                 backgroundSize: `${fontSize}px ${fontSize}px`,
                 backgroundImage:
                   'linear-gradient(0deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px)), linear-gradient(90deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px))',
@@ -370,7 +420,7 @@ export default function AsciiArt() {
           ) : (
             <pre
               className="font-mono whitespace-pre overflow-auto flex-1"
-              style={{ fontSize: `${fontSize}px`, lineHeight: `${fontSize}px` }}
+              style={{ fontSize: `${fontSize}px`, lineHeight: `${fontSize}px`, fontFamily }}
               dangerouslySetInnerHTML={{ __html: asciiHtml }}
             />
           )}

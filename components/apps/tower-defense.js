@@ -20,6 +20,7 @@ const TowerDefense = () => {
     createProjectilePool(MAX_PROJECTILES)
   );
   const [path, setPath] = useState(() => getPath([]));
+  const [flowField, setFlowField] = useState(null);
   const [wave, setWave] = useState(1);
   const [speed, setSpeed] = useState(1);
   const [lives, setLives] = useState(20);
@@ -30,6 +31,7 @@ const TowerDefense = () => {
   const towersRef = useRef(towers);
   const enemiesRef = useRef(enemies);
   const projectilesRef = useRef(projectiles);
+  const flowWorkerRef = useRef(null);
 
   useEffect(() => {
     towersRef.current = towers;
@@ -40,6 +42,16 @@ const TowerDefense = () => {
   useEffect(() => {
     projectilesRef.current = projectiles;
   }, [projectiles]);
+
+  useEffect(() => {
+    flowWorkerRef.current = new Worker(
+      new URL('./tower-defense-flow-worker.js', import.meta.url)
+    );
+    const worker = flowWorkerRef.current;
+    worker.onmessage = (e) => setFlowField(e.data.field);
+    worker.postMessage({ towers: [] });
+    return () => worker.terminate();
+  }, []);
 
   const spawnWave = (waveNum) => {
     ReactGA.event({ category: 'tower-defense', action: 'wave_start', value: waveNum });
@@ -81,6 +93,7 @@ const TowerDefense = () => {
 
   useEffect(() => {
     setPath(getPath(towers));
+    flowWorkerRef.current?.postMessage({ towers });
   }, [towers]);
 
   useEffect(() => {
@@ -254,14 +267,27 @@ const TowerDefense = () => {
     if (tower) bg = 'bg-blue-700';
     if (enemy) bg = 'bg-red-700';
     if (projectile) bg = 'bg-yellow-400';
-
+    const dir = flowField?.[y]?.[x];
+    const arrow = dir
+      ? dir.dx === 1
+        ? '→'
+        : dir.dx === -1
+        ? '←'
+        : dir.dy === 1
+        ? '↓'
+        : dir.dy === -1
+        ? '↑'
+        : ''
+      : '';
     return (
       <div
         key={`${x}-${y}`}
-        className={`w-8 h-8 border border-gray-900 ${bg}`}
+        className={`w-8 h-8 border border-gray-900 ${bg} flex items-center justify-center`}
         onClick={() => handleCellClick(x, y)}
         onContextMenu={(e) => handleCellRightClick(x, y, e)}
-      />
+      >
+        <span className="text-xs">{arrow}</span>
+      </div>
     );
   };
 

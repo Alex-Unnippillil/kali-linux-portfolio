@@ -3,10 +3,12 @@ import {
   exportPKCS8,
   exportSPKI,
   exportJWK,
-  SignJWT,
-  jwtVerify,
   CompactEncrypt,
   compactDecrypt,
+  CompactSign,
+  compactVerify,
+  GeneralSign,
+  generalVerify,
   importJWK,
   importPKCS8,
   importSPKI,
@@ -15,18 +17,27 @@ import {
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
+let rsaPrivateKey: CryptoKey;
+let rsaPublicKey: CryptoKey;
+let ecPrivateKey: CryptoKey;
+let ecPublicKey: CryptoKey;
+
 (async () => {
   const rsa = await generateKeyPair('RS256');
-  const rsaPrivatePem = await exportPKCS8(rsa.privateKey);
-  const rsaPublicPem = await exportSPKI(rsa.publicKey);
-  const rsaPrivateJwk = await exportJWK(rsa.privateKey);
-  const rsaPublicJwk = await exportJWK(rsa.publicKey);
+  rsaPrivateKey = rsa.privateKey;
+  rsaPublicKey = rsa.publicKey;
+  const rsaPrivatePem = await exportPKCS8(rsaPrivateKey);
+  const rsaPublicPem = await exportSPKI(rsaPublicKey);
+  const rsaPrivateJwk = await exportJWK(rsaPrivateKey);
+  const rsaPublicJwk = await exportJWK(rsaPublicKey);
 
   const ec = await generateKeyPair('ES256');
-  const ecPrivatePem = await exportPKCS8(ec.privateKey);
-  const ecPublicPem = await exportSPKI(ec.publicKey);
-  const ecPrivateJwk = await exportJWK(ec.privateKey);
-  const ecPublicJwk = await exportJWK(ec.publicKey);
+  ecPrivateKey = ec.privateKey;
+  ecPublicKey = ec.publicKey;
+  const ecPrivatePem = await exportPKCS8(ecPrivateKey);
+  const ecPublicPem = await exportSPKI(ecPublicKey);
+  const ecPrivateJwk = await exportJWK(ecPrivateKey);
+  const ecPublicJwk = await exportJWK(ecPublicKey);
 
   (self as any).postMessage({
     id: 'init',
@@ -77,21 +88,74 @@ async function parseKey(
 }
 
 (self as any).onmessage = async (e: MessageEvent) => {
-  const { id, action, payload, token, key, alg, enc, kid } = e.data as any;
+  const { id, action, payload, token, key, alg, enc, kid, detached, multi, direction } =
+    e.data as any;
   if (id === 'init') return;
   try {
     let result: any;
     if (action === 'sign') {
-      const cryptoKey = await parseKey(key, 'private', alg);
-      result = await new SignJWT(payload)
-        .setProtectedHeader({ alg, kid })
-        .sign(cryptoKey);
+      if (multi) {
+        const payloadBytes = encoder.encode(JSON.stringify(payload));
+        const signer = new GeneralSign(payloadBytes);
+        signer
+          .addSignature(rsaPrivateKey)
+          .setProtectedHeader({ alg: 'RS256', kid: 'rsa' });
+        signer
+          .addSignature(ecPrivateKey)
+          .setProtectedHeader({ alg: 'ES256', kid: 'ec' });
+        result = await signer.sign();
+      } else {
+        const cryptoKey = await parseKey(key, 'private', alg);
+        let jws = await new CompactSign(
+          encoder.encode(JSON.stringify(payload)),
+        )
+          .setProtectedHeader({ alg, kid })
+          .sign(cryptoKey);
+        if (detached) {
+          const parts = jws.split('.');
+          parts[1] = '';
+          jws = parts.join('.');
+        }
+        result = jws;
+      }
     } else if (action === 'verify') {
-      const cryptoKey = await parseKey(key, 'public', alg);
-      const { payload: pl, protectedHeader } = await jwtVerify(token, cryptoKey, {
-        algorithms: [alg],
-      });
-      result = { payload: pl, header: protectedHeader };
+      if (token.trim().startsWith('{')) {
+        const obj = typeof token === 'string' ? JSON.parse(token) : token;
+        const payloadBytes = detached
+          ? encoder.encode(JSON.stringify(payload))
+          : undefined;
+        const results: any[] = [];
+        try {
+          const res1 = await generalVerify(obj, rsaPublicKey, {
+            payload: payloadBytes,
+          });
+          results.push({
+            payload: JSON.parse(decoder.decode(res1.payload)),
+            header: res1.protectedHeader,
+          });
+        } catch {}
+        try {
+          const res2 = await generalVerify(obj, ecPublicKey, {
+            payload: payloadBytes,
+          });
+          results.push({
+            payload: JSON.parse(decoder.decode(res2.payload)),
+            header: res2.protectedHeader,
+          });
+        } catch {}
+        result = results;
+      } else {
+        const cryptoKey = await parseKey(key, 'public', alg);
+        const payloadBytes = detached
+          ? encoder.encode(JSON.stringify(payload))
+          : undefined;
+        const { payload: pl, protectedHeader } = await compactVerify(
+          token,
+          cryptoKey,
+          { payload: payloadBytes },
+        );
+        result = { payload: JSON.parse(decoder.decode(pl)), header: protectedHeader };
+      }
     } else if (action === 'encrypt') {
       const cryptoKey = await parseKey(key, 'public', alg);
       const jwe = await new CompactEncrypt(
@@ -110,6 +174,20 @@ async function parseKey(
         payload: JSON.parse(decoder.decode(plaintext)),
         header: protectedHeader,
       };
+    } else if (action === 'convert') {
+      if (direction === 'pem2jwk') {
+        const cryptoKey = await parseKey(key, key.includes('PRIVATE') ? 'private' : 'public', alg);
+        result = await exportJWK(cryptoKey);
+      } else if (direction === 'jwk2pem') {
+        const cryptoKey = await parseKey(key, key.includes('"d"') ? 'private' : 'public', alg);
+        try {
+          result = await exportPKCS8(cryptoKey);
+        } catch {
+          result = await exportSPKI(cryptoKey);
+        }
+      } else {
+        throw new Error('Unknown conversion direction');
+      }
     } else {
       throw new Error('Unknown action');
     }
