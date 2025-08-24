@@ -154,9 +154,11 @@ export const generatePuzzle = (size = 6): Puzzle => {
     puzzle[r][c] = solution[r][c];
   };
   const cells = Array.from({ length: size * size }, (_, i) => [Math.floor(i / size), i % size]);
-  while (countSolutions(puzzle.map((r) => r.slice()), row.slice(), col.slice()) !== 1 && cells.length) {
+  const cache = new Map<string, number>();
+  while (countSolutions(puzzle.map((r) => r.slice()), row.slice(), col.slice(), 0, 0, cache) !== 1 && cells.length) {
     const [r, c] = cells.splice(Math.floor(Math.random() * cells.length), 1)[0];
     reveal(r, c);
+    cache.clear(); // Clear cache after each reveal, as puzzle changes
   }
 
   return { puzzle, solution, rowCounts: row, colCounts: col };
