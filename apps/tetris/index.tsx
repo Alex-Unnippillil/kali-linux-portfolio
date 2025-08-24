@@ -12,26 +12,17 @@ import {
   ROWS,
   GameState,
   cloneState,
+  softDrop,
 } from './engine';
 
-const COLORS = ['#000', '#0ff', '#00f', '#f80', '#ff0', '#0f0', '#a0f', '#f00', '#888'];
-const TYPE_COLOR = {
-  I: COLORS[1],
-  J: COLORS[2],
-  L: COLORS[3],
-  O: COLORS[4],
-  S: COLORS[5],
-  T: COLORS[6],
-  Z: COLORS[7],
-};
 
 const Tetris: React.FC = () => {
   const [state, setState] = useState<GameState>(() => createGame());
   const boardRef = useRef<HTMLCanvasElement>(null);
-  const activeRef = useRef<HTMLCanvasElement>(null);
   const replay = useRef<string[]>([]);
   const stats = useRef({ lines: 0, tSpins: 0 });
   const socketRef = useRef<WebSocket | null>(null);
+  const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
     const ws = new WebSocket('ws://localhost:3001');
@@ -51,26 +42,49 @@ const Tetris: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.repeat) return;
+    const DAS = 150;
+    const ARR = 50;
+    let lTimeout: any = null;
+    let rTimeout: any = null;
+    let lInterval: any = null;
+    let rInterval: any = null;
+    let dInterval: any = null;
+
+    const moveLeft = () =>
+      setState((s) => {
+        move(s, -1, 0);
+        replay.current.push('L');
+        return cloneState(s);
+      });
+    const moveRight = () =>
+      setState((s) => {
+        move(s, 1, 0);
+        replay.current.push('R');
+        return cloneState(s);
+      });
+    const dropSoft = () =>
+      setState((s) => {
+        softDrop(s);
+        replay.current.push('D');
+        return cloneState(s);
+      });
+
+    const keydown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
-        setState((s) => {
-          move(s, -1, 0);
-          replay.current.push('L');
-          return cloneState(s);
-        });
+        if (lTimeout || lInterval) return;
+        moveLeft();
+        lTimeout = setTimeout(() => {
+          lInterval = setInterval(moveLeft, ARR);
+        }, DAS);
       } else if (e.key === 'ArrowRight') {
-        setState((s) => {
-          move(s, 1, 0);
-          replay.current.push('R');
-          return cloneState(s);
-        });
+        if (rTimeout || rInterval) return;
+        moveRight();
+        rTimeout = setTimeout(() => {
+          rInterval = setInterval(moveRight, ARR);
+        }, DAS);
       } else if (e.key === 'ArrowDown') {
-        setState((s) => {
-          move(s, 0, 1);
-          replay.current.push('D');
-          return cloneState(s);
-        });
+        if (dInterval) return;
+        dInterval = setInterval(dropSoft, ARR);
       } else if (e.key === ' ') {
         e.preventDefault();
         setState((s) => {
@@ -98,63 +112,56 @@ const Tetris: React.FC = () => {
         });
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+
+    const keyup = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        clearTimeout(lTimeout);
+        clearInterval(lInterval);
+        lTimeout = null;
+        lInterval = null;
+      } else if (e.key === 'ArrowRight') {
+        clearTimeout(rTimeout);
+        clearInterval(rInterval);
+        rTimeout = null;
+        rInterval = null;
+      } else if (e.key === 'ArrowDown') {
+        clearInterval(dInterval);
+        dInterval = null;
+      }
+    };
+
+    window.addEventListener('keydown', keydown);
+    window.addEventListener('keyup', keyup);
+    return () => {
+      window.removeEventListener('keydown', keydown);
+      window.removeEventListener('keyup', keyup);
+      clearTimeout(lTimeout);
+      clearTimeout(rTimeout);
+      clearInterval(lInterval);
+      clearInterval(rInterval);
+      clearInterval(dInterval);
+    };
   }, []);
 
   useEffect(() => {
     const canvas = boardRef.current!;
     canvas.width = COLS * CELL_SIZE;
     canvas.height = ROWS * CELL_SIZE;
-    const activeCanvas = activeRef.current!;
-    activeCanvas.width = COLS * CELL_SIZE;
-    activeCanvas.height = ROWS * CELL_SIZE;
+    const off = (canvas as any).transferControlToOffscreen();
+    const worker = new Worker(new URL('./renderer.worker.ts', import.meta.url));
+    workerRef.current = worker;
+    worker.postMessage({ type: 'init', canvas: off }, [off]);
+    return () => worker.terminate();
+  }, []);
 
+  useEffect(() => {
+    workerRef.current?.postMessage({ type: 'state', state });
+  }, [state]);
+
+  useEffect(() => {
     let last = 0;
     let frame: number;
     const dropInterval = 1000;
-    const ctx = canvas.getContext('2d')!;
-    const activeCtx = activeCanvas.getContext('2d')!;
-
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let y = 0; y < ROWS; y++) {
-        for (let x = 0; x < COLS; x++) {
-          const v = state.board[y][x];
-          if (v) {
-            ctx.fillStyle = COLORS[v];
-            ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-          }
-        }
-      }
-
-      activeCtx.clearRect(0, 0, canvas.width, canvas.height);
-      const piece = state.current;
-      const ghost = cloneState(state);
-      while (move(ghost, 0, 1));
-      for (let y = 0; y < piece.shape.length; y++) {
-        for (let x = 0; x < piece.shape[y].length; x++) {
-          if (piece.shape[y][x]) {
-            activeCtx.fillStyle = TYPE_COLOR[piece.type];
-            activeCtx.globalAlpha = 0.3;
-            activeCtx.fillRect(
-              (ghost.current.x + x) * CELL_SIZE,
-              (ghost.current.y + y) * CELL_SIZE,
-              CELL_SIZE,
-              CELL_SIZE
-            );
-            activeCtx.globalAlpha = 1;
-            activeCtx.fillRect(
-              (piece.x + x) * CELL_SIZE,
-              (piece.y + y) * CELL_SIZE,
-              CELL_SIZE,
-              CELL_SIZE
-            );
-          }
-        }
-      }
-    };
-
     const update = (time: number) => {
       if (time - last > dropInterval) {
         setState((s) => {
@@ -172,12 +179,11 @@ const Tetris: React.FC = () => {
           return cloneState(s);
         });
       }
-      draw();
       frame = requestAnimationFrame(update);
     };
     frame = requestAnimationFrame(update);
     return () => cancelAnimationFrame(frame);
-  }, [state]);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -197,7 +203,6 @@ const Tetris: React.FC = () => {
   return (
     <div className="p-4">
       <canvas ref={boardRef} className="absolute" />
-      <canvas ref={activeRef} className="absolute" />
       <div className="mt-4 text-white">
         <div>Lines: {stats.current.lines}</div>
         <div>T-Spins: {stats.current.tSpins}</div>
