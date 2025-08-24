@@ -23,7 +23,7 @@ const createDynamicApp = (path: string, name: string) =>
               <ErrorPane
                 code="load_error"
                 message={`Failed to load ${name}. Please try again.`}
-                onRetry={() => window.location.reload()}
+                onReload={() => window.location.reload()}
               />
             );
           };
