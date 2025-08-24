@@ -5,6 +5,7 @@ interface Pattern {
   regex: string;
   severity: string;
   remediation: string;
+  whitelist: string;
   tool: string;
 }
 
@@ -17,6 +18,7 @@ interface WorkerResult {
   match: string;
   severity: string;
   remediation: string;
+  whitelist: string;
 }
 
 const gitleaksPatterns: Omit<Pattern, 'tool'>[] = [
@@ -25,12 +27,14 @@ const gitleaksPatterns: Omit<Pattern, 'tool'>[] = [
     regex: 'AKIA[0-9A-Z]{16}',
     severity: 'high',
     remediation: 'Rotate the key and remove from history.',
+    whitelist: 'git secrets --add "AKIA[0-9A-Z]{16}"',
   },
   {
     name: 'Generic API Key',
     regex: '[A-Za-z0-9-_]{32,45}',
     severity: 'medium',
     remediation: 'Rotate the key and remove from the repository.',
+    whitelist: 'git secrets --add "[A-Za-z0-9-_]{32,45}"',
   },
 ];
 
@@ -40,12 +44,14 @@ const trufflehogPatterns: Omit<Pattern, 'tool'>[] = [
     regex: 'xox[baprs]-[0-9a-zA-Z]{10,48}',
     severity: 'high',
     remediation: 'Revoke the token and generate a new one.',
+    whitelist: 'git secrets --add "xox[baprs]-[0-9a-zA-Z]{10,48}"',
   },
   {
     name: 'RSA Private Key',
     regex: '-----BEGIN(?: RSA)? PRIVATE KEY-----',
     severity: 'critical',
     remediation: 'Remove private keys and generate new ones.',
+    whitelist: 'git secrets --add "-----BEGIN(?: RSA)? PRIVATE KEY-----"',
   },
 ];
 
@@ -87,6 +93,7 @@ self.onmessage = async (e: MessageEvent<ScanMessage>) => {
             severity: pat.severity,
             confidence: 'high',
             remediation: pat.remediation,
+            whitelist: pat.whitelist,
           });
         }
       });
