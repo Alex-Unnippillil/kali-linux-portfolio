@@ -8,6 +8,14 @@ export interface GameState {
   dir: number;
   width: number;
   wave: number;
+  /**
+   * Delay until the formation moves again. This shrinks as
+   * invaders are destroyed to speed up the march, mimicking the
+   * classic game's increasing difficulty.
+   */
+  stepDelay: number;
+  /** Total number of invaders spawned for this wave */
+  totalInvaders: number;
 }
 
 export function createGame(width: number, rows = 4, cols = 8): GameState {
@@ -19,13 +27,16 @@ export function createGame(width: number, rows = 4, cols = 8): GameState {
     }
     rowArr.push(row);
   }
+  const invs = rowArr.flat();
   return {
     rows: rowArr,
-    invaders: rowArr.flat(),
+    invaders: invs,
     playerBullets: [],
     dir: 1,
     width,
     wave: 1,
+    stepDelay: 0.5,
+    totalInvaders: invs.length,
   };
 }
 
@@ -45,6 +56,11 @@ export function march(state: GameState) {
       if (inv.alive) inv.y += drop;
     });
   }
+  // Update the delay for the next march based on remaining invaders.
+  const alive = state.invaders.filter((i) => i.alive).length;
+  const ratio = alive / state.totalInvaders;
+  // As fewer invaders remain, reduce the delay (but keep a sensible minimum)
+  state.stepDelay = Math.max(0.05, 0.5 * ratio);
 }
 
 export function handleCollisions(bullets: Projectile[], state: GameState) {
