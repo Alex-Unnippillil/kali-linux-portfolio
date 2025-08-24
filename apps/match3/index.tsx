@@ -20,9 +20,17 @@ export interface Board {
   nodes: Map<string, Node>;
 }
 
+interface CrushAnim {
+  id: number;
+  x: number;
+  y: number;
+  color: string;
+}
+
 const COLORS = ['#ff6666', '#66b3ff', '#66ff66', '#ffcc66', '#cc66ff'];
 const BOARD_SIZE = 8;
 const MAX_CHAIN = 10;
+const MOVE_LIMIT = 30;
 let uid = 0;
 
 
@@ -104,52 +112,50 @@ const key = (x: number, y: number) => `${x},${y}`;
 export const findMatches = (board: Board): Set<string> => {
   const size = board.size;
   const matches = new Set<string>();
-  // horizontal
+  const visited = new Set<string>();
+
   for (let y = 0; y < size; y++) {
-    let x = 0;
-    while (x < size) {
-      const piece = board.nodes.get(key(x, y))?.piece;
-      if (!piece) {
-        x++;
-        continue;
+    for (let x = 0; x < size; x++) {
+      const k = key(x, y);
+      if (visited.has(k)) continue;
+      const piece = board.nodes.get(k)?.piece;
+      if (!piece) continue;
+      const queue: string[] = [k];
+      const group: string[] = [];
+      visited.add(k);
+      while (queue.length) {
+        const cur = queue.pop()!;
+        group.push(cur);
+        const [cx, cy] = cur.split(',').map(Number);
+        const neigh = [
+          [cx + 1, cy],
+          [cx - 1, cy],
+          [cx, cy + 1],
+          [cx, cy - 1],
+        ];
+        neigh.forEach(([nx, ny]) => {
+          const nk = key(nx, ny);
+          if (
+            nx >= 0 &&
+            ny >= 0 &&
+            nx < size &&
+            ny < size &&
+            !visited.has(nk)
+          ) {
+            const np = board.nodes.get(nk)?.piece;
+            if (np && np.color === piece.color) {
+              visited.add(nk);
+              queue.push(nk);
+            }
+          }
+        });
       }
-      const color = piece.color;
-      let len = 1;
-      while (
-        x + len < size &&
-        board.nodes.get(key(x + len, y))?.piece &&
-        board.nodes.get(key(x + len, y))!.piece!.color === color
-      )
-        len++;
-      if (len >= 3) {
-        for (let k = 0; k < len; k++) matches.add(key(x + k, y));
+      if (group.length >= 3) {
+        group.forEach((g) => matches.add(g));
       }
-      x += len;
     }
   }
-  // vertical
-  for (let x = 0; x < size; x++) {
-    let y = 0;
-    while (y < size) {
-      const piece = board.nodes.get(key(x, y))?.piece;
-      if (!piece) {
-        y++;
-        continue;
-      }
-      const color = piece.color;
-      let len = 1;
-      while (
-        y + len < size &&
-        board.nodes.get(key(x, y + len))?.piece &&
-        board.nodes.get(key(x, y + len))!.piece!.color === color
-      )
-        len++;
-      if (len >= 3) {
-        for (let k = 0; k < len; k++) matches.add(key(x, y + k));
-      }
-      y += len;
-    }
-  }
+
   return matches;
 };
 
@@ -188,7 +194,11 @@ const triggerSpecial = (
   }
 };
 
-const removeMatches = (board: Board, matches: Set<string>): void => {
+const removeMatches = (
+  board: Board,
+  matches: Set<string>,
+): CrushAnim[] => {
+  const removed: CrushAnim[] = [];
   matches.forEach((k) => {
     const [x, y] = k.split(',').map(Number);
     const p = board.nodes.get(key(x, y))?.piece;
@@ -199,8 +209,12 @@ const removeMatches = (board: Board, matches: Set<string>): void => {
   matches.forEach((k) => {
     const [x, y] = k.split(',').map(Number);
     const node = board.nodes.get(key(x, y));
-    if (node) node.piece = null;
+    if (node && node.piece) {
+      removed.push({ id: node.piece.id, x, y, color: node.piece.color });
+      node.piece = null;
+    }
   });
+  return removed;
 };
 
 const applyGravity = (board: Board, rand: () => number): void => {
@@ -332,8 +346,9 @@ export const resolveBoard = (
   maxChain = MAX_CHAIN,
   origin?: { x: number; y: number },
   target?: { x: number; y: number },
-): { board: Board; chain: number } => {
+): { board: Board; chain: number; anims: CrushAnim[][] } => {
   let chain = 0;
+  const anims: CrushAnim[][] = [];
   while (chain < maxChain) {
     const matches = findMatches(board);
     if (matches.size === 0) break;
@@ -341,11 +356,12 @@ export const resolveBoard = (
       createSpecialFromMatch(board, matches, origin, target);
       matches.delete(key(target.x, target.y));
     }
-    removeMatches(board, matches);
+    const removed = removeMatches(board, matches);
+    anims.push(removed);
     applyGravity(board, rand);
     chain++;
   }
-  return { board, chain };
+  return { board, chain, anims };
 };
 
 export const swapPieces = (
@@ -354,13 +370,13 @@ export const swapPieces = (
   b: { x: number; y: number },
   rand: () => number = Math.random,
   maxChain = MAX_CHAIN,
-): { board: Board; swapped: boolean } => {
-  if (!areAdjacent(a, b)) return { board, swapped: false };
+): { board: Board; swapped: boolean; chain: number; anims: CrushAnim[][] } => {
+  if (!areAdjacent(a, b)) return { board, swapped: false, chain: 0, anims: [] };
   const newBoard = cloneBoard(board);
   const nodeA = newBoard.nodes.get(key(a.x, a.y));
   const nodeB = newBoard.nodes.get(key(b.x, b.y));
   const temp = nodeA?.piece;
-  if (!nodeA || !nodeB) return { board, swapped: false };
+  if (!nodeA || !nodeB) return { board, swapped: false, chain: 0, anims: [] };
   nodeA.piece = nodeB.piece;
   nodeB.piece = temp;
   const p1 = nodeA.piece;
@@ -370,23 +386,23 @@ export const swapPieces = (
   if (p1 && p2 && (p1.type !== 'normal' || p2.type !== 'normal')) {
     const specialTriggered = handleSpecialSwap(newBoard, a, b);
     if (!specialTriggered) {
-      return { board, swapped: false };
+      return { board, swapped: false, chain: 0, anims: [] };
     }
-    resolveBoard(newBoard, rand, maxChain);
-    return { board: newBoard, swapped: true };
+    const res = resolveBoard(newBoard, rand, maxChain);
+    return { board: res.board, swapped: true, chain: res.chain, anims: res.anims };
   }
   if (matches.size === 0) {
-    return { board, swapped: false };
+    return { board, swapped: false, chain: 0, anims: [] };
   }
-  resolveBoard(newBoard, rand, maxChain, a, b);
-  return { board: newBoard, swapped: true };
+  const res = resolveBoard(newBoard, rand, maxChain, a, b);
+  return { board: res.board, swapped: true, chain: res.chain, anims: res.anims };
 };
 
 export const resolveBoardAsync = (
   board: Board,
   seed: number,
   maxChain = MAX_CHAIN,
-): Promise<{ board: Board; chain: number }> => {
+): Promise<{ board: Board; chain: number; anims: CrushAnim[][] }> => {
   if (typeof Worker === 'undefined') {
     return Promise.resolve(resolveBoard(board, rngFactory(seed), maxChain));
   }
@@ -412,6 +428,9 @@ const Match3: React.FC = () => {
   const rngRef = useRef<() => number>(() => Math.random);
   const [board, setBoard] = useState<Board | null>(null);
   const [sel, setSel] = useState<{ x: number; y: number } | null>(null);
+  const [movesLeft, setMovesLeft] = useState(MOVE_LIMIT);
+  const [cascades, setCascades] = useState(0);
+  const [animations, setAnimations] = useState<CrushAnim[]>([]);
 
   useEffect(() => {
     const seedParam = router.query.seed;
@@ -422,6 +441,7 @@ const Match3: React.FC = () => {
   }, [router.query.seed]);
 
   const handleClick = (x: number, y: number) => {
+    if (movesLeft <= 0) return;
     if (!sel) {
       setSel({ x, y });
       return;
@@ -430,12 +450,23 @@ const Match3: React.FC = () => {
     const res = swapPieces(board, sel, { x, y }, rngRef.current);
     setBoard(cloneBoard(res.board));
     setSel(null);
+    if (res.swapped) {
+      setMovesLeft((m) => m - 1);
+      setCascades(res.chain);
+      const pool: CrushAnim[] = [];
+      res.anims.forEach((step) => step.forEach((a) => pool.push(a)));
+      setAnimations(pool);
+      if (pool.length) {
+        setTimeout(() => setAnimations([]), 300);
+      }
+    }
   };
 
   if (!board) return null;
 
   return (
-    <div className="p-2">
+    <div className="p-2 text-white">
+      <div className="mb-2">Moves: {movesLeft} | Cascades: {cascades}</div>
       <div
         className="relative"
         style={{ width: BOARD_SIZE * cellSize, height: BOARD_SIZE * cellSize }}
@@ -464,6 +495,28 @@ const Match3: React.FC = () => {
             ) : null;
           }),
         )}
+        {animations.map((a) => (
+          <div
+            key={`anim-${a.id}-${a.x}-${a.y}`}
+            className="absolute pointer-events-none rounded"
+            style={{
+              width: cellSize - 4,
+              height: cellSize - 4,
+              backgroundColor: a.color,
+              left: a.x * cellSize,
+              top: a.y * cellSize,
+              animation: 'fade 0.3s forwards',
+            }}
+          />
+        ))}
+        <style jsx>{`
+          @keyframes fade {
+            to {
+              opacity: 0;
+              transform: scale(0.5);
+            }
+          }
+        `}</style>
       </div>
     </div>
   );
