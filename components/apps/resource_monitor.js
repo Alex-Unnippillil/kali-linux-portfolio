@@ -42,6 +42,14 @@ const ResourceMonitor = () => {
   const [memory, setMemory] = useState(null);
   const [networkBytes, setNetworkBytes] = useState(null);
   const [connection, setConnection] = useState({ downlink: null, effectiveType: null });
+  const [webVitals, setWebVitals] = useState({
+    fcp: null,
+    lcp: null,
+    cls: null,
+    fid: null,
+    ttfb: null,
+  });
+  const [recording, setRecording] = useState(false);
 
   const fpsHistory = useRef([]);
   const longTaskHistory = useRef([]);
@@ -154,16 +162,146 @@ const ResourceMonitor = () => {
     };
   }, [paused]);
 
+  useEffect(() => {
+    if (paused) return;
+    let lcpObserver;
+    let clsObserver;
+    let fidObserver;
+    let clsValue = 0;
+
+    const fcpEntry = performance.getEntriesByName('first-contentful-paint')[0];
+    if (fcpEntry) {
+      setWebVitals((v) => ({ ...v, fcp: Math.round(fcpEntry.startTime) }));
+    }
+
+    if (typeof PerformanceObserver !== 'undefined') {
+      try {
+        lcpObserver = new PerformanceObserver((entryList) => {
+          const entries = entryList.getEntries();
+          const lastEntry = entries[entries.length - 1];
+          setWebVitals((v) => ({ ...v, lcp: Math.round(lastEntry.startTime) }));
+        });
+        lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
+      } catch (_) {
+        /* unsupported */
+      }
+
+      try {
+        clsObserver = new PerformanceObserver((entryList) => {
+          for (const entry of entryList.getEntries()) {
+            if (!entry.hadRecentInput) {
+              clsValue += entry.value;
+              setWebVitals((v) => ({
+                ...v,
+                cls: parseFloat(clsValue.toFixed(3)),
+              }));
+            }
+          }
+        });
+        clsObserver.observe({ type: 'layout-shift', buffered: true });
+      } catch (_) {
+        /* unsupported */
+      }
+
+      try {
+        fidObserver = new PerformanceObserver((entryList) => {
+          const firstInput = entryList.getEntries()[0];
+          if (firstInput) {
+            const fid = firstInput.processingStart - firstInput.startTime;
+            setWebVitals((v) => ({ ...v, fid: Math.round(fid) }));
+          }
+        });
+        fidObserver.observe({ type: 'first-input', buffered: true });
+      } catch (_) {
+        /* unsupported */
+      }
+    }
+
+    const navEntry = performance.getEntriesByType('navigation')[0];
+    if (navEntry) {
+      setWebVitals((v) => ({ ...v, ttfb: Math.round(navEntry.responseStart) }));
+    }
+
+    return () => {
+      lcpObserver?.disconnect();
+      clsObserver?.disconnect();
+      fidObserver?.disconnect();
+    };
+  }, [paused]);
+
+  const recordProfile = () => {
+    if (recording) return;
+    setRecording(true);
+    performance.clearMarks?.();
+    performance.clearMeasures?.();
+    performance.clearResourceTimings?.();
+    let longEntries = [];
+    let ltObserver;
+    if (typeof PerformanceObserver !== 'undefined') {
+      try {
+        ltObserver = new PerformanceObserver((list) => {
+          longEntries.push(
+            ...list.getEntries().map((e) => ({ start: e.startTime, duration: e.duration }))
+          );
+        });
+        ltObserver.observe({ entryTypes: ['longtask'] });
+      } catch (_) {
+        /* unsupported */
+      }
+    }
+    const start = performance.now();
+    setTimeout(() => {
+      ltObserver?.disconnect();
+      const profile = {
+        timestamp: new Date().toISOString(),
+        duration: performance.now() - start,
+        metrics: {
+          fps: fpsHistory.current,
+          longTasks: longTaskHistory.current,
+          memory: memoryHistory.current,
+          network: networkHistory.current,
+          webVitals,
+          longTasksDetailed: longEntries,
+          perf: performance.getEntries().map(({ name, entryType, startTime, duration }) => ({
+            name,
+            entryType,
+            startTime,
+            duration,
+          })),
+        },
+      };
+      const blob = new Blob([JSON.stringify(profile, null, 2)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `profile-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setRecording(false);
+    }, 5000);
+  };
+
   const togglePause = () => setPaused((p) => !p);
 
   return (
     <div className="h-full w-full flex flex-col bg-panel text-white">
-      <button
-        className="self-end m-2 px-2 py-1 bg-gray-700 rounded"
-        onClick={togglePause}
-      >
-        {paused ? 'Resume' : 'Pause'}
-      </button>
+      <div className="self-end m-2 flex space-x-2">
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={togglePause}
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={recordProfile}
+          disabled={recording}
+        >
+          {recording ? 'Recording…' : 'Record Profile'}
+        </button>
+      </div>
       <div className="flex flex-wrap justify-evenly">
         <Metric label="FPS" value={fps} history={fpsHistory.current} />
         <Metric label="Long Tasks" value={longTasks} history={longTaskHistory.current} />
@@ -182,6 +320,11 @@ const ResourceMonitor = () => {
             )}
           </div>
         </div>
+        <Metric label="FCP" value={webVitals.fcp} history={[]} unit="ms" />
+        <Metric label="LCP" value={webVitals.lcp} history={[]} unit="ms" />
+        <Metric label="CLS" value={webVitals.cls} history={[]} />
+        <Metric label="FID" value={webVitals.fid} history={[]} unit="ms" />
+        <Metric label="TTFB" value={webVitals.ttfb} history={[]} unit="ms" />
       </div>
     </div>
   );

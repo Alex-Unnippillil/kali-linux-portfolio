@@ -11,6 +11,7 @@ import {
   isComplete,
   serialize,
   deserialize,
+  chord,
 } from '../../apps/minesweeper/engine';
 
 interface SaveData {
@@ -33,6 +34,17 @@ const Minesweeper: React.FC = () => {
   const [dark, setDark] = useState(false);
   const [scores, setScores] = useState<{ name: string; time: number }[]>([]);
   const boardRef = useRef<HTMLDivElement>(null);
+
+  const flagged = React.useMemo(() => {
+    if (!game) return 0;
+    let c = 0;
+    for (let x = 0; x < game.height; x++) {
+      for (let y = 0; y < game.width; y++) {
+        if (isFlagged(game, x, y)) c++;
+      }
+    }
+    return c;
+  }, [game]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -104,6 +116,18 @@ const Minesweeper: React.FC = () => {
     if (!game || status !== 'playing') return;
     toggleFlag(game, x, y);
     setGame({ ...game });
+  };
+
+  const handleChord = (x: number, y: number) => {
+    if (!game || status !== 'playing') return;
+    const hit = chord(game, x, y);
+    setGame({ ...game });
+    if (hit) {
+      setStatus('lost');
+    } else if (isComplete(game)) {
+      setStatus('won');
+      saveScore(elapsed);
+    }
   };
 
   const saveScore = (time: number) => {
@@ -213,6 +237,7 @@ const Minesweeper: React.FC = () => {
           <button className="px-2 py-1 border" onClick={() => setDark((d) => !d)}>
             Toggle Theme
           </button>
+          <span>Mines left: {settings.mines - flagged}</span>
           <span>Time: {elapsed.toFixed(1)}</span>
         </div>
         {status === 'won' && <div className="mb-2">You win!</div>}
@@ -236,6 +261,7 @@ const Minesweeper: React.FC = () => {
                     e.preventDefault();
                     handleFlag(x, y);
                   }}
+                  onDoubleClick={() => handleChord(x, y)}
                   className={`${cellClass(x, y)} w-6 h-6 border border-gray-400 flex items-center justify-center text-xs ${sel ? 'outline outline-2 outline-blue-500' : ''}`}
                 >
                   {revealed && !isMine(game!, x, y) && adj > 0 && adj}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="8" ry="8" fill="#4a5568"/>
+  <path d="M16 20h32v8H16zM16 28h32v4H16zM16 36h32v4H16zM16 44h32v4H16z" fill="#fff"/>
+  <text x="32" y="30" text-anchor="middle" font-size="12" fill="#4a5568">SPF</text>
+
+</svg>

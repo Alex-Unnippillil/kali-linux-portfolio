@@ -279,3 +279,16 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
         transition: none !important;
     }
 }
+
+/* CRT effect overlay */
+.crt {
+    filter: contrast(1.2) brightness(1.1);
+}
+.crt::after {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 2px);
+
+}

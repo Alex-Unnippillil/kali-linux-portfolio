@@ -6,6 +6,8 @@ import {
   fireProjectile,
   deactivateProjectile,
   getTowerDPS,
+  computeFlowField,
+  START,
 } from '@components/apps/tower-defense-core';
 
 describe('tower defense core', () => {
@@ -34,5 +36,12 @@ describe('tower defense core', () => {
     const d1 = getTowerDPS('single', 1);
     const d2 = getTowerDPS('single', 2);
     expect(d2).toBeGreaterThan(d1);
+  });
+
+  test('flow field respects obstacles', () => {
+    const { field } = computeFlowField([]);
+    expect(field[START.y][START.x]).toEqual({ dx: 1, dy: 0 });
+    const { field: field2 } = computeFlowField([{ x: START.x + 1, y: START.y }]);
+    expect(field2[START.y][START.x]).toEqual({ dx: 0, dy: -1 });
   });
 });

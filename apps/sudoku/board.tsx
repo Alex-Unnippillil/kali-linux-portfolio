@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { Board } from './types';
+import { isValid } from './solver';
 
 interface Props {
   puzzle: Board;
@@ -15,6 +16,7 @@ function cloneBoard(b: Board): Board {
 const BoardComponent: React.FC<Props> = ({ puzzle, solution, storageKey, onComplete }) => {
   const [board, setBoard] = useState<Board>(() => cloneBoard(puzzle));
   const [pencil, setPencil] = useState(false);
+  const [errorFree, setErrorFree] = useState(false);
   const [marks, setMarks] = useState<Set<number>[][]>(() =>
     Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => new Set<number>()))
   );
@@ -57,6 +59,11 @@ const BoardComponent: React.FC<Props> = ({ puzzle, solution, storageKey, onCompl
       else newMarks[r][c].add(val);
       setMarks(newMarks);
     } else {
+      if (errorFree && val !== 0) {
+        const temp = cloneBoard(board);
+        temp[r][c] = 0;
+        if (!isValid(temp, r, c, val)) return;
+      }
       const newBoard = cloneBoard(board);
       newBoard[r][c] = val;
       setBoard(newBoard);
@@ -102,10 +109,14 @@ const BoardComponent: React.FC<Props> = ({ puzzle, solution, storageKey, onCompl
 
   return (
     <div>
-      <div className="mb-2">
+      <div className="mb-2 space-x-4">
         <label>
           <input type="checkbox" checked={pencil} onChange={(e) => setPencil(e.target.checked)} />
           {' '}Pencil Marks
+        </label>
+        <label>
+          <input type="checkbox" checked={errorFree} onChange={(e) => setErrorFree(e.target.checked)} />
+          {' '}Error Free
         </label>
       </div>
       <div

@@ -13,8 +13,17 @@ export interface ScanResult {
   pattern: string;
   match: string;
   index: number;
+  line: number;
   severity: string;
+  confidence: string;
   remediation: string;
+}
+
+interface DiffLine {
+  file: string;
+  line: string;
+  lineNumber: number | null;
+  type: 'context' | 'add' | 'remove';
 }
 
 export const defaultPatterns: PatternInfo[] = [
@@ -45,8 +54,20 @@ export const redactSecret = (secret: string): string => {
   return `${secret.slice(0, 2)}***${secret.slice(-2)}`;
 };
 
+const shannonEntropy = (str: string): number => {
+  const freq: Record<string, number> = {};
+  for (const c of str) freq[c] = (freq[c] || 0) + 1;
+  let e = 0;
+  const len = str.length;
+  Object.values(freq).forEach((f) => {
+    const p = f / len;
+    e -= p * Math.log2(p);
+  });
+  return e;
+};
+
 const isBinary = (data: Uint8Array): boolean => {
-  for (let i = 0; i < data.length && i < 1000; i++) {
+  for (let i = 0; i < data.length && i < 1000; i += 1) {
     if (data[i] === 0) return true;
   }
   return false;
@@ -58,6 +79,8 @@ const GitSecretsTester: React.FC = () => {
   const [results, setResults] = useState<ScanResult[]>([]);
   const [falsePositives, setFalsePositives] = useState<ScanResult[]>([]);
   const [logs, setLogs] = useState<string[]>([]);
+  const [diff, setDiff] = useState<DiffLine[]>([]);
+  const [patch, setPatch] = useState('');
 
   const allPatterns = useMemo(() => {
     const custom = customPatterns
@@ -73,45 +96,152 @@ const GitSecretsTester: React.FC = () => {
     return [...defaultPatterns, ...custom];
   }, [customPatterns]);
 
-  const scanText = (file: string, content: string) => {
-    const newResults: ScanResult[] = [];
+  const scanLine = (
+    file: string,
+    lineContent: string,
+    lineNumber: number,
+  ): { safe: string; results: ScanResult[] } => {
+    const lineResults: ScanResult[] = [];
+    let safe = lineContent;
+
     allPatterns.forEach((pat) => {
       try {
         const re = new RegExp(pat.regex, 'g');
         let m: RegExpExecArray | null;
-        while ((m = re.exec(content)) !== null) {
-          newResults.push({
+        while ((m = re.exec(lineContent)) !== null) {
+          lineResults.push({
             file,
             pattern: pat.name,
             match: redactSecret(m[0]),
             index: m.index,
+            line: lineNumber,
             severity: pat.severity,
+            confidence: 'high',
             remediation: pat.remediation,
           });
+          safe = safe.replace(m[0], redactSecret(m[0]));
         }
       } catch (e: any) {
-        newResults.push({
+        lineResults.push({
           file,
           pattern: pat.regex,
           match: '',
           index: -1,
+          line: lineNumber,
           severity: 'error',
+          confidence: 'low',
           remediation: e.message,
         });
       }
     });
-    setResults((prev) => [...prev, ...newResults]);
+
+    const heur = /(password|secret|api[-_]?key|token)\s*[:=]\s*['"]?([^'"\s]+)/i.exec(
+      lineContent,
+    );
+    if (heur) {
+      const secret = heur[2];
+      lineResults.push({
+        file,
+        pattern: `Keyword ${heur[1]}`,
+        match: redactSecret(secret),
+        index: lineContent.indexOf(secret),
+        line: lineNumber,
+        severity: 'medium',
+        confidence: 'low',
+        remediation: 'Avoid hardcoding credentials.',
+      });
+      safe = safe.replace(secret, redactSecret(secret));
+    }
+
+    const tokens = lineContent.match(/[A-Za-z0-9\/+=]{20,}/g) || [];
+    tokens.forEach((token) => {
+      const ent = shannonEntropy(token);
+      if (ent > 4) {
+        lineResults.push({
+          file,
+          pattern: 'High Entropy String',
+          match: redactSecret(token),
+          index: lineContent.indexOf(token),
+          line: lineNumber,
+          severity: 'medium',
+          confidence: 'medium',
+          remediation: 'Verify this string is not a secret.',
+        });
+        safe = safe.replace(token, redactSecret(token));
+      }
+    });
+
+    return { safe, results: lineResults };
+  };
+
+  const scanFile = (file: string, content: string) => {
+    const res: ScanResult[] = [];
+    content.split(/\r?\n/).forEach((line, idx) => {
+      const { results: r } = scanLine(file, line, idx + 1);
+      res.push(...r);
+    });
+    setResults((prev) => [...prev, ...res]);
+  };
+
+  const parsePatch = (p: string) => {
+    const lines = p.split(/\r?\n/);
+    const diffLines: DiffLine[] = [];
+    const res: ScanResult[] = [];
+    let currentFile = '';
+    let ln = 0;
+    lines.forEach((line) => {
+      if (line.startsWith('+++')) {
+        currentFile = line.replace('+++ b/', '').replace('+++ ', '');
+        diffLines.push({ file: currentFile, line, lineNumber: null, type: 'context' });
+      } else if (line.startsWith('@@')) {
+        const m = /@@ .* \+(\d+)/.exec(line);
+        ln = m ? parseInt(m[1], 10) - 1 : 0;
+        diffLines.push({ file: currentFile, line, lineNumber: null, type: 'context' });
+      } else if (line.startsWith('+') && !line.startsWith('+++')) {
+        ln += 1;
+        const { safe, results: r } = scanLine(currentFile, line.slice(1), ln);
+        diffLines.push({
+          file: currentFile,
+          line: `+${safe}`,
+          lineNumber: ln,
+          type: 'add',
+        });
+        res.push(...r);
+      } else if (line.startsWith('-') && !line.startsWith('---')) {
+        const { safe } = scanLine(currentFile, line.slice(1), ln);
+        diffLines.push({
+          file: currentFile,
+          line: `-${safe}`,
+          lineNumber: null,
+          type: 'remove',
+        });
+      } else {
+        ln += 1;
+        const { safe } = scanLine(currentFile, line, ln);
+        diffLines.push({ file: currentFile, line: safe, lineNumber: ln, type: 'context' });
+      }
+    });
+    setDiff(diffLines);
+    setResults((prev) => [...prev, ...res]);
   };
 
   const handleTextChange = (val: string) => {
     setText(val);
     setResults([]);
-    if (val) scanText('input', val);
+    setDiff([]);
+    if (val) scanFile('input', val);
   };
 
   const handleFile = async (file: File) => {
     setResults([]);
     setLogs([]);
+    setDiff([]);
+    if (file.name.endsWith('.patch') || file.name.endsWith('.diff')) {
+      const p = await file.text();
+      setPatch(p);
+      parsePatch(p);
+      return;
+    }
     if (file.name.endsWith('.zip')) {
       const zip = await JSZip.loadAsync(file);
       const entries = Object.values(zip.files);
@@ -123,7 +253,7 @@ const GitSecretsTester: React.FC = () => {
           continue;
         }
         const content = new TextDecoder().decode(data);
-        scanText(entry.name, content);
+        scanFile(entry.name, content);
       }
     } else {
       const data = new Uint8Array(await file.arrayBuffer());
@@ -132,12 +262,57 @@ const GitSecretsTester: React.FC = () => {
         return;
       }
       const content = new TextDecoder().decode(data);
-      scanText(file.name, content);
+      scanFile(file.name, content);
     }
   };
 
   const markFalsePositive = (r: ScanResult) => {
     setFalsePositives((prev) => [...prev, r]);
+  };
+
+  const summary = useMemo(() => {
+    const m: Record<string, { counts: Record<string, number>; remediations: string[] }> = {};
+    results.forEach((r) => {
+      if (!m[r.severity]) m[r.severity] = { counts: {}, remediations: [] };
+      m[r.severity].counts[r.confidence] =
+        (m[r.severity].counts[r.confidence] || 0) + 1;
+      if (!m[r.severity].remediations.includes(r.remediation))
+        m[r.severity].remediations.push(r.remediation);
+    });
+    return m;
+  }, [results]);
+
+  const runServerScan = async () => {
+    try {
+      const res = await fetch('/api/git-secrets-tester', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patch: patch || text }),
+      });
+      const data = await res.json();
+      const merged: ScanResult[] = [];
+      ['gitleaks', 'trufflehog'].forEach((tool) => {
+        const arr = (data as any)[tool];
+        if (Array.isArray(arr)) {
+          arr.forEach((item: any) => {
+            merged.push({
+              file: item.file || 'input',
+              pattern: tool,
+              match: redactSecret(item.secret || ''),
+              index: item.index || 0,
+              line: item.line || 0,
+              severity: item.severity || 'medium',
+              confidence: item.confidence || 'medium',
+              remediation: item.remediation || 'Rotate the secret.',
+            });
+          });
+        }
+      });
+      if (merged.length > 0) setResults((prev) => [...prev, ...merged]);
+      else setLogs((l) => [...l, 'Server scan did not return results']);
+    } catch (e: any) {
+      setLogs((l) => [...l, `Server scan failed: ${e.message}`]);
+    }
   };
 
   return (
@@ -170,19 +345,81 @@ const GitSecretsTester: React.FC = () => {
       />
       <input
         type="file"
-        accept=".zip,.txt"
+        accept=".zip,.txt,.patch,.diff"
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) handleFile(f);
         }}
       />
+      <button
+        type="button"
+        className="px-2 py-1 bg-purple-700 rounded w-40"
+        onClick={runServerScan}
+      >
+        Server scan
+      </button>
+      {Object.keys(summary).length > 0 && (
+        <div className="bg-gray-800 p-2 rounded">
+          <strong>Summary:</strong>
+          <ul className="list-disc ml-4">
+            {Object.entries(summary).map(([sev, info]) => (
+              <li key={sev}>
+                {sev} –
+                {Object.entries(info.counts)
+                  .map(([conf, c]) => `${conf}: ${c}`)
+                  .join(', ')}
+                <ul className="list-disc ml-4 text-sm">
+                  {info.remediations.map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {diff.length > 0 && (
+        <div className="bg-gray-800 p-2 rounded overflow-auto">
+          <pre className="font-mono text-sm">
+            {diff.map((d, idx) => {
+              const annotations = results.filter(
+                (r) => r.file === d.file && r.line === d.lineNumber,
+              );
+              return (
+                <div key={idx} className="flex">
+                  <span className="w-16 text-right pr-2 text-gray-500">
+                    {d.lineNumber ?? ''}
+                  </span>
+                  <span
+                    className={`flex-1 whitespace-pre ${{
+                      add: 'text-green-400',
+                      remove: 'text-red-400',
+                      context: '',
+                    }[d.type]}`}
+                  >
+                    {d.line}
+                  </span>
+                  {annotations.map((a, i) => (
+                    <span
+                      key={i}
+                      className="ml-2 text-xs bg-red-700 text-white px-1 rounded"
+                    >
+                      {a.pattern}
+                    </span>
+                  ))}
+                </div>
+              );
+            })}
+          </pre>
+        </div>
+      )}
       <div className="flex-1 space-y-2">
         {results.map((r, idx) => (
           <div key={idx} className="p-2 bg-gray-800 rounded">
             <div>
               <span className="font-mono">{r.pattern}</span> matched &quot;
               <span className="bg-yellow-600 text-black">{r.match}</span>&quot; in {r.file}
-              {' '}at {r.index} [{r.severity}]
+              {' '}at {r.line}:{r.index} [{r.severity}/{r.confidence}]
             </div>
             <div className="text-sm text-gray-300">Remediation: {r.remediation}</div>
             <button

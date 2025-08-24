@@ -1,7 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Player from '../../apps/space-invaders/player';
 import Invader from '../../apps/space-invaders/invader';
 import Projectile from '../../apps/space-invaders/projectile';
+import Shield from '../../apps/space-invaders/shield';
+import Mothership from '../../apps/space-invaders/mothership';
+import Particle from '../../apps/space-invaders/particle';
 
 const SpaceInvaders = () => {
   const canvasRef = useRef(null);
@@ -10,14 +13,30 @@ const SpaceInvaders = () => {
   const touch = useRef({ left: false, right: false, fire: false });
   const playerRef = useRef(null);
   const invadersRef = useRef([]);
+  const invaderRowsRef = useRef([]);
   const playerBulletsRef = useRef([]);
   const enemyBulletsRef = useRef([]);
   const powerUpsRef = useRef([]);
+  const shieldsRef = useRef([]);
+  const mothershipRef = useRef(null);
   const enemyDir = useRef(1);
   const enemyCooldown = useRef(1);
+  const moveTimer = useRef(0);
+  const stepIndex = useRef(0);
+  const totalInvaders = useRef(0);
+  const mothershipTimer = useRef(10);
   const wave = useRef(1);
   const gameOver = useRef(false);
   const audioCtxRef = useRef(null);
+  const particlesRef = useRef([]);
+  const framesRef = useRef([]);
+  const replayFramesRef = useRef([]);
+  const replayIndexRef = useRef(0);
+  const replayingRef = useRef(false);
+  const loopRef = useRef(null);
+  const highScoreRef = useRef(0);
+  const [effects, setEffects] = useState(true);
+  const [showReplay, setShowReplay] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -28,6 +47,10 @@ const SpaceInvaders = () => {
     const h = canvas.height;
 
     playerRef.current = new Player(w / 2 - 10, h - 30);
+    highScoreRef.current = parseInt(
+      localStorage.getItem('siHighScore') || '0',
+      10
+    );
     audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
     const playSound = (freq) => {
       const actx = audioCtxRef.current;
@@ -40,24 +63,55 @@ const SpaceInvaders = () => {
       gain.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + 0.2);
       osc.stop(actx.currentTime + 0.2);
     };
+    const stepSounds = [260, 280, 300, 320];
 
     const spawnWave = () => {
-      invadersRef.current = [];
+      invaderRowsRef.current = [];
       if (wave.current % 3 === 0) {
-        invadersRef.current.push(new Invader(w / 2 - 30, 50, 60, 30, 20));
+        invaderRowsRef.current.push([
+          new Invader(w / 2 - 30, 50, 60, 30, 20),
+        ]);
       } else {
         const rows = 4;
         const cols = 8;
         for (let r = 0; r < rows; r += 1) {
+          const row = [];
           for (let c = 0; c < cols; c += 1) {
-            invadersRef.current.push(new Invader(30 + c * 30, 30 + r * 30));
+            row.push(new Invader(30 + c * 30, 30 + r * 30));
           }
+          invaderRowsRef.current.push(row);
         }
       }
+      invadersRef.current = invaderRowsRef.current.flat();
+      totalInvaders.current = invadersRef.current.length;
+      moveTimer.current = 0;
       enemyDir.current = 1;
     };
 
+    const spawnShields = () => {
+      shieldsRef.current = [];
+      const count = 3;
+      for (let i = 0; i < count; i += 1) {
+        const sx = (w / (count + 1)) * (i + 1) - 15;
+        shieldsRef.current.push(new Shield(sx, h - 80));
+      }
+    };
+
+    const spawnMothership = () => {
+      const dir = Math.random() < 0.5 ? 1 : -1;
+      mothershipRef.current = new Mothership(w, dir);
+    };
+
+    const spawnExplosion = (x, y, color) => {
+      if (!effects) return;
+      for (let i = 0; i < 10; i += 1) {
+        particlesRef.current.push(new Particle(x, y, color));
+      }
+    };
+
     spawnWave();
+    spawnShields();
+    framesRef.current = [];
 
     const handleKey = (e) => {
       keys.current[e.code] = e.type === 'keydown';
@@ -77,6 +131,12 @@ const SpaceInvaders = () => {
           accuracy: playerRef.current.accuracy(),
         }),
       }).catch(() => {});
+      localStorage.setItem('siReplay', JSON.stringify(framesRef.current));
+      if (playerRef.current.score > highScoreRef.current) {
+        highScoreRef.current = playerRef.current.score;
+        localStorage.setItem('siHighScore', String(highScoreRef.current));
+      }
+      setShowReplay(true);
     };
 
     let last = performance.now();
@@ -85,13 +145,54 @@ const SpaceInvaders = () => {
       last = time;
 
       const p = playerRef.current;
+      if (replayingRef.current) {
+        const frame = replayFramesRef.current[replayIndexRef.current++];
+        if (!frame) {
+          replayingRef.current = false;
+          return;
+        }
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = 'white';
+        ctx.fillRect(frame.p.x, frame.p.y, p.w, p.h);
+        frame.invaders.forEach((inv) => {
+          if (inv.alive) {
+            ctx.fillStyle = inv.hp > 1 ? 'purple' : 'lime';
+            ctx.fillRect(inv.x, inv.y, inv.w, inv.h);
+          }
+        });
+        frame.playerBullets.forEach((b) => {
+          ctx.fillStyle = 'red';
+          ctx.fillRect(b.x, b.y, 2, 4);
+        });
+        frame.enemyBullets.forEach((b) => {
+          ctx.fillStyle = 'yellow';
+          ctx.fillRect(b.x, b.y, 2, 4);
+        });
+        if (effects)
+          frame.particles.forEach((pt) => {
+            ctx.fillStyle = pt.color;
+            ctx.fillRect(pt.x, pt.y, 2, 2);
+          });
+        reqRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
       p.update(dt);
-      const dir =
+      let dir =
         (keys.current['ArrowRight'] || touch.current.right ? 1 : 0) -
         (keys.current['ArrowLeft'] || touch.current.left ? 1 : 0);
+      let fire = keys.current['Space'] || touch.current.fire;
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const gp = pads && pads[0];
+      if (gp) {
+        const axis = gp.axes[0] || 0;
+        if (axis > 0.2) dir = 1;
+        else if (axis < -0.2) dir = -1;
+        if (gp.buttons[0] && gp.buttons[0].pressed) fire = true;
+      }
       if (dir) p.move(dir, dt, w);
 
-      const fire = keys.current['Space'] || touch.current.fire;
       if (fire) {
         const before = p.shots;
         p.shoot(playerBulletsRef.current);
@@ -109,18 +210,25 @@ const SpaceInvaders = () => {
         enemyCooldown.current = Math.max(0.2, 1 / difficulty);
       }
 
-      const speed = 20 * difficulty;
-      let hitEdge = false;
-      invadersRef.current.forEach((inv) => {
-        if (!inv.alive) return;
-        inv.x += enemyDir.current * speed * dt;
-        if (inv.x < 10 || inv.x + inv.w > w - 10) hitEdge = true;
-      });
-      if (hitEdge) {
-        enemyDir.current *= -1;
+      moveTimer.current -= dt;
+      const alive = invadersRef.current.filter((i) => i.alive).length;
+      if (moveTimer.current <= 0 && alive) {
+        playSound(stepSounds[stepIndex.current]);
+        stepIndex.current = (stepIndex.current + 1) % stepSounds.length;
+        let hitEdge = false;
         invadersRef.current.forEach((inv) => {
-          if (inv.alive) inv.y += 10;
+          if (!inv.alive) return;
+          inv.x += enemyDir.current * 10;
+          if (inv.x < 10 || inv.x + inv.w > w - 10) hitEdge = true;
         });
+        if (hitEdge) {
+          enemyDir.current *= -1;
+          invadersRef.current.forEach((inv) => {
+            if (inv.alive) inv.y += 10;
+          });
+        }
+        const ratio = alive / totalInvaders.current;
+        moveTimer.current = Math.max(0.05, 0.5 * ratio);
       }
 
       playerBulletsRef.current.forEach((b) => b.update(dt, h));
@@ -128,9 +236,41 @@ const SpaceInvaders = () => {
       powerUpsRef.current.forEach((pu) => {
         pu.y += 40 * dt;
       });
+      particlesRef.current.forEach((pt) => pt.update(dt));
+      particlesRef.current = particlesRef.current.filter((pt) => pt.alive);
+      if (mothershipRef.current) {
+        mothershipRef.current.update(dt, w);
+        if (!mothershipRef.current.active) mothershipRef.current = null;
+      }
+      mothershipTimer.current -= dt;
+      if (!mothershipRef.current && mothershipTimer.current <= 0) {
+        spawnMothership();
+        mothershipTimer.current = 20 + Math.random() * 20;
+      }
 
       playerBulletsRef.current.forEach((b) => {
         if (!b.active) return;
+        for (const s of shieldsRef.current) {
+          if (s.alive && b.collides(s)) {
+            s.hit();
+            b.active = false;
+            spawnExplosion(s.x + s.w / 2, s.y + s.h / 2, 'yellow');
+            break;
+          }
+        }
+        if (!b.active) return;
+        if (mothershipRef.current && b.collides(mothershipRef.current)) {
+          mothershipRef.current.active = false;
+          b.active = false;
+          p.addScore(50);
+          playSound(500);
+          spawnExplosion(
+            mothershipRef.current.x + mothershipRef.current.w / 2,
+            mothershipRef.current.y + mothershipRef.current.h / 2,
+            'red'
+          );
+          return;
+        }
         for (const inv of invadersRef.current) {
           if (inv.alive && b.collides(inv)) {
             inv.hit();
@@ -138,6 +278,7 @@ const SpaceInvaders = () => {
             if (!inv.alive) {
               p.addScore(10);
               playSound(220);
+              spawnExplosion(inv.x + inv.w / 2, inv.y + inv.h / 2, 'lime');
               if (Math.random() < 0.1) {
                 powerUpsRef.current.push({
                   x: inv.x,
@@ -153,10 +294,23 @@ const SpaceInvaders = () => {
       });
 
       for (const b of enemyBulletsRef.current) {
+        let blocked = false;
+        for (const s of shieldsRef.current) {
+          if (s.alive && b.collides(s)) {
+            s.hit();
+            b.active = false;
+            blocked = true;
+            spawnExplosion(s.x + s.w / 2, s.y + s.h / 2, 'yellow');
+            break;
+          }
+        }
+        if (blocked) continue;
         if (b.collides(p)) {
           b.active = false;
           playSound(110);
+          spawnExplosion(p.x + p.w / 2, p.y, 'white');
           if (p.takeHit()) {
+            spawnExplosion(p.x + p.w / 2, p.y, 'red');
             endGame();
             return;
           }
@@ -180,6 +334,7 @@ const SpaceInvaders = () => {
       playerBulletsRef.current = playerBulletsRef.current.filter((b) => b.active);
       enemyBulletsRef.current = enemyBulletsRef.current.filter((b) => b.active);
       powerUpsRef.current = powerUpsRef.current.filter((pu) => pu.active && pu.y < h);
+      shieldsRef.current = shieldsRef.current.filter((s) => s.alive);
 
       if (invadersRef.current.every((inv) => !inv.alive)) {
         wave.current += 1;
@@ -194,20 +349,44 @@ const SpaceInvaders = () => {
         ctx.fillStyle = inv.hp > 1 ? 'purple' : 'lime';
         inv.draw(ctx);
       });
+      if (mothershipRef.current) mothershipRef.current.draw(ctx);
+      shieldsRef.current.forEach((s) => s.draw(ctx));
       playerBulletsRef.current.forEach((b) => b.draw(ctx, 'red'));
       enemyBulletsRef.current.forEach((b) => b.draw(ctx, 'yellow'));
       powerUpsRef.current.forEach((pu) => {
         ctx.fillStyle = pu.type === 'shield' ? 'cyan' : 'orange';
         ctx.fillRect(pu.x, pu.y, 10, 10);
       });
+      if (effects) particlesRef.current.forEach((pt) => pt.draw(ctx));
 
       ctx.fillStyle = 'white';
       ctx.fillText(`Score: ${p.score}`, 10, 20);
+      ctx.fillText(`High: ${highScoreRef.current}`, w - 80, 20);
       ctx.fillText(`Accuracy: ${Math.round(p.accuracy() * 100)}%`, 10, 40);
+      if (!replayingRef.current)
+        framesRef.current.push({
+          p: { x: p.x, y: p.y },
+          invaders: invadersRef.current.map((inv) => ({
+            x: inv.x,
+            y: inv.y,
+            w: inv.w,
+            h: inv.h,
+            alive: inv.alive,
+            hp: inv.hp,
+          })),
+          playerBullets: playerBulletsRef.current.map((b) => ({ x: b.x, y: b.y })),
+          enemyBullets: enemyBulletsRef.current.map((b) => ({ x: b.x, y: b.y })),
+          particles: particlesRef.current.map((pt) => ({
+            x: pt.x,
+            y: pt.y,
+            color: pt.color,
+          })),
+        });
 
       if (!gameOver.current) reqRef.current = requestAnimationFrame(loop);
     };
 
+    loopRef.current = loop;
     reqRef.current = requestAnimationFrame(loop);
 
     return () => {
@@ -225,8 +404,33 @@ const SpaceInvaders = () => {
   };
 
   return (
-    <div className="h-full w-full relative bg-black text-white">
+    <div className={`h-full w-full relative bg-black text-white ${effects ? 'crt' : ''}`}>
       <canvas ref={canvasRef} className="w-full h-full" />
+      <div className="absolute top-2 right-2 flex gap-2">
+        <button
+          className="bg-gray-700 px-2 py-1 rounded"
+          onClick={() => setEffects((e) => !e)}
+        >
+          {effects ? 'FX On' : 'FX Off'}
+        </button>
+        {showReplay && (
+          <button
+            className="bg-gray-700 px-2 py-1 rounded"
+            onClick={() => {
+              replayFramesRef.current = JSON.parse(
+                localStorage.getItem('siReplay') || '[]'
+              );
+              replayIndexRef.current = 0;
+              replayingRef.current = true;
+              gameOver.current = false;
+              reqRef.current = requestAnimationFrame(loopRef.current);
+              setShowReplay(false);
+            }}
+          >
+            Replay
+          </button>
+        )}
+      </div>
       <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-8 md:hidden">
         <button
           className="bg-gray-700 px-4 py-2 rounded"

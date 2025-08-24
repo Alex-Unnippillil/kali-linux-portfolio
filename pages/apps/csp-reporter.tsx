@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const CspReporter = dynamic(() => import('../../components/apps/csp-reporter'), { ssr: false });
+const CspReporter = dynamic(() => import('@apps/csp-reporter'), { ssr: false });
 
 export default function CspReporterPage() {
   return <CspReporter />;

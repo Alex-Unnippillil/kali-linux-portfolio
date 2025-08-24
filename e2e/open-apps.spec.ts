@@ -6,3 +6,4 @@ test('open Firefox app from desktop', async ({ page }) => {
   await firefoxIcon.dblclick();
   await expect(page.locator('[data-testid="window-chrome"]')).toBeVisible();
 });
+

@@ -7,12 +7,16 @@ interface Hop {
   setCookie?: string;
   hsts?: string;
   altSvc?: string;
+  protocol: string;
+  crossSite: boolean;
+  insecure: boolean;
   time: number;
 }
 
 interface ApiResponse {
   ok: boolean;
   chain: Hop[];
+  mixedContent?: boolean;
 }
 
 function statusColor(status: number) {
@@ -27,12 +31,14 @@ const RedirectVisualizer: React.FC = () => {
   const [data, setData] = useState<Hop[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mixed, setMixed] = useState(false);
 
   const trace = async () => {
     if (!url) return;
     setLoading(true);
     setError('');
     setData([]);
+    setMixed(false);
     try {
       const res = await fetch('/api/redirect-visualizer', {
         method: 'POST',
@@ -44,6 +50,7 @@ const RedirectVisualizer: React.FC = () => {
         setError('Trace failed');
       }
       setData(json.chain);
+      setMixed(!!json.mixedContent);
     } catch (e) {
       setError('Trace failed');
     } finally {
@@ -78,11 +85,17 @@ const RedirectVisualizer: React.FC = () => {
       {data.length > 0 && (
         <div className="space-y-2 overflow-auto">
           {data.map((hop, i) => (
-            <div key={i} className="border border-gray-700 p-2 rounded">
+            <div
+              key={i}
+              className={`border p-2 rounded ${
+                hop.insecure ? 'border-red-700' : hop.crossSite ? 'border-yellow-700' : 'border-gray-700'
+              }`}
+            >
               <div className="flex justify-between">
                 <span className="break-all">{hop.url}</span>
                 <span className={statusColor(hop.status)}>{hop.status}</span>
               </div>
+              <div className="text-sm">Protocol: {hop.protocol}</div>
               {hop.location && (
                 <div className="break-all text-sm">Location: {hop.location}</div>
               )}
@@ -95,6 +108,12 @@ const RedirectVisualizer: React.FC = () => {
               {hop.altSvc && (
                 <div className="break-all text-sm">Alt-Svc: {hop.altSvc}</div>
               )}
+              {hop.crossSite && (
+                <div className="text-sm text-yellow-400">Cross-site redirect</div>
+              )}
+              {hop.insecure && (
+                <div className="text-sm text-red-400">Insecure hop</div>
+              )}
               <div className="text-sm">Time: {hop.time} ms</div>
               <button
                 type="button"
@@ -105,6 +124,9 @@ const RedirectVisualizer: React.FC = () => {
               </button>
             </div>
           ))}
+          {mixed && (
+            <div className="text-red-400">Mixed content detected on landing page</div>
+          )}
         </div>
       )}
     </div>

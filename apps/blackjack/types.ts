@@ -7,4 +7,5 @@ export interface Hand {
   cards: Card[];
   bet: number;
   isFinished?: boolean;
+  surrendered?: boolean;
 }

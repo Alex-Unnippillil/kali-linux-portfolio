@@ -10,6 +10,7 @@ import {
   suits,
   Card,
   GameState,
+  createDeck,
 } from '@components/apps/solitaire/engine';
 
 const card = (s: any, v: number, faceUp = true): Card => ({
@@ -27,6 +28,7 @@ const emptyState = (): GameState => ({
   draw: 1,
   score: 0,
   redeals: 3,
+  scoring: 'standard',
 });
 
 describe('Solitaire engine', () => {
@@ -51,6 +53,24 @@ describe('Solitaire engine', () => {
     expect(recycled.waste.length).toBe(0);
     expect(recycled.stock.every((c) => !c.faceUp)).toBe(true);
     expect(recycled.redeals).toBe(2);
+  });
+
+  test('createDeck is deterministic with seed', () => {
+    const d1 = createDeck(42);
+    const d2 = createDeck(42);
+    expect(d1).toEqual(d2);
+  });
+
+  test('vegas scoring applies bonuses and penalties', () => {
+    let game = initializeGame(1, undefined, { scoring: 'vegas', seed: 1 });
+    const afterDraw = drawFromStock(game);
+    expect(afterDraw.score).toBe(-53); // -52 start -1 draw
+    const state = emptyState();
+    state.scoring = 'vegas';
+    state.score = -52;
+    state.waste = [card('♠', 1, true)];
+    const moved = moveToFoundation(state, 'waste', null);
+    expect(moved.score).toBe(-47); // +5 for foundation move
   });
 
   test('moveTableauToTableau obeys rules and flips card', () => {

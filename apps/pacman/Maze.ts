@@ -1,4 +1,12 @@
-import { GhostConfig } from './Ghost';
+import { GhostType } from "./Ghost";
+
+export interface Fruit {
+  x: number;
+  y: number;
+  score: number;
+  /** remaining frames before the fruit disappears */
+  timer?: number;
+}
 
 export interface LevelData {
   width: number;
@@ -6,9 +14,9 @@ export interface LevelData {
   walls: string[];
   pellets: string[];
   powerUps: string[];
-  fruit?: { x: number; y: number; score: number }[];
+  fruit?: Fruit[];
   player: { x: number; y: number };
-  ghosts: GhostConfig[];
+  ghosts: { x: number; y: number; color?: string; type: GhostType }[];
 }
 
 export default class Maze {
@@ -18,8 +26,8 @@ export default class Maze {
   walls: Set<string>;
   pellets: Set<string>;
   powerUps: Set<string>;
-  fruit: { x: number; y: number; score: number }[];
-  ghosts: GhostConfig[];
+  fruit: Fruit[];
+  ghosts: { x: number; y: number; color?: string; type: GhostType }[];
   playerStart: { x: number; y: number };
 
   constructor(data: LevelData) {
@@ -51,17 +59,30 @@ export default class Maze {
     return this.walls.has(`${tx},${ty}`);
   }
 
+  isWallTile(x: number, y: number) {
+    return this.walls.has(`${x},${y}`);
+  }
+
+  isTunnel(x: number, y: number) {
+    const ty = Math.floor(y / this.tileSize);
+    return ty === Math.floor(this.height / 2);
+  }
+
   eat(x: number, y: number) {
     const key = `${Math.floor(x / this.tileSize)},${Math.floor(y / this.tileSize)}`;
     if (this.powerUps.has(key)) {
       this.powerUps.delete(key);
-      return 'power';
+      return "power";
     }
     if (this.pellets.has(key)) {
       this.pellets.delete(key);
-      return 'pellet';
+      return "pellet";
     }
-    const idx = this.fruit.findIndex((f) => f.x === Math.floor(x / this.tileSize) && f.y === Math.floor(y / this.tileSize));
+    const idx = this.fruit.findIndex(
+      (f) =>
+        f.x === Math.floor(x / this.tileSize) &&
+        f.y === Math.floor(y / this.tileSize),
+    );
     if (idx >= 0) {
       const f = this.fruit[idx];
       this.fruit.splice(idx, 1);
@@ -70,17 +91,36 @@ export default class Maze {
     return null;
   }
 
+  /** add a fruit to the maze */
+  spawnFruit(f: Fruit) {
+    this.fruit.push(f);
+  }
+
+  /** update timers for transient objects */
+  tick() {
+    this.fruit = this.fruit.filter((f) => {
+      if (f.timer === undefined) return true;
+      f.timer--;
+      return f.timer > 0;
+    });
+  }
+
   draw(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, this.width * this.tileSize, this.height * this.tileSize);
     this.walls.forEach((k) => {
-      const [x, y] = k.split(',').map(Number);
-      ctx.fillStyle = '#0011aa';
-      ctx.fillRect(x * this.tileSize, y * this.tileSize, this.tileSize, this.tileSize);
+      const [x, y] = k.split(",").map(Number);
+      ctx.fillStyle = "#0011aa";
+      ctx.fillRect(
+        x * this.tileSize,
+        y * this.tileSize,
+        this.tileSize,
+        this.tileSize,
+      );
     });
     this.pellets.forEach((k) => {
-      const [x, y] = k.split(',').map(Number);
-      ctx.fillStyle = 'white';
+      const [x, y] = k.split(",").map(Number);
+      ctx.fillStyle = "white";
       ctx.beginPath();
       ctx.arc(
         x * this.tileSize + this.tileSize / 2,
@@ -92,8 +132,8 @@ export default class Maze {
       ctx.fill();
     });
     this.powerUps.forEach((k) => {
-      const [x, y] = k.split(',').map(Number);
-      ctx.fillStyle = 'orange';
+      const [x, y] = k.split(",").map(Number);
+      ctx.fillStyle = "orange";
       ctx.beginPath();
       ctx.arc(
         x * this.tileSize + this.tileSize / 2,
@@ -105,7 +145,7 @@ export default class Maze {
       ctx.fill();
     });
     this.fruit.forEach((f) => {
-      ctx.fillStyle = 'pink';
+      ctx.fillStyle = "pink";
       ctx.beginPath();
       ctx.arc(
         f.x * this.tileSize + this.tileSize / 2,

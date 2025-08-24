@@ -1,23 +1,37 @@
 export default class Pipe {
-  constructor(x, gap, width, canvasHeight, speed = 2) {
-    this.x = x;
-    this.gap = gap;
+  constructor(x, gap, width, canvasHeight, speed = 2, color = '#228B22') {
     this.width = width;
     this.canvasHeight = canvasHeight;
     this.speed = speed;
-    const top = Math.random() * (canvasHeight - gap - 40) + 20;
-    this.top = top;
-    this.bottom = top + gap;
+    this.baseGap = gap;
+    this.color = color;
+    this.reset(x);
   }
 
-  update() {
-    this.x -= this.speed;
+  reset(x, score = 0) {
+    this.x = x;
+    const difficulty = Math.min(score * 2, 30);
+    const gap =
+      Math.max(this.baseGap - difficulty, 50) + Math.random() * 40 - 20;
+    const top = Math.random() * (this.canvasHeight - gap - 40) + 20;
+    this.top = top;
+    this.bottom = top + gap;
+    this.passed = false;
+  }
+
+  update(dt = 1) {
+    this.x -= this.speed * dt;
   }
 
   draw(ctx) {
-    ctx.fillStyle = '#228B22';
+    ctx.fillStyle = this.color;
     ctx.fillRect(this.x, 0, this.width, this.top);
-    ctx.fillRect(this.x, this.bottom, this.width, this.canvasHeight - this.bottom);
+    ctx.fillRect(
+      this.x,
+      this.bottom,
+      this.width,
+      this.canvasHeight - this.bottom
+    );
   }
 
   isOffscreen() {
@@ -25,9 +39,12 @@ export default class Pipe {
   }
 
   collides(bird) {
-    if (this.x > bird.x + bird.radius || this.x + this.width < bird.x - bird.radius) {
-      return false;
-    }
-    return bird.y - bird.radius < this.top || bird.y + bird.radius > this.bottom;
+    const b = bird.bounds;
+    if (b.right < this.x || b.left > this.x + this.width) return false;
+    return b.top < this.top || b.bottom > this.bottom;
+  }
+
+  setColor(color) {
+    this.color = color;
   }
 }

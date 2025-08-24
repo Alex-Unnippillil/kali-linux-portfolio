@@ -15,10 +15,12 @@ import {
   Board,
   Config,
 } from '../../../apps/checkers/engine';
+import { saveMatch } from '@lib/checkers-history';
 
 const Checkers = () => {
   const [variant, setVariant] = useState<Variant>('standard');
-  const [difficulty, setDifficulty] = useState(4);
+  const [depth, setDepth] = useState(4);
+  const [timeLimit, setTimeLimit] = useState(200);
   const config = useMemo<Config>(() => createConfig(variant), [variant]);
   const [board, setBoard] = useState<Board>(() => createBoard(config));
   const [turn, setTurn] = useState<'red' | 'black'>('red');
@@ -86,8 +88,10 @@ const Checkers = () => {
     const piece = board[r][c];
     if (winner || draw || spectate || !piece || piece.color !== turn) return;
     const pieceMoves = getPieceMoves(board, r, c, config);
-    const mustCapture = allMoves.some((m) => m.captured);
-    const filtered = mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
+    const mustCapture = allMoves.some((m) => m.captures?.length);
+    const filtered = mustCapture
+      ? pieceMoves.filter((m) => m.captures?.length)
+      : pieceMoves;
     if (filtered.length) {
       setSelected([r, c]);
       setMoves(filtered);
@@ -101,19 +105,9 @@ const Checkers = () => {
   };
 
     const makeMove = (move: Move) => {
-    if (pathRef.current.length === 0) pathRef.current = [move.from, move.to];
-    else pathRef.current.push(move.to);
+    pathRef.current = move.path ?? [move.from, move.to];
     const { board: newBoard, capture, king } = applyMove(board, move, config);
-    const further = capture
-      ? getPieceMoves(newBoard, move.to[0], move.to[1], config).filter((m) => m.captured)
-      : [];
     setBoard(newBoard);
-    if (capture && further.length) {
-      setSelected([move.to[0], move.to[1]]);
-      setMoves(further);
-      setNoCapture(0);
-      return;
-    }
     const newHistory = [...history, { board, turn, no: noCapture }];
     setHistory(newHistory);
     setFuture([]);
@@ -135,6 +129,7 @@ const Checkers = () => {
     if (isDraw(newNo)) {
       setDraw(true);
       ReactGA.event({ category: 'Checkers', action: 'game_over', label: 'draw' });
+      saveMatch([...newHistory, { board: newBoard, turn: next, no: newNo }]);
       setLastMove(pathRef.current);
       pathRef.current = [];
       return;
@@ -143,10 +138,11 @@ const Checkers = () => {
     if (winnerColor) {
       setWinner(winnerColor);
       ReactGA.event({ category: 'Checkers', action: 'game_over', label: turn });
+      saveMatch([...newHistory, { board: newBoard, turn: next, no: newNo }]);
     } else {
       setTurn(next);
       if (!gameId && next === 'black') {
-        workerRef.current?.postMessage({ board: newBoard, color: 'black', maxDepth: difficulty, config });
+        workerRef.current?.postMessage({ board: newBoard, color: 'black', maxDepth: depth, timeLimit, config });
       }
     }
     setSelected(null);
@@ -209,15 +205,15 @@ const Checkers = () => {
     setHint(null);
     setLastMove([]);
     pathRef.current = [];
-    if (!gameId && next.turn === 'black') {
-      workerRef.current?.postMessage({ board: next.board, color: 'black', maxDepth: difficulty, config });
-    }
+      if (!gameId && next.turn === 'black') {
+        workerRef.current?.postMessage({ board: next.board, color: 'black', maxDepth: depth, timeLimit, config });
+      }
     if (gameId) socketRef.current?.emit('state', { gameId, board: next.board, turn: next.turn });
   };
 
   const hintMove = () => {
     hintRequest.current = true;
-    workerRef.current?.postMessage({ board, color: turn, maxDepth: difficulty, config });
+    workerRef.current?.postMessage({ board, color: turn, maxDepth: depth, timeLimit, config });
   };
 
   return (
@@ -232,15 +228,29 @@ const Checkers = () => {
           <option value="international">International</option>
           <option value="giveaway">Giveaway</option>
         </select>
-        <select
-          value={difficulty}
-          onChange={(e) => setDifficulty(Number(e.target.value))}
-          className="bg-gray-700 p-1 rounded"
-        >
-          <option value={2}>Easy</option>
-          <option value={4}>Medium</option>
-          <option value={6}>Hard</option>
-        </select>
+        <label className="flex items-center space-x-1">
+          <span>Depth</span>
+          <input
+            type="range"
+            min={1}
+            max={8}
+            value={depth}
+            onChange={(e) => setDepth(Number(e.target.value))}
+          />
+          <span>{depth}</span>
+        </label>
+        <label className="flex items-center space-x-1">
+          <span>Time</span>
+          <input
+            type="range"
+            min={100}
+            max={1000}
+            step={100}
+            value={timeLimit}
+            onChange={(e) => setTimeLimit(Number(e.target.value))}
+          />
+          <span>{timeLimit}ms</span>
+        </label>
         <input
           value={gameId}
           onChange={(e) => setGameId(e.target.value)}

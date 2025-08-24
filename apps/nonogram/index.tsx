@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { parseNON, type NonogramPuzzle } from './parser';
+import { propagate, type Cell } from './solver';
 
 const CELL_SIZE = 24;
-
-type Cell = -1 | 0 | 1; // -1 marked, 0 empty, 1 filled
 
 interface Status {
   complete: boolean;
@@ -32,11 +31,20 @@ const Nonogram: React.FC = () => {
   const [puzzle, setPuzzle] = useState<NonogramPuzzle | null>(null);
   const [grid, setGrid] = useState<Cell[][]>([]);
   const [puzzleId, setPuzzleId] = useState('');
-  const [scale, setScale] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [markMode, setMarkMode] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const last = useRef<{ x: number; y: number; dist?: number } | null>(null);
+  const viewRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef({ x: 0, y: 0 });
+  const scaleRef = useRef(1);
+  const raf = useRef<number>();
+
+  const updateTransform = () => {
+    if (viewRef.current) {
+      viewRef.current.style.transform = `translate(${offsetRef.current.x}px, ${offsetRef.current.y}px) scale(${scaleRef.current})`;
+    }
+  };
 
   useEffect(() => {
     fetch('/api/nonogram/daily')
@@ -51,6 +59,9 @@ const Nonogram: React.FC = () => {
         setPuzzleId(data.id || 'daily');
       })
       .catch(() => {});
+  }, []);
+  useEffect(() => {
+    updateTransform();
   }, []);
 
   useEffect(() => {
@@ -76,25 +87,15 @@ const Nonogram: React.FC = () => {
   const updateCell = (r: number, c: number, mark: boolean) => {
     if (!puzzle) return;
     setGrid((prev) => {
-      const ng = prev.map((row) => row.slice());
+      let ng = prev.map((row) => row.slice());
       const current = ng[r][c];
       ng[r][c] = mark ? (current === -1 ? 0 : -1) : current === 1 ? 0 : 1;
-      const rowStatus = analyseLine(ng[r], puzzle.rows[r]);
-      if (rowStatus.complete) {
-        ng[r] = ng[r].map((cell) => (cell === 0 ? -1 : cell));
-      }
-      const col = ng.map((row) => row[c]);
-      const colStatus = analyseLine(col, puzzle.cols[c]);
-      if (colStatus.complete) {
-        col.forEach((_, ri) => {
-          if (ng[ri][c] === 0) ng[ri][c] = -1;
-        });
-      }
-      return ng;
+      const { grid: pg, contradiction } = propagate(ng, puzzle);
+      return contradiction ? prev : pg;
     });
   };
 
-  const handleCellClick = (r: number, c: number) => updateCell(r, c, false);
+  const handleCellClick = (r: number, c: number) => updateCell(r, c, markMode);
   const handleRightClick = (r: number, c: number, e: React.MouseEvent) => {
     e.preventDefault();
     updateCell(r, c, true);
@@ -121,6 +122,14 @@ const Nonogram: React.FC = () => {
     }
   };
 
+  const schedule = () => {
+    if (raf.current) return;
+    raf.current = requestAnimationFrame(() => {
+      updateTransform();
+      raf.current = undefined;
+    });
+  };
+
   const onPointerMove = (e: React.PointerEvent) => {
     if (!pointers.current.has(e.pointerId)) return;
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -128,13 +137,16 @@ const Nonogram: React.FC = () => {
       const dx = e.clientX - last.current.x;
       const dy = e.clientY - last.current.y;
       last.current = { x: e.clientX, y: e.clientY };
-      setOffset((o) => ({ x: o.x + dx, y: o.y + dy }));
+      offsetRef.current.x += dx;
+      offsetRef.current.y += dy;
+      schedule();
     } else if (pointers.current.size === 2 && last.current?.dist) {
       const pts = Array.from(pointers.current.values());
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
       const delta = dist / last.current.dist;
-      setScale((s) => Math.min(3, Math.max(0.5, s * delta)));
+      scaleRef.current = Math.min(3, Math.max(0.5, scaleRef.current * delta));
       last.current = { x: 0, y: 0, dist };
+      schedule();
     }
   };
 
@@ -184,6 +196,25 @@ const Nonogram: React.FC = () => {
           accept=".non"
           onChange={(e) => e.target.files && importFile(e.target.files[0])}
         />
+        <button
+          className="border px-2 py-1"
+          onClick={() => setMarkMode((m) => !m)}
+        >
+          {markMode ? 'Fill' : 'Mark X'}
+        </button>
+        {puzzle && (
+          <button
+            className="border px-2 py-1"
+            onClick={() =>
+              setGrid((g) => {
+                const { grid: pg } = propagate(g, puzzle);
+                return pg;
+              })
+            }
+          >
+            Auto Fill
+          </button>
+        )}
       </div>
       {puzzle && (
         <div
@@ -196,8 +227,9 @@ const Nonogram: React.FC = () => {
           onPointerCancel={onPointerUp}
         >
           <div
+            ref={viewRef}
             style={{
-              transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+              transform: `translate(${offsetRef.current.x}px, ${offsetRef.current.y}px) scale(${scaleRef.current})`,
               transformOrigin: '0 0',
             }}
           >
@@ -213,18 +245,25 @@ const Nonogram: React.FC = () => {
                   }}
                 >
                   {grid.map((row, r) =>
-                    row.map((cell, c) => (
-                      <div
-                        key={`${r}-${c}`}
-                        onClick={() => handleCellClick(r, c)}
-                        onContextMenu={(e) => handleRightClick(r, c, e)}
-                        className={`w-6 h-6 border flex items-center justify-center cursor-pointer ${
-                          cell === 1 ? 'bg-black' : ''
-                        } ${cell === -1 ? 'text-gray-400' : ''}`}
-                      >
-                        {cell === -1 ? 'X' : ''}
-                      </div>
-                    ))
+                    row.map((cell, c) => {
+                      const cellError =
+                        rowStatus[r]?.contradiction ||
+                        colStatus[c]?.contradiction;
+                      return (
+                        <div
+                          key={`${r}-${c}`}
+                          onClick={() => handleCellClick(r, c)}
+                          onContextMenu={(e) => handleRightClick(r, c, e)}
+                          className={`w-6 h-6 border flex items-center justify-center cursor-pointer ${
+                            cell === 1 ? 'bg-black' : ''
+                          } ${
+                            cell === -1 ? 'text-gray-400' : ''
+                          } ${cellError ? 'bg-red-200' : ''}`}
+                        >
+                          {cell === -1 ? 'X' : ''}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </div>
