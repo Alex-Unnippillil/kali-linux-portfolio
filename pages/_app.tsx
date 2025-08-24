@@ -1,5 +1,6 @@
-import type { AppProps } from 'next/app';
+import type { AppProps, NextWebVitalsMetric } from 'next/app';
 import { useEffect, useState } from 'react';
+import { initAxiom, logEvent } from '../lib/axiom';
 import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
 import { Inter } from 'next/font/google';
@@ -7,6 +8,8 @@ import 'tailwindcss/tailwind.css';
 import '../styles/index.css';
 
 const inter = Inter({ subsets: ['latin'] });
+
+initAxiom();
 
 const shouldTrack = Math.random() < 0.1;
 
@@ -79,3 +82,7 @@ function MyApp({ Component, pageProps }: AppProps) {
 }
 
 export default MyApp;
+
+export function reportWebVitals(metric: NextWebVitalsMetric): void {
+  logEvent({ type: 'web-vital', ...metric });
+}

@@ -11,6 +11,7 @@ interface ExploitInfo {
 
 import { loadKevSet } from '../../lib/kev';
 import { fetchEpssScores } from '../../lib/epss';
+import { rateLimitEdge } from '../../lib/rateLimiter';
 
 const responseCache = new Map<string, { data: unknown; expiry: number }>();
 let exploitMapPromise: Promise<Map<string, ExploitInfo[]>> | null = null;
@@ -68,6 +69,14 @@ function parseCSV(line: string): string[] {
 }
 
 export default async function handler(req: Request): Promise<Response> {
+  const rate = rateLimitEdge(req);
+  if (rate.limited) {
+    return new Response(JSON.stringify({ error: 'Too many requests' }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', ...rate.headers },
+    });
+  }
+
   const { searchParams } = new URL(req.url);
   const keyword = searchParams.get('keyword') || '';
   const domain = searchParams.get('domain') || '';
@@ -84,7 +93,11 @@ export default async function handler(req: Request): Promise<Response> {
   const cached = responseCache.get(cacheKey);
   if (cached && cached.expiry > Date.now()) {
     return new Response(JSON.stringify(cached.data), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 's-maxage=3600, stale-while-revalidate=7200' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 's-maxage=3600, stale-while-revalidate=7200',
+        ...rate.headers,
+      },
     });
   }
 
@@ -99,12 +112,12 @@ export default async function handler(req: Request): Promise<Response> {
     if (cached) {
       return new Response(JSON.stringify({ ...cached.data, retryAfter, fromCache: true }), {
         status: 429,
-        headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter },
+        headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter, ...rate.headers },
       });
     }
     return new Response(JSON.stringify({ error: 'rate_limited', retryAfter }), {
       status: 429,
-      headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter },
+      headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter, ...rate.headers },
     });
   }
   const nvdData = await nvdRes.json();
@@ -144,7 +157,11 @@ export default async function handler(req: Request): Promise<Response> {
   responseCache.set(cacheKey, { data, expiry: Date.now() + 3600 * 1000 });
 
   return new Response(JSON.stringify(data), {
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 's-maxage=3600, stale-while-revalidate=7200' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 's-maxage=3600, stale-while-revalidate=7200',
+      ...rate.headers,
+    },
   });
 }
 
