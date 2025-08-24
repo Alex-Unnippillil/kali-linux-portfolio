@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import CryptoJS from 'crypto-js';
 
 function murmurhash3_32_gc(key: string, seed = 0): string {
   let remainder = key.length & 3;
@@ -54,169 +53,138 @@ function murmurhash3_32_gc(key: string, seed = 0): string {
   return (h1 | 0).toString();
 }
 
-const PROXY_PREFIX = 'https://r.jina.ai/';
-
 const FaviconHash: React.FC = () => {
-  const [url, setUrl] = useState('');
-  const [murmur, setMurmur] = useState('');
-  const [md5, setMd5] = useState('');
-  const [redirects, setRedirects] = useState<string[]>([]);
-  const [finalUrl, setFinalUrl] = useState('');
+  const [input, setInput] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [hash, setHash] = useState('');
+  const [size, setSize] = useState<number | null>(null);
+  const [mime, setMime] = useState('');
   const [error, setError] = useState('');
-  const [showProxy, setShowProxy] = useState(false);
 
   const copy = useCallback((text: string) => {
     if (!text) return;
     navigator.clipboard?.writeText(text).catch(() => {});
   }, []);
 
-  const buildUrl = useCallback((raw: string) => {
-    let target = raw.trim();
-    if (!/^https?:\/\//i.test(target)) target = `https://${target}`;
-    if (!/\.(ico|png|jpe?g|gif|svg)$/i.test(target)) {
-      target = target.replace(/\/$/, '') + '/favicon.ico';
-    }
-    return target;
-  }, []);
+  const process = useCallback(async () => {
+    setError('');
+    setHash('');
+    setSize(null);
+    setMime('');
+    let base64 = '';
+    let bytes: Uint8Array;
 
-  const fetchIcon = useCallback(
-    async (useProxy = false) => {
-      setMurmur('');
-      setMd5('');
-      setError('');
-      setRedirects([]);
-      setFinalUrl('');
-      setShowProxy(false);
-
-      if (!url.trim()) {
-        setError('Enter a URL');
-        return;
-      }
-
-      const initialUrl = buildUrl(url);
-      const chain = [initialUrl];
-      const targetUrl = useProxy ? `${PROXY_PREFIX}${initialUrl}` : initialUrl;
-      let res: Response;
-      try {
-        res = await fetch(targetUrl, { redirect: 'follow' });
-      } catch (e) {
-        try {
-          await fetch(targetUrl, { mode: 'no-cors' });
-          setError('CORS error: target blocks cross-origin requests.');
-          setShowProxy(true);
-        } catch {
-          setError('Network error: failed to reach URL.');
-          setShowProxy(true);
+    try {
+      if (file) {
+        const buf = await file.arrayBuffer();
+        bytes = new Uint8Array(buf);
+        base64 = btoa(String.fromCharCode(...bytes));
+        setSize(bytes.length);
+        setMime(file.type || 'application/octet-stream');
+      } else if (input.trim().startsWith('data:')) {
+        const match = input.trim().match(/^data:([^;,]+)?(;base64)?,(.*)$/i);
+        if (!match) {
+          setError('Invalid data URI');
+          return;
         }
+        const mimeType = match[1] || 'text/plain';
+        const isBase64 = !!match[2];
+        let dataPart = match[3];
+        if (isBase64) {
+          dataPart = dataPart.trim();
+          const bin = atob(dataPart);
+          bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
+          base64 = dataPart;
+        } else {
+          const decoded = decodeURIComponent(dataPart);
+          bytes = new TextEncoder().encode(decoded);
+          base64 = btoa(decoded);
+        }
+        setSize(bytes.length);
+        setMime(mimeType);
+      } else if (input.trim()) {
+        const res = await fetch(`/api/favicon?url=${encodeURIComponent(input.trim())}`);
+        const data = await res.json();
+        if (!data.ok) {
+          setError(data.message || 'Failed to fetch URL');
+          return;
+        }
+        base64 = data.base64;
+        setSize(data.size);
+        setMime(data.mime);
+      } else {
+        setError('Provide a URL, file, or data URI');
         return;
       }
+    } catch (e) {
+      setError('Failed to process input');
+      return;
+    }
 
-      if (res.type === 'opaqueredirect' && !useProxy) {
-        fetchIcon(true);
-        return;
-      }
-
-      if (!res.ok) {
-        if (res.status === 404) setError('404 error: favicon not found.');
-        else setError(`HTTP ${res.status}`);
-        setShowProxy(true);
-        return;
-      }
-
-      const final = res.url;
-      if (final !== initialUrl) chain.push(final);
-      setRedirects(chain);
-      setFinalUrl(final);
-
-      const buffer = await res.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      let binary = '';
-      bytes.forEach((b) => {
-        binary += String.fromCharCode(b);
-      });
-      const base64 = btoa(binary);
-      const mmh3 = murmurhash3_32_gc(base64);
-      const md5hex = CryptoJS.MD5(CryptoJS.enc.Latin1.parse(binary)).toString();
-      setMurmur(mmh3);
-      setMd5(md5hex);
-    },
-    [url, buildUrl]
-  );
+    setHash(murmurhash3_32_gc(base64));
+  }, [input, file]);
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col items-center space-y-4">
-      <div className="flex space-x-2 w-full max-w-md">
+      <div className="flex flex-col space-y-2 w-full max-w-md">
         <input
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://example.com"
-          className="flex-1 p-2 rounded text-black"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="URL or data URI"
+          className="p-2 rounded text-black"
+        />
+        <input
+          type="file"
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          className="p-2 rounded text-black"
         />
         <button
           type="button"
-          onClick={() => fetchIcon(false)}
+          onClick={process}
           className="px-4 py-2 bg-blue-600 rounded"
         >
-          Fetch
+          Hash
         </button>
       </div>
-      {error && (
-        <div className="text-red-400 space-y-2 text-center">
-          <div>{error}</div>
-          {showProxy && (
-            <button
-              type="button"
-              className="px-2 py-1 bg-blue-600 rounded"
-              onClick={() => fetchIcon(true)}
-            >
-              Use Proxy
-            </button>
-          )}
-        </div>
-      )}
-      {redirects.length > 0 && (
-        <div className="w-full max-w-md text-sm break-all space-y-1">
-          <div className="font-semibold">Redirect chain:</div>
-          <ul className="list-disc list-inside">
-            {redirects.map((r, i) => (
-              <li key={i}>{r}</li>
-            ))}
-          </ul>
-          <div className="mt-1">Final URL: {finalUrl}</div>
-        </div>
-      )}
-      {murmur && md5 && (
+      {error && <div className="text-red-400">{error}</div>}
+      {hash && size !== null && (
         <div className="w-full max-w-md space-y-2">
           <div className="flex items-center space-x-2">
             <span className="font-semibold">MMH3:</span>
-            <span className="flex-1 break-all">{murmur}</span>
+            <span className="flex-1 break-all">{hash}</span>
             <button
               type="button"
-              onClick={() => copy(murmur)}
+              onClick={() => copy(hash)}
               className="px-2 py-1 bg-blue-600 rounded"
             >
               Copy
             </button>
           </div>
-          <div className="flex items-center space-x-2">
-            <span className="font-semibold">MD5:</span>
-            <span className="flex-1 break-all">{md5}</span>
-            <button
-              type="button"
-              onClick={() => copy(md5)}
-              className="px-2 py-1 bg-blue-600 rounded"
+          <div>Size: {size} bytes</div>
+          <div>Mime: {mime}</div>
+          <div className="flex space-x-4 text-blue-400 underline">
+            <a
+              href={`https://www.shodan.io/search?query=http.favicon.hash:${hash}`}
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              Copy
-            </button>
+              Shodan
+            </a>
+            <a
+              href={`https://search.censys.io/search?resource=hosts&q=services.http.response.favicon.hash%3A${hash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Censys
+            </a>
+            <a
+              href={`https://www.virustotal.com/gui/search/http.favicon.hash:${hash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              VirusTotal
+            </a>
           </div>
-          <a
-            href={`https://www.shodan.io/search?query=http.favicon.hash:${murmur}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-400 underline"
-          >
-            Shodan search
-          </a>
         </div>
       )}
     </div>
