@@ -45,11 +45,11 @@ export const updateCars = (
     let timer = lane.timer - dt;
     const items = lane.items
       .map((c) => ({ ...c, x: c.x + lane.speed * lane.dir * dt }))
-      .filter((c) => c.x + c.width > 0 && c.x < TILE * 10);
+      .filter((c) => c.x + c.width > 0 && c.x < TILE * NUM_TILES_WIDE);
 
     if (timer <= 0) {
       const width = lane.length * TILE;
-      const x = lane.dir === 1 ? -width : TILE * 10;
+      const x = lane.dir === 1 ? -width : TILE * NUM_TILES_WIDE;
       items.push({ x, width, height: TILE });
       timer += lane.spawnRate + lane.rng() * lane.spawnRate;
     }
