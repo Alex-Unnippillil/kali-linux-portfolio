@@ -16,13 +16,13 @@
     "check:node-core": "node scripts/check-node-core-modules.js",
     "check:edge-node": "node scripts/check-edge-node-modules.js",
     "validate:icons": "node scripts/validate-icons.js",
+    "scaffold:app": "node scripts/add-app.js",
     "test:unit": "vitest",
     "format": "prettier --write .",
     "lighthouse": "lhci autorun",
     "typecheck": "tsc --noEmit",
     "build:ci": "next build",
     "lint:ci": "next lint --max-warnings=0 && yarn check:edge-node",
-
     "format:check": "prettier --check ."
   },
   "engines": {
@@ -104,7 +104,6 @@
     "react-activity-calendar": "^2.7.13",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.1",
-
     "react-force-graph": "^1.48.0",
     "react-force-graph-2d": "^1.28.0",
     "react-ga4": "^2.1.0",
@@ -177,6 +176,5 @@
     "prettier": "^3.2.5",
     "typescript": "^5.9.2",
     "vitest": "^1.6.0"
-
   }
 }
