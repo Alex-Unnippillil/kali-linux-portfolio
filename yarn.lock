@@ -4400,13 +4400,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"buffer-crc32@npm:0.1.x":
-  version: 0.1.1
-  resolution: "buffer-crc32@npm:0.1.1"
-  checksum: 10c0/a68ad44357aeaaf477a0ebce5546d6ffe4ff44bcecbe69a8b21ba8236af609c049d812c4eed2256aec5fb7ee0925687fe43ea798dba9b6c0e09887b98f1f29c3
-  languageName: node
-  linkType: hard
-
 "buffer-crc32@npm:~0.2.3":
   version: 0.2.13
   resolution: "buffer-crc32@npm:0.2.13"
@@ -14039,15 +14032,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"simhash@npm:^0.1.0":
-  version: 0.1.0
-  resolution: "simhash@npm:0.1.0"
-  dependencies:
-    buffer-crc32: "npm:0.1.x"
-  checksum: 10c0/1941bca3cd76ac09ff0f2b774c6ff595fad3c12e7aefedd5c6a40e21e02d05e021598255185e022c0bbd725c3135ae6c6914bd7200dbea34608311c2fa5f8c81
-  languageName: node
-  linkType: hard
-
 "simple-swizzle@npm:^0.2.2":
   version: 0.2.2
   resolution: "simple-swizzle@npm:0.2.2"
@@ -15697,7 +15681,6 @@ __metadata:
     rfc4648: "npm:^1.5.4"
     safe-regex: "npm:^2.1.1"
     sax: "npm:^1.4.1"
-    simhash: "npm:^0.1.0"
     socket.io: "npm:^4.7.5"
     socket.io-client: "npm:^4.7.5"
     spdx-license-ids: "npm:^3.0.17"
