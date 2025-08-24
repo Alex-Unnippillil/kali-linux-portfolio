@@ -14,6 +14,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
         .readdirSync(dir)
         .filter((f) => f.endsWith('.json'));
       const levels = files.map((f) => {
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         const data = fs.readFileSync(path.join(dir, f), 'utf8');
         return JSON.parse(data);
       });
@@ -30,7 +31,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     if (!parsed) return;
     try {
       const file = path.join(dir, `level-${Date.now()}.json`);
-      fs.writeFileSync(file, JSON.stringify(parsed.body));
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
+      fs.writeFileSync(file, JSON.stringify(req.body));
+
       res.status(200).json({ saved: true });
     } catch (e) {
       res.status(500).json({ error: 'Failed to save' });

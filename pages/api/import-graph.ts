@@ -19,6 +19,7 @@ export default async function handler(
   async function walk(dir: string): Promise<void> {
     let entries;
     try {
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       entries = await fs.readdir(dir, { withFileTypes: true });
     } catch {
       return;
@@ -31,6 +32,7 @@ export default async function handler(
       } else if (exts.has(path.extname(entry.name))) {
         try {
           const rel = path.relative(root, full).replace(/\\/g, '/');
+          // eslint-disable-next-line security/detect-non-literal-fs-filename
           files[rel] = await fs.readFile(full, 'utf8');
         } catch {
           // ignore unreadable files

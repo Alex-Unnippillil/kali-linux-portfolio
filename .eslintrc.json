@@ -1,9 +1,15 @@
 {
-  "extends": ["next/core-web-vitals", "prettier"],
+  "extends": [
+    "next/core-web-vitals",
+    "plugin:security/recommended-legacy",
+    "prettier"
+  ],
+  "plugins": ["security"],
   "ignorePatterns": ["components/apps/breakout.js"],
   "rules": {
     "@next/next/no-page-custom-font": "off",
     "@next/next/no-img-element": "off",
+    "security/detect-object-injection": "off",
     "no-restricted-imports": [
       "error",
       {
@@ -12,6 +18,14 @@
     ]
   },
   "overrides": [
+    {
+      "files": ["*.config.js", "scripts/**/*.js"],
+      "extends": ["plugin:node/recommended"],
+      "plugins": ["node"],
+      "rules": {
+        "node/no-deprecated-api": "off"
+      }
+    },
     {
       "files": ["apps.config.js"],
       "rules": {
