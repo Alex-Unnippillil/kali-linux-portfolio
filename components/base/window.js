@@ -286,6 +286,7 @@ export class Window extends Component {
                         onKeyDown={this.handleKeyDown}
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
                         className={
+                            "pointer-events-auto " +
                             this.state.cursorType +
                             " " +
                             (this.state.closed ? " closed-window " : "") +
