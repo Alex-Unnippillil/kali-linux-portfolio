@@ -1,5 +1,3 @@
-import path from 'path';
-import os from 'os';
 import jwt from 'jsonwebtoken';
 
 function mockReqRes({ method, query, body, headers }: { method: string; query: any; body?: any; headers?: any }) {
@@ -16,8 +14,9 @@ describe('blackjack api', () => {
 
   test('rejects when JWT secret missing', async () => {
     delete process.env.JWT_SECRET;
-    process.env.USER_STORE_FILE = path.join(os.tmpdir(), `bj-${Date.now()}.json`);
     jest.resetModules();
+    const { setKVAdapter, MemoryKV } = await import('../lib/kv');
+    setKVAdapter(new MemoryKV());
     const { default: handler } = await import('../pages/api/users/[id]/blackjack');
     const token = jwt.sign({ sub: id }, 'temp');
     const { req, res } = mockReqRes({ method: 'GET', query: { id }, headers: { authorization: `Bearer ${token}` } });
@@ -27,8 +26,9 @@ describe('blackjack api', () => {
 
   test('validates token subject', async () => {
     process.env.JWT_SECRET = 'secret';
-    process.env.USER_STORE_FILE = path.join(os.tmpdir(), `bj-${Date.now()}.json`);
     jest.resetModules();
+    const { setKVAdapter, MemoryKV } = await import('../lib/kv');
+    setKVAdapter(new MemoryKV());
     const { default: handler } = await import('../pages/api/users/[id]/blackjack');
     const token = jwt.sign({ sub: 'other' }, process.env.JWT_SECRET!);
     const { req, res } = mockReqRes({ method: 'GET', query: { id }, headers: { authorization: `Bearer ${token}` } });
@@ -38,9 +38,9 @@ describe('blackjack api', () => {
 
   test('persists stats and rate limits', async () => {
     process.env.JWT_SECRET = 'secret';
-    const storePath = path.join(os.tmpdir(), `bj-${Date.now()}.json`);
-    process.env.USER_STORE_FILE = storePath;
     jest.resetModules();
+    const { setKVAdapter, MemoryKV } = await import('../lib/kv');
+    setKVAdapter(new MemoryKV());
     const { default: handler } = await import('../pages/api/users/[id]/blackjack');
     const token = jwt.sign({ sub: id }, process.env.JWT_SECRET!);
 

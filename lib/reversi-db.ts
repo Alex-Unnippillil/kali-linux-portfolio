@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { kv } from './kv';
 
 export interface ReversiDB {
   ratings: Record<string, number>;
@@ -7,18 +6,12 @@ export interface ReversiDB {
   tournaments: Array<{ id: number; players: string[]; bracket: string[][] }>;
 }
 
-const file = path.join(process.cwd(), 'data', 'reversi.json');
+const KEY = 'reversi-db';
 
-export function readDB(): ReversiDB {
-  try {
-    const data = fs.readFileSync(file, 'utf-8');
-    return JSON.parse(data) as ReversiDB;
-  } catch (e) {
-    return { ratings: {}, matches: [], tournaments: [] };
-  }
+export async function readDB(): Promise<ReversiDB> {
+  return (await kv.get<ReversiDB>(KEY)) ?? { ratings: {}, matches: [], tournaments: [] };
 }
 
-export function writeDB(db: ReversiDB) {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(db, null, 2));
+export async function writeDB(db: ReversiDB) {
+  await kv.set(KEY, db);
 }
