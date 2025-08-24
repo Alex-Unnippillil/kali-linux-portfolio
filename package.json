@@ -5,6 +5,7 @@
   "homepage": "https://unnippillil.com/",
   "packageManager": "yarn@4.9.2",
   "scripts": {
+    "preinstall": "node scripts/check-node-version.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
