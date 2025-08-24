@@ -6,13 +6,20 @@ interface CaaRecord {
   value: string;
 }
 
+interface EffectivePolicy {
+  issue: string[];
+  issuewild: string[];
+  iodef: string | null;
+}
+
 interface ApiResult {
   ok: boolean;
   records: CaaRecord[];
   issues: string[];
   policyDomain: string;
-  recommendation?: string;
+  examples?: string;
   notes: string[];
+  effective: EffectivePolicy;
 }
 
 const CaaChecker: React.FC = () => {
@@ -62,8 +69,54 @@ const CaaChecker: React.FC = () => {
           <div className="text-sm">
             Effective policy from <span className="font-mono">{result.policyDomain}</span>
           </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr>
+                <th className="text-left">Tag</th>
+                <th className="text-left">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>issue</td>
+                <td>
+                  {result.effective.issue.length > 0 ? (
+                    result.effective.issue.join(', ')
+                  ) : (
+                    <span className="text-yellow-400">Any CA</span>
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <td>issuewild</td>
+                <td>
+                  {result.effective.issuewild.length > 0 ? (
+                    <>
+                      {result.effective.issuewild.join(', ')}
+                      {!result.records.some((r) => r.tag === 'issuewild') &&
+                        result.effective.issue.length > 0 && (
+                          <span className="text-gray-400"> (from issue)</span>
+                        )}
+                    </>
+                  ) : (
+                    <span className="text-yellow-400">Any CA</span>
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <td>iodef</td>
+                <td>
+                  {result.effective.iodef ? (
+                    result.effective.iodef
+                  ) : (
+                    <span className="text-yellow-400">None</span>
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
           {result.records.length > 0 && (
-            <table className="w-full text-sm">
+            <table className="w-full text-sm mt-2">
               <thead>
                 <tr>
                   <th className="text-left">Flags</th>
@@ -82,17 +135,17 @@ const CaaChecker: React.FC = () => {
               </tbody>
             </table>
           )}
-          {result.recommendation && (
+          {result.examples && (
             <div className="text-sm space-y-1">
-              <div>Recommended CAA stanza:</div>
+              <div>Example CAA records:</div>
               <div className="relative">
                 <pre className="bg-gray-800 p-2 overflow-x-auto" id="rec-block">
-{result.recommendation}
+{result.examples}
                 </pre>
                 <button
                   type="button"
                   className="absolute top-1 right-1 bg-blue-600 px-2 py-1 text-xs rounded"
-                  onClick={() => navigator.clipboard.writeText(result.recommendation || '')}
+                  onClick={() => navigator.clipboard.writeText(result.examples || '')}
                 >
                   Copy
                 </button>

@@ -7,6 +7,8 @@ export default function ProjectGallery() {
   const [projects, setProjects] = useState([]);
   const [search, setSearch] = useState('');
   const [tag, setTag] = useState('All');
+  const [pinned, setPinned] = useState([]);
+  const [columns, setColumns] = useState(1);
   const cardRefs = useRef([]);
 
   useEffect(() => {
@@ -17,35 +19,91 @@ export default function ProjectGallery() {
     setProjects(projectsData);
   }, []);
 
+  useEffect(() => {
+    const stored =
+      typeof window !== 'undefined'
+        ? JSON.parse(localStorage.getItem('pinnedProjects') || '[]')
+        : [];
+    setPinned(stored);
+  }, []);
+
+  useEffect(() => {
+    const updateColumns = () => {
+      if (typeof window === 'undefined') return;
+      const width = window.innerWidth;
+      if (width >= 1024) setColumns(3);
+      else if (width >= 640) setColumns(2);
+      else setColumns(1);
+    };
+    updateColumns();
+    window.addEventListener('resize', updateColumns);
+    return () => window.removeEventListener('resize', updateColumns);
+  }, []);
+
   const tags = useMemo(
     () => ['All', ...Array.from(new Set(projects.flatMap((p) => p.tags)))],
     [projects]
   );
 
-  const filtered = useMemo(
-    () =>
-      projects.filter(
-        (p) =>
-          (tag === 'All' || p.tags.includes(tag)) &&
-          (p.title.toLowerCase().includes(search.toLowerCase()) ||
-            p.description.toLowerCase().includes(search.toLowerCase()))
-      ),
-    [projects, search, tag]
-  );
+  const filtered = useMemo(() => {
+    const term = search.toLowerCase();
+    return projects.filter(
+      (p) =>
+        (tag === 'All' || p.tags.includes(tag)) &&
+        (p.title.toLowerCase().includes(term) ||
+          p.description.toLowerCase().includes(term) ||
+          p.tech.some((t) => t.toLowerCase().includes(term)) ||
+          p.tags.some((t) => t.toLowerCase().includes(term)))
+    );
+  }, [projects, search, tag]);
+
+  const sorted = useMemo(() => {
+    const pinnedProjects = filtered.filter((p) => pinned.includes(p.title));
+    const otherProjects = filtered.filter((p) => !pinned.includes(p.title));
+    return [...pinnedProjects, ...otherProjects];
+  }, [filtered, pinned]);
 
   useEffect(() => {
-    cardRefs.current = cardRefs.current.slice(0, filtered.length);
-  }, [filtered]);
+    cardRefs.current = cardRefs.current.slice(0, sorted.length);
+  }, [sorted]);
+
+  const togglePinned = (title) => {
+    setPinned((prev) => {
+      const next = prev.includes(title)
+        ? prev.filter((t) => t !== title)
+        : [...prev, title];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('pinnedProjects', JSON.stringify(next));
+      }
+      return next;
+    });
+  };
 
   const handleKeyDown = (e, index) => {
-    if (['ArrowRight', 'ArrowDown'].includes(e.key)) {
-      const next = (index + 1) % filtered.length;
-      cardRefs.current[next]?.focus();
-      e.preventDefault();
-    } else if (['ArrowLeft', 'ArrowUp'].includes(e.key)) {
-      const prev = (index - 1 + filtered.length) % filtered.length;
-      cardRefs.current[prev]?.focus();
-      e.preventDefault();
+    if (e.key === 'ArrowRight') {
+      const next = index + 1;
+      if (next < sorted.length) {
+        cardRefs.current[next]?.focus();
+        e.preventDefault();
+      }
+    } else if (e.key === 'ArrowLeft') {
+      const prev = index - 1;
+      if (prev >= 0) {
+        cardRefs.current[prev]?.focus();
+        e.preventDefault();
+      }
+    } else if (e.key === 'ArrowDown') {
+      const nextRow = index + columns;
+      if (nextRow < sorted.length) {
+        cardRefs.current[nextRow]?.focus();
+        e.preventDefault();
+      }
+    } else if (e.key === 'ArrowUp') {
+      const prevRow = index - columns;
+      if (prevRow >= 0) {
+        cardRefs.current[prevRow]?.focus();
+        e.preventDefault();
+      }
     }
   };
 
@@ -73,18 +131,25 @@ export default function ProjectGallery() {
           ))}
         </div>
       </div>
-      {filtered.length === 0 ? (
+      {sorted.length === 0 ? (
         <p className="text-center">No projects found.</p>
       ) : (
-        <div className="columns-1 sm:columns-2 lg:columns-3 gap-4">
-          {filtered.map((project, index) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {sorted.map((project, index) => (
             <div
               key={index}
               ref={(el) => (cardRefs.current[index] = el)}
               tabIndex={0}
               onKeyDown={(e) => handleKeyDown(e, index)}
-              className="mb-4 break-inside-avoid rounded-md bg-surface bg-opacity-20 border border-gray-700 overflow-hidden flex flex-col"
+              className="relative rounded-md bg-surface bg-opacity-20 border border-gray-700 overflow-hidden flex flex-col"
             >
+              <button
+                onClick={() => togglePinned(project.title)}
+                aria-label="Toggle pinned"
+                className="absolute top-2 right-2 text-xl"
+              >
+                {pinned.includes(project.title) ? '★' : '☆'}
+              </button>
               <div className="relative h-40 w-full">
                 <Image
                   src={project.image}
@@ -105,7 +170,7 @@ export default function ProjectGallery() {
                   {project.description}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {project.tech.map((t, i) => (
+                  {[...project.tech, ...(project.tags || [])].map((t, i) => (
                     <span
                       key={i}
                       className="px-2 py-0.5 text-xs rounded bg-gray-700"

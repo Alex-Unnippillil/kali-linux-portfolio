@@ -3,6 +3,7 @@ import { init, parse } from 'es-module-lexer';
 interface GraphNode {
   deps: string[];
   size: number;
+  ssrUnsafe: boolean;
 }
 
 interface FileError {
@@ -58,7 +59,10 @@ self.onmessage = async (e: MessageEvent) => {
     try {
       const [imports] = parse(content);
       const deps = imports.map((i) => resolvePath(path, content.slice(i.s, i.e)));
-      graph[path] = { deps, size: content.length };
+      const ssrUnsafe = /\b(window|document|navigator|localStorage|sessionStorage)\b/.test(
+        content,
+      );
+      graph[path] = { deps, size: content.length, ssrUnsafe };
       (self as any).postMessage({ type: 'progress', partial: { [path]: graph[path] } });
     } catch (err: any) {
       errors.push({ file: path, error: err.message || String(err) });

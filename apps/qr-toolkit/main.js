@@ -11,6 +11,7 @@ const decodedText = document.getElementById('decoded-text');
 const fileInput = document.getElementById('file-input');
 const logoInput = document.getElementById('logo-input');
 
+
 const MAX_TEXT_LENGTH = 1000;
 let svgData = '';
 let debounceTimer;
@@ -29,7 +30,11 @@ function generate() {
   QRCode.toCanvas(
     qrCanvas,
     text,
-    { errorCorrectionLevel: ecSelect.value, width: size },
+    {
+      errorCorrectionLevel: ecSelect.value,
+      width: size,
+      color: { dark: fgColor.value, light: bgColor.value },
+    },
     (err) => {
       if (err) {
         console.error(err);
@@ -44,7 +49,12 @@ function generate() {
   );
   QRCode.toString(
     text,
-    { errorCorrectionLevel: ecSelect.value, width: size, type: 'svg' },
+    {
+      errorCorrectionLevel: ecSelect.value,
+      width: size,
+      type: 'svg',
+      color: { dark: fgColor.value, light: bgColor.value },
+    },
     (err, svg) => {
       if (!err) {
         if (logoImg && logoDataUrl) {
@@ -111,11 +121,11 @@ function handleFile(event) {
     const img = new Image();
     img.onload = function () {
       decodeCanvas.width = img.width;
-      decodeCanvas.height = img.height;
-      const ctx = decodeCanvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, decodeCanvas.width, decodeCanvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+  decodeCanvas.height = img.height;
+  const ctx = decodeCanvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  const imageData = ctx.getImageData(0, 0, decodeCanvas.width, decodeCanvas.height);
+  const code = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: 'dontInvert',
       });
       decodedText.textContent = code ? code.data : 'No QR code found';
@@ -152,10 +162,13 @@ sizeSlider.addEventListener('input', () => {
   sizeValue.textContent = sizeSlider.value;
   handleInput();
 });
+fgColor.addEventListener('input', handleInput);
+bgColor.addEventListener('input', handleInput);
 downloadPngBtn.addEventListener('click', downloadPNG);
 downloadSvgBtn.addEventListener('click', downloadSVG);
 fileInput.addEventListener('change', handleFile);
 logoInput.addEventListener('change', handleLogo);
+
 
 // Initial render
 generate();

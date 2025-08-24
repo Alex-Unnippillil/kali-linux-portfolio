@@ -12,6 +12,7 @@ const RegexRedactor = () => {
   const [mask, setMask] = useState('full');
   const [activePreset, setActivePreset] = useState(null);
   const [unsafe, setUnsafe] = useState(false);
+  const [useRe2, setUseRe2] = useState(false);
 
   const workerRef = useRef(null);
 
@@ -35,8 +36,9 @@ const RegexRedactor = () => {
       pattern,
       preset: activePreset?.label,
       mask,
+      useRe2,
     });
-  }, [text, pattern, mask, activePreset]);
+  }, [text, pattern, mask, activePreset, useRe2]);
 
   const highlighted = useMemo(() => {
     if (!highlights.length) return text;
@@ -102,6 +104,14 @@ const RegexRedactor = () => {
           <option value="full">Full Mask</option>
           <option value="partial">Partial Mask</option>
         </select>
+        <label className="flex items-center gap-1 text-sm">
+          <input
+            type="checkbox"
+            checked={useRe2}
+            onChange={(e) => setUseRe2(e.target.checked)}
+          />
+          RE2
+        </label>
         <button
           className="px-3 py-1 bg-blue-600 rounded"
           onClick={() => setRedact(!redact)}
@@ -123,6 +133,9 @@ const RegexRedactor = () => {
           Potential catastrophic regex detected. Consider using RE2-compatible
           patterns.
         </div>
+      )}
+      {useRe2 && (
+        <div className="text-sm text-gray-300 mb-2">RE2 mode enabled.</div>
       )}
       <textarea
         value={text}
