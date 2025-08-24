@@ -27,7 +27,7 @@ self.onmessage = async (e: MessageEvent<File>) => {
       md5: md5.finalize().toString(),
       sha1: sha1.finalize().toString(),
       sha256: sha256.finalize().toString(),
-      ssdeep: ssdeep.digest(total),
+      ssdeep: ssdeep.digest(total as any),
     };
     // @ts-ignore
     self.postMessage(hashes);

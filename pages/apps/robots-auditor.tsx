@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const RobotsAuditor = dynamic(() => import('../../apps/robots-auditor'), {
+const RobotsAuditor = dynamic(() => import('../../components/apps/robots-auditor'), {
   ssr: false,
 });
 

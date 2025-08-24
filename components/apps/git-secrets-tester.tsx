@@ -180,8 +180,8 @@ const GitSecretsTester: React.FC = () => {
         {results.map((r, idx) => (
           <div key={idx} className="p-2 bg-gray-800 rounded">
             <div>
-              <span className="font-mono">{r.pattern}</span> matched "
-              <span className="bg-yellow-600 text-black">{r.match}</span>" in {r.file}
+              <span className="font-mono">{r.pattern}</span> matched &quot;
+              <span className="bg-yellow-600 text-black">{r.match}</span>&quot; in {r.file}
               {' '}at {r.index} [{r.severity}]
             </div>
             <div className="text-sm text-gray-300">Remediation: {r.remediation}</div>
@@ -206,8 +206,8 @@ const GitSecretsTester: React.FC = () => {
           <ul className="list-disc ml-4">
             {falsePositives.map((fp, idx) => (
               <li key={idx}>
-                <span className="font-mono">{fp.pattern}</span> – "
-                <span className="bg-yellow-600 text-black">{fp.match}</span>" in {fp.file}
+                <span className="font-mono">{fp.pattern}</span> – &quot;
+                <span className="bg-yellow-600 text-black">{fp.match}</span>&quot; in {fp.file}
               </li>
             ))}
           </ul>

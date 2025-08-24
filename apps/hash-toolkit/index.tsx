@@ -53,7 +53,7 @@ const HashToolkit: React.FC = () => {
     const md5 = CryptoJS.MD5(wordArray);
     const sha1 = CryptoJS.SHA1(wordArray);
     const sha256 = CryptoJS.SHA256(wordArray);
-    const fuzzy = ssdeep.digest(new Uint8Array(buffer));
+    const fuzzy = ssdeep.digest(new Uint8Array(buffer) as any);
     setHashes({
       md5: md5.toString(),
       sha1: sha1.toString(),

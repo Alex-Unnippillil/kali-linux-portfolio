@@ -113,10 +113,13 @@ export default async function handler(req: Request): Promise<Response> {
   if (nvdRes.status === 429) {
     const retryAfter = nvdRes.headers.get('Retry-After') || '30';
     if (cached) {
-      return new Response(JSON.stringify({ ...cached.data, retryAfter, fromCache: true }), {
-        status: 429,
-        headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter, ...rate.headers },
-      });
+      return new Response(
+        JSON.stringify({ ...(cached.data as any), retryAfter, fromCache: true }),
+        {
+          status: 429,
+          headers: { 'Content-Type': 'application/json', 'Retry-After': retryAfter, ...rate.headers },
+        },
+      );
     }
     return new Response(JSON.stringify({ error: 'rate_limited', retryAfter }), {
       status: 429,

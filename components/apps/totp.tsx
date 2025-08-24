@@ -56,8 +56,8 @@ const TOTPApp = () => {
       if (secretValid) {
         const now = Date.now();
         setCode(totp.generate(secret));
-        setPrevCode(totp.generate(secret, { epoch: now - period * 1000 }));
-        setNextCode(totp.generate(secret, { epoch: now + period * 1000 }));
+        setPrevCode((totp as any).generate(secret, { epoch: now - period * 1000 }));
+        setNextCode((totp as any).generate(secret, { epoch: now + period * 1000 }));
       } else {
         setCode('');
         setPrevCode('');

@@ -64,7 +64,7 @@ ctx.onmessage = (e: MessageEvent<DecodeRequest>) => {
     } else {
       bytes = new TextEncoder().encode(data);
     }
-    const buffer = bytes.buffer;
+    const buffer = bytes.buffer as ArrayBuffer;
     const response: DecodeResponse = { id, decoded: buffer };
     ctx.postMessage(response, [buffer]);
   } catch (err: any) {

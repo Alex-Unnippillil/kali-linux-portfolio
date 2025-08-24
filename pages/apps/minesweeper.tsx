@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const Minesweeper = dynamic(() => import('../../apps/minesweeper'), {
+const Minesweeper = dynamic(() => import('../../components/apps/minesweeper'), {
   ssr: false,
 });
 

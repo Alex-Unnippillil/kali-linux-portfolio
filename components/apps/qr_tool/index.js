@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import QRCode from 'qrcode';
 import QrScanner from 'qr-scanner';
 
@@ -24,7 +24,7 @@ const QRTool = () => {
     setSvgData('');
   };
 
-  const generate = async () => {
+  const generate = useCallback(async () => {
     if (!text) {
       clearCanvas();
       return;
@@ -43,7 +43,7 @@ const QRTool = () => {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [text, size, errorCorrection]);
 
   const downloadPng = () => {
     const link = document.createElement('a');
@@ -125,7 +125,7 @@ const QRTool = () => {
       generate();
     }, 300);
     return () => clearTimeout(debounceRef.current);
-  }, [text, errorCorrection, size]);
+  }, [text, errorCorrection, size, generate]);
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">

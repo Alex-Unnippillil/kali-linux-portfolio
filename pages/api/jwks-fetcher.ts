@@ -80,10 +80,10 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  const { jwksUrl, jwt } =
+  const { jwksUrl: jwksUrlParam, jwt } =
     req.method === 'POST' ? req.body : (req.query as { [key: string]: any });
 
-  if (typeof jwksUrl !== 'string') {
+  if (typeof jwksUrlParam !== 'string') {
     res.status(400).json({ ok: false, error: 'invalid_url', keys: [] });
     return;
   }
@@ -94,7 +94,7 @@ export default async function handler(
     bodyLimit: 1024,
   });
   if (!parsed) return;
-  const { jwksUrl } = parsed.query;
+  const { jwksUrl } = parsed.query as { jwksUrl: string };
 
   try {
     const url = new URL(jwksUrl);

@@ -103,7 +103,10 @@ const EvidenceNotebook: React.FC = () => {
         ? await crypto.subtle.verify(
             { name: 'ECDSA', hash: 'SHA-256' },
             keyPair!.publicKey,
-            Uint8Array.from(atob(entries[i].signature), (c) => c.charCodeAt(0)),
+            Uint8Array.from(
+              atob(entries[i].signature!),
+              (c) => c.charCodeAt(0),
+            ),
             new TextEncoder().encode(chainHex)
           )
         : false;

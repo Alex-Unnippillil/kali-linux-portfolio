@@ -61,7 +61,7 @@ const ReportViewer: React.FC = () => {
           setJsonKeyMap({});
         }
       } else if (kind === 'csv') {
-        const parsed = Papa.parse<string[]>(text.trim());
+        const parsed = Papa.parse(text.trim());
         setCsvData(parsed.data as string[][]);
       } else if (kind === 'pdf') {
         const urlReader = new FileReader();

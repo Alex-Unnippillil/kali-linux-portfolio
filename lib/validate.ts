@@ -42,7 +42,7 @@ export function validateRequest(
       res.status(400).json({ error: 'Invalid input' });
       return null;
     }
-    parsedQuery = result.data;
+    parsedQuery = result.data as typeof queryData;
   }
 
   const bodyData = req.body ?? {};
@@ -68,7 +68,7 @@ export function validateRequest(
       res.status(400).json({ error: 'Invalid input' });
       return null;
     }
-    parsedBody = result.data;
+    parsedBody = result.data as typeof bodyData;
   }
 
   return { query: parsedQuery, body: parsedBody };

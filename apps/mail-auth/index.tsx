@@ -117,12 +117,14 @@ const MailAuth: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {[
-                  ['SPF', results.spf],
-                  ['DKIM', results.dkim],
-                  ['DMARC', results.dmarc],
-                ].map(([label, r]) => (
-                  <tr key={label as string} className="border-t border-gray-700">
+                {(
+                  [
+                    ['SPF', results.spf],
+                    ['DKIM', results.dkim],
+                    ['DMARC', results.dmarc],
+                  ] as [string, Result][]
+                ).map(([label, r]) => (
+                  <tr key={label} className="border-t border-gray-700">
                     <td className="py-2 font-semibold">{label}</td>
                     <td className="py-2">
                       <span

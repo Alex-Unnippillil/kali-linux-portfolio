@@ -94,7 +94,7 @@ export default function EmlMsgParser() {
                   (att.encoding || att.transferEncoding || 'base64').toLowerCase();
                 try {
                   const bytes = await decodeWorker(base64, encoding);
-                  const blob = new Blob([bytes], { type });
+                  const blob = new Blob([bytes as unknown as ArrayBuffer], { type });
                   const url = URL.createObjectURL(blob);
                   const preview = type.startsWith('text/')
                     ? new TextDecoder().decode(bytes.slice(0, 4096))

@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { validateRequest } from '../../lib/validate';
-
 import {
   UserInputError,
   UpstreamError,
@@ -26,10 +25,7 @@ export const config = {
 const querySchema = z.object({ url: z.string().url() });
 const bodySchema = z.object({});
 
-export default async function handler(
-
 export default withErrorHandler(async function handler(
- 
   req: NextApiRequest,
   res: NextApiResponse<RobotsResponse>
 ) {
@@ -42,7 +38,6 @@ export default withErrorHandler(async function handler(
   if (!parsed) return;
   const { url } = parsed.query as { url: string };
 
-  const { url } = req.query;
   if (!url || typeof url !== 'string') {
     throw new UserInputError('Missing url query parameter');
   }

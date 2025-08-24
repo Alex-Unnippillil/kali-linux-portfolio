@@ -64,6 +64,8 @@ const NodeItem = React.memo(
       transform: CSS.Translate.toString({
         x: node.x + (transform?.x ?? 0),
         y: node.y + (transform?.y ?? 0),
+        scaleX: 1,
+        scaleY: 1,
       }),
     } as React.CSSProperties;
 
@@ -106,12 +108,11 @@ const ThreatModeler: React.FC = () => {
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { id, delta } = event;
+    const { active, delta } = event;
+    const id = String(active.id);
     setNodes((ns) =>
       ns.map((n) =>
-        n.id === id
-          ? { ...n, x: n.x + delta.x, y: n.y + delta.y }
-          : n,
+        n.id === id ? { ...n, x: n.x + delta.x, y: n.y + delta.y } : n,
       ),
     );
   };
