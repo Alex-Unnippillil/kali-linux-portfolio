@@ -86,8 +86,10 @@ const Checkers = () => {
     const piece = board[r][c];
     if (winner || draw || spectate || !piece || piece.color !== turn) return;
     const pieceMoves = getPieceMoves(board, r, c, config);
-    const mustCapture = allMoves.some((m) => m.captured);
-    const filtered = mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
+    const mustCapture = allMoves.some((m) => m.captures?.length);
+    const filtered = mustCapture
+      ? pieceMoves.filter((m) => m.captures?.length)
+      : pieceMoves;
     if (filtered.length) {
       setSelected([r, c]);
       setMoves(filtered);
@@ -101,19 +103,9 @@ const Checkers = () => {
   };
 
     const makeMove = (move: Move) => {
-    if (pathRef.current.length === 0) pathRef.current = [move.from, move.to];
-    else pathRef.current.push(move.to);
+    pathRef.current = move.path ?? [move.from, move.to];
     const { board: newBoard, capture, king } = applyMove(board, move, config);
-    const further = capture
-      ? getPieceMoves(newBoard, move.to[0], move.to[1], config).filter((m) => m.captured)
-      : [];
     setBoard(newBoard);
-    if (capture && further.length) {
-      setSelected([move.to[0], move.to[1]]);
-      setMoves(further);
-      setNoCapture(0);
-      return;
-    }
     const newHistory = [...history, { board, turn, no: noCapture }];
     setHistory(newHistory);
     setFuture([]);
@@ -146,7 +138,7 @@ const Checkers = () => {
     } else {
       setTurn(next);
       if (!gameId && next === 'black') {
-        workerRef.current?.postMessage({ board: newBoard, color: 'black', maxDepth: difficulty, config });
+        workerRef.current?.postMessage({ board: newBoard, color: 'black', maxDepth: difficulty, timeLimit: 200, config });
       }
     }
     setSelected(null);
@@ -209,15 +201,15 @@ const Checkers = () => {
     setHint(null);
     setLastMove([]);
     pathRef.current = [];
-    if (!gameId && next.turn === 'black') {
-      workerRef.current?.postMessage({ board: next.board, color: 'black', maxDepth: difficulty, config });
-    }
+      if (!gameId && next.turn === 'black') {
+        workerRef.current?.postMessage({ board: next.board, color: 'black', maxDepth: difficulty, timeLimit: 200, config });
+      }
     if (gameId) socketRef.current?.emit('state', { gameId, board: next.board, turn: next.turn });
   };
 
   const hintMove = () => {
     hintRequest.current = true;
-    workerRef.current?.postMessage({ board, color: turn, maxDepth: difficulty, config });
+    workerRef.current?.postMessage({ board, color: turn, maxDepth: difficulty, timeLimit: 200, config });
   };
 
   return (
