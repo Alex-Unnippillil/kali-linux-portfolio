@@ -1,0 +1,8 @@
+{
+  "modal": {
+    "close": "Close"
+  },
+  "gamePage": {
+    "title": "Game: {slug}"
+  }
+}
