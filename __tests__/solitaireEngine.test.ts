@@ -5,6 +5,7 @@ import {
   moveWasteToTableau,
   moveToFoundation,
   autoMove,
+  autoMoveHint,
   autoComplete,
   isWin,
   suits,
@@ -117,6 +118,16 @@ describe('Solitaire engine', () => {
     state.waste = [card('♦', 1, true)];
     const r = autoMove(state, 'waste', null);
     expect(r.foundations[suits.indexOf('♦')].length).toBe(1);
+  });
+
+  test('autoMoveHint suggests movable cards', () => {
+    const state = emptyState();
+    state.waste = [card('♣', 1, true)];
+    expect(autoMoveHint(state)).toEqual({ source: 'waste' });
+    const state2 = emptyState();
+    state2.tableau[0] = [card('♠', 1, true)];
+    expect(autoMoveHint(state2)).toEqual({ source: 'tableau', index: 0 });
+    expect(autoMoveHint(emptyState())).toBeNull();
   });
 
   test('autoComplete moves all possible cards to foundation', () => {

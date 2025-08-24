@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-
-type Point = { x: number; y: number };
+import { makeRng, randomCell as randomCellEngine, type Point } from './engine';
 const CELL_SIZE = 20;
 const OBSTACLE_COUNT = 5;
 const BASE_SPEED = 200; // ms per step
@@ -16,29 +15,17 @@ const themes = {
 type ThemeName = keyof typeof themes;
 type Mode = 'walls' | 'portals' | 'obstacles' | 'speed';
 
-const useRandomCell = (size: number) =>
-  useCallback((occupied: Point[]): Point => {
-    let cell: Point;
-    do {
-      cell = { x: Math.floor(Math.random() * size), y: Math.floor(Math.random() * size) };
-    } while (occupied.some((p) => p.x === cell.x && p.y === cell.y));
-    return cell;
-  }, [size]);
-
-const randomCellFor = (occupied: Point[], size: number): Point => {
-  let cell: Point;
-  do {
-    cell = { x: Math.floor(Math.random() * size), y: Math.floor(Math.random() * size) };
-  } while (occupied.some((p) => p.x === cell.x && p.y === cell.y));
-  return cell;
-};
+const useRandomCell = (size: number, rng: () => number) =>
+  useCallback((occupied: Point[]): Point => randomCellEngine(occupied, size, rng), [size, rng]);
 
 const Snake: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bufferRef = useRef<HTMLCanvasElement | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const [gridSize, setGridSize] = useState(20);
-  const randomCell = useRandomCell(gridSize);
+  const seedRef = useRef<number>(Date.now());
+  const rngRef = useRef<() => number>(makeRng(seedRef.current));
+  const randomCell = useRandomCell(gridSize, rngRef.current);
   const startPoint = { x: Math.floor(gridSize / 2), y: Math.floor(gridSize / 2) };
   const [snake, setSnake] = useState<Point[]>([startPoint]);
   const [direction, setDirection] = useState<Point>({ x: 0, y: -1 });
@@ -100,6 +87,7 @@ const Snake: React.FC = () => {
       if (replaying) return;
       const last = dirQueue.current.length ? dirQueue.current[dirQueue.current.length - 1] : direction;
       if (last.x + dir.x === 0 && last.y + dir.y === 0) return;
+      if (dirQueue.current.length >= 3) return;
       dirQueue.current.push(dir);
     },
     [direction, replaying]
@@ -280,17 +268,20 @@ const Snake: React.FC = () => {
   }, [snake, food, obstacles, theme, gridSize]);
 
   const reset = (m: Mode = mode, size = gridSize) => {
+    seedRef.current = Date.now();
+    rngRef.current = makeRng(seedRef.current);
     setGridSize(size);
     dirQueue.current = [];
     historyRef.current = [];
     const start = { x: Math.floor(size / 2), y: Math.floor(size / 2) };
     setSnake([start]);
     setDirection({ x: 0, y: -1 });
-    setFood(randomCellFor([start], size));
+    setFood(randomCellEngine([start], size, rngRef.current));
     if (m === 'obstacles') {
       setObstacles(() => {
         const obs: Point[] = [];
-        while (obs.length < OBSTACLE_COUNT) obs.push(randomCellFor([...obs, start], size));
+        while (obs.length < OBSTACLE_COUNT)
+          obs.push(randomCellEngine([...obs, start], size, rngRef.current));
         return obs;
       });
     } else {
@@ -353,8 +344,8 @@ const Snake: React.FC = () => {
           value={mode}
           onChange={(e) => reset(e.target.value as Mode)}
         >
-          <option value="walls">walls</option>
-          <option value="portals">portals</option>
+          <option value="walls">no-wrap</option>
+          <option value="portals">wrap</option>
           <option value="obstacles">obstacles</option>
           <option value="speed">speed-up</option>
         </select>

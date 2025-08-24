@@ -28,6 +28,21 @@ export const getTowerDPS = (type, level) => {
   return stats.damage / stats.fireRate;
 };
 
+// Generate enemies for a given wave. Used for tests and spawning.
+export const generateWaveEnemies = (waveNum, startId = 0) => {
+  const count = 5 + waveNum;
+  return Array.from({ length: count }, (_, i) => ({
+    id: startId + i,
+    x: START.x,
+    y: START.y,
+    health: 5 + waveNum,
+    resistance: 0,
+    baseSpeed: 0.5 + waveNum * 0.05,
+    slow: null,
+    dot: null,
+  }));
+};
+
 // ---- Pathfinding with caching ----
 let lastKey = '';
 let lastPath = null;

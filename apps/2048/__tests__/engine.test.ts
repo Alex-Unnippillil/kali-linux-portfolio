@@ -1,4 +1,4 @@
-import { move, undo, redo, isGameOver } from '../engine';
+import { move, undo, redo, isGameOver, spawnTile, createRng } from '../engine';
 import type { Board, GameState } from '../engine';
 
 describe('2048 engine', () => {
@@ -50,5 +50,29 @@ describe('2048 engine', () => {
       4, 2, 4, 2,
     ];
     expect(isGameOver(board)).toBe(true);
+  });
+
+  test('spawn tile uses 90/10 distribution', () => {
+    const board = Array(16).fill(0);
+    const rng2 = (() => {
+      const seq = [0, 0.8];
+      let i = 0;
+      return () => seq[i++];
+    })();
+    expect(spawnTile(board, rng2)[0]).toBe(2);
+    const rng4 = (() => {
+      const seq = [0, 0.95];
+      let i = 0;
+      return () => seq[i++];
+    })();
+    expect(spawnTile(board, rng4)[0]).toBe(4);
+  });
+
+  test('seeded RNG is deterministic', () => {
+    const a = createRng(123);
+    const b = createRng(123);
+    const seqA = Array.from({ length: 5 }, () => a());
+    const seqB = Array.from({ length: 5 }, () => b());
+    expect(seqA).toEqual(seqB);
   });
 });

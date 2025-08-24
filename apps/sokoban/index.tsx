@@ -354,7 +354,11 @@ const Sokoban: React.FC = () => {
       </div>
       <div
         className="relative bg-gray-700"
-        style={{ width: state.width * CELL, height: state.height * CELL }}
+        style={{
+          width: state.width * CELL,
+          height: state.height * CELL,
+          imageRendering: 'pixelated',
+        }}
       >
         {Array.from({ length: state.height }).map((_, y) =>
           Array.from({ length: state.width }).map((_, x) => {

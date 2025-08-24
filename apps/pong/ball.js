@@ -20,7 +20,9 @@ export default class Ball {
   }
 
   update(dt, paddles, canvasWidth, canvasHeight) {
-    const steps = Math.ceil(((Math.abs(this.vx) + Math.abs(this.vy)) * dt) / this.radius);
+    const steps = Math.ceil(
+      ((Math.abs(this.vx) + Math.abs(this.vy)) * dt) / this.radius
+    );
     const subDt = dt / steps;
 
     for (let i = 0; i < steps; i++) {
@@ -48,7 +50,8 @@ export default class Ball {
           this.speed *= 1.05;
           const newSpeed = this.speed;
           this.vx = dir * newSpeed * Math.cos(angle);
-          this.vy = newSpeed * Math.sin(angle);
+          // Add paddle velocity influence for richer collision response
+          this.vy = newSpeed * Math.sin(angle) + p.vy * 0.5;
           this.x = p.x + (dir === 1 ? p.width + this.radius : -this.radius);
         }
       });
@@ -56,9 +59,13 @@ export default class Ball {
   }
 
   draw(ctx) {
+    ctx.save();
     ctx.fillStyle = 'white';
+    ctx.shadowColor = 'white';
+    ctx.shadowBlur = 10; // subtle bloom
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
   }
 }

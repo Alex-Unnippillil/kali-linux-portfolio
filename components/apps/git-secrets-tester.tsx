@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import JSZip from 'jszip';
 
 export interface PatternInfo {
@@ -81,6 +81,20 @@ const GitSecretsTester: React.FC = () => {
   const [logs, setLogs] = useState<string[]>([]);
   const [diff, setDiff] = useState<DiffLine[]>([]);
   const [patch, setPatch] = useState('');
+  const workerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    workerRef.current = new Worker(
+      new URL('./git-secrets-tester.worker.ts', import.meta.url),
+      { type: 'module' },
+    );
+    const worker = workerRef.current;
+    worker.onmessage = (e: MessageEvent) => {
+      const { results: r } = e.data as { results?: ScanResult[] };
+      if (r) setResults((prev) => [...prev, ...r]);
+    };
+    return () => worker.terminate();
+  }, []);
 
   const allPatterns = useMemo(() => {
     const custom = customPatterns
@@ -243,7 +257,9 @@ const GitSecretsTester: React.FC = () => {
       return;
     }
     if (file.name.endsWith('.zip')) {
-      const zip = await JSZip.loadAsync(file);
+      const buf = await file.arrayBuffer();
+      workerRef.current?.postMessage({ type: 'scan-archive', buffer: buf });
+      const zip = await JSZip.loadAsync(buf);
       const entries = Object.values(zip.files);
       for (const entry of entries) {
         if (entry.dir) continue;
@@ -421,7 +437,7 @@ const GitSecretsTester: React.FC = () => {
               <span className="bg-yellow-600 text-black">{r.match}</span>&quot; in {r.file}
               {' '}at {r.line}:{r.index} [{r.severity}/{r.confidence}]
             </div>
-            <div className="text-sm text-gray-300">Remediation: {r.remediation}</div>
+            <div className="text-sm text-gray-300 flex items-center"><span className="flex-1">Remediation: {r.remediation}</span><button type="button" className="ml-2 px-1 bg-gray-700 rounded" onClick={() => navigator.clipboard.writeText(r.remediation)}>Copy</button></div>
             <button
               type="button"
               className="mt-2 px-2 py-1 bg-blue-600 rounded"

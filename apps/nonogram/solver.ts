@@ -107,3 +107,37 @@ export function propagate(
   return { grid: ng, contradiction };
 }
 
+function backtrack(grid: Cell[][], puzzle: NonogramPuzzle): Cell[][] | null {
+  for (let r = 0; r < puzzle.height; r += 1) {
+    for (let c = 0; c < puzzle.width; c += 1) {
+      if (grid[r][c] === 0) {
+        for (const val of [1, -1] as Cell[]) {
+          const g = grid.map((row) => row.slice() as Cell[]);
+          g[r][c] = val;
+          const { grid: pg, contradiction } = propagate(g, puzzle);
+          if (!contradiction) {
+            const solved = backtrack(pg, puzzle);
+            if (solved) return solved;
+          }
+        }
+        return null;
+      }
+    }
+  }
+  return grid;
+}
+
+export function solve(
+  grid: Cell[][],
+  puzzle: NonogramPuzzle
+): { grid: Cell[][]; contradiction: boolean } {
+  const { grid: pg, contradiction } = propagate(grid, puzzle);
+  if (contradiction) return { grid: pg, contradiction: true };
+  const normalized = pg.map((row) =>
+    row.map((v) => (v === 2 ? 0 : v)) as Cell[]
+  );
+  const result = backtrack(normalized, puzzle);
+  if (!result) return { grid: pg, contradiction: true };
+  return { grid: result, contradiction: false };
+}
+

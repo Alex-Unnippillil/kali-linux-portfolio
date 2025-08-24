@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 
 function murmurhash3_32_gc(key: string, seed = 0): string {
   let remainder = key.length & 3;
@@ -53,6 +53,39 @@ function murmurhash3_32_gc(key: string, seed = 0): string {
   return (h1 | 0).toString();
 }
 
+function detectMime(bytes: Uint8Array): string | undefined {
+  if (bytes.length >= 4) {
+    if (
+      bytes[0] === 0x89 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x4e &&
+      bytes[3] === 0x47
+    ) {
+      return 'image/png';
+    }
+    if (
+      bytes[0] === 0x00 &&
+      bytes[1] === 0x00 &&
+      (bytes[2] === 0x01 || bytes[2] === 0x02) &&
+      bytes[3] === 0x00
+    ) {
+      return 'image/x-icon';
+    }
+    if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46) {
+      return 'image/gif';
+    }
+    if (
+      bytes[0] === 0xff &&
+      bytes[1] === 0xd8 &&
+      bytes[bytes.length - 2] === 0xff &&
+      bytes[bytes.length - 1] === 0xd9
+    ) {
+      return 'image/jpeg';
+    }
+  }
+  return undefined;
+}
+
 const FaviconHash: React.FC = () => {
   const [input, setInput] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -60,6 +93,9 @@ const FaviconHash: React.FC = () => {
   const [size, setSize] = useState<number | null>(null);
   const [mime, setMime] = useState('');
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const copy = useCallback((text: string) => {
     if (!text) return;
@@ -71,6 +107,8 @@ const FaviconHash: React.FC = () => {
     setHash('');
     setSize(null);
     setMime('');
+    setWarning('');
+    setLoading(true);
     let base64 = '';
     let bytes: Uint8Array;
 
@@ -80,11 +118,17 @@ const FaviconHash: React.FC = () => {
         bytes = new Uint8Array(buf);
         base64 = btoa(String.fromCharCode(...bytes));
         setSize(bytes.length);
-        setMime(file.type || 'application/octet-stream');
+        const m = file.type || 'application/octet-stream';
+        setMime(m);
+        const detected = detectMime(bytes);
+        if (detected && !m.toLowerCase().includes(detected)) {
+          setWarning(`Content-Type is ${m} but data appears to be ${detected}`);
+        }
       } else if (input.trim().startsWith('data:')) {
         const match = input.trim().match(/^data:([^;,]+)?(;base64)?,(.*)$/i);
         if (!match) {
           setError('Invalid data URI');
+          setLoading(false);
           return;
         }
         const mimeType = match[1] || 'text/plain';
@@ -102,27 +146,59 @@ const FaviconHash: React.FC = () => {
         }
         setSize(bytes.length);
         setMime(mimeType);
+        const detected = detectMime(bytes);
+        if (detected && !mimeType.toLowerCase().includes(detected)) {
+          setWarning(
+            `Content-Type is ${mimeType} but data appears to be ${detected}`
+          );
+        }
       } else if (input.trim()) {
-        const res = await fetch(`/api/favicon?url=${encodeURIComponent(input.trim())}`);
-        const data = await res.json();
-        if (!data.ok) {
-          setError(data.message || 'Failed to fetch URL');
+        const res = await fetch(input.trim());
+        if (res.type === 'opaque') {
+          setError(
+            'Opaque response (CORS). Please download and upload the favicon manually.'
+          );
+          setLoading(false);
           return;
         }
-        base64 = data.base64;
-        setSize(data.size);
-        setMime(data.mime);
+        if (!res.ok) {
+          setError(`HTTP ${res.status}`);
+          setLoading(false);
+          return;
+        }
+        const buf = await res.arrayBuffer();
+        bytes = new Uint8Array(buf);
+        base64 = btoa(String.fromCharCode(...bytes));
+        setSize(bytes.length);
+        const m = res.headers.get('content-type') || 'application/octet-stream';
+        setMime(m);
+        const detected = detectMime(bytes);
+        if (detected && !m.toLowerCase().includes(detected)) {
+          setWarning(`Content-Type is ${m} but data appears to be ${detected}`);
+        }
       } else {
         setError('Provide a URL, file, or data URI');
+        setLoading(false);
         return;
       }
     } catch (e) {
       setError('Failed to process input');
+      setLoading(false);
       return;
     }
-
+    setLoading(false);
     setHash(murmurhash3_32_gc(base64));
   }, [input, file]);
+
+  const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files?.[0];
+    if (f) setFile(f);
+  }, []);
+
+  const onDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  }, []);
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col items-center space-y-4">
@@ -133,20 +209,31 @@ const FaviconHash: React.FC = () => {
           placeholder="URL or data URI"
           className="p-2 rounded text-black"
         />
-        <input
-          type="file"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="p-2 rounded text-black"
-        />
+        <div
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          onClick={() => fileInputRef.current?.click()}
+          className="p-4 border-2 border-dashed border-gray-500 rounded text-center cursor-pointer"
+        >
+          {file ? file.name : 'Drag & drop favicon or click to select'}
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className="hidden"
+          />
+        </div>
         <button
           type="button"
           onClick={process}
-          className="px-4 py-2 bg-blue-600 rounded"
+          disabled={loading}
+          className="px-4 py-2 bg-blue-600 rounded disabled:opacity-50"
         >
-          Hash
+          {loading ? 'Processing…' : 'Hash'}
         </button>
       </div>
       {error && <div className="text-red-400">{error}</div>}
+      {warning && <div className="text-yellow-400">{warning}</div>}
       {hash && size !== null && (
         <div className="w-full max-w-md space-y-2">
           <div className="flex items-center space-x-2">
@@ -155,6 +242,17 @@ const FaviconHash: React.FC = () => {
             <button
               type="button"
               onClick={() => copy(hash)}
+              className="px-2 py-1 bg-blue-600 rounded"
+            >
+              Copy
+            </button>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="font-semibold">Query:</span>
+            <span className="flex-1 break-all">http.favicon.hash:{hash}</span>
+            <button
+              type="button"
+              onClick={() => copy(`http.favicon.hash:${hash}`)}
               className="px-2 py-1 bg-blue-600 rounded"
             >
               Copy

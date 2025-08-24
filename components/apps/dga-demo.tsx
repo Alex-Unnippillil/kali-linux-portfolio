@@ -6,7 +6,7 @@ import React, {
   useState,
 } from 'react';
 import ReactGA from 'react-ga4';
-import { Scatter } from 'react-chartjs-2';
+import { Scatter, Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   LinearScale,
@@ -15,15 +15,17 @@ import {
   Tooltip,
   Legend,
   ChartData,
+  CategoryScale,
 } from 'chart.js';
 
-ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend);
+ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend, CategoryScale);
 
 interface Result {
   domain: string;
   entropy: number;
   vowelRatio: number;
   ngramScore: number;
+  ngramDeviation: number;
   markovScore: number;
   risk: string;
   reasons: string[];
@@ -212,12 +214,14 @@ export default function DgaDemo() {
         const vowel = vowelRatio(cleaned);
         const ngram = ngramScore(cleaned);
         const markov = markovScore(cleaned, markovModel);
+        const ngramDeviation = NGRAM_THRESHOLD - ngram;
         const { risk, reasons } = classify(entropy, vowel, ngram, markov);
         return {
           domain,
           entropy,
           vowelRatio: vowel,
           ngramScore: ngram,
+          ngramDeviation,
           markovScore: markov,
           risk,
           reasons,
@@ -230,6 +234,7 @@ export default function DgaDemo() {
     [analyzeDomains]
   );
   const [results, setResults] = useState<Result[]>([]);
+  const [probes, setProbes] = useState<Record<string, { http?: number; whois?: string }>>({});
 
   const entropyVowelData = useMemo<ChartData<'scatter'>>(
     () => ({
@@ -311,6 +316,28 @@ export default function DgaDemo() {
     },
   } as const;
 
+  const entropyLineData = useMemo<ChartData<'line'>>(
+    () => ({
+      labels: results.map((_, i) => i + 1),
+      datasets: [
+        {
+          label: 'Entropy',
+          data: results.map((r) => r.entropy),
+          borderColor: 'cyan',
+          backgroundColor: 'cyan',
+        } as any,
+      ],
+    }),
+    [results]
+  );
+
+  const entropyLineOptions = {
+    scales: {
+      x: { title: { display: true, text: 'Domain #'} },
+      y: { title: { display: true, text: 'Entropy' }, min: 0, max: 8 },
+    },
+  } as const;
+
   const validateSeed = useCallback(
     (val: string) => {
       if (!/^-?\d+$/.test(val)) {
@@ -339,6 +366,27 @@ export default function DgaDemo() {
     }
     setAlphaError('');
     return true;
+  }, []);
+
+  const probeDomain = useCallback(async (domain: string) => {
+    const result: { http?: number; whois?: string } = {};
+    try {
+      const res = await fetch(`https://rdap.org/domain/${domain}`);
+      if (res.ok) {
+        const data = await res.json();
+        const reg = data.events?.find((e: any) => e.eventAction === 'registration');
+        if (reg) result.whois = reg.eventDate?.slice(0, 10);
+      }
+    } catch (_) {
+      /* ignore */
+    }
+    try {
+      const res = await fetch(`https://${domain}`, { method: 'HEAD' });
+      result.http = res.status;
+    } catch (_) {
+      /* ignore */
+    }
+    setProbes((p) => ({ ...p, [domain]: result }));
   }, []);
 
   const requestDomains = useCallback(() => {
@@ -379,6 +427,18 @@ export default function DgaDemo() {
       label: 'DGA Demo',
     });
   }, [mode, seed, length, alphabet, algorithm, seedError, alphaError, analyzeDomains]);
+
+  const exportIOC = () => {
+    const blob = new Blob([results.map((r) => r.domain).join('\n')], {
+      type: 'text/plain',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'dga_iocs.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     workerRef.current = new Worker(
@@ -481,6 +541,7 @@ export default function DgaDemo() {
             >
               <option value="lcg">LCG</option>
               <option value="xorshift">XORShift</option>
+              <option value="mulberry32">Mulberry32</option>
             </select>
           </div>
         )}
@@ -493,6 +554,9 @@ export default function DgaDemo() {
           <Scatter data={ngramMarkovData} options={ngramMarkovOptions} />
         </div>
       </div>
+      <div className="bg-surface p-2 rounded w-full">
+        <Line data={entropyLineData} options={entropyLineOptions} />
+      </div>
 
       {results.length > 0 && (
         <div className="overflow-auto">
@@ -503,9 +567,13 @@ export default function DgaDemo() {
                 <th className="p-2">Entropy</th>
                 <th className="p-2">Vowel Ratio</th>
                 <th className="p-2">N-gram</th>
+                <th className="p-2">N-gram Dev</th>
                 <th className="p-2">Markov</th>
+                <th className="p-2">HTTP</th>
+                <th className="p-2">WHOIS</th>
                 <th className="p-2">Risk</th>
                 <th className="p-2">Notes</th>
+                <th className="p-2">Probe</th>
               </tr>
             </thead>
             <tbody>
@@ -515,7 +583,10 @@ export default function DgaDemo() {
                   <td className="p-2">{r.entropy.toFixed(2)}</td>
                   <td className="p-2">{r.vowelRatio.toFixed(2)}</td>
                   <td className="p-2">{r.ngramScore.toFixed(2)}</td>
+                  <td className="p-2">{r.ngramDeviation.toFixed(2)}</td>
                   <td className="p-2">{r.markovScore.toFixed(2)}</td>
+                  <td className="p-2">{probes[r.domain]?.http ?? '-'}</td>
+                  <td className="p-2">{probes[r.domain]?.whois ?? '-'}</td>
                   <td className="p-2 font-semibold">
                     <span
                       className={
@@ -530,11 +601,26 @@ export default function DgaDemo() {
                     </span>
                   </td>
                   <td className="p-2">{r.reasons.join(', ')}</td>
+                  <td className="p-2">
+                    {!probes[r.domain] && (
+                      <button
+                        className="px-2 py-1 bg-gray-700"
+                        onClick={() => probeDomain(r.domain)}
+                      >
+                        Probe
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+      {results.length > 0 && (
+        <button className="px-2 py-1 bg-gray-700 mt-2" onClick={exportIOC}>
+          Export IOC
+        </button>
       )}
     </div>
   );
