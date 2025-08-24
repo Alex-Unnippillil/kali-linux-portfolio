@@ -1,5 +1,8 @@
 export const TILE = 40;
 export const PAD_POSITIONS = [TILE, TILE * 3, TILE * 5, TILE * 7, TILE * 9];
+export const NUM_TILES_WIDE = 10;
+// allow a small overlap margin so collisions feel fair on touch devices
+export const COLLISION_TOLERANCE = TILE * 0.15;
 
 // linear congruential generator for deterministic lane RNG
 const rng = (seed: number) => () => {
@@ -70,7 +73,9 @@ export const updateCars = (
       lane.type === 'car' &&
       lane.y === frog.y &&
       lane.items.some(
-        (c) => frogBox.x < c.x + c.width && frogBox.x + frogBox.width > c.x
+        (c) =>
+          frogBox.x + COLLISION_TOLERANCE < c.x + c.width &&
+          frogBox.x + frogBox.width - COLLISION_TOLERANCE > c.x
       )
   );
 

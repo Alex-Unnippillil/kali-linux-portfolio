@@ -1,4 +1,14 @@
-import { initLane, updateCars, handlePads, PAD_POSITIONS, rampLane, carLaneDefs, logLaneDefs } from '@components/apps/frogger';
+import {
+  initLane,
+  updateCars,
+  handlePads,
+  PAD_POSITIONS,
+  rampLane,
+  carLaneDefs,
+  logLaneDefs,
+  TILE,
+  COLLISION_TOLERANCE,
+} from '@components/apps/frogger';
 
 describe('frogger mechanics', () => {
   test('lane spawn variance via lane-local RNG', () => {
@@ -32,5 +42,20 @@ describe('frogger mechanics', () => {
     const log = rampLane(logLaneDefs[0], level, 0.5);
     expect(log.speed).toBeCloseTo(logLaneDefs[0].speed * 1.4);
     expect(log.spawnRate).toBeCloseTo(Math.max(0.5, logLaneDefs[0].spawnRate * 0.8));
+  });
+
+  test('collision tolerance allows slight overlap', () => {
+    const base = initLane({ y: 0, dir: 1, speed: 0, spawnRate: 1000, length: 1, type: 'car' }, 1);
+    const lane = {
+      ...base,
+      items: [
+        {
+          x: TILE - COLLISION_TOLERANCE / 2,
+          width: TILE,
+          height: TILE,
+        },
+      ],
+    };
+    expect(updateCars([lane], { x: 0, y: 0 }, 0).dead).toBe(false);
   });
 });
