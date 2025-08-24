@@ -3,6 +3,7 @@ import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 
 import offlineQuotes from './quotes.json';
+import { TEMPLATES, DEFAULT_TEMPLATE } from './quote_templates';
 
 const SAFE_CATEGORIES = [
   'inspirational',
@@ -56,12 +57,14 @@ const allOfflineQuotes = processQuotes(offlineQuotes);
 const QuoteGenerator = () => {
   const [quotes, setQuotes] = useState([]);
   const [current, setCurrent] = useState(null);
+  const [displayed, setDisplayed] = useState('');
   const [inspiration, setInspiration] = useState('');
   const [search, setSearch] = useState('');
-  const [fade, setFade] = useState(false);
+  const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
   const [prefersReduced, setPrefersReduced] = useState(false);
   const [newQuote, setNewQuote] = useState('');
   const [newAuthor, setNewAuthor] = useState('');
+  const [pinned, setPinned] = useState(false);
 
   const loadLocalQuotes = () => {
     const base = [...allOfflineQuotes];
@@ -86,6 +89,18 @@ const QuoteGenerator = () => {
     handler();
     media.addEventListener('change', handler);
     return () => media.removeEventListener('change', handler);
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('quote');
+    const a = params.get('author');
+    const t = params.get('template');
+    if (t && TEMPLATES[t]) setTemplate(t);
+    if (q && a) {
+      setCurrent({ content: q, author: a });
+      setPinned(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -122,6 +137,7 @@ const QuoteGenerator = () => {
   );
 
   useEffect(() => {
+    if (pinned) return;
     if (!filteredQuotes.length) {
       setCurrent(null);
       return;
@@ -134,21 +150,34 @@ const QuoteGenerator = () => {
           .reduce((a, c) => Math.imul(a, 31) + c.charCodeAt(0), 0)
       ) % filteredQuotes.length;
     setCurrent(filteredQuotes[index]);
-  }, [filteredQuotes]);
+  }, [filteredQuotes, pinned]);
+
+  useEffect(() => {
+    if (!current) {
+      setDisplayed('');
+      return;
+    }
+    if (prefersReduced) {
+      setDisplayed(current.content);
+      return;
+    }
+    setDisplayed('');
+    let i = 0;
+    const text = current.content;
+    const id = setInterval(() => {
+      setDisplayed((prev) => prev + text[i]);
+      i += 1;
+      if (i >= text.length) clearInterval(id);
+    }, 30);
+    return () => clearInterval(id);
+  }, [current, prefersReduced]);
 
   const changeQuote = () => {
     if (!filteredQuotes.length) return;
     const newQuote =
       filteredQuotes[Math.floor(Math.random() * filteredQuotes.length)];
-    if (prefersReduced) {
-      setCurrent(newQuote);
-    } else {
-      setFade(true);
-      setTimeout(() => {
-        setCurrent(newQuote);
-        setFade(false);
-      }, 300);
-    }
+    setPinned(false);
+    setCurrent(newQuote);
   };
 
   const copyQuote = () => {
@@ -161,8 +190,37 @@ const QuoteGenerator = () => {
 
   const shareOnX = () => {
     if (!current) return;
+    const params = new URLSearchParams({
+      quote: current.content,
+      author: current.author,
+      template,
+    });
+    const shareUrl = `${window.location.origin}/apps/quote-generator?${params.toString()}`;
     const text = `"${current.content}" - ${current.author}`;
-    const url = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    const url =
+      `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+    window.open(url, '_blank');
+  };
+
+  const copyLink = () => {
+    if (!current || !navigator.clipboard) return;
+    const params = new URLSearchParams({
+      quote: current.content,
+      author: current.author,
+      template,
+    });
+    const url = `${window.location.origin}/apps/quote-generator?${params.toString()}`;
+    navigator.clipboard.writeText(url);
+  };
+
+  const openOgImage = () => {
+    if (!current) return;
+    const params = new URLSearchParams({
+      quote: current.content,
+      author: current.author,
+      template,
+    });
+    const url = `${window.location.origin}/apps/quote-generator/og?${params.toString()}`;
     window.open(url, '_blank');
   };
 
@@ -205,14 +263,12 @@ const QuoteGenerator = () => {
       <div className="w-full max-w-md flex flex-col items-center">
         <div
           id="quote-card"
-          className={`p-4 text-center transition-opacity duration-300 ${
-            fade && !prefersReduced ? 'opacity-0' : 'opacity-100'
-          }`}
+          className={`p-4 text-center rounded ${TEMPLATES[template].card}`}
         >
           {current ? (
             <>
-              <p className="text-2xl font-serif italic leading-relaxed mb-4">&quot;{current.content}&quot;</p>
-              <p className="text-lg font-semibold text-gray-300">- {current.author}</p>
+              <p className={TEMPLATES[template].quote}>&quot;{displayed}&quot;</p>
+              <p className={TEMPLATES[template].author}>- {current.author}</p>
             </>
           ) : (
             <p>No quotes found.</p>
@@ -233,9 +289,21 @@ const QuoteGenerator = () => {
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={copyLink}
+          >
+            Link
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={shareOnX}
           >
             X
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={openOgImage}
+          >
+            OG
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
@@ -260,6 +328,17 @@ const QuoteGenerator = () => {
             {inspirations.map((cat) => (
               <option key={cat} value={cat}>
                 {cat}
+              </option>
+            ))}
+          </select>
+          <select
+            value={template}
+            onChange={(e) => setTemplate(e.target.value)}
+            className="px-2 py-1 rounded text-black"
+          >
+            {Object.keys(TEMPLATES).map((t) => (
+              <option key={t} value={t}>
+                {t}
               </option>
             ))}
           </select>
