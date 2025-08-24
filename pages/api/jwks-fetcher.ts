@@ -2,6 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { decodeProtectedHeader, importJWK, jwtVerify } from 'jose';
 import { createHash } from 'crypto';
 
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
+
 interface CacheEntry {
   jwk: any;
   expiry: number;
@@ -64,6 +67,13 @@ async function getKey(jwksUrl: string, kid: string) {
   return keys.find((k: any) => k.kid === kid);
 }
 
+export const config = {
+  api: { bodyParser: { sizeLimit: '1kb' } },
+};
+
+const querySchema = z.object({ jwksUrl: z.string().url() });
+const bodySchema = z.object({});
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -75,6 +85,14 @@ export default async function handler(
     res.status(400).json({ ok: false, error: 'invalid_url', keys: [] });
     return;
   }
+  const parsed = validateRequest(req, res, {
+    querySchema,
+    bodySchema,
+    queryLimit: 1024,
+    bodyLimit: 1024,
+  });
+  if (!parsed) return;
+  const { jwksUrl } = parsed.query;
 
   try {
     const url = new URL(jwksUrl);
