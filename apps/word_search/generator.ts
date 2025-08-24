@@ -30,6 +30,15 @@ export function createRNG(seed: string) {
   return mulberry32(seedFunc());
 }
 
+function shuffle<T>(arr: T[], rng: () => number): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 const DIRECTIONS = [
   { dx: 1, dy: 0 },
   { dx: -1, dy: 0 },
@@ -134,9 +143,10 @@ export function generateGrid(
 
   function validPlacements(word: string) {
     const options: { positions: Position[]; overlap: number }[] = [];
+    const dirs = shuffle(DIRECTIONS, rng);
     for (let r = 0; r < size; r += 1) {
       for (let c = 0; c < size; c += 1) {
-        for (const dir of DIRECTIONS) {
+        for (const dir of dirs) {
           const endRow = r + dir.dy * (word.length - 1);
           const endCol = c + dir.dx * (word.length - 1);
           if (endRow < 0 || endRow >= size || endCol < 0 || endCol >= size) continue;
@@ -171,16 +181,13 @@ export function generateGrid(
     const word = sortedWords[index];
     const options = validPlacements(word);
     for (const opt of options) {
-      // place
       opt.positions.forEach((p, i) => {
         grid[p.row][p.col] = word[i];
       });
       placements.push({ word, positions: opt.positions });
       if (place(index + 1)) return true;
-      // backtrack
       placements.pop();
       opt.positions.forEach((p) => {
-        // clear only if it doesn't belong to previous placements
         let keep = false;
         for (const pl of placements) {
           if (pl.positions.some((pp) => pp.row === p.row && pp.col === p.col)) {
@@ -194,7 +201,15 @@ export function generateGrid(
     return false;
   }
 
-  place(0);
+  let solved = false;
+  let tries = 0;
+  while (!solved && tries < 20) {
+    for (let r = 0; r < size; r += 1) grid[r].fill('');
+    placements.length = 0;
+    solved = place(0);
+    tries += 1;
+  }
+  if (!solved) throw new Error('Unable to place all words');
 
   function fillRandom() {
     for (let r = 0; r < size; r += 1) {
