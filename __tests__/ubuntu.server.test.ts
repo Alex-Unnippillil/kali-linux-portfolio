@@ -15,6 +15,8 @@ describe('Ubuntu component server-side', () => {
       ubuntu.getLocalData();
       ubuntu.unLockScreen();
       ubuntu.changeBackgroundImage('wall-1');
+      ubuntu.lockScreen();
+      ubuntu.shutDown();
       ubuntu.turnOn();
     }).not.toThrow();
     errorSpy.mockRestore();

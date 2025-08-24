@@ -32,7 +32,9 @@ describe('createDynamicApp', () => {
     const FailingApp = createDynamicApp('non-existent', 'FailApp');
     render(<FailingApp />);
     await waitFor(() =>
-      expect(screen.getByText('Failed to load FailApp.')).toBeInTheDocument()
+      expect(
+        screen.getByText('Failed to load FailApp. Please try again.')
+      ).toBeInTheDocument()
     );
     expect(ReactGA.event).toHaveBeenCalledWith('exception', expect.any(Object));
     expect(ReactGA.event).toHaveBeenCalledWith(

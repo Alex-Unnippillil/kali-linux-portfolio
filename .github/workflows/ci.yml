@@ -42,8 +42,10 @@ jobs:
       - run: corepack enable
       - run: yarn install --immutable
       - run: yarn dedupe --check
+
       - run: yarn lint:ci
       - run: yarn typecheck
+      - run: yarn validate:icons
       - run: yarn build:ci
       - name: Jest tests
         run: yarn test --ci | tee jest-report.txt
@@ -76,7 +78,10 @@ jobs:
           if-no-files-found: ignore
 
       - name: Lighthouse CI
+
         run: yarn lighthouse --collect.startServerCommand="yarn start" --collect.startServerReadyPattern="ready on"
+      - name: Lighthouse (desktop)
+        run: yarn lighthouse --collect.startServerCommand="yarn start" --collect.startServerReadyPattern="ready on" --collect.settings.preset=desktop --collect.additive
       - name: Upload Lighthouse results
         if: always()
         uses: actions/upload-artifact@v4

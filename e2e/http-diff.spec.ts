@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../playwright.config';
 
 test('renders HTTP diff app', async ({ page }) => {
   await page.goto('/apps/http-diff');

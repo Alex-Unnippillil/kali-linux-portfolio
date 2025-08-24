@@ -1,8 +1,22 @@
 ## Quick Start
 
-1. **Install dependencies** – ensure [Node.js 20](https://nodejs.org/) and Yarn 4 are available. `nvm install 20 && nvm use 20` sets the correct Node version, and `corepack enable` activates Yarn 4.
+1. **Enable Corepack & Node 20**
+   ```bash
+   corepack enable
+   nvm install 20 && nvm use 20
+   ```
 2. **Install packages** – run `yarn` to install project dependencies.
-3. **Environment** – copy `.env.example` to `.env.local` and fill in required variables like `JWT_SECRET`.
+3. **Environment** – copy `.env.example` to `.env.local` and set variables:
+
+   **Required for production**
+   - `JWT_SECRET` – secret used to sign JWT tokens.
+
+   **Optional**
+   - `NEXT_PUBLIC_ENABLE_ANALYTICS`, `NEXT_PUBLIC_TRACKING_ID`, `NEXT_PUBLIC_AXIOM_TOKEN`, `NEXT_PUBLIC_AXIOM_DATASET` – analytics.
+   - `NEXT_PUBLIC_SERVICE_ID`, `NEXT_PUBLIC_TEMPLATE_ID`, `NEXT_PUBLIC_USER_ID` – email configuration.
+   - `NEXT_PUBLIC_YOUTUBE_API_KEY` – YouTube data.
+   - `NEXT_PUBLIC_THEME` – UI theme (defaults to `Yaru`).
+   - `USER_STORE_FILE` – local path for development-only user stats.
 4. **Run the app** – start the development server with `yarn dev`.
 5. **Type-check** – run `yarn typecheck` to verify TypeScript types. This command also runs in CI.
 
@@ -20,6 +34,25 @@
 4. Update `.env.example` whenever new environment variables are added.
 5. Run `yarn validate:icons` to ensure all icon paths in `apps.config.js` exist under `public/themes/` before committing.
 
+## Design Tokens
+
+Color variables and spacing are centralized in `styles/tokens.css`. The file defines light and dark palettes, and the `--accent` color blends Ubuntu Orange (`#E95420`) with Aubergine (`#77216F`). Semantic tokens map to the active palette via `prefers-color-scheme`:
+
+| Semantic token | Light | Dark |
+| -------------- | ----- | ---- |
+| `--color-bg` | `--color-light-bg` | `--color-dark-bg` |
+| `--color-surface` | `--color-light-surface` | `--color-dark-surface` |
+| `--color-text` | `--color-light-text` | `--color-dark-text` |
+
+These pairings meet or exceed WCAG contrast guidelines:
+
+| Pair | Contrast | Rating |
+| ---- | -------- | ------ |
+| Light `--color-bg` / `--color-text` | 18.88:1 | AAA |
+| Light `--color-surface` / `--color-text` | 16.87:1 | AAA |
+| Dark `--color-bg` / `--color-text` | 16.02:1 | AAA |
+| Dark `--color-surface` / `--color-text` | 13.39:1 | AAA |
+
 ## Local File Storage
 
 Some API routes persist data to the filesystem when running locally. This file-based storage is best effort and may be cleared between runs. Production deployments fall back to a no-op implementation or external storage via `lib/store`.
@@ -27,6 +60,12 @@ Some API routes persist data to the filesystem when running locally. This file-b
 ## Adding New Apps
 
 See [New App Checklist](./docs/new-app-checklist.md) to ensure all required steps are completed.
+
+### Using the New-App Generator
+
+Run `yarn new-app <id>` to scaffold a new application. The generator creates a stub in
+`apps/<id>/` and a matching component under `components/apps/`, then injects an entry into
+`apps.config.js`.
 
 Heavy applications should be loaded with [`next/dynamic`](https://nextjs.org/docs/advanced-features/dynamic-import) so that they do not bloat the initial bundle.
 
@@ -128,18 +167,37 @@ To introduce a new game:
 
 The new game will then appear alongside the other games on the desktop.
 
-## Theme Selection
+## Theming and Accent Switching
 
 Icon themes can be changed at runtime by setting the `NEXT_PUBLIC_THEME`
 environment variable. It should correspond to a directory inside
-`public/themes/`. When unspecified, the application defaults to the
-`Yaru` theme.
+`public/themes/`; when unspecified, the application defaults to the `Yaru`
+theme. Accent colours come from `styles/tokens.css` and can be overridden
+by updating the `--color-accent` token or extending the Settings app to
+persist a user-selected accent.
+
+## Accessibility Guidelines
+
+When adding features or applications:
+
+- Ensure all interactive elements are reachable via keyboard navigation.
+- Provide descriptive `aria-label`s for icons and unlabeled controls.
+- Maintain sufficient colour contrast, especially when introducing custom
+  themes or accent colours.
+- Use semantic HTML and test with screen readers when possible.
 
 ## Privacy
 
 The contact application records only non-PII metadata in Google Analytics.
 Submissions trigger an event with `{ category: "contact", action: "submit_success" }`, and the
 free-text fields (name, subject, message) are never sent to analytics.
+
+## CI Overview
+
+The [CI workflow](.github/workflows/ci.yml) installs dependencies, lints,
+type-checks, builds the project, runs Jest and Vitest tests, executes
+Playwright end-to-end tests, and collects Lighthouse metrics. Test and
+Lighthouse reports are uploaded as artifacts for inspection.
 
 ## Required CI Secrets
 
@@ -154,6 +212,13 @@ The GitHub Actions workflow relies on the following secrets configured in the re
 - `NEXT_PUBLIC_AXIOM_DATASET`
 
 These secrets provide the values for the corresponding environment variables during the build step.
+
+## Design Sources
+
+Reference colour and icon assets come from upstream Ubuntu resources:
+
+- [Ubuntu brand colour palette](https://design.ubuntu.com/brand/colour-palette/)
+- [Yaru icon theme](https://github.com/ubuntu/yaru)
 
 ## Deployment and WebSocket Support
 
