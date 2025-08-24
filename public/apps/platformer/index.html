@@ -11,7 +11,10 @@
     <select id="levelSelect"></select>
     <div id="timer"></div>
     <button id="mode">Edit</button>
-    <button id="export">Export</button>
+    <button id="exportReplay">Export Replay</button>
+    <label><input type="checkbox" id="touchToggle" />Touch</label>
+    <label><input type="checkbox" id="reduceMotion" />Reduced Motion</label>
+    <label><input type="checkbox" id="highContrast" />High Contrast</label>
     <div id="palette" class="hidden">
       <button data-tile="0">Empty</button>
       <button data-tile="1">Solid</button>
@@ -20,6 +23,11 @@
       <button data-tile="4">Checkpoint</button>
       <button data-tile="5">Coin</button>
     </div>
+  </div>
+  <div id="touchControls" class="hidden">
+    <button id="leftBtn">◀</button>
+    <button id="rightBtn">▶</button>
+    <button id="jumpBtn">⤒</button>
   </div>
   <script type="module" src="main.js"></script>
 </body>

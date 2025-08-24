@@ -14,12 +14,24 @@ let currentLevel = '';
 let levelStart = 0;
 
 const player = new Player();
-const camera = { x: 0, y: 0, deadZone: { w: 100, h: 60 } };
+const camera = { x: 0, y: 0, deadZone: { w: 100, h: 60 }, lookAhead: 40 };
 const keys = {};
 const effects = [];
+let replay = [];
+let progress = JSON.parse(localStorage.getItem('platformerProgress') || '{}');
+let reduceMotion = false;
+let highContrast = false;
 
 const timerEl = document.getElementById('timer');
 const levelSelect = document.getElementById('levelSelect');
+const exportBtn = document.getElementById('exportReplay');
+const touchToggle = document.getElementById('touchToggle');
+const touchControls = document.getElementById('touchControls');
+const leftBtn = document.getElementById('leftBtn');
+const rightBtn = document.getElementById('rightBtn');
+const jumpBtn = document.getElementById('jumpBtn');
+const reducedToggle = document.getElementById('reduceMotion');
+const contrastToggle = document.getElementById('highContrast');
 
 // levels list
 const levels = ['level1.json', 'level2.json'];
@@ -30,6 +42,35 @@ levels.forEach((lvl, i) => {
   levelSelect.appendChild(opt);
 });
 levelSelect.onchange = () => loadLevel(levelSelect.value);
+exportBtn.onclick = () => exportReplay();
+touchToggle.onchange = () => {
+  touchControls.classList.toggle('hidden', !touchToggle.checked);
+};
+[leftBtn, rightBtn, jumpBtn].forEach(btn => {
+  btn?.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (btn === leftBtn) keys['ArrowLeft'] = true;
+    if (btn === rightBtn) keys['ArrowRight'] = true;
+    if (btn === jumpBtn) keys['Space'] = true;
+  });
+  btn?.addEventListener('pointerup', () => {
+    if (btn === leftBtn) keys['ArrowLeft'] = false;
+    if (btn === rightBtn) keys['ArrowRight'] = false;
+    if (btn === jumpBtn) keys['Space'] = false;
+  });
+  btn?.addEventListener('pointerleave', () => {
+    if (btn === leftBtn) keys['ArrowLeft'] = false;
+    if (btn === rightBtn) keys['ArrowRight'] = false;
+    if (btn === jumpBtn) keys['Space'] = false;
+  });
+});
+reducedToggle.onchange = () => {
+  reduceMotion = reducedToggle.checked;
+};
+contrastToggle.onchange = () => {
+  highContrast = contrastToggle.checked;
+  document.body.classList.toggle('high-contrast', highContrast);
+};
 
 // input handling
 window.addEventListener('keydown', e => {
@@ -77,6 +118,7 @@ function loadLevel(name) {
       }
       currentLevel = name;
       levelStart = performance.now();
+      replay = [];
       gaEvent('level_start', { level: name });
     });
 }
@@ -85,15 +127,31 @@ function loadLevel(name) {
 loadLevel(levels[0]);
 
 // game loop
+const FIXED_DT = 1 / 60;
 let last = 0;
+let acc = 0;
 function loop(ts) {
-  const dt = Math.min((ts - last) / 1000, 0.1);
+  const delta = Math.min((ts - last) / 1000, 0.05);
   last = ts;
-  update(dt);
+  acc += delta;
+  while (acc >= FIXED_DT) {
+    update(FIXED_DT);
+    acc -= FIXED_DT;
+  }
   draw();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
+function pollGamepad(input) {
+  const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
+  if (gp) {
+    const x = gp.axes[0] || 0;
+    if (x < -0.3) input.left = true;
+    if (x > 0.3) input.right = true;
+    if (gp.buttons[0]?.pressed || gp.buttons[1]?.pressed) input.jump = true;
+  }
+}
 
 function update(dt) {
   const input = {
@@ -101,23 +159,28 @@ function update(dt) {
     right: keys['ArrowRight'],
     jump: keys['Space']
   };
+  pollGamepad(input);
+  replay.push({ t: (performance.now() - levelStart) / 1000, ...input });
   updatePhysics(player, input, dt);
   movePlayer(dt);
   updateEffects(dt);
 
   if (player.y > mapHeight * tileSize) respawn();
 
-  // camera with dead zone
+  // camera with dead zone and look ahead
+  const look = (player.vx > 0 ? 1 : player.vx < 0 ? -1 : 0) * camera.lookAhead;
+  const targetX = player.x + player.w / 2 + look;
+  const targetY = player.y + player.h / 2;
   const centerX = camera.x + canvas.width / 2;
   const centerY = camera.y + canvas.height / 2;
-  if (player.x < centerX - camera.deadZone.w / 2)
-    camera.x = player.x - (canvas.width / 2 - camera.deadZone.w / 2);
-  if (player.x + player.w > centerX + camera.deadZone.w / 2)
-    camera.x = player.x + player.w - (canvas.width / 2 + camera.deadZone.w / 2);
-  if (player.y < centerY - camera.deadZone.h / 2)
-    camera.y = player.y - (canvas.height / 2 - camera.deadZone.h / 2);
-  if (player.y + player.h > centerY + camera.deadZone.h / 2)
-    camera.y = player.y + player.h - (canvas.height / 2 + camera.deadZone.h / 2);
+  if (targetX < centerX - camera.deadZone.w / 2)
+    camera.x = targetX - (canvas.width / 2 - camera.deadZone.w / 2);
+  if (targetX > centerX + camera.deadZone.w / 2)
+    camera.x = targetX - (canvas.width / 2 + camera.deadZone.w / 2);
+  if (targetY < centerY - camera.deadZone.h / 2)
+    camera.y = targetY - (canvas.height / 2 - camera.deadZone.h / 2);
+  if (targetY > centerY + camera.deadZone.h / 2)
+    camera.y = targetY - (canvas.height / 2 + camera.deadZone.h / 2);
   camera.x = Math.max(0, Math.min(camera.x, mapWidth * tileSize - canvas.width));
   camera.y = Math.max(0, Math.min(camera.y, mapHeight * tileSize - canvas.height));
 
@@ -126,6 +189,8 @@ function update(dt) {
 
   if (coinTotal === 0 && score > 0) {
     gaEvent('level_complete', { level: currentLevel, time: elapsed });
+    progress[currentLevel] = Math.min(progress[currentLevel] || Infinity, parseFloat(elapsed));
+    localStorage.setItem('platformerProgress', JSON.stringify(progress));
     coinTotal = -1; // prevent repeat
   }
 }
@@ -139,10 +204,11 @@ function respawn() {
 function movePlayer(dt) {
   // vertical move first
   let ny = player.y + player.vy * dt;
+  const prevBottom = player.y + player.h;
   player.onGround = false;
   const dirY = Math.sign(player.vy);
   if (dirY !== 0) {
-    const rangeY = dirY > 0 ? [player.y + player.h, ny + player.h] : [ny, player.y];
+    const rangeY = dirY > 0 ? [prevBottom, ny + player.h] : [ny, player.y];
     const startTileY = Math.floor(rangeY[0] / tileSize);
     const endTileY = Math.floor(rangeY[1] / tileSize);
     for (let ty = startTileY; dirY > 0 ? ty <= endTileY : ty >= endTileY; ty += dirY) {
@@ -152,11 +218,27 @@ function movePlayer(dt) {
       const tilesRight = Math.floor((player.x + player.w - 1) / tileSize);
       for (let tx = tilesLeft; tx <= tilesRight; tx++) {
         const t = getTile(tx, ty);
-        if (t === 1) {
+        if (t === 1 || t === 4 && dirY > 0 && prevBottom <= minY) {
           if (dirY > 0) {
             ny = Math.min(ny, minY - player.h);
             player.onGround = true;
-          } else ny = Math.max(ny, maxY);
+            player.vy = 0;
+          } else {
+            ny = Math.max(ny, maxY);
+            player.vy = 0; // head-bump smoothing
+          }
+        } else if (dirY > 0 && (t === 2 || t === 3)) {
+          const tileLeft = tx * tileSize;
+          const tileBottom = minY + tileSize;
+          const localX = (player.x + player.w / 2) - tileLeft;
+          let floorY = tileBottom;
+          if (t === 2) floorY = tileBottom - localX;
+          if (t === 3) floorY = tileBottom - (tileSize - localX);
+          if (prevBottom <= floorY && ny + player.h >= floorY) {
+            ny = floorY - player.h;
+            player.onGround = true;
+            player.vy = 0;
+          }
         }
       }
     }
@@ -166,6 +248,7 @@ function movePlayer(dt) {
   // horizontal move
   let nx = player.x + player.vx * dt;
   const dirX = Math.sign(player.vx);
+  const step = 4;
   if (dirX !== 0) {
     const rangeX = dirX > 0 ? [player.x + player.w, nx + player.w] : [nx, player.x];
     const startTileX = Math.floor(rangeX[0] / tileSize);
@@ -178,8 +261,14 @@ function movePlayer(dt) {
       for (let ty = tilesTop; ty <= tilesBottom; ty++) {
         const t = getTile(tx, ty);
         if (t === 1) {
-          if (dirX > 0) nx = Math.min(nx, minX - player.w);
-          else nx = Math.max(nx, maxX);
+          const topY = ty * tileSize - player.h;
+          if (player.y > topY && player.y < topY + step && !getTile(tx, ty - 1)) {
+            player.y = topY;
+            player.onGround = true;
+          } else {
+            if (dirX > 0) nx = Math.min(nx, minX - player.w);
+            else nx = Math.max(nx, maxX);
+          }
         }
       }
     }
@@ -227,10 +316,12 @@ function drawEffects() {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   // parallax background
-  ctx.fillStyle = '#0a0a0a';
-  ctx.fillRect(-camera.x * 0.5, -camera.y * 0.5, canvas.width * 2, canvas.height * 2);
-  ctx.fillStyle = '#141414';
-  ctx.fillRect(-camera.x * 0.2, -camera.y * 0.2, canvas.width * 2, canvas.height * 2);
+  if (!reduceMotion) {
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(-camera.x * 0.5, -camera.y * 0.5, canvas.width * 2, canvas.height * 2);
+    ctx.fillStyle = '#141414';
+    ctx.fillRect(-camera.x * 0.2, -camera.y * 0.2, canvas.width * 2, canvas.height * 2);
+  }
 
   for (let y = 0; y < mapHeight; y++) {
     for (let x = 0; x < mapWidth; x++) {
@@ -239,11 +330,24 @@ function draw() {
       const screenX = x * tileSize - camera.x;
       const screenY = y * tileSize - camera.y;
       if (t === 1) {
-        ctx.fillStyle = '#888';
+        ctx.fillStyle = highContrast ? '#fff' : '#888';
         ctx.fillRect(screenX, screenY, tileSize, tileSize);
+      } else if (t === 2 || t === 3) {
+        ctx.fillStyle = highContrast ? '#fff' : '#888';
+        ctx.beginPath();
+        if (t === 2) {
+          ctx.moveTo(screenX, screenY);
+          ctx.lineTo(screenX + tileSize, screenY + tileSize);
+          ctx.lineTo(screenX, screenY + tileSize);
+        } else {
+          ctx.moveTo(screenX + tileSize, screenY);
+          ctx.lineTo(screenX + tileSize, screenY + tileSize);
+          ctx.lineTo(screenX, screenY + tileSize);
+        }
+        ctx.fill();
       } else if (t === 4) {
         ctx.fillStyle = 'yellow';
-        ctx.fillRect(screenX, screenY, tileSize, tileSize);
+        ctx.fillRect(screenX, screenY, tileSize, 4);
       } else if (t === 5) {
         ctx.fillStyle = 'gold';
         ctx.beginPath();
@@ -262,3 +366,14 @@ function draw() {
 window.addEventListener('keydown', e => {
   if (e.code === 'KeyR') respawn();
 });
+
+function exportReplay() {
+  const data = JSON.stringify({ level: currentLevel, replay }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${currentLevel}-replay.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
