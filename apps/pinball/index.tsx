@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
-import { Howl } from 'howler';
 
 const {
   Engine,
@@ -43,23 +42,39 @@ export default function Pinball() {
   const nudgesRef = useRef<number[]>([]);
   const [tilt, setTilt] = useState(false);
   const [shakeOffset, setShakeOffset] = useState({ x: 0, y: 0 });
-  const bumperSound = useRef(
-    new Howl({
-      src: [
-        'data:audio/wav;base64,' +
-          'UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YSADAAAAAFsrllErbrp9a34pcKVUHi8FBHPYjbHukxeDBIH1jWKoK83397UjO0vcafl7bX/Qc4Fa' +
-          'fzYLDCzgD7hzmBeFQoCIirKi5cX27+sblUQjZbt57n8BdwJgqT0FFAXo2b5hnZOHAYCTh2Gd2b4F6AUUqT0CYAF37n+7eSNllUTrG/bv5cWyooiKQoAXhXOYD7gs4AsM' +
-          'fzaBWtBzbX/5e9xpO0u1I/f3K81iqPWNBIEXg+6TjbFz2AUEHi+lVClwa366fStullFbKwAApdRqrtWRRoKVgdePW6vi0Pv7jSdzThJs6Xz8fgtynlfVMgkIS9zFtCSW' +
-          'B4STgDCMf6WByfXz1B/xR41n6Xq+f3h1Tl0bOgoQFeRru92aRYYSgP+I/p9Xwvvr+xcnQZ9ibXj/f214n2InQfsX++tXwv6f/4gSgEWG3ZpruxXkChAbOk5deHW+f+l6' +
-          'jWfxR9Qf9fOByX+lMIyTgAeEJJbFtEvcCQjVMp5XC3L8ful8EmxzTo0n+/vi0Fur14+VgUaC1ZFqrqXUAABbK5ZRK266fWt+KXClVB4vBQRz2I2x7pMXgwSB9Y1iqCvN' +
-          '9/e1IztL3Gn5e21/0HOBWn82Cwws4A+4c5gXhUKAiIqyouXF9u/rG5VEI2W7ee5/AXcCYKk9BRQF6Nm+YZ2ThwGAk4dhndm+BegFFKk9AmABd+5/u3kjZZVE6xv27+XF' +
-          'sqKIikKAF4VzmA+4LOALDH82gVrQc21/+XvcaTtLtSP39yvNYqj1jQSBF4Puk42xc9gFBB4vpVQpcGt+un0rbpZRWysAAKXUaq7VkUaClYHXj1ur4tD7+40nc04SbOl8' +
-          '/H4Lcp5X1TIJCEvcxbQklgeEk4AwjH+lgcn189Qf8UeNZ+l6vn94dU5dGzoKEBXka7vdmkWGEoD/iP6fV8L76/sXJ0GfYm14/39teJ9iJ0H7F/vrV8L+n/+IEoBFht2a' +
-          'a7sV5AoQGzpOXXh1vn/peo1n8UfUH/Xzgcl/pTCMk4AHhCSWxbRL3AkI1TKeVwty/H7pfBJsc06NJ/v74tBbq9ePlYFGgtWRaq6l1A=='
-      ],
-    })
-  ).current;
+  const bumperSound = useRef<any>(null);
 
+  useEffect(() => {
+    let mounted = true;
+    const src = [
+      'data:audio/wav;base64,' +
+        'UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YSADAAAAAFsrllErbrp9a34pcKVUHi8FBHPYjbHukxeDBIH1jWKoK83397UjO0vca' +
+        'fl7bX/Qc4Fa' +
+        'fzYLDCzgD7hzmBeFQoCIirKi5cX27+sblUQjZbt57n8BdwJgqT0FFAXo2b5hnZOHAYCTh2Gd2b4F6AUUqT0CYAF37n+7eSNllUTrG/bv5cWyooiKQoAXh' +
+        'XOYD7gs4AsM' +
+        'fzaBWtBzbX/5e9xpO0u1I/f3K81iqPWNBIEXg+6TjbFz2AUEHi+lVClwa366fStullFbKwAApdRqrtWRRoKVgdePW6vi0Pv7jSdzThJs6Xz8fgtynlfVM' +
+        'gkIS9zFtCSW' +
+        'B4STgDCMf6WByfXz1B/xR41n6Xq+f3h1Tl0bOgoQFeRru92aRYYSgP+I/p9Xwvvr+xcnQZ9ibXj/f214n2InQfsX++tXwv6f/4gSgEWG3ZpruxXkChAbO' +
+        'k5deHW+f+l6' +
+        'jWfxR9Qf9fOByX+lMIyTgAeEJJbFtEvcCQjVMp5XC3L8ful8EmxzTo0n+/vi0Fur14+VgUaC1ZFqrqXUAABbK5ZRK266fWt+KXClVB4vBQRz2I2x7pMXg' +
+        'wSB9Y1iqCvN' +
+        '9/e1IztL3Gn5e21/0HOBWn82Cwws4A+4c5gXhUKAiIqyouXF9u/rG5VEI2W7ee5/AXcCYKk9BRQF6Nm+YZ2ThwGAk4dhndm+BegFFKk9AmABd+5/u3kjZ' +
+        'ZVE6xv27+XF' +
+        'sqKIikKAF4VzmA+4LOALDH82gVrQc21/+XvcaTtLtSP39yvNYqj1jQSBF4Puk42xc9gFBB4vpVQpcGt+un0rbpZRWysAAKXUaq7VkUaClYHXj1ur4tD7+' +
+        '40nc04SbOl8' +
+        '/H4Lcp5X1TIJCEvcxbQklgeEk4AwjH+lgcn189Qf8UeNZ+l6vn94dU5dGzoKEBXka7vdmkWGEoD/iP6fV8L76/sXJ0GfYm14/39teJ9iJ0H7F/vrV8L+n' +
+        '/+IEoBFht2a' +
+        'a7sV5AoQGzpOXXh1vn/peo1n8UfUH/Xzgcl/pTCMk4AHhCSWxbRL3AkI1TKeVwty/H7pfBJsc06NJ/v74tBbq9ePlYFGgtWRaq6l1A==',
+    ];
+    import('howler').then(({ Howl }) => {
+      if (!mounted) return;
+      bumperSound.current = new Howl({ src });
+    });
+    return () => {
+      mounted = false;
+      bumperSound.current?.unload();
+    };
+  }, []);
   useEffect(() => {
     let mounted = true;
     const width = 400;
@@ -303,7 +318,7 @@ export default function Pinball() {
       setMultiplier((m) => m + 1);
     }
     setScore((s) => s + 100 * multiplier);
-    bumperSound.play();
+    bumperSound.current?.play();
     shake();
     if (x !== undefined && y !== undefined) {
       flashLight(x, y);
@@ -357,17 +372,19 @@ export default function Pinball() {
   }
 
   function triggerHaptics() {
-    if (navigator.vibrate) {
-      navigator.vibrate(50);
-    }
-    const pads = navigator.getGamepads();
-    const pad = pads[0];
-    if (pad && pad.vibrationActuator) {
-      pad.vibrationActuator.playEffect('dual-rumble', {
-        duration: 50,
-        strongMagnitude: 1,
-        weakMagnitude: 1,
-      });
+    if (typeof navigator !== 'undefined') {
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const pad = pads[0];
+      if (pad && pad.vibrationActuator) {
+        pad.vibrationActuator.playEffect('dual-rumble', {
+          duration: 50,
+          strongMagnitude: 1,
+          weakMagnitude: 1,
+        });
+      }
     }
   }
 

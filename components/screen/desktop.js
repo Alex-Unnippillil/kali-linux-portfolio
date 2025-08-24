@@ -429,79 +429,24 @@ export class Desktop extends Component {
       }
     }
 
-    openApp = (objId) => {
+    return result;
+  };
+  openApp = (objId) => {
+    // google analytics
+    ReactGA.event({
+      category: `Open App`,
+      action: `Opened ${objId} window`,
+    });
 
-        // google analytics
-        ReactGA.event({
-            category: `Open App`,
-            action: `Opened ${objId} window`
-        });
+    // if the app is disabled
+    if (this.state.disabled_apps[objId]) return;
 
-        // if the app is disabled
-        if (this.state.disabled_apps[objId]) return;
-
-        // ensure the window is created and not minimized on first open
-        const closed_windows = { ...this.state.closed_windows };
-        const minimized_windows = { ...this.state.minimized_windows };
-        if (closed_windows[objId] === true) {
-            closed_windows[objId] = false;
-            minimized_windows[objId] = false;
-        }
-        this.setState({ closed_windows, minimized_windows });
-
-        if (this.state.minimized_windows[objId]) {
-            // focus this app's window
-            this.focus(objId);
-
-            // set window's last position
-            var r = document.querySelector("#" + objId);
-            r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-
-            // tell childs that his app has been not minimised
-            this.setState((s) => ({ minimized_windows: { ...s.minimized_windows, [objId]: false } }));
-            return;
-        }
-
-        //if app is already opened
-        if (this.app_stack.includes(objId)) this.focus(objId);
-        else {
-            var frequentApps = localStorage.getItem('frequentApps') ? JSON.parse(localStorage.getItem('frequentApps')) : [];
-            var currentApp = frequentApps.find(app => app.id === objId);
-            if (currentApp) {
-                frequentApps.forEach((app) => {
-                    if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
-                    }
-                });
-            } else {
-                frequentApps.push({ id: objId, frequency: 1 }); // new app opened
-            }
-
-            frequentApps.sort((a, b) => {
-                if (a.frequency < b.frequency) {
-                    return 1;
-                }
-                if (a.frequency > b.frequency) {
-                    return -1;
-                }
-                return 0; // sort according to decreasing frequencies
-            });
-
-            localStorage.setItem("frequentApps", JSON.stringify(frequentApps));
-
-            setTimeout(() => {
-                this.setState(
-                    (s) => ({
-                        closed_windows: { ...s.closed_windows, [objId]: false },
-                        favourite_apps: { ...s.favourite_apps, [objId]: true },
-                        allAppsView: false,
-                    }),
-                    () => this.focus(objId)
-                );
-                this.app_stack.push(objId);
-            }, 200);
-        }
-
+    // ensure the window is created and not minimized on first open
+    const closed_windows = { ...this.state.closed_windows };
+    const minimized_windows = { ...this.state.minimized_windows };
+    if (closed_windows[objId] === true) {
+      closed_windows[objId] = false;
+      minimized_windows[objId] = false;
     }
     this.setState({ closed_windows, minimized_windows });
 
@@ -509,41 +454,22 @@ export class Desktop extends Component {
       // focus this app's window
       this.focus(objId);
 
-        // close window
-        this.setState((s) => {
-            const closed_windows = { ...s.closed_windows, [objId]: true };
-            const favourite_apps = { ...s.favourite_apps };
-            if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
-            return { closed_windows, favourite_apps };
-        });
-    }
+      // set window's last position
+      const r = document.querySelector('#' + objId);
+      r.style.transform = `translate(${r.style.getPropertyValue('--window-transform-x')},${r.style.getPropertyValue('--window-transform-y')}) scale(1)`;
 
-    focus = (objId) => {
-        // removes focus from all window and 
-        // gives focus to window with 'id = objId'
-        this.setState((s) => {
-            const focused_windows = { ...s.focused_windows };
-            focused_windows[objId] = true;
-            for (let key in focused_windows) {
-                if (focused_windows.hasOwnProperty(key) && key !== objId) {
-                    focused_windows[key] = false;
-                }
-            }
-            return { focused_windows };
-        });
-    }
-
-
+      // tell childs that his app has been not minimised
+      this.setState((s) => ({ minimized_windows: { ...s.minimized_windows, [objId]: false } }));
       return;
     }
 
     //if app is already opened
     if (this.app_stack.includes(objId)) this.focus(objId);
     else {
-      var frequentApps = localStorage.getItem('frequentApps')
+      let frequentApps = localStorage.getItem('frequentApps')
         ? JSON.parse(localStorage.getItem('frequentApps'))
         : [];
-      var currentApp = frequentApps.find((app) => app.id === objId);
+      const currentApp = frequentApps.find((app) => app.id === objId);
       if (currentApp) {
         frequentApps.forEach((app) => {
           if (app.id === currentApp.id) {
@@ -555,12 +481,8 @@ export class Desktop extends Component {
       }
 
       frequentApps.sort((a, b) => {
-        if (a.frequency < b.frequency) {
-          return 1;
-        }
-        if (a.frequency > b.frequency) {
-          return -1;
-        }
+        if (a.frequency < b.frequency) return 1;
+        if (a.frequency > b.frequency) return -1;
         return 0; // sort according to decreasing frequencies
       });
 
@@ -580,8 +502,7 @@ export class Desktop extends Component {
       }, delay);
     }
   };
-
-  closeApp = (objId) => {
+closeApp = (objId) => {
     // remove app from the app stack
     this.app_stack.splice(this.app_stack.indexOf(objId), 1);
 

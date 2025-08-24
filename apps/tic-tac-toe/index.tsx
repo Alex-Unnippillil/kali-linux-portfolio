@@ -502,6 +502,7 @@ const TicTacToeComponent: React.FC = () => {
   }
 
   return (
+    <>
     <div className="h-full w-full flex flex-col md:flex-row items-center justify-center bg-panel text-white p-4 space-y-4 md:space-y-0 md:space-x-4">
       <div className="flex flex-col items-center">
         {mistakeSlider}
@@ -634,6 +635,7 @@ const TicTacToeComponent: React.FC = () => {
         animation: draw 0.5s ease forwards;
       }
     `}</style>
+    </>
   );
 };
 

@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { validateRequest } from '../../lib/validate';
 import { UserInputError, withErrorHandler } from '../../lib/errors';
 import { fetchRobots, RobotsData } from '../../lib/robots';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 import { XMLParser } from 'fast-xml-parser';
 

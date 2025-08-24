@@ -1,5 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { rateLimit } from '../../lib/rateLimiter';
 import { setupUrlGuard } from '../../lib/urlGuard';
+
+/**
+ * RDAP domain lookup using rdap.org.
+ * Rate limited to 60 requests per minute.
+ */
 setupUrlGuard();
 
 let tldCache: Set<string> | null = null;
@@ -37,6 +43,7 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (!(await rateLimit(req, res))) return;
   const { domain } = req.query;
   if (typeof domain !== 'string') {
     res.status(400).json({ error: 'domain query parameter required' });

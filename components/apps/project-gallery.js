@@ -239,9 +239,7 @@ export default function ProjectGallery() {
                       rel="noopener noreferrer"
                       className="px-3 py-1 text-sm bg-blue-600 rounded hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-<<<<<< codex/add-aria-roles-and-keyboard-support
                       {strings.liveDemo}
-
                     </a>
                   )}
                   {project.repo && (
@@ -252,7 +250,6 @@ export default function ProjectGallery() {
                       className="px-3 py-1 text-sm border border-blue-600 rounded hover:bg-blue-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       {strings.repo}
-
                     </a>
                   )}
                 </div>

@@ -107,7 +107,7 @@ const FaviconHash: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const copy = useCallback((text: string) => {
-    if (!text) return;
+    if (!text || typeof navigator === 'undefined') return;
     navigator.clipboard?.writeText(text).catch(() => {});
   }, []);
 

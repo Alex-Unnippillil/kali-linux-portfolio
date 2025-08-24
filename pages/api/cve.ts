@@ -4,6 +4,10 @@ import { fetchEpssScores } from '../../lib/epss';
 import { rateLimitEdge } from '../../lib/rateLimiter';
 import { kv } from '../../lib/kv';
 
+/**
+ * CVE aggregation using NVD and other sources.
+ * Rate limited to 60 requests per minute.
+ */
 setupUrlGuard();
 
 export const config = {
