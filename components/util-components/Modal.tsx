@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useId } from 'react';
+import messages from '../../messages/en.json';
 
 interface ModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ const focusableSelector =
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -48,20 +50,26 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
       role="dialog"
       aria-modal="true"
+      aria-labelledby={title ? titleId : undefined}
     >
       <div
         ref={dialogRef}
         className="bg-[var(--color-surface)] text-[var(--color-text)] p-4 rounded shadow-lg w-11/12 max-w-md"
       >
-        {title && <h2 className="text-lg font-bold mb-2">{title}</h2>}
+        {title && (
+          <h2 id={titleId} className="text-lg font-bold mb-2">
+            {title}
+          </h2>
+        )}
         <div>{children}</div>
         <div className="mt-4 text-right">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-[var(--color-accent)] text-black rounded"
+            className="px-4 py-2 bg-[var(--color-accent)] text-black rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text)]"
             data-autofocus
+            aria-label={messages.modal.close}
           >
-            Close
+            {messages.modal.close}
           </button>
         </div>
       </div>

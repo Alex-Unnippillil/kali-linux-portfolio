@@ -117,7 +117,10 @@ function parseSpdx(data: any): ParsedSbom {
   return { components, graph };
 }
 
-export async function fetchOsv(component: SbomComponent): Promise<void> {
+export async function fetchOsv(
+  component: SbomComponent,
+  signal?: AbortSignal,
+): Promise<void> {
   if (!component.version) {
     component.vulns = [];
     return;
@@ -130,6 +133,7 @@ export async function fetchOsv(component: SbomComponent): Promise<void> {
         version: component.version,
         package: { name: component.name },
       }),
+      signal,
     });
     if (!res.ok) return;
     const json = await res.json();
