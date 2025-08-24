@@ -2,7 +2,17 @@
 
 1. **Install dependencies** – ensure [Node.js 20](https://nodejs.org/) and Yarn 4 are available. `nvm install 20 && nvm use 20` sets the correct Node version, and `corepack enable` activates Yarn 4.
 2. **Install packages** – run `yarn` to install project dependencies.
-3. **Environment** – copy `.env.example` to `.env.local` and fill in required variables like `JWT_SECRET`.
+3. **Environment** – copy `.env.example` to `.env.local` and set variables:
+
+   **Required for production**
+   - `JWT_SECRET` – secret used to sign JWT tokens.
+
+   **Optional**
+   - `NEXT_PUBLIC_ENABLE_ANALYTICS`, `NEXT_PUBLIC_TRACKING_ID`, `NEXT_PUBLIC_AXIOM_TOKEN`, `NEXT_PUBLIC_AXIOM_DATASET` – analytics.
+   - `NEXT_PUBLIC_SERVICE_ID`, `NEXT_PUBLIC_TEMPLATE_ID`, `NEXT_PUBLIC_USER_ID` – email configuration.
+   - `NEXT_PUBLIC_YOUTUBE_API_KEY` – YouTube data.
+   - `NEXT_PUBLIC_THEME` – UI theme (defaults to `Yaru`).
+   - `USER_STORE_FILE` – local path for development-only user stats.
 4. **Run the app** – start the development server with `yarn dev`.
 5. **Type-check** – run `yarn typecheck` to verify TypeScript types. This command also runs in CI.
 
