@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
-import {
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+
   getLicenseInfo,
   LicenseInfo,
   LicenseMatchResult,
@@ -26,8 +26,9 @@ const LicenseClassifier: React.FC = () => {
   });
   const [files, setFiles] = useState<FileCache>({});
   const [progress, setProgress] = useState(0);
-  const [running, setRunning] = useState(false);
-  const controllerRef = useRef<AbortController | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const workerRef = useRef<Worker>();
+n
 
   const analyze = () => {
     if (!text.trim()) {
@@ -59,41 +60,46 @@ const LicenseClassifier: React.FC = () => {
       });
   };
 
-  const handleFiles = useCallback(
-    async (fileList: FileList) => {
-      const cache: FileCache = { ...files };
-      const arr = Array.from(fileList);
-      const controller = new AbortController();
-      controllerRef.current = controller;
-      setProgress(0);
-      setRunning(true);
-      try {
-        for (let i = 0; i < arr.length; i += 1) {
-          const file = arr[i];
-          if (cache[file.name]) continue;
-          const content = await file.text();
-          const parsed = parseSpdxExpression(content);
-          const detected = parsed.ids.map((id) => getLicenseInfo(id));
-          const fuzzy = await matchLicenseWorker(content, {
-            signal: controller.signal,
-            onProgress: (p) =>
-              setProgress(Math.round(((i + p) / arr.length) * 100)),
-          });
-          const conflicts = detectLicenseConflicts(
-            parsed.ids,
-            parsed.hasAnd && !parsed.hasOr
-          );
-          cache[file.name] = { detected, fuzzy, conflicts };
-        }
-        setFiles(cache);
-      } catch (err: any) {
-        if (err.name !== 'AbortError') console.error(err);
-      } finally {
-        setRunning(false);
+  useEffect(() => {
+    workerRef.current = new Worker(
+      new URL('./license-classifier.worker.ts', import.meta.url),
+    );
+    const worker = workerRef.current;
+    worker.onmessage = (e: MessageEvent) => {
+      const { type } = e.data as { type: string };
+      if (type === 'file') {
+        const { file, result } = e.data as {
+          file: string;
+          result: AnalysisResult;
+        };
+        setFiles((f) => ({ ...f, [file]: result }));
+      } else if (type === 'progress') {
+        const { processed, total } = e.data as {
+          processed: number;
+          total: number;
+        };
+        setProgress(Math.round((processed / total) * 100));
+      } else if (type === 'done' || type === 'cancelled') {
+        setProcessing(false);
       }
-    },
-    [files]
-  );
+    };
+    return () => worker.terminate();
+  }, []);
+
+  const handleFiles = useCallback((fileList: FileList) => {
+    setFiles({});
+    setProgress(0);
+    setProcessing(true);
+    workerRef.current?.postMessage({
+      type: 'analyze',
+      files: Array.from(fileList),
+    });
+  }, []);
+
+  const cancelProcessing = useCallback(() => {
+    workerRef.current?.postMessage({ type: 'cancel' });
+  }, []);
+
 
   const repoConflicts = useMemo(() => {
     const ids = Object.values(files).flatMap((r) =>
@@ -223,6 +229,24 @@ const LicenseClassifier: React.FC = () => {
           onChange={(e) => e.target.files && handleFiles(e.target.files)}
         />
       </div>
+
+      {processing && (
+        <div className="flex items-center space-x-2 mt-2">
+          <div className="flex-1 h-2 bg-gray-700 rounded">
+            <div
+              className="h-2 bg-green-500 rounded"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={cancelProcessing}
+            className="px-2 py-1 bg-red-600 rounded"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
 
       {Object.keys(files).length > 0 && (
         <div className="mt-4">
