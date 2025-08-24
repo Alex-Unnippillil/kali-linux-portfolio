@@ -5,6 +5,7 @@ import {
   spawnBullet,
   updateBullets,
   Bullet,
+  Quadtree,
 } from './utils';
 
 interface Vec { x: number; y: number; }
@@ -84,6 +85,24 @@ const Asteroids: React.FC = () => {
     let saucerTimer = 30 * 60;
     let score = 0;
     let level = 1;
+    let crt = false;
+    let safeMode = false;
+
+    const telemetry = (event: string, detail: any = {}) => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('telemetry', { detail: { event, ...detail } }));
+      }
+    };
+
+    const rumble = (strong: number, weak: number, duration: number) => {
+      if (safeMode) return;
+      const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
+      gp?.vibrationActuator?.playEffect?.('dual-rumble', {
+        duration,
+        strongMagnitude: strong,
+        weakMagnitude: weak,
+      }).catch?.(() => {});
+    };
 
     const spawnAsteroid = () => {
       const edge = Math.random() < 0.5 ? 0 : 1;
@@ -92,6 +111,7 @@ const Asteroids: React.FC = () => {
       const angle = Math.random() * TAU;
       const speed = Math.random() * 0.5 + 0.5 + level * 0.05;
       asteroids.push({ x, y, dx: Math.cos(angle) * speed, dy: Math.sin(angle) * speed, r: 40, verts: 8 });
+      telemetry('asteroidSpawn', { level });
     };
 
     const splitAsteroid = (index: number) => {
@@ -112,7 +132,11 @@ const Asteroids: React.FC = () => {
       }
       asteroids.splice(index, 1);
       score += 100;
-      if (score / 1000 > level) level += 1;
+      telemetry('asteroidSplit', { score });
+      if (score / 1000 > level) {
+        level += 1;
+        telemetry('levelUp', { level });
+      }
     };
 
     const spawnSaucer = () => {
@@ -122,6 +146,7 @@ const Asteroids: React.FC = () => {
       saucer.dx = (Math.random() < 0.5 ? 1 : -1) * (1 + level * 0.1);
       saucer.dy = (Math.random() - 0.5) * 1.5;
       saucer.cooldown = 120;
+      telemetry('ufoSpawn', { level });
     };
 
     const shoot = () => {
@@ -130,14 +155,42 @@ const Asteroids: React.FC = () => {
       const dy = Math.sin(ship.angle) * 6;
       spawnBullet(bullets, ship.x + dx * 2, ship.y + dy * 2, dx, dy, 60);
       ship.cooldown = 15;
+      telemetry('playerShoot');
+      rumble(0.5, 0.5, 100);
     };
 
     const handleKey = (e: KeyboardEvent, down: boolean) => {
       keys[e.key] = down;
       if (down && e.key === ' ') shoot();
+      if (down && e.key === 'c') {
+        crt = !crt;
+        canvas.classList.toggle('crt', crt);
+        telemetry('crt', { enabled: crt });
+      }
+      if (down && e.key === 's') {
+        safeMode = !safeMode;
+        canvas.classList.toggle('safe-mode', safeMode);
+        telemetry('safeMode', { enabled: safeMode });
+      }
     };
     window.addEventListener('keydown', (e) => handleKey(e, true));
     window.addEventListener('keyup', (e) => handleKey(e, false));
+
+    const handleTouch = (e: TouchEvent) => {
+      e.preventDefault();
+      const t = e.touches[0];
+      if (!t) return;
+      const rect = canvas.getBoundingClientRect();
+      const tx = t.clientX - rect.left;
+      const ty = t.clientY - rect.top;
+      ship.angle = Math.atan2(ty - ship.y, tx - ship.x);
+      ship.dx += Math.cos(ship.angle) * 0.1;
+      ship.dy += Math.sin(ship.angle) * 0.1;
+    };
+    const touchEnd = () => shoot();
+    canvas.addEventListener('touchstart', handleTouch, { passive: false });
+    canvas.addEventListener('touchmove', handleTouch, { passive: false });
+    canvas.addEventListener('touchend', touchEnd);
 
     let last = performance.now();
     let acc = 0;
@@ -182,6 +235,19 @@ const Asteroids: React.FC = () => {
         b.y = wrap(b.y, height);
       }
 
+      const tree = new Quadtree<{ index: number; asteroid: Asteroid }>({
+        x: 0,
+        y: 0,
+        w: width,
+        h: height,
+      });
+      for (let i = 0; i < asteroids.length; i++) {
+        const a = asteroids[i];
+        a.x = wrap(a.x + a.dx, width);
+        a.y = wrap(a.y + a.dy, height);
+        tree.insert({ x: a.x, y: a.y, r: a.r, data: { index: i, asteroid: a } });
+      }
+
       spawnTimer -= 1;
       if (spawnTimer <= 0) {
         spawnAsteroid();
@@ -206,15 +272,15 @@ const Asteroids: React.FC = () => {
         }
       }
 
-      for (let i = asteroids.length - 1; i >= 0; i--) {
-        const a = asteroids[i];
-        a.x = wrap(a.x + a.dx, width);
-        a.y = wrap(a.y + a.dy, height);
-        for (const b of bullets) {
-          if (!b.active) continue;
-          if (Math.hypot(a.x - b.x, a.y - b.y) < a.r + b.r) {
+      for (const b of bullets) {
+        if (!b.active) continue;
+        const candidates = tree.retrieve({ x: b.x, y: b.y, r: b.r });
+        for (const c of candidates) {
+          const { asteroid, index } = c.data;
+          if (Math.hypot(asteroid.x - b.x, asteroid.y - b.y) < asteroid.r + b.r) {
             b.active = false;
-            splitAsteroid(i);
+            splitAsteroid(index);
+            rumble(1, 1, 150);
             break;
           }
         }
@@ -232,7 +298,9 @@ const Asteroids: React.FC = () => {
           y: ship.y + Math.sin(ship.angle - 2.5) * ship.r,
         },
       ];
-      for (const a of asteroids) {
+      const shipCandidates = tree.retrieve({ x: ship.x, y: ship.y, r: ship.r });
+      for (const c of shipCandidates) {
+        const a = c.data.asteroid;
         if (polygonCircle(shipPoly, a.x, a.y, a.r)) {
           ship.x = width / 2;
           ship.y = height / 2;
@@ -240,6 +308,8 @@ const Asteroids: React.FC = () => {
           score = 0;
           level = 1;
           asteroids.length = 0;
+          rumble(1, 1, 300);
+          telemetry('shipHit');
           break;
         }
       }
@@ -253,6 +323,8 @@ const Asteroids: React.FC = () => {
           score = 0;
           level = 1;
           asteroids.length = 0;
+          rumble(1, 1, 300);
+          telemetry('shipHit');
           break;
         }
       }
@@ -268,13 +340,14 @@ const Asteroids: React.FC = () => {
         saucer: Saucer;
         score: number;
         level: number;
+        safeMode: boolean;
       },
     ) => {
-      const { ship, bullets, saucerBullets, asteroids, saucer, score, level } = state;
+      const { ship, bullets, saucerBullets, asteroids, saucer, score, level, safeMode } = state;
       context.clearRect(0, 0, width, height);
       context.lineWidth = 1.5;
       context.strokeStyle = '#ffffff';
-      context.shadowBlur = 4;
+      context.shadowBlur = safeMode ? 0 : 4;
       context.shadowColor = '#0ff';
       context.beginPath();
       // ship
@@ -347,7 +420,7 @@ const Asteroids: React.FC = () => {
         update();
         acc -= STEP;
       }
-      render({ ship, bullets, asteroids, saucer, saucerBullets, score, level });
+      render({ ship, bullets, asteroids, saucer, saucerBullets, score, level, safeMode });
       anim = requestAnimationFrame(loop);
     };
     anim = requestAnimationFrame(loop);
@@ -357,6 +430,9 @@ const Asteroids: React.FC = () => {
       window.removeEventListener('resize', resize);
       window.removeEventListener('keydown', (e) => handleKey(e, true));
       window.removeEventListener('keyup', (e) => handleKey(e, false));
+       canvas.removeEventListener('touchstart', handleTouch);
+       canvas.removeEventListener('touchmove', handleTouch);
+       canvas.removeEventListener('touchend', touchEnd);
       workerRef.current?.terminate();
     };
   }, []);

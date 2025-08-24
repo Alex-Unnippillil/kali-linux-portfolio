@@ -5,6 +5,8 @@ import { toPng } from 'html-to-image';
 
 const NODE_W = 120;
 const NODE_H = 40;
+const BOUNDARY_W = 200;
+const BOUNDARY_H = 150;
 const STRIDE = [
   'Spoofing',
   'Tampering',
@@ -23,6 +25,15 @@ interface DreadScores {
   discoverability: number;
 }
 
+interface Boundary {
+  id: string;
+  x: number;
+  y: number;
+  label: string;
+  width: number;
+  height: number;
+}
+
 interface Node {
   id: string;
   x: number;
@@ -37,6 +48,15 @@ interface Edge {
   from: string;
   to: string;
 }
+
+const MITIGATIONS: Record<StrideKey, string> = {
+  Spoofing: 'Use strong authentication',
+  Tampering: 'Validate input and integrity',
+  Repudiation: 'Employ auditing and logging',
+  'Information Disclosure': 'Encrypt and enforce access control',
+  'Denial of Service': 'Rate limit and add redundancy',
+  'Elevation of Privilege': 'Apply least privilege and patching',
+};
 
 const createStride = () =>
   STRIDE.reduce(
@@ -75,7 +95,7 @@ const NodeItem = React.memo(
         {...attributes}
         {...listeners}
         onClick={onSelect}
-        className="absolute px-2 py-1 bg-blue-600 rounded text-white cursor-move select-none flex items-center justify-center"
+        className="absolute z-10 px-2 py-1 bg-blue-600 rounded text-white cursor-move select-none flex items-center justify-center"
         style={style}
       >
         {node.label}
@@ -84,9 +104,37 @@ const NodeItem = React.memo(
   },
 );
 
+const BoundaryItem = React.memo(({ boundary }: { boundary: Boundary }) => {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: boundary.id,
+  });
+  const style = {
+    width: boundary.width,
+    height: boundary.height,
+    transform: CSS.Translate.toString({
+      x: boundary.x + (transform?.x ?? 0),
+      y: boundary.y + (transform?.y ?? 0),
+      scaleX: 1,
+      scaleY: 1,
+    }),
+  } as React.CSSProperties;
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className="absolute z-0 border-2 border-dashed border-red-500 text-red-500 cursor-move select-none flex items-start justify-start"
+      style={style}
+    >
+      <span className="bg-red-500 text-white text-xs px-1">{boundary.label}</span>
+    </div>
+  );
+});
+
 const ThreatModeler: React.FC = () => {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
+  const [boundaries, setBoundaries] = useState<Boundary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [addingEdge, setAddingEdge] = useState(false);
   const [edgeStart, setEdgeStart] = useState<string | null>(null);
@@ -107,14 +155,37 @@ const ThreatModeler: React.FC = () => {
     ]);
   };
 
+  const addBoundary = () => {
+    const id = `b${Date.now()}`;
+    setBoundaries((b) => [
+      ...b,
+      {
+        id,
+        x: 40,
+        y: 40,
+        label: `Boundary ${b.length + 1}`,
+        width: BOUNDARY_W,
+        height: BOUNDARY_H,
+      },
+    ]);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, delta } = event;
     const id = String(active.id);
-    setNodes((ns) =>
-      ns.map((n) =>
-        n.id === id ? { ...n, x: n.x + delta.x, y: n.y + delta.y } : n,
-      ),
-    );
+    if (id.startsWith('n')) {
+      setNodes((ns) =>
+        ns.map((n) =>
+          n.id === id ? { ...n, x: n.x + delta.x, y: n.y + delta.y } : n,
+        ),
+      );
+    } else if (id.startsWith('b')) {
+      setBoundaries((bs) =>
+        bs.map((b) =>
+          b.id === id ? { ...b, x: b.x + delta.x, y: b.y + delta.y } : b,
+        ),
+      );
+    }
   };
 
   const selectNode = (id: string) => {
@@ -151,6 +222,47 @@ const ThreatModeler: React.FC = () => {
     const link = document.createElement('a');
     link.href = url;
     link.download = 'diagram.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const enumerateThreats = () => {
+    const ths: {
+      node: string;
+      category: StrideKey;
+      risk: number;
+      mitigation: string;
+      residual: number;
+    }[] = [];
+    nodes.forEach((n) => {
+      const values = Object.values(n.dread);
+      const risk = values.reduce((a, b) => a + b, 0) / values.length;
+      (Object.entries(n.stride) as [StrideKey, boolean][]).forEach(
+        ([cat, enabled]) => {
+          if (enabled) {
+            const mitigation = MITIGATIONS[cat];
+            const residual = Math.max(risk - 2, 0);
+            ths.push({ node: n.label, category: cat, risk, mitigation, residual });
+          }
+        },
+      );
+    });
+    return ths;
+  };
+
+  const exportMarkdown = () => {
+    const threats = enumerateThreats();
+    let md = '# Threat Model\n\n';
+    md += '| Node | Threat | Risk | Mitigation | Residual Risk |\n';
+    md += '| ---- | ------ | ---- | ---------- | ------------- |\n';
+    threats.forEach((t) => {
+      md += `| ${t.node} | ${t.category} | ${t.risk.toFixed(1)} | ${t.mitigation} | ${t.residual.toFixed(1)} |\n`;
+    });
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'threats.md';
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -228,6 +340,9 @@ const ThreatModeler: React.FC = () => {
           <button className="bg-gray-700 px-2 rounded" onClick={addNode}>
             Add Node
           </button>
+          <button className="bg-gray-700 px-2 rounded" onClick={addBoundary}>
+            Add Boundary
+          </button>
           <button
             className="bg-gray-700 px-2 rounded"
             onClick={() => {
@@ -243,8 +358,14 @@ const ThreatModeler: React.FC = () => {
           <button className="bg-gray-700 px-2 rounded" onClick={exportJson}>
             Export JSON
           </button>
+          <button className="bg-gray-700 px-2 rounded" onClick={exportMarkdown}>
+            Export Markdown
+          </button>
         </div>
         <div ref={canvasRef} className="flex-1 relative bg-gray-800 rounded">
+          {boundaries.map((b) => (
+            <BoundaryItem key={b.id} boundary={b} />
+          ))}
           <svg className="absolute inset-0 w-full h-full pointer-events-none">
             {edgeElements}
           </svg>

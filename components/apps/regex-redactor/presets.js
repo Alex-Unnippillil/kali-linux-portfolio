@@ -37,6 +37,22 @@ export const PRESETS = [
       return '█'.repeat(match.length);
     },
   },
+  {
+    label: 'Secret',
+    pattern:
+      '(?i)(?:api[_-]?key|secret|token)\\s*[:=]\\s*[A-Za-z0-9._-]{10,}',
+    mask(match, option) {
+      const delimiter = match.includes(':') ? ':' : '=';
+      const [key, value] = match.split(delimiter);
+      const trimmed = value.trim();
+      if (option === 'partial') {
+        return `${key}${delimiter}${trimmed.slice(0, 4)}***`;
+      }
+      return `${key}${delimiter}` + '█'.repeat(trimmed.length);
+
+    },
+  },
 ];
 
+export const SAFE_PRESETS = PRESETS;
 export default PRESETS;

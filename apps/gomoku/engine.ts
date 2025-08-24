@@ -6,6 +6,11 @@ export enum Player {
   White = -1,
 }
 
+export enum OpeningRule {
+  FreeStyle = 'freestyle',
+  Standard = 'standard',
+}
+
 export type Board = Int8Array;
 
 export interface Move {
@@ -102,6 +107,34 @@ export const checkWin = (board: Board, player: Player): boolean => {
   return false;
 };
 
+export const checkWinFast = (board: Board, move: Move, player: Player): boolean => {
+  const dirs = [
+    [1, 0],
+    [0, 1],
+    [1, 1],
+    [1, -1],
+  ];
+  for (const [dx, dy] of dirs) {
+    let count = 1;
+    let cx = move.x + dx;
+    let cy = move.y + dy;
+    while (inBounds(cx, cy) && board[index(cx, cy)] === player) {
+      count += 1;
+      cx += dx;
+      cy += dy;
+    }
+    cx = move.x - dx;
+    cy = move.y - dy;
+    while (inBounds(cx, cy) && board[index(cx, cy)] === player) {
+      count += 1;
+      cx -= dx;
+      cy -= dy;
+    }
+    if (count >= WIN) return true;
+  }
+  return false;
+};
+
 function evaluateLine(line: Int8Array, player: Player): number {
   let score = 0;
   const opp = -player;
@@ -174,17 +207,22 @@ export const evaluate = (board: Board, player: Player): number => {
   return score;
 };
 
-export const generateMoves = (board: Board): Move[] => {
+export const generateMoves = (
+  board: Board,
+  player: Player,
+  rule: OpeningRule = OpeningRule.FreeStyle,
+): Move[] => {
   const moves: Move[] = [];
   let filled = false;
+  let stones = 0;
   for (let i = 0; i < board.length; i += 1) {
     if (board[i] !== 0) {
       filled = true;
-      break;
+      stones += 1;
     }
   }
+  const c = Math.floor(SIZE / 2);
   if (!filled) {
-    const c = Math.floor(SIZE / 2);
     return [{ x: c, y: c }];
   }
   const seen = new Set<number>();
@@ -206,11 +244,28 @@ export const generateMoves = (board: Board): Move[] => {
       }
     }
   }
-  return moves;
+  if (rule === OpeningRule.Standard && stones === 1) {
+    return moves.filter(
+      (m) => Math.max(Math.abs(m.x - c), Math.abs(m.y - c)) > 2,
+    );
+  }
+  const scored = moves.map((m) => {
+    const { board: nb } = applyMove(board, m, player);
+    const score = evaluate(nb, player);
+    return { m, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((s) => s.m);
 };
 
 interface SearchResult {
   score: number;
+  move?: Move;
+}
+
+interface TTEntry {
+  score: number;
+  depth: number;
   move?: Move;
 }
 
@@ -221,11 +276,20 @@ export const minimax = (
   alpha = -Infinity,
   beta = Infinity,
   capture = false,
+  rule: OpeningRule = OpeningRule.FreeStyle,
+  tt: Map<string, TTEntry> = new Map(),
   killer: Move[][] = [],
   ply = 0,
 ): SearchResult => {
-  if (depth === 0) return { score: evaluate(board, player) };
-  const moves = generateMoves(board);
+  const key = board.toString();
+  const ttEntry = tt.get(key);
+  if (ttEntry && ttEntry.depth >= depth) return { score: ttEntry.score, move: ttEntry.move };
+  if (depth === 0) {
+    const sc = evaluate(board, player);
+    tt.set(key, { score: sc, depth });
+    return { score: sc };
+  }
+  const moves = generateMoves(board, player, rule);
   const killerMove = killer[ply]?.[0];
   moves.sort((a, b) => {
     if (killerMove && a.x === killerMove.x && a.y === killerMove.y) return -1;
@@ -236,7 +300,18 @@ export const minimax = (
   let bestMove: Move | undefined;
   for (const m of moves) {
     const { board: nb } = applyMove(board, m, player, capture);
-    const { score } = minimax(nb, depth - 1, -player, -beta, -alpha, capture, killer, ply + 1);
+    const { score } = minimax(
+      nb,
+      depth - 1,
+      -player,
+      -beta,
+      -alpha,
+      capture,
+      rule,
+      tt,
+      killer,
+      ply + 1,
+    );
     const val = -score;
     if (val > bestScore) {
       bestScore = val;
@@ -249,6 +324,7 @@ export const minimax = (
       break;
     }
   }
+  tt.set(key, { score: bestScore, depth, move: bestMove });
   return { score: bestScore, move: bestMove };
 };
 
@@ -257,11 +333,24 @@ export const iterativeDeepening = (
   maxDepth: number,
   player: Player,
   capture = false,
+  rule: OpeningRule = OpeningRule.FreeStyle,
 ): Move | null => {
   const killer: Move[][] = [];
+  const tt = new Map<string, TTEntry>();
   let best: Move | null = null;
   for (let d = 1; d <= maxDepth; d += 1) {
-    const { move } = minimax(board, d, player, -Infinity, Infinity, capture, killer, 0);
+    const { move } = minimax(
+      board,
+      d,
+      player,
+      -Infinity,
+      Infinity,
+      capture,
+      rule,
+      tt,
+      killer,
+      0,
+    );
     if (move) best = move;
   }
   return best;

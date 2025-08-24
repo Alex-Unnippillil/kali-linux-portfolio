@@ -4,6 +4,7 @@ import JSZip from 'jszip';
 interface GraphNode {
   deps: string[];
   size: number;
+  ssrUnsafe: boolean;
 }
 
 interface FileError {
@@ -19,6 +20,8 @@ const ImportGraph: React.FC = () => {
   const [errors, setErrors] = useState<FileError[]>([]);
   const [cycles, setCycles] = useState<string[][]>([]);
   const [depth, setDepth] = useState(3);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [diff, setDiff] = useState<string[]>([]);
   const workerRef = useRef<Worker>();
 
   useEffect(() => {
@@ -34,6 +37,33 @@ const ImportGraph: React.FC = () => {
         setGraph(e.data.graph);
         setErrors(e.data.errors);
         setCycles(e.data.cycles);
+        const g: Record<string, GraphNode> = e.data.graph;
+        const sugg: string[] = [];
+        Object.entries(g).forEach(([path, node]) => {
+          if (node.ssrUnsafe)
+            sugg.push(
+              `${path} uses browser globals; wrap with next/dynamic({ ssr: false })`,
+            );
+          else if (node.size > LARGE_THRESHOLD)
+            sugg.push(
+              `${path} is large (${node.size} bytes); consider next/dynamic`,
+            );
+        });
+        setSuggestions(sugg);
+        const previous: Record<string, GraphNode> = JSON.parse(
+          localStorage.getItem('import-graph-last') || '{}',
+        );
+        const changes: string[] = [];
+        for (const k of Object.keys(g)) {
+          if (!previous[k]) changes.push(`Added ${k}`);
+          else if (previous[k].size !== g[k].size)
+            changes.push(`Modified ${k}`);
+        }
+        for (const k of Object.keys(previous)) {
+          if (!g[k]) changes.push(`Removed ${k}`);
+        }
+        setDiff(changes);
+        localStorage.setItem('import-graph-last', JSON.stringify(g));
       }
     };
     return () => worker.terminate();
@@ -43,11 +73,19 @@ const ImportGraph: React.FC = () => {
     setGraph({});
     setErrors([]);
     setCycles([]);
+    setSuggestions([]);
+    setDiff([]);
     workerRef.current?.postMessage({ files });
   };
 
   const handlePaste = () => {
     if (pasted.trim()) parseFiles({ 'index.js': pasted });
+  };
+
+  const handleLocal = async () => {
+    const res = await fetch('/api/import-graph');
+    const data = await res.json();
+    parseFiles(data.files);
   };
 
   const handleZip = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,6 +121,9 @@ const ImportGraph: React.FC = () => {
         Parse Pasted Code
       </button>
       <input type="file" accept=".zip" onChange={handleZip} />
+      <button onClick={handleLocal} className="bg-green-600 px-2 py-1 rounded w-fit">
+        Analyze Repo
+      </button>
       <label className="flex items-center space-x-2">
         <span>Depth: {depth}</span>
         <input
@@ -100,6 +141,20 @@ const ImportGraph: React.FC = () => {
             <div key={e.file}>
               {e.file}: {e.error}
             </div>
+          ))}
+        </div>
+      )}
+      {suggestions.length > 0 && (
+        <div className="text-yellow-300 overflow-auto max-h-32">
+          {suggestions.map((s, i) => (
+            <div key={i}>{s}</div>
+          ))}
+        </div>
+      )}
+      {diff.length > 0 && (
+        <div className="text-green-300 overflow-auto max-h-32">
+          {diff.map((d, i) => (
+            <div key={i}>{d}</div>
           ))}
         </div>
       )}
@@ -181,7 +236,13 @@ const GraphView: React.FC<GraphViewProps> = ({ graph, cycles, depth }) => {
         {filteredNodes.map((n) => {
           const pos = positions[n];
           const large = graph[n].size > LARGE_THRESHOLD;
-          const fill = cycleNodes.has(n) ? '#f87171' : large ? '#f97316' : '#60a5fa';
+          const fill = cycleNodes.has(n)
+            ? '#f87171'
+            : graph[n].ssrUnsafe
+            ? '#a855f7'
+            : large
+            ? '#f97316'
+            : '#60a5fa';
           return (
             <g key={n}>
               <circle cx={pos.x} cy={pos.y} r={10} fill={fill} />
