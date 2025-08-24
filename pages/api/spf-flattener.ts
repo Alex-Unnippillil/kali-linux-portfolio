@@ -85,6 +85,10 @@ async function lookupA(domain: string, state: State): Promise<{ ips: string[]; t
     ips.push(`ip6:${aaaa.data}`);
     ttl = Math.min(ttl, aaaa.TTL);
   }
+  if (!answersA.length && !answersAAAA.length) {
+    state.warnings.push(`Void lookup for ${domain} (A/AAAA)`);
+  }
+  if (ttl === Infinity) ttl = 0;
   return { ips, ttl };
 }
 
@@ -92,6 +96,10 @@ async function lookupMx(domain: string, state: State): Promise<{ ips: string[]; 
   const answers = await dnsQuery(domain, 'MX', state);
   let ttl = Infinity;
   let ips: string[] = [];
+  if (!answers.length) {
+    state.warnings.push(`Void lookup for ${domain} (MX)`);
+    return { ips: [], ttl: 0 };
+  }
   for (const ans of answers) {
     ttl = Math.min(ttl, ans.TTL);
     const parts = String(ans.data).split(' ');
@@ -100,6 +108,7 @@ async function lookupMx(domain: string, state: State): Promise<{ ips: string[]; 
     ips = ips.concat(r.ips);
     ttl = Math.min(ttl, r.ttl);
   }
+  if (ttl === Infinity) ttl = 0;
   return { ips, ttl };
 }
 
@@ -224,6 +233,16 @@ function buildSplitRecords(domain: string, ips: string[]) {
   return { root, parts };
 }
 
+function buildRedirectRecord(domain: string, ips: string[]) {
+  if (!ips.length) return null;
+  const target = `_spf.${domain}`;
+  return {
+    root: `v=spf1 redirect=${target}`,
+    domain: target,
+    record: buildFlattenedSpfRecord(ips),
+  };
+}
+
 export const config = {
   api: { bodyParser: { sizeLimit: '1kb' } },
 };
@@ -255,22 +274,24 @@ export default async function handler(
       path: new Set(),
       lookupLog: [],
     };
-    const result = await resolveSpf(domain.toLowerCase(), state);
-    const flattenedSpfRecord = buildFlattenedSpfRecord(result.allIps);
-    const length = flattenedSpfRecord.length;
-    const ttl = result.minTtl === Infinity ? 0 : result.minTtl;
-    const split = buildSplitRecords(domain.toLowerCase(), result.allIps);
-    return res.status(200).json({
-      chain: result.node,
-      ips: result.allIps,
-      ttl,
-      length,
-      flattenedSpfRecord,
-      split,
-      lookups: state.lookups,
-      warnings: state.warnings,
-      lookupLog: state.lookupLog,
-    });
+      const result = await resolveSpf(domain.toLowerCase(), state);
+      const flattenedSpfRecord = buildFlattenedSpfRecord(result.allIps);
+      const length = flattenedSpfRecord.length;
+      const ttl = result.minTtl === Infinity ? 0 : result.minTtl;
+      const split = buildSplitRecords(domain.toLowerCase(), result.allIps);
+      const redirect = buildRedirectRecord(domain.toLowerCase(), result.allIps);
+      return res.status(200).json({
+        chain: result.node,
+        ips: result.allIps,
+        ttl,
+        length,
+        flattenedSpfRecord,
+        split,
+        redirect,
+        lookups: state.lookups,
+        warnings: state.warnings,
+        lookupLog: state.lookupLog,
+      });
   } catch (e: any) {
     return res.status(500).json({ error: e.message || 'Lookup failed' });
   }
