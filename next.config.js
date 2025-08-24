@@ -12,9 +12,9 @@ const ContentSecurityPolicy = [
   // External scripts required for embedded timelines and Vercel Live feedback
   "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com",
   // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
+  "connect-src 'self' https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://*.googleapis.com https://stackblitz.com",
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load arbitrary content
-  "frame-src 'self' https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com",
+  "frame-src 'self' https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://open.spotify.com https://todoist.com",
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
 ].join('; ');
@@ -35,6 +35,18 @@ const securityHeaders = [
   {
     key: 'Permissions-Policy',
     value: 'camera=(), microphone=(), geolocation=()',
+  },
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  {
+    key: 'Cross-Origin-Opener-Policy',
+    value: 'same-origin',
+  },
+  {
+    key: 'Cross-Origin-Resource-Policy',
+    value: 'same-site',
   },
   {
     // Allow same-origin framing so the PDF resume renders in an <object>

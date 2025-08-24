@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 const ALLOWED_TYPES = ['A', 'AAAA', 'CNAME', 'TXT', 'MX', 'NS', 'SOA', 'DNSKEY', 'DS', 'CAA'];
 

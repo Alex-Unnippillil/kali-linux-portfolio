@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 // Simple in-memory rate limiter
 const RATE_LIMIT = 5; // requests

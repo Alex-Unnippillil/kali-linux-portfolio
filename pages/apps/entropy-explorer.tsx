@@ -1,8 +1,9 @@
-import React from 'react';
-import EntropyExplorer from '../../apps/entropy-explorer';
+import dynamic from 'next/dynamic';
 
-const EntropyExplorerPage: React.FC = () => {
+const EntropyExplorer = dynamic(() => import('../../apps/entropy-explorer'), {
+  ssr: false,
+});
+
+export default function EntropyExplorerPage() {
   return <EntropyExplorer />;
-};
-
-export default EntropyExplorerPage;
+}

@@ -2,6 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import { getStats, setStats, type Stats } from '../../../../lib/user-store';
 
+if (!process.env.JWT_SECRET && process.env.NODE_ENV !== 'test') {
+  throw new Error('JWT_SECRET is required');
+}
+
 const BUCKET_CAPACITY = 5;
 const REFILL_INTERVAL = 60_000; // 1 minute
 const buckets = new Map<string, { tokens: number; last: number }>();

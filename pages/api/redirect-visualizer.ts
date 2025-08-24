@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Agent } from 'undici';
+import { setupUrlGuard } from '../../lib/urlGuard';
+setupUrlGuard();
 
 const MAX_HOPS = 15;
 const MAX_HEADER_BYTES = 1024 * 1024; // 1MB

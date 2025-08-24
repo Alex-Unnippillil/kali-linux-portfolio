@@ -1,8 +1,9 @@
-import React from 'react';
-import Blackjack from '../../apps/blackjack';
+import dynamic from 'next/dynamic';
 
-const BlackjackPage: React.FC = () => {
+const Blackjack = dynamic(() => import('../../apps/blackjack'), {
+  ssr: false,
+});
+
+export default function BlackjackPage() {
   return <Blackjack />;
-};
-
-export default BlackjackPage;
+}

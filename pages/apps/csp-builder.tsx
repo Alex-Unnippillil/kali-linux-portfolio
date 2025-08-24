@@ -1,8 +1,9 @@
-import React from 'react';
-import CspBuilder from '../../apps/csp-builder';
+import dynamic from 'next/dynamic';
 
-const CspBuilderPage: React.FC = () => {
+const CspBuilder = dynamic(() => import('../../apps/csp-builder'), {
+  ssr: false,
+});
+
+export default function CspBuilderPage() {
   return <CspBuilder />;
-};
-
-export default CspBuilderPage;
+}

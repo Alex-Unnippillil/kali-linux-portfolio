@@ -7,8 +7,8 @@ function expected(a: number, b: number) {
   return 1 / (1 + 10 ** ((b - a) / 400));
 }
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  const db = readDB();
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const db = await readDB();
   if (req.method === 'GET') {
     res.status(200).json({ matches: db.matches, ratings: db.ratings });
     return;
@@ -28,7 +28,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     db.ratings[white] = Math.round(rw + K * (sw - ew));
     db.ratings[black] = Math.round(rb + K * (sb - eb));
     db.matches.push({ white, black, winner, time: Date.now() });
-    writeDB(db);
+    await writeDB(db);
     res.status(200).json({ ratings: db.ratings });
     return;
   }

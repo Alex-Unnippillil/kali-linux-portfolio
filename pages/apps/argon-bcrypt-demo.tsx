@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const ArgonBcryptDemo = dynamic(() => import('../../components/apps/argon-bcrypt-demo'), {
+const ArgonBcryptDemo = dynamic(() => import('../../apps/argon-bcrypt-demo'), {
   ssr: false,
 });
 
