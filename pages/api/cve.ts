@@ -72,7 +72,7 @@ function parseCSV(line: string): string[] {
 }
 
 export default async function handler(req: Request): Promise<Response> {
-  const rate = rateLimitEdge(req);
+  const rate = await rateLimitEdge(req);
   if (rate.limited) {
     return new Response(JSON.stringify({ error: 'Too many requests' }), {
       status: 429,
