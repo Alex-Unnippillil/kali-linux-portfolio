@@ -43,6 +43,7 @@ interface MatchDetail {
 interface CompileError {
   message: string;
   line?: number;
+  column?: number;
   warning?: boolean;
 }
 
@@ -73,6 +74,22 @@ const YaraTester: React.FC = () => {
   const [elapsed, setElapsed] = useState<number | null>(null);
   const [fileTimes, setFileTimes] = useState<{ name: string; elapsed: number }[]>([]);
   const [heatmap, setHeatmap] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const stored = localStorage.getItem('yaraRules');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) setRules(parsed);
+      } catch {
+        // ignore invalid data
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('yaraRules', JSON.stringify(rules));
+  }, [rules]);
 
   const createWorker = () => {
     const w = new Worker(new URL('./worker.ts', import.meta.url));
@@ -126,18 +143,27 @@ const YaraTester: React.FC = () => {
     return () => clearTimeout(id);
   }, [rules]);
 
-  const gotoLine = (line?: number) => {
+  const gotoLine = (line?: number, column?: number) => {
     if (!line) return;
     const textarea = document.getElementById('rule-editor') as HTMLTextAreaElement | null;
     if (!textarea) return;
     const lines = textarea.value.split('\n');
     let pos = 0;
     for (let i = 0; i < line - 1 && i < lines.length; i += 1) pos += lines[i].length + 1;
+    if (column && column > 0) pos += column - 1;
     textarea.focus();
     textarea.setSelectionRange(pos, pos);
   };
 
   const handleFile = async (file: File) => {
+    if (file.size > 1024 * 1024) {
+      setRuntimeError('File too large');
+      return;
+    }
+    if (!file.type.startsWith('text') && file.type !== 'application/octet-stream') {
+      setRuntimeError('Unsupported file type');
+      return;
+    }
     const reader = file.stream().getReader();
     const decoder = new TextDecoder('utf-8');
     let result = '';
@@ -151,6 +177,10 @@ const YaraTester: React.FC = () => {
 
   const runRules = () => {
     if (!workerRef.current) return;
+    if (input.length > 1024 * 1024) {
+      setRuntimeError('Sample too large');
+      return;
+    }
     setRunning(true);
     setRuntimeError(null);
     setMatches([]);
@@ -205,7 +235,7 @@ const YaraTester: React.FC = () => {
     setCurrentRule(0);
   };
 
-  const exportPack = () => {
+  const exportRules = () => {
     const blob = new Blob([JSON.stringify(rules)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -215,12 +245,39 @@ const YaraTester: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const exportMatches = () => {
+    const blob = new Blob([JSON.stringify(matches, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'matches.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const copyCurrentRule = () => {
+    navigator.clipboard.writeText(rules[currentRule]?.content || '');
+  };
+
+  const copyMatches = () => {
+    if (matches.length === 0) return;
+    navigator.clipboard.writeText(JSON.stringify(matches, null, 2));
+  };
+
   const importPack = (file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
       try {
         const data = JSON.parse(String(reader.result));
-        if (Array.isArray(data)) setRules(data);
+        if (
+          Array.isArray(data) &&
+          data.every(
+            (r) => typeof r?.name === 'string' && typeof r?.content === 'string'
+          )
+        )
+          setRules(data);
       } catch {
         // ignore
       }
@@ -297,8 +354,22 @@ const YaraTester: React.FC = () => {
             -
           </button>
         )}
-        <button type="button" className="bg-gray-700 px-2" onClick={exportPack}>
-          Export
+        <button type="button" className="bg-gray-700 px-2" onClick={exportRules}>
+          Export Rules
+        </button>
+        <button type="button" className="bg-gray-700 px-2" onClick={exportMatches} disabled={matches.length === 0}>
+          Export Matches
+        </button>
+        <button type="button" className="bg-gray-700 px-2" onClick={copyCurrentRule}>
+          Copy Rule
+        </button>
+        <button
+          type="button"
+          className="bg-gray-700 px-2"
+          onClick={copyMatches}
+          disabled={matches.length === 0}
+        >
+          Copy Matches
         </button>
         <input
           type="file"
@@ -341,9 +412,11 @@ const YaraTester: React.FC = () => {
               <li
                 key={idx}
                 className="cursor-pointer"
-                onClick={() => gotoLine(e.line)}
+                onClick={() => gotoLine(e.line, e.column)}
               >
-                {e.line ? `Line ${e.line}: ` : ''}
+                {e.line
+                  ? `Line ${e.line}${e.column !== undefined ? `, Col ${e.column}` : ''}: `
+                  : ''}
                 {e.message}
               </li>
             ))}
@@ -380,31 +453,42 @@ const YaraTester: React.FC = () => {
             <strong>Matches:</strong>
             {elapsed !== null && <span>Runtime: {elapsed.toFixed(2)} ms</span>}
           </div>
-          <ul>
-            {matches.map((m, idx) => (
-              <li key={idx} className="mb-2">
-                <div className="font-bold">
-                  {m.rule}
-                  {m.file && (
-                    <span className="ml-2 text-sm text-orange-300">[{m.file}]</span>
-                  )}
-                  {m.tags && m.tags.length > 0 && (
-                    <span className="ml-2 text-sm text-yellow-300">[{m.tags.join(', ')}]</span>
-                  )}
-                </div>
-                {m.meta && (
-                  <div className="ml-4 text-sm">meta: {Object.entries(m.meta).map(([k, v]) => `${k}=${v}`).join(', ')}</div>
-                )}
-                <ul className="ml-4 list-disc">
-                  {m.matches.map((d, j) => (
-                    <li key={j} className="font-mono">
-                      {d.identifier} @ {d.offset} len {d.length}: "{d.data}" ({toHex(d.data)})
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
+          <table className="w-full text-sm text-left font-mono">
+            <thead>
+              <tr>
+                <th className="px-1">Rule</th>
+                <th className="px-1">File</th>
+                <th className="px-1">Tags</th>
+                <th className="px-1">Meta</th>
+                <th className="px-1">Identifier</th>
+                <th className="px-1">Data</th>
+                <th className="px-1">Offset</th>
+                <th className="px-1">Length</th>
+              </tr>
+            </thead>
+            <tbody>
+              {matches.map((m, idx) =>
+                m.matches.map((d, j) => (
+                  <tr key={`${idx}-${j}`}>
+                    <td className="px-1">{m.rule}</td>
+                    <td className="px-1">{m.file || ''}</td>
+                    <td className="px-1">{m.tags?.join(', ') || ''}</td>
+                    <td className="px-1">
+                      {m.meta
+                        ? Object.entries(m.meta)
+                            .map(([k, v]) => `${k}=${v}`)
+                            .join(', ')
+                        : ''}
+                    </td>
+                    <td className="px-1">{d.identifier}</td>
+                    <td className="px-1">"{d.data}" ({toHex(d.data)})</td>
+                    <td className="px-1">{d.offset}</td>
+                    <td className="px-1">{d.length}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       )}
       {fileTimes.length > 0 && (

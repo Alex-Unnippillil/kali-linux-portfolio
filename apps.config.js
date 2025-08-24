@@ -685,7 +685,7 @@ const apps = [
   {
     id: 'yara-tester',
     title: 'YARA Tester',
-    icon: './themes/Yaru/apps/bash.png',
+    icon: './themes/Yaru/apps/yara.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
