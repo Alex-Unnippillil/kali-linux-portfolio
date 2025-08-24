@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { LRUCache } from 'lru-cache';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
 
@@ -9,7 +10,23 @@ type CacheEntry = {
 };
 
 const TXT_CACHE: Record<string, CacheEntry> = {};
+const TLSA_CACHE: Record<string, CacheEntry> = {};
 const TXT_TTL = 5 * 60 * 1000; // 5 minutes
+
+const RESULT_CACHE = new LRUCache<string, any>({ ttl: TXT_TTL, max: 100 });
+const RATE_LIMIT = new LRUCache<string, { count: number }>({ ttl: 60_000, max: 500 });
+
+function checkRateLimit(req: NextApiRequest): boolean {
+  const ip =
+    (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+    req.socket.remoteAddress ||
+    'unknown';
+  const entry = RATE_LIMIT.get(ip) || { count: 0 };
+  if (entry.count >= 30) return false;
+  entry.count += 1;
+  RATE_LIMIT.set(ip, entry);
+  return true;
+}
 
 async function lookupTxt(name: string): Promise<string[]> {
   const now = Date.now();
@@ -96,6 +113,7 @@ function parseSpf(records: string[]) {
     example: pass ? undefined : 'v=spf1 include:_spf.example.com -all',
     spec: SPF_SPEC,
   };
+
 }
 
 const DKIM_SPEC = 'https://datatracker.ietf.org/doc/html/rfc6376';
@@ -144,6 +162,47 @@ function parseDkim(records: string[]) {
     };
   }
   return { pass: true, record, bits, spec: DKIM_SPEC };
+}
+
+const SPF_SPEC = 'https://www.rfc-editor.org/rfc/rfc7208';
+
+function parseSpf(records: string[]) {
+  const record = records.find((r) => r.toLowerCase().startsWith('v=spf1'));
+  if (!record) {
+    return {
+      pass: false,
+      message: 'No SPF record found',
+      recommendation: 'Publish a TXT record with v=spf1',
+      example: 'v=spf1 mx -all',
+      spec: SPF_SPEC,
+    };
+  }
+  if (!/[-~?+]all/i.test(record)) {
+    return {
+      pass: false,
+      record,
+      message: 'SPF record missing all mechanism',
+      recommendation: 'End SPF record with -all',
+      example: 'v=spf1 mx -all',
+      spec: SPF_SPEC,
+    };
+  }
+  return { pass: true, record, spec: SPF_SPEC };
+}
+
+const DANE_SPEC = 'https://www.rfc-editor.org/rfc/rfc6698';
+
+function parseDane(records: string[]) {
+  if (!records.length) {
+    return {
+      pass: false,
+      message: 'No TLSA record found',
+      recommendation: 'Publish TLSA record at _25._tcp',
+      example: '3 1 1 base64hash',
+      spec: DANE_SPEC,
+    };
+  }
+  return { pass: true, record: records.join(' | '), spec: DANE_SPEC };
 }
 
 const DMARC_SPEC = 'https://datatracker.ietf.org/doc/html/rfc7489';
@@ -277,13 +336,18 @@ function parseBimi(records: string[]) {
       spec: BIMI_SPEC,
     };
   }
-  return { pass: true, record, spec: BIMI_SPEC };
+  const logo = record.match(/l=([^;]+)/i)?.[1];
+  return { pass: true, record, logo, spec: BIMI_SPEC };
 }
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  if (!checkRateLimit(req)) {
+    res.status(429).json({ error: 'Too Many Requests' });
+    return;
+  }
   const { domain, selector } = req.query;
   if (typeof domain !== 'string') {
     res.status(400).json({ error: 'domain parameter required' });
@@ -353,6 +417,7 @@ export default async function handler(
   }
 
   try {
+
     let dkimRecords: string[] = [];
     if (typeof selector === 'string' && selector) {
       dkimRecords = await lookupTxt(`${selector}._domainkey.${domain}`);
@@ -369,6 +434,7 @@ export default async function handler(
             example: 'v=DKIM1; k=rsa; p=base64publickey',
             spec: DKIM_SPEC,
           };
+
   } catch (e: any) {
     response.dkim = {
       pass: false,

@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import type { Metadata } from 'next';
 import type { ScanResult } from './worker';
+
+export const metadata: Metadata = {
+  title: 'Mixed Content',
+  description:
+    'Scan pages for insecure HTTP subresources and get upgrade-insecure-requests guidance',
+};
 
 const MixedContent: React.FC = () => {
   const [url, setUrl] = useState('');
@@ -57,6 +64,16 @@ const MixedContent: React.FC = () => {
     }
   };
 
+  const copyReport = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(results, null, 2),
+      );
+    } catch {
+      /* ignore */
+    }
+  };
+
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
       <div className="flex space-x-2">
@@ -103,9 +120,25 @@ const MixedContent: React.FC = () => {
       {error && <div className="text-red-400">{error}</div>}
       {results.length > 0 && (
         <div className="overflow-auto text-sm flex-1 space-y-4">
-          <div>
-            <p>Active mixed content: {results.filter((r) => r.category === 'active').length}</p>
-            <p>Passive mixed content: {results.filter((r) => r.category === 'passive').length}</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p>
+                Active mixed content:{' '}
+                {results.filter((r) => r.category === 'active').length}
+              </p>
+              <p>
+                Passive mixed content:{' '}
+                {results.filter((r) => r.category === 'passive').length}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={copyReport}
+              data-testid="copy-report"
+              className="bg-gray-700 px-2 py-1 rounded"
+            >
+              Copy Report
+            </button>
           </div>
           <table className="min-w-full">
             <thead>

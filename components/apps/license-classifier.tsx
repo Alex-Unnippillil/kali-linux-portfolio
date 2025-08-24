@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   getLicenseInfo,
   matchLicense,
@@ -15,6 +15,8 @@ interface AnalysisResult {
   conflicts: LicenseConflict[];
 }
 
+type FileCache = Record<string, AnalysisResult>;
+
 const LicenseClassifier: React.FC = () => {
   const [text, setText] = useState('');
   const [analysis, setAnalysis] = useState<AnalysisResult>({
@@ -22,6 +24,7 @@ const LicenseClassifier: React.FC = () => {
     fuzzy: null,
     conflicts: [],
   });
+  const [files, setFiles] = useState<FileCache>({});
 
   const analyze = () => {
     if (!text.trim()) {
@@ -35,8 +38,55 @@ const LicenseClassifier: React.FC = () => {
     setAnalysis({ detected, fuzzy, conflicts });
   };
 
+  const handleFiles = useCallback(
+    async (fileList: FileList) => {
+      const cache: FileCache = { ...files };
+      for (const file of Array.from(fileList)) {
+        if (cache[file.name]) continue;
+        const content = await file.text();
+        const parsed = parseSpdxExpression(content);
+        const detected = parsed.ids.map((id) => getLicenseInfo(id));
+        const fuzzy = matchLicense(content);
+        const conflicts = detectLicenseConflicts(
+          parsed.ids,
+          parsed.hasAnd && !parsed.hasOr
+        );
+        cache[file.name] = { detected, fuzzy, conflicts };
+      }
+      setFiles(cache);
+    },
+    [files]
+  );
+
+  const repoConflicts = useMemo(() => {
+    const ids = Object.values(files).flatMap((r) =>
+      r.detected.map((d) => d.spdxId)
+    );
+    return detectLicenseConflicts([...new Set(ids)], true);
+  }, [files]);
+
+  const exportReport = useCallback(() => {
+    const payload = {
+      files: Object.entries(files).map(([file, res]) => ({
+        file,
+        licenses: res.detected.map((d) => d.spdxId),
+        conflicts: res.conflicts,
+      })),
+      conflicts: repoConflicts,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'license-report.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [files, repoConflicts]);
+
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
+    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4 overflow-auto">
       <textarea
         className="flex-1 text-black p-2"
         placeholder="Paste text to analyze..."
@@ -108,6 +158,64 @@ const LicenseClassifier: React.FC = () => {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      <div
+        className="mt-4 p-4 border-2 border-dashed border-gray-500 rounded"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          handleFiles(e.dataTransfer.files);
+        }}
+      >
+        <p className="mb-2">Drag & drop files or directories here</p>
+        <input
+          type="file"
+          multiple
+          webkitdirectory="true"
+          onChange={(e) => e.target.files && handleFiles(e.target.files)}
+        />
+      </div>
+
+      {Object.keys(files).length > 0 && (
+        <div className="mt-4">
+          <h3 className="font-bold mb-2">License Report</h3>
+          <table className="w-full text-sm text-left">
+            <thead>
+              <tr>
+                <th className="pr-2">File</th>
+                <th>Licenses</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(files).map(([file, res]) => (
+                <tr key={file}>
+                  <td className="pr-2 align-top">{file}</td>
+                  <td>{res.detected.map((d) => d.spdxId).join(', ') || 'Unknown'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {repoConflicts.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-bold mb-2">Repository Conflicts</h4>
+              <ul className="list-disc list-inside space-y-1">
+                {repoConflicts.map((c) => (
+                  <li key={c.licenses.join('-')}>{c.message}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={exportReport}
+            className="mt-4 px-4 py-1 bg-blue-600 rounded"
+          >
+            Export Report
+          </button>
         </div>
       )}
     </div>

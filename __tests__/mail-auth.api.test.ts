@@ -2,6 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Response } from 'undici';
 
+
 function createRes() {
   return {
     statusCode: 0,
@@ -76,5 +77,6 @@ describe('mail-auth api', () => {
     const res2 = createRes();
     await handler(req, res2);
     expect(fetchMock).toHaveBeenCalledTimes(6);
+
   });
 });

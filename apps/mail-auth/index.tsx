@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Mail Auth',
+  description:
+    'Checklist for DMARC, SPF, DKIM, MTA-STS, TLS-RPT, DANE and BIMI with exportable reports',
+};
 
 type Result = {
   pass: boolean;
@@ -21,6 +28,7 @@ type Response = {
   dmarc: Result;
   mtaSts: Result;
   tlsRpt: Result;
+  dane: Result;
   bimi: Result;
   error?: string;
 };
@@ -28,9 +36,14 @@ type Response = {
 const CONTROLS = [
   { id: 'spf', label: 'SPF' },
   { id: 'dkim', label: 'DKIM' },
+
   { id: 'dmarc', label: 'DMARC' },
+  { id: 'spf', label: 'SPF' },
+  { id: 'dkim', label: 'DKIM' },
   { id: 'mtaSts', label: 'MTA-STS' },
   { id: 'tlsRpt', label: 'TLS-RPT' },
+  { id: 'dane', label: 'DANE' },
+  { id: 'bimi', label: 'BIMI' },
 ] as const;
 
 type ControlId = typeof CONTROLS[number]['id'];
@@ -192,11 +205,13 @@ const MailAuth: React.FC = () => {
                       }
                       const r = (res as any)[id as ControlId] as Result;
                       const badgeColor = r.pass ? 'bg-green-600' : 'bg-red-600';
+                      const tip = [r.record, r.message].filter(Boolean).join('\n');
                       return (
                         <td key={domain} className="py-2">
                           <div className="flex flex-col">
                             <span
                               className={`px-2 py-0.5 rounded text-white text-xs ${badgeColor}`}
+                              title={tip}
                             >
                               {r.pass ? 'PASS' : 'FAIL'}
                             </span>

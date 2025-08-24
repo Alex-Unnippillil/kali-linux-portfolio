@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!DOCTYPE nmaprun SYSTEM "nmap.dtd">
+<nmaprun scanner="nmap" args="" start="0" version="7.80" xmloutputversion="1.04">
+  <host>
+    <status state="up" reason="syn-ack" reason_ttl="0"/>
+    <address addr="192.0.2.1" addrtype="ipv4"/>
+    <hostnames>
+      <hostname name="example" type="user"/>
+    </hostnames>
+    <ports>
+      <port protocol="tcp" portid="80">
+        <state state="open" reason="syn-ack" reason_ttl="0"/>
+        <service name="http" product="Apache" version="2.4.1"/>
+        <script id="http-vuln-cve2017-5638" output="Apache Struts CVE-2017-5638">
+          <table key="vulns">
+            <table key="CVE-2017-5638">
+              <elem key="id">CVE-2017-5638</elem>
+              <elem key="cvss">10.0</elem>
+              <elem key="summary">Remote code execution</elem>
+            </table>
+          </table>
+        </script>
+      </port>
+    </ports>
+  </host>
+</nmaprun>

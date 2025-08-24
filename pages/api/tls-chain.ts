@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import tls, { PeerCertificate } from 'tls';
+import { LRUCache } from 'lru-cache';
 
 interface FormattedCert {
   subject: Record<string, string>;
@@ -17,7 +18,9 @@ const explanations = {
   validFrom: 'The date when this certificate becomes valid.',
   validTo: 'The date when this certificate expires.',
   daysRemaining: 'Number of days until the certificate expires.',
-  ocspStapled: 'Whether the server provided an OCSP stapling response indicating revocation status.'
+  ocspStapled: 'Whether the server provided an OCSP stapling response indicating revocation status.',
+  cipher: 'The negotiated cipher suite for the TLS connection.',
+  protocol: 'The negotiated TLS protocol version.'
 };
 
 function parseSAN(input?: string): string[] {
@@ -60,19 +63,38 @@ function getTLSInfo(host: string, port: number): Promise<any> {
     const socket = tls.connect(
       { host, port, servername: host, rejectUnauthorized: false, requestOCSP: true } as any,
       () => {
-      try {
-        const peer = socket.getPeerCertificate(true);
-        const chain = collectChain(peer).map(formatCert);
-        const ocspStapled = Boolean((socket as any).ocspResponse || (socket as any).getOCSPResponse?.());
-        socket.end();
-        resolve({ host, port, ocspStapled, chain, explanations });
-      } catch (err) {
-        reject(err);
+        try {
+          const peer = socket.getPeerCertificate(true);
+          const chain = collectChain(peer).map(formatCert);
+          const ocspStapled = Boolean(
+            (socket as any).ocspResponse || (socket as any).getOCSPResponse?.()
+          );
+          const cipher = socket.getCipher();
+          const protocol = socket.getProtocol?.();
+          socket.end();
+          resolve({
+            host,
+            port,
+            ocspStapled,
+            cipher,
+            protocol,
+            chain,
+            explanations,
+            sslLabsUrl: `https://www.ssllabs.com/ssltest/analyze.html?d=${encodeURIComponent(host)}`,
+          });
+        } catch (err) {
+          reject(err);
+        }
       }
-    });
+    );
     socket.on('error', reject);
   });
 }
+
+const cache = new LRUCache<string, any>({
+  max: 100,
+  ttl: 60 * 60 * 1000,
+});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { host, port } = req.query;
@@ -83,8 +105,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const portNum = typeof port === 'string' ? parseInt(port, 10) || 443 : 443;
 
+  const key = `${host}:${portNum}`;
   try {
+    const cached = cache.get(key);
+    if (cached) {
+      res.status(200).json({ ...cached, cached: true });
+      return;
+    }
     const info = await getTLSInfo(host, portNum);
+    cache.set(key, info);
     res.status(200).json(info);
   } catch (e: any) {
     res.status(500).json({ error: e.message });

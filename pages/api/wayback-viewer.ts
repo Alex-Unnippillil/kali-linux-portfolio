@@ -2,6 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
 
+const cache = new Map<string, { timestamp: number; data: any }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 interface Snapshot {
   timestamp: string;
   original: string;
@@ -22,6 +25,13 @@ export default async function handler(
 
   const pageNum = Array.isArray(page) ? parseInt(page[0], 10) : parseInt(page, 10);
   const limitNum = Array.isArray(limit) ? parseInt(limit[0], 10) : parseInt(limit, 10);
+
+  const cacheKey = JSON.stringify({ url, pageNum, limitNum, status, mime, noRobot });
+  const cached = cache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    res.status(200).json(cached.data);
+    return;
+  }
 
   try {
     const availabilityRes = await fetch(
@@ -62,8 +72,15 @@ export default async function handler(
     );
     const hasMore = rawRows.length === (Number.isNaN(limitNum) ? 50 : limitNum);
 
-    res.status(200).json({ availability, snapshots, hasMore });
+    const data = { availability, snapshots, hasMore };
+    cache.set(cacheKey, { timestamp: Date.now(), data });
+
+    res.status(200).json(data);
   } catch (e: any) {
     res.status(500).json({ error: e.message || 'Error fetching data' });
   }
+}
+
+export function __clearCache() {
+  cache.clear();
 }

@@ -6,17 +6,19 @@ self.onmessage = (e: MessageEvent<TimelineEvent[]>) => {
   const groupIds = new Map<string, number>();
   const items = events.map((evt, idx) => {
     let group: number | undefined;
-    if (evt.group) {
-      if (!groupIds.has(evt.group)) {
+    const label = evt.group || evt.tags?.[0];
+    if (label) {
+      if (!groupIds.has(label)) {
         const id = groupIds.size + 1;
-        groupIds.set(evt.group, id);
-        groups.push({ id, content: evt.group });
+        groupIds.set(label, id);
+        groups.push({ id, content: label });
       }
-      group = groupIds.get(evt.group);
+      group = groupIds.get(label);
     }
     return {
       id: idx,
-      content: evt.event,
+      content:
+        evt.event + (evt.tags && evt.tags.length ? ` [${evt.tags.join(',')}]` : ''),
       start: evt.time,
       end: evt.end,
       group,

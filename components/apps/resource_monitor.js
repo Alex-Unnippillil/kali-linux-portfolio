@@ -27,11 +27,17 @@ const Sparkline = ({ data, width = 100, height = 30 }) => {
   );
 };
 
-const Metric = ({ label, value, history, unit }) => (
-  <div className="flex flex-col items-center m-2">
+const Metric = ({ label, value, history, unit, hint }) => (
+  <div
+    className="flex flex-col items-center m-2"
+    data-testid={`metric-${label.toLowerCase().replace(/\s+/g, '-')}`}
+  >
     <div className="text-lg">{value !== null ? `${value}${unit || ''}` : 'N/A'}</div>
     <Sparkline data={history} />
-    <div className="text-sm mt-1">{label}</div>
+    <div className="text-sm mt-1">
+      {label}
+      {hint && <span className="ml-1 text-xs text-gray-300">{hint}</span>}
+    </div>
   </div>
 );
 
@@ -39,7 +45,7 @@ const ResourceMonitor = () => {
   const [paused, setPaused] = useState(false);
   const [fps, setFps] = useState(null);
   const [longTasks, setLongTasks] = useState(null);
-  const [memory, setMemory] = useState(null);
+  const [memory, setMemory] = useState({ percent: null, hint: null });
   const [networkBytes, setNetworkBytes] = useState(null);
   const [connection, setConnection] = useState({ downlink: null, effectiveType: null });
   const [webVitals, setWebVitals] = useState({
@@ -50,6 +56,13 @@ const ResourceMonitor = () => {
     ttfb: null,
   });
   const [recording, setRecording] = useState(false);
+  const [enabled, setEnabled] = useState({
+    fps: true,
+    longTasks: true,
+    memory: true,
+    network: true,
+    webVitals: true,
+  });
 
   const fpsHistory = useRef([]);
   const longTaskHistory = useRef([]);
@@ -62,7 +75,8 @@ const ResourceMonitor = () => {
   };
 
   useEffect(() => {
-    if (paused || typeof window === 'undefined' || !window.requestAnimationFrame) return;
+    if (paused || !enabled.fps || typeof window === 'undefined' || !window.requestAnimationFrame)
+      return;
     let frame = 0;
     let last = performance.now();
     let raf;
@@ -79,16 +93,18 @@ const ResourceMonitor = () => {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [paused]);
+  }, [paused, enabled.fps]);
 
   useEffect(() => {
-    if (paused) return;
+    if (paused || !enabled.longTasks) return;
     let longTaskObserver;
-    let longTaskCount = 0;
+    let longTaskDuration = 0;
     if (typeof PerformanceObserver !== 'undefined') {
       try {
         longTaskObserver = new PerformanceObserver((list) => {
-          longTaskCount += list.getEntries().length;
+          for (const entry of list.getEntries()) {
+            longTaskDuration += entry.duration;
+          }
         });
         longTaskObserver.observe({ entryTypes: ['longtask'] });
       } catch (_) {
@@ -96,24 +112,25 @@ const ResourceMonitor = () => {
       }
     }
     const interval = setInterval(() => {
-      setLongTasks(longTaskCount);
-      pushHistory(longTaskHistory, longTaskCount);
-      longTaskCount = 0;
+      setLongTasks(longTaskDuration);
+      pushHistory(longTaskHistory, longTaskDuration);
+      longTaskDuration = 0;
     }, 1000);
     return () => {
       clearInterval(interval);
       if (longTaskObserver) longTaskObserver.disconnect();
     };
-  }, [paused]);
+  }, [paused, enabled.longTasks]);
 
   useEffect(() => {
-    if (paused) return;
+    if (paused || !enabled.memory) return;
     let memInterval;
     if (performance && performance.memory) {
       const updateMem = () => {
         const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
         const perc = Math.round((usedJSHeapSize / totalJSHeapSize) * 100);
-        setMemory(perc);
+        const hint = perc > 80 ? 'High' : perc > 50 ? 'Moderate' : 'Low';
+        setMemory({ percent: perc, hint });
         pushHistory(memoryHistory, perc);
       };
       updateMem();
@@ -122,10 +139,10 @@ const ResourceMonitor = () => {
     return () => {
       if (memInterval) clearInterval(memInterval);
     };
-  }, [paused]);
+  }, [paused, enabled.memory]);
 
   useEffect(() => {
-    if (paused) return;
+    if (paused || !enabled.network) return;
     const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     const updateConn = () => {
       setConnection({
@@ -160,10 +177,10 @@ const ResourceMonitor = () => {
       resourceObserver?.disconnect();
       conn?.removeEventListener('change', updateConn);
     };
-  }, [paused]);
+  }, [paused, enabled.network]);
 
   useEffect(() => {
-    if (paused) return;
+    if (paused || !enabled.webVitals) return;
     let lcpObserver;
     let clsObserver;
     let fidObserver;
@@ -227,7 +244,7 @@ const ResourceMonitor = () => {
       clsObserver?.disconnect();
       fidObserver?.disconnect();
     };
-  }, [paused]);
+  }, [paused, enabled.webVitals]);
 
   const recordProfile = () => {
     if (recording) return;
@@ -284,14 +301,23 @@ const ResourceMonitor = () => {
   };
 
   const togglePause = () => setPaused((p) => !p);
+  const toggleMetric = (m) => setEnabled((e) => ({ ...e, [m]: !e[m] }));
+  const clearHistory = () => {
+    fpsHistory.current = [];
+    longTaskHistory.current = [];
+    memoryHistory.current = [];
+    networkHistory.current = [];
+    setFps(null);
+    setLongTasks(null);
+    setMemory({ percent: null, hint: null });
+    setNetworkBytes(null);
+    setWebVitals({ fcp: null, lcp: null, cls: null, fid: null, ttfb: null });
+  };
 
   return (
     <div className="h-full w-full flex flex-col bg-panel text-white">
       <div className="self-end m-2 flex space-x-2">
-        <button
-          className="px-2 py-1 bg-gray-700 rounded"
-          onClick={togglePause}
-        >
+        <button className="px-2 py-1 bg-gray-700 rounded" onClick={togglePause}>
           {paused ? 'Resume' : 'Pause'}
         </button>
         <button
@@ -302,29 +328,80 @@ const ResourceMonitor = () => {
           {recording ? 'Recording…' : 'Record Profile'}
         </button>
       </div>
+      <div className="m-2 flex flex-wrap items-center space-x-4">
+        {[
+          ['fps', 'FPS'],
+          ['longTasks', 'Long Tasks'],
+          ['memory', 'Memory'],
+          ['network', 'Network'],
+          ['webVitals', 'Web Vitals'],
+        ].map(([key, label]) => (
+          <label key={key} className="flex items-center space-x-1">
+            <input
+              type="checkbox"
+              checked={enabled[key]}
+              onChange={() => toggleMetric(key)}
+              aria-label={label}
+            />
+            <span className="text-sm">{label}</span>
+          </label>
+        ))}
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={clearHistory}
+        >
+          Clear
+        </button>
+      </div>
       <div className="flex flex-wrap justify-evenly">
-        <Metric label="FPS" value={fps} history={fpsHistory.current} />
-        <Metric label="Long Tasks" value={longTasks} history={longTaskHistory.current} />
-        <Metric label="Memory" value={memory} history={memoryHistory.current} unit="%" />
-        <div className="flex flex-col items-center m-2">
-          <div className="text-lg">
-            {networkBytes !== null ? `${Math.round(networkBytes / 1024)} KB/s` : 'N/A'}
+        {enabled.fps && <Metric label="FPS" value={fps} history={fpsHistory.current} />}
+        {enabled.longTasks && (
+          <Metric
+            label="Long Tasks"
+            value={longTasks}
+            history={longTaskHistory.current}
+            unit="ms"
+          />
+        )}
+        {enabled.memory && (
+          <Metric
+            label="Memory"
+            value={memory.percent}
+            history={memoryHistory.current}
+            unit="%"
+            hint={memory.hint}
+          />
+        )}
+        {enabled.network && (
+          <div
+            className="flex flex-col items-center m-2"
+            data-testid="metric-network"
+          >
+            <div className="text-lg">
+              {networkBytes !== null
+                ? `${Math.round(networkBytes / 1024)} KB/s`
+                : 'N/A'}
+            </div>
+            <Sparkline data={networkHistory.current} />
+            <div className="text-sm mt-1">
+              Network
+              {connection.downlink && (
+                <span className="ml-1 text-xs">
+                  {`${connection.downlink}Mbps ${connection.effectiveType || ''}`}
+                </span>
+              )}
+            </div>
           </div>
-          <Sparkline data={networkHistory.current} />
-          <div className="text-sm mt-1">
-            Network
-            {connection.downlink && (
-              <span className="ml-1 text-xs">
-                {`${connection.downlink}Mbps ${connection.effectiveType || ''}`}
-              </span>
-            )}
-          </div>
-        </div>
-        <Metric label="FCP" value={webVitals.fcp} history={[]} unit="ms" />
-        <Metric label="LCP" value={webVitals.lcp} history={[]} unit="ms" />
-        <Metric label="CLS" value={webVitals.cls} history={[]} />
-        <Metric label="FID" value={webVitals.fid} history={[]} unit="ms" />
-        <Metric label="TTFB" value={webVitals.ttfb} history={[]} unit="ms" />
+        )}
+        {enabled.webVitals && (
+          <>
+            <Metric label="FCP" value={webVitals.fcp} history={[]} unit="ms" />
+            <Metric label="LCP" value={webVitals.lcp} history={[]} unit="ms" />
+            <Metric label="CLS" value={webVitals.cls} history={[]} />
+            <Metric label="FID" value={webVitals.fid} history={[]} unit="ms" />
+            <Metric label="TTFB" value={webVitals.ttfb} history={[]} unit="ms" />
+          </>
+        )}
       </div>
     </div>
   );
