@@ -1,3 +1,10 @@
+## Setup
+
+1. Copy `.env.example` to `.env.local`.
+2. Set `JWT_SECRET` to a secure value.
+3. Optionally set analytics variables such as `NEXT_PUBLIC_TRACKING_ID`.
+4. Update `.env.example` whenever new environment variables are added.
+
 ## Adding New Apps
 
 Heavy applications should be loaded with [`next/dynamic`](https://nextjs.org/docs/advanced-features/dynamic-import) so that they do not bloat the initial bundle.
