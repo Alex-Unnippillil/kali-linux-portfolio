@@ -97,19 +97,29 @@ async function parseKey(
       if (multi) {
         const payloadBytes = encoder.encode(JSON.stringify(payload));
         const signer = new GeneralSign(payloadBytes);
-        signer
-          .addSignature(rsaPrivateKey)
-          .setProtectedHeader({ alg: 'RS256', kid: 'rsa' });
-        signer
-          .addSignature(ecPrivateKey)
-          .setProtectedHeader({ alg: 'ES256', kid: 'ec' });
-        result = await signer.sign();
+        const rsaHeader: any = { alg: 'RS256', kid: 'rsa' };
+        const ecHeader: any = { alg: 'ES256', kid: 'ec' };
+        if (detached) {
+          rsaHeader.b64 = false;
+          rsaHeader.crit = ['b64'];
+          ecHeader.b64 = false;
+          ecHeader.crit = ['b64'];
+        }
+        signer.addSignature(rsaPrivateKey).setProtectedHeader(rsaHeader);
+        signer.addSignature(ecPrivateKey).setProtectedHeader(ecHeader);
+        const obj = await signer.sign();
+        if (detached) delete (obj as any).payload;
+        result = obj;
       } else {
         const cryptoKey = await parseKey(key, 'private', alg);
         let jws = await new CompactSign(
           encoder.encode(JSON.stringify(payload)),
         )
-          .setProtectedHeader({ alg, kid })
+          .setProtectedHeader(
+            detached
+              ? { alg, kid, b64: false, crit: ['b64'] }
+              : { alg, kid },
+          )
           .sign(cryptoKey);
         if (detached) {
           const parts = jws.split('.');
@@ -124,20 +134,17 @@ async function parseKey(
         const payloadBytes = detached
           ? encoder.encode(JSON.stringify(payload))
           : undefined;
+        const options = detached ? { payload: payloadBytes, crit: ['b64'] } : { payload: payloadBytes };
         const results: any[] = [];
         try {
-          const res1 = await generalVerify(obj, rsaPublicKey, {
-            payload: payloadBytes,
-          });
+          const res1 = await generalVerify(obj, rsaPublicKey, options);
           results.push({
             payload: JSON.parse(decoder.decode(res1.payload)),
             header: res1.protectedHeader,
           });
         } catch {}
         try {
-          const res2 = await generalVerify(obj, ecPublicKey, {
-            payload: payloadBytes,
-          });
+          const res2 = await generalVerify(obj, ecPublicKey, options);
           results.push({
             payload: JSON.parse(decoder.decode(res2.payload)),
             header: res2.protectedHeader,
@@ -149,10 +156,11 @@ async function parseKey(
         const payloadBytes = detached
           ? encoder.encode(JSON.stringify(payload))
           : undefined;
+        const options = detached ? { payload: payloadBytes, crit: ['b64'] } : { payload: payloadBytes };
         const { payload: pl, protectedHeader } = await compactVerify(
           token,
           cryptoKey,
-          { payload: payloadBytes },
+          options,
         );
         result = { payload: JSON.parse(decoder.decode(pl)), header: protectedHeader };
       }

@@ -46,7 +46,7 @@ import { displaySpfFlattener } from './components/apps/spf-flattener';
 
 import { displayHibpCheck } from './components/apps/hibp-check';
 
-import { displayJwsJweWorkbench } from './components/apps/jws-jwe-workbench';
+import { displayJwsJweWorkbench } from './apps/jws-jwe-workbench';
 
 import { displayCaaChecker } from './components/apps/caa-checker';
 
