@@ -2017,6 +2017,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/emscripten@npm:*":
+  version: 1.40.1
+  resolution: "@types/emscripten@npm:1.40.1"
+  checksum: 10c0/0d6cd29e551f85ba49a0e7d58de16c857960d40e57553e7cc2860b7d80c4210c992ed292998ec3fd3bdc3b41d96541e91d01a6c232106ac0ad79b4710e87f38d
+  languageName: node
+  linkType: hard
+
 "@types/estree@npm:^1.0.6":
   version: 1.0.8
   resolution: "@types/estree@npm:1.0.8"
@@ -2164,6 +2171,16 @@ __metadata:
     "@types/prop-types": "npm:*"
     csstype: "npm:^3.0.2"
   checksum: 10c0/9e188fa8e50f172cf647fc48fea2e04d88602afff47190b697de281a8ac88df9ee059864757a2a438ff599eaf9276d9a9e0e60585e88f7d57f01a2e4877d37ec
+  languageName: node
+  linkType: hard
+
+"@types/sql.js@npm:^1":
+  version: 1.4.9
+  resolution: "@types/sql.js@npm:1.4.9"
+  dependencies:
+    "@types/emscripten": "npm:*"
+    "@types/node": "npm:*"
+  checksum: 10c0/5d915d10ce0d3bf71231fe33ccceff60f485c3afc43546b05347f4be988084c17774185a9bd3c8a69157420e11d7b3baee54769e9aefd55d17ce92b7a76579a6
   languageName: node
   linkType: hard
 
@@ -3520,6 +3537,13 @@ __metadata:
     color-convert: "npm:^2.0.1"
     color-string: "npm:^1.9.0"
   checksum: 10c0/7fbe7cfb811054c808349de19fb380252e5e34e61d7d168ec3353e9e9aacb1802674bddc657682e4e9730c2786592a4de6f8283e7e0d3870b829bb0b7b2f6118
+  languageName: node
+  linkType: hard
+
+"comlink@npm:^4.4.2":
+  version: 4.4.2
+  resolution: "comlink@npm:4.4.2"
+  checksum: 10c0/38aa1f455cf08e94aaa8fc494fd203cc0ef02ece6c21404b7931ce17567e8a72deacddab98aa5650cfd78332ff24c34610586f6fb27fd19dc77e753ed1980deb
   languageName: node
   linkType: hard
 
@@ -9044,6 +9068,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"sql.js@npm:^1.13.0":
+  version: 1.13.0
+  resolution: "sql.js@npm:1.13.0"
+  checksum: 10c0/ecad62bf74082bf296a42db9bf001a79cd1b2fc954dbaddb97d689f7382c573ec827a692bd4490322fac47358d74c026258042466e258b34ea7c07b35d4a2e8e
+  languageName: node
+  linkType: hard
+
 "sshpk@npm:^1.18.0":
   version: 1.18.0
   resolution: "sshpk@npm:1.18.0"
@@ -9783,6 +9814,7 @@ __metadata:
     "@types/node": "npm:^24.2.1"
     "@types/plist": "npm:^3.0.2"
     "@types/react": "npm:^18.2.0"
+    "@types/sql.js": "npm:^1"
     "@types/three": "npm:^0.179.0"
     "@types/zxcvbn": "npm:^4.4.5"
     "@vercel/analytics": "npm:^1.5.0"
@@ -9799,6 +9831,7 @@ __metadata:
     canvas-confetti: "npm:1.9.3"
     cheerio: "npm:^1.1.2"
     chess.js: "npm:^1.0.0"
+    comlink: "npm:^4.4.2"
     crypto-js: "npm:4"
     cvss: "npm:^1.0.5"
     diff: "npm:^8.0.2"
@@ -9838,6 +9871,7 @@ __metadata:
     socket.io: "npm:^4.7.5"
     socket.io-client: "npm:^4.7.5"
     spdx-license-ids: "npm:^3.0.17"
+    sql.js: "npm:^1.13.0"
     sshpk: "npm:^1.18.0"
     stockfish: "npm:^16.0.0"
     swr: "npm:^2.2.5"
