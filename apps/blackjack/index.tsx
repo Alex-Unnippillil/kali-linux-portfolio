@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import Dealer from './Dealer';
 import PlayerHand from './PlayerHand';
@@ -69,8 +71,10 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
   const [showCount, setShowCount] = useState(false);
   const [showStrategy, setShowStrategy] = useState(false);
   const strategyKey = useMemo(() => `blackjack:strategy:${userId ?? 'guest'}`, [userId]);
+  const bankrollKey = useMemo(() => `blackjack:bankroll:${userId ?? 'guest'}`, [userId]);
   const [showPractice, setShowPractice] = useState(false);
   const [deck, setDeck] = useState<Card[]>(() => shuffle(createDeck(1)));
+  const [cutCard, setCutCard] = useState(15);
   const [dealer, setDealer] = useState<Card[]>([]);
   const [playerHands, setPlayerHands] = useState<Hand[]>([]);
   const [active, setActive] = useState(0);
@@ -79,6 +83,7 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
   const [runningCount, setRunningCount] = useState(0);
   const [history, setHistory] = useState<any[]>([]);
   const [betting, setBetting] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
   const trueCount = useMemo(() => runningCount / Math.max(1, deck.length / 52), [runningCount, deck.length]);
 
   useEffect(() => {
@@ -91,6 +96,19 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
   }, [showStrategy, strategyKey]);
 
   useEffect(() => {
+    const stored = localStorage.getItem(bankrollKey);
+    if (stored !== null) {
+      const val = parseInt(stored, 10);
+      if (!Number.isNaN(val)) setBankroll(val);
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) setReduceMotion(true);
+  }, [bankrollKey]);
+
+  useEffect(() => {
+    localStorage.setItem(bankrollKey, String(bankroll));
+  }, [bankroll, bankrollKey]);
+
+  useEffect(() => {
     if (preset === 'vegas') {
       setDecks(6);
       setHitSoft17(true);
@@ -101,7 +119,10 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
   }, [preset]);
 
   useEffect(() => {
-    setDeck(shuffle(createDeck(decks)));
+    const d = shuffle(createDeck(decks));
+    setDeck(d);
+    const penetration = 0.75 + Math.random() * 0.1; // 75-85% penetration
+    setCutCard(Math.floor(d.length * (1 - penetration)));
     setRunningCount(0);
   }, [decks]);
 
@@ -120,16 +141,25 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
   }, [deck, dealer, playerHands, active, bankroll, runningCount]);
 
   const dealCard = useCallback((hand: Card[]) => {
-    const card = deck[0];
-    setDeck(deck.slice(1));
-    hand.push(card);
-    setRunningCount((c) => c + countValue(card));
-  }, [deck]);
+    setDeck((d) => {
+      const [card, ...rest] = d;
+      hand.push(card);
+      setRunningCount((c) => c + countValue(card));
+      return rest;
+    });
+  }, []);
+
+  const reshuffle = useCallback(() => {
+    const d = shuffle(createDeck(decks));
+    const penetration = 0.75 + Math.random() * 0.1;
+    setCutCard(Math.floor(d.length * (1 - penetration)));
+    setDeck(d);
+    setRunningCount(0);
+  }, [decks]);
 
   const startRound = useCallback(() => {
-    if (deck.length < 15) {
-      setDeck(shuffle(createDeck(decks)));
-      setRunningCount(0);
+    if (deck.length <= cutCard) {
+      reshuffle();
     }
     setHistory([]);
     setTookInsurance(false);
@@ -145,7 +175,7 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
     setPlayerHands([player]);
     setActive(0);
     setBankroll((b) => b - bet);
-  }, [bet, dealCard, deck.length, decks]);
+  }, [bet, dealCard, deck.length, cutCard, reshuffle]);
 
   const hit = useCallback(() => {
     saveHistory();
@@ -273,6 +303,19 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
     return () => window.removeEventListener('keydown', handler);
   }, [hit, stand, doubleDown, split, surrender, playerHands, canDouble, canSplit, canSurrender]);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (playerHands.length > 0) return;
+      if (e.key === '1') setBet(5);
+      else if (e.key === '2') setBet(25);
+      else if (e.key === '3') setBet(100);
+      else if (e.key === '+' || e.key === '=') setBet((b) => b + 5);
+      else if (e.key === '-' || e.key === '_') setBet((b) => Math.max(5, b - 5));
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [playerHands.length]);
+
   const canUndo = history.length > 0;
   const undo = useCallback(() => {
     const prev = history[history.length - 1];
@@ -378,11 +421,12 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
       <div className="mb-2" aria-label="Bet controls">
         <div>Bet: {bet}</div>
         <div className="space-x-1 mt-1">
-          {[5, 25, 100].map((v) => (
+          {[5, 25, 100].map((v, i) => (
             <button
               key={v}
               className="btn"
               aria-label={`Set bet to ${v}`}
+              aria-keyshortcuts={`${i + 1}`}
               onClick={() => setBet(v)}
             >
               {v}
@@ -391,11 +435,15 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
         </div>
       </div>
       {dealer.length > 0 && (
-        <Dealer hand={dealer} hideHoleCard={playerHands.some((h) => !h.isFinished)} />
+        <Dealer
+          hand={dealer}
+          hideHoleCard={playerHands.some((h) => !h.isFinished)}
+          reduceMotion={reduceMotion}
+        />
       )}
       <div className="space-y-2">
         {playerHands.map((h, idx) => (
-          <PlayerHand key={idx} hand={h} active={idx === active} />
+          <PlayerHand key={idx} hand={h} active={idx === active} reduceMotion={reduceMotion} />
         ))}
       </div>
       <Controls
@@ -412,6 +460,7 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
         canUndo={canUndo}
         canInsurance={canInsurance}
         disabled={playerHands.length === 0}
+        recommended={showStrategy ? strategy : undefined}
       />
       <button className="btn mt-2 mr-2" aria-label="Deal" onClick={startRound}>Deal</button>
       <button
