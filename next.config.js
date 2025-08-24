@@ -81,6 +81,7 @@ const securityHeaders = [
 ];
 
 module.exports = {
+  bundlePagesRouterDependencies: true,
   productionBrowserSourceMaps: true,
   images: {
     remotePatterns: [
