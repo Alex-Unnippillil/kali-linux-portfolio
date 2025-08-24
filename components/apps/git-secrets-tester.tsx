@@ -6,6 +6,7 @@ export interface PatternInfo {
   regex: string;
   severity: string;
   remediation: string;
+  whitelist: string;
 }
 
 export interface ScanResult {
@@ -17,6 +18,7 @@ export interface ScanResult {
   severity: string;
   confidence: string;
   remediation: string;
+  whitelist: string;
 }
 
 interface DiffLine {
@@ -32,18 +34,21 @@ export const defaultPatterns: PatternInfo[] = [
     regex: 'AKIA[0-9A-Z]{16}',
     severity: 'high',
     remediation: 'Rotate the key and remove from history.',
+    whitelist: 'git secrets --add "AKIA[0-9A-Z]{16}"',
   },
   {
     name: 'RSA Private Key',
     regex: '-----BEGIN RSA PRIVATE KEY-----',
     severity: 'critical',
     remediation: 'Remove the private key and generate a new one.',
+    whitelist: 'git secrets --add "-----BEGIN RSA PRIVATE KEY-----"',
   },
   {
     name: 'Slack Token',
     regex: 'xox[baprs]-[0-9a-zA-Z]{10,48}',
     severity: 'high',
     remediation: 'Revoke the token and issue a new one.',
+    whitelist: 'git secrets --add "xox[baprs]-[0-9a-zA-Z]{10,48}"',
   },
 ];
 
@@ -81,6 +86,7 @@ const GitSecretsTester: React.FC = () => {
   const [logs, setLogs] = useState<string[]>([]);
   const [diff, setDiff] = useState<DiffLine[]>([]);
   const [patch, setPatch] = useState('');
+  const [archive, setArchive] = useState<string | null>(null);
   const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
@@ -132,6 +138,7 @@ const GitSecretsTester: React.FC = () => {
             severity: pat.severity,
             confidence: 'high',
             remediation: pat.remediation,
+            whitelist: pat.whitelist,
           });
           safe = safe.replace(m[0], redactSecret(m[0]));
         }
@@ -145,6 +152,7 @@ const GitSecretsTester: React.FC = () => {
           severity: 'error',
           confidence: 'low',
           remediation: e.message,
+          whitelist: pat.whitelist,
         });
       }
     });
@@ -163,6 +171,7 @@ const GitSecretsTester: React.FC = () => {
         severity: 'medium',
         confidence: 'low',
         remediation: 'Avoid hardcoding credentials.',
+        whitelist: 'git secrets --add -l "pattern"',
       });
       safe = safe.replace(secret, redactSecret(secret));
     }
@@ -180,6 +189,7 @@ const GitSecretsTester: React.FC = () => {
           severity: 'medium',
           confidence: 'medium',
           remediation: 'Verify this string is not a secret.',
+          whitelist: 'git secrets --add -l "pattern"',
         });
         safe = safe.replace(token, redactSecret(token));
       }
@@ -243,6 +253,8 @@ const GitSecretsTester: React.FC = () => {
     setText(val);
     setResults([]);
     setDiff([]);
+    setArchive(null);
+    setPatch('');
     if (val) scanFile('input', val);
   };
 
@@ -250,6 +262,8 @@ const GitSecretsTester: React.FC = () => {
     setResults([]);
     setLogs([]);
     setDiff([]);
+    setPatch('');
+    setArchive(null);
     if (file.name.endsWith('.patch') || file.name.endsWith('.diff')) {
       const p = await file.text();
       setPatch(p);
@@ -258,6 +272,7 @@ const GitSecretsTester: React.FC = () => {
     }
     if (file.name.endsWith('.zip')) {
       const buf = await file.arrayBuffer();
+      setArchive(Buffer.from(buf).toString('base64'));
       workerRef.current?.postMessage({ type: 'scan-archive', buffer: buf });
       const zip = await JSZip.loadAsync(buf);
       const entries = Object.values(zip.files);
@@ -278,6 +293,7 @@ const GitSecretsTester: React.FC = () => {
         return;
       }
       const content = new TextDecoder().decode(data);
+      setPatch(content);
       scanFile(file.name, content);
     }
   };
@@ -300,35 +316,35 @@ const GitSecretsTester: React.FC = () => {
 
   const runServerScan = async () => {
     try {
+      const body: any = {};
+      if (archive) body.archive = archive;
+      if (patch || text) body.patch = patch || text;
       const res = await fetch('/api/git-secrets-tester', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patch: patch || text }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
-      const merged: ScanResult[] = [];
-      ['gitleaks', 'trufflehog'].forEach((tool) => {
-        const arr = (data as any)[tool];
-        if (Array.isArray(arr)) {
-          arr.forEach((item: any) => {
-            merged.push({
-              file: item.file || 'input',
-              pattern: tool,
-              match: redactSecret(item.secret || ''),
-              index: item.index || 0,
-              line: item.line || 0,
-              severity: item.severity || 'medium',
-              confidence: item.confidence || 'medium',
-              remediation: item.remediation || 'Rotate the secret.',
-            });
-          });
-        }
-      });
-      if (merged.length > 0) setResults((prev) => [...prev, ...merged]);
-      else setLogs((l) => [...l, 'Server scan did not return results']);
+      if (Array.isArray(data.results)) {
+        setResults((prev) => [...prev, ...data.results]);
+      } else {
+        setLogs((l) => [...l, 'Server scan did not return results']);
+      }
+      if (Array.isArray(data.logs)) setLogs((l) => [...l, ...data.logs]);
     } catch (e: any) {
       setLogs((l) => [...l, `Server scan failed: ${e.message}`]);
     }
+  };
+
+  const downloadLogs = () => {
+    if (logs.length === 0) return;
+    const blob = new Blob([logs.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'git-secrets.log';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -373,6 +389,13 @@ const GitSecretsTester: React.FC = () => {
         onClick={runServerScan}
       >
         Server scan
+      </button>
+      <button
+        type="button"
+        className="px-2 py-1 bg-gray-700 rounded w-40"
+        onClick={downloadLogs}
+      >
+        Download logs
       </button>
       {Object.keys(summary).length > 0 && (
         <div className="bg-gray-800 p-2 rounded">
@@ -438,6 +461,7 @@ const GitSecretsTester: React.FC = () => {
               {' '}at {r.line}:{r.index} [{r.severity}/{r.confidence}]
             </div>
             <div className="text-sm text-gray-300 flex items-center"><span className="flex-1">Remediation: {r.remediation}</span><button type="button" className="ml-2 px-1 bg-gray-700 rounded" onClick={() => navigator.clipboard.writeText(r.remediation)}>Copy</button></div>
+            <div className="text-sm text-gray-300 flex items-center mt-1"><span className="flex-1">Whitelist: {r.whitelist}</span><button type="button" className="ml-2 px-1 bg-gray-700 rounded" onClick={() => navigator.clipboard.writeText(r.whitelist)}>Copy</button></div>
             <button
               type="button"
               className="mt-2 px-2 py-1 bg-blue-600 rounded"
