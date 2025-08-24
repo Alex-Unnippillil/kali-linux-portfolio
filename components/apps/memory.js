@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createDeck, THEME_PACKS } from './memory_utils';
+import {
+  createDeck,
+  THEME_PACKS,
+  MATCH_PAUSE,
+  FLIP_BACK_DELAY,
+} from './memory_utils';
 
 const LEVELS = [8, 12, 18, 24, 30];
 
@@ -23,6 +28,8 @@ const Memory = () => {
     bestScore: null,
   });
   const timerRef = useRef(null);
+  const cardRefs = useRef([]);
+  const [announcement, setAnnouncement] = useState('');
 
   const key = useCallback(
     (p = pairs, t = timed, th = theme) =>
@@ -121,10 +128,12 @@ const Memory = () => {
         setStreak(newStreak);
         setScore((s) => s + 10 * newStreak);
         setMatched([...matched, first, second]);
-        setTimeout(() => setFlipped([]), 600);
+        setAnnouncement('Match found');
+        setTimeout(() => setFlipped([]), MATCH_PAUSE);
       } else {
         setStreak(0);
-        setTimeout(() => setFlipped([]), assistive ? 800 : 200);
+        setAnnouncement('No match');
+        setTimeout(() => setFlipped([]), assistive ? 800 : FLIP_BACK_DELAY);
       }
     }
   };
@@ -132,6 +141,20 @@ const Memory = () => {
   const totalCards = cards.length || pairs * 2;
   const cols = Math.ceil(Math.sqrt(totalCards));
   const gridStyle = { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` };
+
+  const handleKeyDown = (idx, e) => {
+    const row = Math.floor(idx / cols);
+    const col = idx % cols;
+    let next = null;
+    if (e.key === 'ArrowRight' && col < cols - 1) next = idx + 1;
+    if (e.key === 'ArrowLeft' && col > 0) next = idx - 1;
+    if (e.key === 'ArrowDown' && idx + cols < cards.length) next = idx + cols;
+    if (e.key === 'ArrowUp' && idx - cols >= 0) next = idx - cols;
+    if (next != null && cardRefs.current[next]) {
+      e.preventDefault();
+      cardRefs.current[next].focus();
+    }
+  };
 
   const frontClasses =
     theme === 'high-contrast'
@@ -198,9 +221,18 @@ const Memory = () => {
         {cards.map((card, idx) => {
           const isFlipped = flipped.includes(idx) || matched.includes(idx);
           return (
-            <div key={card.id} className="aspect-square" onClick={() => handleFlip(idx)}>
+            <button
+              key={card.id}
+              className="aspect-square focus:outline-none"
+              onClick={() => handleFlip(idx)}
+              ref={(el) => (cardRefs.current[idx] = el)}
+              onKeyDown={(e) => handleKeyDown(idx, e)}
+              aria-label={`Card ${idx + 1}`}
+              aria-pressed={isFlipped}
+              data-testid={`card-${idx}`}
+            >
               <div
-                className="relative w-full h-full transition-transform duration-500 transform-gpu"
+                className="relative w-full h-full transition-transform duration-500 ease-in-out transform-gpu"
                 style={{
                   transformStyle: 'preserve-3d',
                   transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
@@ -210,11 +242,19 @@ const Memory = () => {
                   className={frontClasses}
                   style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
                 >
-                  {card.value}
+                  {typeof card.value === 'string' && card.value.startsWith('http') ? (
+                    <img
+                      src={card.value}
+                      alt="card"
+                      className="w-full h-full object-cover rounded"
+                    />
+                  ) : (
+                    card.value
+                  )}
                 </div>
                 <div className={backClasses} style={{ backfaceVisibility: 'hidden' }} />
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -239,6 +279,9 @@ const Memory = () => {
         >
           Replay
         </button>
+      </div>
+      <div aria-live="polite" className="sr-only">
+        {announcement}
       </div>
     </div>
   );
