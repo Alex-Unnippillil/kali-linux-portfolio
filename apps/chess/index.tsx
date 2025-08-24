@@ -1,3 +1,4 @@
+'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import { Chess, Square, PieceSymbol, Piece } from 'chess.js';
 
@@ -43,9 +44,14 @@ const ChessApp: React.FC = () => {
   const engine = useRef<Worker | null>(null);
   const premoveRef = useRef<{ from: string; to: string } | null>(null);
   const enginePlayingRef = useRef(false);
-  const [analysis, setAnalysis] = useState<{ eval: string; best: string } | null>(
-    null
-  );
+  const [analysis, setAnalysis] =
+    useState<{ eval: string; depth: number; pv: string } | null>(null);
+  const [moveList, setMoveList] = useState<string[]>([]);
+  const [whiteTime, setWhiteTime] = useState(300);
+  const [blackTime, setBlackTime] = useState(300);
+  const [boardTheme, setBoardTheme] = useState<
+    'standard' | 'high' | 'colorblind'
+  >('standard');
   const [bestArrow, setBestArrow] = useState<{
     from: string;
     to: string;
@@ -74,61 +80,54 @@ const ChessApp: React.FC = () => {
   const openingsRef = useRef<string[][] | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const StockfishModule: any = await import(
-        /* webpackIgnore: true */ 'stockfish/src/stockfish-nnue-16.js'
-      );
-      if (!mounted) return;
-      engine.current = StockfishModule();
-      engine.current.postMessage('uci');
-      engine.current.postMessage(`setoption name Skill Level value ${skill}`);
-      engine.current.onmessage = (e: MessageEvent) => {
-        const line = e.data as string;
-        if (line.startsWith('info')) {
-          const scoreMatch = line.match(/score (cp|mate) (-?\d+)/);
-          const pvMatch = line.match(/pv ([a-h][1-8][a-h][1-8][qrbn]?)/);
-          if (scoreMatch && pvMatch) {
-            const value =
-              scoreMatch[1] === 'cp'
-                ? (Number(scoreMatch[2]) / 100).toFixed(2)
-                : `M${scoreMatch[2]}`;
-            setAnalysis({ eval: value, best: pvMatch[1] });
-            setBestArrow({
-              from: pvMatch[1].slice(0, 2),
-              to: pvMatch[1].slice(2, 4),
-            });
-          }
-        } else if (line.startsWith('bestmove')) {
-          const move = line.split(' ')[1];
-          if (enginePlayingRef.current) {
-            game.move({
-              from: move.slice(0, 2) as Square,
-              to: move.slice(2, 4) as Square,
-              promotion: move.slice(4) || 'q',
-            });
-            updateBoard();
-            updateStatus();
-            if (premoveRef.current) {
-              const res = game.move(premoveRef.current as any);
-              premoveRef.current = null;
-              setPremove(null);
-              if (res) {
-                updateBoard();
-                updateStatus();
-              }
-            }
-            setAnnounce(`Engine moves ${move}`);
-            analyzePosition();
-          }
-          enginePlayingRef.current = false;
+    const w = new Worker(new URL('./stockfishWorker.ts', import.meta.url));
+    engine.current = w;
+    w.postMessage('uci');
+    w.postMessage(`setoption name Skill Level value ${skill}`);
+    w.onmessage = (e: MessageEvent) => {
+      const line = e.data as string;
+      if (line.startsWith('info')) {
+        const scoreMatch = line.match(/score (cp|mate) (-?\d+)/);
+        const depthMatch = line.match(/depth (\d+)/);
+        const pvMatch = line.match(/pv (.+)/);
+        if (scoreMatch && pvMatch && depthMatch) {
+          const value =
+            scoreMatch[1] === 'cp'
+              ? (Number(scoreMatch[2]) / 100).toFixed(2)
+              : `M${scoreMatch[2]}`;
+          const pv = pvMatch[1].trim();
+          setAnalysis({ eval: value, depth: Number(depthMatch[1]), pv });
+          const best = pv.split(' ')[0];
+          setBestArrow({ from: best.slice(0, 2), to: best.slice(2, 4) });
         }
-      };
-      analyzePosition();
-    })();
+      } else if (line.startsWith('bestmove')) {
+        const move = line.split(' ')[1];
+        if (enginePlayingRef.current) {
+          game.move({
+            from: move.slice(0, 2) as Square,
+            to: move.slice(2, 4) as Square,
+            promotion: move.slice(4) || 'q',
+          });
+          updateBoard();
+          updateStatus();
+          if (premoveRef.current) {
+            const res = game.move(premoveRef.current as any);
+            premoveRef.current = null;
+            setPremove(null);
+            if (res) {
+              updateBoard();
+              updateStatus();
+            }
+          }
+          setAnnounce(`Engine moves ${move}`);
+          analyzePosition();
+        }
+        enginePlayingRef.current = false;
+      }
+    };
+    analyzePosition();
     return () => {
-      mounted = false;
-      if (engine.current) engine.current.terminate();
+      w.terminate();
     };
   }, []);
 
@@ -141,8 +140,21 @@ const ChessApp: React.FC = () => {
     premoveRef.current = premove;
   }, [premove]);
 
+  useEffect(() => {
+    const int = setInterval(() => {
+      setWhiteTime((t) =>
+        game.turn() === 'w' && t > 0 ? t - 1 : t,
+      );
+      setBlackTime((t) =>
+        game.turn() === 'b' && t > 0 ? t - 1 : t,
+      );
+    }, 1000);
+    return () => clearInterval(int);
+  }, []);
+
   const updateBoard = () => {
     setBoard(game.board());
+    setMoveList(game.history());
     if (!enginePlayingRef.current) analyzePosition();
   };
 
@@ -275,6 +287,18 @@ const ChessApp: React.FC = () => {
     setPremove(null);
     setAnnounce('New game');
     if (engine.current) engine.current.postMessage('ucinewgame');
+    setMoveList([]);
+    setWhiteTime(300);
+    setBlackTime(300);
+  };
+
+  const takeback = () => {
+    game.undo();
+    if (game.turn() === 'b') game.undo();
+    premoveRef.current = null;
+    setPremove(null);
+    updateBoard();
+    updateStatus();
   };
 
   const loadPuzzle = async (daily = false) => {
@@ -374,6 +398,14 @@ const ChessApp: React.FC = () => {
     setArrowFrom(null);
   };
 
+  const formatTime = (t: number) => {
+    const m = Math.floor(t / 60)
+      .toString()
+      .padStart(2, '0');
+    const s = (t % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
   const exportPGN = () => {
     const pgn = game.pgn();
     if (navigator.clipboard) {
@@ -468,7 +500,16 @@ const ChessApp: React.FC = () => {
   const renderSquare = (piece: any, file: number, rank: number) => {
     const squareName = 'abcdefgh'[file] + (8 - rank);
     const isSelected = selected === squareName;
-    const squareColor = (file + rank) % 2 === 0 ? 'bg-gray-300' : 'bg-gray-700';
+    let light = 'bg-gray-300';
+    let dark = 'bg-gray-700';
+    if (boardTheme === 'high') {
+      light = 'bg-white';
+      dark = 'bg-black';
+    } else if (boardTheme === 'colorblind') {
+      light = 'bg-blue-300';
+      dark = 'bg-yellow-500';
+    }
+    const squareColor = (file + rank) % 2 === 0 ? light : dark;
     const isHighlight = highlight.includes(squareName);
     const draggable = !!(piece && piece.color === game.turn());
     const pieceName = piece
@@ -494,6 +535,13 @@ const ChessApp: React.FC = () => {
     );
   };
 
+  const movePairs: string[] = [];
+  for (let i = 0; i < moveList.length; i += 2) {
+    movePairs.push(
+      `${i / 2 + 1}. ${moveList[i]} ${moveList[i + 1] ?? ''}`,
+    );
+  }
+
   return (
     <div className="p-2 text-white bg-panel h-full w-full flex flex-col items-center">
       <div aria-live="polite" className="sr-only">
@@ -507,6 +555,10 @@ const ChessApp: React.FC = () => {
       {user && (
         <div className="mb-2">{user.name} – Rating: {user.rating}</div>
       )}
+      <div className="mb-2 flex justify-between w-64">
+        <span>White {formatTime(whiteTime)}</span>
+        <span>Black {formatTime(blackTime)}</span>
+      </div>
       <div className="relative">
         <div className="grid grid-cols-8">
           {board.map((row, r) => row.map((p, f) => renderSquare(p, f, r)))}
@@ -580,9 +632,16 @@ const ChessApp: React.FC = () => {
           })()}
         </svg>
       </div>
+      <div className="mt-2 w-64 h-24 overflow-y-auto bg-gray-800 p-1 text-xs">
+        {movePairs.map((m, i) => (
+          <div key={i}>{m}</div>
+        ))}
+      </div>
       <div className="mt-2">{status}</div>
       {analysis && (
-        <div className="mt-1">Eval: {analysis.eval} Best: {analysis.best}</div>
+        <div className="mt-1">
+          Eval: {analysis.eval} Depth: {analysis.depth} PV: {analysis.pv}
+        </div>
       )}
       {rushActive && (
         <div className="mt-1">Rush: {rushScore} – {rushTime}s</div>
@@ -593,6 +652,9 @@ const ChessApp: React.FC = () => {
       <div className="mt-2 flex flex-wrap gap-2 justify-center">
         <button className="px-2 py-1 bg-gray-700" onClick={reset}>
           Reset
+        </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={takeback}>
+          Takeback
         </button>
         <button className="px-2 py-1 bg-gray-700" onClick={() => loadPuzzle(false)}>
           Puzzle
@@ -620,6 +682,24 @@ const ChessApp: React.FC = () => {
         </button>
         <button className="px-2 py-1 bg-gray-700" onClick={clearArrows}>
           Clear Arrows
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700"
+          onClick={() => setBoardTheme('high')}
+        >
+          High Contrast
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700"
+          onClick={() => setBoardTheme('colorblind')}
+        >
+          Color Blind
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700"
+          onClick={() => setBoardTheme('standard')}
+        >
+          Standard
         </button>
       </div>
       <div className="mt-2 flex items-center">
