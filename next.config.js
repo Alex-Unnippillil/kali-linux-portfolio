@@ -22,7 +22,7 @@ const ContentSecurityPolicy = [
   "base-uri 'self'",
   "form-action 'self'",
   // Enable Reporting API endpoint for violations
-  "report-to csp-endpoint",
+  'report-to csp-endpoint',
 ].join('; ');
 
 // Omit the CSP in development to prevent dev tooling from breaking.
@@ -34,8 +34,8 @@ const securityHeaders = [
         {
           key: 'Report-To',
           value:
-            '{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/api/csp-reporter"}]}'
-        }
+            '{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/api/csp-reporter"}]}',
+        },
       ]),
   {
     key: 'X-Content-Type-Options',
@@ -47,7 +47,8 @@ const securityHeaders = [
   },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(), usb=(), payment=(), serial=()',
+    value:
+      'camera=(), microphone=(), geolocation=(), usb=(), payment=(), serial=()',
   },
   {
     key: 'Strict-Transport-Security',
@@ -69,9 +70,25 @@ const securityHeaders = [
 ];
 
 module.exports = {
+  productionBrowserSourceMaps: true,
   images: {
-    unoptimized: true,
-    domains: ['opengraph.githubassets.com', 'raw.githubusercontent.com', 'avatars.githubusercontent.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'opengraph.githubassets.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'raw.githubusercontent.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+        pathname: '/**',
+      },
+    ],
   },
   webpack: (config) => {
     config.resolve = config.resolve || {};
@@ -86,7 +103,10 @@ module.exports = {
       mermaid: require('path').resolve(__dirname, 'lib/mermaidStub.js'),
       'argon2-browser': require('path').resolve(__dirname, 'lib/argon2Stub.js'),
     };
-    config.experiments = { ...(config.experiments || {}), asyncWebAssembly: true };
+    config.experiments = {
+      ...(config.experiments || {}),
+      asyncWebAssembly: true,
+    };
     return config;
   },
   async headers() {
@@ -98,4 +118,3 @@ module.exports = {
     ];
   },
 };
-
