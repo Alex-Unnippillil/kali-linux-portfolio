@@ -81,17 +81,19 @@ const JwsJweWorkbench: React.FC = () => {
 const privateKeyPem = \`${privateKeyData}\`;
 const privateKey = await importPKCS8(privateKeyPem, '${jwsAlg}');
 const payload = { msg: 'hello' };
-const jws = await new CompactSign(new TextEncoder().encode(JSON.stringify(payload)))
-  .setProtectedHeader({ alg: '${jwsAlg}', kid: 'demo' })
-  .sign(privateKey);`
+let jws = await new CompactSign(new TextEncoder().encode(JSON.stringify(payload)))
+  .setProtectedHeader({ alg: '${jwsAlg}', kid: 'demo'${detached ? ", b64: false, crit: ['b64']" : ''} })
+  .sign(privateKey);
+${detached ? "const parts = jws.split('.');\nparts[1] = '';\njws = parts.join('.');" : ''}`
       : `import { CompactSign, importJWK } from 'jose';
 
 const jwks = ${privateKeyData};
 const privateKey = await importJWK(jwks.keys[0], '${jwsAlg}');
 const payload = { msg: 'hello' };
-const jws = await new CompactSign(new TextEncoder().encode(JSON.stringify(payload)))
-  .setProtectedHeader({ alg: '${jwsAlg}', kid: 'demo' })
-  .sign(privateKey);`;
+let jws = await new CompactSign(new TextEncoder().encode(JSON.stringify(payload)))
+  .setProtectedHeader({ alg: '${jwsAlg}', kid: 'demo'${detached ? ", b64: false, crit: ['b64']" : ''} })
+  .sign(privateKey);
+${detached ? "const parts = jws.split('.');\nparts[1] = '';\njws = parts.join('.');" : ''}`;
 
   const verifySnippet =
     format === 'pem'
@@ -99,13 +101,13 @@ const jws = await new CompactSign(new TextEncoder().encode(JSON.stringify(payloa
 
 const publicKeyPem = \`${publicKeyData}\`;
 const publicKey = await importSPKI(publicKeyPem, '${jwsAlg}');
-const { payload, protectedHeader } = await compactVerify(jws, publicKey);
+const { payload, protectedHeader } = await compactVerify(jws, publicKey${detached ? ", { payload: new TextEncoder().encode(JSON.stringify({ msg: 'hello' })), crit: ['b64'] }" : ''});
 const data = JSON.parse(new TextDecoder().decode(payload));`
       : `import { compactVerify, importJWK } from 'jose';
 
 const jwks = ${publicKeyData};
 const publicKey = await importJWK(jwks.keys[0], '${jwsAlg}');
-const { payload, protectedHeader } = await compactVerify(jws, publicKey);
+const { payload, protectedHeader } = await compactVerify(jws, publicKey${detached ? ", { payload: new TextEncoder().encode(JSON.stringify({ msg: 'hello' })), crit: ['b64'] }" : ''});
 const data = JSON.parse(new TextDecoder().decode(payload));`;
 
   const encryptSnippet =
