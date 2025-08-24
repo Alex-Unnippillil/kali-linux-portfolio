@@ -22,20 +22,69 @@ export class BattleshipAI {
 
   // Compute remaining ships from board knowledge
   private remainingShips(board: CellState[][]): number[] {
-    const hits = board.flat().filter((c) => c === 2).length;
-    const sunk = board.flat().filter((c) => c === 3).length;
-    const total = FLEET.reduce((a, b) => a + b, 0);
-    const remaining = total - hits - sunk;
-    const ships: number[] = [];
-    let acc = remaining;
-    for (const len of FLEET) {
-      if (acc >= len) {
-        ships.push(len);
-        acc -= len;
+    // Copy the fleet so we can remove sunk ships
+    const fleet = [...FLEET];
+    const size = board.length;
+    // Track which ships have been sunk by finding contiguous groups of '3' cells
+    const sunkShips: number[] = [];
+    const visited: boolean[][] = Array.from({ length: size }, () => Array(size).fill(false));
+
+    // Helper to mark contiguous sunk cells and return their length
+    const markSunk = (r: number, c: number, dr: number, dc: number): number => {
+      let len = 0;
+      while (
+        r >= 0 && r < size &&
+        c >= 0 && c < size &&
+        board[r][c] === 3 &&
+        !visited[r][c]
+      ) {
+        visited[r][c] = true;
+        len++;
+        r += dr;
+        c += dc;
+      }
+      return len;
+    };
+
+    // Scan for horizontal sunk ships
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (board[r][c] === 3 && !visited[r][c]) {
+          // Check horizontal
+          let len = markSunk(r, c, 0, 1);
+          if (len > 1) sunkShips.push(len);
+        }
       }
     }
-    if (ships.every((l) => l === 1)) this.parity = 1;
-    return ships;
+    // Scan for vertical sunk ships
+    for (let c = 0; c < size; c++) {
+      for (let r = 0; r < size; r++) {
+        if (board[r][c] === 3 && !visited[r][c]) {
+          // Check vertical
+          let len = markSunk(r, c, 1, 0);
+          if (len > 1) sunkShips.push(len);
+        }
+      }
+    }
+    // Single cell sunk ships (if any)
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (board[r][c] === 3 && !visited[r][c]) {
+          sunkShips.push(1);
+          visited[r][c] = true;
+        }
+      }
+    }
+
+    // Remove sunk ships from fleet
+    for (const sunkLen of sunkShips) {
+      const idx = fleet.indexOf(sunkLen);
+      if (idx !== -1) {
+        fleet.splice(idx, 1);
+      }
+    }
+    if (fleet.every((l) => l === 1)) this.parity = 1;
+    return fleet;
   }
 
   // Generate probability density map for current board state
