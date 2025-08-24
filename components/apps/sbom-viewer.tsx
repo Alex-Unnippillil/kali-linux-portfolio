@@ -1,187 +1,198 @@
-import React, { useEffect, useState } from 'react';
-import { XMLParser } from 'fast-xml-parser';
+import React, { useCallback, useMemo, useState } from 'react';
+import Fuse from 'fuse.js';
+import Papa from 'papaparse';
+import { FixedSizeList as List } from 'react-window';
+import {
+  ParsedSbom,
+  fetchOsv,
+  parseSbomObject,
+  readFileChunks,
+} from '@lib/sbom';
 
-interface PackageInfo {
-  name: string;
-  version: string;
-  licenses: string[];
-  vulns?: { id: string; summary: string }[];
+interface TreeProps {
+  id: string;
+  graph: Record<string, string[]>;
 }
 
-const parseCycloneDxJson = (data: any): PackageInfo[] => {
-  const comps = data.components || [];
-  return comps.map((c: any) => ({
-    name: c.name,
-    version: c.version || '',
-    licenses:
-      (c.licenses || []).map((l: any) => l.license?.id || l.license?.name || l.expression).filter(Boolean),
-  }));
-};
-
-const parseCycloneDxXml = (data: any): PackageInfo[] => {
-  let comps = data.bom?.components?.component;
-  if (!comps) return [];
-  if (!Array.isArray(comps)) comps = [comps];
-  return comps.map((c: any) => {
-    const licNode = c.licenses?.license;
-    let licenses: string[] = [];
-    if (Array.isArray(licNode)) {
-      licenses = licNode.map((l: any) => l.id || l.name).filter(Boolean);
-    } else if (licNode) {
-      licenses = [licNode.id || licNode.name].filter(Boolean);
-    }
-    return { name: c.name, version: c.version || '', licenses };
-  });
-};
-
-const parseSpdxJson = (data: any): PackageInfo[] => {
-  return (data.packages || []).map((p: any) => ({
-    name: p.name,
-    version: p.versionInfo || '',
-    licenses: [p.licenseConcluded, p.licenseDeclared].filter(Boolean),
-  }));
-};
-
-const parseSbom = (text: string): PackageInfo[] => {
-  try {
-    const json = JSON.parse(text);
-    if (json.bomFormat === 'CycloneDX') return parseCycloneDxJson(json);
-    if (json.spdxVersion) return parseSpdxJson(json);
-  } catch {
-    try {
-      const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '' });
-      const obj = parser.parse(text);
-      if (obj.bom) return parseCycloneDxXml(obj);
-    } catch {
-      return [];
-    }
-  }
-  return [];
-};
-
-const fetchVulns = async (pkgs: PackageInfo[]) => {
-  return Promise.all(
-    pkgs.map(async (p) => {
-      try {
-        const res = await fetch('https://api.osv.dev/v1/query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ package: { name: p.name, ecosystem: 'npm' }, version: p.version }),
-        });
-        const data = await res.json();
-        p.vulns = data.vulns || [];
-      } catch {
-        p.vulns = [];
-      }
-      return p;
-    })
+const DependencyTree: React.FC<TreeProps> = ({ id, graph }) => {
+  const deps = graph[id] || [];
+  if (!deps.length) return null;
+  return (
+    <ul className="ml-4 list-disc">
+      {deps.map((d) => (
+        <li key={d}>
+          {d}
+          <DependencyTree id={d} graph={graph} />
+        </li>
+      ))}
+    </ul>
   );
 };
 
 const SbomViewer: React.FC = () => {
-  const [pkgsA, setPkgsA] = useState<PackageInfo[]>([]);
-  const [pkgsB, setPkgsB] = useState<PackageInfo[]>([]);
-  const [diff, setDiff] = useState<{ added: PackageInfo[]; removed: PackageInfo[] }>({ added: [], removed: [] });
+  const [sbom, setSbom] = useState<ParsedSbom | null>(null);
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<string | null>(null);
 
-  const loadFile = async (e: React.ChangeEvent<HTMLInputElement>, which: 'A' | 'B') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const pkgs = parseSbom(text);
-    if (which === 'A') setPkgsA(pkgs);
-    else setPkgsB(pkgs);
+  const handleFile = useCallback(async (file: File) => {
+    const text = await readFileChunks(file);
+    const data = JSON.parse(text);
+    const parsed = parseSbomObject(data);
+    await Promise.all(parsed.components.map(fetchOsv));
+    setSbom(parsed);
+  }, []);
+
+  const onDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const file = e.dataTransfer.files?.[0];
+      if (file) handleFile(file);
+    },
+    [handleFile]
+  );
+
+  const components = sbom?.components || [];
+
+  const fuse = useMemo(
+    () => new Fuse(components, { keys: ['name'], threshold: 0.3 }),
+    [components]
+  );
+
+  const filtered = useMemo(() => {
+    if (!query) return components;
+    return fuse.search(query).map((r) => r.item);
+  }, [components, query, fuse]);
+
+  const licenseMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    components.forEach((c) =>
+      c.licenses.forEach((l) => {
+        map[l] = (map[l] || 0) + 1;
+      })
+    );
+    return map;
+  }, [components]);
+
+  const exportCsv = () => {
+    if (!sbom) return;
+    const rows = components.map((c) => ({
+      name: c.name,
+      version: c.version || '',
+      licenses: c.licenses.join(';'),
+      vulnerabilities: c.vulns.map((v) => v.id).join(';'),
+    }));
+    const csv = Papa.unparse(rows);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sbom.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  useEffect(() => {
-    if (pkgsA.length) fetchVulns(pkgsA).then(setPkgsA);
-  }, [pkgsA.length]);
-
-  useEffect(() => {
-    if (pkgsB.length) fetchVulns(pkgsB).then(setPkgsB);
-  }, [pkgsB.length]);
-
-  useEffect(() => {
-    const mapA = new Map(pkgsA.map((p) => [p.name + '@' + p.version, p]));
-    const mapB = new Map(pkgsB.map((p) => [p.name + '@' + p.version, p]));
-    const added: PackageInfo[] = [];
-    const removed: PackageInfo[] = [];
-    for (const [k, v] of mapB) if (!mapA.has(k)) added.push(v);
-    for (const [k, v] of mapA) if (!mapB.has(k)) removed.push(v);
-    setDiff({ added, removed });
-  }, [pkgsA, pkgsB]);
-
-  return (
-    <div className="p-4 text-white bg-ub-cool-grey h-full w-full overflow-auto text-xs">
-      <div className="mb-4 space-y-2">
-        <div>
-          <label className="font-bold">SBOM A: </label>
-          <input type="file" onChange={(e) => loadFile(e, 'A')} />
+  const Row = ({ index, style }: { index: number; style: React.CSSProperties }) => {
+    const c = filtered[index];
+    return (
+      <div
+        style={style}
+        className="flex gap-2 px-2 py-1 border-b cursor-pointer"
+        onClick={() => setSelected(c.id)}
+      >
+        <div className="flex-1 truncate" title={c.name}>
+          {c.name}
         </div>
-        <div>
-          <label className="font-bold">SBOM B: </label>
-          <input type="file" onChange={(e) => loadFile(e, 'B')} />
+        <div className="w-24">{c.version}</div>
+        <div className="flex-1 truncate" title={c.licenses.join(', ')}>
+          {c.licenses.join(', ')}
+        </div>
+        <div className="flex-1 truncate">
+          {c.vulns.map((v) => {
+            const url = v.id.startsWith('CVE-')
+              ? `https://nvd.nist.gov/vuln/detail/${v.id}`
+              : `https://osv.dev/vulnerability/${v.id}`;
+            return (
+              <a
+                key={v.id}
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-300 underline mr-1"
+              >
+                {v.id}
+              </a>
+            );
+          })}
         </div>
       </div>
-      <table className="mb-4 w-full table-auto border text-xs">
-        <thead>
-          <tr>
-            <th className="border px-1">Package</th>
-            <th className="border px-1">Version</th>
-            <th className="border px-1">Licenses</th>
-            <th className="border px-1">Vulnerabilities</th>
-          </tr>
-        </thead>
-        <tbody>
-          {pkgsA.map((p, i) => (
-            <tr key={i}>
-              <td className="border px-1">{p.name}</td>
-              <td className="border px-1">{p.version}</td>
-              <td className="border px-1">{p.licenses.join(', ')}</td>
-              <td className="border px-1">
-                {p.vulns && p.vulns.length > 0
-                  ? p.vulns.map((v) => v.id).join(', ')
-                  : '—'}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {(diff.added.length > 0 || diff.removed.length > 0) && (
-        <div className="mb-4">
-          <h3 className="font-bold mb-2">SBOM Diff</h3>
-          {diff.added.length > 0 && (
-            <div className="mb-2">
-              <h4 className="font-semibold">Added</h4>
-              <ul className="list-disc pl-4">
-                {diff.added.map((p, i) => (
-                  <li key={i}>{`${p.name}@${p.version}`}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {diff.removed.length > 0 && (
-            <div className="mb-2">
-              <h4 className="font-semibold">Removed</h4>
-              <ul className="list-disc pl-4">
-                {diff.removed.map((p, i) => (
-                  <li key={i}>{`${p.name}@${p.version}`}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+    );
+  };
+
+  if (!sbom) {
+    return (
+      <div
+        className="h-full w-full flex items-center justify-center border-2 border-dashed"
+        onDrop={onDrop}
+        onDragOver={(e) => e.preventDefault()}
+      >
+        <label className="text-center">
+          Drop SBOM JSON here or{' '}
+          <input
+            data-testid="file-input"
+            type="file"
+            onChange={(e) => e.target.files && handleFile(e.target.files[0])}
+          />
+        </label>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 space-y-4 h-full w-full overflow-hidden text-white bg-ub-cool-grey">
+      <div className="flex gap-2">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search"
+          className="border p-1 text-black"
+        />
+        <button onClick={exportCsv} className="border px-2 text-black">
+          Export CSV
+        </button>
+      </div>
+      <div className="flex flex-1 overflow-hidden gap-4">
+        <div className="w-1/2 border overflow-hidden">
+          <List
+            height={400}
+            width={400}
+            itemCount={filtered.length}
+            itemSize={35}
+          >
+            {Row}
+          </List>
         </div>
-      )}
-      <div>
-        <h3 className="font-bold mb-2">Syft GitHub Action</h3>
-        <pre className="bg-black p-2 overflow-auto text-[10px]">{`- name: Generate SBOM
-  uses: anchore/syft-action@v0.15.0
-  with:
-    source: .
-    output: sbom.json`}</pre>
+        <div className="w-1/2 overflow-auto text-sm space-y-4">
+          {selected && (
+            <div>
+              <h3 className="font-bold mb-1">Dependency Tree</h3>
+              <div>{selected}</div>
+              <DependencyTree id={selected} graph={sbom.graph} />
+            </div>
+          )}
+          <div>
+            <h3 className="font-bold mb-1">License Map</h3>
+            <ul className="ml-4 list-disc">
+              {Object.entries(licenseMap).map(([lic, count]) => (
+                <li key={lic}>
+                  {lic}: {count}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
 export default SbomViewer;
-
