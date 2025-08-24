@@ -83,6 +83,23 @@ interface Attachment {
   error?: string;
 }
 
+interface MimePart {
+  headers: Record<string, any>;
+  body?: string;
+  parts?: MimePart[];
+}
+
+function buildStructure(data: any): MimePart {
+  const headers = canonicalizeHeaders(data.headers || {});
+  if (Array.isArray(data.body)) {
+    return {
+      headers,
+      parts: data.body.map((b: any) => buildStructure(b.part)),
+    };
+  }
+  return { headers, body: data.body };
+}
+
 interface ParsedMessage {
   name: string;
   headers: Record<string, any>;
@@ -93,6 +110,7 @@ interface ParsedMessage {
   inReplyTo?: string;
   references?: string[];
   raw?: string;
+  structure?: MimePart;
   children: ParsedMessage[];
   error?: string;
 }
@@ -187,6 +205,15 @@ export default function EmlMsgParser() {
               } else if (data.text) {
                 body = { type: 'text', content: data.text };
               }
+              let structure: MimePart | undefined;
+              await new Promise<void>((resolveStructure) => {
+                emlformat.parse(text, (err2: any, tree: any) => {
+                  if (!err2 && tree) {
+                    structure = buildStructure(tree);
+                  }
+                  resolveStructure();
+                });
+              });
               parsed.push({
                 name,
                 headers,
@@ -197,6 +224,7 @@ export default function EmlMsgParser() {
                 inReplyTo,
                 references,
                 raw: text,
+                structure,
                 children: [],
               });
             }
@@ -261,6 +289,15 @@ export default function EmlMsgParser() {
         const raw = await new Promise<string>((resolve) => {
           emlformat.build(emlObj, (err: any, eml: string) => resolve(eml || ''));
         });
+        let structure: MimePart | undefined;
+        await new Promise<void>((resolveStructure) => {
+          emlformat.parse(raw, (err2: any, tree: any) => {
+            if (!err2 && tree) {
+              structure = buildStructure(tree);
+            }
+            resolveStructure();
+          });
+        });
         parsed.push({
           name,
           headers,
@@ -271,6 +308,7 @@ export default function EmlMsgParser() {
           inReplyTo,
           references,
           raw,
+          structure,
           children: [],
         });
       } else {
@@ -286,6 +324,24 @@ export default function EmlMsgParser() {
     }
 
     setThreads(buildThreads(parsed));
+  };
+
+  const renderStructure = (part: MimePart, path = '0'): JSX.Element => {
+    const ct = part.headers['Content-Type'] || 'text/plain';
+    const disp = part.headers['Content-Disposition'];
+    return (
+      <li key={path}>
+        <div>
+          {ct}
+          {disp ? `; ${disp}` : ''}
+        </div>
+        {part.parts && part.parts.length > 0 && (
+          <ul className="ml-4">
+            {part.parts.map((p, i) => renderStructure(p, `${path}-${i}`))}
+          </ul>
+        )}
+      </li>
+    );
   };
 
   const renderMessage = (msg: ParsedMessage, depth = 0) => (
@@ -354,6 +410,14 @@ export default function EmlMsgParser() {
               {msg.body.content}
             </pre>
           )}
+        </div>
+      )}
+      {msg.structure && (
+        <div className="mb-2">
+          <h3 className="font-semibold">MIME Structure</h3>
+          <ul className="text-sm">
+            {renderStructure(msg.structure)}
+          </ul>
         </div>
       )}
       {msg.attachments.length > 0 && (
