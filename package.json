@@ -12,7 +12,8 @@
     "test:watch": "jest --watch",
     "lint": "next lint",
     "test:e2e": "npx playwright test",
-    "check:node-core": "node scripts/check-node-core-modules.js"
+    "check:node-core": "node scripts/check-node-core-modules.js",
+    "validate:icons": "node scripts/validate-icons.js"
   },
   "engines": {
     "node": "20.x"
