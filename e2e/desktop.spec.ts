@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../playwright.config';
 
 // Helper to close an app window by title if it is open
 async function closeWindowByTitle(page, title) {

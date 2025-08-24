@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../playwright.config';
 
 test('open Firefox app from desktop', async ({ page }) => {
   await page.goto('/');
