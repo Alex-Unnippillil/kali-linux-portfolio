@@ -1,37 +1,83 @@
 const textInput = document.getElementById('text-input');
 const ecSelect = document.getElementById('ec-level');
-const generateBtn = document.getElementById('generate-btn');
-const downloadBtn = document.getElementById('download-btn');
+const sizeSlider = document.getElementById('size-slider');
+const sizeValue = document.getElementById('size-value');
+const errorMsg = document.getElementById('error-msg');
+const downloadPngBtn = document.getElementById('download-png-btn');
+const downloadSvgBtn = document.getElementById('download-svg-btn');
 const qrCanvas = document.getElementById('qr-canvas');
 const decodeCanvas = document.getElementById('decode-canvas');
 const decodedText = document.getElementById('decoded-text');
 const fileInput = document.getElementById('file-input');
 
-// Generate QR code with selected error correction level
+const MAX_TEXT_LENGTH = 1000;
+let svgData = '';
+let debounceTimer;
+
 function generate() {
   const text = textInput.value.trim();
-  if (!text) return;
+  if (!text) {
+    const ctx = qrCanvas.getContext('2d');
+    ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+    svgData = '';
+    return;
+  }
+  const size = parseInt(sizeSlider.value, 10);
   QRCode.toCanvas(
     qrCanvas,
     text,
-    { errorCorrectionLevel: ecSelect.value, width: 256 },
+    { errorCorrectionLevel: ecSelect.value, width: size },
     (err) => {
       if (err) {
         console.error(err);
       }
     }
   );
+  QRCode.toString(
+    text,
+    { errorCorrectionLevel: ecSelect.value, width: size, type: 'svg' },
+    (err, svg) => {
+      if (!err) {
+        svgData = svg;
+      }
+    }
+  );
 }
 
-// Download generated QR code as image
-function download() {
+function debouncedGenerate() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(generate, 300);
+}
+
+function downloadPNG() {
   const link = document.createElement('a');
   link.download = 'qr.png';
   link.href = qrCanvas.toDataURL('image/png');
   link.click();
 }
 
-// Decode uploaded image file using jsQR
+function downloadSVG() {
+  if (!svgData) return;
+  const blob = new Blob([svgData], { type: 'image/svg+xml' });
+  const link = document.createElement('a');
+  link.download = 'qr.svg';
+  link.href = URL.createObjectURL(blob);
+  link.click();
+}
+
+function handleInput() {
+  if (textInput.value.length > MAX_TEXT_LENGTH) {
+    errorMsg.textContent = `Text exceeds ${MAX_TEXT_LENGTH} characters`;
+    const ctx = qrCanvas.getContext('2d');
+    ctx.clearRect(0, 0, qrCanvas.width, qrCanvas.height);
+    svgData = '';
+    return;
+  }
+  errorMsg.textContent = '';
+  debouncedGenerate();
+}
+
+// Decode uploaded image file using canvas and jsQR
 function handleFile(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -55,6 +101,15 @@ function handleFile(event) {
   reader.readAsDataURL(file);
 }
 
-generateBtn.addEventListener('click', generate);
-downloadBtn.addEventListener('click', download);
+textInput.addEventListener('input', handleInput);
+ecSelect.addEventListener('change', handleInput);
+sizeSlider.addEventListener('input', () => {
+  sizeValue.textContent = sizeSlider.value;
+  handleInput();
+});
+downloadPngBtn.addEventListener('click', downloadPNG);
+downloadSvgBtn.addEventListener('click', downloadSVG);
 fileInput.addEventListener('change', handleFile);
+
+// Initial render
+generate();
