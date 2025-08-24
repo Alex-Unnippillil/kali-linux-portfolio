@@ -1,377 +1,219 @@
 import React, { useRef, useEffect } from 'react';
 import {
   TILE,
+  NUM_TILES_WIDE,
   PAD_POSITIONS,
+  COLLISION_TOLERANCE,
   initLane,
   updateCars,
   handlePads,
   rampLane,
   carLaneDefs,
   logLaneDefs,
+  EASINGS,
+  rectsIntersect,
 } from '../../apps/frogger';
 
+// Frogger game rendered with PixiJS sprites and basic HUD
 const Frogger = () => {
-  const bgRef = useRef(null);
-  const spriteRef = useRef(null);
+  const containerRef = useRef(null);
 
   useEffect(() => {
-    const bg = bgRef.current;
-    const fg = spriteRef.current;
-    const bgCtx = bg.getContext('2d');
-    const ctx = fg.getContext('2d');
-    const width = fg.width;
-    const height = fg.height;
-    const tile = TILE;
-
-    const safeMode = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches;
-    const speedScale = safeMode ? 0.5 : 1;
-
-    const saved = (() => {
-      try {
-        return JSON.parse(localStorage.getItem('frogger-save') || '{}');
-      } catch {
-        return {};
-      }
-    })();
-
-    let level =
-      saved.level || parseInt(localStorage.getItem('frogger-level') || '1', 10);
-    let score = saved.score || 0;
-    let pads = saved.pads || PAD_POSITIONS.map(() => false);
-    let replayMoves = saved.replay || [];
-
-    const save = () =>
-      localStorage.setItem(
-        'frogger-save',
-        JSON.stringify({ level, score, pads, replay: replayMoves })
-      );
-
-    const lanes = [];
-    let paused = false;
-
-    const handleBlur = () => {
-      paused = true;
-    };
-    const handleFocus = () => {
-      if (paused) {
-        paused = false;
-        requestAnimationFrame(update);
-      }
-    };
-    window.addEventListener('blur', handleBlur);
-    window.addEventListener('focus', handleFocus);
-
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const playTone = (freq, duration = 0.1) => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.frequency.value = freq;
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(
-        0.001,
-        audioCtx.currentTime + duration
-      );
-      osc.stop(audioCtx.currentTime + duration);
-    };
-
-    const drawBackground = () => {
-      bgCtx.fillStyle = safeMode ? '#111' : '#222';
-      bgCtx.fillRect(0, 0, width, height);
-      bgCtx.fillStyle = safeMode ? '#333' : '#444';
-      for (let i = 1; i < 9; i++) {
-        if (i === 9) continue;
-        bgCtx.fillRect(0, i * tile, width, 2);
-      }
-      bgCtx.fillStyle = safeMode ? '#060' : '#0a0';
-      bgCtx.fillRect(0, 0, width, tile);
-      bgCtx.fillRect(0, height - tile, width, tile);
-    };
-
-    const frog = { x: width / 2 - tile / 2, y: height - tile, size: tile };
-
-    const resetFrog = () => {
-      frog.x = width / 2 - tile / 2;
-      frog.y = height - tile;
-    };
-
-    const initLevel = () => {
-      lanes.length = 0;
-      carLaneDefs.forEach((def, i) => {
-        const lane = rampLane(
-          { ...def, y: height - tile * (2 + i) },
-          level,
-          0.3
-        );
-        lane.speed *= speedScale;
-        lanes.push(initLane(lane, i + 1));
-      });
-      logLaneDefs.forEach((def, i) => {
-        const lane = rampLane(
-          { ...def, y: tile * (1 + i) },
-          level,
-          0.5
-        );
-        lane.speed *= speedScale;
-        lanes.push(initLane(lane, i + 10));
-      });
-      pads = PAD_POSITIONS.map(() => false);
-      resetFrog();
-    };
-
-    const moveFrog = (dx, dy, record = true) => {
-      audioCtx.resume();
-      frog.x = Math.min(Math.max(0, frog.x + dx * tile), width - tile);
-      frog.y = Math.min(Math.max(0, frog.y + dy * tile), height - tile);
-      if (record) {
-        replayMoves.push([dx, dy]);
-        save();
-      }
-      playTone(440, 0.05);
-    };
-
-    const startReplay = () => {
-      if (!replayMoves.length) return;
-      resetFrog();
-      let i = 0;
-      paused = true;
-      const step = () => {
-        if (i >= replayMoves.length) {
-          paused = false;
-          requestAnimationFrame(update);
-          return;
-        }
-        const [dx, dy] = replayMoves[i++];
-        moveFrog(dx, dy, false);
-        setTimeout(step, 200);
-      };
-      step();
-    };
-
-    const handleKey = (e) => {
-      if (e.key === 'ArrowUp') moveFrog(0, -1);
-      else if (e.key === 'ArrowDown') moveFrog(0, 1);
-      else if (e.key === 'ArrowLeft') moveFrog(-1, 0);
-      else if (e.key === 'ArrowRight') moveFrog(1, 0);
-    };
-    window.addEventListener('keydown', handleKey);
-
+    let app;
+    let PIXI;
+    let lanes = [];
+    let frog;
+    let livesText;
+    let timerText;
+    let pads = PAD_POSITIONS.map(() => false);
+    let lives = 3;
+    let timer = 60;
+    let last = performance.now();
+    let raf;
     let touchStart = null;
-    const handleTouchStart = (e) => {
-      const t = e.touches[0];
-      touchStart = { x: t.clientX, y: t.clientY };
-    };
-    const handleTouchEnd = (e) => {
-      if (!touchStart) return;
-      const t = e.changedTouches[0];
-      const dx = t.clientX - touchStart.x;
-      const dy = t.clientY - touchStart.y;
-      const absX = Math.abs(dx);
-      const absY = Math.abs(dy);
-      if (Math.max(absX, absY) > 20) {
-        if (absX > absY) moveFrog(dx > 0 ? 1 : -1, 0);
-        else moveFrog(0, dy > 0 ? 1 : -1);
-      } else {
-        moveFrog(0, -1);
-        suppressClick = true;
-        setTimeout(() => { suppressClick = false; }, 400);
-      }
-      touchStart = null;
-    };
-    fg.addEventListener('touchstart', handleTouchStart);
-    fg.addEventListener('touchend', handleTouchEnd);
-    const handleTap = (e) => {
-      if (suppressClick) {
-        e.preventDefault && e.preventDefault();
-        return;
-      }
-      moveFrog(0, -1);
-    };
-    fg.addEventListener('click', handleTap);
 
-    let tilt = { x: 0, y: 0 };
-    const handleOrientation = (e) => {
-      tilt = { x: e.gamma || 0, y: e.beta || 0 };
-    };
-    window.addEventListener('deviceorientation', handleOrientation);
+    // lazy load pixi to keep tests light
+    import('pixi.js').then((lib) => {
+      PIXI = lib;
+      app = new PIXI.Application({
+        width: TILE * NUM_TILES_WIDE,
+        height: TILE * NUM_TILES_WIDE,
+        backgroundAlpha: 0,
+      });
+      containerRef.current.appendChild(app.view);
 
-    const replayBtn = document.getElementById('frogger-replay');
-    replayBtn?.addEventListener('click', startReplay);
-
-    let tiltCooldown = 0;
-    let padCooldown = 0;
-
-    let lastTime = performance.now();
-    const update = (time) => {
-      if (paused) {
-        requestAnimationFrame(update);
-        return;
-      }
-      const dt = Math.min((time - lastTime) / (1000 / 60), 3);
-      lastTime = time;
-
-      tiltCooldown = Math.max(0, tiltCooldown - dt);
-      padCooldown = Math.max(0, padCooldown - dt);
-
-      const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
-      if (gp && padCooldown <= 0) {
-        const axX = gp.axes[0];
-        const axY = gp.axes[1];
-        const btn = gp.buttons;
-        if (btn[12]?.pressed || axY < -0.5) {
-          moveFrog(0, -1);
-          padCooldown = 10;
-        } else if (btn[13]?.pressed || axY > 0.5) {
-          moveFrog(0, 1);
-          padCooldown = 10;
-        } else if (btn[14]?.pressed || axX < -0.5) {
-          moveFrog(-1, 0);
-          padCooldown = 10;
-        } else if (btn[15]?.pressed || axX > 0.5) {
-          moveFrog(1, 0);
-          padCooldown = 10;
-        }
-      }
-
-      if (tiltCooldown <= 0) {
-        if (tilt.y < -15) {
-          moveFrog(0, -1);
-          tiltCooldown = 10;
-        } else if (tilt.y > 15) {
-          moveFrog(0, 1);
-          tiltCooldown = 10;
-        } else if (tilt.x < -15) {
-          moveFrog(-1, 0);
-          tiltCooldown = 10;
-        } else if (tilt.x > 15) {
-          moveFrog(1, 0);
-          tiltCooldown = 10;
-        }
-      }
-
-      ctx.clearRect(0, 0, width, height);
-
-      const difficulty = 1 + score / 2000;
-      const result = updateCars(lanes, frog, dt * difficulty);
-      lanes.splice(0, lanes.length, ...result.lanes);
-      frog.x += result.frogDx;
-
-      const hitCar = lanes.some(
-        (lane) =>
-          lane.type === 'car' &&
-          lane.y === frog.y &&
-          lane.items.some(
-            (c) =>
-              frog.x < c.x + c.width && frog.x + TILE > c.x
-          )
+      // frog sprite
+      frog = new PIXI.Sprite(PIXI.Texture.WHITE);
+      frog.width = frog.height = TILE;
+      frog.tint = 0x00ff00;
+      frog.x = (NUM_TILES_WIDE / 2) * TILE - TILE / 2;
+      frog.y = TILE * (NUM_TILES_WIDE - 1);
+      frog.hitArea = new PIXI.Rectangle(
+        COLLISION_TOLERANCE,
+        COLLISION_TOLERANCE,
+        TILE - COLLISION_TOLERANCE * 2,
+        TILE - COLLISION_TOLERANCE * 2,
       );
-      const nearCar = lanes.some(
-        (lane) =>
-          lane.type === 'car' &&
-          lane.y === frog.y &&
-          lane.items.some(
-            (c) =>
-              Math.abs(c.x + c.width / 2 - (frog.x + TILE / 2)) < TILE
-          )
-      );
-      if (nearCar && !hitCar) playTone(700, 0.05);
+      app.stage.addChild(frog);
 
-      if (result.dead) {
-        if (!hitCar) {
-          ctx.fillStyle = '#00f';
-          ctx.beginPath();
-          ctx.arc(frog.x + TILE / 2, frog.y + TILE / 2, TILE / 2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        playTone(hitCar ? 1000 : 200, 0.2);
-        resetFrog();
-        score = Math.max(0, score - 10);
-      }
+      // HUD text
+      livesText = new PIXI.Text(`Lives: ${lives}`, {
+        fill: 'white',
+        fontSize: 14,
+      });
+      livesText.x = 5;
+      livesText.y = 5;
+      timerText = new PIXI.Text(`Time: ${timer}`, {
+        fill: 'white',
+        fontSize: 14,
+      });
+      timerText.x = 5;
+      timerText.y = 20;
+      app.stage.addChild(livesText);
+      app.stage.addChild(timerText);
 
-      if (frog.y <= 0) {
-        const padResult = handlePads({ x: frog.x, y: 0 }, pads);
-        pads = padResult.pads;
-        if (padResult.padHit) {
-          playTone(800, 0.2);
-          score += 100;
-          if (pads.every(Boolean)) {
-            level += 1;
-            localStorage.setItem('frogger-level', level.toString());
-            initLevel();
-          } else {
-            resetFrog();
-          }
-        } else {
-          playTone(200, 0.2);
+      const initLevel = () => {
+        lanes = [];
+        carLaneDefs.forEach((def, i) => {
+          const lane = rampLane(
+            { ...def, y: TILE * (NUM_TILES_WIDE - (i + 2)) },
+            1,
+            0.3,
+          );
+          lanes.push(initLane(lane, i + 1));
+        });
+        logLaneDefs.forEach((def, i) => {
+          const lane = rampLane({ ...def, y: TILE * (i + 1) }, 1, 0.5);
+          lanes.push(initLane(lane, i + 10));
+        });
+      };
+
+      const resetFrog = () => {
+        frog.x = (NUM_TILES_WIDE / 2) * TILE - TILE / 2;
+        frog.y = TILE * (NUM_TILES_WIDE - 1);
+      };
+
+      const moveFrog = (dx, dy) => {
+        frog.x = Math.max(0, Math.min(TILE * (NUM_TILES_WIDE - 1), frog.x + dx));
+        frog.y = Math.max(0, Math.min(TILE * (NUM_TILES_WIDE - 1), frog.y + dy));
+      };
+
+      const update = (now) => {
+        const dt = (now - last) / 1000;
+        last = now;
+        timer -= dt;
+        if (timer <= 0) {
+          lives -= 1;
+          timer = 60;
           resetFrog();
         }
-      }
 
-      lanes.forEach((lane) => {
-        ctx.fillStyle = lane.type === 'car' ? '#888' : '#964B00';
-        lane.items.forEach((v) => {
-          ctx.fillRect(v.x, lane.y, v.width, TILE);
+        const result = updateCars(lanes, { x: frog.x, y: frog.y }, dt);
+        lanes = result.lanes;
+        frog.x += result.frogDx;
+        if (result.dead) {
+          lives -= 1;
+          resetFrog();
+        }
+
+        // spawn/remove sprites for lane items
+        lanes.forEach((lane) => {
+          lane.sprites = lane.sprites || [];
+          lane.items.forEach((item, idx) => {
+            let sprite = lane.sprites[idx];
+            if (!sprite) {
+              sprite = new PIXI.Sprite(PIXI.Texture.WHITE);
+              sprite.width = item.width;
+              sprite.height = TILE;
+              sprite.tint = lane.type === 'car' ? 0x888888 : 0x964b00;
+              sprite.hitArea = new PIXI.Rectangle(0, 0, sprite.width, TILE);
+              app.stage.addChild(sprite);
+              lane.sprites[idx] = sprite;
+            }
+            sprite.x = item.x;
+            sprite.y = lane.y;
+          });
+          lane.sprites.slice(lane.items.length).forEach((s) => s.destroy());
+          lane.sprites.length = lane.items.length;
         });
-      });
 
-      ctx.fillStyle = '#0f0';
-      ctx.fillRect(frog.x, frog.y, frog.size, frog.size);
-      ctx.fillStyle = 'white';
-      ctx.font = '16px sans-serif';
-      ctx.fillText(`Score: ${score} Level: ${level}`, 10, 20);
+        // pad handling
+        if (frog.y <= 0) {
+          const res = handlePads({ x: frog.x, y: 0 }, pads);
+          pads = res.pads;
+          if (res.padHit) {
+            resetFrog();
+            timer = 60;
+          }
+          if (res.dead) {
+            lives -= 1;
+            resetFrog();
+          }
+        }
 
-      save();
-      requestAnimationFrame(update);
-    };
+        livesText.text = `Lives: ${lives}`;
+        timerText.text = `Time: ${Math.ceil(timer)}`;
 
-    drawBackground();
-    initLevel();
-    requestAnimationFrame(update);
+        raf = requestAnimationFrame(update);
+      };
 
-    return () => {
-      window.removeEventListener('keydown', handleKey);
-      fg.removeEventListener('touchstart', handleTouchStart);
-      fg.removeEventListener('touchend', handleTouchEnd);
-      fg.removeEventListener('click', handleTap);
-      window.removeEventListener('deviceorientation', handleOrientation);
-      replayBtn?.removeEventListener('click', startReplay);
-      window.removeEventListener('blur', handleBlur);
-      window.removeEventListener('focus', handleFocus);
-    };
+      initLevel();
+      raf = requestAnimationFrame(update);
+
+      const handleKey = (e) => {
+        switch (e.key) {
+          case 'ArrowLeft':
+            moveFrog(-TILE, 0);
+            break;
+          case 'ArrowRight':
+            moveFrog(TILE, 0);
+            break;
+          case 'ArrowUp':
+            moveFrog(0, -TILE);
+            break;
+          case 'ArrowDown':
+            moveFrog(0, TILE);
+            break;
+          default:
+        }
+      };
+      window.addEventListener('keydown', handleKey);
+
+      const handleTouchStart = (e) => {
+        touchStart = e.changedTouches[0];
+      };
+      const handleTouchEnd = (e) => {
+        const end = e.changedTouches[0];
+        const dx = end.clientX - touchStart.clientX;
+        const dy = end.clientY - touchStart.clientY;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          if (dx > 20) moveFrog(TILE, 0);
+          else if (dx < -20) moveFrog(-TILE, 0);
+        } else {
+          if (dy > 20) moveFrog(0, TILE);
+          else if (dy < -20) moveFrog(0, -TILE);
+        }
+      };
+      app.view.addEventListener('touchstart', handleTouchStart);
+      app.view.addEventListener('touchend', handleTouchEnd);
+
+      return () => {
+        cancelAnimationFrame(raf);
+        window.removeEventListener('keydown', handleKey);
+        app.view.removeEventListener('touchstart', handleTouchStart);
+        app.view.removeEventListener('touchend', handleTouchEnd);
+        app.destroy(true, { children: true });
+      };
+    });
   }, []);
 
   return (
     <div
-      className="w-full h-full relative"
+      ref={containerRef}
+      className="w-full h-full"
       role="application"
       aria-label="Frogger game"
-    >
-      <button
-        id="frogger-replay"
-        aria-label="Replay last run"
-        className="absolute top-2 right-2 z-10 bg-black text-white text-xs px-2 py-1 rounded"
-      >
-        Replay
-      </button>
-      <canvas
-        ref={bgRef}
-        width={400}
-        height={400}
-        className="absolute inset-0 w-full h-full"
-        aria-hidden="true"
-      />
-      <canvas
-        ref={spriteRef}
-        width={400}
-        height={400}
-        className="absolute inset-0 w-full h-full"
-        aria-hidden="true"
-      />
-    </div>
+    />
   );
 };
 
@@ -383,6 +225,11 @@ export {
   rampLane,
   carLaneDefs,
   logLaneDefs,
+  TILE,
+  COLLISION_TOLERANCE,
+  EASINGS,
+  rectsIntersect,
 };
 
 export default Frogger;
+
