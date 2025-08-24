@@ -40,6 +40,7 @@
     "cvss": "^1.0.5",
     "diff": "^8.0.2",
     "eml-format": "^0.6.1",
+    "es-module-lexer": "^1.5.4",
     "expr-eval": "^2.0.2",
     "fast-xml-parser": "^5.2.5",
     "html-to-image": "^1.11.13",

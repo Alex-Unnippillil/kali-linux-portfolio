@@ -4675,6 +4675,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"es-module-lexer@npm:^1.5.4":
+  version: 1.7.0
+  resolution: "es-module-lexer@npm:1.7.0"
+  checksum: 10c0/4c935affcbfeba7fb4533e1da10fa8568043df1e3574b869385980de9e2d475ddc36769891936dbb07036edb3c3786a8b78ccf44964cd130dedc1f2c984b6c7b
+  languageName: node
+  linkType: hard
+
 "es-object-atoms@npm:^1.0.0, es-object-atoms@npm:^1.1.1":
   version: 1.1.1
   resolution: "es-object-atoms@npm:1.1.1"
@@ -9803,6 +9810,7 @@ __metadata:
     cvss: "npm:^1.0.5"
     diff: "npm:^8.0.2"
     eml-format: "npm:^0.6.1"
+    es-module-lexer: "npm:^1.5.4"
     eslint: "npm:^9.34.0"
     eslint-config-next: "npm:^15.5.0"
     expr-eval: "npm:^2.0.2"
