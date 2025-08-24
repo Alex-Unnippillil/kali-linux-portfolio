@@ -15,6 +15,13 @@ const MENU_STRINGS = {
     },
 };
 
+const MENU_LABELS = {
+    followLinkedIn: 'Follow on Linkedin',
+    followGithub: 'Follow on Github',
+    contact: 'Contact Me',
+    reset: 'Reset Kali Linux',
+}
+
 function DefaultMenu(props) {
     const [locale, setLocale] = useState('en');
     const itemRefs = useRef([]);
@@ -65,6 +72,7 @@ function DefaultMenu(props) {
             aria-label={strings.defaultMenu}
             tabIndex={-1}
             onKeyDown={handleKeyDown}
+
             className={
                 (props.active ? 'block pointer-events-auto ' : 'hidden pointer-events-none ') +
                 'cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-menu text-sm'
@@ -82,6 +90,7 @@ function DefaultMenu(props) {
             >
                 <span className="ml-5">🙋‍♂️</span>{' '}
                 <span className="ml-2">{strings.follow} <strong>Linkedin</strong></span>
+
             </a>
             <a
                 rel="noopener noreferrer"
@@ -94,6 +103,7 @@ function DefaultMenu(props) {
             >
                 <span className="ml-5">🤝</span>{' '}
                 <span className="ml-2">{strings.follow} <strong>Github</strong></span>
+
             </a>
             <a
                 rel="noopener noreferrer"
@@ -117,6 +127,7 @@ function DefaultMenu(props) {
             >
                 <span className="ml-5">🧹</span>{' '}
                 <span className="ml-2">{strings.reset}</span>
+
             </div>
         </div>
     );

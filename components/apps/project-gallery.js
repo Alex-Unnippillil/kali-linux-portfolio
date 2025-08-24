@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import projectsData from '../../data/projects.json';
+import messages from './project-gallery.messages';
 
 export default function ProjectGallery() {
   const [projects, setProjects] = useState([]);
@@ -114,15 +115,16 @@ export default function ProjectGallery() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search..."
-          className="px-2 py-1 rounded bg-gray-800 text-white flex-grow"
+          placeholder={messages.searchPlaceholder}
+          aria-label={messages.searchAriaLabel}
+          className="px-2 py-1 rounded bg-gray-800 text-white flex-grow focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <div className="flex flex-wrap gap-2">
           {tags.map((t) => (
             <button
               key={t}
               onClick={() => setTag(t)}
-              className={`px-2 py-0.5 text-sm rounded ${
+              className={`px-2 py-0.5 text-sm rounded focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 tag === t ? 'bg-blue-600' : 'bg-gray-700'
               }`}
             >
@@ -132,7 +134,7 @@ export default function ProjectGallery() {
         </div>
       </div>
       {sorted.length === 0 ? (
-        <p className="text-center">No projects found.</p>
+        <p className="text-center">{messages.noProjectsFound}</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {sorted.map((project, index) => (
@@ -141,12 +143,12 @@ export default function ProjectGallery() {
               ref={(el) => (cardRefs.current[index] = el)}
               tabIndex={0}
               onKeyDown={(e) => handleKeyDown(e, index)}
-              className="relative rounded-md bg-surface bg-opacity-20 border border-gray-700 overflow-hidden flex flex-col"
+              className="relative rounded-md bg-surface bg-opacity-20 border border-gray-700 overflow-hidden flex flex-col focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <button
                 onClick={() => togglePinned(project.title)}
-                aria-label="Toggle pinned"
-                className="absolute top-2 right-2 text-xl"
+                aria-label={messages.togglePinned}
+                className="absolute top-2 right-2 text-xl focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
               >
                 {pinned.includes(project.title) ? '★' : '☆'}
               </button>
@@ -185,9 +187,9 @@ export default function ProjectGallery() {
                       href={project.live}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1 text-sm bg-blue-600 rounded hover:bg-blue-500"
+                      className="px-3 py-1 text-sm bg-blue-600 rounded hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      Live Demo
+                      {messages.liveDemo}
                     </a>
                   )}
                   {project.repo && (
@@ -195,9 +197,9 @@ export default function ProjectGallery() {
                       href={project.repo}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1 text-sm border border-blue-600 rounded hover:bg-blue-600 hover:text-white"
+                      className="px-3 py-1 text-sm border border-blue-600 rounded hover:bg-blue-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      Repo
+                      {messages.repo}
                     </a>
                   )}
                 </div>

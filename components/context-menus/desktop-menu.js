@@ -27,6 +27,18 @@ const MENU_STRINGS = {
     },
 };
 
+const MENU_LABELS = {
+    newFolder: 'New Folder',
+    paste: 'Paste',
+    showDesktop: 'Show Desktop in Files',
+    openTerminal: 'Open in Terminal',
+    changeBackground: 'Change Background...',
+    displaySettings: 'Display Settings',
+    settings: 'Settings',
+    enterFullScreen: 'Enter Full Screen',
+    exitFullScreen: 'Exit Full Screen',
+}
+
 function DesktopMenu(props) {
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [locale, setLocale] = useState('en');
@@ -105,6 +117,7 @@ function DesktopMenu(props) {
             aria-label={strings.desktopMenu}
             tabIndex={-1}
             onKeyDown={handleKeyDown}
+
             className={
                 (props.active ? 'block pointer-events-auto ' : 'hidden pointer-events-none ') +
                 'cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-menu text-sm'
@@ -118,6 +131,7 @@ function DesktopMenu(props) {
                 className="w-full py-0.5 hover:bg-warm hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">{strings.newFolder}</span>
+
             </div>
             <Devider />
             <div
@@ -127,6 +141,7 @@ function DesktopMenu(props) {
                 className="w-full py-0.5 hover:bg-warm hover:bg-opacity-20 mb-1.5 text-gray-400"
             >
                 <span className="ml-5">{strings.paste}</span>
+
             </div>
             <Devider />
             <div
@@ -136,6 +151,7 @@ function DesktopMenu(props) {
                 className="w-full py-0.5 hover:bg-warm hover:bg-opacity-20 mb-1.5 text-gray-400"
             >
                 <span className="ml-5">{strings.showDesktop}</span>
+
             </div>
             <div
                 onClick={openTerminal}
@@ -145,6 +161,7 @@ function DesktopMenu(props) {
                 className="w-full py-0.5 hover:bg-warm hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">{strings.openTerminal}</span>
+
             </div>
             <Devider />
             <div
@@ -155,6 +172,7 @@ function DesktopMenu(props) {
                 className="w-full py-0.5 hover:bg-warm hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">{strings.changeBackground}</span>
+
             </div>
             <Devider />
             <div
@@ -164,6 +182,7 @@ function DesktopMenu(props) {
                 className="w-full py-0.5 hover:bg-warm hover:bg-opacity-20 mb-1.5 text-gray-400"
             >
                 <span className="ml-5">{strings.displaySettings}</span>
+
             </div>
             <div
                 onClick={openSettings}
@@ -173,6 +192,7 @@ function DesktopMenu(props) {
                 className="w-full py-0.5 hover:bg-warm hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">{strings.settings}</span>
+
             </div>
             <Devider />
             <div
@@ -183,6 +203,7 @@ function DesktopMenu(props) {
                 className="w-full py-0.5 hover:bg-warm hover:bg-opacity-20 mb-1.5"
             >
                 <span className="ml-5">{isFullScreen ? strings.exitFullScreen : strings.enterFullScreen}</span>
+
             </div>
         </div>
     );

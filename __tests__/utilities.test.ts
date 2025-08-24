@@ -61,6 +61,42 @@ describe('wrapWorker', () => {
     const call = wrapWorker<number, number>(worker as any);
     await expect(call(2)).resolves.toBe(4);
   });
+
+  it('reports progress', async () => {
+    class MockWorker {
+      listeners: Record<string, any> = {};
+      postMessage(msg: any) {
+        this.listeners['message']({ data: { progress: 0.5 } });
+        this.listeners['message']({ data: msg * 2 });
+      }
+      addEventListener(type: 'message' | 'error', cb: any) {
+        this.listeners[type] = cb;
+      }
+      removeEventListener() {}
+    }
+    const worker = new MockWorker();
+    const call = wrapWorker<number, number, number>(worker as any);
+    const progresses: number[] = [];
+    await expect(call(2, { onProgress: (p) => progresses.push(p) })).resolves.toBe(4);
+    expect(progresses).toEqual([0.5]);
+  });
+
+  it('supports cancellation', async () => {
+    class MockWorker {
+      listeners: Record<string, any> = {};
+      postMessage(_msg: any) {}
+      addEventListener(type: 'message' | 'error', cb: any) {
+        this.listeners[type] = cb;
+      }
+      removeEventListener() {}
+    }
+    const worker = new MockWorker();
+    const call = wrapWorker<number, number>(worker as any);
+    const controller = new AbortController();
+    const promise = call(2, { signal: controller.signal });
+    controller.abort();
+    await expect(promise).rejects.toThrow('aborted');
+  });
 });
 
 describe('useToastLogger', () => {

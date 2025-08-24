@@ -6,8 +6,13 @@ import { useScore } from './score';
 export default function HUD() {
   const { score } = useScore();
   return (
-    <div className="absolute top-2 left-2 text-white" aria-label="game heads up display">
-      <span className="mr-4">Score: {score}</span>
+    <div
+      className="absolute top-2 left-2 bg-black/60 text-white p-2 rounded text-sm sm:text-base md:text-lg"
+      aria-label="game heads up display"
+    >
+      <span className="mr-4" aria-live="polite">
+        Score: {score}
+      </span>
       <PauseMenu />
     </div>
   );

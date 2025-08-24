@@ -131,14 +131,28 @@ for (const id of spdxLicenseIds) {
   tokenizedLicenses[id] = tokenize(text);
 }
 
-export function matchLicense(licenseText: string): LicenseMatchResult {
+export interface MatchOptions {
+  signal?: AbortSignal;
+  onProgress?: (completed: number, total: number) => void;
+}
+
+export function matchLicense(
+  licenseText: string,
+  options: MatchOptions = {}
+): LicenseMatchResult {
+  const { signal, onProgress } = options;
   const inputTokens = tokenize(licenseText);
   const matches: LicenseMatch[] = [];
+  const total = spdxLicenseIds.length;
 
-  for (const id of spdxLicenseIds) {
+  for (let i = 0; i < spdxLicenseIds.length; i += 1) {
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+    const id = spdxLicenseIds[i];
     const tokens = tokenizedLicenses[id];
     if (!tokens || tokens.size === 0) continue;
-    const intersectionSize = [...inputTokens].filter(t => tokens.has(t)).length;
+    const intersectionSize = [...inputTokens].filter((t) => tokens.has(t)).length;
     const unionSize = new Set([...inputTokens, ...tokens]).size;
     const confidence = unionSize === 0 ? 0 : intersectionSize / unionSize;
     const info = getLicenseInfo(id);
@@ -146,12 +160,16 @@ export function matchLicense(licenseText: string): LicenseMatchResult {
       ...info,
       confidence,
     });
+    onProgress?.(i + 1, total);
   }
 
   matches.sort((a, b) => b.confidence - a.confidence);
   const top = matches[0];
   const second = matches[1];
-  const ambiguous = !top || top.confidence < 0.8 || (second && second.confidence >= top.confidence - 0.05);
+  const ambiguous =
+    !top ||
+    top.confidence < 0.8 ||
+    (second && second.confidence >= top.confidence - 0.05);
   const message = ambiguous
     ? 'Multiple potential licenses detected. Please review the matches to select the correct SPDX identifier.'
     : undefined;

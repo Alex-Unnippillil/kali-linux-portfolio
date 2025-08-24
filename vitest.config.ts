@@ -7,6 +7,6 @@ export default defineConfig({
     setupFiles: './vitest.setup.ts',
   },
   esbuild: {
-    loader: 'jsx',
+    loader: 'tsx',
   },
 });
