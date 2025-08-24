@@ -55,6 +55,7 @@ describe('next.config.js Content Security Policy', () => {
       expect(parsed['script-src']).not.toEqual(
         expect.arrayContaining(["'unsafe-inline'"])
       );
+
     expect(parsed['style-src']).toEqual(
       expect.arrayContaining([
         "'self'",

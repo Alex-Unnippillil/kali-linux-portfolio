@@ -74,7 +74,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
         <div className="mt-4 text-right">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-[var(--color-accent)] text-black rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text)]"
+            className="px-4 py-2 bg-[var(--accent)] text-black rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-text)]"
             data-autofocus
             aria-label={messages.modal.close}
           >

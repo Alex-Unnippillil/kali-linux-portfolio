@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../playwright.config';
 
 test('request builder page loads', async ({ page }) => {
   await page.goto('/apps/request-builder');
