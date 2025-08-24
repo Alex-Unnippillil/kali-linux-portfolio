@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import Papa from 'papaparse';
+import jsPDF from 'jspdf';
 
 type Result = {
   pass: boolean;
@@ -22,67 +24,104 @@ type Response = {
   error?: string;
 };
 
+const CONTROLS = [
+  { id: 'spf', label: 'SPF' },
+  { id: 'dkim', label: 'DKIM' },
+  { id: 'dmarc', label: 'DMARC' },
+] as const;
+
+type ControlId = typeof CONTROLS[number]['id'];
+
 const MailAuth: React.FC = () => {
-  const [domain, setDomain] = useState('');
+  const [domainsText, setDomainsText] = useState('');
   const [selector, setSelector] = useState('');
-  const [results, setResults] = useState<Response | null>(null);
+  const [results, setResults] = useState<Record<string, Response>>({});
   const [loading, setLoading] = useState(false);
 
   const check = async () => {
-    if (!domain) return;
+    const domains = domainsText.split(/\s+/).filter(Boolean);
+    if (domains.length === 0) return;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ domain });
-      if (selector) params.append('selector', selector);
-      const res = await fetch(`/api/mail-auth?${params.toString()}`);
-      const data = await res.json();
-      setResults(data);
+      const entries = await Promise.all(
+        domains.map(async (domain) => {
+          const params = new URLSearchParams({ domain });
+          if (selector) params.append('selector', selector);
+          const res = await fetch(`/api/mail-auth?${params.toString()}`);
+          const data = await res.json();
+          return [domain, data as Response] as [string, Response];
+        })
+      );
+      setResults(Object.fromEntries(entries));
     } finally {
       setLoading(false);
     }
   };
 
-  const renderRow = (label: string, r: Result) => (
-    <tr key={label} className="border-t border-gray-700">
-      <td className="py-2 font-semibold">{label}</td>
-      <td className="py-2">
-        <span
-          className={`px-2 py-0.5 rounded text-white text-xs ${
-            r.pass ? 'bg-green-600' : 'bg-red-600'
-          }`}
-        >
-          {r.pass ? 'PASS' : 'FAIL'}
-        </span>
-      </td>
-      <td className="py-2 text-xs">
-        {r.policy
-          ? `Policy: ${r.policy}`
-          : r.bits
-          ? `Key: ${r.bits}-bit`
-          : r.record || r.message || ''}
-      </td>
-      <td className="py-2 text-xs">{r.recommendation || ''}</td>
-      <td className="py-2 text-xs">
-        <a
-          href={r.spec}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-400"
-        >
-          Spec
-        </a>
-      </td>
-    </tr>
-  );
+  const exportCsv = () => {
+    const data: any[] = [];
+    CONTROLS.forEach(({ id, label }) => {
+      Object.entries(results).forEach(([domain, res]) => {
+        if (res.error) return;
+        const r = (res as any)[id as ControlId] as Result;
+        data.push({
+          Control: label,
+          Domain: domain,
+          Status: r.pass ? 'PASS' : 'FAIL',
+          Policy: r.policy || '',
+          Message: r.message || '',
+          Remediation: r.spec,
+        });
+      });
+    });
+    const csv = Papa.unparse(data);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mail-auth.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportPdf = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(12);
+    doc.text('Mail Auth Results', 10, 10);
+    const domains = Object.keys(results).filter((d) => !results[d].error);
+    let y = 20;
+    doc.text('Control', 10, y);
+    domains.forEach((d, i) => {
+      doc.text(d, 40 + i * 40, y);
+    });
+    y += 10;
+    CONTROLS.forEach(({ id, label }) => {
+      doc.text(label, 10, y);
+      domains.forEach((d, i) => {
+        const r = (results[d] as any)[id as ControlId] as Result;
+        const text = r.pass ? 'PASS' : 'FAIL';
+        doc.text(text, 40 + i * 40, y);
+        if (r.spec) {
+          doc.textWithLink('Fix', 40 + i * 40, y + 5, { url: r.spec });
+        }
+      });
+      y += 20;
+    });
+    doc.save('mail-auth.pdf');
+  };
+
+
+  const hasResults = Object.keys(results).length > 0;
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 space-y-4">
       <div className="flex flex-col sm:flex-row gap-2">
-        <input
+        <textarea
           className="px-2 py-1 rounded bg-gray-800 text-white flex-1"
-          placeholder="domain.com"
-          value={domain}
-          onChange={(e) => setDomain(e.target.value)}
+          rows={3}
+          placeholder={"domain.com\nexample.org"}
+          value={domainsText}
+          onChange={(e) => setDomainsText(e.target.value)}
         />
         <input
           className="px-2 py-1 rounded bg-gray-800 text-white flex-1"
@@ -99,33 +138,70 @@ const MailAuth: React.FC = () => {
           {loading ? 'Checking...' : 'Check'}
         </button>
       </div>
-      {results && !results.error && (
-        <div className="overflow-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left">
-                <th className="pb-2">Check</th>
-                <th className="pb-2">Status</th>
-                <th className="pb-2">Details</th>
-                <th className="pb-2">Action</th>
-                <th className="pb-2">Spec</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(
-                [
-                  ['DKIM', results.dkim],
-                  ['DMARC', results.dmarc],
-                  ['MTA-STS', results.mtaSts],
-                  ['TLS-RPT', results.tlsRpt],
-                  ['BIMI', results.bimi],
-                ] as [string, Result][]
-              ).map(([label, r]) => renderRow(label, r))}
-            </tbody>
-          </table>
-        </div>
+      {hasResults && (
+        <>
+          <div className="overflow-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left">
+                  <th className="pb-2">Control</th>
+                  {Object.keys(results).map((domain) => (
+                    <th key={domain} className="pb-2">
+                      {domain}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {CONTROLS.map(({ id, label }) => (
+                  <tr key={id} className="border-t border-gray-700">
+                    <td className="py-2 font-semibold">{label}</td>
+                    {Object.entries(results).map(([domain, res]) => {
+                      if (res.error) {
+                        return (
+                          <td key={domain} className="py-2 text-xs text-red-400">
+                            {res.error}
+                          </td>
+                        );
+                      }
+                      const r = (res as any)[id as ControlId] as Result;
+                      const badgeColor = r.pass ? 'bg-green-600' : 'bg-red-600';
+                      return (
+                        <td key={domain} className="py-2">
+                          <span
+                            className={`px-2 py-0.5 rounded text-white text-xs ${badgeColor}`}
+                          >
+                            {r.pass ? 'PASS' : 'FAIL'}
+                          </span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={exportCsv}
+              className="px-4 py-1 bg-green-600 rounded"
+              type="button"
+            >
+              Export CSV
+            </button>
+            <button
+              onClick={exportPdf}
+              className="px-4 py-1 bg-purple-600 rounded"
+              type="button"
+            >
+              Export PDF
+            </button>
+          </div>
+        </>
+
+          
+          
       )}
-      {results?.error && <div className="text-red-400">{results.error}</div>}
     </div>
   );
 };
