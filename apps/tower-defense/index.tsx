@@ -1,13 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import upgrades from './upgrades.json';
 import { createEmptyMap, MapData, Enemy } from './engine';
-import LevelEditor from './levelEditor';
+
+const LevelEditor = dynamic(() => import('./levelEditor'), { ssr: false });
+const WaveEditor = dynamic(() => import('./waveEditor'), { ssr: false });
 
 const SIZE = 10;
 
 const TowerDefense: React.FC = () => {
   const [map, setMap] = useState<MapData>(() => createEmptyMap(SIZE));
   const [enemies, setEnemies] = useState<Enemy[]>([]);
+  const [recomputeCount, setRecomputeCount] = useState(0);
   const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
@@ -16,7 +20,15 @@ const TowerDefense: React.FC = () => {
     });
     const worker = workerRef.current;
     worker.onmessage = (e) => {
-      if (e.data.type === 'state') setEnemies(e.data.enemies);
+      const data = e.data;
+      if (data.type === 'state') {
+        setEnemies(data.enemies);
+        if (data.recomputeCount !== undefined)
+          setRecomputeCount(data.recomputeCount);
+      } else if (data.type === 'field') {
+        if (data.recomputeCount !== undefined)
+          setRecomputeCount(data.recomputeCount);
+      }
     };
     worker.postMessage({ type: 'init', map });
     const id = setInterval(() => worker.postMessage({ type: 'tick' }), 500);
@@ -24,7 +36,14 @@ const TowerDefense: React.FC = () => {
       clearInterval(id);
       worker.terminate();
     };
+  }, []);
+
+  useEffect(() => {
+    workerRef.current?.postMessage({ type: 'updateMap', map });
   }, [map]);
+
+  const handleSpawn = (count: number) =>
+    workerRef.current?.postMessage({ type: 'spawn', count });
 
   return (
     <div className="p-4 space-y-4 text-white">
@@ -42,6 +61,7 @@ const TowerDefense: React.FC = () => {
         )}
       </div>
       <LevelEditor map={map} onChange={setMap} />
+      <WaveEditor onStart={handleSpawn} recomputeCount={recomputeCount} />
       <pre className="text-xs">{JSON.stringify(upgrades, null, 2)}</pre>
     </div>
   );
