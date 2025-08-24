@@ -7,6 +7,7 @@ export default class Ball {
   canvasWidth: number;
   canvasHeight: number;
   maxSpeed = 600;
+  stuck = false;
 
   constructor(canvasWidth: number, canvasHeight: number) {
     this.canvasWidth = canvasWidth;
@@ -19,9 +20,11 @@ export default class Ball {
     this.y = this.canvasHeight / 2;
     this.vx = 150 * (Math.random() > 0.5 ? 1 : -1);
     this.vy = -150;
+    this.stuck = false;
   }
 
   update(dt: number) {
+    if (this.stuck) return;
     let remaining = dt;
     const step = 1 / 60; // base fixed step
     while (remaining > 0) {
