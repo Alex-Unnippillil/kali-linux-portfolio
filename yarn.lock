@@ -15912,6 +15912,7 @@ __metadata:
     rfc4648: "npm:^1.5.4"
     safe-regex: "npm:^2.1.1"
     sax: "npm:^1.4.1"
+    sharp: "npm:^0.34.3"
     socket.io: "npm:^4.7.5"
     socket.io-client: "npm:^4.7.5"
     spdx-license-ids: "npm:^3.0.17"
