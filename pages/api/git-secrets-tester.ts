@@ -2,6 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import JSZip from 'jszip';
 import { spawn, spawnSync } from 'child_process';
 import { defaultPatterns, redactSecret } from '../../components/apps/git-secrets-tester';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 interface ApiResult {
   file: string;

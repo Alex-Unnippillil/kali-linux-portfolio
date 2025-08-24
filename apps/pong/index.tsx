@@ -85,6 +85,7 @@ const Pong: React.FC = () => {
     }
 
     function pollPads() {
+      if (typeof navigator === 'undefined') return;
       const pads = navigator.getGamepads ? navigator.getGamepads() : [];
       const p1 = pads[0];
       const p2 = pads[1];

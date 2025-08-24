@@ -1,15 +1,15 @@
 import TicTacToe, {
   checkWinner as rawCheckWinner,
-  negamax,
+  minimax as baseMinimax,
 } from '../../apps/tic-tac-toe';
 
 const inferSize = (board) => Math.sqrt(board.length);
 
 const minimax = (board, player) =>
-  negamax(board.slice(), player, inferSize(board));
+  baseMinimax(board.slice(), player, inferSize(board));
 
 const checkWinner = (board) => rawCheckWinner(board, inferSize(board));
 
 export default TicTacToe;
-export { checkWinner, minimax, negamax };
+export { checkWinner, minimax };
 

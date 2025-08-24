@@ -1,6 +1,9 @@
 // Security headers configuration for Next.js.
 // Allows external badges, inline styles, and same-origin PDF embedding.
 
+const { validateEnv } = require('./lib/validate.ts');
+validateEnv(process.env);
+
 const ContentSecurityPolicy = [
   "default-src 'self'",
   // Allow external images and data URIs for badges/icons
@@ -12,9 +15,9 @@ const ContentSecurityPolicy = [
   // External script required for embedded timelines
   "script-src 'self' 'unsafe-inline' https://platform.twitter.com",
   // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.googleapis.com https://stackblitz.com https://api64.ipify.org https://cloudflare-dns.com https://dns.google stun:stun.l.google.com:19302",
+  "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.googleapis.com https://stackblitz.com https://api64.ipify.org https://cloudflare-dns.com https://dns.google https://ghbtns.com stun:stun.l.google.com:19302",
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load arbitrary content
-  "frame-src 'self' https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
+  "frame-src 'self' https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://open.spotify.com https://todoist.com https://ghbtns.com https://www.youtube.com https://www.youtube-nocookie.com",
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
   // Disallow plugins and limit base/submit targets
@@ -22,7 +25,7 @@ const ContentSecurityPolicy = [
   "base-uri 'self'",
   "form-action 'self'",
   // Enable Reporting API endpoint for violations
-  "report-to csp-endpoint",
+  'report-to csp-endpoint',
 ].join('; ');
 
 // Omit the CSP in development to prevent dev tooling from breaking.
@@ -34,8 +37,8 @@ const securityHeaders = [
         {
           key: 'Report-To',
           value:
-            '{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/api/csp-reporter"}]}'
-        }
+            '{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/api/csp-reporter"}]}',
+        },
       ]),
   {
     key: 'X-Content-Type-Options',
@@ -47,7 +50,8 @@ const securityHeaders = [
   },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(), usb=(), payment=(), serial=()',
+    value:
+      'camera=(), microphone=(), geolocation=(), usb=(), payment=(), serial=()',
   },
   {
     key: 'Strict-Transport-Security',
@@ -69,9 +73,25 @@ const securityHeaders = [
 ];
 
 module.exports = {
+  productionBrowserSourceMaps: true,
   images: {
-    unoptimized: true,
-    domains: ['opengraph.githubassets.com', 'raw.githubusercontent.com', 'avatars.githubusercontent.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'opengraph.githubassets.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'raw.githubusercontent.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+        pathname: '/**',
+      },
+    ],
   },
   webpack: (config) => {
     config.resolve = config.resolve || {};
@@ -80,13 +100,23 @@ module.exports = {
       fs: false,
       net: false,
       tls: false,
+      worker_threads: false,
+      perf_hooks: false,
+      readline: false,
     };
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       mermaid: require('path').resolve(__dirname, 'lib/mermaidStub.js'),
       'argon2-browser': require('path').resolve(__dirname, 'lib/argon2Stub.js'),
+      'vis-timeline/dist/vis-timeline-graph2d.min.css': require('path').resolve(
+        __dirname,
+        'node_modules/vis-timeline/styles/vis-timeline-graph2d.min.css'
+      ),
     };
-    config.experiments = { ...(config.experiments || {}), asyncWebAssembly: true };
+    config.experiments = {
+      ...(config.experiments || {}),
+      asyncWebAssembly: true,
+    };
     return config;
   },
   async headers() {
@@ -98,4 +128,3 @@ module.exports = {
     ];
   },
 };
-

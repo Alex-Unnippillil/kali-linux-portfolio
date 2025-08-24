@@ -2,7 +2,8 @@
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './',
+  testMatch: ['e2e/**/*.spec.ts', '__tests__/e2e/**/*.spec.ts'],
   webServer: {
     command: 'yarn dev',
     port: 3000,

@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 const filePath = path.join(process.cwd(), 'data', 'settings.json');
 

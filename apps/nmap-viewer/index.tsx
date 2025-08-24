@@ -10,6 +10,7 @@ const ForceGraph2D = dynamic(() => import('react-force-graph'), {
   loading: () => <div>Loading graph...</div>,
 });
 
+
 interface VulnInfo {
   id: string;
   cvss?: string;

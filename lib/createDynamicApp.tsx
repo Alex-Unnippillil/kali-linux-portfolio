@@ -19,7 +19,13 @@ const createDynamicApp = (path: string, name: string) =>
           });
           ReactGA.event('exception', { description: error.message });
           return function DynamicAppError() {
-            return <ErrorPane code="load_error" message={`Failed to load ${name}.`} />;
+            return (
+              <ErrorPane
+                code="load_error"
+                message={`Failed to load ${name}. Please try again.`}
+                onRetry={() => window.location.reload()}
+              />
+            );
           };
         }),
       {

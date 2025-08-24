@@ -2,6 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { fetchHead } from '../../lib/headCache';
 import { URL } from 'url';
 import dgram from 'dgram';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 export default async function handler(
   req: NextApiRequest,

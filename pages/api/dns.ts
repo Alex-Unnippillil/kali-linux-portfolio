@@ -54,8 +54,10 @@ export default async function handler(
     }
     const data = await response.json();
     return res.status(200).json(data);
-  } catch (e: any) {
-    return res.status(500).json({ error: e.message || 'Request failed' });
+  } catch (e: unknown) {
+    return res.status(500).json({
+      error: e instanceof Error ? e.message : 'Request failed',
+    });
   }
 }
 
