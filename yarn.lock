@@ -3908,6 +3908,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cvss4@npm:^1.0.7":
+  version: 1.0.7
+  resolution: "cvss4@npm:1.0.7"
+  dependencies:
+    tslib: "npm:~2.4.0"
+  checksum: 10c0/7b0721a2612e3f910dec01be29048217dbbc1e6753e1a0878b697c6dec599b6facc1d2cb60997d36e89983b4048b5d8ea437142f899773a9114d1f204edd2b60
+  languageName: node
+  linkType: hard
+
 "cvss@npm:^1.0.5":
   version: 1.0.5
   resolution: "cvss@npm:1.0.5"
@@ -10588,6 +10597,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tslib@npm:~2.4.0":
+  version: 2.4.1
+  resolution: "tslib@npm:2.4.1"
+  checksum: 10c0/9ac0e4fd1033861f0b4f0d848dc3009ebcc3aa4757a06e8602a2d8a7aed252810e3540e54e70709f06c0f95311faa8584f769bcbede48aff785eb7e4d399b9ec
+  languageName: node
+  linkType: hard
+
 "tweetnacl@npm:^0.14.3, tweetnacl@npm:~0.14.0":
   version: 0.14.5
   resolution: "tweetnacl@npm:0.14.5"
@@ -10859,6 +10875,7 @@ __metadata:
     clarinet: "npm:^0.12.6"
     crypto-js: "npm:4"
     cvss: "npm:^1.0.5"
+    cvss4: "npm:^1.0.7"
     diff: "npm:^8.0.2"
     eml-format: "npm:^0.6.1"
     es-module-lexer: "npm:^1.5.4"
