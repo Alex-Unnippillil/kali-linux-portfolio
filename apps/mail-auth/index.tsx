@@ -16,6 +16,7 @@ type Result = {
 };
 
 type Response = {
+  spf: Result;
   dkim: Result;
   dmarc: Result;
   mtaSts: Result;
@@ -25,6 +26,7 @@ type Response = {
 };
 
 const CONTROLS = [
+  { id: 'spf', label: 'SPF' },
   { id: 'dkim', label: 'DKIM' },
   { id: 'dmarc', label: 'DMARC' },
   { id: 'mtaSts', label: 'MTA-STS' },
@@ -48,9 +50,14 @@ const MailAuth: React.FC = () => {
         domains.map(async (domain) => {
           const params = new URLSearchParams({ domain });
           if (selector) params.append('selector', selector);
-          const res = await fetch(`/api/mail-auth?${params.toString()}`);
-          const data = await res.json();
-          return [domain, data as Response] as [string, Response];
+          try {
+            const res = await fetch(`/api/mail-auth?${params.toString()}`);
+            if (!res.ok) throw new Error('Request failed');
+            const data = await res.json();
+            return [domain, data as Response];
+          } catch (e: any) {
+            return [domain, { error: e.message || 'Lookup failed' } as Response];
+          }
         })
       );
       setResults(Object.fromEntries(entries));
@@ -115,6 +122,23 @@ const MailAuth: React.FC = () => {
 
   const hasResults = Object.keys(results).length > 0;
 
+  const DMARC_TEMPLATES = [
+    {
+      label: 'Monitor',
+      value: 'v=DMARC1; p=none; rua=mailto:postmaster@domain.com',
+    },
+    {
+      label: 'Quarantine',
+      value:
+        'v=DMARC1; p=quarantine; rua=mailto:postmaster@domain.com; aspf=s; adkim=s',
+    },
+    {
+      label: 'Reject',
+      value:
+        'v=DMARC1; p=reject; rua=mailto:postmaster@domain.com; aspf=s; adkim=s',
+    },
+  ];
+
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 space-y-4">
       <div className="flex flex-col sm:flex-row gap-2">
@@ -176,11 +200,24 @@ const MailAuth: React.FC = () => {
                             >
                               {r.pass ? 'PASS' : 'FAIL'}
                             </span>
-                            {!r.pass && (r.message || r.recommendation) && (
+                            {(!r.pass && (r.message || r.recommendation)) && (
                               <div className="mt-1 text-xs text-red-400 space-y-1">
                                 {r.message && <div>{r.message}</div>}
                                 {r.recommendation && <div>{r.recommendation}</div>}
                               </div>
+                            )}
+                            {(r.record || r.example) && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  navigator.clipboard.writeText(
+                                    r.record || r.example || ''
+                                  )
+                                }
+                                className="mt-1 text-xs underline text-blue-400 self-start"
+                              >
+                                Copy
+                              </button>
                             )}
                           </div>
                         </td>
@@ -190,6 +227,21 @@ const MailAuth: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="mt-4 space-y-2 text-xs">
+            <div className="font-semibold">DMARC Templates</div>
+            {DMARC_TEMPLATES.map((t) => (
+              <div key={t.label} className="flex items-center gap-2">
+                <code className="bg-gray-800 px-2 py-1 rounded flex-1">{t.value}</code>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(t.value)}
+                  className="px-2 py-1 bg-gray-700 rounded"
+                >
+                  Copy
+                </button>
+              </div>
+            ))}
           </div>
           <div className="flex gap-2 mt-4">
             <button
