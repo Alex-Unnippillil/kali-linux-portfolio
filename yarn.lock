@@ -6041,6 +6041,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"install-artifact-from-github@npm:^1.4.0":
+  version: 1.4.0
+  resolution: "install-artifact-from-github@npm:1.4.0"
+  bin:
+    install-from-cache: bin/install-from-cache.js
+    save-to-github-cache: bin/save-to-github-cache.js
+  checksum: 10c0/99ea455ae9ced893574e6277cf08cad01b2dfbc7558f7b1b392ed9bc8b079319683638848905d7a72d1ded5dccbb7f7c63754a22ce4c6a165725f671920539f6
+  languageName: node
+  linkType: hard
+
 "internal-slot@npm:^1.1.0":
   version: 1.1.0
   resolution: "internal-slot@npm:1.1.0"
@@ -8116,6 +8126,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nan@npm:^2.22.2":
+  version: 2.23.0
+  resolution: "nan@npm:2.23.0"
+  dependencies:
+    node-gyp: "npm:latest"
+  checksum: 10c0/b986dd257dca53ab43a3b6ca6d0eafde697b69e1d63b242fa4aece50ce97eb169f9c4a5d8eb0eb5f58d118a9595fee11f3198fa210f023440053bb6f54109e73
+  languageName: node
+  linkType: hard
+
 "nanoid@npm:^3.3.11, nanoid@npm:^3.3.6":
   version: 3.3.11
   resolution: "nanoid@npm:3.3.11"
@@ -8214,7 +8233,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-gyp@npm:latest":
+"node-gyp@npm:^11.2.0, node-gyp@npm:latest":
   version: 11.4.1
   resolution: "node-gyp@npm:11.4.1"
   dependencies:
@@ -9037,6 +9056,17 @@ __metadata:
   version: 1.0.2
   resolution: "re2-wasm@npm:1.0.2"
   checksum: 10c0/49f2026e4ad12da3d34cc27004f7005b6986123be6f60e8f5621717e8d6bdd1e74b5ac1ea79e47a6740023d11dc8ac91f5e6e1f5f18382642ce58074d304ad16
+  languageName: node
+  linkType: hard
+
+"re2@npm:^1.22.1":
+  version: 1.22.1
+  resolution: "re2@npm:1.22.1"
+  dependencies:
+    install-artifact-from-github: "npm:^1.4.0"
+    nan: "npm:^2.22.2"
+    node-gyp: "npm:^11.2.0"
+  checksum: 10c0/21d6fa1554b7d24bd19117b89591181a9c611af058137f91bd2d9950f0fb78ed2623d23e0252c80df3016403d5ec8e0cba46cbdac890fbf62576639a695c8541
   languageName: node
   linkType: hard
 
@@ -10832,6 +10862,7 @@ __metadata:
     pvutils: "npm:^1.1.3"
     qr-scanner: "npm:^1.4.2"
     qrcode: "npm:^1.5.4"
+    re2: "npm:^1.22.1"
     re2-wasm: "npm:^1.0.2"
     react: "npm:18.2.0"
     react-activity-calendar: "npm:^2.7.13"
