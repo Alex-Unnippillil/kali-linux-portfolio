@@ -13,6 +13,7 @@ const customJestConfig = {
     '^@public/(.*)$': '<rootDir>/public/$1',
     '^@/(.*)$': '<rootDir>/$1',
   },
+  testPathIgnorePatterns: ['<rootDir>/e2e/'],
 };
 
 module.exports = createJestConfig(customJestConfig);
