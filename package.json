@@ -14,13 +14,15 @@
     "lint": "next lint",
     "test:e2e": "npx playwright test",
     "check:node-core": "node scripts/check-node-core-modules.js",
+    "check:edge-node": "node scripts/check-edge-node-modules.js",
     "validate:icons": "node scripts/validate-icons.js",
     "test:unit": "vitest",
     "format": "prettier --write .",
     "lighthouse": "lhci autorun",
     "typecheck": "tsc --noEmit",
     "build:ci": "next build",
-    "lint:ci": "next lint --max-warnings=0 --config eslint.config.mjs",
+    "lint:ci": "next lint --max-warnings=0 && yarn check:edge-node",
+
     "format:check": "prettier --check ."
   },
   "engines": {
