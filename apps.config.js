@@ -488,7 +488,7 @@ const apps = [
   {
     id: 'license-classifier',
     title: 'License Classifier',
-    icon: icon('gedit.png'),
+    icon: icon('license-classifier.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
