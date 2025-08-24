@@ -13,6 +13,14 @@ const restartBtn = document.getElementById('restart');
 const globalBoard = document.getElementById('globalBoard');
 const friendsBoard = document.getElementById('friendsBoard');
 
+const GRAVITY = 0.5;
+const FLAP_FORCE = -8;
+const PIPE_GAP = 80;
+const PIPE_WIDTH = 40;
+const PIPE_SPEED = 2;
+const PIPE_SPACING = 200;
+const PIPE_COUNT = 3;
+
 const SKINS = [
   { name: 'Yellow', color: 'yellow', cost: 0 },
   { name: 'Blue', color: 'blue', cost: 10 },
@@ -63,25 +71,37 @@ let background;
 let score;
 let running;
 let timeLeft;
-
-function addPipe() {
-  pipes.push(new Pipe(canvas.width, 80, 40, canvas.height));
-}
+let lastTime;
 
 function startGame() {
-  bird = new Bird(50, canvas.height / 2, 0.5, skinSelect.value);
+  bird = new Bird(50, canvas.height / 2, GRAVITY, skinSelect.value);
   pipes = [];
-  background = new Background(canvas.width, canvas.height);
+  for (let i = 0; i < PIPE_COUNT; i++) {
+    pipes.push(
+      new Pipe(
+        canvas.width + i * PIPE_SPACING,
+        PIPE_GAP,
+        PIPE_WIDTH,
+        canvas.height,
+        PIPE_SPEED
+      )
+    );
+  }
+  background = new Background(
+    canvas.width,
+    canvas.height,
+    Math.random() < 0.5 ? 'day' : 'night'
+  );
   score = 0;
   running = true;
   timeLeft = modeSelect.value === 'time' ? 30000 : null;
-  addPipe();
   overlay.style.display = 'none';
+  lastTime = performance.now();
   requestAnimationFrame(loop);
 }
 
 function flap() {
-  const force = modeSelect.value === 'reverse' ? 8 : -8;
+  const force = modeSelect.value === 'reverse' ? -FLAP_FORCE : FLAP_FORCE;
   bird.flap(force);
 }
 
@@ -111,34 +131,39 @@ function renderBoard(el, data) {
   });
 }
 
-function loop() {
+function loop(timestamp) {
   if (!running) return;
-  background.update();
+  const delta = timestamp - lastTime;
+  lastTime = timestamp;
+  const dt = delta / 16.6667;
+
+  background.update(dt);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   background.draw(ctx);
 
-  pipes.forEach((p) => {
-    p.update();
-    p.draw(ctx);
-  });
-  if (pipes.length && pipes[0].isOffscreen()) {
-    pipes.shift();
-    score++;
-    addPipe();
-  }
-
-  bird.update(modeSelect.value === 'reverse');
-  bird.draw(ctx);
-
-  if (bird.y - bird.radius < 0 || bird.y + bird.radius > canvas.height) {
-    gameOver();
-    return;
-  }
   for (const p of pipes) {
+    p.update(dt);
+    p.draw(ctx);
+    if (p.isOffscreen()) {
+      p.reset(canvas.width + PIPE_SPACING);
+    }
+    if (!p.passed && bird.x > p.x + p.width / 2) {
+      score++;
+      p.passed = true;
+    }
     if (p.collides(bird)) {
       gameOver();
       return;
     }
+  }
+
+  bird.update(modeSelect.value === 'reverse', dt);
+  bird.draw(ctx);
+
+  const b = bird.bounds;
+  if (b.top < 0 || b.bottom > canvas.height) {
+    gameOver();
+    return;
   }
 
   ctx.fillStyle = 'black';
@@ -146,7 +171,7 @@ function loop() {
   ctx.fillText(`Score: ${score}`, 10, 20);
 
   if (timeLeft !== null) {
-    timeLeft -= 16;
+    timeLeft -= delta;
     ctx.fillText(`Time: ${Math.ceil(timeLeft / 1000)}`, canvas.width - 80, 20);
     if (timeLeft <= 0) {
       gameOver();
@@ -157,14 +182,22 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
+function handleInput(e) {
+  e.preventDefault();
+  if (running) {
+    flap();
+  } else {
+    startGame();
+  }
+}
+
 document.addEventListener('keydown', (e) => {
   if (e.code === 'Space') {
-    if (running) {
-      flap();
-    } else {
-      startGame();
-    }
+    handleInput(e);
   }
+});
+['mousedown', 'touchstart'].forEach((ev) => {
+  document.addEventListener(ev, handleInput, { passive: false });
 });
 
 restartBtn.addEventListener('click', startGame);

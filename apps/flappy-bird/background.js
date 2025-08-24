@@ -1,16 +1,34 @@
 export default class Background {
-  constructor(width, height) {
+  constructor(width, height, theme = 'day') {
     this.width = width;
     this.height = height;
-    this.layers = [
-      { speed: 0.5, offset: 0, height: 40, color: '#7ec850' },
-      { speed: 1, offset: 0, height: 20, color: '#4caf50' },
-    ];
+    this.themes = {
+      day: {
+        sky: '#87CEEB',
+        layers: [
+          { speed: 0.5, offset: 0, height: 40, color: '#7ec850' },
+          { speed: 1, offset: 0, height: 20, color: '#4caf50' },
+        ],
+      },
+      night: {
+        sky: '#0d1b2a',
+        layers: [
+          { speed: 0.5, offset: 0, height: 40, color: '#264653' },
+          { speed: 1, offset: 0, height: 20, color: '#2a9d8f' },
+        ],
+      },
+    };
+    this.setTheme(theme);
   }
 
-  update() {
+  setTheme(theme) {
+    this.theme = this.themes[theme] ? theme : 'day';
+    this.layers = this.themes[this.theme].layers.map((l) => ({ ...l }));
+  }
+
+  update(dt = 1) {
     this.layers.forEach((layer) => {
-      layer.offset -= layer.speed;
+      layer.offset -= layer.speed * dt;
       if (layer.offset <= -this.width) {
         layer.offset += this.width;
       }
@@ -18,7 +36,7 @@ export default class Background {
   }
 
   draw(ctx) {
-    ctx.fillStyle = '#87CEEB';
+    ctx.fillStyle = this.themes[this.theme].sky;
     ctx.fillRect(0, 0, this.width, this.height);
     this.layers.forEach((layer) => {
       ctx.fillStyle = layer.color;
