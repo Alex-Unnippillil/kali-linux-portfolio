@@ -3,6 +3,7 @@ export interface ScanResult {
   attr: string;
   url: string;
   httpsUrl: string;
+  category: 'active' | 'passive';
 }
 
 self.onmessage = (e: MessageEvent<string>) => {
@@ -12,15 +13,26 @@ self.onmessage = (e: MessageEvent<string>) => {
   const elements = Array.from(doc.querySelectorAll('[src],[href]'));
   const results: ScanResult[] = [];
 
+  const activeTags = new Set(['script', 'iframe', 'embed', 'object', 'link', 'form']);
+
   elements.forEach((el) => {
     const attr = el.getAttribute('src') ? 'src' : 'href';
     const url = el.getAttribute(attr);
     if (url && url.startsWith('http://')) {
+      const tag = el.tagName.toLowerCase();
+      let category: 'active' | 'passive' = 'passive';
+      if (
+        activeTags.has(tag) ||
+        (tag === 'link' && (el as HTMLLinkElement).rel === 'stylesheet')
+      ) {
+        category = 'active';
+      }
       results.push({
-        tag: el.tagName.toLowerCase(),
+        tag,
         attr,
         url,
         httpsUrl: url.replace(/^http:\/\//i, 'https://'),
+        category,
       });
     }
   });

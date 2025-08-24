@@ -9,6 +9,7 @@ export interface SbomComponent {
   version?: string;
   licenses: string[];
   dependencies: string[];
+  supplier?: string;
   vulns: OsvVuln[];
 }
 
@@ -52,6 +53,7 @@ function parseCycloneDx(data: any): ParsedSbom {
       (l: any) => l.license?.id || l.license?.name || l.expression || ''
     ),
     dependencies: [],
+    supplier: c.supplier?.name || c.manufacturer?.name,
     vulns: [],
   }));
   const graph: Record<string, string[]> = {};
@@ -65,6 +67,15 @@ function parseCycloneDx(data: any): ParsedSbom {
 }
 
 function parseSpdx(data: any): ParsedSbom {
+  const verMatch = /(\d+)\.(\d+)/.exec(data.spdxVersion || '');
+  if (!verMatch) {
+    throw new Error('Invalid SPDX version');
+  }
+  const major = parseInt(verMatch[1], 10);
+  const minor = parseInt(verMatch[2], 10);
+  if (major < 2 || (major === 2 && minor < 3)) {
+    throw new Error('Unsupported SPDX version: require >=2.3');
+  }
   if (!Array.isArray(data.packages)) {
     throw new Error('Invalid SBOM schema: missing packages at $.packages');
   }
@@ -78,6 +89,7 @@ function parseSpdx(data: any): ParsedSbom {
     version: p.versionInfo,
     licenses: [p.licenseDeclared, p.licenseConcluded].filter(Boolean),
     dependencies: [],
+    supplier: p.supplier || p.originator,
     vulns: [],
   }));
   const graph: Record<string, string[]> = {};
