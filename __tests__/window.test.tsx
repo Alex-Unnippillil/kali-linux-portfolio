@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { act } from 'react';
+import { act } from 'react-dom/test-utils';
 import Window from '../components/base/window';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
@@ -25,7 +25,7 @@ describe('Window lifecycle', () => {
       />
     );
 
-    const closeButton = screen.getByRole('button', { name: /window close/i });
+    const closeButton = screen.getByRole('button', { name: /close window/i });
     fireEvent.click(closeButton);
 
     expect(hideSideBar).toHaveBeenCalledWith('test-window', false);

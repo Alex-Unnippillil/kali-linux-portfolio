@@ -1,17 +1,26 @@
 import React, { Component } from 'react';
 import NextImage from 'next/image';
 import { DndContext, useDraggable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 
-function DraggableContainer({ id, defaultPosition, bounds, onDrag, onStart, onStop, children }) {
-    const [position, setPosition] = React.useState(defaultPosition);
+function DraggableContainer({ id, defaultPosition, bounds, onDrag, onStart, onStop, children, position: controlledPosition, onPositionChange }) {
+    const [internalPosition, setInternalPosition] = React.useState(defaultPosition);
+    const isControlled = controlledPosition !== undefined;
+    const position = isControlled ? controlledPosition : internalPosition;
     const { attributes, listeners, setNodeRef, transform } = useDraggable({ id });
     const dx = position.x + (transform ? transform.x : 0);
     const dy = position.y + (transform ? transform.y : 0);
     const style = {
         transform: `translate3d(${dx}px, ${dy}px, 0)`
+    };
+
+    const updatePosition = (newPos) => {
+        if (isControlled && onPositionChange) {
+            onPositionChange(newPos);
+        } else {
+            setInternalPosition(newPos);
+        }
     };
 
     const handleDragEnd = (event) => {
@@ -22,7 +31,7 @@ function DraggableContainer({ id, defaultPosition, bounds, onDrag, onStart, onSt
             newX = Math.min(Math.max(newX, bounds.left), bounds.right);
             newY = Math.min(Math.max(newY, bounds.top), bounds.bottom);
         }
-        setPosition({ x: newX, y: newY });
+        updatePosition({ x: newX, y: newY });
         if (onStop) onStop();
     };
 
@@ -62,8 +71,10 @@ export class Window extends Component {
             parentSize: {
                 height: 100,
                 width: 100
-            }
+            },
+            position: { x: this.startX, y: this.startY }
         }
+        this.windowRef = React.createRef();
     }
 
     componentDidMount() {
@@ -119,6 +130,52 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default" })
     }
 
+    handleKeyboardMove = (dx, dy) => {
+        const bounds = { left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height };
+        this.setState(prevState => {
+            let newX = prevState.position.x + dx;
+            let newY = prevState.position.y + dy;
+            newX = Math.min(Math.max(newX, bounds.left), bounds.right);
+            newY = Math.min(Math.max(newY, bounds.top), bounds.bottom);
+            return { position: { x: newX, y: newY } };
+        }, this.checkOverlap);
+    }
+
+    handleKeyDown = (e) => {
+        if (e.altKey) {
+            switch (e.key) {
+                case 'w':
+                case 'W':
+                    e.preventDefault();
+                    this.closeWindow();
+                    break;
+                case 'f':
+                case 'F':
+                    e.preventDefault();
+                    this.focusWindow();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.handleKeyboardMove(0, -10);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.handleKeyboardMove(0, 10);
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    this.handleKeyboardMove(-10, 0);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    this.handleKeyboardMove(10, 0);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
         this.setState({ height: this.state.height + 0.1 }, this.resizeBoundries);
@@ -149,6 +206,9 @@ export class Window extends Component {
 
     focusWindow = () => {
         this.props.focus(this.id);
+        if (this.windowRef.current) {
+            this.windowRef.current.focus();
+        }
     }
 
     minimizeWindow = () => {
@@ -212,6 +272,8 @@ export class Window extends Component {
             <DraggableContainer
                 id={this.id}
                 defaultPosition={{ x: this.startX, y: this.startY }}
+                position={this.state.position}
+                onPositionChange={(pos) => this.setState({ position: pos })}
                 bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 onStart={this.changeCursorToMove}
                 onStop={this.changeCursorToDefault}
@@ -219,6 +281,9 @@ export class Window extends Component {
             >
                 {({ attributes, listeners }) => (
                     <div
+                        ref={this.windowRef}
+                        tabIndex={0}
+                        onKeyDown={this.handleKeyDown}
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
                         className={
                             this.state.cursorType +
@@ -298,7 +363,12 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center">
-            <span className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.minimize}>
+            <button
+                type="button"
+                aria-label="Minimize window"
+                className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                onClick={props.minimize}
+            >
                 <NextImage
                     src="/themes/Yaru/window/window-minimize-symbolic.svg"
                     alt="Kali window minimize"
@@ -307,34 +377,49 @@ export function WindowEditButtons(props) {
                     height={20}
                     sizes="20px"
                 />
-            </span>
+            </button>
             {props.allowMaximize && (
-                props.isMaximised
-                    ? (
-                        <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
-                            <NextImage
-                                src="/themes/Yaru/window/window-restore-symbolic.svg"
-                                alt="Kali window restore"
-                                className="h-5 w-5 inline"
-                                width={20}
-                                height={20}
-                                sizes="20px"
-                            />
-                        </span>
-                    ) : (
-                        <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
-                            <NextImage
-                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                                alt="Kali window maximize"
-                                className="h-5 w-5 inline"
-                                width={20}
-                                height={20}
-                                sizes="20px"
-                            />
-                        </span>
-                    )
+                props.isMaximised ? (
+                    <button
+                        type="button"
+                        aria-label="Restore window"
+                        className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                        onClick={props.maximize}
+                    >
+                        <NextImage
+                            src="/themes/Yaru/window/window-restore-symbolic.svg"
+                            alt="Kali window restore"
+                            className="h-5 w-5 inline"
+                            width={20}
+                            height={20}
+                            sizes="20px"
+                        />
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        aria-label="Maximize window"
+                        className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                        onClick={props.maximize}
+                    >
+                        <NextImage
+                            src="/themes/Yaru/window/window-maximize-symbolic.svg"
+                            alt="Kali window maximize"
+                            className="h-5 w-5 inline"
+                            width={20}
+                            height={20}
+                            sizes="20px"
+                        />
+                    </button>
+                )
             )}
-            <button tabIndex="-1" id={`close-${props.id}`} className="mx-1.5 focus:outline-none cursor-default bg-panel bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.close}>
+            <button
+                type="button"
+                id={`close-${props.id}`}
+                aria-label="Close window"
+                className="mx-1.5 cursor-default bg-panel bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                onClick={props.close}
+            >
                 <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"
                     alt="Kali window close"
