@@ -1,8 +1,9 @@
 self.onmessage = async (e) => {
-  const { bitmap, charSet, fontSize, useColor, palette } = e.data;
+  const { bitmap, charSet, fontSize, charWidth, useColor, palette } = e.data;
   const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
   const safeFont = clamp(fontSize || 8, 1, 100);
-  const rawWidth = Math.floor(bitmap.width / safeFont);
+  const safeChar = clamp(charWidth || safeFont, 1, 1000);
+  const rawWidth = Math.floor(bitmap.width / safeChar);
   const rawHeight = Math.floor(bitmap.height / safeFont);
   const MAX_DIM = 1000;
   const width = clamp(rawWidth, 1, MAX_DIM);
