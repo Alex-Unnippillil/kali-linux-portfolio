@@ -49,6 +49,7 @@ export const PRESETS = [
         return `${key}${delimiter}${trimmed.slice(0, 4)}***`;
       }
       return `${key}${delimiter}` + '█'.repeat(trimmed.length);
+
     },
   },
 ];

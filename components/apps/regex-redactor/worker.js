@@ -1,9 +1,11 @@
 import { diffWords } from 'diff';
 import safeRegex from 'safe-regex';
+import { RE2 } from 're2-wasm';
 import { PRESETS } from './presets';
 
 self.onmessage = async (e) => {
   const { text, pattern, preset, mask, engine } = e.data;
+
   let error = '';
   let unsafe = false;
   let warning = '';
@@ -26,6 +28,7 @@ self.onmessage = async (e) => {
         }
         regex = new RegExp(pattern, 'g');
       }
+
     } catch (err) {
       error = err.message;
     }

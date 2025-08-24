@@ -15,6 +15,7 @@ const RegexRedactor = () => {
   const [unsafe, setUnsafe] = useState(false);
   const [engine, setEngine] = useState('js');
 
+
   const workerRef = useRef(null);
 
   useEffect(() => {
@@ -114,6 +115,7 @@ const RegexRedactor = () => {
           <option value="js">JavaScript</option>
           <option value="re2">RE2</option>
         </select>
+
         <button
           className="px-3 py-1 bg-blue-600 rounded"
           onClick={() => setRedact(!redact)}
@@ -138,6 +140,9 @@ const RegexRedactor = () => {
           Potential catastrophic regex detected. Consider using RE2-compatible
           patterns.
         </div>
+      )}
+      {useRe2 && (
+        <div className="text-sm text-gray-300 mb-2">RE2 mode enabled.</div>
       )}
       <textarea
         value={text}
