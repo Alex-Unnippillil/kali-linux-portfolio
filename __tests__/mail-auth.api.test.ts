@@ -1,5 +1,7 @@
+/** @jest-environment node */
 import type { NextApiRequest, NextApiResponse } from 'next';
-import handler from '../pages/api/mail-auth';
+import { Response } from 'undici';
+
 
 function createRes() {
   return {
@@ -16,60 +18,65 @@ function createRes() {
   } as unknown as NextApiResponse;
 }
 
-describe('mail auth api', () => {
-  test('returns records with spf and dane', async () => {
-    const bigKey = Buffer.alloc(128).toString('base64');
+describe('mail-auth api', () => {
+  beforeEach(() => {
+    jest.resetModules();
+  });
+  test('returns records for SPF, DKIM and DMARC', async () => {
+    const { default: handler } = await import('../pages/api/mail-auth');
     (global as any).fetch = jest.fn((url: string) => {
-      if (url.startsWith('https://cloudflare-dns.com')) {
-        const u = new URL(url);
-        const name = u.searchParams.get('name');
-        const type = u.searchParams.get('type');
-        let Answer: any[] = [];
-        switch (name) {
-          case 'example.com':
-            Answer = [{ data: '"v=spf1 -all"' }];
-            break;
-          case '_dmarc.example.com':
-            Answer = [{ data: '"v=DMARC1; p=reject"' }];
-            break;
-          case '_mta-sts.example.com':
-            Answer = [{ data: '"v=STSv1; id=1"' }];
-            break;
-          case '_smtp._tls.example.com':
-            Answer = [{ data: '"v=TLSRPTv1; rua=mailto:postmaster@example.com"' }];
-            break;
-          case 'default._bimi.example.com':
-            Answer = [{ data: '"v=BIMI1; l=https://example.com/logo.svg"' }];
-            break;
-          case 'default._domainkey.example.com':
-            Answer = [{ data: `"v=DKIM1; p=${bigKey}"` }];
-            break;
-          case '_25._tcp.example.com':
-            return Promise.resolve({
-              ok: true,
-              json: () => Promise.resolve({ Answer: [{ data: '3 1 1 ABCDEF' }] }),
-            });
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ Answer }) });
+      const name = new URL(url).searchParams.get('name');
+      let answer: any[] = [];
+      if (name === 'example.com') {
+        answer = [{ data: '"v=spf1 -all"' }];
+      } else if (name === '_dmarc.example.com') {
+        answer = [{ data: '"v=DMARC1; p=reject"' }];
+      } else if (name === 'default._domainkey.example.com') {
+        const key = 'A'.repeat(172);
+        answer = [{ data: `"v=DKIM1; p=${key}"` }];
+      } else {
+        answer = [];
       }
-      if (url === 'https://mta-sts.example.com/.well-known/mta-sts.txt') {
-        return Promise.resolve({ ok: true });
-      }
-      if (url === 'https://example.com/logo.svg') {
-        return Promise.resolve({ ok: true });
-      }
-      return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+      return Promise.resolve(
+        new Response(JSON.stringify({ Answer: answer }), { status: 200 })
+      );
     });
-
-    const req = {
-      query: { domain: 'example.com' },
-      headers: {},
-      socket: { remoteAddress: '1.1.1.1' },
-    } as unknown as NextApiRequest;
-    const res: any = createRes();
+    const req = { query: { domain: 'example.com' } } as unknown as NextApiRequest;
+    const res = createRes();
     await handler(req, res);
     expect(res.statusCode).toBe(200);
-    expect(res.data.spf.pass).toBe(true);
-    expect(res.data.dane.pass).toBe(true);
+    expect(res.data.spf.record).toContain('v=spf1');
+    expect(res.data.dmarc.policy).toBe('reject');
+    expect(res.data.dkim.pass).toBe(true);
+  });
+
+  test('handles network errors', async () => {
+    const { default: handler } = await import('../pages/api/mail-auth');
+    (global as any).fetch = jest.fn(() => Promise.reject(new Error('network')));
+    const req = { query: { domain: 'example.com' } } as unknown as NextApiRequest;
+    const res = createRes();
+    await handler(req, res);
+    expect(res.statusCode).toBe(200);
+    expect(res.data.spf.pass).toBe(false);
+    expect(res.data.spf.message).toMatch(/network/);
+  });
+
+  test('caches DNS lookups', async () => {
+    const { default: handler } = await import('../pages/api/mail-auth');
+    const fetchMock = jest.fn((url: string) => {
+      const name = new URL(url).searchParams.get('name');
+      const answer = [{ data: `"record for ${name}"` }];
+      return Promise.resolve(
+        new Response(JSON.stringify({ Answer: answer }), { status: 200 })
+      );
+    });
+    (global as any).fetch = fetchMock;
+    const req = { query: { domain: 'cache.com' } } as unknown as NextApiRequest;
+    const res1 = createRes();
+    await handler(req, res1);
+    const res2 = createRes();
+    await handler(req, res2);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+
   });
 });

@@ -61,33 +61,59 @@ async function lookupTxt(name: string): Promise<string[]> {
   return promise;
 }
 
-async function lookupTlsa(name: string): Promise<string[]> {
-  const now = Date.now();
-  const cached = TLSA_CACHE[name];
-  if (cached) {
-    if (cached.data.length && cached.expires > now) return cached.data;
-    if (cached.promise) return cached.promise;
+const SPF_SPEC = 'https://www.rfc-editor.org/rfc/rfc7208';
+
+function parseSpf(records: string[]) {
+  const spfRecords = records.filter((r) => r.toLowerCase().startsWith('v=spf1'));
+  if (spfRecords.length === 0) {
+    return {
+      pass: false,
+      message: 'No SPF record found',
+      recommendation: 'Add a TXT record with v=spf1 and authorized senders',
+      example: 'v=spf1 include:_spf.example.com -all',
+      spec: SPF_SPEC,
+    };
   }
+  if (spfRecords.length > 1) {
+    return {
+      pass: false,
+      record: spfRecords.join(' | '),
+      message: 'Multiple SPF records found',
+      recommendation: 'Only one SPF record should exist',
+      example: 'v=spf1 include:_spf.example.com -all',
+      spec: SPF_SPEC,
+    };
+  }
+  const record = spfRecords[0];
+  const qualifier = record.match(/([~+?\-])all/i)?.[1];
+  let pass = true;
+  let message: string | undefined;
+  let recommendation = '';
+  if (!qualifier) {
+    pass = false;
+    message = 'SPF record missing all mechanism';
+    recommendation = 'End the record with -all';
+  } else if (qualifier === '?') {
+    pass = false;
+    message = 'Neutral SPF policy';
+    recommendation = 'Use -all or ~all to specify a policy';
+  } else if (qualifier === '+') {
+    pass = false;
+    message = 'SPF record allows all hosts (+all)';
+    recommendation = 'Use -all or ~all to restrict senders';
+  } else if (qualifier === '~') {
+    recommendation = 'Consider using -all for stricter enforcement';
+  }
+  return {
+    pass,
+    record,
+    policy: qualifier ? `${qualifier}all` : undefined,
+    message,
+    recommendation,
+    example: pass ? undefined : 'v=spf1 include:_spf.example.com -all',
+    spec: SPF_SPEC,
+  };
 
-  const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(name)}&type=TLSA`;
-  const promise = fetch(url, { headers: { Accept: 'application/dns-json' } })
-    .then((res) => {
-      if (!res.ok) throw new Error('DNS query failed');
-      return res.json();
-    })
-    .then((data) => {
-      const answers = data.Answer || [];
-      const records = answers.map((a: any) => String(a.data));
-      TLSA_CACHE[name] = { data: records, expires: now + TXT_TTL };
-      return records;
-    })
-    .catch((err) => {
-      delete TLSA_CACHE[name];
-      throw err;
-    });
-
-  TLSA_CACHE[name] = { data: [], expires: 0, promise };
-  return promise;
 }
 
 const DKIM_SPEC = 'https://datatracker.ietf.org/doc/html/rfc6376';
@@ -327,74 +353,96 @@ export default async function handler(
     res.status(400).json({ error: 'domain parameter required' });
     return;
   }
-  const cacheKey = `${domain}|${selector || ''}`;
-  const cached = RESULT_CACHE.get(cacheKey);
-  if (cached) {
-    res.status(200).json(cached);
-    return;
-  }
+
+  const response: any = {};
+
   try {
-    const [spfRecords, dmarcRecords, mtaStsRecords, tlsRptRecords, bimiRecords, daneRecords] =
-      await Promise.all([
-        lookupTxt(domain),
-        lookupTxt(`_dmarc.${domain}`),
-        lookupTxt(`_mta-sts.${domain}`),
-        lookupTxt(`_smtp._tls.${domain}`),
-        lookupTxt(`default._bimi.${domain}`),
-        lookupTlsa(`_25._tcp.${domain}`),
-      ]);
+    const spfRecords = await lookupTxt(domain);
+    response.spf = parseSpf(spfRecords);
+  } catch (e: any) {
+    response.spf = {
+      pass: false,
+      message: e.message || 'SPF lookup failed',
+      recommendation: 'Check DNS and try again',
+      spec: SPF_SPEC,
+    };
+  }
+
+  try {
+    const dmarcRecords = await lookupTxt(`_dmarc.${domain}`);
+    response.dmarc = parseDmarc(dmarcRecords);
+  } catch (e: any) {
+    response.dmarc = {
+      pass: false,
+      message: e.message || 'DMARC lookup failed',
+      recommendation: 'Check DNS and try again',
+      spec: DMARC_SPEC,
+    };
+  }
+
+  try {
+    const mtaStsRecords = await lookupTxt(`_mta-sts.${domain}`);
+    response.mtaSts = parseMtaSts(mtaStsRecords);
+  } catch (e: any) {
+    response.mtaSts = {
+      pass: false,
+      message: e.message || 'MTA-STS lookup failed',
+      recommendation: 'Check DNS and try again',
+      spec: MTA_STS_SPEC,
+    };
+  }
+
+  try {
+    const tlsRptRecords = await lookupTxt(`_smtp._tls.${domain}`);
+    response.tlsRpt = parseTlsRpt(tlsRptRecords);
+  } catch (e: any) {
+    response.tlsRpt = {
+      pass: false,
+      message: e.message || 'TLS-RPT lookup failed',
+      recommendation: 'Check DNS and try again',
+      spec: TLS_RPT_SPEC,
+    };
+  }
+
+  try {
+    const bimiRecords = await lookupTxt(`default._bimi.${domain}`);
+    response.bimi = parseBimi(bimiRecords);
+  } catch (e: any) {
+    response.bimi = {
+      pass: false,
+      message: e.message || 'BIMI lookup failed',
+      recommendation: 'Check DNS and try again',
+      spec: BIMI_SPEC,
+    };
+  }
+
+  try {
+
     let dkimRecords: string[] = [];
     if (typeof selector === 'string' && selector) {
       dkimRecords = await lookupTxt(`${selector}._domainkey.${domain}`);
     } else {
-      dkimRecords = await lookupTxt(`default._domainkey.${domain}`).catch(() => []);
+      dkimRecords = await lookupTxt(`default._domainkey.${domain}`);
     }
+    response.dkim =
+      dkimRecords.length > 0
+        ? parseDkim(dkimRecords)
+        : {
+            pass: false,
+            message: 'No DKIM record found',
+            recommendation: 'Publish a DKIM record or specify a selector',
+            example: 'v=DKIM1; k=rsa; p=base64publickey',
+            spec: DKIM_SPEC,
+          };
 
-    const mtaStsResult = parseMtaSts(mtaStsRecords);
-    if (mtaStsResult.pass) {
-      const ok = await fetch(`https://mta-sts.${domain}/.well-known/mta-sts.txt`)
-        .then((r) => r.ok)
-        .catch(() => false);
-      if (!ok) {
-        mtaStsResult.pass = false;
-        mtaStsResult.message = 'MTA-STS policy file not accessible';
-        mtaStsResult.recommendation = `Serve policy at https://mta-sts.${domain}/.well-known/mta-sts.txt`;
-      }
-    }
-
-    const bimiResult = parseBimi(bimiRecords);
-    if (bimiResult.pass && bimiResult.logo) {
-      const ok = await fetch(bimiResult.logo)
-        .then((r) => r.ok)
-        .catch(() => false);
-      if (!ok) {
-        bimiResult.pass = false;
-        bimiResult.message = 'BIMI logo URL not reachable';
-        bimiResult.recommendation = 'Ensure logo URL is accessible via HTTPS';
-      }
-    }
-
-    const result = {
-      spf: parseSpf(spfRecords),
-      dkim:
-        dkimRecords.length > 0
-          ? parseDkim(dkimRecords)
-          : {
-              pass: false,
-              message: 'No DKIM record found',
-              recommendation: 'Publish a DKIM record or specify a selector',
-              example: 'v=DKIM1; k=rsa; p=base64publickey',
-              spec: DKIM_SPEC,
-            },
-      dmarc: parseDmarc(dmarcRecords),
-      mtaSts: mtaStsResult,
-      tlsRpt: parseTlsRpt(tlsRptRecords),
-      dane: parseDane(daneRecords),
-      bimi: bimiResult,
-    };
-    RESULT_CACHE.set(cacheKey, result);
-    res.status(200).json(result);
   } catch (e: any) {
-    res.status(500).json({ error: e.message || 'Lookup failed' });
+    response.dkim = {
+      pass: false,
+      message: e.message || 'DKIM lookup failed',
+      recommendation: 'Check DNS and try again',
+      spec: DKIM_SPEC,
+    };
   }
+
+  res.status(200).json(response);
 }
