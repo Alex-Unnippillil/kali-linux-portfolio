@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { totp } from 'otplib';
+import QRCode from 'qrcode';
 
 type HashAlg = 'SHA1' | 'SHA256' | 'SHA512';
 
@@ -37,9 +38,11 @@ const TOTPApp = () => {
   const [label, setLabel] = useState('');
   const [issuer, setIssuer] = useState('');
   const [tolerance, setTolerance] = useState(1);
+  const [drift, setDrift] = useState(0);
   const [codes, setCodes] = useState<string[]>([]);
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [remaining, setRemaining] = useState(totp.timeRemaining());
+  const qrRef = useRef<HTMLCanvasElement>(null);
   const secretValid = isValidSecret(secret);
 
   const handleUriChange = (value: string) => {
@@ -58,6 +61,19 @@ const TOTPApp = () => {
   const handleSecretChange = (value: string) => {
     const cleaned = value.replace(/\s+/g, '').toUpperCase();
     setSecret(cleaned);
+  };
+
+  const buildUri = () => {
+    if (!secretValid) return '';
+    const name = label || '';
+    const path = issuer ? `${issuer}:${name}` : name;
+    const url = new URL(`otpauth://totp/${encodeURIComponent(path)}`);
+    url.searchParams.set('secret', secret);
+    url.searchParams.set('period', String(period));
+    url.searchParams.set('digits', String(digits));
+    url.searchParams.set('algorithm', algorithm);
+    if (issuer) url.searchParams.set('issuer', issuer);
+    return url.toString();
   };
 
   const generateRecoveryCodes = () => {
@@ -86,21 +102,31 @@ const TOTPApp = () => {
     totp.options = { step: period, digits, algorithm: algorithm as any };
     const update = () => {
       if (secretValid) {
-        const now = Date.now();
+        const now = Date.now() + drift * 1000;
         const arr: string[] = [];
         for (let w = -tolerance; w <= tolerance; w++) {
           arr.push((totp as any).generate(secret, { epoch: now + w * period * 1000 }));
         }
         setCodes(arr);
+        const rem = period - Math.floor((Math.floor(now / 1000)) % period);
+        setRemaining(rem === period ? 0 : rem);
       } else {
         setCodes([]);
+        setRemaining(period);
       }
-      setRemaining(totp.timeRemaining());
     };
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [secret, period, digits, algorithm, secretValid, tolerance]);
+  }, [secret, period, digits, algorithm, secretValid, tolerance, drift]);
+
+  const provisioningUri = buildUri();
+
+  useEffect(() => {
+    if (provisioningUri && qrRef.current) {
+      QRCode.toCanvas(qrRef.current, provisioningUri).catch(() => {});
+    }
+  }, [provisioningUri]);
 
   const percentage = ((period - remaining) / period) * 100;
   const color = `hsl(${(remaining / period) * 120}, 100%, 50%)`;
@@ -117,8 +143,22 @@ const TOTPApp = () => {
             className="w-full p-2 rounded text-black"
           />
         </label>
-        {label && <div className="text-sm">Label: {label}</div>}
-        {issuer && <div className="text-sm">Issuer: {issuer}</div>}
+        <label className="block">
+          Label
+          <input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="w-full p-2 rounded text-black"
+          />
+        </label>
+        <label className="block">
+          Issuer
+          <input
+            value={issuer}
+            onChange={(e) => setIssuer(e.target.value)}
+            className="w-full p-2 rounded text-black"
+          />
+        </label>
         <label className="block">
           Secret
           <input
@@ -171,6 +211,26 @@ const TOTPApp = () => {
             className="w-full p-2 rounded text-black"
           />
         </label>
+        <label className="block">
+          Time Drift (s)
+          <input
+            type="number"
+            value={drift}
+            onChange={(e) => setDrift(Number(e.target.value))}
+            className="w-full p-2 rounded text-black"
+          />
+        </label>
+        {provisioningUri && (
+          <div className="block">
+            <label>Provisioning URI</label>
+            <input
+              value={provisioningUri}
+              readOnly
+              className="w-full p-2 rounded text-black"
+            />
+            <canvas ref={qrRef} className="mx-auto mt-2 bg-white p-2 rounded" />
+          </div>
+        )}
       </div>
       <div className="mt-6 text-center">
         <div className="text-6xl font-mono" style={{ color }}>
