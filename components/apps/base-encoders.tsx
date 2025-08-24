@@ -10,6 +10,7 @@ const BASE64URL_ALPHABET =
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 const BASE16_ALPHABET = '0123456789abcdefABCDEF';
+const BASE36_ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyz';
 const BASE58_ALPHABET =
   '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 const ASCII85_ALPHABET = (() => {
@@ -23,6 +24,7 @@ type Mode = 'encode' | 'decode';
 type Codec =
   | 'base16'
   | 'base32'
+  | 'base36'
   | 'base64'
   | 'base64url'
   | 'ascii85'
@@ -151,6 +153,8 @@ function validate(codec: Codec, mode: Mode, data: string): ValidationError {
       return validateBase64url(data);
     case 'base32':
       return validateBase32(data);
+    case 'base36':
+      return validateAlphabet(data.toLowerCase(), BASE36_ALPHABET);
     case 'base16':
       return validateBase16(data);
     case 'base58check':
@@ -177,6 +181,7 @@ function detectCodec(data: string): Codec | null {
     return 'base58check';
   if (/^[^\s]+1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+$/.test(str)) return 'bech32';
   if (/^[0-9A-Fa-f]+$/.test(str) && str.length % 2 === 0) return 'base16';
+  if (/^[0-9A-Za-z]+$/.test(str)) return 'base36';
   return null;
 }
 
@@ -188,6 +193,12 @@ const docs: Record<
     alphabet: BASE16_ALPHABET,
     padding: 'none',
     tooltip: 'Hexadecimal encoding',
+    checksum: 'none',
+  },
+  base36: {
+    alphabet: BASE36_ALPHABET,
+    padding: 'none',
+    tooltip: 'Base36 encoding',
     checksum: 'none',
   },
   base32: {
@@ -237,6 +248,7 @@ const docs: Record<
 const codecOptions: { value: Codec; label: string }[] = [
   { value: 'base16', label: 'Base16' },
   { value: 'base32', label: 'Base32' },
+  { value: 'base36', label: 'Base36' },
   { value: 'base64', label: 'Base64 MIME' },
   { value: 'base64url', label: 'Base64 URL' },
   { value: 'base58check', label: 'Base58Check' },
@@ -533,3 +545,4 @@ const BaseEncoders = () => {
 
 export default BaseEncoders;
 export const displayBaseEncoders = () => <BaseEncoders />;
+export { detectCodec };
