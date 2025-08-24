@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   initialBoard,
   getMoves,
   makeMove,
-  negamax,
   Player,
   countBits,
   flipsForMove,
@@ -16,24 +15,31 @@ const Reversi: React.FC = () => {
   const [hint, setHint] = useState<bigint | null>(null);
   const [hoverFlips, setHoverFlips] = useState<bigint>(0n);
   const [heatmap, setHeatmap] = useState<Record<number, number>>({});
+  const [bestMove, setBestMove] = useState<bigint>(0n);
+  const workerRef = useRef<Worker | null>(null);
 
   const playerBits = turn === Player.Black ? board.black : board.white;
   const oppBits = turn === Player.Black ? board.white : board.black;
   const moves = getMoves(playerBits, oppBits);
 
   useEffect(() => {
-    const h: Record<number, number> = {};
-    let m = moves;
-    while (m) {
-      const move = m & -m;
-      const idx = bitIndex(move);
-      const { player, opponent } = makeMove(playerBits, oppBits, move);
-      const { score } = negamax(opponent, player, 4);
-      h[idx] = -score;
-      m ^= move;
-    }
-    setHeatmap(h);
-  }, [board, turn]);
+    workerRef.current = new Worker(new URL('./worker.ts', import.meta.url));
+    workerRef.current.onmessage = (
+      e: MessageEvent<{ scores: Record<number, number>; bestMove: bigint }>
+    ) => {
+      setHeatmap(e.data.scores);
+      setBestMove(e.data.bestMove);
+    };
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  useEffect(() => {
+    workerRef.current?.postMessage({
+      player: playerBits,
+      opponent: oppBits,
+      depth: 4,
+    });
+  }, [playerBits, oppBits]);
 
   const handleClick = (idx: number) => {
     const m = 1n << BigInt(idx);
@@ -49,8 +55,7 @@ const Reversi: React.FC = () => {
   };
 
   const showHint = () => {
-    const { move } = negamax(playerBits, oppBits, 8);
-    setHint(move === 0n ? null : move);
+    setHint(bestMove === 0n ? null : bestMove);
   };
 
   const handleHover = (idx: number) => {
@@ -83,8 +88,8 @@ const Reversi: React.FC = () => {
         onMouseEnter={() => handleHover(idx)}
         onMouseLeave={clearHover}
         className={`relative w-10 h-10 flex items-center justify-center bg-green-700 border border-green-800 ${
-          isHint ? 'ring-4 ring-yellow-400' : ''
-        }`}
+          isMove && !isHint ? 'ring-2 ring-blue-300' : ''
+        } ${isHint ? 'ring-4 ring-yellow-400' : ''}`}
       >
         {color && !hasBlack && !hasWhite && (
           <div className="absolute inset-0" style={{ backgroundColor: color }} />
