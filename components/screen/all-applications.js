@@ -65,7 +65,7 @@ class AllApplications extends React.Component {
 
     render() {
         return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-surface bg-opacity-95 all-apps-anim">
+            <div className="fixed inset-0 z-overlay pointer-events-auto flex flex-col items-center overflow-y-auto bg-surface bg-opacity-95 all-apps-anim">
                 <button
                     onClick={this.props.closeAllApps}
                     className="absolute top-4 right-4 p-1 rounded hover:bg-white hover:bg-opacity-10 focus:outline-none"

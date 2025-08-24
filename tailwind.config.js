@@ -56,6 +56,9 @@ module.exports = {
     extend: {
       zIndex: {
         '-10': '-10',
+        overlay: '50',
+        menu: '60',
+        lock: '100',
       }
     },
   },
