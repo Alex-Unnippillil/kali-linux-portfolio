@@ -7,6 +7,8 @@ export default class Mothership {
   speed: number;
   active: boolean;
 
+  static timer = 0;
+
   constructor(boundsW: number, dir: number) {
     this.w = 40;
     this.h = 20;
@@ -20,6 +22,24 @@ export default class Mothership {
   update(dt: number, boundsW: number) {
     this.x += this.speed * this.dir * dt;
     if ((this.dir === 1 && this.x > boundsW) || (this.dir === -1 && this.x + this.w < 0)) this.active = false;
+  }
+
+  /**
+   * Countdown timer helper for spawning saucers. Call every frame
+   * with the elapsed time; returns a new saucer when the timer
+   * elapses.
+   */
+  static tick(dt: number, boundsW: number): Mothership | null {
+    Mothership.timer -= dt;
+    if (Mothership.timer > 0) return null;
+    // reset for the next spawn
+    Mothership.timer = 20 + Math.random() * 20;
+    const dir = Math.random() < 0.5 ? 1 : -1;
+    return new Mothership(boundsW, dir);
+  }
+
+  static resetTimer(initial = 10) {
+    Mothership.timer = initial;
   }
 
   draw(ctx: CanvasRenderingContext2D) {

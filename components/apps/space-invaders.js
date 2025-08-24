@@ -1,3 +1,4 @@
+'use client';
 import React, { useRef, useEffect, useState } from 'react';
 import Player from '../../apps/space-invaders/player';
 import Invader from '../../apps/space-invaders/invader';
@@ -24,7 +25,6 @@ const SpaceInvaders = () => {
   const moveTimer = useRef(0);
   const stepIndex = useRef(0);
   const totalInvaders = useRef(0);
-  const mothershipTimer = useRef(10);
   const wave = useRef(1);
   const gameOver = useRef(false);
   const audioCtxRef = useRef(null);
@@ -35,7 +35,7 @@ const SpaceInvaders = () => {
   const replayingRef = useRef(false);
   const loopRef = useRef(null);
   const highScoreRef = useRef(0);
-  const [effects, setEffects] = useState(true);
+  const [crt, setCrt] = useState(true);
   const [showReplay, setShowReplay] = useState(false);
 
   useEffect(() => {
@@ -97,13 +97,8 @@ const SpaceInvaders = () => {
       }
     };
 
-    const spawnMothership = () => {
-      const dir = Math.random() < 0.5 ? 1 : -1;
-      mothershipRef.current = new Mothership(w, dir);
-    };
-
     const spawnExplosion = (x, y, color) => {
-      if (!effects) return;
+      if (!crt) return;
       for (let i = 0; i < 10; i += 1) {
         particlesRef.current.push(new Particle(x, y, color));
       }
@@ -112,6 +107,7 @@ const SpaceInvaders = () => {
     spawnWave();
     spawnShields();
     framesRef.current = [];
+    Mothership.resetTimer();
 
     const handleKey = (e) => {
       keys.current[e.code] = e.type === 'keydown';
@@ -169,7 +165,7 @@ const SpaceInvaders = () => {
           ctx.fillStyle = 'yellow';
           ctx.fillRect(b.x, b.y, 2, 4);
         });
-        if (effects)
+        if (crt)
           frame.particles.forEach((pt) => {
             ctx.fillStyle = pt.color;
             ctx.fillRect(pt.x, pt.y, 2, 2);
@@ -247,19 +243,18 @@ const SpaceInvaders = () => {
         mothershipRef.current.update(dt, w);
         if (!mothershipRef.current.active) mothershipRef.current = null;
       }
-      mothershipTimer.current -= dt;
-      if (!mothershipRef.current && mothershipTimer.current <= 0) {
-        spawnMothership();
-        mothershipTimer.current = 20 + Math.random() * 20;
+      if (!mothershipRef.current) {
+        const m = Mothership.tick(dt, w);
+        if (m) mothershipRef.current = m;
       }
 
       playerBulletsRef.current.forEach((b) => {
         if (!b.active) return;
         for (const s of shieldsRef.current) {
           if (s.alive && b.collides(s)) {
-            s.hit();
+            s.hit(b.x, b.y);
             b.release();
-            spawnExplosion(s.x + s.w / 2, s.y + s.h / 2, 'yellow');
+            spawnExplosion(b.x, b.y, 'yellow');
             break;
           }
         }
@@ -302,10 +297,10 @@ const SpaceInvaders = () => {
         let blocked = false;
         for (const s of shieldsRef.current) {
           if (s.alive && b.collides(s)) {
-            s.hit();
+            s.hit(b.x, b.y);
             b.release();
             blocked = true;
-            spawnExplosion(s.x + s.w / 2, s.y + s.h / 2, 'yellow');
+            spawnExplosion(b.x, b.y, 'yellow');
             break;
           }
         }
@@ -344,6 +339,7 @@ const SpaceInvaders = () => {
       if (invadersRef.current.every((inv) => !inv.alive)) {
         wave.current += 1;
         spawnWave();
+        Mothership.resetTimer();
       }
 
       ctx.fillStyle = 'black';
@@ -382,7 +378,7 @@ const SpaceInvaders = () => {
         ctx.fillStyle = pu.type === 'shield' ? 'cyan' : 'orange';
         ctx.fillRect(pu.x, pu.y, 10, 10);
       });
-      if (effects) particlesRef.current.forEach((pt) => pt.draw(ctx));
+      if (crt) particlesRef.current.forEach((pt) => pt.draw(ctx));
 
       ctx.fillStyle = 'white';
       ctx.fillText(`Score: ${p.score}`, 10, 20);
@@ -429,14 +425,14 @@ const SpaceInvaders = () => {
   };
 
   return (
-    <div className={`h-full w-full relative bg-black text-white ${effects ? 'crt' : ''}`}>
+    <div className={`h-full w-full relative bg-black text-white ${crt ? 'crt' : ''}`}>
       <canvas ref={canvasRef} className="w-full h-full" />
       <div className="absolute top-2 right-2 flex gap-2">
         <button
           className="bg-gray-700 px-2 py-1 rounded"
-          onClick={() => setEffects((e) => !e)}
+          onClick={() => setCrt((e) => !e)}
         >
-          {effects ? 'FX On' : 'FX Off'}
+          {crt ? 'CRT On' : 'CRT Off'}
         </button>
         {showReplay && (
           <button
