@@ -15,9 +15,17 @@ function bitsToHex(bits: number[]): string {
 
 export {};
 
+let cancelled = false;
 
-self.onmessage = async (e: MessageEvent<File>) => {
-  const file = e.data;
+self.onmessage = async (
+  e: MessageEvent<{ type: 'hash'; file: File } | { type: 'cancel' }>
+) => {
+  if (e.data.type === 'cancel') {
+    cancelled = true;
+    return;
+  }
+  const { file } = e.data;
+  cancelled = false;
   try {
     const chunkSize = 64 * 1024;
     const md5 = CryptoJS.algo.MD5.create();
@@ -27,6 +35,11 @@ self.onmessage = async (e: MessageEvent<File>) => {
     const total = new Uint8Array(file.size);
     let offset = 0;
     while (offset < file.size) {
+      if (cancelled) {
+        // @ts-ignore
+        self.postMessage({ type: 'cancelled' });
+        return;
+      }
       const slice = file.slice(offset, offset + chunkSize);
       const buffer = await slice.arrayBuffer();
       const wordArray = CryptoJS.lib.WordArray.create(buffer);
@@ -35,7 +48,9 @@ self.onmessage = async (e: MessageEvent<File>) => {
       sha256.update(wordArray);
       sha512.update(wordArray);
       total.set(new Uint8Array(buffer), offset);
-      offset += chunkSize;
+      offset += buffer.byteLength;
+      // @ts-ignore
+      self.postMessage({ type: 'progress', progress: offset / file.size });
     }
     // Build binary string for tlsh
     let bin = '';
@@ -58,9 +73,9 @@ self.onmessage = async (e: MessageEvent<File>) => {
       simhash: simhashHex,
     };
     // @ts-ignore
-    self.postMessage(hashes);
+    self.postMessage({ type: 'result', hashes });
   } catch (err) {
     // @ts-ignore
-    self.postMessage({ error: 'File read error' });
+    self.postMessage({ type: 'error', error: 'File read error' });
   }
 };
