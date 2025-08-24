@@ -2,21 +2,22 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import projectsData from '../../data/projects.json';
+import type { Project } from '../../lib/types';
 
 export default function ProjectGallery() {
-  const [projects, setProjects] = useState([]);
-  const [search, setSearch] = useState('');
-  const [tag, setTag] = useState('All');
-  const [pinned, setPinned] = useState([]);
-  const [columns, setColumns] = useState(1);
-  const cardRefs = useRef([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [search, setSearch] = useState<string>('');
+  const [tag, setTag] = useState<string>('All');
+  const [pinned, setPinned] = useState<string[]>([]);
+  const [columns, setColumns] = useState<number>(1);
+  const cardRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
     ReactGA.event({ category: 'Application', action: 'Loaded Project Gallery' });
   }, []);
 
   useEffect(() => {
-    setProjects(projectsData);
+    setProjects(projectsData as Project[]);
   }, []);
 
   useEffect(() => {
@@ -40,12 +41,12 @@ export default function ProjectGallery() {
     return () => window.removeEventListener('resize', updateColumns);
   }, []);
 
-  const tags = useMemo(
+  const tags = useMemo<string[]>(
     () => ['All', ...Array.from(new Set(projects.flatMap((p) => p.tags)))],
     [projects]
   );
 
-  const filtered = useMemo(() => {
+  const filtered = useMemo<Project[]>(() => {
     const term = search.toLowerCase();
     return projects.filter(
       (p) =>
@@ -57,7 +58,7 @@ export default function ProjectGallery() {
     );
   }, [projects, search, tag]);
 
-  const sorted = useMemo(() => {
+  const sorted = useMemo<Project[]>(() => {
     const pinnedProjects = filtered.filter((p) => pinned.includes(p.title));
     const otherProjects = filtered.filter((p) => !pinned.includes(p.title));
     return [...pinnedProjects, ...otherProjects];
@@ -67,7 +68,7 @@ export default function ProjectGallery() {
     cardRefs.current = cardRefs.current.slice(0, sorted.length);
   }, [sorted]);
 
-  const togglePinned = (title) => {
+  const togglePinned = (title: string) => {
     setPinned((prev) => {
       const next = prev.includes(title)
         ? prev.filter((t) => t !== title)
@@ -79,7 +80,10 @@ export default function ProjectGallery() {
     });
   };
 
-  const handleKeyDown = (e, index) => {
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLDivElement>,
+    index: number
+  ) => {
     if (e.key === 'ArrowRight') {
       const next = index + 1;
       if (next < sorted.length) {
@@ -135,7 +139,7 @@ export default function ProjectGallery() {
         <p className="text-center">No projects found.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sorted.map((project, index) => (
+          {sorted.map((project: Project, index: number) => (
             <div
               key={index}
               ref={(el) => (cardRefs.current[index] = el)}
@@ -159,8 +163,9 @@ export default function ProjectGallery() {
                   sizes="100%"
                   loading="lazy"
                   onError={(e) => {
-                    e.currentTarget.onerror = null;
-                    e.currentTarget.src = '/images/logos/logo.png';
+                    const target = e.currentTarget as HTMLImageElement;
+                    target.onerror = null;
+                    target.src = '/images/logos/logo.png';
                   }}
                 />
               </div>

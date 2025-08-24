@@ -1,16 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import Image from 'next/image';
 import projects from '../../data/projects.json';
-
-interface Project {
-  title: string;
-  description: string;
-  image: string;
-  tech: string[];
-  tags: string[];
-  live?: string;
-  repo?: string;
-}
+import type { Project } from '../../lib/types';
 
 const ProjectGallery: React.FC = () => {
   const [tag, setTag] = useState('All');

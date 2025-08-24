@@ -1,8 +1,14 @@
 import React, { useState } from 'react';
+import type { Badge } from '../lib/types';
 
-const BadgeList = ({ badges, className = '' }) => {
+interface BadgeListProps {
+  badges: Badge[];
+  className?: string;
+}
+
+const BadgeList: React.FC<BadgeListProps> = ({ badges, className = '' }) => {
   const [filter, setFilter] = useState('');
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState<Badge | null>(null);
 
   const filteredBadges = badges.filter((badge) =>
     badge.label.toLowerCase().includes(filter.toLowerCase())
