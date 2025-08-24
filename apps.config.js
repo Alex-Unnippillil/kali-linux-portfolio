@@ -578,7 +578,7 @@ const apps = [
   {
     id: 'import-graph',
     title: 'Import Graph',
-    icon: './themes/Yaru/apps/gedit.png',
+    icon: './themes/Yaru/apps/import-graph.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,

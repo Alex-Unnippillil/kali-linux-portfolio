@@ -28,6 +28,8 @@ const ImportGraph: React.FC = () => {
   const [depth, setDepth] = useState(3);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [diff, setDiff] = useState<string[]>([]);
+  const [root, setRoot] = useState('');
+  const [search, setSearch] = useState('');
   const workerRef = useRef<Worker>();
 
   useEffect(() => {
@@ -44,6 +46,7 @@ const ImportGraph: React.FC = () => {
         setErrors(e.data.errors);
         setCycles(e.data.cycles);
         const g: Record<string, GraphNode> = e.data.graph;
+        setRoot(Object.keys(g)[0] || '');
         const cycleSet = new Set<string>(e.data.cycles.flat());
         const sugg: string[] = [];
         Object.entries(g).forEach(([path, node]) => {
@@ -94,9 +97,43 @@ const ImportGraph: React.FC = () => {
   };
 
   const handleLocal = async () => {
-    const res = await fetch('/api/import-graph');
+    const res = await fetch('/api/madge');
     const data = await res.json();
-    parseFiles(data.files);
+    if (data.error) {
+      setErrors([{ file: 'madge', error: data.error }]);
+      return;
+    }
+    const g: Record<string, GraphNode> = {};
+    Object.entries<Record<string, string[]>>(data.graph).forEach(([k, deps]) => {
+      g[k] = { deps, size: data.sizes[k] || 0, ssrUnsafe: false };
+    });
+    setGraph(g);
+    setCycles(data.circular || []);
+    setRoot(Object.keys(g)[0] || '');
+    const cycleSet = new Set<string>((data.circular || []).flat());
+    const sugg: string[] = [];
+    Object.entries(g).forEach(([path, node]) => {
+      if (cycleSet.has(path)) sugg.push(`${path} is part of a cycle`);
+      else if (node.size > LARGE_THRESHOLD)
+        sugg.push(`${path} is large (${node.size} bytes); consider code splitting`);
+    });
+    (data.orphans || []).forEach((o: string) =>
+      sugg.push(`${o} is unused and may be tree-shaken`),
+    );
+    setSuggestions(sugg);
+    const previous: Record<string, GraphNode> = JSON.parse(
+      localStorage.getItem('import-graph-last') || '{}',
+    );
+    const changes: string[] = [];
+    for (const k of Object.keys(g)) {
+      if (!previous[k]) changes.push(`Added ${k}`);
+      else if (previous[k].size !== g[k].size) changes.push(`Modified ${k}`);
+    }
+    for (const k of Object.keys(previous)) {
+      if (!g[k]) changes.push(`Removed ${k}`);
+    }
+    setDiff(changes);
+    localStorage.setItem('import-graph-last', JSON.stringify(g));
   };
 
   const handleZip = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -118,6 +155,17 @@ const ImportGraph: React.FC = () => {
     );
     setErrors(errs);
     parseFiles(files);
+  };
+
+  const handleExport = async () => {
+    const el = document.getElementById('import-graph-svg');
+    if (!el) return;
+    const { toPng } = await import('html-to-image');
+    const dataUrl = await toPng(el as HTMLElement);
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'import-graph.png';
+    a.click();
   };
 
   return (
@@ -145,7 +193,35 @@ const ImportGraph: React.FC = () => {
           onChange={(e) => setDepth(parseInt(e.target.value))}
         />
       </label>
-      <GraphView graph={graph} cycles={cycles} depth={depth} />
+      {Object.keys(graph).length > 0 && (
+        <div className="flex flex-col space-y-2">
+          <label className="flex items-center space-x-2">
+            <span>Root:</span>
+            <select
+              value={root}
+              onChange={(e) => setRoot(e.target.value)}
+              className="text-black"
+            >
+              {Object.keys(graph).map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+            </select>
+          </label>
+          <input
+            type="text"
+            placeholder="Search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="text-black p-1"
+          />
+          <button onClick={handleExport} className="bg-purple-600 px-2 py-1 rounded w-fit">
+            Export PNG
+          </button>
+        </div>
+      )}
+      <GraphView graph={graph} cycles={cycles} depth={depth} root={root} search={search} />
       {errors.length > 0 && (
         <div className="text-red-400 overflow-auto max-h-32">
           {errors.map((e) => (
@@ -177,18 +253,21 @@ interface GraphViewProps {
   graph: Record<string, GraphNode>;
   cycles: string[][];
   depth: number;
+  root: string;
+  search: string;
 }
 
-const GraphView: React.FC<GraphViewProps> = ({ graph, cycles, depth }) => {
+const GraphView: React.FC<GraphViewProps> = ({ graph, cycles, depth, root, search }) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
   const [panning, setPanning] = useState<null | { x: number; y: number }>(null);
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
 
   const nodes = Object.keys(graph);
-  const root = nodes[0];
   const visible = root ? filterByDepth(graph, root, depth) : new Set<string>();
-  const filteredNodes = root ? nodes.filter((n) => visible.has(n)) : [];
+  const filteredNodes = root
+    ? nodes.filter((n) => visible.has(n) && n.includes(search))
+    : [];
   const edges = filteredNodes.flatMap((n) =>
     graph[n].deps.filter((d) => visible.has(d)).map((d) => [n, d] as [string, string]),
   );
@@ -238,6 +317,7 @@ const GraphView: React.FC<GraphViewProps> = ({ graph, cycles, depth }) => {
 
   return (
     <svg
+      id="import-graph-svg"
       ref={svgRef}
       className="flex-1 border border-gray-700 bg-gray-800 cursor-move"
       onWheel={handleWheel}
