@@ -77,6 +77,8 @@ class AllApplications extends React.Component {
                         height={16}
                         src="/themes/Yaru/window/window-close-symbolic.svg"
                         alt="close"
+                        sizes="16px"
+                        priority
                     />
                 </button>
                 <input

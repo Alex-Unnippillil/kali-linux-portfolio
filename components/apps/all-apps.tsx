@@ -79,6 +79,7 @@ export default function AllApps() {
                 height={64}
                 className="mb-1"
                 loading="lazy"
+                sizes="64px"
               />
               <span className="text-xs text-center">{app.title}</span>
             </Link>

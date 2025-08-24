@@ -5,13 +5,16 @@ import { initAxiom } from '../lib/axiom';
 import { maskPII, trackWebVital } from '../lib/analytics';
 import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
-import { Inter } from 'next/font/google';
+import localFont from 'next/font/local';
 import 'tailwindcss/tailwind.css';
 import '../styles/index.css';
 import ConsentBanner from '../components/ConsentBanner';
 import { validatePublicEnv } from '../lib/validate';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = localFont({
+  src: '../public/fonts/Inter-roman.var.woff2',
+  display: 'swap',
+});
 
 validatePublicEnv(process.env);
 initAxiom();

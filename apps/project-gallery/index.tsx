@@ -48,6 +48,7 @@ const ProjectGallery: React.FC = () => {
               height={300}
               className="w-full h-48 object-cover"
               loading="lazy"
+              sizes="(max-width: 768px) 100vw, 400px"
             />
             <div className="p-2">
               <h3 className="font-semibold">{p.title}</h3>
