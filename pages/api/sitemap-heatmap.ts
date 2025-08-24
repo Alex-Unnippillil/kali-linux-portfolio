@@ -1,22 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { XMLParser } from 'fast-xml-parser';
+import LRUCache from 'lru-cache';
+import { Readable } from 'node:stream';
+import { parseSitemap, SitemapEntry } from '../../lib/sitemap';
 import { setupUrlGuard } from '../../lib/urlGuard';
+
 setupUrlGuard();
-
-interface UrlEntry {
-  loc: string;
-  lastmod?: string;
-}
-
-interface SitemapUrl {
-  loc?: string;
-  lastmod?: string;
-}
 
 interface HeatmapResponse {
   ok: boolean;
-  urls: UrlEntry[];
+  urls: SitemapEntry[];
 }
+
+const cache = new LRUCache<string, SitemapEntry[]>({
+  max: 10,
+  ttl: 1000 * 60 * 5,
+});
 
 export default async function handler(
   req: NextApiRequest,
@@ -37,25 +35,19 @@ export default async function handler(
     return;
   }
 
+  const cacheKey = parsed.origin;
   try {
-    const response = await fetch(`${parsed.origin}/sitemap.xml`);
-    if (!response.ok) {
-      res.status(200).json({ ok: false, urls: [] });
-      return;
-    }
+    let urls = cache.get(cacheKey);
+    if (!urls) {
+      const response = await fetch(`${parsed.origin}/sitemap.xml`);
+      if (!response.ok || !response.body) {
+        res.status(200).json({ ok: false, urls: [] });
+        return;
+      }
 
-    const xml = await response.text();
-    const parser = new XMLParser();
-    const data = parser.parse(xml);
-    const urlset: SitemapUrl[] | SitemapUrl | undefined = data.urlset?.url;
-
-    const urls: UrlEntry[] = [];
-    if (Array.isArray(urlset)) {
-      urlset.forEach((u: SitemapUrl) => {
-        if (u.loc) urls.push({ loc: u.loc, lastmod: u.lastmod });
-      });
-    } else if (urlset && urlset.loc) {
-      urls.push({ loc: urlset.loc, lastmod: urlset.lastmod });
+      const stream = Readable.fromWeb(response.body as any);
+      urls = await parseSitemap(stream);
+      cache.set(cacheKey, urls);
     }
 
     res.status(200).json({ ok: true, urls });
