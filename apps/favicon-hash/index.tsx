@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 
-function murmurhash3_32_gc(key: string, seed = 0): string {
+export function murmurhash3_32_gc(key: string, seed = 0): string {
   let remainder = key.length & 3;
   const bytes = key.length - remainder;
   let h1 = seed;
@@ -85,6 +85,14 @@ function detectMime(bytes: Uint8Array): string | undefined {
   }
   return undefined;
 }
+const ALLOWED_TYPES = new Set([
+  'image/x-icon',
+  'image/vnd.microsoft.icon',
+  'image/png',
+  'image/jpeg',
+  'image/gif',
+  'image/svg+xml',
+]);
 
 const FaviconHash: React.FC = () => {
   const [input, setInput] = useState('');
@@ -95,6 +103,7 @@ const FaviconHash: React.FC = () => {
   const [error, setError] = useState('');
   const [warning, setWarning] = useState('');
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const copy = useCallback((text: string) => {
@@ -109,12 +118,28 @@ const FaviconHash: React.FC = () => {
     setMime('');
     setWarning('');
     setLoading(true);
+    setProgress(0);
     let base64 = '';
     let bytes: Uint8Array;
 
     try {
       if (file) {
-        const buf = await file.arrayBuffer();
+        if (file.type && !ALLOWED_TYPES.has(file.type)) {
+          setError('Unsupported file type');
+          setLoading(false);
+          return;
+        }
+        const buf = await new Promise<ArrayBuffer>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('read_error'));
+          reader.onprogress = (e) => {
+            if (e.lengthComputable) {
+              setProgress(Math.round((e.loaded / e.total) * 100));
+            }
+          };
+          reader.onload = () => resolve(reader.result as ArrayBuffer);
+          reader.readAsArrayBuffer(file);
+        });
         bytes = new Uint8Array(buf);
         base64 = btoa(String.fromCharCode(...bytes));
         setSize(bytes.length);
@@ -124,6 +149,7 @@ const FaviconHash: React.FC = () => {
         if (detected && !m.toLowerCase().includes(detected)) {
           setWarning(`Content-Type is ${m} but data appears to be ${detected}`);
         }
+        setProgress(100);
       } else if (input.trim().startsWith('data:')) {
         const match = input.trim().match(/^data:([^;,]+)?(;base64)?,(.*)$/i);
         if (!match) {
@@ -152,37 +178,42 @@ const FaviconHash: React.FC = () => {
             `Content-Type is ${mimeType} but data appears to be ${detected}`
           );
         }
+        setProgress(100);
       } else if (input.trim()) {
-        const res = await fetch(input.trim());
-        if (res.type === 'opaque') {
-          setError(
-            'Opaque response (CORS). Please download and upload the favicon manually.'
-          );
-          setLoading(false);
-          return;
-        }
-        if (!res.ok) {
-          setError(`HTTP ${res.status}`);
-          setLoading(false);
-          return;
-        }
-        const buf = await res.arrayBuffer();
-        bytes = new Uint8Array(buf);
-        base64 = btoa(String.fromCharCode(...bytes));
-        setSize(bytes.length);
-        const m = res.headers.get('content-type') || 'application/octet-stream';
-        setMime(m);
-        const detected = detectMime(bytes);
-        if (detected && !m.toLowerCase().includes(detected)) {
-          setWarning(`Content-Type is ${m} but data appears to be ${detected}`);
+        const url = input.trim();
+        let attempt = 0;
+        let success = false;
+        while (attempt < 3 && !success) {
+          try {
+            const res = await fetch(
+              `/api/favicon?url=${encodeURIComponent(url)}`
+            );
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            base64 = data.base64;
+            bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+            setSize(data.size);
+            setMime(data.mime);
+            const detected = detectMime(bytes);
+            if (detected && !data.mime.toLowerCase().includes(detected)) {
+              setWarning(
+                `Content-Type is ${data.mime} but data appears to be ${detected}`
+              );
+            }
+            success = true;
+            setProgress(100);
+          } catch (err) {
+            attempt += 1;
+            if (attempt >= 3) throw err;
+          }
         }
       } else {
         setError('Provide a URL, file, or data URI');
         setLoading(false);
         return;
       }
-    } catch (e) {
-      setError('Failed to process input');
+    } catch (e: any) {
+      setError(e?.message || 'Failed to process input');
       setLoading(false);
       return;
     }
@@ -231,6 +262,16 @@ const FaviconHash: React.FC = () => {
         >
           {loading ? 'Processing…' : 'Hash'}
         </button>
+        {loading && (
+          <div className="w-full mt-2">
+            <div className="w-full bg-gray-700 h-2 rounded">
+              <div
+                className="bg-blue-500 h-2 rounded"
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
       </div>
       {error && <div className="text-red-400">{error}</div>}
       {warning && <div className="text-yellow-400">{warning}</div>}
@@ -290,3 +331,5 @@ const FaviconHash: React.FC = () => {
 };
 
 export default FaviconHash;
+
+export const displayFaviconHash = () => <FaviconHash />;
