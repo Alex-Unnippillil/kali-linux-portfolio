@@ -8287,6 +8287,19 @@ __metadata:
 "react-dom@npm:^19.1.1":
   version: 19.1.1
   resolution: "react-dom@npm:19.1.1"
+
+dependencies:
+    scheduler: "npm:^0.26.0"
+  peerDependencies:
+    react: ^19.1.1
+  checksum: 10c0/8c91198510521299c56e4e8d5e3a4508b2734fb5e52f29eeac33811de64e76fe586ad32c32182e2e84e070d98df67125da346c3360013357228172dbcd20bcdd
+  languageName: node
+  linkType: hard
+
+"react-draggable@npm:^4.4.5":
+  version: 4.5.0
+  resolution: "react-draggable@npm:4.5.0"
+
   dependencies:
     scheduler: "npm:^0.26.0"
   peerDependencies:
@@ -9819,6 +9832,8 @@ __metadata:
     react: "npm:^19.1.1"
     react-activity-calendar: "npm:^2.7.13"
     react-dom: "npm:^19.1.1"
+    react-draggable: "npm:^4.4.5"
+
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
     react-twitter-embed: "npm:^4.0.4"
