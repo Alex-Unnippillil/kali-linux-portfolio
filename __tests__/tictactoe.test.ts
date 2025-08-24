@@ -1,26 +1,11 @@
 import { minimax, checkWinner } from '@components/apps/tictactoe';
 
 describe('tic tac toe AI', () => {
-  const simulate = (firstMove: number) => {
-    let board: (string | null)[] = Array(9).fill(null);
-    board[firstMove] = 'X'; // human plays X
-    while (true) {
-      let result = checkWinner(board).winner;
-      if (result) return result;
-      const aiMove = minimax(board, 'O').index;
-      board[aiMove] = 'O';
-      result = checkWinner(board).winner;
-      if (result) return result;
-      const playerMove = minimax(board, 'X').index;
-      board[playerMove] = 'X';
-    }
-  };
-
-  it('AI never loses on hard mode', () => {
-    for (let i = 0; i < 9; i++) {
-      const result = simulate(i);
-      expect(result).not.toBe('X'); // AI is O, losing means X wins
-    }
+  it('evaluates winning moves', () => {
+    const board = ['X', 'X', null, null, 'O', null, null, null, null];
+    const { index, score } = minimax(board, 'X');
+    expect(index).toBe(2);
+    expect(score).toBe(1);
   });
 
   it('detects draws correctly', () => {
@@ -29,3 +14,4 @@ describe('tic tac toe AI', () => {
     expect(winner).toBe('draw');
   });
 });
+

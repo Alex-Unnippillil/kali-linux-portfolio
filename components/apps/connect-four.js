@@ -120,13 +120,75 @@ const tt = new Map();
 const ttKey = (g) =>
   `${g.bitboards[0].toString()}:${g.bitboards[1].toString()}:${g.player}`;
 
+const boardToArray = (g) => {
+  const arr = Array.from({ length: g.rows }, () => Array(g.cols).fill(null));
+  for (let c = 0; c < g.cols; c++) {
+    for (let r = 0; r < g.rows; r++) {
+      const idx = c * (g.rows + 1) + r;
+      const bit = 1n << BigInt(idx);
+      if (g.bitboards[0] & bit) arr[r][c] = 0;
+      else if (g.bitboards[1] & bit) arr[r][c] = 1;
+    }
+  }
+  return arr;
+};
+
+const windowScore = (window, player) => {
+  const opp = 1 - player;
+  const countP = window.filter((v) => v === player).length;
+  const countO = window.filter((v) => v === opp).length;
+  const countE = window.filter((v) => v === null).length;
+  let score = 0;
+  if (countP === 4) score += 100;
+  else if (countP === 3 && countE === 1) score += 5;
+  else if (countP === 2 && countE === 2) score += 2;
+  if (countO === 3 && countE === 1) score -= 4;
+  else if (countO === 2 && countE === 2) score -= 1;
+  return score;
+};
+
 const heuristic = (g) => {
   const center = Math.floor(g.cols / 2);
   const centerMask =
     ((1n << BigInt(g.rows)) - 1n) << BigInt(center * (g.rows + 1));
   const cur = bitCount(g.bitboards[g.player] & centerMask);
   const opp = bitCount(g.bitboards[1 - g.player] & centerMask);
-  return (cur - opp) * 3;
+  let score = (cur - opp) * 3;
+
+  const board = boardToArray(g);
+  for (let r = 0; r < g.rows; r++) {
+    for (let c = 0; c < g.cols - 3; c++) {
+      score += windowScore(
+        [board[r][c], board[r][c + 1], board[r][c + 2], board[r][c + 3]],
+        g.player
+      );
+    }
+  }
+  for (let c = 0; c < g.cols; c++) {
+    for (let r = 0; r < g.rows - 3; r++) {
+      score += windowScore(
+        [board[r][c], board[r + 1][c], board[r + 2][c], board[r + 3][c]],
+        g.player
+      );
+    }
+  }
+  for (let r = 0; r < g.rows - 3; r++) {
+    for (let c = 0; c < g.cols - 3; c++) {
+      score += windowScore(
+        [board[r][c], board[r + 1][c + 1], board[r + 2][c + 2], board[r + 3][c + 3]],
+        g.player
+      );
+    }
+  }
+  for (let r = 3; r < g.rows; r++) {
+    for (let c = 0; c < g.cols - 3; c++) {
+      score += windowScore(
+        [board[r][c], board[r - 1][c + 1], board[r - 2][c + 2], board[r - 3][c + 3]],
+        g.player
+      );
+    }
+  }
+  return score;
 };
 
 const negamax = (g, depth, alpha, beta) => {
@@ -205,6 +267,9 @@ const ConnectFour = () => {
   const [winner, setWinner] = useState(null);
   const [heat, setHeat] = useState(Array(game.cols).fill(null));
   const [stats, setStats] = useState({ wins: 0, losses: 0, draws: 0 });
+  const [depth, setDepth] = useState(4);
+  const [evalScore, setEvalScore] = useState(0);
+  const [selCol, setSelCol] = useState(3);
 
   // load stats from localStorage
   useEffect(() => {
@@ -233,6 +298,7 @@ const ConnectFour = () => {
     setIdx(0);
     setWinner(null);
     setHeat(Array(cols).fill(null));
+    setSelCol(Math.floor(cols / 2));
   };
 
   const applyMove = (fn, col, type) => {
@@ -268,21 +334,43 @@ const ConnectFour = () => {
   // AI move when it's AI's turn
   useEffect(() => {
     if (!winner && game.player === 1) {
-      const move = aiBestMove(game, 6) ?? ordered(game.cols).find((c) => canPlay(game, c));
+      const move =
+        aiBestMove(game, depth) ?? ordered(game.cols).find((c) => canPlay(game, c));
       if (move !== null && move !== undefined) {
-        applyMove(canPlay(game, move) ? applyDrop : applyPop, move, canPlay(game, move) ? 'drop' : 'pop');
+        applyMove(
+          canPlay(game, move) ? applyDrop : applyPop,
+          move,
+          canPlay(game, move) ? 'drop' : 'pop'
+        );
       }
     }
-  }, [idx, winner]);
+  }, [idx, winner, depth]);
 
   // compute hints when it's human's turn
   useEffect(() => {
     if (!winner && game.player === 0) {
-      setHeat(computeHeat(game, 4));
+      setHeat(computeHeat(game, depth));
     } else {
       setHeat(Array(game.cols).fill(null));
     }
-  }, [idx, winner]);
+  }, [idx, winner, depth]);
+
+  useEffect(() => {
+    setEvalScore(negamax(game, depth, -1000, 1000));
+  }, [idx, depth]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (winner) return;
+      if (e.key === 'ArrowLeft')
+        setSelCol((c) => (c + cols - 1) % cols);
+      else if (e.key === 'ArrowRight')
+        setSelCol((c) => (c + 1) % cols);
+      else if (e.key === ' ' || e.key === 'Enter') handleDrop(selCol);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [cols, selCol, winner, handleDrop]);
 
   const undo = () => {
     if (idx === 0) return;
@@ -324,20 +412,10 @@ const ConnectFour = () => {
     return `rgba(${red},${green},0,0.5)`;
   };
 
-  const boardBitsToArray = () => {
-    const arr = Array.from({ length: rows }, () => Array(cols).fill(null));
-    for (let c = 0; c < cols; c++) {
-      for (let r = 0; r < rows; r++) {
-        const idx = c * (rows + 1) + r;
-        const bit = 1n << BigInt(idx);
-        if (game.bitboards[0] & bit) arr[r][c] = 'red';
-        else if (game.bitboards[1] & bit) arr[r][c] = 'yellow';
-      }
-    }
-    return arr;
-  };
-
-  const boardArr = boardBitsToArray();
+  const boardArr = boardToArray(game).map((row) =>
+    row.map((v) => (v === 0 ? 'red' : v === 1 ? 'yellow' : null))
+  );
+  const evalPercent = Math.max(0, Math.min(100, ((evalScore + 1000) / 2000) * 100));
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-2 select-none">
@@ -355,6 +433,15 @@ const ConnectFour = () => {
           <input type="checkbox" checked={popOut} onChange={togglePop} />
           <span>Pop-out</span>
         </label>
+        <select
+          value={depth}
+          onChange={(e) => setDepth(parseInt(e.target.value))}
+          className="text-black p-1 rounded"
+        >
+          {[2, 4, 6, 8].map((d) => (
+            <option key={d} value={d}>{`Depth ${d}`}</option>
+          ))}
+        </select>
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={() => reset(rows, cols, popOut)}
@@ -388,14 +475,30 @@ const ConnectFour = () => {
         </div>
       )}
       <div
+        className="mb-2 h-4 bg-gray-700 relative"
+        style={{ width: `${cols * 2.5}rem` }}
+      >
+        <div
+          className="absolute top-0 bottom-0 left-0 bg-red-500"
+          style={{ width: `${evalPercent}%` }}
+        />
+        <div
+          className="absolute top-0 bottom-0 right-0 bg-yellow-400"
+          style={{ width: `${100 - evalPercent}%` }}
+        />
+      </div>
+      <div
         className="grid gap-1"
         style={{ gridTemplateColumns: `repeat(${cols}, 2.5rem)` }}
       >
         {heat.map((h, c) => (
           <div
             key={`heat-${c}`}
-            className="h-4 w-10"
+            className={`h-4 w-10 ${selCol === c ? 'ring-2 ring-white' : ''}`}
             style={{ backgroundColor: heatColor(h) }}
+            onMouseEnter={() => setSelCol(c)}
+            onTouchStart={() => setSelCol(c)}
+            onClick={() => handleDrop(c)}
           />
         ))}
         {boardArr
@@ -405,7 +508,9 @@ const ConnectFour = () => {
             row.map((cell, cIdx) => (
               <div
                 key={`${rIdx}-${cIdx}`}
-                className="h-10 w-10 bg-blue-700 flex items-center justify-center cursor-pointer"
+                className={`h-10 w-10 bg-blue-700 flex items-center justify-center cursor-pointer ${selCol === cIdx ? 'ring-2 ring-white' : ''}`}
+                onMouseEnter={() => setSelCol(cIdx)}
+                onTouchStart={() => setSelCol(cIdx)}
                 onClick={() => handleDrop(cIdx)}
               >
                 {cell && (
@@ -437,4 +542,6 @@ const ConnectFour = () => {
 };
 
 export default ConnectFour;
+
+export { createGame, applyDrop, hasWin, heuristic };
 

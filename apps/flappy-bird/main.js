@@ -1,6 +1,7 @@
 import Bird from './bird.js';
 import Pipe from './pipe.js';
 import Background from './background.js';
+import { getMedal } from './medals.js';
 import { submitScore, fetchLeaderboard } from './scoreService.js';
 
 const canvas = document.getElementById('game');
@@ -17,6 +18,7 @@ const shakeToggle = document.getElementById('shakeToggle');
 const motionToggle = document.getElementById('motionToggle');
 const colorToggle = document.getElementById('colorToggle');
 const bestScoreEl = document.getElementById('bestScore');
+const medalEl = document.getElementById('medal');
 
 const GRAVITY = 1.8;
 const FLAP_FORCE = -15; // tuned for ~0.28s airtime
@@ -155,6 +157,7 @@ function startGame() {
   running = true;
   timeLeft = modeSelect.value === 'time' ? 30000 : null;
   overlay.style.display = 'none';
+  medalEl.textContent = '';
   lastTime = performance.now();
   requestAnimationFrame(loop);
 }
@@ -193,6 +196,8 @@ function gameOver() {
     localStorage.setItem('fb_highScore', highScore);
   }
   bestScoreEl.textContent = `Best: ${highScore}`;
+  const medal = getMedal(score);
+  medalEl.textContent = medal ? `${medal} Medal` : '';
   submitScore(score);
   loadLeaderboards();
   overlay.style.display = 'flex';
@@ -264,7 +269,7 @@ function loop(timestamp) {
     return;
   }
 
-  bird.update(modeSelect.value === 'reverse', dt);
+  bird.update(modeSelect.value === 'reverse');
   bird.draw(ctx);
   currentRun.push(bird.y);
 
