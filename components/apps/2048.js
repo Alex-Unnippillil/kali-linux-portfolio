@@ -141,19 +141,19 @@ const Game2048 = () => {
       )}
       <div className="mt-4 space-x-2">
         <button
-          className="px-4 py-2 bg-[var(--color-accent)] text-black rounded hover:opacity-90"
+          className="px-4 py-2 bg-[var(--accent)] text-black rounded hover:opacity-90"
           onClick={reset}
         >
           Reset
         </button>
         <button
-          className="px-4 py-2 bg-[var(--color-accent)] text-black rounded hover:opacity-90"
+          className="px-4 py-2 bg-[var(--accent)] text-black rounded hover:opacity-90"
           onClick={() => setShowHelp(true)}
         >
           Help
         </button>
         <button
-          className="px-4 py-2 bg-[var(--color-accent)] text-black rounded hover:opacity-90"
+          className="px-4 py-2 bg-[var(--accent)] text-black rounded hover:opacity-90"
           onClick={close}
         >
           Close

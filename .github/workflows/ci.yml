@@ -9,17 +9,43 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    env:
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-secret' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: 'yarn'
+          cache-dependency-path: yarn.lock
+      - name: Cache yarn dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            .yarn/cache
+          key: ${{ runner.os }}-yarn-${{ matrix.node-version }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ matrix.node-version }}-${{ hashFiles('yarn.lock') }}
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
       - run: corepack enable
       - run: yarn install --immutable
       - run: yarn dedupe:check
+
       - run: yarn lint:ci
       - run: yarn typecheck
+      - run: yarn validate:icons
       - run: yarn build:ci
       - name: Jest tests
         run: yarn test --ci | tee jest-report.txt
@@ -51,8 +77,11 @@ jobs:
             playwright-report
           if-no-files-found: ignore
 
-      - name: Lighthouse
+      - name: Lighthouse CI
+
         run: yarn lighthouse --collect.startServerCommand="yarn start" --collect.startServerReadyPattern="ready on"
+      - name: Lighthouse (desktop)
+        run: yarn lighthouse --collect.startServerCommand="yarn start" --collect.startServerReadyPattern="ready on" --collect.settings.preset=desktop --collect.additive
       - name: Upload Lighthouse results
         if: always()
         uses: actions/upload-artifact@v4
