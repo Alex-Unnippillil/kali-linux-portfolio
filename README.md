@@ -73,26 +73,39 @@ Heavy applications should be loaded with [`next/dynamic`](https://nextjs.org/doc
 import dynamic from 'next/dynamic';
 import ReactGA from 'react-ga4';
 
-const MyApp = dynamic(() =>
-    import('./components/apps/my-app').then(mod => {
-        ReactGA.event({ category: 'Application', action: 'Loaded My App' });
-        return mod.default;
-    }), {
-        ssr: false,
-        loading: () => (
-            <div className="h-full w-full flex items-center justify-center bg-panel text-white">
-                Loading My App...
-            </div>
-        ),
-    }
+const MyApp = dynamic(
+  () =>
+    import('./components/apps/my-app').then((mod) => {
+      ReactGA.event({ category: 'Application', action: 'Loaded My App' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-panel text-white">
+        Loading My App...
+      </div>
+    ),
+  }
 );
 
 const displayMyApp = (addFolder, openApp) => (
-    <MyApp addFolder={addFolder} openApp={openApp} />
+  <MyApp addFolder={addFolder} openApp={openApp} />
 );
 ```
 
 Add the `displayMyApp` function to `apps.config.js` and reference it in the `apps` array to make the app available to the desktop.
+
+### Scripted Setup
+
+Run `yarn scaffold:app <id> "App Title"` to scaffold a new application. The script:
+
+1. Appends entries to `apps.config.js`.
+2. Creates a placeholder component in `components/apps/`.
+3. Adds an empty icon under `public/themes/Yaru/apps/`.
+4. Executes `yarn validate:icons` to verify icon paths.
+
+Use this as a starting point and replace the generated component and icon with real implementations.
 
 ### Minimal Example
 
@@ -109,7 +122,9 @@ export default function Hello() {
 ```js
 import dynamic from 'next/dynamic';
 
-const HelloApp = dynamic(() => import('./components/apps/hello'), { ssr: false });
+const HelloApp = dynamic(() => import('./components/apps/hello'), {
+  ssr: false,
+});
 
 const displayHello = (addFolder, openApp) => (
   <HelloApp addFolder={addFolder} openApp={openApp} />
@@ -134,36 +149,38 @@ To introduce a new game:
 1. **Icon** – Add the game's icon to `public/themes/Yaru/apps/` and reference it with the helper `icon('my-game.png')`.
 2. **Dynamic import** – Create the game component in `components/apps/` and load it with `next/dynamic` to keep the initial bundle small:
 
-    ```js
-    const MyGame = dynamic(() =>
-      import('./components/apps/my-game').then(mod => {
-        ReactGA.event({ category: 'Application', action: 'Loaded My Game' });
-        return mod.default;
-      }), {
-        ssr: false,
-        loading: () => (
-          <div className="h-full w-full flex items-center justify-center bg-panel text-white">
-            Loading My Game...
-          </div>
-        ),
-      }
-    );
+   ```js
+   const MyGame = dynamic(
+     () =>
+       import('./components/apps/my-game').then((mod) => {
+         ReactGA.event({ category: 'Application', action: 'Loaded My Game' });
+         return mod.default;
+       }),
+     {
+       ssr: false,
+       loading: () => (
+         <div className="h-full w-full flex items-center justify-center bg-panel text-white">
+           Loading My Game...
+         </div>
+       ),
+     }
+   );
 
-    const displayMyGame = (addFolder, openApp) => (
-      <MyGame addFolder={addFolder} openApp={openApp} />
-    );
-    ```
+   const displayMyGame = (addFolder, openApp) => (
+     <MyGame addFolder={addFolder} openApp={openApp} />
+   );
+   ```
 
 3. **Register** – Append the game's configuration object to the `games` array:
 
-    ```js
-    games.push({
-      id: 'my-game',
-      title: 'My Game',
-      icon: icon('my-game.png'),
-      screen: displayMyGame,
-    });
-    ```
+   ```js
+   games.push({
+     id: 'my-game',
+     title: 'My Game',
+     icon: icon('my-game.png'),
+     screen: displayMyGame,
+   });
+   ```
 
 The new game will then appear alongside the other games on the desktop.
 
@@ -252,6 +269,7 @@ defaults:
 - **Scaling limits** – serverless WebSockets have connection limits per region
   and may recycle instances under load. For heavy usage, monitor connection
   counts and consider a dedicated WebSocket host or external state store.
+
 ## E2E Testing
 
 The project uses [Playwright](https://playwright.dev/) for end-to-end tests.
@@ -280,4 +298,3 @@ yarn start
 ```
 
 Deploy to any platform that can run a Next.js server; static export is not supported.
-

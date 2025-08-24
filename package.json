@@ -16,6 +16,7 @@
     "check:node-core": "node scripts/check-node-core-modules.js",
     "check:edge-node": "node scripts/check-edge-node-modules.js",
     "validate:icons": "node scripts/validate-icons.js",
+    "scaffold:app": "node scripts/add-app.js",
     "test:unit": "vitest",
     "format": "prettier --write .",
     "dedupe": "yarn dedupe",
@@ -23,7 +24,8 @@
     "lighthouse": "lhci autorun",
     "typecheck": "tsc --noEmit",
     "build:ci": "next build",
-    "lint:ci": "eslint . --max-warnings=0 && yarn check:edge-node",
+    "lint:ci": "next lint --max-warnings=0 && yarn check:edge-node",
+
     "format:check": "prettier --check ."
   },
   "engines": {
@@ -177,6 +179,7 @@
     "jest-environment-jsdom": "^30.0.5",
     "prettier": "^3.2.5",
     "typescript": "^5.9.2",
-    "vitest": "^1.6.1"
+    "vitest": "^1.6.0"
+
   }
 }
