@@ -857,7 +857,7 @@ const apps = [
   {
     id: 'ipv6-slaac',
     title: 'IPv6 SLAAC',
-    icon: icon('calc.png'),
+    icon: icon('ipv6-slaac.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
