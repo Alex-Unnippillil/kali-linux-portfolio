@@ -2598,6 +2598,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"adler-32@npm:~1.3.0":
+  version: 1.3.1
+  resolution: "adler-32@npm:1.3.1"
+  checksum: 10c0/c1b7185526ee1bbe0eac8ed414d5226af4cd02a0540449a72ec1a75f198c5e93352ba4d7b9327231eea31fd83c2d080d13baf16d8ed5710fb183677beb85f612
+  languageName: node
+  linkType: hard
+
 "agent-base@npm:^7.1.0, agent-base@npm:^7.1.2":
   version: 7.1.4
   resolution: "agent-base@npm:7.1.4"
@@ -3322,6 +3329,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cfb@npm:1.2.2":
+  version: 1.2.2
+  resolution: "cfb@npm:1.2.2"
+  dependencies:
+    adler-32: "npm:~1.3.0"
+    crc-32: "npm:~1.2.0"
+  checksum: 10c0/87f6d9c3878268896ed6ca29dfe32a2aa078b12d0f21d8405c95911b74ab6296823d7312bbf5e18326d00b16cc697f587e07a17018c5edf7a1ba31dd5bc6da36
+  languageName: node
+  linkType: hard
+
 "chalk@npm:^4.0.0, chalk@npm:^4.1.2":
   version: 4.1.2
   resolution: "chalk@npm:4.1.2"
@@ -3618,6 +3635,15 @@ __metadata:
   dependencies:
     layout-base: "npm:^2.0.0"
   checksum: 10c0/14b9f8100ac322a00777ffb1daeb3321af368bbc9cabe3103943361273baee2003202ffe38e4ab770960b600214224e9c196195a78d589521540aa694df7cdec
+  languageName: node
+  linkType: hard
+
+"crc-32@npm:~1.2.0":
+  version: 1.2.2
+  resolution: "crc-32@npm:1.2.2"
+  bin:
+    crc32: bin/crc32.njs
+  checksum: 10c0/11dcf4a2e77ee793835d49f2c028838eae58b44f50d1ff08394a610bfd817523f105d6ae4d9b5bef0aad45510f633eb23c903e9902e4409bed1ce70cb82b9bf0
   languageName: node
   linkType: hard
 
@@ -9797,6 +9823,7 @@ __metadata:
     bs58: "npm:^6.0.0"
     cannon-es: "npm:^0.20.0"
     canvas-confetti: "npm:1.9.3"
+    cfb: "npm:1.2.2"
     cheerio: "npm:^1.1.2"
     chess.js: "npm:^1.0.0"
     crypto-js: "npm:4"
