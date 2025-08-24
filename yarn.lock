@@ -2225,16 +2225,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:*":
-  version: 19.1.11
-  resolution: "@types/react@npm:19.1.11"
-  dependencies:
-    csstype: "npm:^3.0.2"
-  checksum: 10c0/639b225c2bbcd4b8a30e1ea7a73aec81ae5b952a4c432460b48c9881c9d12e76645c9032d24f15eefae9985a12d5cb26557fe10e9850b2da0fabfb0a1e2d16bd
-  languageName: node
-  linkType: hard
-
-"@types/react@npm:^18.2.0":
+"@types/react@npm:*, @types/react@npm:^18.2.0":
   version: 18.3.24
   resolution: "@types/react@npm:18.3.24"
   dependencies:
@@ -2244,17 +2235,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/ssdeep.js@npm:^0":
-  version: 0.0.2
-  resolution: "@types/ssdeep.js@npm:0.0.2"
-  checksum: 10c0/b6f45362a2124389b6521bdf5db9c526cc29f4a984dd13545a628c878d431fa32b0f76c01c87e860c4c1aeb46ac674ff7882112ef1e53c10ab12fa15c1e29a5f
-
 "@types/sax@npm:^1":
   version: 1.2.7
   resolution: "@types/sax@npm:1.2.7"
   dependencies:
     "@types/node": "npm:*"
   checksum: 10c0/d077a761a0753b079bf8279b3993948030ca86ed9125437b9b29c1de40db9b2deb7fddc369f014b58861d450e8b8cc75f163aa29dc8cea81952efbfd859168cf
+  languageName: node
+  linkType: hard
+
+"@types/ssdeep.js@npm:^0":
+  version: 0.0.2
+  resolution: "@types/ssdeep.js@npm:0.0.2"
+  checksum: 10c0/b6f45362a2124389b6521bdf5db9c526cc29f4a984dd13545a628c878d431fa32b0f76c01c87e860c4c1aeb46ac674ff7882112ef1e53c10ab12fa15c1e29a5f
   languageName: node
   linkType: hard
 
@@ -2822,7 +2815,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aria-query@npm:5.3.0":
+"aria-query@npm:5.3.0, aria-query@npm:^5.0.0":
   version: 5.3.0
   resolution: "aria-query@npm:5.3.0"
   dependencies:
@@ -2831,7 +2824,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"aria-query@npm:^5.0.0, aria-query@npm:^5.3.2":
+"aria-query@npm:^5.3.2":
   version: 5.3.2
   resolution: "aria-query@npm:5.3.2"
   checksum: 10c0/003c7e3e2cff5540bf7a7893775fc614de82b0c5dde8ae823d47b7a28a9d4da1f7ed85f340bdb93d5649caa927755f0e31ecc7ab63edfdfc00c8ef07e505e03e
@@ -3445,6 +3438,8 @@ __metadata:
   version: 2.0.1
   resolution: "ccount@npm:2.0.1"
   checksum: 10c0/3939b1664390174484322bc3f45b798462e6c07ee6384cb3d645e0aa2f318502d174845198c1561930e1d431087f74cf1fe291ae9a4722821a9f4ba67e574350
+  languageName: node
+  linkType: hard
 
 "cfb@npm:1.2.2":
   version: 1.2.2
@@ -3498,6 +3493,8 @@ __metadata:
   version: 2.0.1
   resolution: "character-reference-invalid@npm:2.0.1"
   checksum: 10c0/2ae0dec770cd8659d7e8b0ce24392d83b4c2f0eb4a3395c955dce5528edd4cc030a794cfa06600fcdd700b3f2de2f9b8e40e309c0011c4180e3be64a0b42e6a1
+  languageName: node
+  linkType: hard
 
 "chart.js@npm:^4.5.0":
   version: 4.5.0
@@ -7610,7 +7607,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-
 "memoize-one@npm:>=3.1.1 <6":
   version: 5.2.1
   resolution: "memoize-one@npm:5.2.1"
@@ -10613,6 +10609,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"undici@npm:^6.19.8":
+  version: 6.21.3
+  resolution: "undici@npm:6.21.3"
+  checksum: 10c0/294da109853fad7a6ef5a172ad0ca3fb3f1f60cf34703d062a5ec967daf69ad8c03b52e6d536c5cba3bb65615769bf08e5b30798915cbccdddaca01045173dda
+  languageName: node
+  linkType: hard
+
 "undici@npm:^7.12.0":
   version: 7.15.0
   resolution: "undici@npm:7.15.0"
@@ -10722,9 +10725,9 @@ __metadata:
     "@types/node": "npm:^24.2.1"
     "@types/plist": "npm:^3.0.2"
     "@types/react": "npm:^18.2.0"
-    "@types/ssdeep.js": "npm:^0"
-    "@types/sax": "npm:^1"
     "@types/react-window": "npm:^1"
+    "@types/sax": "npm:^1"
+    "@types/ssdeep.js": "npm:^0"
     "@types/three": "npm:^0.179.0"
     "@types/zxcvbn": "npm:^4.4.5"
     "@vercel/analytics": "npm:^1.5.0"
@@ -10740,7 +10743,6 @@ __metadata:
     cannon-es: "npm:^0.20.0"
     canvas-confetti: "npm:1.9.3"
     cfb: "npm:1.2.2"
-
     chart.js: "npm:^4.5.0"
     cheerio: "npm:^1.1.2"
     chess.js: "npm:^1.0.0"
@@ -10784,30 +10786,25 @@ __metadata:
     react-github-calendar: "npm:^4.5.9"
     react-markdown: "npm:^10.1.0"
     react-twitter-embed: "npm:^4.0.4"
-    rfc4648: "npm:^1.5.4"
-
-    sax: "npm:^1.4.1"
     react-window: "npm:^1.8.11"
-
-
+    rfc4648: "npm:^1.5.4"
     safe-regex: "npm:^2.1.1"
-
+    sax: "npm:^1.4.1"
     socket.io: "npm:^4.7.5"
     socket.io-client: "npm:^4.7.5"
     spdx-license-ids: "npm:^3.0.17"
-    ssdeep.js: "npm:^0.0.3"
-
     spdx-license-list: "npm:^6.10.0"
+    ssdeep.js: "npm:^0.0.3"
     sshpk: "npm:^1.18.0"
     stockfish: "npm:^16.0.0"
     swr: "npm:^2.2.5"
     tailwindcss: "npm:^3.2.4"
     three: "npm:^0.179.1"
     typescript: "npm:^5.9.2"
+    undici: "npm:^6.19.8"
     url-parse: "npm:^1.5.10"
     ws: "npm:^8.18.3"
     xmllint-wasm: "npm:^5.0.0"
-
     zod: "npm:^4.1.0"
     zxcvbn: "npm:^4.4.2"
   languageName: unknown
@@ -11401,16 +11398,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zwitch@npm:^2.0.0":
-  version: 2.0.4
-  resolution: "zwitch@npm:2.0.4"
-  checksum: 10c0/3c7830cdd3378667e058ffdb4cf2bb78ac5711214e2725900873accb23f3dfe5f9e7e5a06dcdc5f29605da976fc45c26d9a13ca334d6eea2245a15e77b8fc06e
-
 "zod@npm:^4.1.0":
   version: 4.1.0
   resolution: "zod@npm:4.1.0"
   checksum: 10c0/b39bce830cf9864e33b00da2e3fee008e1abb96fff169936ba779648276b6a031d35ed5438d7659ac5d5e09b932d40dce6c255344184794d56f8bd22e501561b
+  languageName: node
+  linkType: hard
 
+"zwitch@npm:^2.0.0":
+  version: 2.0.4
+  resolution: "zwitch@npm:2.0.4"
+  checksum: 10c0/3c7830cdd3378667e058ffdb4cf2bb78ac5711214e2725900873accb23f3dfe5f9e7e5a06dcdc5f29605da976fc45c26d9a13ca334d6eea2245a15e77b8fc06e
   languageName: node
   linkType: hard
 
