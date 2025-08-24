@@ -1,15 +1,18 @@
 import React from 'react';
+import LazyIframe from '../util-components/LazyIframe';
 
 export default function VsCode() {
     return (
-        <iframe
+        <LazyIframe
+
             src="https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md"
-            frameBorder="0"
             title="VsCode"
             className="h-full w-full bg-panel"
-            allow="accelerometer; camera; microphone; gyroscope; clipboard-write"
+            allow="clipboard-write"
             allowFullScreen
-        ></iframe>
+            frameBorder="0"
+
+        />
     );
 }
 

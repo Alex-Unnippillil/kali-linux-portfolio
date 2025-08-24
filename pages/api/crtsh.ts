@@ -16,6 +16,11 @@ interface CacheEntry {
   results: CertResult[];
 }
 
+interface ApiResponse {
+  results: CertResult[];
+  total: number;
+}
+
 const cache = new LRUCache<string, CacheEntry>({ max: 100, ttl: 10 * 60 * 1000 });
 const RATE_LIMIT_WINDOW = 60 * 1000;
 const RATE_LIMIT_MAX = 10;
@@ -44,10 +49,24 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { domain, subdomains = 'true' } = req.query;
+  const {
+    domain,
+    subdomains = 'true',
+    issuer,
+    notAfter,
+    page = '1',
+    perPage = '50',
+  } = req.query;
+
   if (!domain || typeof domain !== 'string') {
     return res.status(400).json({ error: 'Missing domain' });
   }
+
+  const pageNum = Math.max(parseInt(page as string, 10) || 1, 1);
+  const perPageNum = Math.min(
+    Math.max(parseInt(perPage as string, 10) || 50, 1),
+    500
+  );
 
   const ip =
     (req.headers['x-forwarded-for'] as string)?.split(',')[0] ||
@@ -59,13 +78,22 @@ export default async function handler(
     return res.status(429).json({ error: 'Rate limit exceeded' });
   }
 
-  const key = `${domain}|${subdomains}`;
+  const key = `${domain}|${subdomains}|${issuer || ''}|${notAfter || ''}`;
   const cached = cache.get(key);
   if (cached) {
-    return res.status(200).json(cached);
+    const total = cached.results.length;
+    const start = (pageNum - 1) * perPageNum;
+    const paged = cached.results.slice(start, start + perPageNum);
+    const payload: ApiResponse = { results: paged, total };
+    return res.status(200).json(payload);
   }
 
-  const search = subdomains === 'true' ? `%25.${domain}` : domain;
+  let search: string;
+  if (domain.includes('*') || domain.includes('%')) {
+    search = domain.replace(/\*/g, '%');
+  } else {
+    search = subdomains === 'true' ? `%.${domain}` : domain;
+  }
   try {
     const response = await fetch(
       `https://crt.sh/?q=${encodeURIComponent(search)}&output=json`,
@@ -83,7 +111,7 @@ export default async function handler(
     }
 
     const data = await response.json();
-    const results: CertResult[] = data.map((item: any) => ({
+    let results: CertResult[] = data.map((item: any) => ({
       certId: Number(item.id || item.min_cert_id || item.cert_id),
       issuer: item.issuer_name as string,
       notBefore: item.not_before as string,
@@ -93,8 +121,25 @@ export default async function handler(
         .filter(Boolean),
     }));
 
-    const payload: CacheEntry = { results };
-    cache.set(key, payload);
+    if (issuer && typeof issuer === 'string') {
+      const needle = issuer.toLowerCase();
+      results = results.filter((r) => r.issuer.toLowerCase().includes(needle));
+    }
+
+    if (notAfter && typeof notAfter === 'string') {
+      const cutoff = new Date(notAfter);
+      if (!isNaN(cutoff.valueOf())) {
+        results = results.filter((r) => new Date(r.notAfter) <= cutoff);
+      }
+    }
+
+    const cacheEntry: CacheEntry = { results };
+    cache.set(key, cacheEntry);
+
+    const total = results.length;
+    const start = (pageNum - 1) * perPageNum;
+    const paged = results.slice(start, start + perPageNum);
+    const payload: ApiResponse = { results: paged, total };
     return res.status(200).json(payload);
   } catch (e: any) {
     return res.status(500).json({ error: e.message || 'Request failed' });

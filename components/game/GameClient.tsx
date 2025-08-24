@@ -5,14 +5,10 @@ import Matter from 'matter-js';
 import { useGameWorker } from './useGameWorker';
 import HUD from './HUD';
 import TouchControls from './TouchControls';
-
-const FIXED_STEP = 1000 / 60;
+import { startGameLoop } from '@lib/game';
 
 export default function GameClient() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const appRef = useRef<Application | null>(null);
-  const lastTimeRef = useRef(0);
-  const accumulatorRef = useRef(0);
   const worker = useGameWorker();
 
   useEffect(() => {
@@ -25,7 +21,6 @@ export default function GameClient() {
       return app.init({ background: '#000', preference: 'canvas' });
     });
 
-    appRef.current = app;
     container.appendChild(app.canvas);
 
     // Preload a placeholder texture to demonstrate sprite loading.
@@ -37,20 +32,11 @@ export default function GameClient() {
     // Headless Matter.js engine
     const engine = Matter.Engine.create();
 
-    let running = true;
-    const tick = (time: number) => {
-      if (!running) return;
-      const delta = time - lastTimeRef.current;
-      lastTimeRef.current = time;
-      accumulatorRef.current += delta;
-      while (accumulatorRef.current >= FIXED_STEP) {
-        Matter.Engine.update(engine, FIXED_STEP);
-        accumulatorRef.current -= FIXED_STEP;
-      }
-      app.render();
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
+    const stopLoop = startGameLoop({
+      fps: 60,
+      update: (dt) => Matter.Engine.update(engine, dt * 1000),
+      render: () => app.render(),
+    });
 
     // Hand off canvas to worker if supported
     if (worker && app.canvas.transferControlToOffscreen) {
@@ -59,7 +45,7 @@ export default function GameClient() {
     }
 
     return () => {
-      running = false;
+      stopLoop();
       app.destroy();
     };
   }, [worker]);

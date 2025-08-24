@@ -1,82 +1,10 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import JSZip from 'jszip';
-
-export interface PatternInfo {
-  name: string;
-  regex: string;
-  severity: string;
-  remediation: string;
-  whitelist: string;
-}
-
-export interface ScanResult {
-  file: string;
-  pattern: string;
-  match: string;
-  index: number;
-  line: number;
-  severity: string;
-  confidence: string;
-  remediation: string;
-  whitelist: string;
-}
-
-interface DiffLine {
-  file: string;
-  line: string;
-  lineNumber: number | null;
-  type: 'context' | 'add' | 'remove';
-}
-
-export const defaultPatterns: PatternInfo[] = [
-  {
-    name: 'AWS Access Key',
-    regex: 'AKIA[0-9A-Z]{16}',
-    severity: 'high',
-    remediation: 'Rotate the key and remove from history.',
-    whitelist: 'git secrets --add "AKIA[0-9A-Z]{16}"',
-  },
-  {
-    name: 'RSA Private Key',
-    regex: '-----BEGIN RSA PRIVATE KEY-----',
-    severity: 'critical',
-    remediation: 'Remove the private key and generate a new one.',
-    whitelist: 'git secrets --add "-----BEGIN RSA PRIVATE KEY-----"',
-  },
-  {
-    name: 'Slack Token',
-    regex: 'xox[baprs]-[0-9a-zA-Z]{10,48}',
-    severity: 'high',
-    remediation: 'Revoke the token and issue a new one.',
-    whitelist: 'git secrets --add "xox[baprs]-[0-9a-zA-Z]{10,48}"',
-  },
-];
-
-const MAX_SIZE = 1_000_000; // 1MB
-
-export const redactSecret = (secret: string): string => {
-  if (secret.length <= 4) return '***';
-  return `${secret.slice(0, 2)}***${secret.slice(-2)}`;
-};
-
-const shannonEntropy = (str: string): number => {
-  const freq: Record<string, number> = {};
-  for (const c of str) freq[c] = (freq[c] || 0) + 1;
-  let e = 0;
-  const len = str.length;
-  Object.values(freq).forEach((f) => {
-    const p = f / len;
-    e -= p * Math.log2(p);
-  });
-  return e;
-};
-
-const isBinary = (data: Uint8Array): boolean => {
-  for (let i = 0; i < data.length && i < 1000; i += 1) {
-    if (data[i] === 0) return true;
-  }
-  return false;
-};
+import {
+  PatternInfo,
+  ScanResult,
+  DiffLine,
+  defaultPatterns,
+} from './git-secrets-tester.utils';
 
 const GitSecretsTester: React.FC = () => {
   const [customPatterns, setCustomPatterns] = useState('');
@@ -87,20 +15,8 @@ const GitSecretsTester: React.FC = () => {
   const [diff, setDiff] = useState<DiffLine[]>([]);
   const [patch, setPatch] = useState('');
   const [archive, setArchive] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const workerRef = useRef<Worker | null>(null);
-
-  useEffect(() => {
-    workerRef.current = new Worker(
-      new URL('./git-secrets-tester.worker.ts', import.meta.url),
-      { type: 'module' },
-    );
-    const worker = workerRef.current;
-    worker.onmessage = (e: MessageEvent) => {
-      const { results: r } = e.data as { results?: ScanResult[] };
-      if (r) setResults((prev) => [...prev, ...r]);
-    };
-    return () => worker.terminate();
-  }, []);
 
   const allPatterns = useMemo(() => {
     const custom = customPatterns
@@ -116,138 +32,27 @@ const GitSecretsTester: React.FC = () => {
     return [...defaultPatterns, ...custom];
   }, [customPatterns]);
 
-  const scanLine = (
-    file: string,
-    lineContent: string,
-    lineNumber: number,
-  ): { safe: string; results: ScanResult[] } => {
-    const lineResults: ScanResult[] = [];
-    let safe = lineContent;
-
-    allPatterns.forEach((pat) => {
-      try {
-        const re = new RegExp(pat.regex, 'g');
-        let m: RegExpExecArray | null;
-        while ((m = re.exec(lineContent)) !== null) {
-          lineResults.push({
-            file,
-            pattern: pat.name,
-            match: redactSecret(m[0]),
-            index: m.index,
-            line: lineNumber,
-            severity: pat.severity,
-            confidence: 'high',
-            remediation: pat.remediation,
-            whitelist: pat.whitelist,
-          });
-          safe = safe.replace(m[0], redactSecret(m[0]));
-        }
-      } catch (e: any) {
-        lineResults.push({
-          file,
-          pattern: pat.regex,
-          match: '',
-          index: -1,
-          line: lineNumber,
-          severity: 'error',
-          confidence: 'low',
-          remediation: e.message,
-          whitelist: pat.whitelist,
-        });
-      }
-    });
-
-    const heur = /(password|secret|api[-_]?key|token)\s*[:=]\s*['"]?([^'"\s]+)/i.exec(
-      lineContent,
+  useEffect(() => {
+    workerRef.current = new Worker(
+      new URL('./git-secrets-tester.worker.ts', import.meta.url),
+      { type: 'module' },
     );
-    if (heur) {
-      const secret = heur[2];
-      lineResults.push({
-        file,
-        pattern: `Keyword ${heur[1]}`,
-        match: redactSecret(secret),
-        index: lineContent.indexOf(secret),
-        line: lineNumber,
-        severity: 'medium',
-        confidence: 'low',
-        remediation: 'Avoid hardcoding credentials.',
-        whitelist: 'git secrets --add -l "pattern"',
-      });
-      safe = safe.replace(secret, redactSecret(secret));
-    }
-
-    const tokens = lineContent.match(/[A-Za-z0-9\/+=]{20,}/g) || [];
-    tokens.forEach((token) => {
-      const ent = shannonEntropy(token);
-      if (ent > 4) {
-        lineResults.push({
-          file,
-          pattern: 'High Entropy String',
-          match: redactSecret(token),
-          index: lineContent.indexOf(token),
-          line: lineNumber,
-          severity: 'medium',
-          confidence: 'medium',
-          remediation: 'Verify this string is not a secret.',
-          whitelist: 'git secrets --add -l "pattern"',
-        });
-        safe = safe.replace(token, redactSecret(token));
+    const worker = workerRef.current;
+    worker.onmessage = (e: MessageEvent) => {
+      const msg = e.data as any;
+      if (msg.type === 'results') {
+        if (msg.results) setResults((prev) => [...prev, ...msg.results]);
+        if (msg.diff) setDiff(msg.diff);
+        if (msg.logs) setLogs((l) => [...l, ...msg.logs]);
+        setProgress(null);
+      } else if (msg.type === 'progress') {
+        setProgress({ current: msg.current, total: msg.total });
+      } else if (msg.type === 'canceled') {
+        setProgress(null);
       }
-    });
-
-    return { safe, results: lineResults };
-  };
-
-  const scanFile = (file: string, content: string) => {
-    const res: ScanResult[] = [];
-    content.split(/\r?\n/).forEach((line, idx) => {
-      const { results: r } = scanLine(file, line, idx + 1);
-      res.push(...r);
-    });
-    setResults((prev) => [...prev, ...res]);
-  };
-
-  const parsePatch = (p: string) => {
-    const lines = p.split(/\r?\n/);
-    const diffLines: DiffLine[] = [];
-    const res: ScanResult[] = [];
-    let currentFile = '';
-    let ln = 0;
-    lines.forEach((line) => {
-      if (line.startsWith('+++')) {
-        currentFile = line.replace('+++ b/', '').replace('+++ ', '');
-        diffLines.push({ file: currentFile, line, lineNumber: null, type: 'context' });
-      } else if (line.startsWith('@@')) {
-        const m = /@@ .* \+(\d+)/.exec(line);
-        ln = m ? parseInt(m[1], 10) - 1 : 0;
-        diffLines.push({ file: currentFile, line, lineNumber: null, type: 'context' });
-      } else if (line.startsWith('+') && !line.startsWith('+++')) {
-        ln += 1;
-        const { safe, results: r } = scanLine(currentFile, line.slice(1), ln);
-        diffLines.push({
-          file: currentFile,
-          line: `+${safe}`,
-          lineNumber: ln,
-          type: 'add',
-        });
-        res.push(...r);
-      } else if (line.startsWith('-') && !line.startsWith('---')) {
-        const { safe } = scanLine(currentFile, line.slice(1), ln);
-        diffLines.push({
-          file: currentFile,
-          line: `-${safe}`,
-          lineNumber: null,
-          type: 'remove',
-        });
-      } else {
-        ln += 1;
-        const { safe } = scanLine(currentFile, line, ln);
-        diffLines.push({ file: currentFile, line: safe, lineNumber: ln, type: 'context' });
-      }
-    });
-    setDiff(diffLines);
-    setResults((prev) => [...prev, ...res]);
-  };
+    };
+    return () => worker.terminate();
+  }, []);
 
   const handleTextChange = (val: string) => {
     setText(val);
@@ -255,7 +60,14 @@ const GitSecretsTester: React.FC = () => {
     setDiff([]);
     setArchive(null);
     setPatch('');
-    if (val) scanFile('input', val);
+    workerRef.current?.postMessage({ type: 'cancel' });
+    if (val) {
+      workerRef.current?.postMessage({
+        type: 'scan-text',
+        text: val,
+        patterns: allPatterns,
+      });
+    }
   };
 
   const handleFile = async (file: File) => {
@@ -264,37 +76,27 @@ const GitSecretsTester: React.FC = () => {
     setDiff([]);
     setPatch('');
     setArchive(null);
+    workerRef.current?.postMessage({ type: 'cancel' });
+    const patterns = allPatterns;
     if (file.name.endsWith('.patch') || file.name.endsWith('.diff')) {
       const p = await file.text();
       setPatch(p);
-      parsePatch(p);
+      workerRef.current?.postMessage({ type: 'scan-patch', patch: p, patterns });
       return;
     }
     if (file.name.endsWith('.zip')) {
       const buf = await file.arrayBuffer();
       setArchive(Buffer.from(buf).toString('base64'));
-      workerRef.current?.postMessage({ type: 'scan-archive', buffer: buf });
-      const zip = await JSZip.loadAsync(buf);
-      const entries = Object.values(zip.files);
-      for (const entry of entries) {
-        if (entry.dir) continue;
-        const data = await entry.async('uint8array');
-        if (data.length > MAX_SIZE || isBinary(data)) {
-          setLogs((l) => [...l, `Skipped ${entry.name}`]);
-          continue;
-        }
-        const content = new TextDecoder().decode(data);
-        scanFile(entry.name, content);
-      }
+      workerRef.current?.postMessage({ type: 'scan-archive', buffer: buf, patterns });
     } else {
-      const data = new Uint8Array(await file.arrayBuffer());
-      if (data.length > MAX_SIZE || isBinary(data)) {
-        setLogs([`Skipped ${file.name}`]);
-        return;
-      }
-      const content = new TextDecoder().decode(data);
+      const content = await file.text();
       setPatch(content);
-      scanFile(file.name, content);
+      workerRef.current?.postMessage({
+        type: 'scan-file',
+        name: file.name,
+        content,
+        patterns,
+      });
     }
   };
 
@@ -383,6 +185,20 @@ const GitSecretsTester: React.FC = () => {
           if (f) handleFile(f);
         }}
       />
+      {progress && (
+        <div className="flex items-center space-x-2">
+          <span>
+            Scanning {progress.current}/{progress.total}
+          </span>
+          <button
+            type="button"
+            className="px-2 py-1 bg-red-700 rounded"
+            onClick={() => workerRef.current?.postMessage({ type: 'cancel' })}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
       <button
         type="button"
         className="px-2 py-1 bg-purple-700 rounded w-40"
@@ -430,11 +246,13 @@ const GitSecretsTester: React.FC = () => {
                     {d.lineNumber ?? ''}
                   </span>
                   <span
-                    className={`flex-1 whitespace-pre ${{
-                      add: 'text-green-400',
-                      remove: 'text-red-400',
-                      context: '',
-                    }[d.type]}`}
+                    className={`flex-1 whitespace-pre ${
+                      {
+                        add: 'text-green-400',
+                        remove: 'text-red-400',
+                        context: '',
+                      }[d.type]
+                    }`}
                   >
                     {d.line}
                   </span>
@@ -457,8 +275,8 @@ const GitSecretsTester: React.FC = () => {
           <div key={idx} className="p-2 bg-gray-800 rounded">
             <div>
               <span className="font-mono">{r.pattern}</span> matched &quot;
-              <span className="bg-yellow-600 text-black">{r.match}</span>&quot; in {r.file}
-              {' '}at {r.line}:{r.index} [{r.severity}/{r.confidence}]
+              <span className="bg-yellow-600 text-black">{r.match}</span>&quot; in {r.file}{' '}
+              at {r.line}:{r.index} [{r.severity}/{r.confidence}]
             </div>
             <div className="text-sm text-gray-300 flex items-center"><span className="flex-1">Remediation: {r.remediation}</span><button type="button" className="ml-2 px-1 bg-gray-700 rounded" onClick={() => navigator.clipboard.writeText(r.remediation)}>Copy</button></div>
             <div className="text-sm text-gray-300 flex items-center mt-1"><span className="flex-1">Whitelist: {r.whitelist}</span><button type="button" className="ml-2 px-1 bg-gray-700 rounded" onClick={() => navigator.clipboard.writeText(r.whitelist)}>Copy</button></div>
@@ -495,8 +313,8 @@ const GitSecretsTester: React.FC = () => {
 };
 
 export default GitSecretsTester;
-
 export const displayGitSecretsTester = () => {
   return <GitSecretsTester />;
 };
-
+export { defaultPatterns, redactSecret } from './git-secrets-tester.utils';
+export type { PatternInfo, ScanResult, DiffLine } from './git-secrets-tester.utils';
