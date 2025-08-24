@@ -159,7 +159,7 @@ const PkceHelper: React.FC = () => {
             value={callback}
             onChange={(e) => setCallback(e.target.value)}
             className="w-full p-2 rounded text-black"
-            placeholder="https://example.com/callback?code=...&state=..."
+            placeholder="https://example.com/callback?code=AUTH_CODE&state=STATE"
           />
         </div>
         <button
