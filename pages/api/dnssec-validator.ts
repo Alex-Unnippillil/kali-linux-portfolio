@@ -1,5 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { rateLimit } from '../../lib/rateLimiter';
 import { setupUrlGuard } from '../../lib/urlGuard';
+
+/**
+ * DNSSEC validation using Google's resolver.
+ * Rate limited to 60 requests per minute.
+ */
 setupUrlGuard();
 
 const ALLOWED_TYPES = ['A', 'AAAA', 'CNAME', 'TXT', 'MX', 'NS', 'SOA', 'DNSKEY', 'DS', 'CAA'];
@@ -21,6 +27,8 @@ export default async function handler(
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  if (!(await rateLimit(req, res))) return;
 
   const { domain, type } = req.query;
 
