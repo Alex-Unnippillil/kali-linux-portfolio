@@ -1,8 +1,17 @@
 import React from 'react'
 import Head from 'next/head';
+import Script from 'next/script';
 
 export default function Meta() {
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        name: "Alex Unnippillil",
+        url: "https://unnippillil.com/",
+    };
+
     return (
+        <>
         <Head>
             {/* Primary Meta Tags */}
              <title>Alex Unnippillil&apos;s Portfolio </title>
@@ -49,17 +58,10 @@ export default function Meta() {
             <link rel="apple-touch-icon" href="images/logos/logo.png" />
             <link rel="preload" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" as="style" />
             <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet"></link>
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
-                        "@context": "https://schema.org",
-                        "@type": "Person",
-                        name: "Alex Unnippillil",
-                        url: "https://unnippillil.com/",
-                    }),
-                }}
-            />
         </Head>
+        <Script id="person-jsonld" type="application/ld+json">
+            {JSON.stringify(jsonLd)}
+        </Script>
+        </>
     )
 }
