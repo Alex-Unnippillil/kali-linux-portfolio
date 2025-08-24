@@ -1,6 +1,24 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { z } from 'zod';
+import { validateRequest } from '../../lib/validate';
 
 const ALLOWED_TYPES = ['A', 'AAAA', 'CNAME', 'TXT', 'NS'];
+
+export const config = {
+  api: { bodyParser: { sizeLimit: '1kb' } },
+};
+
+const querySchema = z.object({
+  domain: z.string().min(1),
+  type: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || ALLOWED_TYPES.includes(val.toUpperCase()),
+      'Invalid record type'
+    ),
+});
+const bodySchema = z.object({});
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,18 +29,16 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { domain, type } = req.query;
+  const parsed = validateRequest(req, res, {
+    querySchema,
+    bodySchema,
+    queryLimit: 1024,
+    bodyLimit: 1024,
+  });
+  if (!parsed) return;
+  const { domain, type } = parsed.query as { domain: string; type?: string };
 
-  if (!domain || typeof domain !== 'string') {
-    return res.status(400).json({ error: 'Missing domain' });
-  }
-
-  const recordType =
-    typeof type === 'string' ? type.toUpperCase() : 'A';
-
-  if (!ALLOWED_TYPES.includes(recordType)) {
-    return res.status(400).json({ error: 'Invalid record type' });
-  }
+  const recordType = type ? type.toUpperCase() : 'A';
 
   try {
     const endpoint = `https://dns.google/resolve?name=${encodeURIComponent(

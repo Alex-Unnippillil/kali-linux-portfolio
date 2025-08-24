@@ -4,14 +4,34 @@ interface Report {
   [key: string]: any;
 }
 
+interface TopOffender {
+  uri: string;
+  count: number;
+}
+
+interface TimelineEvent {
+  type: string;
+  time: number;
+  directive: string;
+  blockedURI: string;
+  sourceFile?: string;
+  lineNumber?: number;
+  columnNumber?: number;
+}
+
 const CspReporter: React.FC = () => {
   const [demoPage, setDemoPage] = useState(false);
   const [reports, setReports] = useState<Report[]>([]);
+  const [top, setTop] = useState<Record<string, TopOffender[]>>({});
+  const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
 
   const fetchReports = () => {
     fetch('/api/csp-reporter')
       .then((res) => res.json())
-      .then((data) => setReports(data))
+      .then((data) => {
+        setReports(data.reports || []);
+        setTop(data.top || {});
+      })
       .catch(() => {});
   };
 
@@ -21,7 +41,38 @@ const CspReporter: React.FC = () => {
     return () => clearInterval(id);
   }, []);
 
-  const demoDoc = `\n<html>\n<head>\n<meta http-equiv="Content-Security-Policy" content="default-src 'none'; report-uri /api/csp-reporter">\n</head>\n<body>\n<script src="https://example.com/evil.js"></script>\n</body>\n</html>`;
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data && e.data.type === 'csp-violation') {
+        setTimeline((t) => [...t, e.data]);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  const demoDoc = `
+<html>
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; report-uri /api/csp-reporter">
+<script>
+document.addEventListener('securitypolicyviolation', function(e){
+  parent.postMessage({
+    type: 'csp-violation',
+    time: Date.now(),
+    directive: e.effectiveDirective || e.violatedDirective,
+    blockedURI: e.blockedURI,
+    sourceFile: e.sourceFile,
+    lineNumber: e.lineNumber,
+    columnNumber: e.columnNumber
+  }, '*');
+});
+</script>
+</head>
+<body>
+<script src="https://example.com/evil.js"></script>
+</body>
+</html>`;
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
@@ -54,6 +105,37 @@ const CspReporter: React.FC = () => {
           srcDoc={demoDoc}
           className="w-full h-64 border mt-4"
         />
+      )}
+
+      {timeline.length > 0 && (
+        <div className="mt-6">
+          <h2 className="mb-2 text-lg">Client timeline</h2>
+          <ul className="text-sm">
+            {timeline.map((e, i) => (
+              <li key={i} className="mb-1">
+                {new Date(e.time).toLocaleTimeString()} - {e.directive} blocked {e.blockedURI}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <h2 className="mt-6 mb-2 text-lg">Top offenders</h2>
+      {Object.keys(top).length > 0 ? (
+        Object.entries(top).map(([dir, list]) => (
+          <div key={dir} className="mb-4">
+            <h3 className="font-semibold">{dir}</h3>
+            <ul className="pl-4 list-disc text-sm">
+              {list.map((o) => (
+                <li key={o.uri} className="break-all">
+                  {o.uri} ({o.count})
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      ) : (
+        <p className="text-gray-400 text-sm">No data</p>
       )}
 
       <h2 className="mt-6 mb-2 text-lg">Received reports</h2>
@@ -91,3 +173,4 @@ const CspReporter: React.FC = () => {
 
 export default CspReporter;
 export const displayCspReporter = () => <CspReporter />;
+
