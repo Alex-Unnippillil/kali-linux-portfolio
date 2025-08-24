@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic';
 
 const EvidenceNotebook = dynamic(
-  () => import('../../../apps/evidence-notebook'),
+  () => import('../../../components/apps/evidence-notebook'),
   { ssr: false }
 );
 
