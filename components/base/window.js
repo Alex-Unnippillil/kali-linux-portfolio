@@ -3,6 +3,7 @@ import NextImage from 'next/image';
 import { DndContext, useDraggable } from '@dnd-kit/core';
 import Settings from '../apps/settings';
 import { trackEvent, trackPageview } from '../../lib/analytics';
+import ErrorPane from '../ErrorPane';
 
 function DraggableContainer({ id, defaultPosition, bounds, onDrag, onStart, onStop, children, position: controlledPosition, onPositionChange }) {
     const [internalPosition, setInternalPosition] = React.useState(defaultPosition);
@@ -436,23 +437,46 @@ export function WindowEditButtons(props) {
     )
 }
 
+function ScreenRenderer(props) {
+    return props.screen(props.addFolder, props.openApp);
+}
+
 // Window's Main Screen
 export class WindowMainScreen extends Component {
     constructor() {
         super();
         this.state = {
             setDarkBg: false,
-        }
+            hasError: false,
+        };
+        this.handleReload = this.handleReload.bind(this);
+    }
+    static getDerivedStateFromError() {
+        return { hasError: true };
     }
     componentDidMount() {
         setTimeout(() => {
             this.setState({ setDarkBg: true });
         }, 3000);
     }
+    handleReload() {
+        if (typeof window !== 'undefined') {
+            window.location.reload();
+        }
+    }
     render() {
+        if (this.state.hasError) {
+            return (
+                <ErrorPane
+                    code="render_error"
+                    message={`An error occurred while rendering ${this.props.title}. Please try again.`}
+                    onReload={this.handleReload}
+                />
+            );
+        }
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-brand-dark " : " bg-panel")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-brand-dark " : " bg-panel")}> 
+                <ScreenRenderer screen={this.props.screen} addFolder={this.props.addFolder} openApp={this.props.openApp} />
             </div>
         )
     }

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../playwright.config';
 
 test('2048 game state updates after moves', async ({ page }) => {
   test.setTimeout(20_000);
