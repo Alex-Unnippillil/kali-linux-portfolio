@@ -1,4 +1,7 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import confetti from 'canvas-confetti';
 
 /** Generate all possible winning line combinations for a given board size. */
@@ -34,39 +37,56 @@ export const checkWinner = (
   return { winner: null, line: [] };
 };
 
-/**
- * Negamax with alpha-beta pruning for optimal play on variable-sized boards.
- */
-export const negamax = (
-  board: (string | null)[],
-  player: 'X' | 'O',
-  size: number,
-  alpha = -Infinity,
-  beta = Infinity,
-): { index?: number; score: number } => {
-  const opponent = player === 'X' ? 'O' : 'X';
-  const { winner } = checkWinner(board, size);
-  if (winner === player) return { score: 1 };
-  if (winner === opponent) return { score: -1 };
-  if (winner === 'draw') return { score: 0 };
+// Encode board as a string for URL sharing
+const encodeBoard = (b: (string | null)[]) => b.map((c) => c || '-').join('');
+const decodeBoard = (s: string): (string | null)[] =>
+  s.split('').map((ch) => (ch === '-' ? null : ch));
 
-  let best = { index: -1, score: -Infinity };
+/** Classic minimax algorithm for optimal play on variable-sized boards. */
+export const minimax = (
+  board: (string | null)[],
+  current: 'X' | 'O',
+  ai: 'X' | 'O',
+  size: number,
+): number => {
+  const opponent = current === 'X' ? 'O' : 'X';
+  const { winner } = checkWinner(board, size);
+  if (winner === ai) return 1;
+  if (winner === opponent) return -1;
+  if (winner === 'draw') return 0;
+
+  let best = current === ai ? -Infinity : Infinity;
   for (let i = 0; i < board.length; i += 1) {
     if (board[i]) continue;
-    board[i] = player;
-    const result = negamax(board, opponent, size, -beta, -alpha);
-    const score = -result.score;
+    board[i] = current;
+    const score = minimax(board, opponent, ai, size);
     board[i] = null;
-    if (score > best.score) {
-      best = { index: i, score };
-    }
-    if (score > alpha) alpha = score;
-    if (alpha >= beta) break;
+    if (current === ai) {
+      if (score > best) best = score;
+    } else if (score < best) best = score;
   }
   return best;
 };
 
-const TicTacToe: React.FC = () => {
+/** Determine the best move for the AI using minimax. */
+export const bestMove = (
+  board: (string | null)[],
+  ai: 'X' | 'O',
+  size: number,
+): { index: number; score: number } => {
+  const opponent = ai === 'X' ? 'O' : 'X';
+  let best = { index: -1, score: -Infinity };
+  for (let i = 0; i < board.length; i += 1) {
+    if (board[i]) continue;
+    board[i] = ai;
+    const score = minimax(board, opponent, ai, size);
+    board[i] = null;
+    if (score > best.score) best = { index: i, score };
+  }
+  return best;
+};
+
+const TicTacToeComponent: React.FC = () => {
   // Game state
   const [size, setSize] = useState(3);
   const [history, setHistory] = useState<(string | null)[][]>([
@@ -77,13 +97,16 @@ const TicTacToe: React.FC = () => {
   const [status, setStatus] = useState('Choose X or O');
   const [player, setPlayer] = useState<'X' | 'O' | null>(null);
   const [ai, setAi] = useState<'X' | 'O' | null>(null);
-  // Difficulty ranges from 0 (easy) to 1 (hard). On hard the AI is unbeatable.
-  const [difficulty, setDifficulty] = useState(1);
+  // Mistake rate ranges from 0 (perfect play) to 1 (random moves).
+  const [mistakeRate, setMistakeRate] = useState(0);
   const [aiMoves, setAiMoves] = useState(0);
   // Scores for each available move – used for visualisation
   const [moveEvals, setMoveEvals] = useState<Record<number, number>>({});
   const [hintMove, setHintMove] = useState<number | null>(null);
   const [winningLine, setWinningLine] = useState<number[]>([]);
+  const [lineCoords, setLineCoords] = useState<
+    { x1: number; y1: number; x2: number; y2: number } | null
+  >(null);
   const [leaderboard, setLeaderboard] = useState<{ X: number; O: number; draw: number }>(
     { X: 0, O: 0, draw: 0 },
   );
@@ -92,6 +115,44 @@ const TicTacToe: React.FC = () => {
 
   // WebSocket ref for multiplayer support
   const wsRef = useRef<WebSocket | null>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
+
+  // Load board state from URL if present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const s = parseInt(params.get('s') || '3', 10);
+    const sizeParam = [3, 4].includes(s) ? s : 3;
+    setSize(sizeParam);
+    const b = params.get('b');
+    const p = params.get('p') as 'X' | 'O' | null;
+    if (b && b.length === sizeParam * sizeParam) {
+      const parsed = decodeBoard(b);
+      setHistory([parsed]);
+      setStep(0);
+      if (p) {
+        const a = p === 'X' ? 'O' : 'X';
+        setPlayer(p);
+        setAi(a);
+        const filled = parsed.filter(Boolean).length;
+        const isXTurn = filled % 2 === 0;
+        const currentTurn = isXTurn ? 'X' : 'O';
+        setStatus(currentTurn === p ? 'Your turn' : "AI's turn");
+      }
+    } else {
+      setHistory([Array(sizeParam * sizeParam).fill(null)]);
+      setStep(0);
+    }
+  }, []);
+
+  // Update URL with current board state
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('s', size.toString());
+    params.set('b', encodeBoard(board));
+    if (player) params.set('p', player);
+    const url = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(null, '', url);
+  }, [board, size, player]);
 
   // Establish websocket connection once on mount
   useEffect(() => {
@@ -250,23 +311,25 @@ const TicTacToe: React.FC = () => {
       const evaluations = available.map((idx) => {
         const newBoard = board.slice();
         newBoard[idx] = ai;
-        const result = negamax(newBoard, ai === 'X' ? 'O' : 'X', size);
-        const score = -result.score;
+        const score = minimax(newBoard, player!, ai, size);
         return { index: idx, score };
       });
 
       setMoveEvals(Object.fromEntries(evaluations.map((e) => [e.index, e.score])));
 
-      const noisy = evaluations.map((e) => ({
-        index: e.index,
-        score: e.score + (Math.random() * 2 - 1) * (1 - difficulty),
-      }));
-
-      const best = noisy.reduce(
+      const best = evaluations.reduce(
         (a, b) => (b.score > a.score ? b : a),
         { index: -1, score: -Infinity },
       );
-      const index = best.index;
+
+      let choice = best;
+      if (mistakeRate > 0 && Math.random() < mistakeRate) {
+        const others = evaluations.filter((e) => e.index !== best.index);
+        if (others.length) {
+          choice = others[Math.floor(Math.random() * others.length)];
+        }
+      }
+      const index = choice.index;
 
       if (index !== undefined && index >= 0) {
         setTimeout(() => {
@@ -282,8 +345,7 @@ const TicTacToe: React.FC = () => {
       const evaluations = available.map((idx) => {
         const newBoard = board.slice();
         newBoard[idx] = player;
-        const result = negamax(newBoard, player === 'X' ? 'O' : 'X', size);
-        const score = -result.score;
+        const score = minimax(newBoard, ai!, player!, size);
         return { index: idx, score };
       });
 
@@ -295,7 +357,28 @@ const TicTacToe: React.FC = () => {
       setHintMove(best.index);
       setStatus('Your turn');
     }
-  }, [board, player, ai, difficulty, size]);
+  }, [board, player, ai, mistakeRate, size]);
+
+  // Compute coordinates for the animated winning line
+  useEffect(() => {
+    if (winningLine.length && boardRef.current) {
+      const rect = boardRef.current.getBoundingClientRect();
+      const cellSize = rect.width / size;
+      const getCenter = (idx: number) => {
+        const r = Math.floor(idx / size);
+        const c = idx % size;
+        return {
+          x: c * cellSize + cellSize / 2,
+          y: r * cellSize + cellSize / 2,
+        };
+      };
+      const start = getCenter(winningLine[0]);
+      const end = getCenter(winningLine[winningLine.length - 1]);
+      setLineCoords({ x1: start.x, y1: start.y, x2: end.x, y2: end.y });
+    } else {
+      setLineCoords(null);
+    }
+  }, [winningLine, size]);
 
   // Jump to a specific move in history
   const jumpTo = (move: number) => {
@@ -353,20 +436,24 @@ const TicTacToe: React.FC = () => {
     return () => window.removeEventListener('keydown', handler);
   }, [player, selected, size]);
 
-  const difficultySlider = (
+  const mistakeSlider = (
     <div className="w-40 mb-4">
+      <label htmlFor="mistakes" className="block text-xs mb-1">
+        Humanized mistakes
+      </label>
       <input
+        id="mistakes"
         type="range"
         min="0"
         max="1"
         step="0.01"
-        value={difficulty}
-        onChange={(e) => setDifficulty(parseFloat(e.target.value))}
+        value={mistakeRate}
+        onChange={(e) => setMistakeRate(parseFloat(e.target.value))}
         className="w-full"
       />
       <div className="flex justify-between text-xs">
-        <span>Easy</span>
-        <span>Hard</span>
+        <span>Off</span>
+        <span>Max</span>
       </div>
     </div>
   );
@@ -374,10 +461,13 @@ const TicTacToe: React.FC = () => {
   if (player === null) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4">
-        {difficultySlider}
+        {mistakeSlider}
         <div className="mb-4 flex flex-col items-center">
-          <label className="mb-1">Board Size</label>
+          <label htmlFor="boardsize" className="mb-1">
+            Board Size
+          </label>
           <select
+            id="boardsize"
             value={size}
             onChange={(e) => setSize(parseInt(e.target.value, 10))}
             className="bg-gray-700 p-1 rounded"
@@ -414,31 +504,56 @@ const TicTacToe: React.FC = () => {
   return (
     <div className="h-full w-full flex flex-col md:flex-row items-center justify-center bg-panel text-white p-4 space-y-4 md:space-y-0 md:space-x-4">
       <div className="flex flex-col items-center">
-        {difficultySlider}
+        {mistakeSlider}
         <div
-          className={`grid gap-1 ${size === 3 ? 'w-60' : 'w-80'} mb-2`}
+          ref={boardRef}
+          className={`relative grid gap-1 ${size === 3 ? 'w-60' : 'w-80'} mb-2`}
           style={{ gridTemplateColumns: `repeat(${size}, 1fr)` }}
+          role="grid"
+          aria-label="Tic tac toe board"
         >
-          {board.map((cell, idx) => (
-            <button
-              key={idx}
-              className={`relative h-20 w-20 text-4xl flex items-center justify-center bg-gray-700 hover:bg-gray-600 ${
-                winningLine.includes(idx) ? 'bg-green-600 animate-pulse' : ''
-              } ${selected === idx ? 'ring-2 ring-yellow-400' : ''}`}
-              onClick={() => handleClick(idx)}
-            >
-              {cell || (
-                <span className="text-xs text-gray-400">
-                  {moveEvals[idx]?.toFixed(2)}
-                </span>
-              )}
-              {hintMove === idx && !cell && (
-                <span className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-green-400">↑</span>
-              )}
-            </button>
-          ))}
+          {board.map((cell, idx) => {
+            const row = Math.floor(idx / size) + 1;
+            const col = (idx % size) + 1;
+            return (
+              <button
+                key={idx}
+                role="gridcell"
+                aria-label={`Row ${row} column ${col}${cell ? `, ${cell}` : ''}`}
+                className={`relative h-20 w-20 text-4xl flex items-center justify-center bg-gray-700 hover:bg-gray-600 ${
+                  winningLine.includes(idx) ? 'bg-green-600 animate-pulse' : ''
+                } ${selected === idx ? 'ring-2 ring-yellow-400' : ''}`}
+                onClick={() => handleClick(idx)}
+              >
+                {cell || (
+                  <span className="text-xs text-gray-400">
+                    {moveEvals[idx]?.toFixed(2)}
+                  </span>
+                )}
+                {hintMove === idx && !cell && (
+                  <span className="absolute -top-3 left-1/2 transform -translate-x-1/2 text-green-400">↑</span>
+                )}
+              </button>
+            );
+          })}
+          {lineCoords && (
+            <svg className="absolute inset-0 w-full h-full pointer-events-none">
+              <line
+                x1={lineCoords.x1}
+                y1={lineCoords.y1}
+                x2={lineCoords.x2}
+                y2={lineCoords.y2}
+                stroke="yellow"
+                strokeWidth={4}
+                pathLength={1}
+                className="draw-line"
+              />
+            </svg>
+          )}
         </div>
-        <div className="mb-2">{status}</div>
+        <div className="mb-2" aria-live="polite">
+          {status}
+        </div>
         <div className="hidden md:block text-xs mb-2">Use arrow keys + Enter</div>
         <div className="md:hidden flex flex-col items-center mb-2">
           <div>
@@ -507,8 +622,20 @@ const TicTacToe: React.FC = () => {
         </div>
       </div>
     </div>
+    <style jsx>{`
+      @keyframes draw {
+        to {
+          stroke-dashoffset: 0;
+        }
+      }
+      .draw-line {
+        stroke-dasharray: 1;
+        stroke-dashoffset: 1;
+        animation: draw 0.5s ease forwards;
+      }
+    `}</style>
   );
 };
 
-export default TicTacToe;
+export default dynamic(() => Promise.resolve(TicTacToeComponent), { ssr: false });
 
