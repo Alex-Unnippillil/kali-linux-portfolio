@@ -22,6 +22,7 @@ export class UbuntuApp extends Component {
                 onDoubleClick={this.openApp}
                 tabIndex={0}
                 aria-label={`Open ${this.props.name}`}
+                data-testid={`ubuntu-app-${this.props.id}`}
             >
                 <Image
                     width={40}
