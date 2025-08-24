@@ -1,16 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
-import Matter from 'matter-js';
-
-interface TrackWall { x: number; y: number; w: number; h: number; }
-interface TrackPoint { x: number; y: number; }
-interface Track {
-  width: number;
-  height: number;
-  start: { x: number; y: number; angle: number };
-  walls: TrackWall[];
-  checkpoints: { x: number; y: number; w: number; h: number }[];
-  line: TrackPoint[];
-}
+import React, { useEffect, useRef } from 'react';
+import type * as PIXI from 'pixi.js';
+import {
+  project,
+  findSegment,
+  Segment,
+  segmentLength,
+} from '../pixi-racer/projection';
 
 interface LineCheckpoint { x: number; y1: number; y2: number }
 
@@ -56,345 +51,272 @@ export function advanceCheckpoints(
   return { nextCheckpoint: next, lapLineCrossed, lapStarted, lapCompleted };
 }
 
-interface GhostFrame { x: number; y: number; angle: number; time: number }
+// ---- outrun style renderer ----
 
-const STORAGE_KEY = 'car-racer-data';
+const WIDTH = 800;
+const HEIGHT = 450;
+const CAMERA_HEIGHT = 1000;
+const ROAD_WIDTH = 2000;
+const DRAW_DISTANCE = 200;
+const CAMERA_DEPTH = 1 / Math.tan(Math.PI / 4 / 2);
 
-function loadPersisted() {
-  if (typeof window === 'undefined') return { bestLap: null, ghost: null, laps: [] };
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      return JSON.parse(raw);
-    }
-  } catch {
-    /* ignore */
-  }
-  return { bestLap: null, ghost: null, laps: [] };
+interface RoadSprite {
+  offset: number; // -1..1 from road center
+  sprite?: PIXI.Graphics;
 }
 
-function savePersisted(bestLap: number | null, ghost: GhostFrame[] | null, laps: number[]) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ bestLap, ghost, laps })
-    );
-  } catch {
-    /* ignore */
+interface RoadSegment extends Segment {
+  sprites: RoadSprite[];
+}
+
+function buildTrack(): RoadSegment[] {
+  const segments: RoadSegment[] = [];
+  let y = 0;
+  for (let i = 0; i < 1000; i++) {
+    const curve = i > 100 && i < 180 ? 0.6 : i > 300 && i < 380 ? -0.6 : 0;
+    let hill = 0;
+    if (i > 450 && i <= 480) hill = 20;
+    else if (i > 480 && i <= 510) hill = -20;
+    const p1y = y;
+    y += hill;
+    const p2y = y;
+    const seg: RoadSegment = {
+      index: i,
+      curve,
+      y: p1y,
+      p1: { x: 0, y: p1y, z: i * segmentLength },
+      p2: { x: 0, y: p2y, z: (i + 1) * segmentLength },
+      sprites: [],
+    };
+    if (i % 40 === 0) seg.sprites.push({ offset: -1 });
+    if (i % 60 === 0) seg.sprites.push({ offset: 1 });
+    segments.push(seg);
   }
+  return segments;
 }
 
 const CarRacer: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [engineForce, setEngineForce] = useState(0.001);
-  const [grip, setGrip] = useState(0.02);
-  const [lapTime, setLapTime] = useState<number | null>(null);
-  const [bestLap, setBestLap] = useState<number | null>(null);
-  const ghostRef = useRef<GhostFrame[]>([]);
-  const [ghost, setGhost] = useState<GhostFrame[] | null>(null);
-  const [laps, setLaps] = useState<number[]>([]);
-  const keyState = useRef({ up: false, left: false, right: false });
+  const divRef = useRef<HTMLDivElement>(null);
+  const keyRef = useRef({ left: false, right: false, accel: false });
+  const positionRef = useRef(0);
+  const speedRef = useRef(0);
+  const playerXRef = useRef(0);
 
   useEffect(() => {
-    const data = loadPersisted();
-    if (data.bestLap) setBestLap(data.bestLap);
-    if (data.ghost) setGhost(data.ghost);
-    if (data.laps) setLaps(data.laps);
-  }, []);
+    let app: PIXI.Application | null = null;
+    let raf = 0;
+    let keyDown: ((e: KeyboardEvent) => void) | undefined;
+    let keyUp: ((e: KeyboardEvent) => void) | undefined;
 
-  useEffect(() => {
-    savePersisted(bestLap, ghost, laps);
-  }, [bestLap, ghost, laps]);
-
-  const handleWheel = (e: React.PointerEvent<HTMLDivElement>) => {
-    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const mid = rect.width / 2;
-    keyState.current.left = x < mid - 10;
-    keyState.current.right = x > mid + 10;
-    keyState.current.up = true;
-  };
-  const handleWheelEnd = () => {
-    keyState.current.left = false;
-    keyState.current.right = false;
-    keyState.current.up = false;
-  };
-
-  // tilt steering
-  useEffect(() => {
-    const orientation = (e: DeviceOrientationEvent) => {
-      if (typeof e.gamma === 'number') {
-        keyState.current.left = e.gamma < -10;
-        keyState.current.right = e.gamma > 10;
-      }
-    };
-    window.addEventListener('deviceorientation', orientation);
-    return () => window.removeEventListener('deviceorientation', orientation);
-  }, []);
-
-  // gamepad polling
-  useEffect(() => {
-    let raf: number;
-    const poll = () => {
-      const gp = navigator.getGamepads()[0];
-      if (gp) {
-        const steer = gp.axes[0] || 0;
-        keyState.current.left = steer < -0.2;
-        keyState.current.right = steer > 0.2;
-        keyState.current.up = gp.buttons[0]?.pressed || gp.buttons[7]?.pressed || false;
-      }
-      raf = requestAnimationFrame(poll);
-    };
-    poll();
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  useEffect(() => {
-    let engine = Matter.Engine.create();
-    let render: Matter.Render;
-    let runner = Matter.Runner.create();
-    let track: Track;
-    let player: Matter.Body;
-    const aiCars: { body: Matter.Body; progress: number }[] = [];
-    const checkpoints: Matter.Body[] = [];
-    let currentCheckpoint = 0;
-    let startTime = 0;
-    let raf: number;
-
-    async function init() {
-      track = await (await fetch('/apps/car-racer/tracks/basic.json')).json();
-      const canvas = canvasRef.current as HTMLCanvasElement;
-      render = Matter.Render.create({
-        engine,
-        canvas,
-        options: {
-          width: track.width,
-          height: track.height,
-          background: '#222',
-          wireframes: false,
-        },
+    (async () => {
+      const PIXI = await import('pixi.js');
+      app = new PIXI.Application({
+        width: WIDTH,
+        height: HEIGHT,
+        background: '#80d0ff',
+        antialias: true,
+        resolution: window.devicePixelRatio,
+        autoDensity: true,
+        autoStart: false,
       });
+      const container = divRef.current as HTMLDivElement;
+      container.innerHTML = '';
+      container.appendChild(app.view as HTMLCanvasElement);
 
-      // create track walls
-      track.walls.forEach(w => {
-        const wall = Matter.Bodies.rectangle(w.x, w.y, w.w, w.h, { isStatic: true });
-        Matter.World.add(engine.world, wall);
-      });
-
-      // optional tilemap
-      const anyTrack = track as any;
-      if (anyTrack.tiles) {
-        const size = anyTrack.tileSize || 40;
-        anyTrack.tiles.forEach((row: number[], ty: number) => {
-          row.forEach((tile: number, tx: number) => {
-            if (tile) {
-              const x = tx * size + size / 2;
-              const y = ty * size + size / 2;
-              const t = Matter.Bodies.rectangle(x, y, size, size, {
-                isStatic: true,
-                render: { fillStyle: '#444' },
-              });
-              Matter.World.add(engine.world, t);
-            }
-          });
-        });
+      const farMount = new PIXI.Graphics();
+      for (let i = 0; i < 5; i++) {
+        farMount
+          .beginFill(0x88aaff)
+          .moveTo(i * 160, 80)
+          .lineTo(i * 160 + 80, 0)
+          .lineTo(i * 160 + 160, 80)
+          .endFill();
       }
+      const farTex = app.renderer.generateTexture(farMount);
+      const bgFar = new PIXI.TilingSprite(farTex, WIDTH, 80);
+      bgFar.y = HEIGHT / 2 - 100;
+      app.stage.addChild(bgFar);
 
-      // checkpoints as sensors
-      CHECKPOINTS.forEach((c, idx) => {
-        const cp = Matter.Bodies.rectangle(
-          c.x,
-          (c.y1 + c.y2) / 2,
-          20,
-          c.y2 - c.y1,
-          { isStatic: true, isSensor: true, label: `cp-${idx}` }
+      const nearMount = new PIXI.Graphics();
+      for (let i = 0; i < 5; i++) {
+        nearMount
+          .beginFill(0x3355aa)
+          .moveTo(i * 160, 120)
+          .lineTo(i * 160 + 80, 20)
+          .lineTo(i * 160 + 160, 120)
+          .endFill();
+      }
+      const nearTex = app.renderer.generateTexture(nearMount);
+      const bgNear = new PIXI.TilingSprite(nearTex, WIDTH, 120);
+      bgNear.y = HEIGHT / 2 - 60;
+      app.stage.addChild(bgNear);
+
+      const road = new PIXI.Container();
+      app.stage.addChild(road);
+
+      const segments = buildTrack();
+
+      function update(dt: number) {
+        const gp = navigator.getGamepads()[0];
+        if (gp) {
+          const steer = gp.axes[0] || 0;
+          keyRef.current.left = steer < -0.2;
+          keyRef.current.right = steer > 0.2;
+          keyRef.current.accel =
+            gp.buttons[0]?.pressed || gp.buttons[7]?.pressed || false;
+        }
+
+        const speed = keyRef.current.accel
+          ? Math.min(400, speedRef.current + 200 * dt)
+          : Math.max(0, speedRef.current - 150 * dt);
+        speedRef.current = speed;
+        positionRef.current += speed * dt;
+
+        if (keyRef.current.left) playerXRef.current -= dt * 150;
+        if (keyRef.current.right) playerXRef.current += dt * 150;
+        playerXRef.current = Math.max(
+          -ROAD_WIDTH / 2,
+          Math.min(ROAD_WIDTH / 2, playerXRef.current)
         );
-        checkpoints.push(cp);
-        Matter.World.add(engine.world, cp);
-      });
 
-      // player car
-      player = Matter.Bodies.rectangle(track.start.x, track.start.y, 40, 20, {
-        frictionAir: 0.1,
-      });
-      Matter.Body.setAngle(player, track.start.angle);
-      Matter.World.add(engine.world, player);
+        const baseSegment = findSegment(positionRef.current, segments);
+        const baseIndex = baseSegment.index;
+        let x = 0;
+        let dx = -baseSegment.curve;
+        road.removeChildren();
+        for (let n = 0; n < DRAW_DISTANCE; n++) {
+          const seg = segments[(baseIndex + n) % segments.length];
+          seg.p1.x = x;
+          seg.p1.z = seg.index * segmentLength;
+          x += dx;
+          dx += seg.curve;
+          seg.p2.x = x;
+          seg.p2.z = (seg.index + 1) * segmentLength;
 
-      // AI cars
-      for (let i = 0; i < 8; i++) {
-        const car = Matter.Bodies.rectangle(track.start.x - i * 30, track.start.y + 40, 40, 20, {
-          frictionAir: 0.1,
-        });
-        aiCars.push({ body: car, progress: 0 });
-        Matter.World.add(engine.world, car);
+          const p1 = project(
+            seg.p1,
+            playerXRef.current,
+            CAMERA_HEIGHT,
+            positionRef.current,
+            CAMERA_DEPTH,
+            WIDTH,
+            HEIGHT
+          );
+          const p2 = project(
+            seg.p2,
+            playerXRef.current,
+            CAMERA_HEIGHT,
+            positionRef.current,
+            CAMERA_DEPTH,
+            WIDTH,
+            HEIGHT
+          );
+
+          if (p1.y >= HEIGHT && p2.y >= HEIGHT) continue;
+          const r1 = ROAD_WIDTH * p1.scale;
+          const r2 = ROAD_WIDTH * p2.scale;
+          const g = new PIXI.Graphics();
+          g.beginFill(n % 2 === 0 ? 0x444444 : 0x3a3a3a);
+          g.moveTo(p1.x - r1, p1.y);
+          g.lineTo(p2.x - r2, p2.y);
+          g.lineTo(p2.x + r2, p2.y);
+          g.lineTo(p1.x + r1, p1.y);
+          g.closePath();
+          g.endFill();
+          road.addChild(g);
+
+          seg.sprites.forEach((spr) => {
+            const wx = seg.p1.x + spr.offset * ROAD_WIDTH;
+            const p = project(
+              { x: wx, y: seg.p1.y, z: seg.p1.z },
+              playerXRef.current,
+              CAMERA_HEIGHT,
+              positionRef.current,
+              CAMERA_DEPTH,
+              WIDTH,
+              HEIGHT
+            );
+            if (p.scale <= 0 || p.y < 0 || p.y > HEIGHT) return; // cull
+            if (!spr.sprite) {
+              const tree = new PIXI.Graphics();
+              tree.beginFill(0x006600).drawRect(-20, -60, 40, 60).endFill();
+              spr.sprite = tree;
+            }
+            const s = spr.sprite;
+            if (s) {
+              s.x = p.x;
+              s.y = p.y;
+              s.scale.set(p.scale, p.scale);
+              road.addChild(s);
+            }
+          });
+        }
+
+        bgFar.tilePosition.x = positionRef.current * 0.02;
+        bgNear.tilePosition.x = positionRef.current * 0.05;
       }
 
-      Matter.Events.on(engine, 'beforeUpdate', (e) => {
-        const dt = e.delta / 1000;
-        // player controls
-        if (keyState.current.up) {
-          const force = {
-            x: Math.cos(player.angle) * engineForce,
-            y: Math.sin(player.angle) * engineForce,
-          };
-          Matter.Body.applyForce(player, player.position, force);
+      let last = performance.now();
+      let acc = 0;
+      const step = 1 / 60;
+      const frame = (now: number) => {
+        const delta = (now - last) / 1000;
+        acc += delta;
+        while (acc >= step) {
+          update(step);
+          acc -= step;
         }
-        if (keyState.current.left) Matter.Body.setAngularVelocity(player, player.angularVelocity - 0.05);
-        if (keyState.current.right) Matter.Body.setAngularVelocity(player, player.angularVelocity + 0.05);
-
-        // drift - damp lateral velocity
-        const forward = { x: Math.cos(player.angle), y: Math.sin(player.angle) };
-        const lateral = { x: -forward.y, y: forward.x };
-        const v = player.velocity;
-        const latVel = v.x * lateral.x + v.y * lateral.y;
-        const driftForce = { x: -latVel * lateral.x * grip, y: -latVel * lateral.y * grip };
-        Matter.Body.applyForce(player, player.position, driftForce);
-
-        ghostRef.current.push({ x: player.position.x, y: player.position.y, angle: player.angle, time: performance.now() - startTime });
-
-        // simple AI following line with basic flocking separation
-        aiCars.forEach((car, idx) => {
-          const target = track.line[Math.floor(car.progress) % track.line.length];
-          const steer = { x: target.x - car.body.position.x, y: target.y - car.body.position.y };
-          // separation from other AI cars
-          aiCars.forEach((other, j) => {
-            if (idx === j) return;
-            const dx = car.body.position.x - other.body.position.x;
-            const dy = car.body.position.y - other.body.position.y;
-            const dist = Math.hypot(dx, dy);
-            if (dist > 0 && dist < 50) {
-              steer.x += dx / dist;
-              steer.y += dy / dist;
-            }
-          });
-          const dir = Math.atan2(steer.y, steer.x);
-          Matter.Body.setAngle(car.body, dir);
-          Matter.Body.applyForce(car.body, car.body.position, {
-            x: Math.cos(dir) * engineForce,
-            y: Math.sin(dir) * engineForce,
-          });
-          car.progress += dt * 2;
-        });
-      });
-
-      Matter.Events.on(engine, 'collisionStart', (ev) => {
-        ev.pairs.forEach((pair) => {
-          const labels = [pair.bodyA.label, pair.bodyB.label];
-          labels.forEach((lab) => {
-            if (lab === `cp-${currentCheckpoint}`) {
-              currentCheckpoint += 1;
-              if (currentCheckpoint >= checkpoints.length) {
-                const now = performance.now();
-                const lap = (now - startTime) / 1000;
-                setLapTime(lap);
-                setLaps((l) => [...l, lap]);
-                if (!bestLap || lap < bestLap) {
-                  setBestLap(lap);
-                  setGhost([...ghostRef.current]);
-                }
-                const pad = navigator.getGamepads()[0];
-                pad?.vibrationActuator?.playEffect?.('dual-rumble', {
-                  duration: 200,
-                  strongMagnitude: 1,
-                  weakMagnitude: 1,
-                });
-                startTime = now;
-                currentCheckpoint = 0;
-                ghostRef.current = [];
-              }
-            }
-          });
-        });
-      });
-
-      Matter.Render.run(render);
-      Matter.Runner.run(runner, engine);
-      startTime = performance.now();
-
-      // ghost drawing overlay
-      const drawGhost = () => {
-        if (ghost && render.context) {
-          const t = performance.now() - startTime;
-          const frame = ghost.find((f) => f.time > t);
-          if (frame) {
-            const ctx = render.context;
-            ctx.save();
-            ctx.fillStyle = 'rgba(0,255,255,0.5)';
-            ctx.translate(frame.x, frame.y);
-            ctx.rotate(frame.angle);
-            ctx.fillRect(-20, -10, 40, 20);
-            ctx.restore();
-          }
-        }
-        raf = requestAnimationFrame(drawGhost);
+        app!.renderer.render(app!.stage);
+        last = now;
+        raf = requestAnimationFrame(frame);
       };
-      drawGhost();
-    }
+      raf = requestAnimationFrame(frame);
 
-    const keyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp') keyState.current.up = true;
-      if (e.key === 'ArrowLeft') keyState.current.left = true;
-      if (e.key === 'ArrowRight') keyState.current.right = true;
-    };
-    const keyUp = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp') keyState.current.up = false;
-      if (e.key === 'ArrowLeft') keyState.current.left = false;
-      if (e.key === 'ArrowRight') keyState.current.right = false;
-    };
-    window.addEventListener('keydown', keyDown);
-    window.addEventListener('keyup', keyUp);
-
-    init();
+      keyDown = (e: KeyboardEvent) => {
+        if (e.key === 'ArrowLeft') keyRef.current.left = true;
+        if (e.key === 'ArrowRight') keyRef.current.right = true;
+        if (e.key === 'ArrowUp') keyRef.current.accel = true;
+      };
+      keyUp = (e: KeyboardEvent) => {
+        if (e.key === 'ArrowLeft') keyRef.current.left = false;
+        if (e.key === 'ArrowRight') keyRef.current.right = false;
+        if (e.key === 'ArrowUp') keyRef.current.accel = false;
+      };
+      window.addEventListener('keydown', keyDown);
+      window.addEventListener('keyup', keyUp);
+    })();
 
     return () => {
-      window.removeEventListener('keydown', keyDown);
-      window.removeEventListener('keyup', keyUp);
+      window.removeEventListener('keydown', keyDown!);
+      window.removeEventListener('keyup', keyUp!);
       cancelAnimationFrame(raf);
-      Matter.Render.stop(render);
-      Matter.Runner.stop(runner);
-      Matter.World.clear(engine.world, false);
-      engine.events = {} as any;
+      app?.destroy(true, { children: true });
     };
-  }, [engineForce, grip, ghost]);
+  }, []);
+
+  const handleTouch = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const mid = rect.width / 2;
+    keyRef.current.left = x < mid - 10;
+    keyRef.current.right = x > mid + 10;
+    keyRef.current.accel = true;
+  };
+  const endTouch = () => {
+    keyRef.current.left = false;
+    keyRef.current.right = false;
+    keyRef.current.accel = false;
+  };
 
   return (
-    <div className="w-full h-full flex flex-col items-center text-white">
-      <canvas ref={canvasRef} width={800} height={600} />
-      <div className="mt-2 space-x-2">
-        <label>Engine {engineForce.toFixed(3)}</label>
-        <input
-          type="range"
-          min="0.0005"
-          max="0.005"
-          step="0.0005"
-          value={engineForce}
-          onChange={(e) => setEngineForce(parseFloat(e.target.value))}
-        />
-        <label>Grip {grip.toFixed(2)}</label>
-        <input
-          type="range"
-          min="0.01"
-          max="0.1"
-          step="0.01"
-          value={grip}
-          onChange={(e) => setGrip(parseFloat(e.target.value))}
-        />
-      </div>
-      <div className="mt-2">Lap: {lapTime ? lapTime.toFixed(2) : '--'}s Best: {bestLap ? bestLap.toFixed(2) : '--'}s</div>
-      <div className="mt-1 text-xs">
-        {laps.map((l, i) => (
-          <span key={i} className="mr-2">
-            #{i + 1}:{l.toFixed(2)}s
-          </span>
-        ))}
-      </div>
+    <div className="relative w-full h-full text-white">
+      <div ref={divRef} />
       <div
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 w-32 h-32 bg-white/20 rounded-full touch-none"
-        onPointerDown={handleWheel}
-        onPointerMove={handleWheel}
-        onPointerUp={handleWheelEnd}
-        onPointerLeave={handleWheelEnd}
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 w-32 h-32 bg-white/20 rounded-full touch-none"
+        onPointerDown={handleTouch}
+        onPointerMove={handleTouch}
+        onPointerUp={endTouch}
+        onPointerLeave={endTouch}
       />
     </div>
   );
