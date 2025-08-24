@@ -830,7 +830,7 @@ const apps = [
   {
     id: 'csp-reporter',
     title: 'CSP Reporter',
-    icon: './themes/Yaru/apps/resource-monitor.svg',
+    icon: './themes/Yaru/apps/csp-reporter.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,

@@ -31,6 +31,7 @@ const CspReporter: React.FC = () => {
   const [demoPage, setDemoPage] = useState(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [top, setTop] = useState<Record<string, TopOffender[]>>({});
+  const [summary, setSummary] = useState<Record<string, number>>({});
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [policy, setPolicy] = useState('');
   const [simResult, setSimResult] = useState<{ directive: string; uri: string }[] | null>(
@@ -39,13 +40,22 @@ const CspReporter: React.FC = () => {
   const [reportUriConfig, setReportUriConfig] = useState('');
   const [reportToConfig, setReportToConfig] = useState('');
   const [eventSupported, setEventSupported] = useState(false);
+  const [search, setSearch] = useState('');
+  const [templates, setTemplates] = useState<{ name: string; policy: string }[]>([]);
+  const [fixes, setFixes] = useState<
+    { directive: string; uri: string; suggestion: string }[]
+  >([]);
 
   const fetchReports = () => {
-    fetch('/api/csp-reporter')
+    const qs = search ? `?q=${encodeURIComponent(search)}` : '';
+    fetch(`/api/csp-reporter${qs}`)
       .then((res) => res.json())
       .then((data) => {
         setReports(data.reports || []);
         setTop(data.top || {});
+        setSummary(data.summary || {});
+        setTemplates(data.templates || []);
+        setFixes(data.fixes || []);
       })
       .catch(() => {});
   };
@@ -54,7 +64,8 @@ const CspReporter: React.FC = () => {
     fetchReports();
     const id = setInterval(fetchReports, 5000);
     return () => clearInterval(id);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
@@ -139,6 +150,22 @@ document.addEventListener('securitypolicyviolation', function(e){
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
       <h1 className="text-xl mb-2">CSP Reporter</h1>
+      <div className="mb-4 flex gap-2 items-center">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search reports"
+          className="p-1 text-black flex-grow"
+        />
+        <a
+          href={`/api/csp-reporter?download=json${
+            search ? `&q=${encodeURIComponent(search)}` : ''
+          }`}
+          className="px-2 py-1 bg-gray-700 rounded"
+        >
+          Download logs
+        </a>
+      </div>
       <p className="mb-2">
         Use the snippets below to send Content Security Policy violation reports to this application.
       </p>
@@ -204,6 +231,19 @@ document.addEventListener('securitypolicyviolation', function(e){
         </div>
       )}
 
+      <h2 className="mt-6 mb-2 text-lg">Summary</h2>
+      {Object.keys(summary).length > 0 ? (
+        <ul className="text-sm mb-4">
+          {Object.entries(summary).map(([dir, count]) => (
+            <li key={dir} className="break-all">
+              {dir}: {count}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-gray-400 text-sm mb-4">No data</p>
+      )}
+
       <h2 className="mt-6 mb-2 text-lg">Top offenders</h2>
       {Object.keys(top).length > 0 ? (
         Object.entries(top).map(([dir, list]) => (
@@ -220,6 +260,32 @@ document.addEventListener('securitypolicyviolation', function(e){
         ))
       ) : (
         <p className="text-gray-400 text-sm">No data</p>
+      )}
+
+      {fixes.length > 0 && (
+        <div className="mt-6">
+          <h2 className="mb-2 text-lg">Quick fixes</h2>
+          <ul className="text-sm list-disc pl-4">
+            {fixes.map((f, i) => (
+              <li key={i} className="break-all">
+                {f.suggestion}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {templates.length > 0 && (
+        <div className="mt-6">
+          <h2 className="mb-2 text-lg">Policy templates</h2>
+          <ul className="text-sm list-disc pl-4">
+            {templates.map((t) => (
+              <li key={t.name} className="break-all">
+                <strong>{t.name}:</strong> <code>{t.policy}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <div className="mt-6">
