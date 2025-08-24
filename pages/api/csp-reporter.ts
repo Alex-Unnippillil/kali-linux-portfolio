@@ -80,6 +80,61 @@ function computeTop(list: CSPReport[]): Record<string, { uri: string; count: num
   );
 }
 
+function parsePolicy(policy: string): Record<string, string[]> {
+  return Object.fromEntries(
+    policy
+      .split(';')
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => {
+        const [dir, ...sources] = p.split(/\s+/);
+        return [dir, sources];
+      })
+  );
+}
+
+function simulatePolicy(policy: string, list: CSPReport[]) {
+  const map = parsePolicy(policy);
+  const blocked: { directive: string; uri: string }[] = [];
+  list.forEach((r) => {
+    const dir = r['effective-directive'] || r['violated-directive'] || '';
+    if (!dir) return;
+    const sources = map[dir] || map['default-src'] || [];
+    const uri = r['blocked-uri'] || '';
+    const docOrigin = (() => {
+      try {
+        return new URL(r['document-uri']).origin;
+      } catch {
+        return '';
+      }
+    })();
+    const blockedOrigin = (() => {
+      try {
+        return new URL(uri, r['document-uri']).origin;
+      } catch {
+        return uri;
+      }
+    })();
+    if (sources.includes("'none'")) {
+      blocked.push({ directive: dir, uri });
+      return;
+    }
+    const allowed = sources.some((s) => {
+      if (s === '*') return true;
+      if (s === "'self'") return blockedOrigin === docOrigin;
+      try {
+        return blockedOrigin === new URL(s).origin;
+      } catch {
+        return false;
+      }
+    });
+    if (!allowed) {
+      blocked.push({ directive: dir, uri });
+    }
+  });
+  return { blocked };
+}
+
 export default function handler(req: NextApiRequest, res: NextApiResponse<any>) {
   if (req.method === 'POST') {
     const parsed = normalizeReports(req.body);
@@ -102,7 +157,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse<any>) 
 
   if (req.method === 'GET') {
     const list = reports.map((r) => r.report);
-    res.status(200).json({ reports: list, top: computeTop(list) });
+    const policy = typeof req.query.policy === 'string' ? req.query.policy : undefined;
+    const simulate = policy ? simulatePolicy(policy, list) : undefined;
+    res
+      .status(200)
+      .json({ reports: list, top: computeTop(list), simulate });
     return;
   }
 
@@ -110,4 +169,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponse<any>) 
   res.status(405).end('Method Not Allowed');
 }
 
-export { reports, normalizeReports, validateReport, computeTop };
+export {
+  reports,
+  normalizeReports,
+  validateReport,
+  computeTop,
+  simulatePolicy,
+};

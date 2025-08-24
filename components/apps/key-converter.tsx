@@ -67,6 +67,7 @@ async function tryImportPem(pem: string): Promise<CryptoKey> {
 const KeyConverter: React.FC = () => {
   const [inputFormat, setInputFormat] = useState('pem');
   const [outputFormat, setOutputFormat] = useState('jwk');
+
   const [key, setKey] = useState('');
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
@@ -83,6 +84,7 @@ const KeyConverter: React.FC = () => {
         cryptoKey = await tryImportJwk(JSON.parse(key));
       } else if (inputFormat === 'pem') {
         cryptoKey = await tryImportPem(key);
+
       } else {
         const b64 = key.replace(/\s+/g, '');
         const body = b64.match(/.{1,64}/g)?.join('\n') || '';
@@ -108,11 +110,13 @@ const KeyConverter: React.FC = () => {
         const match = jwk.crv.match(/\d+/);
         if (match && parseInt(match[0], 10) < 256) {
           warn = `Warning: EC curve ${jwk.crv} is weak`;
+
         }
       }
       setWarning(warn);
 
       if (outputFormat === 'jwk') {
+
         setResult(JSON.stringify(jwk, null, 2));
       } else if (outputFormat === 'pem') {
         if ('d' in jwk) {
@@ -165,12 +169,13 @@ const KeyConverter: React.FC = () => {
           onChange={(e) => setOutputFormat(e.target.value)}
           className="px-2 py-1 text-black rounded"
         >
-          {formats.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
+        {formats.map((f) => (
+          <option key={f.value} value={f.value}>
+            {f.label}
+          </option>
+        ))}
         </select>
+
         <button onClick={convert} className="px-3 py-1 bg-blue-600 rounded">
           Convert
         </button>

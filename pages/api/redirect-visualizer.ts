@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Agent } from 'undici';
 import { setupUrlGuard } from '../../lib/urlGuard';
+import { fetchHead } from '../../lib/headCache';
 setupUrlGuard();
 
 const MAX_HOPS = 15;
@@ -47,11 +48,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     setCookie?: string;
     hsts?: string;
     altSvc?: string;
+    protocol: string;
+    crossSite: boolean;
+    insecure: boolean;
     time: number;
   }[] = [];
   let current = url;
   const visited = new Set<string>([current]);
   let headerBytes = 0;
+  let mixedContent = false;
 
   try {
     for (let i = 0; i < MAX_HOPS; i += 1) {
@@ -69,6 +74,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const hsts = response.headers.get('strict-transport-security') || undefined;
       const altSvc = response.headers.get('alt-svc') || undefined;
 
+      let alpn = 'http/1.1';
+      if (urlObj.protocol === 'https:') {
+        try {
+          const head = await fetchHead(current);
+          alpn = head.alpn || 'http/1.1';
+        } catch {
+          /* ignore */
+        }
+      }
+      const protocol = alpn.toLowerCase().includes('h2')
+        ? 'H2'
+        : alpn.toLowerCase().includes('h3')
+          ? 'H3'
+          : 'H1';
+
+      const crossSite =
+        chain.length > 0 &&
+        new URL(chain[chain.length - 1].url).origin !== urlObj.origin;
+      const insecure = urlObj.protocol !== 'https:';
+
       headerBytes += [...response.headers].reduce(
         (sum, [k, v]) => sum + k.length + v.length + 4,
         0,
@@ -81,6 +106,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         setCookie,
         hsts,
         altSvc,
+        protocol,
+        crossSite,
+        insecure,
         time,
       });
 
@@ -96,13 +124,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         visited.add(nextUrl);
         current = nextUrl;
       } else {
-        return res.status(200).json({ ok: true, chain });
+        if (urlObj.protocol === 'https:') {
+          try {
+            const finalRes = await fetch(current, {
+              method: 'GET',
+              // @ts-ignore - dispatcher is undici-specific
+              dispatcher: agents[urlObj.protocol],
+            } as any);
+            const body = (await finalRes.text()).slice(0, 1_000_000);
+            mixedContent = /http:\/\//i.test(body);
+          } catch {
+            /* ignore */
+          }
+        }
+        return res.status(200).json({ ok: true, chain, mixedContent });
       }
     }
 
-    return res.status(200).json({ ok: false, chain });
+    return res.status(200).json({ ok: false, chain, mixedContent });
   } catch {
-    return res.status(500).json({ ok: false, chain });
+    return res.status(500).json({ ok: false, chain, mixedContent });
   }
 }
 
