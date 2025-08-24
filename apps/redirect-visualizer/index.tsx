@@ -21,7 +21,7 @@ interface ApiResponse {
 
 function statusColor(status: number) {
   if (status >= 200 && status < 300) return 'text-green-500';
-  if (status >= 300 && status < 400) return 'text-yellow-500';
+  if ((status >= 300 && status < 400) || status === 0) return 'text-yellow-500';
   if (status >= 400) return 'text-red-500';
   return '';
 }
@@ -98,6 +98,9 @@ const RedirectVisualizer: React.FC = () => {
               <div className="text-sm">Protocol: {hop.protocol}</div>
               {hop.location && (
                 <div className="break-all text-sm">Location: {hop.location}</div>
+              )}
+              {hop.status === 0 && !hop.location && (
+                <div className="break-all text-sm">Location: (opaque)</div>
               )}
               {hop.setCookie && (
                 <div className="break-all text-sm">Set-Cookie: {hop.setCookie}</div>

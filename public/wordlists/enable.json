@@ -1,0 +1,12 @@
+[
+  {"word": "apple", "freq": 5000},
+  {"word": "banana", "freq": 4000},
+  {"word": "house", "freq": 4500},
+  {"word": "puzzle", "freq": 2000},
+  {"word": "gadget", "freq": 1500},
+  {"word": "computer", "freq": 1600},
+  {"word": "xylophone", "freq": 100},
+  {"word": "quizzical", "freq": 80},
+  {"word": "telecommunication", "freq": 10},
+  {"word": "jazz", "freq": 800}
+]

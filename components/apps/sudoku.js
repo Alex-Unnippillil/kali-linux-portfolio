@@ -1,28 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { solveRandom, countSolutions, isValid } from './sudoku-dlx';
+import { isValid } from './sudoku-dlx';
 
 const SIZE = 9;
 const range = (n) => Array.from({ length: n }, (_, i) => i);
-
-// Pseudo random generator so daily puzzles are deterministic
-const createRNG = (seed) => {
-  let t = seed >>> 0;
-  return () => {
-    t += 0x6D2B79F5;
-    let r = Math.imul(t ^ (t >>> 15), 1 | t);
-    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
-    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-  };
-};
-
-const shuffle = (arr, rng) => {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-};
 
 const dailySeed = () => {
   const str = new Date().toISOString().slice(0, 10);
@@ -88,29 +68,28 @@ const idbDelete = async (key) => {
   });
 };
 
-const generateSudoku = (difficulty = 'easy', seed = Date.now()) => {
-  const rng = createRNG(seed);
-  const empty = Array(SIZE)
-    .fill(0)
-    .map(() => Array(SIZE).fill(0));
-  const solution = solveRandom(empty, rng);
-  const puzzle = solution.map((row) => row.slice());
-  const holesByDiff = { easy: 35, medium: 45, hard: 55 };
-  let holes = holesByDiff[difficulty] || holesByDiff.easy;
-  const positions = shuffle(range(SIZE * SIZE), rng);
-  for (const pos of positions) {
-    if (holes === 0) break;
-    const r = Math.floor(pos / SIZE);
-    const c = pos % SIZE;
-    const backup = puzzle[r][c];
-    puzzle[r][c] = 0;
-    const copy = puzzle.map((row) => row.slice());
-    if (countSolutions(copy) !== 1) {
-      puzzle[r][c] = backup;
-    } else {
-      holes--;
-    }
-  }
+let workerRef = null;
+const initWorker = () => {
+  if (workerRef || typeof window === 'undefined') return;
+  workerRef = new Worker(new URL('./sudoku.worker.ts', import.meta.url));
+};
+
+const callWorker = (msg) =>
+  new Promise((resolve) => {
+    initWorker();
+    const worker = workerRef;
+    const handler = (e) => {
+      if (e.data.type === msg.type) {
+        worker.removeEventListener('message', handler);
+        resolve(e.data);
+      }
+    };
+    worker.addEventListener('message', handler);
+    worker.postMessage(msg);
+  });
+
+const generateSudoku = async (difficulty = 'easy', seed = Date.now()) => {
+  const { puzzle, solution } = await callWorker({ type: 'generate', difficulty, seed });
   return { puzzle, solution };
 };
 
@@ -130,8 +109,13 @@ const Sudoku = () => {
   const [time, setTime] = useState(0);
   const timerRef = useRef(null);
 
-  const startGame = (seedValue) => {
-    const { puzzle, solution } = generateSudoku(difficulty, seedValue);
+  useEffect(() => {
+    initWorker();
+    return () => workerRef && workerRef.terminate();
+  }, []);
+
+  const startGame = async (seedValue) => {
+    const { puzzle, solution } = await generateSudoku(difficulty, seedValue);
     setSeed(seedValue);
     setGame({ puzzle, solution });
     setBoard(puzzle.map((r) => r.slice()));
@@ -232,21 +216,15 @@ const Sudoku = () => {
     setNotes(newNotes);
   };
 
-  const getHintHandler = () => {
-    for (let r = 0; r < SIZE; r++) {
-      for (let c = 0; c < SIZE; c++) {
-        if (board[r][c] === 0) {
-          const cand = getCandidates(board, r, c);
-          if (cand.length === 1) {
-            setHint(`Cell (${r + 1},${c + 1}) must be ${cand[0]} (single candidate)`);
-            setHintCell({ r, c });
-            return;
-          }
-        }
-      }
+  const getHintHandler = async () => {
+    const { hint: h } = await callWorker({ type: 'hint', board });
+    if (h) {
+      setHint(`Cell (${h.r + 1},${h.c + 1}) must be ${h.val} (${h.reason})`);
+      setHintCell({ r: h.r, c: h.c });
+    } else {
+      setHint('No hints available');
+      setHintCell(null);
     }
-    setHint('No simple hints available');
-    setHintCell(null);
   };
 
   const hasConflict = (b, r, c, val) => {

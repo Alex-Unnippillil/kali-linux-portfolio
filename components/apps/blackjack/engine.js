@@ -135,11 +135,21 @@ export function basicStrategy(playerCards, dealerUpCard, options = {}) {
 }
 
 export class BlackjackGame {
-  constructor({ decks = 6, bankroll = 10000, hitSoft17 = true } = {}) {
+  constructor({
+    decks = 6,
+    bankroll = 10000,
+    hitSoft17 = true,
+    allowDouble = true,
+    allowSplit = true,
+    allowSurrender = true,
+  } = {}) {
     this.shoe = new Shoe(decks);
     this.bankroll = bankroll; // in chips (integers)
     this.stats = { wins: 0, losses: 0, pushes: 0, hands: 0 };
     this.hitSoft17 = hitSoft17;
+    this.allowDouble = allowDouble;
+    this.allowSplit = allowSplit;
+    this.allowSurrender = allowSurrender;
     this.resetRound();
   }
 
@@ -191,6 +201,7 @@ export class BlackjackGame {
   }
 
   double() {
+    if (!this.allowDouble) throw new Error('Double not allowed');
     const hand = this.currentHand();
     if (this.bankroll < hand.bet) throw new Error('Not enough bankroll');
     this.bankroll -= hand.bet;
@@ -203,6 +214,7 @@ export class BlackjackGame {
   }
 
   split() {
+    if (!this.allowSplit) throw new Error('Split not allowed');
     const hand = this.currentHand();
     const card1 = hand.cards[0];
     const card2 = hand.cards[1];
@@ -215,6 +227,7 @@ export class BlackjackGame {
   }
 
   surrender() {
+    if (!this.allowSurrender) throw new Error('Surrender not allowed');
     const hand = this.currentHand();
     if (hand.cards.length !== 2 || hand.finished) throw new Error('Cannot surrender');
     hand.finished = true;
@@ -287,5 +300,61 @@ export class BlackjackGame {
       this.stats.hands += 1;
     });
   }
+}
+
+// Monte Carlo house edge simulator respecting rule configuration
+export function computeHouseEdge({
+  decks = 6,
+  hitSoft17 = true,
+  allowDouble = true,
+  allowSplit = true,
+  allowSurrender = true,
+  rounds = 10000,
+  bet = 100,
+} = {}) {
+  // deterministic pseudo random generator for tests
+  let seed = 42;
+  function random() {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  }
+  const original = Math.random;
+  Math.random = random;
+
+  const starting = rounds * bet;
+  const game = new BlackjackGame({
+    decks,
+    bankroll: starting,
+    hitSoft17,
+    allowDouble,
+    allowSplit,
+    allowSurrender,
+  });
+
+  for (let i = 0; i < rounds; i += 1) {
+    game.startRound(bet);
+    while (game.playerHands.some((h) => !h.finished)) {
+      const hand = game.playerHands[game.current];
+      const dealerUp = game.dealerHand[0];
+      const options = {
+        canSplit:
+          allowSplit &&
+          hand.cards[0]?.value === hand.cards[1]?.value &&
+          game.playerHands.length === 1,
+        canDouble: allowDouble && hand.cards.length === 2,
+        canSurrender: allowSurrender && hand.cards.length === 2 && !hand.finished,
+      };
+      const action = basicStrategy(hand.cards, dealerUp, options);
+      if (action === 'hit') game.hit();
+      else if (action === 'stand') game.stand();
+      else if (action === 'double') game.double();
+      else if (action === 'split') game.split();
+      else if (action === 'surrender') game.surrender();
+    }
+  }
+
+  const edge = (game.bankroll - starting) / (rounds * bet);
+  Math.random = original;
+  return edge;
 }
 

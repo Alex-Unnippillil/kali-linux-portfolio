@@ -8,7 +8,10 @@ export interface Config {
   giveaway: boolean;
 }
 
-export interface Piece { color: Color; king: boolean; }
+export interface Piece {
+  color: Color;
+  king: boolean;
+}
 export type Board = (Piece | null)[][];
 
 export interface Move {
@@ -72,7 +75,7 @@ export const getPieceMoves = (
   board: Board,
   r: number,
   c: number,
-  config: Config,
+  config: Config
 ): Move[] => {
   const piece = board[r][c];
   if (!piece) return [];
@@ -84,7 +87,7 @@ export const getPieceMoves = (
     pr: number,
     pc: number,
     path: [number, number][],
-    caps: [number, number][],
+    caps: [number, number][]
   ) => {
     const p = b[pr][pc]!;
     const dirs = [...directions[p.color]];
@@ -119,14 +122,22 @@ export const getPieceMoves = (
   if (captureMoves.length) return captureMoves;
 
   const dirs = [...directions[piece.color]];
-  if (piece.king) dirs.push(...directions[piece.color === 'red' ? 'black' : 'red']);
+  if (piece.king)
+    dirs.push(...directions[piece.color === 'red' ? 'black' : 'red']);
   const moves: Move[] = [];
   for (const [dr, dc] of dirs) {
     const r1 = r + dr;
     const c1 = c + dc;
     if (!inBounds(r1, c1, config)) continue;
     if (!board[r1][c1]) {
-      moves.push({ from: [r, c], to: [r1, c1], path: [[r, c], [r1, c1]] });
+      moves.push({
+        from: [r, c],
+        to: [r1, c1],
+        path: [
+          [r, c],
+          [r1, c1],
+        ],
+      });
     }
   }
   return moves;
@@ -135,7 +146,7 @@ export const getPieceMoves = (
 export const getAllMoves = (
   board: Board,
   color: Color,
-  config: Config,
+  config: Config
 ): Move[] => {
   let result: Move[] = [];
   for (let r = 0; r < config.size; r++) {
@@ -146,9 +157,9 @@ export const getAllMoves = (
       }
     }
   }
-  const anyCapture = result.some((m) => (m.captures?.length || m.captured));
+  const anyCapture = result.some((m) => m.captures?.length || m.captured);
   return anyCapture
-    ? result.filter((m) => (m.captures?.length || m.captured))
+    ? result.filter((m) => m.captures?.length || m.captured)
     : result;
 };
 
@@ -158,7 +169,7 @@ export const hasMoves = (board: Board, color: Color, config: Config): boolean =>
 export const applyMove = (
   board: Board,
   move: Move,
-  config: Config,
+  config: Config
 ): { board: Board; capture: boolean; king: boolean } => {
   const newBoard = cloneBoard(board);
   const piece = newBoard[move.from[0]][move.from[1]]!;
@@ -207,15 +218,25 @@ export const countPieces = (board: Board, color: Color): number => {
 export const getWinner = (
   board: Board,
   turn: Color,
-  config: Config,
+  config: Config
 ): Color | null => {
   const opponent = turn === 'red' ? 'black' : 'red';
   if (config.giveaway) {
-    if (countPieces(board, turn) === 0 || !hasMoves(board, turn, config)) return turn;
-    if (countPieces(board, opponent) === 0 || !hasMoves(board, opponent, config)) return opponent;
+    if (countPieces(board, turn) === 0 || !hasMoves(board, turn, config))
+      return turn;
+    if (
+      countPieces(board, opponent) === 0 ||
+      !hasMoves(board, opponent, config)
+    )
+      return opponent;
   } else {
-    if (countPieces(board, opponent) === 0 || !hasMoves(board, opponent, config)) return turn;
-    if (countPieces(board, turn) === 0 || !hasMoves(board, turn, config)) return opponent;
+    if (
+      countPieces(board, opponent) === 0 ||
+      !hasMoves(board, opponent, config)
+    )
+      return turn;
+    if (countPieces(board, turn) === 0 || !hasMoves(board, turn, config))
+      return opponent;
   }
   return null;
 };
@@ -290,6 +311,29 @@ const transKey = (board: Board, color: Color, config: Config) => {
   return `${red}-${black}-${kings}-${color}`;
 };
 
+const orderMoves = (
+  board: Board,
+  moves: Move[],
+  color: Color,
+  config: Config
+) => {
+  const center = (config.size - 1) / 2;
+  moves.sort((a, b) => {
+    const aCaps = a.captures?.length || (a.captured ? 1 : 0);
+    const bCaps = b.captures?.length || (b.captured ? 1 : 0);
+    if (aCaps !== bCaps) return bCaps - aCaps;
+    const aPiece = board[a.from[0]][a.from[1]]!;
+    const bPiece = board[b.from[0]][b.from[1]]!;
+    if (aPiece.king !== bPiece.king) return bPiece.king ? 1 : -1;
+    const aForward = color === 'red' ? -a.to[0] : a.to[0];
+    const bForward = color === 'red' ? -b.to[0] : b.to[0];
+    if (aForward !== bForward) return aForward - bForward;
+    const aDist = Math.abs(a.to[0] - center) + Math.abs(a.to[1] - center);
+    const bDist = Math.abs(b.to[0] - center) + Math.abs(b.to[1] - center);
+    return aDist - bDist;
+  });
+};
+
 const minimax = (
   board: Board,
   color: Color,
@@ -300,9 +344,10 @@ const minimax = (
   start: number,
   limit: number,
   table: Map<string, { depth: number; score: number }>,
-  config: Config,
+  config: Config
 ): { score: number; move?: Move } => {
-  if (Date.now() - start >= limit) return { score: evaluateBoard(board, config) };
+  if (Date.now() - start >= limit)
+    return { score: evaluateBoard(board, config) };
   const key = transKey(board, maximizing ? color : opponent(color), config);
   const cached = table.get(key);
   if (cached && cached.depth >= depth) return { score: cached.score };
@@ -314,6 +359,7 @@ const minimax = (
   const turn = maximizing ? color : opponent(color);
   const moves = getAllMoves(board, turn, config);
   if (!moves.length) return { score: maximizing ? -Infinity : Infinity };
+  orderMoves(board, moves, turn, config);
   let bestMove: Move | undefined;
   for (const move of moves) {
     const { board: next } = applyMove(board, move, config);
@@ -327,7 +373,7 @@ const minimax = (
       start,
       limit,
       table,
-      config,
+      config
     );
     if (maximizing) {
       if (score > alpha) {
@@ -352,7 +398,7 @@ export const findBestMove = (
   board: Board,
   color: Color,
   config: Config,
-  options: SearchOptions,
+  options: SearchOptions
 ): Move | null => {
   const start = Date.now();
   const timeLimit = options.timeLimit ?? 200;
@@ -370,7 +416,7 @@ export const findBestMove = (
       start,
       timeLimit,
       table,
-      config,
+      config
     );
     if (move) best = move;
   }

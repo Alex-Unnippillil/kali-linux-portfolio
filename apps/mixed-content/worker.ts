@@ -4,6 +4,7 @@ export interface ScanResult {
   url: string;
   httpsUrl: string;
   category: 'active' | 'passive';
+  suggestion: string;
 }
 
 self.onmessage = (e: MessageEvent<string>) => {
@@ -27,12 +28,18 @@ self.onmessage = (e: MessageEvent<string>) => {
       ) {
         category = 'active';
       }
+      const httpsUrl = url.replace(/^http:\/\//i, 'https://');
+      let suggestion = `Replace with ${httpsUrl}`;
+      if (category === 'active') {
+        suggestion += ' or remove the insecure element';
+      }
       results.push({
         tag,
         attr,
         url,
-        httpsUrl: url.replace(/^http:\/\//i, 'https://'),
+        httpsUrl,
         category,
+        suggestion,
       });
     }
   });

@@ -4,6 +4,7 @@ import { generateGrid } from './generator';
 import type { Position } from './types';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
+import { findWord } from './utils';
 
 const GRID_SIZE = 12;
 
@@ -14,8 +15,15 @@ function key(p: Position) {
 function computePath(start: Position, end: Position): Position[] {
   const dx = Math.sign(end.col - start.col);
   const dy = Math.sign(end.row - start.row);
-  const len = Math.max(Math.abs(end.col - start.col), Math.abs(end.row - start.row));
-  if (dx !== 0 && dy !== 0 && Math.abs(end.col - start.col) !== Math.abs(end.row - start.row)) {
+  const len = Math.max(
+    Math.abs(end.col - start.col),
+    Math.abs(end.row - start.row)
+  );
+  if (
+    dx !== 0 &&
+    dy !== 0 &&
+    Math.abs(end.col - start.col) !== Math.abs(end.row - start.row)
+  ) {
     return [start];
   }
   const path: Position[] = [];
@@ -50,7 +58,10 @@ const WordSearch: React.FC = () => {
     if (typeof q.theme === 'string') setTheme(q.theme);
     if (typeof q.seed === 'string') setSeed(q.seed);
     if (typeof q.words === 'string') {
-      const qs = q.words.split(',').map((w) => w.toUpperCase()).filter(Boolean);
+      const qs = q.words
+        .split(',')
+        .map((w) => w.toUpperCase())
+        .filter(Boolean);
       setWords(qs);
     }
   }, [router.isReady]);
@@ -59,10 +70,12 @@ const WordSearch: React.FC = () => {
     fetch('/wordlists/packs.json')
       .then((res) => res.json())
       .then((data) => {
-        const arr = Object.entries(data as Record<string, string>).map(([id, name]) => ({
-          id,
-          name,
-        }));
+        const arr = Object.entries(data as Record<string, string>).map(
+          ([id, name]) => ({
+            id,
+            name,
+          })
+        );
         setPacks(arr);
         if (!router.query.theme && arr.length) setTheme(arr[0].id);
       });
@@ -105,9 +118,10 @@ const WordSearch: React.FC = () => {
     const { grid: g } = generateGrid(words, GRID_SIZE, seed);
     setGrid(g);
 
-    const saved = typeof window !== 'undefined'
-      ? window.localStorage.getItem(`word-search-${storageKey}`)
-      : null;
+    const saved =
+      typeof window !== 'undefined'
+        ? window.localStorage.getItem(`word-search-${storageKey}`)
+        : null;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -177,9 +191,7 @@ const WordSearch: React.FC = () => {
       setSelection([]);
       return;
     }
-    const letters = selection.map((p) => grid[p.row][p.col]).join('');
-    const reversed = letters.split('').reverse().join('');
-    const match = words.find((w) => w === letters || w === reversed);
+    const match = findWord(grid, words, selection);
     if (match && !found.has(match)) {
       const newFound = new Set(found);
       newFound.add(match);
@@ -195,7 +207,10 @@ const WordSearch: React.FC = () => {
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!selecting) return;
     const touch = e.touches[0];
-    const target = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null;
+    const target = document.elementFromPoint(
+      touch.clientX,
+      touch.clientY
+    ) as HTMLElement | null;
     const pos = target?.dataset?.pos;
     if (!pos) return;
     const [r, c] = pos.split('-').map(Number);
@@ -225,6 +240,24 @@ const WordSearch: React.FC = () => {
     pdf.save(`word-search-${theme}.pdf`);
   };
 
+  const printPuzzle = () => {
+    window.print();
+  };
+
+  const sharePuzzle = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Word Search', url });
+      } catch {
+        // ignore share cancellation
+      }
+    } else {
+      await navigator.clipboard.writeText(url);
+      alert('Link copied to clipboard');
+    }
+  };
+
   const importWords = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -248,6 +281,42 @@ const WordSearch: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const moveFocus = (r: number, c: number, dr: number, dc: number) => {
+    const nr = Math.max(0, Math.min(GRID_SIZE - 1, r + dr));
+    const nc = Math.max(0, Math.min(GRID_SIZE - 1, c + dc));
+    const el = document.querySelector<HTMLElement>(`[data-pos="${nr}-${nc}"]`);
+    el?.focus();
+    handleMouseEnter(nr, nc);
+  };
+
+  const handleKeyDown = (r: number, c: number, e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        moveFocus(r, c, -1, 0);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        moveFocus(r, c, 1, 0);
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        moveFocus(r, c, 0, -1);
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        moveFocus(r, c, 0, 1);
+        break;
+      case 'Enter':
+      case ' ': {
+        e.preventDefault();
+        if (!selecting) handleMouseDown(r, c);
+        else handleMouseUp();
+        break;
+      }
+    }
+  };
+
   const formatTime = (ms: number) => {
     const total = Math.floor(ms / 1000);
     const m = Math.floor(total / 60)
@@ -258,7 +327,11 @@ const WordSearch: React.FC = () => {
   };
 
   return (
-    <div className="p-4 select-none" ref={containerRef} id="word-search-container">
+    <div
+      className="p-4 select-none"
+      ref={containerRef}
+      id="word-search-container"
+    >
       <div className="flex flex-wrap space-x-2 mb-2 print:hidden">
         <input
           ref={fileRef}
@@ -304,6 +377,22 @@ const WordSearch: React.FC = () => {
         </button>
         <button
           type="button"
+          onClick={printPuzzle}
+          aria-label="Print puzzle"
+          className="px-2 py-1 bg-indigo-600 text-white rounded"
+        >
+          Print
+        </button>
+        <button
+          type="button"
+          onClick={sharePuzzle}
+          aria-label="Share puzzle"
+          className="px-2 py-1 bg-pink-600 text-white rounded"
+        >
+          Share
+        </button>
+        <button
+          type="button"
           onClick={() => fileRef.current?.click()}
           aria-label="Import words"
           className="px-2 py-1 bg-green-600 text-white rounded"
@@ -322,7 +411,7 @@ const WordSearch: React.FC = () => {
       </div>
       <div
         style={{
-          gridTemplateColumns: `repeat(${GRID_SIZE}, 2rem)` ,
+          gridTemplateColumns: `repeat(${GRID_SIZE}, 2rem)`,
           gridTemplateRows: `repeat(${GRID_SIZE}, 2rem)`,
         }}
         className="grid border w-max"
@@ -334,25 +423,33 @@ const WordSearch: React.FC = () => {
         {grid.map((row, r) =>
           row.map((letter, c) => {
             const posKey = key({ row: r, col: c });
-            const isSelected = selection.some((p) => p.row === r && p.col === c);
+            const isSelected = selection.some(
+              (p) => p.row === r && p.col === c
+            );
             const isFound = foundCells.has(posKey);
             return (
-              <div
+              <button
+                type="button"
                 key={posKey}
                 data-pos={posKey}
                 onMouseDown={() => handleMouseDown(r, c)}
                 onMouseEnter={() => handleMouseEnter(r, c)}
                 onMouseUp={handleMouseUp}
+                onKeyDown={(e) => handleKeyDown(r, c, e)}
                 onTouchStart={(e) => {
                   e.preventDefault();
                   handleMouseDown(r, c);
                 }}
-                className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none ${
-                  isFound ? 'bg-green-300' : isSelected ? 'bg-yellow-300' : 'bg-white'
+                className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none focus:outline-none ${
+                  isFound
+                    ? 'bg-green-300'
+                    : isSelected
+                      ? 'bg-yellow-300'
+                      : 'bg-white'
                 }`}
               >
                 {letter}
-              </div>
+              </button>
             );
           })
         )}
@@ -369,7 +466,10 @@ const WordSearch: React.FC = () => {
       )}
       <ul className="mt-4 columns-2 md:columns-3">
         {words.map((w) => (
-          <li key={w} className={found.has(w) ? 'line-through text-gray-500' : ''}>
+          <li
+            key={w}
+            className={found.has(w) ? 'line-through text-gray-500' : ''}
+          >
             {w}
           </li>
         ))}
@@ -379,4 +479,3 @@ const WordSearch: React.FC = () => {
 };
 
 export default WordSearch;
-

@@ -8,6 +8,7 @@ export default class Ball {
   canvasHeight: number;
   maxSpeed = 600;
   stuck = false;
+  spin = 0;
 
   constructor(canvasWidth: number, canvasHeight: number) {
     this.canvasWidth = canvasWidth;
@@ -25,6 +26,10 @@ export default class Ball {
 
   update(dt: number) {
     if (this.stuck) return;
+    if (this.spin) {
+      this.vx += this.spin * dt;
+      this.spin *= 0.98;
+    }
     let remaining = dt;
     const step = 1 / 60; // base fixed step
     while (remaining > 0) {
@@ -49,9 +54,13 @@ export default class Ball {
   }
 
   draw(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#0ff';
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
     ctx.fillStyle = 'white';
     ctx.fill();
+    ctx.restore();
   }
 }

@@ -92,26 +92,40 @@ export default class Ghost {
     }
   }
 
+  /**
+   * Return the tile this ghost should target based on the current mode.
+   * In frightened mode ghosts don't aim for any tile so `null` is returned.
+   */
+  getTargetTile(
+    mode: GhostMode,
+    player: Player,
+    maze: Maze,
+    blinky?: Ghost,
+  ) {
+    if (mode === "frightened") return null;
+    if (mode === "scatter") return this.scatter;
+    return this.getChaseTarget(player, maze, blinky);
+  }
+
   private pathfind(target: { x: number; y: number }, maze: Maze) {
     const ts = maze.tileSize;
     const sx = Math.floor(this.x / ts);
     const sy = Math.floor(this.y / ts);
-    const visited = new Set<string>();
-    const q: { x: number; y: number; path: { x: number; y: number }[] }[] = [];
-    q.push({ x: sx, y: sy, path: [] });
-    visited.add(`${sx},${sy}`);
+    const visited = new Set<string>([`${sx},${sy}`]);
+    const q: { x: number; y: number; first?: { x: number; y: number } }[] = [
+      { x: sx, y: sy },
+    ];
     while (q.length) {
       const cur = q.shift()!;
-      if (cur.x === target.x && cur.y === target.y) {
-        return cur.path[0] || { x: 0, y: 0 };
-      }
+      if (cur.x === target.x && cur.y === target.y)
+        return cur.first || { x: 0, y: 0 };
       for (const d of DIRS) {
         const nx = cur.x + d.x;
         const ny = cur.y + d.y;
         const key = `${nx},${ny}`;
         if (visited.has(key) || maze.isWallTile(nx, ny)) continue;
         visited.add(key);
-        q.push({ x: nx, y: ny, path: [...cur.path, d] });
+        q.push({ x: nx, y: ny, first: cur.first || d });
       }
     }
     return { x: 0, y: 0 };
@@ -139,11 +153,8 @@ export default class Ghost {
       );
       dir = choices[Math.floor(Math.random() * choices.length)] || dir;
     } else {
-      const target =
-        curMode === "scatter"
-          ? this.scatter
-          : this.getChaseTarget(player, maze, blinky);
-      dir = this.pathfind(target, maze);
+      const target = this.getTargetTile(curMode, player, maze, blinky);
+      dir = target ? this.pathfind(target, maze) : dir;
     }
     this.dir = dir;
     const tunnel = maze.isTunnel(this.x, this.y);

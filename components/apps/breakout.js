@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import Paddle from '../../apps/breakout/Paddle';
 import Ball from '../../apps/breakout/Ball';
 import Brick from '../../apps/breakout/Brick';
+import { collideBallRect } from '../../apps/breakout/physics';
 
 const rowsByDifficulty = { easy: 3, medium: 5, hard: 7 };
 const speedByDifficulty = { easy: 150, medium: 200, hard: 250 };
@@ -84,6 +85,12 @@ const Breakout = () => {
   const [editing, setEditing] = useState(false);
   const [customLayout, setCustomLayout] = useState(null);
   const [levels, setLevels] = useState([]);
+  const [score, setScore] = useState(0);
+  const scoreRef = useRef(0);
+  const [lives, setLives] = useState(3);
+  const livesRef = useRef(3);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
   const replayRef = useRef([]);
   const elapsedRef = useRef(0);
 
@@ -102,6 +109,16 @@ const Breakout = () => {
   }, []);
 
   useEffect(() => {
+    scoreRef.current = score;
+  }, [score]);
+  useEffect(() => {
+    livesRef.current = lives;
+  }, [lives]);
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  useEffect(() => {
     fetch('/api/breakout/levels')
       .then((res) => res.json())
       .then((data) => setLevels(data))
@@ -118,6 +135,11 @@ const Breakout = () => {
     let height = container.clientHeight;
     canvas.width = width;
     canvas.height = height;
+    setScore(0);
+    scoreRef.current = 0;
+    setLives(3);
+    livesRef.current = 3;
+    setPaused(false);
 
     const resizeObserver = new ResizeObserver((entries) => {
       const cr = entries[0].contentRect;
@@ -177,6 +199,7 @@ const Breakout = () => {
         releaseBalls();
         paddle.shoot();
       }
+      if (e.key === 'p' || e.key === 'Escape') setPaused((p) => !p);
     };
     const keyUp = (e) => {
       if (e.key === 'ArrowLeft') keys.left = false;
@@ -186,8 +209,9 @@ const Breakout = () => {
     window.addEventListener('keyup', keyUp);
 
     const pointerMove = (e) => {
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const rect = canvas.getBoundingClientRect();
-      paddle.x = e.clientX - rect.left - paddle.width / 2;
+      paddle.x = clientX - rect.left - paddle.width / 2;
       if (paddle.x < 0) paddle.x = 0;
       if (paddle.x + paddle.width > width) paddle.x = width - paddle.width;
     };
@@ -197,6 +221,8 @@ const Breakout = () => {
     };
     canvas.addEventListener('pointermove', pointerMove);
     canvas.addEventListener('pointerdown', pointerDown);
+    canvas.addEventListener('touchmove', pointerMove);
+    canvas.addEventListener('touchstart', pointerDown);
 
     let lastTime = 0;
 
@@ -226,47 +252,6 @@ const Breakout = () => {
         });
       }
       return arr;
-    };
-    const sweptAABB = (ball, rect, dt) => {
-      const dx = ball.vx * dt;
-      const dy = ball.vy * dt;
-      const invEntry = { x: 0, y: 0 };
-      const invExit = { x: 0, y: 0 };
-      if (dx > 0) {
-        invEntry.x = rect.x - (ball.x + ball.r);
-        invExit.x = rect.x + rect.w - (ball.x - ball.r);
-      } else {
-        invEntry.x = rect.x + rect.w - (ball.x - ball.r);
-        invExit.x = rect.x - (ball.x + ball.r);
-      }
-      if (dy > 0) {
-        invEntry.y = rect.y - (ball.y + ball.r);
-        invExit.y = rect.y + rect.h - (ball.y - ball.r);
-      } else {
-        invEntry.y = rect.y + rect.h - (ball.y - ball.r);
-        invExit.y = rect.y - (ball.y + ball.r);
-      }
-      const entry = {
-        x: dx === 0 ? -Infinity : invEntry.x / dx,
-        y: dy === 0 ? -Infinity : invEntry.y / dy,
-      };
-      const exit = {
-        x: dx === 0 ? Infinity : invExit.x / dx,
-        y: dy === 0 ? Infinity : invExit.y / dy,
-      };
-      const entryTime = Math.max(entry.x, entry.y);
-      const exitTime = Math.min(exit.x, exit.y);
-      if (entryTime > exitTime || entry.x < 0 && entry.y < 0 || entryTime > 1 || entryTime < 0) {
-        return null;
-      }
-      let nx = 0;
-      let ny = 0;
-      if (entry.x > entry.y) {
-        nx = invEntry.x < 0 ? 1 : -1;
-      } else {
-        ny = invEntry.y < 0 ? 1 : -1;
-      }
-      return { time: entryTime, nx, ny };
     };
     const drawBricks = () => {
       const groups = { normal: [], power: [], boss: [] };
@@ -303,6 +288,7 @@ const Breakout = () => {
     };
 
     const update = (dt) => {
+      if (pausedRef.current) return;
       const dtAdj = dt * speedFactor;
       paddle.move((keys.right ? 1 : 0) - (keys.left ? 1 : 0), dtAdj);
       paddle.updateLasers(dtAdj);
@@ -317,20 +303,14 @@ const Breakout = () => {
       });
 
       balls.forEach((b) => {
-        const res = sweptAABB(b, { x: paddle.x, y: paddle.y, w: paddle.width, h: paddle.height }, dtAdj);
-        if (res && b.vy > 0) {
-          b.x += b.vx * res.time;
-          b.y += b.vy * res.time;
+        if (
+          b.vy > 0 &&
+          collideBallRect(b, { x: paddle.x, y: paddle.y, w: paddle.width, h: paddle.height }, paddle.vx)
+        ) {
           if (paddle.sticky) {
             b.stuck = true;
             b.vx = 0;
             b.vy = 0;
-          } else {
-            const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
-            const relative = (b.x - (paddle.x + paddle.width / 2)) / (paddle.width / 2);
-            const angle = relative * (Math.PI / 3);
-            b.vx = speed * Math.sin(angle) + paddle.vx * 0.1;
-            b.vy = -Math.abs(speed * Math.cos(angle));
           }
           playSound(200);
         }
@@ -345,6 +325,8 @@ const Breakout = () => {
           if (!br.destroyed && l.x > br.x && l.x < br.x + br.w && l.y > br.y && l.y < br.y + br.h) {
             br.hit();
             if (br.destroyed) {
+              scoreRef.current += 100;
+              setScore(scoreRef.current);
               particles.push(...spawnParticles(br.x + br.w / 2, br.y + br.h / 2));
               if (br.powerUp) spawnPowerUp(br.x + br.w / 2, br.y + br.h / 2, br.powerUp);
             }
@@ -355,14 +337,11 @@ const Breakout = () => {
       balls.forEach((b) => {
         bricks.forEach((br) => {
           if (br.destroyed) return;
-          const res = sweptAABB(b, br, dtAdj);
-          if (res) {
-            b.x += b.vx * res.time;
-            b.y += b.vy * res.time;
-            if (res.nx) b.vx *= -1;
-            if (res.ny) b.vy *= -1;
+          if (collideBallRect(b, br)) {
             br.hit();
             if (br.destroyed) {
+              scoreRef.current += 100;
+              setScore(scoreRef.current);
               playSound(400);
               particles.push(...spawnParticles(br.x + br.w / 2, br.y + br.h / 2));
               if (br.powerUp) spawnPowerUp(br.x + br.w / 2, br.y + br.h / 2, br.powerUp);
@@ -422,7 +401,13 @@ const Breakout = () => {
       });
 
       if (balls.length === 0) {
-        balls.push(new Ball(width, height));
+        livesRef.current -= 1;
+        setLives(livesRef.current);
+        if (livesRef.current > 0) {
+          balls.push(new Ball(width, height));
+        } else {
+          setPaused(true);
+        }
       }
     };
 
@@ -466,6 +451,8 @@ const Breakout = () => {
       window.removeEventListener('keyup', keyUp);
       canvas.removeEventListener('pointermove', pointerMove);
       canvas.removeEventListener('pointerdown', pointerDown);
+      canvas.removeEventListener('touchmove', pointerMove);
+      canvas.removeEventListener('touchstart', pointerDown);
       resizeObserver.disconnect();
       cancelAnimationFrame(id);
     };
@@ -511,35 +498,60 @@ const Breakout = () => {
       ) : (
         <>
           <canvas ref={canvasRef} className="touch-none" />
-            <div className="absolute top-2 left-2 space-x-2 text-white">
-              <select
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value)}
-                className="text-black px-1"
-              >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-              </select>
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="px-2 py-1 bg-blue-600"
-              >
-                Edit Level
-              </button>
-              <button
-                type="button"
-                onClick={saveReplay}
-                className="px-2 py-1 bg-green-700"
-              >
-                Save Replay
-              </button>
+          <div className="absolute top-2 left-2 space-x-2 text-white">
+            <select
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value)}
+              className="text-black px-1"
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="px-2 py-1 bg-blue-600"
+            >
+              Edit Level
+            </button>
+            <button
+              type="button"
+              onClick={saveReplay}
+              className="px-2 py-1 bg-green-700"
+            >
+              Save Replay
+            </button>
+          </div>
+          <div className="absolute top-2 right-2 space-x-4 text-white">
+            <span>Score: {score}</span>
+            <span>Lives: {lives}</span>
+            <button
+              type="button"
+              onClick={() => setPaused((p) => !p)}
+              className="px-2 py-1 bg-gray-700"
+            >
+              {paused ? 'Resume' : 'Pause'}
+            </button>
+          </div>
+          {paused && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-white">
+              <div className="space-y-2 text-center">
+                <div>Paused</div>
+                <button
+                  type="button"
+                  onClick={() => setPaused(false)}
+                  className="px-2 py-1 bg-green-600"
+                >
+                  Resume
+                </button>
+              </div>
             </div>
-          </>
-        )}
-      </div>
-    );
+          )}
+        </>
+      )}
+    </div>
+  );
 };
 
 export default Breakout;

@@ -4,6 +4,8 @@ export default class Background {
     this.height = height;
     this.reducedMotion = false;
     this.colorBlind = false;
+    this.cycleTime = 0;
+    this.cycleDuration = 10000; // ms between theme switches
     this.themes = {
       day: {
         sky: '#87CEEB',
@@ -43,12 +45,19 @@ export default class Background {
   }
 
   update(dt = 1) {
+    // handle parallax offsets
     this.layers.forEach((layer) => {
       layer.offset -= layer.speed * dt;
       if (layer.offset <= -this.width) {
         layer.offset += this.width;
       }
     });
+    // advance day/night cycle
+    this.cycleTime += dt * 16.6667; // convert frames to ms
+    if (this.cycleTime >= this.cycleDuration) {
+      this.cycleTime = 0;
+      this.setTheme(this.theme === 'day' ? 'night' : 'day');
+    }
   }
 
   draw(ctx) {

@@ -1,268 +1,187 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import mermaid from 'mermaid';
-import {
-  readFileChunks,
-  parseSbomObject,
-  fetchOsv,
-  severityRank,
-  ParsedSbom,
-  SbomComponent,
-} from '../../lib/sbom';
+import React, { useEffect, useState } from 'react';
+import { XMLParser } from 'fast-xml-parser';
 
-const sanitize = (s: string) => s.replace(/[^A-Za-z0-9_]/g, '_');
+interface PackageInfo {
+  name: string;
+  version: string;
+  licenses: string[];
+  vulns?: { id: string; summary: string }[];
+}
+
+const parseCycloneDxJson = (data: any): PackageInfo[] => {
+  const comps = data.components || [];
+  return comps.map((c: any) => ({
+    name: c.name,
+    version: c.version || '',
+    licenses:
+      (c.licenses || []).map((l: any) => l.license?.id || l.license?.name || l.expression).filter(Boolean),
+  }));
+};
+
+const parseCycloneDxXml = (data: any): PackageInfo[] => {
+  let comps = data.bom?.components?.component;
+  if (!comps) return [];
+  if (!Array.isArray(comps)) comps = [comps];
+  return comps.map((c: any) => {
+    const licNode = c.licenses?.license;
+    let licenses: string[] = [];
+    if (Array.isArray(licNode)) {
+      licenses = licNode.map((l: any) => l.id || l.name).filter(Boolean);
+    } else if (licNode) {
+      licenses = [licNode.id || licNode.name].filter(Boolean);
+    }
+    return { name: c.name, version: c.version || '', licenses };
+  });
+};
+
+const parseSpdxJson = (data: any): PackageInfo[] => {
+  return (data.packages || []).map((p: any) => ({
+    name: p.name,
+    version: p.versionInfo || '',
+    licenses: [p.licenseConcluded, p.licenseDeclared].filter(Boolean),
+  }));
+};
+
+const parseSbom = (text: string): PackageInfo[] => {
+  try {
+    const json = JSON.parse(text);
+    if (json.bomFormat === 'CycloneDX') return parseCycloneDxJson(json);
+    if (json.spdxVersion) return parseSpdxJson(json);
+  } catch {
+    try {
+      const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '' });
+      const obj = parser.parse(text);
+      if (obj.bom) return parseCycloneDxXml(obj);
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
+const fetchVulns = async (pkgs: PackageInfo[]) => {
+  return Promise.all(
+    pkgs.map(async (p) => {
+      try {
+        const res = await fetch('https://api.osv.dev/v1/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ package: { name: p.name, ecosystem: 'npm' }, version: p.version }),
+        });
+        const data = await res.json();
+        p.vulns = data.vulns || [];
+      } catch {
+        p.vulns = [];
+      }
+      return p;
+    })
+  );
+};
 
 const SbomViewer: React.FC = () => {
-  const [sbom, setSbom] = useState<ParsedSbom | null>(null);
-  const [licenseFilter, setLicenseFilter] = useState('');
-  const [severityFilter, setSeverityFilter] = useState('');
-  const [supplierFilter, setSupplierFilter] = useState('');
-  const [query, setQuery] = useState('');
-  const [rootId, setRootId] = useState('');
+  const [pkgsA, setPkgsA] = useState<PackageInfo[]>([]);
+  const [pkgsB, setPkgsB] = useState<PackageInfo[]>([]);
+  const [diff, setDiff] = useState<{ added: PackageInfo[]; removed: PackageInfo[] }>({ added: [], removed: [] });
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const loadFile = async (e: React.ChangeEvent<HTMLInputElement>, which: 'A' | 'B') => {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      const text = await readFileChunks(file);
-      const data = JSON.parse(text);
-      const parsed = parseSbomObject(data);
-      await Promise.all(parsed.components.map((c) => fetchOsv(c)));
-      setSbom(parsed);
-    } catch (err: any) {
-      alert(err.message || 'Failed to parse SBOM file');
-    }
-  };
-
-  const components = useMemo(() => {
-    if (!sbom) return [];
-    return sbom.components.filter((c) => {
-      const licenseOk =
-        !licenseFilter ||
-        c.licenses.some((l) =>
-          l.toLowerCase().includes(licenseFilter.toLowerCase())
-        );
-      const severityOk =
-        !severityFilter ||
-        c.vulns.some(
-          (v) => severityRank(v.severity) >= severityRank(severityFilter)
-        );
-      const supplierOk =
-        !supplierFilter ||
-        (c.supplier || '')
-          .toLowerCase()
-          .includes(supplierFilter.toLowerCase());
-      const queryOk =
-        !query || c.name.toLowerCase().includes(query.toLowerCase());
-      return licenseOk && severityOk && supplierOk && queryOk;
-    });
-  }, [sbom, licenseFilter, severityFilter, supplierFilter, query]);
-
-  const licenseCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    components.forEach((c) =>
-      c.licenses.forEach((l) => {
-        counts[l] = (counts[l] || 0) + 1;
-      })
-    );
-    return counts;
-  }, [components]);
-
-  const maxLicenseCount = useMemo(
-    () => Math.max(1, ...Object.values(licenseCounts)),
-    [licenseCounts]
-  );
-
-  const idMap = useMemo(() => {
-    const map: Record<string, SbomComponent> = {};
-    sbom?.components.forEach((c) => (map[c.id] = c));
-    return map;
-  }, [sbom]);
-
-  const graph = useMemo(() => {
-    if (!sbom) return {} as Record<string, string[]>;
-    const ids = new Set(components.map((c) => c.id));
-    const filtered: Record<string, string[]> = {};
-    ids.forEach((id) => {
-      const deps = sbom.graph[id]?.filter((d) => ids.has(d));
-      if (deps && deps.length) filtered[id] = deps;
-    });
-    return filtered;
-  }, [sbom, components]);
-
-  const graphText = useMemo(() => {
-    const lines = ['graph LR'];
-    Object.entries(graph).forEach(([from, tos]) => {
-      tos.forEach((to) => lines.push(`${sanitize(from)}-->${sanitize(to)}`));
-    });
-    return lines.join('\n');
-  }, [graph]);
-
-  const renderTree = (
-    id: string,
-    seen: Set<string> = new Set()
-  ): JSX.Element => {
-    if (seen.has(id)) return <li key={id}>{id}</li>;
-    seen.add(id);
-    const children = graph[id] || [];
-    return (
-      <li key={id}>
-        {idMap[id]?.name || id}
-        {children.length > 0 && (
-          <ul>{children.map((c) => renderTree(c, new Set(seen)))}</ul>
-        )}
-      </li>
-    );
+    const text = await file.text();
+    const pkgs = parseSbom(text);
+    if (which === 'A') setPkgsA(pkgs);
+    else setPkgsB(pkgs);
   };
 
   useEffect(() => {
-    if (!graphText || !sbom) return;
-    mermaid.initialize({ startOnLoad: false });
-    mermaid.contentLoaded();
-  }, [graphText, sbom]);
+    if (pkgsA.length) fetchVulns(pkgsA).then(setPkgsA);
+  }, [pkgsA.length]);
 
-  const exportFiltered = () => {
-    const blob = new Blob(
-      [JSON.stringify({ components, dependencies: graph }, null, 2)],
-      { type: 'application/json' }
-    );
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'filtered-sbom.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
+  useEffect(() => {
+    if (pkgsB.length) fetchVulns(pkgsB).then(setPkgsB);
+  }, [pkgsB.length]);
+
+  useEffect(() => {
+    const mapA = new Map(pkgsA.map((p) => [p.name + '@' + p.version, p]));
+    const mapB = new Map(pkgsB.map((p) => [p.name + '@' + p.version, p]));
+    const added: PackageInfo[] = [];
+    const removed: PackageInfo[] = [];
+    for (const [k, v] of mapB) if (!mapA.has(k)) added.push(v);
+    for (const [k, v] of mapA) if (!mapB.has(k)) removed.push(v);
+    setDiff({ added, removed });
+  }, [pkgsA, pkgsB]);
 
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
-      <input
-        type="file"
-        accept=".json,.spdx,.cdx"
-        onChange={handleFileUpload}
-      />
-      <div className="flex flex-wrap gap-2">
-        <input
-          type="text"
-          placeholder="Search components"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="text-black p-1"
-        />
-        <input
-          type="text"
-          placeholder="Filter by supplier"
-          value={supplierFilter}
-          onChange={(e) => setSupplierFilter(e.target.value)}
-          className="text-black p-1"
-        />
-        <input
-          type="text"
-          placeholder="Filter by license"
-          value={licenseFilter}
-          onChange={(e) => setLicenseFilter(e.target.value)}
-          className="text-black p-1"
-        />
-        <select
-          value={severityFilter}
-          onChange={(e) => setSeverityFilter(e.target.value)}
-          className="text-black p-1"
-        >
-          <option value="">All severities</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-          <option value="critical">Critical</option>
-        </select>
-        <button onClick={exportFiltered} className="bg-blue-600 px-2 py-1">
-          Export
-        </button>
-      </div>
-
-      {Object.keys(licenseCounts).length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(licenseCounts).map(([l, count]) => {
-            const intensity = count / maxLicenseCount;
-            const color = `hsl(${120 - intensity * 120},70%,45%)`;
-            return (
-              <div
-                key={l}
-                className="p-2 rounded text-black"
-                style={{ backgroundColor: color }}
-              >
-                {l}: {count}
-              </div>
-            );
-          })}
+    <div className="p-4 text-white bg-ub-cool-grey h-full w-full overflow-auto text-xs">
+      <div className="mb-4 space-y-2">
+        <div>
+          <label className="font-bold">SBOM A: </label>
+          <input type="file" onChange={(e) => loadFile(e, 'A')} />
         </div>
-      )}
-      <div className="overflow-auto flex-1">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr>
-              <th className="border-b p-2">Component</th>
-              <th className="border-b p-2">Supplier</th>
-              <th className="border-b p-2">Licenses</th>
-              <th className="border-b p-2">Vulnerabilities</th>
+        <div>
+          <label className="font-bold">SBOM B: </label>
+          <input type="file" onChange={(e) => loadFile(e, 'B')} />
+        </div>
+      </div>
+      <table className="mb-4 w-full table-auto border text-xs">
+        <thead>
+          <tr>
+            <th className="border px-1">Package</th>
+            <th className="border px-1">Version</th>
+            <th className="border px-1">Licenses</th>
+            <th className="border px-1">Vulnerabilities</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pkgsA.map((p, i) => (
+            <tr key={i}>
+              <td className="border px-1">{p.name}</td>
+              <td className="border px-1">{p.version}</td>
+              <td className="border px-1">{p.licenses.join(', ')}</td>
+              <td className="border px-1">
+                {p.vulns && p.vulns.length > 0
+                  ? p.vulns.map((v) => v.id).join(', ')
+                  : '—'}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {components.map((c, i) => (
-              <tr key={i} className="odd:bg-gray-800">
-                <td className="p-2">
-                  {c.name}
-                  {c.version ? `@${c.version}` : ''}
-                </td>
-                <td className="p-2">{c.supplier || 'N/A'}</td>
-                <td className="p-2">{c.licenses.join(', ') || 'N/A'}</td>
-                <td className="p-2">
-                  {c.vulns.length
-                    ? c.vulns
-                        .map((v) =>
-                          `${v.id}${v.severity ? ` (${v.severity})` : ''}`
-                        )
-                        .join(', ')
-                    : 'None'}
-                </td>
-              </tr>
-            ))}
-            {components.length === 0 && (
-              <tr>
-                <td colSpan={4} className="p-2 text-center">
-                  Upload an SBOM to view components
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <select
-          value={rootId}
-          onChange={(e) => setRootId(e.target.value)}
-          className="text-black p-1"
-        >
-          <option value="">Select root for dependency tree</option>
-          {components.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-              {c.version ? `@${c.version}` : ''}
-            </option>
           ))}
-        </select>
+        </tbody>
+      </table>
+      {(diff.added.length > 0 || diff.removed.length > 0) && (
+        <div className="mb-4">
+          <h3 className="font-bold mb-2">SBOM Diff</h3>
+          {diff.added.length > 0 && (
+            <div className="mb-2">
+              <h4 className="font-semibold">Added</h4>
+              <ul className="list-disc pl-4">
+                {diff.added.map((p, i) => (
+                  <li key={i}>{`${p.name}@${p.version}`}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {diff.removed.length > 0 && (
+            <div className="mb-2">
+              <h4 className="font-semibold">Removed</h4>
+              <ul className="list-disc pl-4">
+                {diff.removed.map((p, i) => (
+                  <li key={i}>{`${p.name}@${p.version}`}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+      <div>
+        <h3 className="font-bold mb-2">Syft GitHub Action</h3>
+        <pre className="bg-black p-2 overflow-auto text-[10px]">{`- name: Generate SBOM
+  uses: anchore/syft-action@v0.15.0
+  with:
+    source: .
+    output: sbom.json`}</pre>
       </div>
-
-      {rootId && (
-        <div className="bg-gray-800 p-2 rounded overflow-auto max-h-64">
-          <ul>{renderTree(rootId)}</ul>
-        </div>
-      )}
-      {graphText && (
-        <div className="mermaid overflow-auto bg-gray-800 p-2 rounded">
-          {graphText}
-        </div>
-      )}
     </div>
   );
 };
 
 export default SbomViewer;
+
