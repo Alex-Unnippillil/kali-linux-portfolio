@@ -5,6 +5,7 @@ export interface Hint {
   col: number;
   value: number;
   type: 'single' | 'pointing';
+  message: string;
 }
 
 export interface UserStats {

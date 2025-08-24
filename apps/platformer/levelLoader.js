@@ -1,5 +1,6 @@
 import { Terrain } from './Terrain.js';
 import { Enemy } from './Enemy.js';
+import { Checkpoint } from './checkpoint.js';
 
 function chunk(data, size) {
   const rows = [];
@@ -14,7 +15,12 @@ export async function loadLevel(name) {
   const map = await res.json();
   const terrainLayer = map.layers.find((l) => l.name === 'terrain');
   const enemyLayer = map.layers.find((l) => l.name === 'enemies');
+  const collectibleLayer = map.layers.find((l) => l.name === 'collectibles');
+  const checkpointLayer = map.layers.find((l) => l.name === 'checkpoints');
   const tiles = terrainLayer ? chunk(terrainLayer.data, map.width) : [];
+  const collectibles = collectibleLayer
+    ? chunk(collectibleLayer.data, map.width)
+    : [];
   const terrain = new Terrain(map.tilewidth, tiles);
   const enemies = [];
   if (enemyLayer && enemyLayer.objects) {
@@ -22,5 +28,22 @@ export async function loadLevel(name) {
       enemies.push(new Enemy(o.x, o.y, o.properties?.patrol || 0));
     });
   }
-  return { terrain, enemies, width: map.width, height: map.height };
+  const checkpoints = [];
+  if (checkpointLayer && checkpointLayer.objects) {
+    checkpointLayer.objects.forEach((o) => {
+      checkpoints.push(new Checkpoint(o.x, o.y));
+    });
+  }
+  const parallax = map.layers
+    .filter((l) => l.type === 'imagelayer')
+    .map((l) => l.image);
+  return {
+    terrain,
+    enemies,
+    collectibles,
+    checkpoints,
+    parallax,
+    width: map.width,
+    height: map.height,
+  };
 }

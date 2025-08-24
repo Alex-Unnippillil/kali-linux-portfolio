@@ -39,6 +39,8 @@ const WordSearch: React.FC = () => {
   const [elapsed, setElapsed] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const dailySeed = () => new Date().toISOString().slice(0, 10);
+
   useEffect(() => {
     fetch('/wordlists/packs.json')
       .then((res) => res.json())
@@ -179,6 +181,10 @@ const WordSearch: React.FC = () => {
     setSeed(Math.random().toString(36).slice(2));
   };
 
+  const dailyPuzzle = () => {
+    setSeed(dailySeed());
+  };
+
   const exportPDF = async () => {
     if (!containerRef.current) return;
     const dataUrl = await toPng(containerRef.current);
@@ -219,6 +225,13 @@ const WordSearch: React.FC = () => {
           className="px-2 py-1 bg-blue-600 text-white rounded"
         >
           New
+        </button>
+        <button
+          type="button"
+          onClick={dailyPuzzle}
+          className="px-2 py-1 bg-purple-600 text-white rounded"
+        >
+          Daily
         </button>
         <button
           type="button"
@@ -266,6 +279,16 @@ const WordSearch: React.FC = () => {
           })
         )}
       </div>
+      {found.size > 0 && (
+        <div className="mt-4">
+          <h3 className="font-bold">Found</h3>
+          <ul className="columns-2 md:columns-3 mb-2">
+            {Array.from(found).map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <ul className="mt-4 columns-2 md:columns-3">
         {words.map((w) => (
           <li key={w} className={found.has(w) ? 'line-through text-gray-500' : ''}>
