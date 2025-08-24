@@ -176,6 +176,7 @@ const dynamicAppEntries = [
   ['gomoku', 'Gomoku'],
   ['pinball', 'Pinball'],
   ['favicon-hash', 'Favicon Hash'],
+  ['hash-toolkit', 'Hash Toolkit'],
   ['pcre-re2-lab', 'PCRE RE2 Lab'],
   ['pcap-viewer', 'PCAP Viewer'],
   ['sqlite-viewer', 'SQLite Viewer'],
@@ -601,6 +602,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayBaseEncoders,
+  },
+  {
+    id: 'hash-toolkit',
+    title: 'Hash Toolkit',
+    icon: icon('hash.svg'),
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: getScreen('hash-toolkit'),
   },
   {
     id: 'favicon-hash',
