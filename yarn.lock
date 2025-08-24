@@ -4193,6 +4193,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"buffer-crc32@npm:0.1.x":
+  version: 0.1.1
+  resolution: "buffer-crc32@npm:0.1.1"
+  checksum: 10c0/a68ad44357aeaaf477a0ebce5546d6ffe4ff44bcecbe69a8b21ba8236af609c049d812c4eed2256aec5fb7ee0925687fe43ea798dba9b6c0e09887b98f1f29c3
+  languageName: node
+  linkType: hard
+
 "buffer-crc32@npm:~0.2.3":
   version: 0.2.13
   resolution: "buffer-crc32@npm:0.2.13"
@@ -12894,6 +12901,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"simhash@npm:^0.1.0":
+  version: 0.1.0
+  resolution: "simhash@npm:0.1.0"
+  dependencies:
+    buffer-crc32: "npm:0.1.x"
+  checksum: 10c0/1941bca3cd76ac09ff0f2b774c6ff595fad3c12e7aefedd5c6a40e21e02d05e021598255185e022c0bbd725c3135ae6c6914bd7200dbea34608311c2fa5f8c81
+  languageName: node
+  linkType: hard
+
 "simple-swizzle@npm:^0.2.2":
   version: 0.2.2
   resolution: "simple-swizzle@npm:0.2.2"
@@ -13811,6 +13827,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tlsh@npm:^1.0.8":
+  version: 1.0.8
+  resolution: "tlsh@npm:1.0.8"
+  checksum: 10c0/164e8d94f5304fd2006eb9bef973c1aa18f57eff5273843b5d322f2e35e22a239edd199012148c4fa572bb4f9765779abe8eea36d02e797a6086982fb085f8cb
+  languageName: node
+  linkType: hard
+
 "tmp@npm:^0.0.33":
   version: 0.0.33
   resolution: "tmp@npm:0.0.33"
@@ -14355,6 +14378,7 @@ __metadata:
     rfc4648: "npm:^1.5.4"
     safe-regex: "npm:^2.1.1"
     sax: "npm:^1.4.1"
+    simhash: "npm:^0.1.0"
     socket.io: "npm:^4.7.5"
     socket.io-client: "npm:^4.7.5"
     spdx-license-ids: "npm:^3.0.17"
@@ -14366,6 +14390,7 @@ __metadata:
     swr: "npm:^2.2.5"
     tailwindcss: "npm:^3.2.4"
     three: "npm:^0.179.1"
+    tlsh: "npm:^1.0.8"
     typescript: "npm:^5.9.2"
     undici: "npm:^6.19.8"
     url-parse: "npm:^1.5.10"
