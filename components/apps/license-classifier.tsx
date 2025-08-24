@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
 import {
-  extractSpdxIds,
   getLicenseInfo,
   matchLicense,
   LicenseInfo,
   LicenseMatchResult,
+  parseSpdxExpression,
+  detectLicenseConflicts,
+  LicenseConflict,
 } from '../../lib/licenseMatcher';
 
 interface AnalysisResult {
   detected: LicenseInfo[];
   fuzzy: LicenseMatchResult | null;
+  conflicts: LicenseConflict[];
 }
 
 const LicenseClassifier: React.FC = () => {
@@ -17,17 +20,19 @@ const LicenseClassifier: React.FC = () => {
   const [analysis, setAnalysis] = useState<AnalysisResult>({
     detected: [],
     fuzzy: null,
+    conflicts: [],
   });
 
   const analyze = () => {
     if (!text.trim()) {
-      setAnalysis({ detected: [], fuzzy: null });
+      setAnalysis({ detected: [], fuzzy: null, conflicts: [] });
       return;
     }
-    const ids = extractSpdxIds(text);
-    const detected = ids.map((id) => getLicenseInfo(id));
+    const parsed = parseSpdxExpression(text);
+    const detected = parsed.ids.map((id) => getLicenseInfo(id));
     const fuzzy = matchLicense(text);
-    setAnalysis({ detected, fuzzy });
+    const conflicts = detectLicenseConflicts(parsed.ids, parsed.hasAnd && !parsed.hasOr);
+    setAnalysis({ detected, fuzzy, conflicts });
   };
 
   return (
@@ -87,6 +92,19 @@ const LicenseClassifier: React.FC = () => {
                   {match.spdxId}
                 </a>{' '}
                 ({Math.round(match.confidence * 100)}%) - {match.compatibility}; {match.obligations}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {analysis.conflicts.length > 0 && (
+        <div>
+          <h3 className="font-bold mt-4 mb-2">Potential Conflicts</h3>
+          <ul className="list-disc list-inside space-y-1">
+            {analysis.conflicts.map((c) => (
+              <li key={c.licenses.join('-')}>
+                {c.message} {c.remediation}
               </li>
             ))}
           </ul>
