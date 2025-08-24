@@ -31,14 +31,17 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { domain, excludeExpired, unique } = req.query;
+  const { query, type = 'domain', excludeExpired, unique } = req.query;
 
-  if (!domain || typeof domain !== 'string') {
-    return res.status(400).json({ error: 'Missing domain' });
+  if (!query || typeof query !== 'string') {
+    return res.status(400).json({ error: 'Missing query' });
   }
 
   try {
-    const endpoint = `https://crt.sh/?q=%25.${encodeURIComponent(domain)}&output=json`;
+    const endpoint =
+      type === 'domain'
+        ? `https://crt.sh/?q=%25.${encodeURIComponent(query)}&output=json`
+        : `https://crt.sh/?q=${encodeURIComponent(query)}&output=json`;
     const response = await fetch(endpoint, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
     });
@@ -82,8 +85,8 @@ export default async function handler(
       }
 
       for (const s of finalSans) {
-        if (s.startsWith('*')) wildcardCount++;
-        if (s.includes('*.*')) deepWildcard = true;
+        if (type === 'domain' && s.startsWith('*')) wildcardCount++;
+        if (type === 'domain' && s.includes('*.*')) deepWildcard = true;
       }
 
       if (!resultsMap.has(certId)) {
