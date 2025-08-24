@@ -533,7 +533,7 @@ const apps = [
   {
     id: 'pkce-helper',
     title: 'PKCE Helper',
-    icon: icon('calc.png'),
+    icon: icon('pkce-helper.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
