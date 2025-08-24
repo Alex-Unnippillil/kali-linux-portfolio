@@ -113,15 +113,14 @@ export const makeMove = (
 const mobility = (p: bigint, o: bigint) =>
   countBits(getMoves(p, o)) - countBits(getMoves(o, p));
 
-const stability = (p: bigint, o: bigint) => {
-  const corners = [0, 7, 56, 63].map((i) => 1n << BigInt(i));
-  let score = 0;
-  corners.forEach((c) => {
-    if (p & c) score += 1;
-    else if (o & c) score -= 1;
-  });
-  return score;
-};
+const CORNER_MASK = 0x8100000000000081n;
+const EDGE_MASK = 0x7e8181818181817en;
+
+const corners = (p: bigint, o: bigint) =>
+  countBits(p & CORNER_MASK) - countBits(o & CORNER_MASK);
+
+const stability = (p: bigint, o: bigint) =>
+  countBits(p & EDGE_MASK) - countBits(o & EDGE_MASK);
 
 const parity = (p: bigint, o: bigint) => {
   const empty = 64 - countBits(p | o);
@@ -129,7 +128,32 @@ const parity = (p: bigint, o: bigint) => {
 };
 
 const evaluate = (p: bigint, o: bigint) =>
-  10 * mobility(p, o) + 25 * stability(p, o) + parity(p, o);
+  10 * mobility(p, o) + 25 * corners(p, o) + 5 * stability(p, o) + parity(p, o);
+
+const orderMoves = (
+  p: bigint,
+  o: bigint,
+  moves: bigint,
+  preferred?: bigint
+): bigint[] => {
+  const arr: { move: bigint; score: number }[] = [];
+  let m = moves;
+  while (m) {
+    const move = m & -m;
+    const { player: np, opponent: no } = makeMove(p, o, move);
+    const score = evaluate(np, no);
+    arr.push({ move, score });
+    m ^= move;
+  }
+  arr.sort((a, b) => {
+    if (preferred) {
+      if (a.move === preferred) return -1;
+      if (b.move === preferred) return 1;
+    }
+    return b.score - a.score;
+  });
+  return arr.map((x) => x.move);
+};
 
 const enum TTFlag {
   Exact,
@@ -153,7 +177,8 @@ const negamaxSearch = (
   o: bigint,
   depth: number,
   alpha: number,
-  beta: number
+  beta: number,
+  preferred?: bigint
 ): { score: number; move: bigint } => {
   const key = keyFor(p, o);
   const entry = tt.get(key);
@@ -180,9 +205,8 @@ const negamaxSearch = (
   let bestMove = 0n;
   let bestScore = -Infinity;
   const alphaOrig = alpha;
-  let m = moves;
-  while (m) {
-    const move = m & -m;
+  const ordered = orderMoves(p, o, moves, entry?.move ?? preferred);
+  for (const move of ordered) {
     const { player: np, opponent: no } = makeMove(p, o, move);
     const { score } = negamaxSearch(no, np, depth - 1, -beta, -alpha);
     const val = -score;
@@ -192,7 +216,6 @@ const negamaxSearch = (
     }
     alpha = Math.max(alpha, val);
     if (alpha >= beta) break;
-    m ^= move;
   }
 
   let flag: TTFlag;
@@ -208,9 +231,11 @@ export const negamax = (
   opponent: bigint,
   depth: number
 ): { score: number; move: bigint } => {
+  let bestMove: bigint | undefined;
   let result = { score: 0, move: 0n };
   for (let d = 1; d <= depth; d += 1) {
-    result = negamaxSearch(player, opponent, d, -Infinity, Infinity);
+    result = negamaxSearch(player, opponent, d, -Infinity, Infinity, bestMove);
+    bestMove = result.move;
   }
   return result;
 };
