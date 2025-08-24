@@ -28,17 +28,63 @@ const CorsChecker: React.FC = () => {
     if (!urls.length) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/cors-check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ urls }),
+      const results: Result[] = await Promise.all(
+        urls.map(async (url) => {
+          try {
+            const response = await fetch(url, {
+              method: 'HEAD',
+              redirect: 'follow',
+            });
+            const origin = response.headers.get(
+              'access-control-allow-origin'
+            );
+            const methodsHeader = response.headers.get(
+              'access-control-allow-methods'
+            );
+            const credentialsHeader = response.headers.get(
+              'access-control-allow-credentials'
+            );
+            const methods = methodsHeader
+              ? methodsHeader.split(/\s*,\s*/).filter(Boolean)
+              : [];
+            const credentials =
+              credentialsHeader === null
+                ? null
+                : credentialsHeader.toLowerCase() === 'true';
+            return { url, origin, methods, credentials };
+          } catch (e) {
+            return {
+              url,
+              origin: null,
+              methods: [],
+              credentials: null,
+              error: (e as Error).message,
+            };
+          }
+        })
+      );
+      setResults(results);
+
+      const originBreakdown: Record<string, number> = {};
+      const methodBreakdown: Record<string, number> = {};
+      const credentialsBreakdown = { true: 0, false: 0, null: 0 };
+
+      results.forEach((r) => {
+        if (r.origin)
+          originBreakdown[r.origin] = (originBreakdown[r.origin] || 0) + 1;
+        r.methods.forEach((m) => {
+          methodBreakdown[m] = (methodBreakdown[m] || 0) + 1;
+        });
+        if (r.credentials === true) credentialsBreakdown.true += 1;
+        else if (r.credentials === false) credentialsBreakdown.false += 1;
+        else credentialsBreakdown.null += 1;
       });
-      const data = await res.json();
-      setResults(data.results || []);
-      setBreakdown(data.breakdown || null);
-    } catch (e) {
-      setResults([]);
-      setBreakdown(null);
+
+      setBreakdown({
+        origins: originBreakdown,
+        methods: methodBreakdown,
+        credentials: credentialsBreakdown,
+      });
     } finally {
       setLoading(false);
     }
@@ -46,6 +92,10 @@ const CorsChecker: React.FC = () => {
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
+      <p className="text-sm text-gray-400">
+        Requests are made with the browser Fetch API. Redirect and CORS
+        restrictions apply; some responses may be unavailable.
+      </p>
       <textarea
         className="flex-1 p-2 text-black"
         placeholder="Enter URLs (one per line)"
