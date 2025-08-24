@@ -2167,6 +2167,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/sax@npm:^1":
+  version: 1.2.7
+  resolution: "@types/sax@npm:1.2.7"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/d077a761a0753b079bf8279b3993948030ca86ed9125437b9b29c1de40db9b2deb7fddc369f014b58861d450e8b8cc75f163aa29dc8cea81952efbfd859168cf
+  languageName: node
+  linkType: hard
+
 "@types/stack-utils@npm:^2.0.3":
   version: 2.0.3
   resolution: "@types/stack-utils@npm:2.0.3"
@@ -8665,6 +8674,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"sax@npm:^1.4.1":
+  version: 1.4.1
+  resolution: "sax@npm:1.4.1"
+  checksum: 10c0/6bf86318a254c5d898ede6bd3ded15daf68ae08a5495a2739564eb265cd13bcc64a07ab466fb204f67ce472bb534eb8612dac587435515169593f4fffa11de7c
+  languageName: node
+  linkType: hard
+
 "saxes@npm:^6.0.0":
   version: 6.0.0
   resolution: "saxes@npm:6.0.0"
@@ -9783,6 +9799,7 @@ __metadata:
     "@types/node": "npm:^24.2.1"
     "@types/plist": "npm:^3.0.2"
     "@types/react": "npm:^18.2.0"
+    "@types/sax": "npm:^1"
     "@types/three": "npm:^0.179.0"
     "@types/zxcvbn": "npm:^4.4.5"
     "@vercel/analytics": "npm:^1.5.0"
@@ -9835,6 +9852,7 @@ __metadata:
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
     react-twitter-embed: "npm:^4.0.4"
+    sax: "npm:^1.4.1"
     socket.io: "npm:^4.7.5"
     socket.io-client: "npm:^4.7.5"
     spdx-license-ids: "npm:^3.0.17"
@@ -9846,6 +9864,7 @@ __metadata:
     typescript: "npm:^5.9.2"
     url-parse: "npm:^1.5.10"
     ws: "npm:^8.18.3"
+    xmllint-wasm: "npm:^5.0.0"
     zxcvbn: "npm:^4.4.2"
   languageName: unknown
   linkType: soft
@@ -10304,6 +10323,15 @@ __metadata:
   version: 2.1.2
   resolution: "xmlhttprequest-ssl@npm:2.1.2"
   checksum: 10c0/70d60869323e823f473a238f78fd108437edbc3690ecd5859c39c83217080090a18899b272e515769c0d1f518cc64cbed6b6995b23fdd7ba13b297d530b6e631
+  languageName: node
+  linkType: hard
+
+"xmllint-wasm@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "xmllint-wasm@npm:5.0.0"
+  peerDependencies:
+    "@types/node": ">=16"
+  checksum: 10c0/67186f032eb352635a5d2af821ab9aacb4cb3c9ddb6a8321ab2efcc28b20399b9e8ef49f31e92d0aa7ef1d2f393d90bcc1764cc8af5c2a9606da4bd7741eebf3
   languageName: node
   linkType: hard
 
