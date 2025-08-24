@@ -2,10 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
 import { Howl } from 'howler';
 
-const { Engine, Render, World, Bodies, Body, Constraint, Runner } = Matter as any;
+const {
+  Engine,
+  Render,
+  World,
+  Bodies,
+  Body,
+  Constraint,
+  Runner,
+  Composite,
+} = Matter as any;
 
 interface TableElement {
-  type: 'flipper' | 'bumper' | 'slingshot';
+  type: 'flipper' | 'bumper' | 'slingshot' | 'lane';
   x: number;
   y: number;
   width?: number;
@@ -20,7 +29,12 @@ interface Table {
 
 export default function Pinball() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const effectsRef = useRef<HTMLCanvasElement>(null);
   const workerRef = useRef<Worker>();
+  const engineRef = useRef<any>();
+  const pixiAppRef = useRef<any>();
+  const lightPoolRef = useRef<any[]>([]);
+  const flippersRef = useRef<any[]>([]);
   const [score, setScore] = useState(0);
   const [multiplier, setMultiplier] = useState(1);
   const [combo, setCombo] = useState(0);
@@ -47,6 +61,37 @@ export default function Pinball() {
   ).current;
 
   useEffect(() => {
+    let mounted = true;
+    const width = 400;
+    const height = 600;
+    async function loadPixi() {
+      const PIXI = await import('pixi.js');
+      if (!effectsRef.current || !mounted) return;
+      const app = new PIXI.Application({
+        view: effectsRef.current,
+        width,
+        height,
+        backgroundAlpha: 0,
+      });
+      pixiAppRef.current = app;
+      lightPoolRef.current = Array.from({ length: 10 }, () => {
+        const g = new PIXI.Graphics();
+        g.beginFill(0xffff00);
+        g.drawCircle(0, 0, 20);
+        g.endFill();
+        g.visible = false;
+        app.stage.addChild(g);
+        return g;
+      });
+    }
+    loadPixi();
+    return () => {
+      mounted = false;
+      pixiAppRef.current?.destroy(true);
+    };
+  }, []);
+
+  useEffect(() => {
     let engine: any;
     let render: any;
     let flippers: any[] = [];
@@ -71,7 +116,7 @@ export default function Pinball() {
         );
         workerRef.current.onmessage = (e) => {
           if (e.data.type === 'bumperHit') {
-            onBumperHit();
+            onBumperHit(e.data.x, e.data.y);
           }
         };
         workerRef.current.postMessage({ canvas: off, table }, [off]);
@@ -92,44 +137,76 @@ export default function Pinball() {
           if (el.type === 'bumper') {
             const bumper = Bodies.circle(el.x, el.y, el.radius || 20, {
               isStatic: true,
-              restitution: 1,
+              restitution: 1.2,
             });
             bumpers.push(bumper);
             World.add(engine.world, bumper);
           } else if (el.type === 'flipper') {
+            const widthF = el.width || 80;
             const flipper = Bodies.rectangle(
               el.x,
               el.y,
-              el.width || 80,
+              widthF,
               el.height || 20,
             );
+            const dir = el.x < width / 2 ? -1 : 1;
             const hinge = Constraint.create({
               bodyA: flipper,
-              pointB: { x: el.x, y: el.y },
+              pointA: { x: (widthF / 2) * dir, y: 0 },
+              pointB: { x: el.x + (widthF / 2) * dir, y: el.y },
               length: 0,
               stiffness: 1,
             });
             flippers.push(flipper);
             World.add(engine.world, [flipper, hinge]);
+          } else if (el.type === 'slingshot') {
+            const sling = Bodies.polygon(el.x, el.y, 3, el.radius || 40, {
+              isStatic: true,
+              restitution: 1.2,
+            });
+            bumpers.push(sling);
+            World.add(engine.world, sling);
+          } else if (el.type === 'lane') {
+            const lane = Bodies.rectangle(
+              el.x,
+              el.y,
+              el.width || 100,
+              el.height || 20,
+              { isStatic: true, angle: el.radius || 0 },
+            );
+            World.add(engine.world, lane);
           }
         });
         const ball = Bodies.circle(width / 2, height - 120, 10, {
           restitution: 0.9,
         });
         World.add(engine.world, ball);
+        let ballSave = true;
+        setTimeout(() => (ballSave = false), 5000);
+        Matter.Events.on(engine, 'afterUpdate', () => {
+          if (ball.position.y > height && ballSave) {
+            Body.setPosition(ball, { x: width / 2, y: height - 120 });
+            Body.setVelocity(ball, { x: 0, y: -10 });
+          }
+        });
         Matter.Events.on(engine, 'collisionStart', (event: any) => {
           event.pairs.forEach((pair: any) => {
             if (bumpers.includes(pair.bodyA) || bumpers.includes(pair.bodyB)) {
-              onBumperHit();
+              const p = bumpers.includes(pair.bodyA)
+                ? pair.bodyA.position
+                : pair.bodyB.position;
+              onBumperHit(p.x, p.y);
             }
           });
         });
-        const runner = Runner.create({ isFixed: true, delta: 1000 / 100 });
+        const runner = Runner.create({ isFixed: true, delta: 1000 / 60 });
         Runner.run(runner, engine);
         Render.run(render);
+        engineRef.current = engine;
+        flippersRef.current = flippers;
         const rotateFlipper = (index: number, dir: number) => {
           const fl = flippers[index];
-          if (fl) Body.setAngularVelocity(fl, dir * 10);
+          if (fl) Body.applyAngularImpulse(fl, dir * 0.02);
         };
         function handleKey(e: KeyboardEvent) {
           if (tilt) return;
@@ -173,6 +250,9 @@ export default function Pinball() {
     if (tilt) return;
     if (workerRef.current) {
       workerRef.current.postMessage({ type: 'flip', index, dir });
+    } else {
+      const fl = flippersRef.current[index];
+      if (fl) Body.applyAngularImpulse(fl, dir * 0.02);
     }
   }
 
@@ -185,10 +265,16 @@ export default function Pinball() {
       setTimeout(() => setTilt(false), 3000);
       return;
     }
-    workerRef.current?.postMessage({
-      type: 'nudge',
-      force: { x: 0, y: -0.05 },
-    });
+    if (workerRef.current) {
+      workerRef.current.postMessage({
+        type: 'nudge',
+        force: { x: 0, y: -0.05 },
+      });
+    } else if (engineRef.current) {
+      Composite.allBodies(engineRef.current.world).forEach((b: any) => {
+        if (!b.isStatic) Body.applyForce(b, b.position, { x: 0, y: -0.05 });
+      });
+    }
   }
 
   function handleKey(e: KeyboardEvent) {
@@ -211,7 +297,7 @@ export default function Pinball() {
     return () => window.removeEventListener('touchstart', handleTouch);
   });
 
-  function onBumperHit() {
+  function onBumperHit(x?: number, y?: number) {
     hitsRef.current += 1;
     if (hitsRef.current % 5 === 0) {
       setMultiplier((m) => m + 1);
@@ -219,6 +305,9 @@ export default function Pinball() {
     setScore((s) => s + 100 * multiplier);
     bumperSound.play();
     shake();
+    if (x !== undefined && y !== undefined) {
+      flashLight(x, y);
+    }
     setCombo((c) => {
       const v = c + 1;
       if (v >= 3) {
@@ -230,11 +319,41 @@ export default function Pinball() {
     triggerHaptics();
   }
 
+  function flashLight(x: number, y: number) {
+    const app = pixiAppRef.current;
+    if (!app) return;
+    const pool = lightPoolRef.current;
+    const g = pool.pop();
+    if (!g) return;
+    g.position.set(x, y);
+    g.alpha = 1;
+    g.visible = true;
+    const fade = (delta: number) => {
+      g.alpha -= 0.05 * delta;
+      if (g.alpha <= 0) {
+        g.visible = false;
+        app.ticker.remove(fade);
+        pool.push(g);
+      }
+    };
+    app.ticker.add(fade);
+  }
+
   function shake() {
     const x = (Math.random() - 0.5) * 10;
     const y = (Math.random() - 0.5) * 10;
     setShakeOffset({ x, y });
-    setTimeout(() => setShakeOffset({ x: 0, y: 0 }), 100);
+    if (pixiAppRef.current) {
+      pixiAppRef.current.stage.x = x;
+      pixiAppRef.current.stage.y = y;
+    }
+    setTimeout(() => {
+      setShakeOffset({ x: 0, y: 0 });
+      if (pixiAppRef.current) {
+        pixiAppRef.current.stage.x = 0;
+        pixiAppRef.current.stage.y = 0;
+      }
+    }, 100);
   }
 
   function triggerHaptics() {
@@ -273,10 +392,22 @@ export default function Pinball() {
     <div className="w-full h-full flex flex-col items-center justify-center text-white">
       <div
         style={{
+          position: 'relative',
           transform: `translate(${shakeOffset.x}px, ${shakeOffset.y}px)`,
         }}
       >
         <canvas ref={canvasRef} width={400} height={600} />
+        <canvas
+          ref={effectsRef}
+          width={400}
+          height={600}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            pointerEvents: 'none',
+          }}
+        />
       </div>
       <div className="mt-2">Score: {score} (x{multiplier})</div>
       <div className="flex gap-1">
