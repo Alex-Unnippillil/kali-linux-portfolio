@@ -66,10 +66,14 @@ function parseJA3(input: string): ParsedTLS {
     result.groups = groupNums.map(mapGroup);
 
     if (version < 772) {
-      result.advice.push('Enable TLS 1.3 for stronger security and performance.');
+      result.advice.push(
+        'Enable TLS 1.3 for stronger security and performance.'
+      );
     }
     if (!groupNums.includes(29) && !groupNums.includes(23)) {
-      result.advice.push('Offer modern ECDHE groups such as X25519 or secp256r1.');
+      result.advice.push(
+        'Offer modern ECDHE groups such as X25519 or secp256r1.'
+      );
     }
   }
   return result;
@@ -93,10 +97,14 @@ function parseSClient(input: string): ParsedTLS {
     }
   }
 
-  const groupMatches = Array.from(input.matchAll(/Server Temp Key:\s*([^,\n]+)/gi));
+  const groupMatches = Array.from(
+    input.matchAll(/Server Temp Key:\s*([^,\n]+)/gi)
+  );
   if (groupMatches.length > 0) {
     result.groups = groupMatches.map((m) => m[1].trim());
-    const hasModern = result.groups.some((g) => /X25519|P-256|secp256r1/i.test(g));
+    const hasModern = result.groups.some((g) =>
+      /X25519|P-256|secp256r1/i.test(g)
+    );
     if (!hasModern) {
       result.advice.push('Enable modern ECDHE groups like X25519 or P-256.');
     }
@@ -137,7 +145,10 @@ function parseSClient(input: string): ParsedTLS {
 }
 
 function parseInput(input: string): ParsedTLS {
-  if (/^ja3(?:s)?=/i.test(input.trim()) || /^\d+,\d+(?:-\d+)*,/.test(input.trim())) {
+  if (
+    /^ja3(?:s)?=/i.test(input.trim()) ||
+    /^\d+,\d+(?:-\d+)*,/.test(input.trim())
+  ) {
     return parseJA3(input);
   }
   return parseSClient(input);
@@ -176,7 +187,8 @@ const TLSViewer: React.FC = () => {
             <strong>Cipher:</strong> {parsed.cipher || 'Unknown'}
           </div>
           <div>
-            <strong>Groups:</strong> {parsed.groups.length > 0 ? parsed.groups.join(', ') : 'Unknown'}
+            <strong>Groups:</strong>{' '}
+            {parsed.groups.length > 0 ? parsed.groups.join(', ') : 'Unknown'}
           </div>
           <div>
             <strong>ALPN:</strong> {parsed.alpn || 'None'}
@@ -199,9 +211,33 @@ const TLSViewer: React.FC = () => {
           )}
         </div>
       )}
+      <div className="pt-4 text-xs space-y-2">
+        <h2 className="font-bold">TLS 1.3 notes</h2>
+        <ul className="list-disc list-inside space-y-1">
+          <li>
+            Handshake: ClientHello → ServerHello → EncryptedExtensions →
+            Certificate → CertificateVerify → Finished
+          </li>
+          <li>
+            Keys: Ephemeral ECDHE yields early, handshake, and application
+            secrets via HKDF for forward secrecy
+          </li>
+          <li>
+            Ciphers: Only AEAD suites such as AES-GCM and ChaCha20-Poly1305 are
+            permitted
+          </li>
+          <li>
+            0-RTT: Early data lacks forward secrecy and is replayable—limit it
+            to idempotent requests
+          </li>
+          <li>
+            JA3: ClientHello parameters form a JA3 fingerprint that can be used
+            to track clients
+          </li>
+        </ul>
+      </div>
     </div>
   );
 };
 
 export default TLSViewer;
-
