@@ -434,14 +434,18 @@ export class Desktop extends Component {
         this.hideSideBar(null, false);
 
         // close window
-        this.setState(prev => {
-            const update = {
-                closed_windows: { ...prev.closed_windows, [objId]: true }
+
+        this.setState((state) => {
+            const favourite_updates =
+                this.initFavourite[objId] === false ? { [objId]: false } : {};
+
+            return {
+                closed_windows: { ...state.closed_windows, [objId]: true },
+                favourite_apps: {
+                    ...state.favourite_apps,
+                    ...favourite_updates,
+                },
             };
-            if (this.initFavourite[objId] === false) {
-                update.favourite_apps = { ...prev.favourite_apps, [objId]: false };
-            }
-            return update;
         });
     }
 

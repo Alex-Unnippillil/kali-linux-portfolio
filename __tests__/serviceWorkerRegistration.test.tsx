@@ -30,4 +30,20 @@ describe('service worker registration', () => {
 
     expect(register).not.toHaveBeenCalled();
   });
+
+  it('registers service worker in production', async () => {
+    process.env.NODE_ENV = 'production';
+    const register = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: { register },
+      configurable: true,
+    });
+
+    const MyApp = require('../pages/_app').default;
+    render(<MyApp Component={() => <div />} pageProps={{}} />);
+
+    await act(async () => {});
+
+    expect(register).toHaveBeenCalledWith('/sw.js');
+  });
 });
