@@ -4,6 +4,9 @@ import { spawn, spawnSync } from 'child_process';
 import { z } from 'zod';
 import { validateRequest } from '../../lib/validate';
 import { defaultPatterns, redactSecret } from '../../components/apps/git-secrets-tester';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 interface ApiResult {
   file: string;

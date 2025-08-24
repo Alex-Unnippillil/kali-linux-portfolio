@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import DOMPurify from 'isomorphic-dompurify';
 
 interface Snapshot {
   timestamp: string;
@@ -63,13 +64,11 @@ function renderSideBySide(diff: DiffPart[]) {
     <div className="grid grid-cols-2 gap-4">
       <pre
         className="bg-gray-800 text-white p-2 overflow-auto"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: left.join('\n') }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(left.join('\n')) }}
       />
       <pre
         className="bg-gray-800 text-white p-2 overflow-auto"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: right.join('\n') }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(right.join('\n')) }}
       />
     </div>
   );

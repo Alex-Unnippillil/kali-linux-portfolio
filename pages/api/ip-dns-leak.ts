@@ -1,9 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { rateLimit } from '../../lib/rateLimiter';
 import { setupUrlGuard } from '../../lib/urlGuard';
 import dns from 'dns/promises';
 import tls from 'tls';
 import packet from 'dns-packet';
 
+/**
+ * Detect DNS resolvers and potential leaks.
+ * Rate limited to 60 requests per minute.
+ */
 setupUrlGuard();
 
 interface ResolverInfo {
@@ -31,9 +36,10 @@ async function fetchAsn(ip: string): Promise<string | undefined> {
 }
 
 export default async function handler(
-  _req: NextApiRequest,
+  req: NextApiRequest,
   res: NextApiResponse<ApiResponse>
 ) {
+  if (!(await rateLimit(req, res))) return;
   const results: ResolverInfo[] = [];
 
   // DoH probe using Cloudflare

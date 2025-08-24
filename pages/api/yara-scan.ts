@@ -2,6 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
 import { validateRequest } from '../../lib/validate';
 import yaraFactory from 'libyara-wasm';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 interface MatchDetail {
   rule: string;
