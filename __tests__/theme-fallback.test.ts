@@ -22,30 +22,41 @@ describe('theme fallback helpers', () => {
       const modPath = `@components/apps/${file}`;
       jest.mock(modPath, () => ({}));
     });
+    (global as any).displayImportGraph = () => null;
     process.env.NEXT_PUBLIC_THEME = 'UnknownTheme';
     const mod = await import('@/apps.config.js');
     expect(mod.icon('calc.png')).toBe('./themes/Yaru/apps/calc.png');
     expect(mod.sys('folder.png')).toBe('./themes/Yaru/system/folder.png');
   });
 
-  it('falls back to Yaru when individual assets are missing from a custom theme', async () => {
+  it('has Yaru app icons for every apps.config.js entry', async () => {
+
     const appsDir = path.join(__dirname, '../components/apps');
     fs.readdirSync(appsDir).forEach((file) => {
       const modPath = `@components/apps/${file}`;
       jest.mock(modPath, () => ({}));
     });
+    (global as any).displayImportGraph = () => null;
+    const { default: apps, games } = await import('@/apps.config.js');
+    const icons = [...apps, ...games]
+      .map(({ icon }) => icon)
+      .filter((icon) => icon.includes('/apps/'));
 
-    const customThemeDir = path.join(__dirname, '../public/themes/Custom');
-    const customAppsDir = path.join(customThemeDir, 'apps');
-    const customSystemDir = path.join(customThemeDir, 'system');
-    fs.mkdirSync(customAppsDir, { recursive: true });
-    fs.mkdirSync(customSystemDir, { recursive: true });
+    const missing = icons
+      .map((iconPath) => {
+        const filePath = path.join(
+          process.cwd(),
+          'public',
+          'themes',
+          'Yaru',
+          'apps',
+          path.basename(iconPath),
+        );
+        return fs.existsSync(filePath) ? null : filePath;
+      })
+      .filter(Boolean);
 
-    process.env.NEXT_PUBLIC_THEME = 'Custom';
-    const mod = await import('@/apps.config.js');
-    expect(mod.icon('calc.png')).toBe('./themes/Yaru/apps/calc.png');
-    expect(mod.sys('folder.png')).toBe('./themes/Yaru/system/folder.png');
+    expect(missing).toEqual([]);
 
-    fs.rmSync(customThemeDir, { recursive: true, force: true });
   });
 });
