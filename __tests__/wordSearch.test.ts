@@ -1,4 +1,5 @@
 import { generateGrid } from '@apps/word_search/generator';
+import { findWord } from '@apps/word_search/utils';
 
 describe('word search generator', () => {
   it('places words without conflicts', () => {
@@ -16,5 +17,14 @@ describe('word search generator', () => {
     const a = generateGrid(words, 10, 'same');
     const b = generateGrid(words, 10, 'same');
     expect(a.grid).toEqual(b.grid);
+  });
+
+  it('finds words from selections', () => {
+    const words = ['CAT', 'DOG'];
+    const { grid, placements } = generateGrid(words, 8, 'seed');
+    placements.forEach(({ word, positions }) => {
+      expect(findWord(grid, words, positions)).toBe(word);
+      expect(findWord(grid, words, [...positions].reverse())).toBe(word);
+    });
   });
 });
