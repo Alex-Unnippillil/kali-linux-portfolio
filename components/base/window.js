@@ -8,11 +8,10 @@ import ReactGA from 'react-ga4';
 function DraggableContainer({ id, defaultPosition, bounds, onDrag, onStart, onStop, children }) {
     const [position, setPosition] = React.useState(defaultPosition);
     const { attributes, listeners, setNodeRef, transform } = useDraggable({ id });
+    const dx = position.x + (transform ? transform.x : 0);
+    const dy = position.y + (transform ? transform.y : 0);
     const style = {
-        transform: CSS.Translate.toString({
-            x: position.x + (transform ? transform.x : 0),
-            y: position.y + (transform ? transform.y : 0)
-        })
+        transform: `translate3d(${dx}px, ${dy}px, 0)`
     };
 
     const handleDragEnd = (event) => {
