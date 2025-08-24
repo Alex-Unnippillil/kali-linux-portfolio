@@ -53,6 +53,7 @@ import { displayJwsJweWorkbench } from './apps/jws-jwe-workbench';
 import { displayCaaChecker } from './components/apps/caa-checker';
 
 
+
 export const THEME = process.env.NEXT_PUBLIC_THEME || 'Yaru';
 
 const FALLBACK_THEME = 'Yaru';
@@ -217,6 +218,7 @@ const dynamicAppEntries = [
   ['redirect-visualizer', 'Redirect Visualizer'],
   ['http3-probe', 'HTTP/3 Probe'],
   ['sbom-viewer', 'SBOM Viewer'],
+  ['utilities-demo', 'Utilities Demo'],
 ];
 
 const dynamicScreens = Object.fromEntries(
@@ -882,6 +884,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: getScreen('wayback-viewer'),
+  },
+  {
+    id: 'utilities-demo',
+    title: 'Utilities Demo',
+    icon: './themes/Yaru/apps/utilities.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: getScreen('utilities-demo'),
   },
 ];
  
