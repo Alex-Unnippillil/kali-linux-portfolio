@@ -11,9 +11,10 @@
   "powerUps": ["1,1", "8,8"],
   "player": {"x": 1, "y": 1},
   "ghosts": [
-    {"x": 5, "y": 5, "behavior": "chase", "color": "red"},
-    {"x": 5, "y": 4, "behavior": "ambush", "color": "pink"},
-    {"x": 4, "y": 5, "behavior": "random", "color": "cyan"}
+    {"x": 5, "y": 5, "type": "blinky", "color": "red"},
+    {"x": 5, "y": 4, "type": "pinky", "color": "pink"},
+    {"x": 4, "y": 5, "type": "inky", "color": "cyan"},
+    {"x": 4, "y": 4, "type": "clyde", "color": "orange"}
   ],
   "fruit": [{"x": 4, "y": 4, "score": 100}]
 }

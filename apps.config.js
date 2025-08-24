@@ -167,6 +167,7 @@ const dynamicAppEntries = [
   ['nonogram', 'Nonogram'],
   ['tetris', 'Tetris'],
   ['candy-crush', 'Candy Crush'],
+  ['match3', 'Match 3'],
   ['ct-search', 'CT Search'],
   ['mail-auth', 'Mail Auth'],
   ['mail-security-matrix', 'Mail Security Matrix'],
@@ -270,6 +271,7 @@ export const games = [
   ['sudoku', 'Sudoku'],
   ['flappy-bird', 'Flappy Bird'],
   ['candy-crush', 'Candy Crush'],
+  ['match3', 'Match 3'],
   ['gomoku', 'Gomoku'],
   ['pinball', 'Pinball'],
 ].map(([id, title, extra = {}]) => ({

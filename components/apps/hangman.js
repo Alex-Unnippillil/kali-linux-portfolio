@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/router';
 import confetti from 'canvas-confetti';
 import ReactGA from 'react-ga4';
 
@@ -34,24 +33,15 @@ const HangmanDrawing = ({ wrong }) => (
 );
 
 const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
-const themes = ['movies', 'animals'];
 
 const Hangman = () => {
-  const router = useRouter();
-  const initialTheme =
-    typeof router.query.theme === 'string' && themes.includes(router.query.theme)
-      ? router.query.theme
-      : themes[0];
-  const [theme, setTheme] = useState(initialTheme);
   const [dictionary, setDictionary] = useState({ easy: [], medium: [], hard: [] });
   const [difficulty, setDifficulty] = useState('easy');
   const [lengthIndex, setLengthIndex] = useState(0);
   const [word, setWord] = useState('');
-  const [category, setCategory] = useState('');
   const [guessed, setGuessed] = useState([]);
   const [wrong, setWrong] = useState(0);
   const [letterHint, setLetterHint] = useState('');
-  const [categoryHintShown, setCategoryHintShown] = useState(false);
   const [hintsUsed, setHintsUsed] = useState(0);
   const [score, setScore] = useState(0);
   const [revealed, setRevealed] = useState([]);
@@ -64,23 +54,17 @@ const Hangman = () => {
   const hintLimits = useMemo(() => ({ easy: Infinity, medium: 1, hard: 0 }), []);
 
   useEffect(() => {
-    if (typeof router.query.theme === 'string' && themes.includes(router.query.theme)) {
-      setTheme(router.query.theme);
-    }
-  }, [router.query.theme]);
-
-  useEffect(() => {
-    fetch(`/wordlists/${theme}.json`)
+    fetch('/wordlists/frequency.json')
       .then((res) => res.json())
       .then((data) => setDictionary(data))
       .catch(() => setDictionary({ easy: [], medium: [], hard: [] }));
-  }, [theme]);
+  }, []);
 
   useEffect(() => {
-    const key = `hangman-${theme}-${difficulty}-highscore`;
+    const key = `hangman-${difficulty}-highscore`;
     const saved = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
     setHighScore(saved ? Number(saved) : 0);
-  }, [theme, difficulty]);
+  }, [difficulty]);
 
   const getFilteredWords = useCallback(() => {
     const base = dictionary[difficulty] || [];
@@ -106,13 +90,11 @@ const Hangman = () => {
     setGuessed([]);
     setWrong(0);
     setLetterHint('');
-    setCategoryHintShown(false);
     setHintsUsed(0);
     setScore(0);
     setRevealed([]);
     setGameEnded(false);
     setWord(choice?.word || '');
-    setCategory(choice?.category || '');
   }, [selectWord]);
 
   useEffect(() => {
@@ -185,31 +167,24 @@ const Hangman = () => {
     setTimeout(() => setRevealed((r) => r.filter((l) => l !== reveal)), 500);
   }, [difficulty, guessed, hintLimits, hintsUsed, isGameOver, word]);
 
-  const revealCategory = useCallback(() => {
-    if (isGameOver() || categoryHintShown) return;
-    ReactGA.event({ category: 'hangman', action: 'hint_category' });
-    setCategoryHintShown(true);
-    setScore((s) => s - 2);
-  }, [categoryHintShown, isGameOver]);
-
   const reset = useCallback(() => {
     initGame();
   }, [initGame]);
 
   const saveHigh = useCallback(
     (finalScore) => {
-      const key = `hangman-${theme}-${difficulty}-highscore`;
+      const key = `hangman-${difficulty}-highscore`;
       if (finalScore > highScore) {
         localStorage.setItem(key, String(finalScore));
         setHighScore(finalScore);
         fetch('/api/hangman/highscore', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ theme, difficulty, score: finalScore }),
+          body: JSON.stringify({ difficulty, score: finalScore }),
         }).catch(() => {});
       }
     },
-    [difficulty, theme, highScore],
+    [difficulty, highScore],
   );
 
   useEffect(() => {
@@ -231,10 +206,10 @@ const Hangman = () => {
   useEffect(() => {
     ReactGA.event({
       category: 'hangman',
-      action: 'category_select',
-      label: `${theme}-${difficulty}`,
+      action: 'difficulty_select',
+      label: difficulty,
     });
-  }, [theme, difficulty]);
+  }, [difficulty]);
 
   return (
     <div
@@ -243,18 +218,6 @@ const Hangman = () => {
       }`}
     >
       <div className="flex space-x-2 mb-4">
-        <select
-          value={theme}
-          onChange={(e) => setTheme(e.target.value)}
-          className="bg-gray-700 p-1 rounded"
-          aria-label="Select theme"
-        >
-          {themes.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
         <select
           value={difficulty}
           onChange={(e) => setDifficulty(e.target.value)}
@@ -320,9 +283,6 @@ const Hangman = () => {
         {isLoser() && `You lost! The word was ${word}.`}
       </div>
       {letterHint && !isGameOver() && <div className="mb-2 h-6">Hint: {letterHint}</div>}
-      {categoryHintShown && !isGameOver() && (
-        <div className="mb-2 h-6">Category: {category}</div>
-      )}
       <div className="flex space-x-2">
         <button
           onClick={revealLetter}
@@ -331,14 +291,6 @@ const Hangman = () => {
           aria-label="Reveal a letter"
         >
           Reveal Letter (-5)
-        </button>
-        <button
-          onClick={revealCategory}
-          disabled={isGameOver() || categoryHintShown}
-          className="px-4 py-2 bg-purple-700 hover:bg-purple-600 rounded disabled:bg-purple-500"
-          aria-label="Reveal category"
-        >
-          Reveal Category (-2)
         </button>
         <button
           onClick={reset}

@@ -4,8 +4,11 @@
 2. In `.env.local`, set `JWT_SECRET` to a secure value; this variable is required.
 3. Optionally set analytics variables such as `NEXT_PUBLIC_ENABLE_ANALYTICS` and `NEXT_PUBLIC_TRACKING_ID`.
 4. Update `.env.example` whenever new environment variables are added.
+5. Run `yarn validate:icons` to ensure all icon paths in `apps.config.js` exist under `public/themes/` before committing.
 
 ## Adding New Apps
+
+See [New App Checklist](./docs/new-app-checklist.md) to ensure all required steps are completed.
 
 Heavy applications should be loaded with [`next/dynamic`](https://nextjs.org/docs/advanced-features/dynamic-import) so that they do not bloat the initial bundle.
 

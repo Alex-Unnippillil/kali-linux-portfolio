@@ -14,16 +14,16 @@ const ContentSecurityPolicy = [
   // Allow outbound connections for embeds and the in-browser Chrome app
   "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.googleapis.com https://stackblitz.com https://api64.ipify.org https://cloudflare-dns.com https://dns.google stun:stun.l.google.com:19302",
   // Allow iframes from specific providers so the Chrome and StackBlitz apps can load arbitrary content
-  "frame-src 'self' https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://open.spotify.com https://todoist.com",
+  "frame-src 'self' https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
 ].join('; ');
 
+// Omit the CSP in development to prevent dev tooling from breaking.
 const securityHeaders = [
-  {
-    key: 'Content-Security-Policy',
-    value: ContentSecurityPolicy,
-  },
+  ...(process.env.NODE_ENV === 'development'
+    ? []
+    : [{ key: 'Content-Security-Policy', value: ContentSecurityPolicy }]),
   {
     key: 'X-Content-Type-Options',
     value: 'nosniff',
