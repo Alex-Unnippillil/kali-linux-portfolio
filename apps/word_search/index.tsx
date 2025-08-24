@@ -1,12 +1,12 @@
+"use client";
 import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { generateGrid } from './generator';
 import type { Position } from './types';
-import { toPng } from 'html-to-image';
-import jsPDF from 'jspdf';
 import { findWord } from './utils';
 
 const GRID_SIZE = 12;
+const CELL_SIZE = 32; // px
 
 function key(p: Position) {
   return `${p.row}-${p.col}`;
@@ -45,6 +45,10 @@ const WordSearch: React.FC = () => {
   const [selecting, setSelecting] = useState(false);
   const [start, setStart] = useState<Position | null>(null);
   const [selection, setSelection] = useState<Position[]>([]);
+  const [lines, setLines] = useState<{ start: Position; end: Position }[]>([]);
+  const [currentLine, setCurrentLine] =
+    useState<{ start: Position; end: Position } | null>(null);
+  const [definitions, setDefinitions] = useState<Record<string, string>>({});
   const [startTime, setStartTime] = useState<number>(0);
   const [elapsed, setElapsed] = useState<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -117,6 +121,9 @@ const WordSearch: React.FC = () => {
     if (!seed || !words.length) return;
     const { grid: g } = generateGrid(words, GRID_SIZE, seed);
     setGrid(g);
+    setLines([]);
+    setCurrentLine(null);
+    setDefinitions({});
 
     const saved =
       typeof window !== 'undefined'
@@ -175,12 +182,15 @@ const WordSearch: React.FC = () => {
     const s = { row: r, col: c };
     setStart(s);
     setSelection([s]);
+    setCurrentLine({ start: s, end: s });
   };
 
   const handleMouseEnter = (r: number, c: number) => {
     if (!selecting || !start) return;
-    const path = computePath(start, { row: r, col: c });
+    const end = { row: r, col: c };
+    const path = computePath(start, end);
     setSelection(path);
+    setCurrentLine({ start, end });
   };
 
   const handleMouseUp = () => {
@@ -189,6 +199,7 @@ const WordSearch: React.FC = () => {
     if (!selection.length) {
       setStart(null);
       setSelection([]);
+      setCurrentLine(null);
       return;
     }
     const match = findWord(grid, words, selection);
@@ -199,9 +210,22 @@ const WordSearch: React.FC = () => {
       const newCells = new Set(foundCells);
       selection.forEach((p) => newCells.add(key(p)));
       setFoundCells(newCells);
+      setLines((ls) => [
+        ...ls,
+        { start: selection[0], end: selection[selection.length - 1] },
+      ]);
+      fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${match.toLowerCase()}`)
+        .then((res) => res.json())
+        .then((d) => {
+          const def =
+            d[0]?.meanings?.[0]?.definitions?.[0]?.definition || '';
+          setDefinitions((prev) => ({ ...prev, [match]: def }));
+        })
+        .catch(() => {});
     }
     setStart(null);
     setSelection([]);
+    setCurrentLine(null);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -229,10 +253,24 @@ const WordSearch: React.FC = () => {
     setSeed(dailySeed());
   };
 
+  const exportPNG = async () => {
+    if (!containerRef.current) return;
+    const { toPng } = await import('html-to-image');
+    const dataUrl = await toPng(containerRef.current);
+    const link = document.createElement('a');
+    link.download = `word-search-${theme}.png`;
+    link.href = dataUrl;
+    link.click();
+  };
+
   const exportPDF = async () => {
     if (!containerRef.current) return;
+    const [{ toPng }, jsPDF] = await Promise.all([
+      import('html-to-image'),
+      import('jspdf'),
+    ]);
     const dataUrl = await toPng(containerRef.current);
-    const pdf = new jsPDF('p', 'pt', 'a4');
+    const pdf = new jsPDF.default('p', 'pt', 'a4');
     const imgProps = pdf.getImageProperties(dataUrl);
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
@@ -369,9 +407,17 @@ const WordSearch: React.FC = () => {
         </button>
         <button
           type="button"
+          onClick={exportPNG}
+          aria-label="Export PNG"
+          className="px-2 py-1 bg-gray-600 text-white rounded"
+        >
+          Export PNG
+        </button>
+        <button
+          type="button"
           onClick={exportPDF}
           aria-label="Export PDF"
-          className="px-2 py-1 bg-gray-600 text-white rounded"
+          className="px-2 py-1 bg-gray-500 text-white rounded"
         >
           Export PDF
         </button>
@@ -410,56 +456,108 @@ const WordSearch: React.FC = () => {
         <span className="px-2 py-1">{formatTime(elapsed)}</span>
       </div>
       <div
-        style={{
-          gridTemplateColumns: `repeat(${GRID_SIZE}, 2rem)`,
-          gridTemplateRows: `repeat(${GRID_SIZE}, 2rem)`,
-        }}
-        className="grid border w-max"
+        className="relative w-max"
         onMouseLeave={handleMouseUp}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
       >
-        {grid.map((row, r) =>
-          row.map((letter, c) => {
-            const posKey = key({ row: r, col: c });
-            const isSelected = selection.some(
-              (p) => p.row === r && p.col === c
-            );
-            const isFound = foundCells.has(posKey);
+        <div
+          style={{
+            gridTemplateColumns: `repeat(${GRID_SIZE}, 2rem)`,
+            gridTemplateRows: `repeat(${GRID_SIZE}, 2rem)`,
+          }}
+          className="grid border w-max"
+        >
+          {grid.map((row, r) =>
+            row.map((letter, c) => {
+              const posKey = key({ row: r, col: c });
+              const isSelected = selection.some(
+                (p) => p.row === r && p.col === c
+              );
+              const isFound = foundCells.has(posKey);
+              return (
+                <button
+                  type="button"
+                  key={posKey}
+                  data-pos={posKey}
+                  onMouseDown={() => handleMouseDown(r, c)}
+                  onMouseEnter={() => handleMouseEnter(r, c)}
+                  onMouseUp={handleMouseUp}
+                  onKeyDown={(e) => handleKeyDown(r, c, e)}
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    handleMouseDown(r, c);
+                  }}
+                  className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none focus:outline-none ${
+                    isFound
+                      ? 'bg-green-300'
+                      : isSelected
+                        ? 'bg-yellow-300'
+                        : 'bg-white'
+                  }`}
+                >
+                  {letter}
+                </button>
+              );
+            })
+          )}
+        </div>
+        <svg
+          className="absolute top-0 left-0 pointer-events-none"
+          width={GRID_SIZE * CELL_SIZE}
+          height={GRID_SIZE * CELL_SIZE}
+        >
+          {lines.map((l, i) => {
+            const { start, end } = l;
+            const x1 = start.col * CELL_SIZE + CELL_SIZE / 2;
+            const y1 = start.row * CELL_SIZE + CELL_SIZE / 2;
+            const x2 = end.col * CELL_SIZE + CELL_SIZE / 2;
+            const y2 = end.row * CELL_SIZE + CELL_SIZE / 2;
             return (
-              <button
-                type="button"
-                key={posKey}
-                data-pos={posKey}
-                onMouseDown={() => handleMouseDown(r, c)}
-                onMouseEnter={() => handleMouseEnter(r, c)}
-                onMouseUp={handleMouseUp}
-                onKeyDown={(e) => handleKeyDown(r, c, e)}
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  handleMouseDown(r, c);
-                }}
-                className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none focus:outline-none ${
-                  isFound
-                    ? 'bg-green-300'
-                    : isSelected
-                      ? 'bg-yellow-300'
-                      : 'bg-white'
-                }`}
-              >
-                {letter}
-              </button>
+              <line
+                key={i}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="rgba(134,239,172,0.7)"
+                strokeWidth={24}
+                strokeLinecap="round"
+                className="transition-all duration-300"
+              />
             );
-          })
-        )}
+          })}
+          {currentLine && (() => {
+            const { start, end } = currentLine;
+            const x1 = start.col * CELL_SIZE + CELL_SIZE / 2;
+            const y1 = start.row * CELL_SIZE + CELL_SIZE / 2;
+            const x2 = end.col * CELL_SIZE + CELL_SIZE / 2;
+            const y2 = end.row * CELL_SIZE + CELL_SIZE / 2;
+            return (
+              <line
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="rgba(253,224,71,0.7)"
+                strokeWidth={24}
+                strokeLinecap="round"
+                className="transition-all duration-100"
+              />
+            );
+          })()}
+        </svg>
       </div>
       {found.size > 0 && (
         <div className="mt-4">
           <h3 className="font-bold">Found</h3>
           <ul className="columns-2 md:columns-3 mb-2">
             {Array.from(found).map((w) => (
-              <li key={w}>{w}</li>
+              <li key={w}>
+                <span className="font-bold">{w}</span>
+                {definitions[w] ? ` - ${definitions[w]}` : ''}
+              </li>
             ))}
           </ul>
         </div>
