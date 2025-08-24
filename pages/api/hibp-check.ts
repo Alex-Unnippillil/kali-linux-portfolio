@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createHash } from 'crypto';
+import { rateLimit } from '../../lib/rateLimiter';
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,6 +10,8 @@ export default async function handler(
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  if (!rateLimit(req, res)) return;
 
   const { password } = req.body as { password?: string };
   if (typeof password !== 'string' || password.length === 0) {
