@@ -17,31 +17,49 @@ type ResolverInfo = {
 };
 
 const STUN_TIMEOUT = 3000; // ms
+type IpInfo = { local: string[]; public: string[]; mdns: boolean };
 
-async function fetchPublicIp(): Promise<string> {
-  const res = await fetch('https://api64.ipify.org?format=json');
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const data = await res.json();
-  return data.ip;
-}
-
-function gatherLocalIps(): Promise<string[]> {
+function gatherIps(): Promise<IpInfo> {
   return new Promise((resolve, reject) => {
-    const ips = new Set<string>();
+    const locals = new Set<string>();
+    const publics = new Set<string>();
+    let mdns = false;
     let settled = false;
+    let stunError: string | null = null;
+
     try {
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
       });
       pc.createDataChannel('');
+      pc.onicecandidateerror = (e: any) => {
+        stunError = e.errorText || `code ${e.errorCode}`;
+      };
       pc.onicecandidate = (event) => {
         if (event.candidate && event.candidate.candidate) {
           const parts = event.candidate.candidate.split(' ');
-          if (parts[4]) ips.add(parts[4]);
+          const addr = parts[4];
+          const typeIndex = parts.indexOf('typ');
+          const candType = typeIndex >= 0 ? parts[typeIndex + 1] : '';
+          if (addr && addr.endsWith('.local')) {
+            mdns = true;
+          } else if (candType === 'srflx' || candType === 'relay') {
+            publics.add(addr);
+          } else if (addr) {
+            locals.add(addr);
+          }
         } else if (!event.candidate && !settled) {
           settled = true;
           pc.close();
-          resolve(Array.from(ips));
+          if (stunError) {
+            reject(new Error(stunError));
+          } else {
+            resolve({
+              local: Array.from(locals),
+              public: Array.from(publics),
+              mdns,
+            });
+          }
         }
       };
       pc.createOffer()
@@ -58,7 +76,15 @@ function gatherLocalIps(): Promise<string[]> {
         if (!settled) {
           settled = true;
           pc.close();
-          resolve(Array.from(ips));
+          if (stunError) {
+            reject(new Error(stunError));
+          } else {
+            resolve({
+              local: Array.from(locals),
+              public: Array.from(publics),
+              mdns,
+            });
+          }
         }
       }, STUN_TIMEOUT);
     } catch (err) {
@@ -109,8 +135,15 @@ async function testDns(hostnames: string[]): Promise<DnsResult[]> {
 
 const IpDnsLeak: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [publicIp, setPublicIp] = useState<string | null>(null);
+  const [publicIps, setPublicIps] = useState<string[]>([]);
   const [localIps, setLocalIps] = useState<string[]>([]);
+  const [mdns, setMdns] = useState(false);
+  const [networkInfo, setNetworkInfo] = useState<{
+    type?: string;
+    effectiveType?: string;
+    downlink?: number;
+    rtt?: number;
+  } | null>(null);
   const [dnsInput, setDnsInput] = useState('example.com');
   const [dnsResults, setDnsResults] = useState<DnsResult[]>([]);
   const [resolverInfo, setResolverInfo] = useState<ResolverInfo[]>([]);
@@ -119,8 +152,10 @@ const IpDnsLeak: React.FC = () => {
   const runCheck = async () => {
     setLoading(true);
     setErrors([]);
-    setPublicIp(null);
+    setPublicIps([]);
     setLocalIps([]);
+    setMdns(false);
+    setNetworkInfo(null);
     setDnsResults([]);
     setResolverInfo([]);
 
@@ -131,13 +166,9 @@ const IpDnsLeak: React.FC = () => {
 
     const errorList: string[] = [];
 
-    const ipPromise = fetchPublicIp().catch((e) => {
-      errorList.push(`Public IP error: ${e.message}`);
-      return null;
-    });
-    const localPromise = gatherLocalIps().catch((e) => {
-      errorList.push(`WebRTC error: ${e.message}`);
-      return [] as string[];
+    const ipPromise = gatherIps().catch((e) => {
+      errorList.push(`WebRTC/STUN error: ${e.message}`);
+      return { local: [], public: [], mdns: false } as IpInfo;
     });
     const dnsPromise = testDns(hostnames).catch((e) => {
       errorList.push(`DNS test error: ${e.message}`);
@@ -150,19 +181,32 @@ const IpDnsLeak: React.FC = () => {
         return { resolvers: [] as ResolverInfo[] };
       });
 
-    const [ip, local, dns, resolverData] = await Promise.all([
+    const [ipData, dns, resolverData] = await Promise.all([
       ipPromise,
-      localPromise,
       dnsPromise,
       resolverPromise,
     ]);
 
-    if (ip) setPublicIp(ip);
-    setLocalIps(local);
+    setLocalIps(ipData.local);
+    setPublicIps(ipData.public);
+    setMdns(ipData.mdns);
     setDnsResults(dns);
+
+    const conn =
+      (navigator as any).connection ||
+      (navigator as any).mozConnection ||
+      (navigator as any).webkitConnection;
+    if (conn) {
+      setNetworkInfo({
+        type: conn.type,
+        effectiveType: conn.effectiveType,
+        downlink: conn.downlink,
+        rtt: conn.rtt,
+      });
+    }
+
     if (resolverData?.resolvers) {
-      const ipSet = new Set(local);
-      if (ip) ipSet.add(ip);
+      const ipSet = new Set([...ipData.local, ...ipData.public]);
       const enriched = resolverData.resolvers.map((r: ResolverInfo) => ({
         ...r,
         mismatch: r.ip ? !ipSet.has(r.ip) : true,
@@ -177,7 +221,7 @@ const IpDnsLeak: React.FC = () => {
   const resolverMismatch = resolverInfo.some((r) => r.mismatch);
 
   const summary: string[] = [];
-  if (publicIp) summary.push(`Public IP detected: ${publicIp}`);
+  if (publicIps.length) summary.push(`Public IP detected: ${publicIps.join(', ')}`);
   if (localIps.length) summary.push(`Local IPs: ${localIps.join(', ')}`);
   if (dnsResults.length)
     summary.push(
@@ -189,12 +233,17 @@ const IpDnsLeak: React.FC = () => {
         ? 'Resolver IP mismatch detected.'
         : 'Resolvers match WebRTC candidates.'
     );
+  if (mdns) summary.push('mDNS obfuscation detected.');
+  if (networkInfo)
+    summary.push(
+      `Network: ${networkInfo.effectiveType || networkInfo.type}`
+    );
 
   const tips: string[] = [];
-  if (publicIp)
+  if (publicIps.length)
     tips.push('Use a VPN or proxy to mask your public IP.');
-  if (localIps.length)
-    tips.push('Disable WebRTC to prevent local IP disclosure.');
+  if (localIps.length && !mdns)
+    tips.push('Enable mDNS or disable WebRTC to prevent local IP disclosure.');
   if (hasDnsErrors)
     tips.push('Configure a secure DNS resolver or check for DNS leaks.');
   if (resolverMismatch)
@@ -226,14 +275,31 @@ const IpDnsLeak: React.FC = () => {
       </div>
       )}
 
-      {publicIp && (
+      {publicIps.length > 0 && (
         <div>
-          <strong>Public IP:</strong> {publicIp}
+          <strong>Public Candidates:</strong> {publicIps.join(', ')}
         </div>
       )}
       {localIps.length > 0 && (
         <div>
           <strong>Local Candidates:</strong> {localIps.join(', ')}
+        </div>
+      )}
+      {mdns && (
+        <div>
+          <strong>mDNS:</strong> Obfuscation detected
+        </div>
+      )}
+      {networkInfo && (
+        <div>
+          <strong>Network:</strong>{' '}
+          {networkInfo.effectiveType || networkInfo.type}
+          {typeof networkInfo.downlink === 'number' && (
+            <> ({networkInfo.downlink}Mb/s)</>
+          )}
+          {typeof networkInfo.rtt === 'number' && (
+            <> rtt {networkInfo.rtt}ms</>
+          )}
         </div>
       )}
 
