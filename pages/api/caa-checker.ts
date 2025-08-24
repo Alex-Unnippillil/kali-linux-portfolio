@@ -140,6 +140,11 @@ export default async function handler(
         'Critical flag set: unrecognized tags must be understood by CAs or issuance is forbidden.'
       );
     }
+    if (!records.some((r) => r.tag === 'issuewild') && issueValues.length > 0) {
+      notes.push(
+        'Wildcard policy inherits non-wildcard issue tags when issuewild is absent.'
+      );
+    }
     notes.push(
       `Records at ${policyDomain} apply to ${domain}. More specific subdomains override parent policies.`
     );
