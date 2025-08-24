@@ -7,6 +7,8 @@
 
 ## Adding New Apps
 
+See [New App Checklist](./docs/new-app-checklist.md) to ensure all required steps are completed.
+
 Heavy applications should be loaded with [`next/dynamic`](https://nextjs.org/docs/advanced-features/dynamic-import) so that they do not bloat the initial bundle.
 
 ```js
