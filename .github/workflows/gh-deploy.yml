@@ -42,6 +42,9 @@ jobs:
           NEXT_PUBLIC_TEMPLATE_ID: ${{ secrets.NEXT_PUBLIC_TEMPLATE_ID }}
           NEXT_PUBLIC_USER_ID: ${{ secrets.NEXT_PUBLIC_USER_ID }}
 
+      - name: Check for bundled Node core modules
+        run: yarn check:node-core
+
       - name: Exporting Bundle File
         run: yarn export
       - run: touch ./out/.nojekyll

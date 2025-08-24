@@ -62,7 +62,12 @@ module.exports = {
   },
   webpack: (config) => {
     config.resolve = config.resolve || {};
-    config.resolve.fallback = { ...(config.resolve.fallback || {}), fs: false };
+    config.resolve.fallback = {
+      ...(config.resolve.fallback || {}),
+      fs: false,
+      net: false,
+      tls: false,
+    };
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       mermaid: require('path').resolve(__dirname, 'lib/mermaidStub.js'),
