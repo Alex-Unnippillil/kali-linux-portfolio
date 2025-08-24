@@ -1,5 +1,7 @@
 # Deployment
 
+For security-related deployment steps, including firewall rules for sensitive headers, see [security.md](./security.md).
+
 This application requires a running Next.js server to handle API routes and real-time features such as Socket.IO. Production builds should be created and started with:
 
 ```bash
