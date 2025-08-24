@@ -128,15 +128,17 @@ export class Desktop extends Component {
         contextMenu.style.left = posx;
         contextMenu.style.top = posy;
 
-        this.setState({ context_menus: { ...this.state.context_menus, [menuName]: true } });
+        this.setState(prev => ({ context_menus: { ...prev.context_menus, [menuName]: true } }));
     }
 
     hideAllContextMenu = () => {
-        let menus = this.state.context_menus;
-        Object.keys(menus).forEach(key => {
-            menus[key] = false;
+        this.setState(prev => {
+            const menus = {};
+            Object.keys(prev.context_menus).forEach(key => {
+                menus[key] = false;
+            });
+            return { context_menus: menus };
         });
-        this.setState({ context_menus: menus });
     }
 
     getMenuPosition = (e) => {
@@ -316,19 +318,17 @@ export class Desktop extends Component {
             }
         }
 
-        let overlapped_windows = this.state.overlapped_windows;
-        overlapped_windows[objId] = hide;
-        this.setState({ hideSideBar: hide, overlapped_windows });
+        this.setState(prev => ({
+            hideSideBar: hide,
+            overlapped_windows: { ...prev.overlapped_windows, [objId]: hide }
+        }));
     }
 
     hasMinimised = (objId) => {
-        let minimized_windows = this.state.minimized_windows;
-        var focused_windows = this.state.focused_windows;
-
-        // remove focus and minimise this window
-        minimized_windows[objId] = true;
-        focused_windows[objId] = false;
-        this.setState({ minimized_windows, focused_windows });
+        this.setState(prev => ({
+            minimized_windows: { ...prev.minimized_windows, [objId]: true },
+            focused_windows: { ...prev.focused_windows, [objId]: false }
+        }));
 
         this.hideSideBar(null, false);
 
@@ -377,9 +377,9 @@ export class Desktop extends Component {
             r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
 
             // tell childs that his app has been not minimised
-            let minimized_windows = this.state.minimized_windows;
-            minimized_windows[objId] = false;
-            this.setState({ minimized_windows: minimized_windows });
+            this.setState(prev => ({
+                minimized_windows: { ...prev.minimized_windows, [objId]: false }
+            }));
             return;
         }
 
@@ -434,28 +434,30 @@ export class Desktop extends Component {
         this.hideSideBar(null, false);
 
         // close window
-        let closed_windows = this.state.closed_windows;
-        let favourite_apps = this.state.favourite_apps;
-
-        if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
-        closed_windows[objId] = true; // closes the app's window
-
-        this.setState({ closed_windows, favourite_apps });
+        this.setState(prev => {
+            const update = {
+                closed_windows: { ...prev.closed_windows, [objId]: true }
+            };
+            if (this.initFavourite[objId] === false) {
+                update.favourite_apps = { ...prev.favourite_apps, [objId]: false };
+            }
+            return update;
+        });
     }
 
     focus = (objId) => {
-        // removes focus from all window and 
+        // removes focus from all window and
         // gives focus to window with 'id = objId'
-        var focused_windows = this.state.focused_windows;
-        focused_windows[objId] = true;
-        for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
-                if (key !== objId) {
+        this.setState(prev => {
+            const focused_windows = { ...prev.focused_windows };
+            focused_windows[objId] = true;
+            for (let key in focused_windows) {
+                if (focused_windows.hasOwnProperty(key) && key !== objId) {
                     focused_windows[key] = false;
                 }
             }
-        }
-        this.setState({ focused_windows });
+            return { focused_windows };
+        });
     }
 
     addNewFolder = () => {
@@ -482,7 +484,7 @@ export class Desktop extends Component {
         this.setState({ showNameBar: false }, this.updateAppsData);
     }
 
-    showAllApps = () => { this.setState({ allAppsView: !this.state.allAppsView }) }
+    showAllApps = () => { this.setState(prev => ({ allAppsView: !prev.allAppsView })) }
 
     renderNameBar = () => {
         let addFolder = () => {
