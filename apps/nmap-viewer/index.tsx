@@ -3,7 +3,12 @@ import * as sax from 'sax';
 import { validateXML } from 'xmllint-wasm';
 import Papa from 'papaparse';
 import { FixedSizeList as List } from 'react-window';
-import ForceGraph2D from 'react-force-graph';
+import dynamic from 'next/dynamic';
+
+const ForceGraph2D = dynamic(() => import('react-force-graph'), {
+  ssr: false,
+  loading: () => <div>Loading graph...</div>,
+});
 
 interface VulnInfo {
   id: string;

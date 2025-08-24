@@ -1,5 +1,4 @@
 import { Engine, Runner, Bodies, Body, Composite, Events, Vector } from 'matter-js';
-import { Howl } from 'howler';
 
 export type HitClass = 'flipper' | 'bumper' | 'slingshot';
 
@@ -27,7 +26,7 @@ export class PinballGame {
   private settings: PinballSettings = { sound: true, tiltLimit: 3 };
   private tiltCount = 0;
   private tilted = false;
-  private sounds: Record<HitClass, Howl>;
+  private sounds: Partial<Record<HitClass, import('howler').Howl>> = {};
 
   constructor(private width = 600, private height = 800) {
     this.engine = Engine.create();
@@ -83,19 +82,22 @@ export class PinballGame {
       ...walls,
     ]);
 
-    this.sounds = {
-      flipper: new Howl({ src: ['flipper.wav'], volume: 0.5 }),
-      bumper: new Howl({ src: ['bumper.wav'], volume: 0.5 }),
-      slingshot: new Howl({ src: ['slingshot.wav'], volume: 0.5 }),
-    };
+    import('howler').then(({ Howl }) => {
+      this.sounds = {
+        flipper: new Howl({ src: ['flipper.wav'], volume: 0.5 }),
+        bumper: new Howl({ src: ['bumper.wav'], volume: 0.5 }),
+        slingshot: new Howl({ src: ['slingshot.wav'], volume: 0.5 }),
+      };
+    });
 
     this.loadState();
 
     Events.on(this.engine, 'collisionStart', (evt) => {
       for (const pair of evt.pairs) {
         const label = pair.bodyA === this.ball ? pair.bodyB.label : pair.bodyA.label;
-        if (label && (label as HitClass) in this.sounds && this.settings.sound) {
-          this.sounds[label as HitClass].play();
+        const sound = this.sounds[label as HitClass];
+        if (label && sound && this.settings.sound) {
+          sound.play();
         }
       }
     });
