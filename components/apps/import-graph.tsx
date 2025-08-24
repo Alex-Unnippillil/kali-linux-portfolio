@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import JSZip from 'jszip';
 import {
   forceCenter,
@@ -263,14 +263,24 @@ const GraphView: React.FC<GraphViewProps> = ({ graph, cycles, depth, root, searc
   const [panning, setPanning] = useState<null | { x: number; y: number }>(null);
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
 
-  const nodes = Object.keys(graph);
-  const visible = root ? filterByDepth(graph, root, depth) : new Set<string>();
-  const filteredNodes = root
-    ? nodes.filter((n) => visible.has(n) && n.includes(search))
-    : [];
-  const edges = filteredNodes.flatMap((n) =>
-    graph[n].deps.filter((d) => visible.has(d)).map((d) => [n, d] as [string, string]),
-  );
+    const nodes = useMemo(() => Object.keys(graph), [graph]);
+    const visible = useMemo(
+      () => (root ? filterByDepth(graph, root, depth) : new Set<string>()),
+      [graph, root, depth],
+    );
+    const filteredNodes = useMemo(
+      () => (root ? nodes.filter((n) => visible.has(n) && n.includes(search)) : []),
+      [root, nodes, visible, search],
+    );
+    const edges = useMemo(
+      () =>
+        filteredNodes.flatMap((n) =>
+          graph[n].deps
+            .filter((d) => visible.has(d))
+            .map((d) => [n, d] as [string, string]),
+        ),
+      [filteredNodes, graph, visible],
+    );
 
   useEffect(() => {
     const nodeData = filteredNodes.map((id) => ({ id }));

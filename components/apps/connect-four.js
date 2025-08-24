@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 // Configuration presets
 const PRESETS = {
@@ -281,17 +281,20 @@ const ConnectFour = () => {
     }
   }, []);
 
-  const saveStats = (res) => {
-    const ns = { ...stats, [res]: stats[res] + 1 };
-    setStats(ns);
-    localStorage.setItem('connect4stats', JSON.stringify(ns));
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon(
-        '/api/telemetry',
-        JSON.stringify({ game: 'connect-four', result: res })
-      );
-    }
-  };
+    const saveStats = useCallback(
+      (res) => {
+        const ns = { ...stats, [res]: stats[res] + 1 };
+        setStats(ns);
+        localStorage.setItem('connect4stats', JSON.stringify(ns));
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(
+            '/api/telemetry',
+            JSON.stringify({ game: 'connect-four', result: res })
+          );
+        }
+      },
+      [stats]
+    );
 
   const reset = (rows, cols, pop) => {
     setHistory([createGame(rows, cols, pop)]);
@@ -301,35 +304,44 @@ const ConnectFour = () => {
     setSelCol(Math.floor(cols / 2));
   };
 
-  const applyMove = (fn, col, type) => {
-    if (winner) return;
-    const g = cloneGame(game);
-    const meta = fn(g, col);
-    g.moves.push({ type, col });
-    const newHist = history.slice(0, idx + 1);
-    newHist.push(g);
-    setHistory(newHist);
-    setIdx(idx + 1);
-    if (hasWin(g.bitboards[1 - g.player], g.rows)) {
-      const winPlayer = g.player ^ 1;
-      setWinner(winPlayer === 0 ? 'red' : 'yellow');
-      saveStats(winPlayer === 0 ? 'wins' : 'losses');
-    } else if (g.numMoves === g.rows * g.cols) {
-      setWinner('draw');
-      saveStats('draws');
-    }
-    return meta;
-  };
+    const applyMove = useCallback(
+      (fn, col, type) => {
+        if (winner) return;
+        const g = cloneGame(game);
+        const meta = fn(g, col);
+        g.moves.push({ type, col });
+        const newHist = history.slice(0, idx + 1);
+        newHist.push(g);
+        setHistory(newHist);
+        setIdx(idx + 1);
+        if (hasWin(g.bitboards[1 - g.player], g.rows)) {
+          const winPlayer = g.player ^ 1;
+          setWinner(winPlayer === 0 ? 'red' : 'yellow');
+          saveStats(winPlayer === 0 ? 'wins' : 'losses');
+        } else if (g.numMoves === g.rows * g.cols) {
+          setWinner('draw');
+          saveStats('draws');
+        }
+        return meta;
+      },
+        [winner, game, history, idx, saveStats]
+      );
 
-  const handleDrop = (col) => {
-    if (!canPlay(game, col)) return;
-    applyMove(applyDrop, col, 'drop');
-  };
+    const handleDrop = useCallback(
+      (col) => {
+        if (!canPlay(game, col)) return;
+        applyMove(applyDrop, col, 'drop');
+      },
+      [game, applyMove]
+    );
 
-  const handlePop = (col) => {
-    if (!canPop(game, col)) return;
-    applyMove(applyPop, col, 'pop');
-  };
+    const handlePop = useCallback(
+      (col) => {
+        if (!canPop(game, col)) return;
+        applyMove(applyPop, col, 'pop');
+      },
+      [game, applyMove]
+    );
 
   // AI move when it's AI's turn
   useEffect(() => {
@@ -344,7 +356,7 @@ const ConnectFour = () => {
         );
       }
     }
-  }, [idx, winner, depth]);
+    }, [idx, winner, depth, game, applyMove]);
 
   // compute hints when it's human's turn
   useEffect(() => {
@@ -353,11 +365,11 @@ const ConnectFour = () => {
     } else {
       setHeat(Array(game.cols).fill(null));
     }
-  }, [idx, winner, depth]);
+    }, [idx, winner, depth, game]);
 
   useEffect(() => {
     setEvalScore(negamax(game, depth, -1000, 1000));
-  }, [idx, depth]);
+    }, [idx, depth, game]);
 
   useEffect(() => {
     const handler = (e) => {

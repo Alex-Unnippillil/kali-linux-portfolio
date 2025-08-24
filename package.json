@@ -5,6 +5,7 @@
   "homepage": "https://unnippillil.com/",
   "packageManager": "yarn@4.9.2",
   "scripts": {
+    "preinstall": "node scripts/check-node-version.js",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -21,6 +22,7 @@
     "typecheck": "tsc --noEmit",
     "build:ci": "next build",
     "lint:ci": "next lint --max-warnings=0 && yarn check:edge-node",
+
     "format:check": "prettier --check ."
   },
   "engines": {
@@ -38,6 +40,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/zxcvbn": "^4.4.5",
     "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "apache-arrow": "^21.0.0",
     "argon2-browser": "^1.18.0",
     "ascii85": "^1.0.2",
@@ -97,10 +100,11 @@
     "qrcode": "^1.5.4",
     "re2": "^1.22.1",
     "re2-wasm": "^1.0.2",
-    "react": "18.2.0",
+    "react": "^19.1.1",
     "react-activity-calendar": "^2.7.13",
     "react-chartjs-2": "^5.3.0",
-    "react-dom": "18.2.0",
+    "react-dom": "^19.1.1",
+
     "react-force-graph": "^1.48.0",
     "react-force-graph-2d": "^1.28.0",
     "react-ga4": "^2.1.0",
@@ -114,6 +118,7 @@
     "rfc4648": "^1.5.4",
     "safe-regex": "^2.1.1",
     "sax": "^1.4.1",
+    "sharp": "^0.34.3",
     "socket.io": "^4.7.5",
     "socket.io-client": "^4.7.5",
     "spdx-license-ids": "^3.0.17",
@@ -135,6 +140,8 @@
     "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.34.0",
     "@lhci/cli": "^0.13.0",
     "@playwright/test": "^1.51.1",
     "@testing-library/dom": "^10.4.1",
@@ -151,7 +158,8 @@
     "@types/mermaid": "^9.2.0",
     "@types/node": "^24.2.1",
     "@types/plist": "^3.0.2",
-    "@types/react": "^18.2.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "@types/react-window": "^1",
     "@types/sax": "^1",
     "@types/sql.js": "^1",
@@ -169,9 +177,6 @@
     "prettier": "^3.2.5",
     "typescript": "^5.9.2",
     "vitest": "^1.6.0"
-  },
-  "resolutions": {
-    "react": "18.2.0",
-    "react-dom": "18.2.0"
+
   }
 }
