@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import CryptoJS from 'crypto-js';
 import ssdeep from 'ssdeep.js';
 import tlsh from 'tlsh';
-import createSimhash from 'simhash';
+import createSimhash from '@lib/simhash';
 import DigestHashBuilder from 'tlsh/lib/digests/digest-hash-builder';
 
 const simhash = createSimhash();
