@@ -180,7 +180,11 @@ const Memory = () => {
                 style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden' }}
               >
                 {card.img.startsWith('blob:') ? (
-                  <img src={card.img} alt="" className="w-full h-full object-cover" />
+                  <img
+                    src={card.img}
+                    alt={`Card showing ${card.img}`}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   card.img
                 )}

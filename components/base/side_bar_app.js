@@ -58,6 +58,7 @@ export class SideBarApp extends Component {
                     className={(this.state.scaleImage ? " scale " : "") + " scalable-app-icon w-7 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"}
                     src={this.props.icon.replace('./', '/')}
                     alt=""
+                    role="presentation"
                     sizes="28px"
                 />
                 {
