@@ -506,7 +506,7 @@ const apps = [
   {
     id: 'cvss-calculator',
     title: 'CVSS Calculator',
-    icon: icon('calc.png'),
+    icon: icon('cvss.svg'),
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
