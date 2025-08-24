@@ -854,7 +854,7 @@ const apps = [
   {
     id: 'http3-probe',
     title: 'HTTP/3 Probe',
-    icon: './themes/Yaru/apps/resource-monitor.svg',
+    icon: './themes/Yaru/apps/http3-probe.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
