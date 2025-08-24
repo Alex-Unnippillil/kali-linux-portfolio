@@ -26,6 +26,7 @@ export const trackEvent = async (
   type: string,
   params: Record<string, any> = {}
 ): Promise<void> => {
+  if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'true') return;
   try {
     await logEvent({ type, ...maskPII(params) });
   } catch {
@@ -36,6 +37,7 @@ export const trackEvent = async (
 export const trackWebVital = async (
   metric: NextWebVitalsMetric,
 ): Promise<void> => {
+  if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'true') return;
   await trackEvent('web-vital', metric);
 };
 

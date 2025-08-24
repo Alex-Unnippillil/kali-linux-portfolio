@@ -13,10 +13,12 @@ import { validatePublicEnv } from '../lib/validate';
 
 const inter = Inter({ subsets: ['latin'] });
 
-validatePublicEnv(process.env);
-initAxiom();
-
 const analyticsEnabled = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true';
+
+validatePublicEnv(process.env);
+if (analyticsEnabled) {
+  initAxiom();
+}
 
 const shouldTrack = Math.random() < 0.1;
 
