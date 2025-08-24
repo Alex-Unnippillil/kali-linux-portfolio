@@ -1,5 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import CryptoJS from 'crypto-js';
+
+function memoize<T extends (...args: any[]) => any>(fn: T): T {
+  const cache = new Map<string, any>();
+  return ((...args: any[]) => {
+    const key = JSON.stringify(args);
+    if (cache.has(key)) return cache.get(key);
+    const res = fn(...args);
+    cache.set(key, res);
+    return res;
+  }) as T;
+}
 
 function parseMac(mac: string): Uint8Array {
   const clean = mac.replace(/[^0-9a-f]/gi, '').toLowerCase();
@@ -25,6 +36,16 @@ function parseIPv6(addr: string): Uint8Array {
     bytes[i * 2] = (n >> 8) & 0xff;
     bytes[i * 2 + 1] = n & 0xff;
   });
+  return bytes;
+}
+
+function parseIID(iid: string): Uint8Array {
+  const clean = iid.replace(/[^0-9a-f]/gi, '').toLowerCase();
+  if (clean.length !== 16) return new Uint8Array();
+  const bytes = new Uint8Array(8);
+  for (let i = 0; i < 8; i += 1) {
+    bytes[i] = parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+  }
   return bytes;
 }
 
@@ -73,10 +94,28 @@ function combine(prefix: Uint8Array, iid: Uint8Array): string {
   return bytesToIPv6(bytes);
 }
 
+const parseMacMemo = memoize(parseMac);
+const parseIPv6Memo = memoize(parseIPv6);
+const parseIIDMemo = memoize(parseIID);
+const combineMemo = memoize(combine);
+
+function validatePrefix(prefix: string): Uint8Array | null {
+  const [addr, len] = prefix.split('/');
+  if (len !== '64') return null;
+  const bytes = parseIPv6Memo(addr);
+  if (bytes.length !== 16) return null;
+  return bytes.slice(0, 8);
+}
+
+function validateIID(iid: string): Uint8Array | null {
+  const bytes = parseIIDMemo(iid);
+  return bytes.length === 8 ? bytes : null;
+}
+
 function computeEui64(prefix: string, mac: string): string {
-  const prefixBytes = parseIPv6(prefix).slice(0, 8);
-  const macBytes = parseMac(mac);
-  if (macBytes.length !== 6) return '';
+  const prefixBytes = validatePrefix(prefix);
+  const macBytes = parseMacMemo(mac);
+  if (!prefixBytes || macBytes.length !== 6) return '';
   const iid = new Uint8Array([
     macBytes[0] ^ 0x02,
     macBytes[1],
@@ -87,12 +126,13 @@ function computeEui64(prefix: string, mac: string): string {
     macBytes[4],
     macBytes[5],
   ]);
-  return combine(prefixBytes, iid);
+  return combineMemo(prefixBytes, iid);
 }
 
 function computeRfc7217(prefix: string, mac: string, secret: string): string {
-  const prefixBytes = parseIPv6(prefix).slice(0, 8);
-  const macBytes = mac ? parseMac(mac) : new Uint8Array();
+  const prefixBytes = validatePrefix(prefix);
+  if (!prefixBytes) return '';
+  const macBytes = mac ? parseMacMemo(mac) : new Uint8Array();
   const secretBytes = secret ? new TextEncoder().encode(secret) : new Uint8Array();
   const all = new Uint8Array(prefixBytes.length + macBytes.length + secretBytes.length);
   all.set(prefixBytes);
@@ -105,13 +145,58 @@ function computeRfc7217(prefix: string, mac: string, secret: string): string {
     iid[i] = parseInt(hashHex.slice(i * 2, i * 2 + 2), 16);
   }
   iid[0] &= 0xfc; // clear u and g bits
-  return combine(prefixBytes, iid);
+  return combineMemo(prefixBytes, iid);
 }
+
+function computeFromIID(prefix: string, iid: string): string {
+  const prefixBytes = validatePrefix(prefix);
+  const iidBytes = validateIID(iid);
+  if (!prefixBytes || !iidBytes) return '';
+  return combineMemo(prefixBytes, iidBytes);
+}
+
+function computePrivacy(prefix: string): string {
+  const prefixBytes = validatePrefix(prefix);
+  if (!prefixBytes) return '';
+  const iid = new Uint8Array(8);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(iid);
+  } else {
+    for (let i = 0; i < 8; i += 1) iid[i] = Math.floor(Math.random() * 256);
+  }
+  iid[0] &= 0xfc;
+  return combineMemo(prefixBytes, iid);
+}
+
+function ipCommand(addr: string): string {
+  return `ip addr add ${addr}/64 dev eth0`;
+}
+
+const AddressRow: React.FC<{ label: string; addr: string }> = ({ label, addr }) => {
+  const copy = useCallback(() => navigator.clipboard.writeText(ipCommand(addr)), [addr]);
+  return (
+    <div>
+      {label}: {addr || '-'}
+      {addr && (
+        <button
+          className="ml-2 px-2 py-1 bg-blue-600 rounded"
+          onClick={copy}
+        >
+          Copy
+        </button>
+      )}
+    </div>
+  );
+};
 
 const Ipv6Slaac: React.FC = () => {
   const [prefix, setPrefix] = useState('');
   const [mac, setMac] = useState('');
   const [secret, setSecret] = useState('');
+  const [iid, setIid] = useState('');
+
+  const prefixValid = useMemo(() => !prefix || validatePrefix(prefix) !== null, [prefix]);
+  const iidValid = useMemo(() => !iid || validateIID(iid) !== null, [iid]);
 
   const eui64 = useMemo(() => {
     if (!prefix || !mac) return '';
@@ -131,6 +216,24 @@ const Ipv6Slaac: React.FC = () => {
     }
   }, [prefix, mac, secret]);
 
+  const provided = useMemo(() => {
+    if (!prefix || !iid) return '';
+    try {
+      return computeFromIID(prefix, iid);
+    } catch {
+      return '';
+    }
+  }, [prefix, iid]);
+
+  const privacy = useMemo(() => {
+    if (!prefix) return '';
+    try {
+      return computePrivacy(prefix);
+    } catch {
+      return '';
+    }
+  }, [prefix]);
+
   return (
     <div className="h-full w-full p-4 overflow-y-auto bg-panel text-white space-y-4">
       <div className="space-y-2">
@@ -140,6 +243,9 @@ const Ipv6Slaac: React.FC = () => {
           value={prefix}
           onChange={(e) => setPrefix(e.target.value)}
         />
+        {!prefixValid && prefix && (
+          <div className="text-red-500 text-sm">Prefix must be /64</div>
+        )}
         <input
           className="w-full p-2 text-black rounded"
           placeholder="MAC address (optional)"
@@ -152,10 +258,22 @@ const Ipv6Slaac: React.FC = () => {
           value={secret}
           onChange={(e) => setSecret(e.target.value)}
         />
+        <input
+          className="w-full p-2 text-black rounded"
+          placeholder="IID (optional 64-bit hex)"
+          value={iid}
+          onChange={(e) => setIid(e.target.value)}
+        />
+        {!iidValid && iid && (
+          <div className="text-red-500 text-sm">IID must be 64-bit hex</div>
+        )}
       </div>
+      <div className="font-mono">RA {prefix || '-'} → IID {iid || '-'} → {provided || '-'}</div>
       <div className="space-y-2 font-mono">
-        <div>EUI-64: {eui64 || '-'}</div>
-        <div>RFC7217: {rfc7217 || '-'}</div>
+        <AddressRow label="Provided IID" addr={provided} />
+        <AddressRow label="EUI-64" addr={eui64} />
+        <AddressRow label="RFC7217" addr={rfc7217} />
+        <AddressRow label="Privacy" addr={privacy} />
       </div>
     </div>
   );
