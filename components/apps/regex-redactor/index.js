@@ -6,12 +6,14 @@ const RegexRedactor = () => {
   const [text, setText] = useState('');
   const [redact, setRedact] = useState(false);
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
   const [redacted, setRedacted] = useState('');
   const [highlights, setHighlights] = useState([]);
   const [diffParts, setDiffParts] = useState([]);
   const [mask, setMask] = useState('full');
   const [activePreset, setActivePreset] = useState(null);
   const [unsafe, setUnsafe] = useState(false);
+  const [engine, setEngine] = useState('js');
 
   const workerRef = useRef(null);
 
@@ -19,12 +21,13 @@ const RegexRedactor = () => {
     if (typeof window === 'undefined') return;
     workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
-      const { redacted, highlights, diff, error, unsafe } = e.data;
+      const { redacted, highlights, diff, error, unsafe, warning } = e.data;
       setRedacted(redacted);
       setHighlights(highlights || []);
       setDiffParts(diff || []);
       setError(error || '');
       setUnsafe(unsafe);
+      setWarning(warning || '');
     };
     return () => workerRef.current?.terminate();
   }, []);
@@ -35,8 +38,9 @@ const RegexRedactor = () => {
       pattern,
       preset: activePreset?.label,
       mask,
+      engine,
     });
-  }, [text, pattern, mask, activePreset]);
+  }, [text, pattern, mask, activePreset, engine]);
 
   const highlighted = useMemo(() => {
     if (!highlights.length) return text;
@@ -102,6 +106,14 @@ const RegexRedactor = () => {
           <option value="full">Full Mask</option>
           <option value="partial">Partial Mask</option>
         </select>
+        <select
+          className="px-2 py-1 rounded text-black"
+          value={engine}
+          onChange={(e) => setEngine(e.target.value)}
+        >
+          <option value="js">JavaScript</option>
+          <option value="re2">RE2</option>
+        </select>
         <button
           className="px-3 py-1 bg-blue-600 rounded"
           onClick={() => setRedact(!redact)}
@@ -118,6 +130,9 @@ const RegexRedactor = () => {
         )}
       </div>
       {error && <div className="text-red-500 mb-2">{error}</div>}
+      {warning && !error && (
+        <div className="text-yellow-500 mb-2">{warning}</div>
+      )}
       {unsafe && !error && (
         <div className="text-yellow-500 mb-2">
           Potential catastrophic regex detected. Consider using RE2-compatible
@@ -158,3 +173,5 @@ export default RegexRedactor;
 export const displayRegexRedactor = () => {
   return <RegexRedactor />;
 };
+
+export { PRESETS as SAFE_PATTERNS } from './presets';
