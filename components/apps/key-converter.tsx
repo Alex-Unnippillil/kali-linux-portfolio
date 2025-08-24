@@ -18,6 +18,7 @@ const KeyConverter: React.FC = () => {
   const [inputFormat, setInputFormat] = useState('pem');
   const [outputFormat, setOutputFormat] = useState('jwk');
   const [alg, setAlg] = useState('RS256');
+  const [curve, setCurve] = useState('P-256');
   const [key, setKey] = useState('');
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
@@ -25,14 +26,25 @@ const KeyConverter: React.FC = () => {
   const convert = async () => {
     try {
       setError('');
+      const algMap: Record<string, string> = {
+        'P-256': 'ES256',
+        'P-384': 'ES384',
+        'P-521': 'ES512',
+        Ed25519: 'EdDSA',
+      };
+      const effectiveAlg = alg.startsWith('ES') || alg === 'EdDSA' ? algMap[curve] || alg : alg;
+
       let cryptoKey: CryptoKey;
       if (inputFormat === 'jwk') {
-        cryptoKey = (await importJWK(JSON.parse(key), alg)) as CryptoKey;
+        const jwk = JSON.parse(key);
+        if (!jwk.alg) jwk.alg = effectiveAlg;
+        if (effectiveAlg === 'EdDSA' || effectiveAlg.startsWith('ES')) jwk.crv = jwk.crv || curve;
+        cryptoKey = (await importJWK(jwk, effectiveAlg)) as CryptoKey;
       } else if (inputFormat === 'pem') {
         try {
-          cryptoKey = (await importPKCS8(key, alg)) as CryptoKey;
+          cryptoKey = (await importPKCS8(key, effectiveAlg)) as CryptoKey;
         } catch {
-          cryptoKey = (await importSPKI(key, alg)) as CryptoKey;
+          cryptoKey = (await importSPKI(key, effectiveAlg)) as CryptoKey;
         }
       } else {
         const b64 = key.replace(/\s+/g, '');
@@ -40,14 +52,18 @@ const KeyConverter: React.FC = () => {
         const pkcs8Pem = `-----BEGIN PRIVATE KEY-----\n${body}\n-----END PRIVATE KEY-----`;
         const spkiPem = `-----BEGIN PUBLIC KEY-----\n${body}\n-----END PUBLIC KEY-----`;
         try {
-          cryptoKey = (await importPKCS8(pkcs8Pem, alg)) as CryptoKey;
+          cryptoKey = (await importPKCS8(pkcs8Pem, effectiveAlg)) as CryptoKey;
         } catch {
-          cryptoKey = (await importSPKI(spkiPem, alg)) as CryptoKey;
+          cryptoKey = (await importSPKI(spkiPem, effectiveAlg)) as CryptoKey;
         }
       }
 
       if (outputFormat === 'jwk') {
         const jwk = await exportJWK(cryptoKey);
+        if (effectiveAlg === 'EdDSA' || effectiveAlg.startsWith('ES')) {
+          jwk.alg = effectiveAlg;
+          jwk.crv = curve;
+        }
         setResult(JSON.stringify(jwk, null, 2));
       } else if (outputFormat === 'pem') {
         try {
@@ -101,12 +117,24 @@ const KeyConverter: React.FC = () => {
           onChange={(e) => setOutputFormat(e.target.value)}
           className="px-2 py-1 text-black rounded"
         >
-          {formats.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
-            </option>
-          ))}
+        {formats.map((f) => (
+          <option key={f.value} value={f.value}>
+            {f.label}
+          </option>
+        ))}
         </select>
+        {(alg.startsWith('ES') || alg === 'EdDSA') && (
+          <select
+            value={curve}
+            onChange={(e) => setCurve(e.target.value)}
+            className="px-2 py-1 text-black rounded"
+          >
+            <option value="P-256">P-256</option>
+            <option value="P-384">P-384</option>
+            <option value="P-521">P-521</option>
+            <option value="Ed25519">Ed25519</option>
+          </select>
+        )}
         <input
           value={alg}
           onChange={(e) => setAlg(e.target.value)}

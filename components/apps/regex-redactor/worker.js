@@ -1,9 +1,10 @@
 import { diffWords } from 'diff';
 import safeRegex from 'safe-regex';
+import { RE2 } from 're2-wasm';
 import { PRESETS } from './presets';
 
 self.onmessage = (e) => {
-  const { text, pattern, preset, mask } = e.data;
+  const { text, pattern, preset, mask, useRe2 } = e.data;
   let error = '';
   let unsafe = false;
   let redacted = text;
@@ -14,7 +15,7 @@ self.onmessage = (e) => {
     unsafe = !safeRegex(pattern);
     let regex;
     try {
-      regex = new RegExp(pattern, 'g');
+      regex = useRe2 ? new RE2(pattern, 'gu') : new RegExp(pattern, 'g');
     } catch (err) {
       error = err.message;
     }

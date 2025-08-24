@@ -37,6 +37,16 @@ export const PRESETS = [
       return '█'.repeat(match.length);
     },
   },
+  {
+    label: 'SSN',
+    pattern: '\\b\\d{3}-\\d{2}-\\d{4}\\b',
+    mask(match, option) {
+      if (option === 'partial') {
+        return '***-**-' + match.slice(-4);
+      }
+      return '█'.repeat(match.length);
+    },
+  },
 ];
 
 export default PRESETS;
