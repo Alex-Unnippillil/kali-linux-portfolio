@@ -46,6 +46,7 @@
     "clarinet": "^0.12.6",
     "crypto-js": "4",
     "cvss": "^1.0.5",
+    "cvss4": "^1.0.7",
     "diff": "^8.0.2",
     "dns-packet": "^5.6.1",
     "eml-format": "^0.6.1",
