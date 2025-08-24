@@ -11,7 +11,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "next lint",
-    "test:e2e": "npx playwright test"
+    "test:e2e": "npx playwright test",
+    "check:node-core": "node scripts/check-node-core-modules.js"
   },
   "engines": {
     "node": "20.x"
