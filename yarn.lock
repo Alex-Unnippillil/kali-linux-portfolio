@@ -9184,6 +9184,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"isomorphic-dompurify@npm:^2.26.0":
+  version: 2.26.0
+  resolution: "isomorphic-dompurify@npm:2.26.0"
+  dependencies:
+    dompurify: "npm:^3.2.6"
+    jsdom: "npm:^26.1.0"
+  checksum: 10c0/d6d4f7850180a77d9c8966feb27df46bd8f719c656320936d134ee25f939f15d90c901561251853047d7df240625318656f0f8ba7ac9a75b32a844b103a2178e
+  languageName: node
+  linkType: hard
+
 "isomorphic-fetch@npm:^3.0.0":
   version: 3.0.0
   resolution: "isomorphic-fetch@npm:3.0.0"
@@ -15652,6 +15662,7 @@ __metadata:
     fuse.js: "npm:^6.6.2"
     howler: "npm:^2.2.4"
     html-to-image: "npm:^1.11.13"
+    isomorphic-dompurify: "npm:^2.26.0"
     jest: "npm:^30.0.5"
     jest-environment-jsdom: "npm:^30.0.5"
     jose: "npm:^6.0.13"
