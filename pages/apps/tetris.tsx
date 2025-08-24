@@ -1,6 +1,4 @@
-import dynamic from 'next/dynamic';
-
-const Tetris = dynamic(() => import('../../apps/tetris'), { ssr: false });
+import Tetris from '../../apps/tetris';
 
 export default function TetrisPage() {
   return <Tetris />;
