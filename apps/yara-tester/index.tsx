@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Editor from 'react-simple-code-editor';
 
 const examples = [
   {
@@ -21,8 +22,20 @@ const examples = [
   },
 ];
 
+const sampleArtifacts = [
+  { name: 'Hello World', data: 'Hello world this is a test.' },
+  { name: 'Lorem Ipsum', data: 'Lorem ipsum dolor sit amet.' },
+];
+
+interface RuleFile {
+  name: string;
+  content: string;
+}
+
 interface MatchDetail {
   rule: string;
+  tags?: string[];
+  meta?: Record<string, string>;
   matches: { identifier: string; data: string; offset: number; length: number }[];
 }
 
@@ -37,17 +50,26 @@ const toHex = (s: string): string =>
     .map((c) => c.charCodeAt(0).toString(16).padStart(2, '0'))
     .join(' ');
 
+const highlight = (code: string) =>
+  code
+    .replace(/(rule|strings|condition|meta|include)/g, '<span class="text-purple-400">$1</span>')
+    .replace(/("[^"]*")/g, '<span class="text-green-300">$1</span>')
+    .replace(/(\$[a-zA-Z0-9_]+)/g, '<span class="text-blue-300">$1</span>');
+
 const YaraTester: React.FC = () => {
-  const ruleRef = useRef<HTMLTextAreaElement>(null);
   const workerRef = useRef<Worker | null>(null);
   const runTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const [rules, setRules] = useState(examples[0].rule);
+  const [rules, setRules] = useState<RuleFile[]>([
+    { name: 'main.yar', content: examples[0].rule },
+  ]);
+  const [currentRule, setCurrentRule] = useState(0);
   const [input, setInput] = useState('');
   const [matches, setMatches] = useState<MatchDetail[]>([]);
   const [compileErrors, setCompileErrors] = useState<CompileError[]>([]);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [elapsed, setElapsed] = useState<number | null>(null);
 
   const createWorker = () => {
     const w = new Worker(new URL('./worker.ts', import.meta.url));
@@ -59,11 +81,13 @@ const YaraTester: React.FC = () => {
         if (runTimer.current) clearTimeout(runTimer.current);
         setMatches(data.matches);
         setCompileErrors(data.compileErrors);
+        setElapsed(data.elapsed ?? null);
         setRuntimeError(null);
         setRunning(false);
       } else if (data.type === 'runtimeError') {
         if (runTimer.current) clearTimeout(runTimer.current);
         setMatches([]);
+        setElapsed(null);
         setRuntimeError(data.error);
         setRunning(false);
       }
@@ -80,14 +104,16 @@ const YaraTester: React.FC = () => {
 
   useEffect(() => {
     const id = setTimeout(() => {
-      workerRef.current?.postMessage({ type: 'lint', rules });
+      const ruleMap = Object.fromEntries(rules.map((r) => [r.name, r.content]));
+      workerRef.current?.postMessage({ type: 'lint', rules: ruleMap });
     }, 300);
     return () => clearTimeout(id);
   }, [rules]);
 
   const gotoLine = (line?: number) => {
-    if (!line || !ruleRef.current) return;
-    const textarea = ruleRef.current;
+    if (!line) return;
+    const textarea = document.getElementById('rule-editor') as HTMLTextAreaElement | null;
+    if (!textarea) return;
     const lines = textarea.value.split('\n');
     let pos = 0;
     for (let i = 0; i < line - 1 && i < lines.length; i += 1) pos += lines[i].length + 1;
@@ -111,13 +137,49 @@ const YaraTester: React.FC = () => {
     if (!workerRef.current) return;
     setRunning(true);
     setRuntimeError(null);
-    workerRef.current.postMessage({ type: 'run', rules, input, timeout: 5000 });
+    const ruleMap = Object.fromEntries(rules.map((r) => [r.name, r.content]));
+    workerRef.current.postMessage({ type: 'run', rules: ruleMap, input, timeout: 5000 });
     runTimer.current = setTimeout(() => {
       workerRef.current?.terminate();
       workerRef.current = createWorker();
       setRuntimeError('Scan timed out');
       setRunning(false);
     }, 5000);
+  };
+
+  const addRule = () => {
+    const name = `rule${rules.length + 1}.yar`;
+    setRules([...rules, { name, content: '' }]);
+    setCurrentRule(rules.length);
+  };
+
+  const removeRule = (idx: number) => {
+    const arr = rules.filter((_, i) => i !== idx);
+    setRules(arr);
+    setCurrentRule(0);
+  };
+
+  const exportPack = () => {
+    const blob = new Blob([JSON.stringify(rules)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rules.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importPack = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(String(reader.result));
+        if (Array.isArray(data)) setRules(data);
+      } catch {
+        // ignore
+      }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -128,7 +190,11 @@ const YaraTester: React.FC = () => {
           defaultValue=""
           onChange={(e) => {
             const idx = parseInt(e.target.value, 10);
-            if (!Number.isNaN(idx)) setRules(examples[idx].rule);
+            if (!Number.isNaN(idx)) {
+              const arr = [...rules];
+              arr[currentRule].content = examples[idx].rule;
+              setRules(arr);
+            }
           }}
         >
           <option value="" disabled>
@@ -140,6 +206,23 @@ const YaraTester: React.FC = () => {
             </option>
           ))}
         </select>
+        <select
+          className="bg-black text-green-200 p-1"
+          onChange={(e) => {
+            const art = sampleArtifacts[parseInt(e.target.value, 10)];
+            if (art) setInput(art.data);
+          }}
+          defaultValue=""
+        >
+          <option value="" disabled>
+            Sample artifacts
+          </option>
+          {sampleArtifacts.map((a, i) => (
+            <option key={a.name} value={i}>
+              {a.name}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           className="bg-blue-600 px-4 py-2 rounded disabled:opacity-50"
@@ -148,12 +231,53 @@ const YaraTester: React.FC = () => {
         >
           Run
         </button>
+        <button type="button" className="bg-gray-700 px-2" onClick={addRule}>
+          +
+        </button>
+        {rules.length > 1 && (
+          <button
+            type="button"
+            className="bg-gray-700 px-2"
+            onClick={() => removeRule(currentRule)}
+          >
+            -
+          </button>
+        )}
+        <button type="button" className="bg-gray-700 px-2" onClick={exportPack}>
+          Export
+        </button>
+        <input
+          type="file"
+          accept="application/json"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) importPack(file);
+          }}
+        />
       </div>
-      <textarea
-        ref={ruleRef}
-        className="w-full h-32 p-2 bg-black text-green-200 font-mono"
-        value={rules}
-        onChange={(e) => setRules(e.target.value)}
+      <div className="flex space-x-2 mb-2">
+        {rules.map((r, idx) => (
+          <button
+            key={r.name}
+            type="button"
+            className={`px-2 ${idx === currentRule ? 'bg-gray-700' : 'bg-gray-800'}`}
+            onClick={() => setCurrentRule(idx)}
+          >
+            {r.name}
+          </button>
+        ))}
+      </div>
+      <Editor
+        value={rules[currentRule]?.content}
+        onValueChange={(v) => {
+          const arr = [...rules];
+          arr[currentRule].content = v;
+          setRules(arr);
+        }}
+        highlight={(code) => highlight(code)}
+        padding={10}
+        textareaId="rule-editor"
+        className="w-full h-32 bg-black text-green-200 font-mono"
       />
       {compileErrors.length > 0 && (
         <div className="bg-red-800 p-2 overflow-auto">
@@ -198,11 +322,22 @@ const YaraTester: React.FC = () => {
       )}
       {matches.length > 0 && (
         <div className="bg-gray-800 p-2 overflow-auto">
-          <strong>Matches:</strong>
+          <div className="flex justify-between">
+            <strong>Matches:</strong>
+            {elapsed !== null && <span>Runtime: {elapsed.toFixed(2)} ms</span>}
+          </div>
           <ul>
             {matches.map((m, idx) => (
               <li key={idx} className="mb-2">
-                <div className="font-bold">{m.rule}</div>
+                <div className="font-bold">
+                  {m.rule}
+                  {m.tags && m.tags.length > 0 && (
+                    <span className="ml-2 text-sm text-yellow-300">[{m.tags.join(', ')}]</span>
+                  )}
+                </div>
+                {m.meta && (
+                  <div className="ml-4 text-sm">meta: {Object.entries(m.meta).map(([k, v]) => `${k}=${v}`).join(', ')}</div>
+                )}
                 <ul className="ml-4 list-disc">
                   {m.matches.map((d, j) => (
                     <li key={j} className="font-mono">
