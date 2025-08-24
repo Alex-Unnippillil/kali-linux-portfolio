@@ -1,12 +1,12 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-const ReactMarkdown = dynamic(() => import('react-markdown'), { suspense: true });
+const ReactMarkdown = dynamic(() => import('react-markdown'));
 import { run } from '@mdx-js/mdx';
 import * as runtime from 'react/jsx-runtime';
 import rehypeSanitize from 'rehype-sanitize';
 const List = dynamic(
   () => import('react-window').then((mod) => mod.FixedSizeList),
-  { ssr: false, suspense: true }
+  { ssr: false }
 );
 import type { FixedSizeList as ListType } from 'react-window';
 

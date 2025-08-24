@@ -4,7 +4,6 @@ import Meta from '../components/SEO/Meta';
 
 const Ubuntu = dynamic(() => import('../components/ubuntu'), {
   ssr: false,
-  suspense: true,
 });
 
 const App: React.FC = () => (
