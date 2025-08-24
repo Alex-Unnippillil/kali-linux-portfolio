@@ -16,7 +16,11 @@
     "validate:icons": "node scripts/validate-icons.js",
     "test:unit": "vitest",
     "format": "prettier --write .",
-    "lighthouse": "lhci autorun"
+    "lighthouse": "lhci autorun",
+    "typecheck": "tsc --noEmit",
+    "build:ci": "next build",
+    "lint:ci": "next lint --max-warnings=0",
+    "format:check": "prettier --check ."
   },
   "engines": {
     "node": "20.x"
