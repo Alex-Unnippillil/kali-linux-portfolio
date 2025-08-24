@@ -5,7 +5,8 @@ export default class Ball {
     this.x = x;
     this.y = y;
     this.radius = radius;
-    this.speed = 200;
+    this.baseSpeed = 200;
+    this.speed = this.baseSpeed;
     this.vx = this.speed;
     this.vy = this.speed;
   }
@@ -13,30 +14,45 @@ export default class Ball {
   reset(direction = 1) {
     this.x = this.startX;
     this.y = this.startY;
+    this.speed = this.baseSpeed;
     this.vx = this.speed * direction;
     this.vy = (Math.random() * 2 - 1) * this.speed;
   }
 
   update(dt, paddles, canvasWidth, canvasHeight) {
-    this.x += this.vx * dt;
-    this.y += this.vy * dt;
+    const steps = Math.ceil(((Math.abs(this.vx) + Math.abs(this.vy)) * dt) / this.radius);
+    const subDt = dt / steps;
 
-    if (this.y - this.radius < 0 || this.y + this.radius > canvasHeight) {
-      this.vy *= -1;
-    }
+    for (let i = 0; i < steps; i++) {
+      this.x += this.vx * subDt;
+      this.y += this.vy * subDt;
 
-    paddles.forEach((p) => {
-      if (
-        this.x - this.radius < p.x + p.width &&
-        this.x + this.radius > p.x &&
-        this.y - this.radius < p.y + p.height &&
-        this.y + this.radius > p.y
-      ) {
-        this.vx *= -1;
-        const diff = this.y - (p.y + p.height / 2);
-        this.vy = diff * 5; // spin
+      if (this.y - this.radius < 0) {
+        this.y = this.radius;
+        this.vy *= -1;
+      } else if (this.y + this.radius > canvasHeight) {
+        this.y = canvasHeight - this.radius;
+        this.vy *= -1;
       }
-    });
+
+      paddles.forEach((p) => {
+        if (
+          this.x - this.radius < p.x + p.width &&
+          this.x + this.radius > p.x &&
+          this.y - this.radius < p.y + p.height &&
+          this.y + this.radius > p.y
+        ) {
+          const relative = (this.y - (p.y + p.height / 2)) / (p.height / 2);
+          const angle = relative * (Math.PI / 3);
+          const dir = this.vx < 0 ? 1 : -1;
+          this.speed *= 1.05;
+          const newSpeed = this.speed;
+          this.vx = dir * newSpeed * Math.cos(angle);
+          this.vy = newSpeed * Math.sin(angle);
+          this.x = p.x + (dir === 1 ? p.width + this.radius : -this.radius);
+        }
+      });
+    }
   }
 
   draw(ctx) {
