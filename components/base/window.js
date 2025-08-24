@@ -49,7 +49,8 @@ function DraggableContainer({ id, defaultPosition, bounds, onDrag, onStart, onSt
 export class Window extends Component {
     constructor(props) {
         super(props);
-        this.id = null;
+        // Use a stable id immediately so the first render has it
+        this.id = props.id;
         this.startX = 60;
         this.startY = 10;
         this.state = {
@@ -66,7 +67,6 @@ export class Window extends Component {
     }
 
     componentDidMount() {
-        this.id = this.props.id;
         this.setDefaultWindowDimenstion();
 
         // google analytics
@@ -218,9 +218,20 @@ export class Window extends Component {
                 onDrag={this.checkOverlap}
             >
                 {({ attributes, listeners }) => (
-                    <div style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                    <div
+                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        className={
+                            this.state.cursorType +
+                            " " +
+                            (this.state.closed ? " closed-window " : "") +
+                            (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") +
+                            (this.props.minimized ? " opacity-0 invisible duration-200 " : "") +
+                            (this.props.isFocused ? " z-30 " : " z-20 notFocused") +
+                            " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"
+                        }
                         id={this.id}
+                        role="dialog"
+                        aria-label={this.props.title}
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}

@@ -19,7 +19,11 @@ function MyApp({ Component, pageProps }: AppProps) {
     }
   }, []);
   return (
-    <main className={inter.className}>
+    <main
+      className={inter.className}
+      suppressHydrationWarning
+      data-app-root
+    >
       <Component {...pageProps} />
       <Analytics />
     </main>
