@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/router';
 
 export type PieceType = 'normal' | 'stripedH' | 'stripedV' | 'wrapped' | 'bomb';
 
@@ -20,8 +21,11 @@ export const rngFactory = (seed = 1) => () => {
   return seed / 4294967296;
 };
 
-export const createBoard = (size = BOARD_SIZE, seed = Date.now()): Board => {
-  const rand = rngFactory(seed);
+export const createBoard = (
+  size = BOARD_SIZE,
+  seedOrRand: number | (() => number) = Date.now(),
+): Board => {
+  const rand = typeof seedOrRand === 'function' ? seedOrRand : rngFactory(seedOrRand);
   const board: Board = [];
   for (let y = 0; y < size; y++) {
     const row: (Piece | null)[] = [];
@@ -38,6 +42,39 @@ export const createBoard = (size = BOARD_SIZE, seed = Date.now()): Board => {
 };
 
 const cloneBoard = (b: Board): Board => b.map((r) => r.map((p) => (p ? { ...p } : null)));
+
+export const hasValidMove = (board: Board): boolean => {
+  const size = board.length;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      if (
+        x < size - 1 &&
+        swapPieces(cloneBoard(board), { x, y }, { x: x + 1, y }).swapped
+      )
+        return true;
+      if (
+        y < size - 1 &&
+        swapPieces(cloneBoard(board), { x, y }, { x, y: y + 1 }).swapped
+      )
+        return true;
+    }
+  }
+  return false;
+};
+
+export const initializeBoard = (
+  size = BOARD_SIZE,
+  seed = Date.now(),
+): { board: Board; rand: () => number; seed: number } => {
+  let s = seed;
+  while (true) {
+    const rand = rngFactory(s);
+    const board = createBoard(size, rand);
+    resolveBoard(board, rand);
+    if (hasValidMove(board)) return { board, rand, seed: s };
+    s++;
+  }
+};
 
 export const areAdjacent = (
   a: { x: number; y: number },
@@ -327,24 +364,31 @@ export const swapPieces = (
 const cellSize = 40;
 
 const Match3: React.FC = () => {
-  const rngRef = useRef(rngFactory());
-  const [board, setBoard] = useState<Board>(() => {
-    const b = createBoard(BOARD_SIZE, Date.now());
-    const rand = rngRef.current;
-    resolveBoard(b, rand); // remove initial matches
-    return b;
-  });
+  const router = useRouter();
+  const rngRef = useRef<() => number>(() => Math.random);
+  const [board, setBoard] = useState<Board | null>(null);
   const [sel, setSel] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    const seedParam = router.query.seed;
+    const parsed = typeof seedParam === 'string' ? parseInt(seedParam, 10) : Date.now();
+    const { board: b, rand } = initializeBoard(BOARD_SIZE, Number.isNaN(parsed) ? Date.now() : parsed);
+    rngRef.current = rand;
+    setBoard(cloneBoard(b));
+  }, [router.query.seed]);
 
   const handleClick = (x: number, y: number) => {
     if (!sel) {
       setSel({ x, y });
       return;
     }
+    if (!board) return;
     const res = swapPieces(board, sel, { x, y }, rngRef.current);
     setBoard(cloneBoard(res.board));
     setSel(null);
   };
+
+  if (!board) return null;
 
   return (
     <div className="p-2">
