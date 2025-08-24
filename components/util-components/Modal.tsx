@@ -13,19 +13,28 @@ const focusableSelector =
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const titleId = useId();
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
+
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (isOpen) {
+      lastFocusedRef.current = document.activeElement as HTMLElement | null;
+    } else {
+      lastFocusedRef.current?.focus();
+      return;
+    }
     const dialog = dialogRef.current;
-    const toFocus = dialog?.querySelector<HTMLElement>('[data-autofocus]');
+    const toFocus =
+      dialog?.querySelector<HTMLElement>('[data-autofocus]') ||
+      dialog?.querySelector<HTMLElement>(focusableSelector);
     toFocus?.focus();
 
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
       } else if (e.key === 'Tab') {
-        const focusable = dialog?.querySelectorAll<HTMLElement>(focusableSelector);
+        const focusable =
+          dialog?.querySelectorAll<HTMLElement>(focusableSelector);
         if (!focusable || focusable.length === 0) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
