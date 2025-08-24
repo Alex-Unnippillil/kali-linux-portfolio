@@ -54,11 +54,13 @@ const processQuotes = (data) => {
 
 const allOfflineQuotes = processQuotes(offlineQuotes);
 
+const RATE_LIMIT_MS = 60 * 60 * 1000; // 1 hour
+
 const QuoteGenerator = () => {
   const [quotes, setQuotes] = useState([]);
   const [current, setCurrent] = useState(null);
   const [displayed, setDisplayed] = useState('');
-  const [inspiration, setInspiration] = useState('');
+  const [tag, setTag] = useState('');
   const [search, setSearch] = useState('');
   const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
   const [prefersReduced, setPrefersReduced] = useState(false);
@@ -103,8 +105,9 @@ const QuoteGenerator = () => {
     }
   }, []);
 
-  useEffect(() => {
-    loadLocalQuotes();
+  const fetchQuotes = (force = false) => {
+    const last = Number(localStorage.getItem('quotesFetchedAt') || '0');
+    if (!force && Date.now() - last < RATE_LIMIT_MS) return;
     const etag = localStorage.getItem('quotesEtag');
     fetch('https://dummyjson.com/quotes?limit=500', {
       headers: etag ? { 'If-None-Match': etag } : {},
@@ -115,6 +118,7 @@ const QuoteGenerator = () => {
           res.json().then((d) => {
             localStorage.setItem('quotesData', JSON.stringify(d.quotes));
             if (newEtag) localStorage.setItem('quotesEtag', newEtag);
+            localStorage.setItem('quotesFetchedAt', Date.now().toString());
             loadLocalQuotes();
           });
         }
@@ -122,18 +126,24 @@ const QuoteGenerator = () => {
       .catch(() => {
         /* ignore network errors */
       });
+  };
+
+  useEffect(() => {
+    loadLocalQuotes();
+    fetchQuotes();
   }, []);
 
   const filteredQuotes = useMemo(
     () =>
       quotes.filter(
         (q) =>
-          (!inspiration || q.tags.includes(inspiration)) &&
+          (!tag || q.tags.includes(tag)) &&
           (!search ||
             q.content.toLowerCase().includes(search.toLowerCase()) ||
-            q.author.toLowerCase().includes(search.toLowerCase()))
+            q.author.toLowerCase().includes(search.toLowerCase()) ||
+            q.tags.some((t) => t.includes(search.toLowerCase())))
       ),
-    [quotes, inspiration, search]
+    [quotes, tag, search]
   );
 
   useEffect(() => {
@@ -250,7 +260,7 @@ const QuoteGenerator = () => {
     loadLocalQuotes();
   };
 
-  const inspirations = useMemo(
+  const tags = useMemo(
     () =>
       Array.from(new Set(quotes.flatMap((q) => q.tags))).filter((c) =>
         SAFE_CATEGORIES.includes(c)
@@ -283,6 +293,12 @@ const QuoteGenerator = () => {
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={() => fetchQuotes(true)}
+          >
+            Refresh
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={copyQuote}
           >
             Copy
@@ -312,20 +328,32 @@ const QuoteGenerator = () => {
             Image
           </button>
         </div>
+        <p className="mt-2 text-xs text-gray-400">
+          Quotes provided by{' '}
+          <a
+            href="https://dummyjson.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            dummyjson.com
+          </a>
+        </p>
         <div className="mt-4 flex flex-col w-full gap-2">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search"
+            placeholder="Search quotes, authors, or tags"
             className="px-2 py-1 rounded text-black"
           />
           <select
-            value={inspiration}
-            onChange={(e) => setInspiration(e.target.value)}
+            data-testid="tag-filter"
+            value={tag}
+            onChange={(e) => setTag(e.target.value)}
             className="px-2 py-1 rounded text-black"
           >
-            <option value="">All Inspirations</option>
-            {inspirations.map((cat) => (
+            <option value="">All Tags</option>
+            {tags.map((cat) => (
               <option key={cat} value={cat}>
                 {cat}
               </option>
