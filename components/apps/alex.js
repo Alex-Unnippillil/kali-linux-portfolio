@@ -1,9 +1,8 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
-import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
 import Certs from './certs';
-import { trackEvent } from '../../lib/analytics';
+import { trackEvent, trackPageview } from '../../lib/analytics';
 
 export class AboutAlex extends Component {
 
@@ -43,7 +42,7 @@ export class AboutAlex extends Component {
         localStorage.setItem("about-section", screen);
 
         // google analytics
-        ReactGA.send({ hitType: "pageview", page: `/${screen}`, title: "Custom Title" });
+        trackPageview(`/${screen}`, "Custom Title");
 
 
         this.setState({
