@@ -1,7 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { Agent } from 'undici';
 
-const MAX_HOPS = 10;
+const MAX_HOPS = 15;
+const MAX_HEADER_BYTES = 1024 * 1024; // 1MB
 const ALLOWED_METHODS = ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'];
+
+const agents: Record<string, Agent> = {
+  'http:': new Agent({ keepAliveTimeout: 10_000 }),
+  'https:': new Agent({ keepAliveTimeout: 10_000 }),
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -31,18 +38,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ ok: false, chain: [] });
   }
 
-  const chain: { url: string; status: number; location?: string }[] = [];
+  const chain: {
+    url: string;
+    status: number;
+    location?: string;
+    setCookie?: string;
+    hsts?: string;
+    altSvc?: string;
+    time: number;
+  }[] = [];
   let current = url;
   const visited = new Set<string>([current]);
+  let headerBytes = 0;
 
   try {
     for (let i = 0; i < MAX_HOPS; i += 1) {
+      const start = Date.now();
+      const urlObj = new URL(current);
       const response = await fetch(current, {
         method: upperMethod,
         redirect: 'manual',
+        dispatcher: agents[urlObj.protocol],
       });
+      const time = Date.now() - start;
       const location = response.headers.get('location') || undefined;
-      chain.push({ url: current, status: response.status, location });
+      const setCookie = response.headers.get('set-cookie') || undefined;
+      const hsts = response.headers.get('strict-transport-security') || undefined;
+      const altSvc = response.headers.get('alt-svc') || undefined;
+
+      headerBytes += [...response.headers].reduce(
+        (sum, [k, v]) => sum + k.length + v.length + 4,
+        0,
+      );
+
+      chain.push({
+        url: current,
+        status: response.status,
+        location,
+        setCookie,
+        hsts,
+        altSvc,
+        time,
+      });
+
+      if (headerBytes > MAX_HEADER_BYTES) {
+        return res.status(200).json({ ok: false, chain });
+      }
 
       if (response.status >= 300 && response.status < 400 && location) {
         const nextUrl = new URL(location, current).toString();

@@ -1,0 +1,47 @@
+[
+  {
+    "title": "Portfolio Website",
+    "description": "Personal site built with Next.js.",
+    "image": "/images/logos/logo.png",
+    "tech": ["Next.js", "Tailwind"],
+    "tags": ["web", "portfolio"],
+    "live": "https://unnippillil.com",
+    "repo": "https://github.com/Alex-Unnippillil/kali-linux-portfolio"
+  },
+  {
+    "title": "Tower Defense Game",
+    "description": "A simple tower defense game.",
+    "image": "/images/logos/logo.png",
+    "tech": ["JavaScript"],
+    "tags": ["game"],
+    "live": "",
+    "repo": "https://github.com/Alex-Unnippillil/tower-defense"
+  },
+  {
+    "title": "Checkers",
+    "description": "Classic checkers game.",
+    "image": "/images/logos/logo.png",
+    "tech": ["React"],
+    "tags": ["game"],
+    "live": "",
+    "repo": "https://github.com/Alex-Unnippillil/checkers"
+  },
+  {
+    "title": "QR Tool",
+    "description": "Generate and scan QR codes.",
+    "image": "/images/logos/logo.png",
+    "tech": ["React"],
+    "tags": ["utility", "web"],
+    "live": "",
+    "repo": "https://github.com/Alex-Unnippillil/qr-tool"
+  },
+  {
+    "title": "Regex Redactor",
+    "description": "Redact text using regular expressions.",
+    "image": "/images/logos/logo.png",
+    "tech": ["JavaScript"],
+    "tags": ["utility"],
+    "live": "",
+    "repo": "https://github.com/Alex-Unnippillil/regex-redactor"
+  }
+]
