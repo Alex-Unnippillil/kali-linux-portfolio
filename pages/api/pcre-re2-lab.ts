@@ -1,1 +1,6 @@
-export { matchApi as default } from '../../apps/pcre-re2-lab';
+import { matchApi } from '../../apps/pcre-re2-lab';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
+
+export default matchApi;

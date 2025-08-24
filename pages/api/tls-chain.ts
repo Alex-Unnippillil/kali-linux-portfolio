@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import tls, { PeerCertificate } from 'tls';
 import { LRUCache } from 'lru-cache';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 interface FormattedCert {
   subject: Record<string, string>;

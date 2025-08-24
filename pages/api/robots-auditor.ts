@@ -1,5 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { fetchRobots, RobotsData } from '../../lib/robots';
+import { setupUrlGuard } from '../../lib/urlGuard';
+
+setupUrlGuard();
 
 export default async function handler(
   req: NextApiRequest,
