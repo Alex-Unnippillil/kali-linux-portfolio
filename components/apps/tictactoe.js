@@ -1,5 +1,5 @@
-import TicTacToe, { checkWinner, minimax } from '../../apps/tic-tac-toe';
+import TicTacToe, { checkWinner, negamax } from '../../apps/tic-tac-toe';
 
 export default TicTacToe;
-export { checkWinner, minimax };
+export { checkWinner, negamax };
 
