@@ -46,9 +46,19 @@ export default async function handler(
   }
 
   try {
-    const response = await fetch(target.toString());
-    const body = await response.text();
-    res.status(200).json({ status: response.status, body });
+    let response: Response | null = null;
+    const attempts = 3;
+    for (let i = 0; i < attempts; i += 1) {
+      try {
+        response = await fetch(target.toString());
+        break;
+      } catch (err) {
+        if (i === attempts - 1) throw err;
+        await new Promise((r) => setTimeout(r, 2 ** i * 500));
+      }
+    }
+    const body = await response!.text();
+    res.status(200).json({ status: response!.status, body });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
