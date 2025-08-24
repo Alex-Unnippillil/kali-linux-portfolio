@@ -1,15 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { makeRng, randomCell as randomCellEngine, type Point } from './engine';
+import { makeRng, randomCell as randomCellEngine, type Point, InputBuffer } from './engine';
+import type { Particle } from './particles';
 const CELL_SIZE = 20;
 const OBSTACLE_COUNT = 5;
 const BASE_SPEED = 200; // ms per step
 const MIN_SPEED = 50;
 
 const themes = {
-  classic: { bg: '#000000', snake: '#00ff00', food: '#ff0000', obstacle: '#555555' },
-  neon: { bg: '#222222', snake: '#0fffff', food: '#ff00ff', obstacle: '#ffff00' },
-  dark: { bg: '#111111', snake: '#ffffff', food: '#ff6600', obstacle: '#666666' },
-  colorBlind: { bg: '#000000', snake: '#00aaff', food: '#ffaa00', obstacle: '#888888' },
+  classic: { bg: '#000000', snake: '#00ff00', food: '#ff0000', obstacle: '#555555', particle: '#ffffff' },
+  neon: { bg: '#222222', snake: '#0fffff', food: '#ff00ff', obstacle: '#ffff00', particle: '#ffffff' },
+  dark: { bg: '#111111', snake: '#ffffff', food: '#ff6600', obstacle: '#666666', particle: '#ffffff' },
+  colorBlind: { bg: '#000000', snake: '#00aaff', food: '#ffaa00', obstacle: '#888888', particle: '#ffffff' },
 };
 
 type ThemeName = keyof typeof themes;
@@ -29,7 +30,14 @@ const Snake: React.FC = () => {
   const startPoint = { x: Math.floor(gridSize / 2), y: Math.floor(gridSize / 2) };
   const [snake, setSnake] = useState<Point[]>([startPoint]);
   const [direction, setDirection] = useState<Point>({ x: 0, y: -1 });
-  const dirQueue = useRef<Point[]>([]);
+  const buffer = useRef(new InputBuffer());
+  const [ai, setAi] = useState(false);
+  const aiRef = useRef<Worker | null>(null);
+  const particlesRef = useRef<Particle[]>([]);
+  const particleUtils = useRef<{
+    spawnParticles: (arr: Particle[], x: number, y: number, count?: number) => void;
+    updateParticles: (arr: Particle[]) => void;
+  } | null>(null);
 
   const [food, setFood] = useState<Point>(() => randomCell([startPoint]));
   const [obstacles, setObstacles] = useState<Point[]>([]);
@@ -82,13 +90,24 @@ const Snake: React.FC = () => {
     }
   }, [highScore]);
 
+  useEffect(() => {
+    import('./particles').then((mod) => {
+      particleUtils.current = {
+        spawnParticles: mod.spawnParticles,
+        updateParticles: mod.updateParticles,
+      };
+    });
+  }, []);
+
+  useEffect(() => {
+    speedRef.current = Math.max(MIN_SPEED, BASE_SPEED - score * 5);
+    setSpeed(speedRef.current);
+  }, [score]);
+
   const enqueue = useCallback(
     (dir: Point) => {
       if (replaying) return;
-      const last = dirQueue.current.length ? dirQueue.current[dirQueue.current.length - 1] : direction;
-      if (last.x + dir.x === 0 && last.y + dir.y === 0) return;
-      if (dirQueue.current.length >= 3) return;
-      dirQueue.current.push(dir);
+      buffer.current.enqueue(dir, direction);
     },
     [direction, replaying]
   );
@@ -120,6 +139,27 @@ const Snake: React.FC = () => {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (ai && typeof window !== 'undefined' && typeof Worker !== 'undefined') {
+      import('./ai.ts').then(() => {
+        const worker = new Worker(new URL('./ai.ts', import.meta.url));
+        aiRef.current = worker;
+        worker.onmessage = (e: MessageEvent<Point>) => enqueue(e.data);
+      });
+      return () => {
+        aiRef.current?.terminate();
+        aiRef.current = null;
+      };
+    }
+  }, [ai, enqueue]);
+
+  useEffect(() => {
+    const worker = aiRef.current;
+    if (worker && ai && !gameOver) {
+      worker.postMessage({ snake, food, obstacles, gridSize, wrap: mode === 'portals' });
+    }
+  }, [snake, food, obstacles, gridSize, ai, gameOver, mode]);
 
   useEffect(() => {
     let raf: number;
@@ -177,11 +217,8 @@ const Snake: React.FC = () => {
 
   const step = useCallback(() => {
     setSnake((prev) => {
-      let dir = direction;
-      if (dirQueue.current.length) {
-        dir = dirQueue.current.shift()!;
-        setDirection(dir);
-      }
+      const dir = buffer.current.next(direction);
+      setDirection(dir);
       historyRef.current.push(dir);
       const head = acquire();
       head.x = prev[0].x + dir.x;
@@ -197,6 +234,7 @@ const Snake: React.FC = () => {
       if ((!wrap && hitWall) || hitSelf || hitObstacle) {
         setGameOver(true);
         playSound('die');
+        particleUtils.current?.spawnParticles(particlesRef.current, head.x + 0.5, head.y + 0.5, 20);
         release(head);
         return prev;
       }
@@ -210,6 +248,7 @@ const Snake: React.FC = () => {
           setSpeed(speedRef.current);
         }
         playSound('eat');
+        particleUtils.current?.spawnParticles(particlesRef.current, head.x + 0.5, head.y + 0.5);
       } else {
         const tail = newSnake.pop();
         if (tail) release(tail);
@@ -230,6 +269,7 @@ const Snake: React.FC = () => {
           step();
           acc -= interval;
         }
+        particleUtils.current?.updateParticles(particlesRef.current);
       }
       last = time;
       frame = requestAnimationFrame(loop);
@@ -242,7 +282,15 @@ const Snake: React.FC = () => {
     const worker = workerRef.current;
     const t = themes[theme];
     if (worker) {
-      worker.postMessage({ snake, food, obstacles, colors: t, gridSize, cellSize: CELL_SIZE });
+      worker.postMessage({
+        snake,
+        food,
+        obstacles,
+        particles: particlesRef.current,
+        colors: t,
+        gridSize,
+        cellSize: CELL_SIZE,
+      });
       return;
     }
     if (!bufferRef.current) {
@@ -263,6 +311,14 @@ const Snake: React.FC = () => {
     bctx.fillRect(food.x * CELL_SIZE, food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
     bctx.fillStyle = t.snake;
     snake.forEach((s) => bctx.fillRect(s.x * CELL_SIZE, s.y * CELL_SIZE, CELL_SIZE, CELL_SIZE));
+    if (particlesRef.current.length) {
+      bctx.fillStyle = t.particle || '#ffffff';
+      particlesRef.current.forEach((p) => {
+        bctx.globalAlpha = p.life / 30;
+        bctx.fillRect(p.x * CELL_SIZE, p.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      });
+      bctx.globalAlpha = 1;
+    }
     ctx.clearRect(0, 0, gridSize * CELL_SIZE, gridSize * CELL_SIZE);
     ctx.drawImage(buffer, 0, 0);
   }, [snake, food, obstacles, theme, gridSize]);
@@ -271,7 +327,8 @@ const Snake: React.FC = () => {
     seedRef.current = Date.now();
     rngRef.current = makeRng(seedRef.current);
     setGridSize(size);
-    dirQueue.current = [];
+    buffer.current.clear();
+    particlesRef.current = [];
     historyRef.current = [];
     const start = { x: Math.floor(size / 2), y: Math.floor(size / 2) };
     setSnake([start]);
@@ -298,7 +355,12 @@ const Snake: React.FC = () => {
   const startReplay = () => {
     if (!gameOver || replayDataRef.current.length === 0) return;
     reset(mode, gridSize);
-    dirQueue.current = [...replayDataRef.current];
+    buffer.current.clear();
+    let last = direction;
+    replayDataRef.current.forEach((d) => {
+      buffer.current.enqueue(d, last);
+      last = d;
+    });
     setReplaying(true);
   };
 
@@ -338,6 +400,9 @@ const Snake: React.FC = () => {
         </button>
         <button className="ml-2 px-2 py-1 bg-gray-700 rounded" onClick={startReplay} disabled={!gameOver}>
           Replay
+        </button>
+        <button className="ml-2 px-2 py-1 bg-gray-700 rounded" onClick={() => setAi((a) => !a)}>
+          {ai ? 'Stop AI' : 'AI'}
         </button>
         <select
           className="ml-2 bg-gray-700 rounded"
