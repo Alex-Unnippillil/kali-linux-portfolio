@@ -58,6 +58,33 @@ export function advanceCheckpoints(
 
 interface GhostFrame { x: number; y: number; angle: number; time: number }
 
+const STORAGE_KEY = 'car-racer-data';
+
+function loadPersisted() {
+  if (typeof window === 'undefined') return { bestLap: null, ghost: null, laps: [] };
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch {
+    /* ignore */
+  }
+  return { bestLap: null, ghost: null, laps: [] };
+}
+
+function savePersisted(bestLap: number | null, ghost: GhostFrame[] | null, laps: number[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ bestLap, ghost, laps })
+    );
+  } catch {
+    /* ignore */
+  }
+}
+
 const CarRacer: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [engineForce, setEngineForce] = useState(0.001);
@@ -66,6 +93,62 @@ const CarRacer: React.FC = () => {
   const [bestLap, setBestLap] = useState<number | null>(null);
   const ghostRef = useRef<GhostFrame[]>([]);
   const [ghost, setGhost] = useState<GhostFrame[] | null>(null);
+  const [laps, setLaps] = useState<number[]>([]);
+  const keyState = useRef({ up: false, left: false, right: false });
+
+  useEffect(() => {
+    const data = loadPersisted();
+    if (data.bestLap) setBestLap(data.bestLap);
+    if (data.ghost) setGhost(data.ghost);
+    if (data.laps) setLaps(data.laps);
+  }, []);
+
+  useEffect(() => {
+    savePersisted(bestLap, ghost, laps);
+  }, [bestLap, ghost, laps]);
+
+  const handleWheel = (e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const mid = rect.width / 2;
+    keyState.current.left = x < mid - 10;
+    keyState.current.right = x > mid + 10;
+    keyState.current.up = true;
+  };
+  const handleWheelEnd = () => {
+    keyState.current.left = false;
+    keyState.current.right = false;
+    keyState.current.up = false;
+  };
+
+  // tilt steering
+  useEffect(() => {
+    const orientation = (e: DeviceOrientationEvent) => {
+      if (typeof e.gamma === 'number') {
+        keyState.current.left = e.gamma < -10;
+        keyState.current.right = e.gamma > 10;
+      }
+    };
+    window.addEventListener('deviceorientation', orientation);
+    return () => window.removeEventListener('deviceorientation', orientation);
+  }, []);
+
+  // gamepad polling
+  useEffect(() => {
+    let raf: number;
+    const poll = () => {
+      const gp = navigator.getGamepads()[0];
+      if (gp) {
+        const steer = gp.axes[0] || 0;
+        keyState.current.left = steer < -0.2;
+        keyState.current.right = steer > 0.2;
+        keyState.current.up = gp.buttons[0]?.pressed || gp.buttons[7]?.pressed || false;
+      }
+      raf = requestAnimationFrame(poll);
+    };
+    poll();
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   useEffect(() => {
     let engine = Matter.Engine.create();
@@ -75,7 +158,6 @@ const CarRacer: React.FC = () => {
     let player: Matter.Body;
     const aiCars: { body: Matter.Body; progress: number }[] = [];
     const checkpoints: Matter.Body[] = [];
-    const keyState = { up: false, left: false, right: false };
     let currentCheckpoint = 0;
     let startTime = 0;
     let raf: number;
@@ -99,6 +181,25 @@ const CarRacer: React.FC = () => {
         const wall = Matter.Bodies.rectangle(w.x, w.y, w.w, w.h, { isStatic: true });
         Matter.World.add(engine.world, wall);
       });
+
+      // optional tilemap
+      const anyTrack = track as any;
+      if (anyTrack.tiles) {
+        const size = anyTrack.tileSize || 40;
+        anyTrack.tiles.forEach((row: number[], ty: number) => {
+          row.forEach((tile: number, tx: number) => {
+            if (tile) {
+              const x = tx * size + size / 2;
+              const y = ty * size + size / 2;
+              const t = Matter.Bodies.rectangle(x, y, size, size, {
+                isStatic: true,
+                render: { fillStyle: '#444' },
+              });
+              Matter.World.add(engine.world, t);
+            }
+          });
+        });
+      }
 
       // checkpoints as sensors
       CHECKPOINTS.forEach((c, idx) => {
@@ -132,15 +233,15 @@ const CarRacer: React.FC = () => {
       Matter.Events.on(engine, 'beforeUpdate', (e) => {
         const dt = e.delta / 1000;
         // player controls
-        if (keyState.up) {
+        if (keyState.current.up) {
           const force = {
             x: Math.cos(player.angle) * engineForce,
             y: Math.sin(player.angle) * engineForce,
           };
           Matter.Body.applyForce(player, player.position, force);
         }
-        if (keyState.left) Matter.Body.setAngularVelocity(player, player.angularVelocity - 0.05);
-        if (keyState.right) Matter.Body.setAngularVelocity(player, player.angularVelocity + 0.05);
+        if (keyState.current.left) Matter.Body.setAngularVelocity(player, player.angularVelocity - 0.05);
+        if (keyState.current.right) Matter.Body.setAngularVelocity(player, player.angularVelocity + 0.05);
 
         // drift - damp lateral velocity
         const forward = { x: Math.cos(player.angle), y: Math.sin(player.angle) };
@@ -152,10 +253,22 @@ const CarRacer: React.FC = () => {
 
         ghostRef.current.push({ x: player.position.x, y: player.position.y, angle: player.angle, time: performance.now() - startTime });
 
-        // simple AI following line
-        aiCars.forEach((car) => {
+        // simple AI following line with basic flocking separation
+        aiCars.forEach((car, idx) => {
           const target = track.line[Math.floor(car.progress) % track.line.length];
-          const dir = Math.atan2(target.y - car.body.position.y, target.x - car.body.position.x);
+          const steer = { x: target.x - car.body.position.x, y: target.y - car.body.position.y };
+          // separation from other AI cars
+          aiCars.forEach((other, j) => {
+            if (idx === j) return;
+            const dx = car.body.position.x - other.body.position.x;
+            const dy = car.body.position.y - other.body.position.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist > 0 && dist < 50) {
+              steer.x += dx / dist;
+              steer.y += dy / dist;
+            }
+          });
+          const dir = Math.atan2(steer.y, steer.x);
           Matter.Body.setAngle(car.body, dir);
           Matter.Body.applyForce(car.body, car.body.position, {
             x: Math.cos(dir) * engineForce,
@@ -175,10 +288,17 @@ const CarRacer: React.FC = () => {
                 const now = performance.now();
                 const lap = (now - startTime) / 1000;
                 setLapTime(lap);
+                setLaps((l) => [...l, lap]);
                 if (!bestLap || lap < bestLap) {
                   setBestLap(lap);
                   setGhost([...ghostRef.current]);
                 }
+                const pad = navigator.getGamepads()[0];
+                pad?.vibrationActuator?.playEffect?.('dual-rumble', {
+                  duration: 200,
+                  strongMagnitude: 1,
+                  weakMagnitude: 1,
+                });
                 startTime = now;
                 currentCheckpoint = 0;
                 ghostRef.current = [];
@@ -213,14 +333,14 @@ const CarRacer: React.FC = () => {
     }
 
     const keyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp') keyState.up = true;
-      if (e.key === 'ArrowLeft') keyState.left = true;
-      if (e.key === 'ArrowRight') keyState.right = true;
+      if (e.key === 'ArrowUp') keyState.current.up = true;
+      if (e.key === 'ArrowLeft') keyState.current.left = true;
+      if (e.key === 'ArrowRight') keyState.current.right = true;
     };
     const keyUp = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp') keyState.up = false;
-      if (e.key === 'ArrowLeft') keyState.left = false;
-      if (e.key === 'ArrowRight') keyState.right = false;
+      if (e.key === 'ArrowUp') keyState.current.up = false;
+      if (e.key === 'ArrowLeft') keyState.current.left = false;
+      if (e.key === 'ArrowRight') keyState.current.right = false;
     };
     window.addEventListener('keydown', keyDown);
     window.addEventListener('keyup', keyUp);
@@ -243,11 +363,39 @@ const CarRacer: React.FC = () => {
       <canvas ref={canvasRef} width={800} height={600} />
       <div className="mt-2 space-x-2">
         <label>Engine {engineForce.toFixed(3)}</label>
-        <input type="range" min="0.0005" max="0.005" step="0.0005" value={engineForce} onChange={(e)=>setEngineForce(parseFloat(e.target.value))} />
+        <input
+          type="range"
+          min="0.0005"
+          max="0.005"
+          step="0.0005"
+          value={engineForce}
+          onChange={(e) => setEngineForce(parseFloat(e.target.value))}
+        />
         <label>Grip {grip.toFixed(2)}</label>
-        <input type="range" min="0.01" max="0.1" step="0.01" value={grip} onChange={(e)=>setGrip(parseFloat(e.target.value))} />
+        <input
+          type="range"
+          min="0.01"
+          max="0.1"
+          step="0.01"
+          value={grip}
+          onChange={(e) => setGrip(parseFloat(e.target.value))}
+        />
       </div>
       <div className="mt-2">Lap: {lapTime ? lapTime.toFixed(2) : '--'}s Best: {bestLap ? bestLap.toFixed(2) : '--'}s</div>
+      <div className="mt-1 text-xs">
+        {laps.map((l, i) => (
+          <span key={i} className="mr-2">
+            #{i + 1}:{l.toFixed(2)}s
+          </span>
+        ))}
+      </div>
+      <div
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 w-32 h-32 bg-white/20 rounded-full touch-none"
+        onPointerDown={handleWheel}
+        onPointerMove={handleWheel}
+        onPointerUp={handleWheelEnd}
+        onPointerLeave={handleWheelEnd}
+      />
     </div>
   );
 };

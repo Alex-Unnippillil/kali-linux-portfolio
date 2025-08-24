@@ -118,6 +118,80 @@ export const resetPathCache = () => {
   pathComputationCount = 0;
 };
 
+// ---- Flow field from Dijkstra ----
+export const computeDistanceField = (towers) => {
+  const obstacles = new Set(towers.map((t) => `${t.x},${t.y}`));
+  const dist = Array.from({ length: GRID_SIZE }, () =>
+    Array.from({ length: GRID_SIZE }, () => Infinity)
+  );
+  const q = [{ x: GOAL.x, y: GOAL.y }];
+  dist[GOAL.y][GOAL.x] = 0;
+  while (q.length) {
+    const { x, y } = q.shift();
+    const d = dist[y][x];
+    const dirs = [
+      { x: 1, y: 0 },
+      { x: -1, y: 0 },
+      { x: 0, y: 1 },
+      { x: 0, y: -1 },
+    ];
+    dirs.forEach(({ x: dx, y: dy }) => {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (
+        nx < 0 ||
+        ny < 0 ||
+        nx >= GRID_SIZE ||
+        ny >= GRID_SIZE ||
+        obstacles.has(`${nx},${ny}`)
+      )
+        return;
+      if (dist[ny][nx] > d + 1) {
+        dist[ny][nx] = d + 1;
+        q.push({ x: nx, y: ny });
+      }
+    });
+  }
+  return dist;
+};
+
+export const computeFlowField = (towers) => {
+  const dist = computeDistanceField(towers);
+  const field = Array.from({ length: GRID_SIZE }, () =>
+    Array.from({ length: GRID_SIZE }, () => ({ dx: 0, dy: 0 }))
+  );
+  for (let y = 0; y < GRID_SIZE; y += 1) {
+    for (let x = 0; x < GRID_SIZE; x += 1) {
+      if (dist[y][x] === Infinity) continue;
+      const dirs = [
+        { dx: 1, dy: 0 },
+        { dx: 0, dy: -1 },
+        { dx: 0, dy: 1 },
+        { dx: -1, dy: 0 },
+      ];
+      let best = dist[y][x];
+      let bestDir = { dx: 0, dy: 0 };
+      dirs.forEach((d) => {
+        const nx = x + d.dx;
+        const ny = y + d.dy;
+        if (
+          nx < 0 ||
+          ny < 0 ||
+          nx >= GRID_SIZE ||
+          ny >= GRID_SIZE
+        )
+          return;
+        if (dist[ny][nx] < best) {
+          best = dist[ny][nx];
+          bestDir = d;
+        }
+      });
+      field[y][x] = bestDir;
+    }
+  }
+  return { dist, field };
+};
+
 // ---- Projectile pooling ----
 export const createProjectilePool = (size) =>
   Array.from({ length: size }, () => ({

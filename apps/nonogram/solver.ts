@@ -1,10 +1,12 @@
 import type { NonogramPuzzle } from './parser';
 
-export type Cell = -1 | 0 | 1; // -1 marked, 0 empty, 1 filled
+// -1 marked, 0 empty, 1 filled, 2 pencil note
+export type Cell = -1 | 0 | 1 | 2;
 
 interface SolveResult {
   line: Cell[];
   changed: boolean;
+  contradiction: boolean;
 }
 
 function generate(line: Cell[], clues: number[], idx: number, pos: number, current: Cell[], out: Cell[][]) {
@@ -47,9 +49,11 @@ function generate(line: Cell[], clues: number[], idx: number, pos: number, curre
 }
 
 export function solveLine(line: Cell[], clues: number[]): SolveResult {
+  const base = line.map((v) => (v === 2 ? 0 : v));
   const possibilities: Cell[][] = [];
-  generate(line, clues, 0, 0, line.slice(), possibilities);
-  if (possibilities.length === 0) return { line, changed: false };
+  generate(base, clues, 0, 0, base.slice(), possibilities);
+  if (possibilities.length === 0)
+    return { line, changed: false, contradiction: true };
   const result = line.slice();
   for (let i = 0; i < line.length; i += 1) {
     const vals = possibilities.map((p) => p[i]);
@@ -57,30 +61,49 @@ export function solveLine(line: Cell[], clues: number[]): SolveResult {
     else if (vals.every((v) => v === -1)) result[i] = -1;
   }
   const changed = result.some((v, i) => v !== line[i]);
-  return { line: result, changed };
+  return { line: result, changed, contradiction: false };
 }
 
-export function propagate(grid: Cell[][], puzzle: NonogramPuzzle): Cell[][] {
+export function propagate(
+  grid: Cell[][],
+  puzzle: NonogramPuzzle
+): { grid: Cell[][]; contradiction: boolean } {
   let changed = true;
+  let contradiction = false;
   let ng = grid.map((row) => row.slice());
-  while (changed) {
+  while (changed && !contradiction) {
     changed = false;
     for (let r = 0; r < puzzle.height; r += 1) {
-      const { line, changed: ch } = solveLine(ng[r], puzzle.rows[r]);
+      const { line, changed: ch, contradiction: con } = solveLine(
+        ng[r],
+        puzzle.rows[r]
+      );
+      if (con) {
+        contradiction = true;
+        break;
+      }
       if (ch) {
         ng[r] = line;
         changed = true;
       }
     }
+    if (contradiction) break;
     for (let c = 0; c < puzzle.width; c += 1) {
       const col = ng.map((row) => row[c]);
-      const { line, changed: ch } = solveLine(col, puzzle.cols[c]);
+      const { line, changed: ch, contradiction: con } = solveLine(
+        col,
+        puzzle.cols[c]
+      );
+      if (con) {
+        contradiction = true;
+        break;
+      }
       if (ch) {
         for (let r = 0; r < puzzle.height; r += 1) ng[r][c] = line[r];
         changed = true;
       }
     }
   }
-  return ng;
+  return { grid: ng, contradiction };
 }
 

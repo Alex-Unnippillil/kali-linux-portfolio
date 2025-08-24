@@ -30,7 +30,21 @@ interface State {
   warnings: string[];
   cache: Map<string, { record: string; ttl: number } | null>;
   path: Set<string>;
-  lookupLog: { domain: string; count: number }[];
+  lookupLog: { domain: string; type: string; count: number }[];
+}
+
+async function dnsQuery(domain: string, type: string, state: State): Promise<DnsAnswer[]> {
+  if (state.lookups >= MAX_LOOKUPS) {
+    state.warnings.push(`Lookup limit of ${MAX_LOOKUPS} exceeded at ${domain}`);
+    return [];
+  }
+  state.lookups += 1;
+  state.lookupLog.push({ domain, type, count: state.lookups });
+  const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=${type}`;
+  const res = await fetch(url, { headers: { Accept: 'application/dns-json' } });
+  if (!res.ok) throw new Error('DNS query failed');
+  const data = await res.json();
+  return data.Answer || [];
 }
 
 async function lookupSpf(domain: string, state: State): Promise<{ record: string; ttl: number } | null> {
@@ -38,17 +52,7 @@ async function lookupSpf(domain: string, state: State): Promise<{ record: string
     const cached = state.cache.get(domain) || null;
     return cached;
   }
-  if (state.lookups >= MAX_LOOKUPS) {
-    state.warnings.push(`Lookup limit of ${MAX_LOOKUPS} exceeded at ${domain}`);
-    return null;
-  }
-  state.lookups++;
-  state.lookupLog.push({ domain, count: state.lookups });
-  const url = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=TXT`;
-  const res = await fetch(url, { headers: { Accept: 'application/dns-json' } });
-  if (!res.ok) throw new Error('DNS query failed');
-  const data = await res.json();
-  const answers: DnsAnswer[] = data.Answer || [];
+  const answers = await dnsQuery(domain, 'TXT', state);
   const entry = answers.find((a: DnsAnswer) =>
     String(a.data)
       .replace(/^"|"$/g, '')
@@ -66,6 +70,42 @@ async function lookupSpf(domain: string, state: State): Promise<{ record: string
   const result = { record, ttl: entry.TTL };
   state.cache.set(domain, result);
   return result;
+}
+
+async function lookupA(domain: string, state: State): Promise<{ ips: string[]; ttl: number }> {
+  const answersA = await dnsQuery(domain, 'A', state);
+  const answersAAAA = await dnsQuery(domain, 'AAAA', state);
+  const ips: string[] = [];
+  let ttl = Infinity;
+  for (const a of answersA) {
+    ips.push(`ip4:${a.data}`);
+    ttl = Math.min(ttl, a.TTL);
+  }
+  for (const aaaa of answersAAAA) {
+    ips.push(`ip6:${aaaa.data}`);
+    ttl = Math.min(ttl, aaaa.TTL);
+  }
+  return { ips, ttl };
+}
+
+async function lookupMx(domain: string, state: State): Promise<{ ips: string[]; ttl: number }> {
+  const answers = await dnsQuery(domain, 'MX', state);
+  let ttl = Infinity;
+  let ips: string[] = [];
+  for (const ans of answers) {
+    ttl = Math.min(ttl, ans.TTL);
+    const parts = String(ans.data).split(' ');
+    const host = parts[parts.length - 1];
+    const r = await lookupA(host, state);
+    ips = ips.concat(r.ips);
+    ttl = Math.min(ttl, r.ttl);
+  }
+  return { ips, ttl };
+}
+
+async function lookupPtr(domain: string, state: State): Promise<void> {
+  await dnsQuery(domain, 'PTR', state);
+  state.warnings.push(`PTR mechanism for ${domain} cannot be flattened`);
 }
 
 async function parallelMap<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -109,6 +149,21 @@ async function resolveSpf(domain: string, state: State): Promise<{ node: SPFNode
     } else if (token.startsWith('ip4:') || token.startsWith('ip6:')) {
       ips.push(token);
       allIps.push(token);
+    } else if (token === 'a' || token.startsWith('a:')) {
+      const target = token.includes(':') ? token.slice(token.indexOf(':') + 1) : domain;
+      const res = await lookupA(target, state);
+      ips.push(...res.ips);
+      allIps.push(...res.ips);
+      minTtl = Math.min(minTtl, res.ttl);
+    } else if (token === 'mx' || token.startsWith('mx:')) {
+      const target = token.includes(':') ? token.slice(token.indexOf(':') + 1) : domain;
+      const res = await lookupMx(target, state);
+      ips.push(...res.ips);
+      allIps.push(...res.ips);
+      minTtl = Math.min(minTtl, res.ttl);
+    } else if (token === 'ptr' || token.startsWith('ptr:')) {
+      const target = token.includes(':') ? token.slice(token.indexOf(':') + 1) : domain;
+      await lookupPtr(target, state);
     } else if (/%\{/.test(token)) {
       nodeWarnings.push(`Macro detected: ${token}`);
       state.warnings.push(`Macro detected in ${domain}`);

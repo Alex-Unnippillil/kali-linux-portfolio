@@ -1,4 +1,10 @@
-import { findMatches, swapPieces, rngFactory } from '@components/apps/match3';
+import {
+  findMatches,
+  swapPieces,
+  rngFactory,
+  initializeBoard,
+  hasValidMove,
+} from '@components/apps/match3';
 import type { Board, Piece } from '@components/apps/match3';
 
 const make = (color: string): Piece => ({ color, type: 'normal', id: Math.random() });
@@ -38,4 +44,10 @@ test('swap with fixed seed is deterministic', () => {
   const res1 = swapPieces(board, { x: 0, y: 0 }, { x: 1, y: 0 }, rngFactory(seed));
   const res2 = swapPieces(board2, { x: 0, y: 0 }, { x: 1, y: 0 }, rngFactory(seed));
   expect(simplify(res1.board)).toEqual(simplify(res2.board));
+});
+
+test('initialized board has no matches and at least one move', () => {
+  const { board } = initializeBoard(8, 123);
+  expect(findMatches(board).size).toBe(0);
+  expect(hasValidMove(board)).toBe(true);
 });
