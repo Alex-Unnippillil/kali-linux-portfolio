@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import YAML from 'js-yaml';
+import { stringify as toToml } from '@iarna/toml';
+import { UID } from 'bplist-parser';
 import { Buffer } from 'buffer';
 
 type TreeNodeProps = {
@@ -12,6 +14,9 @@ type TreeNodeProps = {
 const hexOf = (value: any) => {
   if (value instanceof Uint8Array || value instanceof Buffer) {
     return Buffer.from(value).toString('hex');
+  }
+  if (value instanceof UID) {
+    return Buffer.from(value.UID.toString()).toString('hex');
   }
   if (value instanceof Date) {
     return Buffer.from(value.toISOString()).toString('hex');
@@ -47,6 +52,9 @@ const nodeMatches = (value: any, path: string, search: string): boolean => {
   if (!search) return true;
   const lower = search.toLowerCase();
   if (path.toLowerCase().includes(lower)) return true;
+  if (value instanceof UID) {
+    return String(value.UID).toLowerCase().includes(lower);
+  }
   if (typeof value !== 'object' || value === null) {
     return String(value).toLowerCase().includes(lower);
   }
@@ -70,6 +78,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({ value, path, search, onSelect }) =>
     if (Array.isArray(value)) return 'array';
     if (value instanceof Date) return 'date';
     if (value instanceof Uint8Array || value instanceof Buffer) return 'data';
+    if (value instanceof UID) return 'uid';
     if (value === null) return 'null';
     return typeof value === 'object' ? 'dict' : typeof value;
   }, [value]);
@@ -78,7 +87,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({ value, path, search, onSelect }) =>
     if (Array.isArray(value)) {
       return (value as any[]).map((v, i) => [i.toString(), v]);
     }
-    if (value && typeof value === 'object') {
+    if (value && typeof value === 'object' && !(value instanceof UID)) {
       return Object.entries(value);
     }
     return [];
@@ -113,9 +122,9 @@ const TreeNode: React.FC<TreeNodeProps> = ({ value, path, search, onSelect }) =>
           {path === '$' ? 'root' : path.split('.').pop()}
         </span>
         <TypeBadge type={type} />
-        {typeof value !== 'object' && (
-          <span className="ml-1">{String(value)}</span>
-        )}
+        {typeof value !== 'object' || value instanceof UID ? (
+          <span className="ml-1">{String(value instanceof UID ? value.UID : value)}</span>
+        ) : null}
       </div>
       {open && hasChildren && (
         <div className="ml-4 mt-1">
@@ -151,6 +160,7 @@ const PlistInspector = () => {
   );
   const [corruption, setCorruption] = useState<string | null>(null);
   const [format, setFormat] = useState('');
+  const [offsets, setOffsets] = useState<Record<string, number>>({});
   const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
@@ -167,12 +177,14 @@ const PlistInspector = () => {
         setSelected(null);
         setCorruption(null);
         setFormat(e.data.format);
+        setOffsets(e.data.offsets || {});
       } else if (type === 'error') {
         setError(e.data.error);
         setRoot(null);
         setSelected(null);
         setCorruption(e.data.corruption || null);
         setFormat(e.data.format);
+        setOffsets({});
       }
     };
     return () => worker.terminate();
@@ -185,9 +197,23 @@ const PlistInspector = () => {
     workerRef.current.postMessage({ buffer }, [buffer]);
   };
 
+  const normalize = (value: any): any => {
+    if (value instanceof UID) return { UID: value.UID };
+    if (value instanceof Uint8Array || value instanceof Buffer)
+      return Buffer.from(value).toString('base64');
+    if (value instanceof Date) return value.toISOString();
+    if (Array.isArray(value)) return value.map((v) => normalize(v));
+    if (value && typeof value === 'object') {
+      const out: any = {};
+      for (const [k, v] of Object.entries(value)) out[k] = normalize(v);
+      return out;
+    }
+    return value;
+  };
+
   const exportJSON = () => {
     if (!root) return;
-    const blob = new Blob([JSON.stringify(root, null, 2)], {
+    const blob = new Blob([JSON.stringify(normalize(root), null, 2)], {
       type: 'application/json',
     });
     const url = URL.createObjectURL(blob);
@@ -200,13 +226,26 @@ const PlistInspector = () => {
 
   const exportYAML = () => {
     if (!root) return;
-    const blob = new Blob([YAML.dump(root)], {
+    const blob = new Blob([YAML.dump(normalize(root))], {
       type: 'application/x-yaml',
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'plist.yaml';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportTOML = () => {
+    if (!root) return;
+    const blob = new Blob([toToml(normalize(root))], {
+      type: 'application/toml',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plist.toml';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -240,6 +279,12 @@ const PlistInspector = () => {
               className="bg-gray-700 px-2 py-1 rounded"
             >
               Export YAML
+            </button>
+            <button
+              onClick={exportTOML}
+              className="bg-gray-700 px-2 py-1 rounded"
+            >
+              Export TOML
             </button>
           </>
         )}
@@ -278,15 +323,25 @@ const PlistInspector = () => {
                 copy
               </button>
             </div>
+            {offsets[selected.path] !== undefined && (
+              <div className="text-sm break-all mt-2">
+                <strong>Offset:</strong> {offsets[selected.path]}
+              </div>
+            )}
             <div className="text-sm break-all mt-2">
-              <strong>Value:</strong> {String(selected.value)}{' '}
+              <strong>Value:</strong>{' '}
+              {String(
+                selected.value instanceof UID
+                  ? selected.value.UID
+                  : selected.value,
+              )}{' '}
               <button
                 className="text-blue-300 underline ml-1"
                 onClick={() =>
                   navigator.clipboard.writeText(
                     typeof selected.value === 'string'
                       ? selected.value
-                      : JSON.stringify(selected.value),
+                      : JSON.stringify(normalize(selected.value)),
                   )
                 }
               >
