@@ -192,6 +192,7 @@ const dynamicAppEntries = [
   ['hsts-preload', 'HSTS Preload'],
   ['cookie-jar', 'Cookie Jar'],
   ['cookie-simulator', 'Cookie Simulator'],
+  ['cookie-visualizer', 'Cookie Visualizer'],
   ['mixed-content', 'Mixed Content'],
   ['tls-explainer', 'TLS Explainer'],
   ['cache-policy', 'Cache Policy'],
@@ -700,6 +701,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: getScreen('cookie-simulator'),
+  },
+  {
+    id: 'cookie-visualizer',
+    title: 'Cookie Visualizer',
+    icon: './themes/Yaru/apps/cookie-jar.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: getScreen('cookie-visualizer'),
   },
   {
     id: 'content-fingerprint',
