@@ -181,11 +181,12 @@ export class StatusCard extends Component {
 						<span>Settings</span>
 					</div>
 				</div>
-				<div
-					onClick={this.props.lockScreen}
-					className="w-64 py-1.5 flex items-center justify-center bg-panel hover:bg-warm hover:bg-opacity-20"
-				>
-					<div className="w-8">
+                                <button
+                                        type="button"
+                                        onClick={this.props.lockScreen}
+                                        className="w-64 py-1.5 flex items-center justify-center bg-panel hover:bg-warm hover:bg-opacity-20"
+                                >
+                                        <div className="w-8">
                                                 <Image
                                                         width={16}
                                                         height={16}
@@ -193,16 +194,17 @@ export class StatusCard extends Component {
                                                         alt="ubuntu lock"
                                                         sizes="16px"
                                                 />
-					</div>
-					<div className="w-2/3 flex items-center justify-between">
-						<span>Lock</span>
-					</div>
-				</div>
-				<div
-					onClick={this.props.shutDown}
-					className="w-64 py-1.5 flex items-center justify-center bg-panel hover:bg-warm hover:bg-opacity-20"
-				>
-					<div className="w-8">
+                                        </div>
+                                        <div className="w-2/3 flex items-center justify-between">
+                                                <span>Lock</span>
+                                        </div>
+                                </button>
+                                <button
+                                        type="button"
+                                        onClick={this.props.shutDown}
+                                        className="w-64 py-1.5 flex items-center justify-center bg-panel hover:bg-warm hover:bg-opacity-20"
+                                >
+                                        <div className="w-8">
                                                 <Image
                                                         width={16}
                                                         height={16}
@@ -210,12 +212,12 @@ export class StatusCard extends Component {
                                                         alt="ubuntu power"
                                                         sizes="16px"
                                                 />
-					</div>
-					<div className="w-2/3 flex items-center justify-between">
-						<span>Power Off / Log Out</span>
-						<SmallArrow angle="right" />
-					</div>
-				</div>
+                                        </div>
+                                        <div className="w-2/3 flex items-center justify-between">
+                                                <span>Power Off / Log Out</span>
+                                                <SmallArrow angle="right" />
+                                        </div>
+                                </button>
 			</div>
 		);
 	}

@@ -3,8 +3,15 @@
   --color-surface: #1e2329;
   --color-accent: #62dafc;
   --color-text: #e6edf3;
+  --focus-outline: #ffffff;
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
   --space-lg: 2rem;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --focus-outline: #000000;
+  }
 }

@@ -180,13 +180,14 @@ export function Settings(props) {
                 <legend className="font-bold">Wallpapers</legend>
                 <div className="flex flex-wrap justify-center items-center">
                     {Object.keys(wallpapers).map((name, index) => (
-                        <div
+                        <button
                             key={index}
-                            tabIndex={0}
+                            type="button"
                             onFocus={changeBackgroundImage}
                             onClick={changeBackgroundImage}
                             data-path={name}
-                            className={(name === bg ? ' border-yellow-700 ' : ' border-transparent ') + ' md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80'}
+                            aria-label={`Set wallpaper ${name}`}
+                            className={(name === bg ? ' border-yellow-700 ' : ' border-transparent ') + ' md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 border-4 border-opacity-80'}
                             style={{ backgroundImage: `url(${wallpapers[name]})`, backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center' }}
                         />
                     ))}

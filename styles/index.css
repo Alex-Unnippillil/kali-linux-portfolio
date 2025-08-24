@@ -10,6 +10,11 @@ code {
     font-family: 'Fira Code', 'Fira Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
+:focus-visible {
+    outline: 2px solid var(--focus-outline) !important;
+    outline-offset: 2px;
+}
+
 /* Top NavBar styling */
 
 .top-arrow-up {

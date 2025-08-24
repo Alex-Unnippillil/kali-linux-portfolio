@@ -2862,6 +2862,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/eslint-plugin-jsx-a11y@npm:^6":
+  version: 6.10.0
+  resolution: "@types/eslint-plugin-jsx-a11y@npm:6.10.0"
+  dependencies:
+    "@types/eslint": "npm:*"
+  checksum: 10c0/ec494e0ea56a0a10140316a74463eb8a6ac5ed02d7408ef91444f7c0c9bc875866a9d0be7a761f1631ea543c2413b1db947bf7cb1df9d936171e5d82f71c6772
+  languageName: node
+  linkType: hard
+
 "@types/eslint-plugin-security@npm:^3":
   version: 3.0.0
   resolution: "@types/eslint-plugin-security@npm:3.0.0"
@@ -7272,7 +7281,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-plugin-jsx-a11y@npm:^6.10.0":
+"eslint-plugin-jsx-a11y@npm:^6.10.0, eslint-plugin-jsx-a11y@npm:^6.10.2":
   version: 6.10.2
   resolution: "eslint-plugin-jsx-a11y@npm:6.10.2"
   dependencies:
@@ -13350,7 +13359,6 @@ __metadata:
   linkType: hard
 
 "react@npm:^19.1.1":
-
   version: 19.1.1
   resolution: "react@npm:19.1.1"
   checksum: 10c0/8c9769a2dfd02e603af6445058325e6c8a24b47b185d0e461f66a6454765ddcaecb3f0a90184836c68bb509f3c38248359edbc42f0d07c23eb500a5c30c87b4e
@@ -15852,6 +15860,7 @@ __metadata:
     "@types/clarinet": "npm:^0"
     "@types/crypto-js": "npm:^4"
     "@types/dns-packet": "npm:^5"
+    "@types/eslint-plugin-jsx-a11y": "npm:^6"
     "@types/eslint-plugin-security": "npm:^3"
     "@types/howler": "npm:^2"
     "@types/jest": "npm:^30.0.0"
@@ -15898,6 +15907,7 @@ __metadata:
     eslint: "npm:^9.34.0"
     eslint-config-next: "npm:^15.5.0"
     eslint-config-prettier: "npm:^9.0.0"
+    eslint-plugin-jsx-a11y: "npm:^6.10.2"
     eslint-plugin-node: "npm:^11.1.0"
     eslint-plugin-prettier: "npm:^5.1.3"
     eslint-plugin-security: "npm:^3.0.1"
@@ -15942,7 +15952,6 @@ __metadata:
     react-activity-calendar: "npm:^2.7.13"
     react-chartjs-2: "npm:^5.3.0"
     react-dom: "npm:^19.1.1"
-
     react-force-graph: "npm:^1.48.0"
     react-force-graph-2d: "npm:^1.28.0"
     react-ga4: "npm:^2.1.0"

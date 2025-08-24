@@ -187,6 +187,13 @@ defaults:
 - **Scaling limits** – serverless WebSockets have connection limits per region
   and may recycle instances under load. For heavy usage, monitor connection
   counts and consider a dedicated WebSocket host or external state store.
+
+## Accessibility Test Plan
+
+1. Run `JWT_SECRET=dummy npx eslint components/screen/navbar.js components/screen/side_bar.js components/util-components/status_card.js components/apps/settings.js` to ensure interactive components satisfy accessibility lint rules.
+2. Start the development server with `yarn dev` and tab through interactive elements in both light and dark themes.
+3. Verify that focus outlines are clearly visible with a contrast ratio of at least 3:1 against adjacent colors.
+
 ## E2E Testing
 
 The project uses [Playwright](https://playwright.dev/) for end-to-end tests.

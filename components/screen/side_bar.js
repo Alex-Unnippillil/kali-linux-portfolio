@@ -47,7 +47,9 @@ export function AllApps(props) {
     const [title, setTitle] = useState(false);
 
     return (
-        <div
+        <button
+            type="button"
+            aria-label="Show Applications"
             className={`w-10 h-10 rounded m-1 hover:bg-white hover:bg-opacity-10 flex items-center justify-center`}
             style={{ marginTop: 'auto' }}
             onMouseEnter={() => {
@@ -76,6 +78,6 @@ export function AllApps(props) {
                     Show Applications
                 </div>
             </div>
-        </div>
+        </button>
     );
 }
