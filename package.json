@@ -41,6 +41,7 @@
     "bad-words": "^3.0.4",
     "bcryptjs": "^3.0.2",
     "bech32": "^2.0.0",
+    "big.js": "^6.2.1",
     "bplist-parser": "^0.3.2",
     "bs58": "^6.0.0",
     "cannon-es": "^0.20.0",
