@@ -12,6 +12,14 @@ interface FetchMeta {
   headers: Record<string, string>;
   body: string;
   redirects: { url: string; status: number }[];
+  altSvc?: string;
+  http3: {
+    supported: boolean;
+    h1: number;
+    h3?: number;
+    delta?: number;
+    error?: string;
+  };
 }
 
 interface ApiResult {
@@ -119,6 +127,27 @@ const HttpDiff: React.FC = () => {
       {loading && <div>Loading...</div>}
       {data && (
         <div className="flex flex-col space-y-4 overflow-auto">
+          <div>
+            <h2 className="font-bold mb-1">HTTP/3 Support</h2>
+            <div className="grid grid-cols-2 gap-4">
+              {[data.url1, data.url2].map((info, idx) => (
+                <div key={idx} className="bg-gray-800 p-2 rounded space-y-1 break-words">
+                  <div className="font-semibold">{info.finalUrl}</div>
+                  <div>Alt-Svc: {info.altSvc ?? 'none'}</div>
+                  <div>
+                    {info.http3.supported
+                      ? `HTTP/3 latency ${Math.round(info.http3.h3 ?? 0)}ms (Δ ${Math.round(
+                          info.http3.delta ?? 0
+                        )}ms)`
+                      : 'HTTP/3 not supported'}
+                  </div>
+                  {info.http3.error && (
+                    <div className="text-red-400">{info.http3.error}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
           <div>
             <h2 className="font-bold mb-1">Body Diff</h2>
             {renderSideBySide(data.bodyDiff)}

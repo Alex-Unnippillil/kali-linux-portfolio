@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { diffLines } from 'diff';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
 
@@ -9,7 +11,17 @@ interface FetchResult {
   headers: Record<string, string>;
   body: string;
   redirects: { url: string; status: number }[];
+  altSvc?: string;
+  http3: {
+    supported: boolean;
+    h1: number;
+    h3?: number;
+    delta?: number;
+    error?: string;
+  };
 }
+
+const execFileAsync = promisify(execFile);
 
 const MAX_REDIRECTS = 10;
 
@@ -17,6 +29,7 @@ async function fetchWithRedirects(url: string): Promise<FetchResult> {
   const redirects: { url: string; status: number }[] = [];
   let current = url;
   let response: Response | null = null;
+  const start = Date.now();
 
   for (let i = 0; i < MAX_REDIRECTS; i += 1) {
     response = await fetch(current, { redirect: 'manual' });
@@ -32,6 +45,26 @@ async function fetchWithRedirects(url: string): Promise<FetchResult> {
   if (!response) throw new Error('No response');
   const body = await response.text();
   const headers = Object.fromEntries(response.headers.entries());
+  const h1 = Date.now() - start;
+  const altSvc = headers['alt-svc'];
+  let http3: FetchResult['http3'] = { supported: false, h1 };
+  if (altSvc && /h3/i.test(altSvc)) {
+    try {
+      const { stdout } = await execFileAsync('curl', [
+        '-s',
+        '-o',
+        '/dev/null',
+        '-w',
+        '%{time_total}',
+        '--http3',
+        url,
+      ]);
+      const h3 = parseFloat(stdout.trim()) * 1000; // seconds to ms
+      http3 = { supported: true, h1, h3, delta: h3 - h1 };
+    } catch (e: any) {
+      http3 = { supported: false, h1, error: e.message };
+    }
+  }
 
   return {
     finalUrl: current,
@@ -39,6 +72,8 @@ async function fetchWithRedirects(url: string): Promise<FetchResult> {
     headers,
     body,
     redirects,
+    altSvc,
+    http3,
   };
 }
 
