@@ -9,7 +9,7 @@ import { Inter } from 'next/font/google';
 import 'tailwindcss/tailwind.css';
 import '../styles/index.css';
 import ConsentBanner from '../components/ConsentBanner';
-import { validateEnv } from '../lib/validate';
+import { validateEnv } from '../lib/validate-public';
 
 const inter = Inter({ subsets: ['latin'] });
 

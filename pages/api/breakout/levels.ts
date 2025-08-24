@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
 import { z } from 'zod';
-import { validateRequest } from '../../../lib/validate';
+import { validateRequest } from '../../../lib/validate-server';
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   const dir = path.join(process.cwd(), 'apps', 'breakout', 'levels');

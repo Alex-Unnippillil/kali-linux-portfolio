@@ -3,7 +3,7 @@ import { diffLines } from 'diff';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { z } from 'zod';
-import { validateRequest } from '../../lib/validate';
+import { validateRequest } from '../../lib/validate-server';
 import type { ApiResult, DiffPart, FetchMeta, HttpDiffResponse } from '@/types/http-diff';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();

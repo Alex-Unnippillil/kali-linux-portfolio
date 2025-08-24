@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { z } from 'zod';
-import { validateRequest } from '../../lib/validate';
+import { validateRequest } from '../../lib/validate-server';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
 

@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import tls, { PeerCertificate } from 'tls';
 import { LRUCache } from 'lru-cache';
 import { z } from 'zod';
-import { validateRequest } from '../../lib/validate';
+import { validateRequest } from '../../lib/validate-server';
 
 
 interface FormattedCert {
