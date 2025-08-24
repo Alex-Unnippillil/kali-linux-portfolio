@@ -1,12 +1,18 @@
 export type Direction = 'up' | 'down' | 'left' | 'right';
 
-export type Board = number[]; // 16 length
+export type Board = number[];
+
+export interface HistoryEntry {
+  board: Board;
+  score: number;
+  move: Direction | null;
+}
 
 export interface GameState {
   board: Board;
   score: number;
-  history: { board: Board; score: number }[];
-  future: { board: Board; score: number }[];
+  history: HistoryEntry[];
+  future: HistoryEntry[];
 }
 
 export const createRng = (seed: number) => {
@@ -42,15 +48,16 @@ const slide = (line: number[]): { line: number[]; gained: number } => {
       res.push(arr[i]);
     }
   }
-  while (res.length < 4) res.push(0);
+  while (res.length < line.length) res.push(0);
   return { line: res, gained };
 };
 
 const rotate = (board: Board): Board => {
-  const res = new Array(16).fill(0);
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
-      res[c * 4 + (3 - r)] = board[r * 4 + c];
+  const size = Math.sqrt(board.length);
+  const res = new Array(board.length).fill(0);
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      res[c * size + (size - 1 - r)] = board[r * size + c];
     }
   }
   return res;
@@ -60,6 +67,7 @@ export const moveBoard = (
   board: Board,
   dir: Direction,
 ): { board: Board; gained: number } => {
+  const size = Math.sqrt(board.length);
   let b = board.slice();
   let gained = 0;
   // rotate board so movement is to left
@@ -71,9 +79,10 @@ export const moveBoard = (
   };
   const times = rotations[dir];
   for (let i = 0; i < times; i++) b = rotate(b);
-  for (let r = 0; r < 4; r++) {
-    const { line, gained: g } = slide(b.slice(r * 4, r * 4 + 4));
-    b.splice(r * 4, 4, ...line);
+  for (let r = 0; r < size; r++) {
+    const sliceStart = r * size;
+    const { line, gained: g } = slide(b.slice(sliceStart, sliceStart + size));
+    b.splice(sliceStart, size, ...line);
     gained += g;
   }
   for (let i = 0; i < (4 - times) % 4; i++) b = rotate(b);
@@ -92,7 +101,7 @@ export const move = (
   return {
     board: spawned,
     score: score + gained,
-    history: [...state.history, { board, score }],
+    history: [...state.history, { board, score, move: dir }],
     future: [],
   };
 };
@@ -105,7 +114,7 @@ export const undo = (state: GameState): GameState => {
     board: prev.board,
     score: prev.score,
     history,
-    future: [{ board: state.board, score: state.score }, ...state.future],
+    future: [{ board: state.board, score: state.score, move: prev.move }, ...state.future],
   };
 };
 
@@ -116,18 +125,19 @@ export const redo = (state: GameState): GameState => {
   return {
     board: next.board,
     score: next.score,
-    history: [...state.history, { board: state.board, score: state.score }],
+    history: [...state.history, { board: state.board, score: state.score, move: next.move }],
     future,
   };
 };
 
 export const isGameOver = (board: Board): boolean => {
+  const size = Math.sqrt(board.length);
   if (board.includes(0)) return false;
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
-      const idx = r * 4 + c;
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const idx = r * size + c;
       const v = board[idx];
-      if ((c < 3 && v === board[idx + 1]) || (r < 3 && v === board[idx + 4])) {
+      if ((c < size - 1 && v === board[idx + 1]) || (r < size - 1 && v === board[idx + size])) {
         return false;
       }
     }
@@ -137,8 +147,8 @@ export const isGameOver = (board: Board): boolean => {
 
 export const score = (board: Board): number => board.reduce((a, b) => a + b, 0);
 
-export const initialState = (rng: () => number): GameState => {
-  let board = Array(16).fill(0);
+export const initialState = (rng: () => number, size = 4): GameState => {
+  let board = Array(size * size).fill(0);
   board = spawnTile(board, rng);
   board = spawnTile(board, rng);
   return { board, score: 0, history: [], future: [] };

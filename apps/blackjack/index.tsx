@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import Dealer from './Dealer';
 import PlayerHand from './PlayerHand';
 import Controls from './Controls';
+import CountingPractice from './CountingPractice';
 import { Card, Hand } from './types';
 import { basicStrategy, fisherYates } from '@components/apps/blackjack/engine';
 
@@ -64,8 +65,10 @@ function isSoft(hand: Card[]): boolean {
 const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, token }) => {
   const [decks, setDecks] = useState(1);
   const [hitSoft17, setHitSoft17] = useState(true);
+  const [preset, setPreset] = useState<'custom' | 'vegas' | 'atlantic'>('custom');
   const [showCount, setShowCount] = useState(false);
   const [showStrategy, setShowStrategy] = useState(false);
+  const [showPractice, setShowPractice] = useState(false);
   const [deck, setDeck] = useState<Card[]>(() => shuffle(createDeck(1)));
   const [dealer, setDealer] = useState<Card[]>([]);
   const [playerHands, setPlayerHands] = useState<Hand[]>([]);
@@ -76,6 +79,16 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
   const [history, setHistory] = useState<any[]>([]);
   const [betting, setBetting] = useState(false);
   const trueCount = useMemo(() => runningCount / Math.max(1, deck.length / 52), [runningCount, deck.length]);
+
+  useEffect(() => {
+    if (preset === 'vegas') {
+      setDecks(6);
+      setHitSoft17(true);
+    } else if (preset === 'atlantic') {
+      setDecks(8);
+      setHitSoft17(false);
+    }
+  }, [preset]);
 
   useEffect(() => {
     setDeck(shuffle(createDeck(decks)));
@@ -268,13 +281,31 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
       </div>
       <div className="mb-2">
         <label>
+          Preset:
+          <select
+            value={preset}
+            onChange={(e) => setPreset(e.target.value as 'custom' | 'vegas' | 'atlantic')}
+            className="ml-1 border"
+            aria-label="Rule preset"
+          >
+            <option value="custom">Custom</option>
+            <option value="vegas">Las Vegas (H17)</option>
+            <option value="atlantic">Atlantic City (S17)</option>
+          </select>
+        </label>
+      </div>
+      <div className="mb-2">
+        <label>
           Decks:
           <input
             type="number"
             min={1}
             max={8}
             value={decks}
-            onChange={(e) => setDecks(parseInt(e.target.value, 10) || 1)}
+            onChange={(e) => {
+              setDecks(parseInt(e.target.value, 10) || 1);
+              setPreset('custom');
+            }}
             className="ml-1 w-16 border"
             aria-label="Number of decks"
           />
@@ -285,7 +316,10 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
           <input
             type="checkbox"
             checked={hitSoft17}
-            onChange={(e) => setHitSoft17(e.target.checked)}
+            onChange={(e) => {
+              setHitSoft17(e.target.checked);
+              setPreset('custom');
+            }}
             aria-label="Dealer hits soft 17"
           />{' '}
           Dealer hits soft 17
@@ -340,7 +374,15 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
         canInsurance={canInsurance}
         disabled={playerHands.length === 0}
       />
-      <button className="btn mt-2" aria-label="Deal" onClick={startRound}>Deal</button>
+      <button className="btn mt-2 mr-2" aria-label="Deal" onClick={startRound}>Deal</button>
+      <button
+        className="btn mt-2"
+        aria-label="Toggle counting practice"
+        onClick={() => setShowPractice((s) => !s)}
+      >
+        {showPractice ? 'Hide Practice' : 'Counting Practice'}
+      </button>
+      {showPractice && <CountingPractice />}
     </div>
   );
 };

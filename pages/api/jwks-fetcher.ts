@@ -1,5 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { decodeProtectedHeader, importJWK, jwtVerify } from 'jose';
+import {
+  decodeProtectedHeader,
+  importJWK,
+  jwtVerify,
+  calculateJwkThumbprint,
+} from 'jose';
 import { createHash } from 'crypto';
 import { setupUrlGuard } from '../../lib/urlGuard';
 setupUrlGuard();
@@ -10,6 +15,7 @@ import { validateRequest } from '../../lib/validate';
 interface CacheEntry {
   jwk: any;
   expiry: number;
+  thumbprint: string;
 }
 
 const cache = new Map<string, CacheEntry>();
@@ -27,6 +33,25 @@ const SUPPORTED_ALGS = [
   'EdDSA',
 ];
 
+function validateKey(k: any) {
+  if (!k || typeof k !== 'object') return false;
+  if (typeof k.kty !== 'string') return false;
+  switch (k.kty) {
+    case 'RSA':
+      return typeof k.n === 'string' && typeof k.e === 'string';
+    case 'EC':
+      return (
+        typeof k.crv === 'string' &&
+        typeof k.x === 'string' &&
+        typeof k.y === 'string'
+      );
+    case 'OKP':
+      return typeof k.crv === 'string' && typeof k.x === 'string';
+    default:
+      return false;
+  }
+}
+
 async function fetchAndCacheKeys(jwksUrl: string) {
   const resp = await fetch(jwksUrl);
   if (!resp.ok) throw new Error('fetch failed');
@@ -37,10 +62,27 @@ async function fetchAndCacheKeys(jwksUrl: string) {
   const m = cc && /max-age=(\d+)/i.exec(cc);
   if (m) maxAge = parseInt(m[1], 10);
   const expiry = Date.now() + maxAge * 1000;
+  const collisions = new Set<string>();
+  const rotations = new Set<string>();
+  const seenKids = new Set<string>();
+  const processed = [] as any[];
   for (const k of keys) {
-    if (k.kid) cache.set(k.kid, { jwk: k, expiry });
+    if (!validateKey(k)) continue;
+    const thumbprint = await calculateJwkThumbprint(k);
+    processed.push({ ...k, jwkThumbprint: thumbprint });
+    if (k.kid) {
+      if (seenKids.has(k.kid)) collisions.add(k.kid);
+      seenKids.add(k.kid);
+      const existing = cache.get(k.kid);
+      if (existing && existing.thumbprint !== thumbprint) rotations.add(k.kid);
+      cache.set(k.kid, { jwk: k, expiry, thumbprint });
+    }
   }
-  return keys;
+  return {
+    keys: processed,
+    collisions: Array.from(collisions),
+    rotations: Array.from(rotations),
+  };
 }
 
 function augmentKey(k: any) {
@@ -65,7 +107,7 @@ function augmentKey(k: any) {
 async function getKey(jwksUrl: string, kid: string) {
   const entry = cache.get(kid);
   if (entry && entry.expiry > Date.now()) return entry.jwk;
-  const keys = await fetchAndCacheKeys(jwksUrl);
+  const { keys } = await fetchAndCacheKeys(jwksUrl);
   return keys.find((k: any) => k.kid === kid);
 }
 
@@ -124,15 +166,20 @@ export default async function handler(
       }
       const key = await importJWK(jwk, alg);
       const { payload, protectedHeader } = await jwtVerify(token, key);
-      const keys = await fetchAndCacheKeys(jwksUrl);
+      const { keys, collisions, rotations } = await fetchAndCacheKeys(jwksUrl);
       const augmented = keys.map(augmentKey);
-      res
-        .status(200)
-        .json({ ok: true, keys: augmented, payload, header: protectedHeader });
+      res.status(200).json({
+        ok: true,
+        keys: augmented,
+        payload,
+        header: protectedHeader,
+        collisions,
+        rotations,
+      });
     } else {
-      const keys = await fetchAndCacheKeys(jwksUrl);
+      const { keys, collisions, rotations } = await fetchAndCacheKeys(jwksUrl);
       const augmented = keys.map(augmentKey);
-      res.status(200).json({ ok: true, keys: augmented });
+      res.status(200).json({ ok: true, keys: augmented, collisions, rotations });
     }
   } catch (e: any) {
     res
