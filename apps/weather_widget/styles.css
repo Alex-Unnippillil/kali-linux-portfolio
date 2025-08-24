@@ -16,20 +16,55 @@ body {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-.temp {
-  font-size: 2rem;
+
+.controls {
+  display: flex;
+  justify-content: flex-end;
   margin-bottom: 10px;
 }
 
-.icon {
-  width: 80px;
-  height: 80px;
+.unit-btn {
+  background: #e0e0e0;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.unit-btn.active {
+  background: #d0d0d0;
+  font-weight: bold;
+}
+
+.temp {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  min-width: 80px;
+  min-height: 32px;
 }
 
 .forecast {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
   font-size: 1rem;
-  margin-top: 10px;
-  text-transform: capitalize;
+}
+
+.forecast li {
+  margin: 4px 0;
+}
+
+.skeleton {
+  background: #e0e0e0;
+  color: transparent;
+  border-radius: 4px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
 }
 
 .fade-in {

@@ -1,97 +1,76 @@
 document.addEventListener('DOMContentLoaded', () => {
   const widget = document.getElementById('weather');
   const tempEl = widget.querySelector('.temp');
-  const iconEl = widget.querySelector('.icon');
   const forecastEl = widget.querySelector('.forecast');
+  const unitBtns = widget.querySelectorAll('.unit-btn');
 
-  const params = new URLSearchParams(location.search);
-  const demoMode = params.has('demo');
-  let providerName = widget.dataset.provider || 'openweather';
-  let city = widget.dataset.city || 'London';
-  const apiKey = widget.dataset.apiKey || 'YOUR_API_KEY'; // Replace with your provider API key
+  const city = widget.dataset.city || 'London';
+  let units = 'metric';
 
-  const providers = {
-    openweather: async (loc, key) => {
-      const response = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?q=${loc}&units=metric&appid=${key}`
-      );
-      if (!response.ok) throw new Error('Failed to fetch weather');
-      const data = await response.json();
-      return {
-        temp: Math.round(data.main.temp),
-        icon: `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`,
-        description: data.weather[0].description
-      };
-    },
-    weatherapi: async (loc, key) => {
-      const response = await fetch(
-        `https://api.weatherapi.com/v1/current.json?key=${key}&q=${loc}`
-      );
-      if (!response.ok) throw new Error('Failed to fetch weather');
-      const data = await response.json();
-      return {
-        temp: Math.round(data.current.temp_c),
-        icon: `https:${data.current.condition.icon}`,
-        description: data.current.condition.text
-      };
-    },
-    demo: async () => ({
-      temp: 21,
-      icon: 'https://openweathermap.org/img/wn/01d@2x.png',
-      description: 'clear sky'
+  unitBtns.forEach((btn) =>
+    btn.addEventListener('click', () => {
+      unitBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      units = btn.dataset.unit;
+      loadWeather();
     })
-  };
+  );
 
-  if (demoMode) {
-    providerName = 'demo';
-    city = 'Demo City';
+  function showSkeleton() {
+    tempEl.classList.add('skeleton');
+    tempEl.textContent = '';
+    forecastEl.innerHTML = '';
+    for (let i = 0; i < 5; i++) {
+      const li = document.createElement('li');
+      li.className = 'skeleton';
+      forecastEl.appendChild(li);
+    }
   }
 
-  const CACHE_TTL = 60 * 60 * 1000; // 1 hour
-  const cacheKey = `weather:${providerName}:${city}`;
+  function clearSkeleton() {
+    tempEl.classList.remove('skeleton');
+    forecastEl.querySelectorAll('.skeleton').forEach((el) => el.remove());
+  }
 
-  async function fetchWeather() {
+  async function geocode(loc) {
+    const res = await fetch(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(loc)}&count=1`
+    );
+    if (!res.ok) throw new Error('Location lookup failed');
+    const data = await res.json();
+    if (!data.results || !data.results.length) throw new Error('Location not found');
+    return { lat: data.results[0].latitude, lon: data.results[0].longitude };
+  }
+
+  async function loadWeather() {
+    showSkeleton();
     try {
-      const data = await providers[providerName](city, apiKey);
-      updateWeather(data);
-      localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data }));
+      const { lat, lon } = await geocode(city);
+      const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}&units=${units}`);
+      if (!res.ok) throw new Error('Failed to fetch weather');
+      const data = await res.json();
+      renderWeather(data);
     } catch (err) {
       console.error(err);
+      clearSkeleton();
     }
   }
 
-  function loadWeather() {
-    const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
-    const isStale = !cached || Date.now() - cached.timestamp > CACHE_TTL;
-    if (cached) {
-      updateWeather(cached.data);
+  function renderWeather(data) {
+    clearSkeleton();
+    const unitSymbol = units === 'metric' ? '°C' : '°F';
+    tempEl.textContent = `${Math.round(data.hourly.temperature_2m[0])}${unitSymbol}`;
+    forecastEl.innerHTML = '';
+    for (let i = 0; i < data.daily.time.length; i++) {
+      const li = document.createElement('li');
+      const day = data.daily.time[i];
+      const max = Math.round(data.daily.temperature_2m_max[i]);
+      const min = Math.round(data.daily.temperature_2m_min[i]);
+      li.textContent = `${day}: ${max}${unitSymbol} / ${min}${unitSymbol}`;
+      forecastEl.appendChild(li);
     }
-    if (isStale) {
-      fetchWeather();
-    } else {
-      // revalidate in background
-      fetchWeather().catch(() => {});
-    }
-  }
-
-  function updateWeather(data) {
-    widget.classList.remove('fade-in');
-    widget.classList.add('fade-out');
-    widget.addEventListener(
-      'animationend',
-      function handler() {
-        widget.classList.remove('fade-out');
-        tempEl.textContent = `${data.temp}°C`;
-        iconEl.src = data.icon;
-        iconEl.alt = data.description;
-        forecastEl.textContent = data.description;
-        widget.classList.add('fade-in');
-        widget.removeEventListener('animationend', handler);
-      },
-      { once: true }
-    );
   }
 
   loadWeather();
-  setInterval(loadWeather, CACHE_TTL);
 });
+
