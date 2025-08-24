@@ -42,6 +42,14 @@ const ChessApp: React.FC = () => {
 
   const engine = useRef<Worker | null>(null);
   const premoveRef = useRef<{ from: string; to: string } | null>(null);
+  const enginePlayingRef = useRef(false);
+  const [analysis, setAnalysis] = useState<{ eval: string; best: string } | null>(
+    null
+  );
+  const [bestArrow, setBestArrow] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
 
   // Arrows/lines state
   const [arrows, setArrows] = useState<{ from: string; to: string }[]>([]);
@@ -77,27 +85,46 @@ const ChessApp: React.FC = () => {
       engine.current.postMessage(`setoption name Skill Level value ${skill}`);
       engine.current.onmessage = (e: MessageEvent) => {
         const line = e.data as string;
-        if (line.startsWith('bestmove')) {
-          const move = line.split(' ')[1];
-          game.move({
-            from: move.slice(0, 2) as Square,
-            to: move.slice(2, 4) as Square,
-            promotion: move.slice(4) || 'q',
-          });
-          updateBoard();
-          updateStatus();
-          if (premoveRef.current) {
-            const res = game.move(premoveRef.current as any);
-            premoveRef.current = null;
-            setPremove(null);
-            if (res) {
-              updateBoard();
-              updateStatus();
-            }
+        if (line.startsWith('info')) {
+          const scoreMatch = line.match(/score (cp|mate) (-?\d+)/);
+          const pvMatch = line.match(/pv ([a-h][1-8][a-h][1-8][qrbn]?)/);
+          if (scoreMatch && pvMatch) {
+            const value =
+              scoreMatch[1] === 'cp'
+                ? (Number(scoreMatch[2]) / 100).toFixed(2)
+                : `M${scoreMatch[2]}`;
+            setAnalysis({ eval: value, best: pvMatch[1] });
+            setBestArrow({
+              from: pvMatch[1].slice(0, 2),
+              to: pvMatch[1].slice(2, 4),
+            });
           }
-          setAnnounce(`Engine moves ${move}`);
+        } else if (line.startsWith('bestmove')) {
+          const move = line.split(' ')[1];
+          if (enginePlayingRef.current) {
+            game.move({
+              from: move.slice(0, 2) as Square,
+              to: move.slice(2, 4) as Square,
+              promotion: move.slice(4) || 'q',
+            });
+            updateBoard();
+            updateStatus();
+            if (premoveRef.current) {
+              const res = game.move(premoveRef.current as any);
+              premoveRef.current = null;
+              setPremove(null);
+              if (res) {
+                updateBoard();
+                updateStatus();
+              }
+            }
+            setAnnounce(`Engine moves ${move}`);
+            analyzePosition();
+          }
+          enginePlayingRef.current = false;
         }
       };
+      analyzePosition();
     })();
     return () => {
       mounted = false;
@@ -116,6 +143,7 @@ const ChessApp: React.FC = () => {
 
   const updateBoard = () => {
     setBoard(game.board());
+    if (!enginePlayingRef.current) analyzePosition();
   };
 
   const updateStatus = () => {
@@ -132,8 +160,16 @@ const ChessApp: React.FC = () => {
     else setStatus(game.turn() === 'w' ? 'Your move' : 'Waiting');
   };
 
+  const analyzePosition = () => {
+    if (!engine.current) return;
+    enginePlayingRef.current = false;
+    engine.current.postMessage(`position fen ${game.fen()}`);
+    engine.current.postMessage('go depth 12');
+  };
+
   const engineMove = () => {
     if (!engine.current || puzzle) return;
+    enginePlayingRef.current = true;
     engine.current.postMessage(`position fen ${game.fen()}`);
     engine.current.postMessage('go movetime 1000');
   };
@@ -150,12 +186,14 @@ const ChessApp: React.FC = () => {
       promotion: 'q',
     });
     if (move) {
+      const willEngineMove = !puzzle;
+      enginePlayingRef.current = willEngineMove;
       setSelected(null);
       setHighlight([]);
       updateBoard();
       updateStatus();
       setAnnounce(`You move ${move.san}`);
-      if (!puzzle) engineMove();
+      if (willEngineMove) engineMove();
       if (puzzle && move.san === puzzle.solution) {
         const time = puzzleStart ? Math.floor((Date.now() - puzzleStart) / 1000) : 0;
         if (rushActive) {
@@ -223,6 +261,7 @@ const ChessApp: React.FC = () => {
 
   const reset = () => {
     game.reset();
+    enginePlayingRef.current = false;
     updateBoard();
     setSelected(null);
     setHighlight([]);
@@ -248,6 +287,7 @@ const ChessApp: React.FC = () => {
     const move = block.split('\n').pop()?.trim().split(' ')[1];
     if (fen && move) {
       game.load(fen);
+      enginePlayingRef.current = false;
       updateBoard();
       setSelected(null);
       setHighlight([]);
@@ -265,6 +305,7 @@ const ChessApp: React.FC = () => {
       return;
     }
     game.load(p.fen);
+    enginePlayingRef.current = false;
     updateBoard();
     setSelected(null);
     setHighlight([]);
@@ -357,11 +398,12 @@ const ChessApp: React.FC = () => {
     if (pgn) {
       try {
         game.loadPgn(pgn);
+        enginePlayingRef.current = game.turn() === 'b' && !puzzle;
         updateBoard();
         setSelected(null);
         setHighlight([]);
         updateStatus();
-        if (game.turn() === 'b' && !puzzle) engineMove();
+        if (enginePlayingRef.current) engineMove();
       } catch (e) {
         // eslint-disable-next-line no-alert
         alert('Invalid PGN');
@@ -380,11 +422,12 @@ const ChessApp: React.FC = () => {
     if (pgn) {
       try {
         game.loadPgn(pgn);
+        enginePlayingRef.current = game.turn() === 'b' && !puzzle;
         updateBoard();
         setSelected(null);
         setHighlight([]);
         updateStatus();
-        if (game.turn() === 'b' && !puzzle) engineMove();
+        if (enginePlayingRef.current) engineMove();
       } catch (e) {
         // eslint-disable-next-line no-alert
         alert('Failed to load game');
@@ -480,6 +523,16 @@ const ChessApp: React.FC = () => {
             >
               <polygon points="0 0, 10 3.5, 0 7" fill="red" />
             </marker>
+            <marker
+              id="arrowhead-blue"
+              markerWidth="10"
+              markerHeight="7"
+              refX="0"
+              refY="3.5"
+              orient="auto"
+            >
+              <polygon points="0 0, 10 3.5, 0 7" fill="blue" />
+            </marker>
           </defs>
           {arrows.map((a, i) => {
             const fromFile = 'abcdefgh'.indexOf(a.from[0]);
@@ -504,9 +557,33 @@ const ChessApp: React.FC = () => {
               />
             );
           })}
+          {bestArrow && (() => {
+            const fromFile = 'abcdefgh'.indexOf(bestArrow.from[0]);
+            const fromRank = 8 - parseInt(bestArrow.from[1], 10);
+            const toFile = 'abcdefgh'.indexOf(bestArrow.to[0]);
+            const toRank = 8 - parseInt(bestArrow.to[1], 10);
+            const x1 = ((fromFile + 0.5) / 8) * 100;
+            const y1 = ((fromRank + 0.5) / 8) * 100;
+            const x2 = ((toFile + 0.5) / 8) * 100;
+            const y2 = ((toRank + 0.5) / 8) * 100;
+            return (
+              <line
+                x1={`${x1}%`}
+                y1={`${y1}%`}
+                x2={`${x2}%`}
+                y2={`${y2}%`}
+                stroke="blue"
+                strokeWidth="4"
+                markerEnd="url(#arrowhead-blue)"
+              />
+            );
+          })()}
         </svg>
       </div>
       <div className="mt-2">{status}</div>
+      {analysis && (
+        <div className="mt-1">Eval: {analysis.eval} Best: {analysis.best}</div>
+      )}
       {rushActive && (
         <div className="mt-1">Rush: {rushScore} – {rushTime}s</div>
       )}
