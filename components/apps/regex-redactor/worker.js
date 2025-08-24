@@ -1,6 +1,5 @@
 import { diffWords } from 'diff';
 import safeRegex from 'safe-regex';
-import { RE2 } from 're2-wasm';
 import { PRESETS } from './presets';
 
 self.onmessage = async (e) => {
@@ -19,7 +18,7 @@ self.onmessage = async (e) => {
     try {
       if (engine === 're2') {
         const mod = await import('re2-wasm');
-        regex = new mod.RE2(pattern, 'g');
+        regex = new mod.RE2(pattern, 'gu');
       } else {
         unsafe = !safeRegex(pattern);
         if (unsafe) {

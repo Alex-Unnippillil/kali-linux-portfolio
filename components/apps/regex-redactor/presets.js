@@ -12,7 +12,7 @@ export const PRESETS = [
   },
   {
     label: 'Phone',
-    pattern: '\\b(?:\\+?\\d{1,3}[ -]?)?(?:\\d{3}[ -]?){2}\\d{4}\\b',
+    pattern: '(?:\\+?\\d{1,3}[ -]?)?(?:\\d{3}[ -]?){2}\\d{4}\\b',
     mask(match, option) {
       if (option === 'partial') {
         return '***-***-' + match.slice(-4);
