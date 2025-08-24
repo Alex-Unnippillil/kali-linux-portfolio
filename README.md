@@ -123,3 +123,21 @@ The GitHub Actions workflow relies on the following secrets configured in the re
 - `NEXT_PUBLIC_USER_ID`
 
 These secrets provide the values for the corresponding environment variables during the build step.
+
+## E2E Testing
+
+The project uses [Playwright](https://playwright.dev/) for end-to-end tests.
+
+### Setup
+
+1. Install the Playwright browsers (Chromium is sufficient):
+   ```bash
+   npx playwright install chromium
+   npx playwright install-deps chromium  # on Linux
+   ```
+2. Run the tests:
+   ```bash
+   yarn test:e2e
+   ```
+
+The Playwright configuration automatically starts the development server before running the tests.
