@@ -368,7 +368,16 @@ export class Desktop extends Component {
         // if the app is disabled
         if (this.state.disabled_apps[objId]) return;
 
-        if (this.state.minimized_windows[objId]) {
+        let closed_windows = { ...this.state.closed_windows };
+        let minimized_windows = { ...this.state.minimized_windows };
+
+        if (closed_windows[objId]) {
+            closed_windows[objId] = false;
+            minimized_windows[objId] = false;
+        }
+
+        this.setState({ closed_windows, minimized_windows });
+        if (minimized_windows[objId]) {
             // focus this app's window
             this.focus(objId);
 
@@ -377,9 +386,8 @@ export class Desktop extends Component {
             r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
 
             // tell childs that his app has been not minimised
-            let minimized_windows = this.state.minimized_windows;
             minimized_windows[objId] = false;
-            this.setState({ minimized_windows: minimized_windows });
+            this.setState({ minimized_windows });
             return;
         }
 
