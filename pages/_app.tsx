@@ -2,6 +2,7 @@ import '../lib/dev-ssr-logger';
 import type { AppProps, NextWebVitalsMetric } from 'next/app';
 import { useEffect, useState } from 'react';
 import { initAxiom, logEvent } from '../lib/axiom';
+import { maskPII } from '../lib/analytics';
 import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
 import { Inter } from 'next/font/google';
@@ -28,7 +29,7 @@ const schedule = (cb: () => void) => {
 const sanitize = (params: any) => {
   if (!params || typeof params !== 'object') return params;
   const { payload, body, data, ...rest } = params;
-  return rest;
+  return maskPII(rest);
 };
 
 // Default to no-op analytics until consent is granted
@@ -53,6 +54,36 @@ function MyApp({ Component, pageProps }: AppProps) {
     ) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
     }
+
+    const errorHandler = (
+      message: string | Event,
+      source?: string,
+      lineno?: number,
+      colno?: number,
+      error?: Error
+    ): void => {
+      const payload = maskPII({
+        message: String(message),
+        source,
+        lineno,
+        colno,
+        stack: error?.stack,
+      });
+      try {
+        fetch('/api/reportException', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } catch {
+        // ignore network errors
+      }
+    };
+
+    window.onerror = errorHandler;
+    return () => {
+      window.onerror = null;
+    };
   }, []);
 
   useEffect(() => {
