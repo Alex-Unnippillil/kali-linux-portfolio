@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import CryptoJS from 'crypto-js';
 
 function murmurhash3_32_gc(key: string, seed = 0): string {
   let remainder = key.length & 3;
@@ -31,8 +32,10 @@ function murmurhash3_32_gc(key: string, seed = 0): string {
   switch (remainder) {
     case 3:
       k1 ^= (key.charCodeAt(i + 2) & 0xff) << 16;
+    // eslint-disable-next-line no-fallthrough
     case 2:
       k1 ^= (key.charCodeAt(i + 1) & 0xff) << 8;
+    // eslint-disable-next-line no-fallthrough
     case 1:
       k1 ^= key.charCodeAt(i) & 0xff;
       k1 = (k1 * c1) | 0;
@@ -48,90 +51,144 @@ function murmurhash3_32_gc(key: string, seed = 0): string {
   h1 = (h1 * 0xc2b2ae35) | 0;
   h1 ^= h1 >>> 16;
 
-  return (h1 >>> 0).toString();
+  return (h1 | 0).toString();
 }
 
-const MAX_SIZE = 100 * 1024; // 100KB
+const PROXY_PREFIX = 'https://r.jina.ai/';
 
 const FaviconHash: React.FC = () => {
+  const [url, setUrl] = useState('');
   const [murmur, setMurmur] = useState('');
-  const [sha1, setSha1] = useState('');
+  const [md5, setMd5] = useState('');
+  const [redirects, setRedirects] = useState<string[]>([]);
+  const [finalUrl, setFinalUrl] = useState('');
   const [error, setError] = useState('');
-  const [fileInfo, setFileInfo] = useState('');
-
-  const handleFiles = useCallback(async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const file = files[0];
-    setError('');
-    setMurmur('');
-    setSha1('');
-
-    const sizeKB = (file.size / 1024).toFixed(1);
-    setFileInfo(`${file.name} - ${sizeKB} KB`);
-    if (file.size > MAX_SIZE) {
-      setError(`File too large. Max ${(MAX_SIZE / 1024).toFixed(0)} KB`);
-      return;
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i += 1) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
-    const m = murmurhash3_32_gc(base64);
-    const shaBuffer = await crypto.subtle.digest('SHA-1', arrayBuffer);
-    const shaArray = Array.from(new Uint8Array(shaBuffer));
-    const s = shaArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-    setMurmur(m);
-    setSha1(s);
-  }, []);
-
-  const onChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      handleFiles(e.target.files);
-    },
-    [handleFiles]
-  );
-
-  const onDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      handleFiles(e.dataTransfer.files);
-    },
-    [handleFiles]
-  );
+  const [showProxy, setShowProxy] = useState(false);
 
   const copy = useCallback((text: string) => {
     if (!text) return;
     navigator.clipboard?.writeText(text).catch(() => {});
   }, []);
 
+  const buildUrl = useCallback((raw: string) => {
+    let target = raw.trim();
+    if (!/^https?:\/\//i.test(target)) target = `https://${target}`;
+    if (!/\.(ico|png|jpe?g|gif|svg)$/i.test(target)) {
+      target = target.replace(/\/$/, '') + '/favicon.ico';
+    }
+    return target;
+  }, []);
+
+  const fetchIcon = useCallback(
+    async (useProxy = false) => {
+      setMurmur('');
+      setMd5('');
+      setError('');
+      setRedirects([]);
+      setFinalUrl('');
+      setShowProxy(false);
+
+      if (!url.trim()) {
+        setError('Enter a URL');
+        return;
+      }
+
+      const initialUrl = buildUrl(url);
+      const chain = [initialUrl];
+      const targetUrl = useProxy ? `${PROXY_PREFIX}${initialUrl}` : initialUrl;
+      let res: Response;
+      try {
+        res = await fetch(targetUrl, { redirect: 'follow' });
+      } catch (e) {
+        try {
+          await fetch(targetUrl, { mode: 'no-cors' });
+          setError('CORS error: target blocks cross-origin requests.');
+          setShowProxy(true);
+        } catch {
+          setError('Network error: failed to reach URL.');
+          setShowProxy(true);
+        }
+        return;
+      }
+
+      if (res.type === 'opaqueredirect' && !useProxy) {
+        fetchIcon(true);
+        return;
+      }
+
+      if (!res.ok) {
+        if (res.status === 404) setError('404 error: favicon not found.');
+        else setError(`HTTP ${res.status}`);
+        setShowProxy(true);
+        return;
+      }
+
+      const final = res.url;
+      if (final !== initialUrl) chain.push(final);
+      setRedirects(chain);
+      setFinalUrl(final);
+
+      const buffer = await res.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      bytes.forEach((b) => {
+        binary += String.fromCharCode(b);
+      });
+      const base64 = btoa(binary);
+      const mmh3 = murmurhash3_32_gc(base64);
+      const md5hex = CryptoJS.MD5(CryptoJS.enc.Latin1.parse(binary)).toString();
+      setMurmur(mmh3);
+      setMd5(md5hex);
+    },
+    [url, buildUrl]
+  );
+
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col items-center space-y-4">
-      <div
-        onDrop={onDrop}
-        onDragOver={(e) => e.preventDefault()}
-        className="w-full max-w-md flex flex-col items-center justify-center border-2 border-dashed border-gray-500 rounded p-8 cursor-pointer"
-      >
+      <div className="flex space-x-2 w-full max-w-md">
         <input
-          id="favicon-input"
-          type="file"
-          accept="image/x-icon,image/png,image/svg+xml"
-          className="hidden"
-          onChange={onChange}
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://example.com"
+          className="flex-1 p-2 rounded text-black"
         />
-        <label htmlFor="favicon-input" className="text-center">
-          Drag & drop a favicon here, or click to select.
-        </label>
+        <button
+          type="button"
+          onClick={() => fetchIcon(false)}
+          className="px-4 py-2 bg-blue-600 rounded"
+        >
+          Fetch
+        </button>
       </div>
-      {fileInfo && <div>{fileInfo}</div>}
-      {error && <div className="text-red-400">{error}</div>}
-      {murmur && sha1 && (
+      {error && (
+        <div className="text-red-400 space-y-2 text-center">
+          <div>{error}</div>
+          {showProxy && (
+            <button
+              type="button"
+              className="px-2 py-1 bg-blue-600 rounded"
+              onClick={() => fetchIcon(true)}
+            >
+              Use Proxy
+            </button>
+          )}
+        </div>
+      )}
+      {redirects.length > 0 && (
+        <div className="w-full max-w-md text-sm break-all space-y-1">
+          <div className="font-semibold">Redirect chain:</div>
+          <ul className="list-disc list-inside">
+            {redirects.map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
+          </ul>
+          <div className="mt-1">Final URL: {finalUrl}</div>
+        </div>
+      )}
+      {murmur && md5 && (
         <div className="w-full max-w-md space-y-2">
           <div className="flex items-center space-x-2">
-            <span className="font-semibold">Murmur:</span>
+            <span className="font-semibold">MMH3:</span>
             <span className="flex-1 break-all">{murmur}</span>
             <button
               type="button"
@@ -142,19 +199,24 @@ const FaviconHash: React.FC = () => {
             </button>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="font-semibold">SHA-1:</span>
-            <span className="flex-1 break-all">{sha1}</span>
+            <span className="font-semibold">MD5:</span>
+            <span className="flex-1 break-all">{md5}</span>
             <button
               type="button"
-              onClick={() => copy(sha1)}
+              onClick={() => copy(md5)}
               className="px-2 py-1 bg-blue-600 rounded"
             >
               Copy
             </button>
           </div>
-          <div className="text-sm text-yellow-400">
-            Hashes can identify browsers and sites. Share responsibly to protect privacy.
-          </div>
+          <a
+            href={`https://www.shodan.io/search?query=http.favicon.hash:${murmur}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 underline"
+          >
+            Shodan search
+          </a>
         </div>
       )}
     </div>
@@ -162,4 +224,3 @@ const FaviconHash: React.FC = () => {
 };
 
 export default FaviconHash;
-

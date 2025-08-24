@@ -8,6 +8,8 @@ interface Snapshot {
 interface ApiResponse {
   availability: any;
   snapshots: Snapshot[];
+  hasMore?: boolean;
+  error?: string;
 }
 
 interface DiffPart {
@@ -70,6 +72,16 @@ function renderSideBySide(diff: DiffPart[]) {
   );
 }
 
+function parseTimestamp(ts: string): Date {
+  const y = Number(ts.slice(0, 4));
+  const m = Number(ts.slice(4, 6)) - 1;
+  const d = Number(ts.slice(6, 8));
+  const h = Number(ts.slice(8, 10));
+  const min = Number(ts.slice(10, 12));
+  const s = Number(ts.slice(12, 14));
+  return new Date(Date.UTC(y, m, d, h, min, s));
+}
+
 const WaybackViewer: React.FC = () => {
   const [url, setUrl] = useState('');
   const [snapshots, setSnapshots] = useState<Snapshot[]>([]);
@@ -77,19 +89,35 @@ const WaybackViewer: React.FC = () => {
   const [selected, setSelected] = useState<string[]>([]);
   const [diff, setDiff] = useState<DiffResult | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [diffError, setDiffError] = useState<string | null>(null);
+  const limit = 50;
 
-  const fetchSnapshots = async () => {
+  const fetchSnapshots = async (pageNum = 0) => {
     setLoading(true);
     setSnapshots([]);
     setSelected([]);
     setDiff(null);
+    setError(null);
     try {
-      const res = await fetch(`/api/wayback-viewer?url=${encodeURIComponent(url)}`);
+      const res = await fetch(
+        `/api/wayback-viewer?url=${encodeURIComponent(url)}&page=${pageNum}&limit=${limit}`,
+      );
       const json: ApiResponse = await res.json();
-      setSnapshots(json.snapshots);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(e);
+      if (json.error) {
+        setError(json.error);
+      } else {
+        setSnapshots(json.snapshots);
+        setHasMore(Boolean(json.hasMore));
+        setPage(pageNum);
+        if (json.snapshots.length === 0) {
+          setError('No snapshots available');
+        }
+      }
+    } catch (e: any) {
+      setError(e.message || 'Error fetching snapshots');
     } finally {
       setLoading(false);
     }
@@ -107,6 +135,7 @@ const WaybackViewer: React.FC = () => {
   const handleDiff = async () => {
     if (selected.length !== 2) return;
     setDiffLoading(true);
+    setDiffError(null);
     try {
       const url1 = `https://web.archive.org/web/${selected[0]}/${url}`;
       const url2 = `https://web.archive.org/web/${selected[1]}/${url}`;
@@ -115,14 +144,45 @@ const WaybackViewer: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url1, url2 }),
       });
+      if (!res.ok) {
+        throw new Error('Unable to diff snapshots');
+      }
       const json = await res.json();
       setDiff(json);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.error(e);
+    } catch (e: any) {
+      setDiffError(e.message || 'Diff failed');
     } finally {
       setDiffLoading(false);
     }
+  };
+
+  const renderTimeline = () => {
+    if (snapshots.length === 0) return null;
+    const times = snapshots.map((s) => parseTimestamp(s.timestamp).getTime());
+    const min = Math.min(...times);
+    const max = Math.max(...times);
+    const range = max - min || 1;
+    return (
+      <div className="relative w-full h-8 bg-gray-800 rounded overflow-hidden">
+        {snapshots.map((s) => {
+          const t = parseTimestamp(s.timestamp).getTime();
+          const left = ((t - min) / range) * 100;
+          const selectedCls = selected.includes(s.timestamp)
+            ? 'bg-yellow-400'
+            : 'bg-blue-400';
+          return (
+            <button
+              type="button"
+              key={s.timestamp}
+              title={s.timestamp}
+              className={`absolute top-0 h-full w-1 ${selectedCls}`}
+              style={{ left: `${left}%` }}
+              onClick={() => toggleSelect(s.timestamp)}
+            />
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -136,7 +196,7 @@ const WaybackViewer: React.FC = () => {
         />
         <button
           type="button"
-          onClick={fetchSnapshots}
+          onClick={() => fetchSnapshots(0)}
           className="px-4 py-1 bg-blue-600 rounded"
           disabled={loading}
         >
@@ -144,26 +204,49 @@ const WaybackViewer: React.FC = () => {
         </button>
       </div>
       {loading && <div>Loading...</div>}
+      {error && <div className="text-red-400">{error}</div>}
       {snapshots.length > 0 && (
-        <ul className="space-y-1 overflow-auto flex-1">
-          {snapshots.map((s) => (
-            <li key={s.timestamp} className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={selected.includes(s.timestamp)}
-                onChange={() => toggleSelect(s.timestamp)}
-              />
-              <a
-                href={`https://web.archive.org/web/${s.timestamp}/${url}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 underline"
-              >
-                {s.timestamp}
-              </a>
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-col flex-1 space-y-2">
+          {renderTimeline()}
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              onClick={() => fetchSnapshots(page - 1)}
+              className="px-2 py-1 bg-gray-700 rounded disabled:opacity-50"
+              disabled={page === 0}
+            >
+              Prev
+            </button>
+            <span>Page {page + 1}</span>
+            <button
+              type="button"
+              onClick={() => fetchSnapshots(page + 1)}
+              className="px-2 py-1 bg-gray-700 rounded disabled:opacity-50"
+              disabled={!hasMore}
+            >
+              Next
+            </button>
+          </div>
+          <ul className="space-y-1 overflow-auto flex-1">
+            {snapshots.map((s) => (
+              <li key={s.timestamp} className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(s.timestamp)}
+                  onChange={() => toggleSelect(s.timestamp)}
+                />
+                <a
+                  href={`https://web.archive.org/web/${s.timestamp}/${url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 underline"
+                >
+                  {s.timestamp}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {selected.length === 2 && (
         <button
@@ -175,6 +258,7 @@ const WaybackViewer: React.FC = () => {
           Diff Selected
         </button>
       )}
+      {diffError && <div className="text-red-400">{diffError}</div>}
       {diffLoading && <div>Loading diff...</div>}
       {diff && (
         <div className="flex flex-col space-y-4 overflow-auto">
