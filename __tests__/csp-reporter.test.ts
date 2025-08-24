@@ -3,6 +3,10 @@ import {
   computeTop,
   validateReport,
   simulatePolicy,
+  filterReports,
+  sampleReports,
+  aggregateReports,
+  POLICY_TEMPLATES,
 } from '@pages/api/csp-reporter';
 
 describe('csp-reporter utilities', () => {
@@ -82,6 +86,34 @@ describe('csp-reporter utilities', () => {
     ];
     const sim = simulatePolicy('img-src https://cdn.example.com', list as any);
     expect(sim.blocked.length).toBe(0);
+  });
+
+  test('filters, samples and aggregates reports', () => {
+    const list = [
+      {
+        'document-uri': 'a',
+        'violated-directive': 'img-src',
+        'blocked-uri': 'https://evil.com/a.png',
+      },
+      {
+        'document-uri': 'b',
+        'violated-directive': 'script-src',
+        'blocked-uri': 'https://evil.com/b.js',
+      },
+    ];
+    const filtered = filterReports(list as any, 'b.js');
+    expect(filtered).toHaveLength(1);
+    const rand = jest.spyOn(Math, 'random').mockReturnValue(0.6);
+    expect(sampleReports(list as any, 0.5)).toHaveLength(0);
+    rand.mockReturnValue(0.4);
+    expect(sampleReports(list as any, 0.5)).toHaveLength(2);
+    rand.mockRestore();
+    const agg = aggregateReports(list as any);
+    expect(agg['img-src']).toBe(1);
+  });
+
+  test('policy templates exposed', () => {
+    expect(POLICY_TEMPLATES.some((t) => t.name === 'Strict')).toBe(true);
   });
 });
 
