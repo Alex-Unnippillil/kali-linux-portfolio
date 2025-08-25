@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const width = 8;
 const candyColors = ['#ff6666', '#66b3ff', '#66ff66', '#ffcc66'];
@@ -111,4 +112,6 @@ const CandyCrush = () => {
   );
 };
 
-export default CandyCrush;
+const CandyCrushWithBoundary = withGameErrorBoundary(CandyCrush);
+
+export default CandyCrushWithBoundary;

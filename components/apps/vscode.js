@@ -1,6 +1,7 @@
 import React from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
-export default function VsCode() {
+function VsCode() {
     return (
         <iframe
             src="https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md"
@@ -14,5 +15,8 @@ export default function VsCode() {
 }
 
 export const displayVsCode = () => {
-    return <VsCode />;
+    return <VsCodeWithBoundary />;
 };
+
+const VsCodeWithBoundary = withGameErrorBoundary(VsCode);
+export default VsCodeWithBoundary;

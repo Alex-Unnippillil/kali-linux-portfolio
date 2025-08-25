@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import ReactGA from 'react-ga4';
 import confetti from 'canvas-confetti';
 
@@ -201,4 +202,6 @@ const TicTacToe = () => {
 };
 
 export { checkWinner, minimax };
-export default TicTacToe;
+const TicTacToeWithBoundary = withGameErrorBoundary(TicTacToe);
+
+export default TicTacToeWithBoundary;

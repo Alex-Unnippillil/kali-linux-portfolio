@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import confetti from 'canvas-confetti';
 import ReactGA from 'react-ga4';
 
@@ -240,7 +241,7 @@ const Hangman = () => {
         </select>
       </div>
       <div className="mb-2">Score: {score}</div>
-      <HangmanDrawing wrong={wrong} />
+      <HangmanWithBoundaryDrawing wrong={wrong} />
       <div className="flex space-x-2 mb-4 text-2xl">
         {word.split('').map((letter, idx) => (
           <span
@@ -300,5 +301,7 @@ const Hangman = () => {
   );
 };
 
-export default Hangman;
+const HangmanWithBoundary = withGameErrorBoundary(Hangman);
+
+export default HangmanWithBoundary;
 

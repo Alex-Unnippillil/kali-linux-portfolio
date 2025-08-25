@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
@@ -118,8 +119,10 @@ export class Gedit extends Component {
     }
 }
 
-export default Gedit;
+const GeditWithBoundary = withGameErrorBoundary(Gedit);
+
+export default GeditWithBoundary;
 
 export const displayGedit = () => {
-    return <Gedit> </Gedit>;
+    return <GeditWithBoundary> </GeditWithBoundary>;
 }

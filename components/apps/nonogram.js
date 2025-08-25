@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import ReactGA from 'react-ga4';
 import {
   evaluateLine,
@@ -455,4 +456,6 @@ const Nonogram = () => {
   );
 };
 
-export default Nonogram;
+const NonogramWithBoundary = withGameErrorBoundary(Nonogram);
+
+export default NonogramWithBoundary;

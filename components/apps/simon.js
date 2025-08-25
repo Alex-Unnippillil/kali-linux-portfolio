@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const padStyles = [
   {
@@ -163,4 +164,6 @@ const Simon = () => {
   );
 };
 
-export default Simon;
+const SimonWithBoundary = withGameErrorBoundary(Simon);
+
+export default SimonWithBoundary;

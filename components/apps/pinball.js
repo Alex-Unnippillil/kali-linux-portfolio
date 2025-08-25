@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const Pinball = () => {
   const canvasRef = useRef(null);
@@ -113,5 +114,7 @@ const Pinball = () => {
   );
 };
 
-export default Pinball;
+const PinballWithBoundary = withGameErrorBoundary(Pinball);
+
+export default PinballWithBoundary;
 

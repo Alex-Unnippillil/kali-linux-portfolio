@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const SIZE = 10;
 const WORDS = ['REACT', 'CODE', 'TAILWIND', 'NODE', 'JS'];
@@ -154,5 +155,7 @@ const WordSearch = () => {
   );
 };
 
-export default WordSearch;
+const WordSearchWithBoundary = withGameErrorBoundary(WordSearch);
+
+export default WordSearchWithBoundary;
 

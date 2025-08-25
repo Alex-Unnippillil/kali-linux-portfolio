@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import ReactGA from 'react-ga4';
 import Quadtree from './quadtree';
 import {
@@ -318,4 +319,6 @@ const TowerDefense = () => {
   );
 };
 
-export default TowerDefense;
+const TowerDefenseWithBoundary = withGameErrorBoundary(TowerDefense);
+
+export default TowerDefenseWithBoundary;

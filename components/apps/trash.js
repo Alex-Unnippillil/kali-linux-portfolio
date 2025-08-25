@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import Image from 'next/image';
 
 export class Trash extends Component {
@@ -124,8 +125,10 @@ export class Trash extends Component {
     }
 }
 
-export default Trash;
+const TrashWithBoundary = withGameErrorBoundary(Trash);
+
+export default TrashWithBoundary;
 
 export const displayTrash = () => {
-    return <Trash> </Trash>;
+    return <TrashWithBoundary> </TrashWithBoundary>;
 }

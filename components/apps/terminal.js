@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import ReactGA from 'react-ga4';
 
 const MAX_HISTORY = 50;
@@ -395,8 +396,10 @@ export class Terminal extends Component {
   }
 }
 
-export default Terminal;
+const TerminalWithBoundary = withGameErrorBoundary(Terminal);
+
+export default TerminalWithBoundary;
 
 export const displayTerminal = (addFolder, openApp) => {
-  return <Terminal addFolder={addFolder} openApp={openApp}></Terminal>;
+  return <TerminalWithBoundary addFolder={addFolder} openApp={openApp}></TerminalWithBoundary>;
 };

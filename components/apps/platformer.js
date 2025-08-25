@@ -1,4 +1,5 @@
 import React from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const Platformer = () => (
   <iframe
@@ -9,4 +10,6 @@ const Platformer = () => (
   ></iframe>
 );
 
-export default Platformer;
+const PlatformerWithBoundary = withGameErrorBoundary(Platformer);
+
+export default PlatformerWithBoundary;

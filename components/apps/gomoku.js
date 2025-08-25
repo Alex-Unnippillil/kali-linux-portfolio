@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const SIZE = 15;
 
@@ -85,5 +86,7 @@ const Gomoku = () => {
   );
 };
 
-export default Gomoku;
+const GomokuWithBoundary = withGameErrorBoundary(Gomoku);
+
+export default GomokuWithBoundary;
 

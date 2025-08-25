@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const Wordle = () => {
   const [guess, setGuess] = useState('');
@@ -37,4 +38,6 @@ const Wordle = () => {
   );
 };
 
-export default Wordle;
+const WordleWithBoundary = withGameErrorBoundary(Wordle);
+
+export default WordleWithBoundary;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 // size of the square play field
 const gridSize = 20;
@@ -276,5 +277,7 @@ const Snake = () => {
   );
 };
 
-export default Snake;
+const SnakeWithBoundary = withGameErrorBoundary(Snake);
+
+export default SnakeWithBoundary;
 

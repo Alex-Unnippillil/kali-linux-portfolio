@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const SIZE = 9;
 const range = (n) => Array.from({ length: n }, (_, i) => i);
@@ -325,5 +326,7 @@ const Sudoku = () => {
   );
 };
 
-export default Sudoku;
+const SudokuWithBoundary = withGameErrorBoundary(Sudoku);
+
+export default SudokuWithBoundary;
 

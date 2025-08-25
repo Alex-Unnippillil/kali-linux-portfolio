@@ -1,4 +1,5 @@
 import React from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const Weather = () => {
   return (
@@ -9,9 +10,11 @@ const Weather = () => {
   );
 };
 
-export default Weather;
+const WeatherWithBoundary = withGameErrorBoundary(Weather);
+
+export default WeatherWithBoundary;
 
 export const displayWeather = () => {
-  return <Weather />;
+  return <WeatherWithBoundary />;
 };
 

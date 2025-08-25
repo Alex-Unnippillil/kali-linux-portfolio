@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import { wrap, createBulletPool, spawnBullet, updateBullets, createGA } from './asteroids-utils';
 
 // Simple Quadtree for collision queries
@@ -459,5 +460,7 @@ const Asteroids = () => {
   return <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />;
 };
 
-export default Asteroids;
+const AsteroidsWithBoundary = withGameErrorBoundary(Asteroids);
+
+export default AsteroidsWithBoundary;
 

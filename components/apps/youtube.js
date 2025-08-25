@@ -4,13 +4,14 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
 // Renders a small YouTube browser similar to the YouTube mobile UI.
 // Videos can be fetched from the real API if an API key is provided or
 // injected via the `initialVideos` prop (used in tests).
-export default function YouTubeApp({ initialVideos = [] }) {
+function YouTubeApp({ initialVideos = [] }) {
   const [videos, setVideos] = useState(initialVideos);
   const [playlists, setPlaylists] = useState([]); // [{id,title}]
   const [activeCategory, setActiveCategory] = useState('All');
@@ -254,6 +255,9 @@ export default function YouTubeApp({ initialVideos = [] }) {
     </div>
   );
 }
+
+const YouTubeAppWithBoundary = withGameErrorBoundary(YouTubeApp);
+export default YouTubeAppWithBoundary;
 
 // Wrapper used by the window manager in this portfolio project.
 export const displayYouTube = () => <YouTubeApp />;

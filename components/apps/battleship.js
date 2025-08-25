@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import Draggable from 'react-draggable';
 import { MonteCarloAI, BOARD_SIZE, randomizePlacement } from './battleship/ai';
 
@@ -143,4 +144,6 @@ const Battleship = () => {
   );
 };
 
-export default Battleship;
+const BattleshipWithBoundary = withGameErrorBoundary(Battleship);
+
+export default BattleshipWithBoundary;
