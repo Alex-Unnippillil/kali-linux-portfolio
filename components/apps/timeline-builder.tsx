@@ -6,6 +6,7 @@ const Chrono = dynamic(() => import('react-chrono').then(m => m.Chrono), {
   ssr: false,
 });
 
+
 export interface TimelineEvent {
   time: string;
   end?: string;
@@ -70,14 +71,13 @@ const TimelineBuilder: React.FC<Props> = () => {
           Load a CSV, JSON, or log file to begin.
         </div>
       )}
+
     </div>
   );
-};
-
-export default TimelineBuilder;
+}
 
 export const displayTimelineBuilder = (_addFolder?: any, openApp?: any) => (
-  <TimelineBuilder openApp={openApp} />
+  <TimelineBuilder />
 );
 
 export const parseLogText = (text: string): TimelineEvent[] => {
@@ -166,6 +166,7 @@ const parseJson = (file: File): Promise<TimelineEvent[]> =>
 
 const sortEvents = (evts: TimelineEvent[]) =>
   evts.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
 
 export const filterEvents = (evts: TimelineEvent[], term: string) => {
   const q = term.toLowerCase();

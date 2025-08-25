@@ -3019,15 +3019,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/mermaid@npm:^9.2.0":
-  version: 9.2.0
-  resolution: "@types/mermaid@npm:9.2.0"
-  dependencies:
-    mermaid: "npm:*"
-  checksum: 10c0/54bd19371e962b6159082437fb6c016c53af52d64a0e4abaae4b1c2d07ecb36ac9854c3afecd8042caed0948dfb8d98283ff2754e605b0b4afd4f9e17b8ee250
-  languageName: node
-  linkType: hard
-
 "@types/ms@npm:*":
   version: 2.1.0
   resolution: "@types/ms@npm:2.1.0"
@@ -10435,6 +10426,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"loadjs@npm:^4.2.0":
+  version: 4.3.0
+  resolution: "loadjs@npm:4.3.0"
+  checksum: 10c0/8884520a7c5f3b0f6e4d3bc01d200c73b9c468986bea26acb54939d4a3f5da08f40f712812fadc1ff6030fca936e8c9eeb842aaafd287e32ca0ce6ae9f10e759
+  languageName: node
+  linkType: hard
+
 "local-pkg@npm:^0.5.0":
   version: 0.5.1
   resolution: "local-pkg@npm:0.5.1"
@@ -10883,7 +10881,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mermaid@npm:*, mermaid@npm:^11.10.1":
+"mermaid@npm:^11.10.1":
   version: 11.10.1
   resolution: "mermaid@npm:11.10.1"
   dependencies:
@@ -13284,17 +13282,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-twitter-embed@npm:^4.0.4":
-  version: 4.0.4
-  resolution: "react-twitter-embed@npm:4.0.4"
+"react-twitter-widgets@npm:1.11.0":
+
+  version: 1.11.0
+  resolution: "react-twitter-widgets@npm:1.11.0"
   dependencies:
-    scriptjs: "npm:^2.5.9"
+    loadjs: "npm:^4.2.0"
   peerDependencies:
-    react: ^16.0.0 || ^17.0.0 || ^18.0.0
-    react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0
-  checksum: 10c0/5c5395a8421fd67752f4eae993b682175a3757e73c338f1d0ec56cf413206ae01c9197d39dfee41d0726f4740703a9a9fdce4ac66d1529dbecf0967f7953be39
+    react: ^16.8.0 || ^17 || ^18
+  checksum: 10c0/958967e41fc5098f2dc7078eeb8b42244dd60d7d88dca732cfc92ee9a3dbf67b83326775cd32d6cfd866c342bfd2fb3c31e5d413e91be2c30cec62b5c9008401
   languageName: node
   linkType: hard
+
 
 "react-window@npm:^1.8.11":
   version: 1.8.11
@@ -13964,13 +13963,6 @@ __metadata:
   version: 0.26.0
   resolution: "scheduler@npm:0.26.0"
   checksum: 10c0/5b8d5bfddaae3513410eda54f2268e98a376a429931921a81b5c3a2873aab7ca4d775a8caac5498f8cbc7d0daeab947cf923dbd8e215d61671f9f4e392d34356
-  languageName: node
-  linkType: hard
-
-"scriptjs@npm:^2.5.9":
-  version: 2.5.9
-  resolution: "scriptjs@npm:2.5.9"
-  checksum: 10c0/7b81adefb3ce7761a9b13f4cc22c6c77418a3f6a828bf400c9184ea3801c3fc2c352c4966382cece4a60cc843e0d1a1087bcf96b9a81a1bb6de7ddc60fd80811
   languageName: node
   linkType: hard
 
@@ -15855,7 +15847,6 @@ __metadata:
     "@types/eslint-plugin-security": "npm:^3"
     "@types/howler": "npm:^2"
     "@types/jest": "npm:^30.0.0"
-    "@types/mermaid": "npm:^9.2.0"
     "@types/node": "npm:^24.2.1"
     "@types/plist": "npm:^3.0.2"
     "@types/react": "npm:^19.0.0"
@@ -15948,6 +15939,7 @@ __metadata:
     react-markdown: "npm:^10.1.0"
     react-simple-code-editor: "npm:^0.14.1"
     react-twitter-embed: "npm:^4.0.4"
+
     react-window: "npm:^1.8.11"
     rehype-sanitize: "npm:^6.0.0"
     rfc4648: "npm:^1.5.4"

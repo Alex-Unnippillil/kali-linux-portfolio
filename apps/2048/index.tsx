@@ -205,8 +205,8 @@ const createTile = (value: number, x: number, y: number, size: number): PIXI.Con
 
 const Game2048: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const appRef = useRef<PIXI.Application>();
-  const tilesRef = useRef<PIXI.Container>();
+  const appRef = useRef<PIXI.Application | null>(null);
+  const tilesRef = useRef<PIXI.Container | null>(null);
   const spritesRef = useRef<Map<number, PIXI.Container>>(new Map());
   const moveAnims = useRef<MoveAnim[]>([]);
   const scaleAnims = useRef<ScaleAnim[]>([]);
@@ -214,7 +214,7 @@ const Game2048: React.FC = () => {
   const mergeTargets = useRef<Record<number, number>>({});
   const phaseRef = useRef<'idle' | 'moving' | 'scaling'>('idle');
   const inputRef = useRef<Direction[]>([]);
-  const workerRef = useRef<Worker>();
+  const workerRef = useRef<Worker | null>(null);
   const aiPendingRef = useRef(false);
   const startRef = useRef<{ x: number; y: number } | null>(null);
 
