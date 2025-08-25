@@ -25,6 +25,7 @@
     "expr-eval": "^2.0.2",
     "html-to-image": "^1.11.13",
     "next": "^15.0.0",
+    "phaser": "3.70.0",
     "postcss": "^8.4.21",
     "prop-types": "^15.8.1",
     "qr-scanner": "^1.4.2",
