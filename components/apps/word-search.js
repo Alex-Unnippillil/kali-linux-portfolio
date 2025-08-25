@@ -1,15 +1,79 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 const SIZE = 10;
-const WORDS = ['REACT', 'CODE', 'TAILWIND', 'NODE', 'JS'];
+const WORD_LISTS = {
+  tech: [
+    'REACT',
+    'CODE',
+    'TAILWIND',
+    'NODE',
+    'JAVASCRIPT',
+    'HTML',
+    'CSS',
+    'PYTHON',
+  ],
+  animals: [
+    'DOG',
+    'CAT',
+    'EAGLE',
+    'TIGER',
+    'HORSE',
+    'SHARK',
+    'SNAKE',
+    'LION',
+  ],
+  fruits: [
+    'APPLE',
+    'BANANA',
+    'ORANGE',
+    'GRAPE',
+    'MANGO',
+    'LEMON',
+    'PEACH',
+    'CHERRY',
+  ],
+};
 
+const WORD_COUNT = 5;
+
+const usePersistentState = (key, initial) => {
+  const [state, setState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage.getItem(key);
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {
+          // ignore parse errors
+        }
+      }
+    }
+    return typeof initial === 'function' ? initial() : initial;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(key, JSON.stringify(state));
+    }
+  }, [key, state]);
+
+  return [state, setState];
+};
+
+const pickWords = () => {
+  const lists = Object.values(WORD_LISTS);
+  const list = lists[Math.floor(Math.random() * lists.length)];
+  return [...list]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, WORD_COUNT);
+};
 const randomLetter = () => String.fromCharCode(65 + Math.floor(Math.random() * 26));
 
-const generatePuzzle = () => {
+const generatePuzzle = (words) => {
   const grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(''));
   const placements = {};
 
-  WORDS.forEach((word) => {
+  words.forEach((word) => {
     let placed = false;
     for (let attempt = 0; attempt < 100 && !placed; attempt++) {
       const horizontal = Math.random() < 0.5;
@@ -46,7 +110,7 @@ const generatePuzzle = () => {
     }
   }
 
-  return { grid, placements };
+  return { grid, placements, words };
 };
 
 const getPath = (start, end) => {
@@ -65,13 +129,46 @@ const getPath = (start, end) => {
 };
 
 const WordSearch = () => {
-  const [{ grid }, setPuzzle] = useState(generatePuzzle);
-  const [foundWords, setFoundWords] = useState([]);
-  const [foundCells, setFoundCells] = useState([]);
+  const [puzzle, setPuzzle] = usePersistentState('wordsearch-puzzle', () =>
+    generatePuzzle(pickWords()),
+  );
+  const { grid, placements, words } = puzzle;
+  const [foundWords, setFoundWords] = usePersistentState(
+    'wordsearch-found-words',
+    [],
+  );
+  const [foundCells, setFoundCells] = usePersistentState(
+    'wordsearch-found-cells',
+    [],
+  );
+  const [time, setTime] = usePersistentState('wordsearch-time', 0);
   const [start, setStart] = useState(null);
   const [end, setEnd] = useState(null);
   const [selecting, setSelecting] = useState(false);
   const [selection, setSelection] = useState([]);
+  const [hintCells, setHintCells] = useState([]);
+  const timerRef = useRef(null);
+
+  const startTimer = () => {
+    if (!timerRef.current) {
+      timerRef.current = setInterval(() => setTime((t) => t + 1), 1000);
+    }
+  };
+
+  useEffect(() => {
+    startTimer();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (words && foundWords.length === words.length && timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, [foundWords, words]);
 
   useEffect(() => {
     if (start && end) {
@@ -94,7 +191,7 @@ const WordSearch = () => {
     if (selection.length) {
       const letters = selection.map(([r, c]) => grid[r][c]).join('');
       const reverse = letters.split('').reverse().join('');
-      const match = WORDS.find((w) => w === letters || w === reverse);
+      const match = words.find((w) => w === letters || w === reverse);
       if (match && !foundWords.includes(match)) {
         setFoundWords([...foundWords, match]);
         setFoundCells([...foundCells, ...selection]);
@@ -106,13 +203,32 @@ const WordSearch = () => {
     setSelection([]);
   };
 
+  const useHint = () => {
+    const remaining = words.filter((w) => !foundWords.includes(w));
+    if (!remaining.length) return;
+    const word =
+      remaining[Math.floor(Math.random() * remaining.length)];
+    const { row, col, horizontal } = placements[word];
+    const cells = [];
+    for (let i = 0; i < word.length; i++) {
+      const r = row + (horizontal ? 0 : i);
+      const c = col + (horizontal ? i : 0);
+      cells.push([r, c]);
+    }
+    setHintCells(cells);
+    setTimeout(() => setHintCells([]), 1000);
+  };
+
   const reset = () => {
-    setPuzzle(generatePuzzle());
+    setPuzzle(generatePuzzle(pickWords()));
     setFoundWords([]);
     setFoundCells([]);
+    setTime(0);
+    setHintCells([]);
     setStart(null);
     setEnd(null);
     setSelection([]);
+    startTimer();
   };
 
   return (
@@ -126,13 +242,14 @@ const WordSearch = () => {
           row.map((letter, c) => {
             const isSelected = selection.some(([sr, sc]) => sr === r && sc === c);
             const isFound = foundCells.some(([sr, sc]) => sr === r && sc === c);
+            const isHint = hintCells.some(([sr, sc]) => sr === r && sc === c);
             return (
               <div
                 key={`${r}-${c}`}
                 onMouseDown={() => handleMouseDown(r, c)}
                 onMouseEnter={() => handleMouseEnter(r, c)}
                 onMouseUp={handleMouseUp}
-                className={`h-8 w-8 flex items-center justify-center border border-gray-600 cursor-pointer ${isFound ? 'bg-green-600' : isSelected ? 'bg-blue-600' : 'bg-gray-700'}`}
+                className={`h-8 w-8 flex items-center justify-center border border-gray-600 cursor-pointer ${isFound ? 'bg-green-600' : isHint ? 'bg-yellow-600' : isSelected ? 'bg-blue-600' : 'bg-gray-700'}`}
               >
                 {letter}
               </div>
@@ -141,15 +258,29 @@ const WordSearch = () => {
         )}
       </div>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
-        {WORDS.map((w) => (
+        {words.map((w) => (
           <span key={w} className={foundWords.includes(w) ? 'line-through' : ''}>
             {w}
           </span>
         ))}
       </div>
-      <button className="mt-4 px-4 py-1 bg-gray-700 hover:bg-gray-600" onClick={reset}>
-        Reset
-      </button>
+      <div className="mt-4 flex gap-4">
+        <button
+          className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
+          onClick={useHint}
+        >
+          Hint
+        </button>
+        <button
+          className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
+          onClick={reset}
+        >
+          Reset
+        </button>
+      </div>
+      <div className="mt-2">Time: {time}s | Found: {foundWords.length}/{words.length} | Score:{' '}
+        {foundWords.length * 10 - time}
+      </div>
     </div>
   );
 };
