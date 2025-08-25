@@ -8,6 +8,7 @@ import {
 } from './battleship/ai';
 import GameLayout from './battleship/GameLayout';
 import usePersistentState from '../hooks/usePersistentState';
+import useGameControls from './useGameControls';
 
 const CELL = 32; // px
 
@@ -69,6 +70,7 @@ const Battleship = () => {
     wins: 0,
     losses: 0,
   });
+  const [cursor, setCursor] = useState(0);
 
   const placeShips = useCallback((board, layout) => {
     const newBoard = board.slice();
@@ -87,6 +89,7 @@ const Battleship = () => {
       setMessage('Place your ships');
       setHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
       setAi(diff === 'hard' ? new MonteCarloAI() : new RandomSalvoAI());
+      setCursor(0);
     },
     [difficulty, placeShips]
   );
@@ -165,6 +168,28 @@ const Battleship = () => {
     }, 100); // simulate thinking
   };
 
+  useGameControls(({ x, y }) => {
+    if (phase !== 'battle') return;
+    setCursor((c) => {
+      const cx = (c % BOARD_SIZE) + x;
+      const cy = Math.floor(c / BOARD_SIZE) + y;
+      if (cx < 0 || cy < 0 || cx >= BOARD_SIZE || cy >= BOARD_SIZE) return c;
+      return cy * BOARD_SIZE + cx;
+    });
+  });
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (phase !== 'battle') return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fire(cursor);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [phase, cursor, fire]);
+
   const renderBoard = (board, isEnemy=false) => (
     <div className="grid" style={{gridTemplateColumns:`repeat(${BOARD_SIZE}, ${CELL}px)`}}>
       {board.map((cell,idx)=>{
@@ -178,6 +203,9 @@ const Battleship = () => {
             {cell==='hit' && <HitMarker />}
             {cell==='miss' && <MissMarker />}
             {!isEnemy && <div className="absolute inset-0" style={{background:color}}/>}
+            {isEnemy && phase==='battle' && idx===cursor && (
+              <div className="absolute inset-0 border-2 border-yellow-300 pointer-events-none" />
+            )}
           </div>
         );
       })}
