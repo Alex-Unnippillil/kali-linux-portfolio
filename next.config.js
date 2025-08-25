@@ -1,6 +1,7 @@
 // Security headers configuration for Next.js.
 // Allows external badges and same-origin PDF embedding without inline styles.
 
+const crypto = require('crypto');
 const { validateEnv } = require('./lib/validate.js');
 
 function getContentSecurityPolicy(nonce) {
@@ -16,26 +17,10 @@ function getContentSecurityPolicy(nonce) {
     `script-src 'self' 'nonce-${nonce}' https://platform.twitter.com`,
     "worker-src 'self' blob:",
     "child-src 'self' blob:",
-
-const ContentSecurityPolicy = [
-  "default-src 'self'",
-  // Allow external images and data URIs for badges/icons
-  "img-src 'self' https: data:",
-  // Allow styles from self and Google Fonts
-  "style-src 'self' https://fonts.googleapis.com",
-  // Allow external font resources
-  "font-src 'self' https://fonts.gstatic.com",
-  // External script required for embedded timelines
-  "script-src 'self' 'nonce-__CSP_NONCE__' https://platform.twitter.com",
-  "worker-src 'self' blob:",
-  "child-src 'self' blob:",
-
-  // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://stackblitz.com https://api.axiom.co",
-  // Allow iframes from specific providers so the Chrome and StackBlitz apps can load arbitrary content
-  "frame-src 'self' https://stackblitz.com https://ghbtns.com https://platform.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
-
-
+    // Allow outbound connections for embeds and the in-browser Chrome app
+    "connect-src 'self' https://cdn.syndication.twimg.com https://*.twitter.com https://stackblitz.com https://api.axiom.co",
+    // Allow iframes from specific providers so the Chrome and StackBlitz apps can load arbitrary content
+    "frame-src 'self' https://stackblitz.com https://ghbtns.com https://platform.twitter.com https://open.spotify.com https://todoist.com https://www.youtube.com https://www.youtube-nocookie.com",
     // Allow this site to embed its own resources (resume PDF)
     "frame-ancestors 'self'",
     // Disallow plugins and limit base/submit targets
@@ -57,44 +42,22 @@ async function getSecurityHeaders() {
       value:
         '{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/api/csp-reporter"}]}',
     },
-    {
-      key: 'X-Content-Type-Options',
-      value: 'nosniff',
-    },
-    {
-      key: 'Referrer-Policy',
-      value: 'strict-origin-when-cross-origin',
-    },
+    { key: 'X-Content-Type-Options', value: 'nosniff' },
+    { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
     {
       key: 'Permissions-Policy',
-      value:
-        'camera=(), microphone=(), geolocation=(), usb=(), payment=(), serial=()',
+      value: 'camera=(), microphone=(), geolocation=(), usb=(), payment=(), serial=()'
     },
     {
       key: 'Strict-Transport-Security',
-      value: 'max-age=63072000; includeSubDomains; preload',
+      value: 'max-age=63072000; includeSubDomains; preload'
     },
-    {
-      key: 'X-DNS-Prefetch-Control',
-      value: 'off',
-    },
-    {
-      key: 'X-Permitted-Cross-Domain-Policies',
-      value: 'none',
-    },
-    {
-      key: 'Cross-Origin-Opener-Policy',
-      value: 'same-origin',
-    },
-    {
-      key: 'Cross-Origin-Resource-Policy',
-      value: 'same-site',
-    },
-    {
-      // Allow same-origin framing so the PDF resume renders in an <object>
-      key: 'X-Frame-Options',
-      value: 'SAMEORIGIN',
-    },
+    { key: 'X-DNS-Prefetch-Control', value: 'off' },
+    { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
+    { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+    { key: 'Cross-Origin-Resource-Policy', value: 'same-site' },
+    // Allow same-origin framing so the PDF resume renders in an <object>
+    { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
   ];
 }
 
@@ -112,7 +75,6 @@ module.exports = {
   },
   experimental: {
     optimizePackageImports: ['chart.js', 'react-chartjs-2'],
-
   },
   webpack: (config) => {
     config.resolve = config.resolve || {};
@@ -129,6 +91,7 @@ module.exports = {
       ...(config.resolve.alias || {}),
       mermaid: require('path').resolve(__dirname, 'lib/mermaidStub.js'),
       'argon2-browser': require('path').resolve(__dirname, 'lib/argon2Stub.js'),
+      earcut: require('path').resolve(__dirname, 'lib/earcutStub.js'),
       'vis-timeline/dist/vis-timeline-graph2d.min.css': require('path').resolve(
         __dirname,
         'node_modules/vis-timeline/styles/vis-timeline-graph2d.min.css'
@@ -145,6 +108,7 @@ module.exports = {
       return [];
     }
     validateEnv(process.env);
+    const securityHeaders = await getSecurityHeaders();
     return [
       {
         source: '/(.*)',
@@ -153,4 +117,3 @@ module.exports = {
     ];
   },
 };
-
