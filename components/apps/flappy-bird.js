@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import GameLayout from './GameLayout';
 
 const FlappyBird = () => {
   const canvasRef = useRef(null);
@@ -124,12 +125,14 @@ const FlappyBird = () => {
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={400}
-      height={300}
-      className="w-full h-full bg-black"
-    />
+    <GameLayout title="Flappy Bird" instructions="Press Space to flap.">
+      <canvas
+        ref={canvasRef}
+        width={400}
+        height={300}
+        className="w-full h-full bg-black"
+      />
+    </GameLayout>
   );
 };
 
