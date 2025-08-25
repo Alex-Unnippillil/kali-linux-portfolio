@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import GameLayout from './GameLayout';
+import React, { useEffect, useCallback } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
+
 
 const SIZE = 4;
 
@@ -76,10 +77,17 @@ const tileColors = {
   2048: 'bg-green-600 text-white',
 };
 
+const validateBoard = (b) =>
+  Array.isArray(b) &&
+  b.length === SIZE &&
+  b.every(
+    (row) => Array.isArray(row) && row.length === SIZE && row.every((n) => typeof n === 'number'),
+  );
+
 const Game2048 = () => {
-  const [board, setBoard] = useState(() => initBoard());
-  const [won, setWon] = useState(false);
-  const [lost, setLost] = useState(false);
+  const [board, setBoard] = usePersistentState('2048-board', initBoard, validateBoard);
+  const [won, setWon] = usePersistentState('2048-won', false, (v) => typeof v === 'boolean');
+  const [lost, setLost] = usePersistentState('2048-lost', false, (v) => typeof v === 'boolean');
 
   const handleKey = useCallback(
     (e) => {

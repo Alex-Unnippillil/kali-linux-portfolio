@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
 import confetti from 'canvas-confetti';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 
@@ -55,12 +56,12 @@ const Hangman = () => {
   const [theme, setTheme] = useState('tech');
   const [difficulty, setDifficulty] = useState('easy');
   const [lengthIndex, setLengthIndex] = useState(0);
-  const [word, setWord] = useState('');
-  const [guessed, setGuessed] = useState([]);
-  const [wrong, setWrong] = useState(0);
+  const [word, setWord] = usePersistentState('hangman-word', '', (v) => typeof v === 'string');
+  const [guessed, setGuessed] = usePersistentState('hangman-guessed', [], Array.isArray);
+  const [wrong, setWrong] = usePersistentState('hangman-wrong', 0, (v) => typeof v === 'number');
   const [hint, setHint] = useState('');
-  const [hintsUsed, setHintsUsed] = useState(0);
-  const [score, setScore] = useState(0);
+  const [hintsUsed, setHintsUsed] = usePersistentState('hangman-hints', 0, (v) => typeof v === 'number');
+  const [score, setScore] = usePersistentState('hangman-score', 0, (v) => typeof v === 'number');
   const [revealed, setRevealed] = useState([]);
   const [gameEnded, setGameEnded] = useState(false);
   const [shake, setShake] = useState(false);
@@ -103,8 +104,14 @@ const Hangman = () => {
     logGameStart('hangman');
   };
 
+  const firstLoad = useRef(true);
   useEffect(() => {
     usedWordsRef.current = [];
+    if (firstLoad.current && word) {
+      firstLoad.current = false;
+      return;
+    }
+    firstLoad.current = false;
     initGame();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, difficulty, lengthIndex]);
