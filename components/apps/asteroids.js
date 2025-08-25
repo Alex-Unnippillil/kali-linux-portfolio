@@ -1,5 +1,16 @@
-import React, { useRef, useEffect } from 'react';
-import { wrap, createBulletPool, spawnBullet, updateBullets, createGA } from './asteroids-utils';
+import React, { useRef, useEffect, useState } from 'react';
+import {
+  wrap,
+  createBulletPool,
+  spawnBullet,
+  updateBullets,
+  createGA,
+  spawnPowerUp,
+  updatePowerUps,
+  POWER_UPS,
+} from './asteroids-utils';
+import useGameControls from './useGameControls';
+import GameLayout from './GameLayout';
 
 // Simple Quadtree for collision queries
 class Quadtree {
@@ -77,6 +88,10 @@ const Asteroids = () => {
   const requestRef = useRef();
   const audioCtx = useRef(null);
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  const controls = useGameControls(canvasRef);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const [restartKey, setRestartKey] = useState(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -93,8 +108,17 @@ const Asteroids = () => {
     window.addEventListener('resize', resize);
 
     // Game state
-    const keys = {};
-    const ship = { x: canvas.width / 2, y: canvas.height / 2, angle: 0, velX: 0, velY: 0, r: 10, cooldown: 0 };
+    const ship = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      angle: 0,
+      velX: 0,
+      velY: 0,
+      r: 10,
+      cooldown: 0,
+      shield: 0,
+      rapidFire: 0,
+    };
     let lives = 3;
     let score = 0;
     let level = 1;
@@ -105,6 +129,7 @@ const Asteroids = () => {
     const particles = Array.from({ length: 256 }, () => ({ active: false, x: 0, y: 0, dx: 0, dy: 0, life: 0, color: 'white' }));
     const ufo = { active: false, x: 0, y: 0, dx: 0, dy: 0, r: 15, cooldown: 0 };
     const ufoBullets = [];
+    const powerUps = [];
     let ufoTimer = 600; // frames until next UFO
 
     // Particle pooling
@@ -142,60 +167,27 @@ const Asteroids = () => {
     };
 
     // Spawn asteroids for a level
-    const spawnAsteroids = (count) => {
+    const spawnAsteroids = (count, speed = 1 + level * 0.3) => {
       for (let i = 0; i < count; i += 1) {
         const angle = Math.random() * Math.PI * 2;
         const r = 15 + Math.random() * 25;
         asteroids.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          dx: Math.cos(angle) * (1 + level * 0.2),
-          dy: Math.sin(angle) * (1 + level * 0.2),
+          dx: Math.cos(angle) * speed,
+          dy: Math.sin(angle) * speed,
           r,
         });
       }
     };
 
-    spawnAsteroids(4);
+    const startLevel = () => {
+      spawnAsteroids(3 + level * 2);
+      ufoTimer = Math.max(300, 900 - level * 60);
+    };
+
+    startLevel();
     ga.start();
-
-    // Input handling
-    const handleKeyDown = (e) => {
-      keys[e.code] = true;
-      if (e.code === 'Space') fireBullet();
-      if (e.code === 'ShiftLeft') hyperspace();
-    };
-    const handleKeyUp = (e) => {
-      keys[e.code] = false;
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    // Mobile joystick
-    const joystick = { active: false, id: null, sx: 0, sy: 0, x: 0, y: 0 };
-    canvas.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'touch' && !joystick.active) {
-        joystick.active = true;
-        joystick.id = e.pointerId;
-        joystick.sx = e.clientX;
-        joystick.sy = e.clientY;
-      } else if (e.pointerType === 'touch') {
-        fireBullet();
-      }
-    });
-    canvas.addEventListener('pointermove', (e) => {
-      if (e.pointerId === joystick.id) {
-        joystick.x = (e.clientX - joystick.sx) / 40;
-        joystick.y = (e.clientY - joystick.sy) / 40;
-      }
-    });
-    canvas.addEventListener('pointerup', (e) => {
-      if (e.pointerId === joystick.id) {
-        joystick.active = false;
-        joystick.x = 0;
-        joystick.y = 0;
-      }
-    });
 
     // Gamepad support
     const padState = { turn: 0, thrust: 0, fire: false, hyperspace: false };
@@ -225,11 +217,16 @@ const Asteroids = () => {
         Math.sin(ship.angle) * 6 + ship.velY,
         60,
       );
-      ship.cooldown = 15;
+      ship.cooldown = ship.rapidFire > 0 ? 5 : 15;
       playSound(880);
     }
 
     function destroyShip() {
+      if (ship.shield > 0) {
+        ship.shield = 0;
+        spawnParticles(ship.x, ship.y, 20, 'cyan');
+        return;
+      }
       spawnParticles(ship.x, ship.y, 40, 'orange');
       lives -= 1;
       ga.death();
@@ -244,7 +241,8 @@ const Asteroids = () => {
         score = 0;
         level = 1;
         asteroids.length = 0;
-        spawnAsteroids(4);
+        powerUps.length = 0;
+        startLevel();
         ga.start();
       }
     }
@@ -262,6 +260,7 @@ const Asteroids = () => {
       }
       asteroids.splice(index, 1);
       playSound(440);
+      if (Math.random() < 0.1) spawnPowerUp(powerUps, a.x, a.y);
       if (score >= extraLifeScore) {
         lives += 1;
         extraLifeScore += 10000;
@@ -269,7 +268,7 @@ const Asteroids = () => {
       if (!asteroids.length) {
         level += 1;
         ga.level_up();
-        spawnAsteroids(3 + level);
+        startLevel();
       }
     }
 
@@ -281,9 +280,29 @@ const Asteroids = () => {
     }
 
     const update = () => {
+      if (pausedRef.current) {
+        requestRef.current = requestAnimationFrame(update);
+        return;
+      }
       pollGamepad();
-      const turn = (keys.ArrowLeft ? -1 : 0) + (keys.ArrowRight ? 1 : 0) + padState.turn + (joystick.active ? joystick.x : 0);
-      const thrust = (keys.ArrowUp ? 1 : 0) + padState.thrust + (joystick.active ? -joystick.y : 0);
+      const { keys, joystick, fire, hyperspace: hyper } = controls.current;
+      const turn =
+        (keys.ArrowLeft ? -1 : 0) +
+        (keys.ArrowRight ? 1 : 0) +
+        padState.turn +
+        (joystick.active ? joystick.x : 0);
+      const thrust =
+        (keys.ArrowUp ? 1 : 0) +
+        padState.thrust +
+        (joystick.active ? -joystick.y : 0);
+      if (fire) {
+        fireBullet();
+        controls.current.fire = false;
+      }
+      if (hyper) {
+        hyperspace();
+        controls.current.hyperspace = false;
+      }
       if (padState.fire) fireBullet();
       if (padState.hyperspace) hyperspace();
 
@@ -298,10 +317,13 @@ const Asteroids = () => {
       ship.x += ship.velX;
       ship.y += ship.velY;
       ship.cooldown = Math.max(0, ship.cooldown - 1);
+      ship.rapidFire = Math.max(0, ship.rapidFire - 1);
+      ship.shield = Math.max(0, ship.shield - 1);
       ship.x = wrap(ship.x, canvas.width);
       ship.y = wrap(ship.y, canvas.height);
 
       updateBullets(bullets);
+      updatePowerUps(powerUps);
 
       asteroids.forEach((a) => {
         a.x += a.dx;
@@ -331,7 +353,7 @@ const Asteroids = () => {
         ufo.dx = ufo.x < 0 ? 1.5 : -1.5;
         ufo.dy = 0;
         ufo.cooldown = 90;
-        ufoTimer = 900 - level * 30;
+        ufoTimer = Math.max(300, 900 - level * 60);
       }
       ufoBullets.forEach((b) => {
         b.x += b.dx;
@@ -380,6 +402,15 @@ const Asteroids = () => {
         if (dist < b.r + ship.r) destroyShip();
       });
 
+      powerUps.forEach((p, i) => {
+        const dist = Math.hypot(p.x - ship.x, p.y - ship.y);
+        if (dist < p.r + ship.r) {
+          if (p.type === POWER_UPS.SHIELD) ship.shield = 600;
+          else ship.rapidFire = 600;
+          powerUps.splice(i, 1);
+        }
+      });
+
       // Rendering
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -395,6 +426,12 @@ const Asteroids = () => {
       ctx.strokeStyle = 'white';
       ctx.stroke();
       ctx.restore();
+      if (ship.shield > 0) {
+        ctx.beginPath();
+        ctx.arc(ship.x, ship.y, ship.r + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = 'cyan';
+        ctx.stroke();
+      }
 
       // Bullets
       ctx.fillStyle = 'white';
@@ -410,6 +447,14 @@ const Asteroids = () => {
       asteroids.forEach((a) => {
         ctx.beginPath();
         ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+
+      // Power-ups
+      powerUps.forEach((p) => {
+        ctx.beginPath();
+        ctx.strokeStyle = p.type === POWER_UPS.SHIELD ? 'cyan' : 'yellow';
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.stroke();
       });
 
@@ -445,18 +490,27 @@ const Asteroids = () => {
     function cleanup() {
       cancelAnimationFrame(requestRef.current);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      canvas.removeEventListener('pointerdown', () => {});
-      canvas.removeEventListener('pointermove', () => {});
-      canvas.removeEventListener('pointerup', () => {});
     }
 
     requestRef.current = requestAnimationFrame(update);
     return cleanup;
-  }, [dpr]);
+  }, [dpr, restartKey]);
+  const togglePause = () => {
+    pausedRef.current = !pausedRef.current;
+    setPaused(pausedRef.current);
+  };
 
-  return <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />;
+  const restartGame = () => {
+    pausedRef.current = false;
+    setPaused(false);
+    setRestartKey((k) => k + 1);
+  };
+
+  return (
+    <GameLayout paused={paused} onPause={togglePause} onRestart={restartGame}>
+      <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />
+    </GameLayout>
+  );
 };
 
 export default Asteroids;
