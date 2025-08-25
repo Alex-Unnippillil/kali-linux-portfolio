@@ -1,4 +1,4 @@
-import { wrap, createBulletPool, spawnBullet, updateBullets, splitAsteroidTree } from '@apps/asteroids/utils';
+import { wrap, createBulletPool, spawnBullet, updateBullets, splitAsteroidTree } from '../components/apps/asteroids-utils';
 
 describe('wrap', () => {
   it('wraps positive overflow', () => {

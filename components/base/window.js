@@ -1,66 +1,13 @@
 import React, { Component } from 'react';
 import NextImage from 'next/image';
-import { DndContext, useDraggable } from '@dnd-kit/core';
+import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
-import { trackEvent, trackPageview } from '../../lib/analytics';
-import ErrorPane from '../ErrorPane';
-
-function DraggableContainer({ id, defaultPosition, bounds, onDrag, onStart, onStop, children, position: controlledPosition, onPositionChange }) {
-    const [internalPosition, setInternalPosition] = React.useState(defaultPosition);
-    const isControlled = controlledPosition !== undefined;
-    const position = isControlled ? controlledPosition : internalPosition;
-    const { attributes, listeners, setNodeRef, transform } = useDraggable({ id });
-    const dx = position.x + (transform ? transform.x : 0);
-    const dy = position.y + (transform ? transform.y : 0);
-    const style = {
-        transform: `translate3d(${dx}px, ${dy}px, 0)`
-    };
-
-    const updatePosition = (newPos) => {
-        if (isControlled && onPositionChange) {
-            onPositionChange(newPos);
-        } else {
-            setInternalPosition(newPos);
-        }
-    };
-
-    const handleDragEnd = (event) => {
-        const { delta } = event;
-        let newX = position.x + delta.x;
-        let newY = position.y + delta.y;
-        if (bounds) {
-            newX = Math.min(Math.max(newX, bounds.left), bounds.right);
-            newY = Math.min(Math.max(newY, bounds.top), bounds.bottom);
-        }
-        updatePosition({ x: newX, y: newY });
-        if (onStop) onStop();
-    };
-
-    const handleDragMove = (event) => {
-        const { delta } = event;
-        let newX = position.x + delta.x;
-        let newY = position.y + delta.y;
-        if (bounds) {
-            newX = Math.min(Math.max(newX, bounds.left), bounds.right);
-            newY = Math.min(Math.max(newY, bounds.top), bounds.bottom);
-        }
-        if (onDrag) onDrag(null, { x: newX, y: newY });
-    };
-
-    return (
-        <DndContext onDragStart={onStart} onDragMove={handleDragMove} onDragEnd={handleDragEnd}>
-            <div ref={setNodeRef} style={style}>
-                {typeof children === 'function' ? children({ attributes, listeners }) : children}
-            </div>
-        </DndContext>
-    );
-}
+import ReactGA from 'react-ga4';
 
 export class Window extends Component {
     constructor(props) {
         super(props);
-        // Use a stable id immediately so the first render has it
-        this.id = props.id;
+        this.id = null;
         this.startX = 60;
         this.startY = 10;
         this.state = {
@@ -72,25 +19,24 @@ export class Window extends Component {
             parentSize: {
                 height: 100,
                 width: 100
-            },
-            position: { x: this.startX, y: this.startY }
+            }
         }
-        this.windowRef = React.createRef();
     }
 
     componentDidMount() {
+        this.id = this.props.id;
         this.setDefaultWindowDimenstion();
 
         // google analytics
-        trackPageview(`/${this.id}`, "Custom Title");
-        trackEvent('window_open', { id: this.id, title: this.props.title });
+        ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
 
         // on window resize, resize boundary
         window.addEventListener('resize', this.resizeBoundries);
     }
 
     componentWillUnmount() {
-        trackPageview('/desktop', 'Custom Title');
+        ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+
         window.removeEventListener('resize', this.resizeBoundries);
     }
 
@@ -131,52 +77,6 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default" })
     }
 
-    handleKeyboardMove = (dx, dy) => {
-        const bounds = { left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height };
-        this.setState(prevState => {
-            let newX = prevState.position.x + dx;
-            let newY = prevState.position.y + dy;
-            newX = Math.min(Math.max(newX, bounds.left), bounds.right);
-            newY = Math.min(Math.max(newY, bounds.top), bounds.bottom);
-            return { position: { x: newX, y: newY } };
-        }, this.checkOverlap);
-    }
-
-    handleKeyDown = (e) => {
-        if (e.altKey) {
-            switch (e.key) {
-                case 'w':
-                case 'W':
-                    e.preventDefault();
-                    this.closeWindow();
-                    break;
-                case 'f':
-                case 'F':
-                    e.preventDefault();
-                    this.focusWindow();
-                    break;
-                case 'ArrowUp':
-                    e.preventDefault();
-                    this.handleKeyboardMove(0, -10);
-                    break;
-                case 'ArrowDown':
-                    e.preventDefault();
-                    this.handleKeyboardMove(0, 10);
-                    break;
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    this.handleKeyboardMove(-10, 0);
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    this.handleKeyboardMove(10, 0);
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-
     handleVerticleResize = () => {
         if (this.props.resizable === false) return;
         this.setState({ height: this.state.height + 0.1 }, this.resizeBoundries);
@@ -207,9 +107,6 @@ export class Window extends Component {
 
     focusWindow = () => {
         this.props.focus(this.id);
-        if (this.windowRef.current) {
-            this.windowRef.current.focus();
-        }
     }
 
     minimizeWindow = () => {
@@ -259,7 +156,6 @@ export class Window extends Component {
     }
 
     closeWindow = () => {
-        trackEvent('window_close', { id: this.id, title: this.props.title });
         this.setWinowsPosition();
         this.setState({ closed: true }, () => {
             this.props.hideSideBar(this.id, false);
@@ -271,49 +167,33 @@ export class Window extends Component {
 
     render() {
         return (
-            <DraggableContainer
-                id={this.id}
-                defaultPosition={{ x: this.startX, y: this.startY }}
-                position={this.state.position}
-                onPositionChange={(pos) => this.setState({ position: pos })}
-                bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+            <Draggable
+                axis="both"
+                handle=".bg-ub-window-title"
+                grid={[1, 1]}
+                scale={1}
                 onStart={this.changeCursorToMove}
                 onStop={this.changeCursorToDefault}
                 onDrag={this.checkOverlap}
+                allowAnyClick={false}
+                defaultPosition={{ x: this.startX, y: this.startY }}
+                bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
             >
-                {({ attributes, listeners }) => (
-                    <div
-                        ref={this.windowRef}
-                        tabIndex={0}
-                        onKeyDown={this.handleKeyDown}
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={
-                            "pointer-events-auto " +
-                            this.state.cursorType +
-                            " " +
-                            (this.state.closed ? " closed-window " : "") +
-                            (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") +
-                            (this.props.minimized ? " opacity-0 invisible duration-200 " : "") +
-                            (this.props.isFocused ? " z-30 " : " z-20 notFocused") +
-                            " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"
-                        }
-                        id={this.id}
-                        role="dialog"
-                        aria-label={this.props.title}
-                        data-testid={`window-${this.id}`}
-                    >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                        <WindowTopBar title={this.props.title} handleProps={{ ...attributes, ...listeners }} />
-                        <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
-                        {(this.id === "settings"
-                            ? <Settings changeBackgroundImage={this.props.changeBackgroundImage} currBgImgName={this.props.bg_image_name} />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
-                    </div>
-                )}
-            </DraggableContainer >
+                <div style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                    className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                    id={this.id}
+                >
+                    {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
+                    {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                    <WindowTopBar title={this.props.title} />
+                    <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
+                    {(this.id === "settings"
+                        ? <Settings changeBackgroundImage={this.props.changeBackgroundImage} currBgImgName={this.props.bg_image_name} />
+                        : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                            addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                            openApp={this.props.openApp} />)}
+                </div>
+            </Draggable >
         )
     }
 }
@@ -323,7 +203,7 @@ export default Window
 // Window's title bar
 export function WindowTopBar(props) {
     return (
-        <div className={" relative bg-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"} {...props.handleProps}>
+        <div className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}>
             <div className="flex justify-center text-sm font-bold">{props.title}</div>
         </div>
     )
@@ -367,12 +247,7 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center">
-            <button
-                type="button"
-                aria-label="Minimize window"
-                className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-                onClick={props.minimize}
-            >
+            <span className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.minimize}>
                 <NextImage
                     src="/themes/Yaru/window/window-minimize-symbolic.svg"
                     alt="Kali window minimize"
@@ -381,49 +256,34 @@ export function WindowEditButtons(props) {
                     height={20}
                     sizes="20px"
                 />
-            </button>
+            </span>
             {props.allowMaximize && (
-                props.isMaximised ? (
-                    <button
-                        type="button"
-                        aria-label="Restore window"
-                        className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-                        onClick={props.maximize}
-                    >
-                        <NextImage
-                            src="/themes/Yaru/window/window-restore-symbolic.svg"
-                            alt="Kali window restore"
-                            className="h-5 w-5 inline"
-                            width={20}
-                            height={20}
-                            sizes="20px"
-                        />
-                    </button>
-                ) : (
-                    <button
-                        type="button"
-                        aria-label="Maximize window"
-                        className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-                        onClick={props.maximize}
-                    >
-                        <NextImage
-                            src="/themes/Yaru/window/window-maximize-symbolic.svg"
-                            alt="Kali window maximize"
-                            className="h-5 w-5 inline"
-                            width={20}
-                            height={20}
-                            sizes="20px"
-                        />
-                    </button>
-                )
+                props.isMaximised
+                    ? (
+                        <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
+                            <NextImage
+                                src="/themes/Yaru/window/window-restore-symbolic.svg"
+                                alt="Kali window restore"
+                                className="h-5 w-5 inline"
+                                width={20}
+                                height={20}
+                                sizes="20px"
+                            />
+                        </span>
+                    ) : (
+                        <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
+                            <NextImage
+                                src="/themes/Yaru/window/window-maximize-symbolic.svg"
+                                alt="Kali window maximize"
+                                className="h-5 w-5 inline"
+                                width={20}
+                                height={20}
+                                sizes="20px"
+                            />
+                        </span>
+                    )
             )}
-            <button
-                type="button"
-                id={`close-${props.id}`}
-                aria-label="Close window"
-                className="mx-1.5 cursor-default bg-panel bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-                onClick={props.close}
-            >
+            <button tabIndex="-1" id={`close-${props.id}`} className="mx-1.5 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.close}>
                 <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"
                     alt="Kali window close"
@@ -437,46 +297,23 @@ export function WindowEditButtons(props) {
     )
 }
 
-function ScreenRenderer(props) {
-    return props.screen(props.addFolder, props.openApp);
-}
-
 // Window's Main Screen
 export class WindowMainScreen extends Component {
     constructor() {
         super();
         this.state = {
             setDarkBg: false,
-            hasError: false,
-        };
-        this.handleReload = this.handleReload.bind(this);
-    }
-    static getDerivedStateFromError() {
-        return { hasError: true };
+        }
     }
     componentDidMount() {
         setTimeout(() => {
             this.setState({ setDarkBg: true });
         }, 3000);
     }
-    handleReload() {
-        if (typeof window !== 'undefined') {
-            window.location.reload();
-        }
-    }
     render() {
-        if (this.state.hasError) {
-            return (
-                <ErrorPane
-                    code="render_error"
-                    message={`An error occurred while rendering ${this.props.title}. Please try again.`}
-                    onReload={this.handleReload}
-                />
-            );
-        }
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-brand-dark " : " bg-panel")}> 
-                <ScreenRenderer screen={this.props.screen} addFolder={this.props.addFolder} openApp={this.props.openApp} />
+            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+                {this.props.screen(this.props.addFolder, this.props.openApp)}
             </div>
         )
     }

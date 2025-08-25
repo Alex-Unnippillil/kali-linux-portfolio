@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactGA from 'react-ga4';
-import * as PIXI from 'pixi.js';
 import Quadtree from './quadtree';
 import {
   GRID_SIZE,
@@ -10,11 +9,9 @@ import {
   getPath,
   createProjectilePool,
   fireProjectile,
-  generateWaveEnemies,
 } from './tower-defense-core';
 
 const MAX_PROJECTILES = 100;
-const TILE_SIZE = 32;
 
 const TowerDefense = () => {
   const [towers, setTowers] = useState([]);
@@ -23,8 +20,6 @@ const TowerDefense = () => {
     createProjectilePool(MAX_PROJECTILES)
   );
   const [path, setPath] = useState(() => getPath([]));
-  const [flowField, setFlowField] = useState(null);
-  const [distanceField, setDistanceField] = useState(null);
   const [wave, setWave] = useState(1);
   const [speed, setSpeed] = useState(1);
   const [lives, setLives] = useState(20);
@@ -35,10 +30,6 @@ const TowerDefense = () => {
   const towersRef = useRef(towers);
   const enemiesRef = useRef(enemies);
   const projectilesRef = useRef(projectiles);
-  const flowWorkerRef = useRef(null);
-  const pixiRef = useRef(null);
-  const enemySpritesRef = useRef(new Map());
-  const projectileSpritesRef = useRef(new Map());
 
   useEffect(() => {
     towersRef.current = towers;
@@ -50,50 +41,25 @@ const TowerDefense = () => {
     projectilesRef.current = projectiles;
   }, [projectiles]);
 
-  useEffect(() => {
-    flowWorkerRef.current = new Worker(
-      new URL('./tower-defense-flow-worker.js', import.meta.url)
-    );
-    const worker = flowWorkerRef.current;
-    worker.onmessage = (e) => {
-      setFlowField(e.data.field);
-      setDistanceField(e.data.dist);
-    };
-    worker.postMessage({ towers: [] });
-
-    const app = new PIXI.Application({
-      width: GRID_SIZE * TILE_SIZE,
-      height: GRID_SIZE * TILE_SIZE,
-      backgroundAlpha: 0,
-    });
-    pixiRef.current = app;
-    const enemyContainer = new PIXI.ParticleContainer();
-    const projectileContainer = new PIXI.ParticleContainer();
-    app.stage.addChild(enemyContainer, projectileContainer);
-    enemySpritesRef.current.container = enemyContainer;
-    projectileSpritesRef.current.container = projectileContainer;
-    document.getElementById('td-canvas')?.appendChild(app.view);
-
-    return () => {
-      worker.terminate();
-      app.destroy(true, { children: true });
-    };
-  }, []);
-
   const spawnWave = (waveNum) => {
     ReactGA.event({ category: 'tower-defense', action: 'wave_start', value: waveNum });
-    const newEnemies = generateWaveEnemies(waveNum, enemyId.current);
-    enemyId.current += newEnemies.length;
-    newEnemies.forEach((e) => {
-      const sprite = new PIXI.Sprite(PIXI.Texture.WHITE);
-      sprite.width = TILE_SIZE;
-      sprite.height = TILE_SIZE;
-      sprite.tint = 0xff0000;
-      sprite.x = e.x * TILE_SIZE;
-      sprite.y = e.y * TILE_SIZE;
-      enemySpritesRef.current.container.addChild(sprite);
-      enemySpritesRef.current.set(e.id, sprite);
-    });
+    const count = 5 + waveNum;
+    const newEnemies = [];
+    for (let i = 0; i < count; i += 1) {
+      const baseSpeed = 0.5 + waveNum * 0.05;
+      newEnemies.push({
+        id: enemyId.current++,
+        x: START.x,
+        y: START.y,
+        pathIndex: 0,
+        progress: 0,
+        health: 5 + waveNum,
+        resistance: 0,
+        baseSpeed,
+        slow: null,
+        dot: null,
+      });
+    }
     setEnemies((prev) => [...prev, ...newEnemies]);
   };
 
@@ -115,10 +81,18 @@ const TowerDefense = () => {
 
   useEffect(() => {
     setPath(getPath(towers));
-    flowWorkerRef.current?.postMessage({ towers });
   }, [towers]);
 
-  // no path-based index maintenance when using flow field
+  useEffect(() => {
+    setEnemies((prev) =>
+      prev.map((e) => {
+        const idx = path.findIndex((p) => p.x === e.x && p.y === e.y);
+        return idx === -1
+          ? { ...e, pathIndex: 0, x: START.x, y: START.y, progress: 0 }
+          : { ...e, pathIndex: idx };
+      })
+    );
+  }, [path]);
 
   const handleCellClick = (x, y) => {
     if (path.some((p) => p.x === x && p.y === y)) return;
@@ -154,19 +128,18 @@ const TowerDefense = () => {
   };
 
   const tick = () => {
-    // Move enemies using flow field and apply effects
+    // Move enemies and apply effects
     enemiesRef.current = enemiesRef.current
       .map((e) => {
         const effSpeed = e.baseSpeed * (e.slow ? 1 - e.slow.amount : 1);
-        const dir = flowField?.[Math.round(e.y)]?.[Math.round(e.x)];
-        if (dir) {
-          e.x += dir.dx * effSpeed * 0.1 * speed;
-          e.y += dir.dy * effSpeed * 0.1 * speed;
-        }
-        const sprite = enemySpritesRef.current.get(e.id);
-        if (sprite) {
-          sprite.x = e.x * TILE_SIZE;
-          sprite.y = e.y * TILE_SIZE;
+        e.progress += effSpeed * 0.1 * speed;
+        while (e.progress >= 1) {
+          const next = path[e.pathIndex + 1];
+          if (!next) break;
+          e.x = next.x;
+          e.y = next.y;
+          e.pathIndex += 1;
+          e.progress -= 1;
         }
         if (e.dot) {
           e.dot.remaining -= 0.1 * speed;
@@ -180,14 +153,8 @@ const TowerDefense = () => {
         return e;
       })
       .filter((e) => {
-        if (e.health <= 0) {
-          enemySpritesRef.current.get(e.id)?.destroy();
-          enemySpritesRef.current.delete(e.id);
-          return false;
-        }
-        if (Math.round(e.x) === GOAL.x && Math.round(e.y) === GOAL.y) {
-          enemySpritesRef.current.get(e.id)?.destroy();
-          enemySpritesRef.current.delete(e.id);
+        if (e.health <= 0) return false;
+        if (e.pathIndex >= path.length - 1) {
           setLives((l) => {
             const nl = l - 1;
             if (nl <= 0 && !victory.current) {
@@ -210,17 +177,12 @@ const TowerDefense = () => {
       tower.cooldown -= 0.1 * speed;
       if (tower.cooldown <= 0) {
         const candidates = qt.retrieve({ x: tower.x, y: tower.y, r: stats.range });
-        const targetObj = candidates
-          .filter(
-            (c) => Math.abs(c.x - tower.x) + Math.abs(c.y - tower.y) <= stats.range
-          )
-          .sort(
-            (a, b) =>
-              Math.abs(a.x - tower.x) + Math.abs(a.y - tower.y) -
-              (Math.abs(b.x - tower.x) + Math.abs(b.y - tower.y))
-          )[0];
+        const targetObj = candidates.find(
+          (c) =>
+            Math.abs(c.x - tower.x) + Math.abs(c.y - tower.y) <= stats.range
+        );
         if (targetObj) {
-          const proj = fireProjectile(projectilesRef.current, {
+          fireProjectile(projectilesRef.current, {
             x: tower.x,
             y: tower.y,
             targetId: targetObj.ref.id,
@@ -229,20 +191,6 @@ const TowerDefense = () => {
             splash: stats.splash || 0,
             slow: stats.slow || null,
           });
-          if (proj) {
-            let sprite = proj.sprite;
-            if (!sprite) {
-              sprite = new PIXI.Sprite(PIXI.Texture.WHITE);
-              sprite.width = TILE_SIZE / 2;
-              sprite.height = TILE_SIZE / 2;
-              sprite.tint = 0xffff00;
-              projectileSpritesRef.current.container.addChild(sprite);
-              proj.sprite = sprite;
-            }
-            sprite.x = proj.x * TILE_SIZE;
-            sprite.y = proj.y * TILE_SIZE;
-            sprite.visible = true;
-          }
           tower.cooldown = stats.fireRate;
         }
       }
@@ -251,14 +199,10 @@ const TowerDefense = () => {
 
     // Update projectiles
     projectilesRef.current.forEach((p) => {
-      if (!p.active) {
-        if (p.sprite) p.sprite.visible = false;
-        return;
-      }
+      if (!p.active) return;
       const target = enemiesRef.current.find((e) => e.id === p.targetId);
       if (!target) {
         p.active = false;
-        if (p.sprite) p.sprite.visible = false;
         return;
       }
       const dx = target.x - p.x;
@@ -279,14 +223,9 @@ const TowerDefense = () => {
           });
         }
         p.active = false;
-        if (p.sprite) p.sprite.visible = false;
       } else {
         p.x += Math.sign(dx) * p.speed * speed;
         p.y += Math.sign(dy) * p.speed * speed;
-        if (p.sprite) {
-          p.sprite.x = p.x * TILE_SIZE;
-          p.sprite.y = p.y * TILE_SIZE;
-        }
       }
     });
 
@@ -300,41 +239,34 @@ const TowerDefense = () => {
     const interval = setInterval(tick, 100);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [speed, flowField]);
+  }, [speed, path]);
 
   const renderCell = (x, y) => {
     const isPath = path.some((p) => p.x === x && p.y === y);
     const tower = towers.find((t) => t.x === x && t.y === y);
+    const enemy = enemies.find((e) => e.x === x && e.y === y);
+    const projectile = projectiles.find(
+      (p) => p.active && Math.round(p.x) === x && Math.round(p.y) === y
+    );
 
     let bg = 'bg-green-700';
     if (isPath) bg = 'bg-gray-600';
     if (tower) bg = 'bg-blue-700';
-    const dir = flowField?.[y]?.[x];
-    const arrow = dir
-      ? dir.dx === 1
-        ? '→'
-        : dir.dx === -1
-        ? '←'
-        : dir.dy === 1
-        ? '↓'
-        : dir.dy === -1
-        ? '↑'
-        : ''
-      : '';
+    if (enemy) bg = 'bg-red-700';
+    if (projectile) bg = 'bg-yellow-400';
+
     return (
       <div
         key={`${x}-${y}`}
-        className={`w-8 h-8 border border-gray-900 ${bg} flex items-center justify-center`}
+        className={`w-8 h-8 border border-gray-900 ${bg}`}
         onClick={() => handleCellClick(x, y)}
         onContextMenu={(e) => handleCellRightClick(x, y, e)}
-      >
-        <span className="text-xs">{arrow}</span>
-      </div>
+      />
     );
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <div className="mb-2 flex items-center space-x-2">
         <span>Wave: {wave}</span>
         <span>Lives: {lives}</span>
@@ -372,19 +304,10 @@ const TowerDefense = () => {
           </button>
         ))}
       </div>
-      <div
-        className="relative"
-        style={{ width: GRID_SIZE * TILE_SIZE, height: GRID_SIZE * TILE_SIZE }}
-      >
-        <div id="td-canvas" className="absolute top-0 left-0" />
-        <div
-          className="grid grid-cols-10 absolute top-0 left-0"
-          style={{ lineHeight: 0 }}
-        >
-          {Array.from({ length: GRID_SIZE }).map((_, y) =>
-            Array.from({ length: GRID_SIZE }).map((_, x) => renderCell(x, y))
-          )}
-        </div>
+      <div className="grid grid-cols-10" style={{ lineHeight: 0 }}>
+        {Array.from({ length: GRID_SIZE }).map((_, y) =>
+          Array.from({ length: GRID_SIZE }).map((_, x) => renderCell(x, y))
+        )}
       </div>
       <div className="mt-2 text-sm text-center">
         Click to place towers or upgrade existing ones. Right-click to sell.

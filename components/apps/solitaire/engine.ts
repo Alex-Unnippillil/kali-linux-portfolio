@@ -6,8 +6,6 @@ export type Card = {
   faceUp: boolean;
 };
 
-export type Scoring = 'standard' | 'vegas';
-
 export type GameState = {
   tableau: Card[][];
   stock: Card[];
@@ -15,8 +13,7 @@ export type GameState = {
   foundations: Card[][];
   draw: 1 | 3;
   score: number;
-  redeals: number | null; // null means unlimited redeals
-  scoring: Scoring;
+  redeals: number; // remaining times waste can be recycled into stock
 };
 
 export const suits: Suit[] = ['♠', '♥', '♦', '♣'];
@@ -27,42 +24,27 @@ const colors: Record<Suit, 'red' | 'black'> = {
   '♦': 'red',
 };
 
-// simple seeded RNG (mulberry32)
-const mulberry32 = (a: number) => () => {
-  let t = (a += 0x6d2b79f5);
-  t = Math.imul(t ^ (t >>> 15), t | 1);
-  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-};
-
-export const createDeck = (seed?: number): Card[] => {
+export const createDeck = (): Card[] => {
   const deck: Card[] = [];
   suits.forEach((suit) => {
     for (let value = 1; value <= 13; value += 1) {
       deck.push({ suit, value, color: colors[suit], faceUp: false });
     }
   });
-  const rand = seed !== undefined ? mulberry32(seed) : Math.random;
   // Shuffle using Fisher-Yates
   for (let i = deck.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(rand() * (i + 1));
+    const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
   return deck;
 };
 
-export const initializeGame = (
-  draw: 1 | 3 = 1,
-  deck?: Card[],
-  options: { redeals?: number | null; scoring?: Scoring; seed?: number } = {},
-): GameState => {
-  const { redeals = 3, scoring = 'standard', seed } = options;
-  const useDeck = deck || createDeck(seed);
+export const initializeGame = (draw: 1 | 3 = 1, deck: Card[] = createDeck()): GameState => {
   const tableau: Card[][] = Array.from({ length: 7 }, () => []);
   // Deal tableau
   for (let i = 0; i < 7; i += 1) {
     for (let j = 0; j <= i; j += 1) {
-      const card = useDeck.pop();
+      const card = deck.pop();
       if (!card) break;
       tableau[i].push(card);
     }
@@ -72,19 +54,18 @@ export const initializeGame = (
 
   return {
     tableau,
-    stock: useDeck,
+    stock: deck,
     waste: [],
     foundations: Array.from({ length: 4 }, () => []),
     draw,
-    score: scoring === 'vegas' ? -52 : 0,
-    redeals,
-    scoring,
+    score: 0,
+    redeals: 3,
   };
 };
 
 export const drawFromStock = (state: GameState): GameState => {
   if (state.stock.length === 0) {
-    if (state.waste.length === 0 || (state.redeals !== null && state.redeals === 0)) return state;
+    if (state.waste.length === 0 || state.redeals === 0) return state;
     const newStock = state.waste
       .slice()
       .reverse()
@@ -93,16 +74,14 @@ export const drawFromStock = (state: GameState): GameState => {
       ...state,
       stock: newStock,
       waste: [],
-      redeals: state.redeals === null ? null : state.redeals - 1,
-      score: state.scoring === 'vegas' ? state.score : state.score - 100,
+      redeals: state.redeals - 1,
+      score: state.score - 100,
     };
   }
   const drawCount = Math.min(state.draw, state.stock.length);
   const newStock = state.stock.slice(0, state.stock.length - drawCount);
   const drawn = state.stock.slice(-drawCount).map((c) => ({ ...c, faceUp: true }));
-  const score =
-    state.scoring === 'vegas' ? state.score - drawCount : state.score;
-  return { ...state, stock: newStock, waste: [...state.waste, ...drawn], score };
+  return { ...state, stock: newStock, waste: [...state.waste, ...drawn] };
 };
 
 const canPlaceOnTableau = (card: Card, dest: Card[]): boolean => {
@@ -169,8 +148,7 @@ export const moveToFoundation = (
     if (dest.length > 0 && dest[dest.length - 1].value + 1 !== card.value) return state;
     const newWaste = state.waste.slice(0, -1);
     dest.push(card);
-    const scoreAdd = state.scoring === 'vegas' ? 5 : 10;
-    return { ...state, waste: newWaste, foundations, score: state.score + scoreAdd };
+    return { ...state, waste: newWaste, foundations, score: state.score + 10 };
   }
   const pile = state.tableau[fromIndex!];
   card = pile[pile.length - 1];
@@ -192,8 +170,7 @@ export const moveToFoundation = (
     return p;
   });
   dest.push(card);
-  const scoreAdd = state.scoring === 'vegas' ? 5 : 10;
-  return { ...state, tableau: newTableau, foundations, score: state.score + scoreAdd };
+  return { ...state, tableau: newTableau, foundations, score: state.score + 10 };
 };
 
 export const autoMove = (
@@ -205,22 +182,6 @@ export const autoMove = (
     return moveToFoundation(state, 'waste', null);
   }
   return moveToFoundation(state, 'tableau', index);
-};
-
-export type AutoMoveHint =
-  | { source: 'waste' }
-  | { source: 'tableau'; index: number };
-
-export const autoMoveHint = (state: GameState): AutoMoveHint | null => {
-  if (state.waste.length) {
-    const moved = moveToFoundation(state, 'waste', null);
-    if (moved !== state) return { source: 'waste' };
-  }
-  for (let i = 0; i < state.tableau.length; i += 1) {
-    const moved = moveToFoundation(state, 'tableau', i);
-    if (moved !== state) return { source: 'tableau', index: i };
-  }
-  return null;
 };
 
 export const autoComplete = (state: GameState): GameState => {

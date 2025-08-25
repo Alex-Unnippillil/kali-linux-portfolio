@@ -10,29 +10,6 @@ export const DIRECTIONS = [
   [-1, -1],
 ];
 
-// --------- Zobrist hashing setup ---------
-const rand64 = () =>
-  (BigInt(Math.floor(Math.random() * 2 ** 32)) << 32n) |
-  BigInt(Math.floor(Math.random() * 2 ** 32));
-
-const ZOBRIST = Array.from({ length: SIZE }, () =>
-  Array.from({ length: SIZE }, () => ({ B: rand64(), W: rand64() })),
-);
-
-const computeHash = (board) => {
-  let h = 0n;
-  for (let r = 0; r < SIZE; r += 1) {
-    for (let c = 0; c < SIZE; c += 1) {
-      const cell = board[r][c];
-      if (cell === 'B') h ^= ZOBRIST[r][c].B;
-      else if (cell === 'W') h ^= ZOBRIST[r][c].W;
-    }
-  }
-  return h;
-};
-
-const TT = new Map();
-
 export const createBoard = () => {
   const board = Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
   board[3][3] = 'W';
@@ -40,11 +17,6 @@ export const createBoard = () => {
   board[4][3] = 'B';
   board[4][4] = 'W';
   return board;
-};
-
-// Example minimal opening book using initial position
-const OPENING_BOOK = {
-  [computeHash(createBoard()).toString()]: [2, 3],
 };
 
 const inside = (r, c) => r >= 0 && r < SIZE && c >= 0 && c < SIZE;
@@ -162,17 +134,7 @@ export const evaluateBoard = (board, player) => {
     stabilityCount(board, player) - stabilityCount(board, opponent);
   const { black, white } = countPieces(board);
   const parity = player === 'B' ? black - white : white - black;
-  const total = black + white;
-  let weights;
-  if (total < 20) weights = { c: 25, m: 5, s: 5, p: 1 };
-  else if (total < 58) weights = { c: 25, m: 5, s: 10, p: 1 };
-  else weights = { c: 25, m: 1, s: 10, p: 20 };
-  return (
-    weights.c * cornerScore +
-    weights.m * mobility +
-    weights.s * stability +
-    weights.p * parity
-  );
+  return 25 * cornerScore + 5 * mobility + 10 * stability + parity;
 };
 
 export const minimax = (
@@ -182,10 +144,7 @@ export const minimax = (
   maximizer,
   alpha = -Infinity,
   beta = Infinity,
-  hash = computeHash(board),
 ) => {
-  const ttEntry = TT.get(hash.toString());
-  if (ttEntry && ttEntry.depth >= depth) return ttEntry.value;
   const movesObj = computeLegalMoves(board, player);
   const entries = Object.entries(movesObj);
   const opponent = player === 'B' ? 'W' : 'B';
@@ -197,13 +156,9 @@ export const minimax = (
       }
       const { black, white } = countPieces(board);
       const diff = maximizer === 'B' ? black - white : white - black;
-      const val = diff * 1000;
-      TT.set(hash.toString(), { depth, value: val });
-      return val;
+      return diff * 1000;
     }
-    const val = evaluateBoard(board, maximizer);
-    TT.set(hash.toString(), { depth, value: val });
-    return val;
+    return evaluateBoard(board, maximizer);
   }
 
   if (player === maximizer) {
@@ -211,20 +166,11 @@ export const minimax = (
     for (const [key, flips] of entries) {
       const [r, c] = key.split('-').map(Number);
       const newBoard = applyMove(board, r, c, player, flips);
-      const val = minimax(
-        newBoard,
-        opponent,
-        depth - 1,
-        maximizer,
-        alpha,
-        beta,
-        computeHash(newBoard),
-      );
+      const val = minimax(newBoard, opponent, depth - 1, maximizer, alpha, beta);
       value = Math.max(value, val);
       alpha = Math.max(alpha, val);
       if (alpha >= beta) break;
     }
-    TT.set(hash.toString(), { depth, value });
     return value;
   }
 
@@ -232,26 +178,15 @@ export const minimax = (
   for (const [key, flips] of entries) {
     const [r, c] = key.split('-').map(Number);
     const newBoard = applyMove(board, r, c, player, flips);
-    const val = minimax(
-      newBoard,
-      opponent,
-      depth - 1,
-      maximizer,
-      alpha,
-      beta,
-      computeHash(newBoard),
-    );
+    const val = minimax(newBoard, opponent, depth - 1, maximizer, alpha, beta);
     value = Math.min(value, val);
     beta = Math.min(beta, val);
     if (beta <= alpha) break;
   }
-  TT.set(hash.toString(), { depth, value });
   return value;
 };
 
 export const bestMove = (board, player, depth) => {
-  const book = OPENING_BOOK[computeHash(board).toString()];
-  if (book) return book;
   const movesObj = computeLegalMoves(board, player);
   const entries = Object.entries(movesObj);
   if (entries.length === 0) return null;
@@ -261,58 +196,12 @@ export const bestMove = (board, player, depth) => {
   for (const [key, flips] of entries) {
     const [r, c] = key.split('-').map(Number);
     const newBoard = applyMove(board, r, c, player, flips);
-    const val = minimax(
-      newBoard,
-      opponent,
-      depth - 1,
-      player,
-      -Infinity,
-      Infinity,
-      computeHash(newBoard),
-    );
+    const val = minimax(newBoard, opponent, depth - 1, player, -Infinity, Infinity);
     if (val > bestVal) {
       bestVal = val;
       best = [r, c];
     }
   }
   return best;
-};
-
-export const hintHeatmap = (board, player, depth) => {
-  const movesObj = computeLegalMoves(board, player);
-  const opponent = player === 'B' ? 'W' : 'B';
-  const scores = {};
-  let max = -Infinity;
-  let min = Infinity;
-  for (const [key, flips] of Object.entries(movesObj)) {
-    const [r, c] = key.split('-').map(Number);
-    const newBoard = applyMove(board, r, c, player, flips);
-    const val = minimax(
-      newBoard,
-      opponent,
-      depth - 1,
-      player,
-      -Infinity,
-      Infinity,
-      computeHash(newBoard),
-    );
-    scores[key] = val;
-    if (val > max) max = val;
-    if (val < min) min = val;
-  }
-  const range = max - min || 1;
-  Object.keys(scores).forEach((k) => {
-    scores[k] = (scores[k] - min) / range;
-  });
-  return scores;
-};
-
-export const exportHistory = (history) => JSON.stringify(history);
-export const importHistory = (str) => {
-  try {
-    return JSON.parse(str);
-  } catch {
-    return null;
-  }
 };
 

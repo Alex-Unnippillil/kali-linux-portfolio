@@ -9,24 +9,24 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: "yarn"
-      - run: corepack enable
       - name: Installing Packages
-        run: yarn install --immutable
+        run: yarn install
 
       - name: Lint
         run: yarn lint
-
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
-
-      - name: E2E tests
-        run: yarn test:e2e
 
       - name: Building
         run: yarn build
@@ -36,15 +36,12 @@ jobs:
           NEXT_PUBLIC_TEMPLATE_ID: ${{ secrets.NEXT_PUBLIC_TEMPLATE_ID }}
           NEXT_PUBLIC_USER_ID: ${{ secrets.NEXT_PUBLIC_USER_ID }}
 
-      - name: Check for bundled Node core modules
-        run: yarn check:node-core
-
       - name: Exporting Bundle File
         run: yarn export
       - run: touch ./out/.nojekyll
 
-      - name: Deploy to Github-Pages
+      - name: Deploy to Github-Pages 
         uses: JamesIves/github-pages-deploy-action@4.1.5
         with:
-          branch: gh-pages
-          folder: out
+          branch: gh-pages 
+          folder: out 

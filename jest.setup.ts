@@ -14,19 +14,3 @@ class ImageMock {
 
 // @ts-ignore - allow overriding the global Image for the test env
 global.Image = ImageMock as unknown as typeof Image;
-
-const originalError = console.error;
-
-beforeAll(() => {
-  console.error = (...args: any[]) => {
-    const message = args.join(' ');
-    if (message.includes('Warning:') && /hydration/i.test(message)) {
-      throw new Error(message);
-    }
-    originalError(...args);
-  };
-});
-
-afterAll(() => {
-  console.error = originalError;
-});

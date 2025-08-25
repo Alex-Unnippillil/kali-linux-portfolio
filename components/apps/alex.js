@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
+import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
 import Certs from './certs';
-import { trackEvent, trackPageview } from '../../lib/analytics';
 
 export class AboutAlex extends Component {
 
@@ -42,7 +42,7 @@ export class AboutAlex extends Component {
         localStorage.setItem("about-section", screen);
 
         // google analytics
-        trackPageview(`/${screen}`, "Custom Title");
+        ReactGA.send({ hitType: "pageview", page: `/${screen}`, title: "Custom Title" });
 
 
         this.setState({
@@ -58,7 +58,7 @@ export class AboutAlex extends Component {
     renderNavLinks = () => {
         return (
             <>
-                <div id="about" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "about" ? " bg-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
+                <div id="about" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "about" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
                     <Image
                         className=" w-3 md:w-4"
                         alt="about Unnippillil"
@@ -69,7 +69,7 @@ export class AboutAlex extends Component {
                     />
                     <span className=" ml-1 md:ml-2 text-gray-50 ">About Me</span>
                 </div>
-                <div id="education" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "education" ? " bg-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
+                <div id="education" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "education" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
                     <Image
                         className=" w-3 md:w-4"
                         alt="Unnippillil' education"
@@ -80,7 +80,7 @@ export class AboutAlex extends Component {
                     />
                     <span className=" ml-1 md:ml-2 text-gray-50 ">Education</span>
                 </div>
-                <div id="skills" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "skills" ? " bg-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
+                <div id="skills" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "skills" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
                     <Image
                         className=" w-3 md:w-4"
                         alt="Unnippillil' skills"
@@ -91,7 +91,7 @@ export class AboutAlex extends Component {
                     />
                     <span className=" ml-1 md:ml-2 text-gray-50 ">Skills</span>
                 </div>
-                <div id="certs" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "certs" ? " bg-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
+                <div id="certs" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "certs" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
                     <Image
                         className=" w-3 md:w-4"
                         alt="Unnippillil's certifications"
@@ -102,7 +102,7 @@ export class AboutAlex extends Component {
                     />
                     <span className=" ml-1 md:ml-2 text-gray-50 ">Certs</span>
                 </div>
-                <div id="projects" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "projects" ? " bg-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
+                <div id="projects" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "projects" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
                     <Image
                         className=" w-3 md:w-4"
                         alt="Unnippillil' projects"
@@ -113,7 +113,7 @@ export class AboutAlex extends Component {
                     />
                     <span className=" ml-1 md:ml-2 text-gray-50 ">Projects</span>
                 </div>
-                <div id="resume" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "resume" ? " bg-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
+                <div id="resume" tabIndex="0" onFocus={this.changeScreen} className={(this.state.active_screen === "resume" ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}>
                     <Image
                         className=" w-3 md:w-4"
                         alt="Unnippillil's resume"
@@ -131,19 +131,19 @@ export class AboutAlex extends Component {
 
     render() {
         return (
-            <div className="w-full h-full flex bg-panel text-white select-none relative">
+            <div className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
                 <div className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black">
                     {this.renderNavLinks()}
                 </div>
-                <div onClick={this.showNavBar} className="md:hidden flex flex-col items-center justify-center absolute bg-panel rounded w-6 h-6 top-1 left-1">
+                <div onClick={this.showNavBar} className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1">
                     <div className=" w-3.5 border-t border-white"></div>
                     <div className=" w-3.5 border-t border-white" style={{ marginTop: "2pt", marginBottom: "2pt" }}></div>
                     <div className=" w-3.5 border-t border-white"></div>
-                    <div className={(this.state.navbar ? " visible animateShow z-30 " : " invisible ") + " md:hidden text-xs absolute bg-panel py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20"}>
+                    <div className={(this.state.navbar ? " visible animateShow z-30 " : " invisible ") + " md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20"}>
                         {this.renderNavLinks()}
                     </div>
                 </div>
-                <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-surface overflow-y-auto windowMainScreen">
+                <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
                     {this.state.screen}
                 </div>
             </div>
@@ -174,7 +174,7 @@ function About() {
             </div>
             <div className=" mt-4 md:mt-8 text-lg md:text-2xl text-center px-1">
                 <div>My name is <span className="font-bold">Alex Unnippillil</span>, </div>
-                 <div className="font-normal ml-1">I&apos;m a <span className="text-blue font-bold"> Cybersecurity Specialist!</span></div>
+                 <div className="font-normal ml-1">I&apos;m a <span className="text-ubt-blue font-bold"> Cybersecurity Specialist!</span></div>
             </div>
             <div className=" mt-4 relative md:my-8 pt-px bg-white w-32 md:w-48">
                 <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-0"></div>
@@ -183,9 +183,7 @@ function About() {
             <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
                  <li className=" list-pc">I&apos;m a <span className=" font-medium"> Technology Enthusiast </span> who thrives on the thrill of learning and mastering the rapidly evolving world of tech. I&apos;ve completed 4 years of a degree in <u className=' cursor-pointer '><a href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf" target={"_blank"}>Nuclear Engineering </a></u> at OntarioTech University before, I decided to my change my career goals to and pursue my passion of <u className=' cursor-pointer '> <a href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf" target={"_blank"}> Networking and I.T. Security</a> </u>.</li>
                  <li className=" mt-3 list-building">  If you&apos;re looking for the type of person that always wants to help others. That&apos;ll be there putting in the work 24/7. Please feel free to send an email <a className='text-underline'
-                               href='mailto:alex.unnippillil@hotmail.com'
-                               onClick={() => trackEvent('cta_contact_email', { email: 'alex.unnippillil@hotmail.com' })}
-                               ><u>@alex.unnippillil@hotmail.com</u></a></li>
+                               href='mailto:alex.unnippillil@hotmail.com'><u>@alex.unnippillil@hotmail.com</u></a></li>
                 <li className=" mt-3 list-time"> When I am not learning my next technical skill, I like to spend my time reading books, rock climbing or watching <u className=' cursor-pointer '><a href="https://www.youtube.com/@Alex-Unnippillil/playlists" target={"_blank"}>Youtube Videos</a></u> and <u className=' cursor-pointer '><a href="https://myanimelist.net/animelist/alex_u" target={"_blank"}>Anime</a></u></li> 
                 <li className=" mt-3 list-star"> And I also have interests in Deep Learning, Software Development & Animation!</li>
             </ul>
@@ -267,13 +265,13 @@ const SkillSection = ({ title, badges }) => {
           onClick={() => setSelected(null)}
         >
           <div
-            className="bg-panel p-4 rounded max-w-xs"
+            className="bg-ub-cool-grey p-4 rounded max-w-xs"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="font-bold mb-2 text-center">{selected.alt}</div>
             <p className="text-sm text-center">{selected.description}</p>
             <button
-              className="mt-2 px-2 py-1 bg-blue rounded"
+              className="mt-2 px-2 py-1 bg-ubt-blue rounded"
               onClick={() => setSelected(null)}
             >
               Close
@@ -364,7 +362,7 @@ function Skills() {
       </div>
       <ul className=" tracking-tight text-sm md:text-base w-10/12 emoji-list">
         <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
-          <div>I&apos;ve learned a variety of programming languages and frameworks while <strong className="text-gedit-blue">specializing in network security</strong></div>
+          <div>I&apos;ve learned a variety of programming languages and frameworks while <strong className="text-ubt-gedit-blue">specializing in network security</strong></div>
         </li>
         <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
           <div>Below are some skills I&apos;ve learned over the years</div>
@@ -378,7 +376,7 @@ function Skills() {
       </div>
         <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
           <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
-          <div className="bg-gedit-light bg-opacity-20 p-1 md:p-2 rounded-md shadow-md">
+          <div className="bg-ub-gedit-light bg-opacity-20 p-1 md:p-2 rounded-md shadow-md">
             <img
               src="https://ghchart.rshah.org/Alex-Unnippillil"
               alt="Alex Unnippillil's GitHub contribution graph"
@@ -695,8 +693,7 @@ function Resume() {
                     href="/files/Alex-Unnippillil-Resume.pdf"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline text-blue"
-                    onClick={() => trackEvent('cta_download_resume')}
+                    className="underline text-ubt-blue"
                 >
                     Download the resume
                 </a>

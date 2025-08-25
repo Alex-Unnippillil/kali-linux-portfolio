@@ -1,15 +1,4 @@
-import {
-  initLane,
-  updateCars,
-  handlePads,
-  PAD_POSITIONS,
-  rampLane,
-    carLaneDefs,
-    logLaneDefs,
-    TILE,
-    COLLISION_TOLERANCE,
-    rectsIntersect,
-  } from '@components/apps/frogger';
+import { initLane, updateCars, handlePads, PAD_POSITIONS, rampLane, carLaneDefs, logLaneDefs } from '../components/apps/frogger';
 
 describe('frogger mechanics', () => {
   test('lane spawn variance via lane-local RNG', () => {
@@ -44,59 +33,4 @@ describe('frogger mechanics', () => {
     expect(log.speed).toBeCloseTo(logLaneDefs[0].speed * 1.4);
     expect(log.spawnRate).toBeCloseTo(Math.max(0.5, logLaneDefs[0].spawnRate * 0.8));
   });
-
-    test('collision tolerance allows slight overlap', () => {
-      const base = initLane({ y: 0, dir: 1, speed: 0, spawnRate: 1000, length: 1, type: 'car' }, 1);
-      const lane = {
-        ...base,
-        items: [
-        {
-          x: TILE - COLLISION_TOLERANCE / 2,
-          width: TILE,
-          height: TILE,
-        },
-      ],
-      };
-      expect(updateCars([lane], { x: 0, y: 0 }, 0).dead).toBe(false);
-    });
-
-    test('wave pattern offsets lane items', () => {
-      const base = initLane(
-        { y: 1, dir: 1, speed: 1, spawnRate: 100, length: 1, pattern: 'straight', easing: 'linear' },
-        1,
-      );
-      base.items.push({ x: 0, width: TILE, height: TILE });
-      const straight = updateCars([base], { x: 0, y: 0 }, 0.25).lanes[0].items[0].x;
-      const waveLane = initLane(
-        { y: 1, dir: 1, speed: 1, spawnRate: 100, length: 1, pattern: 'wave', easing: 'linear' },
-        1,
-      );
-      waveLane.items.push({ x: 0, width: TILE, height: TILE });
-      const wavy = updateCars([waveLane], { x: 0, y: 0 }, 0.25).lanes[0].items[0].x;
-      expect(wavy).not.toBeCloseTo(straight);
-    });
-
-    test('easing affects movement speed', () => {
-      const linear = initLane(
-        { y: 0, dir: 1, speed: 1, spawnRate: 100, length: 1, easing: 'linear' },
-        1,
-      );
-      linear.items.push({ x: 0, width: TILE, height: TILE });
-      const xLinear = updateCars([linear], { x: 0, y: 0 }, 0.25).lanes[0].items[0].x;
-      const eased = initLane(
-        { y: 0, dir: 1, speed: 1, spawnRate: 100, length: 1, easing: 'easeInOutSine' },
-        1,
-      );
-      eased.items.push({ x: 0, width: TILE, height: TILE });
-      const xEased = updateCars([eased], { x: 0, y: 0 }, 0.25).lanes[0].items[0].x;
-      expect(xEased).not.toBeCloseTo(xLinear);
-    });
-
-    test('bounding-box helper detects overlap', () => {
-      const a = { x: 0, y: 0, width: 10, height: 10 };
-      const b = { x: 5, y: 5, width: 10, height: 10 };
-      const c = { x: 20, y: 20, width: 5, height: 5 };
-      expect(rectsIntersect(a, b)).toBe(true);
-      expect(rectsIntersect(a, c)).toBe(false);
-    });
-  });
+});

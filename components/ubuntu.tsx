@@ -4,7 +4,6 @@ import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
-import { trackPageview } from '../lib/analytics';
 
 interface UbuntuProps {}
 
@@ -41,123 +40,77 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
   };
 
   getLocalData = (): void => {
-    if (typeof window !== 'undefined') {
-      try {
-        const bg_image_name = window.localStorage.getItem('bg-image');
-        if (bg_image_name !== null && bg_image_name !== undefined) {
-          this.setState({ bg_image_name });
-        }
+    const bg_image_name = localStorage.getItem('bg-image');
+    if (bg_image_name !== null && bg_image_name !== undefined) {
+      this.setState({ bg_image_name });
+    }
 
-        const booting_screen = window.localStorage.getItem('booting_screen');
-        if (booting_screen !== null && booting_screen !== undefined) {
-          this.setState({ booting_screen: false });
-        } else {
-          window.localStorage.setItem('booting_screen', 'false');
-          this.setTimeOutBootScreen();
-        }
+    const booting_screen = localStorage.getItem('booting_screen');
+    if (booting_screen !== null && booting_screen !== undefined) {
+      this.setState({ booting_screen: false });
+    } else {
+      localStorage.setItem('booting_screen', 'false');
+      this.setTimeOutBootScreen();
+    }
 
-        const shut_down = window.localStorage.getItem('shut-down');
-        if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
-        else {
-          const screen_locked = window.localStorage.getItem('screen-locked');
-          if (screen_locked !== null && screen_locked !== undefined) {
-            this.setState({ screen_locked: screen_locked === 'true' });
-          }
-        }
-      } catch (e) {
-        console.error('Error accessing localStorage', e);
+    const shut_down = localStorage.getItem('shut-down');
+    if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
+    else {
+      const screen_locked = localStorage.getItem('screen-locked');
+      if (screen_locked !== null && screen_locked !== undefined) {
+        this.setState({ screen_locked: screen_locked === 'true' });
       }
     }
   };
 
   lockScreen = (): void => {
-    trackPageview('/lock-screen', 'Lock Screen');
+    ReactGA.send({ hitType: 'pageview', page: '/lock-screen', title: 'Lock Screen' });
     ReactGA.event({
       category: `Screen Change`,
       action: `Set Screen to Locked`,
     });
 
-    if (typeof document !== 'undefined') {
-      document.getElementById('status-bar')?.blur();
-    }
+    document.getElementById('status-bar')?.blur();
     setTimeout(() => {
       this.setState({ screen_locked: true });
     }, 100);
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem('screen-locked', 'true');
-      } catch (e) {
-        console.error('Error accessing localStorage', e);
-      }
-    }
+    localStorage.setItem('screen-locked', 'true');
   };
 
   unLockScreen = (): void => {
-    trackPageview('/desktop', 'Custom Title');
+    ReactGA.send({ hitType: 'pageview', page: '/desktop', title: 'Custom Title' });
 
-    if (typeof window !== 'undefined') {
-      try {
-        window.removeEventListener('click', this.unLockScreen);
-        window.removeEventListener('keypress', this.unLockScreen);
-      } catch (e) {
-        console.error('Error removing event listeners', e);
-      }
-    }
+    window.removeEventListener('click', this.unLockScreen);
+    window.removeEventListener('keypress', this.unLockScreen);
 
     this.setState({ screen_locked: false });
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem('screen-locked', 'false');
-      } catch (e) {
-        console.error('Error accessing localStorage', e);
-      }
-    }
+    localStorage.setItem('screen-locked', 'false');
   };
 
   changeBackgroundImage = (img_name: string): void => {
     this.setState({ bg_image_name: img_name });
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem('bg-image', img_name);
-      } catch (e) {
-        console.error('Error accessing localStorage', e);
-      }
-    }
+    localStorage.setItem('bg-image', img_name);
   };
 
   shutDown = (): void => {
-    trackPageview('/switch-off', 'Custom Title');
+    ReactGA.send({ hitType: 'pageview', page: '/switch-off', title: 'Custom Title' });
 
     ReactGA.event({
       category: `Screen Change`,
       action: `Switched off the Ubuntu`,
     });
 
-    if (typeof document !== 'undefined') {
-      document.getElementById('status-bar')?.blur();
-    }
+    document.getElementById('status-bar')?.blur();
     this.setState({ shutDownScreen: true });
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem('shut-down', 'true');
-      } catch (e) {
-        console.error('Error accessing localStorage', e);
-      }
-    }
+    localStorage.setItem('shut-down', 'true');
   };
 
   turnOn = (): void => {
-    trackPageview('/desktop', 'Custom Title');
+    ReactGA.send({ hitType: 'pageview', page: '/desktop', title: 'Custom Title' });
 
     this.setState({ shutDownScreen: false, booting_screen: true });
     this.setTimeOutBootScreen();
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem('shut-down', 'false');
-      } catch (e) {
-        console.error('Error accessing localStorage', e);
-      }
-    }
+    localStorage.setItem('shut-down', 'false');
   };
 
   render(): React.ReactNode {

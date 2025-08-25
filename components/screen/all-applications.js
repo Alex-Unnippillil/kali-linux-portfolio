@@ -1,7 +1,5 @@
 import React from 'react';
-import Image from 'next/image';
 import UbuntuApp from '../base/ubuntu_app';
-import ResponsiveGrid from '../util-components/ResponsiveGrid';
 
 class AllApplications extends React.Component {
     constructor() {
@@ -20,17 +18,6 @@ class AllApplications extends React.Component {
             if (!combined.some((app) => app.id === game.id)) combined.push(game);
         });
         this.setState({ apps: combined, unfilteredApps: combined });
-        window.addEventListener('keydown', this.handleKeyDown);
-    }
-
-    componentWillUnmount() {
-        window.removeEventListener('keydown', this.handleKeyDown);
-    }
-
-    handleKeyDown = (e) => {
-        if (e.key === 'Escape' && typeof this.props.closeAllApps === 'function') {
-            this.props.closeAllApps();
-        }
     }
 
     handleChange = (e) => {
@@ -66,28 +53,16 @@ class AllApplications extends React.Component {
 
     render() {
         return (
-            <div className="fixed inset-0 z-overlay pointer-events-auto flex flex-col items-center overflow-y-auto bg-[var(--color-bg)] bg-opacity-95 all-apps-anim">
-                <button
-                    onClick={this.props.closeAllApps}
-                    className="absolute top-4 right-4 p-1 rounded hover:bg-white hover:bg-opacity-10 focus:outline-none"
-                    aria-label="Close all applications"
-                >
-                    <Image
-                        width={16}
-                        height={16}
-                        src="/themes/Yaru/window/window-close-symbolic.svg"
-                        alt="close"
-                    />
-                </button>
+            <div className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto bg-ub-grey bg-opacity-95 all-apps-anim">
                 <input
-                    id="all-apps-search"
-                    name="query"
                     className="mt-10 mb-8 w-2/3 md:w-1/3 px-4 py-2 rounded bg-black bg-opacity-20 text-white focus:outline-none"
                     placeholder="Search"
                     value={this.state.query}
                     onChange={this.handleChange}
                 />
-                <ResponsiveGrid>{this.renderApps()}</ResponsiveGrid>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-6 pb-10 place-items-center">
+                    {this.renderApps()}
+                </div>
             </div>
         );
     }

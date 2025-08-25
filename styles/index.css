@@ -1,13 +1,6 @@
-@import "./tokens.css";
 body{
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-        'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
-}
-
-pre,
-code {
-    font-family: 'Fira Code', 'Fira Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+    font-family: 'Ubuntu', sans-serif;
+    font-display: swap
 }
 
 /* Top NavBar styling */
@@ -15,13 +8,13 @@ code {
 .top-arrow-up {
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-bottom: 5px solid var(--color-border, #333333);
+    border-bottom: 5px solid #333333;
 }
 
 .arrow-custom {
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-bottom: 5px solid var(--color-surface, #fff);
+    border-bottom: 5px solid white;
 }
 
 .animateShow {
@@ -58,7 +51,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     -webkit-box-sizing: border-box;
     box-sizing: border-box;
     -webkit-appearance: none;
-    background-color: var(--color-surface, #fff);
+    background-color: #fff;
     pointer-events: none;
     border-radius: 50%;
     width: 12px;
@@ -70,28 +63,28 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 .arrow-custom-up {
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-bottom: 5px solid var(--color-surface, #fff);
+    border-bottom: 5px solid white;
     width: 0;
 }
 
 .arrow-custom-down {
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-top: 5px solid var(--color-surface, #fff);
+    border-top: 5px solid white;
     width: 0;
 }
 
 .arrow-custom-left {
     border-bottom: 5px solid transparent;
     border-top: 5px solid transparent;
-    border-right: 5px solid var(--color-surface, #fff);
+    border-right: 5px solid white;
     width: 0;
 }
 
 .arrow-custom-right {
     border-top: 5px solid transparent;
     border-bottom: 5px solid transparent;
-    border-left: 5px solid var(--color-surface, #fff);
+    border-left: 5px solid white;
     width: 0;
 }
 
@@ -272,24 +265,4 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 .reveal {
     animation: reveal 0.3s ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-        animation: none !important;
-        transition: none !important;
-    }
-}
-
-/* CRT effect overlay */
-.crt {
-    filter: contrast(1.2) brightness(1.1);
-}
-.crt::after {
-    content: '';
-    pointer-events: none;
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 2px);
-
 }

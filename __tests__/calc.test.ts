@@ -1,4 +1,4 @@
-import { evaluateExpression } from '@components/apps/calc';
+import { evaluateExpression } from '../components/apps/calc';
 
 describe('Calc output sanitization', () => {
   test('renders expressions and errors as plain text', () => {

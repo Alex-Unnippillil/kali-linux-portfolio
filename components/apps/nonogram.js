@@ -8,16 +8,6 @@ import {
   getPuzzleBySeed,
 } from './nonogramUtils';
 
-const gaEvent = (params) => {
-  if (
-    typeof window !== 'undefined' &&
-    ReactGA &&
-    typeof ReactGA.event === 'function'
-  ) {
-    ReactGA.event(params);
-  }
-};
-
 const parseClues = (text) =>
   text
     .trim()
@@ -43,9 +33,6 @@ const Nonogram = () => {
   const [showMistakes, setShowMistakes] = useState(true);
   const [cellSize, setCellSize] = useState(32);
   const [selected, setSelected] = useState({ i: 0, j: 0 });
-
-  const history = useRef([]);
-  const future = useRef([]);
 
   const pending = useRef([]);
   const raf = useRef(null);
@@ -92,19 +79,13 @@ const Nonogram = () => {
     evaluate(g);
     updateStorage(g, r, c);
     setStarted(true);
-    history.current = [];
-    future.current = [];
     startTime.current = Date.now();
     completed.current = false;
-    try {
-      gaEvent({
-        category: 'nonogram',
-        action: 'puzzle_start',
-        label: `${r.length}x${c.length}`,
-      });
-    } catch {
-      // ignore
-    }
+    ReactGA.event({
+      category: 'nonogram',
+      action: 'puzzle_start',
+      label: `${r.length}x${c.length}`,
+    });
   };
 
     const scheduleToggle = useCallback(
@@ -113,8 +94,6 @@ const Nonogram = () => {
         if (!raf.current) {
           raf.current = requestAnimationFrame(() => {
             setGrid((g) => {
-              history.current.push(g.map((row) => row.slice()));
-              future.current = [];
               let ng = g.map((row) => row.slice());
               pending.current.forEach(({ i, j, mode }) => {
                 if (mode === 'cross') ng[i][j] = ng[i][j] === -1 ? 0 : -1;
@@ -128,15 +107,11 @@ const Nonogram = () => {
               if (validateSolution(ng, rows, cols) && !completed.current) {
                 completed.current = true;
                 const time = Math.floor((Date.now() - startTime.current) / 1000);
-                try {
-                  gaEvent({
-                    category: 'nonogram',
-                    action: 'puzzle_complete',
-                    value: time,
-                  });
-                } catch {
-                  // ignore
-                }
+                ReactGA.event({
+                  category: 'nonogram',
+                  action: 'puzzle_complete',
+                  value: time,
+                });
               }
               return ng;
             });
@@ -146,28 +121,6 @@ const Nonogram = () => {
       },
       [rows, cols, evaluate, updateStorage]
     );
-
-  const undo = useCallback(() => {
-    setGrid((g) => {
-      if (!history.current.length) return g;
-      const prev = history.current.pop();
-      future.current.push(g);
-      evaluate(prev);
-      updateStorage(prev);
-      return prev;
-    });
-  }, [evaluate, updateStorage]);
-
-  const redo = useCallback(() => {
-    setGrid((g) => {
-      if (!future.current.length) return g;
-      history.current.push(g);
-      const next = future.current.pop();
-      evaluate(next);
-      updateStorage(next);
-      return next;
-    });
-  }, [evaluate, updateStorage]);
 
   const painting = useRef(false);
   const paintMode = useRef('fill');
@@ -190,26 +143,18 @@ const Nonogram = () => {
     }, []);
 
     const toggleMistakes = useCallback(() => {
-      try {
-        gaEvent({
-          category: 'nonogram',
-          action: 'error_toggle',
-          value: showMistakes ? 0 : 1,
-        });
-      } catch {
-        // ignore
-      }
+      ReactGA.event({
+        category: 'nonogram',
+        action: 'error_toggle',
+        value: showMistakes ? 0 : 1,
+      });
       setShowMistakes(!showMistakes);
     }, [showMistakes]);
 
     const handleHint = useCallback(() => {
       const h = findHint(rows, cols, grid);
       if (h) {
-        try {
-          gaEvent({ category: 'nonogram', action: 'hint' });
-        } catch {
-          // ignore
-        }
+        ReactGA.event({ category: 'nonogram', action: 'hint' });
         scheduleToggle(h.i, h.j, 'fill');
       } else {
         alert('No hints available');
@@ -264,30 +209,13 @@ const Nonogram = () => {
           case 'e':
             toggleMistakes();
             break;
-          case 'z':
-            if (e.ctrlKey) undo();
-            break;
-          case 'y':
-            if (e.ctrlKey) redo();
-            break;
           default:
             break;
         }
       };
       window.addEventListener('keydown', handler);
       return () => window.removeEventListener('keydown', handler);
-    }, [
-      started,
-      rows,
-      cols,
-      selected,
-      pencil,
-      scheduleToggle,
-      handleHint,
-      toggleMistakes,
-      undo,
-      redo,
-    ]);
+    }, [started, rows, cols, selected, pencil, scheduleToggle, handleHint, toggleMistakes]);
 
     const handleTouchStart = (i, j) => {
       touchCross.current = false;
@@ -314,8 +242,6 @@ const Nonogram = () => {
             setGrid(data.grid);
             evaluate(data.grid);
             setStarted(true);
-            history.current = [];
-            future.current = [];
           }
         } catch (e) {
           // ignore
@@ -329,7 +255,7 @@ const Nonogram = () => {
 
   if (!started)
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
         <div className="flex mb-4 space-x-4">
           <textarea
             className="bg-gray-700 p-2"
@@ -396,7 +322,7 @@ const Nonogram = () => {
     );
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4 select-none">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
       <div className="flex">
         <div className="flex flex-col mr-2 text-right">
           {rows.map((clue, i) => (
@@ -430,26 +356,12 @@ const Nonogram = () => {
           </div>
           <div
             className="grid"
-            role="grid"
-            tabIndex={0}
-            aria-label="nonogram grid"
             style={{ gridTemplateColumns: `repeat(${cols.length}, ${cellSize}px)` }}
           >
             {grid.map((row, i) =>
               row.map((cell, j) => (
                 <div
                   key={`${i}-${j}`}
-                  role="gridcell"
-                  aria-label={
-                    cell === 1
-                      ? 'filled'
-                      : cell === -1
-                      ? 'marked'
-                      : cell === 2
-                      ? 'note'
-                      : 'empty'
-                  }
-                  aria-selected={selected.i === i && selected.j === j}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     const mode =
@@ -488,20 +400,6 @@ const Nonogram = () => {
         </div>
       </div>
       <div className="mt-4 space-x-2 flex items-center">
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={undo}
-          aria-label="Undo"
-        >
-          Undo
-        </button>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={redo}
-          aria-label="Redo"
-        >
-          Redo
-        </button>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={validate}

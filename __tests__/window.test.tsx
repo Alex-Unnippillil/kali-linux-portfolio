@@ -1,14 +1,13 @@
-import React from 'react';
+import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { act } from 'react-dom/test-utils';
-
-
-import { render, screen, fireEvent, act } from '@testing-library/react';
-
-import Window from '@components/base/window';
+import Window from '../components/base/window';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
-jest.mock('@components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
+jest.mock('react-draggable', () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
 describe('Window lifecycle', () => {
   it('invokes callbacks on close', () => {
@@ -29,7 +28,7 @@ describe('Window lifecycle', () => {
       />
     );
 
-    const closeButton = screen.getByRole('button', { name: /close window/i });
+    const closeButton = screen.getByRole('button', { name: /window close/i });
     fireEvent.click(closeButton);
 
     expect(hideSideBar).toHaveBeenCalledWith('test-window', false);

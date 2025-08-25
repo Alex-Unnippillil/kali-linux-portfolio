@@ -1,4 +1,4 @@
-import { advanceCheckpoints, CHECKPOINTS } from '@components/apps/car-racer';
+import { advanceCheckpoints, CHECKPOINTS } from '../components/apps/car-racer';
 
 jest.mock('react-ga4', () => ({ event: jest.fn() }));
 
