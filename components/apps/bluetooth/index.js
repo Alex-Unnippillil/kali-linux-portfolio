@@ -3,13 +3,20 @@ import React, { useState } from 'react';
 const BluetoothApp = () => {
   const [devices, setDevices] = useState([]);
   const [error, setError] = useState('');
+  const [demo, setDemo] = useState(false);
 
   const scan = async () => {
     setError('');
     if (!navigator.bluetooth) {
-      setError('Web Bluetooth API is not supported in this browser.');
+      setDemo(true);
+      setError('Web Bluetooth API is not supported in this browser. Showing demo devices.');
+      setDevices([
+        { id: 'demo-1', name: 'Demo Device 1' },
+        { id: 'demo-2', name: 'Demo Device 2' },
+      ]);
       return;
     }
+    setDemo(false);
     try {
       const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
@@ -60,7 +67,9 @@ const BluetoothApp = () => {
             className="mb-2 flex items-center justify-between"
           >
             <span>{device.name || 'Unnamed device'}</span>
-            {device.gatt && device.gatt.connected ? (
+            {demo ? (
+              <span className="text-gray-400">Read-only</span>
+            ) : device.gatt && device.gatt.connected ? (
               <button
                 onClick={() => disconnect(device)}
                 className="px-2 py-1 bg-red-600 rounded"

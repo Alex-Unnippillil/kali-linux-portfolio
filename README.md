@@ -69,6 +69,15 @@ To introduce a new game:
 
 The new game will then appear alongside the other games on the desktop.
 
+## Browser Compatibility
+
+Some applications rely on modern or experimental Web APIs such as Web
+Bluetooth or camera access. These features are not available in every
+browser or on all platforms. Demos require an explicit user gesture
+(like clicking a **Scan** button) before attempting to access hardware.
+When a feature is unsupported the interface falls back to a read-only
+mock so the experience remains visible without granting device access.
+
 ## Privacy
 
 The contact application records only non-PII metadata in Google Analytics.
