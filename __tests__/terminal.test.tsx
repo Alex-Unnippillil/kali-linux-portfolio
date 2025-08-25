@@ -1,5 +1,5 @@
-import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react';
+import React, { createRef, act } from 'react';
+import { render, screen } from '@testing-library/react';
 import Terminal from '../components/apps/terminal';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
@@ -9,20 +9,20 @@ describe('Terminal component', () => {
   const openApp = jest.fn();
 
   it('runs pwd command successfully', () => {
-    render(<Terminal addFolder={addFolder} openApp={openApp} />);
-    const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'pwd' } });
-    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
-    expect(screen.getByText('/home/alex')).toBeInTheDocument();
+    const ref = createRef();
+    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
+    act(() => {
+      ref.current.runCommand('pwd');
+    });
+    expect(ref.current.getContent()).toContain('/home/alex');
   });
 
   it('handles invalid cd command', () => {
-    render(<Terminal addFolder={addFolder} openApp={openApp} />);
-    const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'cd nowhere' } });
-    fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
-    expect(
-      screen.getByText("bash: cd: nowhere: No such file or directory")
-    ).toBeInTheDocument();
+    const ref = createRef();
+    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
+    act(() => {
+      ref.current.runCommand('cd nowhere');
+    });
+    expect(ref.current.getContent()).toContain("bash: cd: nowhere: No such file or directory");
   });
 });
