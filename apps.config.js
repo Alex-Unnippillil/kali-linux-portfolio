@@ -89,6 +89,8 @@ const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const VolatilityApp = createDynamicApp('volatility', 'Volatility');
+
 const KismetApp = createDynamicApp('kismet', 'Kismet');
 
 const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
@@ -149,6 +151,8 @@ const displayMetasploit = createDisplay(MetasploitApp);
 const displayDsniff = createDisplay(DsniffApp);
 const displayGomoku = createDisplay(GomokuApp);
 const displayPinball = createDisplay(PinballApp);
+const displayVolatility = createDisplay(VolatilityApp);
+
 const displayMsfPost = createDisplay(MsfPostApp);
 const displayMimikatz = createDisplay(MimikatzApp);
 const displayEttercap = createDisplay(EttercapApp);
@@ -774,6 +778,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'volatility',
+    title: 'Volatility',
+    icon: './themes/Yaru/apps/volatility.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayVolatility,
   },
   {
     id: 'hashcat',
