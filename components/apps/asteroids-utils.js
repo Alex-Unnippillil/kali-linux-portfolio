@@ -65,3 +65,21 @@ export function createGA(handler) {
     level_up: () => emit('level_up'),
   };
 }
+
+export const POWER_UPS = {
+  SHIELD: 'shield',
+  RAPID_FIRE: 'rapid-fire',
+};
+
+export function spawnPowerUp(list, x, y) {
+  const type = Math.random() < 0.5 ? POWER_UPS.SHIELD : POWER_UPS.RAPID_FIRE;
+  list.push({ type, x, y, r: 12, life: 600 });
+}
+
+export function updatePowerUps(list) {
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    const p = list[i];
+    p.life -= 1;
+    if (p.life <= 0) list.splice(i, 1);
+  }
+}

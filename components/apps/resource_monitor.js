@@ -11,7 +11,7 @@ const Gauge = ({ value, label }) => {
           cx="60"
           cy="60"
           r={radius}
-          stroke="#555"
+          className="stroke-ub-dark-grey"
           strokeWidth="10"
           fill="none"
         />
@@ -19,7 +19,7 @@ const Gauge = ({ value, label }) => {
           cx="60"
           cy="60"
           r={radius}
-          stroke="#4ade80"
+          className="stroke-ubt-green"
           strokeWidth="10"
           fill="none"
           strokeDasharray={circumference}
@@ -30,8 +30,7 @@ const Gauge = ({ value, label }) => {
           x="60"
           y="65"
           textAnchor="middle"
-          fill="#fff"
-          fontSize="20"
+          className="fill-white text-[20px]"
         >
           {value}%
         </text>
@@ -79,7 +78,7 @@ const ResourceMonitor = () => {
   }, []);
 
   return (
-    <div className="h-full w-full flex justify-evenly items-center bg-ub-cool-grey text-white">
+    <div className="h-full w-full flex justify-evenly items-center bg-ub-cool-grey text-white font-ubuntu">
       <Gauge value={batteryLevel} label="Battery" />
       {cpuUsage !== null && <Gauge value={cpuUsage} label="CPU" />}
       <Gauge value={memoryUsage} label="Memory" />

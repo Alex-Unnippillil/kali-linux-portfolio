@@ -5,6 +5,7 @@ import {
   computeLegalMoves,
   countPieces,
   applyMove,
+  bestMove,
 } from './reversiLogic';
 
 const Reversi = () => {
@@ -16,10 +17,56 @@ const Reversi = () => {
   const [aiDepth, setAiDepth] = useState(2);
   const [mustPass, setMustPass] = useState(false);
   const [gameOver, setGameOver] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [future, setFuture] = useState([]);
+  const [showSuggestion, setShowSuggestion] = useState(false);
+  const [suggestion, setSuggestion] = useState(null);
     const workerRef = useRef();
     const handleMoveRef = useRef((r, c) => {});
 
   const legalMoves = useMemo(() => computeLegalMoves(board, player), [board, player]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = window.localStorage.getItem('reversiState');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.board) setBoard(data.board);
+        if (data.player) setPlayer(data.player);
+        if (data.history) setHistory(data.history);
+        if (data.future) setFuture(data.future);
+        if (data.aiDepth) setAiDepth(data.aiDepth);
+        if (data.mustPass) setMustPass(data.mustPass);
+        if (data.gameOver) setGameOver(data.gameOver);
+      } catch (e) {
+        // ignore parse errors
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const state = {
+      board,
+      player,
+      history,
+      future,
+      aiDepth,
+      mustPass,
+      gameOver,
+    };
+    window.localStorage.setItem('reversiState', JSON.stringify(state));
+  }, [board, player, history, future, aiDepth, mustPass, gameOver]);
+
+  useEffect(() => {
+    if (!showSuggestion) {
+      setSuggestion(null);
+      return;
+    }
+    const best = bestMove(board, player, 2);
+    setSuggestion(best);
+  }, [showSuggestion, board, player]);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('./reversi.worker.js', import.meta.url));
@@ -72,10 +119,12 @@ const Reversi = () => {
     }
   }, [player, legalMoves, board, mustPass, aiDepth]);
 
-    const handleMove = (r, c) => {
+  const handleMove = (r, c) => {
     const key = `${r}-${c}`;
     const toFlip = legalMoves[key];
     if (!toFlip || gameOver) return;
+    setHistory((h) => [...h, { board: board.map((row) => row.slice()), player }]);
+    setFuture([]);
     const opponent = player === 'B' ? 'W' : 'B';
     const flipInfo = toFlip.map(([fr, fc]) => ({ key: `${fr}-${fc}`, from: opponent }));
     setFlipping(flipInfo);
@@ -83,9 +132,9 @@ const Reversi = () => {
     ReactGA.event({ category: 'reversi', action: 'move', label: `${player}:${r}-${c}` });
     setTimeout(() => setFlipping([]), 400);
     setPlayer(opponent);
-    };
+  };
 
-    handleMoveRef.current = handleMove;
+  handleMoveRef.current = handleMove;
 
   const handlePreview = (r, c) => {
     const key = `${r}-${c}`;
@@ -104,6 +153,10 @@ const Reversi = () => {
     setPreview(null);
     setMustPass(false);
     setGameOver(null);
+    setHistory([]);
+    setFuture([]);
+    setSuggestion(null);
+    setShowSuggestion(false);
   };
 
   const { black, white } = useMemo(() => countPieces(board), [board]);
@@ -121,6 +174,32 @@ const Reversi = () => {
     setPlayer(next);
     setMustPass(false);
   };
+
+  const undo = () => {
+    if (!history.length) return;
+    const last = history[history.length - 1];
+    setHistory((h) => h.slice(0, -1));
+    setFuture((f) => [{ board: board.map((row) => row.slice()), player }, ...f]);
+    setBoard(last.board);
+    setPlayer(last.player);
+    setPreview(null);
+    setFlipping([]);
+    setGameOver(null);
+  };
+
+  const redo = () => {
+    if (!future.length) return;
+    const next = future[0];
+    setFuture((f) => f.slice(1));
+    setHistory((h) => [...h, { board: board.map((row) => row.slice()), player }]);
+    setBoard(next.board);
+    setPlayer(next.player);
+    setPreview(null);
+    setFlipping([]);
+    setGameOver(null);
+  };
+
+  const toggleSuggestion = () => setShowSuggestion((s) => !s);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none relative">
@@ -150,6 +229,8 @@ const Reversi = () => {
             const isPreview = preview && preview.move[0] === r && preview.move[1] === c;
             const willFlip =
               preview && preview.flips.some(([fr, fc]) => fr === r && fc === c);
+            const isSuggestion =
+              suggestion && suggestion[0] === r && suggestion[1] === c;
             return (
               <div
                 key={key}
@@ -157,9 +238,12 @@ const Reversi = () => {
                 onMouseEnter={() => handlePreview(r, c)}
                 onMouseLeave={clearPreview}
                 className={`relative w-8 h-8 flex items-center justify-center bg-green-600 ${
-                  move ? 'cursor-pointer hover:bg-green-500' : ''
+                  move ? 'cursor-pointer hover:bg-green-500 hover:ring-2 hover:ring-yellow-300' : ''
                 }`}
               >
+                {isSuggestion && (
+                  <div className="absolute inset-0 pointer-events-none ring-2 ring-blue-400 rounded-sm" />
+                )}
                 {cell && (
                   <div className={`piece ${flipObj ? 'flipping' : ''}`}>
                     <div
@@ -194,20 +278,42 @@ const Reversi = () => {
           }),
         )}
       </div>
-      {mustPass && player === 'B' && (
+      <div className="mt-2 flex space-x-2">
+        {mustPass && player === 'B' && (
+          <button
+            onClick={passTurn}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          >
+            Pass
+          </button>
+        )}
         <button
-          onClick={passTurn}
-          className="mt-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={undo}
+          disabled={!history.length}
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
         >
-          Pass
+          Undo
         </button>
-      )}
-      <button
-        onClick={reset}
-        className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-      >
-        Reset
-      </button>
+        <button
+          onClick={redo}
+          disabled={!future.length}
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
+        >
+          Redo
+        </button>
+        <button
+          onClick={toggleSuggestion}
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+        >
+          {showSuggestion ? 'Hide Hint' : 'Show Hint'}
+        </button>
+        <button
+          onClick={reset}
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+        >
+          Reset
+        </button>
+      </div>
       {gameOver && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-ub-cool-grey p-4 rounded text-center">
