@@ -7,6 +7,10 @@ import {
   moveWasteToTableau,
   moveToFoundation,
   autoMove,
+  autoComplete,
+  onlyStockMovesRemain,
+  canPlaceOnTableau,
+  suits,
   valueToString,
   GameState,
   Card,
@@ -31,34 +35,72 @@ const Solitaire = () => {
   const [won, setWon] = useState(false);
   const [time, setTime] = useState(0);
   const timer = useRef<NodeJS.Timeout | null>(null);
+  const [hint, setHint] = useState<{ source: 'tableau' | 'waste'; pile: number; index: number } | null>(null);
+  const hintTimer = useRef<NodeJS.Timeout | null>(null);
+  const [wins, setWins] = useState(0);
 
-    const start = useCallback(
-      (mode: 1 | 3 = drawMode) => {
-        setGame(initializeGame(mode));
-        setWon(false);
-        setTime(0);
-      },
-      [drawMode]
-    );
-
-    useEffect(() => {
-      start(drawMode);
-    }, [drawMode, start]);
+  const start = useCallback(
+    (mode: 1 | 3 = drawMode) => {
+      setGame(initializeGame(mode));
+      setDrawMode(mode);
+      setWon(false);
+      setTime(0);
+      setHint(null);
+    },
+    [drawMode]
+  );
 
   useEffect(() => {
-    if (won) {
-      if (timer.current) clearInterval(timer.current);
-      const best = JSON.parse(localStorage.getItem('solitaireBest') || '{}');
-      if (!best.score || game.score > best.score) {
-        localStorage.setItem('solitaireBest', JSON.stringify({ score: game.score, time }));
+    const stats = JSON.parse(
+      typeof window !== 'undefined'
+        ? localStorage.getItem('solitaireStats') || '{}'
+        : '{}',
+    );
+    if (stats.wins) setWins(stats.wins);
+    const saved =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('solitaireState')
+        : null;
+    if (saved) {
+      try {
+        const { game: g, drawMode: dm, time: t } = JSON.parse(saved);
+        setGame(g);
+        setDrawMode(dm);
+        setTime(t);
+        if (g.foundations.every((p: Card[]) => p.length === 13)) setWon(true);
+      } catch {
+        start(drawMode);
       }
-      return;
+    } else {
+      start(drawMode);
     }
-    timer.current = setInterval(() => setTime((t) => t + 1), 1000);
+  }, []);
+
+  useEffect(() => {
+    if (won) return;
+    timer.current = setInterval(() => {
+      setTime((t) => {
+        const nt = t + 1;
+        if (nt % 10 === 0) {
+          setGame((g) => ({ ...g, score: g.score - 2 }));
+        }
+        return nt;
+      });
+    }, 1000);
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-    }, [won, game, time]);
+  }, [won]);
+
+  useEffect(() => {
+    localStorage.setItem('solitaireState', JSON.stringify({ game, drawMode, time }));
+  }, [game, drawMode, time]);
+
+  useEffect(() => {
+    if (!won && onlyStockMovesRemain(game)) {
+      setGame((g) => autoComplete(g));
+    }
+  }, [game, won]);
 
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {
@@ -67,12 +109,30 @@ const Solitaire = () => {
     }
   }, [game]);
 
-  const draw = () =>
+  useEffect(() => {
+    if (!won) return;
+    if (timer.current) clearInterval(timer.current);
+    const best = JSON.parse(localStorage.getItem('solitaireBest') || '{}');
+    if (!best.score || game.score > best.score) {
+      localStorage.setItem(
+        'solitaireBest',
+        JSON.stringify({ score: game.score, time }),
+      );
+    }
+    const stats = JSON.parse(localStorage.getItem('solitaireStats') || '{}');
+    const newStats = { wins: (stats.wins || 0) + 1 };
+    localStorage.setItem('solitaireStats', JSON.stringify(newStats));
+    setWins(newStats.wins);
+  }, [won, game, time]);
+
+  const draw = () => {
+    setHint(null);
     setGame((g) => {
       const n = drawFromStock(g);
       if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
       return n;
     });
+  };
 
   const handleDragStart = (source: 'tableau' | 'waste', pile: number, index: number) => {
     if (source === 'tableau') {
@@ -88,6 +148,7 @@ const Solitaire = () => {
 
   const dropToTableau = (pileIndex: number) => {
     if (!drag) return;
+    setHint(null);
     if (drag.source === 'tableau') {
       setGame((g) => {
         const n = moveTableauToTableau(g, drag.pile, drag.index, pileIndex);
@@ -106,6 +167,7 @@ const Solitaire = () => {
 
   const dropToFoundation = (pileIndex: number) => {
     if (!drag) return;
+    setHint(null);
     if (drag.source === 'tableau') {
       setGame((g) => {
         const n = moveToFoundation(g, 'tableau', drag.pile);
@@ -123,6 +185,7 @@ const Solitaire = () => {
   };
 
   const handleDoubleClick = (source: 'tableau' | 'waste', pile: number) => {
+    setHint(null);
     setGame((g) => {
       const n = autoMove(g, source, source === 'tableau' ? pile : null);
       if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
@@ -130,7 +193,54 @@ const Solitaire = () => {
     });
   };
 
-  const best = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('solitaireBest') || '{}' : '{}');
+  const showHint = () => {
+    const find = (state: GameState) => {
+      if (state.waste.length) {
+        const card = state.waste[state.waste.length - 1];
+        const dest = state.foundations[suits.indexOf(card.suit)];
+        if (
+          (dest.length === 0 && card.value === 1) ||
+          (dest.length && dest[dest.length - 1].value + 1 === card.value) ||
+          state.tableau.some((p) => canPlaceOnTableau(card, p))
+        ) {
+          return { source: 'waste', pile: -1, index: state.waste.length - 1 };
+        }
+      }
+      for (let i = 0; i < state.tableau.length; i += 1) {
+        const pile = state.tableau[i];
+        if (!pile.length) continue;
+        const top = pile[pile.length - 1];
+        if (top.faceUp) {
+          const dest = state.foundations[suits.indexOf(top.suit)];
+          if (
+            (dest.length === 0 && top.value === 1) ||
+            (dest.length && dest[dest.length - 1].value + 1 === top.value)
+          ) {
+            return { source: 'tableau', pile: i, index: pile.length - 1 };
+          }
+        }
+        for (let j = 0; j < pile.length; j += 1) {
+          const card = pile[j];
+          if (!card.faceUp) continue;
+          for (let k = 0; k < state.tableau.length; k += 1) {
+            if (k !== i && canPlaceOnTableau(card, state.tableau[k])) {
+              return { source: 'tableau', pile: i, index: j };
+            }
+          }
+        }
+      }
+      return null;
+    };
+    const h = find(game);
+    setHint(h);
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHint(null), 3000);
+    ReactGA.event({ category: 'Solitaire', action: 'hint' });
+  };
+
+  const best = JSON.parse(
+    typeof window !== 'undefined' ? localStorage.getItem('solitaireBest') || '{}' : '{}',
+  );
 
   return (
     <div className="h-full w-full bg-green-700 text-white select-none p-2">
@@ -143,13 +253,14 @@ const Solitaire = () => {
         <div>Score: {game.score}</div>
         <div>Time: {time}s</div>
         <div>Redeals: {game.redeals}</div>
+        <div>Wins: {wins}</div>
         <div>Best: {best.score ? `${best.score} (${best.time}s)` : 'N/A'}</div>
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={() => {
             const mode = drawMode === 1 ? 3 : 1;
             ReactGA.event({ category: 'Solitaire', action: 'variant_select', label: mode === 1 ? 'draw1' : 'draw3' });
-            setDrawMode(mode);
+            start(mode);
           }}
         >
           Draw {drawMode === 1 ? '1' : '3'}
@@ -165,6 +276,9 @@ const Solitaire = () => {
               draggable
               onDoubleClick={() => handleDoubleClick('waste', 0)}
               onDragStart={() => handleDragStart('waste', -1, game.waste.length - 1)}
+              className={
+                hint && hint.source === 'waste' ? 'ring-4 ring-yellow-400' : ''
+              }
             >
               {renderCard(game.waste[game.waste.length - 1])}
             </div>
@@ -193,27 +307,39 @@ const Solitaire = () => {
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToTableau(i)}
           >
-            {pile.map((card, idx) => (
-              <div
-                key={idx}
-                className="absolute transition-all duration-300"
-                style={{ top: idx * 24 }}
-                draggable={card.faceUp}
-                onDoubleClick={() => handleDoubleClick('tableau', i)}
-                onDragStart={() => handleDragStart('tableau', i, idx)}
-              >
-                {card.faceUp ? renderCard(card) : renderFaceDown()}
-              </div>
-            ))}
+            {pile.map((card, idx) => {
+              const isHint =
+                hint && hint.source === 'tableau' && hint.pile === i && hint.index === idx;
+              return (
+                <div
+                  key={idx}
+                  className={`absolute transition-all duration-300 ${
+                    isHint ? 'ring-4 ring-yellow-400' : ''
+                  }`}
+                  style={{ top: idx * 24 }}
+                  draggable={card.faceUp}
+                  onDoubleClick={() => handleDoubleClick('tableau', i)}
+                  onDragStart={() => handleDragStart('tableau', i, idx)}
+                >
+                  {card.faceUp ? renderCard(card) : renderFaceDown()}
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>
-      <div className="mt-4">
+      <div className="mt-4 space-x-2">
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={() => start()}
         >
           Restart
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={showHint}
+        >
+          Hint
         </button>
       </div>
     </div>
