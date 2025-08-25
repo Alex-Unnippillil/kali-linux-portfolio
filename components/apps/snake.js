@@ -49,6 +49,9 @@ const Snake = () => {
   // fixed time step loop
   const lastTime = useRef(0);
   const acc = useRef(0);
+  const animationFrameRef = useRef();
+  const replayFrameRef = useRef();
+  const replayLastTimeRef = useRef(0);
 
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('snakeHighScore') : null;
@@ -152,40 +155,48 @@ const Snake = () => {
         }
       }
       lastTime.current = time;
-      requestAnimationFrame(loop);
+      animationFrameRef.current = requestAnimationFrame(loop);
     };
-    requestAnimationFrame(loop);
+    animationFrameRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animationFrameRef.current);
   }, [paused, gameOver, step, speed, playingReplay]);
 
   // replay playback
   const playReplay = () => {
     if (!replayData.length) return;
+    cancelAnimationFrame(replayFrameRef.current);
     setPlayingReplay(true);
     setSnake([{ x: 10, y: 10 }]);
     let i = 0;
-    const run = () => {
+    replayLastTimeRef.current = 0;
+    const run = (time) => {
+      if (!replayLastTimeRef.current) replayLastTimeRef.current = time;
       if (i >= replayData.length) {
         setPlayingReplay(false);
         return;
       }
-      setSnake((prev) => {
-        const dir = replayData[i];
-        i += 1;
-        let head = { x: prev[0].x + dir.x, y: prev[0].y + dir.y };
-        if (wrap) {
-          head.x = (head.x + gridSize) % gridSize;
-          head.y = (head.y + gridSize) % gridSize;
-        }
-        const ns = [head, ...prev];
-        ns.pop();
-        return ns;
-      });
-      setTimeout(run, speed);
+      if (time - replayLastTimeRef.current >= speed) {
+        setSnake((prev) => {
+          const dir = replayData[i];
+          i += 1;
+          let head = { x: prev[0].x + dir.x, y: prev[0].y + dir.y };
+          if (wrap) {
+            head.x = (head.x + gridSize) % gridSize;
+            head.y = (head.y + gridSize) % gridSize;
+          }
+          const ns = [head, ...prev];
+          ns.pop();
+          return ns;
+        });
+        replayLastTimeRef.current = time;
+      }
+      replayFrameRef.current = requestAnimationFrame(run);
     };
-    run();
+    replayFrameRef.current = requestAnimationFrame(run);
   };
 
   const reset = () => {
+    cancelAnimationFrame(replayFrameRef.current);
     setSnake([{ x: 10, y: 10 }]);
     setDirection({ x: 0, y: -1 });
     dirQueue.current = [];
@@ -198,6 +209,8 @@ const Snake = () => {
     replayRef.current = [];
     setReplayData([]);
   };
+
+  useEffect(() => () => cancelAnimationFrame(replayFrameRef.current), []);
 
   useEffect(() => {
     if (gameOver && score > highScore) {
