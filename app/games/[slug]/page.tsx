@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { use } from 'react';
 import dynamicImport from 'next/dynamic';
 import messages from '../../../messages/en.json';
 
@@ -12,8 +12,8 @@ const Reversi = dynamicImport(() => import('../../../apps/reversi'), {
   ssr: false,
 });
 
-export default function GamePage({ params }: { params: { slug: string } }) {
-  const { slug } = params;
+export default function GamePage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
   const heading = messages.gamePage.title.replace('{slug}', slug);
   if (slug === 'reversi') {
     return (

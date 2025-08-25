@@ -1,7 +1,6 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextPlugin from "@next/eslint-plugin-next";
 import security from "eslint-plugin-security";
-import node from "eslint-plugin-node";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import js from "@eslint/js";
@@ -15,8 +14,15 @@ const compat = new FlatCompat({
     allConfig: js.configs.all
 });
 
+const nextCoreWebVitals = compat
+    .extends("next/core-web-vitals")
+    .map((config) => ({
+        ...config,
+        plugins: { "@next/next": nextPlugin, ...(config.plugins ?? {}) },
+    }));
+
 export default defineConfig([
-    nextPlugin.configs["core-web-vitals"],
+    ...nextCoreWebVitals,
     globalIgnores(["components/apps/breakout.js"]),
     {
         extends: compat.extends("plugin:security/recommended-legacy", "prettier"),
@@ -35,20 +41,15 @@ export default defineConfig([
             }],
         },
     }, {
-        files: ["**/*.config.js", "scripts/**/*.js"],
-        extends: compat.extends("plugin:node/recommended"),
-
-        plugins: {
-            node,
-        },
+        files: ["**/apps.config.js"],
 
         rules: {
-            "node/no-deprecated-api": "off",
+            "no-restricted-imports": "off",
         },
     }, {
-    files: ["**/apps.config.js"],
-
-    rules: {
-        "no-restricted-imports": "off",
-    },
-}]);
+        files: ["**/__tests__/**"],
+        rules: {
+            "no-restricted-imports": "off",
+            "react/display-name": "off",
+        },
+    }]);
