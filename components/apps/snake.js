@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import useGameControls from './useGameControls';
 
 // size of the square play field
 const gridSize = 20;
@@ -36,10 +37,16 @@ const Snake = () => {
   // game state
   const [paused, setPaused] = useState(false);
   const [wrap, setWrap] = useState(false);
+  const [speedSetting, setSpeedSetting] = useState('normal');
+  const speedLevels = { slow: 200, normal: 150, fast: 100 };
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
-  const [speed, setSpeed] = useState(200); // ms per step
+  const [speed, setSpeed] = useState(speedLevels[speedSetting]); // ms per step
+
+  // animation state
+  const [growCell, setGrowCell] = useState(null);
+  const [foodAnim, setFoodAnim] = useState(false);
 
   // replay handling
   const replayRef = useRef([]); // record of directions
@@ -51,9 +58,29 @@ const Snake = () => {
   const acc = useRef(0);
 
   useEffect(() => {
-    const stored = typeof window !== 'undefined' ? localStorage.getItem('snakeHighScore') : null;
-    if (stored) setHighScore(parseInt(stored, 10));
+    if (typeof window === 'undefined') return;
+    const storedMode = localStorage.getItem('snakeMode');
+    if (storedMode) {
+      try {
+        const { wrap: w = false, speed: s = 'normal' } = JSON.parse(storedMode);
+        setWrap(w);
+        setSpeedSetting(s);
+        setSpeed(speedLevels[s]);
+        const hs = localStorage.getItem(`snakeHighScore_${w ? 'wrap' : 'nowrap'}_${s}`);
+        if (hs) setHighScore(parseInt(hs, 10));
+      } catch {
+        // ignore parse errors
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('snakeMode', JSON.stringify({ wrap, speed: speedSetting }));
+    const hs = localStorage.getItem(`snakeHighScore_${wrap ? 'wrap' : 'nowrap'}_${speedSetting}`);
+    setHighScore(hs ? parseInt(hs, 10) : 0);
+    setSpeed(speedLevels[speedSetting]);
+  }, [wrap, speedSetting]);
 
   const enqueueDir = useCallback((dir) => {
     const last = dirQueue.current.length ? dirQueue.current[dirQueue.current.length - 1] : direction;
@@ -61,45 +88,16 @@ const Snake = () => {
     dirQueue.current.push(dir);
   }, [direction]);
 
-  // keyboard controls
+  useGameControls(enqueueDir);
+
+  // pause key
   useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === 'ArrowUp') enqueueDir({ x: 0, y: -1 });
-      if (e.key === 'ArrowDown') enqueueDir({ x: 0, y: 1 });
-      if (e.key === 'ArrowLeft') enqueueDir({ x: -1, y: 0 });
-      if (e.key === 'ArrowRight') enqueueDir({ x: 1, y: 0 });
+    const handle = (e) => {
       if (e.key === ' ') setPaused((p) => !p);
     };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [enqueueDir]);
-
-  // swipe controls
-  useEffect(() => {
-    let startX = 0;
-    let startY = 0;
-    const start = (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    };
-    const end = (e) => {
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = e.changedTouches[0].clientY - startY;
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 30) enqueueDir({ x: 1, y: 0 });
-        else if (dx < -30) enqueueDir({ x: -1, y: 0 });
-      } else {
-        if (dy > 30) enqueueDir({ x: 0, y: 1 });
-        else if (dy < -30) enqueueDir({ x: 0, y: -1 });
-      }
-    };
-    window.addEventListener('touchstart', start);
-    window.addEventListener('touchend', end);
-    return () => {
-      window.removeEventListener('touchstart', start);
-      window.removeEventListener('touchend', end);
-    };
-  }, [enqueueDir]);
+    window.addEventListener('keydown', handle);
+    return () => window.removeEventListener('keydown', handle);
+  }, []);
 
   // movement and game logic
   const step = useCallback(() => {
@@ -128,9 +126,11 @@ const Snake = () => {
       const newSnake = [head, ...prev];
       if (head.x === food.x && head.y === food.y) {
         const occupied = [...newSnake, ...obstacles];
-        setFood(randomCell(occupied));
+        const newFood = randomCell(occupied);
+        setFood(newFood);
         setScore((s) => s + 1);
         setSpeed((s) => Math.max(50, s - 10));
+        setGrowCell(head);
       } else {
         newSnake.pop();
       }
@@ -192,21 +192,39 @@ const Snake = () => {
     setFood(randomCell([{ x: 10, y: 10 }]));
     setObstacles(createObstacles(5, [{ x: 10, y: 10 }]));
     setScore(0);
-    setSpeed(200);
+    setSpeed(speedLevels[speedSetting]);
     setGameOver(false);
     setPaused(false);
     replayRef.current = [];
     setReplayData([]);
+    setGrowCell(null);
+    setFoodAnim(false);
   };
+
+  useEffect(() => {
+    if (growCell) {
+      const t = setTimeout(() => setGrowCell(null), 200);
+      return () => clearTimeout(t);
+    }
+  }, [growCell]);
+
+  useEffect(() => {
+    setFoodAnim(true);
+    const t = setTimeout(() => setFoodAnim(false), 200);
+    return () => clearTimeout(t);
+  }, [food]);
 
   useEffect(() => {
     if (gameOver && score > highScore) {
       setHighScore(score);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('snakeHighScore', score.toString());
+        localStorage.setItem(
+          `snakeHighScore_${wrap ? 'wrap' : 'nowrap'}_${speedSetting}`,
+          score.toString()
+        );
       }
     }
-  }, [gameOver, score, highScore]);
+  }, [gameOver, score, highScore, wrap, speedSetting]);
 
   const cells = [];
   for (let y = 0; y < gridSize; y += 1) {
@@ -217,11 +235,15 @@ const Snake = () => {
       cells.push(
         <div
           key={`${x}-${y}`}
-          className={`w-4 h-4 border border-gray-700 ${
+          className={`w-4 h-4 border border-gray-700 transform transition-transform ${
             isSnake
-              ? 'bg-green-500'
+              ? `bg-green-500 ${
+                  growCell && growCell.x === x && growCell.y === y
+                    ? 'scale-125'
+                    : 'scale-100'
+                }`
               : isFood
-              ? 'bg-red-500'
+              ? `bg-red-500 ${foodAnim ? 'scale-125' : 'scale-100'}`
               : isObstacle
               ? 'bg-gray-500'
               : 'bg-ub-cool-grey'
@@ -248,6 +270,15 @@ const Snake = () => {
         >
           {wrap ? 'No Wrap' : 'Wrap'}
         </button>
+        <select
+          className="ml-2 px-1 bg-gray-700 rounded"
+          value={speedSetting}
+          onChange={(e) => setSpeedSetting(e.target.value)}
+        >
+          <option value="slow">Slow</option>
+          <option value="normal">Normal</option>
+          <option value="fast">Fast</option>
+        </select>
       </div>
       <div
         className="grid"
