@@ -9,6 +9,7 @@ const GameLayout = ({ children, stage, lives, score, highScore }) => (
       {highScore !== undefined && <div>High: {highScore}</div>}
     </div>
     {children}
+
   </div>
 );
 

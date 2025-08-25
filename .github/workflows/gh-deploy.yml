@@ -25,6 +25,9 @@ jobs:
       - name: Installing Packages
         run: yarn install
 
+      - name: Test
+        run: yarn test
+
       - name: Lint
         run: yarn lint
 
