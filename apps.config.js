@@ -78,6 +78,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -117,6 +118,8 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+
+const displayReconNG = createDisplay(ReconNGApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -603,6 +606,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'recon-ng',
+    title: 'Recon-ng',
+    icon: './themes/Yaru/apps/reconng.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReconNG,
   },
   // Games are included so they appear alongside apps
   ...games,
