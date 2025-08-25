@@ -21,3 +21,42 @@ body {
   display: block;
   margin-top: 4px;
 }
+
+#controls {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+}
+
+#controls button {
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
+  opacity: 0.6;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  #controls {
+    display: none;
+  }
+}
+
+#complete {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  font-size: 24px;
+}
+
+#complete.hidden {
+  display: none;
+}
