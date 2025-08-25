@@ -76,6 +76,8 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
+const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
+
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 
@@ -113,6 +115,8 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+
+const displayAutopsy = createDisplay(AutopsyApp);
 
 const displayGomoku = createDisplay(GomokuApp);
 
@@ -576,6 +580,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQrTool,
+  },
+  {
+    id: 'autopsy',
+    title: 'Autopsy',
+    icon: './themes/Yaru/apps/autopsy.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAutopsy,
   },
   {
     id: 'ascii-art',
