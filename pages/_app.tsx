@@ -11,6 +11,11 @@ function MyApp({ Component, pageProps }: AppProps) {
     if (trackingId) {
       ReactGA.initialize(trackingId);
     }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        // ignore registration errors
+      });
+    }
   }, []);
   return (
     <>

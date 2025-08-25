@@ -24,6 +24,7 @@
     "chess.js": "^1.0.0",
     "expr-eval": "^2.0.2",
     "html-to-image": "^1.11.13",
+    "idb-keyval": "^6.2.1",
     "next": "^15.0.0",
     "postcss": "^8.4.21",
     "prop-types": "^15.8.1",

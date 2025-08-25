@@ -20,6 +20,7 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
 import { displayNikto } from './components/apps/nikto';
+import { displayTasks } from './components/apps/tasks';
 
 const createDynamicApp = (path, name) =>
   dynamic(
@@ -639,6 +640,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTodoist,
+  },
+  {
+    id: 'tasks',
+    title: 'Tasks',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTasks,
   },
   {
     id: 'trash',
