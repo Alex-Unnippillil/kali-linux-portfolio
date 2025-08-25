@@ -79,6 +79,8 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
+
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 
 
@@ -119,6 +121,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayOpenVAS = createDisplay(OpenVASApp);
 
 const displayReconNG = createDisplay(ReconNGApp);
 
@@ -616,6 +619,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'openvas',
+    title: 'OpenVAS',
+    icon: './themes/Yaru/apps/openvas.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayOpenVAS,
   },
   {
     id: 'recon-ng',
