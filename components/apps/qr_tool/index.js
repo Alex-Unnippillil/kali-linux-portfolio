@@ -67,30 +67,47 @@ const QRTool = () => {
           onChange={(e) => setText(e.target.value)}
           className="w-full p-2 mb-2 rounded text-black"
           placeholder="Enter text"
+          aria-label="Text to encode"
         />
         <div className="flex space-x-2 mb-2">
-          <button onClick={generate} className="px-4 py-2 bg-blue-600 rounded">
+          <button
+            onClick={generate}
+            className="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
+            aria-label="Generate QR code"
+          >
             Generate
           </button>
-          <button onClick={download} className="px-4 py-2 bg-green-600 rounded">
+          <button
+            onClick={download}
+            className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-white"
+            aria-label="Download QR code"
+          >
             Download
           </button>
         </div>
-        <canvas ref={canvasRef} className="bg-white" />
+        <canvas ref={canvasRef} className="bg-white" aria-label="Generated QR code" />
       </div>
 
       <div>
         <h2 className="text-lg mb-2">Scan QR Code</h2>
-        <input type="file" accept="image/*" onChange={handleFile} className="mb-2" />
+        <input type="file" accept="image/*" onChange={handleFile} className="mb-2" aria-label="Upload image to scan" />
         <div className="flex space-x-2 mb-2">
-          <button onClick={startCamera} className="px-4 py-2 bg-blue-600 rounded">
+          <button
+            onClick={startCamera}
+            className="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
+            aria-label="Start camera for scanning"
+          >
             Start Camera
           </button>
-          <button onClick={stopCamera} className="px-4 py-2 bg-red-600 rounded">
+          <button
+            onClick={stopCamera}
+            className="px-4 py-2 bg-red-700 hover:bg-red-600 rounded text-white"
+            aria-label="Stop camera"
+          >
             Stop Camera
           </button>
         </div>
-        <video ref={videoRef} className="w-64 h-64 bg-black" />
+        <video ref={videoRef} className="w-64 h-64 bg-black" aria-label="Camera preview" />
         {decodedText && (
           <p className="mt-2 break-all">Decoded: {decodedText}</p>
         )}

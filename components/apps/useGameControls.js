@@ -49,3 +49,4 @@ const useGameControls = (onDirection) => {
 };
 
 export default useGameControls;
+

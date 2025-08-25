@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
+import { pointerHandlers } from '../../utils/pointer';
 // Stockfish engine removed for compatibility; using simple AI instead
 
 const pieceUnicode = {
@@ -200,8 +201,8 @@ const ChessGame = () => {
     return (
       <div
         key={squareName}
-        onClick={() => handleSquareClick(file, rank)}
-        className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center select-none ${squareColor} ${
+        {...pointerHandlers(() => handleSquareClick(file, rank))}
+        className={`w-11 h-11 md:w-12 md:h-12 flex items-center justify-center select-none ${squareColor} ${
           isSelected ? 'ring-2 ring-yellow-400' : ''
         } ${isHighlight ? 'bg-green-500 bg-opacity-50' : ''}`}
       >
