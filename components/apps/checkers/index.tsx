@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
+import { pointerHandlers } from '../../../utils/pointer';
 import {
   createBoard,
   getPieceMoves,
@@ -192,7 +193,9 @@ const Checkers = () => {
             return (
               <div
                 key={`${r}-${c}`}
-                onClick={() => (selected ? tryMove(r, c) : selectPiece(r, c))}
+                {...pointerHandlers(() =>
+                  selected ? tryMove(r, c) : selectPiece(r, c)
+                )}
                 className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
                 } ${isMove ? 'ring-2 ring-yellow-300' : ''} ${
