@@ -81,6 +81,8 @@ const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const JohnApp = createDynamicApp('john', 'John the Ripper');
+
 const NessusApp = createDynamicApp('nessus', 'Nessus');
 
 const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
@@ -128,6 +130,8 @@ const displayMetasploit = createDisplay(MetasploitApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayJohn = createDisplay(JohnApp);
+
 const displayNessus = createDisplay(NessusApp);
 
 const displayNmapNSE = createDisplay(NmapNSEApp);
@@ -665,6 +669,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'john',
+    title: 'John the Ripper',
+    icon: './themes/Yaru/apps/john.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayJohn,
   },
   {
     id: 'openvas',
