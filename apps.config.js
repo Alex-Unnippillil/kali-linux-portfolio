@@ -43,6 +43,7 @@ const createDisplay = (Component) => (addFolder, openApp) => (
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
+const AircrackApp = createDynamicApp('aircrack', 'Aircrack');
 const CalcApp = createDynamicApp('calc', 'Calc');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
@@ -81,6 +82,7 @@ const PinballApp = createDynamicApp('pinball', 'Pinball');
 
 
 const displayTerminal = createDisplay(TerminalApp);
+const displayAircrack = createDisplay(AircrackApp);
 const displayTerminalCalc = createDisplay(CalcApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
@@ -522,6 +524,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'aircrack',
+    title: 'Aircrack',
+    icon: './themes/Yaru/apps/aircrack.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAircrack,
   },
   {
     id: 'project-gallery',
