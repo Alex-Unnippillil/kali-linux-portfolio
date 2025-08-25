@@ -1,63 +1,71 @@
-import { useEffect, useRef } from 'react';
+import { useRef, useEffect } from 'react';
 
-export default function useGameControls(canvasRef) {
-  const state = useRef({
-    keys: {},
-    joystick: { active: false, id: null, sx: 0, sy: 0, x: 0, y: 0 },
-    fire: false,
-    hyperspace: false,
-  });
+const useGameControls = (canvasRef, onChange) => {
+  const state = useRef({ up: false, down: false, touchY: null });
 
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      state.current.keys[e.code] = true;
-      if (e.code === 'Space') state.current.fire = true;
-      if (e.code === 'ShiftLeft') state.current.hyperspace = true;
-    };
-    const handleKeyUp = (e) => {
-      state.current.keys[e.code] = false;
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
     const canvas = canvasRef.current;
-    const joystick = state.current.joystick;
+    if (!canvas) return;
 
-    const pointerDown = (e) => {
-      if (e.pointerType === 'touch' && !joystick.active) {
-        joystick.active = true;
-        joystick.id = e.pointerId;
-        joystick.sx = e.clientX;
-        joystick.sy = e.clientY;
-      } else if (e.pointerType === 'touch') {
-        state.current.fire = true;
+    const notify = () => {
+      if (onChange) onChange(state.current);
+    };
+
+    const keyDown = (e) => {
+      if (e.key === 'ArrowUp') {
+        state.current.up = true;
+        notify();
+      }
+      if (e.key === 'ArrowDown') {
+        state.current.down = true;
+        notify();
       }
     };
-    const pointerMove = (e) => {
-      if (e.pointerId === joystick.id) {
-        joystick.x = (e.clientX - joystick.sx) / 40;
-        joystick.y = (e.clientY - joystick.sy) / 40;
+
+    const keyUp = (e) => {
+      if (e.key === 'ArrowUp') {
+        state.current.up = false;
+        notify();
+      }
+      if (e.key === 'ArrowDown') {
+        state.current.down = false;
+        notify();
       }
     };
-    const pointerUp = (e) => {
-      if (e.pointerId === joystick.id) {
-        joystick.active = false;
-        joystick.x = 0;
-        joystick.y = 0;
-      }
+
+    const handleTouch = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      if (!touch) return;
+      state.current.touchY = touch.clientY - rect.top;
+      notify();
+      e.preventDefault();
     };
-    canvas.addEventListener('pointerdown', pointerDown);
-    canvas.addEventListener('pointermove', pointerMove);
-    canvas.addEventListener('pointerup', pointerUp);
+
+    const endTouch = () => {
+      state.current.touchY = null;
+      notify();
+    };
+
+    window.addEventListener('keydown', keyDown);
+    window.addEventListener('keyup', keyUp);
+    canvas.addEventListener('touchstart', handleTouch, { passive: false });
+    canvas.addEventListener('touchmove', handleTouch, { passive: false });
+    canvas.addEventListener('touchend', endTouch);
+    canvas.addEventListener('touchcancel', endTouch);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      canvas.removeEventListener('pointerdown', pointerDown);
-      canvas.removeEventListener('pointermove', pointerMove);
-      canvas.removeEventListener('pointerup', pointerUp);
+      window.removeEventListener('keydown', keyDown);
+      window.removeEventListener('keyup', keyUp);
+      canvas.removeEventListener('touchstart', handleTouch);
+      canvas.removeEventListener('touchmove', handleTouch);
+      canvas.removeEventListener('touchend', endTouch);
+      canvas.removeEventListener('touchcancel', endTouch);
     };
-  }, [canvasRef]);
+  }, [canvasRef, onChange]);
 
   return state;
-}
+};
+
+export default useGameControls;
+
