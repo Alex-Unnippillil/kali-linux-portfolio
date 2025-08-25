@@ -1,19 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import levelPack from './sokoban_levels.json';
 
-const defaultLevels = [
-  [
-    '#####',
-    '#@$.#',
-    '#####',
-  ],
-  [
-    '######',
-    '# .. #',
-    '# $$ #',
-    '#  @ #',
-    '######',
-  ],
-];
+const defaultLevels = levelPack.levels;
 
 const parseLevel = (level) => {
   const board = level.map((row) => row.split(''));
@@ -32,6 +20,12 @@ const parseLevelsFromText = (text) => {
     .trim()
     .split(/\n\s*\n/)
     .map((lvl) => lvl.split('\n'));
+};
+
+const parseLevelsFromJson = (data) => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.levels)) return data.levels;
+  return [];
 };
 
 const checkWin = (board) =>
@@ -105,20 +99,93 @@ const attemptMove = (board, player, dx, dy) => {
   return { board: newBoard, player: newPlayer };
 };
 
+const GameLayout = ({
+  children,
+  levels,
+  onSelectLevel,
+  containerRef,
+  onKeyDown,
+}) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div
+      className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4"
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      ref={containerRef}
+    >
+      <div className="mb-2">
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setOpen(true)}
+        >
+          Select Level
+        </button>
+      </div>
+      {open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+          <div className="bg-gray-800 p-4 rounded">
+            <div className="mb-2">Select Level</div>
+            <ul className="max-h-64 overflow-auto space-y-1">
+              {levels.map((_, i) => (
+                <li key={i}>
+                  <button
+                    className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded w-full text-left"
+                    onClick={() => {
+                      onSelectLevel(i);
+                      setOpen(false);
+                    }}
+                  >
+                    {`Level ${i + 1}`}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button
+              className="mt-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded w-full"
+              onClick={() => setOpen(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+      {children}
+    </div>
+  );
+};
+
 const Sokoban = () => {
   const [levels, setLevels] = useState(defaultLevels);
   const [levelIndex, setLevelIndex] = useState(0);
   const [board, setBoard] = useState([]);
   const [player, setPlayer] = useState({ x: 0, y: 0 });
   const [message, setMessage] = useState('');
-  const [moveCount, setMoveCount] = useState(0);
+  const [steps, setSteps] = useState(0);
   const [hint, setHint] = useState('');
   const [editorVisible, setEditorVisible] = useState(false);
   const [editorText, setEditorText] = useState('');
   const [error, setError] = useState('');
+  const [bestMoves, setBestMoves] = useState({});
   const containerRef = useRef(null);
   const undoStack = useRef([]);
+  const redoStack = useRef([]);
   const initialState = useRef(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('sokoban-best-moves');
+    if (stored) {
+      try {
+        setBestMoves(JSON.parse(stored));
+      } catch {
+        setBestMoves({});
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('sokoban-best-moves', JSON.stringify(bestMoves));
+  }, [bestMoves]);
 
   useEffect(() => {
     if (!levels[levelIndex]) return;
@@ -126,9 +193,10 @@ const Sokoban = () => {
     setBoard(b);
     setPlayer(p);
     undoStack.current = [];
+    redoStack.current = [];
     initialState.current = { board: b.map((r) => r.slice()), player: { ...p } };
     setMessage('');
-    setMoveCount(0);
+    setSteps(0);
     setHint('');
     containerRef.current?.focus();
   }, [levelIndex, levels]);
@@ -137,14 +205,24 @@ const Sokoban = () => {
     const result = attemptMove(board, player, dx, dy);
     if (!result) return;
     undoStack.current.push({ board: board.map((r) => r.slice()), player: { ...player } });
+    redoStack.current = [];
     setBoard(result.board);
     setPlayer(result.player);
-    setMoveCount((c) => c + 1);
+    const newSteps = steps + 1;
+    setSteps(newSteps);
     setHint('');
 
     if (detectDeadlock(result.board)) {
       setMessage('Deadlock!');
     } else if (checkWin(result.board)) {
+      const key = `level${levelIndex}`;
+      setBestMoves((prev) => {
+        const prevBest = prev[key];
+        if (!prevBest || newSteps < prevBest) {
+          return { ...prev, [key]: newSteps };
+        }
+        return prev;
+      });
       if (levelIndex < levels.length - 1) {
         setLevelIndex(levelIndex + 1);
       } else {
@@ -175,9 +253,22 @@ const Sokoban = () => {
   const undo = () => {
     const last = undoStack.current.pop();
     if (last) {
+      redoStack.current.push({ board: board.map((r) => r.slice()), player: { ...player } });
       setBoard(last.board.map((r) => r.slice()));
       setPlayer({ ...last.player });
-      setMoveCount((c) => (c > 0 ? c - 1 : 0));
+      setSteps((c) => (c > 0 ? c - 1 : 0));
+      setMessage('');
+      setHint('');
+    }
+  };
+
+  const redo = () => {
+    const next = redoStack.current.pop();
+    if (next) {
+      undoStack.current.push({ board: board.map((r) => r.slice()), player: { ...player } });
+      setBoard(next.board.map((r) => r.slice()));
+      setPlayer({ ...next.player });
+      setSteps((c) => c + 1);
       setMessage('');
       setHint('');
     }
@@ -188,8 +279,9 @@ const Sokoban = () => {
       setBoard(initialState.current.board.map((r) => r.slice()));
       setPlayer({ ...initialState.current.player });
       undoStack.current = [];
+      redoStack.current = [];
       setMessage('');
-      setMoveCount(0);
+      setSteps(0);
       setHint('');
       containerRef.current?.focus();
     }
@@ -200,10 +292,16 @@ const Sokoban = () => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const text = ev.target.result;
-      const parsed = parseLevelsFromText(text);
-      setLevels(parsed);
-      setLevelIndex(0);
+      try {
+        const data = JSON.parse(ev.target.result);
+        const parsed = parseLevelsFromJson(data);
+        if (parsed.length) {
+          setLevels(parsed);
+          setLevelIndex(0);
+        }
+      } catch {
+        setMessage('Invalid level file');
+      }
     };
     reader.readAsText(file);
   };
@@ -315,11 +413,11 @@ const Sokoban = () => {
   const width = board[0]?.length || 0;
 
   return (
-    <div
-      className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4"
-      tabIndex={0}
+    <GameLayout
+      levels={levels}
+      onSelectLevel={setLevelIndex}
+      containerRef={containerRef}
       onKeyDown={handleKeyDown}
-      ref={containerRef}
     >
       <div
         className="grid"
@@ -330,12 +428,21 @@ const Sokoban = () => {
         )}
       </div>
       <div className="mt-4 flex space-x-2 flex-wrap items-center justify-center">
-        <span className="mr-2">Moves: {moveCount}</span>
+        <span className="mr-2">Steps: {steps}</span>
+        <span className="mr-2">
+          Best: {bestMoves[`level${levelIndex}`] ?? '-'}
+        </span>
         <button
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={undo}
         >
           Undo
+        </button>
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={redo}
+        >
+          Redo
         </button>
         <button
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
@@ -355,7 +462,7 @@ const Sokoban = () => {
         >
           Edit
         </button>
-        <input type="file" accept=".txt" onChange={handleFile} />
+        <input type="file" accept=".json" onChange={handleFile} />
       </div>
       {hint && <div className="mt-2">Hint: {hint}</div>}
       {message && <div className="mt-2">{message}</div>}
@@ -383,7 +490,15 @@ const Sokoban = () => {
           </div>
         </div>
       )}
-    </div>
+      <div className="mt-4 w-full max-w-md">
+        <div className="font-bold mb-1">Leaderboard</div>
+        <ul>
+          {levels.map((_, i) => (
+            <li key={i}>Level {i + 1}: {bestMoves[`level${i}`] ?? '-'}</li>
+          ))}
+        </ul>
+      </div>
+    </GameLayout>
   );
 };
 
