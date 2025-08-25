@@ -19,6 +19,7 @@ import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayNikto } from './components/apps/nikto';
 
 const createDynamicApp = (path, name) =>
   dynamic(
@@ -80,6 +81,8 @@ const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 
+const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
+
 
 const displayTerminal = createDisplay(TerminalApp);
 const displayTerminalCalc = createDisplay(CalcApp);
@@ -119,6 +122,8 @@ const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
 const displayOpenVAS = createDisplay(OpenVASApp);
+
+const displayReconNG = createDisplay(ReconNGApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -571,6 +576,15 @@ const apps = [
     screen: displayConverter,
   },
   {
+    id: 'nikto',
+    title: 'Nikto',
+    icon: './themes/Yaru/apps/nikto.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNikto,
+  },
+  {
     id: 'qr-tool',
     title: 'QR Tool',
     icon: './themes/Yaru/apps/qr.svg',
@@ -614,6 +628,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayOpenVAS,
+  },
+  {
+    id: 'recon-ng',
+    title: 'Recon-ng',
+    icon: './themes/Yaru/apps/reconng.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReconNG,
   },
   // Games are included so they appear alongside apps
   ...games,
