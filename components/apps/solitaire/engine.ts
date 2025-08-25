@@ -84,7 +84,7 @@ export const drawFromStock = (state: GameState): GameState => {
   return { ...state, stock: newStock, waste: [...state.waste, ...drawn] };
 };
 
-const canPlaceOnTableau = (card: Card, dest: Card[]): boolean => {
+export const canPlaceOnTableau = (card: Card, dest: Card[]): boolean => {
   if (dest.length === 0) return card.value === 13;
   const top = dest[dest.length - 1];
   return top.faceUp && top.color !== card.color && top.value === card.value + 1;
@@ -98,7 +98,7 @@ export const moveWasteToTableau = (state: GameState, destIndex: number): GameSta
   const newTableau = state.tableau.map((p, i) =>
     i === destIndex ? [...p, card] : p,
   );
-  return { ...state, waste: newWaste, tableau: newTableau };
+  return { ...state, waste: newWaste, tableau: newTableau, score: state.score + 5 };
 };
 
 export const moveTableauToTableau = (
@@ -186,9 +186,8 @@ export const autoMove = (
 
 export const autoComplete = (state: GameState): GameState => {
   let current = state;
-  let moved = true;
-  while (moved) {
-    moved = false;
+  while (!isWin(current)) {
+    let moved = false;
     const fromWaste = moveToFoundation(current, 'waste', null);
     if (fromWaste !== current) {
       current = fromWaste;
@@ -201,8 +200,32 @@ export const autoComplete = (state: GameState): GameState => {
         moved = true;
       }
     }
+    if (!moved) {
+      const next = drawFromStock(current);
+      if (next === current) break;
+      current = next;
+    }
   }
   return current;
+};
+
+export const onlyStockMovesRemain = (state: GameState): boolean => {
+  if (state.tableau.some((p) => p.some((c) => !c.faceUp))) return false;
+  if (state.waste.length) {
+    const w = state.waste[state.waste.length - 1];
+    if (state.tableau.some((p) => canPlaceOnTableau(w, p))) return false;
+  }
+  for (let i = 0; i < state.tableau.length; i += 1) {
+    const pile = state.tableau[i];
+    for (let j = 0; j < pile.length; j += 1) {
+      const card = pile[j];
+      if (!card.faceUp) continue;
+      for (let k = 0; k < state.tableau.length; k += 1) {
+        if (k !== i && canPlaceOnTableau(card, state.tableau[k])) return false;
+      }
+    }
+  }
+  return true;
 };
 
 export const isWin = (state: GameState): boolean =>
