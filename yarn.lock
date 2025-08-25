@@ -1540,6 +1540,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/figlet@npm:^1":
+  version: 1.7.0
+  resolution: "@types/figlet@npm:1.7.0"
+  checksum: 10c0/d33a07727e35d6b9ccb47c863d2d9c84b6cd23d2935cf904c495fce687558c842063a7e01176c03a354a2f40f2781004cce66ae446462e5f73c4ee23d7956daa
+  languageName: node
+  linkType: hard
+
 "@types/istanbul-lib-coverage@npm:*, @types/istanbul-lib-coverage@npm:^2.0.1, @types/istanbul-lib-coverage@npm:^2.0.6":
   version: 2.0.6
   resolution: "@types/istanbul-lib-coverage@npm:2.0.6"
@@ -3657,6 +3664,15 @@ __metadata:
   version: 0.8.2
   resolution: "fflate@npm:0.8.2"
   checksum: 10c0/03448d630c0a583abea594835a9fdb2aaf7d67787055a761515bf4ed862913cfd693b4c4ffd5c3f3b355a70cf1e19033e9ae5aedcca103188aaff91b8bd6e293
+  languageName: node
+  linkType: hard
+
+"figlet@npm:^1.8.2":
+  version: 1.8.2
+  resolution: "figlet@npm:1.8.2"
+  bin:
+    figlet: bin/index.js
+  checksum: 10c0/f2fdd47974e63d061866c716f669c0ca3bfaa9d120102db8197752ed7878c4cc065db3708076dc273e40dcf9bc4ec986636b4aeceb6682a6a33791ea2846423a
   languageName: node
   linkType: hard
 
@@ -7386,6 +7402,7 @@ __metadata:
     "@testing-library/react": "npm:^16.3.0"
     "@testing-library/user-event": "npm:^14.6.1"
     "@types/canvas-confetti": "npm:^1"
+    "@types/figlet": "npm:^1"
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^24.2.1"
     "@types/react": "npm:^19.1.10"
@@ -7398,6 +7415,7 @@ __metadata:
     eslint: "npm:^9.13.0"
     eslint-config-next: "npm:^15.0.0"
     expr-eval: "npm:^2.0.2"
+    figlet: "npm:^1.8.2"
     html-to-image: "npm:^1.11.13"
     jest: "npm:^30.0.5"
     jest-environment-jsdom: "npm:^30.0.5"

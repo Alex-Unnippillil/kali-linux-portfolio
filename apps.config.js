@@ -16,6 +16,7 @@ import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
 import { displayQrTool } from './components/apps/qr_tool';
 import { displayAsciiArt } from './components/apps/ascii_art';
+import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
@@ -728,6 +729,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayAsciiArt,
+  },
+  {
+    id: 'figlet',
+    title: 'Figlet',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFiglet,
   },
   {
     id: 'quote-generator',
