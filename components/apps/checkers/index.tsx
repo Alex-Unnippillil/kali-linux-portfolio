@@ -23,10 +23,12 @@ const Checkers = () => {
   const [noCapture, setNoCapture] = useState(0);
   const [hint, setHint] = useState<Move | null>(null);
   const [lastMove, setLastMove] = useState<[number, number][]>([]);
-    const workerRef = useRef<Worker | null>(null);
-    const hintRequest = useRef(false);
-    const pathRef = useRef<[number, number][]>([]);
-    const makeMoveRef = useRef<((move: Move) => void) | null>(null);
+  const [crowned, setCrowned] = useState<[number, number] | null>(null);
+
+  const workerRef = useRef<Worker | null>(null);
+  const hintRequest = useRef(false);
+  const pathRef = useRef<[number, number][]>([]);
+  const makeMoveRef = useRef<((move: Move) => void) | null>(null);
 
   useEffect(() => {
     workerRef.current = new Worker('/checkers-worker.js');
@@ -35,12 +37,50 @@ const Checkers = () => {
       if (hintRequest.current) {
         setHint(move);
         hintRequest.current = false;
-        } else if (move) {
-          makeMoveRef.current?.(move);
-        }
-      };
-      return () => workerRef.current?.terminate();
-    }, []);
+        setTimeout(() => setHint(null), 1000);
+      } else if (move) {
+        makeMoveRef.current?.(move);
+      }
+    };
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('checkersState');
+    if (saved) {
+      const state = JSON.parse(saved);
+      setBoard(state.board);
+      setTurn(state.turn);
+      setHistory(state.history || []);
+      setFuture(state.future || []);
+      setNoCapture(state.noCapture || 0);
+      setWinner(state.winner);
+      setDraw(state.draw);
+      setLastMove(state.lastMove || []);
+      if (state.turn === 'black') {
+        setTimeout(() =>
+          workerRef.current?.postMessage({
+            board: state.board,
+            color: 'black',
+            maxDepth: 8,
+          }), 0);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const state = {
+      board,
+      turn,
+      history,
+      future,
+      noCapture,
+      winner,
+      draw,
+      lastMove,
+    };
+    localStorage.setItem('checkersState', JSON.stringify(state));
+  }, [board, turn, history, future, noCapture, winner, draw, lastMove]);
 
   const allMoves = useMemo(() => getAllMoves(board, turn), [board, turn]);
 
@@ -70,6 +110,10 @@ const Checkers = () => {
       ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
       : [];
     setBoard(newBoard);
+    if (king) {
+      setCrowned([move.to[0], move.to[1]]);
+      setTimeout(() => setCrowned(null), 1000);
+    }
     if (capture && further.length) {
       setSelected([move.to[0], move.to[1]]);
       setMoves(further);
@@ -131,7 +175,9 @@ const Checkers = () => {
     setNoCapture(0);
     setHint(null);
     setLastMove([]);
+    setCrowned(null);
     pathRef.current = [];
+    localStorage.removeItem('checkersState');
   };
 
   const undo = () => {
@@ -189,14 +235,17 @@ const Checkers = () => {
             const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
             const isSelected = selected && selected[0] === r && selected[1] === c;
             const isLast = lastMove.some((p) => p[0] === r && p[1] === c);
+            const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
             return (
               <div
                 key={`${r}-${c}`}
                 onClick={() => (selected ? tryMove(r, c) : selectPiece(r, c))}
                 className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
-                } ${isMove ? 'ring-2 ring-yellow-300' : ''} ${
-                  isHint || isHintDest ? 'ring-2 ring-blue-400' : ''
+                } ${isMove ? 'ring-2 ring-yellow-300 animate-pulse' : ''} ${
+                  isHint || isHintDest
+                    ? 'ring-2 ring-blue-400 animate-pulse'
+                    : ''
                 } ${isSelected ? 'ring-2 ring-green-400' : ''} ${
                   isLast ? 'ring-2 ring-red-400' : ''
                 }`}
@@ -205,7 +254,9 @@ const Checkers = () => {
                   <div
                     className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center ${
                       cell.color === 'red' ? 'bg-red-500' : 'bg-black'
-                    } ${cell.king ? 'border-4 border-yellow-300' : ''}`}
+                    } ${cell.king ? 'border-4 border-yellow-300' : ''} ${
+                      isCrowned ? 'animate-bounce' : ''
+                    }`}
                   >
                     {cell.king && (
                       <span className="text-yellow-300 text-sm font-bold">K</span>

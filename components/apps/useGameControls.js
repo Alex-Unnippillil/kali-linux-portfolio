@@ -43,6 +43,7 @@ const useGameControls = (cols, onDrop) => {
   }, [cols, onDrop, selected]);
 
   return [selected, setSelected];
+
 };
 
 export default useGameControls;
