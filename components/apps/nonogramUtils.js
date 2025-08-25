@@ -124,18 +124,42 @@ export const validateSolution = (grid, rows, cols) => {
   return rowsValid && colsValid;
 };
 
-const puzzles = [
+export const puzzles = [
   {
+    name: 'Full',
     rows: [[5], [5], [5], [5], [5]],
     cols: [[5], [5], [5], [5], [5]],
+    grid: [
+      [1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1],
+      [1, 1, 1, 1, 1],
+    ],
   },
   {
+    name: 'Diamond',
     rows: [[1], [3], [5], [3], [1]],
     cols: [[1], [3], [5], [3], [1]],
+    grid: [
+      [0, 0, 1, 0, 0],
+      [0, 1, 1, 1, 0],
+      [1, 1, 1, 1, 1],
+      [0, 1, 1, 1, 0],
+      [0, 0, 1, 0, 0],
+    ],
   },
   {
+    name: 'Border',
     rows: [[5], [1, 1], [1, 1, 1], [1, 1], [5]],
     cols: [[5], [1, 1], [1, 1, 1], [1, 1], [5]],
+    grid: [
+      [1, 1, 1, 1, 1],
+      [1, 0, 0, 0, 1],
+      [1, 0, 1, 0, 1],
+      [1, 0, 0, 0, 1],
+      [1, 1, 1, 1, 1],
+    ],
   },
 ];
 
@@ -157,6 +181,7 @@ const nonogramUtils = {
   autoFillLines,
   validateSolution,
   getPuzzleBySeed,
+  puzzles,
 };
 
 export default nonogramUtils;
