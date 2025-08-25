@@ -79,8 +79,8 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
-
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 
 
@@ -121,6 +121,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayNmapNSE = createDisplay(NmapNSEApp);
 const displayOpenVAS = createDisplay(OpenVASApp);
 
 const displayReconNG = createDisplay(ReconNGApp);
@@ -610,6 +611,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'nmap-nse',
+    title: 'Nmap NSE',
+    icon: './themes/Yaru/apps/nmap-nse.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNmapNSE,
   },
   {
     id: 'weather',
