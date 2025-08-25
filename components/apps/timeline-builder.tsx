@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Papa from 'papaparse';
 import { toPng } from 'html-to-image';
-import Timeline from 'react-visjs-timeline';
+import { Timeline as VisTimeline } from 'vis-timeline/standalone';
+import 'vis-timeline/styles/vis-timeline-graph2d.min.css';
 import { FixedSizeList as List } from 'react-window';
 
 export interface TimelineEvent {
@@ -26,7 +27,8 @@ const TimelineBuilder: React.FC<Props> = ({ openApp }) => {
   const [search, setSearch] = useState('');
   const workerRef = useRef<Worker>();
   const containerRef = useRef<HTMLDivElement>(null);
-  const timelineRef = useRef<any>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
+  const timeline = useRef<VisTimeline | null>(null);
 
   useEffect(() => {
     workerRef.current = new Worker(
@@ -36,7 +38,10 @@ const TimelineBuilder: React.FC<Props> = ({ openApp }) => {
       setItems(e.data.items);
       setGroups(e.data.groups);
     };
-    return () => workerRef.current?.terminate();
+    return () => {
+      workerRef.current?.terminate();
+      timeline.current?.destroy();
+    };
   }, []);
 
   const filtered = useMemo(
@@ -49,10 +54,26 @@ const TimelineBuilder: React.FC<Props> = ({ openApp }) => {
   }, [filtered]);
 
   useEffect(() => {
-    if (timelineRef.current?.visJsTimeline) {
-      timelineRef.current.visJsTimeline.setOptions({ cluster });
+    if (timelineRef.current) {
+      if (!timeline.current) {
+        timeline.current = new VisTimeline(
+          timelineRef.current,
+          items,
+          groups,
+          {
+            stack: true,
+            height: '70%',
+            width: '100%',
+            cluster,
+          }
+        );
+      } else {
+        timeline.current.setItems(items);
+        timeline.current.setGroups(groups);
+        timeline.current.setOptions({ cluster });
+      }
     }
-  }, [cluster, items]);
+  }, [items, groups, cluster]);
 
   const validateEvent = (e: TimelineEvent) => {
     const start = Date.parse(e.time);
@@ -241,17 +262,7 @@ const TimelineBuilder: React.FC<Props> = ({ openApp }) => {
         </button>
       </div>
       <div ref={containerRef} className="flex-1 bg-white rounded text-black">
-        <Timeline
-          ref={timelineRef}
-          items={items}
-          groups={groups}
-          options={{
-            stack: true,
-            height: '70%',
-            width: '100%',
-            cluster,
-          }}
-        />
+        <div ref={timelineRef}></div>
         <div className="h-[30%] overflow-hidden">
           <List height={200} itemCount={filtered.length} itemSize={24} width="100%">
             {({ index, style }) => {
