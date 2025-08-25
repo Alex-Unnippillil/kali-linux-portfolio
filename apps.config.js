@@ -78,6 +78,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const JohnApp = createDynamicApp('john', 'John the Ripper');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -117,6 +118,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayJohn = createDisplay(JohnApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -603,6 +605,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'john',
+    title: 'John the Ripper',
+    icon: './themes/Yaru/apps/john.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayJohn,
   },
   // Games are included so they appear alongside apps
   ...games,
