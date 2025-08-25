@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 // Load the Twitter timeline client-side only
 const Timeline = dynamic(
   () => import('react-twitter-widgets').then((m) => m.Timeline),
+
   { ssr: false }
 );
 

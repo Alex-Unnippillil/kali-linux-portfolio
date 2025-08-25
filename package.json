@@ -7,7 +7,7 @@
   "scripts": {
     "preinstall": "node scripts/check-node-version.js",
     "dev": "next dev",
-    "build": "next build",
+    "build": "NODE_OPTIONS=--max-old-space-size=4096 next build",
     "start": "next start",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -23,7 +23,7 @@
     "dedupe:check": "yarn dedupe --check",
     "lighthouse": "lhci autorun",
     "typecheck": "tsc --noEmit",
-    "build:ci": "next build",
+    "build:ci": "NODE_OPTIONS=--max-old-space-size=4096 next build",
     "lint:ci": "next lint --max-warnings=0 && yarn check:edge-node",
     "format:check": "prettier --check ."
   },
@@ -112,6 +112,7 @@
     "react-markdown": "^10.1.0",
     "react-simple-code-editor": "^0.14.1",
     "react-twitter-widgets": "patch:react-twitter-widgets@npm%3A1.11.0#~/.yarn/patches/react-twitter-widgets-npm-1.11.0-8937195212.patch",
+
     "react-window": "^1.8.11",
     "rehype-sanitize": "^6.0.0",
     "rfc4648": "^1.5.4",
