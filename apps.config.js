@@ -83,6 +83,8 @@ const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const KismetApp = createDynamicApp('kismet', 'Kismet');
+
 const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
 const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
 const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
@@ -94,6 +96,7 @@ const NessusApp = createDynamicApp('nessus', 'Nessus');
 const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
+ 
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -148,6 +151,8 @@ const displayOpenVAS = createDisplay(OpenVASApp);
 const displayReconNG = createDisplay(ReconNGApp);
 
 const displayHashcat = createDisplay(HashcatApp);
+
+const displayKismet = createDisplay(KismetApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -643,6 +648,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayConverter,
+  },
+  {
+    id: 'kismet',
+    title: 'Kismet',
+    icon: './themes/Yaru/apps/kismet.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKismet,
   },
   {
     id: 'nikto',
