@@ -36,13 +36,18 @@ const processQuotes = (data) => {
   const filter = new Filter();
   return data
     .map((q) => {
-      const lower = q.quote.toLowerCase();
-      const tags = [];
-      Object.entries(CATEGORY_KEYWORDS).forEach(([cat, keywords]) => {
-        if (keywords.some((k) => lower.includes(k))) tags.push(cat);
-      });
+      const content = q.content || q.quote || '';
+      const author = q.author || 'Unknown';
+      // Use provided tags when available, otherwise guess based on keywords
+      let tags = Array.isArray(q.tags) ? q.tags.map((t) => t.toLowerCase()) : [];
+      if (!tags.length) {
+        const lower = content.toLowerCase();
+        Object.entries(CATEGORY_KEYWORDS).forEach(([cat, keywords]) => {
+          if (keywords.some((k) => lower.includes(k))) tags.push(cat);
+        });
+      }
       if (!tags.length) tags.push('general');
-      return { content: q.quote, author: q.author, tags };
+      return { content, author, tags };
     })
     .filter(
       (q) =>
@@ -80,17 +85,22 @@ const QuoteGenerator = () => {
       }
     }
 
-    fetch('https://dummyjson.com/quotes?limit=500', {
+    fetch('https://api.quotable.io/quotes?limit=500', {
       headers: etag ? { 'If-None-Match': etag } : {},
     })
       .then((res) => {
         if (res.status === 200) {
           const newEtag = res.headers.get('ETag');
-          res.json().then((d) => {
-            localStorage.setItem('quotesData', JSON.stringify(d.quotes));
-            if (newEtag) localStorage.setItem('quotesEtag', newEtag);
-            setQuotes(processQuotes(d.quotes));
-          });
+          res
+            .json()
+            .then((d) => {
+              localStorage.setItem('quotesData', JSON.stringify(d.results));
+              if (newEtag) localStorage.setItem('quotesEtag', newEtag);
+              setQuotes(processQuotes(d.results));
+            })
+            .catch(() => {
+              /* ignore parse errors */
+            });
         }
       })
       .catch(() => {
@@ -148,10 +158,10 @@ const QuoteGenerator = () => {
     }
   };
 
-  const shareOnX = () => {
+  const tweetQuote = () => {
     if (!current) return;
     const text = `"${current.content}" - ${current.author}`;
-    const url = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
 
@@ -207,9 +217,9 @@ const QuoteGenerator = () => {
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={shareOnX}
+            onClick={tweetQuote}
           >
-            X
+            Tweet
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
