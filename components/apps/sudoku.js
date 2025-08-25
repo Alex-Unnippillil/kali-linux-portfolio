@@ -113,7 +113,7 @@ const generateSudoku = (difficulty = 'easy', seed = Date.now()) => {
 const Sudoku = () => {
   const [difficulty, setDifficulty] = useState('easy');
   const [useDaily, setUseDaily] = useState(true);
-  const [{ puzzle, solution }, setGame] = useState({ puzzle: [], solution: [] });
+  const [puzzle, setPuzzle] = useState([]);
   const [board, setBoard] = useState([]);
   const [notes, setNotes] = useState([]); // notes[r][c] = array of numbers
   const [noteMode, setNoteMode] = useState(false);
@@ -126,8 +126,8 @@ const Sudoku = () => {
   const timerRef = useRef(null);
 
   const startGame = (seed) => {
-    const { puzzle, solution } = generateSudoku(difficulty, seed);
-    setGame({ puzzle, solution });
+    const { puzzle } = generateSudoku(difficulty, seed);
+    setPuzzle(puzzle);
     setBoard(puzzle.map((r) => r.slice()));
     setNotes(
       Array(SIZE)
@@ -160,7 +160,7 @@ const Sudoku = () => {
           const data = JSON.parse(saved);
           setDifficulty(data.difficulty || 'easy');
           setUseDaily(data.useDaily ?? true);
-          setGame({ puzzle: data.puzzle, solution: data.solution });
+          setPuzzle(data.puzzle);
           setBoard(data.board);
           setNotes(data.notes);
           setCompleted(data.completed);
@@ -193,7 +193,6 @@ const Sudoku = () => {
     if (typeof window === 'undefined' || puzzle.length === 0) return;
     const data = {
       puzzle,
-      solution,
       board,
       notes,
       difficulty,
@@ -202,7 +201,7 @@ const Sudoku = () => {
       completed,
     };
     localStorage.setItem('sudoku-progress', JSON.stringify(data));
-  }, [board, notes, time, puzzle, solution, difficulty, useDaily, completed]);
+  }, [board, notes, time, puzzle, difficulty, useDaily, completed]);
 
   useEffect(() => {
     if (!completed || typeof window === 'undefined') return;
@@ -232,7 +231,7 @@ const Sudoku = () => {
     setBoard(newBoard);
     setNotes(newNotes);
     if (autoNotes) applyAutoNotes(newBoard);
-    if (newBoard.flat().every((n, i) => n === solution[Math.floor(i / 9)][i % 9])) {
+    if (isBoardComplete(newBoard)) {
       setCompleted(true);
     }
   };
@@ -282,6 +281,30 @@ const Sudoku = () => {
       }
     }
     return false;
+  };
+
+  const isBoardComplete = (b) => {
+    for (let r = 0; r < SIZE; r++) {
+      const row = b[r];
+      if (row.includes(0) || new Set(row).size !== SIZE) return false;
+    }
+    for (let c = 0; c < SIZE; c++) {
+      const col = [];
+      for (let r = 0; r < SIZE; r++) col.push(b[r][c]);
+      if (col.includes(0) || new Set(col).size !== SIZE) return false;
+    }
+    for (let br = 0; br < 3; br++) {
+      for (let bc = 0; bc < 3; bc++) {
+        const box = [];
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < 3; c++) {
+            box.push(b[br * 3 + r][bc * 3 + c]);
+          }
+        }
+        if (box.includes(0) || new Set(box).size !== SIZE) return false;
+      }
+    }
+    return true;
   };
 
   if (board.length === 0)
@@ -353,14 +376,13 @@ const Sudoku = () => {
           row.map((val, c) => {
             const original = puzzle[r][c] !== 0;
             const conflict = hasConflict(board, r, c, val);
-            const mistake = !conflict && val !== 0 && val !== solution[r][c];
             const isHint = hintCell && hintCell.r === r && hintCell.c === c;
             return (
               <div
                 key={`${r}-${c}`}
                 className={`relative w-8 h-8 sm:w-10 sm:h-10 ${
                   original ? 'bg-gray-300' : 'bg-white'
-                } ${conflict || mistake ? 'bg-red-300' : ''} ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
+                } ${conflict ? 'bg-red-300' : ''} ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
               >
                 <input
                   className="w-full h-full text-center text-black outline-none"
