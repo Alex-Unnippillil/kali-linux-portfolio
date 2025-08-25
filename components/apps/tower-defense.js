@@ -64,15 +64,44 @@ const TowerDefense = () => {
   };
 
   useEffect(() => {
+    const saved =
+      typeof window !== 'undefined' ? localStorage.getItem('td-state') : null;
+    if (saved) {
+      try {
+        const { towers: stTowers, wave: stWave, lives: stLives } = JSON.parse(
+          saved
+        );
+        setTowers(stTowers);
+        setWave(stWave);
+        setLives(stLives);
+        setPath(getPath(stTowers));
+        spawnWave(stWave);
+        return;
+      } catch (err) {
+        // ignore parse errors and start a new game
+      }
+    }
     spawnWave(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(
+        'td-state',
+        JSON.stringify({ towers, wave, lives })
+      );
+    }
+  }, [towers, wave, lives]);
+
+  useEffect(() => {
+    if (speed === 0) return undefined;
     const interval = setInterval(() => {
       setWave((w) => {
         const next = w + 1;
         spawnWave(next);
-        if (next === 10) ReactGA.event({ category: 'tower-defense', action: 'victory' });
+        if (next === 10)
+          ReactGA.event({ category: 'tower-defense', action: 'victory' });
         return next;
       });
     }, 15000 / speed);
@@ -176,22 +205,33 @@ const TowerDefense = () => {
       const stats = TOWER_TYPES[tower.type][tower.level - 1];
       tower.cooldown -= 0.1 * speed;
       if (tower.cooldown <= 0) {
-        const candidates = qt.retrieve({ x: tower.x, y: tower.y, r: stats.range });
-        const targetObj = candidates.find(
-          (c) =>
-            Math.abs(c.x - tower.x) + Math.abs(c.y - tower.y) <= stats.range
-        );
-        if (targetObj) {
-          fireProjectile(projectilesRef.current, {
-            x: tower.x,
-            y: tower.y,
-            targetId: targetObj.ref.id,
-            damage: stats.damage,
-            speed: 1,
-            splash: stats.splash || 0,
-            slow: stats.slow || null,
-          });
-          tower.cooldown = stats.fireRate;
+        const candidates = qt
+          .retrieve({ x: tower.x, y: tower.y, r: stats.range })
+          .filter(
+            (c) =>
+              Math.abs(c.x - tower.x) + Math.abs(c.y - tower.y) <= stats.range
+          );
+        if (stats.aoe) {
+          if (candidates.length) {
+            candidates.forEach((c) => {
+              c.ref.health -= Math.max(0, stats.damage - c.ref.resistance);
+            });
+            tower.cooldown = stats.fireRate;
+          }
+        } else {
+          const targetObj = candidates[0];
+          if (targetObj) {
+            fireProjectile(projectilesRef.current, {
+              x: tower.x,
+              y: tower.y,
+              targetId: targetObj.ref.id,
+              damage: stats.damage,
+              speed: 1,
+              splash: stats.splash || 0,
+              slow: stats.slow || null,
+            });
+            tower.cooldown = stats.fireRate;
+          }
         }
       }
       return tower;
@@ -258,10 +298,16 @@ const TowerDefense = () => {
     return (
       <div
         key={`${x}-${y}`}
-        className={`w-8 h-8 border border-gray-900 ${bg}`}
+        className={`relative w-8 h-8 border border-gray-900 ${bg}`}
         onClick={() => handleCellClick(x, y)}
         onContextMenu={(e) => handleCellRightClick(x, y, e)}
-      />
+      >
+        {tower && (
+          <span className="absolute inset-0 flex items-center justify-center text-xs">
+            {tower.level}
+          </span>
+        )}
+      </div>
     );
   };
 
@@ -272,10 +318,10 @@ const TowerDefense = () => {
         <span>Lives: {lives}</span>
         <button
           type="button"
-          onClick={() => setSpeed(0.5)}
-          className={`px-2 ${speed === 0.5 ? 'bg-blue-500' : 'bg-gray-700'}`}
+          onClick={() => setSpeed(0)}
+          className={`px-2 ${speed === 0 ? 'bg-blue-500' : 'bg-gray-700'}`}
         >
-          0.5x
+          Pause
         </button>
         <button
           type="button"
@@ -290,6 +336,13 @@ const TowerDefense = () => {
           className={`px-2 ${speed === 2 ? 'bg-blue-500' : 'bg-gray-700'}`}
         >
           2x
+        </button>
+        <button
+          type="button"
+          onClick={() => setSpeed(4)}
+          className={`px-2 ${speed === 4 ? 'bg-blue-500' : 'bg-gray-700'}`}
+        >
+          4x
         </button>
       </div>
       <div className="mb-2 flex space-x-2">

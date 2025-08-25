@@ -20,6 +20,11 @@ export const TOWER_TYPES = {
     { damage: 0, range: 3, fireRate: 0.8, slow: { amount: 0.6, duration: 2.5 } },
     { damage: 0, range: 4, fireRate: 0.6, slow: { amount: 0.7, duration: 3 } },
   ],
+  aoe: [
+    { damage: 0.5, range: 2, fireRate: 1, aoe: true },
+    { damage: 1, range: 3, fireRate: 1, aoe: true },
+    { damage: 1.5, range: 3, fireRate: 0.8, aoe: true },
+  ],
 };
 
 export const getTowerDPS = (type, level) => {
