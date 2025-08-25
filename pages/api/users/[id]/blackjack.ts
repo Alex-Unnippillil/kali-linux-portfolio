@@ -33,7 +33,10 @@ const bodySchema = z.object({
   bankroll: z.number().optional(),
 });
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+): Promise<void> {
   const parsed = validateRequest(req, res, { querySchema, bodySchema });
   if (!parsed) return;
   const { id } = parsed.query as { id: string };
@@ -41,12 +44,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const userStats = await getStats(userId);
 
   if (req.method === 'GET') {
-    return res.status(200).json(userStats);
+    res.status(200).json(userStats);
+    return;
   }
 
   if (req.method === 'POST') {
     if (!allowRequest(userId)) {
-      return res.status(429).json({ error: 'Too many requests' });
+      res.status(429).json({ error: 'Too many requests' });
+      return;
     }
     const { result, bankroll } = parsed.body as {
       result?: 'win' | 'loss' | 'push';
@@ -58,8 +63,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (result === 'push') stats.pushes++;
     if (typeof bankroll === 'number') stats.bankroll = bankroll;
     await setStats(userId, stats);
-    return res.status(200).json(stats);
+    res.status(200).json(stats);
+    return;
   }
 
-  return res.status(405).end();
+  res.status(405).end();
 }
