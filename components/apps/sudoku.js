@@ -122,6 +122,7 @@ const Sudoku = () => {
   const [hintCell, setHintCell] = useState(null);
   const [completed, setCompleted] = useState(false);
   const [time, setTime] = useState(0);
+  const [bestTime, setBestTime] = useState(null);
   const timerRef = useRef(null);
 
   const startGame = (seed) => {
@@ -137,6 +138,14 @@ const Sudoku = () => {
     setHint('');
     setHintCell(null);
     setTime(0);
+    setBestTime(() => {
+      if (typeof window === 'undefined') return null;
+      const stored = localStorage.getItem(`sudoku-best-${difficulty}`);
+      return stored ? parseInt(stored, 10) : null;
+    });
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('sudoku-progress');
+    }
     if (autoNotes) {
       const fresh = puzzle.map((r) => r.slice());
       applyAutoNotes(fresh);
@@ -144,6 +153,28 @@ const Sudoku = () => {
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sudoku-progress');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          setDifficulty(data.difficulty || 'easy');
+          setUseDaily(data.useDaily ?? true);
+          setGame({ puzzle: data.puzzle, solution: data.solution });
+          setBoard(data.board);
+          setNotes(data.notes);
+          setCompleted(data.completed);
+          setTime(data.time || 0);
+          const stored = localStorage.getItem(
+            `sudoku-best-${data.difficulty || 'easy'}`,
+          );
+          setBestTime(stored ? parseInt(stored, 10) : null);
+          return;
+        } catch (e) {
+          // ignore malformed storage
+        }
+      }
+    }
     startGame(useDaily ? dailySeed() : Date.now());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -158,12 +189,38 @@ const Sudoku = () => {
     return () => clearInterval(timerRef.current);
   }, [completed, puzzle]);
 
-  const handleValue = (r, c, value) => {
+  useEffect(() => {
+    if (typeof window === 'undefined' || puzzle.length === 0) return;
+    const data = {
+      puzzle,
+      solution,
+      board,
+      notes,
+      difficulty,
+      useDaily,
+      time,
+      completed,
+    };
+    localStorage.setItem('sudoku-progress', JSON.stringify(data));
+  }, [board, notes, time, puzzle, solution, difficulty, useDaily, completed]);
+
+  useEffect(() => {
+    if (!completed || typeof window === 'undefined') return;
+    const key = `sudoku-best-${difficulty}`;
+    const stored = localStorage.getItem(key);
+    if (!stored || time < parseInt(stored, 10)) {
+      localStorage.setItem(key, time.toString());
+      setBestTime(time);
+    }
+    localStorage.removeItem('sudoku-progress');
+  }, [completed, time, difficulty]);
+
+  const handleValue = (r, c, value, forceNote = false) => {
     if (!puzzle[r] || puzzle[r][c] !== 0) return;
     const v = parseInt(value, 10);
     const newBoard = board.map((row) => row.slice());
     const newNotes = notes.map((row) => row.map((n) => n.slice()));
-    if (noteMode) {
+    if (noteMode || forceNote) {
       if (v >= 1 && v <= 9) {
         if (!newNotes[r][c].includes(v)) newNotes[r][c].push(v);
         else newNotes[r][c] = newNotes[r][c].filter((n) => n !== v);
@@ -283,24 +340,40 @@ const Sudoku = () => {
           {useDaily ? 'Daily' : 'Random'}
         </button>
       </div>
-      <div className="mb-2">Time: {Math.floor(time / 60)}:{('0' + (time % 60)).slice(-2)}</div>
+      <div className="mb-2">
+        Time: {Math.floor(time / 60)}:{('0' + (time % 60)).slice(-2)}
+        {bestTime !== null && (
+          <span className="ml-2 text-sm text-gray-300">
+            Best: {Math.floor(bestTime / 60)}:{('0' + (bestTime % 60)).slice(-2)}
+          </span>
+        )}
+      </div>
       <div className="grid grid-cols-9" style={{ gap: '2px' }}>
         {board.map((row, r) =>
           row.map((val, c) => {
             const original = puzzle[r][c] !== 0;
             const conflict = hasConflict(board, r, c, val);
+            const mistake = !conflict && val !== 0 && val !== solution[r][c];
             const isHint = hintCell && hintCell.r === r && hintCell.c === c;
             return (
               <div
                 key={`${r}-${c}`}
                 className={`relative w-8 h-8 sm:w-10 sm:h-10 ${
                   original ? 'bg-gray-300' : 'bg-white'
-                } ${conflict ? 'bg-red-300' : ''} ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
+                } ${conflict || mistake ? 'bg-red-300' : ''} ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
               >
                 <input
                   className="w-full h-full text-center text-black outline-none"
                   value={val === 0 ? '' : val}
                   onChange={(e) => handleValue(r, c, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key >= '1' && e.key <= '9') {
+                      if (noteMode || e.shiftKey) {
+                        e.preventDefault();
+                        handleValue(r, c, e.key, true);
+                      }
+                    }
+                  }}
                   maxLength={1}
                   disabled={original}
                   inputMode="numeric"
