@@ -1,14 +1,17 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import useCanvasResize from '../../hooks/useCanvasResize';
+const WIDTH = 400;
+const HEIGHT = 500;
 
 const Pinball = () => {
-  const canvasRef = useRef(null);
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    const width = WIDTH;
+    const height = HEIGHT;
 
     const ball = { x: width / 2, y: 50, vx: 100, vy: 0, r: 8 };
     const gravity = 500; // px per second^2
@@ -108,7 +111,7 @@ const Pinball = () => {
 
   return (
     <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey">
-      <canvas ref={canvasRef} width={400} height={500} className="bg-black" />
+      <canvas ref={canvasRef} className="bg-black w-full h-full" />
     </div>
   );
 };

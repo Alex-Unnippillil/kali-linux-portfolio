@@ -2,10 +2,9 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
 
 /**
- * Small Pacman implementation used inside the portfolio.  The goal of this
- * rewrite is not to be a perfect clone of the arcade game but to provide a
- * reasonable approximation that demonstrates a faithful ghost AI, buffered
- * turns and support for different input methods.
+ * Small Pacman implementation used inside the portfolio. The goal of this
+ * rewrite is not to be a perfect clone but to provide a reasonable approximation
+ * that demonstrates a faithful ghost AI, buffered turns, and different inputs.
  */
 
 // 0: empty, 1: wall, 2: pellet, 3: energizer
@@ -20,6 +19,8 @@ const defaultMaze = [
 ];
 
 const tileSize = 20;
+const WIDTH = defaultMaze[0].length * tileSize;
+const HEIGHT = defaultMaze.length * tileSize;
 const speed = 1; // pixels per frame
 
 const dirs = [
@@ -56,9 +57,15 @@ const Pacman = () => {
   });
 
   const canvasRef = useRef(null);
-  const [levels, setLevels] = useState([{ name: 'Default', maze: defaultMaze, fruit: { x: 7, y: 3 } }]);
+
+  // Levels file can override the maze and fruit tile
+  const [levels, setLevels] = useState([
+    { name: 'Default', maze: defaultMaze, fruit: { x: 7, y: 3 } },
+  ]);
   const [levelIndex, setLevelIndex] = useState(0);
+
   const mazeRef = useRef(defaultMaze.map((row) => row.slice()));
+
   const pacRef = useRef({
     x: tileSize, // pixel coords
     y: tileSize,
@@ -67,12 +74,14 @@ const Pacman = () => {
     lives: 3,
     extra: false,
   });
+
   const ghostsRef = useRef([
     { name: 'blinky', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'red' },
     { name: 'pinky', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'pink' },
     { name: 'inky', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'cyan' },
     { name: 'clyde', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'orange' },
   ]);
+
   const modeRef = useRef({ index: 0, timer: modeSchedule[0].duration });
   const frightTimerRef = useRef(0);
   const [score, setScore] = useState(0);
@@ -84,9 +93,7 @@ const Pacman = () => {
   const touchStartRef = useRef(null);
 
   const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);
-
-  const isCenter = (pos) => Math.abs(pos % tileSize - tileSize / 2) < 0.1;
-
+  const isCenter = (pos) => Math.abs((pos % tileSize) - tileSize / 2) < 0.1;
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
   const playSound = (freq) => {
@@ -102,7 +109,7 @@ const Pacman = () => {
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.1);
-    } catch (e) {
+    } catch {
       // ignore audio errors
     }
   };
@@ -129,11 +136,17 @@ const Pacman = () => {
       fruitRef.current.y = lvl.fruit.y;
       fruitRef.current.active = false;
       fruitRef.current.timer = 0;
+
       pacRef.current.lives = 3;
       pacRef.current.extra = false;
+
       setScore(0);
       setPellets(0);
+
       statusRef.current = 'Playing';
+      modeRef.current = { index: 0, timer: modeSchedule[0].duration };
+      frightTimerRef.current = 0;
+
       resetPositions();
     },
     [levels]
@@ -153,36 +166,40 @@ const Pacman = () => {
         return { x: px, y: py };
       case 'pinky':
         return { x: px + 4 * pdx, y: py + 4 * pdy };
-      case 'inky':
+      case 'inky': {
         const blinky = ghostsRef.current[0];
         const bx = Math.floor(blinky.x / tileSize);
         const by = Math.floor(blinky.y / tileSize);
         const tx = px + 2 * pdx;
         const ty = py + 2 * pdy;
         return { x: tx * 2 - bx, y: ty * 2 - by };
-      case 'clyde':
+      }
+      case 'clyde': {
         const dist = Math.hypot(px - Math.floor(ghost.x / tileSize), py - Math.floor(ghost.y / tileSize));
         if (dist > 8) return { x: px, y: py };
         return SCATTER_CORNERS.clyde;
+      }
       default:
         return { x: px, y: py };
     }
   };
 
-    const availableDirs = useCallback((gx, gy, dir) => {
-      const rev = { x: -dir.x, y: -dir.y };
-      return dirs.filter((d) => {
-        if (d.x === rev.x && d.y === rev.y) return false;
-        const nx = gx + d.x;
-        const ny = gy + d.y;
-        return tileAt(nx, ny) !== 1;
-      });
-    }, []);
+  const availableDirs = useCallback((gx, gy, dir) => {
+    const rev = { x: -dir.x, y: -dir.y };
+    return dirs.filter((d) => {
+      if (d.x === rev.x && d.y === rev.y) return false;
+      const nx = gx + d.x;
+      const ny = gy + d.y;
+      return tileAt(nx, ny) !== 1;
+    });
+  }, []);
 
   const draw = () => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     const maze = mazeRef.current;
     for (let y = 0; y < maze.length; y++) {
       for (let x = 0; x < maze[y].length; x++) {
@@ -205,7 +222,12 @@ const Pacman = () => {
 
     if (fruitRef.current.active) {
       ctx.fillStyle = 'green';
-      ctx.fillRect(fruitRef.current.x * tileSize + 4, fruitRef.current.y * tileSize + 4, tileSize - 8, tileSize - 8);
+      ctx.fillRect(
+        fruitRef.current.x * tileSize + 4,
+        fruitRef.current.y * tileSize + 4,
+        tileSize - 8,
+        tileSize - 8
+      );
     }
 
     const pac = pacRef.current;
@@ -255,6 +277,8 @@ const Pacman = () => {
 
     const ptx = Math.floor((pac.x + tileSize / 2) / tileSize);
     const pty = Math.floor((pac.y + tileSize / 2) / tileSize);
+
+    // pellets and energizers
     if (maze[pty][ptx] === 2 || maze[pty][ptx] === 3) {
       if (maze[pty][ptx] === 2) {
         setScore((s) => s + 10);
@@ -265,6 +289,8 @@ const Pacman = () => {
       }
       maze[pty][ptx] = 0;
     }
+
+    // fruit
     if (!fruitRef.current.active && fruitSpawnDots.includes(pellets + 1)) {
       fruitRef.current.active = true;
       fruitRef.current.timer = 9 * 60;
@@ -302,6 +328,7 @@ const Pacman = () => {
     ghostsRef.current.forEach((g) => {
       const gx = g.x / tileSize;
       const gy = g.y / tileSize;
+
       if (isCenter(g.x) && isCenter(g.y)) {
         let options = availableDirs(Math.floor(gx), Math.floor(gy), g.dir);
         if (frightTimerRef.current > 0) {
@@ -318,6 +345,7 @@ const Pacman = () => {
           g.dir = options[0] || g.dir;
         }
       }
+
       const ntx = Math.floor((g.x + g.dir.x * speed + tileSize / 2) / tileSize);
       const nty = Math.floor((g.y + g.dir.y * speed + tileSize / 2) / tileSize);
       if (tileAt(ntx, nty) !== 1) {
@@ -327,6 +355,7 @@ const Pacman = () => {
 
       const gtx = Math.floor((g.x + tileSize / 2) / tileSize);
       const gty = Math.floor((g.y + tileSize / 2) / tileSize);
+
       if (gtx === ptx && gty === pty) {
         if (frightTimerRef.current > 0) {
           setScore((s) => s + 200);
@@ -353,9 +382,10 @@ const Pacman = () => {
 
   useEffect(() => {
     if (loading || error) return;
+
     const canvas = canvasRef.current;
-    canvas.width = mazeRef.current[0].length * tileSize;
-    canvas.height = mazeRef.current.length * tileSize;
+    if (!canvas) return;
+
     const handleKey = (e) => {
       switch (e.key) {
         case 'ArrowUp':
@@ -374,10 +404,12 @@ const Pacman = () => {
           break;
       }
     };
+
     const handleTouchStart = (e) => {
       const t = e.touches[0];
       touchStartRef.current = { x: t.clientX, y: t.clientY };
     };
+
     const handleTouchEnd = (e) => {
       if (!touchStartRef.current) return;
       const t = e.changedTouches[0];
@@ -390,14 +422,16 @@ const Pacman = () => {
       }
       touchStartRef.current = null;
     };
+
     window.addEventListener('keydown', handleKey);
-    canvas.addEventListener('touchstart', handleTouchStart);
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
     canvas.addEventListener('touchend', handleTouchEnd);
+
     let id;
     const loop = () => {
-        if (statusRef.current === 'Playing') {
-          stepRef.current();
-          draw();
+      if (statusRef.current === 'Playing') {
+        stepRef.current();
+        draw();
         // simple gamepad polling
         const pads = navigator.getGamepads ? navigator.getGamepads() : [];
         if (pads) {
@@ -411,15 +445,17 @@ const Pacman = () => {
         id = requestAnimationFrame(loop);
       }
     };
+
     draw();
     loop();
+
     return () => {
       window.removeEventListener('keydown', handleKey);
       canvas.removeEventListener('touchstart', handleTouchStart);
       canvas.removeEventListener('touchend', handleTouchEnd);
-      cancelAnimationFrame(id);
+      if (id) cancelAnimationFrame(id);
     };
-  }, [loading, error]);
+  }, [loading, error, draw]);
 
   if (loading) {
     return (
@@ -471,7 +507,14 @@ const Pacman = () => {
           </option>
         ))}
       </select>
-      <canvas ref={canvasRef} className="bg-black" />
+
+      <canvas
+        ref={canvasRef}
+        width={WIDTH}
+        height={HEIGHT}
+        className="bg-black"
+      />
+
       <div className="mt-2">Score: {score} | High: {highScore}</div>
       <div className="mt-1">Lives: {pacRef.current.lives}</div>
       {statusRef.current !== 'Playing' && <div className="mt-2">{statusRef.current}</div>}
@@ -480,4 +523,3 @@ const Pacman = () => {
 };
 
 export default Pacman;
-

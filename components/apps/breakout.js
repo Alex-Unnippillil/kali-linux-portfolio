@@ -1,17 +1,24 @@
-import React, { useRef, useEffect, useState } from 'react';
-import levelsData from './breakout-levels.json';
-import GameLayout from './GameLayout';
+"use client";
+
+import React, { useRef, useEffect, useState } from "react";
+import levelsData from "./breakout-levels.json";
+import GameLayout from "./GameLayout";
+
+// Base logical canvas size (used if container size is unavailable)
+const WIDTH = 640;
+const HEIGHT = 480;
 
 const BASE_PADDLE_WIDTH = 80;
 
+// Build bricks from a 0/1 layout grid
 const buildBricks = (layout, width) => {
   const rows = layout.length;
   const cols = layout[0].length;
   const brickWidth = width / cols;
   const brickHeight = 20;
   const bricks = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
+  for (let r = 0; r < rows; r += 1) {
+    for (let c = 0; c < cols; c += 1) {
       if (layout[r][c]) {
         bricks.push({
           x: c * brickWidth,
@@ -41,7 +48,9 @@ const LevelEditor = ({ onSave, cols = 8, rows = 5 }) => {
 
   const save = () => {
     onSave(grid);
-    localStorage.setItem('breakout-custom-level', JSON.stringify(grid));
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("breakout-custom-level", JSON.stringify(grid));
+    }
   };
 
   return (
@@ -55,17 +64,14 @@ const LevelEditor = ({ onSave, cols = 8, rows = 5 }) => {
             <div
               key={`${r}-${c}`}
               className={`w-5 h-5 cursor-pointer ${
-                cell ? 'bg-white' : 'bg-gray-700'
+                cell ? "bg-white" : "bg-gray-700"
               }`}
               onClick={() => toggle(r, c)}
             />
           ))
         )}
       </div>
-      <button
-        className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
-        onClick={save}
-      >
+      <button className="px-2 py-1 bg-gray-700 hover:bg-gray-600" onClick={save}>
         Save Level
       </button>
     </div>
@@ -78,21 +84,37 @@ const BreakoutGame = ({ levels }) => {
   const scoreRef = useRef(0);
   const highScoresRef = useRef({});
 
+  // Load saved level and highscores
   useEffect(() => {
-    const savedLevel = parseInt(localStorage.getItem('breakout-level') || '0', 10);
-    const savedHigh = JSON.parse(
-      localStorage.getItem('breakout-highscores') || '{}'
-    );
-    setLevel(savedLevel);
-    highScoresRef.current = savedHigh;
+    if (typeof localStorage === "undefined") return;
+    const savedLevel = parseInt(localStorage.getItem("breakout-level") || "0", 10);
+    const savedHigh = JSON.parse(localStorage.getItem("breakout-highscores") || "{}");
+    setLevel(Number.isFinite(savedLevel) ? savedLevel : 0);
+    highScoresRef.current = savedHigh && typeof savedHigh === "object" ? savedHigh : {};
   }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    const ctx = canvas.getContext("2d");
+
+    // Fit canvas to its container and device pixel ratio
+    const fit = () => {
+      const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+      const cssW = canvas.clientWidth || WIDTH;
+      const cssH = canvas.clientHeight || HEIGHT;
+      canvas.width = Math.floor(cssW * dpr);
+      canvas.height = Math.floor(cssH * dpr);
+      // Draw in CSS pixels; map them to device pixels
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    fit();
+    window.addEventListener("resize", fit);
+
+    // Use CSS pixel dimensions for game logic
+    const width = canvas.clientWidth || WIDTH;
+    const height = canvas.clientHeight || HEIGHT;
 
     let bricks = buildBricks(levels[level % levels.length], width);
     const paddle = {
@@ -101,45 +123,48 @@ const BreakoutGame = ({ levels }) => {
       w: BASE_PADDLE_WIDTH,
       h: 10,
     };
-    const balls = [
-      { x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 },
-    ];
+    const balls = [{ x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 }];
     const powerUps = [];
     let paddleTimer = 0;
 
     const keys = { left: false, right: false };
     const keyDown = (e) => {
-      if (e.key === 'ArrowLeft') keys.left = true;
-      if (e.key === 'ArrowRight') keys.right = true;
+      if (e.key === "ArrowLeft") keys.left = true;
+      if (e.key === "ArrowRight") keys.right = true;
     };
     const keyUp = (e) => {
-      if (e.key === 'ArrowLeft') keys.left = false;
-      if (e.key === 'ArrowRight') keys.right = false;
+      if (e.key === "ArrowLeft") keys.left = false;
+      if (e.key === "ArrowRight") keys.right = false;
     };
-    window.addEventListener('keydown', keyDown);
-    window.addEventListener('keyup', keyUp);
+    window.addEventListener("keydown", keyDown);
+    window.addEventListener("keyup", keyUp);
 
     let animationId;
-    let lastTime = 0;
+    let lastTime = performance.now();
 
     const loop = (time) => {
-      const dt = (time - lastTime) / 1000;
+      const dt = Math.min(0.05, (time - lastTime) / 1000); // clamp big frame gaps
       lastTime = time;
 
-      paddle.x += (keys.right - keys.left) * 300 * dt;
-      paddle.x = Math.max(0, Math.min(width - paddle.w, paddle.x));
+      // Update paddle
+      paddle.x += (Number(keys.right) - Number(keys.left)) * 300 * dt;
+      if (paddle.x < 0) paddle.x = 0;
+      if (paddle.x > width - paddle.w) paddle.x = width - paddle.w;
       if (paddleTimer > 0) {
         paddleTimer -= dt;
         if (paddleTimer <= 0) paddle.w = BASE_PADDLE_WIDTH;
       }
 
-      balls.forEach((ball, idx) => {
+      // Update balls
+      for (let i = balls.length - 1; i >= 0; i -= 1) {
+        const ball = balls[i];
         ball.x += ball.vx * dt;
         ball.y += ball.vy * dt;
 
         if (ball.x < ball.r || ball.x > width - ball.r) ball.vx *= -1;
         if (ball.y < ball.r) ball.vy *= -1;
 
+        // Paddle collision
         if (
           ball.y + ball.r > paddle.y &&
           ball.x > paddle.x &&
@@ -150,8 +175,11 @@ const BreakoutGame = ({ levels }) => {
           ball.y = paddle.y - ball.r;
         }
 
-        bricks.forEach((brick) => {
-          if (brick.alive &&
+        // Brick collisions
+        for (let b = 0; b < bricks.length; b += 1) {
+          const brick = bricks[b];
+          if (
+            brick.alive &&
             ball.x > brick.x &&
             ball.x < brick.x + brick.w &&
             ball.y > brick.y &&
@@ -160,28 +188,41 @@ const BreakoutGame = ({ levels }) => {
             brick.alive = false;
             ball.vy *= -1;
             scoreRef.current += 10;
+
+            // 20% chance to spawn a power-up
             if (Math.random() < 0.2) {
-              const type = Math.random() < 0.5 ? 'multi' : 'expand';
-              powerUps.push({ x: brick.x + brick.w / 2, y: brick.y + brick.h / 2, type, vy: 100 });
+              const type = Math.random() < 0.5 ? "multi" : "expand";
+              powerUps.push({
+                x: brick.x + brick.w / 2,
+                y: brick.y + brick.h / 2,
+                type,
+                vy: 100,
+              });
             }
+            break;
           }
-        });
-
-        if (ball.y > height + ball.r) {
-          balls.splice(idx, 1);
         }
-      });
 
-      powerUps.forEach((p, i) => {
+        // Ball lost
+        if (ball.y > height + ball.r) {
+          balls.splice(i, 1);
+        }
+      }
+
+      // Update power-ups
+      for (let i = powerUps.length - 1; i >= 0; i -= 1) {
+        const p = powerUps[i];
         p.y += p.vy * dt;
-        if (
-          p.y + 8 > paddle.y &&
-          p.x > paddle.x &&
-          p.x < paddle.x + paddle.w
-        ) {
-          if (p.type === 'multi') {
-            balls.push({ x: paddle.x + paddle.w / 2, y: paddle.y - 10, vx: 150, vy: -150, r: 5 });
-          } else if (p.type === 'expand') {
+        if (p.y + 8 > paddle.y && p.x > paddle.x && p.x < paddle.x + paddle.w) {
+          if (p.type === "multi") {
+            balls.push({
+              x: paddle.x + paddle.w / 2,
+              y: paddle.y - 10,
+              vx: 150,
+              vy: -150,
+              r: 5,
+            });
+          } else if (p.type === "expand") {
             paddle.w = BASE_PADDLE_WIDTH * 1.5;
             paddleTimer = 10;
           }
@@ -189,53 +230,66 @@ const BreakoutGame = ({ levels }) => {
         } else if (p.y > height) {
           powerUps.splice(i, 1);
         }
-      });
+      }
 
+      // Ensure at least one ball remains
       if (balls.length === 0) {
         balls.push({ x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 });
       }
 
-      ctx.fillStyle = 'black';
+      // Render
+      ctx.fillStyle = "black";
       ctx.fillRect(0, 0, width, height);
 
-      ctx.fillStyle = 'white';
+      // Paddle
+      ctx.fillStyle = "white";
       ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
-      balls.forEach((ball) => {
+
+      // Balls
+      for (const ball of balls) {
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
         ctx.fill();
-      });
+      }
 
-      bricks.forEach((brick) => {
+      // Bricks
+      for (const brick of bricks) {
         if (brick.alive) {
           ctx.fillRect(brick.x, brick.y, brick.w - 2, brick.h - 2);
         }
-      });
+      }
 
-      powerUps.forEach((p) => {
-        ctx.fillStyle = p.type === 'multi' ? 'red' : 'blue';
+      // Power-ups
+      for (const p of powerUps) {
+        ctx.fillStyle = p.type === "multi" ? "red" : "blue";
         ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
-        ctx.fillStyle = 'white';
-      });
+      }
 
+      // HUD
+      ctx.fillStyle = "white";
+      ctx.font = "14px monospace";
+      ctx.textBaseline = "top";
       ctx.fillText(`Level: ${level + 1}`, 10, 10);
-      ctx.fillText(`Score: ${scoreRef.current}`, 10, 25);
-      ctx.fillText(`High: ${highScoresRef.current[level] || 0}`, 10, 40);
+      ctx.fillText(`Score: ${scoreRef.current}`, 10, 26);
+      ctx.fillText(`High: ${highScoresRef.current[level] || 0}`, 10, 42);
 
+      // Level complete
       if (bricks.every((b) => !b.alive)) {
         highScoresRef.current[level] = Math.max(
           highScoresRef.current[level] || 0,
           scoreRef.current
         );
-        localStorage.setItem(
-          'breakout-highscores',
-          JSON.stringify(highScoresRef.current)
-        );
-        const nextLevel = level + 1;
-        localStorage.setItem('breakout-level', String(nextLevel));
-        setLevel(nextLevel);
+        if (typeof localStorage !== "undefined") {
+          localStorage.setItem(
+            "breakout-highscores",
+            JSON.stringify(highScoresRef.current)
+          );
+          const nextLevel = level + 1;
+          localStorage.setItem("breakout-level", String(nextLevel));
+        }
+        setLevel((v) => v + 1);
         scoreRef.current = 0;
-        return;
+        return; // stop this loop; next render will re-init with new level
       }
 
       animationId = requestAnimationFrame(loop);
@@ -245,28 +299,28 @@ const BreakoutGame = ({ levels }) => {
 
     return () => {
       cancelAnimationFrame(animationId);
-      window.removeEventListener('keydown', keyDown);
-      window.removeEventListener('keyup', keyUp);
+      window.removeEventListener("keydown", keyDown);
+      window.removeEventListener("keyup", keyUp);
+      window.removeEventListener("resize", fit);
     };
   }, [level, levels]);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      width={640}
-      height={480}
-      className="h-full w-full bg-black"
-    />
-  );
+  return <canvas ref={canvasRef} className="h-full w-full bg-black" />;
 };
 
 const Breakout = () => {
-  const [levels, setLevels] = useState(levelsData);
+  const [levels, setLevels] = useState(levelsData || []);
 
   useEffect(() => {
-    const custom = localStorage.getItem('breakout-custom-level');
+    if (typeof localStorage === "undefined") return;
+    const custom = localStorage.getItem("breakout-custom-level");
     if (custom) {
-      setLevels((lvls) => [...lvls, JSON.parse(custom)]);
+      try {
+        const grid = JSON.parse(custom);
+        if (Array.isArray(grid)) setLevels((lvls) => [...lvls, grid]);
+      } catch {
+        // ignore invalid JSON
+      }
     }
   }, []);
 

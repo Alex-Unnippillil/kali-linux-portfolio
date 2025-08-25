@@ -352,7 +352,7 @@ export default function AsciiArt() {
           dangerouslySetInnerHTML={{ __html: asciiHtml }}
         />
       )}
-      <canvas ref={canvasRef} className="hidden" />
+      <canvas ref={canvasRef} className="hidden w-full h-full" />
       <div className="sr-only" aria-live="polite">
         {altText}
       </div>

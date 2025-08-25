@@ -85,7 +85,8 @@ const QRTool = () => {
             Download
           </button>
         </div>
-        <canvas ref={canvasRef} className="bg-white" aria-label="Generated QR code" />
+        <canvas ref={canvasRef} className="bg-white w-full h-full" />
+
       </div>
 
       <div>

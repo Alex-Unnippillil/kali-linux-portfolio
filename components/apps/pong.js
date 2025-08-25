@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
 
 // Basic timing constants so the simulation is consistent across refresh rates
@@ -6,8 +7,11 @@ const FRAME_TIME = 1000 / 60; // ideal frame time in ms
 const WIN_POINTS = 5; // points to win a game
 
 // Pong component with spin, adjustable AI and experimental WebRTC multiplayer
+const WIDTH = 600;
+const HEIGHT = 400;
+
 const Pong = () => {
-  const canvasRef = useRef(null);
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
   const resetRef = useRef(null);
   const peerRef = useRef(null);
   const channelRef = useRef(null);
@@ -41,8 +45,8 @@ const Pong = () => {
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    const width = WIDTH;
+    const height = HEIGHT;
 
     const paddleHeight = 80;
     const paddleWidth = 10;
@@ -162,6 +166,8 @@ const Pong = () => {
       pad.vy = pad.y - prev;
     };
 
+    const cpuHistory = [];
+
     const update = (dt) => {
       frame += 1;
       frameRef.current = frame;
@@ -275,8 +281,6 @@ const Pong = () => {
       saveState();
     };
 
-    const cpuHistory = [];
-
     const loop = () => {
       const now = performance.now();
       const dt = Math.min((now - lastTime) / 1000, 0.1); // clamp big jumps
@@ -316,7 +320,7 @@ const Pong = () => {
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, [difficulty, mode, connected, matchWinner, controls]);
+  }, [difficulty, mode, connected, matchWinner, controls, canvasRef]);
 
   const resetGame = () => {
     if (resetRef.current) resetRef.current();
@@ -327,6 +331,15 @@ const Pong = () => {
     const pc = new RTCPeerConnection();
     const channel = pc.createDataChannel('pong');
     channel.onopen = () => setConnected(true);
+    // handle messages early to avoid missing any before effect runs
+    channel.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg && msg.type === 'input') {
+          // no-op here, the effect will set the definitive handler
+        }
+      } catch {}
+    };
     channelRef.current = channel;
     peerRef.current = pc;
 
@@ -348,7 +361,15 @@ const Pong = () => {
     pc.ondatachannel = (e) => {
       const channel = e.channel;
       channel.onopen = () => setConnected(true);
-      channel.onmessage = (ev) => {};
+      // set handler so we do not miss early messages
+      channel.onmessage = (evt) => {
+        try {
+          const msg = JSON.parse(evt.data);
+          if (msg && msg.type === 'input') {
+            // no-op, effect will overwrite handler
+          }
+        } catch {}
+      };
       channelRef.current = channel;
     };
     peerRef.current = pc;
@@ -364,9 +385,7 @@ const Pong = () => {
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
       <canvas
         ref={canvasRef}
-        width={600}
-        height={400}
-        className="bg-black touch-none"
+        className="bg-black w-full h-full touch-none"
       />
       <div className="mt-2">Player: {scores.player} | Opponent: {scores.opponent}</div>
       <div className="mt-1">Games: {match.player} | {match.opponent}</div>
@@ -441,4 +460,3 @@ const Pong = () => {
 };
 
 export default Pong;
-
