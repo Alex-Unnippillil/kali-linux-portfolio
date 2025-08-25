@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import confetti from 'canvas-confetti';
+import GameLayout from './GameLayout';
 
 const winningLines = [
   [0, 1, 2],
@@ -201,4 +202,11 @@ const TicTacToe = () => {
 };
 
 export { checkWinner, minimax };
-export default TicTacToe;
+
+export default function TicTacToeApp() {
+  return (
+    <GameLayout gameId="tictactoe">
+      <TicTacToe />
+    </GameLayout>
+  );
+}
