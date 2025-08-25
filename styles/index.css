@@ -296,3 +296,12 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 .reveal {
     animation: reveal 0.3s ease-out;
 }
+
+@keyframes tile-pop {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
+}
+
+.tile-pop {
+    animation: tile-pop 0.15s ease-out;
+}
