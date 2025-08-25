@@ -266,3 +266,21 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 .reveal {
     animation: reveal 0.3s ease-out;
 }
+
+@keyframes tilePop {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
+}
+
+@keyframes tileMerge {
+    0% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.tile-pop {
+    animation: tilePop 0.15s ease-out;
+}
+
+.tile-merge {
+    animation: tileMerge 0.15s ease-out;
+}
