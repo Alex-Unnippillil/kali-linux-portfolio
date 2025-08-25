@@ -2996,15 +2996,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/mermaid@npm:^9.2.0":
-  version: 9.2.0
-  resolution: "@types/mermaid@npm:9.2.0"
-  dependencies:
-    mermaid: "npm:*"
-  checksum: 10c0/54bd19371e962b6159082437fb6c016c53af52d64a0e4abaae4b1c2d07ecb36ac9854c3afecd8042caed0948dfb8d98283ff2754e605b0b4afd4f9e17b8ee250
-  languageName: node
-  linkType: hard
-
 "@types/ms@npm:*":
   version: 2.1.0
   resolution: "@types/ms@npm:2.1.0"
@@ -10807,7 +10798,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mermaid@npm:*, mermaid@npm:^11.10.1":
+"mermaid@npm:^11.10.1":
   version: 11.10.1
   resolution: "mermaid@npm:11.10.1"
   dependencies:
@@ -15723,7 +15714,6 @@ __metadata:
     "@types/eslint-plugin-security": "npm:^3"
     "@types/howler": "npm:^2"
     "@types/jest": "npm:^30.0.0"
-    "@types/mermaid": "npm:^9.2.0"
     "@types/node": "npm:^24.2.1"
     "@types/plist": "npm:^3.0.2"
     "@types/react": "npm:^19.0.0"
