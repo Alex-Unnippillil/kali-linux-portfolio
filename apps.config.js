@@ -78,6 +78,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const ReaverApp = createDynamicApp('reaver', 'Reaver');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -117,6 +118,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayReaver = createDisplay(ReaverApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -576,6 +578,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQrTool,
+  },
+  {
+    id: 'reaver',
+    title: 'Reaver',
+    icon: './themes/Yaru/apps/reaver.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReaver,
   },
   {
     id: 'ascii-art',
