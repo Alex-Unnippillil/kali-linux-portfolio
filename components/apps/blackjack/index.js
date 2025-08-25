@@ -1,8 +1,43 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useReducer } from 'react';
 import ReactGA from 'react-ga4';
 import { BlackjackGame, handValue, basicStrategy, cardValue } from './engine';
 
 const CHIP_VALUES = [1, 5, 25, 100];
+
+// simple reducer so that game actions can be dispatched and extended easily
+const gameReducer = (state, action) => {
+  const game = state.gameRef.current;
+  try {
+    switch (action.type) {
+      case 'hit':
+        game.hit();
+        break;
+      case 'stand':
+        game.stand();
+        ReactGA.event({ category: 'Blackjack', action: 'stand' });
+        break;
+      case 'double':
+        // implement double down logic
+        game.double();
+        ReactGA.event({ category: 'Blackjack', action: 'double' });
+        break;
+      case 'split':
+        // implement split logic
+        game.split();
+        ReactGA.event({ category: 'Blackjack', action: 'split' });
+        break;
+      case 'surrender':
+        game.surrender();
+        break;
+      default:
+        break;
+    }
+  } catch (e) {
+    state.setMessage(e.message);
+  }
+  // trigger re-render by bumping version
+  return { ...state, version: state.version + 1 };
+};
 
 const Blackjack = () => {
   const gameRef = useRef(new BlackjackGame({ bankroll: 1000 }));
@@ -14,8 +49,16 @@ const Blackjack = () => {
   const [showInsurance, setShowInsurance] = useState(false);
   const [stats, setStats] = useState(gameRef.current.stats);
   const [showHints, setShowHints] = useState(true);
+  const [shuffling, setShuffling] = useState(false);
+
+  const [_, dispatch] = useReducer(gameReducer, {
+    gameRef,
+    setMessage,
+    version: 0,
+  });
 
   const bankroll = gameRef.current.bankroll;
+  const availableBankroll = bankroll - bet;
 
   const update = () => {
     setDealerHand([...gameRef.current.dealerHand]);
@@ -26,6 +69,8 @@ const Blackjack = () => {
 
   const start = () => {
     try {
+      setShuffling(true);
+      setTimeout(() => setShuffling(false), 500);
       gameRef.current.startRound(bet);
       ReactGA.event({ category: 'Blackjack', action: 'hand_start', value: bet });
       setMessage('Hit, Stand, Double, Split or Surrender');
@@ -37,30 +82,13 @@ const Blackjack = () => {
   };
 
   const act = (type) => {
-    try {
-      if (type === 'hit') gameRef.current.hit();
-      if (type === 'stand') {
-        gameRef.current.stand();
-        ReactGA.event({ category: 'Blackjack', action: 'stand' });
-      }
-      if (type === 'double') {
-        gameRef.current.double();
-        ReactGA.event({ category: 'Blackjack', action: 'double' });
-      }
-      if (type === 'split') {
-        gameRef.current.split();
-        ReactGA.event({ category: 'Blackjack', action: 'split' });
-      }
-      if (type === 'surrender') gameRef.current.surrender();
-      update();
-      if (gameRef.current.current >= gameRef.current.playerHands.length) {
-        setMessage('Round complete');
-        gameRef.current.playerHands.forEach((h) => {
-          if (h.result) ReactGA.event({ category: 'Blackjack', action: 'result', label: h.result });
-        });
-      }
-    } catch (e) {
-      setMessage(e.message);
+    dispatch({ type });
+    update();
+    if (gameRef.current.current >= gameRef.current.playerHands.length) {
+      setMessage('Round complete');
+      gameRef.current.playerHands.forEach((h) => {
+        if (h.result) ReactGA.event({ category: 'Blackjack', action: 'result', label: h.result });
+      });
     }
   };
 
@@ -103,11 +131,26 @@ const Blackjack = () => {
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const renderHand = (hand, hideFirst) => (
-    <div className="flex space-x-2">
+  const bustProbability = (hand) => {
+    const total = handValue(hand.cards);
+    const remaining = gameRef.current.shoe.cards;
+    const bustCards = remaining.filter((c) => cardValue(c) + total > 21).length;
+    return remaining.length ? bustCards / remaining.length : 0;
+  };
+
+  const renderHand = (hand, hideFirst, showProb) => (
+    <div
+      className="flex space-x-2"
+      title={showProb ? `Bust chance: ${(bustProbability(hand) * 100).toFixed(1)}%` : undefined}
+    >
       {hand.cards.map((card, idx) => (
-        <div key={idx} className="h-16 w-12 bg-white text-black flex items-center justify-center">
-          {hideFirst && idx === 0 && playerHands.length > 0 && current < playerHands.length ? '?' : `${card.value}${card.suit}`}
+        <div
+          key={idx}
+          className="h-16 w-12 bg-white text-black flex items-center justify-center card animate-deal"
+        >
+          {hideFirst && idx === 0 && playerHands.length > 0 && current < playerHands.length
+            ? '?'
+            : `${card.value}${card.suit}`}
         </div>
       ))}
       <div className="ml-2 self-center">{handValue(hand.cards)}</div>
@@ -118,7 +161,10 @@ const Blackjack = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
-      <div className="mb-2">Bankroll: {bankroll}</div>
+      <div className="mb-2 flex items-center space-x-4">
+        <div>Bankroll: {availableBankroll}</div>
+        <div className={`h-8 w-6 bg-gray-700 ${shuffling ? 'shuffle' : ''}`}></div>
+      </div>
       <div className="mb-2">
         <button className="px-2 py-1 bg-gray-700" onClick={() => setShowHints(!showHints)}>
           {showHints ? 'Hide Hints' : 'Show Hints'}
@@ -128,12 +174,21 @@ const Blackjack = () => {
         <div className="mb-4">
           <div className="mb-2">Bet: {bet}</div>
           <div className="flex space-x-2 mb-2">
-            {CHIP_VALUES.map((v, i) => (
-              <button key={v} className="px-2 py-1 bg-gray-700" onClick={() => bet + v <= bankroll && setBet(bet + v)}>
+            {CHIP_VALUES.map((v) => (
+              <button
+                key={v}
+                className={`h-10 w-10 rounded-full flex items-center justify-center bg-gray-700 hover:bg-gray-600 ${
+                  bet + v > bankroll ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+                onClick={() => bet + v <= bankroll && setBet(bet + v)}
+                title={`Add ${v} chip`}
+              >
                 {v}
               </button>
             ))}
-            <button className="px-2 py-1 bg-gray-700" onClick={() => setBet(0)}>Clear</button>
+            <button className="px-2 py-1 bg-gray-700" onClick={() => setBet(0)}>
+              Clear
+            </button>
             <button className="px-2 py-1 bg-gray-700" onClick={start} disabled={bet === 0}>
               Deal
             </button>
@@ -148,7 +203,7 @@ const Blackjack = () => {
       {playerHands.map((hand, idx) => (
         <div key={idx} className="mb-2">
           <div className="mb-1">{`Player${playerHands.length > 1 ? ` ${idx + 1}` : ''}`}</div>
-          {renderHand(hand)}
+          {renderHand(hand, false, true)}
           {idx === current && playerHands.length > 0 && (
             <div className="mt-2 flex space-x-2">
               <button className={`px-3 py-1 bg-gray-700 ${rec === 'hit' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('hit')}>Hit</button>
