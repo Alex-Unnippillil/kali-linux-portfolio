@@ -83,6 +83,7 @@ const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
 const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
 const ReaverApp = createDynamicApp('reaver', 'Reaver');
 const HydraApp = createDynamicApp('hydra', 'Hydra');
@@ -130,24 +131,17 @@ const displayWireshark = createDisplay(WiresharkApp);
 const displayBluetooth = createDisplay(BluetoothApp);
 const displayBeef = createDisplay(BeefApp);
 const displayMetasploit = createDisplay(MetasploitApp);
-
 const displayDsniff = createDisplay(DsniffApp);
 const displayGomoku = createDisplay(GomokuApp);
-
 const displayPinball = createDisplay(PinballApp);
+const displayMimikatz = createDisplay(MimikatzApp);
 const displayEttercap = createDisplay(EttercapApp);
-
 const displayReaver = createDisplay(ReaverApp);
-
-
 const displayHydra = createDisplay(HydraApp);
 const displayJohn = createDisplay(JohnApp);
-
 const displayNessus = createDisplay(NessusApp);
-
 const displayNmapNSE = createDisplay(NmapNSEApp);
 const displayOpenVAS = createDisplay(OpenVASApp);
-
 const displayReconNG = createDisplay(ReconNGApp);
 
 
@@ -698,6 +692,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'mimikatz',
+    title: 'Mimikatz',
+    icon: './themes/Yaru/apps/mimikatz.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMimikatz,
   },
   {
     id: 'hydra',
