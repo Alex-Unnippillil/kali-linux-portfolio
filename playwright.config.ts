@@ -32,7 +32,6 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
     env: {
-      JWT_SECRET: 'test-secret',
       NODE_ENV: 'test',
     },
   },

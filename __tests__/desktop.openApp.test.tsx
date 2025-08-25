@@ -19,10 +19,24 @@ jest.mock('../apps.config', () => ({
 }));
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
+jest.mock('next/image', () => (props: any) => <img {...props} />);
 
 const Desktop = require('../components/screen/desktop').default;
 
 test('openApp flips closed_windows to false', () => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation(() => ({
+      matches: false,
+      media: '',
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
   jest.useFakeTimers();
   const ref = React.createRef<any>();
   render(<Desktop ref={ref} bg_image_name="sample.jpg" changeBackgroundImage={() => {}} />);

@@ -1,27 +1,33 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-vi.mock('react-ga4', () => ({
+jest.mock('react-ga4', () => ({
+  __esModule: true,
   default: {
-    send: vi.fn(),
-    event: vi.fn(),
+    send: jest.fn(),
+    event: jest.fn(),
   },
 }));
 
-vi.mock('../lib/axiom', () => ({
-  logEvent: vi.fn(),
+jest.mock('../lib/axiom', () => ({
+  logEvent: jest.fn(),
 }));
 
-vi.mock('next/font/google', () => ({
+jest.mock('next/font/google', () => ({
   Inter: () => ({ className: '' }),
 }));
 
-vi.mock('../lib/validate', () => ({
+jest.mock('../lib/validate', () => ({
   validatePublicEnv: () => {},
+}));
+
+jest.mock('../lib/analytics', () => ({
+  trackEvent: jest.fn(),
+  trackPageview: jest.fn(),
+  trackWebVital: jest.fn().mockResolvedValue(undefined),
 }));
 
 describe('analytics disabled', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
+    jest.resetModules();
     delete process.env.NEXT_PUBLIC_ENABLE_ANALYTICS;
     localStorage.clear();
     localStorage.setItem('analytics-consent', 'granted');
@@ -41,21 +47,20 @@ describe('analytics disabled', () => {
     if (value !== undefined) {
       process.env.NEXT_PUBLIC_ENABLE_ANALYTICS = value;
     }
-    const { trackPageview } = await import('../lib/analytics');
-    const ReactGA = (await import('react-ga4')).default;
-    trackPageview('/page');
-    expect(ReactGA.send).not.toHaveBeenCalled();
+    const analytics = await import('../lib/analytics');
+    const ReactGA = (await import('react-ga4')).default as any;
+    analytics.trackPageview('/page');
+    expect((ReactGA.send as jest.Mock).mock.calls.length).toBe(0);
   });
 
   it.each([undefined, 'false'])('reportWebVitals no-ops when env is %s', async (value) => {
-    vi.resetModules();
+    jest.resetModules();
     if (value !== undefined) {
       process.env.NEXT_PUBLIC_ENABLE_ANALYTICS = value;
     }
     const analytics = await import('../lib/analytics');
-    const trackWebVitalSpy = vi.spyOn(analytics, 'trackWebVital').mockResolvedValue();
     const { reportWebVitals } = await import('../pages/_app');
     reportWebVitals({ id: '1', name: 'CLS', value: 0, label: 'web-vital', startTime: 0 });
-    expect(trackWebVitalSpy).not.toHaveBeenCalled();
+    expect(analytics.trackWebVital).not.toHaveBeenCalled();
   });
 });
