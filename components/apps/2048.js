@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
+
 
 const SIZE = 4;
 
@@ -75,10 +77,17 @@ const tileColors = {
   2048: 'bg-green-600 text-white',
 };
 
+const validateBoard = (b) =>
+  Array.isArray(b) &&
+  b.length === SIZE &&
+  b.every(
+    (row) => Array.isArray(row) && row.length === SIZE && row.every((n) => typeof n === 'number'),
+  );
+
 const Game2048 = () => {
-  const [board, setBoard] = useState(() => initBoard());
-  const [won, setWon] = useState(false);
-  const [lost, setLost] = useState(false);
+  const [board, setBoard] = usePersistentState('2048-board', initBoard, validateBoard);
+  const [won, setWon] = usePersistentState('2048-won', false, (v) => typeof v === 'boolean');
+  const [lost, setLost] = usePersistentState('2048-lost', false, (v) => typeof v === 'boolean');
 
   const handleKey = useCallback(
     (e) => {
@@ -119,39 +128,46 @@ const Game2048 = () => {
   };
 
   return (
-    <div className="h-full w-full p-4 flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
-      <div className="grid grid-cols-4 gap-2">
-        {board.map((row, rIdx) =>
-          row.map((cell, cIdx) => (
-            <div
-              key={`${rIdx}-${cIdx}`}
-              className={`h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
-                cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
-              }`}
-            >
-              {cell !== 0 ? cell : ''}
-            </div>
-          ))
+    <GameLayout
+      title="2048"
+      instructions="Use arrow keys to move tiles. Reach 2048 to win."
+      controls={
+        <>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={reset}
+          >
+            Reset
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={close}
+          >
+            Close
+          </button>
+        </>
+      }
+    >
+      <>
+        <div className="grid grid-cols-4 gap-2">
+          {board.map((row, rIdx) =>
+            row.map((cell, cIdx) => (
+              <div
+                key={`${rIdx}-${cIdx}`}
+                className={`h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
+                  cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
+                }`}
+              >
+                {cell !== 0 ? cell : ''}
+              </div>
+            ))
+          )}
+        </div>
+        {(won || lost) && (
+          <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
         )}
-      </div>
-      {(won || lost) && (
-        <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
-      )}
-      <div className="mt-4 space-x-2">
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={reset}
-        >
-          Reset
-        </button>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={close}
-        >
-          Close
-        </button>
-      </div>
-    </div>
+      </>
+    </GameLayout>
   );
 };
 

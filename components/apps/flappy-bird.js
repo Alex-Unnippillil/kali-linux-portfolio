@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import GameLayout from './GameLayout';
 
 const FlappyBird = () => {
   const canvasRef = useRef(null);
@@ -35,6 +36,8 @@ const FlappyBird = () => {
       bird.vy = jump;
     };
 
+    let animationFrameId;
+
     const handleKey = (e) => {
       if (e.code === 'Space') {
         if (running) {
@@ -42,7 +45,7 @@ const FlappyBird = () => {
         } else {
           reset();
           addPipe();
-          requestAnimationFrame(update);
+          animationFrameId = requestAnimationFrame(update);
         }
       }
     };
@@ -80,7 +83,7 @@ const FlappyBird = () => {
 
       draw();
 
-      if (running) requestAnimationFrame(update);
+      if (running) animationFrameId = requestAnimationFrame(update);
     };
 
     const draw = () => {
@@ -116,20 +119,23 @@ const FlappyBird = () => {
     };
 
     addPipe();
-    requestAnimationFrame(update);
+    animationFrameId = requestAnimationFrame(update);
 
     return () => {
       window.removeEventListener('keydown', handleKey);
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={400}
-      height={300}
-      className="w-full h-full bg-black"
-    />
+    <GameLayout title="Flappy Bird" instructions="Press Space to flap.">
+      <canvas
+        ref={canvasRef}
+        width={400}
+        height={300}
+        className="w-full h-full bg-black"
+      />
+    </GameLayout>
   );
 };
 

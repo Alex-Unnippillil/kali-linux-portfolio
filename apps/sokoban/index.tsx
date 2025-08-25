@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import ReactGA from 'react-ga4';
+import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 import { defaultLevels, parseLevels } from './levels';
 import {
   loadLevel,
@@ -22,6 +22,10 @@ const Sokoban: React.FC = () => {
   const [best, setBest] = useState<number | null>(null);
 
   useEffect(() => {
+    logGameStart('sokoban');
+  }, []);
+
+  useEffect(() => {
     const k = `sokoban-best-${index}`;
     const b = localStorage.getItem(k);
     setBest(b ? Number(b) : null);
@@ -36,10 +40,15 @@ const Sokoban: React.FC = () => {
       setState(newState);
       setReach(reachable(newState));
       if (newState.pushes > state.pushes) {
-        ReactGA.event('push');
+        logEvent({ category: 'sokoban', action: 'push' });
       }
       if (isSolved(newState)) {
-        ReactGA.event('level_complete', { moves: newState.pushes });
+        logGameEnd('sokoban', `level_complete`);
+        logEvent({
+          category: 'sokoban',
+          action: 'level_complete',
+          value: newState.pushes,
+        });
         const bestKey = `sokoban-best-${index}`;
         const prevBest = localStorage.getItem(bestKey);
         if (!prevBest || newState.pushes < Number(prevBest)) {
@@ -57,7 +66,8 @@ const Sokoban: React.FC = () => {
     setIndex(i);
     setState(st);
     setReach(reachable(st));
-    ReactGA.event('level_select', { level: i });
+    logGameStart('sokoban');
+    logEvent({ category: 'sokoban', action: 'level_select', value: i });
   };
 
   const handleUndo = () => {
@@ -65,7 +75,7 @@ const Sokoban: React.FC = () => {
     if (st !== state) {
       setState(st);
       setReach(reachable(st));
-      ReactGA.event('undo');
+      logEvent({ category: 'sokoban', action: 'undo' });
     }
   };
 
@@ -76,13 +86,17 @@ const Sokoban: React.FC = () => {
   };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const text = await file.text();
-    const lvl = parseLevels(text);
-    if (lvl.length) {
-      setLevels(lvl);
-      selectLevel(0);
+    try {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      const lvl = parseLevels(text);
+      if (lvl.length) {
+        setLevels(lvl);
+        selectLevel(0);
+      }
+    } catch (err: any) {
+      logGameError('sokoban', err?.message || String(err));
     }
   };
 

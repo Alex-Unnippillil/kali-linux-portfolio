@@ -1,6 +1,6 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
-import ReactGA from 'react-ga4';
+import { logEvent } from './utils/analytics';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
@@ -19,12 +19,13 @@ import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayNikto } from './components/apps/nikto';
 
 const createDynamicApp = (path, name) =>
   dynamic(
     () =>
       import(`./components/apps/${path}`).then((mod) => {
-        ReactGA.event({ category: 'Application', action: `Loaded ${name}` });
+        logEvent({ category: 'Application', action: `Loaded ${name}` });
         return mod.default;
       }),
     {
@@ -75,9 +76,37 @@ const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
+const Radare2App = createDynamicApp('radare2', 'Radare2');
+
+const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
+
+
+const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
+const BluetoothApp = createDynamicApp('bluetooth', 'Bluetooth Tools');
+const DsniffApp = createDynamicApp('dsniff', 'dsniff');
+const BeefApp = createDynamicApp('beef', 'BeEF');
+const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
+
+const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const VolatilityApp = createDynamicApp('volatility', 'Volatility');
+
+const KismetApp = createDynamicApp('kismet', 'Kismet');
+
+const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
+const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
+const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
+const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
+const ReaverApp = createDynamicApp('reaver', 'Reaver');
+const HydraApp = createDynamicApp('hydra', 'Hydra');
+const JohnApp = createDynamicApp('john', 'John the Ripper');
+const NessusApp = createDynamicApp('nessus', 'Nessus');
+const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
+const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
+const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
+ 
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -113,10 +142,35 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+const displayRadare2 = createDisplay(Radare2App);
 
+const displayGhidra = createDisplay(GhidraApp);
+
+const displayAutopsy = createDisplay(AutopsyApp);
+
+const displayWireshark = createDisplay(WiresharkApp);
+const displayBluetooth = createDisplay(BluetoothApp);
+const displayBeef = createDisplay(BeefApp);
+const displayMetasploit = createDisplay(MetasploitApp);
+const displayDsniff = createDisplay(DsniffApp);
 const displayGomoku = createDisplay(GomokuApp);
-
 const displayPinball = createDisplay(PinballApp);
+const displayVolatility = createDisplay(VolatilityApp);
+
+const displayMsfPost = createDisplay(MsfPostApp);
+const displayMimikatz = createDisplay(MimikatzApp);
+const displayEttercap = createDisplay(EttercapApp);
+const displayReaver = createDisplay(ReaverApp);
+const displayHydra = createDisplay(HydraApp);
+const displayJohn = createDisplay(JohnApp);
+const displayNessus = createDisplay(NessusApp);
+const displayNmapNSE = createDisplay(NmapNSEApp);
+const displayOpenVAS = createDisplay(OpenVASApp);
+const displayReconNG = createDisplay(ReconNGApp);
+
+const displayHashcat = createDisplay(HashcatApp);
+
+const displayKismet = createDisplay(KismetApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -497,6 +551,15 @@ const apps = [
     screen: displayYouTube,
   },
   {
+    id: 'beef',
+    title: 'BeEF',
+    icon: './themes/Yaru/apps/beef.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBeef,
+  },
+  {
     id: 'about-alex',
     title: 'About Alex',
     icon: './themes/Yaru/system/user-home.png',
@@ -524,6 +587,33 @@ const apps = [
     screen: displayResourceMonitor,
   },
   {
+    id: 'ettercap',
+    title: 'Ettercap',
+    icon: './themes/Yaru/apps/ettercap.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEttercap,
+  },
+  {
+    id: 'bluetooth-tools',
+    title: 'Bluetooth Tools',
+    icon: './themes/Yaru/apps/bluetooth.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBluetooth,
+  },
+  {
+    id: 'metasploit',
+    title: 'Metasploit',
+    icon: './themes/Yaru/apps/metasploit.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMetasploit,
+  },
+  {
     id: 'project-gallery',
     title: 'Project Gallery',
     icon: './themes/Yaru/apps/project-gallery.svg',
@@ -531,6 +621,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'wireshark',
+    title: 'Wireshark',
+    icon: './themes/Yaru/apps/wireshark.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWireshark,
   },
   {
     id: 'todoist',
@@ -569,6 +668,24 @@ const apps = [
     screen: displayConverter,
   },
   {
+    id: 'kismet',
+    title: 'Kismet',
+    icon: './themes/Yaru/apps/kismet.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKismet,
+  },
+  {
+    id: 'nikto',
+    title: 'Nikto',
+    icon: './themes/Yaru/apps/nikto.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNikto,
+  },
+  {
     id: 'qr-tool',
     title: 'QR Tool',
     icon: './themes/Yaru/apps/qr.svg',
@@ -576,6 +693,32 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQrTool,
+  },
+  {
+    id: 'autopsy',
+    title: 'Autopsy',
+    icon: './themes/Yaru/apps/autopsy.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAutopsy,
+  },
+  {    id: 'reaver',
+    title: 'Reaver',
+    icon: './themes/Yaru/apps/reaver.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReaver,
+  },
+  {
+    id: 'nessus',
+    title: 'Nessus',
+    icon: './themes/Yaru/apps/nessus.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNessus,
   },
   {
     id: 'ascii-art',
@@ -596,6 +739,42 @@ const apps = [
     screen: displayQuoteGenerator,
   },
   {
+    id: 'ghidra',
+    title: 'Ghidra',
+    icon: './themes/Yaru/apps/ghidra.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayGhidra,
+  },
+  {
+    id: 'mimikatz',
+    title: 'Mimikatz',
+    icon: './themes/Yaru/apps/mimikatz.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMimikatz,
+  },
+  {
+    id: 'hydra',
+    title: 'Hydra',
+    icon: './themes/Yaru/apps/hydra.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHydra,
+  },
+  {
+    id: 'nmap-nse',
+    title: 'Nmap NSE',
+    icon: './themes/Yaru/apps/nmap-nse.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNmapNSE,
+  },
+  {
     id: 'weather',
     title: 'Weather',
     icon: './themes/Yaru/apps/weather.svg',
@@ -603,6 +782,78 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'radare2',
+    title: 'Radare2',
+    icon: './themes/Yaru/apps/radare2.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayRadare2,
+  },
+  {
+    id: 'volatility',
+    title: 'Volatility',
+    icon: './themes/Yaru/apps/volatility.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayVolatility,
+  },
+  {
+    id: 'hashcat',
+    title: 'Hashcat',
+    icon: './themes/Yaru/apps/hashcat.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHashcat,
+  },
+  {
+    id: 'msf-post',
+    title: 'Metasploit Post',
+    icon: './themes/Yaru/apps/msf-post.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMsfPost,
+  },
+  {
+    id: 'dsniff',
+    title: 'dsniff',
+    icon: './themes/Yaru/apps/dsniff.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDsniff,
+  },
+  {
+    id: 'john',
+    title: 'John the Ripper',
+    icon: './themes/Yaru/apps/john.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayJohn,
+  },
+  {
+    id: 'openvas',
+    title: 'OpenVAS',
+    icon: './themes/Yaru/apps/openvas.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayOpenVAS,
+  },
+  {
+    id: 'recon-ng',
+    title: 'Recon-ng',
+    icon: './themes/Yaru/apps/reconng.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReconNG,
   },
   // Games are included so they appear alongside apps
   ...games,
