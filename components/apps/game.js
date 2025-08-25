@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import GameLayout from './GameLayout';
 
 const lines = [
   [0, 1, 2],
@@ -62,8 +63,18 @@ const GameApp = () => {
   }, []);
 
   return (
-    <div className="h-full w-full p-4 bg-gray-900 text-white flex flex-col items-center justify-center">
-      <div className="mb-4 text-xl">{status}</div>
+    <GameLayout
+      title="Tic Tac Toe"
+      score={<div className="text-xl">{status}</div>}
+      controls={
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={reset}
+        >
+          Reset
+        </button>
+      }
+    >
       <div className="grid grid-cols-3 gap-2">
         {squares.map((value, idx) => (
           <button
@@ -75,13 +86,7 @@ const GameApp = () => {
           </button>
         ))}
       </div>
-      <button
-        className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={reset}
-      >
-        Reset
-      </button>
-    </div>
+    </GameLayout>
   );
 };
 
