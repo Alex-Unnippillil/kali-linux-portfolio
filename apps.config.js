@@ -76,11 +76,14 @@ const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
+const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
+
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
 const BluetoothApp = createDynamicApp('bluetooth', 'Bluetooth Tools');
 const DsniffApp = createDynamicApp('dsniff', 'dsniff');
 const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
+
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const KismetApp = createDynamicApp('kismet', 'Kismet');
@@ -132,6 +135,8 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+const displayGhidra = createDisplay(GhidraApp);
+
 const displayWireshark = createDisplay(WiresharkApp);
 const displayBluetooth = createDisplay(BluetoothApp);
 const displayBeef = createDisplay(BeefApp);
@@ -711,6 +716,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'ghidra',
+    title: 'Ghidra',
+    icon: './themes/Yaru/apps/ghidra.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayGhidra,
   },
   {
     id: 'mimikatz',
