@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useGameSettings } from './settings-context';
 import ReactGA from 'react-ga4';
 import confetti from 'canvas-confetti';
 
@@ -49,7 +50,7 @@ const TicTacToe = () => {
   const [status, setStatus] = useState('Choose X or O');
   const [player, setPlayer] = useState(null);
   const [ai, setAi] = useState(null);
-  const [difficulty, setDifficulty] = useState('hard');
+  const { difficulty, setDifficulty } = useGameSettings();
   const [aiMoves, setAiMoves] = useState(0);
   const [winningLine, setWinningLine] = useState([]);
 

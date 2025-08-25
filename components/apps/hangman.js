@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useGameSettings } from './settings-context';
 import confetti from 'canvas-confetti';
 import ReactGA from 'react-ga4';
 
@@ -52,8 +53,7 @@ const HangmanDrawing = ({ wrong }) => (
 const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
 const Hangman = () => {
-  const [theme, setTheme] = useState('tech');
-  const [difficulty, setDifficulty] = useState('easy');
+  const { theme, setTheme, difficulty, setDifficulty } = useGameSettings();
   const [lengthIndex, setLengthIndex] = useState(0);
   const [word, setWord] = useState('');
   const [guessed, setGuessed] = useState([]);

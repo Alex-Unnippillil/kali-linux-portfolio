@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useGameSettings } from './settings-context';
 
 const padStyles = [
   {
@@ -25,6 +26,7 @@ export const createToneSchedule = (length, start, step) =>
   Array.from({ length }, (_, i) => start + i * step);
 
 const Simon = () => {
+  const { sound } = useGameSettings();
   const [sequence, setSequence] = useState([]);
   const [step, setStep] = useState(0);
   const [isPlayerTurn, setIsPlayerTurn] = useState(false);
@@ -34,6 +36,7 @@ const Simon = () => {
   const audioCtx = useRef(null);
 
   const scheduleTone = (freq, startTime) => {
+    if (!sound) return;
     const ctx =
       audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.current = ctx;
