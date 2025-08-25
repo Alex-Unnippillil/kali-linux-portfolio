@@ -76,6 +76,7 @@ const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
+const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
@@ -119,6 +120,8 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+
+const displayMetasploit = createDisplay(MetasploitApp);
 
 const displayGomoku = createDisplay(GomokuApp);
 
@@ -534,6 +537,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'metasploit',
+    title: 'Metasploit',
+    icon: './themes/Yaru/apps/metasploit.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMetasploit,
   },
   {
     id: 'project-gallery',
