@@ -13294,16 +13294,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-twitter-widgets@patch:react-twitter-widgets@npm%3A1.11.0#~/.yarn/patches/react-twitter-widgets-npm-1.11.0-8937195212.patch":
-  version: 1.11.0
-  resolution: "react-twitter-widgets@patch:react-twitter-widgets@npm%3A1.11.0#~/.yarn/patches/react-twitter-widgets-npm-1.11.0-8937195212.patch::version=1.11.0&hash=a5a1cf"
-  dependencies:
-    loadjs: "npm:^4.2.0"
-  peerDependencies:
-    react: ^16.8.0 || ^17 || ^18
-  checksum: 10c0/c08b346a0d7944cd7359bfbba4db0fe12863090cd84760da22195bd42a2dfb955a1a1f53a1236195d6cbe31dc8ca692f4adddb94c040c257190f869d4ec062b5
-  languageName: node
-  linkType: hard
 
 "react-window@npm:^1.8.11":
   version: 1.8.11
@@ -15948,7 +15938,7 @@ __metadata:
     react-github-calendar: "npm:^4.5.9"
     react-markdown: "npm:^10.1.0"
     react-simple-code-editor: "npm:^0.14.1"
-    react-twitter-widgets: "patch:react-twitter-widgets@npm%3A1.11.0#~/.yarn/patches/react-twitter-widgets-npm-1.11.0-8937195212.patch"
+    react-twitter-embed: "npm:^4.0.4"
 
     react-window: "npm:^1.8.11"
     rehype-sanitize: "npm:^6.0.0"

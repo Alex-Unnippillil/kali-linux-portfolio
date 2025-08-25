@@ -113,7 +113,7 @@
     "react-github-calendar": "^4.5.9",
     "react-markdown": "^10.1.0",
     "react-simple-code-editor": "^0.14.1",
-    "react-twitter-widgets": "patch:react-twitter-widgets@npm%3A1.11.0#~/.yarn/patches/react-twitter-widgets-npm-1.11.0-8937195212.patch",
+    "react-twitter-embed": "^4.0.4",
 
     "react-window": "^1.8.11",
     "rehype-sanitize": "^6.0.0",

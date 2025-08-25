@@ -1,9 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useState } from 'react';
 import Papa from 'papaparse';
+import dynamic from 'next/dynamic';
 
-// react-chrono runs client-side only
-const Chrono = dynamic(() => import('react-chrono').then(m => m.Chrono), { ssr: false });
+const Chrono = dynamic(() => import('react-chrono').then(m => m.Chrono), {
+  ssr: false,
+});
+
 
 export interface TimelineEvent {
   time: string;
@@ -14,40 +16,62 @@ export interface TimelineEvent {
   link?: string;
 }
 
-export default function TimelineBuilder() {
-  const [rows, setRows] = useState<TimelineEvent[]>([]);
+interface Props {
+  openApp?: (id: string) => void;
+}
 
-  const items = useMemo(() => {
-    return rows
-      .slice()
-      .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
-      .map((r) => ({
-        title: new Date(r.time).toLocaleDateString(),
-        cardTitle: r.event,
-        cardSubtitle: r.group ?? '',
-        url: r.link,
-      }));
-  }, [rows]);
+const TimelineBuilder: React.FC<Props> = () => {
+  const [events, setEvents] = useState<TimelineEvent[]>([]);
+  const [search, setSearch] = useState('');
 
-  const onCsv = (file: File) => {
-    Papa.parse<TimelineEvent>(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (res) => setRows((res.data || []).filter(Boolean)),
-    });
+  const handleFiles = async (files: FileList | null) => {
+    if (!files) return;
+    const parsed: TimelineEvent[] = [];
+    for (const file of Array.from(files)) {
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (ext === 'csv') parsed.push(...(await parseCsv(file)));
+      else if (ext === 'json') parsed.push(...(await parseJson(file)));
+      else if (ext === 'log' || ext === 'txt') parsed.push(...(await parseLog(file)));
+    }
+    setEvents(sortEvents(parsed));
   };
 
+  const filtered = filterEvents(events, search);
+
+  const items = filtered.map((e) => ({
+    title: new Date(e.time).toISOString(),
+    cardTitle: e.event,
+    cardSubtitle: e.group,
+    cardDetailedText: e.tags && e.tags.length > 0 ? e.tags.join(', ') : undefined,
+  }));
+
   return (
-    <div className="h-full w-full bg-panel p-3 overflow-auto">
-      <input
-        type="file"
-        accept=".csv"
-        onChange={(e) => e.target.files?.[0] && onCsv(e.target.files[0])}
-        className="mb-3"
-      />
-      <div style={{ height: 'calc(100% - 3rem)' }}>
-        <Chrono items={items} mode="VERTICAL" hideControls />
+    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white p-2 space-y-2">
+      <div className="flex space-x-2 items-center">
+        <input
+          type="file"
+          accept=".csv,.json,.log,.txt"
+          multiple
+          onChange={(e) => handleFiles(e.target.files)}
+        />
+        <input
+          type="text"
+          placeholder="Search..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="bg-white text-black px-2 rounded"
+        />
       </div>
+      {items.length > 0 ? (
+        <div className="flex-1 overflow-y-auto">
+          <Chrono items={items} mode="VERTICAL" scrollable={{ scrollbar: true }} />
+        </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center text-gray-400">
+          Load a CSV, JSON, or log file to begin.
+        </div>
+      )}
+
     </div>
   );
 }
@@ -80,6 +104,69 @@ export const parseLogText = (text: string): TimelineEvent[] => {
     })
     .filter((e): e is TimelineEvent => e !== null);
 };
+
+const parseLog = (file: File): Promise<TimelineEvent[]> =>
+  new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(parseLogText(reader.result as string));
+    reader.readAsText(file);
+  });
+
+const parseCsv = (file: File): Promise<TimelineEvent[]> =>
+  new Promise((resolve) => {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results: any) => {
+        const rows = results.data as any[];
+        const parsed = rows
+          .map((r) => ({
+            time: r.time || r.start || r.date || r.timestamp,
+            end: r.end || r.finish,
+            event: r.event || r.title || r.description,
+            group: r.group || r.category,
+            tags: r.tags
+              ? String(r.tags)
+                  .split(/[|,]/)
+                  .map((t: string) => t.trim())
+                  .filter(Boolean)
+              : undefined,
+            link: r.link || r.evidence || r.url,
+          }))
+          .filter((e) => e.time && e.event);
+        resolve(parsed);
+      },
+    });
+  });
+
+const parseJson = (file: File): Promise<TimelineEvent[]> =>
+  new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result as string);
+        const arr = Array.isArray(data) ? data : data.events || [];
+        const parsed = arr
+          .map((e: any) => ({
+            time: e.time || e.start || e.date || e.timestamp,
+            end: e.end || e.finish,
+            event: e.event || e.title || e.description,
+            group: e.group || e.category,
+            tags: e.tags,
+            link: e.link || e.evidence || e.url,
+          }))
+          .filter((e: TimelineEvent) => e.time && e.event);
+        resolve(parsed);
+      } catch {
+        resolve([]);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+const sortEvents = (evts: TimelineEvent[]) =>
+  evts.sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
 
 export const filterEvents = (evts: TimelineEvent[], term: string) => {
   const q = term.toLowerCase();

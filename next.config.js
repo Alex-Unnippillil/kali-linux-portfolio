@@ -92,10 +92,6 @@ module.exports = {
       mermaid: require('path').resolve(__dirname, 'lib/mermaidStub.js'),
       'argon2-browser': require('path').resolve(__dirname, 'lib/argon2Stub.js'),
       earcut: require('path').resolve(__dirname, 'lib/earcutStub.js'),
-      'vis-timeline/dist/vis-timeline-graph2d.min.css': require('path').resolve(
-        __dirname,
-        'node_modules/vis-timeline/styles/vis-timeline-graph2d.min.css'
-      ),
     };
     config.experiments = {
       ...(config.experiments || {}),
