@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
 import confetti from 'canvas-confetti';
-import ReactGA from 'react-ga4';
+import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 
 const dictionaries = {
   tech: {
@@ -55,12 +56,12 @@ const Hangman = () => {
   const [theme, setTheme] = useState('tech');
   const [difficulty, setDifficulty] = useState('easy');
   const [lengthIndex, setLengthIndex] = useState(0);
-  const [word, setWord] = useState('');
-  const [guessed, setGuessed] = useState([]);
-  const [wrong, setWrong] = useState(0);
+  const [word, setWord] = usePersistentState('hangman-word', '', (v) => typeof v === 'string');
+  const [guessed, setGuessed] = usePersistentState('hangman-guessed', [], Array.isArray);
+  const [wrong, setWrong] = usePersistentState('hangman-wrong', 0, (v) => typeof v === 'number');
   const [hint, setHint] = useState('');
-  const [hintsUsed, setHintsUsed] = useState(0);
-  const [score, setScore] = useState(0);
+  const [hintsUsed, setHintsUsed] = usePersistentState('hangman-hints', 0, (v) => typeof v === 'number');
+  const [score, setScore] = usePersistentState('hangman-score', 0, (v) => typeof v === 'number');
   const [revealed, setRevealed] = useState([]);
   const [gameEnded, setGameEnded] = useState(false);
   const [shake, setShake] = useState(false);
@@ -100,52 +101,67 @@ const Hangman = () => {
     setRevealed([]);
     setGameEnded(false);
     setWord(selectWord());
+    logGameStart('hangman');
   };
 
+  const firstLoad = useRef(true);
   useEffect(() => {
     usedWordsRef.current = [];
+    if (firstLoad.current && word) {
+      firstLoad.current = false;
+      return;
+    }
+    firstLoad.current = false;
     initGame();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [theme, difficulty, lengthIndex]);
 
   const handleGuess = (letter) => {
-    const btn = document.getElementById(`key-${letter}`);
-    if (btn) {
-      btn.classList.add('key-press');
-      setTimeout(() => btn.classList.remove('key-press'), 100);
-    }
-    if (guessed.includes(letter) || isGameOver()) return;
-    ReactGA.event({ category: 'hangman', action: 'guess', label: letter });
-    setGuessed((g) => [...g, letter]);
-    if (!word.includes(letter)) {
-      setWrong((w) => w + 1);
-      setScore((s) => s - 1);
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-    } else {
-      setScore((s) => s + 2);
-      setRevealed((r) => [...r, letter]);
-      setTimeout(() =>
-        setRevealed((r) => r.filter((l) => l !== letter)),
-      500);
+    try {
+      const btn = document.getElementById(`key-${letter}`);
+      if (btn) {
+        btn.classList.add('key-press');
+        setTimeout(() => btn.classList.remove('key-press'), 100);
+      }
+      if (guessed.includes(letter) || isGameOver()) return;
+      logEvent({ category: 'hangman', action: 'guess', label: letter });
+      setGuessed((g) => [...g, letter]);
+      if (!word.includes(letter)) {
+        setWrong((w) => w + 1);
+        setScore((s) => s - 1);
+        setShake(true);
+        setTimeout(() => setShake(false), 500);
+      } else {
+        setScore((s) => s + 2);
+        setRevealed((r) => [...r, letter]);
+        setTimeout(() =>
+          setRevealed((r) => r.filter((l) => l !== letter)),
+        500);
+      }
+    } catch (err) {
+      logGameError('hangman', err?.message || String(err));
     }
   };
 
   const useHint = () => {
-    if (isGameOver() || hintsUsed >= hintLimits[difficulty]) return;
-    const remaining = word
-      .split('')
-      .filter((l) => !guessed.includes(l));
-    if (!remaining.length) return;
-    const counts = remaining.reduce((acc, l) => {
-      acc[l] = (acc[l] || 0) + 1;
-      return acc;
-    }, {});
-    const best = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
-    ReactGA.event({ category: 'hangman', action: 'hint' });
-    setHint(`Try letter ${best.toUpperCase()}`);
-    setScore((s) => s - 5);
-    setHintsUsed((h) => h + 1);
+    try {
+      if (isGameOver() || hintsUsed >= hintLimits[difficulty]) return;
+      const remaining = word
+        .split('')
+        .filter((l) => !guessed.includes(l));
+      if (!remaining.length) return;
+      const counts = remaining.reduce((acc, l) => {
+        acc[l] = (acc[l] || 0) + 1;
+        return acc;
+      }, {});
+      const best = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+      logEvent({ category: 'hangman', action: 'hint' });
+      setHint(`Try letter ${best.toUpperCase()}`);
+      setScore((s) => s - 5);
+      setHintsUsed((h) => h + 1);
+    } catch (err) {
+      logGameError('hangman', err?.message || String(err));
+    }
   };
 
     const isWinner = useCallback(
@@ -179,7 +195,8 @@ const Hangman = () => {
 
     useEffect(() => {
       if (!gameEnded && isGameOver()) {
-        ReactGA.event({
+        logGameEnd('hangman', isWinner() ? 'win' : 'lose');
+        logEvent({
           category: 'hangman',
           action: 'game_over',
           label: isWinner() ? 'win' : 'lose',
@@ -190,7 +207,7 @@ const Hangman = () => {
     }, [gameEnded, guessed, isGameOver, isWinner]);
 
   useEffect(() => {
-    ReactGA.event({
+    logEvent({
       category: 'hangman',
       action: 'category_select',
       label: `${theme}-${difficulty}`,

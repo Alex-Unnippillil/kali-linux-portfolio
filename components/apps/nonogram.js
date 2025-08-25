@@ -6,7 +6,9 @@ import {
   findHint,
   validateSolution,
   getPuzzleBySeed,
+  puzzles,
 } from './nonogramUtils';
+import usePersistentState from '../usePersistentState';
 
 const parseClues = (text) =>
   text
@@ -23,9 +25,11 @@ const parseClues = (text) =>
 const Nonogram = () => {
   const [rowInput, setRowInput] = useState('1\n3\n5\n3\n1');
   const [colInput, setColInput] = useState('1 1\n3\n5\n3\n1 1');
-  const [rows, setRows] = useState([]);
-  const [cols, setCols] = useState([]);
-  const [grid, setGrid] = useState([]);
+  const [rows, setRows] = usePersistentState('nonogram-rows', []);
+  const [cols, setCols] = usePersistentState('nonogram-cols', []);
+  const [grid, setGrid] = usePersistentState('nonogram-grid', []);
+  const [rowMarks, setRowMarks] = usePersistentState('nonogram-rowMarks', []);
+  const [colMarks, setColMarks] = usePersistentState('nonogram-colMarks', []);
   const [rowState, setRowState] = useState([]);
   const [colState, setColState] = useState([]);
   const [started, setStarted] = useState(false);
@@ -40,18 +44,6 @@ const Nonogram = () => {
   const completed = useRef(false);
   const touchTimer = useRef(null);
   const touchCross = useRef(false);
-
-    const updateStorage = useCallback(
-      (g, r = rows, c = cols) => {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(
-            'nonogram-progress',
-            JSON.stringify({ rows: r, cols: c, grid: g })
-          );
-        }
-      },
-      [rows, cols]
-    );
 
     const evaluate = useCallback(
       (g) => {
@@ -76,8 +68,9 @@ const Nonogram = () => {
       .fill(null)
       .map(() => Array(c.length).fill(0));
     setGrid(g);
+    setRowMarks(Array(r.length).fill(false));
+    setColMarks(Array(c.length).fill(false));
     evaluate(g);
-    updateStorage(g, r, c);
     setStarted(true);
     startTime.current = Date.now();
     completed.current = false;
@@ -103,7 +96,6 @@ const Nonogram = () => {
               pending.current = [];
               ng = autoFillLines(ng, rows, cols);
               evaluate(ng);
-              updateStorage(ng);
               if (validateSolution(ng, rows, cols) && !completed.current) {
                 completed.current = true;
                 const time = Math.floor((Date.now() - startTime.current) / 1000);
@@ -119,7 +111,7 @@ const Nonogram = () => {
           });
         }
       },
-      [rows, cols, evaluate, updateStorage]
+      [rows, cols, evaluate]
     );
 
   const painting = useRef(false);
@@ -230,27 +222,45 @@ const Nonogram = () => {
     touchCross.current = false;
   };
 
-    useEffect(() => {
-      if (typeof window === 'undefined') return;
-      const saved = localStorage.getItem('nonogram-progress');
-      if (saved) {
-        try {
-          const data = JSON.parse(saved);
-          if (data.rows && data.cols && data.grid) {
-            setRows(data.rows);
-            setCols(data.cols);
-            setGrid(data.grid);
-            evaluate(data.grid);
-            setStarted(true);
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
-    }, [evaluate]);
+  useEffect(() => {
+    if (rows.length && cols.length && grid.length) {
+      evaluate(grid);
+      if (!rowMarks.length) setRowMarks(Array(rows.length).fill(false));
+      if (!colMarks.length) setColMarks(Array(cols.length).fill(false));
+      setStarted(true);
+    }
+  }, [rows, cols, grid, evaluate, rowMarks.length, colMarks.length, setRowMarks, setColMarks]);
 
   const validate = () => {
     alert(validateSolution(grid, rows, cols) ? 'Puzzle solved!' : 'Not yet solved');
+  };
+
+  const handleUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const p = JSON.parse(ev.target.result);
+        if (p.rows && p.cols) {
+          setRowInput(p.rows.map((r) => r.join(' ')).join('\n'));
+          setColInput(p.cols.map((c) => c.join(' ')).join('\n'));
+          if (p.grid) {
+            setRows(p.rows);
+            setCols(p.cols);
+            setGrid(p.grid);
+            setRowMarks(Array(p.rows.length).fill(false));
+            setColMarks(Array(p.cols.length).fill(false));
+            evaluate(p.grid);
+            setStarted(true);
+          }
+        }
+      } catch (err) {
+        alert('Invalid puzzle file');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   if (!started)
@@ -272,39 +282,22 @@ const Nonogram = () => {
             placeholder="Column clues"
           />
         </div>
-        <div className="space-x-2">
+        <div className="space-x-2 flex items-center">
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={startGame}
           >
             Start
           </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={() => {
-              const data = prompt('Paste puzzle seed');
-              if (!data) return;
-              try {
-                const p = JSON.parse(data);
-                if (p.rows && p.cols) {
-                  setRowInput(p.rows.map((r) => r.join(' ')).join('\n'));
-                  setColInput(p.cols.map((c) => c.join(' ')).join('\n'));
-                  if (p.grid) {
-                    setRows(p.rows);
-                    setCols(p.cols);
-                    setGrid(p.grid);
-                    evaluate(p.grid);
-                    setStarted(true);
-                    updateStorage(p.grid, p.rows, p.cols);
-                  }
-                }
-              } catch (e) {
-                alert('Invalid seed');
-              }
-            }}
-          >
-            Import
-          </button>
+          <label className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded cursor-pointer">
+            Upload
+            <input
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={handleUpload}
+            />
+          </label>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={() => {
@@ -318,6 +311,44 @@ const Nonogram = () => {
             Daily
           </button>
         </div>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {puzzles.map((p, idx) => (
+            <button
+              key={idx}
+              className="p-1 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={() => {
+                setRowInput(p.rows.map((r) => r.join(' ')).join('\n'));
+                setColInput(p.cols.map((c) => c.join(' ')).join('\n'));
+                setRows(p.rows);
+                setCols(p.cols);
+                const g = Array(p.rows.length)
+                  .fill(null)
+                  .map(() => Array(p.cols.length).fill(0));
+                setGrid(g);
+                setRowMarks(Array(p.rows.length).fill(false));
+                setColMarks(Array(p.cols.length).fill(false));
+                evaluate(g);
+                setStarted(true);
+                startTime.current = Date.now();
+                completed.current = false;
+              }}
+            >
+              <div
+                className="grid gap-px mb-1"
+                style={{ gridTemplateColumns: `repeat(${p.cols.length}, 1fr)` }}
+              >
+                {p.grid.flat().map((cell, i) => (
+                  <div
+                    key={i}
+                    className={cell ? 'bg-gray-200' : 'bg-gray-500'}
+                    style={{ width: 16, height: 16 }}
+                  />
+                ))}
+              </div>
+              <div className="text-xs text-center">{p.name}</div>
+            </button>
+          ))}
+        </div>
       </div>
     );
 
@@ -328,8 +359,15 @@ const Nonogram = () => {
           {rows.map((clue, i) => (
             <div
               key={i}
-              className={`h-8 flex items-center justify-end pr-1 ${
-                rowState[i]?.solved ? 'line-through' : ''
+              onClick={() =>
+                setRowMarks((m) => {
+                  const nm = m.slice();
+                  nm[i] = !nm[i];
+                  return nm;
+                })
+              }
+              className={`h-8 flex items-center justify-end pr-1 cursor-pointer ${
+                rowMarks[i] || rowState[i]?.solved ? 'line-through' : ''
               } ${
                 showMistakes && rowState[i]?.contradiction ? 'text-red-500' : ''
               }`}
@@ -343,8 +381,15 @@ const Nonogram = () => {
             {cols.map((clue, i) => (
               <div
                 key={i}
-                className={`text-center ${
-                  colState[i]?.solved ? 'line-through' : ''
+                onClick={() =>
+                  setColMarks((m) => {
+                    const nm = m.slice();
+                    nm[i] = !nm[i];
+                    return nm;
+                  })
+                }
+                className={`text-center cursor-pointer ${
+                  colMarks[i] || colState[i]?.solved ? 'line-through' : ''
                 } ${
                   showMistakes && colState[i]?.contradiction ? 'text-red-500' : ''
                 }`}
@@ -436,7 +481,22 @@ const Nonogram = () => {
             alert('Puzzle copied to clipboard');
           }}
         >
-          Export
+          Copy
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => {
+            const data = JSON.stringify({ rows, cols, grid });
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'nonogram.json';
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
+          Download
         </button>
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"

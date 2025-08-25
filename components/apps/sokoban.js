@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import levelPack from './sokoban_levels.json';
 
+
 const defaultLevels = levelPack.levels;
 
 const parseLevel = (level) => {
@@ -13,6 +14,12 @@ const parseLevel = (level) => {
   );
   return { board, player };
 };
+
+const validateBoard = (b) =>
+  Array.isArray(b) && b.every((row) => Array.isArray(row) && row.every((c) => typeof c === 'string'));
+
+const validatePlayer = (p) =>
+  p && typeof p.x === 'number' && typeof p.y === 'number';
 
 const parseLevelsFromText = (text) => {
   return text
@@ -156,12 +163,13 @@ const GameLayout = ({
 };
 
 const Sokoban = () => {
-  const [levels, setLevels] = useState(defaultLevels);
-  const [levelIndex, setLevelIndex] = useState(0);
-  const [board, setBoard] = useState([]);
-  const [player, setPlayer] = useState({ x: 0, y: 0 });
+  const [levels, setLevels] = usePersistentState('sokoban-levels', defaultLevels, Array.isArray);
+  const [levelIndex, setLevelIndex] = usePersistentState('sokoban-level-index', 0, (v) => typeof v === 'number');
+  const [board, setBoard] = usePersistentState('sokoban-board', [], validateBoard);
+  const [player, setPlayer] = usePersistentState('sokoban-player', { x: 0, y: 0 }, validatePlayer);
   const [message, setMessage] = useState('');
   const [steps, setSteps] = useState(0);
+
   const [hint, setHint] = useState('');
   const [editorVisible, setEditorVisible] = useState(false);
   const [editorText, setEditorText] = useState('');
@@ -172,6 +180,7 @@ const Sokoban = () => {
   const redoStack = useRef([]);
   const initialState = useRef(null);
 
+  const firstLoad = useRef(true);
   useEffect(() => {
     const stored = localStorage.getItem('sokoban-best-moves');
     if (stored) {
@@ -190,6 +199,15 @@ const Sokoban = () => {
   useEffect(() => {
     if (!levels[levelIndex]) return;
     const { board: b, player: p } = parseLevel(levels[levelIndex]);
+    if (firstLoad.current && board.length) {
+      initialState.current = {
+        board: board.map((r) => r.slice()),
+        player: { ...player },
+      };
+      firstLoad.current = false;
+      return;
+    }
+    firstLoad.current = false;
     setBoard(b);
     setPlayer(p);
     undoStack.current = [];
