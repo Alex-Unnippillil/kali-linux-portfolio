@@ -13,6 +13,12 @@ const OUTER_RADIUS = TRACK_RADIUS + TRACK_WIDTH / 2;
 
 const STEP = 1 / 60;
 
+const DIFFICULTY_SETTINGS = {
+  easy: { aiAccel: 70, obstacles: 5 },
+  normal: { aiAccel: 80, obstacles: 10 },
+  hard: { aiAccel: 100, obstacles: 15 },
+};
+
 // Checkpoints used to validate laps
 export const CHECKPOINTS = [
   {
@@ -124,12 +130,49 @@ const CarRacer = () => {
   const [lastLap, setLastLap] = useState(null);
   const [bestLap, setBestLap] = useState(null);
   const [mobileSensitivity, setMobileSensitivity] = useState(1);
+  const [lapTimes, setLapTimes] = useState([]);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const [reset, setReset] = useState(0);
+  const [difficulty, setDifficulty] = useState('normal');
+
+  useEffect(() => {
+    if (control === 'tilt') {
+      const requestPermission = async () => {
+        if (
+          typeof DeviceOrientationEvent !== 'undefined' &&
+          typeof DeviceOrientationEvent.requestPermission === 'function'
+        ) {
+          try {
+            await DeviceOrientationEvent.requestPermission();
+          } catch (e) {
+            /* ignore */
+          }
+        }
+      };
+      requestPermission();
+    }
+  }, [control]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     let lastTime = performance.now();
     let accumulator = 0;
+
+    const { aiAccel, obstacles: obstacleCount } = DIFFICULTY_SETTINGS[difficulty];
+
+    // Generate roadside obstacles
+    const obstacles = [];
+    for (let i = 0; i < obstacleCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = Math.random() < 0.5 ? INNER_RADIUS - 20 : OUTER_RADIUS + 20;
+      const x = CENTER_X + Math.cos(angle) * r;
+      const y = CENTER_Y + Math.sin(angle) * r;
+      obstacles.push({ x, y, radius: 10 });
+    }
+
+    let collisionTimer = 0;
 
     // Create player and AI cars lined up on start line
     const cars = [];
@@ -202,7 +245,7 @@ const CarRacer = () => {
           steerInput = wheelAngle;
           if (keys[' ']) accelInput = 1; // space for throttle
         } else if (control === 'tilt') {
-          steerInput = tilt;
+          steerInput = tilt * sensitivityRef.current;
           if (keys[' ']) accelInput = 1;
         } else if (control === 'buttons') {
           steerInput = steerButtonRef.current * sensitivityRef.current;
@@ -221,7 +264,7 @@ const CarRacer = () => {
         if (Math.hypot(dx, dy) < 40) {
           car.wp = (car.wp + 1) % WAYPOINTS.length;
         }
-        car.accel = 80;
+        car.accel = aiAccel;
         car.brake = 0;
       }
 
@@ -239,11 +282,19 @@ const CarRacer = () => {
       const vy = Math.sin(drift) * car.speed * dt;
       const newX = car.x + vx;
       const newY = car.y + vy;
-      if (getTile(newX, newY) === 1) {
+      let collided = false;
+      for (const ob of obstacles) {
+        if (Math.hypot(newX - ob.x, newY - ob.y) < ob.radius + 10) {
+          collided = true;
+          break;
+        }
+      }
+      if (getTile(newX, newY) === 1 && !collided) {
         car.x = newX;
         car.y = newY;
       } else {
         car.speed = 0;
+        collisionTimer = 0.5;
       }
     };
 
@@ -258,6 +309,12 @@ const CarRacer = () => {
       ctx.beginPath();
       ctx.arc(CENTER_X, CENTER_Y, INNER_RADIUS, 0, Math.PI * 2);
       ctx.fill();
+      ctx.fillStyle = '#964B00';
+      obstacles.forEach((o) => {
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, o.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
       const cp0 = CHECKPOINTS[0];
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 2;
@@ -295,6 +352,10 @@ const CarRacer = () => {
     const frame = (time) => {
       const dt = (time - lastTime) / 1000;
       lastTime = time;
+      if (pausedRef.current) {
+        animationId = requestAnimationFrame(frame);
+        return;
+      }
       accumulator += dt;
       while (accumulator >= STEP) {
         cars.forEach((car) => updateCar(car, STEP));
@@ -307,6 +368,7 @@ const CarRacer = () => {
           const t = (now - lapStart) / 1000;
           setLaps((l) => l + 1);
           setLastLap(t);
+          setLapTimes((lts) => [...lts, t]);
           ReactGA.event('lap_complete', { time: t });
           if (bestLapTime === null || t < bestLapTime) {
             bestLapTime = t;
@@ -330,6 +392,11 @@ const CarRacer = () => {
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
       renderTrack();
       renderCars();
+      if (collisionTimer > 0) {
+        ctx.fillStyle = `rgba(255,0,0,${collisionTimer})`;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        collisionTimer -= dt;
+      }
       setSpeed(cars[0].speed);
       setLapTime((performance.now() - lapStart) / 1000);
       animationId = requestAnimationFrame(frame);
@@ -343,12 +410,36 @@ const CarRacer = () => {
         window.removeEventListener('deviceorientation', handleOrientation);
         wheel && wheel.removeEventListener('pointermove', handleWheel);
       };
-    }, [control]);
+    }, [control, difficulty, reset]);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
   const handleSensitivity = (e) => {
     const val = parseFloat(e.target.value);
     setMobileSensitivity(val);
     sensitivityRef.current = val;
+  };
+
+  const topTimes = [...lapTimes].sort((a, b) => a - b).slice(0, 5);
+
+  const handlePause = () => {
+    setPaused((p) => !p);
+  };
+
+  const handleRestart = () => {
+    setLaps(0);
+    setLapTime(0);
+    setLastLap(null);
+    setBestLap(null);
+    setLapTimes([]);
+    setReset((r) => r + 1);
+  };
+
+  const handleDifficulty = (e) => {
+    setDifficulty(e.target.value);
+    handleRestart();
   };
 
   return (
@@ -369,11 +460,42 @@ const CarRacer = () => {
             <option value="buttons">Buttons</option>
           </select>
         </div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="difficulty">Difficulty:</label>
+          <select
+            id="difficulty"
+            value={difficulty}
+            onChange={handleDifficulty}
+            className="text-black"
+          >
+            <option value="easy">Easy</option>
+            <option value="normal">Normal</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={handlePause} className="px-2 py-1 bg-gray-700">
+            {paused ? 'Resume' : 'Pause'}
+          </button>
+          <button onClick={handleRestart} className="px-2 py-1 bg-gray-700">
+            Restart
+          </button>
+        </div>
         <div>Laps: {laps}</div>
         <div>Speed: {Math.round(speed)}</div>
         <div>Lap Time: {lapTime.toFixed(2)}s</div>
         {lastLap !== null && <div>Last Lap: {lastLap.toFixed(2)}s</div>}
         {bestLap !== null && <div>Best Lap: {bestLap.toFixed(2)}s</div>}
+        {topTimes.length > 0 && (
+          <div>
+            <div>Leaderboard:</div>
+            <ol>
+              {topTimes.map((t, i) => (
+                <li key={i}>{t.toFixed(2)}s</li>
+              ))}
+            </ol>
+          </div>
+        )}
       </div>
       {control === 'wheel' && (
         <div
