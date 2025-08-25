@@ -1,49 +1,51 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 
-const useGameControls = (cols, onDrop) => {
-  const [selected, setSelected] = useState(Math.floor(cols / 2));
-
+/**
+ * Hook to handle keyboard arrow keys and touch swipe gestures.
+ * Calls the provided callback with a direction object: {x, y}.
+ */
+const useGameControls = (onDirection) => {
+  // keyboard controls
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === 'ArrowLeft') {
-        setSelected((c) => Math.max(0, c - 1));
-      } else if (e.key === 'ArrowRight') {
-        setSelected((c) => Math.min(cols - 1, c + 1));
-      } else if (e.key === ' ' || e.key === 'Enter') {
-        onDrop(selected);
-      }
+      if (e.key === 'ArrowUp') onDirection({ x: 0, y: -1 });
+      if (e.key === 'ArrowDown') onDirection({ x: 0, y: 1 });
+      if (e.key === 'ArrowLeft') onDirection({ x: -1, y: 0 });
+      if (e.key === 'ArrowRight') onDirection({ x: 1, y: 0 });
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [cols, onDrop, selected]);
+  }, [onDirection]);
 
+  // touch swipe controls
   useEffect(() => {
     let startX = 0;
     let startY = 0;
-    const handleStart = (e) => {
+
+    const start = (e) => {
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
     };
-    const handleEnd = (e) => {
+
+    const end = (e) => {
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
-      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30) {
-        if (dx > 0) setSelected((c) => Math.min(cols - 1, c + 1));
-        else setSelected((c) => Math.max(0, c - 1));
-      } else if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
-        onDrop(selected);
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 30) onDirection({ x: 1, y: 0 });
+        else if (dx < -30) onDirection({ x: -1, y: 0 });
+      } else {
+        if (dy > 30) onDirection({ x: 0, y: 1 });
+        else if (dy < -30) onDirection({ x: 0, y: -1 });
       }
     };
-    window.addEventListener('touchstart', handleStart);
-    window.addEventListener('touchend', handleEnd);
+
+    window.addEventListener('touchstart', start);
+    window.addEventListener('touchend', end);
     return () => {
-      window.removeEventListener('touchstart', handleStart);
-      window.removeEventListener('touchend', handleEnd);
+      window.removeEventListener('touchstart', start);
+      window.removeEventListener('touchend', end);
     };
-  }, [cols, onDrop, selected]);
-
-  return [selected, setSelected];
-
+  }, [onDirection]);
 };
 
 export default useGameControls;
