@@ -1,5 +1,14 @@
 import { Player, updatePhysics, collectCoin } from './engine.js';
 
+const params = new URLSearchParams(location.search);
+const levelFile = params.get('lvl') || 'levels/level1.json';
+const cpParam = params.get('cp');
+let checkpoint = null;
+if (cpParam) {
+  const [cx, cy] = cpParam.split(',').map(Number);
+  if (!isNaN(cx) && !isNaN(cy)) checkpoint = { x: cx, y: cy };
+}
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const tileSize = 16;
@@ -10,7 +19,6 @@ let tiles = [];
 let spawn = { x: 0, y: 0 };
 let coinTotal = 0;
 let score = 0;
-let currentLevel = '';
 let levelStart = 0;
 
 const player = new Player();
@@ -19,19 +27,8 @@ const keys = {};
 const effects = [];
 
 const timerEl = document.getElementById('timer');
-const levelSelect = document.getElementById('levelSelect');
+const completeEl = document.getElementById('complete');
 
-// levels list
-const levels = ['level1.json', 'level2.json'];
-levels.forEach((lvl, i) => {
-  const opt = document.createElement('option');
-  opt.value = lvl;
-  opt.textContent = `Level ${i + 1}`;
-  levelSelect.appendChild(opt);
-});
-levelSelect.onchange = () => loadLevel(levelSelect.value);
-
-// input handling
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
 });
@@ -39,11 +36,23 @@ window.addEventListener('keyup', e => {
   keys[e.code] = false;
 });
 
-function gaEvent(action, params = {}) {
-  try {
-    window.parent.ReactGA?.event({ category: 'platformer', action, ...params });
-  } catch (e) {}
+function setupMobile() {
+  const map = { btnLeft: 'ArrowLeft', btnRight: 'ArrowRight', btnJump: 'Space' };
+  Object.keys(map).forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const key = map[id];
+    el.addEventListener('touchstart', e => {
+      e.preventDefault();
+      keys[key] = true;
+    });
+    el.addEventListener('touchend', e => {
+      e.preventDefault();
+      keys[key] = false;
+    });
+  });
 }
+setupMobile();
 
 function playCoinSound() {
   try {
@@ -60,13 +69,14 @@ function playCoinSound() {
 }
 
 function loadLevel(name) {
-  fetch(`levels/${name}`)
+  fetch(name)
     .then(r => r.json())
     .then(data => {
       mapWidth = data.width;
       mapHeight = data.height;
       tiles = data.tiles;
       spawn = data.spawn;
+      if (checkpoint) spawn = checkpoint;
       player.x = spawn.x;
       player.y = spawn.y;
       player.vx = player.vy = 0;
@@ -75,16 +85,11 @@ function loadLevel(name) {
       for (let y = 0; y < mapHeight; y++) {
         for (let x = 0; x < mapWidth; x++) if (tiles[y][x] === 5) coinTotal++;
       }
-      currentLevel = name;
       levelStart = performance.now();
-      gaEvent('level_start', { level: name });
     });
 }
+loadLevel(levelFile);
 
-// initial level
-loadLevel(levels[0]);
-
-// game loop
 let last = 0;
 function loop(ts) {
   const dt = Math.min((ts - last) / 1000, 0.1);
@@ -107,7 +112,6 @@ function update(dt) {
 
   if (player.y > mapHeight * tileSize) respawn();
 
-  // camera with dead zone
   const centerX = camera.x + canvas.width / 2;
   const centerY = camera.y + canvas.height / 2;
   if (player.x < centerX - camera.deadZone.w / 2)
@@ -125,8 +129,9 @@ function update(dt) {
   timerEl.textContent = `Time: ${elapsed}s`;
 
   if (coinTotal === 0 && score > 0) {
-    gaEvent('level_complete', { level: currentLevel, time: elapsed });
-    coinTotal = -1; // prevent repeat
+    if (completeEl) completeEl.classList.remove('hidden');
+    window.parent.postMessage({ type: 'levelComplete' }, '*');
+    coinTotal = -1;
   }
 }
 
@@ -137,7 +142,6 @@ function respawn() {
 }
 
 function movePlayer(dt) {
-  // vertical move first
   let ny = player.y + player.vy * dt;
   player.onGround = false;
   const dirY = Math.sign(player.vy);
@@ -163,7 +167,6 @@ function movePlayer(dt) {
   }
   player.y = ny;
 
-  // horizontal move
   let nx = player.x + player.vx * dt;
   const dirX = Math.sign(player.vx);
   if (dirX !== 0) {
@@ -186,7 +189,6 @@ function movePlayer(dt) {
   }
   player.x = nx;
 
-  // coin collection
   const cx = Math.floor((player.x + player.w / 2) / tileSize);
   const cy = Math.floor((player.y + player.h / 2) / tileSize);
   if (collectCoin(tiles, cx, cy)) {
@@ -194,7 +196,12 @@ function movePlayer(dt) {
     coinTotal--;
     effects.push({ x: cx * tileSize + tileSize / 2, y: cy * tileSize + tileSize / 2, life: 0 });
     playCoinSound();
-    gaEvent('coin_collect', { total: score });
+  }
+  const tile = getTile(cx, cy);
+  if (tile === 6) {
+    tiles[cy][cx] = 0;
+    spawn = { x: cx * tileSize, y: cy * tileSize };
+    window.parent.postMessage({ type: 'checkpoint', checkpoint: spawn }, '*');
   }
 }
 
@@ -226,7 +233,6 @@ function drawEffects() {
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  // parallax background
   ctx.fillStyle = '#0a0a0a';
   ctx.fillRect(-camera.x * 0.5, -camera.y * 0.5, canvas.width * 2, canvas.height * 2);
   ctx.fillStyle = '#141414';
@@ -241,14 +247,14 @@ function draw() {
       if (t === 1) {
         ctx.fillStyle = '#888';
         ctx.fillRect(screenX, screenY, tileSize, tileSize);
-      } else if (t === 4) {
-        ctx.fillStyle = 'yellow';
-        ctx.fillRect(screenX, screenY, tileSize, tileSize);
       } else if (t === 5) {
         ctx.fillStyle = 'gold';
         ctx.beginPath();
         ctx.arc(screenX + tileSize / 2, screenY + tileSize / 2, 4, 0, Math.PI * 2);
         ctx.fill();
+      } else if (t === 6) {
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(screenX, screenY, tileSize, tileSize);
       }
     }
   }

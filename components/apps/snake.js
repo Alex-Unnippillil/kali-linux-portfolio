@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import GameLayout from './GameLayout';
 
 // size of the square play field
 const gridSize = 20;
@@ -49,6 +50,9 @@ const Snake = () => {
   // fixed time step loop
   const lastTime = useRef(0);
   const acc = useRef(0);
+  const animationFrameRef = useRef();
+  const replayFrameRef = useRef();
+  const replayLastTimeRef = useRef(0);
 
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('snakeHighScore') : null;
@@ -152,40 +156,48 @@ const Snake = () => {
         }
       }
       lastTime.current = time;
-      requestAnimationFrame(loop);
+      animationFrameRef.current = requestAnimationFrame(loop);
     };
-    requestAnimationFrame(loop);
+    animationFrameRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animationFrameRef.current);
   }, [paused, gameOver, step, speed, playingReplay]);
 
   // replay playback
   const playReplay = () => {
     if (!replayData.length) return;
+    cancelAnimationFrame(replayFrameRef.current);
     setPlayingReplay(true);
     setSnake([{ x: 10, y: 10 }]);
     let i = 0;
-    const run = () => {
+    replayLastTimeRef.current = 0;
+    const run = (time) => {
+      if (!replayLastTimeRef.current) replayLastTimeRef.current = time;
       if (i >= replayData.length) {
         setPlayingReplay(false);
         return;
       }
-      setSnake((prev) => {
-        const dir = replayData[i];
-        i += 1;
-        let head = { x: prev[0].x + dir.x, y: prev[0].y + dir.y };
-        if (wrap) {
-          head.x = (head.x + gridSize) % gridSize;
-          head.y = (head.y + gridSize) % gridSize;
-        }
-        const ns = [head, ...prev];
-        ns.pop();
-        return ns;
-      });
-      setTimeout(run, speed);
+      if (time - replayLastTimeRef.current >= speed) {
+        setSnake((prev) => {
+          const dir = replayData[i];
+          i += 1;
+          let head = { x: prev[0].x + dir.x, y: prev[0].y + dir.y };
+          if (wrap) {
+            head.x = (head.x + gridSize) % gridSize;
+            head.y = (head.y + gridSize) % gridSize;
+          }
+          const ns = [head, ...prev];
+          ns.pop();
+          return ns;
+        });
+        replayLastTimeRef.current = time;
+      }
+      replayFrameRef.current = requestAnimationFrame(run);
     };
-    run();
+    replayFrameRef.current = requestAnimationFrame(run);
   };
 
   const reset = () => {
+    cancelAnimationFrame(replayFrameRef.current);
     setSnake([{ x: 10, y: 10 }]);
     setDirection({ x: 0, y: -1 });
     dirQueue.current = [];
@@ -198,6 +210,8 @@ const Snake = () => {
     replayRef.current = [];
     setReplayData([]);
   };
+
+  useEffect(() => () => cancelAnimationFrame(replayFrameRef.current), []);
 
   useEffect(() => {
     if (gameOver && score > highScore) {
@@ -232,47 +246,58 @@ const Snake = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
-      <div className="mb-2 flex space-x-2">
-        <span>Score: {score}</span>
-        <span>| High Score: {highScore}</span>
-        <button
-          className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
-          onClick={() => setPaused((p) => !p)}
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
-          onClick={() => setWrap((w) => !w)}
-        >
-          {wrap ? 'No Wrap' : 'Wrap'}
-        </button>
-      </div>
-      <div
-        className="grid"
-        style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
-      >
-        {cells}
-      </div>
-      {gameOver && (
-        <div className="mt-2 flex items-center space-x-2">
-          <span>Game Over</span>
-          <button
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={reset}
-          >
-            Retry
-          </button>
-          <button
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={playReplay}
-          >
-            Replay
-          </button>
+    <GameLayout
+      title="Snake"
+      score={
+        <div className="flex space-x-2">
+          <span>Score: {score}</span>
+          <span>| High Score: {highScore}</span>
         </div>
-      )}
-    </div>
+      }
+      controls={
+        <>
+          <button
+            className="px-2 py-0.5 bg-gray-700 rounded"
+            onClick={() => setPaused((p) => !p)}
+          >
+            {paused ? 'Resume' : 'Pause'}
+          </button>
+          <button
+            className="px-2 py-0.5 bg-gray-700 rounded"
+            onClick={() => setWrap((w) => !w)}
+          >
+            {wrap ? 'No Wrap' : 'Wrap'}
+          </button>
+        </>
+      }
+      instructions="Use arrow keys or swipe to move."
+    >
+      <>
+        <div
+          className="grid"
+          style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
+        >
+          {cells}
+        </div>
+        {gameOver && (
+          <div className="mt-2 flex items-center space-x-2">
+            <span>Game Over</span>
+            <button
+              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={reset}
+            >
+              Retry
+            </button>
+            <button
+              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={playReplay}
+            >
+              Replay
+            </button>
+          </div>
+        )}
+      </>
+    </GameLayout>
   );
 };
 

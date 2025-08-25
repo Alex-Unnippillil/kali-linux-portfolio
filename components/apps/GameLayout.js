@@ -10,4 +10,5 @@ const GameLayout = ({ minesLeft, time, children }) => (
   </div>
 );
 
+
 export default GameLayout;
