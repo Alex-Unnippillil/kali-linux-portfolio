@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 
-const usePersistentState = (key, initialValue) => {
+// Simple hook to persist state in localStorage
+export default function usePersistentState(key, initialValue) {
+
   const [state, setState] = useState(() => {
     if (typeof window === 'undefined') return initialValue;
     try {
@@ -23,7 +25,5 @@ const usePersistentState = (key, initialValue) => {
   }, [key, state]);
 
   return [state, setState];
-};
-
-export default usePersistentState;
+}
 
