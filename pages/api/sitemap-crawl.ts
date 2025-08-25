@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import LRUCache from 'lru-cache';
+import { LRUCache } from 'lru-cache';
 import { setupUrlGuard } from '../../lib/urlGuard';
 
 setupUrlGuard();

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import LRUCache from 'lru-cache';
+import { LRUCache } from 'lru-cache';
 import { Readable } from 'node:stream';
 import { parseSitemap, SitemapEntry } from '../../lib/sitemap';
 import { setupUrlGuard } from '../../lib/urlGuard';
