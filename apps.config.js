@@ -78,6 +78,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -117,6 +118,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayMsfPost = createDisplay(MsfPostApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -603,6 +605,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'msf-post',
+    title: 'Metasploit Post',
+    icon: './themes/Yaru/apps/msf-post.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMsfPost,
   },
   // Games are included so they appear alongside apps
   ...games,
