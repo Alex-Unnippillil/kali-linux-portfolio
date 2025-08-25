@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import useAssetLoader from '../../hooks/useAssetLoader';
 
 /**
  * Small Pacman implementation used inside the portfolio.  The goal of this
@@ -49,6 +50,11 @@ const modeSchedule = [
 const fruitSpawnDots = [10, 30];
 
 const Pacman = () => {
+  const { loading, error } = useAssetLoader({
+    images: ['/themes/Yaru/status/ubuntu_white_hex.svg'],
+    sounds: [],
+  });
+
   const canvasRef = useRef(null);
   const [levels, setLevels] = useState([{ name: 'Default', maze: defaultMaze, fruit: { x: 7, y: 3 } }]);
   const [levelIndex, setLevelIndex] = useState(0);
@@ -346,6 +352,7 @@ const Pacman = () => {
   }, [step]);
 
   useEffect(() => {
+    if (loading || error) return;
     const canvas = canvasRef.current;
     canvas.width = mazeRef.current[0].length * tileSize;
     canvas.height = mazeRef.current.length * tileSize;
@@ -412,7 +419,23 @@ const Pacman = () => {
       canvas.removeEventListener('touchend', handleTouchEnd);
       cancelAnimationFrame(id);
     };
-  }, []);
+  }, [loading, error]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="h-8 w-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        Failed to load assets.
+      </div>
+    );
+  }
 
   useEffect(() => {
     fetch('/pacman-levels.json')
