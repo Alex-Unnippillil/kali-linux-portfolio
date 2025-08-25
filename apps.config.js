@@ -75,6 +75,7 @@ const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
+const BeefApp = createDynamicApp('beef', 'BeEF');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
@@ -113,6 +114,7 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+const displayBeef = createDisplay(BeefApp);
 
 const displayGomoku = createDisplay(GomokuApp);
 
@@ -495,6 +497,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayYouTube,
+  },
+  {
+    id: 'beef',
+    title: 'BeEF',
+    icon: './themes/Yaru/apps/beef.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBeef,
   },
   {
     id: 'about-alex',
