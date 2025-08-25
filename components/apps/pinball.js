@@ -1,7 +1,20 @@
 import React, { useRef, useEffect } from 'react';
+import useGameControls from '../../hooks/useGameControls';
 
 const Pinball = () => {
   const canvasRef = useRef(null);
+
+  const flippers = useRef({ left: false, right: false });
+  useGameControls({
+    keydown: {
+      ArrowLeft: () => (flippers.current.left = true),
+      ArrowRight: () => (flippers.current.right = true),
+    },
+    keyup: {
+      ArrowLeft: () => (flippers.current.left = false),
+      ArrowRight: () => (flippers.current.right = false),
+    },
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -12,21 +25,7 @@ const Pinball = () => {
 
     const ball = { x: width / 2, y: 50, vx: 100, vy: 0, r: 8 };
     const gravity = 500; // px per second^2
-    const flippers = { left: false, right: false };
     const floor = height - 20;
-
-    const keydown = (e) => {
-      if (e.key === 'ArrowLeft') flippers.left = true;
-      if (e.key === 'ArrowRight') flippers.right = true;
-    };
-
-    const keyup = (e) => {
-      if (e.key === 'ArrowLeft') flippers.left = false;
-      if (e.key === 'ArrowRight') flippers.right = false;
-    };
-
-    window.addEventListener('keydown', keydown);
-    window.addEventListener('keyup', keyup);
 
     const reset = () => {
       ball.x = width / 2;
@@ -61,11 +60,12 @@ const Pinball = () => {
         ball.vy *= -1;
       }
 
+      const f = flippers.current;
       if (ball.y + ball.r > floor) {
-        if (flippers.left && ball.x < width / 2) {
+        if (f.left && ball.x < width / 2) {
           ball.vy = -300;
           ball.vx = -150;
-        } else if (flippers.right && ball.x >= width / 2) {
+        } else if (f.right && ball.x >= width / 2) {
           ball.vy = -300;
           ball.vx = 150;
         } else {
@@ -78,15 +78,16 @@ const Pinball = () => {
       ctx.fillRect(0, 0, width, height);
 
       ctx.fillStyle = '#ff6f00';
+      const f = flippers.current;
       ctx.save();
       ctx.translate(80, floor);
-      ctx.rotate(flippers.left ? -0.5 : 0);
+      ctx.rotate(f.left ? -0.5 : 0);
       ctx.fillRect(-40, -5, 40, 10);
       ctx.restore();
 
       ctx.save();
       ctx.translate(width - 80, floor);
-      ctx.rotate(flippers.right ? 0.5 : 0);
+      ctx.rotate(f.right ? 0.5 : 0);
       ctx.fillRect(0, -5, 40, 10);
       ctx.restore();
 
@@ -101,8 +102,6 @@ const Pinball = () => {
 
     return () => {
       cancelAnimationFrame(animationId);
-      window.removeEventListener('keydown', keydown);
-      window.removeEventListener('keyup', keyup);
     };
   }, []);
 

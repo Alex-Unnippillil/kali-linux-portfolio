@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import useGameControls from '../../hooks/useGameControls';
 import ReactGA from 'react-ga4';
 
 // Track constants - circular course
@@ -117,6 +118,7 @@ const CarRacer = () => {
   const wheelRef = useRef(null);
   const steerButtonRef = useRef(0);
   const sensitivityRef = useRef(1);
+  const keysRef = useRef({});
   const [laps, setLaps] = useState(0);
   const [control, setControl] = useState('keys');
   const [speed, setSpeed] = useState(0);
@@ -124,6 +126,23 @@ const CarRacer = () => {
   const [lastLap, setLastLap] = useState(null);
   const [bestLap, setBestLap] = useState(null);
   const [mobileSensitivity, setMobileSensitivity] = useState(1);
+
+  useGameControls({
+    keydown: {
+      ArrowLeft: () => (keysRef.current['ArrowLeft'] = true),
+      ArrowRight: () => (keysRef.current['ArrowRight'] = true),
+      ArrowUp: () => (keysRef.current['ArrowUp'] = true),
+      ArrowDown: () => (keysRef.current['ArrowDown'] = true),
+      ' ': () => (keysRef.current[' '] = true),
+    },
+    keyup: {
+      ArrowLeft: () => (keysRef.current['ArrowLeft'] = false),
+      ArrowRight: () => (keysRef.current['ArrowRight'] = false),
+      ArrowUp: () => (keysRef.current['ArrowUp'] = false),
+      ArrowDown: () => (keysRef.current['ArrowDown'] = false),
+      ' ': () => (keysRef.current[' '] = false),
+    },
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -151,11 +170,7 @@ const CarRacer = () => {
       aiIdx++;
     }
 
-    const keys = {};
-    const keyDown = (e) => (keys[e.key] = true);
-    const keyUp = (e) => (keys[e.key] = false);
-    window.addEventListener('keydown', keyDown);
-    window.addEventListener('keyup', keyUp);
+    const keys = keysRef.current;
 
     // Touch steering wheel
       let wheelAngle = 0;
@@ -338,8 +353,6 @@ const CarRacer = () => {
 
     return () => {
       cancelAnimationFrame(animationId);
-        window.removeEventListener('keydown', keyDown);
-        window.removeEventListener('keyup', keyUp);
         window.removeEventListener('deviceorientation', handleOrientation);
         wheel && wheel.removeEventListener('pointermove', handleWheel);
       };

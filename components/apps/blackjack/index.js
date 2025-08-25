@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import useGameControls from '../../../hooks/useGameControls';
 import ReactGA from 'react-ga4';
 import { BlackjackGame, handValue, basicStrategy, cardValue } from './engine';
 
@@ -84,23 +85,51 @@ const Blackjack = () => {
     });
   };
 
-  useEffect(() => {
-    const onKey = (e) => {
-      if (['1', '2', '3', '4'].includes(e.key) && bet >= 0 && playerHands.length === 0) {
-        const val = CHIP_VALUES[parseInt(e.key, 10) - 1];
-        if (bet + val <= bankroll) setBet(bet + val);
-      }
-      if (e.key === 'Enter' && playerHands.length === 0 && bet > 0) start();
-      if (playerHands.length > 0) {
-        if (e.key.toLowerCase() === 'h') act('hit');
-        if (e.key.toLowerCase() === 's') act('stand');
-        if (e.key.toLowerCase() === 'd') act('double');
-        if (e.key.toLowerCase() === 'p') act('split');
-        if (e.key.toLowerCase() === 'r') act('surrender');
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+  useGameControls({
+    keydown: {
+      '1': () => {
+        if (bet >= 0 && playerHands.length === 0) {
+          const val = CHIP_VALUES[0];
+          if (bet + val <= bankroll) setBet(bet + val);
+        }
+      },
+      '2': () => {
+        if (bet >= 0 && playerHands.length === 0) {
+          const val = CHIP_VALUES[1];
+          if (bet + val <= bankroll) setBet(bet + val);
+        }
+      },
+      '3': () => {
+        if (bet >= 0 && playerHands.length === 0) {
+          const val = CHIP_VALUES[2];
+          if (bet + val <= bankroll) setBet(bet + val);
+        }
+      },
+      '4': () => {
+        if (bet >= 0 && playerHands.length === 0) {
+          const val = CHIP_VALUES[3];
+          if (bet + val <= bankroll) setBet(bet + val);
+        }
+      },
+      Enter: () => {
+        if (playerHands.length === 0 && bet > 0) start();
+      },
+      h: () => {
+        if (playerHands.length > 0) act('hit');
+      },
+      s: () => {
+        if (playerHands.length > 0) act('stand');
+      },
+      d: () => {
+        if (playerHands.length > 0) act('double');
+      },
+      p: () => {
+        if (playerHands.length > 0) act('split');
+      },
+      r: () => {
+        if (playerHands.length > 0) act('surrender');
+      },
+    },
   });
 
   const renderHand = (hand, hideFirst) => (

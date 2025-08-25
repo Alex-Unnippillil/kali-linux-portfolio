@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import useGameControls from '../../hooks/useGameControls';
 
 // size of the square play field
 const gridSize = 20;
@@ -61,45 +62,21 @@ const Snake = () => {
     dirQueue.current.push(dir);
   }, [direction]);
 
-  // keyboard controls
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === 'ArrowUp') enqueueDir({ x: 0, y: -1 });
-      if (e.key === 'ArrowDown') enqueueDir({ x: 0, y: 1 });
-      if (e.key === 'ArrowLeft') enqueueDir({ x: -1, y: 0 });
-      if (e.key === 'ArrowRight') enqueueDir({ x: 1, y: 0 });
-      if (e.key === ' ') setPaused((p) => !p);
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [enqueueDir]);
-
-  // swipe controls
-  useEffect(() => {
-    let startX = 0;
-    let startY = 0;
-    const start = (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    };
-    const end = (e) => {
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = e.changedTouches[0].clientY - startY;
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 30) enqueueDir({ x: 1, y: 0 });
-        else if (dx < -30) enqueueDir({ x: -1, y: 0 });
-      } else {
-        if (dy > 30) enqueueDir({ x: 0, y: 1 });
-        else if (dy < -30) enqueueDir({ x: 0, y: -1 });
-      }
-    };
-    window.addEventListener('touchstart', start);
-    window.addEventListener('touchend', end);
-    return () => {
-      window.removeEventListener('touchstart', start);
-      window.removeEventListener('touchend', end);
-    };
-  }, [enqueueDir]);
+  useGameControls({
+    keydown: {
+      ArrowUp: () => enqueueDir({ x: 0, y: -1 }),
+      ArrowDown: () => enqueueDir({ x: 0, y: 1 }),
+      ArrowLeft: () => enqueueDir({ x: -1, y: 0 }),
+      ArrowRight: () => enqueueDir({ x: 1, y: 0 }),
+      ' ': () => setPaused((p) => !p),
+    },
+    swipe: {
+      up: () => enqueueDir({ x: 0, y: -1 }),
+      down: () => enqueueDir({ x: 0, y: 1 }),
+      left: () => enqueueDir({ x: -1, y: 0 }),
+      right: () => enqueueDir({ x: 1, y: 0 }),
+    },
+  });
 
   // movement and game logic
   const step = useCallback(() => {

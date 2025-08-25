@@ -1,7 +1,27 @@
 import React, { useRef, useEffect } from 'react';
+import useGameControls from '../../hooks/useGameControls';
 
 const FlappyBird = () => {
   const canvasRef = useRef(null);
+
+  const runningRef = useRef(true);
+  const flapRef = useRef(() => {});
+  const resetRef = useRef(() => {});
+  const addPipeRef = useRef(() => {});
+  const updateRef = useRef(() => {});
+  useGameControls({
+    keydown: {
+      Space: () => {
+        if (runningRef.current) {
+          flapRef.current();
+        } else {
+          resetRef.current();
+          addPipeRef.current();
+          requestAnimationFrame(updateRef.current);
+        }
+      },
+    },
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -16,12 +36,14 @@ const FlappyBird = () => {
     let frame = 0;
     let score = 0;
     let running = true;
+    runningRef.current = running;
 
     const addPipe = () => {
       const gap = 80;
       const top = Math.random() * (height - gap - 40) + 20;
       pipes.push({ x: width, top, bottom: top + gap });
     };
+    addPipeRef.current = addPipe;
 
     const reset = () => {
       bird = { x: 50, y: height / 2, vy: 0 };
@@ -29,25 +51,14 @@ const FlappyBird = () => {
       frame = 0;
       score = 0;
       running = true;
+      runningRef.current = running;
     };
+    resetRef.current = reset;
 
     const flap = () => {
       bird.vy = jump;
     };
-
-    const handleKey = (e) => {
-      if (e.code === 'Space') {
-        if (running) {
-          flap();
-        } else {
-          reset();
-          addPipe();
-          requestAnimationFrame(update);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKey);
+    flapRef.current = flap;
 
     const update = () => {
       if (!running) return;
@@ -61,6 +72,7 @@ const FlappyBird = () => {
 
       if (bird.y + 10 > height || bird.y - 10 < 0) {
         running = false;
+        runningRef.current = running;
       }
 
       pipes.forEach((pipe) => {
@@ -75,6 +87,7 @@ const FlappyBird = () => {
           (bird.y - 10 < pipe.top || bird.y + 10 > pipe.bottom)
         ) {
           running = false;
+          runningRef.current = running;
         }
       });
 
@@ -82,6 +95,7 @@ const FlappyBird = () => {
 
       if (running) requestAnimationFrame(update);
     };
+    updateRef.current = update;
 
     const draw = () => {
       ctx.fillStyle = '#87CEEB';
@@ -118,9 +132,7 @@ const FlappyBird = () => {
     addPipe();
     requestAnimationFrame(update);
 
-    return () => {
-      window.removeEventListener('keydown', handleKey);
-    };
+    return () => {};
   }, []);
 
   return (
