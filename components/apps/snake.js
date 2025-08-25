@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import GameLayout from './GameLayout';
 
 // size of the square play field
 const gridSize = 20;
@@ -232,47 +233,58 @@ const Snake = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
-      <div className="mb-2 flex space-x-2">
-        <span>Score: {score}</span>
-        <span>| High Score: {highScore}</span>
-        <button
-          className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
-          onClick={() => setPaused((p) => !p)}
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
-          onClick={() => setWrap((w) => !w)}
-        >
-          {wrap ? 'No Wrap' : 'Wrap'}
-        </button>
-      </div>
-      <div
-        className="grid"
-        style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
-      >
-        {cells}
-      </div>
-      {gameOver && (
-        <div className="mt-2 flex items-center space-x-2">
-          <span>Game Over</span>
-          <button
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={reset}
-          >
-            Retry
-          </button>
-          <button
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={playReplay}
-          >
-            Replay
-          </button>
+    <GameLayout
+      title="Snake"
+      score={
+        <div className="flex space-x-2">
+          <span>Score: {score}</span>
+          <span>| High Score: {highScore}</span>
         </div>
-      )}
-    </div>
+      }
+      controls={
+        <>
+          <button
+            className="px-2 py-0.5 bg-gray-700 rounded"
+            onClick={() => setPaused((p) => !p)}
+          >
+            {paused ? 'Resume' : 'Pause'}
+          </button>
+          <button
+            className="px-2 py-0.5 bg-gray-700 rounded"
+            onClick={() => setWrap((w) => !w)}
+          >
+            {wrap ? 'No Wrap' : 'Wrap'}
+          </button>
+        </>
+      }
+      instructions="Use arrow keys or swipe to move."
+    >
+      <>
+        <div
+          className="grid"
+          style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
+        >
+          {cells}
+        </div>
+        {gameOver && (
+          <div className="mt-2 flex items-center space-x-2">
+            <span>Game Over</span>
+            <button
+              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={reset}
+            >
+              Retry
+            </button>
+            <button
+              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={playReplay}
+            >
+              Replay
+            </button>
+          </div>
+        )}
+      </>
+    </GameLayout>
   );
 };
 
