@@ -209,6 +209,36 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     }
 }
 
+/* Blackjack animations */
+.card {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.animate-deal {
+    transform: translateY(-20px);
+    opacity: 0;
+    animation: dealCard 0.3s forwards ease-out;
+}
+
+@keyframes dealCard {
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.shuffle {
+    animation: shuffleDeck 0.5s;
+}
+
+@keyframes shuffleDeck {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-3px) rotate(-2deg); }
+    50% { transform: translateX(3px) rotate(2deg); }
+    75% { transform: translateX(-2px) rotate(-1deg); }
+    100% { transform: translateX(0); }
+}
+
 /* Context Menu */
 .context-menu-bg {
     background-color: rgb(43, 43, 43);
