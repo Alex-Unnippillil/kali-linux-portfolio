@@ -3,7 +3,6 @@
 
 const crypto = require('crypto');
 const { validateEnv } = require('./lib/validate.js');
-const crypto = require('crypto');
 
 function getContentSecurityPolicy(nonce) {
   return [
