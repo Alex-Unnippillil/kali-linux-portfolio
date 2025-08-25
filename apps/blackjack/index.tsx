@@ -64,7 +64,7 @@ function isSoft(hand: Card[]): boolean {
   return aces > 0 && total <= 21;
 }
 
-const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, token }) => {
+const Blackjack: React.FC<{ userId?: string }> = ({ userId }) => {
   const [decks, setDecks] = useState(1);
   const [hitSoft17, setHitSoft17] = useState(true);
   const [preset, setPreset] = useState<'custom' | 'vegas' | 'atlantic'>('custom');
@@ -226,17 +226,16 @@ const Blackjack: React.FC<{ userId?: string; token?: string }> = ({ userId, toke
       if (result === 'win') setBankroll((b) => b + h.bet * 2);
       if (result === 'push') setBankroll((b) => b + h.bet);
     });
-    if (userId && token) {
+    if (userId) {
       fetch(`/api/users/${userId}/blackjack`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ result: results[0], bankroll }),
       });
     }
-  }, [bankroll, token, userId]);
+  }, [bankroll, userId]);
 
   const canSplit = playerHands[active]?.cards[0]?.value === playerHands[active]?.cards[1]?.value && playerHands.length === 1;
   const split = useCallback(() => {

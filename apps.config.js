@@ -198,7 +198,6 @@ const dynamicAppEntries = [
   ['ssh-fingerprint', 'SSH Fingerprint'],
   ['nmap-viewer', 'Nmap Viewer'],
   ['report-viewer', 'Report Viewer'],
-  ['jwks-fetcher', 'JWKS Fetcher'],
   ['license-classifier', 'License Classifier'],
   ['hsts-preload', 'HSTS Preload'],
   ['cookie-jar', 'Cookie Jar'],
@@ -849,15 +848,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: getScreen('mixed-content'),
-  },
-  {
-    id: 'jwks-fetcher',
-    title: 'JWKS Fetcher',
-    icon: './themes/Yaru/apps/bash.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: getScreen('jwks-fetcher'),
   },
   {
     id: 'sbom-viewer',

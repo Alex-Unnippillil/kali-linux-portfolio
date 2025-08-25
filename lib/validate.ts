@@ -80,15 +80,17 @@ const PublicEnvSchema = z.object({
   NEXT_PUBLIC_TRACKING_ID: z.string().optional(),
 });
 
-const EnvSchema = z.object({
-  JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
-});
+const EnvSchema = z.object({});
 
 function validate<T extends ZodTypeAny>(schema: T, env: NodeJS.ProcessEnv) {
   const result = schema.safeParse(env);
   if (!result.success) {
     const missing = result.error.issues.map((i) => i.path.join('.')).join(', ');
-    throw new Error(`Missing required environment variables: ${missing}`);
+    if (env.NODE_ENV === 'production') {
+      throw new Error(`Missing required environment variables: ${missing}`);
+    }
+    console.warn(`Missing required environment variables: ${missing}`);
+    return {} as z.infer<T>;
   }
   return result.data as z.infer<T>;
 }

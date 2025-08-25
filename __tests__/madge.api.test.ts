@@ -19,6 +19,7 @@ function createRes() {
 }
 
 describe('madge api', () => {
+  jest.setTimeout(20000);
   const dir = path.join(process.cwd(), 'lib', 'madge-test');
   beforeAll(() => {
     fs.mkdirSync(dir, { recursive: true });

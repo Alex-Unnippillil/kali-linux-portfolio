@@ -17,9 +17,6 @@ function parseCSP(csp: string): Record<string, string[]> {
 
 describe('next.config.js Content Security Policy', () => {
   const OLD_ENV = { ...process.env };
-  beforeAll(() => {
-    process.env.JWT_SECRET = 'test-secret';
-  });
   afterAll(() => {
     process.env = OLD_ENV;
   });

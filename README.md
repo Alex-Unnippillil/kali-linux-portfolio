@@ -8,9 +8,6 @@
 2. **Install packages** – run `yarn` to install project dependencies.
 3. **Environment** – copy `.env.example` to `.env.local` and set variables:
 
-   **Required for production**
-   - `JWT_SECRET` – secret used to sign JWT tokens.
-
    **Optional**
    - `NEXT_PUBLIC_ENABLE_ANALYTICS`, `NEXT_PUBLIC_TRACKING_ID`, `NEXT_PUBLIC_AXIOM_TOKEN`, `NEXT_PUBLIC_AXIOM_DATASET` – analytics.
    - `NEXT_PUBLIC_SERVICE_ID`, `NEXT_PUBLIC_TEMPLATE_ID`, `NEXT_PUBLIC_USER_ID` – email configuration.
@@ -29,10 +26,9 @@
 ## Setup
 
 1. Copy `.env.example` to `.env.local`.
-2. In `.env.local`, set `JWT_SECRET` to a secure value; this variable is required.
-3. Optionally set analytics variables such as `NEXT_PUBLIC_ENABLE_ANALYTICS` and `NEXT_PUBLIC_TRACKING_ID`.
-4. Update `.env.example` whenever new environment variables are added.
-5. Run `yarn validate:icons` to ensure all icon paths in `apps.config.js` exist under `public/themes/` before committing.
+2. Optionally set analytics variables such as `NEXT_PUBLIC_ENABLE_ANALYTICS` and `NEXT_PUBLIC_TRACKING_ID`.
+3. Update `.env.example` whenever new environment variables are added.
+4. Run `yarn validate:icons` to ensure all icon paths in `apps.config.js` exist under `public/themes/` before committing.
 
 ## Content Security Policy
 
