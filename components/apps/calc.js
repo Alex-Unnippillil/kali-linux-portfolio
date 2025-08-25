@@ -45,13 +45,13 @@ const Calc = () => {
   };
 
   const buttons = [
-    { label: '7' }, { label: '8' }, { label: '9' }, { label: '/' },
-    { label: '4' }, { label: '5' }, { label: '6' }, { label: '*' },
-    { label: '1' }, { label: '2' }, { label: '3' }, { label: '-' },
-    { label: '0' }, { label: '.' }, { label: '=' }, { label: '+' },
-    { label: '(' }, { label: ')' }, { label: '^' }, { label: 'sqrt', value: 'sqrt(' },
-    { label: 'sin', value: 'sin(' }, { label: 'cos', value: 'cos(' }, { label: 'tan', value: 'tan(' }, { label: 'log', value: 'log(' },
-    { label: 'C', type: 'clear', colSpan: 2 },
+    { label: '7' }, { label: '8' }, { label: '9' }, { label: '/', ariaLabel: 'divide' },
+    { label: '4' }, { label: '5' }, { label: '6' }, { label: '*', ariaLabel: 'multiply' },
+    { label: '1' }, { label: '2' }, { label: '3' }, { label: '-', ariaLabel: 'subtract' },
+    { label: '0' }, { label: '.' }, { label: '=', ariaLabel: 'equals' }, { label: '+', ariaLabel: 'add' },
+    { label: '(', ariaLabel: 'open parenthesis' }, { label: ')', ariaLabel: 'close parenthesis' }, { label: '^', ariaLabel: 'power' }, { label: 'sqrt', value: 'sqrt(', ariaLabel: 'square root' },
+    { label: 'sin', value: 'sin(', ariaLabel: 'sine' }, { label: 'cos', value: 'cos(', ariaLabel: 'cosine' }, { label: 'tan', value: 'tan(', ariaLabel: 'tangent' }, { label: 'log', value: 'log(', ariaLabel: 'logarithm' },
+    { label: 'C', type: 'clear', colSpan: 2, ariaLabel: 'clear' },
   ];
 
   return (
@@ -66,7 +66,8 @@ const Calc = () => {
         {buttons.map((btn, idx) => (
           <button
             key={idx}
-            className={`bg-gray-700 hover:bg-gray-600 rounded text-xl flex items-center justify-center ${
+            aria-label={btn.ariaLabel || btn.label}
+            className={`bg-gray-800 hover:bg-gray-700 rounded text-xl flex items-center justify-center ${
               btn.colSpan ? `col-span-${btn.colSpan}` : ''
             }`}
             onClick={() => handleClick(btn)}
