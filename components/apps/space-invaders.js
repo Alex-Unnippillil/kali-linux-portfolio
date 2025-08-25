@@ -18,6 +18,19 @@ const SpaceInvaders = () => {
   const ufoTimer = useRef(0);
   const initialCount = useRef(0);
 
+  useGameControls({
+    keydown: {
+      ArrowLeft: () => (keys.current['ArrowLeft'] = true),
+      ArrowRight: () => (keys.current['ArrowRight'] = true),
+      Space: () => (keys.current['Space'] = true),
+    },
+    keyup: {
+      ArrowLeft: () => (keys.current['ArrowLeft'] = false),
+      ArrowRight: () => (keys.current['ArrowRight'] = false),
+      Space: () => (keys.current['Space'] = false),
+    },
+  });
+
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -55,11 +68,6 @@ const SpaceInvaders = () => {
       { x: w * 0.8 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
     ];
 
-    const handleKey = (e) => {
-      keys.current[e.code] = e.type === 'keydown';
-    };
-    window.addEventListener('keydown', handleKey);
-    window.addEventListener('keyup', handleKey);
 
     const shoot = (pool, x, y) => {
       for (const b of pool) {
@@ -263,8 +271,6 @@ const SpaceInvaders = () => {
 
     return () => {
       cancelAnimationFrame(reqRef.current);
-      window.removeEventListener('keydown', handleKey);
-      window.removeEventListener('keyup', handleKey);
     };
   }, []);
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import useGameControls from '../../hooks/useGameControls';
 import ReactGA from 'react-ga4';
 
 const WIDTH = 7;
@@ -155,43 +156,20 @@ const Frogger = () => {
     clearInterval(holdRef.current);
   };
 
-  useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === 'ArrowLeft') moveFrog(-1, 0);
-      if (e.key === 'ArrowRight') moveFrog(1, 0);
-      if (e.key === 'ArrowUp') moveFrog(0, -1);
-      if (e.key === 'ArrowDown') moveFrog(0, 1);
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, []);
-
-  useEffect(() => {
-    const container = document.getElementById('frogger-container');
-    let startX = 0;
-    let startY = 0;
-    const handleStart = (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    };
-    const handleEnd = (e) => {
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = e.changedTouches[0].clientY - startY;
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 30) moveFrog(1, 0);
-        else if (dx < -30) moveFrog(-1, 0);
-      } else {
-        if (dy > 30) moveFrog(0, 1);
-        else if (dy < -30) moveFrog(0, -1);
-      }
-    };
-    container?.addEventListener('touchstart', handleStart);
-    container?.addEventListener('touchend', handleEnd);
-    return () => {
-      container?.removeEventListener('touchstart', handleStart);
-      container?.removeEventListener('touchend', handleEnd);
-    };
-  }, []);
+  useGameControls({
+    keydown: {
+      ArrowLeft: () => moveFrog(-1, 0),
+      ArrowRight: () => moveFrog(1, 0),
+      ArrowUp: () => moveFrog(0, -1),
+      ArrowDown: () => moveFrog(0, 1),
+    },
+    swipe: {
+      left: () => moveFrog(-1, 0),
+      right: () => moveFrog(1, 0),
+      up: () => moveFrog(0, -1),
+      down: () => moveFrog(0, 1),
+    },
+  });
 
   useEffect(() => {
     ReactGA.event({ category: 'Frogger', action: 'level_start', value: 1 });

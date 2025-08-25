@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import useGameControls from '../../hooks/useGameControls';
 
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
@@ -9,6 +10,50 @@ const Pong = () => {
   const resetRef = useRef(null);
   const peerRef = useRef(null);
   const channelRef = useRef(null);
+  const keysRef = useRef({ up: false, down: false });
+  const frameRef = useRef(0);
+  const modeRef = useRef('cpu');
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+  useGameControls({
+    keydown: {
+      ArrowUp: () => {
+        keysRef.current.up = true;
+        if (modeRef.current === 'online' && channelRef.current) {
+          channelRef.current.send(
+            JSON.stringify({ type: 'input', frame: frameRef.current + 1, ...keysRef.current })
+          );
+        }
+      },
+      ArrowDown: () => {
+        keysRef.current.down = true;
+        if (modeRef.current === 'online' && channelRef.current) {
+          channelRef.current.send(
+            JSON.stringify({ type: 'input', frame: frameRef.current + 1, ...keysRef.current })
+          );
+        }
+      },
+    },
+    keyup: {
+      ArrowUp: () => {
+        keysRef.current.up = false;
+        if (modeRef.current === 'online' && channelRef.current) {
+          channelRef.current.send(
+            JSON.stringify({ type: 'input', frame: frameRef.current + 1, ...keysRef.current })
+          );
+        }
+      },
+      ArrowDown: () => {
+        keysRef.current.down = false;
+        if (modeRef.current === 'online' && channelRef.current) {
+          channelRef.current.send(
+            JSON.stringify({ type: 'input', frame: frameRef.current + 1, ...keysRef.current })
+          );
+        }
+      },
+    },
+  });
 
   const [scores, setScores] = useState({ player: 0, opponent: 0 });
   const [reaction, setReaction] = useState(200); // ms reaction time for the AI
@@ -39,7 +84,7 @@ const Pong = () => {
 
     let playerScore = 0;
     let oppScore = 0;
-    const keys = { up: false, down: false };
+    const keys = keysRef.current;
     const remoteKeys = { up: false, down: false };
 
     let animationId;
@@ -114,6 +159,7 @@ const Pong = () => {
 
     const update = (dt) => {
       frame += 1;
+      frameRef.current = frame;
       // local player
       applyInputs(player, keys, dt);
 
@@ -201,25 +247,6 @@ const Pong = () => {
       animationId = requestAnimationFrame(loop);
     };
 
-    const keyDown = (e) => {
-      if (e.key === 'ArrowUp') keys.up = true;
-      if (e.key === 'ArrowDown') keys.down = true;
-      if (mode === 'online' && channelRef.current) {
-        channelRef.current.send(
-          JSON.stringify({ type: 'input', frame: frame + 1, ...keys })
-        );
-      }
-    };
-    const keyUp = (e) => {
-      if (e.key === 'ArrowUp') keys.up = false;
-      if (e.key === 'ArrowDown') keys.down = false;
-      if (mode === 'online' && channelRef.current) {
-        channelRef.current.send(
-          JSON.stringify({ type: 'input', frame: frame + 1, ...keys })
-        );
-      }
-    };
-
     const handleMessage = (event) => {
       const msg = JSON.parse(event.data);
       if (msg.type === 'input') {
@@ -241,16 +268,12 @@ const Pong = () => {
       channelRef.current.onmessage = handleMessage;
     }
 
-    window.addEventListener('keydown', keyDown);
-    window.addEventListener('keyup', keyUp);
 
     resetBall();
     lastTime = performance.now();
     loop();
 
     return () => {
-      window.removeEventListener('keydown', keyDown);
-      window.removeEventListener('keyup', keyUp);
       cancelAnimationFrame(animationId);
     };
   }, [reaction, mode, connected]);

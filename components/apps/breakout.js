@@ -1,7 +1,20 @@
 import React, { useRef, useEffect } from 'react';
+import useGameControls from '../../hooks/useGameControls';
 
 const Breakout = () => {
   const canvasRef = useRef(null);
+
+  const keys = useRef({ left: false, right: false });
+  useGameControls({
+    keydown: {
+      ArrowLeft: () => (keys.current.left = true),
+      ArrowRight: () => (keys.current.right = true),
+    },
+    keyup: {
+      ArrowLeft: () => (keys.current.left = false),
+      ArrowRight: () => (keys.current.right = false),
+    },
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -13,25 +26,13 @@ const Breakout = () => {
     const paddle = { x: width / 2 - 40, y: height - 20, w: 80, h: 10 };
     const ball = { x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 };
 
-    const keys = { left: false, right: false };
-
-    const keyDown = (e) => {
-      if (e.key === 'ArrowLeft') keys.left = true;
-      if (e.key === 'ArrowRight') keys.right = true;
-    };
-    const keyUp = (e) => {
-      if (e.key === 'ArrowLeft') keys.left = false;
-      if (e.key === 'ArrowRight') keys.right = false;
-    };
-    window.addEventListener('keydown', keyDown);
-    window.addEventListener('keyup', keyUp);
-
     let lastTime = 0;
     const loop = (time) => {
       const dt = (time - lastTime) / 1000;
       lastTime = time;
 
-      paddle.x += (keys.right - keys.left) * 300 * dt;
+      const k = keys.current;
+      paddle.x += (k.right - k.left) * 300 * dt;
       paddle.x = Math.max(0, Math.min(width - paddle.w, paddle.x));
 
       ball.x += ball.vx * dt;
@@ -69,10 +70,7 @@ const Breakout = () => {
     };
     requestAnimationFrame(loop);
 
-    return () => {
-      window.removeEventListener('keydown', keyDown);
-      window.removeEventListener('keyup', keyUp);
-    };
+    return () => {};
   }, []);
 
   return (

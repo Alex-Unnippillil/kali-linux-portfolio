@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import useGameControls from '../../hooks/useGameControls';
 import confetti from 'canvas-confetti';
 import ReactGA from 'react-ga4';
 
@@ -159,16 +160,15 @@ const Hangman = () => {
     initGame();
   };
 
-  useEffect(() => {
-    const handler = (e) => {
-      const letter = e.key.toLowerCase();
-      if (/^[a-z]$/.test(letter)) {
-        handleGuess(letter);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  });
+  const letterMap = useMemo(() => {
+    const m = {};
+    'abcdefghijklmnopqrstuvwxyz'.split('').forEach((l) => {
+      m[l] = () => handleGuess(l);
+    });
+    return m;
+  }, [handleGuess]);
+
+  useGameControls({ keydown: letterMap });
 
   useEffect(() => {
     const winner = word && word.split('').every((l) => guessed.includes(l));

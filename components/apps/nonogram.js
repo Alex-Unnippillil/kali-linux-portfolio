@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import useGameControls from '../../hooks/useGameControls';
 import ReactGA from 'react-ga4';
 import {
   evaluateLine,
@@ -162,60 +163,28 @@ const Nonogram = () => {
     }, [rows, cols, grid, scheduleToggle]);
 
     // keyboard shortcuts
-    useEffect(() => {
-      if (!started) return;
-      const handler = (e) => {
-        if (
-          [
-            'ArrowUp',
-            'ArrowDown',
-            'ArrowLeft',
-            'ArrowRight',
-            ' ',
-            'Enter',
-            'x',
-            'p',
-            'h',
-            'e',
-          ].includes(e.key)
-        )
-          e.preventDefault();
-        switch (e.key) {
-          case 'ArrowUp':
-            setSelected((s) => ({ i: Math.max(0, s.i - 1), j: s.j }));
-            break;
-          case 'ArrowDown':
-            setSelected((s) => ({ i: Math.min(rows.length - 1, s.i + 1), j: s.j }));
-            break;
-          case 'ArrowLeft':
-            setSelected((s) => ({ i: s.i, j: Math.max(0, s.j - 1) }));
-            break;
-          case 'ArrowRight':
-            setSelected((s) => ({ i: s.i, j: Math.min(cols.length - 1, s.j + 1) }));
-            break;
-          case ' ': // fallthrough
-          case 'Enter':
-            scheduleToggle(selected.i, selected.j, pencil ? 'pencil' : 'fill');
-            break;
-          case 'x':
-            scheduleToggle(selected.i, selected.j, 'cross');
-            break;
-          case 'p':
-            setPencil((p) => !p);
-            break;
-          case 'h':
-            handleHint();
-            break;
-          case 'e':
-            toggleMistakes();
-            break;
-          default:
-            break;
-        }
-      };
-      window.addEventListener('keydown', handler);
-      return () => window.removeEventListener('keydown', handler);
-    }, [started, rows, cols, selected, pencil, scheduleToggle, handleHint, toggleMistakes]);
+    useGameControls({
+      keydown: started
+        ? {
+            ArrowUp: () =>
+              setSelected((s) => ({ i: Math.max(0, s.i - 1), j: s.j })),
+            ArrowDown: () =>
+              setSelected((s) => ({ i: Math.min(rows.length - 1, s.i + 1), j: s.j })),
+            ArrowLeft: () =>
+              setSelected((s) => ({ i: s.i, j: Math.max(0, s.j - 1) })),
+            ArrowRight: () =>
+              setSelected((s) => ({ i: s.i, j: Math.min(cols.length - 1, s.j + 1) })),
+            ' ': () =>
+              scheduleToggle(selected.i, selected.j, pencil ? 'pencil' : 'fill'),
+            Enter: () =>
+              scheduleToggle(selected.i, selected.j, pencil ? 'pencil' : 'fill'),
+            x: () => scheduleToggle(selected.i, selected.j, 'cross'),
+            p: () => setPencil((p) => !p),
+            h: () => handleHint(),
+            e: () => toggleMistakes(),
+          }
+        : undefined,
+    });
 
     const handleTouchStart = (i, j) => {
       touchCross.current = false;

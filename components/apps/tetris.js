@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import useGameControls from '../../hooks/useGameControls';
 
 const WIDTH = 10;
 const HEIGHT = 20;
@@ -26,22 +27,16 @@ const Tetris = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const handleKey = useCallback((e) => {
-    if (e.key === 'ArrowLeft') {
-      setPos((p) => ({ ...p, x: Math.max(0, p.x - 1) }));
-    }
-    if (e.key === 'ArrowRight') {
-      setPos((p) => ({ ...p, x: Math.min(WIDTH - 1, p.x + 1) }));
-    }
-    if (e.key === 'ArrowDown') {
-      setPos((p) => ({ ...p, y: Math.min(HEIGHT - 1, p.y + 1) }));
-    }
-  }, []);
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [handleKey]);
+  useGameControls({
+    keydown: {
+      ArrowLeft: () =>
+        setPos((p) => ({ ...p, x: Math.max(0, p.x - 1) })),
+      ArrowRight: () =>
+        setPos((p) => ({ ...p, x: Math.min(WIDTH - 1, p.x + 1) })),
+      ArrowDown: () =>
+        setPos((p) => ({ ...p, y: Math.min(HEIGHT - 1, p.y + 1) })),
+    },
+  });
 
   const cells = [];
   for (let y = 0; y < HEIGHT; y += 1) {

@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
+import useGameControls from '../../hooks/useGameControls';
+import useGameControls from '../../hooks/useGameControls';
 
 const SIZE = 4;
 
@@ -80,33 +82,53 @@ const Game2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
 
-  const handleKey = useCallback(
-    (e) => {
-      if (e.key === 'Escape') {
+  useGameControls({
+    keydown: {
+      Escape: () => {
         document.getElementById('close-2048')?.click();
-        return;
-      }
-      if (won || lost) return;
-      let newBoard;
-      if (e.key === 'ArrowLeft') newBoard = moveLeft(board);
-      else if (e.key === 'ArrowRight') newBoard = moveRight(board);
-      else if (e.key === 'ArrowUp') newBoard = moveUp(board);
-      else if (e.key === 'ArrowDown') newBoard = moveDown(board);
-      else return;
-      if (!boardsEqual(board, newBoard)) {
-        addRandomTile(newBoard);
-        setBoard(newBoard);
-        if (checkWin(newBoard)) setWon(true);
-        else if (!hasMoves(newBoard)) setLost(true);
-      }
+      },
+      ArrowLeft: () => {
+        if (won || lost) return;
+        const newBoard = moveLeft(board);
+        if (!boardsEqual(board, newBoard)) {
+          addRandomTile(newBoard);
+          setBoard(newBoard);
+          if (checkWin(newBoard)) setWon(true);
+          else if (!hasMoves(newBoard)) setLost(true);
+        }
+      },
+      ArrowRight: () => {
+        if (won || lost) return;
+        const newBoard = moveRight(board);
+        if (!boardsEqual(board, newBoard)) {
+          addRandomTile(newBoard);
+          setBoard(newBoard);
+          if (checkWin(newBoard)) setWon(true);
+          else if (!hasMoves(newBoard)) setLost(true);
+        }
+      },
+      ArrowUp: () => {
+        if (won || lost) return;
+        const newBoard = moveUp(board);
+        if (!boardsEqual(board, newBoard)) {
+          addRandomTile(newBoard);
+          setBoard(newBoard);
+          if (checkWin(newBoard)) setWon(true);
+          else if (!hasMoves(newBoard)) setLost(true);
+        }
+      },
+      ArrowDown: () => {
+        if (won || lost) return;
+        const newBoard = moveDown(board);
+        if (!boardsEqual(board, newBoard)) {
+          addRandomTile(newBoard);
+          setBoard(newBoard);
+          if (checkWin(newBoard)) setWon(true);
+          else if (!hasMoves(newBoard)) setLost(true);
+        }
+      },
     },
-    [board, won, lost]
-  );
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [handleKey]);
+  });
 
   const reset = () => {
     setBoard(initBoard());

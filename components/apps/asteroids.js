@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import useGameControls from '../../hooks/useGameControls';
 import { wrap, createBulletPool, spawnBullet, updateBullets, createGA } from './asteroids-utils';
 
 // Simple Quadtree for collision queries
@@ -77,6 +78,31 @@ const Asteroids = () => {
   const requestRef = useRef();
   const audioCtx = useRef(null);
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  const keys = useRef({});
+  useGameControls({
+    keydown: {
+      ArrowLeft: () => (keys.current['ArrowLeft'] = true),
+      ArrowRight: () => (keys.current['ArrowRight'] = true),
+      ArrowUp: () => (keys.current['ArrowUp'] = true),
+      ArrowDown: () => (keys.current['ArrowDown'] = true),
+      Space: () => {
+        keys.current['Space'] = true;
+        fireBullet();
+      },
+      ShiftLeft: () => {
+        keys.current['ShiftLeft'] = true;
+        hyperspace();
+      },
+    },
+    keyup: {
+      ArrowLeft: () => (keys.current['ArrowLeft'] = false),
+      ArrowRight: () => (keys.current['ArrowRight'] = false),
+      ArrowUp: () => (keys.current['ArrowUp'] = false),
+      ArrowDown: () => (keys.current['ArrowDown'] = false),
+      Space: () => (keys.current['Space'] = false),
+      ShiftLeft: () => (keys.current['ShiftLeft'] = false),
+    },
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -93,7 +119,7 @@ const Asteroids = () => {
     window.addEventListener('resize', resize);
 
     // Game state
-    const keys = {};
+    const keyState = keys.current;
     const ship = { x: canvas.width / 2, y: canvas.height / 2, angle: 0, velX: 0, velY: 0, r: 10, cooldown: 0 };
     let lives = 3;
     let score = 0;
@@ -159,17 +185,7 @@ const Asteroids = () => {
     spawnAsteroids(4);
     ga.start();
 
-    // Input handling
-    const handleKeyDown = (e) => {
-      keys[e.code] = true;
-      if (e.code === 'Space') fireBullet();
-      if (e.code === 'ShiftLeft') hyperspace();
-    };
-    const handleKeyUp = (e) => {
-      keys[e.code] = false;
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    // Input handling handled by useGameControls
 
     // Mobile joystick
     const joystick = { active: false, id: null, sx: 0, sy: 0, x: 0, y: 0 };
@@ -282,8 +298,15 @@ const Asteroids = () => {
 
     const update = () => {
       pollGamepad();
-      const turn = (keys.ArrowLeft ? -1 : 0) + (keys.ArrowRight ? 1 : 0) + padState.turn + (joystick.active ? joystick.x : 0);
-      const thrust = (keys.ArrowUp ? 1 : 0) + padState.thrust + (joystick.active ? -joystick.y : 0);
+      const turn =
+        (keyState.ArrowLeft ? -1 : 0) +
+        (keyState.ArrowRight ? 1 : 0) +
+        padState.turn +
+        (joystick.active ? joystick.x : 0);
+      const thrust =
+        (keyState.ArrowUp ? 1 : 0) +
+        padState.thrust +
+        (joystick.active ? -joystick.y : 0);
       if (padState.fire) fireBullet();
       if (padState.hyperspace) hyperspace();
 
@@ -445,8 +468,6 @@ const Asteroids = () => {
     function cleanup() {
       cancelAnimationFrame(requestRef.current);
       window.removeEventListener('resize', resize);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
       canvas.removeEventListener('pointerdown', () => {});
       canvas.removeEventListener('pointermove', () => {});
       canvas.removeEventListener('pointerup', () => {});

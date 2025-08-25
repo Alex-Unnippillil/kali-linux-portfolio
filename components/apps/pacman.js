@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import useGameControls from '../../hooks/useGameControls';
 
 /**
  * Small Pacman implementation used inside the portfolio.  The goal of this
@@ -271,50 +272,44 @@ const Pacman = () => {
     });
   }, [pellets, score, availableDirs]);
 
-  const stepRef = useRef(step);
-  useEffect(() => {
-    stepRef.current = step;
-  }, [step]);
+const stepRef = useRef(step);
+useEffect(() => {
+  stepRef.current = step;
+}, [step]);
+
+const handleTouch = (e) => {
+  const canvas = canvasRef.current;
+  if (!canvas) return;
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const dx = x - cx;
+  const dy = y - cy;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    pacRef.current.nextDir = { x: dx > 0 ? 1 : -1, y: 0 };
+  } else {
+    pacRef.current.nextDir = { x: 0, y: dy > 0 ? 1 : -1 };
+  }
+};
+
+useGameControls({
+  keydown: {
+    ArrowUp: () => (pacRef.current.nextDir = { x: 0, y: -1 }),
+    ArrowDown: () => (pacRef.current.nextDir = { x: 0, y: 1 }),
+    ArrowLeft: () => (pacRef.current.nextDir = { x: -1, y: 0 }),
+    ArrowRight: () => (pacRef.current.nextDir = { x: 1, y: 0 }),
+  },
+  touchStart: handleTouch,
+  element: canvasRef.current,
+});
 
   useEffect(() => {
     const canvas = canvasRef.current;
     canvas.width = mazeRef.current[0].length * tileSize;
     canvas.height = mazeRef.current.length * tileSize;
-    const handleKey = (e) => {
-      switch (e.key) {
-        case 'ArrowUp':
-          pacRef.current.nextDir = { x: 0, y: -1 };
-          break;
-        case 'ArrowDown':
-          pacRef.current.nextDir = { x: 0, y: 1 };
-          break;
-        case 'ArrowLeft':
-          pacRef.current.nextDir = { x: -1, y: 0 };
-          break;
-        case 'ArrowRight':
-          pacRef.current.nextDir = { x: 1, y: 0 };
-          break;
-        default:
-          break;
-      }
-    };
-    const handleTouch = (e) => {
-      const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const dx = x - cx;
-      const dy = y - cy;
-      if (Math.abs(dx) > Math.abs(dy)) {
-        pacRef.current.nextDir = { x: dx > 0 ? 1 : -1, y: 0 };
-      } else {
-        pacRef.current.nextDir = { x: 0, y: dy > 0 ? 1 : -1 };
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    canvas.addEventListener('touchstart', handleTouch);
     let id;
     const loop = () => {
         if (statusRef.current === 'Playing') {
@@ -336,8 +331,6 @@ const Pacman = () => {
     draw();
     loop();
     return () => {
-      window.removeEventListener('keydown', handleKey);
-      canvas.removeEventListener('touchstart', handleTouch);
       cancelAnimationFrame(id);
     };
   }, []);
