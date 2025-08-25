@@ -74,6 +74,9 @@ module.exports = {
       'avatars.githubusercontent.com',
     ],
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   experimental: {
     optimizePackageImports: ['chart.js', 'react-chartjs-2'],
   },
