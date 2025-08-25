@@ -1,70 +1,49 @@
-import { useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
-const useGameControls = (canvasRef, onChange) => {
-  const state = useRef({ up: false, down: false, touchY: null });
+const useGameControls = (cols, onDrop) => {
+  const [selected, setSelected] = useState(Math.floor(cols / 2));
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const notify = () => {
-      if (onChange) onChange(state.current);
-    };
-
-    const keyDown = (e) => {
-      if (e.key === 'ArrowUp') {
-        state.current.up = true;
-        notify();
-      }
-      if (e.key === 'ArrowDown') {
-        state.current.down = true;
-        notify();
+    const handleKey = (e) => {
+      if (e.key === 'ArrowLeft') {
+        setSelected((c) => Math.max(0, c - 1));
+      } else if (e.key === 'ArrowRight') {
+        setSelected((c) => Math.min(cols - 1, c + 1));
+      } else if (e.key === ' ' || e.key === 'Enter') {
+        onDrop(selected);
       }
     };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [cols, onDrop, selected]);
 
-    const keyUp = (e) => {
-      if (e.key === 'ArrowUp') {
-        state.current.up = false;
-        notify();
+  useEffect(() => {
+    let startX = 0;
+    let startY = 0;
+    const handleStart = (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    };
+    const handleEnd = (e) => {
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30) {
+        if (dx > 0) setSelected((c) => Math.min(cols - 1, c + 1));
+        else setSelected((c) => Math.max(0, c - 1));
+      } else if (Math.abs(dx) < 10 && Math.abs(dy) < 10) {
+        onDrop(selected);
       }
-      if (e.key === 'ArrowDown') {
-        state.current.down = false;
-        notify();
-      }
     };
-
-    const handleTouch = (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const touch = e.touches[0];
-      if (!touch) return;
-      state.current.touchY = touch.clientY - rect.top;
-      notify();
-      e.preventDefault();
-    };
-
-    const endTouch = () => {
-      state.current.touchY = null;
-      notify();
-    };
-
-    window.addEventListener('keydown', keyDown);
-    window.addEventListener('keyup', keyUp);
-    canvas.addEventListener('touchstart', handleTouch, { passive: false });
-    canvas.addEventListener('touchmove', handleTouch, { passive: false });
-    canvas.addEventListener('touchend', endTouch);
-    canvas.addEventListener('touchcancel', endTouch);
-
+    window.addEventListener('touchstart', handleStart);
+    window.addEventListener('touchend', handleEnd);
     return () => {
-      window.removeEventListener('keydown', keyDown);
-      window.removeEventListener('keyup', keyUp);
-      canvas.removeEventListener('touchstart', handleTouch);
-      canvas.removeEventListener('touchmove', handleTouch);
-      canvas.removeEventListener('touchend', endTouch);
-      canvas.removeEventListener('touchcancel', endTouch);
+      window.removeEventListener('touchstart', handleStart);
+      window.removeEventListener('touchend', handleEnd);
     };
-  }, [canvasRef, onChange]);
+  }, [cols, onDrop, selected]);
 
-  return state;
+  return [selected, setSelected];
+
 };
 
 export default useGameControls;
