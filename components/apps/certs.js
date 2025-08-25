@@ -1,4 +1,5 @@
 import React from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const Certs = () => {
   const certBadges = [
@@ -54,5 +55,7 @@ const Certs = () => {
   );
 };
 
-export default Certs;
+const CertsWithBoundary = withGameErrorBoundary(Certs);
+
+export default CertsWithBoundary;
 

@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const Breakout = () => {
   const canvasRef = useRef(null);
@@ -85,4 +86,6 @@ const Breakout = () => {
   );
 };
 
-export default Breakout;
+const BreakoutWithBoundary = withGameErrorBoundary(Breakout);
+
+export default BreakoutWithBoundary;

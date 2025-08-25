@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const SpaceInvaders = () => {
   const canvasRef = useRef(null);
@@ -305,4 +306,6 @@ const SpaceInvaders = () => {
   );
 };
 
-export default SpaceInvaders;
+const SpaceInvadersWithBoundary = withGameErrorBoundary(SpaceInvaders);
+
+export default SpaceInvadersWithBoundary;

@@ -1,4 +1,5 @@
 import React from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import dynamic from 'next/dynamic';
 
 // Load the Twitter embed only on the client to avoid SSR issues.
@@ -7,7 +8,7 @@ const TwitterTimelineEmbed = dynamic(
   { ssr: false }
 );
 
-export default function XApp() {
+function XApp() {
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey">
       <TwitterTimelineEmbed
@@ -20,5 +21,8 @@ export default function XApp() {
   );
 }
 
-export const displayX = () => <XApp />;
+export const displayX = () => <XAppWithBoundary />;
 
+
+const XAppWithBoundary = withGameErrorBoundary(XApp);
+export default XAppWithBoundary;

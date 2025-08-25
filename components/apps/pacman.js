@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 /**
  * Small Pacman implementation used inside the portfolio.  The goal of this
@@ -351,5 +352,7 @@ const Pacman = () => {
   );
 };
 
-export default Pacman;
+const PacmanWithBoundary = withGameErrorBoundary(Pacman);
+
+export default PacmanWithBoundary;
 

@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const FlappyBird = () => {
   const canvasRef = useRef(null);
@@ -133,5 +134,7 @@ const FlappyBird = () => {
   );
 };
 
-export default FlappyBird;
+const FlappyBirdWithBoundary = withGameErrorBoundary(FlappyBird);
+
+export default FlappyBirdWithBoundary;
 

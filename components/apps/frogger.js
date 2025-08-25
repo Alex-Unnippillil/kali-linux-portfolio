@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import ReactGA from 'react-ga4';
 
 const WIDTH = 7;
@@ -384,7 +385,9 @@ const Frogger = () => {
   );
 };
 
-export default Frogger;
+const FroggerWithBoundary = withGameErrorBoundary(Frogger);
+
+export default FroggerWithBoundary;
 
 export {
   makeRng,

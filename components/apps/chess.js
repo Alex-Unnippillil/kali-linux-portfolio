@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import { Chess } from 'chess.js';
 // Stockfish engine removed for compatibility; using simple AI instead
 
@@ -265,5 +266,7 @@ const ChessGame = () => {
   );
 };
 
-export default ChessGame;
+const ChessGameWithBoundary = withGameErrorBoundary(ChessGame);
+
+export default ChessGameWithBoundary;
 

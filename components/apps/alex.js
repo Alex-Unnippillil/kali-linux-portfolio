@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
@@ -151,10 +152,12 @@ export class AboutAlex extends Component {
     }
 }
 
-export default AboutAlex;
+const AboutAlexWithBoundary = withGameErrorBoundary(AboutAlex);
+
+export default AboutAlexWithBoundary;
 
 export const displayAboutAlex = () => {
-    return <AboutAlex />;
+    return <AboutAlexWithBoundary />;
 }
 
 

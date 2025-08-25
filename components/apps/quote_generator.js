@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 
@@ -243,6 +244,8 @@ const QuoteGenerator = () => {
   );
 };
 
-export default QuoteGenerator;
-export const displayQuoteGenerator = () => <QuoteGenerator />;
+const QuoteGeneratorWithBoundary = withGameErrorBoundary(QuoteGenerator);
+
+export default QuoteGeneratorWithBoundary;
+export const displayQuoteGenerator = () => <QuoteGeneratorWithBoundary />;
 

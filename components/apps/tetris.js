@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const WIDTH = 10;
 const HEIGHT = 20;
@@ -65,5 +66,7 @@ const Tetris = () => {
   );
 };
 
-export default Tetris;
+const TetrisWithBoundary = withGameErrorBoundary(Tetris);
+
+export default TetrisWithBoundary;
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import { createDeck } from './memory_utils';
 
 const modes = [2, 4, 6];
@@ -184,4 +185,6 @@ const Memory = () => {
   );
 };
 
-export default Memory;
+const MemoryWithBoundary = withGameErrorBoundary(Memory);
+
+export default MemoryWithBoundary;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const defaultLevels = [
   [
@@ -387,5 +388,7 @@ const Sokoban = () => {
   );
 };
 
-export default Sokoban;
+const SokobanWithBoundary = withGameErrorBoundary(Sokoban);
+
+export default SokobanWithBoundary;
 

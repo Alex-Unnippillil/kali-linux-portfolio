@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 
 const GITHUB_USER = 'Alex-Unnippillil';
 
-export default function ProjectGallery() {
+function ProjectGallery() {
   const [projects, setProjects] = useState([]);
 
   useEffect(() => {
@@ -100,5 +101,8 @@ export default function ProjectGallery() {
   );
 }
 
-export const displayProjectGallery = () => <ProjectGallery />;
+export const displayProjectGallery = () => <ProjectGalleryWithBoundary />;
 
+
+const ProjectGalleryWithBoundary = withGameErrorBoundary(ProjectGallery);
+export default ProjectGalleryWithBoundary;

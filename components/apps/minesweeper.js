@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const BOARD_SIZE = 8;
 const MINES_COUNT = 10;
@@ -393,4 +394,6 @@ const Minesweeper = () => {
   );
 };
 
-export default Minesweeper;
+const MinesweeperWithBoundary = withGameErrorBoundary(Minesweeper);
+
+export default MinesweeperWithBoundary;

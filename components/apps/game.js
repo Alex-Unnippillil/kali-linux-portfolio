@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const lines = [
   [0, 1, 2],
@@ -85,7 +86,9 @@ const GameApp = () => {
   );
 };
 
-export default GameApp;
+const GameAppWithBoundary = withGameErrorBoundary(GameApp);
 
-export const displayGame = () => <GameApp />;
+export default GameAppWithBoundary;
+
+export const displayGame = () => <GameAppWithBoundary />;
 

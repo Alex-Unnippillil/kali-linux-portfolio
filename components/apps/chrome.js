@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import Image from 'next/image';
 
 export class Chrome extends Component {
@@ -92,8 +93,10 @@ export class Chrome extends Component {
     }
 }
 
-export default Chrome
+const ChromeWithBoundary = withGameErrorBoundary(Chrome);
+
+export default ChromeWithBoundary;
 
 export const displayChrome = () => {
-    return <Chrome> </Chrome>;
+    return <ChromeWithBoundary> </ChromeWithBoundary>;
 }

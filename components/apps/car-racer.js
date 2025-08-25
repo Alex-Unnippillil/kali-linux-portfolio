@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import ReactGA from 'react-ga4';
 
 // Track constants - circular course
@@ -416,5 +417,7 @@ const CarRacer = () => {
   );
 };
 
-export default CarRacer;
+const CarRacerWithBoundary = withGameErrorBoundary(CarRacer);
+
+export default CarRacerWithBoundary;
 

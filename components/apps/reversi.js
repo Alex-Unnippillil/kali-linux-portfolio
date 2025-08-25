@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 import ReactGA from 'react-ga4';
 import {
   createBoard,
@@ -248,5 +249,7 @@ const Reversi = () => {
   );
 };
 
-export default Reversi;
+const ReversiWithBoundary = withGameErrorBoundary(Reversi);
+
+export default ReversiWithBoundary;
 

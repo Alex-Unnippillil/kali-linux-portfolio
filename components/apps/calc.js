@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 const Parser = require('expr-eval').Parser;
 
 // configure parser similar to previous implementation
@@ -79,9 +80,11 @@ const Calc = () => {
   );
 };
 
-export default Calc;
+const CalcWithBoundary = withGameErrorBoundary(Calc);
+
+export default CalcWithBoundary;
 
 export const displayTerminalCalc = (addFolder, openApp) => {
-  return <Calc addFolder={addFolder} openApp={openApp} />;
+  return <CalcWithBoundary addFolder={addFolder} openApp={openApp} />;
 };
 

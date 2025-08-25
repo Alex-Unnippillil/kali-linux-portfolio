@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
@@ -368,5 +369,7 @@ const Pong = () => {
   );
 };
 
-export default Pong;
+const PongWithBoundary = withGameErrorBoundary(Pong);
+
+export default PongWithBoundary;
 

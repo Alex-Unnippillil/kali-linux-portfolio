@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const Gauge = ({ value, label }) => {
   const radius = 45;
@@ -87,8 +88,10 @@ const ResourceMonitor = () => {
   );
 };
 
-export default ResourceMonitor;
+const ResourceMonitorWithBoundary = withGameErrorBoundary(ResourceMonitor);
+
+export default ResourceMonitorWithBoundary;
 
 export const displayResourceMonitor = (addFolder, openApp) => {
-  return <ResourceMonitor addFolder={addFolder} openApp={openApp} />;
+  return <ResourceMonitorWithBoundary addFolder={addFolder} openApp={openApp} />;
 };

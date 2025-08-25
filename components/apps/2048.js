@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const SIZE = 4;
 
@@ -155,5 +156,7 @@ const Game2048 = () => {
   );
 };
 
-export default Game2048;
+const Game2048WithBoundary = withGameErrorBoundary(Game2048);
+
+export default Game2048WithBoundary;
 

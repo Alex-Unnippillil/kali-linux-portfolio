@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 const ROWS = 6;
 const COLS = 7;
@@ -94,5 +95,7 @@ const ConnectFour = () => {
   );
 };
 
-export default ConnectFour;
+const ConnectFourWithBoundary = withGameErrorBoundary(ConnectFour);
+
+export default ConnectFourWithBoundary;
 

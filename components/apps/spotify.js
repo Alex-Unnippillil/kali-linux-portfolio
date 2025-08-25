@@ -1,6 +1,7 @@
 import React from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
-export default function SpotifyApp() {
+function SpotifyApp() {
   return (
     <div className="h-full w-full bg-ub-cool-grey">
       <iframe
@@ -16,5 +17,8 @@ export default function SpotifyApp() {
   );
 }
 
-export const displaySpotify = () => <SpotifyApp />;
+export const displaySpotify = () => <SpotifyAppWithBoundary />;
 
+
+const SpotifyAppWithBoundary = withGameErrorBoundary(SpotifyApp);
+export default SpotifyAppWithBoundary;

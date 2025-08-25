@@ -1,4 +1,5 @@
 import React from 'react';
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
 export function Settings(props) {
     const wallpapers = {
@@ -33,9 +34,11 @@ export function Settings(props) {
     )
 }
 
-export default Settings
+const SettingsWithBoundary = withGameErrorBoundary(Settings);
+
+export default SettingsWithBoundary;
 
 
 export const displaySettings = () => {
-    return <Settings> </Settings>;
+    return <SettingsWithBoundary> </SettingsWithBoundary>;
 }

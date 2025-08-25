@@ -1,6 +1,7 @@
 import React from 'react'
+import { withGameErrorBoundary } from './GameErrorBoundary';
 
-export default function Todoist() {
+function Todoist() {
     return (
         <iframe src="https://todoist.com/showProject?id=220474322" frameBorder="0" title="Todoist" className="h-full w-full"></iframe>
         // just to bypass the headers 🙃
@@ -8,5 +9,8 @@ export default function Todoist() {
 }
 
 export const displayTodoist = () => {
-    return <Todoist />;
+    return <TodoistWithBoundary />;
 };
+
+const TodoistWithBoundary = withGameErrorBoundary(Todoist);
+export default TodoistWithBoundary;
