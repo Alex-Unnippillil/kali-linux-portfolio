@@ -82,6 +82,7 @@ const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const ReaverApp = createDynamicApp('reaver', 'Reaver');
 
+
 const HydraApp = createDynamicApp('hydra', 'Hydra');
 const JohnApp = createDynamicApp('john', 'John the Ripper');
 const NessusApp = createDynamicApp('nessus', 'Nessus');
@@ -131,6 +132,7 @@ const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
 const displayReaver = createDisplay(ReaverApp);
+
 
 const displayHydra = createDisplay(HydraApp);
 const displayJohn = createDisplay(JohnApp);
