@@ -1,35 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import HelpOverlay from './HelpOverlay';
 
 interface GameLayoutProps {
-  title: string;
-  score?: React.ReactNode;
-  instructions?: React.ReactNode;
-  controls?: React.ReactNode;
+  gameId: string;
   children: React.ReactNode;
 }
 
-const GameLayout: React.FC<GameLayoutProps> = ({
-  title,
-  score,
-  instructions,
-  controls,
-  children,
-}) => {
+const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
+  const [showHelp, setShowHelp] = useState(false);
+
+  const close = useCallback(() => setShowHelp(false), []);
+  const toggle = useCallback(() => setShowHelp((h) => !h), []);
+
+  useEffect(() => {
+    if (!showHelp) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowHelp(false);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showHelp]);
+
   return (
-    <div className="h-full w-full p-4 flex flex-col bg-ub-cool-grey text-white">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">{title}</h2>
-        {score && <div>{score}</div>}
-      </div>
-      <div className="flex-1 flex flex-col items-center justify-center">
-        {children}
-      </div>
-      {instructions && (
-        <div className="mt-4 text-sm text-center">{instructions}</div>
-      )}
-      {controls && (
-        <div className="mt-4 flex space-x-2 justify-center">{controls}</div>
-      )}
+    <div className="relative h-full w-full">
+      {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
+      <button
+        type="button"
+        aria-label="Help"
+        aria-expanded={showHelp}
+        onClick={toggle}
+        className="absolute top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+      >
+        ?
+      </button>
+      {children}
+
     </div>
   );
 };

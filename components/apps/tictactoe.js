@@ -214,4 +214,11 @@ const TicTacToe = () => {
 };
 
 export { checkWinner, minimax };
-export default TicTacToe;
+
+export default function TicTacToeApp() {
+  return (
+    <GameLayout gameId="tictactoe">
+      <TicTacToe />
+    </GameLayout>
+  );
+}
