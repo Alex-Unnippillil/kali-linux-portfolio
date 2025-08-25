@@ -78,6 +78,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const TheHarvesterApp = createDynamicApp('theHarvester', 'theHarvester');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -117,6 +118,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayTheHarvester = createDisplay(TheHarvesterApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -603,6 +605,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'theHarvester',
+    title: 'theHarvester',
+    icon: './themes/Yaru/apps/theharvester.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTheHarvester,
   },
   // Games are included so they appear alongside apps
   ...games,
