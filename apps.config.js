@@ -78,6 +78,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -117,6 +118,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayEttercap = createDisplay(EttercapApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -522,6 +524,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'ettercap',
+    title: 'Ettercap',
+    icon: './themes/Yaru/apps/ettercap.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEttercap,
   },
   {
     id: 'project-gallery',
