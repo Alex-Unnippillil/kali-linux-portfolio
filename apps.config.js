@@ -78,13 +78,11 @@ const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
-
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const HydraApp = createDynamicApp('hydra', 'Hydra');
 const JohnApp = createDynamicApp('john', 'John the Ripper');
-
 const NessusApp = createDynamicApp('nessus', 'Nessus');
-
 const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
@@ -130,6 +128,7 @@ const displayMetasploit = createDisplay(MetasploitApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayHydra = createDisplay(HydraApp);
 const displayJohn = createDisplay(JohnApp);
 
 const displayNessus = createDisplay(NessusApp);
@@ -651,6 +650,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'hydra',
+    title: 'Hydra',
+    icon: './themes/Yaru/apps/hydra.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHydra,
   },
   {
     id: 'nmap-nse',
