@@ -1,5 +1,0 @@
-[
-  {"name": "Ruy Lopez", "line": ["e4", "e5", "Nf3", "Nc6", "Bb5"]},
-  {"name": "Sicilian Defense", "line": ["e4", "c5", "Nf3", "d6", "d4", "cxd4", "Nxd4", "Nf6"]},
-  {"name": "Queen's Gambit", "line": ["d4", "d5", "c4", "e6"]}
-]

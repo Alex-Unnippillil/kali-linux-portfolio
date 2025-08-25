@@ -1,65 +1,50 @@
-import { useEffect, useState } from 'react';
+import { Component } from 'react'
 
-export default function Clock(props) {
-  const month_list = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-  const day_list = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const [time, setTime] = useState(null);
-  const hour12 = true;
+export default class Clock extends Component {
+    constructor() {
+        super();
+        this.month_list = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        this.day_list = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        this.state = {
+            hour_12: true,
+            current_time: new Date()
+        };
+    }
 
-  useEffect(() => {
-    setTime(new Date());
-    const t = setInterval(() => setTime(new Date()), 10_000);
-    return () => clearInterval(t);
-  }, []);
+    componentDidMount() {
+        this.update_time = setInterval(() => {
+            this.setState({ current_time: new Date() });
+        }, 10 * 1000);
+    }
 
-  if (!time)
-    return <span suppressHydrationWarning>{"--:--"}</span>;
+    componentWillUnmount() {
+        clearInterval(this.update_time);
+    }
 
-  let day = day_list[time.getDay()];
-  let hour = time.getHours();
-  let minute = time.getMinutes();
-  let month = month_list[time.getMonth()];
-  let date = time.getDate().toLocaleString();
-  let meridiem = hour < 12 ? "AM" : "PM";
+    render() {
+        const { current_time } = this.state;
 
-  if (minute.toLocaleString().length === 1) {
-    minute = "0" + minute;
-  }
+        let day = this.day_list[current_time.getDay()];
+        let hour = current_time.getHours();
+        let minute = current_time.getMinutes();
+        let month = this.month_list[current_time.getMonth()];
+        let date = current_time.getDate().toLocaleString();
+        let meridiem = (hour < 12 ? "AM" : "PM");
 
-  if (hour12 && hour > 12) hour -= 12;
+        if (minute.toLocaleString().length === 1) {
+            minute = "0" + minute
+        }
 
-  let display_time;
-  if (props.onlyTime) {
-    display_time = hour + ":" + minute + " " + meridiem;
-  } else if (props.onlyDay) {
-    display_time = day + " " + month + " " + date;
-  } else {
-    display_time =
-      day +
-      " " +
-      month +
-      " " +
-      date +
-      " " +
-      hour +
-      ":" +
-      minute +
-      " " +
-      meridiem;
-  }
-  return <span suppressHydrationWarning>{display_time}</span>;
+        if (this.state.hour_12 && hour > 12) hour -= 12;
+
+        let display_time;
+        if (this.props.onlyTime) {
+            display_time = hour + ":" + minute + " " + meridiem;
+        }
+        else if (this.props.onlyDay) {
+            display_time = day + " " + month + " " + date;
+        }
+        else display_time = day + " " + month + " " + date + " " + hour + ":" + minute + " " + meridiem;
+        return <span>{display_time}</span>;
+    }
 }
-

@@ -1,9 +1,0 @@
-{
-  "name": "Advanced Table",
-  "elements": [
-    { "type": "flipper", "x": 100, "y": 550, "width": 80, "height": 20 },
-    { "type": "flipper", "x": 300, "y": 550, "width": 80, "height": 20 },
-    { "type": "bumper", "x": 150, "y": 350, "radius": 25 },
-    { "type": "bumper", "x": 250, "y": 350, "radius": 25 }
-  ]
-}

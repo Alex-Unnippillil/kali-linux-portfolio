@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
 import SmallArrow from './small_arrow';
-// React 19 removed findDOMNode, so handle outside clicks without relying on
-// libraries that call it (e.g. react-onclickoutside).
+import onClickOutside from 'react-onclickoutside';
 
 class Slider extends Component {
 	render() {
@@ -30,30 +29,18 @@ export class StatusCard extends Component {
 			brightness_level: 100 // setting default value to 100 so that by default its always full.
 		};
 	}
-        handleClickOutside = (event) => {
-                if (
-                        this.wrapperRef.current &&
-                        !this.wrapperRef.current.contains(event.target)
-                ) {
-                        this.props.toggleVisible();
-                }
-        };
-        componentDidMount() {
-                document.addEventListener('mousedown', this.handleClickOutside);
-                document.addEventListener('touchstart', this.handleClickOutside);
-                this.setState({
-                        sound_level: localStorage.getItem('sound-level') || 75,
-                        brightness_level: localStorage.getItem('brightness-level') || 100
-                }, () => {
-                        document.getElementById('monitor-screen').style.filter = `brightness(${(3 / 400) * this.state.brightness_level +
-                                0.25})`;
-                });
-        }
-
-        componentWillUnmount() {
-                document.removeEventListener('mousedown', this.handleClickOutside);
-                document.removeEventListener('touchstart', this.handleClickOutside);
-        }
+	handleClickOutside = () => {
+		this.props.toggleVisible();
+	};
+	componentDidMount() {
+		this.setState({
+			sound_level: localStorage.getItem('sound-level') || 75,
+			brightness_level: localStorage.getItem('brightness-level') || 100
+		}, () => {
+			document.getElementById('monitor-screen').style.filter = `brightness(${3 / 400 * this.state.brightness_level +
+				0.25})`;
+		})
+	}
 
 	handleBrightness = (e) => {
 		this.setState({ brightness_level: e.target.value });
@@ -72,14 +59,14 @@ export class StatusCard extends Component {
 			<div
 				ref={this.wrapperRef}
 				className={
-					'absolute bg-panel rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 status-card' +
+					'absolute bg-ub-cool-grey rounded-md py-4 top-9 right-3 shadow border-black border border-opacity-20 status-card' +
 					(this.props.visible ? ' visible animateShow' : ' invisible')
 				}
 			>
 				{' '}
 				{/* Status Card */}
 				<div className="absolute w-0 h-0 -top-1 right-6 top-arrow-up" />
-				<div className="w-64 py-1.5 flex items-center justify-center bg-panel hover:bg-warm hover:bg-opacity-20">
+				<div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
 					<div className="w-8">
                                                 <Image
                                                         width={16}
@@ -96,7 +83,7 @@ export class StatusCard extends Component {
 						name="headphone_range"
 					/>
 				</div>
-				<div className="w-64 py-1.5 flex items-center justify-center bg-panel hover:bg-warm hover:bg-opacity-20">
+				<div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
 					<div className="w-8">
                                                 <Image
                                                         width={16}
@@ -116,7 +103,7 @@ export class StatusCard extends Component {
 				<div className="w-64 flex content-center justify-center">
 					<div className="w-2/4 border-black border-opacity-50 border-b my-2 border-solid" />
 				</div>
-				<div className="w-64 py-1.5 flex items-center justify-center bg-panel hover:bg-warm hover:bg-opacity-20">
+				<div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
 					<div className="w-8">
                                                 <Image
                                                         width={16}
@@ -131,7 +118,7 @@ export class StatusCard extends Component {
 						<SmallArrow angle="right" />
 					</div>
 				</div>
-				<div className="w-64 py-1.5 flex items-center justify-center bg-panel hover:bg-warm hover:bg-opacity-20">
+				<div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
 					<div className="w-8">
                                                 <Image
                                                         width={16}
@@ -146,7 +133,7 @@ export class StatusCard extends Component {
 						<SmallArrow angle="right" />
 					</div>
 				</div>
-				<div className="w-64 py-1.5 flex items-center justify-center bg-panel hover:bg-warm hover:bg-opacity-20">
+				<div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
 					<div className="w-8">
                                                 <Image
                                                         width={16}
@@ -166,7 +153,7 @@ export class StatusCard extends Component {
 				</div>
 				<div
 					id="open-settings"
-					className="w-64 py-1.5 flex items-center justify-center bg-panel hover:bg-warm hover:bg-opacity-20"
+					className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20"
 				>
 					<div className="w-8">
                                                 <Image
@@ -183,7 +170,7 @@ export class StatusCard extends Component {
 				</div>
 				<div
 					onClick={this.props.lockScreen}
-					className="w-64 py-1.5 flex items-center justify-center bg-panel hover:bg-warm hover:bg-opacity-20"
+					className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20"
 				>
 					<div className="w-8">
                                                 <Image
@@ -200,7 +187,7 @@ export class StatusCard extends Component {
 				</div>
 				<div
 					onClick={this.props.shutDown}
-					className="w-64 py-1.5 flex items-center justify-center bg-panel hover:bg-warm hover:bg-opacity-20"
+					className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20"
 				>
 					<div className="w-8">
                                                 <Image
@@ -221,4 +208,4 @@ export class StatusCard extends Component {
 	}
 }
 
-export default StatusCard;
+export default onClickOutside(StatusCard);

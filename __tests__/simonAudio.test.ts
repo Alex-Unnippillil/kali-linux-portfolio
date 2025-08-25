@@ -1,4 +1,4 @@
-import { createToneSchedule } from '@components/apps/simon';
+import { createToneSchedule } from '../components/apps/simon';
 
 describe('createToneSchedule', () => {
   test('tone schedule drift under 5 ms per step across 20 steps', () => {

@@ -5,17 +5,11 @@ import {
   computeLegalMoves,
   countPieces,
   applyMove,
-  hintHeatmap,
-  exportHistory,
-  importHistory,
 } from './reversiLogic';
 
 const Reversi = () => {
-  const initial = { board: createBoard(), player: 'B' };
-  const [board, setBoard] = useState(initial.board);
-  const [player, setPlayer] = useState(initial.player);
-  const [history, setHistory] = useState([initial]);
-  const [step, setStep] = useState(0);
+  const [board, setBoard] = useState(createBoard);
+  const [player, setPlayer] = useState('B');
   const [status, setStatus] = useState("Black's turn");
   const [flipping, setFlipping] = useState([]);
   const [preview, setPreview] = useState(null);
@@ -26,7 +20,6 @@ const Reversi = () => {
     const handleMoveRef = useRef((r, c) => {});
 
   const legalMoves = useMemo(() => computeLegalMoves(board, player), [board, player]);
-  const heatmap = useMemo(() => hintHeatmap(board, player, aiDepth), [board, player, aiDepth]);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('./reversi.worker.js', import.meta.url));
@@ -79,23 +72,18 @@ const Reversi = () => {
     }
   }, [player, legalMoves, board, mustPass, aiDepth]);
 
-  const handleMove = (r, c) => {
+    const handleMove = (r, c) => {
     const key = `${r}-${c}`;
     const toFlip = legalMoves[key];
     if (!toFlip || gameOver) return;
     const opponent = player === 'B' ? 'W' : 'B';
     const flipInfo = toFlip.map(([fr, fc]) => ({ key: `${fr}-${fc}`, from: opponent }));
     setFlipping(flipInfo);
-    const newBoard = applyMove(board, r, c, player, toFlip);
-    setBoard(newBoard);
-    const newHist = history.slice(0, step + 1);
-    newHist.push({ board: newBoard, player: opponent });
-    setHistory(newHist);
-    setStep(step + 1);
+    setBoard(applyMove(board, r, c, player, toFlip));
     ReactGA.event({ category: 'reversi', action: 'move', label: `${player}:${r}-${c}` });
     setTimeout(() => setFlipping([]), 400);
     setPlayer(opponent);
-  };
+    };
 
     handleMoveRef.current = handleMove;
 
@@ -110,15 +98,12 @@ const Reversi = () => {
   useEffect(() => setPreview(null), [board, player]);
 
   const reset = () => {
-    const b = createBoard();
-    setBoard(b);
+    setBoard(createBoard());
     setPlayer('B');
     setStatus("Black's turn");
     setPreview(null);
     setMustPass(false);
     setGameOver(null);
-    setHistory([{ board: b, player: 'B' }]);
-    setStep(0);
   };
 
   const { black, white } = useMemo(() => countPieces(board), [board]);
@@ -133,52 +118,12 @@ const Reversi = () => {
     if (!mustPass) return;
     const next = player === 'B' ? 'W' : 'B';
     ReactGA.event({ category: 'reversi', action: 'pass', label: player });
-    const newHist = history.slice(0, step + 1);
-    newHist.push({ board, player: next });
-    setHistory(newHist);
-    setStep(step + 1);
     setPlayer(next);
     setMustPass(false);
   };
 
-  const undo = () => {
-    if (step === 0) return;
-    const prev = history[step - 1];
-    setBoard(prev.board);
-    setPlayer(prev.player);
-    setStep(step - 1);
-    setGameOver(null);
-  };
-
-  const redo = () => {
-    if (step >= history.length - 1) return;
-    const next = history[step + 1];
-    setBoard(next.board);
-    setPlayer(next.player);
-    setStep(step + 1);
-    setGameOver(null);
-  };
-
-  const exportGame = () => {
-    navigator.clipboard.writeText(exportHistory(history));
-  };
-
-  const importGame = () => {
-    const data = prompt('Paste game history');
-    if (!data) return;
-    const hist = importHistory(data);
-    if (hist && hist.length) {
-      setHistory(hist);
-      const last = hist[hist.length - 1];
-      setBoard(last.board);
-      setPlayer(last.player);
-      setStep(hist.length - 1);
-      setGameOver(null);
-    }
-  };
-
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4 select-none relative">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none relative">
       <div className="mb-2">{status}</div>
       <div className="mb-2 flex items-center space-x-2">
         <label htmlFor="aiDepth">AI Level:</label>
@@ -205,7 +150,6 @@ const Reversi = () => {
             const isPreview = preview && preview.move[0] === r && preview.move[1] === c;
             const willFlip =
               preview && preview.flips.some(([fr, fc]) => fr === r && fc === c);
-            const heat = heatmap[key] || 0;
             return (
               <div
                 key={key}
@@ -215,7 +159,6 @@ const Reversi = () => {
                 className={`relative w-8 h-8 flex items-center justify-center bg-green-600 ${
                   move ? 'cursor-pointer hover:bg-green-500' : ''
                 }`}
-                style={{ backgroundColor: move ? `rgba(255,255,0,${heat * 0.5})` : undefined }}
               >
                 {cell && (
                   <div className={`piece ${flipObj ? 'flipping' : ''}`}>
@@ -265,35 +208,9 @@ const Reversi = () => {
       >
         Reset
       </button>
-      <div className="mt-2 space-x-2">
-        <button
-          onClick={undo}
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-        >
-          Undo
-        </button>
-        <button
-          onClick={redo}
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-        >
-          Redo
-        </button>
-        <button
-          onClick={exportGame}
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-        >
-          Export
-        </button>
-        <button
-          onClick={importGame}
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-        >
-          Import
-        </button>
-      </div>
       {gameOver && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-panel p-4 rounded text-center">
+          <div className="bg-ub-cool-grey p-4 rounded text-center">
             <div className="mb-2">{gameOver.winner}</div>
             <div className="mb-2">Black: {gameOver.black} White: {gameOver.white}</div>
             <button

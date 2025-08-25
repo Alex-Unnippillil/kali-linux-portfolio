@@ -6,24 +6,6 @@ const Pinball = () => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
-    // Offload rendering and game loop to a worker when supported
-    if (canvas.transferControlToOffscreen && typeof Worker !== 'undefined') {
-      const off = canvas.transferControlToOffscreen();
-      const worker = new Worker(new URL('./pinball.worker.js', import.meta.url));
-      worker.postMessage({ canvas: off }, [off]);
-      const handleKey = (e) =>
-        worker.postMessage({ type: 'key', key: e.key, down: e.type === 'keydown' });
-      window.addEventListener('keydown', handleKey);
-      window.addEventListener('keyup', handleKey);
-      return () => {
-        worker.terminate();
-        window.removeEventListener('keydown', handleKey);
-        window.removeEventListener('keyup', handleKey);
-      };
-    }
-
-    // Fallback to main-thread implementation
     const ctx = canvas.getContext('2d');
     const width = canvas.width;
     const height = canvas.height;
@@ -125,7 +107,7 @@ const Pinball = () => {
   }, []);
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-panel">
+    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey">
       <canvas ref={canvasRef} width={400} height={500} className="bg-black" />
     </div>
   );

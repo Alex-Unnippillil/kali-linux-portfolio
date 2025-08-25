@@ -66,7 +66,3 @@ export function collectCoin(tiles, x, y) {
   }
   return false;
 }
-
-export function hitHazard(tiles, x, y) {
-  return !!(tiles[y] && tiles[y][x] === 4);
-}

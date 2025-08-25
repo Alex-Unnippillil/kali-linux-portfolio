@@ -1,8 +1,74 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { isValid } from './sudoku-dlx';
 
 const SIZE = 9;
 const range = (n) => Array.from({ length: n }, (_, i) => i);
+
+// Pseudo random generator so daily puzzles are deterministic
+const createRNG = (seed) => {
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6D2B79F5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+const shuffle = (arr, rng) => {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+const isValid = (board, row, col, num) => {
+  for (let i = 0; i < SIZE; i++) {
+    if (board[row][i] === num || board[i][col] === num) return false;
+  }
+  const boxRow = Math.floor(row / 3) * 3;
+  const boxCol = Math.floor(col / 3) * 3;
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 3; c++) {
+      if (board[boxRow + r][boxCol + c] === num) return false;
+    }
+  }
+  return true;
+};
+
+// Backtracking solver used for generation and uniqueness checks
+const solveBoard = (board, idx = 0, rng = Math.random) => {
+  if (idx === SIZE * SIZE) return true;
+  const row = Math.floor(idx / SIZE);
+  const col = idx % SIZE;
+  if (board[row][col] !== 0) return solveBoard(board, idx + 1, rng);
+  const nums = shuffle(range(SIZE).map((n) => n + 1), typeof rng === 'function' ? rng : Math.random);
+  for (const num of nums) {
+    if (isValid(board, row, col, num)) {
+      board[row][col] = num;
+      if (solveBoard(board, idx + 1, rng)) return true;
+      board[row][col] = 0;
+    }
+  }
+  return false;
+};
+
+const countSolutions = (board, idx = 0, limit = 2) => {
+  if (idx === SIZE * SIZE) return 1;
+  const row = Math.floor(idx / SIZE);
+  const col = idx % SIZE;
+  if (board[row][col] !== 0) return countSolutions(board, idx + 1, limit);
+  let count = 0;
+  for (let num = 1; num <= SIZE && count < limit; num++) {
+    if (isValid(board, row, col, num)) {
+      board[row][col] = num;
+      count += countSolutions(board, idx + 1, limit - count);
+      board[row][col] = 0;
+    }
+  }
+  return count;
+};
 
 const dailySeed = () => {
   const str = new Date().toISOString().slice(0, 10);
@@ -17,106 +83,49 @@ const getCandidates = (board, r, c) => {
   return cand;
 };
 
-// IndexedDB helpers for saving progress
-const openDB = () =>
-  new Promise((resolve, reject) => {
-    if (typeof window === 'undefined') {
-      resolve(null);
-      return;
+const generateSudoku = (difficulty = 'easy', seed = Date.now()) => {
+  const rng = createRNG(seed);
+  const board = Array(SIZE)
+    .fill(0)
+    .map(() => Array(SIZE).fill(0));
+  solveBoard(board, 0, rng);
+  const solution = board.map((row) => row.slice());
+  const puzzle = board.map((row) => row.slice());
+  const holesByDiff = { easy: 35, medium: 45, hard: 55 };
+  let holes = holesByDiff[difficulty] || holesByDiff.easy;
+  const positions = shuffle(range(SIZE * SIZE), rng);
+  for (const pos of positions) {
+    if (holes === 0) break;
+    const r = Math.floor(pos / SIZE);
+    const c = pos % SIZE;
+    const backup = puzzle[r][c];
+    puzzle[r][c] = 0;
+    const copy = puzzle.map((row) => row.slice());
+    if (countSolutions(copy) !== 1) {
+      puzzle[r][c] = backup;
+    } else {
+      holes--;
     }
-    const request = indexedDB.open('sudoku', 1);
-    request.onupgradeneeded = () => {
-      request.result.createObjectStore('games');
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-
-const idbGet = async (key) => {
-  const db = await openDB();
-  if (!db) return null;
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('games', 'readonly');
-    const store = tx.objectStore('games');
-    const req = store.get(key);
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => reject(req.error);
-  });
-};
-
-const idbSet = async (key, val) => {
-  const db = await openDB();
-  if (!db) return;
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('games', 'readwrite');
-    const store = tx.objectStore('games');
-    const req = store.put(val, key);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
-};
-
-const idbDelete = async (key) => {
-  const db = await openDB();
-  if (!db) return;
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('games', 'readwrite');
-    const store = tx.objectStore('games');
-    const req = store.delete(key);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
-};
-
-let workerRef = null;
-const initWorker = () => {
-  if (workerRef || typeof window === 'undefined') return;
-  workerRef = new Worker(new URL('./sudoku.worker.ts', import.meta.url));
-};
-
-const callWorker = (msg) =>
-  new Promise((resolve) => {
-    initWorker();
-    const worker = workerRef;
-    const handler = (e) => {
-      if (e.data.type === msg.type) {
-        worker.removeEventListener('message', handler);
-        resolve(e.data);
-      }
-    };
-    worker.addEventListener('message', handler);
-    worker.postMessage(msg);
-  });
-
-const generateSudoku = async (difficulty = 'easy', seed = Date.now()) => {
-  const { puzzle, solution } = await callWorker({ type: 'generate', difficulty, seed });
+  }
   return { puzzle, solution };
 };
 
 const Sudoku = () => {
   const [difficulty, setDifficulty] = useState('easy');
   const [useDaily, setUseDaily] = useState(true);
-  const [seed, setSeed] = useState(useDaily ? dailySeed() : Date.now());
   const [{ puzzle, solution }, setGame] = useState({ puzzle: [], solution: [] });
   const [board, setBoard] = useState([]);
   const [notes, setNotes] = useState([]); // notes[r][c] = array of numbers
   const [noteMode, setNoteMode] = useState(false);
   const [autoNotes, setAutoNotes] = useState(false);
-  const [errorMode, setErrorMode] = useState(true);
   const [hint, setHint] = useState('');
   const [hintCell, setHintCell] = useState(null);
   const [completed, setCompleted] = useState(false);
   const [time, setTime] = useState(0);
   const timerRef = useRef(null);
 
-  useEffect(() => {
-    initWorker();
-    return () => workerRef && workerRef.terminate();
-  }, []);
-
-  const startGame = async (seedValue) => {
-    const { puzzle, solution } = await generateSudoku(difficulty, seedValue);
-    setSeed(seedValue);
+  const startGame = (seed) => {
+    const { puzzle, solution } = generateSudoku(difficulty, seed);
     setGame({ puzzle, solution });
     setBoard(puzzle.map((r) => r.slice()));
     setNotes(
@@ -135,41 +144,9 @@ const Sudoku = () => {
   };
 
   useEffect(() => {
-    let mounted = true;
-    idbGet('current').then((data) => {
-      if (!mounted) return;
-      if (data && data.puzzle) {
-        setDifficulty(data.difficulty || 'easy');
-        setUseDaily(data.useDaily ?? true);
-        setSeed(data.seed);
-        setGame({ puzzle: data.puzzle, solution: data.solution });
-        setBoard(data.board);
-        setNotes(data.notes);
-        setTime(data.time || 0);
-      } else {
-        const s = useDaily ? dailySeed() : Date.now();
-        startGame(s);
-      }
-    });
-    return () => {
-      mounted = false;
-    };
+    startGame(useDaily ? dailySeed() : Date.now());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (board.length === 0) return;
-    idbSet('current', {
-      difficulty,
-      useDaily,
-      seed,
-      puzzle,
-      solution,
-      board,
-      notes,
-      time,
-    });
-  }, [board, notes, time, puzzle, solution, difficulty, seed, useDaily]);
 
   useEffect(() => {
     if (completed) {
@@ -200,7 +177,6 @@ const Sudoku = () => {
     if (autoNotes) applyAutoNotes(newBoard);
     if (newBoard.flat().every((n, i) => n === solution[Math.floor(i / 9)][i % 9])) {
       setCompleted(true);
-      idbDelete('current');
     }
   };
 
@@ -216,15 +192,21 @@ const Sudoku = () => {
     setNotes(newNotes);
   };
 
-  const getHintHandler = async () => {
-    const { hint: h } = await callWorker({ type: 'hint', board });
-    if (h) {
-      setHint(`Cell (${h.r + 1},${h.c + 1}) must be ${h.val} (${h.reason})`);
-      setHintCell({ r: h.r, c: h.c });
-    } else {
-      setHint('No hints available');
-      setHintCell(null);
+  const getHintHandler = () => {
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (board[r][c] === 0) {
+          const cand = getCandidates(board, r, c);
+          if (cand.length === 1) {
+            setHint(`Cell (${r + 1},${c + 1}) must be ${cand[0]} (single candidate)`);
+            setHintCell({ r, c });
+            return;
+          }
+        }
+      }
     }
+    setHint('No simple hints available');
+    setHintCell(null);
   };
 
   const hasConflict = (b, r, c, val) => {
@@ -247,13 +229,13 @@ const Sudoku = () => {
 
   if (board.length === 0)
     return (
-      <div className="h-full w-full flex items-center justify-center bg-panel text-white">
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
         Loading...
       </div>
     );
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-panel text-white p-4 select-none overflow-y-auto">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 select-none overflow-y-auto">
       <div className="mb-2 flex space-x-2">
         <select
           className="text-black p-1"
@@ -282,10 +264,6 @@ const Sudoku = () => {
           />
           <span>Auto</span>
         </label>
-        <label className="flex items-center space-x-1">
-          <input type="checkbox" checked={errorMode} onChange={(e) => setErrorMode(e.target.checked)} />
-          <span>Errors</span>
-        </label>
         <button className="px-2 py-1 bg-gray-700 rounded" onClick={getHintHandler}>
           Hint
         </button>
@@ -304,41 +282,23 @@ const Sudoku = () => {
         >
           {useDaily ? 'Daily' : 'Random'}
         </button>
-        <button
-          className="px-2 py-1 bg-gray-700 rounded"
-          onClick={() => {
-            const s = parseInt(prompt('Enter seed'), 10);
-            if (!Number.isNaN(s)) startGame(s);
-          }}
-        >
-          Use Seed
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700 rounded"
-          onClick={() => navigator.clipboard.writeText(String(seed))}
-        >
-          Copy Seed
-        </button>
       </div>
-      <div className="mb-2">Time: {Math.floor(time / 60)}:{('0' + (time % 60)).slice(-2)} | Seed: {seed}</div>
-      <div className="grid grid-cols-9" style={{ gap: '2px' }} role="grid">
+      <div className="mb-2">Time: {Math.floor(time / 60)}:{('0' + (time % 60)).slice(-2)}</div>
+      <div className="grid grid-cols-9" style={{ gap: '2px' }}>
         {board.map((row, r) =>
           row.map((val, c) => {
             const original = puzzle[r][c] !== 0;
-            const conflict = errorMode && hasConflict(board, r, c, val);
+            const conflict = hasConflict(board, r, c, val);
             const isHint = hintCell && hintCell.r === r && hintCell.c === c;
             return (
               <div
                 key={`${r}-${c}`}
-                role="gridcell"
                 className={`relative w-8 h-8 sm:w-10 sm:h-10 ${
                   original ? 'bg-gray-300' : 'bg-white'
                 } ${conflict ? 'bg-red-300' : ''} ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
               >
                 <input
                   className="w-full h-full text-center text-black outline-none"
-                  aria-label={`Row ${r + 1} Column ${c + 1}`}
-                  aria-readonly={original}
                   value={val === 0 ? '' : val}
                   onChange={(e) => handleValue(r, c, e.target.value)}
                   maxLength={1}
@@ -359,14 +319,8 @@ const Sudoku = () => {
           })
         )}
       </div>
-      {completed && (
-        <div className="mt-2" aria-live="polite">
-          Completed!
-        </div>
-      )}
-      {hint && (
-      <div className="mt-2 text-yellow-300" aria-live="polite">{hint}</div>
-      )}
+      {completed && <div className="mt-2">Completed!</div>}
+      {hint && <div className="mt-2 text-yellow-300">{hint}</div>}
     </div>
   );
 };

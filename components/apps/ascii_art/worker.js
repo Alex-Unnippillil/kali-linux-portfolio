@@ -1,14 +1,8 @@
 self.onmessage = async (e) => {
-  const { bitmap, charSet, fontSize, charWidth, useColor, palette } = e.data;
-  const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-  const safeFont = clamp(fontSize || 8, 1, 100);
-  const safeChar = clamp(charWidth || safeFont, 1, 1000);
-  const rawWidth = Math.floor(bitmap.width / safeChar);
-  const rawHeight = Math.floor(bitmap.height / safeFont);
-  const MAX_DIM = 1000;
-  const width = clamp(rawWidth, 1, MAX_DIM);
-  const height = clamp(rawHeight, 1, MAX_DIM);
+  const { bitmap, charSet, cellSize, useColor, palette } = e.data;
   const chars = charSet.split('');
+  const width = Math.floor(bitmap.width / cellSize);
+  const height = Math.floor(bitmap.height / cellSize);
   let canvas;
   if (typeof OffscreenCanvas !== 'undefined') {
     canvas = new OffscreenCanvas(width, height);

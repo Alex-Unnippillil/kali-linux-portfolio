@@ -1,13 +1,10 @@
-/** @jest-environment jsdom */
-import React from 'react';
+import React, { act } from 'react';
 import { render, screen } from '@testing-library/react';
-import { act } from 'react-dom/test-utils';
+import Ubuntu from '../components/ubuntu';
 
-import Ubuntu from '@components/ubuntu';
-
-jest.mock('@components/screen/desktop', () => () => <div data-testid="desktop" />);
-jest.mock('@components/screen/navbar', () => () => <div data-testid="navbar" />);
-jest.mock('@components/screen/lock_screen', () => () => <div data-testid="lock-screen" />);
+jest.mock('../components/screen/desktop', () => () => <div data-testid="desktop" />);
+jest.mock('../components/screen/navbar', () => () => <div data-testid="navbar" />);
+jest.mock('../components/screen/lock_screen', () => () => <div data-testid="lock-screen" />);
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 
 describe('Ubuntu component', () => {

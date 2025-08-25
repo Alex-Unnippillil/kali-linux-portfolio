@@ -56,7 +56,7 @@ const Gomoku = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       {winner && <div className="mb-4 capitalize">{`${winner} wins!`}</div>}
       <div className="grid" style={{ gridTemplateColumns: `repeat(${SIZE}, 1.5rem)` }}>
         {board.map((row, rIdx) =>

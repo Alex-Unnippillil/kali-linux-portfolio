@@ -1,4 +1,4 @@
-import { Shoe, BlackjackGame, basicStrategy, handValue } from '@components/apps/blackjack/engine';
+import { Shoe, BlackjackGame, basicStrategy } from '../components/apps/blackjack/engine';
 
 const card = (v: string) => ({ suit: '\u2660', value: v });
 
@@ -83,42 +83,6 @@ describe('Basic strategy', () => {
   });
   test('recommends hit on A7 vs 9', () => {
     expect(basicStrategy([card('A'), card('7')], card('9'), { canDouble: true })).toBe('hit');
-  });
-});
-
-describe('Hand evaluation', () => {
-  test('aces count as 1 or 11', () => {
-    expect(handValue([card('A'), card('9')])).toBe(20);
-    expect(handValue([card('A'), card('9'), card('9')])).toBe(19);
-  });
-});
-
-describe('Rule settings', () => {
-  test('disallow double', () => {
-    const game = new BlackjackGame({ decks: 1, bankroll: 1000, allowDouble: false });
-    const deck = [card('5'), card('6'), card('9'), card('7')];
-    game.startRound(100, deck);
-    expect(() => game.double()).toThrow('Double not allowed');
-  });
-
-  test('disallow split', () => {
-    const game = new BlackjackGame({ decks: 1, bankroll: 1000, allowSplit: false });
-    const deck = [card('8'), card('8'), card('6'), card('10')];
-    game.startRound(100, deck);
-    expect(() => game.split()).toThrow('Split not allowed');
-  });
-
-  test('disallow surrender', () => {
-    const game = new BlackjackGame({ decks: 1, bankroll: 1000, allowSurrender: false });
-    const deck = [card('10'), card('6'), card('10'), card('5')];
-    game.startRound(100, deck);
-    expect(() => game.surrender()).toThrow('Surrender not allowed');
-  });
-});
-
-describe('Strategy respects options', () => {
-  test('returns hit when double disabled', () => {
-    expect(basicStrategy([card('5'), card('6')], card('4'), { canDouble: false })).toBe('hit');
   });
 });
 

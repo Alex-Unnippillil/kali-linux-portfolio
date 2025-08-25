@@ -343,7 +343,7 @@ const Pacman = () => {
   }, []);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-panel text-white p-4">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <canvas ref={canvasRef} className="bg-black" />
       <div className="mt-2">Score: {score}</div>
       {statusRef.current !== 'Playing' && <div className="mt-2">{statusRef.current}</div>}
