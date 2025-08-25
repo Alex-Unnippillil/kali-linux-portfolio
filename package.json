@@ -8,6 +8,7 @@
     "preinstall": "node scripts/check-node-version.js",
     "dev": "next dev",
     "build": "NODE_OPTIONS=--max_old_space_size=4096 next build",
+
     "start": "next start",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -24,6 +25,7 @@
     "lighthouse": "lhci autorun",
     "typecheck": "tsc --noEmit",
     "build:ci": "NODE_OPTIONS=--max_old_space_size=4096 next build",
+
     "lint:ci": "next lint --max-warnings=0 && yarn check:edge-node",
     "format:check": "prettier --check ."
   },
@@ -103,6 +105,7 @@
     "react": "^19.1.1",
     "react-activity-calendar": "^2.7.13",
     "react-chartjs-2": "^5.3.0",
+    "react-chrono": "^2.9.1",
     "react-dom": "^19.1.1",
     "react-force-graph": "^1.48.0",
     "react-force-graph-2d": "^1.28.0",
@@ -110,8 +113,8 @@
     "react-github-calendar": "^4.5.9",
     "react-markdown": "^10.1.0",
     "react-simple-code-editor": "^0.14.1",
-    "react-twitter-embed": "^4.0.4",
-    "react-visjs-timeline": "^1.6.0",
+    "react-twitter-widgets": "patch:react-twitter-widgets@npm%3A1.11.0#~/.yarn/patches/react-twitter-widgets-npm-1.11.0-8937195212.patch",
+
     "react-window": "^1.8.11",
     "rehype-sanitize": "^6.0.0",
     "rfc4648": "^1.5.4",
@@ -132,7 +135,6 @@
     "tlsh": "^1.0.8",
     "undici": "^6.19.8",
     "url-parse": "^1.5.10",
-    "vis-timeline": "^8.3.0",
     "ws": "^8.18.3",
     "xmllint-wasm": "^5.0.0",
     "zod": "^4.1.0",
@@ -154,7 +156,6 @@
     "@types/eslint-plugin-security": "^3",
     "@types/howler": "^2",
     "@types/jest": "^30.0.0",
-    "@types/mermaid": "^9.2.0",
     "@types/node": "^24.2.1",
     "@types/plist": "^3.0.2",
     "@types/react": "^19.0.0",
