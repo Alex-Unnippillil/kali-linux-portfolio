@@ -8,6 +8,7 @@ const usePersistentState = (key, initialValue) => {
       return stored ? JSON.parse(stored) : initialValue;
     } catch {
       return initialValue;
+
     }
   });
 
@@ -25,3 +26,4 @@ const usePersistentState = (key, initialValue) => {
 };
 
 export default usePersistentState;
+
