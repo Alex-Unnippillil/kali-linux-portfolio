@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useGameSettings } from './settings-context';
 
 const SIZE = 9;
 const range = (n) => Array.from({ length: n }, (_, i) => i);
@@ -111,7 +112,7 @@ const generateSudoku = (difficulty = 'easy', seed = Date.now()) => {
 };
 
 const Sudoku = () => {
-  const [difficulty, setDifficulty] = useState('easy');
+  const { difficulty, setDifficulty } = useGameSettings();
   const [useDaily, setUseDaily] = useState(true);
   const [{ puzzle, solution }, setGame] = useState({ puzzle: [], solution: [] });
   const [board, setBoard] = useState([]);
