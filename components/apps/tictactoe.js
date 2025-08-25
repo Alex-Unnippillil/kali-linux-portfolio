@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import confetti from 'canvas-confetti';
+import GameLayout from './GameLayout';
 
 const winningLines = [
   [0, 1, 2],
@@ -145,58 +146,70 @@ const TicTacToe = () => {
 
   if (player === null) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-        {difficultySlider}
-        <div className="mb-4">Choose X or O</div>
-        <div className="flex space-x-4">
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={() => startGame('X')}
-          >
-            X
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={() => startGame('O')}
-          >
-            O
-          </button>
-        </div>
-      </div>
+      <GameLayout
+        title="Tic Tac Toe"
+        controls={
+          <div className="flex space-x-4">
+            <button
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={() => startGame('X')}
+            >
+              X
+            </button>
+            <button
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={() => startGame('O')}
+            >
+              O
+            </button>
+          </div>
+        }
+      >
+        <>
+          {difficultySlider}
+          <div className="mb-4">Choose X or O</div>
+        </>
+      </GameLayout>
     );
   }
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      {difficultySlider}
-      <div className="grid grid-cols-3 gap-1 w-60 mb-4">
-        {board.map((cell, idx) => (
-          <button
-            key={idx}
-            className={`h-20 w-20 text-4xl flex items-center justify-center bg-gray-700 hover:bg-gray-600 ${
-              winningLine.includes(idx) ? 'bg-green-600 animate-pulse' : ''
-            }`}
-            onClick={() => handleClick(idx)}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleClick(idx);
-              }
-            }}
-          >
-            {cell}
-          </button>
-        ))}
-      </div>
-      <div className="mb-4">{status}</div>
-      <button
-        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={reset}
-      >
-        Reset
-      </button>
-    </div>
+    <GameLayout
+      title="Tic Tac Toe"
+      score={<div>{status}</div>}
+      controls={
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={reset}
+        >
+          Reset
+        </button>
+      }
+    >
+      <>
+        {difficultySlider}
+        <div className="grid grid-cols-3 gap-1 w-60 mb-4">
+          {board.map((cell, idx) => (
+            <button
+              key={idx}
+              className={`h-20 w-20 text-4xl flex items-center justify-center bg-gray-700 hover:bg-gray-600 ${
+                winningLine.includes(idx) ? 'bg-green-600 animate-pulse' : ''
+              }`}
+              onClick={() => handleClick(idx)}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleClick(idx);
+                }
+              }}
+            >
+              {cell}
+            </button>
+          ))}
+        </div>
+      </>
+    </GameLayout>
   );
 };
 
