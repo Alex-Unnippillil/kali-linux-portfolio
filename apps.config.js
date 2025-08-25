@@ -76,6 +76,7 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
+const DsniffApp = createDynamicApp('dsniff', 'dsniff');
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 
@@ -114,6 +115,7 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 
+const displayDsniff = createDisplay(DsniffApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
@@ -603,6 +605,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'dsniff',
+    title: 'dsniff',
+    icon: './themes/Yaru/apps/dsniff.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDsniff,
   },
   // Games are included so they appear alongside apps
   ...games,
