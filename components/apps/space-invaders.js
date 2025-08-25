@@ -1,6 +1,12 @@
 import React, { useRef, useEffect } from 'react';
+import useAssetLoader from '../../hooks/useAssetLoader';
 
 const SpaceInvaders = () => {
+  const { loading, error } = useAssetLoader({
+    images: ['/themes/Yaru/status/ubuntu_white_hex.svg'],
+    sounds: [],
+  });
+
   const canvasRef = useRef(null);
   const reqRef = useRef();
   const keys = useRef({});
@@ -19,6 +25,7 @@ const SpaceInvaders = () => {
   const initialCount = useRef(0);
 
   useEffect(() => {
+    if (loading || error) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     canvas.width = canvas.offsetWidth;
@@ -266,7 +273,7 @@ const SpaceInvaders = () => {
       window.removeEventListener('keydown', handleKey);
       window.removeEventListener('keyup', handleKey);
     };
-  }, []);
+  }, [loading, error]);
 
   const touchStart = (key) => () => {
     touch.current[key] = true;
@@ -274,6 +281,22 @@ const SpaceInvaders = () => {
   const touchEnd = (key) => () => {
     touch.current[key] = false;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="h-8 w-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full text-white bg-black">
+        Failed to load assets.
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full relative bg-black text-white">

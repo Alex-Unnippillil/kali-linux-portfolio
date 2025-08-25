@@ -88,3 +88,43 @@ export function randomizePlacement() {
   }
 }
 
+
+export class RandomSalvoAI {
+  constructor() {
+    this.available = new Set(Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, i) => i));
+    this.queue = [];
+  }
+
+  record(idx, hit) {
+    this.available.delete(idx);
+    if (hit) {
+      const x = idx % BOARD_SIZE;
+      const y = Math.floor(idx / BOARD_SIZE);
+      const neighbors = [
+        [x + 1, y],
+        [x - 1, y],
+        [x, y + 1],
+        [x, y - 1],
+      ];
+      neighbors.forEach(([nx, ny]) => {
+        if (nx >= 0 && ny >= 0 && nx < BOARD_SIZE && ny < BOARD_SIZE) {
+          const nIdx = ny * BOARD_SIZE + nx;
+          if (this.available.has(nIdx) && !this.queue.includes(nIdx)) {
+            this.queue.push(nIdx);
+          }
+        }
+      });
+    }
+  }
+
+  nextMove() {
+    if (this.queue.length) {
+      return this.queue.shift();
+    }
+    const choices = Array.from(this.available);
+    if (!choices.length) return null;
+    const choice = choices[Math.floor(Math.random() * choices.length)];
+    this.available.delete(choice);
+    return choice;
+  }
+}

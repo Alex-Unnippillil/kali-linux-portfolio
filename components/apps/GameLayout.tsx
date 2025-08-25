@@ -37,6 +37,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
         ?
       </button>
       {children}
+
     </div>
   );
 };

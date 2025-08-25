@@ -1,33 +1,99 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Draggable from 'react-draggable';
-import { MonteCarloAI, BOARD_SIZE, randomizePlacement } from './battleship/ai';
+import {
+  MonteCarloAI,
+  RandomSalvoAI,
+  BOARD_SIZE,
+  randomizePlacement,
+} from './battleship/ai';
+import GameLayout from './battleship/GameLayout';
+import usePersistentState from '../hooks/usePersistentState';
 
 const CELL = 32; // px
 
 const createBoard = () => Array(BOARD_SIZE * BOARD_SIZE).fill(null);
+
+const HitMarker = () => (
+  <svg
+    className="absolute inset-0 w-full h-full"
+    viewBox="0 0 32 32"
+    stroke="red"
+    strokeWidth="4"
+  >
+    <line x1="4" y1="4" x2="28" y2="28">
+      <animate
+        attributeName="stroke-opacity"
+        from="0"
+        to="1"
+        dur="0.2s"
+        fill="freeze"
+      />
+    </line>
+    <line x1="28" y1="4" x2="4" y2="28">
+      <animate
+        attributeName="stroke-opacity"
+        from="0"
+        to="1"
+        dur="0.2s"
+        fill="freeze"
+      />
+    </line>
+  </svg>
+);
+
+const MissMarker = () => (
+  <svg
+    className="absolute inset-0 w-full h-full"
+    viewBox="0 0 32 32"
+    stroke="white"
+    strokeWidth="3"
+    fill="none"
+  >
+    <circle cx="16" cy="16" r="0">
+      <animate attributeName="r" from="0" to="10" dur="0.3s" fill="freeze" />
+      <animate attributeName="opacity" from="0" to="1" dur="0.3s" fill="freeze" />
+    </circle>
+  </svg>
+);
 
 const Battleship = () => {
   const [phase, setPhase] = useState('placement');
   const [playerBoard, setPlayerBoard] = useState(createBoard());
   const [enemyBoard, setEnemyBoard] = useState(createBoard());
   const [ships, setShips] = useState([]); // player's ship objects
-  const [ai, setAi] = useState(new MonteCarloAI());
   const [heat, setHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
   const [message, setMessage] = useState('Place your ships');
+  const [difficulty, setDifficulty] = useState('easy');
+  const [ai, setAi] = useState(null);
+  const [stats, setStats] = usePersistentState('battleship-stats', {
+    wins: 0,
+    losses: 0,
+  });
 
-  useEffect(() => {
-    // init player ships
-    const layout = randomizePlacement();
-    setShips(layout.map((s, i) => ({ id: i, ...s })));
-    // enemy ships
-    setEnemyBoard(placeShips(createBoard(), randomizePlacement()));
+  const placeShips = useCallback((board, layout) => {
+    const newBoard = board.slice();
+    layout.forEach((ship) => ship.cells.forEach((c) => (newBoard[c] = 'ship')));
+    return newBoard;
   }, []);
 
-  const placeShips = (board, layout) => {
-    const newBoard = board.slice();
-    layout.forEach(ship => ship.cells.forEach(c => newBoard[c] = 'ship'));
-    return newBoard;
-  };
+  const restart = useCallback(
+    (diff = difficulty) => {
+      const layout = randomizePlacement();
+      const newShips = layout.map((s, i) => ({ ...s, id: i }));
+      setShips(newShips);
+      setPlayerBoard(placeShips(createBoard(), newShips));
+      setEnemyBoard(placeShips(createBoard(), randomizePlacement()));
+      setPhase('placement');
+      setMessage('Place your ships');
+      setHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+      setAi(diff === 'hard' ? new MonteCarloAI() : new RandomSalvoAI());
+    },
+    [difficulty, placeShips]
+  );
+
+  useEffect(() => {
+    restart();
+  }, []);
 
   const handleDragStop = (i, e, data) => {
     const x = Math.round(data.x / CELL);
@@ -52,7 +118,7 @@ const Battleship = () => {
 
   const randomize = () => {
     const layout = randomizePlacement();
-    const newShips = layout.map((s,i)=>({...s,id:i}));
+    const newShips = layout.map((s, i) => ({ ...s, id: i }));
     setShips(newShips);
     setPlayerBoard(placeShips(createBoard(), newShips));
   };
@@ -73,25 +139,30 @@ const Battleship = () => {
     const hit = newBoard[idx]==='ship';
     newBoard[idx]= hit?'hit':'miss';
     setEnemyBoard(newBoard);
-    ai.record(idx, hit);
-    if(!newBoard.includes('ship')){
+    if (!newBoard.includes('ship')) {
       setMessage('You win!');
       setPhase('done');
+      setStats((s) => ({ ...s, wins: s.wins + 1 }));
       return;
     }
     // AI turn
-    setTimeout(()=>{
+    setTimeout(() => {
       const move = ai.nextMove();
-      if(move==null) return;
+      if (move == null) return;
       const pb = playerBoard.slice();
-      const hit2 = pb[move]==='ship';
-      pb[move]= hit2?'hit':'miss';
+      const hit2 = pb[move] === 'ship';
+      pb[move] = hit2 ? 'hit' : 'miss';
       setPlayerBoard(pb);
-      const nh = heat.slice(); nh[move]++; setHeat(nh);
+      const nh = heat.slice();
+      nh[move]++;
+      setHeat(nh);
       ai.record(move, hit2);
-      if(!pb.includes('ship')){ setMessage('AI wins!'); setPhase('done'); }
-      else setMessage(hit?'Hit!':'Miss!');
-    },100); // simulate thinking
+      if (!pb.includes('ship')) {
+        setMessage('AI wins!');
+        setPhase('done');
+        setStats((s) => ({ ...s, losses: s.losses + 1 }));
+      } else setMessage(hit ? 'Hit!' : 'Miss!');
+    }, 100); // simulate thinking
   };
 
   const renderBoard = (board, isEnemy=false) => (
@@ -100,12 +171,12 @@ const Battleship = () => {
         const heatVal = heat[idx];
         const color = heatVal? `rgba(255,0,0,${Math.min(heatVal/5,0.5)})` : 'transparent';
         return (
-          <div key={idx} className="border border-gray-600 relative" style={{width:CELL,height:CELL}}>
+          <div key={idx} className="border border-ub-dark-grey relative" style={{width:CELL,height:CELL}}>
             {isEnemy && phase==='battle' && !['hit','miss'].includes(cell)?(
               <button className="w-full h-full" onClick={()=>fire(idx)} />
             ):null}
-            {cell==='hit' && <div className="absolute inset-0 bg-red-600 transition-opacity"/>}
-            {cell==='miss' && <div className="absolute inset-0 bg-gray-500 transition-opacity"/>}
+            {cell==='hit' && <HitMarker />}
+            {cell==='miss' && <MissMarker />}
             {!isEnemy && <div className="absolute inset-0" style={{background:color}}/>}
           </div>
         );
@@ -114,11 +185,21 @@ const Battleship = () => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto font-ubuntu">
+
+    <GameLayout
+      difficulty={difficulty}
+      onDifficultyChange={(d) => {
+        setDifficulty(d);
+        restart(d);
+      }}
+      onRestart={() => restart()}
+      stats={stats}
+    >
       <div className="mb-2">{message}</div>
       {phase==='placement' && (
         <div className="flex space-x-4">
-          <div className="relative" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL,border:'1px solid #555'}}>
+          <div className="relative border border-ub-dark-grey" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL}}>
             {renderBoard(playerBoard)}
             {ships.map((ship,i)=>(
               <Draggable key={ship.id} grid={[CELL,CELL]} position={{x:(ship.x||0)*CELL,y:(ship.y||0)*CELL}}
@@ -139,7 +220,7 @@ const Battleship = () => {
           <div>{renderBoard(enemyBoard,true)}</div>
         </div>
       )}
-    </div>
+    </GameLayout>
   );
 };
 
