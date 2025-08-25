@@ -1,6 +1,6 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
-import ReactGA from 'react-ga4';
+import { logEvent } from './utils/analytics';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
@@ -24,7 +24,7 @@ const createDynamicApp = (path, name) =>
   dynamic(
     () =>
       import(`./components/apps/${path}`).then((mod) => {
-        ReactGA.event({ category: 'Application', action: `Loaded ${name}` });
+        logEvent({ category: 'Application', action: `Loaded ${name}` });
         return mod.default;
       }),
     {
