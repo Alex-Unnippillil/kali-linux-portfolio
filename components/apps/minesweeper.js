@@ -1,7 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import GameLayout from './GameLayout';
 
-const BOARD_SIZE = 8;
-const MINES_COUNT = 10;
+const DIFFICULTIES = {
+  beginner: { size: 8, mines: 10 },
+  intermediate: { size: 16, mines: 40 },
+  expert: { size: 24, mines: 99 },
+};
 
 // simple seeded pseudo random generator
 const mulberry32 = (a) => {
@@ -14,9 +18,9 @@ const mulberry32 = (a) => {
 const cloneBoard = (board) =>
   board.map((row) => row.map((cell) => ({ ...cell })));
 
-const generateBoard = (seed, sx, sy) => {
-  const board = Array.from({ length: BOARD_SIZE }, () =>
-    Array.from({ length: BOARD_SIZE }, () => ({
+const generateBoard = (seed, sx, sy, size, minesCount) => {
+  const board = Array.from({ length: size }, () =>
+    Array.from({ length: size }, () => ({
       mine: false,
       revealed: false,
       flagged: false,
@@ -25,10 +29,7 @@ const generateBoard = (seed, sx, sy) => {
   );
 
   const rng = mulberry32(seed);
-  const indices = Array.from(
-    { length: BOARD_SIZE * BOARD_SIZE },
-    (_, i) => i,
-  );
+  const indices = Array.from({ length: size * size }, (_, i) => i);
 
   // Fisher-Yates shuffle using seeded rng
   for (let i = indices.length - 1; i > 0; i--) {
@@ -41,25 +42,25 @@ const generateBoard = (seed, sx, sy) => {
     for (let dy = -1; dy <= 1; dy++) {
       const nx = sx + dx;
       const ny = sy + dy;
-      if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
-        safe.add(nx * BOARD_SIZE + ny);
+      if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
+        safe.add(nx * size + ny);
       }
     }
   }
 
   let placed = 0;
   for (const idx of indices) {
-    if (placed >= MINES_COUNT) break;
+    if (placed >= minesCount) break;
     if (safe.has(idx)) continue;
-    const x = Math.floor(idx / BOARD_SIZE);
-    const y = idx % BOARD_SIZE;
+    const x = Math.floor(idx / size);
+    const y = idx % size;
     board[x][y].mine = true;
     placed++;
   }
 
   const dirs = [-1, 0, 1];
-  for (let x = 0; x < BOARD_SIZE; x++) {
-    for (let y = 0; y < BOARD_SIZE; y++) {
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
       if (board[x][y].mine) continue;
       let count = 0;
       dirs.forEach((dx) =>
@@ -69,9 +70,9 @@ const generateBoard = (seed, sx, sy) => {
           const ny = y + dy;
           if (
             nx >= 0 &&
-            nx < BOARD_SIZE &&
+            nx < size &&
             ny >= 0 &&
-            ny < BOARD_SIZE &&
+            ny < size &&
             board[nx][ny].mine
           ) {
             count++;
@@ -85,6 +86,7 @@ const generateBoard = (seed, sx, sy) => {
 };
 
 const revealCell = (board, x, y) => {
+  const size = board.length;
   const cell = board[x][y];
   if (cell.revealed || cell.flagged) return false;
   cell.revealed = true;
@@ -95,7 +97,7 @@ const revealCell = (board, x, y) => {
         if (dx === 0 && dy === 0) continue;
         const nx = x + dx;
         const ny = y + dy;
-        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
+        if (nx >= 0 && nx < size && ny >= 0 && ny < size) {
           revealCell(board, nx, ny);
         }
       }
@@ -105,14 +107,14 @@ const revealCell = (board, x, y) => {
 };
 
 const calculateBV = (board) => {
+  const size = board.length;
   const visited = board.map((row) => row.map(() => false));
   let bv = 0;
   const dirs = [-1, 0, 1];
-  const inBounds = (x, y) =>
-    x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE;
+  const inBounds = (x, y) => x >= 0 && x < size && y >= 0 && y < size;
 
-  for (let x = 0; x < BOARD_SIZE; x++) {
-    for (let y = 0; y < BOARD_SIZE; y++) {
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
       if (board[x][y].mine || visited[x][y] || board[x][y].adjacent !== 0)
         continue;
       bv++;
@@ -141,8 +143,8 @@ const calculateBV = (board) => {
     }
   }
 
-  for (let x = 0; x < BOARD_SIZE; x++) {
-    for (let y = 0; y < BOARD_SIZE; y++) {
+  for (let x = 0; x < size; x++) {
+    for (let y = 0; y < size; y++) {
       if (!board[x][y].mine && !visited[x][y]) bv++;
     }
   }
@@ -155,20 +157,28 @@ const checkWin = (board) =>
 const Minesweeper = () => {
   const [board, setBoard] = useState(null);
   const [status, setStatus] = useState('ready');
-  const [seed, setSeed] = useState(() =>
-    Math.floor(Math.random() * 2 ** 31),
-  );
+  const [seed, setSeed] = useState(() => Math.floor(Math.random() * 2 ** 31));
   const [shareCode, setShareCode] = useState('');
   const [startTime, setStartTime] = useState(null);
   const [elapsed, setElapsed] = useState(0);
-  const [bestTime, setBestTime] = useState(null);
   const [bv, setBV] = useState(0);
   const [codeInput, setCodeInput] = useState('');
+  const [difficulty, setDifficulty] = useState('beginner');
+  const [bestTimes, setBestTimes] = useState({
+    beginner: null,
+    intermediate: null,
+    expert: null,
+  });
+  const touchTimer = useRef(null);
+  const longPress = useRef(false);
+
+  const { size: BOARD_SIZE, mines: MINES_COUNT } = DIFFICULTIES[difficulty];
+  const bestTime = bestTimes[difficulty];
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const best = localStorage.getItem('minesweeper-best-time');
-      if (best) setBestTime(parseFloat(best));
+      const stored = localStorage.getItem('minesweeper-best-times');
+      if (stored) setBestTimes(JSON.parse(stored));
     }
   }, []);
 
@@ -182,7 +192,7 @@ const Minesweeper = () => {
   }, [status, startTime]);
 
   const startGame = (x, y) => {
-    const newBoard = generateBoard(seed, x, y);
+    const newBoard = generateBoard(seed, x, y, BOARD_SIZE, MINES_COUNT);
     revealCell(newBoard, x, y);
     setBoard(newBoard);
     setStatus('playing');
@@ -260,8 +270,9 @@ const Minesweeper = () => {
       setElapsed(time);
       if (typeof window !== 'undefined') {
         if (!bestTime || time < bestTime) {
-          setBestTime(time);
-          localStorage.setItem('minesweeper-best-time', time.toString());
+          const newTimes = { ...bestTimes, [difficulty]: time };
+          setBestTimes(newTimes);
+          localStorage.setItem('minesweeper-best-times', JSON.stringify(newTimes));
         }
       }
     }
@@ -275,6 +286,21 @@ const Minesweeper = () => {
     if (cell.revealed) return;
     cell.flagged = !cell.flagged;
     setBoard(newBoard);
+  };
+
+  const handleTouchStart = (x, y) => {
+    longPress.current = false;
+    touchTimer.current = setTimeout(() => {
+      handleRightClick({ preventDefault: () => {} }, x, y);
+      longPress.current = true;
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimer.current) {
+      clearTimeout(touchTimer.current);
+      touchTimer.current = null;
+    }
   };
 
   const reset = () => {
@@ -310,7 +336,7 @@ const Minesweeper = () => {
       const x = parseInt(parts[1], 10);
       const y = parseInt(parts[2], 10);
       if (!Number.isNaN(x) && !Number.isNaN(y)) {
-        const newBoard = generateBoard(newSeed, x, y);
+        const newBoard = generateBoard(newSeed, x, y, BOARD_SIZE, MINES_COUNT);
         revealCell(newBoard, x, y);
         setBoard(newBoard);
         setStatus('playing');
@@ -322,8 +348,28 @@ const Minesweeper = () => {
     setCodeInput('');
   };
 
+  const minesLeft = board
+    ? MINES_COUNT - board.flat().filter((c) => c.flagged).length
+    : MINES_COUNT;
+
+  const changeDifficulty = (e) => {
+    setDifficulty(e.target.value);
+    reset();
+  };
+
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <GameLayout minesLeft={minesLeft} time={elapsed}>
+      <div className="mb-2">
+        <select
+          className="text-black px-1"
+          value={difficulty}
+          onChange={changeDifficulty}
+        >
+          <option value="beginner">Beginner</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="expert">Expert</option>
+        </select>
+      </div>
       <div className="mb-2 flex items-center space-x-2">
         <span>Seed:</span>
         <span className="font-mono">{seed.toString(36)}</span>
@@ -350,11 +396,19 @@ const Minesweeper = () => {
           Load
         </button>
       </div>
-      <div className="mb-2">3BV: {bv} | Best: {bestTime ? bestTime.toFixed(2) : '--'}s{status === 'won' ? ` | Time: ${elapsed.toFixed(2)}s` : ''}</div>
-      <div className="grid grid-cols-8 gap-1" style={{ width: 'fit-content' }}>
+      <div className="mb-2">
+        3BV: {bv} | Best: {bestTime ? bestTime.toFixed(2) : '--'}s
+        {status === 'won' ? ` | Time: ${elapsed.toFixed(2)}s` : ''}
+      </div>
+      <div
+        className="grid gap-1"
+        style={{ width: 'fit-content', gridTemplateColumns: `repeat(${BOARD_SIZE}, 2rem)` }}
+      >
         {Array.from({ length: BOARD_SIZE }).map((_, x) =>
           Array.from({ length: BOARD_SIZE }).map((_, y) => {
-            const cell = board ? board[x][y] : { revealed: false, flagged: false, adjacent: 0, mine: false };
+            const cell = board
+              ? board[x][y]
+              : { revealed: false, flagged: false, adjacent: 0, mine: false };
             let display = '';
             if (cell.revealed) {
               display = cell.mine ? '💣' : cell.adjacent || '';
@@ -364,9 +418,19 @@ const Minesweeper = () => {
             return (
               <button
                 key={`${x}-${y}`}
-                onClick={() => handleClick(x, y)}
+                onClick={(e) => {
+                  if (longPress.current) {
+                    longPress.current = false;
+                    return;
+                  }
+                  handleClick(x, y);
+                }}
                 onContextMenu={(e) => handleRightClick(e, x, y)}
-                className={`h-8 w-8 flex items-center justify-center text-sm font-bold ${cell.revealed ? 'bg-gray-400' : 'bg-gray-700 hover:bg-gray-600'}`}
+                onTouchStart={() => handleTouchStart(x, y)}
+                onTouchEnd={() => handleTouchEnd()}
+                className={`h-8 w-8 flex items-center justify-center text-sm font-bold ${
+                  cell.revealed ? 'bg-gray-400' : 'bg-gray-700 hover:bg-gray-600'
+                }`}
               >
                 {display}
               </button>
@@ -389,7 +453,7 @@ const Minesweeper = () => {
       >
         Reset
       </button>
-    </div>
+    </GameLayout>
   );
 };
 
