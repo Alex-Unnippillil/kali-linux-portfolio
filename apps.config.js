@@ -80,6 +80,8 @@ const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const ReaverApp = createDynamicApp('reaver', 'Reaver');
+
 const HydraApp = createDynamicApp('hydra', 'Hydra');
 const JohnApp = createDynamicApp('john', 'John the Ripper');
 const NessusApp = createDynamicApp('nessus', 'Nessus');
@@ -128,6 +130,8 @@ const displayMetasploit = createDisplay(MetasploitApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayReaver = createDisplay(ReaverApp);
+
 const displayHydra = createDisplay(HydraApp);
 const displayJohn = createDisplay(JohnApp);
 
@@ -623,6 +627,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQrTool,
+  },
+  {
+    id: 'reaver',
+    title: 'Reaver',
+    icon: './themes/Yaru/apps/reaver.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReaver,
   },
   {
     id: 'nessus',
