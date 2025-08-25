@@ -16,17 +16,22 @@ async function readSettings() {
   });
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+): Promise<void> {
   if (req.method === 'GET') {
-    return res.status(200).json(await readSettings());
+    res.status(200).json(await readSettings());
+    return;
   }
 
   if (req.method === 'POST') {
     const settings = req.body;
     await writeJson(filePath, settings);
-    return res.status(200).json({ ok: true });
+    res.status(200).json({ ok: true });
+    return;
   }
 
   res.setHeader('Allow', ['GET', 'POST']);
-  return res.status(405).end('Method Not Allowed');
+  res.status(405).end('Method Not Allowed');
 }
