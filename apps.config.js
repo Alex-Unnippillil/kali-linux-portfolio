@@ -85,6 +85,8 @@ const DsniffApp = createDynamicApp('dsniff', 'dsniff');
 const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 
+const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
+
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const KismetApp = createDynamicApp('kismet', 'Kismet');
@@ -137,6 +139,8 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGhidra = createDisplay(GhidraApp);
+
+const displayAutopsy = createDisplay(AutopsyApp);
 
 const displayWireshark = createDisplay(WiresharkApp);
 const displayBluetooth = createDisplay(BluetoothApp);
@@ -683,7 +687,15 @@ const apps = [
     screen: displayQrTool,
   },
   {
-    id: 'reaver',
+    id: 'autopsy',
+    title: 'Autopsy',
+    icon: './themes/Yaru/apps/autopsy.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAutopsy,
+  },
+  {    id: 'reaver',
     title: 'Reaver',
     icon: './themes/Yaru/apps/reaver.svg',
     disabled: false,
