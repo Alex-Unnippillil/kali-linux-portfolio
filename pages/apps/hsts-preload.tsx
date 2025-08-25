@@ -1,7 +1,14 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const HstsPreload = dynamic(() => import('../../components/apps/hsts-preload'), { ssr: false });
+const HstsPreload = dynamic(() => import('../../apps/hsts-preload'), {
+  ssr: false,
+});
 
 export default function HstsPreloadPage() {
-  return <HstsPreload />;
+  return (
+    <UbuntuWindow title="hsts preload">
+      <HstsPreload />
+    </UbuntuWindow>
+  );
 }

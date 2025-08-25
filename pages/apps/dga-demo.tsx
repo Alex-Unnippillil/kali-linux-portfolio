@@ -1,10 +1,12 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const DgaDemoApp = dynamic(() => import('../../components/apps/dga-demo'), {
-  ssr: false,
-});
+const DgaDemo = dynamic(() => import('../../apps/dga-demo'), { ssr: false });
 
 export default function DgaDemoPage() {
-  return <DgaDemoApp />;
+  return (
+    <UbuntuWindow title="dga demo">
+      <DgaDemo />
+    </UbuntuWindow>
+  );
 }
-

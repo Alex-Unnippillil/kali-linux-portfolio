@@ -1,22 +1,15 @@
 import dynamic from 'next/dynamic';
-import Head from 'next/head';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const RedirectVisualizer = dynamic(() => import('../../apps/redirect-visualizer'), {
-  ssr: false,
-});
+const RedirectVisualizer = dynamic(
+  () => import('../../apps/redirect-visualizer'),
+  { ssr: false }
+);
 
 export default function RedirectVisualizerPage() {
   return (
-    <>
-      <Head>
-        <title>Redirect Visualizer</title>
-        <meta
-          name="description"
-          content="Trace HTTP redirect chains with method and cache insights"
-        />
-      </Head>
+    <UbuntuWindow title="redirect visualizer">
       <RedirectVisualizer />
-    </>
+    </UbuntuWindow>
   );
 }
-

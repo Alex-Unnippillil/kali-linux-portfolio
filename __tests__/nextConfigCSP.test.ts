@@ -22,11 +22,12 @@ describe('next.config.js Content Security Policy', () => {
   });
 
   it('parses without errors and contains required hosts', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // eslint-disable-next-line
     const nextConfig = require('../next.config.js');
     const previousEnv = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
-    const headersList: { headers: { key: string; value: string }[] }[] = await nextConfig.headers();
+    const headersList: { headers: { key: string; value: string }[] }[] =
+      await nextConfig.headers();
     process.env.NODE_ENV = previousEnv;
     const csp = headersList
       .flatMap((entry) => entry.headers)
@@ -42,22 +43,19 @@ describe('next.config.js Content Security Policy', () => {
         'https://stackblitz.com',
       ])
     );
-      expect(parsed['script-src']).toEqual(
-        expect.arrayContaining([
-          "'self'",
-          expect.stringMatching(/^'nonce-/),
-          'https://platform.twitter.com',
-        ])
-      );
-      expect(parsed['script-src']).not.toEqual(
-        expect.arrayContaining(["'unsafe-inline'"])
-      );
-
-    expect(parsed['style-src']).toEqual(
+    expect(parsed['script-src']).toEqual(
       expect.arrayContaining([
         "'self'",
-        'https://fonts.googleapis.com',
+        expect.stringMatching(/^'nonce-/),
+        'https://platform.twitter.com',
       ])
+    );
+    expect(parsed['script-src']).not.toEqual(
+      expect.arrayContaining(["'unsafe-inline'"])
+    );
+
+    expect(parsed['style-src']).toEqual(
+      expect.arrayContaining(["'self'", 'https://fonts.googleapis.com'])
     );
     expect(parsed['style-src']).not.toEqual(
       expect.arrayContaining(["'unsafe-inline'"])

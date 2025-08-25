@@ -1,9 +1,12 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const CtSearch = dynamic(() => import('../../components/apps/ct-search'), {
-  ssr: false,
-});
+const CtSearch = dynamic(() => import('../../apps/ct-search'), { ssr: false });
 
 export default function CtSearchPage() {
-  return <CtSearch />;
+  return (
+    <UbuntuWindow title="ct search">
+      <CtSearch />
+    </UbuntuWindow>
+  );
 }

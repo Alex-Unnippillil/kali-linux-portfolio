@@ -25,9 +25,9 @@ class Column {
 
   constructor(name: number) {
     this.name = name;
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    // eslint-disable-next-line
     this.left = this.right = this as unknown as Column;
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+    // eslint-disable-next-line
     this.up = this.down = this as unknown as Node;
   }
 }
@@ -126,12 +126,20 @@ function buildDLX(board: Board) {
       SIZE * SIZE + r * SIZE + (n - 1),
       SIZE * SIZE * 2 + c * SIZE + (n - 1),
       SIZE * SIZE * 3 +
-        (Math.floor(r / BOX_SIZE) * BOX_SIZE + Math.floor(c / BOX_SIZE)) * SIZE +
+        (Math.floor(r / BOX_SIZE) * BOX_SIZE + Math.floor(c / BOX_SIZE)) *
+          SIZE +
         (n - 1),
     ];
     const nodes: Node[] = colIndices.map((idx) => {
       const column = columns[idx];
-      const node: Node = { left: null as any, right: null as any, up: column.up, down: column, column, row: rowData.length };
+      const node: Node = {
+        left: null as any,
+        right: null as any,
+        up: column.up,
+        down: column,
+        column,
+        row: rowData.length,
+      };
       column.up.down = node;
       column.up = node;
       column.size += 1;
@@ -219,7 +227,12 @@ export function getHintAsync(board: Board): Promise<Hint | null> {
   });
 }
 
-export function isValid(board: Board, row: number, col: number, val: number): boolean {
+export function isValid(
+  board: Board,
+  row: number,
+  col: number,
+  val: number
+): boolean {
   for (let i = 0; i < SIZE; i += 1) {
     if (board[row][i] === val || board[i][col] === val) return false;
   }

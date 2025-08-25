@@ -1,16 +1,14 @@
-import Head from 'next/head';
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const YaraTester = dynamic(() => import('../../apps/yara-tester'), { ssr: false });
+const YaraTester = dynamic(() => import('../../apps/yara-tester'), {
+  ssr: false,
+});
 
 export default function YaraTesterPage() {
   return (
-    <>
-      <Head>
-        <title>YARA Tester</title>
-        <meta name="description" content="Test YARA rules against sample data" />
-      </Head>
+    <UbuntuWindow title="yara tester">
       <YaraTester />
-    </>
+    </UbuntuWindow>
   );
 }

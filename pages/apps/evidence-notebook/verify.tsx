@@ -1,4 +1,5 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../../components/UbuntuWindow';
 
 const VerifyEvidence = dynamic(
   () => import('../../../apps/evidence-notebook/verify'),
@@ -6,5 +7,9 @@ const VerifyEvidence = dynamic(
 );
 
 export default function EvidenceNotebookVerifyPage() {
-  return <VerifyEvidence />;
+  return (
+    <UbuntuWindow title="evidence notebook verify">
+      <VerifyEvidence />
+    </UbuntuWindow>
+  );
 }

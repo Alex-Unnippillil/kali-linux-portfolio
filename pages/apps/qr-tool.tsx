@@ -1,7 +1,12 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const QrToolApp = dynamic(() => import('../../apps/qr-tool'), { ssr: false });
+const QrTool = dynamic(() => import('../../apps/qr-tool'), { ssr: false });
 
 export default function QrToolPage() {
-  return <QrToolApp />;
+  return (
+    <UbuntuWindow title="qr tool">
+      <QrTool />
+    </UbuntuWindow>
+  );
 }

@@ -1,9 +1,14 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
 const CaaChecker = dynamic(() => import('../../apps/caa-checker'), {
   ssr: false,
 });
 
 export default function CaaCheckerPage() {
-  return <CaaChecker />;
+  return (
+    <UbuntuWindow title="caa checker">
+      <CaaChecker />
+    </UbuntuWindow>
+  );
 }

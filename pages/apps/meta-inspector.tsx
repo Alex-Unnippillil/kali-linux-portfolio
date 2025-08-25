@@ -1,7 +1,14 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const MetaInspector = dynamic(() => import('../../components/apps/meta-inspector'), { ssr: false });
+const MetaInspector = dynamic(() => import('../../apps/meta-inspector'), {
+  ssr: false,
+});
 
 export default function MetaInspectorPage() {
-  return <MetaInspector />;
+  return (
+    <UbuntuWindow title="meta inspector">
+      <MetaInspector />
+    </UbuntuWindow>
+  );
 }

@@ -1,7 +1,14 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const ASNExplorer = dynamic(() => import('../../apps/asn-explorer'), { ssr: false });
+const AsnExplorer = dynamic(() => import('../../apps/asn-explorer'), {
+  ssr: false,
+});
 
-export default function ASNExplorerPage() {
-  return <ASNExplorer />;
+export default function AsnExplorerPage() {
+  return (
+    <UbuntuWindow title="asn explorer">
+      <AsnExplorer />
+    </UbuntuWindow>
+  );
 }

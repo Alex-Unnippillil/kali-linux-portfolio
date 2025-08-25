@@ -1,14 +1,14 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
 const HashToolkit = dynamic(() => import('../../apps/hash-toolkit'), {
   ssr: false,
 });
 
-export const metadata = {
-  title: 'Hash Toolkit',
-};
-
 export default function HashToolkitPage() {
-  return <HashToolkit />;
+  return (
+    <UbuntuWindow title="hash toolkit">
+      <HashToolkit />
+    </UbuntuWindow>
+  );
 }
-

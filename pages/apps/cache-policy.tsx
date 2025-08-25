@@ -1,10 +1,14 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const CachePolicy = dynamic(() => import('../../components/apps/cache-policy'), {
+const CachePolicy = dynamic(() => import('../../apps/cache-policy'), {
   ssr: false,
 });
 
 export default function CachePolicyPage() {
-  return <CachePolicy />;
+  return (
+    <UbuntuWindow title="cache policy">
+      <CachePolicy />
+    </UbuntuWindow>
+  );
 }
-

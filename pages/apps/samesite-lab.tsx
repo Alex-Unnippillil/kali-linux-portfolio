@@ -1,8 +1,14 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const SameSiteLab = dynamic(() => import('../../components/apps/samesite-lab'), { ssr: false });
+const SamesiteLab = dynamic(() => import('../../apps/samesite-lab'), {
+  ssr: false,
+});
 
-export default function SameSiteLabPage() {
-  return <SameSiteLab />;
+export default function SamesiteLabPage() {
+  return (
+    <UbuntuWindow title="samesite lab">
+      <SamesiteLab />
+    </UbuntuWindow>
+  );
 }
-

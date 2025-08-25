@@ -1,5 +1,12 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const SudokuApp = dynamic(() => import('../../apps/sudoku'), { ssr: false });
+const Sudoku = dynamic(() => import('../../apps/sudoku'), { ssr: false });
 
-export default SudokuApp;
+export default function SudokuPage() {
+  return (
+    <UbuntuWindow title="sudoku">
+      <Sudoku />
+    </UbuntuWindow>
+  );
+}

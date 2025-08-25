@@ -1,7 +1,12 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const WeatherApp = dynamic(() => import('../../components/apps/weather'), { ssr: false });
+const Weather = dynamic(() => import('../../apps/weather'), { ssr: false });
 
 export default function WeatherPage() {
-  return <WeatherApp />;
+  return (
+    <UbuntuWindow title="weather">
+      <Weather />
+    </UbuntuWindow>
+  );
 }

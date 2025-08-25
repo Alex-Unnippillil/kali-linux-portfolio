@@ -1,9 +1,15 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const MailSecurityMatrix = dynamic(() => import('../../components/apps/mail-security-matrix'), {
-  ssr: false,
-});
+const MailSecurityMatrix = dynamic(
+  () => import('../../apps/mail-security-matrix'),
+  { ssr: false }
+);
 
 export default function MailSecurityMatrixPage() {
-  return <MailSecurityMatrix />;
+  return (
+    <UbuntuWindow title="mail security matrix">
+      <MailSecurityMatrix />
+    </UbuntuWindow>
+  );
 }

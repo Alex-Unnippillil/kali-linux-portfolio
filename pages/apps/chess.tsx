@@ -1,8 +1,12 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const ChessApp = dynamic(() => import('../../apps/chess'), { ssr: false });
+const Chess = dynamic(() => import('../../apps/chess'), { ssr: false });
 
 export default function ChessPage() {
-  return <ChessApp />;
+  return (
+    <UbuntuWindow title="chess">
+      <Chess />
+    </UbuntuWindow>
+  );
 }
-

@@ -1,9 +1,14 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const TLSInspector = dynamic(() => import('../../apps/tls-inspector'), {
+const TlsInspector = dynamic(() => import('../../apps/tls-inspector'), {
   ssr: false,
 });
 
-export default function TLSInspectorPage() {
-  return <TLSInspector />;
+export default function TlsInspectorPage() {
+  return (
+    <UbuntuWindow title="tls inspector">
+      <TlsInspector />
+    </UbuntuWindow>
+  );
 }

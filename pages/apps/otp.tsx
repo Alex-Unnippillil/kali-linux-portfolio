@@ -1,5 +1,12 @@
 import dynamic from 'next/dynamic';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const OTPApp = dynamic(() => import('../../components/apps/otp'), { ssr: false });
+const Otp = dynamic(() => import('../../apps/otp'), { ssr: false });
 
-export default OTPApp;
+export default function OtpPage() {
+  return (
+    <UbuntuWindow title="otp">
+      <Otp />
+    </UbuntuWindow>
+  );
+}

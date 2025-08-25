@@ -1,5 +1,5 @@
 import dynamic from 'next/dynamic';
-import Head from 'next/head';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
 const SpfFlattener = dynamic(() => import('../../apps/spf-flattener'), {
   ssr: false,
@@ -7,15 +7,8 @@ const SpfFlattener = dynamic(() => import('../../apps/spf-flattener'), {
 
 export default function SpfFlattenerPage() {
   return (
-    <>
-      <Head>
-        <title>SPF Flattener</title>
-        <meta
-          name="description"
-          content="Analyze SPF records, visualize includes, and generate flattened TXT records."
-        />
-      </Head>
+    <UbuntuWindow title="spf flattener">
       <SpfFlattener />
-    </>
+    </UbuntuWindow>
   );
 }

@@ -1,18 +1,14 @@
 import dynamic from 'next/dynamic';
-import Head from 'next/head';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const NmapViewerApp = dynamic(() => import('../../components/apps/nmap-viewer'), {
+const NmapViewer = dynamic(() => import('../../apps/nmap-viewer'), {
   ssr: false,
 });
 
 export default function NmapViewerPage() {
   return (
-    <>
-      <Head>
-        <title>Nmap Viewer</title>
-        <meta name="description" content="Parse and explore Nmap XML results" />
-      </Head>
-      <NmapViewerApp />
-    </>
+    <UbuntuWindow title="nmap viewer">
+      <NmapViewer />
+    </UbuntuWindow>
   );
 }

@@ -1,16 +1,12 @@
 import dynamic from 'next/dynamic';
-import Head from 'next/head';
+import UbuntuWindow from '../../components/UbuntuWindow';
 
-const SettingsApp = dynamic(() => import('../../apps/settings'), { ssr: false });
+const Settings = dynamic(() => import('../../apps/settings'), { ssr: false });
 
 export default function SettingsPage() {
   return (
-    <>
-      <Head>
-        <title>Settings</title>
-        <meta name="description" content="Manage application preferences" />
-      </Head>
-      <SettingsApp />
-    </>
+    <UbuntuWindow title="settings">
+      <Settings />
+    </UbuntuWindow>
   );
 }
