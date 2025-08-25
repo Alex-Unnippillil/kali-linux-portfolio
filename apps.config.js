@@ -78,6 +78,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -117,6 +118,8 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+
+const displayHashcat = createDisplay(HashcatApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -603,6 +606,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'hashcat',
+    title: 'Hashcat',
+    icon: './themes/Yaru/apps/hashcat.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHashcat,
   },
   // Games are included so they appear alongside apps
   ...games,
