@@ -1,14 +1,17 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import useCanvasResize from '../../hooks/useCanvasResize';
+const WIDTH = 640;
+const HEIGHT = 480;
 
 const Breakout = () => {
-  const canvasRef = useRef(null);
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    const width = WIDTH;
+    const height = HEIGHT;
 
     const paddle = { x: width / 2 - 40, y: height - 20, w: 80, h: 10 };
     const ball = { x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 };
@@ -78,8 +81,6 @@ const Breakout = () => {
   return (
     <canvas
       ref={canvasRef}
-      width={640}
-      height={480}
       className="h-full w-full bg-black"
     />
   );

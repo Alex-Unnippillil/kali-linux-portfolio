@@ -1,11 +1,15 @@
 import React, { useRef, useEffect, useState } from 'react';
+import useCanvasResize from '../../hooks/useCanvasResize';
 
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
 
 // Pong component with spin, adjustable AI and experimental WebRTC multiplayer
+const WIDTH = 600;
+const HEIGHT = 400;
+
 const Pong = () => {
-  const canvasRef = useRef(null);
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
   const resetRef = useRef(null);
   const peerRef = useRef(null);
   const channelRef = useRef(null);
@@ -23,8 +27,8 @@ const Pong = () => {
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    const width = WIDTH;
+    const height = HEIGHT;
 
     const paddleHeight = 80;
     const paddleWidth = 10;
@@ -299,7 +303,7 @@ const Pong = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
-      <canvas ref={canvasRef} width={600} height={400} className="bg-black" />
+      <canvas ref={canvasRef} className="bg-black w-full h-full" />
       <div className="mt-2">Player: {scores.player} | Opponent: {scores.opponent}</div>
 
       <div className="mt-2 flex items-center space-x-2">

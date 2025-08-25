@@ -1,13 +1,16 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import useCanvasResize from '../../hooks/useCanvasResize';
+const WIDTH = 400;
+const HEIGHT = 300;
 
 const FlappyBird = () => {
-  const canvasRef = useRef(null);
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const width = canvas.width;
-    const height = canvas.height;
+    const width = WIDTH;
+    const height = HEIGHT;
 
     let bird = { x: 50, y: height / 2, vy: 0 };
     const gravity = 0.5;
@@ -124,12 +127,7 @@ const FlappyBird = () => {
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={400}
-      height={300}
-      className="w-full h-full bg-black"
-    />
+    <canvas ref={canvasRef} className="w-full h-full bg-black" />
   );
 };
 

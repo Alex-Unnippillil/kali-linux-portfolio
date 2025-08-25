@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import useCanvasResize from '../../hooks/useCanvasResize';
 
 /**
  * Small Pacman implementation used inside the portfolio.  The goal of this
@@ -19,6 +20,8 @@ const mazeTemplate = [
 ];
 
 const tileSize = 20;
+const WIDTH = mazeTemplate[0].length * tileSize;
+const HEIGHT = mazeTemplate.length * tileSize;
 const speed = 1; // pixels per frame
 
 const dirs = [
@@ -49,7 +52,7 @@ const modeSchedule = [
 const fruitSpawnDots = [10, 30];
 
 const Pacman = () => {
-  const canvasRef = useRef(null);
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
   const mazeRef = useRef(mazeTemplate.map((row) => row.slice()));
   const pacRef = useRef({
     x: tileSize, // pixel coords
@@ -278,8 +281,6 @@ const Pacman = () => {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    canvas.width = mazeRef.current[0].length * tileSize;
-    canvas.height = mazeRef.current.length * tileSize;
     const handleKey = (e) => {
       switch (e.key) {
         case 'ArrowUp':
@@ -344,7 +345,7 @@ const Pacman = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <canvas ref={canvasRef} className="bg-black" />
+      <canvas ref={canvasRef} className="bg-black w-full h-full" />
       <div className="mt-2">Score: {score}</div>
       {statusRef.current !== 'Playing' && <div className="mt-2">{statusRef.current}</div>}
     </div>
