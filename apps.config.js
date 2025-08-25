@@ -78,9 +78,7 @@ const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
 const BluetoothApp = createDynamicApp('bluetooth', 'Bluetooth Tools');
-
-
-
+const DsniffApp = createDynamicApp('dsniff', 'dsniff');
 const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
@@ -134,6 +132,7 @@ const displayBluetooth = createDisplay(BluetoothApp);
 const displayBeef = createDisplay(BeefApp);
 const displayMetasploit = createDisplay(MetasploitApp);
 
+const displayDsniff = createDisplay(DsniffApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
@@ -716,6 +715,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'dsniff',
+    title: 'dsniff',
+    icon: './themes/Yaru/apps/dsniff.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayDsniff,
   },
   {
     id: 'john',
