@@ -78,6 +78,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -117,6 +118,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayMimikatz = createDisplay(MimikatzApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -594,6 +596,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'mimikatz',
+    title: 'Mimikatz',
+    icon: './themes/Yaru/apps/mimikatz.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMimikatz,
   },
   {
     id: 'weather',
