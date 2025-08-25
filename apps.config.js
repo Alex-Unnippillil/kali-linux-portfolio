@@ -19,6 +19,7 @@ import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayNikto } from './components/apps/nikto';
 
 const createDynamicApp = (path, name) =>
   dynamic(
@@ -75,10 +76,18 @@ const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
-
+const BeefApp = createDynamicApp('beef', 'BeEF');
+const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const ReaverApp = createDynamicApp('reaver', 'Reaver');
+
+const HydraApp = createDynamicApp('hydra', 'Hydra');
+const JohnApp = createDynamicApp('john', 'John the Ripper');
+const NessusApp = createDynamicApp('nessus', 'Nessus');
+const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
+const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
+const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -114,11 +123,24 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+const displayBeef = createDisplay(BeefApp);
+
+const displayMetasploit = createDisplay(MetasploitApp);
 
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
 const displayReaver = createDisplay(ReaverApp);
+
+const displayHydra = createDisplay(HydraApp);
+const displayJohn = createDisplay(JohnApp);
+
+const displayNessus = createDisplay(NessusApp);
+
+const displayNmapNSE = createDisplay(NmapNSEApp);
+const displayOpenVAS = createDisplay(OpenVASApp);
+
+const displayReconNG = createDisplay(ReconNGApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -499,6 +521,15 @@ const apps = [
     screen: displayYouTube,
   },
   {
+    id: 'beef',
+    title: 'BeEF',
+    icon: './themes/Yaru/apps/beef.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBeef,
+  },
+  {
     id: 'about-alex',
     title: 'About Alex',
     icon: './themes/Yaru/system/user-home.png',
@@ -524,6 +555,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'metasploit',
+    title: 'Metasploit',
+    icon: './themes/Yaru/apps/metasploit.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMetasploit,
   },
   {
     id: 'project-gallery',
@@ -571,6 +611,15 @@ const apps = [
     screen: displayConverter,
   },
   {
+    id: 'nikto',
+    title: 'Nikto',
+    icon: './themes/Yaru/apps/nikto.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNikto,
+  },
+  {
     id: 'qr-tool',
     title: 'QR Tool',
     icon: './themes/Yaru/apps/qr.svg',
@@ -587,6 +636,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayReaver,
+  },
+  {
+    id: 'nessus',
+    title: 'Nessus',
+    icon: './themes/Yaru/apps/nessus.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNessus,
   },
   {
     id: 'ascii-art',
@@ -607,6 +665,24 @@ const apps = [
     screen: displayQuoteGenerator,
   },
   {
+    id: 'hydra',
+    title: 'Hydra',
+    icon: './themes/Yaru/apps/hydra.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHydra,
+  },
+  {
+    id: 'nmap-nse',
+    title: 'Nmap NSE',
+    icon: './themes/Yaru/apps/nmap-nse.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNmapNSE,
+  },
+  {
     id: 'weather',
     title: 'Weather',
     icon: './themes/Yaru/apps/weather.svg',
@@ -614,6 +690,33 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'john',
+    title: 'John the Ripper',
+    icon: './themes/Yaru/apps/john.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayJohn,
+  },
+  {
+    id: 'openvas',
+    title: 'OpenVAS',
+    icon: './themes/Yaru/apps/openvas.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayOpenVAS,
+  },
+  {
+    id: 'recon-ng',
+    title: 'Recon-ng',
+    icon: './themes/Yaru/apps/reconng.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayReconNG,
   },
   // Games are included so they appear alongside apps
   ...games,
