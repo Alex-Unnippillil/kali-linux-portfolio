@@ -1,29 +1,28 @@
 import { useState, useEffect } from 'react';
 
-const usePersistentState = (key, defaultValue) => {
-
-  const [value, setValue] = useState(() => {
-    if (typeof window === 'undefined') return defaultValue;
+const usePersistentState = (key, initialValue) => {
+  const [state, setState] = useState(() => {
+    if (typeof window === 'undefined') return initialValue;
     try {
-      const stored = localStorage.getItem(key);
-      return stored ? JSON.parse(stored) : defaultValue;
-    } catch (e) {
+      const stored = window.localStorage.getItem(key);
+      return stored ? JSON.parse(stored) : initialValue;
+    } catch {
+      return initialValue;
 
-      return defaultValue;
     }
   });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(key, JSON.stringify(value));
-      } catch (e) {
+        window.localStorage.setItem(key, JSON.stringify(state));
+      } catch {
         // ignore write errors
       }
     }
-  }, [key, value]);
+  }, [key, state]);
 
-  return [value, setValue];
+  return [state, setState];
 };
 
 export default usePersistentState;

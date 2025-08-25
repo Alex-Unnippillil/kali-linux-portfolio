@@ -1,29 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 
-const GameLayout = ({ children, editor }) => {
-  const [mode, setMode] = useState('game');
-  return (
-    <div className="h-full w-full flex flex-col bg-black text-white">
-      <div className="p-2 space-x-2 bg-gray-800">
-        <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
-          onClick={() => setMode('game')}
-        >
-          Play
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
-          onClick={() => setMode('editor')}
-        >
-          Level Editor
-        </button>
-      </div>
-      <div className="flex-1 flex items-center justify-center">
-        {mode === 'game' ? children : editor}
-      </div>
-    </div>
-  );
-};
-
+const GameLayout = ({ children, onRestart }) => (
+  <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    {children}
+    {onRestart && (
+      <button
+        className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+        onClick={onRestart}
+      >
+        Restart
+      </button>
+    )}
+  </div>
+);
 
 export default GameLayout;
