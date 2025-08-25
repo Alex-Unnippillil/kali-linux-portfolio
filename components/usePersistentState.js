@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 
 // Simple hook to persist state in localStorage
 export default function usePersistentState(key, initialValue) {
+
   const [state, setState] = useState(() => {
     if (typeof window === 'undefined') return initialValue;
     try {
@@ -9,6 +10,7 @@ export default function usePersistentState(key, initialValue) {
       return stored ? JSON.parse(stored) : initialValue;
     } catch {
       return initialValue;
+
     }
   });
 
@@ -24,3 +26,4 @@ export default function usePersistentState(key, initialValue) {
 
   return [state, setState];
 }
+
