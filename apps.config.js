@@ -83,9 +83,8 @@ const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
 const ReaverApp = createDynamicApp('reaver', 'Reaver');
-
-
 const HydraApp = createDynamicApp('hydra', 'Hydra');
 const JohnApp = createDynamicApp('john', 'John the Ripper');
 const NessusApp = createDynamicApp('nessus', 'Nessus');
@@ -136,6 +135,8 @@ const displayDsniff = createDisplay(DsniffApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayEttercap = createDisplay(EttercapApp);
+
 const displayReaver = createDisplay(ReaverApp);
 
 
@@ -562,6 +563,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'ettercap',
+    title: 'Ettercap',
+    icon: './themes/Yaru/apps/ettercap.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEttercap,
   },
   {
     id: 'bluetooth-tools',
