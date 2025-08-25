@@ -100,7 +100,7 @@ const Battleship = () => {
         const heatVal = heat[idx];
         const color = heatVal? `rgba(255,0,0,${Math.min(heatVal/5,0.5)})` : 'transparent';
         return (
-          <div key={idx} className="border border-gray-600 relative" style={{width:CELL,height:CELL}}>
+          <div key={idx} className="border border-ub-dark-grey relative" style={{width:CELL,height:CELL}}>
             {isEnemy && phase==='battle' && !['hit','miss'].includes(cell)?(
               <button className="w-full h-full" onClick={()=>fire(idx)} />
             ):null}
@@ -114,11 +114,11 @@ const Battleship = () => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto">
+    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto font-ubuntu">
       <div className="mb-2">{message}</div>
       {phase==='placement' && (
         <div className="flex space-x-4">
-          <div className="relative" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL,border:'1px solid #555'}}>
+          <div className="relative border border-ub-dark-grey" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL}}>
             {renderBoard(playerBoard)}
             {ships.map((ship,i)=>(
               <Draggable key={ship.id} grid={[CELL,CELL]} position={{x:(ship.x||0)*CELL,y:(ship.y||0)*CELL}}
