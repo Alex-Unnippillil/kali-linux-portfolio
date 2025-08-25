@@ -7,7 +7,7 @@
   "scripts": {
     "preinstall": "node scripts/check-node-version.js",
     "dev": "next dev",
-    "build": "next build",
+    "build": "NODE_OPTIONS=--max-old-space-size=4096 next build",
     "start": "next start",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -23,7 +23,7 @@
     "dedupe:check": "yarn dedupe --check",
     "lighthouse": "lhci autorun",
     "typecheck": "tsc --noEmit",
-    "build:ci": "next build",
+    "build:ci": "NODE_OPTIONS=--max-old-space-size=4096 next build",
     "lint:ci": "next lint --max-warnings=0 && yarn check:edge-node",
     "format:check": "prettier --check ."
   },
