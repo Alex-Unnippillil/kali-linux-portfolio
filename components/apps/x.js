@@ -1,21 +1,29 @@
-import React from 'react';
-import dynamic from 'next/dynamic';
-
-// Load the Twitter embed only on the client to avoid SSR issues.
-const TwitterTimelineEmbed = dynamic(
-  () => import('react-twitter-embed').then((mod) => mod.TwitterTimelineEmbed),
-  { ssr: false }
-);
+import { useEffect, useRef } from 'react';
 
 export default function XApp() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://platform.twitter.com/widgets.js';
+    script.async = true;
+    containerRef.current?.appendChild(script);
+    return () => {
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+      }
+    };
+  }, []);
+
   return (
-    <div className="h-full w-full overflow-auto bg-panel">
-      <TwitterTimelineEmbed
-        sourceType="profile"
-        screenName="AUnnippillil"
-        options={{ chrome: 'noheader noborders' }}
-        className="w-full h-full"
-      />
+    <div ref={containerRef} className="h-full w-full overflow-auto bg-panel">
+      <a
+        className="twitter-timeline"
+        data-chrome="noheader noborders"
+        href="https://twitter.com/AUnnippillil"
+      >
+        Tweets by AUnnippillil
+      </a>
     </div>
   );
 }
