@@ -78,6 +78,7 @@ const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -117,6 +118,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayGomoku = createDisplay(GomokuApp);
 
 const displayPinball = createDisplay(PinballApp);
+const displayNmapNSE = createDisplay(NmapNSEApp);
 
 
 // Default window sizing for games to prevent oversized frames
@@ -594,6 +596,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayQuoteGenerator,
+  },
+  {
+    id: 'nmap-nse',
+    title: 'Nmap NSE',
+    icon: './themes/Yaru/apps/nmap-nse.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNmapNSE,
   },
   {
     id: 'weather',
