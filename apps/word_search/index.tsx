@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { generateGrid } from './generator';
 import type { Position, WordPlacement } from './types';
+import { logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 
 const DEFAULT_WORDS = ['REACT', 'NODE', 'JAVASCRIPT', 'CODE', 'NEXTJS'];
 const GRID_SIZE = 12;
@@ -54,6 +55,7 @@ const WordSearch: React.FC = () => {
     setPlacements(p);
     setFound(new Set());
     setFoundCells(new Set());
+    logGameStart('word_search');
   }, [seed, words]);
 
   const handleMouseDown = (r: number, c: number) => {
@@ -87,6 +89,9 @@ const WordSearch: React.FC = () => {
       const newCells = new Set(foundCells);
       selection.forEach((p) => newCells.add(key(p)));
       setFoundCells(newCells);
+      if (newFound.size === words.length) {
+        logGameEnd('word_search');
+      }
     }
     setStart(null);
     setSelection([]);
@@ -97,8 +102,8 @@ const WordSearch: React.FC = () => {
     const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
     try {
       await navigator.clipboard?.writeText(url);
-    } catch (e) {
-      // ignore
+    } catch (e: any) {
+      logGameError('word_search', e?.message || String(e));
     }
   };
 

@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import useAssetLoader from '../../hooks/useAssetLoader';
 
 /**
  * Small Pacman implementation used inside the portfolio.  The goal of this
@@ -8,7 +9,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
  */
 
 // 0: empty, 1: wall, 2: pellet, 3: energizer
-const mazeTemplate = [
+const defaultMaze = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
   [1,3,2,2,1,2,2,2,2,2,1,2,2,3,1],
   [1,2,1,2,1,2,1,1,1,2,1,2,1,2,1],
@@ -49,8 +50,15 @@ const modeSchedule = [
 const fruitSpawnDots = [10, 30];
 
 const Pacman = () => {
+  const { loading, error } = useAssetLoader({
+    images: ['/themes/Yaru/status/ubuntu_white_hex.svg'],
+    sounds: [],
+  });
+
   const canvasRef = useRef(null);
-  const mazeRef = useRef(mazeTemplate.map((row) => row.slice()));
+  const [levels, setLevels] = useState([{ name: 'Default', maze: defaultMaze, fruit: { x: 7, y: 3 } }]);
+  const [levelIndex, setLevelIndex] = useState(0);
+  const mazeRef = useRef(defaultMaze.map((row) => row.slice()));
   const pacRef = useRef({
     x: tileSize, // pixel coords
     y: tileSize,
@@ -68,15 +76,68 @@ const Pacman = () => {
   const modeRef = useRef({ index: 0, timer: modeSchedule[0].duration });
   const frightTimerRef = useRef(0);
   const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
   const [pellets, setPellets] = useState(0);
-  const fruitRef = useRef({ active: false, x: 7, y: 3 });
+  const fruitRef = useRef({ active: false, x: 7, y: 3, timer: 0 });
   const statusRef = useRef('Playing');
+  const audioCtxRef = useRef(null);
+  const touchStartRef = useRef(null);
 
   const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);
 
   const isCenter = (pos) => Math.abs(pos % tileSize - tileSize / 2) < 0.1;
 
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  const playSound = (freq) => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    } catch (e) {
+      // ignore audio errors
+    }
+  };
+
+  const resetPositions = () => {
+    const pac = pacRef.current;
+    pac.x = tileSize;
+    pac.y = tileSize;
+    pac.dir = { x: 0, y: 0 };
+    pac.nextDir = { x: 0, y: 0 };
+    ghostsRef.current.forEach((g) => {
+      g.x = 7 * tileSize;
+      g.y = 3 * tileSize;
+      g.dir = { x: 0, y: -1 };
+    });
+  };
+
+  const loadLevel = useCallback(
+    (idx, lvls = levels) => {
+      const lvl = lvls[idx];
+      setLevelIndex(idx);
+      mazeRef.current = lvl.maze.map((r) => r.slice());
+      fruitRef.current.x = lvl.fruit.x;
+      fruitRef.current.y = lvl.fruit.y;
+      fruitRef.current.active = false;
+      fruitRef.current.timer = 0;
+      pacRef.current.lives = 3;
+      pacRef.current.extra = false;
+      setScore(0);
+      setPellets(0);
+      statusRef.current = 'Playing';
+      resetPositions();
+    },
+    [levels]
+  );
 
   const targetFor = (ghost, pac) => {
     if (frightTimerRef.current > 0) return null;
@@ -204,13 +265,20 @@ const Pacman = () => {
       }
       maze[pty][ptx] = 0;
     }
-
     if (!fruitRef.current.active && fruitSpawnDots.includes(pellets + 1)) {
       fruitRef.current.active = true;
+      fruitRef.current.timer = 9 * 60;
+      playSound(440);
     }
-    if (fruitRef.current.active && ptx === fruitRef.current.x && pty === fruitRef.current.y) {
-      setScore((s) => s + 100);
-      fruitRef.current.active = false;
+    if (fruitRef.current.active) {
+      fruitRef.current.timer--;
+      if (ptx === fruitRef.current.x && pty === fruitRef.current.y) {
+        setScore((s) => s + 100);
+        fruitRef.current.active = false;
+        playSound(880);
+      } else if (fruitRef.current.timer <= 0) {
+        fruitRef.current.active = false;
+      }
     }
 
     // extra life
@@ -265,7 +333,14 @@ const Pacman = () => {
           g.x = 7 * tileSize;
           g.y = 3 * tileSize;
         } else {
-          statusRef.current = 'Game Over';
+          pac.lives -= 1;
+          if (pac.lives <= 0) {
+            statusRef.current = 'Game Over';
+          } else {
+            resetPositions();
+            frightTimerRef.current = 0;
+            modeRef.current = { index: 0, timer: modeSchedule[0].duration };
+          }
         }
       }
     });
@@ -277,6 +352,7 @@ const Pacman = () => {
   }, [step]);
 
   useEffect(() => {
+    if (loading || error) return;
     const canvas = canvasRef.current;
     canvas.width = mazeRef.current[0].length * tileSize;
     canvas.height = mazeRef.current.length * tileSize;
@@ -298,23 +374,25 @@ const Pacman = () => {
           break;
       }
     };
-    const handleTouch = (e) => {
-      const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const dx = x - cx;
-      const dy = y - cy;
+    const handleTouchStart = (e) => {
+      const t = e.touches[0];
+      touchStartRef.current = { x: t.clientX, y: t.clientY };
+    };
+    const handleTouchEnd = (e) => {
+      if (!touchStartRef.current) return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartRef.current.x;
+      const dy = t.clientY - touchStartRef.current.y;
       if (Math.abs(dx) > Math.abs(dy)) {
         pacRef.current.nextDir = { x: dx > 0 ? 1 : -1, y: 0 };
       } else {
         pacRef.current.nextDir = { x: 0, y: dy > 0 ? 1 : -1 };
       }
+      touchStartRef.current = null;
     };
     window.addEventListener('keydown', handleKey);
-    canvas.addEventListener('touchstart', handleTouch);
+    canvas.addEventListener('touchstart', handleTouchStart);
+    canvas.addEventListener('touchend', handleTouchEnd);
     let id;
     const loop = () => {
         if (statusRef.current === 'Playing') {
@@ -337,15 +415,65 @@ const Pacman = () => {
     loop();
     return () => {
       window.removeEventListener('keydown', handleKey);
-      canvas.removeEventListener('touchstart', handleTouch);
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchend', handleTouchEnd);
       cancelAnimationFrame(id);
     };
-  }, []);
+  }, [loading, error]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="h-8 w-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        Failed to load assets.
+      </div>
+    );
+  }
+
+  useEffect(() => {
+    fetch('/pacman-levels.json')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.levels) {
+          setLevels(data.levels);
+          loadLevel(0, data.levels);
+        }
+      })
+      .catch(() => {});
+    const stored = window.localStorage.getItem('pacmanHighScore');
+    if (stored) setHighScore(parseInt(stored, 10));
+  }, [loadLevel]);
+
+  useEffect(() => {
+    if (score > highScore) {
+      setHighScore(score);
+      window.localStorage.setItem('pacmanHighScore', String(score));
+    }
+  }, [score, highScore]);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <select
+        className="mb-2 text-black"
+        value={levelIndex}
+        onChange={(e) => loadLevel(Number(e.target.value))}
+      >
+        {levels.map((lvl, i) => (
+          <option key={i} value={i}>
+            {lvl.name || `Level ${i + 1}`}
+          </option>
+        ))}
+      </select>
       <canvas ref={canvasRef} className="bg-black" />
-      <div className="mt-2">Score: {score}</div>
+      <div className="mt-2">Score: {score} | High: {highScore}</div>
+      <div className="mt-1">Lives: {pacRef.current.lives}</div>
       {statusRef.current !== 'Playing' && <div className="mt-2">{statusRef.current}</div>}
     </div>
   );
