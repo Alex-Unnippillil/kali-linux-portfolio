@@ -1,6 +1,7 @@
 // Security headers configuration for Next.js.
 // Allows external badges and same-origin PDF embedding without inline styles.
 
+const crypto = require('crypto');
 const { validateEnv } = require('./lib/validate.js');
 const crypto = require('crypto');
 
@@ -42,44 +43,22 @@ async function getSecurityHeaders() {
       value:
         '{"group":"csp-endpoint","max_age":10886400,"endpoints":[{"url":"/api/csp-reporter"}]}',
     },
-    {
-      key: 'X-Content-Type-Options',
-      value: 'nosniff',
-    },
-    {
-      key: 'Referrer-Policy',
-      value: 'strict-origin-when-cross-origin',
-    },
+    { key: 'X-Content-Type-Options', value: 'nosniff' },
+    { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
     {
       key: 'Permissions-Policy',
-      value:
-        'camera=(), microphone=(), geolocation=(), usb=(), payment=(), serial=()',
+      value: 'camera=(), microphone=(), geolocation=(), usb=(), payment=(), serial=()'
     },
     {
       key: 'Strict-Transport-Security',
-      value: 'max-age=63072000; includeSubDomains; preload',
+      value: 'max-age=63072000; includeSubDomains; preload'
     },
-    {
-      key: 'X-DNS-Prefetch-Control',
-      value: 'off',
-    },
-    {
-      key: 'X-Permitted-Cross-Domain-Policies',
-      value: 'none',
-    },
-    {
-      key: 'Cross-Origin-Opener-Policy',
-      value: 'same-origin',
-    },
-    {
-      key: 'Cross-Origin-Resource-Policy',
-      value: 'same-site',
-    },
-    {
-      // Allow same-origin framing so the PDF resume renders in an <object>
-      key: 'X-Frame-Options',
-      value: 'SAMEORIGIN',
-    },
+    { key: 'X-DNS-Prefetch-Control', value: 'off' },
+    { key: 'X-Permitted-Cross-Domain-Policies', value: 'none' },
+    { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+    { key: 'Cross-Origin-Resource-Policy', value: 'same-site' },
+    // Allow same-origin framing so the PDF resume renders in an <object>
+    { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
   ];
 }
 
@@ -97,7 +76,6 @@ module.exports = {
   },
   experimental: {
     optimizePackageImports: ['chart.js', 'react-chartjs-2'],
-
   },
   webpack: (config) => {
     config.resolve = config.resolve || {};
@@ -114,6 +92,7 @@ module.exports = {
       ...(config.resolve.alias || {}),
       mermaid: require('path').resolve(__dirname, 'lib/mermaidStub.js'),
       'argon2-browser': require('path').resolve(__dirname, 'lib/argon2Stub.js'),
+      earcut: require('path').resolve(__dirname, 'lib/earcutStub.js'),
       'vis-timeline/dist/vis-timeline-graph2d.min.css': require('path').resolve(
         __dirname,
         'node_modules/vis-timeline/styles/vis-timeline-graph2d.min.css'
@@ -139,4 +118,3 @@ module.exports = {
     ];
   },
 };
-
