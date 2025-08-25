@@ -83,6 +83,8 @@ const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
 const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
+const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
+
 const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
 const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
 const ReaverApp = createDynamicApp('reaver', 'Reaver');
@@ -134,6 +136,7 @@ const displayMetasploit = createDisplay(MetasploitApp);
 const displayDsniff = createDisplay(DsniffApp);
 const displayGomoku = createDisplay(GomokuApp);
 const displayPinball = createDisplay(PinballApp);
+const displayMsfPost = createDisplay(MsfPostApp);
 const displayMimikatz = createDisplay(MimikatzApp);
 const displayEttercap = createDisplay(EttercapApp);
 const displayReaver = createDisplay(ReaverApp);
@@ -728,6 +731,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'msf-post',
+    title: 'Metasploit Post',
+    icon: './themes/Yaru/apps/msf-post.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayMsfPost,
   },
   {
     id: 'dsniff',
