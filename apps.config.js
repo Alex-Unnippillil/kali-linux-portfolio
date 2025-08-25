@@ -78,6 +78,7 @@ const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
+
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
 const BluetoothApp = createDynamicApp('bluetooth', 'Bluetooth Tools');
 const DsniffApp = createDynamicApp('dsniff', 'dsniff');
