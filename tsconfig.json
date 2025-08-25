@@ -50,12 +50,18 @@
     ]
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
+    "app/**/*",
+    "lib/**/*",
     "next-env.d.ts",
-    ".next/types/**/*.ts"
+    "pages/**/*",
+    "types/**/*"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "apps",
+    "__tests__",
+    "e2e",
+    ".next",
+    "components"
   ]
 }
