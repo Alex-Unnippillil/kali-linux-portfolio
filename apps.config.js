@@ -19,6 +19,7 @@ import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayNikto } from './components/apps/nikto';
 
 const createDynamicApp = (path, name) =>
   dynamic(
@@ -567,6 +568,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayConverter,
+  },
+  {
+    id: 'nikto',
+    title: 'Nikto',
+    icon: './themes/Yaru/apps/nikto.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayNikto,
   },
   {
     id: 'qr-tool',
