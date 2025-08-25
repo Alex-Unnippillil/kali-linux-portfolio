@@ -1,16 +1,15 @@
 import React from 'react';
 
-const GameLayout = ({ children, onRestart }) => (
-  <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+const GameLayout = ({ children, stage, lives, score, highScore }) => (
+  <div className="h-full w-full relative text-white">
+    <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
+      <div>Stage: {stage}</div>
+      <div>Lives: {lives}</div>
+      {score !== undefined && <div>Score: {score}</div>}
+      {highScore !== undefined && <div>High: {highScore}</div>}
+    </div>
     {children}
-    {onRestart && (
-      <button
-        className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={onRestart}
-      >
-        Restart
-      </button>
-    )}
+
   </div>
 );
 
