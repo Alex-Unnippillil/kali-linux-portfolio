@@ -1,9 +1,9 @@
-import React from 'react';
 import dynamic from 'next/dynamic';
 
-// Load the Twitter timeline only on the client to avoid SSR issues.
+// Load the Twitter timeline client-side only
 const Timeline = dynamic(
-  () => import('react-twitter-widgets').then((mod) => mod.Timeline),
+  () => import('react-twitter-widgets').then((m) => m.Timeline),
+
   { ssr: false }
 );
 
