@@ -4,6 +4,7 @@ import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
 import 'tailwindcss/tailwind.css';
 import '../styles/index.css';
+import '@xterm/xterm/css/xterm.css';
 import { ThemeProvider } from '../hooks/useTheme';
 
 function MyApp({ Component, pageProps }: AppProps) {
