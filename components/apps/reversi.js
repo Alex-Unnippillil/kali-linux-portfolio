@@ -21,8 +21,12 @@ const Reversi = () => {
   const [future, setFuture] = useState([]);
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [suggestion, setSuggestion] = useState(null);
-    const workerRef = useRef();
-    const handleMoveRef = useRef((r, c) => {});
+  const [showMoves, setShowMoves] = useState(false);
+  const [focus, setFocus] = useState([0, 0]);
+  const [bestMargin, setBestMargin] = useState(0);
+  const workerRef = useRef();
+  const handleMoveRef = useRef((r, c) => {});
+  const boardRef = useRef(null);
 
   const legalMoves = useMemo(() => computeLegalMoves(board, player), [board, player]);
 
@@ -39,6 +43,7 @@ const Reversi = () => {
         if (data.aiDepth) setAiDepth(data.aiDepth);
         if (data.mustPass) setMustPass(data.mustPass);
         if (data.gameOver) setGameOver(data.gameOver);
+        if (data.bestMargin) setBestMargin(data.bestMargin);
       } catch (e) {
         // ignore parse errors
       }
@@ -55,9 +60,10 @@ const Reversi = () => {
       aiDepth,
       mustPass,
       gameOver,
+      bestMargin,
     };
     window.localStorage.setItem('reversiState', JSON.stringify(state));
-  }, [board, player, history, future, aiDepth, mustPass, gameOver]);
+  }, [board, player, history, future, aiDepth, mustPass, gameOver, bestMargin]);
 
   useEffect(() => {
     if (!showSuggestion) {
@@ -96,6 +102,10 @@ const Reversi = () => {
             : "It's a draw";
         setStatus(winner);
         setGameOver({ black, white, winner });
+        if (black > white) {
+          const margin = black - white;
+          if (margin > bestMargin) setBestMargin(margin);
+        }
         ReactGA.event({ category: 'reversi', action: 'game_over', label: `${black}-${white}` });
       } else {
         setMustPass(true);
@@ -105,7 +115,7 @@ const Reversi = () => {
       setStatus(`${player === 'B' ? 'Black' : 'White'}'s turn`);
       setMustPass(false);
     }
-  }, [legalMoves, board, player]);
+  }, [legalMoves, board, player, bestMargin]);
 
   useEffect(() => {
     if (mustPass && player === 'W') {
@@ -118,6 +128,10 @@ const Reversi = () => {
       workerRef.current.postMessage({ board, player, depth: aiDepth });
     }
   }, [player, legalMoves, board, mustPass, aiDepth]);
+
+  useEffect(() => {
+    boardRef.current?.focus();
+  }, []);
 
   const handleMove = (r, c) => {
     const key = `${r}-${c}`;
@@ -157,6 +171,40 @@ const Reversi = () => {
     setFuture([]);
     setSuggestion(null);
     setShowSuggestion(false);
+  };
+
+  const updatePreview = (r, c) => {
+    const key = `${r}-${c}`;
+    if (legalMoves[key]) handlePreview(r, c);
+    else clearPreview();
+  };
+
+  const handleKeyDown = (e) => {
+    const [r, c] = focus;
+    if (e.key === 'ArrowRight') {
+      const nc = Math.min(7, c + 1);
+      setFocus([r, nc]);
+      updatePreview(r, nc);
+      e.preventDefault();
+    } else if (e.key === 'ArrowLeft') {
+      const nc = Math.max(0, c - 1);
+      setFocus([r, nc]);
+      updatePreview(r, nc);
+      e.preventDefault();
+    } else if (e.key === 'ArrowDown') {
+      const nr = Math.min(7, r + 1);
+      setFocus([nr, c]);
+      updatePreview(nr, c);
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      const nr = Math.max(0, r - 1);
+      setFocus([nr, c]);
+      updatePreview(nr, c);
+      e.preventDefault();
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      handleMove(r, c);
+      e.preventDefault();
+    }
   };
 
   const { black, white } = useMemo(() => countPieces(board), [board]);
@@ -215,10 +263,20 @@ const Reversi = () => {
           <option value={2}>Easy</option>
           <option value={4}>Medium</option>
           <option value={6}>Hard</option>
+          <option value={8}>Expert</option>
         </select>
       </div>
-      <div className="mb-4">Black: {black} White: {white}</div>
-      <div className="grid grid-cols-8 gap-1 bg-green-700 p-1">
+      <div className="mb-4">Black: {black} White: {white} Best: {bestMargin}</div>
+      <div
+        ref={boardRef}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        onMouseEnter={() => setShowMoves(true)}
+        onMouseLeave={() => setShowMoves(false)}
+        onFocus={() => setShowMoves(true)}
+        onBlur={() => setShowMoves(false)}
+        className="grid grid-cols-8 gap-1 bg-green-700 p-1"
+      >
         {board.map((row, r) =>
           row.map((cell, c) => {
             const key = `${r}-${c}`;
@@ -231,6 +289,7 @@ const Reversi = () => {
               preview && preview.flips.some(([fr, fc]) => fr === r && fc === c);
             const isSuggestion =
               suggestion && suggestion[0] === r && suggestion[1] === c;
+            const isFocus = focus[0] === r && focus[1] === c;
             return (
               <div
                 key={key}
@@ -238,8 +297,8 @@ const Reversi = () => {
                 onMouseEnter={() => handlePreview(r, c)}
                 onMouseLeave={clearPreview}
                 className={`relative w-8 h-8 flex items-center justify-center bg-green-600 ${
-                  move ? 'cursor-pointer hover:bg-green-500 hover:ring-2 hover:ring-yellow-300' : ''
-                }`}
+                  move ? 'cursor-pointer hover:bg-green-500' : ''
+                } ${isFocus ? 'ring-2 ring-white' : ''}`}
               >
                 {isSuggestion && (
                   <div className="absolute inset-0 pointer-events-none ring-2 ring-blue-400 rounded-sm" />
@@ -254,8 +313,8 @@ const Reversi = () => {
                     />
                   </div>
                 )}
-                {!cell && move && !isPreview && (
-                  <div className="w-2 h-2 rounded-full bg-white opacity-50" />
+                {!cell && move && showMoves && !isPreview && (
+                  <div className="absolute inset-0 pointer-events-none ring-2 ring-yellow-300 rounded-sm" />
                 )}
                 {!cell && isPreview && (
                   <div
