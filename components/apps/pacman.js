@@ -92,6 +92,7 @@ const Pacman = () => {
   const [pellets, setPellets] = useState(0);
   const fruitRef = useRef({ active: false, x: 7, y: 3, timer: 0 });
   const statusRef = useRef('Playing');
+  const [paused, setPaused] = useState(false);
   const audioCtxRef = useRef(null);
   const touchStartRef = useRef(null);
 
@@ -436,6 +437,15 @@ const Pacman = () => {
         case 'ArrowRight':
           pacRef.current.nextDir = { x: 1, y: 0 };
           break;
+        case 'p':
+          if (statusRef.current === 'Playing' || statusRef.current === 'Paused') {
+            setPaused((p) => {
+              const next = !p;
+              statusRef.current = next ? 'Paused' : 'Playing';
+              return next;
+            });
+          }
+          break;
         default:
           break;
       }
@@ -467,7 +477,6 @@ const Pacman = () => {
     const loop = () => {
       if (statusRef.current === 'Playing') {
         stepRef.current();
-        draw();
         // simple gamepad polling
         const pads = navigator.getGamepads ? navigator.getGamepads() : [];
         if (pads) {
@@ -478,8 +487,9 @@ const Pacman = () => {
             if (Math.abs(ay) > 0.3) pacRef.current.nextDir = { x: 0, y: ay > 0 ? 1 : -1 };
           }
         }
-        id = requestAnimationFrame(loop);
       }
+      draw();
+      id = requestAnimationFrame(loop);
     };
 
     draw();
@@ -531,8 +541,7 @@ const Pacman = () => {
     );
   }
 
-    return (
-
+  return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <select
         className="mb-2 text-black"
@@ -546,16 +555,25 @@ const Pacman = () => {
         ))}
       </select>
 
-      <canvas
-        ref={canvasRef}
-        width={WIDTH}
-        height={HEIGHT}
-        className="bg-black"
-      />
+      <div className="relative">
+        <canvas
+          ref={canvasRef}
+          width={WIDTH}
+          height={HEIGHT}
+          className="bg-black"
+        />
+        {paused && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-2xl">
+            Paused
+          </div>
+        )}
+      </div>
 
       <div className="mt-2">Score: {score} | High: {highScore}</div>
       <div className="mt-1">Lives: {pacRef.current.lives}</div>
-      {statusRef.current !== 'Playing' && <div className="mt-2">{statusRef.current}</div>}
+      {statusRef.current !== 'Playing' && statusRef.current !== 'Paused' && (
+        <div className="mt-2">{statusRef.current}</div>
+      )}
     </div>
   );
 };
