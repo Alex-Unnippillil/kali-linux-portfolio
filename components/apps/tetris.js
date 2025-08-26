@@ -162,7 +162,7 @@ const Tetris = () => {
     if (!canMove(newBoard, next.shape, Math.floor(WIDTH / 2) - 2, 0)) {
       resetGame();
     }
-  }, [board, piece, pos, next, resetGame, highScore, level, maxLevel]);
+    }, [board, piece, pos, next, resetGame, highScore, level, maxLevel, setHighScore, setMaxLevel]);
 
   const moveDown = useCallback(
     (soft = false) => {
@@ -187,23 +187,26 @@ const Tetris = () => {
     return () => clearInterval(id);
   }, [moveDown, dropInterval]);
 
-  const move = (dir) => {
-    const newX = pos.x + dir;
-    if (canMove(board, piece.shape, newX, pos.y)) {
-      setPos((p) => ({ ...p, x: newX }));
-      if (lockRef.current) {
-        clearTimeout(lockRef.current);
-        lockRef.current = null;
+  const move = useCallback(
+    (dir) => {
+      const newX = pos.x + dir;
+      if (canMove(board, piece.shape, newX, pos.y)) {
+        setPos((p) => ({ ...p, x: newX }));
+        if (lockRef.current) {
+          clearTimeout(lockRef.current);
+          lockRef.current = null;
+        }
+        if (!canMove(board, piece.shape, newX, pos.y + 1)) {
+          lockRef.current = setTimeout(() => {
+            placePiece();
+          }, LOCK_DELAY);
+        }
       }
-      if (!canMove(board, piece.shape, newX, pos.y + 1)) {
-        lockRef.current = setTimeout(() => {
-          placePiece();
-        }, LOCK_DELAY);
-      }
-    }
-  };
+    },
+    [board, piece, pos, placePiece]
+  );
 
-  const rotatePiece = () => {
+  const rotatePiece = useCallback(() => {
     const rotated = rotate(piece.shape);
     if (canMove(board, rotated, pos.x, pos.y)) {
       setPiece({ ...piece, shape: rotated });
@@ -217,9 +220,9 @@ const Tetris = () => {
         }, LOCK_DELAY);
       }
     }
-  };
+  }, [board, piece, pos, placePiece]);
 
-  const hardDrop = () => {
+  const hardDrop = useCallback(() => {
     const y = getDropY();
     if (lockRef.current) {
       clearTimeout(lockRef.current);
@@ -227,9 +230,9 @@ const Tetris = () => {
     }
     setPos((p) => ({ ...p, y }));
     placePiece();
-  };
+  }, [getDropY, placePiece]);
 
-  const holdPiece = () => {
+  const holdPiece = useCallback(() => {
     if (!canHold) return;
     setCanHold(false);
     if (lockRef.current) {
@@ -246,28 +249,31 @@ const Tetris = () => {
       setNext(bagPiece());
     }
     setPos({ x: Math.floor(WIDTH / 2) - 2, y: 0 });
-  };
+  }, [canHold, hold, next, piece]);
 
-  const actionFromKey = (key) => {
-    const entry = Object.entries(keyBindings).find(([, k]) => k.toLowerCase() === key.toLowerCase());
-    return entry ? entry[0] : null;
-  };
-
-  const handleKey = useCallback(
-    (e) => {
-      const action = actionFromKey(e.key.length === 1 ? e.key : e.code);
-      if (!action) return;
-      e.preventDefault();
-      if (action === 'left') move(-1);
-      else if (action === 'right') move(1);
-      else if (action === 'down') moveDown(true);
-      else if (action === 'rotate') rotatePiece();
-      else if (action === 'drop') hardDrop();
-      else if (action === 'hold') holdPiece();
-      else if (action === 'settings') setShowSettings((s) => !s);
+  const actionFromKey = useCallback(
+    (key) => {
+      const entry = Object.entries(keyBindings).find(([, k]) => k.toLowerCase() === key.toLowerCase());
+      return entry ? entry[0] : null;
     },
-    [keyBindings, moveDown]
+    [keyBindings]
   );
+
+    const handleKey = useCallback(
+      (e) => {
+        const action = actionFromKey(e.key.length === 1 ? e.key : e.code);
+        if (!action) return;
+        e.preventDefault();
+        if (action === 'left') move(-1);
+        else if (action === 'right') move(1);
+        else if (action === 'down') moveDown(true);
+        else if (action === 'rotate') rotatePiece();
+        else if (action === 'drop') hardDrop();
+        else if (action === 'hold') holdPiece();
+        else if (action === 'settings') setShowSettings((s) => !s);
+      },
+      [actionFromKey, hardDrop, holdPiece, move, moveDown, rotatePiece, setShowSettings]
+    );
 
   useEffect(() => {
     window.addEventListener('keydown', handleKey);

@@ -96,7 +96,7 @@ const Battleship = () => {
 
   useEffect(() => {
     restart();
-  }, []);
+  }, [restart]);
 
   const handleDragStop = (i, e, data) => {
     const x = Math.round(data.x / CELL);
@@ -136,37 +136,40 @@ const Battleship = () => {
     setMessage('Your turn');
   };
 
-  const fire = (idx) => {
-    if(phase!=='battle' || enemyBoard[idx]) return;
-    const newBoard = enemyBoard.slice();
-    const hit = newBoard[idx]==='ship';
-    newBoard[idx]= hit?'hit':'miss';
-    setEnemyBoard(newBoard);
-    if (!newBoard.includes('ship')) {
-      setMessage('You win!');
-      setPhase('done');
-      setStats((s) => ({ ...s, wins: s.wins + 1 }));
-      return;
-    }
-    // AI turn
-    setTimeout(() => {
-      const move = ai.nextMove();
-      if (move == null) return;
-      const pb = playerBoard.slice();
-      const hit2 = pb[move] === 'ship';
-      pb[move] = hit2 ? 'hit' : 'miss';
-      setPlayerBoard(pb);
-      const nh = heat.slice();
-      nh[move]++;
-      setHeat(nh);
-      ai.record(move, hit2);
-      if (!pb.includes('ship')) {
-        setMessage('AI wins!');
+  const fire = useCallback(
+    (idx) => {
+      if (phase !== 'battle' || enemyBoard[idx]) return;
+      const newBoard = enemyBoard.slice();
+      const hit = newBoard[idx] === 'ship';
+      newBoard[idx] = hit ? 'hit' : 'miss';
+      setEnemyBoard(newBoard);
+      if (!newBoard.includes('ship')) {
+        setMessage('You win!');
         setPhase('done');
-        setStats((s) => ({ ...s, losses: s.losses + 1 }));
-      } else setMessage(hit ? 'Hit!' : 'Miss!');
-    }, 100); // simulate thinking
-  };
+        setStats((s) => ({ ...s, wins: s.wins + 1 }));
+        return;
+      }
+      // AI turn
+      setTimeout(() => {
+        const move = ai.nextMove();
+        if (move == null) return;
+        const pb = playerBoard.slice();
+        const hit2 = pb[move] === 'ship';
+        pb[move] = hit2 ? 'hit' : 'miss';
+        setPlayerBoard(pb);
+        const nh = heat.slice();
+        nh[move]++;
+        setHeat(nh);
+        ai.record(move, hit2);
+        if (!pb.includes('ship')) {
+          setMessage('AI wins!');
+          setPhase('done');
+          setStats((s) => ({ ...s, losses: s.losses + 1 }));
+        } else setMessage(hit ? 'Hit!' : 'Miss!');
+      }, 100); // simulate thinking
+    },
+    [ai, enemyBoard, heat, phase, playerBoard, setEnemyBoard, setPlayerBoard, setHeat, setMessage, setPhase, setStats]
+  );
 
   useGameControls(({ x, y }) => {
     if (phase !== 'battle') return;

@@ -98,10 +98,10 @@ const Pacman = () => {
   const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);
   const isCenter = (pos) => Math.abs((pos % tileSize) - tileSize / 2) < 0.1;
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-  const isTunnel = (tx, ty) => {
+  const isTunnel = useCallback((tx, ty) => {
     const width = mazeRef.current[0].length;
     return (tx === 0 || tx === width - 1) && tileAt(tx, ty) !== 1;
-  };
+  }, []);
 
   const playSound = (freq) => {
     try {

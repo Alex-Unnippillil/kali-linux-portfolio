@@ -411,7 +411,7 @@ const CarRacer = () => {
         window.removeEventListener('deviceorientation', handleOrientation);
         wheel && wheel.removeEventListener('pointermove', handleWheel);
       };
-    }, [control, difficulty, reset]);
+      }, [canvasRef, control, difficulty, reset]);
 
   useEffect(() => {
     pausedRef.current = paused;

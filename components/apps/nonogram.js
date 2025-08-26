@@ -81,8 +81,8 @@ const Nonogram = () => {
     });
   };
 
-    const scheduleToggle = useCallback(
-      (i, j, mode) => {
+      const scheduleToggle = useCallback(
+        (i, j, mode) => {
         pending.current.push({ i, j, mode });
         if (!raf.current) {
           raf.current = requestAnimationFrame(() => {
@@ -110,9 +110,9 @@ const Nonogram = () => {
             raf.current = null;
           });
         }
-      },
-      [rows, cols, evaluate]
-    );
+        },
+        [rows, cols, evaluate, setGrid]
+      );
 
   const painting = useRef(false);
   const paintMode = useRef('fill');
