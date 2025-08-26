@@ -26,7 +26,7 @@ describe('Terminal component', () => {
     expect(ref.current.getContent()).toContain("bash: cd: nowhere: No such file or directory");
   });
 
-  it('supports history and clear commands', () => {
+  it('supports history, clear, and help commands', () => {
     const ref = createRef();
     render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
     act(() => {
@@ -37,6 +37,12 @@ describe('Terminal component', () => {
     act(() => {
       ref.current.runCommand('clear');
     });
-    expect(ref.current.getContent()).toBe('');
+    expect(ref.current.getContent()).toContain('pwd');
+    act(() => {
+      ref.current.runCommand('help');
+    });
+    expect(ref.current.getContent()).toContain('Available commands:');
+    expect(ref.current.getContent()).toContain('clear');
+    expect(ref.current.getContent()).toContain('help');
   });
 });
