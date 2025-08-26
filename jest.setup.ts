@@ -66,20 +66,23 @@ class WorkerMock {
 // @ts-ignore
 global.Worker = WorkerMock as any;
 
-// Mock xterm which isn't available in the test environment
+// Mock xterm and addons so terminal tests run without the real library
 jest.mock(
   'xterm',
   () => ({
-    Terminal: jest.fn().mockImplementation(() => ({
-      open: jest.fn(),
-      write: jest.fn(),
-      writeln: jest.fn(),
-      loadAddon: jest.fn(),
-      dispose: jest.fn(),
-      onKey: jest.fn(),
-      onData: jest.fn(),
-      focus: jest.fn(),
-    })),
+    Terminal: class {
+      loadAddon() {}
+      write() {}
+      writeln() {}
+      open() {}
+      dispose() {}
+      onKey() {}
+      onData() {}
+      get buffer() {
+        return { active: { getLine: () => ({ translateToString: () => '' }) } };
+      }
+    },
+
   }),
   { virtual: true }
 );
@@ -87,7 +90,12 @@ jest.mock(
 jest.mock(
   'xterm-addon-fit',
   () => ({
-    FitAddon: jest.fn().mockImplementation(() => ({ fit: jest.fn() })),
+    FitAddon: class {
+      activate() {}
+      dispose() {}
+      fit() {}
+    },
+
   }),
   { virtual: true }
 );
@@ -95,7 +103,11 @@ jest.mock(
 jest.mock(
   'xterm-addon-search',
   () => ({
-    SearchAddon: jest.fn().mockImplementation(() => ({ findNext: jest.fn() })),
+    SearchAddon: class {
+      activate() {}
+      dispose() {}
+    },
+
   }),
   { virtual: true }
 );
