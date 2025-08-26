@@ -5947,12 +5947,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"phaser@npm:^3.90.0":
-  version: 3.90.0
-  resolution: "phaser@npm:3.90.0"
+"phaser@npm:3.70.0":
+  version: 3.70.0
+  resolution: "phaser@npm:3.70.0"
   dependencies:
     eventemitter3: "npm:^5.0.1"
-  checksum: 10c0/43d405832fc84c8641e22842fe8d4ca954950ffde364bfb60e4d07b05a29f33eb0c9d4a64acda088122ee6649b7b3ed6d9b3b99bbb67671a528c6ceb10d71689
+  checksum: 10c0/a66fed1fab29ea09856faaff60b4c5e03aea6d282d024f991fa0c306f08db1b65213dda655eb6fb0f58954bf211a9b1e731c409b75e9daf6c2698360fb3a940f
+
   languageName: node
   linkType: hard
 
@@ -7511,7 +7512,8 @@ __metadata:
     mathjs: "npm:^14.6.0"
 
     next: "npm:^15.0.0"
-    phaser: "npm:^3.90.0"
+    phaser: "npm:3.70.0"
+
     postcss: "npm:^8.4.21"
     prop-types: "npm:^15.8.1"
     qrcode: "npm:^1.5.4"
