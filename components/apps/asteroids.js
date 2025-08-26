@@ -509,7 +509,11 @@ const Asteroids = () => {
 
     requestRef.current = requestAnimationFrame(update);
     return cleanup;
-  }, [controls, dpr, restartKey]);
+  }, [
+    controls,
+    dpr,
+    restartKey,
+  ]);
   const togglePause = () => {
     pausedRef.current = !pausedRef.current;
     setPaused(pausedRef.current);
