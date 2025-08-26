@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { generateGrid } from './generator';
+import { generateGrid, createRNG } from './generator';
 import type { Position, WordPlacement } from './types';
+import wordList from '../../components/apps/wordle_words.json';
 import { logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 
-const DEFAULT_WORDS = ['REACT', 'NODE', 'JAVASCRIPT', 'CODE', 'NEXTJS'];
+const WORD_COUNT = 5;
 const GRID_SIZE = 12;
 
 function key(p: Position) {
@@ -29,7 +30,7 @@ const WordSearch: React.FC = () => {
   const router = useRouter();
   const { seed: seedQuery, words: wordsQuery } = router.query as { seed?: string; words?: string };
   const [seed, setSeed] = useState('');
-  const [words, setWords] = useState<string[]>(DEFAULT_WORDS);
+  const [words, setWords] = useState<string[]>([]);
   const [grid, setGrid] = useState<string[][]>([]);
   const [placements, setPlacements] = useState<WordPlacement[]>([]);
   const [found, setFound] = useState<Set<string>>(new Set());
@@ -38,14 +39,25 @@ const WordSearch: React.FC = () => {
   const [start, setStart] = useState<Position | null>(null);
   const [selection, setSelection] = useState<Position[]>([]);
 
+  function pickWords(s: string) {
+    const rng = createRNG(s);
+    const chosen = new Set<string>();
+    while (chosen.size < WORD_COUNT) {
+      const w = wordList[Math.floor(rng() * wordList.length)];
+      chosen.add(w);
+    }
+    return Array.from(chosen);
+  }
+
   useEffect(() => {
     const queryWords =
       typeof wordsQuery === 'string'
         ? wordsQuery.split(',').map((w) => w.trim().toUpperCase()).filter(Boolean)
         : [];
-    const s = typeof seedQuery === 'string' ? seedQuery : Math.random().toString(36).slice(2);
+    const defaultSeed = new Date().toISOString().split('T')[0];
+    const s = typeof seedQuery === 'string' ? seedQuery : defaultSeed;
     setSeed(s);
-    setWords(queryWords.length ? queryWords : DEFAULT_WORDS);
+    setWords(queryWords.length ? queryWords : pickWords(s));
   }, [seedQuery, wordsQuery]);
 
   useEffect(() => {
@@ -122,21 +134,21 @@ const WordSearch: React.FC = () => {
         <button
           type="button"
           onClick={newPuzzle}
-          className="px-2 py-1 bg-blue-600 text-white rounded"
+          className="px-2 py-1 bg-blue-700 text-white rounded"
         >
           New
         </button>
         <button
           type="button"
           onClick={copyLink}
-          className="px-2 py-1 bg-green-600 text-white rounded"
+          className="px-2 py-1 bg-green-700 text-white rounded"
         >
           Copy Link
         </button>
         <button
           type="button"
           onClick={() => window.print()}
-          className="px-2 py-1 bg-gray-600 text-white rounded"
+          className="px-2 py-1 bg-gray-700 text-white rounded"
         >
           Print
         </button>
