@@ -114,3 +114,24 @@ describe('Split rules', () => {
     expect(() => game.split()).toThrow('Cannot split');
   });
 });
+
+describe('Counting and penetration', () => {
+  test('running count updates with drawn cards', () => {
+    const shoe = new Shoe(1, 1);
+    shoe.cards = [card('2'), card('5'), card('K')];
+    shoe.shufflePoint = Infinity;
+    shoe.dealt = 0;
+    shoe.runningCount = 0;
+    shoe.draw();
+    expect(shoe.runningCount).toBe(-1); // K
+    shoe.draw();
+    expect(shoe.runningCount).toBe(0); // 5
+    shoe.draw();
+    expect(shoe.runningCount).toBe(1); // 2
+  });
+
+  test('BlackjackGame allows custom penetration', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000, penetration: 0.6 });
+    expect(game.shoe.penetration).toBe(0.6);
+  });
+});

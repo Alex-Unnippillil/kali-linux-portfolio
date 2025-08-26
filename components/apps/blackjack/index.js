@@ -40,7 +40,8 @@ const gameReducer = (state, action) => {
 };
 
 const Blackjack = () => {
-  const gameRef = useRef(new BlackjackGame({ bankroll: 1000 }));
+  const [penetration, setPenetration] = useState(0.75);
+  const gameRef = useRef(new BlackjackGame({ bankroll: 1000, penetration }));
   const [bet, setBet] = useState(0);
   const [message, setMessage] = useState('Place your bet');
   const [dealerHand, setDealerHand] = useState([]);
@@ -50,6 +51,8 @@ const Blackjack = () => {
   const [stats, setStats] = useState(gameRef.current.stats);
   const [showHints, setShowHints] = useState(true);
   const [shuffling, setShuffling] = useState(false);
+  const [showCount, setShowCount] = useState(false);
+  const [runningCount, setRunningCount] = useState(0);
 
   const [_, dispatch] = useReducer(gameReducer, {
     gameRef,
@@ -65,7 +68,13 @@ const Blackjack = () => {
     setPlayerHands(gameRef.current.playerHands.map((h) => ({ ...h, cards: [...h.cards] })));
     setStats({ ...gameRef.current.stats });
     setCurrent(gameRef.current.current);
+    setRunningCount(gameRef.current.shoe.runningCount);
   };
+
+  useEffect(() => {
+    gameRef.current.shoe.penetration = penetration;
+    gameRef.current.shoe.shufflePoint = Math.floor(gameRef.current.shoe.cards.length * penetration);
+  }, [penetration]);
 
   const start = () => {
     try {
@@ -164,11 +173,30 @@ const Blackjack = () => {
       <div className="mb-2 flex items-center space-x-4">
         <div>Bankroll: {availableBankroll}</div>
         <div className={`h-8 w-6 bg-gray-700 ${shuffling ? 'shuffle' : ''}`}></div>
+        {showCount && <div>RC: {runningCount}</div>}
       </div>
-      <div className="mb-2">
+      <div className="mb-2 flex items-center space-x-2">
         <button className="px-2 py-1 bg-gray-700" onClick={() => setShowHints(!showHints)}>
           {showHints ? 'Hide Hints' : 'Show Hints'}
         </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={() => setShowCount(!showCount)}>
+          {showCount ? 'Hide Count' : 'Show Count'}
+        </button>
+        <label className="flex items-center space-x-1">
+          <span className="text-sm">Pen</span>
+          <input
+            type="number"
+            step="0.05"
+            min="0.5"
+            max="0.95"
+            value={penetration}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              if (!Number.isNaN(val)) setPenetration(val);
+            }}
+            className="w-16 text-black px-1"
+          />
+        </label>
       </div>
       {playerHands.length === 0 ? (
         <div className="mb-4">
@@ -205,12 +233,15 @@ const Blackjack = () => {
           <div className="mb-1">{`Player${playerHands.length > 1 ? ` ${idx + 1}` : ''}`}</div>
           {renderHand(hand, false, true)}
           {idx === current && playerHands.length > 0 && (
-            <div className="mt-2 flex space-x-2">
-              <button className={`px-3 py-1 bg-gray-700 ${rec === 'hit' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('hit')}>Hit</button>
-              <button className={`px-3 py-1 bg-gray-700 ${rec === 'stand' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('stand')}>Stand</button>
-              <button className={`px-3 py-1 bg-gray-700 ${rec === 'double' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('double')}>Double</button>
-              <button className={`px-3 py-1 bg-gray-700 ${rec === 'split' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('split')}>Split</button>
-              <button className={`px-3 py-1 bg-gray-700 ${rec === 'surrender' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('surrender')}>Surrender</button>
+            <div className="mt-2 flex flex-col items-start">
+              <div className="flex space-x-2">
+                <button className={`px-3 py-1 bg-gray-700 ${rec === 'hit' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('hit')}>Hit</button>
+                <button className={`px-3 py-1 bg-gray-700 ${rec === 'stand' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('stand')}>Stand</button>
+                <button className={`px-3 py-1 bg-gray-700 ${rec === 'double' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('double')}>Double</button>
+                <button className={`px-3 py-1 bg-gray-700 ${rec === 'split' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('split')}>Split</button>
+                <button className={`px-3 py-1 bg-gray-700 ${rec === 'surrender' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('surrender')}>Surrender</button>
+              </div>
+              {showHints && rec && <div className="mt-1 text-sm">Hint: {rec.toUpperCase()}</div>}
             </div>
           )}
         </div>
