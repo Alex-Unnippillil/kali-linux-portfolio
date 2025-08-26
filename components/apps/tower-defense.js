@@ -30,9 +30,11 @@ const TowerDefense = () => {
   const [lives, setLives] = useState(20);
   const [towerType, setTowerType] = useState('single');
   const [waves, setWaves] = useState([{ count: 5, baseSpeed: 0.5, health: 5 }]);
-  const [waveInput, setWaveInput] = useState(
-    JSON.stringify(waves, null, 2)
-  );
+  const [highestWave, setHighestWave] = useState(() => {
+    if (typeof window === 'undefined') return 1;
+    const saved = parseInt(localStorage.getItem('td-highest-wave'), 10);
+    return Number.isNaN(saved) ? 1 : saved;
+  });
   const enemySprite = useMemo(
     () => loadSprite('/themes/Yaru/status/ubuntu_white_hex.svg'),
     []
@@ -63,14 +65,15 @@ const TowerDefense = () => {
     wavesRef.current = waves;
   }, [waves]);
 
-  useEffect(() => {
-    try {
-      const parsed = JSON.parse(waveInput);
-      if (Array.isArray(parsed)) setWaves(parsed);
-    } catch (err) {
-      // ignore parse errors
-    }
-  }, [waveInput]);
+  const handleWaveField = (index, field, value) => {
+    setWaves((ws) =>
+      ws.map((w, i) => (i === index ? { ...w, [field]: value } : w))
+    );
+  };
+
+  const addWave = () => {
+    setWaves((ws) => [...ws, { count: 5, baseSpeed: 0.5, health: 5 }]);
+  };
 
   useEffect(() => {
     const canvas = pathCanvasRef.current;
@@ -95,9 +98,9 @@ const TowerDefense = () => {
   const spawnWave = (waveNum) => {
     ReactGA.event({ category: 'tower-defense', action: 'wave_start', value: waveNum });
     const config = wavesRef.current[waveNum - 1] || {
-      count: 5 + waveNum,
-      baseSpeed: 0.5 + waveNum * 0.05,
-      health: 5 + waveNum,
+      count: 6 + waveNum * 2,
+      baseSpeed: 0.6 + waveNum * 0.04,
+      health: 10 + waveNum * 2,
     };
     for (let i = 0; i < config.count; i += 1) {
       spawnEnemy(enemiesRef.current, {
@@ -121,12 +124,16 @@ const TowerDefense = () => {
       typeof window !== 'undefined' ? localStorage.getItem('td-state') : null;
     if (saved) {
       try {
-        const { towers: stTowers, wave: stWave, lives: stLives } = JSON.parse(
-          saved
-        );
+        const {
+          towers: stTowers,
+          wave: stWave,
+          lives: stLives,
+          waves: stWaves,
+        } = JSON.parse(saved);
         setTowers(stTowers);
         setWave(stWave);
         setLives(stLives);
+        if (Array.isArray(stWaves)) setWaves(stWaves);
         setPath(getPath(stTowers));
         spawnWave(stWave);
         return;
@@ -142,10 +149,20 @@ const TowerDefense = () => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(
         'td-state',
-        JSON.stringify({ towers, wave, lives })
+        JSON.stringify({ towers, wave, lives, waves })
       );
     }
-  }, [towers, wave, lives]);
+  }, [towers, wave, lives, waves]);
+
+  useEffect(() => {
+    setHighestWave((hw) => {
+      const next = Math.max(hw, wave);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('td-highest-wave', String(next));
+      }
+      return next;
+    });
+  }, [wave]);
 
   useEffect(() => {
     if (speed === 0) return undefined;
@@ -373,9 +390,21 @@ const TowerDefense = () => {
     return (
       <div
         key={`${x}-${y}`}
+        role="button"
+        tabIndex={0}
         className={`relative w-8 h-8 border border-gray-900 ${bg}`}
         onClick={() => handleCellClick(x, y)}
         onContextMenu={(e) => handleCellRightClick(x, y, e)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleCellClick(x, y);
+          }
+          if (e.key === 'Backspace' || e.key === 'Delete') {
+            e.preventDefault();
+            handleCellRightClick(x, y, e);
+          }
+        }}
       >
         {content}
       </div>
@@ -384,15 +413,50 @@ const TowerDefense = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <textarea
-        className="mb-2 w-full text-black p-1"
-        value={waveInput}
-        onChange={(e) => setWaveInput(e.target.value)}
-        rows={4}
-      />
+      <div className="mb-2 w-full space-y-1">
+        {waves.map((w, i) => (
+          <div key={i} className="flex items-center space-x-1">
+            <span className="text-xs">#{i + 1}</span>
+            <input
+              type="number"
+              min="1"
+              className="w-14 text-black p-1"
+              value={w.count}
+              aria-label={`Wave ${i + 1} count`}
+              onChange={(e) =>
+                handleWaveField(i, 'count', parseInt(e.target.value, 10))
+              }
+            />
+            <input
+              type="number"
+              step="0.1"
+              className="w-16 text-black p-1"
+              value={w.baseSpeed}
+              aria-label={`Wave ${i + 1} speed`}
+              onChange={(e) =>
+                handleWaveField(i, 'baseSpeed', parseFloat(e.target.value))
+              }
+            />
+            <input
+              type="number"
+              min="1"
+              className="w-16 text-black p-1"
+              value={w.health}
+              aria-label={`Wave ${i + 1} health`}
+              onChange={(e) =>
+                handleWaveField(i, 'health', parseInt(e.target.value, 10))
+              }
+            />
+          </div>
+        ))}
+        <button type="button" onClick={addWave} className="px-2 bg-gray-700">
+          Add Wave
+        </button>
+      </div>
       <div className="mb-2 flex items-center space-x-2">
         <span>Wave: {wave}</span>
         <span>Lives: {lives}</span>
+        <span>Best: {highestWave}</span>
         <button
           type="button"
           onClick={() => setSpeed(0)}
