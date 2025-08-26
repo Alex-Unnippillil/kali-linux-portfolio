@@ -54,7 +54,7 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       logRef.current += `Command '${trimmed}' not found\n`;
       prompt();
     }
-  }, [prompt]);
+  }, []);
 
   const renderSuggestions = useCallback(() => {
     termRef.current.writeln('');
