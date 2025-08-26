@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactGA from 'react-ga4';
 import confetti from 'canvas-confetti';
 import GameLayout from './GameLayout';
@@ -40,9 +40,15 @@ const minimax = (board, player, depth = 0, maxDepth = Infinity) => {
     }
   });
   if (player === 'O') {
-    return moves.reduce((best, move) => (move.score > best.score ? move : best), { score: -Infinity });
+    return moves.reduce(
+      (best, move) => (move.score > best.score ? move : best),
+      { score: -Infinity }
+    );
   }
-  return moves.reduce((best, move) => (move.score < best.score ? move : best), { score: Infinity });
+  return moves.reduce(
+    (best, move) => (move.score < best.score ? move : best),
+    { score: Infinity }
+  );
 };
 
 const getMediumMove = (board, ai) => {
@@ -65,6 +71,7 @@ const getMediumMove = (board, ai) => {
 };
 
 const TicTacToe = () => {
+  const TURN_TIME = 10;
   const [board, setBoard] = useState(Array(9).fill(null));
   const [status, setStatus] = useState('Choose X or O');
   const [player, setPlayer] = useState(null);
@@ -74,6 +81,17 @@ const TicTacToe = () => {
   const [winningLine, setWinningLine] = useState([]);
   const [lastMove, setLastMove] = useState(null);
   const [score, setScore] = useState({ player: 0, ai: 0, draw: 0 });
+  const [timer, setTimer] = useState(TURN_TIME);
+  const [gameStart, setGameStart] = useState(null);
+  const [fastestWin, setFastestWin] = useState(null);
+  const cellRefs = useRef([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('tictactoe-fastest');
+      if (stored) setFastestWin(parseInt(stored, 10));
+    }
+  }, []);
 
   const startGame = (p) => {
     const a = p === 'X' ? 'O' : 'X';
@@ -86,6 +104,11 @@ const TicTacToe = () => {
     setWinningLine([]);
     setLastMove(null);
     setScore({ player: 0, ai: 0, draw: 0 });
+    setGameStart(Date.now());
+    setTimer(TURN_TIME);
+    setTimeout(() => {
+      cellRefs.current[0]?.focus();
+    }, 0);
   };
 
   const handleClick = (idx) => {
@@ -100,6 +123,30 @@ const TicTacToe = () => {
     setBoard(newBoard);
     setLastMove(idx);
     ReactGA.event({ category: 'TicTacToe', action: 'move', label: 'player' });
+    setTimer(TURN_TIME);
+  };
+
+  const makeAiMove = (currentBoard = board) => {
+    const available = currentBoard.map((v, i) => (v ? null : i)).filter((v) => v !== null);
+    let index;
+    if (difficulty === 'easy') {
+      index = available[Math.floor(Math.random() * available.length)];
+    } else if (difficulty === 'medium') {
+      index = getMediumMove(currentBoard, ai);
+    } else {
+      index = minimax(currentBoard, ai).index;
+    }
+    if (index !== undefined) {
+      const newBoard = currentBoard.slice();
+      newBoard[index] = ai;
+      setTimeout(() => {
+        setBoard(newBoard);
+        setLastMove(index);
+      }, 200);
+      setAiMoves((m) => m + 1);
+      ReactGA.event({ category: 'TicTacToe', action: 'move', label: 'ai' });
+    }
+    setTimer(TURN_TIME);
   };
 
   useEffect(() => {
@@ -109,6 +156,15 @@ const TicTacToe = () => {
       if (winner !== 'draw') {
         setWinningLine(line);
         confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+      }
+      if (winner === player && gameStart) {
+        const winTime = Date.now() - gameStart;
+        if (!fastestWin || winTime < fastestWin) {
+          setFastestWin(winTime);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('tictactoe-fastest', winTime.toString());
+          }
+        }
       }
       setStatus(
         winner === 'draw' ? "It's a draw" : winner === player ? 'You win!' : 'You lose!'
@@ -126,31 +182,35 @@ const TicTacToe = () => {
     const isXTurn = filled % 2 === 0;
     const aiTurn = (ai === 'X' && isXTurn) || (ai === 'O' && !isXTurn);
     if (aiTurn) {
-      const available = board.map((v, i) => (v ? null : i)).filter((v) => v !== null);
-      let index;
-      if (difficulty === 'easy') {
-        index = available[Math.floor(Math.random() * available.length)];
-      } else if (difficulty === 'medium') {
-        index = getMediumMove(board, ai);
-      } else if (aiMoves === 0) {
-        index = available[Math.floor(Math.random() * available.length)];
-      } else {
-        index = minimax(board, ai).index;
-      }
-      if (index !== undefined) {
-        const newBoard = board.slice();
-        newBoard[index] = ai;
-        setTimeout(() => {
-          setBoard(newBoard);
-          setLastMove(index);
-        }, 200);
-        setAiMoves((m) => m + 1);
-        ReactGA.event({ category: 'TicTacToe', action: 'move', label: 'ai' });
-      }
+      makeAiMove(board);
     } else {
       setStatus('Your turn');
     }
-  }, [board, player, ai, difficulty, aiMoves]);
+  }, [board, player, ai, difficulty, aiMoves, gameStart, fastestWin]);
+
+  useEffect(() => {
+    if (player === null || ai === null) return;
+    if (checkWinner(board).winner) return;
+    const filled = board.filter(Boolean).length;
+    const isXTurn = filled % 2 === 0;
+    const playerTurn = (player === 'X' && isXTurn) || (player === 'O' && !isXTurn);
+    if (playerTurn) {
+      setTimer(TURN_TIME);
+      const interval = setInterval(() => {
+        setTimer((t) => {
+          if (t <= 1) {
+            clearInterval(interval);
+            makeAiMove(board);
+            return TURN_TIME;
+          }
+          return t - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    } else {
+      setTimer(TURN_TIME);
+    }
+  }, [board, player, ai]);
 
   const restart = () => {
     setBoard(Array(9).fill(null));
@@ -158,6 +218,11 @@ const TicTacToe = () => {
     setWinningLine([]);
     setLastMove(null);
     setStatus(player === 'X' ? 'Your turn' : "AI's turn");
+    setTimer(TURN_TIME);
+    setGameStart(Date.now());
+    setTimeout(() => {
+      cellRefs.current[0]?.focus();
+    }, 0);
   };
 
   const reset = () => {
@@ -169,6 +234,8 @@ const TicTacToe = () => {
     setWinningLine([]);
     setLastMove(null);
     setScore({ player: 0, ai: 0, draw: 0 });
+    setTimer(TURN_TIME);
+    setGameStart(null);
   };
 
   const difficultySlider = (
@@ -234,6 +301,7 @@ const TicTacToe = () => {
         {board.map((cell, idx) => (
           <button
             key={idx}
+            ref={(el) => (cellRefs.current[idx] = el)}
             className={`h-20 w-20 text-4xl flex items-center justify-center bg-gray-700 hover:bg-gray-600 ${
               winningLine.includes(idx)
                 ? 'bg-green-600 animate-pulse'
@@ -248,6 +316,18 @@ const TicTacToe = () => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 handleClick(idx);
+              } else if (e.key === 'ArrowUp' && idx >= 3) {
+                e.preventDefault();
+                cellRefs.current[idx - 3]?.focus();
+              } else if (e.key === 'ArrowDown' && idx <= 5) {
+                e.preventDefault();
+                cellRefs.current[idx + 3]?.focus();
+              } else if (e.key === 'ArrowLeft' && idx % 3 !== 0) {
+                e.preventDefault();
+                cellRefs.current[idx - 1]?.focus();
+              } else if (e.key === 'ArrowRight' && idx % 3 !== 2) {
+                e.preventDefault();
+                cellRefs.current[idx + 1]?.focus();
               }
             }}
           >
@@ -256,7 +336,10 @@ const TicTacToe = () => {
         ))}
       </div>
       <div className="mb-2 text-sm">
-        Player: {score.player} | AI: {score.ai} | Draws: {score.draw}
+        Player: {score.player} | AI: {score.ai} | Draws: {score.draw} | Time: {timer}s
+      </div>
+      <div className="mb-2 text-xs">
+        Fastest win: {fastestWin ? (fastestWin / 1000).toFixed(1) : '--'}s
       </div>
       <div className="mb-4">{status}</div>
       <div className="flex space-x-4">
