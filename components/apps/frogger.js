@@ -132,6 +132,16 @@ const Frogger = () => {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
+  const [highestLevel, setHighestLevel] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = parseInt(
+        localStorage.getItem('frogger_highest_level') || '1',
+        10,
+      );
+      return Number.isNaN(stored) ? 1 : stored;
+    }
+    return 1;
+  });
   const [difficulty, setDifficulty] = useState('normal');
   const nextLife = useRef(500);
   const holdRef = useRef();
@@ -140,6 +150,11 @@ const Frogger = () => {
   useEffect(() => { carsRef.current = cars; }, [cars]);
   useEffect(() => { logsRef.current = logs; }, [logs]);
   useEffect(() => { padsRef.current = pads; }, [pads]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined')
+      localStorage.setItem('frogger_highest_level', String(highestLevel));
+  }, [highestLevel]);
 
   const moveFrog = (dx, dy) => {
     setFrog((prev) => {
@@ -281,6 +296,7 @@ const Frogger = () => {
           ReactGA.event({ category: 'Frogger', action: 'level_complete', value: level });
           const newLevel = level + 1;
           setLevel(newLevel);
+          setHighestLevel((h) => (newLevel > h ? newLevel : h));
           ReactGA.event({ category: 'Frogger', action: 'level_start', value: newLevel });
           setPads(PAD_POSITIONS.map(() => false));
           reset(false, difficulty, newLevel);
@@ -377,7 +393,9 @@ const Frogger = () => {
       className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4"
     >
       <div className="grid grid-cols-7 gap-1">{grid}</div>
-      <div className="mt-4">Score: {score} Lives: {lives}</div>
+      <div className="mt-4">
+        Score: {score} Lives: {lives} Level: {level} (Best: {highestLevel})
+      </div>
       <div className="mt-1">{status}</div>
       <div className="mt-2 flex items-center gap-2">
         <label htmlFor="difficulty">Difficulty:</label>
