@@ -296,3 +296,12 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 .reveal {
     animation: reveal 0.3s ease-out;
 }
+
+@keyframes errorFlash {
+    from { background-color: rgba(239, 68, 68, 0.9); }
+    to { background-color: transparent; }
+}
+
+.error-flash {
+    animation: errorFlash 0.3s ease-in-out;
+}
