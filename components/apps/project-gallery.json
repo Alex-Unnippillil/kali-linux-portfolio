@@ -1,0 +1,29 @@
+[
+  {
+    "id": "portfolio",
+    "title": "Portfolio Website",
+    "description": "Personal portfolio built with Next.js and Tailwind CSS.",
+    "image": "https://opengraph.githubassets.com/1/Alex-Unnippillil/unnippillil",
+    "tags": ["Next.js", "TailwindCSS", "React"],
+    "live": "https://unnippillil.com",
+    "repo": "https://github.com/Alex-Unnippillil/unnippillil"
+  },
+  {
+    "id": "tower-defense",
+    "title": "Tower Defense Game",
+    "description": "Browser tower defense game built with Phaser.",
+    "image": "https://opengraph.githubassets.com/1/Alex-Unnippillil/tower-defense",
+    "tags": ["Phaser", "JavaScript"],
+    "live": "https://example.com/tower-defense",
+    "repo": "https://github.com/Alex-Unnippillil/tower-defense"
+  },
+  {
+    "id": "quote-generator",
+    "title": "Quote Generator",
+    "description": "Random quote generator using vanilla JavaScript.",
+    "image": "https://opengraph.githubassets.com/1/Alex-Unnippillil/quotes",
+    "tags": ["JavaScript", "HTML", "CSS"],
+    "live": "https://example.com/quotes",
+    "repo": "https://github.com/Alex-Unnippillil/quotes"
+  }
+]
