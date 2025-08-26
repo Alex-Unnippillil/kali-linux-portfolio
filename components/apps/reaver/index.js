@@ -23,18 +23,29 @@ export default function ReaverApp() {
   const [pin, setPin] = useState('');
   const [log, setLog] = useState('');
   const [running, setRunning] = useState(false);
+  const [tries, setTries] = useState(0);
+  const [eta, setEta] = useState(null);
+  const totalTries = 5;
 
   const startAttack = () => {
     setRunning(true);
     setLog(`Starting WPS PIN attack on ${bssid}\n`);
-    let tries = 0;
+    setTries(0);
+    setEta(null);
+    const start = Date.now();
+    let attempt = 0;
     const interval = setInterval(() => {
-      tries += 1;
+      attempt += 1;
+      setTries(attempt);
       const guess = Math.floor(Math.random() * 1e8)
         .toString()
         .padStart(8, '0');
       setLog((prev) => `${prev}Trying PIN ${guess}\n`);
-      if (tries >= 5) {
+      const elapsed = (Date.now() - start) / 1000;
+      const rate = attempt / elapsed;
+      const remaining = Math.max((totalTries - attempt) / rate, 0);
+      setEta(remaining);
+      if (attempt >= totalTries) {
         clearInterval(interval);
         const result = derivePin(bssid);
         setLog((prev) =>
@@ -67,6 +78,20 @@ export default function ReaverApp() {
       >
         Start Attack
       </button>
+      {tries > 0 && (
+        <div className="mt-4">
+          <div className="h-4 w-full bg-gray-700 rounded">
+            <div
+              className="h-full bg-green-500 rounded transition-all duration-300"
+              style={{ width: `${(tries / totalTries) * 100}%` }}
+            />
+          </div>
+          <div className="text-sm mt-1">
+            {tries}/{totalTries} attempts
+            {eta !== null && ` – ~${eta.toFixed(1)}s remaining`}
+          </div>
+        </div>
+      )}
       {pin && (
         <div className="mt-4">
           <div className="mb-1">Discovered WPS PIN:</div>
