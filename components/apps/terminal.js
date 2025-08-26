@@ -3,6 +3,8 @@ import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import '@xterm/xterm/css/xterm.css';
+import usePersistentState from '../usePersistentState';
+import CommandDocsPanel from './command-docs-panel';
 
 
 const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
@@ -13,10 +15,10 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const commandRef = useRef('');
   const logRef = useRef('');
   const knownCommandsRef = useRef(
-    new Set(['pwd', 'cd', 'simulate', 'history', 'clear', 'help']),
+    new Set(['pwd', 'cd', 'simulate', 'history', 'clear', 'help', 'date', 'echo', 'ls']),
   );
-  const historyRef = useRef([]);
-  const historyIndexRef = useRef(0);
+  const [history, setHistory] = usePersistentState('terminal-history', []);
+  const historyIndexRef = useRef(history.length);
   const suggestionsRef = useRef([]);
   const suggestionIndexRef = useRef(0);
   const showingSuggestionsRef = useRef(false);
@@ -35,11 +37,30 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     if (first) {
       knownCommandsRef.current.add(first);
     }
+    let newHistory = history;
     if (trimmed) {
-      historyRef.current.push(trimmed);
+      newHistory = [...history, trimmed];
+      setHistory(newHistory);
     }
-    historyIndexRef.current = historyRef.current.length;
-    if (trimmed === 'pwd') {
+    historyIndexRef.current = newHistory.length;
+    if (
+      trimmed === 'simulate' ||
+      ['date', 'echo', 'ls'].some((cmd) => trimmed.startsWith(cmd))
+    ) {
+      termRef.current.writeln('');
+      if (workerRef.current) {
+        if (trimmed === 'simulate') {
+          termRef.current.writeln('Running heavy simulation...');
+          logRef.current += 'Running heavy simulation...\n';
+        }
+        workerRef.current.postMessage({ command: trimmed });
+      } else {
+        const msg = 'Web Workers are not supported in this environment.';
+        termRef.current.writeln(msg);
+        logRef.current += `${msg}\n`;
+        prompt();
+      }
+    } else if (trimmed === 'pwd') {
       termRef.current.writeln('');
       termRef.current.writeln('/home/alex');
       logRef.current += '/home/alex\n';
@@ -50,19 +71,6 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       termRef.current.writeln(`bash: cd: ${target}: No such file or directory`);
       logRef.current += `bash: cd: ${target}: No such file or directory\n`;
       prompt();
-    } else if (trimmed === 'simulate') {
-      termRef.current.writeln('');
-      if (workerRef.current) {
-        termRef.current.writeln('Running heavy simulation...');
-        logRef.current += 'Running heavy simulation...\n';
-        workerRef.current.postMessage({ command: 'simulate' });
-        // prompt will be called when worker responds
-      } else {
-        const msg = 'Web Workers are not supported in this environment.';
-        termRef.current.writeln(msg);
-        logRef.current += `${msg}\n`;
-        prompt();
-      }
     } else if (trimmed === 'clear') {
       termRef.current.clear();
       prompt();
@@ -74,9 +82,9 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       prompt();
     } else if (trimmed === 'history') {
       termRef.current.writeln('');
-      const history = historyRef.current.join('\n');
-      termRef.current.writeln(history);
-      logRef.current += `${history}\n`;
+      const historyText = newHistory.join('\n');
+      termRef.current.writeln(historyText);
+      logRef.current += `${historyText}\n`;
       prompt();
     } else if (trimmed.length === 0) {
       prompt();
@@ -86,7 +94,7 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       logRef.current += `Command '${trimmed}' not found\n`;
       prompt();
     }
-  }, [prompt]);
+  }, [prompt, history, setHistory]);
 
   const renderSuggestions = useCallback(() => {
     termRef.current.writeln('');
@@ -140,24 +148,24 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   }, [renderSuggestions]);
 
   const handleHistoryNav = useCallback((direction) => {
-    if (historyRef.current.length === 0) return;
+    if (history.length === 0) return;
     if (direction === 'up') {
       if (historyIndexRef.current > 0) {
         historyIndexRef.current -= 1;
       }
     } else if (direction === 'down') {
-      if (historyIndexRef.current < historyRef.current.length) {
+      if (historyIndexRef.current < history.length) {
         historyIndexRef.current += 1;
       }
     }
-    const cmd = historyRef.current[historyIndexRef.current] || '';
+    const cmd = history[historyIndexRef.current] || '';
     termRef.current.write('\x1b[2K\r');
     termRef.current.write(promptText);
     termRef.current.write(cmd);
     commandRef.current = cmd;
     suggestionsRef.current = [];
     showingSuggestionsRef.current = false;
-  }, []);
+  }, [history]);
 
   // Initialise terminal
   useEffect(() => {
@@ -248,7 +256,16 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     historyNav: handleHistoryNav,
   }));
 
-  return <div className="h-full w-full bg-ub-cool-grey" ref={containerRef} data-testid="xterm-container" />;
+  return (
+    <div className="flex h-full w-full">
+      <div
+        className="flex-1 bg-ub-cool-grey"
+        ref={containerRef}
+        data-testid="xterm-container"
+      />
+      <CommandDocsPanel />
+    </div>
+  );
 });
 
 Terminal.displayName = 'Terminal';
