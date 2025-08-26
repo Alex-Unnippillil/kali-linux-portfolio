@@ -21,46 +21,6 @@ const Sokoban: React.FC = () => {
   const [reach, setReach] = useState<Set<string>>(reachable(loadLevel(defaultLevels[0])));
   const [best, setBest] = useState<number | null>(null);
 
-  useEffect(() => {
-    logGameStart('sokoban');
-  }, []);
-
-  useEffect(() => {
-    const k = `sokoban-best-${index}`;
-    const b = localStorage.getItem(k);
-    setBest(b ? Number(b) : null);
-  }, [index]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (!directionKeys.includes(e.key as any)) return;
-      e.preventDefault();
-      const newState = move(state, e.key as any);
-      if (newState === state) return;
-      setState(newState);
-      setReach(reachable(newState));
-      if (newState.pushes > state.pushes) {
-        logEvent({ category: 'sokoban', action: 'push' });
-      }
-      if (isSolved(newState)) {
-        logGameEnd('sokoban', `level_complete`);
-        logEvent({
-          category: 'sokoban',
-          action: 'level_complete',
-          value: newState.pushes,
-        });
-        const bestKey = `sokoban-best-${index}`;
-        const prevBest = localStorage.getItem(bestKey);
-        if (!prevBest || newState.pushes < Number(prevBest)) {
-          localStorage.setItem(bestKey, String(newState.pushes));
-          setBest(newState.pushes);
-        }
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [state, index]);
-
   const selectLevel = (i: number) => {
     const st = loadLevel(levels[i]);
     setIndex(i);
@@ -99,6 +59,80 @@ const Sokoban: React.FC = () => {
       logGameError('sokoban', err?.message || String(err));
     }
   };
+
+  useEffect(() => {
+    logGameStart('sokoban');
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      if (code) {
+        let text = decodeURIComponent(code);
+        let parsed = parseLevels(text);
+        if (!parsed.length) {
+          try {
+            parsed = parseLevels(atob(text));
+          } catch {
+            parsed = [];
+          }
+        }
+        if (parsed.length) {
+          setLevels(parsed);
+          const st = loadLevel(parsed[0]);
+          setIndex(0);
+          setState(st);
+          setReach(reachable(st));
+        }
+      }
+    } catch (err: any) {
+      logGameError('sokoban', err?.message || String(err));
+    }
+  }, []);
+
+  useEffect(() => {
+    const k = `sokoban-best-${index}`;
+    const b = localStorage.getItem(k);
+    setBest(b ? Number(b) : null);
+  }, [index]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        handleReset();
+        return;
+      }
+      if (['u', 'U', 'z', 'Z', 'Backspace'].includes(e.key)) {
+        e.preventDefault();
+        handleUndo();
+        return;
+      }
+      if (!directionKeys.includes(e.key as any)) return;
+      e.preventDefault();
+      const newState = move(state, e.key as any);
+      if (newState === state) return;
+      setState(newState);
+      setReach(reachable(newState));
+      if (newState.pushes > state.pushes) {
+        logEvent({ category: 'sokoban', action: 'push' });
+      }
+      if (isSolved(newState)) {
+        logGameEnd('sokoban', `level_complete`);
+        logEvent({
+          category: 'sokoban',
+          action: 'level_complete',
+          value: newState.pushes,
+        });
+        const bestKey = `sokoban-best-${index}`;
+        const prevBest = localStorage.getItem(bestKey);
+        if (!prevBest || newState.pushes < Number(prevBest)) {
+          localStorage.setItem(bestKey, String(newState.pushes));
+          setBest(newState.pushes);
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [state, index]);
 
   const cellStyle = {
     width: CELL,
