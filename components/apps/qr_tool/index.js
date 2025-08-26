@@ -1,17 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import QrScanner from 'qr-scanner';
+import jsQR from 'jsqr';
 
 const QRTool = () => {
   const [text, setText] = useState('');
   const [decodedText, setDecodedText] = useState('');
-  const canvasRef = useRef(null);
+  const [message, setMessage] = useState('');
+  const generateCanvasRef = useRef(null);
+  const scanCanvasRef = useRef(null);
   const videoRef = useRef(null);
-  const scannerRef = useRef(null);
+  const animationRef = useRef(null);
 
   const generate = () => {
     if (!text) return;
-    QRCode.toCanvas(canvasRef.current, text, { width: 256 }, (err) => {
+    QRCode.toCanvas(generateCanvasRef.current, text, { width: 256 }, (err) => {
       if (err) console.error(err);
     });
   };
@@ -19,41 +21,72 @@ const QRTool = () => {
   const download = () => {
     const link = document.createElement('a');
     link.download = 'qr.png';
-    link.href = canvasRef.current.toDataURL('image/png');
+    link.href = generateCanvasRef.current.toDataURL('image/png');
     link.click();
   };
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    try {
-      const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true });
-      setDecodedText(result.data);
-    } catch (err) {
-      setDecodedText('No QR code found');
-    }
+    const img = new Image();
+    img.onload = () => {
+      const canvas = scanCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      setDecodedText(code ? code.data : 'No QR code found');
+    };
+    img.onerror = () => setDecodedText('Could not load image');
+    img.src = URL.createObjectURL(file);
   };
 
-  const startCamera = () => {
-    if (scannerRef.current) {
-      scannerRef.current.start();
-      return;
+  const scan = () => {
+    if (videoRef.current && scanCanvasRef.current) {
+      const canvas = scanCanvasRef.current;
+      const ctx = canvas.getContext('2d');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      if (code) {
+        setDecodedText(code.data);
+      }
     }
-    scannerRef.current = new QrScanner(
-      videoRef.current,
-      (result) => setDecodedText(result.data),
-      { returnDetailedScanResult: true }
-    );
-    scannerRef.current.start();
+    animationRef.current = requestAnimationFrame(scan);
+  };
+
+  const startCamera = async () => {
+    try {
+      setMessage('Requesting camera permission...');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+      });
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+      setMessage('Place the QR code within the square');
+      scan();
+    } catch (err) {
+      setMessage('Camera permission denied or unavailable');
+    }
   };
 
   const stopCamera = () => {
-    scannerRef.current?.stop();
+    const stream = videoRef.current?.srcObject;
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+      videoRef.current.srcObject = null;
+    }
+    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    setMessage('');
   };
 
   useEffect(() => {
     return () => {
-      scannerRef.current?.stop();
+      stopCamera();
     };
   }, []);
 
@@ -85,7 +118,7 @@ const QRTool = () => {
             Download
           </button>
         </div>
-        <canvas ref={canvasRef} className="bg-white w-full h-full" />
+        <canvas ref={generateCanvasRef} className="bg-white w-full h-full" />
 
       </div>
 
@@ -108,10 +141,17 @@ const QRTool = () => {
             Stop Camera
           </button>
         </div>
-        <video ref={videoRef} className="w-64 h-64 bg-black" aria-label="Camera preview" />
+        <div className="relative w-64 h-64 bg-black">
+          <video ref={videoRef} className="w-full h-full object-cover" aria-label="Camera preview" />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-40 h-40 border-2 border-green-500" />
+          </div>
+        </div>
+        {message && <p className="mt-2">{message}</p>}
         {decodedText && (
           <p className="mt-2 break-all">Decoded: {decodedText}</p>
         )}
+        <canvas ref={scanCanvasRef} className="hidden" />
       </div>
     </div>
   );
