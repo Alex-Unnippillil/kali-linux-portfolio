@@ -162,7 +162,18 @@ const Tetris = () => {
     if (!canMove(newBoard, next.shape, Math.floor(WIDTH / 2) - 2, 0)) {
       resetGame();
     }
-    }, [board, piece, pos, next, resetGame, highScore, level, maxLevel, setHighScore, setMaxLevel]);
+    }, [
+    board,
+    piece,
+    pos,
+    next,
+    resetGame,
+    highScore,
+    level,
+    maxLevel,
+    setHighScore,
+    setMaxLevel,
+  ]);
 
   const moveDown = useCallback(
     (soft = false) => {
@@ -272,8 +283,16 @@ const Tetris = () => {
         else if (action === 'hold') holdPiece();
         else if (action === 'settings') setShowSettings((s) => !s);
       },
-      [actionFromKey, hardDrop, holdPiece, move, moveDown, rotatePiece, setShowSettings]
-    );
+        [
+          actionFromKey,
+          hardDrop,
+          holdPiece,
+          move,
+          moveDown,
+          rotatePiece,
+          setShowSettings,
+        ]
+      );
 
   useEffect(() => {
     window.addEventListener('keydown', handleKey);
