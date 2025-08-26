@@ -4,6 +4,7 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
+import LazyImage from '../LazyImage';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
@@ -228,7 +229,13 @@ export default function YouTubeApp({ initialVideos = [] }) {
               >
                 <a href={video.url} target="_blank" rel="noreferrer" className="block">
                   {video.thumbnail && (
-                    <img src={video.thumbnail} alt={video.title} className="w-full" />
+                    <LazyImage
+                      src={video.thumbnail}
+                      srcSet={`${video.thumbnail} 1x, ${video.thumbnail} 2x`}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 200px"
+                      alt={video.title}
+                      className="w-full"
+                    />
                   )}
                   <div
                     className="p-2 font-semibold text-sm"

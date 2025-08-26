@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import LazyImage from './LazyImage';
 
 const BadgeList = ({ badges, className = '' }) => {
   const [filter, setFilter] = useState('');
@@ -19,10 +20,12 @@ const BadgeList = ({ badges, className = '' }) => {
       />
       <div className="flex flex-wrap justify-center items-start w-full">
         {filteredBadges.map((badge, idx) => (
-          <img
+          <LazyImage
             key={idx}
             className="m-1 hover:scale-110 transition-transform cursor-pointer"
             src={badge.src}
+            srcSet={`${badge.src} 1x, ${badge.src} 2x`}
+            sizes="(max-width: 768px) 20vw, 10vw"
             alt={badge.alt}
             title={badge.description || badge.label}
             onClick={() => setSelected(badge)}

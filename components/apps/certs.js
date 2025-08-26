@@ -1,4 +1,5 @@
 import React from 'react';
+import LazyImage from '../LazyImage';
 
 const Certs = () => {
   const certBadges = [
@@ -42,11 +43,22 @@ const Certs = () => {
       </ul>
       <div className="w-full md:w-10/12 flex flex-wrap justify-center items-center mt-4">
         <a href="https://data.typeracer.com/pit/profile?user=ulexa&ref=badge" target="_blank" rel="noopener noreferrer" className="m-2">
-          <img src="https://data.typeracer.com/misc/badge?user=ulexa" alt="TypeRacer.com scorecard for user ulexa" />
+          <LazyImage
+            src="https://data.typeracer.com/misc/badge?user=ulexa"
+            srcSet="https://data.typeracer.com/misc/badge?user=ulexa 1x, https://data.typeracer.com/misc/badge?user=ulexa 2x"
+            sizes="(max-width: 768px) 50vw, 128px"
+            alt="TypeRacer.com scorecard for user ulexa"
+          />
         </a>
         {certBadges.map((badge) => (
           <a key={badge.href} href={badge.href} target="_blank" rel="noopener noreferrer" className="m-2">
-            <img src={badge.src} alt={badge.alt} className="w-24 h-24 md:w-28 md:h-28" />
+            <LazyImage
+              src={badge.src}
+              srcSet={`${badge.src} 1x, ${badge.src} 2x`}
+              sizes="(max-width: 768px) 25vw, 7rem"
+              alt={badge.alt}
+              className="w-24 h-24 md:w-28 md:h-28"
+            />
           </a>
         ))}
       </div>
