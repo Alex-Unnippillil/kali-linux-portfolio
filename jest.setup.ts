@@ -20,9 +20,9 @@ global.Image = ImageMock as unknown as typeof Image;
 HTMLCanvasElement.prototype.getContext = () => ({
   fillRect: () => {},
   clearRect: () => {},
-  getImageData: () => ({ data: [] }),
+  getImageData: () => ({ data: new Uint8ClampedArray() } as ImageData),
   putImageData: () => {},
-  createImageData: () => [],
+  createImageData: () => new ImageData(0, 0),
   setTransform: () => {},
   drawImage: () => {},
   save: () => {},
@@ -37,11 +37,11 @@ HTMLCanvasElement.prototype.getContext = () => ({
   rotate: () => {},
   arc: () => {},
   fill: () => {},
-  measureText: () => ({ width: 0 }),
+  measureText: () => ({ width: 0 } as TextMetrics),
   transform: () => {},
   rect: () => {},
   clip: () => {},
-  createLinearGradient: () => ({ addColorStop: () => {} }),
+  createLinearGradient: () => ({ addColorStop: () => {} } as unknown as CanvasGradient),
 });
 
 // Basic matchMedia mock for libraries that expect it
