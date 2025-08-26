@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import useGameControls from './useGameControls';
 
 const ROWS = 6;
 const COLS = 7;
@@ -9,6 +8,54 @@ const SLOT = CELL_SIZE + GAP;
 const ANIM_MS = 300;
 
 const createEmptyBoard = () => Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+
+const useColumnControls = (cols, onDrop) => {
+  const [selected, setSelected] = useState(0);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'ArrowLeft') {
+        setSelected((s) => (s - 1 + cols) % cols);
+      } else if (e.key === 'ArrowRight') {
+        setSelected((s) => (s + 1) % cols);
+      } else if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+        onDrop(selected);
+      } else {
+        const num = parseInt(e.key, 10);
+        if (!Number.isNaN(num) && num >= 1 && num <= cols) onDrop(num - 1);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [cols, selected, onDrop]);
+
+  useEffect(() => {
+    let startX = 0;
+    let startY = 0;
+    const start = (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    };
+    const end = (e) => {
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30) {
+        if (dx > 0) setSelected((s) => (s + 1) % cols);
+        else setSelected((s) => (s - 1 + cols) % cols);
+      } else if (Math.abs(dx) < 30 && Math.abs(dy) < 30) {
+        onDrop(selected);
+      }
+    };
+    window.addEventListener('touchstart', start);
+    window.addEventListener('touchend', end);
+    return () => {
+      window.removeEventListener('touchstart', start);
+      window.removeEventListener('touchend', end);
+    };
+  }, [cols, selected, onDrop]);
+
+  return [selected, setSelected];
+};
 
 const getValidRow = (board, col) => {
   for (let r = ROWS - 1; r >= 0; r--) {
@@ -157,14 +204,30 @@ const ConnectFour = () => {
   const [scores, setScores] = useState({ red: 0, yellow: 0 });
   const [depth, setDepth] = useState(4);
   const [animDisc, setAnimDisc] = useState(null);
-  const [selectedCol, setSelectedCol] = useGameControls(COLS, (col) => dropDisc(col));
+  const [history, setHistory] = useState([]);
+  const [best, setBest] = useState(0);
+  const [selectedCol, setSelectedCol] = useColumnControls(COLS, (col) => dropDisc(col));
+
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('connect4Best') : null;
+    if (stored) setBest(parseInt(stored, 10));
+  }, []);
 
   const finalizeMove = (newBoard, color) => {
     const winCells = checkWinner(newBoard, color);
     if (winCells) {
       setWinner(color);
       setWinningCells(winCells);
-      setScores((s) => ({ ...s, [color]: s[color] + 1 }));
+      setScores((s) => {
+        const updated = { ...s, [color]: s[color] + 1 };
+        if (color === 'red' && updated.red > best) {
+          setBest(updated.red);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('connect4Best', String(updated.red));
+          }
+        }
+        return updated;
+      });
     } else if (isBoardFull(newBoard)) {
       setWinner('draw');
     } else {
@@ -179,6 +242,16 @@ const ConnectFour = () => {
     if (winner || animDisc) return;
     const row = getValidRow(board, col);
     if (row === -1) return;
+    setHistory((h) => [
+      ...h,
+      {
+        board: board.map((r) => [...r]),
+        player,
+        winner,
+        winningCells,
+        scores,
+      },
+    ]);
     setAnimDisc({ col, row, color, y: -1 });
     setTimeout(() => {
       setAnimDisc((d) => ({ ...d, y: row }));
@@ -197,11 +270,27 @@ const ConnectFour = () => {
     if (column !== undefined) dropDisc(column, 'yellow');
   };
 
+  const undo = () => {
+    if (animDisc || history.length === 0) return;
+    const newHist = [...history];
+    let prev = newHist.pop();
+    if (prev.player === 'yellow' && newHist.length) {
+      prev = newHist.pop();
+    }
+    setBoard(prev.board);
+    setPlayer(prev.player);
+    setWinner(prev.winner);
+    setWinningCells(prev.winningCells);
+    setScores(prev.scores);
+    setHistory(newHist);
+  };
+
   const rematch = () => {
     setBoard(createEmptyBoard());
     setWinner(null);
     setWinningCells([]);
     setPlayer('red');
+    setHistory([]);
   };
 
   return (
@@ -209,19 +298,18 @@ const ConnectFour = () => {
       <div className="mb-2 flex gap-4 items-center">
         <div>Red: {scores.red}</div>
         <div>Yellow: {scores.yellow}</div>
-        <div>
+        <div>Best: {best}</div>
+        <div className="flex items-center">
           Depth:
-          <select
-            className="ml-1 bg-gray-700"
+          <input
+            type="range"
+            min="1"
+            max="6"
             value={depth}
             onChange={(e) => setDepth(parseInt(e.target.value, 10))}
-          >
-            {[1, 2, 3, 4, 5].map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
+            className="ml-2"
+          />
+          <span className="ml-2">{depth}</span>
         </div>
       </div>
       {winner && (
@@ -270,12 +358,20 @@ const ConnectFour = () => {
           </div>
         )}
       </div>
-      <button
-        className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={rematch}
-      >
-        Rematch
-      </button>
+      <div className="mt-4 flex gap-2">
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={undo}
+        >
+          Undo
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={rematch}
+        >
+          Rematch
+        </button>
+      </div>
     </div>
   );
 };
