@@ -1,91 +1,338 @@
-# Kali Linux Portfolio
+# Kali Linux Portfolio (Ubuntu-style Desktop)
 
-- [Getting Started](docs/getting-started.md)
-- [Architecture](docs/architecture.md)
+A desktop-style portfolio built with Next.js and Tailwind that emulates a Kali/Ubuntu UI with windows, a dock, context menus, and a rich catalog of **security-tool simulations**, **utilities**, and **retro games**. This README is tailored for a professional full-stack engineer preparing **production deployment** and ongoing maintenance.
 
-## Adding New Apps
+> Repo homepage: https://unnippillil.com/
 
-Heavy applications should be loaded with [`next/dynamic`](https://nextjs.org/docs/advanced-features/dynamic-import) so that they do not bloat the initial bundle.
+---
 
-```js
-import dynamic from 'next/dynamic';
-import ReactGA from 'react-ga4';
+## Quick Start
 
-const MyApp = dynamic(() =>
-    import('./components/apps/my-app').then(mod => {
-        ReactGA.event({ category: 'Application', action: 'Loaded My App' });
-        return mod.default;
-    }), {
-        ssr: false,
-        loading: () => (
-            <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-                Loading My App...
-            </div>
-        ),
-    }
-);
+### Requirements
+- **Node.js 20.x**
+- **Yarn** or **npm**
+- Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
-const displayMyApp = (addFolder, openApp) => (
-    <MyApp addFolder={addFolder} openApp={openApp} />
-);
+### Install & Run (Dev)
+```bash
+yarn install
+yarn dev
 ```
 
-Add the `displayMyApp` function to `apps.config.js` and reference it in the `apps` array to make the app available to the desktop.
+### Production Build
+```bash
+# Next.js production build & start
+yarn build
+yarn start
+```
 
-## Adding New Games
+### Static Export (for GitHub Pages / S3 Websites)
+This project supports static export. Serverless API routes will not be available in a static export; the UI gracefully degrades.
+```bash
+yarn export        # outputs to ./out
+```
 
-Games are organized in `apps.config.js` using a `games` array that mirrors the structure of the main `apps` list. Each game entry defines metadata such as an `id`, `title`, `icon`, and the component used to render the game.
+---
 
-To introduce a new game:
+## Tech Stack
 
-1. **Icon** – Add the game's icon to `public/themes/Yaru/apps/` and reference it with a relative path like `./themes/Yaru/apps/my-game.png`.
-2. **Dynamic import** – Create the game component in `components/apps/` and load it with `next/dynamic` to keep the initial bundle small:
+- **Next.js 15** (app uses `/pages` routing) + **TypeScript** in parts
+- **Tailwind CSS** with custom Ubuntu/Kali theme tokens (`styles/index.css`, `tailwind.config.js`)
+- **React GA4** via a thin wrapper in `utils/analytics.ts`
+- **Vercel Analytics** (`@vercel/analytics`)
+- **EmailJS** for the contact (“Gedit”) app
+- Client-side only **simulations** of security tools (no real exploitation)
+- A large set of games rendered in-browser (Canvas/DOM), with a shared `GameLayout`
 
-    ```js
-    const MyGame = dynamic(() =>
-      import('./components/apps/my-game').then(mod => {
-        ReactGA.event({ category: 'Application', action: 'Loaded My Game' });
-        return mod.default;
-      }), {
-        ssr: false,
-        loading: () => (
-          <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-            Loading My Game...
-          </div>
-        ),
-      }
-    );
+---
 
-    const displayMyGame = (addFolder, openApp) => (
-      <MyGame addFolder={addFolder} openApp={openApp} />
-    );
-    ```
+## App Shell & Architecture
 
-3. **Register** – Append the game's configuration object to the `games` array:
+```
+pages/
+  _app.tsx               # global providers (Legal banner, GA init, Vercel Analytics)
+  _document.tsx
+  index.tsx              # mounts <Ubuntu />
+  api/                   # (dev/server) stub routes for demo-only features
+  apps/                  # a few example pages
 
-    ```js
-    games.push({
-      id: 'my-game',
-      title: 'My Game',
-      icon: './themes/Yaru/apps/my-game.png',
-      screen: displayMyGame,
-    });
-    ```
+components/
+  ubuntu.tsx             # state: boot, lock, desktop; wires screens & navbar
+  base/                  # window system, app base component
+  screen/                # booting_screen, desktop, lock_screen, navbar
+  apps/                  # the catalog (games, utilities, “security” sims, media)
+  SEO/Meta.js            # meta tags and JSON-LD
+  util-components/       # shared UI helpers
 
-The new game will then appear alongside the other games on the desktop.
+public/
+  images/                # wallpapers, icons
+  apps/platformer/       # static assets for games
+  chess/, checkers-worker.js, …
 
-## Privacy
+hooks/
+  usePersistentState.ts, useAssetLoader.ts, useCanvasResize.ts, …
 
-The contact application records only non-PII metadata in Google Analytics.
-Submissions trigger an event with `{ category: "contact", action: "submit_success" }`, and the free-text fields (name, subject, message) are never sent to analytics.
+pages/api/
+  hydra.js, john.js, metasploit.js, radare2.js   # demo stubs (disabled in static export)
 
-## Required CI Secrets
+__tests__/
+  *.test.(ts|tsx|js)      # smoke tests & per-app logic tests
 
-The GitHub Actions workflow relies on the following secrets configured in the repository settings:
+.github/workflows/
+  gh-deploy.yml           # GitHub Pages export pipeline
+```
 
-- `NEXT_PUBLIC_TRACKING_ID`
-- `NEXT_PUBLIC_SERVICE_ID`
-- `NEXT_PUBLIC_TEMPLATE_ID`
-- `NEXT_PUBLIC_USER_ID`
+**Windowing model.** The desktop (`components/screen/desktop.js`) manages:
+- z-ordering and focus of windows
+- global context menus (`components/context-menus/`)
+- favorites vs “All Applications” grid
+- analytics events for user actions
 
-These secrets provide the values for the corresponding environment variables during the build step.
+**App registry.** `apps.config.js` registers apps using dynamic imports to keep the initial bundle lean:
+```ts
+import dynamic from 'next/dynamic';
+
+const SudokuApp = dynamic(() => import('./components/apps/sudoku'));
+export const displaySudoku = () => <SudokuApp />;
+```
+Heavy apps are wrapped with **dynamic import** and most games share a `GameLayout` with a help overlay.
+
+---
+
+## Environment Variables
+
+| Name | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_TRACKING_ID` | GA4 measurement ID (e.g., `G-XXXXXXX`). |
+| `NEXT_PUBLIC_SERVICE_ID` | EmailJS service id. |
+| `NEXT_PUBLIC_TEMPLATE_ID` | EmailJS template id. |
+| `NEXT_PUBLIC_USER_ID` | EmailJS public key / user id. |
+| `NEXT_PUBLIC_YOUTUBE_API_KEY` | Used by the YouTube app for search/embed enhancements. |
+| `NEXT_PUBLIC_BEEF_URL` | Optional URL for the BeEF demo iframe (if used). |
+| `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
+| `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
+
+> In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
+
+---
+
+## Security Headers & CSP
+
+Defined in `next.config.js`:
+
+- **Content-Security-Policy (CSP)** (string built from `ContentSecurityPolicy[]`)
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- `X-Frame-Options: SAMEORIGIN`
+
+**Notes for prod hardening**
+- The sample CSP currently **permits wide `connect-src` and `frame-src`** to enable sandboxed iframes (Chrome app) and demos. In production, **tighten** these to the exact domains you embed. Remove `http:` origins; prefer `https:` only.
+- Consider removing `'unsafe-inline'` from `style-src` once all inline styles are eliminated.
+- If deploying on a domain that serves a PDF resume via `<object>`, keep `X-Frame-Options: SAMEORIGIN`. Otherwise you can rely on CSP `frame-ancestors` instead.
+
+---
+
+## CI/CD
+
+### GitHub Pages (static)
+Workflow: `.github/workflows/gh-deploy.yml`:
+- Installs Node, runs `yarn build && yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
+- **Action item:** update matrix to **Node 20.x** to match `package.json`.
+- Exposes env via repo **Secrets**:
+  - `NEXT_PUBLIC_TRACKING_ID`, `NEXT_PUBLIC_SERVICE_ID`, `NEXT_PUBLIC_TEMPLATE_ID`, `NEXT_PUBLIC_USER_ID`.
+
+### Vercel (serverless) - optional
+- Create a Vercel project, set the environment variables above.
+- Build command: `yarn build`
+- Output: Next.js (serverless by default on Vercel).
+- If you keep API routes, Vercel will deploy them as serverless functions. If you go **static** on Vercel, disable API routes or feature-flag those apps.
+
+### Docker (self-hosted) - optional
+```Dockerfile
+# node:20-alpine
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
+COPY . .
+RUN yarn build
+
+FROM node:20-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app ./
+EXPOSE 3000
+CMD ["yarn","start","-p","3000"]
+```
+
+---
+
+## Testing
+
+Jest is configured via `jest.config.js` with a **jsdom** environment and helpers in `jest.setup.ts`:
+- Mocks for `Image`, `OffscreenCanvas`, `AudioContext`, `Worker`, etc.
+- `__tests__/apps.smoke.test.tsx` dynamically imports each app and renders it to catch runtime errors.
+- Per-app logic tests (e.g., `blackjack.test.ts`, `sokoban.test.ts`, `nonogram.test.ts`).
+
+Commands:
+```bash
+yarn test
+yarn test:watch
+yarn lint
+```
+
+---
+
+## Feature Overview
+
+### Utilities & Media
+| App | Route | Category |
+| --- | --- | --- |
+| Alex | /apps/alex | Utility / Media |
+| Chrome | /apps/chrome | Utility / Media |
+| Vscode | /apps/vscode | Utility / Media |
+| Spotify | /apps/spotify | Utility / Media |
+| Youtube | /apps/youtube | Utility / Media |
+| Weather | /apps/weather | Utility / Media |
+| X / Twitter | /apps/x | Utility / Media |
+| Todoist | /apps/todoist | Utility / Media |
+| Gedit | /apps/gedit | Utility / Media |
+| Settings | /apps/settings | Utility / Media |
+| Trash | /apps/trash | Utility / Media |
+| Project Gallery | /apps/project-gallery | Utility / Media |
+| Quote_Generator | /apps/quote_generator | Utility / Media |
+
+### Games
+| Game | Route | Category |
+| --- | --- | --- |
+| 2048 | /apps/2048 | Game |
+| Asteroids | /apps/asteroids | Game |
+| Battleship | /apps/battleship | Game |
+| Blackjack | /apps/blackjack | Game |
+| Breakout | /apps/breakout | Game |
+| Candy Crush | /apps/candy-crush | Game |
+| Car Racer | /apps/car-racer | Game |
+| Checkers | /apps/checkers | Game |
+| Chess | /apps/chess | Game |
+| Connect Four | /apps/connect-four | Game |
+| Flappy Bird | /apps/flappy-bird | Game |
+| Frogger | /apps/frogger | Game |
+| Gomoku | /apps/gomoku | Game |
+| Hangman | /apps/hangman | Game |
+| Memory | /apps/memory | Game |
+| Minesweeper | /apps/minesweeper | Game |
+| Nonogram | /apps/nonogram | Game |
+| Pacman | /apps/pacman | Game |
+| Pinball | /apps/pinball | Game |
+| Platformer | /apps/platformer | Game |
+| Pong | /apps/pong | Game |
+| Reversi | /apps/reversi | Game |
+| Simon | /apps/simon | Game |
+| Snake | /apps/snake | Game |
+| Sokoban | /apps/sokoban | Game |
+| Solitaire | /apps/solitaire | Game |
+| Space Invaders | /apps/space-invaders | Game |
+| Sudoku | /apps/sudoku | Game |
+| Tetris | /apps/tetris | Game |
+| Tic Tac Toe | /apps/tictactoe | Game |
+| Tower Defense | /apps/tower-defense | Game |
+| Word Search | /apps/word-search | Game |
+| Wordle | /apps/wordle | Game |
+
+### Security Tools (Simulated)
+| Tool | Route | Category |
+| --- | --- | --- |
+| Autopsy | /apps/autopsy | Security Tool (simulated) |
+| BeEF | /apps/beef | Security Tool (simulated) |
+| Bluetooth Tools | /apps/bluetooth | Security Tool (simulated) |
+| dsniff | /apps/dsniff | Security Tool (simulated) |
+| Ettercap | /apps/ettercap | Security Tool (simulated) |
+| Ghidra | /apps/ghidra | Security Tool (simulated) |
+| Hashcat | /apps/hashcat | Security Tool (simulated) |
+| Hydra | /apps/hydra | Security Tool (simulated) |
+| John the Ripper | /apps/john | Security Tool (simulated) |
+| Kismet | /apps/kismet | Security Tool (simulated) |
+| Metasploit | /apps/metasploit | Security Tool (simulated) |
+| Metasploit Post | /apps/msf-post | Security Tool (simulated) |
+| Mimikatz | /apps/mimikatz | Security Tool (simulated) |
+| Nessus | /apps/nessus | Security Tool (simulated) |
+| Nmap NSE | /apps/nmap-nse | Security Tool (simulated) |
+| OpenVAS | /apps/openvas | Security Tool (simulated) |
+| Radare2 | /apps/radare2 | Security Tool (simulated) |
+| Reaver | /apps/reaver | Security Tool (simulated) |
+| Recon-ng | /apps/reconng | Security Tool (simulated) |
+| Volatility | /apps/volatility | Security Tool (simulated) |
+| Wireshark | /apps/wireshark | Security Tool (simulated) |
+
+> All security apps are **non-operational simulations** intended for education/demos. They **do not** execute exploits and should not be used for any unauthorized activity.
+
+---
+
+## Notable Components
+
+- **`components/base/window.js`** - draggable, focusable window with header controls; integrates with desktop z-index.
+- **`components/screen/*`** - lock screen, boot splash, navbar, app grid.
+- **`hooks/usePersistentState.ts`** - localStorage-backed state with validation + reset helper.
+- **`components/apps/GameLayout.tsx`** - standardized layout and help toggle for games.
+- **`components/LegalBanner.tsx`** - prominent legal/ethical disclaimer (always on in `_app.tsx`).
+
+---
+
+## Adding a New App
+
+1. Create your component under `components/apps/my-app/index.tsx`.
+2. Register it in `apps.config.js` using dynamic import:
+   ```ts
+   const MyApp = dynamic(() => import('./components/apps/my-app'));
+   export const displayMyApp = () => <MyApp />;
+   ```
+3. Add metadata (icon, title) where appropriate.
+4. If the app needs persistent state, use `usePersistentState(key, initial, validator)`.
+5. If the app embeds external sites, **whitelist** the domain in `next.config.js` CSP (`connect-src`, `frame-src`, `img-src`) and `images.domains`.
+
+---
+
+## Production Hardening Checklist
+
+- [ ] **Pin Node to 20.x** across runtime and CI.
+- [ ] **Tighten CSP** (`connect-src`, `frame-src`, remove `http:` and `'unsafe-inline'`).
+- [ ] **Set env vars** in the hosting platform; rotate EmailJS keys regularly.
+- [ ] **Disable/flag API demo routes** for production or protect behind feature flags.
+- [ ] **Rate-limit** any future server routes; validate and sanitize inputs.
+- [ ] **Turn on HTTPS/HSTS** at the edge (Vercel / CDN / reverse proxy).
+- [ ] **Monitor** with GA4 and server logs; track errors (consider Sentry).
+- [ ] **Accessibility pass** (semantic labels, focus order, contrast); fix any Lighthouse issues.
+- [ ] **Perf budget** for initial JS; keep heavy apps dynamically imported and idle-loaded.
+- [ ] **Backup** any hosted static assets (wallpapers, levels, JSON data).
+
+---
+
+## Known Constraints
+
+- **Static export** disables Next API routes; security/demo apps requiring `/api/*` will be stubbed client-side.
+- Some embeds (e.g., arbitrary external sites in the **Chrome** app) may refuse to render in iframes due to **X-Frame-Options** or CSP set by the target site.
+
+---
+
+## License
+
+See [`LICENSE`](./LICENSE).
+
+---
+
+*Generated on 2025-08-26*
+
+
+---
+
+## NPM/Yarn Scripts
+
+- `dev` → `next dev`
+- `build` → `next build`
+- `start` → `next start`
+- `export` → `next export`
+- `test` → `jest`
+- `test:watch` → `jest --watch`
+- `lint` → `next lint`
+
