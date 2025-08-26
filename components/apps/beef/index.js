@@ -8,6 +8,8 @@ export default function Beef() {
   const [modules, setModules] = useState([]);
   const [output, setOutput] = useState('');
   const [showHelp, setShowHelp] = useState(false);
+  const [simulate, setSimulate] = useState(false);
+  const [logs, setLogs] = useState([]);
 
   const baseUrl = process.env.NEXT_PUBLIC_BEEF_URL || 'http://127.0.0.1:3000';
 
@@ -48,6 +50,17 @@ export default function Beef() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!simulate) return;
+    const id = setInterval(() => {
+      setLogs((prev) => [
+        ...prev.slice(-49),
+        `[${new Date().toLocaleTimeString()}] Simulated hook heartbeat`,
+      ]);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [simulate]);
+
   const runModule = async () => {
     if (!selected || !moduleId) return;
     setOutput('');
@@ -81,13 +94,22 @@ export default function Beef() {
       <div className="w-1/3 border-r border-gray-700 overflow-y-auto">
         <div className="flex items-center justify-between p-2">
           <h2 className="font-bold">Hooked Browsers</h2>
-          <button
-            type="button"
-            className="px-2 py-1 bg-ub-gray-50 text-black rounded"
-            onClick={fetchHooks}
-          >
-            Refresh
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="px-2 py-1 bg-ub-gray-50 text-black rounded"
+              onClick={fetchHooks}
+            >
+              Refresh
+            </button>
+            <button
+              type="button"
+              className={`px-2 py-1 rounded ${simulate ? 'bg-red-500' : 'bg-ub-gray-50 text-black'}`}
+              onClick={() => setSimulate((s) => !s)}
+            >
+              {simulate ? 'Stop' : 'Simulate Hook'}
+            </button>
+          </div>
         </div>
         <ul>
           {hooks.map((hook) => (
@@ -104,6 +126,37 @@ export default function Beef() {
         </ul>
       </div>
       <div className="flex-1 p-4 overflow-y-auto">
+        <div className="mb-4 text-sm">
+          <p>
+            BeEF hooks a browser by injecting a small script that keeps a
+            persistent connection open. The framework then queues and receives
+            commands through this &quot;hook&quot; channel, letting testers control the
+            client.
+          </p>
+          <iframe
+            src="https://beefproject.com"
+            title="BeEF demo"
+            className="w-full h-40 mt-2 border-0"
+          />
+          <p className="mt-2 text-xs">
+            Read the{' '}
+            <a
+              href="https://github.com/beefproject/beef/wiki"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ub-primary underline"
+            >
+              official BeEF documentation
+            </a>{' '}
+            for deeper coverage of hook mechanics and modules.
+          </p>
+        </div>
+        {simulate && logs.length > 0 && (
+          <div className="mb-4">
+            <h3 className="font-bold">Simulated Hook Log</h3>
+            <pre className="whitespace-pre-wrap text-xs bg-black p-2 rounded h-32 overflow-y-auto">{logs.join('\n')}</pre>
+          </div>
+        )}
         {selected ? (
           <>
             <div className="mb-2">
