@@ -2,6 +2,8 @@ import React, { useEffect, useRef, forwardRef, useImperativeHandle, useCallback 
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
+import '@xterm/xterm/css/xterm.css';
+
 
 
 const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
