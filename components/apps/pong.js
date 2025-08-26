@@ -1,6 +1,50 @@
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
-import useGameControls from './useGameControls';
+
+// Local hook to manage paddle controls via keyboard and touch
+const usePaddleControls = (canvasRef, onChange) => {
+  const stateRef = useRef({ up: false, down: false, touchY: null });
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowUp') stateRef.current.up = true;
+      if (e.key === 'ArrowDown') stateRef.current.down = true;
+      if (onChange) onChange(stateRef.current);
+    };
+    const handleKeyUp = (e) => {
+      if (e.key === 'ArrowUp') stateRef.current.up = false;
+      if (e.key === 'ArrowDown') stateRef.current.down = false;
+      if (onChange) onChange(stateRef.current);
+    };
+
+    const canvas = canvasRef.current;
+    const handleTouch = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      stateRef.current.touchY = e.touches[0].clientY - rect.top;
+      if (onChange) onChange(stateRef.current);
+    };
+    const handleTouchEnd = () => {
+      stateRef.current.touchY = null;
+      if (onChange) onChange(stateRef.current);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    canvas.addEventListener('touchstart', handleTouch);
+    canvas.addEventListener('touchmove', handleTouch);
+    canvas.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      canvas.removeEventListener('touchstart', handleTouch);
+      canvas.removeEventListener('touchmove', handleTouch);
+      canvas.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [canvasRef, onChange]);
+
+  return stateRef;
+};
 
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
@@ -27,8 +71,10 @@ const Pong = () => {
   const [offerSDP, setOfferSDP] = useState('');
   const [answerSDP, setAnswerSDP] = useState('');
   const [connected, setConnected] = useState(false);
+  const [longestRally, setLongestRally] = useState(0);
+  const longestRallyRef = useRef(0);
 
-  const controls = useGameControls(canvasRef, (state) => {
+  const controls = usePaddleControls(canvasRef, (state) => {
     if (mode === 'online' && channelRef.current) {
       channelRef.current.send(
         JSON.stringify({
@@ -36,6 +82,7 @@ const Pong = () => {
           frame: frameRef.current + 1,
           up: state.up,
           down: state.down,
+          touchY: state.touchY,
         })
       );
     }
@@ -79,6 +126,7 @@ const Pong = () => {
     let playerScore = 0;
     let oppScore = 0;
     const remoteKeys = { up: false, down: false, touchY: null };
+    let rally = 0;
 
     let animationId;
     let lastTime = performance.now();
@@ -140,6 +188,9 @@ const Pong = () => {
       opponent.y = height / 2 - paddleHeight / 2;
       player.rot = 0;
       opponent.rot = 0;
+      longestRallyRef.current = 0;
+      setLongestRally(0);
+      rally = 0;
 
       resetBall();
     };
@@ -270,12 +321,13 @@ const Pong = () => {
       const paddleCollision = (pad, dir) => {
         const padCenter = pad.y + paddleHeight / 2;
         const relative = (ball.y - padCenter) / (paddleHeight / 2);
-        // add spin based on paddle velocity and impact point
+        const spin = pad.vy * 0.3; // spin imparted by paddle movement
         ball.vx = Math.abs(ball.vx) * dir;
-        ball.vy += pad.vy * 0.1 + relative * 200;
+        ball.vy += spin + relative * 200;
         pad.scale = 1.2;
         pad.rot = relative * 0.3;
         ball.scale = 1.2;
+        rally += 1;
       };
 
       if (
@@ -300,10 +352,20 @@ const Pong = () => {
 
       // scoring
       if (ball.x < 0) {
+        if (rally > longestRallyRef.current) {
+          longestRallyRef.current = rally;
+          setLongestRally(rally);
+        }
+        rally = 0;
         oppScore += 1;
         setScores({ player: playerScore, opponent: oppScore });
         resetBall(1);
       } else if (ball.x > width) {
+        if (rally > longestRallyRef.current) {
+          longestRallyRef.current = rally;
+          setLongestRally(rally);
+        }
+        rally = 0;
         playerScore += 1;
         setScores({ player: playerScore, opponent: oppScore });
         resetBall(-1);
@@ -348,9 +410,10 @@ const Pong = () => {
     const handleMessage = (event) => {
       const msg = JSON.parse(event.data);
       if (msg.type === 'input') {
-        const { frame: f, up, down } = msg;
+        const { frame: f, up, down, touchY } = msg;
         remoteKeys.up = up;
         remoteKeys.down = down;
+        remoteKeys.touchY = touchY ?? null;
         if (f < frame) {
           // rollback to remote frame and resimulate
           if (loadState(f)) {
@@ -442,6 +505,7 @@ const Pong = () => {
       />
       <div className="mt-2">Player: {scores.player} | Opponent: {scores.opponent}</div>
       <div className="mt-1">Games: {match.player} | {match.opponent}</div>
+      <div className="mt-1">Longest Rally: {longestRally}</div>
       {matchWinner && (
         <div className="mt-1 text-lg">Winner: {matchWinner}</div>
       )}
