@@ -304,6 +304,7 @@ const Frogger = () => {
   // Only include dynamic values to prevent unnecessary re-renders
   }, [difficulty, level, loseLife, reset]);
 
+
   useEffect(() => {
     if (score >= nextLife.current) {
       setLives((l) => l + 1);
