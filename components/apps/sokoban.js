@@ -190,6 +190,7 @@ const Sokoban = () => {
   }, [player]);
 
   const firstLoad = useRef(true);
+  const levelDepsRef = useRef({ levelIndex: null, levels: null });
   useEffect(() => {
     const stored = localStorage.getItem('sokoban-best-moves');
     if (stored) {
@@ -206,6 +207,12 @@ const Sokoban = () => {
   }, [bestMoves]);
 
   useEffect(() => {
+    if (
+      levelDepsRef.current.levelIndex === levelIndex &&
+      levelDepsRef.current.levels === levels
+    )
+      return;
+    levelDepsRef.current = { levelIndex, levels };
     if (!levels[levelIndex]) return;
     const { board: b, player: p } = parseLevel(levels[levelIndex]);
     if (firstLoad.current && boardRef.current.length) {
@@ -226,7 +233,7 @@ const Sokoban = () => {
     setSteps(0);
     setHint('');
     containerRef.current?.focus();
-  }, [levelIndex, levels, setBoard, setPlayer]);
+  }, [levelIndex, levels, board, player, setBoard, setPlayer]);
 
   const move = (dx, dy) => {
     const result = attemptMove(board, player, dx, dy);
