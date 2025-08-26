@@ -1,85 +1,60 @@
 import React, { useState } from 'react';
 import {
-  parseRules,
-  distributeTasks,
   identifyHashType,
+  getSampleCrack,
+  estimateCrackTime,
 } from './utils';
 
-// Enhanced John the Ripper interface that supports rule uploads,
-// basic hash analysis and mock distribution of cracking tasks.
+const WORDLISTS = ['rockyou.txt', 'top100.txt', 'custom.txt'];
 
 const JohnApp = () => {
   const [hashes, setHashes] = useState('');
   const [hashTypes, setHashTypes] = useState([]);
-  const [rules, setRules] = useState([]);
-  const [endpoints, setEndpoints] = useState('');
+  const [wordlist, setWordlist] = useState(WORDLISTS[0]);
   const [output, setOutput] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleRuleUpload = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result || '';
-      setRules(parseRules(String(text)));
-    };
-    reader.readAsText(file);
-  };
-
-  const handleHashesChange = (e) => {
-    const value = e.target.value;
+  const updateHashes = (value) => {
     setHashes(value);
     const arr = value.split(/\r?\n/).filter(Boolean);
     setHashTypes(arr.map((h) => identifyHashType(h)));
   };
 
-  const handleSubmit = async (e) => {
+  const handleHashesChange = (e) => {
+    updateHashes(e.target.value);
+  };
+
+  const handleHashPaste = (e) => {
+    const text = e.clipboardData.getData('text');
+    e.preventDefault();
+    updateHashes(text);
+  };
+
+  const handleSubmit = (e) => {
     e.preventDefault();
     const hashArr = hashes.split(/\r?\n/).filter(Boolean);
     if (!hashArr.length) {
       setError('At least one hash is required');
       return;
     }
-    const endpointArr = endpoints
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
     setError('');
-    setLoading(true);
-    setOutput('');
-    try {
-      const assignments = endpointArr.length
-        ? distributeTasks(hashArr, endpointArr)
-        : { local: hashArr };
-      const results = [];
-      for (const [endpoint, hs] of Object.entries(assignments)) {
-        for (const h of hs) {
-          const res = await fetch('/api/john', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hash: h, rules }),
-          });
-          const data = await res.json();
-          results.push(
-            `${endpoint} (${identifyHashType(h)}): ${
-              data.output || data.error || 'No output'
-            }`
-          );
-        }
-      }
-      setOutput(results.join('\n'));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    const results = hashArr.map((h, i) => {
+      const type = identifyHashType(h);
+      const cracked = getSampleCrack(type);
+      const time = estimateCrackTime(type, wordlist);
+      return `Hash ${i + 1} (${type}): ${cracked} (est. ${time})`;
+    });
+    setOutput(
+      `Simulation only. No real cracking performed.\n\n${results.join('\n')}`
+    );
   };
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
       <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-2">
+        <p className="text-xs text-gray-400">
+          This is a demonstration; no actual cracking occurs.
+        </p>
         <label htmlFor="john-hashes" className="text-sm">
           Hashes (one per line)
         </label>
@@ -87,7 +62,8 @@ const JohnApp = () => {
           id="john-hashes"
           value={hashes}
           onChange={handleHashesChange}
-          placeholder="Enter hashes"
+          onPaste={handleHashPaste}
+          placeholder="Enter or paste hashes"
           className="flex-1 px-2 py-1 bg-gray-800 text-white rounded h-24"
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={error ? 'john-error' : undefined}
@@ -99,33 +75,26 @@ const JohnApp = () => {
             ))}
           </ul>
         )}
-        <label htmlFor="john-rule" className="text-sm">
-          Rule file
+        <label htmlFor="john-wordlist" className="text-sm">
+          Wordlist
         </label>
-        <input
-          id="john-rule"
-          type="file"
-          accept=".rule,.rules,.txt"
-          onChange={handleRuleUpload}
-          className="text-sm"
-        />
-        <label htmlFor="john-endpoints" className="text-sm">
-          Endpoints (comma separated)
-        </label>
-        <input
-          id="john-endpoints"
-          type="text"
-          value={endpoints}
-          onChange={(e) => setEndpoints(e.target.value)}
-          placeholder="endpoint1, endpoint2"
+        <select
+          id="john-wordlist"
+          value={wordlist}
+          onChange={(e) => setWordlist(e.target.value)}
           className="px-2 py-1 bg-gray-800 text-white rounded"
-        />
+        >
+          {WORDLISTS.map((w) => (
+            <option key={w} value={w}>
+              {w}
+            </option>
+          ))}
+        </select>
         <button
           type="submit"
           className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded self-start"
-          disabled={loading}
         >
-          {loading ? 'Running...' : 'Crack'}
+          Crack
         </button>
         {error && (
           <p id="john-error" role="alert" className="text-red-500 text-sm">
@@ -143,4 +112,3 @@ export default JohnApp;
 export const displayJohn = (addFolder, openApp) => (
   <JohnApp addFolder={addFolder} openApp={openApp} />
 );
-
