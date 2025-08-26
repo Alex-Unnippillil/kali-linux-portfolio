@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
-import { Terminal as XTerm } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { SearchAddon } from '@xterm/addon-search';
-import '@xterm/xterm/css/xterm.css';
+import { Terminal as XTerm } from 'xterm';
+import { FitAddon } from 'xterm-addon-fit';
+import { SearchAddon } from 'xterm-addon-search';
+import 'xterm/css/xterm.css';
 
 
 const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
@@ -12,6 +12,10 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const workerRef = useRef(null);
   const commandRef = useRef('');
   const logRef = useRef('');
+  const knownCommandsRef = useRef(new Set(['pwd', 'cd', 'simulate']));
+  const suggestionsRef = useRef([]);
+  const suggestionIndexRef = useRef(0);
+  const showingSuggestionsRef = useRef(false);
 
   // Prompt helper
   const prompt = useCallback(() => {
@@ -21,6 +25,10 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   // Handle command execution
   const runCommand = useCallback((command) => {
     const trimmed = command.trim();
+    const first = trimmed.split(' ')[0];
+    if (first) {
+      knownCommandsRef.current.add(first);
+    }
     if (trimmed === 'pwd') {
       termRef.current.writeln('');
       termRef.current.writeln('/home/alex');
@@ -48,6 +56,55 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     }
   }, [prompt]);
 
+  const renderSuggestions = useCallback(() => {
+    termRef.current.writeln('');
+    termRef.current.writeln(
+      suggestionsRef.current
+        .map((cmd, idx) => (idx === suggestionIndexRef.current ? `\u001b[7m${cmd}\u001b[0m` : cmd))
+        .join(' '),
+    );
+    prompt();
+    termRef.current.write(commandRef.current);
+  }, [prompt]);
+
+  const handleTab = useCallback(() => {
+    const current = commandRef.current;
+    if (showingSuggestionsRef.current && suggestionsRef.current.length > 0) {
+      const selection = suggestionsRef.current[suggestionIndexRef.current];
+      const completion = selection.slice(current.length);
+      termRef.current.write(completion);
+      commandRef.current = selection;
+      suggestionsRef.current = [];
+      showingSuggestionsRef.current = false;
+      return;
+    }
+
+    if (!current) return;
+    const matches = Array.from(knownCommandsRef.current).filter((cmd) => cmd.startsWith(current));
+    if (matches.length === 1) {
+      const completion = matches[0].slice(current.length);
+      termRef.current.write(completion);
+      commandRef.current = matches[0];
+    } else if (matches.length > 1) {
+      suggestionsRef.current = matches;
+      suggestionIndexRef.current = 0;
+      showingSuggestionsRef.current = true;
+      renderSuggestions();
+    }
+  }, [renderSuggestions]);
+
+  const handleSuggestionNav = useCallback((direction) => {
+    if (!showingSuggestionsRef.current) return;
+    if (direction === 'left') {
+      suggestionIndexRef.current =
+        (suggestionIndexRef.current - 1 + suggestionsRef.current.length) % suggestionsRef.current.length;
+    } else if (direction === 'right') {
+      suggestionIndexRef.current =
+        (suggestionIndexRef.current + 1) % suggestionsRef.current.length;
+    }
+    renderSuggestions();
+  }, [renderSuggestions]);
+
   // Initialise terminal
   useEffect(() => {
     const term = new XTerm({ cursorBlink: true, convertEol: true });
@@ -61,22 +118,45 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     fitAddon.fit();
     term.write('Welcome to the portfolio terminal');
     prompt();
+    term.onKey(({ key, domEvent }) => {
+      if (domEvent.key === 'Tab') {
+        domEvent.preventDefault();
+        handleTab();
+      } else if (domEvent.key === 'ArrowLeft') {
+        domEvent.preventDefault();
+        handleSuggestionNav('left');
+      } else if (domEvent.key === 'ArrowRight') {
+        domEvent.preventDefault();
+        handleSuggestionNav('right');
+      }
+    });
+
     term.onData((data) => {
       if (data === '\r') {
         runCommand(commandRef.current);
         commandRef.current = '';
+        suggestionsRef.current = [];
+        showingSuggestionsRef.current = false;
       } else if (data === '\u0003') { // Ctrl+C
         term.write('^C');
         prompt();
         commandRef.current = '';
+        suggestionsRef.current = [];
+        showingSuggestionsRef.current = false;
       } else if (data === '\u007F') { // Backspace
         if (commandRef.current.length > 0) {
           commandRef.current = commandRef.current.slice(0, -1);
           term.write('\b \b');
         }
+        suggestionsRef.current = [];
+        showingSuggestionsRef.current = false;
+      } else if (data === '\t') {
+        // handled in onKey
       } else {
         commandRef.current += data;
         term.write(data);
+        suggestionsRef.current = [];
+        showingSuggestionsRef.current = false;
       }
     });
     workerRef.current = new Worker(new URL('./terminal.worker.js', import.meta.url));
@@ -95,7 +175,7 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       workerRef.current?.terminate();
       term.dispose();
     };
-  }, [prompt, runCommand]);
+  }, [prompt, runCommand, handleTab, handleSuggestionNav]);
 
   useImperativeHandle(ref, () => ({
     runCommand,
