@@ -6,6 +6,7 @@ const QRTool = () => {
   const [text, setText] = useState('');
   const [decodedText, setDecodedText] = useState('');
   const [message, setMessage] = useState('');
+  const [copyMessage, setCopyMessage] = useState('');
   const generateCanvasRef = useRef(null);
   const scanCanvasRef = useRef(null);
   const videoRef = useRef(null);
@@ -41,6 +42,18 @@ const QRTool = () => {
     };
     img.onerror = () => setDecodedText('Could not load image');
     img.src = URL.createObjectURL(file);
+  };
+
+  const copyToClipboard = async () => {
+    if (!decodedText) return;
+    try {
+      await navigator.clipboard.writeText(decodedText);
+      setCopyMessage('Copied to clipboard');
+      setTimeout(() => setCopyMessage(''), 2000);
+    } catch {
+      setCopyMessage('Failed to copy');
+      setTimeout(() => setCopyMessage(''), 2000);
+    }
   };
 
   const scan = () => {
@@ -149,7 +162,17 @@ const QRTool = () => {
         </div>
         {message && <p className="mt-2">{message}</p>}
         {decodedText && (
-          <p className="mt-2 break-all">Decoded: {decodedText}</p>
+          <div className="mt-2 break-all">
+            <p>Decoded: {decodedText}</p>
+            <button
+              onClick={copyToClipboard}
+              className="mt-2 px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+              aria-label="Copy decoded text"
+            >
+              Copy
+            </button>
+            {copyMessage && <p className="mt-1 text-sm">{copyMessage}</p>}
+          </div>
         )}
         <canvas ref={scanCanvasRef} className="hidden" />
       </div>
