@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { pointerHandlers } from '../../utils/pointer';
-// Stockfish engine removed for compatibility; using simple AI instead
+
+// Optional Stockfish WASM engine for stronger play. Falls back to JS if unavailable
 
 const pieceUnicode = {
   p: { w: '♙', b: '♟' },
@@ -22,20 +23,47 @@ const ChessGame = () => {
   const [highlight, setHighlight] = useState([]);
   const [premove, setPremove] = useState(null);
   const [lastMove, setLastMove] = useState([]);
-  const [skill, setSkill] = useState(5);
+  const [cursor, setCursor] = useState({ file: 0, rank: 0 });
+  const [depth, setDepth] = useState(1);
+  const [winStreak, setWinStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(0);
 
   const [whiteTime, setWhiteTime] = useState(initialTime);
   const [blackTime, setBlackTime] = useState(initialTime);
   const timerRef = useRef(null);
+  const engineRef = useRef(null);
 
   const updateBoard = () => {
     setBoard(game.board());
   };
 
   const updateStatus = () => {
-    if (game.in_checkmate()) setStatus('Checkmate');
-    else if (game.in_draw()) setStatus('Draw');
-    else setStatus(game.turn() === 'w' ? 'Your move' : 'AI thinking...');
+    if (game.in_checkmate()) {
+      setStatus('Checkmate');
+      if (game.turn() === 'b') {
+        const newWin = winStreak + 1;
+        setWinStreak(newWin);
+        const newBest = Math.max(bestStreak, newWin);
+        setBestStreak(newBest);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('chess_winStreak', String(newWin));
+          localStorage.setItem('chess_bestStreak', String(newBest));
+        }
+      } else {
+        setWinStreak(0);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('chess_winStreak', '0');
+        }
+      }
+    } else if (game.in_draw()) {
+      setStatus('Draw');
+      setWinStreak(0);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chess_winStreak', '0');
+      }
+    } else {
+      setStatus(game.turn() === 'w' ? 'Your move' : 'AI thinking...');
+    }
   };
 
   const startTimers = () => {
@@ -52,8 +80,30 @@ const ChessGame = () => {
   useEffect(() => {
     updateBoard();
     startTimers();
+
+    if (typeof window !== 'undefined') {
+      const storedBest = parseInt(localStorage.getItem('chess_bestStreak') || '0', 10);
+      const storedCurrent = parseInt(localStorage.getItem('chess_winStreak') || '0', 10);
+      setBestStreak(storedBest);
+      setWinStreak(storedCurrent);
+    }
+
+    if (typeof WebAssembly !== 'undefined') {
+      import('stockfish')
+        .then(({ default: Stockfish }) => {
+          const engine = Stockfish();
+          engine.postMessage('uci');
+          engineRef.current = engine;
+        })
+        .catch(() => {
+          engineRef.current = null;
+        });
+    }
+
     return () => {
       stopTimers();
+      if (engineRef.current && engineRef.current.terminate)
+        engineRef.current.terminate();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -119,22 +169,46 @@ const ChessGame = () => {
   };
 
   const makeAIMove = () => {
-    const moves = game.moves();
-    if (moves.length > 0) {
-      const move = moves[Math.floor(Math.random() * moves.length)];
-      const aiResult = game.move(move, { sloppy: true });
-      if (aiResult) setLastMove([aiResult.from, aiResult.to]);
+    if (engineRef.current) {
+      engineRef.current.onmessage = (e) => {
+        const line = typeof e === 'string' ? e : e.data;
+        const match = line && line.match(/^bestmove\s(\S+)/);
+        if (match) {
+          const move = match[1];
+          const aiResult = game.move(move, { sloppy: true });
+          if (aiResult) setLastMove([aiResult.from, aiResult.to]);
 
-      updateBoard();
-      updateStatus();
-      if (premove) {
-        const result = game.move(premove, { sloppy: true });
-        setPremove(null);
-        if (result) {
-          setLastMove([result.from, result.to]);
           updateBoard();
           updateStatus();
+          if (premove) {
+            const result = game.move(premove, { sloppy: true });
+            setPremove(null);
+            if (result) {
+              setLastMove([result.from, result.to]);
+              updateBoard();
+              updateStatus();
+            }
+          }
         }
+      };
+      engineRef.current.postMessage(`position fen ${game.fen()}`);
+      engineRef.current.postMessage(`go depth ${depth}`);
+      return;
+    }
+
+    const move = getBestMove(game, depth) || game.moves()[Math.floor(Math.random() * game.moves().length)];
+    const aiResult = game.move(move, { sloppy: true });
+    if (aiResult) setLastMove([aiResult.from, aiResult.to]);
+
+    updateBoard();
+    updateStatus();
+    if (premove) {
+      const result = game.move(premove, { sloppy: true });
+      setPremove(null);
+      if (result) {
+        setLastMove([result.from, result.to]);
+        updateBoard();
+        updateStatus();
       }
     }
   };
@@ -295,14 +369,18 @@ const ChessGame = () => {
     const squareColor = (file + rank) % 2 === 0 ? 'bg-gray-300' : 'bg-gray-700';
     const isHighlight = highlight.includes(squareName);
     const isLastMove = lastMove.includes(squareName);
+    const isCursor = cursor.file === file && cursor.rank === rank;
 
     return (
       <div
         key={squareName}
         {...pointerHandlers(() => handleSquareClick(file, rank))}
+        tabIndex={0}
+        role="button"
+        aria-label={`${piece ? `${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : 'empty'} on ${squareName}`}
         className={`w-11 h-11 md:w-12 md:h-12 flex items-center justify-center select-none ${squareColor} ${
           isSelected ? 'ring-2 ring-yellow-400' : ''
-        } ${isHighlight ? 'bg-green-500 bg-opacity-50' : ''} ${
+        } ${isCursor ? 'ring-2 ring-blue-400' : ''} ${isHighlight ? 'bg-green-500 bg-opacity-50' : ''} ${
           isLastMove ? 'bg-yellow-500 bg-opacity-50' : ''
         }`}
 
@@ -322,6 +400,10 @@ const ChessGame = () => {
       <div className="mt-2 flex space-x-2">
         <div>White: {whiteTime}s</div>
         <div>Black: {blackTime}s</div>
+      </div>
+      <div className="mt-2 flex space-x-2">
+        <div>Streak: {winStreak}</div>
+        <div>Best: {bestStreak}</div>
       </div>
       <div className="mt-2">{status}</div>
       <div className="mt-2 flex flex-wrap gap-2 justify-center">
