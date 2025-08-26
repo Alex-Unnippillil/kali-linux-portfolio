@@ -303,7 +303,10 @@ function Skills() {
     { src: 'https://img.shields.io/badge/Nmap-4682B4?logo=nmap&logoColor=white', alt: 'Nmap', description: 'Network Scanner' },
     { src: 'https://img.shields.io/badge/Metasploit-1280c4?logo=metasploit&logoColor=white', alt: 'Metasploit', description: 'Penetration Testing Framework' },
     { src: 'https://img.shields.io/badge/Burp_Suite-FF6633?logo=burp-suite&logoColor=white', alt: 'Burp Suite', description: 'Web Vulnerability Scanner' },
-    { src: 'https://img.shields.io/badge/Splunk-000000?logo=splunk&logoColor=white', alt: 'Splunk', description: 'Security Information and Event Management' }
+    { src: 'https://img.shields.io/badge/Splunk-000000?logo=splunk&logoColor=white', alt: 'Splunk', description: 'Security Information and Event Management' },
+    { src: 'https://img.shields.io/badge/OpenVPN-F78F20?logo=openvpn&logoColor=white', alt: 'OpenVPN', description: 'VPN Solution' },
+    { src: 'https://img.shields.io/badge/Nessus-00A0D1?logo=tenable&logoColor=white', alt: 'Nessus', description: 'Vulnerability Scanner' },
+    { src: 'https://img.shields.io/badge/Snort-A40327?logo=snort&logoColor=white', alt: 'Snort', description: 'Intrusion Detection System' }
   ];
 
   const softwaresOperating = [
@@ -321,7 +324,10 @@ function Skills() {
     { src: 'https://img.shields.io/badge/Debian-D70A53?logo=debian&logoColor=white', alt: 'Debian', description: 'Debian Linux' },
     { src: 'https://img.shields.io/badge/Visual%20Studio-5C2D91?logo=visual-studio&logoColor=white', alt: 'Visual Studio', description: 'Microsoft IDE' },
     { src: 'https://img.shields.io/badge/VS%20Code-007ACC?logo=visual-studio-code&logoColor=white', alt: 'VS Code', description: 'Code Editor' },
-    { src: 'https://img.shields.io/badge/Git-F05032?logo=git&logoColor=white', alt: 'Git', description: 'Version Control' }
+    { src: 'https://img.shields.io/badge/Git-F05032?logo=git&logoColor=white', alt: 'Git', description: 'Version Control' },
+    { src: 'https://img.shields.io/badge/CentOS-262577?logo=CentOS&logoColor=white', alt: 'CentOS', description: 'CentOS Linux' },
+    { src: 'https://img.shields.io/badge/Arch%20Linux-1793D1?logo=arch-linux&logoColor=white', alt: 'Arch Linux', description: 'Arch Linux Distribution' },
+    { src: 'https://img.shields.io/badge/Figma-F24E1E?logo=figma&logoColor=white', alt: 'Figma', description: 'Design Tool' }
   ];
 
   const languagesTools = [
@@ -336,7 +342,11 @@ function Skills() {
     { src: 'https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white', alt: 'TypeScript', description: 'Typed JavaScript' },
     { src: 'https://img.shields.io/badge/Go-00ADD8?logo=go&logoColor=white', alt: 'Go', description: 'Go Programming Language' },
     { src: 'https://img.shields.io/badge/Rust-000000?logo=rust&logoColor=white', alt: 'Rust', description: 'Rust Programming Language' },
-    { src: 'https://img.shields.io/badge/Bash-121011?logo=gnubash&logoColor=white', alt: 'Bash', description: 'Unix Shell' }
+    { src: 'https://img.shields.io/badge/Bash-121011?logo=gnubash&logoColor=white', alt: 'Bash', description: 'Unix Shell' },
+    { src: 'https://img.shields.io/badge/PHP-777BB4?logo=php&logoColor=white', alt: 'PHP', description: 'Server-side Scripting Language' },
+    { src: 'https://img.shields.io/badge/Ruby-CC342D?logo=ruby&logoColor=white', alt: 'Ruby', description: 'Dynamic Programming Language' },
+    { src: 'https://img.shields.io/badge/Swift-FA7343?logo=swift&logoColor=white', alt: 'Swift', description: 'Apple Programming Language' },
+    { src: 'https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white', alt: 'Kotlin', description: 'Kotlin Programming Language' }
   ];
 
   const frameworksLibraries = [
@@ -352,7 +362,11 @@ function Skills() {
     { src: 'https://img.shields.io/badge/Django-092E20?logo=django&logoColor=white', alt: 'Django', description: 'Python Framework' },
     { src: 'https://img.shields.io/badge/Bootstrap-7952B3?logo=bootstrap&logoColor=white', alt: 'Bootstrap', description: 'CSS Framework' },
     { src: 'https://img.shields.io/badge/Redux-764ABC?logo=redux&logoColor=white', alt: 'Redux', description: 'State Management Library' },
-    { src: 'https://img.shields.io/badge/TensorFlow-FF6F00?logo=tensorflow&logoColor=white', alt: 'TensorFlow', description: 'Machine Learning Library' }
+    { src: 'https://img.shields.io/badge/TensorFlow-FF6F00?logo=tensorflow&logoColor=white', alt: 'TensorFlow', description: 'Machine Learning Library' },
+    { src: 'https://img.shields.io/badge/Angular-DD0031?logo=angular&logoColor=white', alt: 'Angular', description: 'Web Application Framework' },
+    { src: 'https://img.shields.io/badge/Vue.js-35495E?logo=vuedotjs&logoColor=4FC08D', alt: 'Vue.js', description: 'JavaScript Framework' },
+    { src: 'https://img.shields.io/badge/Svelte-FF3E00?logo=svelte&logoColor=white', alt: 'Svelte', description: 'Front-end Framework' },
+    { src: 'https://img.shields.io/badge/Spring-6DB33F?logo=spring&logoColor=white', alt: 'Spring', description: 'Java Framework' }
   ];
 
   return (
