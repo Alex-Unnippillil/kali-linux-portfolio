@@ -40,6 +40,29 @@ const Gauge = ({ value, label }) => {
   );
 };
 
+const LineChart = ({ data, color, label }) => {
+  const max = Math.max(...data, 1);
+  const points = data
+    .map((d, i) => {
+      const x = (i / Math.max(data.length - 1, 1)) * 100;
+      const y = 100 - (d / max) * 100;
+      return `${x},${y}`;
+    })
+    .join(' ');
+  const latest = data[data.length - 1];
+  return (
+    <div className="flex flex-col items-center flex-1">
+      <svg viewBox="0 0 100 100" className="w-full h-24">
+        <polyline fill="none" stroke={color} strokeWidth="2" points={points} />
+      </svg>
+      <span className="mt-1 text-white">
+        {label}
+        {latest !== undefined ? `: ${latest.toFixed(2)}` : ''}
+      </span>
+    </div>
+  );
+};
+
 const ResourceMonitor = () => {
   const [batteryLevel, setBatteryLevel] = useState(0);
   const [memoryUsage, setMemoryUsage] = useState(0);
@@ -47,6 +70,9 @@ const ResourceMonitor = () => {
   const [resourceTimings, setResourceTimings] = useState([]);
   const [paintTimings, setPaintTimings] = useState([]);
   const [longTaskCount, setLongTaskCount] = useState(0);
+  const [downloadRates, setDownloadRates] = useState([]);
+  const [uploadRates, setUploadRates] = useState([]);
+  const [intervalMs, setIntervalMs] = useState(5000);
 
   const updateStats = async () => {
     if (navigator.getBattery) {
@@ -72,12 +98,24 @@ const ResourceMonitor = () => {
         setCpuUsage(Math.round(usage));
       }, 100);
     }
+
+    const connection =
+      navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (connection) {
+      const download = connection.downlink || 0;
+      const upload = connection.upload || connection.uplink || connection.upLink || download / 2;
+      setDownloadRates((prev) => [...prev.slice(-19), download]);
+      setUploadRates((prev) => [...prev.slice(-19), upload]);
+    }
   };
 
   useEffect(() => {
     updateStats();
-    const interval = setInterval(updateStats, 5000);
+    const interval = setInterval(updateStats, intervalMs);
+    return () => clearInterval(interval);
+  }, [intervalMs]);
 
+  useEffect(() => {
     if (typeof performance !== 'undefined' && typeof PerformanceObserver !== 'undefined') {
       const existingResources = performance.getEntriesByType('resource');
       const existingPaints = performance.getEntriesByType('paint');
@@ -102,20 +140,19 @@ const ResourceMonitor = () => {
       longTaskObserver.observe({ entryTypes: ['longtask'] });
 
       return () => {
-        clearInterval(interval);
         resourceObserver.disconnect();
         paintObserver.disconnect();
         longTaskObserver.disconnect();
       };
     }
-
-    return () => clearInterval(interval);
   }, []);
 
   const clearMetrics = () => {
     setResourceTimings([]);
     setPaintTimings([]);
     setLongTaskCount(0);
+    setDownloadRates([]);
+    setUploadRates([]);
     if (performance.clearResourceTimings) {
       performance.clearResourceTimings();
     }
@@ -123,6 +160,15 @@ const ResourceMonitor = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu">
+      <div className="p-2 bg-ub-dark-grey text-sm flex items-center">
+        <label className="mr-2">Update interval (ms):</label>
+        <input
+          type="number"
+          value={intervalMs}
+          onChange={(e) => setIntervalMs(Number(e.target.value))}
+          className="w-24 bg-black text-white px-1 rounded"
+        />
+      </div>
       <div className="flex justify-evenly items-center flex-1">
         <Gauge value={batteryLevel} label="Battery" />
         {cpuUsage !== null && <Gauge value={cpuUsage} label="CPU" />}
@@ -130,6 +176,13 @@ const ResourceMonitor = () => {
       </div>
       <div className="bg-ub-dark-grey p-4 text-sm overflow-y-auto max-h-60">
         <div>
+          <strong>Network</strong>
+          <div className="flex mt-1">
+            <LineChart data={downloadRates} color="#21c5c7" label="Download (Mbps)" />
+            <LineChart data={uploadRates} color="#f953c6" label="Upload (Mbps)" />
+          </div>
+        </div>
+        <div className="mt-4">
           <strong>Resource Timings</strong>
           <ul className="list-disc pl-5">
             {resourceTimings.map((r, idx) => (
