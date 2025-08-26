@@ -1,25 +1,30 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import GameLayout from './GameLayout';
 
 const SIZE = 4;
 
-const initBoard = () => {
+const cloneBoard = (b) => b.map((row) => [...row]);
+
+const initBoard = (hard = false) => {
   const board = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-  addRandomTile(board);
-  addRandomTile(board);
+  addRandomTile(board, hard);
+  addRandomTile(board, hard);
   return board;
 };
 
-const addRandomTile = (board) => {
-  const empty = [];
-  board.forEach((row, r) =>
-    row.forEach((cell, c) => {
-      if (cell === 0) empty.push([r, c]);
-    })
-  );
-  if (empty.length === 0) return board;
-  const [r, c] = empty[Math.floor(Math.random() * empty.length)];
-  board[r][c] = Math.random() < 0.9 ? 2 : 4;
+const addRandomTile = (board, hard, count = 1) => {
+  for (let i = 0; i < count; i++) {
+    const empty = [];
+    board.forEach((row, r) =>
+      row.forEach((cell, c) => {
+        if (cell === 0) empty.push([r, c]);
+      })
+    );
+    if (empty.length === 0) return board;
+    const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+    board[r][c] = hard ? 4 : Math.random() < 0.9 ? 2 : 4;
+  }
   return board;
 };
 
@@ -87,6 +92,16 @@ const Game2048 = () => {
   const [board, setBoard] = usePersistentState('2048-board', initBoard, validateBoard);
   const [won, setWon] = usePersistentState('2048-won', false, (v) => typeof v === 'boolean');
   const [lost, setLost] = usePersistentState('2048-lost', false, (v) => typeof v === 'boolean');
+  const [history, setHistory] = useState([]);
+  const [hardMode, setHardMode] = usePersistentState('2048-hard', false, (v) => typeof v === 'boolean');
+  const [animCells, setAnimCells] = useState(new Set());
+
+  useEffect(() => {
+    if (animCells.size > 0) {
+      const t = setTimeout(() => setAnimCells(new Set()), 200);
+      return () => clearTimeout(t);
+    }
+  }, [animCells]);
 
   const handleKey = useCallback(
     (e) => {
@@ -95,20 +110,32 @@ const Game2048 = () => {
         return;
       }
       if (won || lost) return;
-      let newBoard;
-      if (e.key === 'ArrowLeft') newBoard = moveLeft(board);
-      else if (e.key === 'ArrowRight') newBoard = moveRight(board);
-      else if (e.key === 'ArrowUp') newBoard = moveUp(board);
-      else if (e.key === 'ArrowDown') newBoard = moveDown(board);
+      let moved;
+      if (e.key === 'ArrowLeft') moved = moveLeft(board);
+      else if (e.key === 'ArrowRight') moved = moveRight(board);
+      else if (e.key === 'ArrowUp') moved = moveUp(board);
+      else if (e.key === 'ArrowDown') moved = moveDown(board);
       else return;
-      if (!boardsEqual(board, newBoard)) {
-        addRandomTile(newBoard);
-        setBoard(newBoard);
-        if (checkWin(newBoard)) setWon(true);
-        else if (!hasMoves(newBoard)) setLost(true);
+      if (!boardsEqual(board, moved)) {
+        const beforeAdd = cloneBoard(moved);
+        addRandomTile(moved, hardMode, hardMode ? 2 : 1);
+        setHistory((h) => [...h, cloneBoard(board)]);
+        const changed = new Set();
+        for (let r = 0; r < SIZE; r++) {
+          for (let c = 0; c < SIZE; c++) {
+            if (beforeAdd[r][c] !== moved[r][c] || board[r][c] !== moved[r][c]) {
+              changed.add(`${r}-${c}`);
+            }
+          }
+        }
+        setAnimCells(changed);
+        setBoard(cloneBoard(moved));
+        if (checkWin(moved)) setWon(true);
+        else if (!hasMoves(moved)) setLost(true);
       }
     },
-    [board, won, lost, setBoard, setWon, setLost]
+    [board, won, lost, hardMode, setBoard, setLost, setWon]
+
   );
 
   useEffect(() => {
@@ -117,43 +144,86 @@ const Game2048 = () => {
   }, [handleKey]);
 
   const reset = () => {
-    setBoard(initBoard());
+    setBoard(initBoard(hardMode));
+    setHistory([]);
     setWon(false);
     setLost(false);
+    setAnimCells(new Set());
   };
 
   const close = () => {
     document.getElementById('close-2048')?.click();
   };
 
+  const undo = () => {
+    setHistory((h) => {
+      if (h.length === 0) return h;
+      const prev = h[h.length - 1];
+      setBoard(cloneBoard(prev));
+      setWon(checkWin(prev));
+      setLost(!hasMoves(prev));
+      setAnimCells(new Set());
+      return h.slice(0, -1);
+    });
+  };
+
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <div className="mb-4 flex space-x-2">
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={reset}
-        >
-          Reset
-        </button>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={close}
-        >
-          Close
-        </button>
-      </div>
-      <div className="grid grid-cols-4 gap-2">
-        {board.map((row, rIdx) =>
-          row.map((cell, cIdx) => (
-            <div
-              key={`${rIdx}-${cIdx}`}
-              className={`h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
-                cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
-              }`}
-            >
-              {cell !== 0 ? cell : ''}
-            </div>
-          ))
+    <GameLayout
+      title="2048"
+      instructions="Use arrow keys to move tiles. Reach 2048 to win."
+      controls={
+        <>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={reset}
+          >
+            Reset
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
+            onClick={undo}
+            disabled={history.length === 0}
+          >
+            Undo
+          </button>
+          <label className="flex items-center space-x-1 px-2">
+            <input
+              type="checkbox"
+              checked={hardMode}
+              onChange={() => setHardMode(!hardMode)}
+            />
+            <span>Hard</span>
+          </label>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={close}
+          >
+            Close
+          </button>
+        </>
+      }
+    >
+      <>
+        <div className="grid grid-cols-4 gap-2">
+          {board.map((row, rIdx) =>
+            row.map((cell, cIdx) => {
+              const key = `${rIdx}-${cIdx}`;
+              return (
+                <div
+                  key={key}
+                  className={`h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
+                    cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
+                  } ${animCells.has(key) ? 'tile-pop' : ''}`}
+                >
+                  {cell !== 0 ? cell : ''}
+                </div>
+              );
+            })
+          )}
+        </div>
+        {(won || lost) && (
+          <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
+
         )}
       </div>
       {(won || lost) && (

@@ -337,11 +337,12 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: reveal 0.3s ease-out;
 }
 
-@keyframes errorFlash {
-    from { background-color: rgba(239, 68, 68, 0.9); }
-    to { background-color: transparent; }
+@keyframes tile-pop {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
 }
 
-.error-flash {
-    animation: errorFlash 0.3s ease-in-out;
+.tile-pop {
+    animation: tile-pop 0.15s ease-out;
+
 }
