@@ -12,14 +12,20 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const workerRef = useRef(null);
   const commandRef = useRef('');
   const logRef = useRef('');
-  const knownCommandsRef = useRef(new Set(['pwd', 'cd', 'simulate']));
+  const knownCommandsRef = useRef(
+    new Set(['pwd', 'cd', 'simulate', 'history', 'clear', 'help']),
+  );
+  const historyRef = useRef([]);
+  const historyIndexRef = useRef(0);
   const suggestionsRef = useRef([]);
   const suggestionIndexRef = useRef(0);
   const showingSuggestionsRef = useRef(false);
 
+  const promptText = 'alex@kali:~$ ';
+
   // Prompt helper
   const prompt = useCallback(() => {
-    termRef.current.write(`\r\nalex@kali:~$ `);
+    termRef.current.write(`\r\n${promptText}`);
   }, []);
 
   // Handle command execution
@@ -29,6 +35,10 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     if (first) {
       knownCommandsRef.current.add(first);
     }
+    if (trimmed) {
+      historyRef.current.push(trimmed);
+    }
+    historyIndexRef.current = historyRef.current.length;
     if (trimmed === 'pwd') {
       termRef.current.writeln('');
       termRef.current.writeln('/home/alex');
@@ -42,10 +52,32 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       prompt();
     } else if (trimmed === 'simulate') {
       termRef.current.writeln('');
-      termRef.current.writeln('Running heavy simulation...');
-      logRef.current += 'Running heavy simulation...\n';
-      workerRef.current.postMessage({ command: 'simulate' });
-      // prompt will be called when worker responds
+      if (workerRef.current) {
+        termRef.current.writeln('Running heavy simulation...');
+        logRef.current += 'Running heavy simulation...\n';
+        workerRef.current.postMessage({ command: 'simulate' });
+        // prompt will be called when worker responds
+      } else {
+        const msg = 'Web Workers are not supported in this environment.';
+        termRef.current.writeln(msg);
+        logRef.current += `${msg}\n`;
+        prompt();
+      }
+    } else if (trimmed === 'clear') {
+      termRef.current.clear();
+      prompt();
+    } else if (trimmed === 'help') {
+      termRef.current.writeln('');
+      const commands = Array.from(knownCommandsRef.current).sort().join(' ');
+      termRef.current.writeln(`Available commands: ${commands}`);
+      logRef.current += `Available commands: ${commands}\n`;
+      prompt();
+    } else if (trimmed === 'history') {
+      termRef.current.writeln('');
+      const history = historyRef.current.join('\n');
+      termRef.current.writeln(history);
+      logRef.current += `${history}\n`;
+      prompt();
     } else if (trimmed.length === 0) {
       prompt();
     } else {
@@ -80,7 +112,9 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     }
 
     if (!current) return;
-    const matches = Array.from(knownCommandsRef.current).filter((cmd) => cmd.startsWith(current));
+    const matches = Array.from(knownCommandsRef.current)
+      .filter((cmd) => cmd.startsWith(current))
+      .sort();
     if (matches.length === 1) {
       const completion = matches[0].slice(current.length);
       termRef.current.write(completion);
@@ -105,6 +139,26 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     renderSuggestions();
   }, [renderSuggestions]);
 
+  const handleHistoryNav = useCallback((direction) => {
+    if (historyRef.current.length === 0) return;
+    if (direction === 'up') {
+      if (historyIndexRef.current > 0) {
+        historyIndexRef.current -= 1;
+      }
+    } else if (direction === 'down') {
+      if (historyIndexRef.current < historyRef.current.length) {
+        historyIndexRef.current += 1;
+      }
+    }
+    const cmd = historyRef.current[historyIndexRef.current] || '';
+    termRef.current.write('\x1b[2K\r');
+    termRef.current.write(promptText);
+    termRef.current.write(cmd);
+    commandRef.current = cmd;
+    suggestionsRef.current = [];
+    showingSuggestionsRef.current = false;
+  }, []);
+
   // Initialise terminal
   useEffect(() => {
     const term = new XTerm({ cursorBlink: true, convertEol: true });
@@ -128,6 +182,12 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       } else if (domEvent.key === 'ArrowRight') {
         domEvent.preventDefault();
         handleSuggestionNav('right');
+      } else if (domEvent.key === 'ArrowUp') {
+        domEvent.preventDefault();
+        handleHistoryNav('up');
+      } else if (domEvent.key === 'ArrowDown') {
+        domEvent.preventDefault();
+        handleHistoryNav('down');
       }
     });
 
@@ -159,13 +219,17 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
         showingSuggestionsRef.current = false;
       }
     });
-    workerRef.current = new Worker(new URL('./terminal.worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => {
-      term.writeln('');
-      term.writeln(String(e.data));
-      logRef.current += `${String(e.data)}\n`;
-      prompt();
-    };
+    if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
+      workerRef.current = new Worker(new URL('./terminal.worker.js', import.meta.url));
+      workerRef.current.onmessage = (e) => {
+        term.writeln('');
+        term.writeln(String(e.data));
+        logRef.current += `${String(e.data)}\n`;
+        prompt();
+      };
+    } else {
+      workerRef.current = null;
+    }
 
     const handleResize = () => fitAddon.fit();
     window.addEventListener('resize', handleResize);
@@ -175,11 +239,13 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       workerRef.current?.terminate();
       term.dispose();
     };
-  }, [prompt, runCommand, handleTab, handleSuggestionNav]);
+  }, [prompt, runCommand, handleTab, handleSuggestionNav, handleHistoryNav]);
 
   useImperativeHandle(ref, () => ({
     runCommand,
     getContent: () => logRef.current,
+    getCommand: () => commandRef.current,
+    historyNav: handleHistoryNav,
   }));
 
   return <div className="h-full w-full bg-ub-cool-grey" ref={containerRef} data-testid="xterm-container" />;
