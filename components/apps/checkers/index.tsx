@@ -8,9 +8,12 @@ import {
   applyMove,
   isDraw,
   hasMoves,
+  getHintMove,
   Move,
   Board,
 } from './engine';
+
+const HINT_LIMIT = 3;
 
 const Checkers = () => {
   const [board, setBoard] = useState<Board>(createBoard());
@@ -25,9 +28,9 @@ const Checkers = () => {
   const [hint, setHint] = useState<Move | null>(null);
   const [lastMove, setLastMove] = useState<[number, number][]>([]);
   const [crowned, setCrowned] = useState<[number, number] | null>(null);
+  const [hintsLeft, setHintsLeft] = useState(HINT_LIMIT);
 
   const workerRef = useRef<Worker | null>(null);
-  const hintRequest = useRef(false);
   const pathRef = useRef<[number, number][]>([]);
   const makeMoveRef = useRef<((move: Move) => void) | null>(null);
 
@@ -35,11 +38,7 @@ const Checkers = () => {
     workerRef.current = new Worker('/checkers-worker.js');
     workerRef.current.onmessage = (e: MessageEvent<Move>) => {
       const move = e.data;
-      if (hintRequest.current) {
-        setHint(move);
-        hintRequest.current = false;
-        setTimeout(() => setHint(null), 1000);
-      } else if (move) {
+      if (move) {
         makeMoveRef.current?.(move);
       }
     };
@@ -58,6 +57,7 @@ const Checkers = () => {
       setWinner(state.winner);
       setDraw(state.draw);
       setLastMove(state.lastMove || []);
+      setHintsLeft(state.hintsLeft ?? HINT_LIMIT);
       if (state.turn === 'black') {
         setTimeout(() =>
           workerRef.current?.postMessage({
@@ -79,9 +79,10 @@ const Checkers = () => {
       winner,
       draw,
       lastMove,
+      hintsLeft,
     };
     localStorage.setItem('checkersState', JSON.stringify(state));
-  }, [board, turn, history, future, noCapture, winner, draw, lastMove]);
+  }, [board, turn, history, future, noCapture, winner, draw, lastMove, hintsLeft]);
 
   const allMoves = useMemo(() => getAllMoves(board, turn), [board, turn]);
 
@@ -177,6 +178,7 @@ const Checkers = () => {
     setHint(null);
     setLastMove([]);
     setCrowned(null);
+    setHintsLeft(HINT_LIMIT);
     pathRef.current = [];
     localStorage.removeItem('checkersState');
   };
@@ -219,8 +221,12 @@ const Checkers = () => {
   };
 
   const hintMove = () => {
-    hintRequest.current = true;
-    workerRef.current?.postMessage({ board, color: turn, maxDepth: 8 });
+    if (hintsLeft <= 0) return;
+    const move = getHintMove(board, turn);
+    if (move) {
+      setHint(move);
+      setHintsLeft((h) => h - 1);
+    }
   };
 
   return (
@@ -295,10 +301,13 @@ const Checkers = () => {
               Redo
             </button>
             <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              className={`px-2 py-1 bg-gray-700 rounded ${
+                hintsLeft === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-600'
+              }`}
               onClick={hintMove}
+              disabled={hintsLeft === 0}
             >
-              Hint
+              Hint ({hintsLeft})
             </button>
           </>
         )}

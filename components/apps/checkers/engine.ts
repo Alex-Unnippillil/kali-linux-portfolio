@@ -153,3 +153,26 @@ export const evaluateBoard = (board: Board): number => {
 };
 
 export const isDraw = (noCaptureMoves: number) => noCaptureMoves >= 40;
+
+export const getHintMove = (board: Board, color: Color): Move | null => {
+  const moves = getAllMoves(board, color);
+  if (!moves.length) return null;
+  let bestMove = moves[0];
+  let bestScore = color === 'red' ? -Infinity : Infinity;
+  for (const move of moves) {
+    const { board: newBoard } = applyMove(board, move);
+    const score = evaluateBoard(newBoard);
+    if (color === 'red') {
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+    } else {
+      if (score < bestScore) {
+        bestScore = score;
+        bestMove = move;
+      }
+    }
+  }
+  return bestMove;
+};
