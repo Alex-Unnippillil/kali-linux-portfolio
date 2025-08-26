@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+
 import dynamic from 'next/dynamic';
 
 // Load the Twitter embed only on the client to avoid SSR issues.
@@ -62,6 +63,7 @@ export default function XApp() {
           className="w-full h-full"
         />
       </div>
+
     </div>
   );
 }
