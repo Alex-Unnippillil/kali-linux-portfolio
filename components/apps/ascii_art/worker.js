@@ -1,8 +1,8 @@
 self.onmessage = async (e) => {
-  const { bitmap, charSet, cellSize, useColor, palette } = e.data;
+  const { bitmap, charSet, width: outWidth, useColor, palette } = e.data;
   const chars = charSet.split('');
-  const width = Math.floor(bitmap.width / cellSize);
-  const height = Math.floor(bitmap.height / cellSize);
+  const width = outWidth;
+  const height = Math.round((bitmap.height / bitmap.width) * outWidth);
   let canvas;
   if (typeof OffscreenCanvas !== 'undefined') {
     canvas = new OffscreenCanvas(width, height);
