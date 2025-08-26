@@ -24,18 +24,18 @@ const checkWinner = (board) => {
   return { winner: null, line: [] };
 };
 
-const minimax = (board, player) => {
+const minimax = (board, player, depth = 0, maxDepth = Infinity) => {
   const { winner } = checkWinner(board);
-  if (winner === 'O') return { score: 1 };
-  if (winner === 'X') return { score: -1 };
-  if (winner === 'draw') return { score: 0 };
+  if (winner === 'O') return { score: 10 - depth };
+  if (winner === 'X') return { score: depth - 10 };
+  if (winner === 'draw' || depth === maxDepth) return { score: 0 };
 
   const moves = [];
   board.forEach((cell, idx) => {
     if (!cell) {
       const newBoard = board.slice();
       newBoard[idx] = player;
-      const result = minimax(newBoard, player === 'O' ? 'X' : 'O');
+      const result = minimax(newBoard, player === 'O' ? 'X' : 'O', depth + 1, maxDepth);
       moves.push({ index: idx, score: result.score });
     }
   });
