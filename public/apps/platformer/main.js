@@ -1,4 +1,4 @@
-import { Player, updatePhysics, collectCoin } from './engine.js';
+import { Player, updatePhysics, collectCoin, movePlayer } from './engine.js';
 
 const params = new URLSearchParams(location.search);
 const levelFile = params.get('lvl') || 'levels/level1.json';
@@ -107,10 +107,25 @@ function update(dt) {
     jump: keys['Space']
   };
   updatePhysics(player, input, dt);
-  movePlayer(dt);
+  movePlayer(player, tiles, tileSize, dt);
   updateEffects(dt);
 
   if (player.y > mapHeight * tileSize) respawn();
+
+  const cx = Math.floor((player.x + player.w / 2) / tileSize);
+  const cy = Math.floor((player.y + player.h / 2) / tileSize);
+  if (collectCoin(tiles, cx, cy)) {
+    score++;
+    coinTotal--;
+    effects.push({ x: cx * tileSize + tileSize / 2, y: cy * tileSize + tileSize / 2, life: 0 });
+    playCoinSound();
+  }
+  const tile = getTile(cx, cy);
+  if (tile === 6) {
+    tiles[cy][cx] = 0;
+    spawn = { x: cx * tileSize, y: cy * tileSize };
+    window.parent.postMessage({ type: 'checkpoint', checkpoint: spawn }, '*');
+  }
 
   const centerX = camera.x + canvas.width / 2;
   const centerY = camera.y + canvas.height / 2;
@@ -139,70 +154,6 @@ function respawn() {
   player.x = spawn.x;
   player.y = spawn.y;
   player.vx = player.vy = 0;
-}
-
-function movePlayer(dt) {
-  let ny = player.y + player.vy * dt;
-  player.onGround = false;
-  const dirY = Math.sign(player.vy);
-  if (dirY !== 0) {
-    const rangeY = dirY > 0 ? [player.y + player.h, ny + player.h] : [ny, player.y];
-    const startTileY = Math.floor(rangeY[0] / tileSize);
-    const endTileY = Math.floor(rangeY[1] / tileSize);
-    for (let ty = startTileY; dirY > 0 ? ty <= endTileY : ty >= endTileY; ty += dirY) {
-      const minY = ty * tileSize;
-      const maxY = minY + tileSize;
-      const tilesLeft = Math.floor(player.x / tileSize);
-      const tilesRight = Math.floor((player.x + player.w - 1) / tileSize);
-      for (let tx = tilesLeft; tx <= tilesRight; tx++) {
-        const t = getTile(tx, ty);
-        if (t === 1) {
-          if (dirY > 0) {
-            ny = Math.min(ny, minY - player.h);
-            player.onGround = true;
-          } else ny = Math.max(ny, maxY);
-        }
-      }
-    }
-  }
-  player.y = ny;
-
-  let nx = player.x + player.vx * dt;
-  const dirX = Math.sign(player.vx);
-  if (dirX !== 0) {
-    const rangeX = dirX > 0 ? [player.x + player.w, nx + player.w] : [nx, player.x];
-    const startTileX = Math.floor(rangeX[0] / tileSize);
-    const endTileX = Math.floor(rangeX[1] / tileSize);
-    for (let tx = startTileX; dirX > 0 ? tx <= endTileX : tx >= endTileX; tx += dirX) {
-      const minX = tx * tileSize;
-      const maxX = minX + tileSize;
-      const tilesTop = Math.floor(player.y / tileSize);
-      const tilesBottom = Math.floor((player.y + player.h - 1) / tileSize);
-      for (let ty = tilesTop; ty <= tilesBottom; ty++) {
-        const t = getTile(tx, ty);
-        if (t === 1) {
-          if (dirX > 0) nx = Math.min(nx, minX - player.w);
-          else nx = Math.max(nx, maxX);
-        }
-      }
-    }
-  }
-  player.x = nx;
-
-  const cx = Math.floor((player.x + player.w / 2) / tileSize);
-  const cy = Math.floor((player.y + player.h / 2) / tileSize);
-  if (collectCoin(tiles, cx, cy)) {
-    score++;
-    coinTotal--;
-    effects.push({ x: cx * tileSize + tileSize / 2, y: cy * tileSize + tileSize / 2, life: 0 });
-    playCoinSound();
-  }
-  const tile = getTile(cx, cy);
-  if (tile === 6) {
-    tiles[cy][cx] = 0;
-    spawn = { x: cx * tileSize, y: cy * tileSize };
-    window.parent.postMessage({ type: 'checkpoint', checkpoint: spawn }, '*');
-  }
 }
 
 function getTile(x, y) {
