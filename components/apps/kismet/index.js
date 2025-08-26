@@ -14,26 +14,68 @@ const randomMac = () =>
 const KismetApp = () => {
   const [networks, setNetworks] = useState([]);
   const [packets, setPackets] = useState([]);
+  const [channel, setChannel] = useState(1);
+  const [hopRate, setHopRate] = useState(0);
+  const [channelHistory, setChannelHistory] = useState([]);
 
   useEffect(() => {
     // In browsers we cannot access wireless cards directly. For demo purposes,
-    // populate with static data and simulate packets.
+    // populate with static data and simulate packets and channel hopping.
     setNetworks(demoNetworks());
 
-    const interval = setInterval(() => {
+    const pktInterval = setInterval(() => {
       setPackets((prev) => [
         ...prev,
         { ts: Date.now(), from: randomMac(), to: randomMac() },
       ]);
     }, 1500);
 
-    return () => clearInterval(interval);
+    // Simulate channel hopping and hop rate measurement
+    const channels = Array.from({ length: 11 }, (_, i) => i + 1); // 1-11
+    let hops = 0;
+    const hopInterval = setInterval(() => {
+      const newChannel = channels[Math.floor(Math.random() * channels.length)];
+      setChannel(newChannel);
+      hops += 1;
+      setChannelHistory((prev) => {
+        const updated = [...prev, { ts: Date.now(), channel: newChannel }];
+        try {
+          localStorage.setItem('kismetChannelHistory', JSON.stringify(updated));
+        } catch (e) {
+          // ignore write errors
+        }
+        return updated;
+      });
+    }, 2000);
+
+    const rateInterval = setInterval(() => {
+      setHopRate(hops / 2); // since hop interval is 2s, divide by 2 for hops/sec
+      hops = 0;
+    }, 2000);
+
+    // Load existing history on mount
+    try {
+      const saved = JSON.parse(localStorage.getItem('kismetChannelHistory') || '[]');
+      if (Array.isArray(saved)) setChannelHistory(saved);
+    } catch (e) {
+      // ignore read errors
+    }
+
+    return () => {
+      clearInterval(pktInterval);
+      clearInterval(hopInterval);
+      clearInterval(rateInterval);
+    };
   }, []);
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
       <div className="px-3 py-1 border-b border-gray-700">
         <span className="font-bold">Kismet</span>
+      </div>
+      <div className="px-3 py-1 border-b border-gray-700 text-xs flex justify-between">
+        <span>Channel: {channel}</span>
+        <span>Hop rate: {hopRate.toFixed(1)} hops/sec</span>
       </div>
       <div className="flex flex-grow overflow-hidden">
         <div className="w-1/2 p-2 overflow-y-auto">
@@ -64,6 +106,20 @@ const KismetApp = () => {
           ) : (
             <p className="text-gray-400 text-sm">No packets captured.</p>
           )}
+          <div className="mt-4">
+            <h2 className="text-sm font-semibold mb-2">Channel History</h2>
+            {channelHistory.length ? (
+              <ul>
+                {channelHistory.slice(-100).map((entry, idx) => (
+                  <li key={`${entry.ts}-${idx}`} className="text-xs mb-1">
+                    [{new Date(entry.ts).toLocaleTimeString()}] ch {entry.channel}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-400 text-sm">No channel activity.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
