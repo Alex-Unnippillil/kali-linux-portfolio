@@ -7,6 +7,8 @@ const Radare2 = () => {
   const [analysis, setAnalysis] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [query, setQuery] = useState('');
+  const [matches, setMatches] = useState([]);
 
   const handleDisasm = async () => {
     setError('');
@@ -55,6 +57,46 @@ const Radare2 = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleSearch = async () => {
+    setError('');
+    setDisasm('');
+    setMatches([]);
+    if (!hex || !query) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/api/radare2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'search', hex, query }),
+      });
+      const data = await res.json();
+      if (data.error) setError(data.error);
+      else {
+        setDisasm(data.result);
+        setMatches(data.matches || []);
+      }
+    } catch (err) {
+      setError('Failed to reach backend');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const highlightDisasm = (text, q) => {
+    if (!q) return text;
+    const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+    return parts.map((part, i) =>
+      part.toLowerCase() === q.toLowerCase() ? (
+        <span key={i} className="bg-yellow-500 text-black">
+          {part}
+        </span>
+      ) : (
+        part
+      )
+    );
+  };
+
   return (
     <div className="h-full w-full bg-ub-cool-grey text-white p-4 overflow-auto">
       <h1 className="text-xl mb-4">Radare2 Toolkit</h1>
@@ -68,14 +110,34 @@ const Radare2 = () => {
           onChange={(e) => setHex(e.target.value)}
           placeholder="9090"
         />
-        <button
-          onClick={handleDisasm}
-          className="px-4 py-2 bg-blue-600 rounded"
-        >
-          Disassemble
-        </button>
+        <div className="flex items-center space-x-2 mb-2">
+          <button
+            onClick={handleDisasm}
+            className="px-4 py-2 bg-blue-600 rounded"
+          >
+            Disassemble
+          </button>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search string"
+            className="flex-1 p-2 rounded text-black"
+          />
+          <button
+            onClick={handleSearch}
+            className="px-4 py-2 bg-purple-600 rounded"
+          >
+            Search
+          </button>
+        </div>
         {disasm && (
-          <pre className="whitespace-pre-wrap bg-black p-2 mt-2 rounded">{disasm}</pre>
+          <pre className="whitespace-pre-wrap bg-black p-2 mt-2 rounded">
+            {highlightDisasm(disasm, query)}
+          </pre>
+        )}
+        {matches.length > 0 && (
+          <p className="mt-1">{matches.length} match(es) found</p>
         )}
       </div>
 
