@@ -699,19 +699,40 @@ function Projects() {
     )
 }
 function Resume() {
+    const handleDownload = () => {
+        ReactGA.event({ category: 'resume', action: 'download' });
+    };
+
     return (
-        <object className="h-full w-full" data="/files/Alex-Unnippillil-Resume.pdf" type="application/pdf">
-            <p className="p-4 text-center">
-                Unable to display PDF.&nbsp;
+        <div className="h-full w-full flex flex-col">
+            <div className="p-2 text-right">
                 <a
-                    href="/files/Alex-Unnippillil-Resume.pdf"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline text-ubt-blue"
+                    href="/assets/Alex-Unnippillil-Resume.pdf"
+                    download
+                    onClick={handleDownload}
+                    className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
                 >
-                    Download the resume
+                    Download
                 </a>
-            </p>
-        </object>
+            </div>
+            <object
+                className="h-full w-full flex-1"
+                data="/assets/Alex-Unnippillil-Resume.pdf"
+                type="application/pdf"
+            >
+                <p className="p-4 text-center">
+                    Unable to display PDF.&nbsp;
+                    <a
+                        href="/assets/Alex-Unnippillil-Resume.pdf"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline text-ubt-blue"
+                        onClick={handleDownload}
+                    >
+                        Download the resume
+                    </a>
+                </p>
+            </object>
+        </div>
     )
 }
