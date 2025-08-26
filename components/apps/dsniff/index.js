@@ -1,92 +1,84 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-// Simple parser that attempts to extract protocol and host from a log line
-const parseLines = (text) =>
-  text
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => {
-      const parts = line.trim().split(/\s+/);
-      return { raw: line, protocol: parts[0] || '', host: parts[1] || '' };
-    });
-
-// Example traffic used when simulation mode is enabled
-const exampleUrlsnarf = [
-  { raw: 'HTTP example.com/index.html', protocol: 'HTTP', host: 'example.com' },
-  { raw: 'HTTPS test.com/login', protocol: 'HTTPS', host: 'test.com' },
-];
-
-const exampleArpspoof = [
+// Mock credential and ARP data used for local simulation
+const exampleCredentials = [
   {
-    raw: 'ARP reply 192.168.0.1 is-at 00:11:22:33:44:55',
-    protocol: 'ARP',
-    host: '192.168.0.1',
+    protocol: 'HTTP',
+    host: 'example.com',
+    username: 'alice',
+    password: 'password123',
+    raw: 'HTTP example.com alice password123',
   },
   {
-    raw: 'ARP reply 192.168.0.2 is-at aa:bb:cc:dd:ee:ff',
-    protocol: 'ARP',
-    host: '192.168.0.2',
+    protocol: 'FTP',
+    host: 'files.test',
+    username: 'bob',
+    password: 'qwerty',
+    raw: 'FTP files.test bob qwerty',
+  },
+];
+
+const exampleArpTable = [
+  {
+    ip: '192.168.0.1',
+    mac: '00:11:22:33:44:55',
+    raw: '192.168.0.1 00:11:22:33:44:55',
+  },
+  {
+    ip: '192.168.0.2',
+    mac: 'aa:bb:cc:dd:ee:ff',
+    raw: '192.168.0.2 aa:bb:cc:dd:ee:ff',
   },
 ];
 
 const Dsniff = () => {
-  const [urlsnarfLogs, setUrlsnarfLogs] = useState([]);
-  const [arpspoofLogs, setArpspoofLogs] = useState([]);
-  const [activeTab, setActiveTab] = useState('urlsnarf');
+  const [credLogs, setCredLogs] = useState([]);
+  const [arpLogs, setArpLogs] = useState([]);
+  const [activeTab, setActiveTab] = useState('credentials');
   const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState([]); // { field: 'host' | 'protocol', value: string }
-  const [newField, setNewField] = useState('host');
+  const [filters, setFilters] = useState([]); // { field: string, value: string }
+  const [newField, setNewField] = useState('protocol');
   const [newValue, setNewValue] = useState('');
   const [simulate, setSimulate] = useState(false);
   const simInterval = useRef(null);
   const simIndex = useRef(0);
 
-  const fetchOutputs = async () => {
-    try {
-      const [urlsnarfRes, arpspoofRes] = await Promise.all([
-        fetch('/api/dsniff/urlsnarf').then((r) => r.text()).catch(() => ''),
-        fetch('/api/dsniff/arpspoof').then((r) => r.text()).catch(() => ''),
-      ]);
-      if (urlsnarfRes) setUrlsnarfLogs(parseLines(urlsnarfRes));
-      if (arpspoofRes) setArpspoofLogs(parseLines(arpspoofRes));
-    } catch (e) {
-      // ignore errors
-    }
-  };
-
-  useEffect(() => {
-    if (!simulate) {
-      fetchOutputs();
-      const interval = setInterval(fetchOutputs, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [simulate]);
-
+  // Simulation that gradually adds entries from the mock data
   useEffect(() => {
     if (simulate) {
       simIndex.current = 0;
-      setUrlsnarfLogs([]);
-      setArpspoofLogs([]);
+      setCredLogs([]);
+      setArpLogs([]);
       simInterval.current = setInterval(() => {
-        setUrlsnarfLogs((prev) => [
+        setCredLogs((prev) => [
           ...prev,
-          exampleUrlsnarf[simIndex.current % exampleUrlsnarf.length],
+          exampleCredentials[simIndex.current % exampleCredentials.length],
         ]);
-        setArpspoofLogs((prev) => [
+        setArpLogs((prev) => [
           ...prev,
-          exampleArpspoof[simIndex.current % exampleArpspoof.length],
+          exampleArpTable[simIndex.current % exampleArpTable.length],
         ]);
         simIndex.current += 1;
       }, 1000);
     } else {
-      setUrlsnarfLogs([]);
-      setArpspoofLogs([]);
+      setCredLogs(exampleCredentials);
+      setArpLogs(exampleArpTable);
       if (simInterval.current) clearInterval(simInterval.current);
     }
     return () => {
       if (simInterval.current) clearInterval(simInterval.current);
     };
   }, [simulate]);
+
+  // Reset filter options when switching tabs
+  useEffect(() => {
+    if (activeTab === 'credentials') {
+      setNewField('protocol');
+    } else {
+      setNewField('ip');
+    }
+    setFilters([]);
+  }, [activeTab]);
 
   const addFilter = () => {
     if (newValue.trim()) {
@@ -99,16 +91,27 @@ const Dsniff = () => {
     setFilters(filters.filter((_, i) => i !== idx));
   };
 
-  const logs = activeTab === 'urlsnarf' ? urlsnarfLogs : arpspoofLogs;
+  const logs = activeTab === 'credentials' ? credLogs : arpLogs;
   const filteredLogs = logs.filter((log) => {
-    const searchMatch = log.raw
-      .toLowerCase()
-      .includes(search.toLowerCase());
+    const searchMatch = log.raw.toLowerCase().includes(search.toLowerCase());
     const filterMatch = filters.every((f) =>
-      log[f.field].toLowerCase().includes(f.value.toLowerCase())
+      (log[f.field] || '').toLowerCase().includes(f.value.toLowerCase())
     );
     return searchMatch && filterMatch;
   });
+
+  const fieldOptions =
+    activeTab === 'credentials'
+      ? [
+          { value: 'protocol', label: 'protocol' },
+          { value: 'host', label: 'host' },
+          { value: 'username', label: 'username' },
+          { value: 'password', label: 'password' },
+        ]
+      : [
+          { value: 'ip', label: 'ip' },
+          { value: 'mac', label: 'mac' },
+        ];
 
   return (
     <div className="h-full w-full bg-ub-cool-grey text-white p-2 overflow-auto">
@@ -116,19 +119,19 @@ const Dsniff = () => {
       <div className="mb-2 flex space-x-2 items-center">
         <button
           className={`px-2 ${
-            activeTab === 'urlsnarf' ? 'bg-black text-green-500' : 'bg-ub-grey'
+            activeTab === 'credentials' ? 'bg-black text-green-500' : 'bg-ub-grey'
           }`}
-          onClick={() => setActiveTab('urlsnarf')}
+          onClick={() => setActiveTab('credentials')}
         >
-          urlsnarf
+          credentials
         </button>
         <button
           className={`px-2 ${
-            activeTab === 'arpspoof' ? 'bg-black text-green-500' : 'bg-ub-grey'
+            activeTab === 'arp' ? 'bg-black text-green-500' : 'bg-ub-grey'
           }`}
-          onClick={() => setActiveTab('arpspoof')}
+          onClick={() => setActiveTab('arp')}
         >
-          arpspoof
+          ARP table
         </button>
         <label className="ml-auto flex items-center space-x-1">
           <input
@@ -142,7 +145,7 @@ const Dsniff = () => {
       <div className="mb-2">
         <input
           className="w-full text-black p-1"
-          placeholder="Search logs"
+          placeholder="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -154,8 +157,11 @@ const Dsniff = () => {
             onChange={(e) => setNewField(e.target.value)}
             className="text-black"
           >
-            <option value="host">host</option>
-            <option value="protocol">protocol</option>
+            {fieldOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
           <input
             className="flex-1 text-black p-1"
@@ -163,10 +169,7 @@ const Dsniff = () => {
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
           />
-          <button
-            className="bg-ub-blue text-white px-2"
-            onClick={addFilter}
-          >
+          <button className="bg-ub-blue text-white px-2" onClick={addFilter}>
             Add
           </button>
         </div>
@@ -187,12 +190,53 @@ const Dsniff = () => {
           ))}
         </div>
       </div>
-      <div className="bg-black text-green-500 p-2 h-40 overflow-auto whitespace-pre-wrap">
+      <div className="bg-black text-green-500 p-2 h-40 overflow-auto">
         {filteredLogs.length ? (
-          filteredLogs.map((log, i) => <div key={i}>{log.raw}</div>)
+          <table className="w-full text-sm">
+            <thead>
+              {activeTab === 'credentials' ? (
+                <tr className="text-left">
+                  <th className="pr-2">Protocol</th>
+                  <th className="pr-2">Host</th>
+                  <th className="pr-2">Username</th>
+                  <th>Password</th>
+                </tr>
+              ) : (
+                <tr className="text-left">
+                  <th className="pr-2">IP</th>
+                  <th>MAC</th>
+                </tr>
+              )}
+            </thead>
+            <tbody>
+              {activeTab === 'credentials'
+                ? filteredLogs.map((log, i) => (
+                    <tr key={i} className="odd:bg-ub-grey">
+                      <td className="pr-2">{log.protocol}</td>
+                      <td className="pr-2">{log.host}</td>
+                      <td className="pr-2">{log.username}</td>
+                      <td>{log.password}</td>
+                    </tr>
+                  ))
+                : filteredLogs.map((log, i) => (
+                    <tr key={i} className="odd:bg-ub-grey">
+                      <td className="pr-2">{log.ip}</td>
+                      <td>{log.mac}</td>
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
         ) : (
           'No data'
         )}
+      </div>
+      <div className="mt-4">
+        <h2 className="text-lg mb-2">How to protect</h2>
+        <ul className="list-disc pl-5 text-sm">
+          <li>Use encrypted alternatives like HTTPS, SSH and SFTP.</li>
+          <li>Employ network monitoring to detect ARP spoofing.</li>
+          <li>Prefer VPNs and secure protocols to safeguard credentials.</li>
+        </ul>
       </div>
     </div>
   );
@@ -203,3 +247,4 @@ export default Dsniff;
 export const displayDsniff = (addFolder, openApp) => (
   <Dsniff addFolder={addFolder} openApp={openApp} />
 );
+

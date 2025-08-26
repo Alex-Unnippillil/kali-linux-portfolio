@@ -17,35 +17,27 @@ describe('Dsniff component', () => {
 
   it('toggles simulation mode', () => {
     render(<Dsniff />);
-    expect(screen.getByText('No data')).toBeInTheDocument();
+    expect(screen.getAllByRole('row').length).toBe(3);
 
     fireEvent.click(screen.getByLabelText('Simulation'));
     act(() => {
       jest.advanceTimersByTime(1000);
     });
-    expect(screen.queryByText('No data')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('row').length).toBe(2);
 
     fireEvent.click(screen.getByLabelText('Simulation'));
-    act(() => {
-      jest.advanceTimersByTime(0);
-    });
-    expect(screen.getByText('No data')).toBeInTheDocument();
+    expect(screen.getAllByRole('row').length).toBe(3);
   });
 
   it('applies host filter', () => {
     render(<Dsniff />);
-    fireEvent.click(screen.getByLabelText('Simulation'));
-    act(() => {
-      jest.advanceTimersByTime(2000);
-    });
 
-    // Apply host filter
     fireEvent.change(screen.getByPlaceholderText('Value'), {
       target: { value: 'example.com' },
     });
     fireEvent.click(screen.getByText('Add'));
     expect(screen.getAllByText(/example.com/).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/test.com/)).toBeNull();
+    expect(screen.queryByText(/files.test/)).toBeNull();
   });
 });
 
