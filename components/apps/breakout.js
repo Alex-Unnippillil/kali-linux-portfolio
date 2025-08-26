@@ -83,14 +83,20 @@ const BreakoutGame = ({ levels }) => {
   const [level, setLevel] = useState(0);
   const scoreRef = useRef(0);
   const highScoresRef = useRef({});
+  const bestLevelRef = useRef(0);
 
   // Load saved level and highscores
   useEffect(() => {
     if (typeof localStorage === "undefined") return;
     const savedLevel = parseInt(localStorage.getItem("breakout-level") || "0", 10);
     const savedHigh = JSON.parse(localStorage.getItem("breakout-highscores") || "{}");
+    const savedBest = parseInt(
+      localStorage.getItem("breakout-best-level") || "0",
+      10
+    );
     setLevel(Number.isFinite(savedLevel) ? savedLevel : 0);
     highScoresRef.current = savedHigh && typeof savedHigh === "object" ? savedHigh : {};
+    bestLevelRef.current = Number.isFinite(savedBest) ? savedBest : 0;
   }, []);
 
   useEffect(() => {
@@ -122,6 +128,7 @@ const BreakoutGame = ({ levels }) => {
       y: height - 20,
       w: BASE_PADDLE_WIDTH,
       h: 10,
+      vx: 0,
     };
     const balls = [{ x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 }];
     const powerUps = [];
@@ -139,6 +146,17 @@ const BreakoutGame = ({ levels }) => {
     window.addEventListener("keydown", keyDown);
     window.addEventListener("keyup", keyUp);
 
+    // touch/mouse controls
+    const handlePointer = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      paddle.x = clientX - rect.left - paddle.w / 2;
+      e.preventDefault();
+    };
+    canvas.addEventListener("mousemove", handlePointer);
+    canvas.addEventListener("touchstart", handlePointer, { passive: false });
+    canvas.addEventListener("touchmove", handlePointer, { passive: false });
+
     let animationId;
     let lastTime = performance.now();
 
@@ -146,8 +164,18 @@ const BreakoutGame = ({ levels }) => {
       const dt = Math.min(0.05, (time - lastTime) / 1000); // clamp big frame gaps
       lastTime = time;
 
-      // Update paddle
-      paddle.x += (Number(keys.right) - Number(keys.left)) * 300 * dt;
+      // Update paddle with acceleration
+      const accel = 1200;
+      const maxSpeed = 400;
+      const friction = 800;
+      if (keys.left) paddle.vx -= accel * dt;
+      if (keys.right) paddle.vx += accel * dt;
+      if (!keys.left && !keys.right) {
+        if (paddle.vx > 0) paddle.vx = Math.max(0, paddle.vx - friction * dt);
+        else if (paddle.vx < 0) paddle.vx = Math.min(0, paddle.vx + friction * dt);
+      }
+      paddle.vx = Math.max(-maxSpeed, Math.min(maxSpeed, paddle.vx));
+      paddle.x += paddle.vx * dt;
       if (paddle.x < 0) paddle.x = 0;
       if (paddle.x > width - paddle.w) paddle.x = width - paddle.w;
       if (paddleTimer > 0) {
@@ -191,7 +219,8 @@ const BreakoutGame = ({ levels }) => {
 
             // 20% chance to spawn a power-up
             if (Math.random() < 0.2) {
-              const type = Math.random() < 0.5 ? "multi" : "expand";
+              const types = ["multi", "expand", "slow"];
+              const type = types[Math.floor(Math.random() * types.length)];
               powerUps.push({
                 x: brick.x + brick.w / 2,
                 y: brick.y + brick.h / 2,
@@ -225,6 +254,11 @@ const BreakoutGame = ({ levels }) => {
           } else if (p.type === "expand") {
             paddle.w = BASE_PADDLE_WIDTH * 1.5;
             paddleTimer = 10;
+          } else if (p.type === "slow") {
+            for (const b of balls) {
+              b.vx *= 0.7;
+              b.vy *= 0.7;
+            }
           }
           powerUps.splice(i, 1);
         } else if (p.y > height) {
@@ -261,7 +295,8 @@ const BreakoutGame = ({ levels }) => {
 
       // Power-ups
       for (const p of powerUps) {
-        ctx.fillStyle = p.type === "multi" ? "red" : "blue";
+        ctx.fillStyle =
+          p.type === "multi" ? "red" : p.type === "expand" ? "blue" : "green";
         ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
       }
 
@@ -272,6 +307,7 @@ const BreakoutGame = ({ levels }) => {
       ctx.fillText(`Level: ${level + 1}`, 10, 10);
       ctx.fillText(`Score: ${scoreRef.current}`, 10, 26);
       ctx.fillText(`High: ${highScoresRef.current[level] || 0}`, 10, 42);
+      ctx.fillText(`Best: ${bestLevelRef.current + 1}`, 10, 58);
 
       // Level complete
       if (bricks.every((b) => !b.alive)) {
@@ -286,6 +322,10 @@ const BreakoutGame = ({ levels }) => {
           );
           const nextLevel = level + 1;
           localStorage.setItem("breakout-level", String(nextLevel));
+          if (nextLevel > bestLevelRef.current) {
+            bestLevelRef.current = nextLevel;
+            localStorage.setItem("breakout-best-level", String(nextLevel));
+          }
         }
         setLevel((v) => v + 1);
         scoreRef.current = 0;
@@ -302,6 +342,9 @@ const BreakoutGame = ({ levels }) => {
       window.removeEventListener("keydown", keyDown);
       window.removeEventListener("keyup", keyUp);
       window.removeEventListener("resize", fit);
+      canvas.removeEventListener("mousemove", handlePointer);
+      canvas.removeEventListener("touchstart", handlePointer);
+      canvas.removeEventListener("touchmove", handlePointer);
     };
   }, [level, levels]);
 
