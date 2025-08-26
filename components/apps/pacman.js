@@ -50,6 +50,9 @@ const modeSchedule = [
 
 const fruitSpawnDots = [10, 30];
 
+const TARGET_MODE_LEVEL = 2; // level index where ghosts begin targeting
+const TUNNEL_SPEED = 0.5; // multiplier for speed inside tunnels
+
 const Pacman = () => {
   const { loading, error } = useAssetLoader({
     images: ['/themes/Yaru/status/ubuntu_white_hex.svg'],
@@ -95,6 +98,10 @@ const Pacman = () => {
   const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);
   const isCenter = (pos) => Math.abs((pos % tileSize) - tileSize / 2) < 0.1;
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const isTunnel = (tx, ty) => {
+    const width = mazeRef.current[0].length;
+    return (tx === 0 || tx === width - 1) && tileAt(tx, ty) !== 1;
+  };
 
   const playSound = (freq) => {
     try {
@@ -252,6 +259,7 @@ const Pacman = () => {
   const step = useCallback(() => {
     const pac = pacRef.current;
     const maze = mazeRef.current;
+    const randomMode = levelIndex < TARGET_MODE_LEVEL;
 
     // handle pacman turning
     const px = pac.x / tileSize;
@@ -265,12 +273,16 @@ const Pacman = () => {
       }
     }
 
+    const pacTileX = Math.floor((pac.x + tileSize / 2) / tileSize);
+    const pacTileY = Math.floor((pac.y + tileSize / 2) / tileSize);
+    const pacSpeed = isTunnel(pacTileX, pacTileY) ? speed * TUNNEL_SPEED : speed;
+
     // move pacman
-    const tx = Math.floor((pac.x + pac.dir.x * speed + tileSize / 2) / tileSize);
-    const ty = Math.floor((pac.y + pac.dir.y * speed + tileSize / 2) / tileSize);
+    const tx = Math.floor((pac.x + pac.dir.x * pacSpeed + tileSize / 2) / tileSize);
+    const ty = Math.floor((pac.y + pac.dir.y * pacSpeed + tileSize / 2) / tileSize);
     if (tileAt(tx, ty) !== 1) {
-      pac.x += pac.dir.x * speed;
-      pac.y += pac.dir.y * speed;
+      pac.x += pac.dir.x * pacSpeed;
+      pac.y += pac.dir.y * pacSpeed;
     } else {
       pac.dir = { x: 0, y: 0 };
     }
@@ -328,10 +340,13 @@ const Pacman = () => {
     ghostsRef.current.forEach((g) => {
       const gx = g.x / tileSize;
       const gy = g.y / tileSize;
+      const gtxPrev = Math.floor((g.x + tileSize / 2) / tileSize);
+      const gtyPrev = Math.floor((g.y + tileSize / 2) / tileSize);
+      const gSpeed = isTunnel(gtxPrev, gtyPrev) ? speed * TUNNEL_SPEED : speed;
 
       if (isCenter(g.x) && isCenter(g.y)) {
         let options = availableDirs(Math.floor(gx), Math.floor(gy), g.dir);
-        if (frightTimerRef.current > 0) {
+        if (frightTimerRef.current > 0 || randomMode) {
           g.dir = options[Math.floor(Math.random() * options.length)] || g.dir;
         } else {
           const target = targetFor(g, pac);
@@ -346,11 +361,11 @@ const Pacman = () => {
         }
       }
 
-      const ntx = Math.floor((g.x + g.dir.x * speed + tileSize / 2) / tileSize);
-      const nty = Math.floor((g.y + g.dir.y * speed + tileSize / 2) / tileSize);
+      const ntx = Math.floor((g.x + g.dir.x * gSpeed + tileSize / 2) / tileSize);
+      const nty = Math.floor((g.y + g.dir.y * gSpeed + tileSize / 2) / tileSize);
       if (tileAt(ntx, nty) !== 1) {
-        g.x += g.dir.x * speed;
-        g.y += g.dir.y * speed;
+        g.x += g.dir.x * gSpeed;
+        g.y += g.dir.y * gSpeed;
       }
 
       const gtx = Math.floor((g.x + tileSize / 2) / tileSize);
@@ -373,7 +388,7 @@ const Pacman = () => {
         }
       }
     });
-  }, [pellets, score, availableDirs]);
+  }, [pellets, score, availableDirs, levelIndex, isTunnel]);
 
   const stepRef = useRef(step);
   useEffect(() => {
@@ -478,6 +493,28 @@ const Pacman = () => {
     };
   }, [loading, error, draw]);
 
+
+  useEffect(() => {
+    fetch('/pacman-levels.json')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.levels) {
+          setLevels(data.levels);
+          loadLevel(0, data.levels);
+        }
+      })
+      .catch(() => {});
+    const stored = window.localStorage.getItem('pacmanHighScore');
+    if (stored) setHighScore(parseInt(stored, 10));
+  }, [loadLevel]);
+
+  useEffect(() => {
+    if (score > highScore) {
+      setHighScore(score);
+      window.localStorage.setItem('pacmanHighScore', String(score));
+    }
+  }, [score, highScore]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -495,6 +532,7 @@ const Pacman = () => {
   }
 
     return (
+
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <select
         className="mb-2 text-black"

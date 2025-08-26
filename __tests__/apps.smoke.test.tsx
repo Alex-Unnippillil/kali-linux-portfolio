@@ -34,6 +34,7 @@ beforeAll(() => {
     transform: jest.fn(),
     rect: jest.fn(),
     clip: jest.fn(),
+    createLinearGradient: jest.fn(() => ({ addColorStop: jest.fn() })),
   }));
 
   // mock fetch for components that request external resources

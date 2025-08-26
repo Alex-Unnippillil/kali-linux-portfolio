@@ -26,11 +26,22 @@ describe('frogger mechanics', () => {
 
   test('speed ramp scales lane speeds and spawn rates', () => {
     const level = 3; // two increments
-    const car = rampLane(carLaneDefs[0], level, 0.3);
+    const car = rampLane(carLaneDefs[0], level, 0.3, 1);
     expect(car.speed).toBeCloseTo(carLaneDefs[0].speed * 1.4);
-    expect(car.spawnRate).toBeCloseTo(Math.max(0.3, carLaneDefs[0].spawnRate * 0.8));
-    const log = rampLane(logLaneDefs[0], level, 0.5);
+    expect(car.spawnRate).toBeCloseTo(
+      Math.max(0.3, carLaneDefs[0].spawnRate * 0.8)
+    );
+    const log = rampLane(logLaneDefs[0], level, 0.5, 1);
     expect(log.speed).toBeCloseTo(logLaneDefs[0].speed * 1.4);
-    expect(log.spawnRate).toBeCloseTo(Math.max(0.5, logLaneDefs[0].spawnRate * 0.8));
+    expect(log.spawnRate).toBeCloseTo(
+      Math.max(0.5, logLaneDefs[0].spawnRate * 0.8)
+    );
+  });
+
+  test('difficulty multiplier adjusts lane speed', () => {
+    const hard = rampLane(carLaneDefs[0], 1, 0.3, 1.2);
+    expect(hard.speed).toBeCloseTo(carLaneDefs[0].speed * 1.2);
+    const easy = rampLane(carLaneDefs[0], 1, 0.3, 0.8);
+    expect(easy.speed).toBeCloseTo(carLaneDefs[0].speed * 0.8);
   });
 });
