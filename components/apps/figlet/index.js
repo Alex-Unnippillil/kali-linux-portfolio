@@ -1,28 +1,60 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const fonts = ['Standard', 'Slant'];
+const defaultFonts = ['Standard', 'Slant'];
 
 const FigletApp = () => {
   const [text, setText] = useState('');
-  const [font, setFont] = useState(fonts[0]);
+  const [fonts, setFonts] = useState(defaultFonts);
+  const [font, setFont] = useState(defaultFonts[0]);
   const [output, setOutput] = useState('');
   const workerRef = useRef(null);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => setOutput(e.data);
+    workerRef.current.onmessage = (e) => {
+      const { type, name, output } = e.data;
+      if (type === 'render') {
+        setOutput(output);
+      } else if (type === 'fontParsed') {
+        setFonts((prev) => [...prev, name]);
+        setFont(name);
+      }
+    };
     return () => workerRef.current?.terminate();
   }, []);
 
   useEffect(() => {
     if (workerRef.current) {
-      workerRef.current.postMessage({ text, font });
+      workerRef.current.postMessage({ type: 'render', text, font });
     }
   }, [text, font]);
+
+  const handleUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file && workerRef.current) {
+      const reader = new FileReader();
+      const name = file.name.replace(/\.flf$/i, '');
+      reader.onload = () => {
+        workerRef.current.postMessage({
+          type: 'parseFont',
+          name,
+          data: reader.result,
+        });
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+  };
 
   return (
     <div className="flex flex-col h-full w-full bg-ub-cool-grey text-white font-mono">
       <div className="p-2 flex gap-2 bg-ub-gedit-dark">
+        <input
+          type="file"
+          accept=".flf"
+          onChange={handleUpload}
+          className="bg-gray-700 text-white"
+        />
         <select
           className="bg-gray-700 text-white px-1"
           value={font}
