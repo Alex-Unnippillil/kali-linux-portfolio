@@ -95,7 +95,7 @@ const Asteroids = () => {
   const requestRef = useRef();
   const audioCtx = useRef(null);
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-  const controls = useGameControls(canvasRef);
+  const controlsRef = useRef(useGameControls(canvasRef));
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [restartKey, setRestartKey] = useState(0);
@@ -302,7 +302,7 @@ const Asteroids = () => {
         return;
       }
       pollGamepad();
-      const { keys, joystick, fire, hyperspace: hyper } = controls.current;
+      const { keys, joystick, fire, hyperspace: hyper } = controlsRef.current;
       const turn =
         (keys.ArrowLeft ? -1 : 0) +
         (keys.ArrowRight ? 1 : 0) +
@@ -314,11 +314,11 @@ const Asteroids = () => {
         (joystick.active ? -joystick.y : 0);
       if (fire) {
         fireBullet();
-        controls.current.fire = false;
+        controlsRef.current.fire = false;
       }
       if (hyper) {
         hyperspace();
-        controls.current.hyperspace = false;
+        controlsRef.current.hyperspace = false;
       }
       if (padState.fire) fireBullet();
       if (padState.hyperspace) hyperspace();
@@ -509,7 +509,7 @@ const Asteroids = () => {
 
     requestRef.current = requestAnimationFrame(update);
     return cleanup;
-  }, [controls, dpr, restartKey]);
+  }, [controlsRef, dpr, restartKey]);
   const togglePause = () => {
     pausedRef.current = !pausedRef.current;
     setPaused(pausedRef.current);
