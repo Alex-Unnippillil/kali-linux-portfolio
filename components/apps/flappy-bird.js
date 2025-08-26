@@ -1,11 +1,16 @@
 import React, { useEffect } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
+import usePersistentState from '../../hooks/usePersistentState';
 
 const WIDTH = 400;
 const HEIGHT = 300;
+const BIRD_RADIUS = 10;
+const HITBOX_RADIUS = 8;
 
 const FlappyBird = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+
+  const [best, setBest] = usePersistentState('flappy-bird-best', 0, (v) => typeof v === 'number');
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -31,6 +36,7 @@ const FlappyBird = () => {
     let score = 0;
     let running = true;
     let animationFrameId = 0;
+    let bestScore = best;
 
     function addPipe() {
       const top = Math.random() * (height - gap - 40) + 20;
@@ -64,14 +70,14 @@ const FlappyBird = () => {
       // bird
       ctx.fillStyle = 'yellow';
       ctx.beginPath();
-      ctx.arc(bird.x, bird.y, 10, 0, Math.PI * 2);
+      ctx.arc(bird.x, bird.y, BIRD_RADIUS, 0, Math.PI * 2);
       ctx.fill();
 
       // HUD
       ctx.fillStyle = 'black';
       ctx.font = '16px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`Score: ${score}`, 10, 20);
+      ctx.fillText(`Score: ${score} Best: ${bestScore}`, 10, 20);
 
       if (!running) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -81,7 +87,10 @@ const FlappyBird = () => {
         ctx.font = '24px sans-serif';
         ctx.fillText('Game Over', width / 2, height / 2);
         ctx.font = '16px sans-serif';
-        ctx.fillText('Press Space or Click to restart', width / 2, height / 2 + 30);
+        ctx.fillText('Press Space or Tap to restart', width / 2, height / 2 + 30);
+        ctx.font = '12px sans-serif';
+        const share = `${window.location.origin}${window.location.pathname}?score=${bestScore}`;
+        ctx.fillText(`Share: ${share}`, width / 2, height / 2 + 50);
         ctx.textAlign = 'left';
       }
     }
@@ -97,7 +106,7 @@ const FlappyBird = () => {
       bird.y += bird.vy;
 
       // top/bottom collision
-      if (bird.y + 10 > height || bird.y - 10 < 0) {
+      if (bird.y + HITBOX_RADIUS > height || bird.y - HITBOX_RADIUS < 0) {
         running = false;
       }
 
@@ -109,9 +118,9 @@ const FlappyBird = () => {
 
         // collision with current pipe
         if (
-          pipe.x < bird.x + 10 &&
-          pipe.x + pipeWidth > bird.x - 10 &&
-          (bird.y - 10 < pipe.top || bird.y + 10 > pipe.bottom)
+          pipe.x < bird.x + HITBOX_RADIUS &&
+          pipe.x + pipeWidth > bird.x - HITBOX_RADIUS &&
+          (bird.y - HITBOX_RADIUS < pipe.top || bird.y + HITBOX_RADIUS > pipe.bottom)
         ) {
           running = false;
         }
@@ -128,7 +137,13 @@ const FlappyBird = () => {
 
       draw();
 
-      if (running) animationFrameId = requestAnimationFrame(update);
+      if (running) {
+        animationFrameId = requestAnimationFrame(update);
+      } else if (score > bestScore) {
+        setBest(score);
+        bestScore = score;
+        draw();
+      }
     }
 
     function handleKey(e) {
