@@ -64,3 +64,26 @@ body {
 .hidden {
   display: none;
 }
+
+.history {
+  margin-top: 0.5rem;
+  max-height: 120px;
+  overflow-y: auto;
+  background: #fafafa;
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.history-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.history-entry button {
+  margin-left: 0.5rem;
+  padding: 0.25rem 0.5rem;
+}
