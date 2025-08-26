@@ -5,6 +5,7 @@ import QrScanner from 'qr-scanner';
 const QRTool = () => {
   const [text, setText] = useState('');
   const [decodedText, setDecodedText] = useState('');
+  const [demo, setDemo] = useState(false);
   const canvasRef = useRef(null);
   const videoRef = useRef(null);
   const scannerRef = useRef(null);
@@ -35,6 +36,11 @@ const QRTool = () => {
   };
 
   const startCamera = () => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setDemo(true);
+      setDecodedText('Demo result: https://example.com');
+      return;
+    }
     if (scannerRef.current) {
       scannerRef.current.start();
       return;
@@ -48,6 +54,7 @@ const QRTool = () => {
   };
 
   const stopCamera = () => {
+    if (demo) return;
     scannerRef.current?.stop();
   };
 
@@ -104,11 +111,18 @@ const QRTool = () => {
             onClick={stopCamera}
             className="px-4 py-2 bg-red-700 hover:bg-red-600 rounded text-white"
             aria-label="Stop camera"
+            disabled={demo}
           >
             Stop Camera
           </button>
         </div>
-        <video ref={videoRef} className="w-64 h-64 bg-black" aria-label="Camera preview" />
+        {demo ? (
+          <div className="w-64 h-64 bg-black flex items-center justify-center text-gray-400">
+            Camera Demo
+          </div>
+        ) : (
+          <video ref={videoRef} className="w-64 h-64 bg-black" aria-label="Camera preview" />
+        )}
         {decodedText && (
           <p className="mt-2 break-all">Decoded: {decodedText}</p>
         )}
