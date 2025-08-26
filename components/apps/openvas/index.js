@@ -1,9 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const OpenVASApp = () => {
   const [target, setTarget] = useState('');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [reports, setReports] = useState([]);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const res = await fetch('/api/openvas');
+        if (!res.ok) return;
+        const data = await res.json();
+        setReports(data.reports || []);
+      } catch (e) {
+        // ignore history fetch errors
+      }
+    };
+    fetchHistory();
+  }, []);
 
   const runScan = async () => {
     if (!target) return;
@@ -12,8 +27,11 @@ const OpenVASApp = () => {
     try {
       const res = await fetch(`/api/openvas?target=${encodeURIComponent(target)}`);
       if (!res.ok) throw new Error(`Request failed with ${res.status}`);
-      const data = await res.text();
-      setOutput(data);
+      const data = await res.json();
+      setOutput(data.output);
+      if (data.report) {
+        setReports((prev) => [data.report, ...prev]);
+      }
     } catch (e) {
       setOutput(e.message);
     } finally {
@@ -44,6 +62,27 @@ const OpenVASApp = () => {
         <pre className="bg-black text-green-400 p-2 rounded whitespace-pre-wrap">
           {output}
         </pre>
+      )}
+      {reports.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-md mb-2">Report History</h3>
+          <ul className="space-y-1 text-sm">
+            {reports.map((r) => (
+              <li key={r.id} className="flex justify-between">
+                <span>
+                  {new Date(r.createdAt).toLocaleString()} - {r.target}
+                </span>
+                <a
+                  className="text-blue-400 hover:underline"
+                  href={r.url}
+                  download
+                >
+                  PDF
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
