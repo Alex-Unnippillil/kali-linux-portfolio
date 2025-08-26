@@ -303,49 +303,21 @@ const Snake = () => {
       {gameOver && (
         <div className="mt-2 flex items-center space-x-2">
           <span>Game Over</span>
-
           <button
-            className="px-2 py-0.5 bg-gray-700 rounded"
-            onClick={() => setPaused((p) => !p)}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={reset}
           >
-            {paused ? 'Resume' : 'Pause'}
+            Retry
           </button>
           <button
-            className="px-2 py-0.5 bg-gray-700 rounded"
-            onClick={() => setWrap((w) => !w)}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={playReplay}
           >
-            {wrap ? 'No Wrap' : 'Wrap'}
+            Replay
           </button>
-        </>
-      }
-      instructions="Use arrow keys or swipe to move."
-    >
-      <>
-        <div
-          className="grid"
-          style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
-        >
-          {cells}
         </div>
-        {gameOver && (
-          <div className="mt-2 flex items-center space-x-2">
-            <span>Game Over</span>
-            <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-              onClick={reset}
-            >
-              Retry
-            </button>
-            <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-              onClick={playReplay}
-            >
-              Replay
-            </button>
-          </div>
-        )}
-      </>
-    </GameLayout>
+      )}
+    </div>
   );
 };
 

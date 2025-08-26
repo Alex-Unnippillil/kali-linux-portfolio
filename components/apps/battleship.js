@@ -186,41 +186,41 @@ const Battleship = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto font-ubuntu">
-
-    <GameLayout
-      difficulty={difficulty}
-      onDifficultyChange={(d) => {
-        setDifficulty(d);
-        restart(d);
-      }}
-      onRestart={() => restart()}
-      stats={stats}
-    >
-      <div className="mb-2">{message}</div>
-      {phase==='placement' && (
-        <div className="flex space-x-4">
-          <div className="relative border border-ub-dark-grey" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL}}>
-            {renderBoard(playerBoard)}
-            {ships.map((ship,i)=>(
-              <Draggable key={ship.id} grid={[CELL,CELL]} position={{x:(ship.x||0)*CELL,y:(ship.y||0)*CELL}}
-                onStop={(e,data)=>handleDragStop(i,e,data)} disabled={phase!=='placement'}>
-                <div className="absolute bg-blue-700 opacity-80" style={{width:(ship.dir===0?ship.len:1)*CELL,height:(ship.dir===1?ship.len:1)*CELL}}/>
-              </Draggable>
-            ))}
+      <GameLayout
+        difficulty={difficulty}
+        onDifficultyChange={(d) => {
+          setDifficulty(d);
+          restart(d);
+        }}
+        onRestart={() => restart()}
+        stats={stats}
+      >
+        <div className="mb-2">{message}</div>
+        {phase==='placement' && (
+          <div className="flex space-x-4">
+            <div className="relative border border-ub-dark-grey" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL}}>
+              {renderBoard(playerBoard)}
+              {ships.map((ship,i)=>(
+                <Draggable key={ship.id} grid={[CELL,CELL]} position={{x:(ship.x||0)*CELL,y:(ship.y||0)*CELL}}
+                  onStop={(e,data)=>handleDragStop(i,e,data)} disabled={phase!=='placement'}>
+                  <div className="absolute bg-blue-700 opacity-80" style={{width:(ship.dir===0?ship.len:1)*CELL,height:(ship.dir===1?ship.len:1)*CELL}}/>
+                </Draggable>
+              ))}
+            </div>
+            <div className="flex flex-col space-y-2">
+              <button className="px-2 py-1 bg-gray-700" onClick={randomize}>Randomize</button>
+              <button className="px-2 py-1 bg-gray-700" onClick={start}>Start</button>
+            </div>
           </div>
-          <div className="flex flex-col space-y-2">
-            <button className="px-2 py-1 bg-gray-700" onClick={randomize}>Randomize</button>
-            <button className="px-2 py-1 bg-gray-700" onClick={start}>Start</button>
+        )}
+        {phase!=='placement' && (
+          <div className="flex space-x-8">
+            <div>{renderBoard(playerBoard)}</div>
+            <div>{renderBoard(enemyBoard,true)}</div>
           </div>
-        </div>
-      )}
-      {phase!=='placement' && (
-        <div className="flex space-x-8">
-          <div>{renderBoard(playerBoard)}</div>
-          <div>{renderBoard(enemyBoard,true)}</div>
-        </div>
-      )}
-    </GameLayout>
+        )}
+      </GameLayout>
+    </div>
   );
 };
 
