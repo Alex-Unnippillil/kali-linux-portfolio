@@ -4,7 +4,7 @@ import { create, all } from 'mathjs';
 const math = create(all);
 
 const unitMap = {
-  length: {
+  distance: {
     meter: 'm',
     kilometer: 'km',
     mile: 'mi',
@@ -16,6 +16,11 @@ const unitMap = {
     pound: 'lb',
     ounce: 'oz',
   },
+  temperature: {
+    celsius: 'degC',
+    fahrenheit: 'degF',
+    kelvin: 'K',
+  },
 };
 
 export const convertUnit = (category, from, to, amount, precision) => {
@@ -26,7 +31,7 @@ export const convertUnit = (category, from, to, amount, precision) => {
 };
 
 const UnitConverter = () => {
-  const [category, setCategory] = useState('length');
+  const [category, setCategory] = useState('distance');
   const [fromUnit, setFromUnit] = useState('meter');
   const [toUnit, setToUnit] = useState('kilometer');
   const [value, setValue] = useState('');
@@ -68,8 +73,9 @@ const UnitConverter = () => {
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
-          <option value="length">Length</option>
+          <option value="distance">Distance</option>
           <option value="weight">Weight</option>
+          <option value="temperature">Temperature</option>
         </select>
       </label>
       <label className="flex flex-col">
