@@ -1,0 +1,29 @@
+{
+  "caseName": "Sample Case",
+  "files": [
+    {
+      "path": "documents/evidence.txt",
+      "content": "This file contains evidence of the breach.",
+      "timestamp": "2023-06-01T10:00:00Z",
+      "hash": "b8946362af5510a5d53d21df92766fa050168180e14c9659198465cb866d51c6"
+    },
+    {
+      "path": "documents/notes.txt",
+      "content": "Buy milk and eggs.",
+      "timestamp": "2023-06-02T09:30:00Z",
+      "hash": "547b3793570b58afdd103ebf83d32c5ab4f5564b2257a9f42fa528a2198eb4a4"
+    },
+    {
+      "path": "logs/system.log",
+      "content": "2023-06-01 12:00:00 user login\n2023-06-02 14:00:00 unauthorized access attempt",
+      "timestamp": "2023-06-02T14:00:00Z",
+      "hash": "b9372c569230ddecbec91df5a7d72619f1b782878f61331aa7be512599893225"
+    },
+    {
+      "path": "images/photo.jpg",
+      "content": "[binary]",
+      "timestamp": "2023-06-03T08:15:00Z",
+      "hash": "553dcf932a632f1394530335fbfd8c6a167f819693051947208f6579b40483ab"
+    }
+  ]
+}
