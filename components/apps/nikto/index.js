@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import usePersistentState from '../../usePersistentState';
+import initialResults from './output.json';
 
 const NiktoApp = () => {
   const [target, setTarget] = useState('');
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = usePersistentState('nikto-history', initialResults.scans || []);
 
   const runScan = async () => {
     if (!target) return;
@@ -11,13 +14,19 @@ const NiktoApp = () => {
     setResult('');
     try {
       const res = await fetch(`/api/nikto?target=${encodeURIComponent(target)}`);
-      const text = await res.text();
-      setResult(text);
+      const data = await res.json();
+      const formatted = JSON.stringify(data, null, 2);
+      setResult(formatted);
+      setHistory([...history, { id: Date.now(), target, output: data }]);
     } catch (err) {
       setResult(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
+  };
+
+  const deleteEntry = (id) => {
+    setHistory(history.filter((entry) => entry.id !== id));
   };
 
   return (
@@ -44,6 +53,34 @@ const NiktoApp = () => {
       ) : (
         <pre className="whitespace-pre-wrap flex-1 overflow-auto">{result}</pre>
       )}
+      <div className="mt-4">
+        <h2 className="text-md font-bold mb-2">Past Scans</h2>
+        {history.length === 0 ? (
+          <p>No past scans</p>
+        ) : (
+          <ul className="space-y-2">
+            {history.map(({ id, target, output }) => (
+              <li key={id} className="border border-gray-600 rounded p-2">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <span className="font-semibold mr-2">{target}</span>
+                    <span className="text-xs">{new Date(id).toLocaleString()}</span>
+                  </div>
+                  <button
+                    onClick={() => deleteEntry(id)}
+                    className="bg-red-600 px-2 py-1 rounded text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+                <pre className="whitespace-pre-wrap mt-2">
+                  {JSON.stringify(output, null, 2)}
+                </pre>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 };
