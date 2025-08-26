@@ -181,11 +181,55 @@ function About() {
                 <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-0"></div>
             </div>
             <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
-                 <li className=" list-pc">I&apos;m a <span className=" font-medium"> Technology Enthusiast </span> who thrives on the thrill of learning and mastering the rapidly evolving world of tech. I&apos;ve completed 4 years of a degree in <u className=' cursor-pointer '><a href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf" target={"_blank"}>Nuclear Engineering </a></u> at OntarioTech University before, I decided to my change my career goals to and pursue my passion of <u className=' cursor-pointer '> <a href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf" target={"_blank"}> Networking and I.T. Security</a> </u>.</li>
-                 <li className=" mt-3 list-building">  If you&apos;re looking for the type of person that always wants to help others. That&apos;ll be there putting in the work 24/7. Please feel free to send an email <a className='text-underline'
-                               href='mailto:alex.unnippillil@hotmail.com'><u>@alex.unnippillil@hotmail.com</u></a></li>
-                <li className=" mt-3 list-time"> When I am not learning my next technical skill, I like to spend my time reading books, rock climbing or watching <u className=' cursor-pointer '><a href="https://www.youtube.com/@Alex-Unnippillil/playlists" target={"_blank"}>Youtube Videos</a></u> and <u className=' cursor-pointer '><a href="https://myanimelist.net/animelist/alex_u" target={"_blank"}>Anime</a></u></li> 
-                <li className=" mt-3 list-star"> And I also have interests in Deep Learning, Software Development & Animation!</li>
+                <li className="list-pc">
+                    I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly evolving world of tech. I completed four years of a
+                    <a
+                        className=" underline cursor-pointer"
+                        href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf"
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        Nuclear Engineering
+                    </a>
+                    degree at Ontario Tech University before deciding to change my career goals and pursue my passion for
+                    <a
+                        className=" underline cursor-pointer"
+                        href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf"
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        Networking and I.T. Security
+                    </a>
+                    .
+                </li>
+                <li className="mt-3 list-building">
+                    If you&apos;re looking for someone who always wants to help others and will put in the work 24/7, feel free to email
+                    <a className=" underline" href="mailto:alex.unnippillil@hotmail.com">alex.unnippillil@hotmail.com</a>.
+                </li>
+                <li className="mt-3 list-time">
+                    When I&apos;m not learning new technical skills, I enjoy reading books, rock climbing, or watching
+                    <a
+                        className=" underline cursor-pointer"
+                        href="https://www.youtube.com/@Alex-Unnippillil/playlists"
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        YouTube videos
+                    </a>
+                    and
+                    <a
+                        className=" underline cursor-pointer"
+                        href="https://myanimelist.net/animelist/alex_u"
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        anime
+                    </a>
+                    .
+                </li>
+                <li className="mt-3 list-star">
+                    I also have interests in deep learning, software development, and animation.
+                </li>
             </ul>
         </>
     )
