@@ -6668,7 +6668,8 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-force-graph@npm:^1.48.0":
+"react-force-graph@npm:^1.45.0":
+
   version: 1.48.0
   resolution: "react-force-graph@npm:1.48.0"
   dependencies:
@@ -8041,7 +8042,8 @@ __metadata:
     react-activity-calendar: "npm:^2.7.13"
     react-dom: "npm:^18.2.0"
     react-draggable: "npm:^4.4.5"
-    react-force-graph: "npm:^1.48.0"
+    react-force-graph: "npm:^1.45.0"
+
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
     react-onclickoutside: "npm:^6.12.2"
