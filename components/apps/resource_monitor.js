@@ -44,6 +44,9 @@ const ResourceMonitor = () => {
   const [batteryLevel, setBatteryLevel] = useState(0);
   const [memoryUsage, setMemoryUsage] = useState(0);
   const [cpuUsage, setCpuUsage] = useState(null);
+  const [resourceTimings, setResourceTimings] = useState([]);
+  const [paintTimings, setPaintTimings] = useState([]);
+  const [longTaskCount, setLongTaskCount] = useState(0);
 
   const updateStats = async () => {
     if (navigator.getBattery) {
@@ -74,14 +77,90 @@ const ResourceMonitor = () => {
   useEffect(() => {
     updateStats();
     const interval = setInterval(updateStats, 5000);
+
+    if (typeof performance !== 'undefined' && typeof PerformanceObserver !== 'undefined') {
+      const existingResources = performance.getEntriesByType('resource');
+      const existingPaints = performance.getEntriesByType('paint');
+      setResourceTimings(existingResources.map(({ name, duration }) => ({ name, duration })));
+      setPaintTimings(existingPaints.map(({ name, startTime }) => ({ name, startTime })));
+
+      const resourceObserver = new PerformanceObserver((list) => {
+        const entries = list.getEntries().map(({ name, duration }) => ({ name, duration }));
+        setResourceTimings((prev) => [...prev, ...entries]);
+      });
+      resourceObserver.observe({ entryTypes: ['resource'] });
+
+      const paintObserver = new PerformanceObserver((list) => {
+        const entries = list.getEntries().map(({ name, startTime }) => ({ name, startTime }));
+        setPaintTimings((prev) => [...prev, ...entries]);
+      });
+      paintObserver.observe({ entryTypes: ['paint'] });
+
+      const longTaskObserver = new PerformanceObserver((list) => {
+        setLongTaskCount((prev) => prev + list.getEntries().length);
+      });
+      longTaskObserver.observe({ entryTypes: ['longtask'] });
+
+      return () => {
+        clearInterval(interval);
+        resourceObserver.disconnect();
+        paintObserver.disconnect();
+        longTaskObserver.disconnect();
+      };
+    }
+
     return () => clearInterval(interval);
   }, []);
 
+  const clearMetrics = () => {
+    setResourceTimings([]);
+    setPaintTimings([]);
+    setLongTaskCount(0);
+    if (performance.clearResourceTimings) {
+      performance.clearResourceTimings();
+    }
+  };
+
   return (
-    <div className="h-full w-full flex justify-evenly items-center bg-ub-cool-grey text-white font-ubuntu">
-      <Gauge value={batteryLevel} label="Battery" />
-      {cpuUsage !== null && <Gauge value={cpuUsage} label="CPU" />}
-      <Gauge value={memoryUsage} label="Memory" />
+    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu">
+      <div className="flex justify-evenly items-center flex-1">
+        <Gauge value={batteryLevel} label="Battery" />
+        {cpuUsage !== null && <Gauge value={cpuUsage} label="CPU" />}
+        <Gauge value={memoryUsage} label="Memory" />
+      </div>
+      <div className="bg-ub-dark-grey p-4 text-sm overflow-y-auto max-h-60">
+        <div>
+          <strong>Resource Timings</strong>
+          <ul className="list-disc pl-5">
+            {resourceTimings.map((r, idx) => (
+              <li key={idx}>{`${r.name}: ${r.duration.toFixed(1)}ms`}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="mt-2">
+          <strong>Paint Timings</strong>
+          <ul className="list-disc pl-5">
+            {paintTimings.map((p, idx) => (
+              <li key={idx}>{`${p.name}: ${p.startTime.toFixed(1)}ms`}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="mt-2">Long Tasks: {longTaskCount}</div>
+        <button
+          onClick={clearMetrics}
+          className="mt-2 px-2 py-1 bg-ubt-green text-black rounded"
+        >
+          Clear metrics
+        </button>
+        <a
+          href="https://developer.chrome.com/docs/devtools/memory-problems/"
+          target="_blank"
+          rel="noopener"
+          className="mt-2 block text-ubt-blue underline"
+        >
+          Learn about memory leaks
+        </a>
+      </div>
     </div>
   );
 };

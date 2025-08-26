@@ -375,7 +375,8 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/runtime@npm:^7.12.5":
+"@babel/runtime@npm:^7.12.5, @babel/runtime@npm:^7.26.10":
+
   version: 7.28.3
   resolution: "@babel/runtime@npm:7.28.3"
   checksum: 10c0/b360f82c2c5114f2a062d4d143d7b4ec690094764853937110585a9497977aed66c102166d0e404766c274e02a50ffb8f6d77fef7251ecf3f607f0e03e6397bc
@@ -1537,6 +1538,13 @@ __metadata:
   version: 1.0.8
   resolution: "@types/estree@npm:1.0.8"
   checksum: 10c0/39d34d1afaa338ab9763f37ad6066e3f349444f9052b9676a7cc0252ef9485a41c6d81c9c4e0d26e9077993354edf25efc853f3224dd4b447175ef62bdcc86a5
+  languageName: node
+  linkType: hard
+
+"@types/howler@npm:^2":
+  version: 2.2.12
+  resolution: "@types/howler@npm:2.2.12"
+  checksum: 10c0/fb30e8c137ec03aa6a1e739be11b9d5b973f5f19d9f8a92eb11cff466170c9b5a314d73b8b34bb9a435e309ae880ba4847dee1029ec37d08c3f64b2219add462
   languageName: node
   linkType: hard
 
@@ -2718,6 +2726,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"complex.js@npm:^2.2.5":
+  version: 2.4.2
+  resolution: "complex.js@npm:2.4.2"
+  checksum: 10c0/c78cca0a3c08fa48845e2703b9772bdd80d44e56728382d43879183cb23391da6e8b6326ceec23c685abfd529b61d34842ba1784d7fa3783b194fbc6d0850d7c
+  languageName: node
+  linkType: hard
+
 "concat-map@npm:0.0.1":
   version: 0.0.1
   resolution: "concat-map@npm:0.0.1"
@@ -2861,7 +2876,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"decimal.js@npm:^10.5.0":
+"decimal.js@npm:^10.4.3, decimal.js@npm:^10.5.0":
   version: 10.6.0
   resolution: "decimal.js@npm:10.6.0"
   checksum: 10c0/07d69fbcc54167a340d2d97de95f546f9ff1f69d2b45a02fd7a5292412df3cd9eb7e23065e532a318f5474a2e1bccf8392fdf0443ef467f97f3bf8cb0477e5aa
@@ -3214,6 +3229,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"escape-latex@npm:^1.2.0":
+  version: 1.2.0
+  resolution: "escape-latex@npm:1.2.0"
+  checksum: 10c0/b77ea1594a38625295793a61105222c283c1792d1b2511bbfd6338cf02cc427dcabce7e7c1e22ec2f5c40baf3eaf2eeaf229a62dbbb74c6e69bb4a4209f2544f
+  languageName: node
+  linkType: hard
+
 "escape-string-regexp@npm:^2.0.0":
   version: 2.0.0
   resolution: "escape-string-regexp@npm:2.0.0"
@@ -3517,6 +3539,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"eventemitter3@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "eventemitter3@npm:5.0.1"
+  checksum: 10c0/4ba5c00c506e6c786b4d6262cfbce90ddc14c10d4667e5c83ae993c9de88aa856033994dd2b35b83e8dc1170e224e66a319fa80adc4c32adcd2379bbc75da814
+  languageName: node
+  linkType: hard
+
 "execa@npm:^5.1.1":
   version: 5.1.1
   resolution: "execa@npm:5.1.1"
@@ -3731,6 +3760,13 @@ __metadata:
   version: 4.3.7
   resolution: "fraction.js@npm:4.3.7"
   checksum: 10c0/df291391beea9ab4c263487ffd9d17fed162dbb736982dee1379b2a8cc94e4e24e46ed508c6d278aded9080ba51872f1bc5f3a5fd8d7c74e5f105b508ac28711
+  languageName: node
+  linkType: hard
+
+"fraction.js@npm:^5.2.1":
+  version: 5.3.4
+  resolution: "fraction.js@npm:5.3.4"
+  checksum: 10c0/f90079fe9bfc665e0a07079938e8ff71115bce9462f17b32fc283f163b0540ec34dc33df8ed41bb56f028316b04361b9a9995b9ee9258617f8338e0b05c5f95a
   languageName: node
   linkType: hard
 
@@ -3992,6 +4028,13 @@ __metadata:
   dependencies:
     function-bind: "npm:^1.1.2"
   checksum: 10c0/3769d434703b8ac66b209a4cca0737519925bbdb61dd887f93a16372b14694c63ff4e797686d87c90f08168e81082248b9b028bad60d4da9e0d1148766f56eb9
+  languageName: node
+  linkType: hard
+
+"howler@npm:^2.2.4":
+  version: 2.2.4
+  resolution: "howler@npm:2.2.4"
+  checksum: 10c0/74a295f56fd9b2abce122b27ed12c33fa195fb8a76832803e92d8e462a1eca803b55f44c14db052211d0cfab85c7c5249664c68d95bbbc16c775fac73866c6ef
   languageName: node
   linkType: hard
 
@@ -4518,6 +4561,13 @@ __metadata:
     "@pkgjs/parseargs":
       optional: true
   checksum: 10c0/6acc10d139eaefdbe04d2f679e6191b3abf073f111edf10b1de5302c97ec93fffeb2fdd8681ed17f16268aa9dd4f8c588ed9d1d3bffbbfa6e8bf897cbb3149b9
+  languageName: node
+  linkType: hard
+
+"javascript-natural-sort@npm:^0.7.1":
+  version: 0.7.1
+  resolution: "javascript-natural-sort@npm:0.7.1"
+  checksum: 10c0/340f8ffc5d30fb516e06dc540e8fa9e0b93c865cf49d791fed3eac3bdc5fc71f0066fc81d44ec1433edc87caecaf9f13eec4a1fce8c5beafc709a71eaedae6fe
   languageName: node
   linkType: hard
 
@@ -5286,6 +5336,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mathjs@npm:^14.6.0":
+  version: 14.6.0
+  resolution: "mathjs@npm:14.6.0"
+  dependencies:
+    "@babel/runtime": "npm:^7.26.10"
+    complex.js: "npm:^2.2.5"
+    decimal.js: "npm:^10.4.3"
+    escape-latex: "npm:^1.2.0"
+    fraction.js: "npm:^5.2.1"
+
+    javascript-natural-sort: "npm:^0.7.1"
+    seedrandom: "npm:^3.0.5"
+    tiny-emitter: "npm:^2.1.0"
+    typed-function: "npm:^4.2.1"
+  bin:
+    mathjs: bin/cli.js
+  checksum: 10c0/1f1cadf7ce0241d916b1d6e0a3712d494c090f39cadf312c033ed24b61502312062f3c234e8efcd941a54c644621b9a0893b495083b2f2679ac07115e9a01e3f
+
+  languageName: node
+  linkType: hard
+
 "merge-stream@npm:^2.0.0":
   version: 2.0.0
   resolution: "merge-stream@npm:2.0.0"
@@ -5863,6 +5934,15 @@ __metadata:
     lru-cache: "npm:^10.2.0"
     minipass: "npm:^5.0.0 || ^6.0.2 || ^7.0.0"
   checksum: 10c0/32a13711a2a505616ae1cc1b5076801e453e7aae6ac40ab55b388bb91b9d0547a52f5aaceff710ea400205f18691120d4431e520afbe4266b836fadede15872d
+  languageName: node
+  linkType: hard
+
+"phaser@npm:^3.90.0":
+  version: 3.90.0
+  resolution: "phaser@npm:3.90.0"
+  dependencies:
+    eventemitter3: "npm:^5.0.1"
+  checksum: 10c0/43d405832fc84c8641e22842fe8d4ca954950ffde364bfb60e4d07b05a29f33eb0c9d4a64acda088122ee6649b7b3ed6d9b3b99bbb67671a528c6ceb10d71689
   languageName: node
   linkType: hard
 
@@ -6460,6 +6540,13 @@ __metadata:
   version: 2.5.9
   resolution: "scriptjs@npm:2.5.9"
   checksum: 10c0/7b81adefb3ce7761a9b13f4cc22c6c77418a3f6a828bf400c9184ea3801c3fc2c352c4966382cece4a60cc843e0d1a1087bcf96b9a81a1bb6de7ddc60fd80811
+  languageName: node
+  linkType: hard
+
+"seedrandom@npm:^3.0.5":
+  version: 3.0.5
+  resolution: "seedrandom@npm:3.0.5"
+  checksum: 10c0/929752ac098ff4990b3f8e0ac39136534916e72879d6eb625230141d20db26e2f44c4d03d153d457682e8cbaab0fb7d58a1e7267a157cf23fd8cf34e25044e88
   languageName: node
   linkType: hard
 
@@ -7137,6 +7224,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tiny-emitter@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "tiny-emitter@npm:2.1.0"
+  checksum: 10c0/459c0bd6e636e80909898220eb390e1cba2b15c430b7b06cec6ac29d87acd29ef618b9b32532283af749f5d37af3534d0e3bde29fdf6bcefbf122784333c953d
+  languageName: node
+  linkType: hard
+
 "tinyglobby@npm:^0.2.12, tinyglobby@npm:^0.2.13":
   version: 0.2.14
   resolution: "tinyglobby@npm:0.2.14"
@@ -7310,6 +7404,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"typed-function@npm:^4.2.1":
+  version: 4.2.1
+  resolution: "typed-function@npm:4.2.1"
+  checksum: 10c0/0b4e9a359e456f7df50f3d7cc53e2408d23a516f27b50c2c0654f388110ecf407c0595b1bf2296d3d8667fae6aae311ec2af90c602385777d12fe724bae99156
+  languageName: node
+  linkType: hard
+
 "typescript@npm:^5.9.2":
   version: 5.9.2
   resolution: "typescript@npm:5.9.2"
@@ -7377,6 +7478,7 @@ __metadata:
     "@testing-library/react": "npm:^16.3.0"
     "@testing-library/user-event": "npm:^14.6.1"
     "@types/canvas-confetti": "npm:^1"
+    "@types/howler": "npm:^2"
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^24.2.1"
     "@types/react": "npm:^19.1.10"
@@ -7389,11 +7491,15 @@ __metadata:
     eslint: "npm:^9.13.0"
     eslint-config-next: "npm:^15.0.0"
     expr-eval: "npm:^2.0.2"
+    howler: "npm:^2.2.4"
     html-to-image: "npm:^1.11.13"
     jest: "npm:^30.0.5"
     jest-environment-jsdom: "npm:^30.0.5"
     jsqr: "npm:^1.4.0"
+    mathjs: "npm:^14.6.0"
+
     next: "npm:^15.0.0"
+    phaser: "npm:^3.90.0"
     postcss: "npm:^8.4.21"
     prop-types: "npm:^15.8.1"
     qrcode: "npm:^1.5.4"
@@ -7410,6 +7516,9 @@ __metadata:
     tailwindcss: "npm:^3.2.4"
     three: "npm:^0.179.1"
     typescript: "npm:^5.9.2"
+    xterm: "npm:^5.3.0"
+    xterm-addon-fit: "npm:^0.8.0"
+    xterm-addon-search: "npm:^0.13.0"
   languageName: unknown
   linkType: soft
 
@@ -7747,6 +7856,31 @@ __metadata:
   version: 2.2.0
   resolution: "xmlchars@npm:2.2.0"
   checksum: 10c0/b64b535861a6f310c5d9bfa10834cf49127c71922c297da9d4d1b45eeaae40bf9b4363275876088fbe2667e5db028d2cd4f8ee72eed9bede840a67d57dab7593
+  languageName: node
+  linkType: hard
+
+"xterm-addon-fit@npm:^0.8.0":
+  version: 0.8.0
+  resolution: "xterm-addon-fit@npm:0.8.0"
+  peerDependencies:
+    xterm: ^5.0.0
+  checksum: 10c0/39f77c9ec74bcc048ad74fbc4b9d610070c0a67971837f7edf92a8d21d65189c887986713d6ab22c04e2704253022488324d27fdb2425dc8aa95a9b679703101
+  languageName: node
+  linkType: hard
+
+"xterm-addon-search@npm:^0.13.0":
+  version: 0.13.0
+  resolution: "xterm-addon-search@npm:0.13.0"
+  peerDependencies:
+    xterm: ^5.0.0
+  checksum: 10c0/0612c9cbc0d837eb6c6f21cb726d7927a2fb899272e37c925d77c1fc077c7fcd23a75799e470aa3b467cabd9896b95875b8e2a3884bc8529c6a895c594fc36f4
+  languageName: node
+  linkType: hard
+
+"xterm@npm:^5.3.0":
+  version: 5.3.0
+  resolution: "xterm@npm:5.3.0"
+  checksum: 10c0/39bf5ea933cc2f65d5970560d065b4db645ed03c820bcf6c6239bd504e41a876ab1a773ad9e4e09476ba85a4891534702b9fbb885b0838d79e6620ed2f856bae
   languageName: node
   linkType: hard
 

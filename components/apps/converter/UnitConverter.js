@@ -1,23 +1,28 @@
 import React, { useState, useEffect } from 'react';
+import { create, all } from 'mathjs';
 
-const unitRates = {
+const math = create(all);
+
+const unitMap = {
   length: {
-    meter: 1,
-    kilometer: 1000,
-    mile: 1609.34,
-    foot: 0.3048,
+    meter: 'm',
+    kilometer: 'km',
+    mile: 'mi',
+    foot: 'ft',
   },
   weight: {
-    gram: 1,
-    kilogram: 1000,
-    pound: 453.592,
-    ounce: 28.3495,
+    gram: 'g',
+    kilogram: 'kg',
+    pound: 'lb',
+    ounce: 'oz',
   },
 };
 
-export const convertUnit = (category, from, to, amount) => {
-  const base = amount * unitRates[category][from];
-  return base / unitRates[category][to];
+export const convertUnit = (category, from, to, amount, precision) => {
+  const fromUnit = unitMap[category][from];
+  const toUnit = unitMap[category][to];
+  const result = math.unit(amount, fromUnit).toNumber(toUnit);
+  return typeof precision === 'number' ? math.round(result, precision) : result;
 };
 
 const UnitConverter = () => {
@@ -26,9 +31,10 @@ const UnitConverter = () => {
   const [toUnit, setToUnit] = useState('kilometer');
   const [value, setValue] = useState('');
   const [result, setResult] = useState('');
+  const [precision, setPrecision] = useState(4);
 
   useEffect(() => {
-    const units = Object.keys(unitRates[category]);
+    const units = Object.keys(unitMap[category]);
     setFromUnit(units[0]);
     setToUnit(units[1] || units[0]);
   }, [category]);
@@ -38,11 +44,19 @@ const UnitConverter = () => {
       setResult('');
       return;
     }
-    const converted = convertUnit(category, fromUnit, toUnit, parseFloat(value));
-    setResult(converted.toFixed(4));
-  }, [value, fromUnit, toUnit, category]);
+    const converted = convertUnit(
+      category,
+      fromUnit,
+      toUnit,
+      parseFloat(value),
+      precision
+    );
+    setResult(
+      math.format(converted, { notation: 'fixed', precision })
+    );
+  }, [value, fromUnit, toUnit, category, precision]);
 
-  const units = Object.keys(unitRates[category]);
+  const units = Object.keys(unitMap[category]);
 
   return (
     <div className="bg-gray-700 p-4 rounded flex flex-col gap-2">
@@ -65,6 +79,16 @@ const UnitConverter = () => {
           type="number"
           value={value}
           onChange={(e) => setValue(e.target.value)}
+        />
+      </label>
+      <label className="flex flex-col">
+        Precision
+        <input
+          className="text-black p-1 rounded"
+          type="number"
+          min="0"
+          value={precision}
+          onChange={(e) => setPrecision(Number(e.target.value))}
         />
       </label>
       <div className="grid grid-cols-2 gap-2">

@@ -21,26 +21,28 @@ class Slider extends Component {
 }
 
 export class StatusCard extends Component {
-	constructor() {
-		super();
-		this.wrapperRef = React.createRef();
-		this.state = {
-			sound_level: 75, // better of setting default values from localStorage
-			brightness_level: 100 // setting default value to 100 so that by default its always full.
-		};
-	}
-	handleClickOutside = () => {
-		this.props.toggleVisible();
-	};
-	componentDidMount() {
-		this.setState({
-			sound_level: localStorage.getItem('sound-level') || 75,
-			brightness_level: localStorage.getItem('brightness-level') || 100
-		}, () => {
-			document.getElementById('monitor-screen').style.filter = `brightness(${3 / 400 * this.state.brightness_level +
-				0.25})`;
-		})
-	}
+        constructor() {
+                super();
+                this.wrapperRef = React.createRef();
+                this.state = {
+                        sound_level: 75, // better of setting default values from localStorage
+                        brightness_level: 100, // setting default value to 100 so that by default its always full.
+                        theme: 'dark'
+                };
+        }
+        handleClickOutside = () => {
+                this.props.toggleVisible();
+        };
+        componentDidMount() {
+                this.setState({
+                        sound_level: localStorage.getItem('sound-level') || 75,
+                        brightness_level: localStorage.getItem('brightness-level') || 100,
+                        theme: document.documentElement.dataset.theme || 'dark'
+                }, () => {
+                        document.getElementById('monitor-screen').style.filter = `brightness(${3 / 400 * this.state.brightness_level +
+                                0.25})`;
+                })
+        }
 
 	handleBrightness = (e) => {
 		this.setState({ brightness_level: e.target.value });
@@ -49,10 +51,21 @@ export class StatusCard extends Component {
 		document.getElementById('monitor-screen').style.filter = `brightness(${3 / 400 * e.target.value + 0.25})`; // Using css filter to adjust the brightness in the root div.
 	};
 
-	handleSound = (e) => {
-		this.setState({ sound_level: e.target.value });
-		localStorage.setItem('sound-level', e.target.value);
-	};
+        handleSound = (e) => {
+                this.setState({ sound_level: e.target.value });
+                localStorage.setItem('sound-level', e.target.value);
+        };
+
+        setTheme = (theme) => {
+                this.setState({ theme });
+                localStorage.setItem('theme', theme);
+                document.documentElement.dataset.theme = theme;
+        };
+
+        toggleTheme = () => {
+                const next = this.state.theme === 'dark' ? 'light' : 'dark';
+                this.setTheme(next);
+        };
 
 	render() {
 		return (
@@ -93,16 +106,34 @@ export class StatusCard extends Component {
                                                         sizes="16px"
                                                 />
 					</div>
-					<Slider
-						onChange={this.handleBrightness}
-						className="ubuntu-slider w-2/3"
-						name="brightness_range"
-						value={this.state.brightness_level}
-					/>
-				</div>
-				<div className="w-64 flex content-center justify-center">
-					<div className="w-2/4 border-black border-opacity-50 border-b my-2 border-solid" />
-				</div>
+                                        <Slider
+                                                onChange={this.handleBrightness}
+                                                className="ubuntu-slider w-2/3"
+                                                name="brightness_range"
+                                                value={this.state.brightness_level}
+                                        />
+                                </div>
+                                <div
+                                        className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20"
+                                        onClick={this.toggleTheme}
+                                >
+                                        <div className="w-8">
+                                                <Image
+                                                        width={16}
+                                                        height={16}
+                                                        src="/themes/Yaru/status/display-brightness-symbolic.svg"
+                                                        alt="theme toggle"
+                                                        sizes="16px"
+                                                />
+                                        </div>
+                                        <div className="w-2/3 flex items-center justify-between">
+                                                <span>Theme</span>
+                                                <span>{this.state.theme === 'dark' ? 'Dark' : 'Light'}</span>
+                                        </div>
+                                </div>
+                                <div className="w-64 flex content-center justify-center">
+                                        <div className="w-2/4 border-black border-opacity-50 border-b my-2 border-solid" />
+                                </div>
 				<div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
 					<div className="w-8">
                                                 <Image
