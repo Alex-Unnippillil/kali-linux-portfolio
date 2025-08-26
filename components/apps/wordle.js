@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import wordList from './wordle_words.json';
 
 // Determine today's puzzle key and pick a word from the dictionary
@@ -78,6 +78,10 @@ const Wordle = () => {
     false
   );
   const [hardMode, setHardMode] = usePersistentState('wordle-hardmode', false);
+  const [stats, setStats] = usePersistentState('wordle-stats', {
+    streak: 0,
+    best: 0,
+  });
 
   const isSolved = guesses.some((g) => g.guess === solution);
   const isGameOver = isSolved || guesses.length === 6;
@@ -98,15 +102,41 @@ const Wordle = () => {
     ? { correct: '🟦', present: '🟧', absent: '⬛' }
     : { correct: '🟩', present: '🟨', absent: '⬛' };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const submitGuess = useCallback(() => {
     if (isGameOver) return;
     const upper = guess.toUpperCase();
     if (upper.length !== 5) return;
 
-    if (hardMode && new Set(upper).size < 5) {
-      setMessage('Hard mode: no repeating letters.');
-      return;
+    if (hardMode && guesses.length) {
+      const requiredPos = {};
+      const requiredLetters = {};
+      guesses.forEach(({ guess: gStr, result }) => {
+        const counts = {};
+        result.forEach((r, i) => {
+          const ch = gStr[i];
+          if (r === 'correct') requiredPos[i] = ch;
+          if (r === 'present' || r === 'correct') {
+            counts[ch] = (counts[ch] || 0) + 1;
+          }
+        });
+        Object.keys(counts).forEach((c) => {
+          requiredLetters[c] = Math.max(requiredLetters[c] || 0, counts[c]);
+        });
+      });
+      for (const [i, ch] of Object.entries(requiredPos)) {
+        if (upper[Number(i)] !== ch) {
+          setMessage(`Hard mode: must use ${ch} in position ${Number(i) + 1}.`);
+          return;
+        }
+      }
+      const upperCounts = {};
+      upper.split('').forEach((c) => (upperCounts[c] = (upperCounts[c] || 0) + 1));
+      for (const [ch, cnt] of Object.entries(requiredLetters)) {
+        if ((upperCounts[ch] || 0) < cnt) {
+          setMessage(`Hard mode: guess must include ${ch}.`);
+          return;
+        }
+      }
     }
 
     const result = evaluateGuess(upper, solution);
@@ -116,25 +146,49 @@ const Wordle = () => {
     setMessage('');
 
     if (upper === solution || next.length === 6) {
-      setHistory({
+      const updatedHistory = {
         ...history,
         [todayKey]: {
           guesses: next.length,
           solution,
           success: upper === solution,
         },
-      });
-    }
-  };
+      };
+      setHistory(updatedHistory);
 
-  const share = () => {
-    let text = `Wordle ${isSolved ? guesses.length : 'X'}/6\n`;
-    text += guesses
-      .map((g) => g.result.map((r) => emojiMap[r]).join(''))
-      .join('\n');
-    navigator.clipboard.writeText(text);
-    setMessage('Copied results to clipboard!');
-  };
+      let streak = 0;
+      const day = new Date(todayKey);
+      while (true) {
+        const key = day.toISOString().split('T')[0];
+        if (updatedHistory[key]?.success) {
+          streak += 1;
+          day.setDate(day.getDate() - 1);
+        } else break;
+      }
+      let best = stats.best || 0;
+      if (upper === solution) {
+        best = best ? Math.min(best, next.length) : next.length;
+      } else {
+        streak = 0;
+      }
+      setStats({ streak, best });
+    }
+  }, [guess, guesses, hardMode, isGameOver, history, stats, solution]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (isGameOver) return;
+      if (e.key === 'Enter') {
+        submitGuess();
+      } else if (e.key === 'Backspace') {
+        setGuess((g) => g.slice(0, -1));
+      } else if (/^[a-zA-Z]$/.test(e.key)) {
+        setGuess((g) => (g.length < 5 ? g + e.key.toUpperCase() : g));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [submitGuess, isGameOver]);
 
   const renderCell = (row, col) => {
     const guessRow = guesses[row];
@@ -155,10 +209,47 @@ const Wordle = () => {
     );
   };
 
+  const keyStatus = {};
+  guesses.forEach(({ guess: g, result }) => {
+    g.split('').forEach((ch, i) => {
+      const r = result[i];
+      const cur = keyStatus[ch];
+      if (r === 'correct' || (r === 'present' && cur !== 'correct') || (!cur && r === 'absent')) {
+        keyStatus[ch] = r;
+      }
+    });
+  });
+
+  const addLetter = (ch) => {
+    if (isGameOver) return;
+    setGuess((g) => (g.length < 5 ? g + ch : g));
+  };
+
+  const onBackspace = () => {
+    if (isGameOver) return;
+    setGuess((g) => g.slice(0, -1));
+  };
+
+  const onEnter = () => {
+    submitGuess();
+  };
+
+  const keyboardRows = [
+    ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+    ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+    ['Enter', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'Back'],
+  ];
+
   const shareString = () =>
-    `Wordle ${isSolved ? guesses.length : 'X'}/6\n${guesses
+    `Wordle ${todayKey} ${isSolved ? guesses.length : 'X'}/6\n${guesses
       .map((g) => g.result.map((r) => emojiMap[r]).join(''))
       .join('\n')}`;
+
+  const share = () => {
+    const text = shareString();
+    navigator.clipboard.writeText(text);
+    setMessage('Copied results to clipboard!');
+  };
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
@@ -192,26 +283,55 @@ const Wordle = () => {
       </div>
 
       {!isGameOver && (
-        <form onSubmit={handleSubmit} className="flex space-x-2">
-          <input
-            type="text"
-            maxLength={5}
-            value={guess}
-            onChange={(e) => setGuess(e.target.value.toUpperCase())}
-            className="w-32 p-2 text-black text-center uppercase"
-            placeholder="Guess"
-          />
-          <button
-            type="submit"
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          >
-            Submit
-          </button>
-        </form>
+        <div className="flex flex-col space-y-1">
+          {keyboardRows.map((row, idx) => (
+            <div key={idx} className="flex justify-center space-x-1">
+              {row.map((key) => {
+                if (key === 'Enter')
+                  return (
+                    <button
+                      key="Enter"
+                      aria-label="Enter"
+                      onClick={onEnter}
+                      className="px-3 py-2 bg-gray-600 rounded text-white font-bold"
+                    >
+                      Enter
+                    </button>
+                  );
+                if (key === 'Back')
+                  return (
+                    <button
+                      key="Back"
+                      aria-label="Backspace"
+                      onClick={onBackspace}
+                      className="px-3 py-2 bg-gray-600 rounded text-white font-bold"
+                    >
+                      ⌫
+                    </button>
+                  );
+                const status = keyStatus[key];
+                let keyClass = 'px-2 py-2 rounded font-bold';
+                if (status) keyClass += ` ${colors[status]} text-white`;
+                else keyClass += ' bg-gray-600 text-white';
+                return (
+                  <button
+                    key={key}
+                    aria-label={key}
+                    onClick={() => addLetter(key)}
+                    className={keyClass}
+                  >
+                    {key}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       )}
 
       {isGameOver && (
         <div className="flex flex-col items-center space-y-2">
+          <div className="text-sm">Streak: {stats.streak} | Best: {stats.best || '-'}</div>
           <button
             onClick={share}
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
