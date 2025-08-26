@@ -65,3 +65,46 @@ class WorkerMock {
 }
 // @ts-ignore
 global.Worker = WorkerMock as any;
+
+// Mock xterm and addons so terminal tests run without the real library
+jest.mock(
+  'xterm',
+  () => ({
+    Terminal: class {
+      loadAddon() {}
+      write() {}
+      writeln() {}
+      open() {}
+      dispose() {}
+      onKey() {}
+      onData() {}
+      get buffer() {
+        return { active: { getLine: () => ({ translateToString: () => '' }) } };
+      }
+    },
+  }),
+  { virtual: true }
+);
+
+jest.mock(
+  'xterm-addon-fit',
+  () => ({
+    FitAddon: class {
+      activate() {}
+      dispose() {}
+      fit() {}
+    },
+  }),
+  { virtual: true }
+);
+
+jest.mock(
+  'xterm-addon-search',
+  () => ({
+    SearchAddon: class {
+      activate() {}
+      dispose() {}
+    },
+  }),
+  { virtual: true }
+);
