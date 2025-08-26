@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
+import usePersistentState from '../../hooks/usePersistentState';
 import ReactGA from 'react-ga4';
 
 // Track constants - circular course
@@ -129,7 +130,7 @@ const CarRacer = () => {
   const [speed, setSpeed] = useState(0);
   const [lapTime, setLapTime] = useState(0);
   const [lastLap, setLastLap] = useState(null);
-  const [bestLap, setBestLap] = useState(null);
+  const [bestLap, setBestLap] = usePersistentState('car-racer-best-lap', null);
   const [mobileSensitivity, setMobileSensitivity] = useState(1);
   const [lapTimes, setLapTimes] = useState([]);
   const [paused, setPaused] = useState(false);
@@ -229,7 +230,7 @@ const CarRacer = () => {
     let prevPos = { x: cars[0].x, y: cars[0].y };
     let currentLapTrace = [];
     let bestLapTrace = null;
-    let bestLapTime = null;
+    let bestLapTime = bestLap;
     let ghostIndex = 0;
 
     const updateCar = (car, dt) => {
@@ -237,21 +238,21 @@ const CarRacer = () => {
         let steerInput = 0;
         let accelInput = 0;
         let brakeInput = 0;
-        if (control === 'keys') {
-          if (keys['ArrowLeft']) steerInput = -1;
-          if (keys['ArrowRight']) steerInput = 1;
-          if (keys['ArrowUp']) accelInput = 1;
-          if (keys['ArrowDown']) brakeInput = 1;
-        } else if (control === 'wheel') {
+
+        if (control === 'wheel') {
           steerInput = wheelAngle;
-          if (keys[' ']) accelInput = 1; // space for throttle
         } else if (control === 'tilt') {
           steerInput = tilt * sensitivityRef.current;
-          if (keys[' ']) accelInput = 1;
         } else if (control === 'buttons') {
           steerInput = steerButtonRef.current * sensitivityRef.current;
-          if (keys[' ']) accelInput = 1;
         }
+
+        // Arrow keys always available
+        if (keys['ArrowLeft']) steerInput = -1;
+        if (keys['ArrowRight']) steerInput = 1;
+        if (keys['ArrowUp'] || keys[' ']) accelInput = 1;
+        if (keys['ArrowDown']) brakeInput = 1;
+
         car.steer += (steerInput - car.steer) * dt * 5;
         car.accel = accelInput * 100;
         car.brake = brakeInput * 200;
@@ -283,14 +284,21 @@ const CarRacer = () => {
       const vy = Math.sin(drift) * car.speed * dt;
       const newX = car.x + vx;
       const newY = car.y + vy;
-      let collided = false;
-      for (const ob of obstacles) {
-        if (Math.hypot(newX - ob.x, newY - ob.y) < ob.radius + 10) {
-          collided = true;
-          break;
-        }
-      }
-      if (getTile(newX, newY) === 1 && !collided) {
+      const halfW = 10;
+      const halfH = 5;
+      const cos = Math.cos(drift);
+      const sin = Math.sin(drift);
+      const corners = [
+        { x: newX + cos * halfW - sin * halfH, y: newY + sin * halfW + cos * halfH },
+        { x: newX + cos * halfW + sin * halfH, y: newY + sin * halfW - cos * halfH },
+        { x: newX - cos * halfW - sin * halfH, y: newY - sin * halfW + cos * halfH },
+        { x: newX - cos * halfW + sin * halfH, y: newY - sin * halfW - cos * halfH },
+      ];
+      const offTrack = corners.some((p) => getTile(p.x, p.y) !== 1);
+      const hitObstacle = obstacles.some((ob) =>
+        corners.some((p) => Math.hypot(p.x - ob.x, p.y - ob.y) < ob.radius)
+      );
+      if (!offTrack && !hitObstacle) {
         car.x = newX;
         car.y = newY;
       } else {
@@ -433,7 +441,6 @@ const CarRacer = () => {
     setLaps(0);
     setLapTime(0);
     setLastLap(null);
-    setBestLap(null);
     setLapTimes([]);
     setReset((r) => r + 1);
   };
@@ -446,6 +453,12 @@ const CarRacer = () => {
   return (
     <div className="relative h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
       <canvas ref={canvasRef} className="bg-black w-full h-full" />
+      <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-black/60 px-2 py-1 rounded text-sm">
+        {lapTime.toFixed(2)}s
+        {bestLap !== null && (
+          <span className="ml-2">Best: {bestLap.toFixed(2)}s</span>
+        )}
+      </div>
       <div className="absolute top-2 left-2 bg-black/60 p-2 rounded text-xs space-y-1">
         <div className="flex items-center gap-2">
           <label htmlFor="ctrl">Control:</label>
