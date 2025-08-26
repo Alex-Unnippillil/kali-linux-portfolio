@@ -4,6 +4,7 @@ import ReactGA from 'react-ga4';
 const WIDTH = 7;
 const HEIGHT = 8;
 const SUB_STEP = 0.5;
+const TOTAL_LEVELS = 10;
 
 const PAD_POSITIONS = [1, 3, 5];
 const DIFFICULTY_MULTIPLIERS = {
@@ -132,6 +133,7 @@ const Frogger = () => {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
+  const [progress, setProgress] = useState(0);
   const [difficulty, setDifficulty] = useState('normal');
   const nextLife = useRef(500);
   const holdRef = useRef();
@@ -140,6 +142,9 @@ const Frogger = () => {
   useEffect(() => { carsRef.current = cars; }, [cars]);
   useEffect(() => { logsRef.current = logs; }, [logs]);
   useEffect(() => { padsRef.current = pads; }, [pads]);
+  useEffect(() => {
+    setProgress(Math.min(level - 1, TOTAL_LEVELS) / TOTAL_LEVELS);
+  }, [level]);
 
   const moveFrog = (dx, dy) => {
     setFrog((prev) => {
@@ -223,6 +228,7 @@ const Frogger = () => {
           setLives(3);
           setPads(PAD_POSITIONS.map(() => false));
           setLevel(1);
+          setProgress(0);
           nextLife.current = 500;
           ReactGA.event({
             category: 'Frogger',
@@ -376,6 +382,13 @@ const Frogger = () => {
     >
       <div className="grid grid-cols-7 gap-1">{grid}</div>
       <div className="mt-4">Score: {score} Lives: {lives}</div>
+      <div className="mt-1">Level {Math.min(level, TOTAL_LEVELS)} / {TOTAL_LEVELS}</div>
+      <div className="w-full max-w-xs bg-gray-700 h-2 mt-1">
+        <div
+          className="bg-green-400 h-full"
+          style={{ width: `${progress * 100}%` }}
+        />
+      </div>
       <div className="mt-1">{status}</div>
       <div className="mt-2 flex items-center gap-2">
         <label htmlFor="difficulty">Difficulty:</label>
@@ -429,4 +442,5 @@ export {
   carLaneDefs,
   logLaneDefs,
   rampLane,
+  TOTAL_LEVELS,
 };
