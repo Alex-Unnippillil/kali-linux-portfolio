@@ -1,6 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
-import GameLayout from './GameLayout';
 
 const SIZE = 4;
 
@@ -128,46 +127,39 @@ const Game2048 = () => {
   };
 
   return (
-    <GameLayout
-      title="2048"
-      instructions="Use arrow keys to move tiles. Reach 2048 to win."
-      controls={
-        <>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={reset}
-          >
-            Reset
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={close}
-          >
-            Close
-          </button>
-        </>
-      }
-    >
-      <>
-        <div className="grid grid-cols-4 gap-2">
-          {board.map((row, rIdx) =>
-            row.map((cell, cIdx) => (
-              <div
-                key={`${rIdx}-${cIdx}`}
-                className={`h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
-                  cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
-                }`}
-              >
-                {cell !== 0 ? cell : ''}
-              </div>
-            ))
-          )}
-        </div>
-        {(won || lost) && (
-          <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <div className="mb-4 flex space-x-2">
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={reset}
+        >
+          Reset
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={close}
+        >
+          Close
+        </button>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {board.map((row, rIdx) =>
+          row.map((cell, cIdx) => (
+            <div
+              key={`${rIdx}-${cIdx}`}
+              className={`h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
+                cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
+              }`}
+            >
+              {cell !== 0 ? cell : ''}
+            </div>
+          ))
         )}
-      </>
-    </GameLayout>
+      </div>
+      {(won || lost) && (
+        <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
+      )}
+    </div>
   );
 };
 

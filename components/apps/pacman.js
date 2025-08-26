@@ -201,7 +201,7 @@ const Pacman = () => {
     });
   }, []);
 
-  const draw = () => {
+  const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -254,7 +254,7 @@ const Pacman = () => {
       ctx.arc(g.x + tileSize / 2, g.y + tileSize / 2, tileSize / 2 - 2, 0, Math.PI * 2);
       ctx.fill();
     });
-  };
+  }, []);
 
   const step = useCallback(() => {
     const pac = pacRef.current;
@@ -396,6 +396,27 @@ const Pacman = () => {
   }, [step]);
 
   useEffect(() => {
+    fetch('/pacman-levels.json')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.levels) {
+          setLevels(data.levels);
+          loadLevel(0, data.levels);
+        }
+      })
+      .catch(() => {});
+    const stored = window.localStorage.getItem('pacmanHighScore');
+    if (stored) setHighScore(parseInt(stored, 10));
+  }, [loadLevel]);
+
+  useEffect(() => {
+    if (score > highScore) {
+      setHighScore(score);
+      window.localStorage.setItem('pacmanHighScore', String(score));
+    }
+  }, [score, highScore]);
+
+  useEffect(() => {
     if (loading || error) return;
 
     const canvas = canvasRef.current;
@@ -472,6 +493,7 @@ const Pacman = () => {
     };
   }, [loading, error, draw]);
 
+
   useEffect(() => {
     fetch('/pacman-levels.json')
       .then((res) => res.json())
@@ -509,7 +531,8 @@ const Pacman = () => {
     );
   }
 
-  return (
+    return (
+
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <select
         className="mb-2 text-black"
