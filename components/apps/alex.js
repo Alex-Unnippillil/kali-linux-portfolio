@@ -3,7 +3,6 @@ import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
 import Certs from './certs';
-import YouTubePlayer from '../YouTubePlayer';
 
 export class AboutAlex extends Component {
 
@@ -188,9 +187,6 @@ function About() {
                 <li className=" mt-3 list-time"> When I am not learning my next technical skill, I like to spend my time reading books, rock climbing or watching <u className=' cursor-pointer '><a href="https://www.youtube.com/@Alex-Unnippillil/playlists" target={"_blank"}>Youtube Videos</a></u> and <u className=' cursor-pointer '><a href="https://myanimelist.net/animelist/alex_u" target={"_blank"}>Anime</a></u></li> 
                 <li className=" mt-3 list-star"> And I also have interests in Deep Learning, Software Development & Animation!</li>
             </ul>
-            <div className="mt-4 w-5/6 md:w-3/4">
-                <YouTubePlayer videoId="M7lc1UVf-VE" />
-            </div>
         </>
     )
 }

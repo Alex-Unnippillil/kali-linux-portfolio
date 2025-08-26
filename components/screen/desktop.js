@@ -37,7 +37,9 @@ export class Desktop extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
-        this.fetchAppsData();
+        this.fetchAppsData(() => {
+            this.openApp('about-alex');
+        });
         this.setContextListeners();
         this.setEventListeners();
         this.checkForNewFolders();
@@ -155,7 +157,7 @@ export class Desktop extends Component {
         }
     }
 
-    fetchAppsData = () => {
+    fetchAppsData = (callback) => {
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
         apps.forEach((app) => {
@@ -193,6 +195,8 @@ export class Desktop extends Component {
             overlapped_windows,
             minimized_windows,
             desktop_apps
+        }, () => {
+            if (typeof callback === 'function') callback();
         });
         this.initFavourite = { ...favourite_apps };
     }
