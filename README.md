@@ -1,4 +1,4 @@
-# Kali Linux Portfolio (Ubuntu-style Desktop)
+# Kali Linux Portfolio 
 
 A desktop-style portfolio built with Next.js and Tailwind that emulates a Kali/Ubuntu UI with windows, a dock, context menus, and a rich catalog of **security-tool simulations**, **utilities**, and **retro games**. This README is tailored for a professional full-stack engineer preparing **production deployment** and ongoing maintenance.
 
