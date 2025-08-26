@@ -81,6 +81,7 @@ const Tetris = () => {
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
   const [lines, setLines] = useState(0);
+  const [highLines, setHighLines] = usePersistentState('tetris-high-lines', 0);
   const [highScore, setHighScore] = usePersistentState('tetris-high-score', 0);
   const [maxLevel, setMaxLevel] = usePersistentState('tetris-max-level', 1);
   const [keyBindings, setKeyBindings] = usePersistentState('tetris-keys', defaultKeys);
@@ -150,6 +151,7 @@ const Tetris = () => {
           setLevel(nlvl);
           if (nlvl > maxLevel) setMaxLevel(nlvl);
         }
+        if (nl > highLines) setHighLines(nl);
         return nl;
       });
     } else {
@@ -162,7 +164,7 @@ const Tetris = () => {
     if (!canMove(newBoard, next.shape, Math.floor(WIDTH / 2) - 2, 0)) {
       resetGame();
     }
-    }, [board, piece, pos, next, resetGame, highScore, level, maxLevel, setHighScore, setMaxLevel]);
+    }, [board, piece, pos, next, resetGame, highScore, level, maxLevel, highLines, setHighScore, setMaxLevel, setHighLines]);
 
   const moveDown = useCallback(
     (soft = false) => {
@@ -280,6 +282,32 @@ const Tetris = () => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [handleKey]);
 
+  useEffect(() => {
+    let startX = 0;
+    let startY = 0;
+    const start = (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    };
+    const end = (e) => {
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 30) move(1);
+        else if (dx < -30) move(-1);
+      } else {
+        if (dy > 30) hardDrop();
+        else if (dy < -30) rotatePiece();
+      }
+    };
+    window.addEventListener('touchstart', start);
+    window.addEventListener('touchend', end);
+    return () => {
+      window.removeEventListener('touchstart', start);
+      window.removeEventListener('touchend', end);
+    };
+  }, [move, hardDrop, rotatePiece]);
+
   const ghostY = getDropY();
 
   const cellClass = (cell) => {
@@ -309,7 +337,7 @@ const Tetris = () => {
               c ? (
                 <div
                   key={`g-${r}-${col}`}
-                  className="absolute w-4 h-4 border border-gray-700 opacity-30"
+                  className={`absolute w-4 h-4 border border-gray-700 ${piece.color} opacity-30`}
                   style={{ top: (ghostY + r) * CELL_SIZE, left: (pos.x + col) * CELL_SIZE }}
                 />
               ) : null
@@ -373,6 +401,8 @@ const Tetris = () => {
           </div>
           <div>Score: {score}</div>
           <div>High: {highScore}</div>
+          <div>Lines: {lines}</div>
+          <div>Max Lines: {highLines}</div>
           <div>Level: {level}</div>
           <div>Max Level: {maxLevel}</div>
         </div>
