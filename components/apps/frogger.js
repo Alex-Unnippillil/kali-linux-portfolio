@@ -301,7 +301,8 @@ const Frogger = () => {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-      }, [difficulty, level, loseLife, reset, handlePads, PAD_POSITIONS, initialFrog]);
+  // Only include dynamic values to prevent unnecessary re-renders
+  }, [difficulty, level, loseLife, reset]);
 
   useEffect(() => {
     if (score >= nextLife.current) {
