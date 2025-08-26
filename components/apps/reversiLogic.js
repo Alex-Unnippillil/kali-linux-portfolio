@@ -75,6 +75,19 @@ const corners = [
   [SIZE - 1, SIZE - 1],
 ];
 
+// Positional weights encouraging good squares (corners, edges) and
+// discouraging risky ones (adjacent to corners).
+const POSITION_WEIGHTS = [
+  [120, -20, 20, 5, 5, 20, -20, 120],
+  [-20, -40, -5, -5, -5, -5, -40, -20],
+  [20, -5, 15, 3, 3, 15, -5, 20],
+  [5, -5, 3, 3, 3, 3, -5, 5],
+  [5, -5, 3, 3, 3, 3, -5, 5],
+  [20, -5, 15, 3, 3, 15, -5, 20],
+  [-20, -40, -5, -5, -5, -5, -40, -20],
+  [120, -20, 20, 5, 5, 20, -20, 120],
+];
+
 const stableFromCorner = (board, r, c, dr, dc, player) => {
   let i = r;
   let j = c;
@@ -134,7 +147,14 @@ export const evaluateBoard = (board, player) => {
     stabilityCount(board, player) - stabilityCount(board, opponent);
   const { black, white } = countPieces(board);
   const parity = player === 'B' ? black - white : white - black;
-  return 25 * cornerScore + 5 * mobility + 10 * stability + parity;
+  let positional = 0;
+  for (let r = 0; r < SIZE; r += 1) {
+    for (let c = 0; c < SIZE; c += 1) {
+      if (board[r][c] === player) positional += POSITION_WEIGHTS[r][c];
+      else if (board[r][c] === opponent) positional -= POSITION_WEIGHTS[r][c];
+    }
+  }
+  return 25 * cornerScore + 5 * mobility + 10 * stability + parity + positional;
 };
 
 export const minimax = (
