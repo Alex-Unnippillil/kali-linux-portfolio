@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
 
 const BOARD_SIZE = 8;
 const MINES_COUNT = 10;
@@ -161,17 +162,14 @@ const Minesweeper = () => {
   const [shareCode, setShareCode] = useState('');
   const [startTime, setStartTime] = useState(null);
   const [elapsed, setElapsed] = useState(0);
-  const [bestTime, setBestTime] = useState(null);
+  const [bestTime, setBestTime] = usePersistentState(
+    'minesweeper-best-time',
+    null,
+    (v) => v === null || typeof v === 'number',
+  );
   const [bv, setBV] = useState(0);
   const [codeInput, setCodeInput] = useState('');
   const [flags, setFlags] = useState(0);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const best = localStorage.getItem('minesweeper-best-time');
-      if (best) setBestTime(parseFloat(best));
-    }
-  }, []);
 
   useEffect(() => {
     if (status === 'playing') {
@@ -188,9 +186,73 @@ const Minesweeper = () => {
     setBoard(newBoard);
     setStatus('playing');
     setStartTime(Date.now());
-    setShareCode(`${seed.toString(36)}-${x}-${y}`);
+    setShareCode(
+      `${seed.toString(36)}-${x.toString(36)}-${y.toString(36)}`,
+    );
     setBV(calculateBV(newBoard));
     setFlags(0);
+  };
+
+  const handleChord = (x, y) => {
+    if (status !== 'playing' || !board) return;
+    const newBoard = cloneBoard(board);
+    const cell = newBoard[x][y];
+    if (!cell.revealed || cell.adjacent === 0) return;
+    let flagged = 0;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (
+          nx >= 0 &&
+          nx < BOARD_SIZE &&
+          ny >= 0 &&
+          ny < BOARD_SIZE &&
+          newBoard[nx][ny].flagged
+        ) {
+          flagged++;
+        }
+      }
+    }
+    if (flagged !== cell.adjacent) return;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (
+          nx >= 0 &&
+          nx < BOARD_SIZE &&
+          ny >= 0 &&
+          ny < BOARD_SIZE &&
+          !newBoard[nx][ny].flagged
+        ) {
+          const hit = revealCell(newBoard, nx, ny);
+          if (hit) {
+            setBoard(newBoard);
+            setStatus('lost');
+            return;
+          }
+        }
+      }
+    }
+    setBoard(newBoard);
+    if (checkWin(newBoard)) {
+      setStatus('won');
+      const time = (Date.now() - startTime) / 1000;
+      setElapsed(time);
+      if (!bestTime || time < bestTime) {
+        setBestTime(time);
+      }
+    }
+  };
+
+  const handlePointerDown = (e, x, y) => {
+    if (e.pointerType === 'mouse' && e.buttons === 3) {
+      e.preventDefault();
+      handleChord(x, y);
+    }
   };
 
   const handleClick = (x, y) => {
@@ -200,59 +262,18 @@ const Minesweeper = () => {
       return;
     }
 
-    const newBoard = cloneBoard(board);
-    const cell = newBoard[x][y];
-
+    const cell = board[x][y];
     if (cell.revealed) {
-      if (cell.adjacent > 0) {
-        let flagged = 0;
-        for (let dx = -1; dx <= 1; dx++) {
-          for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = x + dx;
-            const ny = y + dy;
-            if (
-              nx >= 0 &&
-              nx < BOARD_SIZE &&
-              ny >= 0 &&
-              ny < BOARD_SIZE &&
-              newBoard[nx][ny].flagged
-            ) {
-              flagged++;
-            }
-          }
-        }
-        if (flagged === cell.adjacent) {
-          for (let dx = -1; dx <= 1; dx++) {
-            for (let dy = -1; dy <= 1; dy++) {
-              if (dx === 0 && dy === 0) continue;
-              const nx = x + dx;
-              const ny = y + dy;
-              if (
-                nx >= 0 &&
-                nx < BOARD_SIZE &&
-                ny >= 0 &&
-                ny < BOARD_SIZE &&
-                !newBoard[nx][ny].flagged
-              ) {
-                const hit = revealCell(newBoard, nx, ny);
-                if (hit) {
-                  setBoard(newBoard);
-                  setStatus('lost');
-                  return;
-                }
-              }
-            }
-          }
-        }
-      }
-    } else {
-      const hitMine = revealCell(newBoard, x, y);
-      if (hitMine) {
-        setBoard(newBoard);
-        setStatus('lost');
-        return;
-      }
+      handleChord(x, y);
+      return;
+    }
+
+    const newBoard = cloneBoard(board);
+    const hitMine = revealCell(newBoard, x, y);
+    if (hitMine) {
+      setBoard(newBoard);
+      setStatus('lost');
+      return;
     }
 
     setBoard(newBoard);
@@ -260,11 +281,8 @@ const Minesweeper = () => {
       setStatus('won');
       const time = (Date.now() - startTime) / 1000;
       setElapsed(time);
-      if (typeof window !== 'undefined') {
-        if (!bestTime || time < bestTime) {
-          setBestTime(time);
-          localStorage.setItem('minesweeper-best-time', time.toString());
-        }
+      if (!bestTime || time < bestTime) {
+        setBestTime(time);
       }
     }
   };
@@ -312,15 +330,17 @@ const Minesweeper = () => {
     setBV(0);
     setFlags(0);
     if (parts.length === 3) {
-      const x = parseInt(parts[1], 10);
-      const y = parseInt(parts[2], 10);
+      const x = parseInt(parts[1], 36);
+      const y = parseInt(parts[2], 36);
       if (!Number.isNaN(x) && !Number.isNaN(y)) {
         const newBoard = generateBoard(newSeed, x, y);
         revealCell(newBoard, x, y);
         setBoard(newBoard);
         setStatus('playing');
         setStartTime(Date.now());
-        setShareCode(codeInput.trim());
+        setShareCode(
+          `${newSeed.toString(36)}-${x.toString(36)}-${y.toString(36)}`,
+        );
         setBV(calculateBV(newBoard));
         setFlags(0);
       }
@@ -357,7 +377,7 @@ const Minesweeper = () => {
         </button>
       </div>
       <div className="mb-2">Mines: {MINES_COUNT - flags}</div>
-      <div className="mb-2">3BV: {bv} | Best: {bestTime ? bestTime.toFixed(2) : '--'}s{status === 'won' ? ` | Time: ${elapsed.toFixed(2)}s` : ''}</div>
+      <div className="mb-2">3BV: {bv} | Best: {bestTime !== null ? bestTime.toFixed(2) : '--'}s{status === 'won' ? ` | Time: ${elapsed.toFixed(2)}s` : ''}</div>
       <div className="grid grid-cols-8 gap-1" style={{ width: 'fit-content' }}>
         {Array.from({ length: BOARD_SIZE }).map((_, x) =>
           Array.from({ length: BOARD_SIZE }).map((_, y) => {
@@ -373,6 +393,7 @@ const Minesweeper = () => {
                 key={`${x}-${y}`}
                 onClick={() => handleClick(x, y)}
                 onContextMenu={(e) => handleRightClick(e, x, y)}
+                onPointerDown={(e) => handlePointerDown(e, x, y)}
                 className={`h-8 w-8 flex items-center justify-center text-sm font-bold ${cell.revealed ? 'bg-gray-400' : 'bg-gray-700 hover:bg-gray-600'}`}
               >
                 {display}
