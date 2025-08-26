@@ -41,6 +41,9 @@ export class Trash extends Component {
             fileHandle: null,
             filePreview: null,
             confirmDelete: false,
+            showEmptyModal: false,
+            emptyConfirm: '',
+            undoAvailable: false,
         }
     }
 
@@ -61,8 +64,32 @@ export class Trash extends Component {
     }
 
     emptyTrash = () => {
-        this.setState({ empty: true });
+        this.setState({ empty: true, undoAvailable: true });
         localStorage.setItem("trash-empty", true);
+    };
+
+    undoEmpty = () => {
+        this.setState({ empty: false, undoAvailable: false });
+        localStorage.setItem("trash-empty", false);
+    };
+
+    openEmptyModal = () => {
+        this.setState({ showEmptyModal: true, emptyConfirm: '' });
+    };
+
+    closeEmptyModal = () => {
+        this.setState({ showEmptyModal: false, emptyConfirm: '' });
+    };
+
+    handleEmptyConfirm = (e) => {
+        this.setState({ emptyConfirm: e.target.value });
+    };
+
+    confirmEmptyTrash = () => {
+        if (this.state.emptyConfirm === 'EMPTY') {
+            this.emptyTrash();
+            this.setState({ showEmptyModal: false, emptyConfirm: '' });
+        }
     };
 
     emptyScreen = () => {
@@ -156,7 +183,7 @@ export class Trash extends Component {
                     <span className="font-bold ml-2">Trash</span>
                     <div className="flex">
                         <div className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded text-gray-300">Restore</div>
-                        <div onClick={this.emptyTrash} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty</div>
+                        <div onClick={this.openEmptyModal} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty</div>
                         <div onClick={this.selectFile} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Delete File</div>
                     </div>
                 </div>
@@ -175,6 +202,34 @@ export class Trash extends Component {
                                 <button onClick={this.cancelDelete} className="px-3 py-1 bg-gray-600 rounded">Cancel</button>
                             </div>
                         </div>
+                    </div>
+                )}
+                {this.state.showEmptyModal && (
+                    <div className="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4">
+                        <div className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full">
+                            <p className="mb-2">Type &apos;EMPTY&apos; to permanently delete all items.</p>
+                            <input
+                                value={this.state.emptyConfirm}
+                                onChange={this.handleEmptyConfirm}
+                                className="w-full mb-2 text-black px-2 py-1 rounded"
+                            />
+                            <div className="flex justify-end space-x-2">
+                                <button
+                                    onClick={this.confirmEmptyTrash}
+                                    disabled={this.state.emptyConfirm !== 'EMPTY'}
+                                    className="px-3 py-1 bg-red-600 rounded disabled:opacity-50"
+                                >
+                                    Empty
+                                </button>
+                                <button onClick={this.closeEmptyModal} className="px-3 py-1 bg-gray-600 rounded">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {this.state.undoAvailable && this.state.empty && (
+                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-ub-warm-grey bg-opacity-90 text-sm px-4 py-2 rounded">
+                        Trash emptied.
+                        <button onClick={this.undoEmpty} className="underline ml-2">Undo</button>
                     </div>
                 )}
             </div>
