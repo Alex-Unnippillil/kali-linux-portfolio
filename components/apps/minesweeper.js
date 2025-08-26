@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 const BOARD_SIZE = 8;
 const MINES_COUNT = 10;
+const MAX_HINTS = 3;
 
 // simple seeded pseudo random generator
 const mulberry32 = (a) => {
@@ -21,6 +22,7 @@ const generateBoard = (seed, sx, sy) => {
       revealed: false,
       flagged: false,
       adjacent: 0,
+      hinted: false,
     })),
   );
 
@@ -88,6 +90,7 @@ const revealCell = (board, x, y) => {
   const cell = board[x][y];
   if (cell.revealed || cell.flagged) return false;
   cell.revealed = true;
+  cell.hinted = false;
   if (cell.mine) return true;
   if (cell.adjacent === 0) {
     for (let dx = -1; dx <= 1; dx++) {
@@ -165,6 +168,7 @@ const Minesweeper = () => {
   const [bv, setBV] = useState(0);
   const [codeInput, setCodeInput] = useState('');
   const [flags, setFlags] = useState(0);
+  const [hints, setHints] = useState(MAX_HINTS);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -191,6 +195,7 @@ const Minesweeper = () => {
     setShareCode(`${seed.toString(36)}-${x}-${y}`);
     setBV(calculateBV(newBoard));
     setFlags(0);
+    setHints(MAX_HINTS);
   };
 
   const handleClick = (x, y) => {
@@ -290,6 +295,7 @@ const Minesweeper = () => {
     setBV(0);
     setCodeInput('');
     setFlags(0);
+    setHints(MAX_HINTS);
   };
 
   const copyCode = () => {
@@ -311,6 +317,7 @@ const Minesweeper = () => {
     setElapsed(0);
     setBV(0);
     setFlags(0);
+    setHints(MAX_HINTS);
     if (parts.length === 3) {
       const x = parseInt(parts[1], 10);
       const y = parseInt(parts[2], 10);
@@ -323,9 +330,29 @@ const Minesweeper = () => {
         setShareCode(codeInput.trim());
         setBV(calculateBV(newBoard));
         setFlags(0);
+        setHints(MAX_HINTS);
       }
     }
     setCodeInput('');
+  };
+
+  const giveHint = () => {
+    if (status !== 'playing' || !board || hints <= 0) return;
+    const safeCells = [];
+    for (let x = 0; x < BOARD_SIZE; x++) {
+      for (let y = 0; y < BOARD_SIZE; y++) {
+        const cell = board[x][y];
+        if (!cell.mine && !cell.revealed && !cell.flagged && !cell.hinted) {
+          safeCells.push([x, y]);
+        }
+      }
+    }
+    if (safeCells.length === 0) return;
+    const [hx, hy] = safeCells[Math.floor(Math.random() * safeCells.length)];
+    const newBoard = cloneBoard(board);
+    newBoard[hx][hy].hinted = true;
+    setBoard(newBoard);
+    setHints((h) => h - 1);
   };
 
   return (
@@ -361,19 +388,21 @@ const Minesweeper = () => {
       <div className="grid grid-cols-8 gap-1" style={{ width: 'fit-content' }}>
         {Array.from({ length: BOARD_SIZE }).map((_, x) =>
           Array.from({ length: BOARD_SIZE }).map((_, y) => {
-            const cell = board ? board[x][y] : { revealed: false, flagged: false, adjacent: 0, mine: false };
+            const cell = board ? board[x][y] : { revealed: false, flagged: false, adjacent: 0, mine: false, hinted: false };
             let display = '';
             if (cell.revealed) {
               display = cell.mine ? '💣' : cell.adjacent || '';
             } else if (cell.flagged) {
               display = '🚩';
+            } else if (cell.hinted) {
+              display = '✅';
             }
             return (
               <button
                 key={`${x}-${y}`}
                 onClick={() => handleClick(x, y)}
                 onContextMenu={(e) => handleRightClick(e, x, y)}
-                className={`h-8 w-8 flex items-center justify-center text-sm font-bold ${cell.revealed ? 'bg-gray-400' : 'bg-gray-700 hover:bg-gray-600'}`}
+                className={`h-8 w-8 flex items-center justify-center text-sm font-bold ${cell.revealed ? 'bg-gray-400' : cell.hinted ? 'bg-green-700 hover:bg-green-600' : 'bg-gray-700 hover:bg-gray-600'}`}
               >
                 {display}
               </button>
@@ -390,12 +419,21 @@ const Minesweeper = () => {
           ? 'You win!'
           : 'Boom! Game over'}
       </div>
-      <button
-        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={reset}
-      >
-        Reset
-      </button>
+      <div className="flex space-x-2">
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={reset}
+        >
+          Reset
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
+          onClick={giveHint}
+          disabled={status !== 'playing' || hints <= 0}
+        >
+          Hint ({hints})
+        </button>
+      </div>
     </div>
   );
 };
