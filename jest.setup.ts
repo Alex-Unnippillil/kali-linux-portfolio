@@ -82,6 +82,7 @@ jest.mock(
         return { active: { getLine: () => ({ translateToString: () => '' }) } };
       }
     },
+
   }),
   { virtual: true }
 );
@@ -94,6 +95,7 @@ jest.mock(
       dispose() {}
       fit() {}
     },
+
   }),
   { virtual: true }
 );
@@ -105,6 +107,7 @@ jest.mock(
       activate() {}
       dispose() {}
     },
+
   }),
   { virtual: true }
 );

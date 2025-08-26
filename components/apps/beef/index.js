@@ -5,6 +5,7 @@ export default function Beef() {
   const [hooks, setHooks] = useState([]);
   const [selected, setSelected] = useState(null);
   const [moduleId, setModuleId] = useState('');
+  const [modules, setModules] = useState([]);
   const [output, setOutput] = useState('');
   const [showHelp, setShowHelp] = useState(false);
 
@@ -20,9 +21,25 @@ export default function Beef() {
     }
   }, [baseUrl]);
 
+  const fetchModules = useCallback(async () => {
+    try {
+      const res = await fetch(`${baseUrl}/api/modules`);
+      const data = await res.json();
+      setModules(data.modules || []);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [baseUrl]);
+
   useEffect(() => {
     fetchHooks();
+    const id = setInterval(fetchHooks, 5000);
+    return () => clearInterval(id);
   }, [fetchHooks]);
+
+  useEffect(() => {
+    fetchModules();
+  }, [fetchModules]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -33,14 +50,26 @@ export default function Beef() {
 
   const runModule = async () => {
     if (!selected || !moduleId) return;
+    setOutput('');
     try {
       const res = await fetch(`${baseUrl}/api/modules/${moduleId}/${selected}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      const json = await res.json();
-      setOutput(JSON.stringify(json, null, 2));
+      if (res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          const text = decoder.decode(value, { stream: true });
+          setOutput((prev) => prev + text);
+        }
+      } else {
+        const json = await res.json();
+        setOutput(JSON.stringify(json, null, 2));
+      }
     } catch (e) {
       setOutput(e.toString());
     }
@@ -78,13 +107,18 @@ export default function Beef() {
         {selected ? (
           <>
             <div className="mb-2">
-              <input
-                type="text"
-                placeholder="Module ID"
+              <select
                 className="w-full p-1 mb-2 text-black"
                 value={moduleId}
                 onChange={(e) => setModuleId(e.target.value)}
-              />
+              >
+                <option value="">Select Module</option>
+                {modules.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name || m.id}
+                  </option>
+                ))}
+              </select>
               <button
                 type="button"
                 onClick={runModule}
