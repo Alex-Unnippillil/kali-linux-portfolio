@@ -1,6 +1,46 @@
+/* Theme variables */
+:root {
+    --color-ub-grey: #111111;
+    --color-ub-warm-grey: #AEA79F;
+    --color-ub-cool-grey: #333333;
+    --color-ub-orange: #E95420;
+    --color-ub-lite-abrgn: #77216F;
+    --color-ub-med-abrgn: #5E2750;
+    --color-ub-drk-abrgn: #2C001E;
+    --color-ub-window-title: #201f1f;
+    --color-ub-gedit-dark: #021B33;
+    --color-ub-gedit-light: #003B70;
+    --color-ub-gedit-darker: #010D1A;
+    --color-ubt-grey: #F6F6F5;
+    --color-ubt-warm-grey: #AEA79F;
+    --color-ubt-cool-grey: #333333;
+    --color-ubt-blue: #3465A4;
+    --color-ubt-green: #4E9A06;
+    --color-ubt-gedit-orange: #F39A21;
+    --color-ubt-gedit-blue: #50B6C6;
+    --color-ubt-gedit-dark: #003B70;
+    --color-ub-border-orange: #E95420;
+    --color-ub-dark-grey: #555555;
+    --color-bg: #111111;
+    --color-text: #F6F6F5;
+}
+
+[data-theme='light'] {
+    --color-ub-grey: #ffffff;
+    --color-ub-warm-grey: #666666;
+    --color-ub-cool-grey: #e5e5e5;
+    --color-ub-window-title: #f0f0f0;
+    --color-ubt-grey: #111111;
+    --color-ubt-cool-grey: #4a4a4a;
+    --color-bg: #ffffff;
+    --color-text: #333333;
+}
+
 body{
     font-family: 'Ubuntu', sans-serif;
-    font-display: swap
+    font-display: swap;
+    background-color: var(--color-bg);
+    color: var(--color-text);
 }
 
 /* Top NavBar styling */

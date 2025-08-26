@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import wordList from './wordle_words.json';
 
-// Small word list for demo purposes. The word of the day is chosen
-// deterministically based on the current date so that the same word is
-// presented for an entire day.
-const WORDS = ['APPLE', 'BRAIN', 'CRANE', 'LIGHT', 'SMILE'];
-
+// Determine today's puzzle key and pick a word from the dictionary
+// deterministically so everyone sees the same puzzle each day.
 const todayKey = new Date().toISOString().split('T')[0];
-const solution = WORDS[new Date().getDate() % WORDS.length];
+function hash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    h = Math.imul(31, h) + str.charCodeAt(i);
+  }
+  return Math.abs(h);
+}
+const solution = wordList[hash(todayKey) % wordList.length];
 
 // Persist state to localStorage so that refreshes keep progress/history
 // and games reset each day.
@@ -79,13 +84,13 @@ const Wordle = () => {
 
   const colors = colorBlind
     ? {
-        correct: 'bg-blue-600 border-blue-600',
-        present: 'bg-orange-500 border-orange-500',
+        correct: 'bg-blue-700 border-blue-700',
+        present: 'bg-orange-700 border-orange-700',
         absent: 'bg-gray-700 border-gray-700',
       }
     : {
-        correct: 'bg-green-600 border-green-600',
-        present: 'bg-yellow-500 border-yellow-500',
+        correct: 'bg-green-700 border-green-700',
+        present: 'bg-yellow-800 border-yellow-800',
         absent: 'bg-gray-700 border-gray-700',
       };
 

@@ -8,4 +8,10 @@ describe('Unit conversion', () => {
   it('converts kilograms to pounds', () => {
     expect(convertUnit('weight', 'kilogram', 'pound', 1)).toBeCloseTo(2.20462, 5);
   });
+
+  it('respects precision when provided', () => {
+    expect(
+      convertUnit('length', 'meter', 'kilometer', 1234, 2)
+    ).toBeCloseTo(1.23, 2);
+  });
 });

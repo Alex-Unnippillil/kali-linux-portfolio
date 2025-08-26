@@ -44,9 +44,9 @@ function DesktopMenu(props) {
 
     return (
         <div id="desktop-menu" className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}>
-            <div onClick={props.addNewFolder} className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
+            <button onClick={props.addNewFolder} type="button" className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
                 <span className="ml-5">New Folder</span>
-            </div>
+            </button>
             <Devider />
             <div className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Paste</span>
@@ -55,24 +55,24 @@ function DesktopMenu(props) {
             <div className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Show Desktop in Files</span>
             </div>
-            <div onClick={openTerminal} className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
+            <button onClick={openTerminal} type="button" className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
                 <span className="ml-5">Open in Terminal</span>
-            </div>
+            </button>
             <Devider />
-            <div onClick={openSettings} className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
+            <button onClick={openSettings} type="button" className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
                 <span className="ml-5">Change Background...</span>
-            </div>
+            </button>
             <Devider />
             <div className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Display Settings</span>
             </div>
-            <div onClick={openSettings} className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
+            <button onClick={openSettings} type="button" className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
                 <span className="ml-5">Settings</span>
-            </div>
+            </button>
             <Devider />
-            <div onClick={goFullScreen} className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
+            <button onClick={goFullScreen} type="button" className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
                 <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
-            </div>
+            </button>
         </div>
     )
 }

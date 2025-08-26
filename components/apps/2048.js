@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
-
+import GameLayout from './GameLayout';
 
 const SIZE = 4;
 
@@ -109,7 +109,7 @@ const Game2048 = () => {
         else if (!hasMoves(newBoard)) setLost(true);
       }
     },
-    [board, won, lost]
+    [board, won, lost, setBoard, setWon, setLost]
   );
 
   useEffect(() => {
