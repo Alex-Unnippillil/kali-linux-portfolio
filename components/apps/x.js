@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+
 import dynamic from 'next/dynamic';
 
 // Load the Twitter embed only on the client to avoid SSR issues.
@@ -8,41 +9,61 @@ const TwitterTimelineEmbed = dynamic(
 );
 
 export default function XApp() {
-  const [loaded, setLoaded] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [text, setText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [timelineKey, setTimelineKey] = useState(0);
 
-  // If the embed does not load within a few seconds, display a fallback link.
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!loaded) setFailed(true);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [loaded]);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/x', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim() }),
+      });
+      if (res.ok) {
+        setText('');
+        setTimelineKey((k) => k + 1);
+      }
+    } catch (err) {
+      // Silently fail for now
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <div className="h-full w-full overflow-auto bg-ub-cool-grey">
-      {!failed ? (
+    <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col">
+      <form
+        onSubmit={handleSubmit}
+        className="p-2 flex flex-col gap-2 border-b border-gray-600"
+      >
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="What's happening?"
+          className="w-full p-2 rounded bg-gray-800 text-white"
+        />
+        <button
+          type="submit"
+          disabled={submitting || !text.trim()}
+          className="self-end px-4 py-1 bg-blue-500 text-white rounded disabled:opacity-50"
+        >
+          {submitting ? 'Posting...' : 'Post'}
+        </button>
+      </form>
+      <div className="flex-1">
         <TwitterTimelineEmbed
+          key={timelineKey}
           sourceType="profile"
-          screenName="alexunnippillil"
+          screenName="AUnnippillil"
           options={{ chrome: 'noheader noborders' }}
           className="w-full h-full"
-          onLoad={() => setLoaded(true)}
         />
-      ) : (
-        <div className="flex h-full w-full items-center justify-center p-4 text-center text-white">
-          Unable to load timeline. Visit{' '}
-          <a
-            href="https://x.com/alexunnippillil"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            x.com/alexunnippillil
-          </a>
-          .
-        </div>
-      )}
+      </div>
+
     </div>
   );
 }
