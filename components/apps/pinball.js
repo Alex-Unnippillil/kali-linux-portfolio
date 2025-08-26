@@ -1,10 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
+import GameLayout from './GameLayout';
 const WIDTH = 400;
 const HEIGHT = 500;
 
 const Pinball = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+  const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
+  const scoreRef = useRef(0);
+  const displayScoreRef = useRef(0);
+  const highRef = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -13,14 +19,25 @@ const Pinball = () => {
     const width = WIDTH;
     const height = HEIGHT;
 
-    const ball = { x: width / 2, y: 50, vx: 100, vy: 0, r: 8 };
-    const gravity = 500; // px per second^2
+    const savedHigh = Number(localStorage.getItem('pinballHighScore')) || 0;
+    setHighScore(savedHigh);
+    highRef.current = savedHigh;
+
+    const ball = { x: width / 2, y: 50, vx: 80, vy: 0, r: 8 };
+    const gravity = 400; // px per second^2
+    const damping = 0.99;
     const flippers = { left: false, right: false };
     const floor = height - 20;
+
+    const nudge = () => {
+      ball.vx += (Math.random() - 0.5) * 200;
+      ball.vy -= 150;
+    };
 
     const keydown = (e) => {
       if (e.key === 'ArrowLeft') flippers.left = true;
       if (e.key === 'ArrowRight') flippers.right = true;
+      if (e.key === 'ArrowUp' || e.key === ' ') nudge();
     };
 
     const keyup = (e) => {
@@ -31,10 +48,37 @@ const Pinball = () => {
     window.addEventListener('keydown', keydown);
     window.addEventListener('keyup', keyup);
 
+    const touchstart = (e) => {
+      e.preventDefault();
+      if (e.touches.length > 1) {
+        nudge();
+        return;
+      }
+      const rect = canvas.getBoundingClientRect();
+      const x = e.touches[0].clientX - rect.left;
+      if (x < width / 2) flippers.left = true;
+      else flippers.right = true;
+    };
+
+    const touchend = () => {
+      flippers.left = false;
+      flippers.right = false;
+    };
+
+    canvas.addEventListener('touchstart', touchstart, { passive: false });
+    canvas.addEventListener('touchend', touchend);
+
     const reset = () => {
+      if (scoreRef.current > highRef.current) {
+        highRef.current = Math.floor(scoreRef.current);
+        setHighScore(highRef.current);
+        localStorage.setItem('pinballHighScore', String(highRef.current));
+      }
+      scoreRef.current = 0;
+      setScore(0);
       ball.x = width / 2;
       ball.y = 50;
-      ball.vx = 100 * (Math.random() > 0.5 ? 1 : -1);
+      ball.vx = 80 * (Math.random() > 0.5 ? 1 : -1);
       ball.vy = 0;
     };
 
@@ -43,12 +87,21 @@ const Pinball = () => {
 
     const loop = (time) => {
       animationId = requestAnimationFrame(loop);
-      const dt = (time - last) / 1000;
+      const dt = Math.min((time - last) / 1000, 0.02);
       last = time;
 
       ball.vy += gravity * dt;
+      ball.vx *= damping;
+      ball.vy *= damping;
       ball.x += ball.vx * dt;
       ball.y += ball.vy * dt;
+
+      scoreRef.current += dt * 10;
+      const currentScore = Math.floor(scoreRef.current);
+      if (currentScore !== displayScoreRef.current) {
+        displayScoreRef.current = currentScore;
+        setScore(currentScore);
+      }
 
       if (ball.x < ball.r) {
         ball.x = ball.r;
@@ -66,11 +119,11 @@ const Pinball = () => {
 
       if (ball.y + ball.r > floor) {
         if (flippers.left && ball.x < width / 2) {
-          ball.vy = -300;
-          ball.vx = -150;
+          ball.vy = -350;
+          ball.vx = -200;
         } else if (flippers.right && ball.x >= width / 2) {
-          ball.vy = -300;
-          ball.vx = 150;
+          ball.vy = -350;
+          ball.vx = 200;
         } else {
           reset();
         }
@@ -106,13 +159,21 @@ const Pinball = () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('keydown', keydown);
       window.removeEventListener('keyup', keyup);
+      canvas.removeEventListener('touchstart', touchstart);
+      canvas.removeEventListener('touchend', touchend);
     };
   }, [canvasRef]);
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey">
-      <canvas ref={canvasRef} className="bg-black w-full h-full" />
-    </div>
+    <GameLayout stage={1} lives={1} score={score} highScore={highScore}>
+      <canvas
+        ref={canvasRef}
+        className="bg-black w-full h-full"
+        role="application"
+        aria-label="Pinball game board"
+        tabIndex={0}
+      />
+    </GameLayout>
   );
 };
 
