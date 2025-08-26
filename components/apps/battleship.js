@@ -91,7 +91,7 @@ const Battleship = () => {
       setAi(diff === 'hard' ? new MonteCarloAI() : new RandomSalvoAI());
       setCursor(0);
     },
-    [difficulty, placeShips]
+    [createBoard, difficulty, placeShips, randomizePlacement]
   );
 
   useEffect(() => {
@@ -168,7 +168,7 @@ const Battleship = () => {
         } else setMessage(hit ? 'Hit!' : 'Miss!');
       }, 100); // simulate thinking
     },
-    [ai, enemyBoard, heat, phase, playerBoard, setEnemyBoard, setPlayerBoard, setHeat, setMessage, setPhase, setStats]
+    [ai, enemyBoard, heat, phase, playerBoard]
   );
 
   useGameControls(({ x, y }) => {
