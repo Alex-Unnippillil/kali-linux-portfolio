@@ -29,8 +29,52 @@ const effects = [];
 const timerEl = document.getElementById('timer');
 const completeEl = document.getElementById('complete');
 
+const editBtn = document.getElementById('editToggle');
+const paletteEl = document.getElementById('palette');
+const saveBtn = document.getElementById('saveLevel');
+let editing = false;
+let selectedTile = '1';
+
+if (editBtn) {
+  editBtn.addEventListener('click', () => {
+    editing = !editing;
+    if (paletteEl) paletteEl.classList.toggle('hidden', !editing);
+  });
+}
+if (paletteEl) {
+  paletteEl.addEventListener('click', e => {
+    const t = e.target.dataset.tile;
+    if (t) selectedTile = t;
+  });
+}
+if (saveBtn) {
+  saveBtn.addEventListener('click', () => {
+    const data = { width: mapWidth, height: mapHeight, tiles, spawn };
+    try {
+      localStorage.setItem('platformer-custom-level', JSON.stringify(data));
+    } catch {}
+  });
+}
+
+canvas.addEventListener('click', e => {
+  if (!editing) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left + camera.x) / tileSize);
+  const y = Math.floor((e.clientY - rect.top + camera.y) / tileSize);
+  if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight) return;
+  if (selectedTile === 'spawn') {
+    spawn = { x: x * tileSize, y: y * tileSize };
+  } else {
+    tiles[y][x] = parseInt(selectedTile);
+  }
+});
+
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
+  if (e.code === 'KeyE') {
+    editing = !editing;
+    if (paletteEl) paletteEl.classList.toggle('hidden', !editing);
+  }
 });
 window.addEventListener('keyup', e => {
   keys[e.code] = false;
@@ -69,6 +113,28 @@ function playCoinSound() {
 }
 
 function loadLevel(name) {
+  if (name === 'custom') {
+    try {
+      const stored = localStorage.getItem('platformer-custom-level');
+      if (stored) {
+        const data = JSON.parse(stored);
+        mapWidth = data.width;
+        mapHeight = data.height;
+        tiles = data.tiles;
+        spawn = data.spawn || { x: 0, y: 0 };
+        if (checkpoint) spawn = checkpoint;
+        player.x = spawn.x;
+        player.y = spawn.y;
+        player.vx = player.vy = 0;
+        score = 0;
+        coinTotal = 0;
+        for (let y = 0; y < mapHeight; y++)
+          for (let x = 0; x < mapWidth; x++) if (tiles[y][x] === 5) coinTotal++;
+        levelStart = performance.now();
+      }
+    } catch {}
+    return;
+  }
   fetch(name)
     .then(r => r.json())
     .then(data => {
@@ -94,7 +160,7 @@ let last = 0;
 function loop(ts) {
   const dt = Math.min((ts - last) / 1000, 0.1);
   last = ts;
-  update(dt);
+  if (!editing) update(dt);
   draw();
   requestAnimationFrame(loop);
 }
@@ -140,12 +206,12 @@ function update(dt) {
   camera.x = Math.max(0, Math.min(camera.x, mapWidth * tileSize - canvas.width));
   camera.y = Math.max(0, Math.min(camera.y, mapHeight * tileSize - canvas.height));
 
-  const elapsed = ((performance.now() - levelStart) / 1000).toFixed(2);
-  timerEl.textContent = `Time: ${elapsed}s`;
+  const elapsed = (performance.now() - levelStart) / 1000;
+  timerEl.textContent = `Time: ${elapsed.toFixed(2)}s`;
 
   if (coinTotal === 0 && score > 0) {
     if (completeEl) completeEl.classList.remove('hidden');
-    window.parent.postMessage({ type: 'levelComplete' }, '*');
+    window.parent.postMessage({ type: 'levelComplete', time: +elapsed.toFixed(2) }, '*');
     coinTotal = -1;
   }
 }
@@ -214,6 +280,11 @@ function draw() {
 
   ctx.fillStyle = '#0f0';
   ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
+
+  if (editing) {
+    ctx.strokeStyle = 'red';
+    ctx.strokeRect(spawn.x - camera.x, spawn.y - camera.y, tileSize, tileSize);
+  }
 }
 
 window.addEventListener('keydown', e => {
