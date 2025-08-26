@@ -1,5 +1,24 @@
 import React, { createRef, act } from 'react';
 import { render, screen } from '@testing-library/react';
+
+jest.mock('xterm', () => {
+  return {
+    Terminal: function () {
+      return {
+        loadAddon: jest.fn(),
+        open: jest.fn(),
+        write: jest.fn(),
+        writeln: jest.fn(),
+        dispose: jest.fn(),
+        onKey: jest.fn(),
+        onData: jest.fn(),
+      };
+    },
+  };
+}, { virtual: true });
+jest.mock('xterm-addon-fit', () => ({ FitAddon: function () { return { fit: jest.fn() }; } }), { virtual: true });
+jest.mock('xterm-addon-search', () => ({ SearchAddon: function () {} }), { virtual: true });
+jest.mock('xterm/css/xterm.css', () => ({}), { virtual: true });
 import Terminal from '../components/apps/terminal';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
