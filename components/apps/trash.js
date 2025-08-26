@@ -4,44 +4,63 @@ import Image from 'next/image';
 export class Trash extends Component {
     constructor() {
         super();
+        const now = new Date().toLocaleString();
         this.trashItems = [
             {
                 name: "php",
-                icon: "/themes/filetypes/php.png"
+                icon: "/themes/filetypes/php.png",
+                path: "/var/www/php",
+                deletedAt: now,
             },
             {
                 name: "Angular.js",
-                icon: "/themes/filetypes/js.png"
+                icon: "/themes/filetypes/js.png",
+                path: "/home/user/angular.js",
+                deletedAt: now,
             },
             {
                 name: "node_modules",
-                icon: "/themes/Yaru/system/folder.png"
+                icon: "/themes/Yaru/system/folder.png",
+                path: "/home/user/node_modules",
+                deletedAt: now,
             },
-
             {
                 name: "abandoned project",
-                icon: "/themes/Yaru/system/folder.png"
+                icon: "/themes/Yaru/system/folder.png",
+                path: "/home/user/projects/abandoned",
+                deletedAt: now,
             },
             {
                 name: "INFR 4900U blockchain assignment AlexUnnippillil.zip",
-                icon: "/themes/filetypes/zip.png"
+                icon: "/themes/filetypes/zip.png",
+                path: "/home/user/INFR-4900U.zip",
+                deletedAt: now,
             },
             {
                 name: "cryptography project final",
-                icon: "/themes/Yaru/system/folder.png"
+                icon: "/themes/Yaru/system/folder.png",
+                path: "/home/user/crypto-final",
+                deletedAt: now,
             },
             {
                 name: "project machine learning-final",
-                icon: "/themes/Yaru/system/folder.png"
+                icon: "/themes/Yaru/system/folder.png",
+                path: "/home/user/ml-final",
+                deletedAt: now,
             },
-
         ];
         this.state = {
             empty: false,
             fileHandle: null,
             filePreview: null,
             confirmDelete: false,
-        }
+            selectedItems: [],
+            lastSelected: null,
+            confirmEmpty: false,
+            recentlyDeleted: [],
+            showUndo: false,
+        };
+        this.undoTimer = null;
     }
 
     componentDidMount() {
@@ -52,17 +71,60 @@ export class Trash extends Component {
         }
     }
 
-    focusFile = (e) => {
-        // icon
-        const children = e.currentTarget.children;
-        if (children[0]) children[0].classList.toggle("opacity-60");
-        // file name
-        if (children[1]) children[1].classList.toggle("bg-ub-orange");
+    componentWillUnmount() {
+        if (this.undoTimer) clearTimeout(this.undoTimer);
     }
 
-    emptyTrash = () => {
-        this.setState({ empty: true });
+    selectItem = (index, e) => {
+        const { selectedItems, lastSelected } = this.state;
+        let newSelection = [];
+        if (e.shiftKey && lastSelected !== null) {
+            const [start, end] = [Math.min(index, lastSelected), Math.max(index, lastSelected)];
+            for (let i = start; i <= end; i++) newSelection.push(i);
+        } else if (e.ctrlKey || e.metaKey) {
+            if (selectedItems.includes(index)) newSelection = selectedItems.filter(i => i !== index);
+            else newSelection = [...selectedItems, index];
+        } else {
+            newSelection = [index];
+        }
+        this.setState({ selectedItems: newSelection, lastSelected: index });
+    };
+
+    openEmptyConfirm = () => {
+        this.setState({ confirmEmpty: true });
+    };
+
+    performEmptyTrash = () => {
+        const deleted = [...this.trashItems];
+        this.trashItems = [];
+        this.setState({
+            empty: true,
+            confirmEmpty: false,
+            recentlyDeleted: deleted,
+            showUndo: true,
+            selectedItems: [],
+        });
         localStorage.setItem("trash-empty", true);
+        if (this.undoTimer) clearTimeout(this.undoTimer);
+        this.undoTimer = setTimeout(() => {
+            this.setState({ recentlyDeleted: [], showUndo: false });
+        }, 10000);
+    };
+
+    cancelEmpty = () => {
+        this.setState({ confirmEmpty: false });
+    };
+
+    undoDelete = () => {
+        const { recentlyDeleted } = this.state;
+        if (this.undoTimer) clearTimeout(this.undoTimer);
+        this.trashItems = [...this.trashItems, ...recentlyDeleted];
+        this.setState({
+            empty: this.trashItems.length === 0,
+            recentlyDeleted: [],
+            showUndo: false,
+        });
+        localStorage.setItem("trash-empty", this.trashItems.length === 0);
     };
 
     emptyScreen = () => {
@@ -86,9 +148,15 @@ export class Trash extends Component {
             <div className="flex-grow ml-4 flex flex-wrap items-start content-start justify-start overflow-y-auto windowMainScreen">
                 {
                     this.trashItems.map((item, index) => {
+                        const selected = this.state.selectedItems.includes(index);
                         return (
-                            <div key={index} tabIndex="1" onFocus={this.focusFile} onBlur={this.focusFile} className="flex flex-col items-center text-sm outline-none w-16 my-2 mx-4">
-                                <div className="w-16 h-16 flex items-center justify-center">
+                            <div
+                                key={index}
+                                tabIndex="1"
+                                onClick={(e) => this.selectItem(index, e)}
+                                className={`flex flex-col items-center text-sm outline-none w-32 my-2 mx-4 cursor-pointer ${selected ? '' : ''}`}
+                            >
+                                <div className={`w-16 h-16 flex items-center justify-center ${selected ? 'opacity-60' : ''}`}>
                                     <Image
                                         src={item.icon}
                                         alt="Ubuntu File Icons"
@@ -97,14 +165,16 @@ export class Trash extends Component {
                                         sizes="48px"
                                     />
                                 </div>
-                                <span className="text-center rounded px-0.5">{item.name}</span>
+                                <span className={`text-center rounded px-0.5 ${selected ? 'bg-ub-orange' : ''}`}>{item.name}</span>
+                                <span className="text-center text-xs text-gray-400 break-all px-0.5">{item.path}</span>
+                                <span className="text-center text-xs text-gray-400 px-0.5">{item.deletedAt}</span>
                             </div>
-                        )
+                        );
                     })
                 }
             </div>
         );
-    }
+    };
 
     selectFile = async () => {
         if (!window.showOpenFilePicker) {
@@ -156,7 +226,7 @@ export class Trash extends Component {
                     <span className="font-bold ml-2">Trash</span>
                     <div className="flex">
                         <div className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded text-gray-300">Restore</div>
-                        <div onClick={this.emptyTrash} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty</div>
+                        <div onClick={this.openEmptyConfirm} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty Trash</div>
                         <div onClick={this.selectFile} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Delete File</div>
                     </div>
                 </div>
@@ -177,8 +247,25 @@ export class Trash extends Component {
                         </div>
                     </div>
                 )}
+                {this.state.confirmEmpty && (
+                    <div className="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4">
+                        <div className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full">
+                            <p className="mb-4">Empty trash?</p>
+                            <div className="flex justify-end space-x-2">
+                                <button onClick={this.performEmptyTrash} className="px-3 py-1 bg-red-600 rounded">Empty</button>
+                                <button onClick={this.cancelEmpty} className="px-3 py-1 bg-gray-600 rounded">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {this.state.showUndo && (
+                    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-ub-warm-grey px-4 py-2 rounded shadow">
+                        <span className="mr-2">Items deleted</span>
+                        <button onClick={this.undoDelete} className="underline">Undo</button>
+                    </div>
+                )}
             </div>
-        )
+        );
     }
 }
 
