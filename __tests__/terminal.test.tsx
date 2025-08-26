@@ -39,4 +39,18 @@ describe('Terminal component', () => {
     });
     expect(ref.current.getContent()).toBe('');
   });
+
+  it('navigates command history with arrow keys', () => {
+    const ref = createRef();
+    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
+    act(() => {
+      ref.current.runCommand('pwd');
+      ref.current.historyNav('up');
+    });
+    expect(ref.current.getCommand()).toBe('pwd');
+    act(() => {
+      ref.current.historyNav('down');
+    });
+    expect(ref.current.getCommand()).toBe('');
+  });
 });

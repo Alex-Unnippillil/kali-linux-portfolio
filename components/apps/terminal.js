@@ -14,13 +14,16 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const logRef = useRef('');
   const knownCommandsRef = useRef(new Set(['pwd', 'cd', 'simulate', 'clear', 'history']));
   const historyRef = useRef([]);
+  const historyIndexRef = useRef(0);
   const suggestionsRef = useRef([]);
   const suggestionIndexRef = useRef(0);
   const showingSuggestionsRef = useRef(false);
 
+  const promptText = 'alex@kali:~$ ';
+
   // Prompt helper
   const prompt = useCallback(() => {
-    termRef.current.write(`\r\nalex@kali:~$ `);
+    termRef.current.write(`\r\n${promptText}`);
   }, []);
 
   // Handle command execution
@@ -33,6 +36,7 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     if (trimmed) {
       historyRef.current.push(trimmed);
     }
+    historyIndexRef.current = historyRef.current.length;
     if (trimmed === 'pwd') {
       termRef.current.writeln('');
       termRef.current.writeln('/home/alex');
@@ -119,6 +123,26 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     renderSuggestions();
   }, [renderSuggestions]);
 
+  const handleHistoryNav = useCallback((direction) => {
+    if (historyRef.current.length === 0) return;
+    if (direction === 'up') {
+      if (historyIndexRef.current > 0) {
+        historyIndexRef.current -= 1;
+      }
+    } else if (direction === 'down') {
+      if (historyIndexRef.current < historyRef.current.length) {
+        historyIndexRef.current += 1;
+      }
+    }
+    const cmd = historyRef.current[historyIndexRef.current] || '';
+    termRef.current.write('\x1b[2K\r');
+    termRef.current.write(promptText);
+    termRef.current.write(cmd);
+    commandRef.current = cmd;
+    suggestionsRef.current = [];
+    showingSuggestionsRef.current = false;
+  }, []);
+
   // Initialise terminal
   useEffect(() => {
     const term = new XTerm({ cursorBlink: true, convertEol: true });
@@ -142,6 +166,12 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       } else if (domEvent.key === 'ArrowRight') {
         domEvent.preventDefault();
         handleSuggestionNav('right');
+      } else if (domEvent.key === 'ArrowUp') {
+        domEvent.preventDefault();
+        handleHistoryNav('up');
+      } else if (domEvent.key === 'ArrowDown') {
+        domEvent.preventDefault();
+        handleHistoryNav('down');
       }
     });
 
@@ -189,11 +219,13 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       workerRef.current?.terminate();
       term.dispose();
     };
-  }, [prompt, runCommand, handleTab, handleSuggestionNav]);
+  }, [prompt, runCommand, handleTab, handleSuggestionNav, handleHistoryNav]);
 
   useImperativeHandle(ref, () => ({
     runCommand,
     getContent: () => logRef.current,
+    getCommand: () => commandRef.current,
+    historyNav: handleHistoryNav,
   }));
 
   return <div className="h-full w-full bg-ub-cool-grey" ref={containerRef} data-testid="xterm-container" />;
