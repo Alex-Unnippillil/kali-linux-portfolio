@@ -18,6 +18,7 @@ const OpenVASApp = () => {
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [summaryUrl, setSummaryUrl] = useState(null);
+  const [report, setReport] = useState(null);
 
   const generateSummary = (data) => {
     const summary = `# OpenVAS Scan Summary\n\n- Target: ${target}\n- Group: ${group}\n\n## Output\n\n${data}`;
@@ -46,6 +47,22 @@ const OpenVASApp = () => {
       setLoading(false);
     }
   };
+
+  const loadSampleReport = async () => {
+    try {
+      const res = await fetch('/apps/openvas/sample-report.json');
+      const data = await res.json();
+      setReport(data);
+    } catch (e) {
+      notify('Failed to load report', e.message);
+    }
+  };
+
+  const severityCounts =
+    report?.results.reduce((acc, r) => {
+      acc[r.severity] = (acc[r.severity] || 0) + 1;
+      return acc;
+    }, {}) || {};
 
   return (
     <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
@@ -86,6 +103,65 @@ const OpenVASApp = () => {
           Download Summary
         </a>
       )}
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={loadSampleReport}
+          className="px-4 py-2 bg-purple-600 rounded"
+        >
+          Load Sample Report
+        </button>
+        {report && (
+          <div className="mt-4">
+            <h3 className="text-md mb-2">Tasks & Targets</h3>
+            <table className="w-full text-sm mb-4">
+              <thead>
+                <tr>
+                  <th className="text-left pr-4">Task</th>
+                  <th className="text-left">Target</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.tasks.map((t) => (
+                  <tr key={t.id} className="border-t border-gray-700">
+                    <td className="py-1 pr-4">{t.name}</td>
+                    <td className="py-1">{t.target}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <h3 className="text-md mb-2">Vulnerability Summary</h3>
+            <table className="w-full text-sm mb-4">
+              <thead>
+                <tr>
+                  <th className="text-left pr-4">Severity</th>
+                  <th className="text-left">Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(severityCounts).map(([sev, count]) => (
+                  <tr key={sev} className="border-t border-gray-700">
+                    <td className="py-1 pr-4">{sev}</td>
+                    <td className="py-1">{count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <a
+              href="/apps/openvas/sample-report.pdf"
+              download
+              className="inline-block mt-2 px-4 py-2 bg-blue-600 rounded"
+            >
+              Download Sample PDF
+            </a>
+            <p className="mt-4 text-sm text-gray-300">
+              Tasks link scan configurations to specific targets. The resulting
+              report highlights vulnerabilities that feed remediation in a
+              typical vulnerability management workflow.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
