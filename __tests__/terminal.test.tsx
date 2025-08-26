@@ -1,22 +1,15 @@
-import React, { createRef, act } from 'react';
-import { render } from '@testing-library/react';
-import Terminal from '../components/apps/terminal';
-
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock(
   '@xterm/xterm',
   () => ({
     Terminal: jest.fn().mockImplementation(() => ({
       open: jest.fn(),
-      write: jest.fn(),
-      onData: jest.fn(),
-      loadAddon: jest.fn(),
-      dispose: jest.fn(),
       focus: jest.fn(),
-      reset: jest.fn(),
-      onKey: jest.fn(),
+      loadAddon: jest.fn(),
+      write: jest.fn(),
       writeln: jest.fn(),
-      clear: jest.fn(),
+      onData: jest.fn(),
+      onKey: jest.fn(),
+      dispose: jest.fn(),
     })),
   }),
   { virtual: true }
@@ -24,21 +17,27 @@ jest.mock(
 jest.mock(
   '@xterm/addon-fit',
   () => ({
-    FitAddon: jest.fn().mockImplementation(() => ({
-      activate: jest.fn(),
-      fit: jest.fn(),
-    })),
+    FitAddon: jest.fn().mockImplementation(() => ({ fit: jest.fn() })),
   }),
   { virtual: true }
 );
 jest.mock(
   '@xterm/addon-search',
   () => ({
-    SearchAddon: jest.fn().mockImplementation(() => ({ activate: jest.fn() })),
+    SearchAddon: jest.fn().mockImplementation(() => ({
+      activate: jest.fn(),
+      dispose: jest.fn(),
+    })),
   }),
   { virtual: true }
 );
 jest.mock('@xterm/xterm/css/xterm.css', () => ({}), { virtual: true });
+jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
+
+import React, { createRef, act } from 'react';
+import { render } from '@testing-library/react';
+import Terminal from '../components/apps/terminal';
+
 
 describe('Terminal component', () => {
   const addFolder = jest.fn();
