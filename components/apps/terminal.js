@@ -103,6 +103,8 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   return <div className="h-full w-full bg-ub-cool-grey" ref={containerRef} data-testid="xterm-container" />;
 });
 
+Terminal.displayName = 'Terminal';
+
 export default Terminal;
 
 export const displayTerminal = (addFolder, openApp) => {

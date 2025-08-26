@@ -7,6 +7,7 @@ import {
   moveWasteToTableau,
   moveToFoundation,
   autoMove,
+  autoComplete,
   valueToString,
   GameState,
   Card,
@@ -220,7 +221,9 @@ const Solitaire = () => {
             className="w-16 h-24"
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToFoundation(i)}
-            ref={(el) => (foundationRefs.current[i] = el)}
+            ref={(el) => {
+              foundationRefs.current[i] = el;
+            }}
           >
             {pile.length ? renderCard(pile[pile.length - 1]) : (
               <div className="w-16 h-24 border border-dashed border-white rounded" />
@@ -235,7 +238,9 @@ const Solitaire = () => {
             className="relative w-16 h-96 border border-black"
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToTableau(i)}
-            ref={(el) => (tableauRefs.current[i] = el)}
+              ref={(el) => {
+                tableauRefs.current[i] = el;
+              }}
           >
             {pile.map((card, idx) => (
               <div

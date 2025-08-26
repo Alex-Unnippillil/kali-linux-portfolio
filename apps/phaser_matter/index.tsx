@@ -28,7 +28,7 @@ const PhaserMatter: React.FC = () => {
             isStatic: true,
             friction: 1,
             collisionFilter: { category: groundCategory },
-            render: { fillStyle: 0x888888 },
+            render: { fillColor: 0x888888 },
           });
 
           // Platform with low friction
@@ -36,7 +36,7 @@ const PhaserMatter: React.FC = () => {
             isStatic: true,
             friction: 0,
             collisionFilter: { category: groundCategory },
-            render: { fillStyle: 0xaaaaaa },
+            render: { fillColor: 0xaaaaaa },
           });
 
           // Ball that collides only with ground layer
@@ -45,7 +45,7 @@ const PhaserMatter: React.FC = () => {
             friction: 0.05,
             frictionAir: 0.001,
             collisionFilter: { category: ballCategory, mask: groundCategory },
-            render: { fillStyle: 0xff0000 },
+            render: { fillColor: 0xff0000 },
           });
 
           // Box on separate collision layer that ignores the ball
@@ -53,7 +53,7 @@ const PhaserMatter: React.FC = () => {
           this.matter.add.rectangle(650, 0, 40, 40, {
             restitution: 0.1,
             collisionFilter: { category: boxCategory, mask: groundCategory | boxCategory },
-            render: { fillStyle: 0x00ff00 },
+            render: { fillColor: 0x00ff00 },
           });
         },
       },

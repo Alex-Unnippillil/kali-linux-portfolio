@@ -223,13 +223,9 @@ const Game2048 = () => {
         </div>
         {(won || lost) && (
           <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
-
         )}
-      </div>
-      {(won || lost) && (
-        <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
-      )}
-    </div>
+      </>
+    </GameLayout>
   );
 };
 
