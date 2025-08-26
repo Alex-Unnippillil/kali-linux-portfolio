@@ -388,7 +388,7 @@ const Pacman = () => {
         }
       }
     });
-  }, [pellets, score, availableDirs, levelIndex, isTunnel]);
+  }, [pellets, score, availableDirs, levelIndex]);
 
   const stepRef = useRef(step);
   useEffect(() => {
