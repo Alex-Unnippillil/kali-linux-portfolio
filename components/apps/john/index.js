@@ -3,8 +3,11 @@ import React, { useState } from 'react';
 // Simple John the Ripper interface that sends hash input to an API
 // route which in turn runs the `john` binary using Node's child_process.
 
+const modes = ['single', 'wordlist', 'incremental'];
+
 const JohnApp = () => {
   const [hash, setHash] = useState('');
+  const [mode, setMode] = useState('single');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -17,18 +20,18 @@ const JohnApp = () => {
     }
     setError('');
     setLoading(true);
-    setOutput('');
+    setOutput(`Running in ${mode} mode...`);
     try {
       const res = await fetch('/api/john', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hash }),
+        body: JSON.stringify({ hash, mode }),
       });
       const data = await res.json();
       if (data.error) {
         setError(data.error);
       }
-      setOutput(data.output || data.error || 'No output');
+      setOutput(`Mode: ${mode}\n${data.output || data.error || 'No output'}`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -39,6 +42,21 @@ const JohnApp = () => {
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
       <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-2">
+        <label htmlFor="john-mode" className="text-sm">
+          Mode
+        </label>
+        <select
+          id="john-mode"
+          value={mode}
+          onChange={(e) => setMode(e.target.value)}
+          className="px-2 py-1 bg-gray-800 text-white rounded"
+        >
+          {modes.map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
         <label htmlFor="john-hash" className="text-sm">
           Hash
         </label>
