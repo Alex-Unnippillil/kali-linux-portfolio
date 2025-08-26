@@ -31,6 +31,8 @@ const createObstacles = (count, occupied = []) => {
   return obs;
 };
 
+const speedLevels = { slow: 200, normal: 150, fast: 100 };
+
 const Snake = () => {
   // snake state and movement
   const [snake, setSnake] = useState([{ x: 10, y: 10 }]);
@@ -46,7 +48,6 @@ const Snake = () => {
   const [paused, setPaused] = useState(false);
   const [wrap, setWrap] = useState(false);
   const [speedSetting, setSpeedSetting] = useState('normal');
-  const speedLevels = { slow: 200, normal: 150, fast: 100 };
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { Terminal as XTerm } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { SearchAddon } from 'xterm-addon-search';
@@ -12,12 +12,12 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const logRef = useRef('');
 
   // Prompt helper
-  const prompt = () => {
+  const prompt = useCallback(() => {
     termRef.current.write(`\r\nalex@kali:~$ `);
-  };
+  }, []);
 
   // Handle command execution
-  const runCommand = (command) => {
+  const runCommand = useCallback((command) => {
     const trimmed = command.trim();
     if (trimmed === 'pwd') {
       termRef.current.writeln('');
@@ -44,7 +44,7 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       logRef.current += `Command '${trimmed}' not found\n`;
       prompt();
     }
-  };
+  }, [prompt]);
 
   // Initialise terminal
   useEffect(() => {
@@ -93,7 +93,7 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       workerRef.current?.terminate();
       term.dispose();
     };
-  }, []);
+  }, [prompt, runCommand]);
 
   useImperativeHandle(ref, () => ({
     runCommand,

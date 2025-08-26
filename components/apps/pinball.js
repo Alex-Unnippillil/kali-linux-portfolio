@@ -107,7 +107,7 @@ const Pinball = () => {
       window.removeEventListener('keydown', keydown);
       window.removeEventListener('keyup', keyup);
     };
-  }, []);
+  }, [canvasRef]);
 
   return (
     <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey">
