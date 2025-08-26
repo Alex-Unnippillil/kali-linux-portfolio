@@ -1,6 +1,8 @@
-export function wrap(value, max) {
-  const m = value % max;
-  return m < 0 ? m + max : m;
+export function wrap(value, max, margin = 0) {
+  const range = max + margin * 2;
+  let m = (value + margin) % range;
+  if (m < 0) m += range;
+  return m - margin;
 }
 
 export function createBulletPool(size) {

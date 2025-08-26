@@ -14,6 +14,7 @@ const Memory = () => {
   const [time, setTime] = useState(0);
   const [stats, setStats] = useState({ games: 0, bestTime: null, bestMoves: null });
   const timerRef = useRef(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
     const key = useCallback(
       (s = size, t = timed) => `memory_${s}_${t ? 'timed' : 'casual'}`,
@@ -47,7 +48,7 @@ const Memory = () => {
     }, [key]);
 
   const startTimer = () => {
-    if (timed && !timerRef.current) {
+    if (!timerRef.current) {
       timerRef.current = setInterval(() => setTime((t) => t + 1), 1000);
     }
   };
@@ -71,6 +72,15 @@ const Memory = () => {
       localStorage.setItem(key(), JSON.stringify(updated));
       setStats(updated);
     }, [timed, time, moves, key]);
+
+    useEffect(() => {
+      if (typeof window === 'undefined') return;
+      const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+      setPrefersReducedMotion(media.matches);
+      const handler = () => setPrefersReducedMotion(media.matches);
+      media.addEventListener('change', handler);
+      return () => media.removeEventListener('change', handler);
+    }, []);
 
     useEffect(() => {
       if (cards.length && matched.length === cards.length) {
@@ -97,9 +107,10 @@ const Memory = () => {
 
       if (cards[first].value === cards[second].value) {
         setMatched([...matched, first, second]);
-        setTimeout(() => setFlipped([]), 600);
+        setTimeout(() => setFlipped([]), prefersReducedMotion ? 0 : 600);
       } else {
-        setTimeout(() => setFlipped([]), assistive ? 800 : 200);
+        const delay = assistive ? 800 : 200;
+        setTimeout(() => setFlipped([]), prefersReducedMotion ? 0 : delay);
       }
     }
   };
@@ -141,14 +152,15 @@ const Memory = () => {
           <span className="ml-1">Assistive</span>
         </label>
       </div>
-      {timed && <div className="mb-2">Time: {time}s</div>}
       <div className="grid gap-2 mb-4" style={gridStyle}>
         {cards.map((card, idx) => {
           const isFlipped = flipped.includes(idx) || matched.includes(idx);
           return (
             <div key={card.id} className="aspect-square" onClick={() => handleFlip(idx)}>
               <div
-                className="relative w-full h-full transition-transform duration-500 transform-gpu"
+                className={`relative w-full h-full transform-gpu ${
+                  prefersReducedMotion ? '' : 'transition-transform duration-500'
+                }`}
                 style={{
                   transformStyle: 'preserve-3d',
                   transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
@@ -171,6 +183,7 @@ const Memory = () => {
       </div>
       <div className="flex space-x-4 mb-2">
         <div>Moves: {moves}</div>
+        <div>Time: {time}s</div>
         {timed && stats.bestTime != null && <div>Best: {stats.bestTime}s</div>}
         {!timed && stats.bestMoves != null && <div>Best: {stats.bestMoves}</div>}
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import usePersistentState from '../usePersistentState';
 
 const WIDTH = 10;
@@ -19,7 +19,8 @@ const PIECES = Object.keys(TETROMINOS);
 const createBoard = () =>
   Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(0));
 
-const rotate = (matrix) => matrix[0].map((_, i) => matrix.map((row) => row[i]).reverse());
+const rotate = (matrix) =>
+  matrix[0].map((_, i) => matrix.map((row) => row[i]).reverse());
 
 const canMove = (board, shape, x, y) => {
   for (let r = 0; r < shape.length; r += 1) {
@@ -45,8 +46,18 @@ const merge = (board, shape, x, y, type) => {
   return newBoard;
 };
 
-const randomPiece = () => {
-  const type = PIECES[Math.floor(Math.random() * PIECES.length)];
+const shuffle = (array) => {
+  for (let i = array.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+};
+
+let bag = [];
+const bagPiece = () => {
+  if (bag.length === 0) bag = shuffle([...PIECES]);
+  const type = bag.pop();
   return { ...TETROMINOS[type], type };
 };
 
@@ -62,9 +73,9 @@ const defaultKeys = {
 
 const Tetris = () => {
   const [board, setBoard] = useState(createBoard);
-  const [piece, setPiece] = useState(randomPiece);
+  const [piece, setPiece] = useState(bagPiece);
   const [pos, setPos] = useState({ x: Math.floor(WIDTH / 2) - 2, y: 0 });
-  const [next, setNext] = useState(randomPiece);
+  const [next, setNext] = useState(bagPiece);
   const [hold, setHold] = useState(null);
   const [canHold, setCanHold] = useState(true);
   const [score, setScore] = useState(0);
@@ -75,6 +86,8 @@ const Tetris = () => {
   const [keyBindings, setKeyBindings] = usePersistentState('tetris-keys', defaultKeys);
   const [showSettings, setShowSettings] = useState(false);
   const [softDrop, setSoftDrop] = useState(false);
+  const lockRef = useRef(null);
+  const LOCK_DELAY = 500;
 
   const dropInterval = Math.max(100, 1000 - (level - 1) * 100);
 
@@ -89,16 +102,26 @@ const Tetris = () => {
 
   const resetGame = useCallback(() => {
     setBoard(createBoard());
-    setPiece(randomPiece());
-    setNext(randomPiece());
+    bag = [];
+    setPiece(bagPiece());
+    setNext(bagPiece());
     setPos({ x: Math.floor(WIDTH / 2) - 2, y: 0 });
     setScore(0);
     setLevel(1);
     setLines(0);
     setHold(null);
+    setCanHold(true);
+    if (lockRef.current) {
+      clearTimeout(lockRef.current);
+      lockRef.current = null;
+    }
   }, []);
 
   const placePiece = useCallback(() => {
+    if (lockRef.current) {
+      clearTimeout(lockRef.current);
+      lockRef.current = null;
+    }
     const newBoard = merge(board, piece.shape, pos.x, pos.y, piece.type);
     const filled = [];
     for (let r = 0; r < HEIGHT; r += 1) {
@@ -133,7 +156,7 @@ const Tetris = () => {
       setBoard(newBoard);
     }
     setPiece(next);
-    setNext(randomPiece());
+    setNext(bagPiece());
     setPos({ x: Math.floor(WIDTH / 2) - 2, y: 0 });
     setCanHold(true);
     if (!canMove(newBoard, next.shape, Math.floor(WIDTH / 2) - 2, 0)) {
@@ -145,9 +168,15 @@ const Tetris = () => {
     (soft = false) => {
       setSoftDrop(soft);
       if (canMove(board, piece.shape, pos.x, pos.y + 1)) {
+        if (lockRef.current) {
+          clearTimeout(lockRef.current);
+          lockRef.current = null;
+        }
         setPos((p) => ({ ...p, y: p.y + 1 }));
-      } else {
-        placePiece();
+      } else if (!lockRef.current) {
+        lockRef.current = setTimeout(() => {
+          placePiece();
+        }, LOCK_DELAY);
       }
     },
     [board, piece, pos, placePiece]
@@ -160,16 +189,42 @@ const Tetris = () => {
 
   const move = (dir) => {
     const newX = pos.x + dir;
-    if (canMove(board, piece.shape, newX, pos.y)) setPos((p) => ({ ...p, x: newX }));
+    if (canMove(board, piece.shape, newX, pos.y)) {
+      setPos((p) => ({ ...p, x: newX }));
+      if (lockRef.current) {
+        clearTimeout(lockRef.current);
+        lockRef.current = null;
+      }
+      if (!canMove(board, piece.shape, newX, pos.y + 1)) {
+        lockRef.current = setTimeout(() => {
+          placePiece();
+        }, LOCK_DELAY);
+      }
+    }
   };
 
   const rotatePiece = () => {
     const rotated = rotate(piece.shape);
-    if (canMove(board, rotated, pos.x, pos.y)) setPiece({ ...piece, shape: rotated });
+    if (canMove(board, rotated, pos.x, pos.y)) {
+      setPiece({ ...piece, shape: rotated });
+      if (lockRef.current) {
+        clearTimeout(lockRef.current);
+        lockRef.current = null;
+      }
+      if (!canMove(board, rotated, pos.x, pos.y + 1)) {
+        lockRef.current = setTimeout(() => {
+          placePiece();
+        }, LOCK_DELAY);
+      }
+    }
   };
 
   const hardDrop = () => {
     const y = getDropY();
+    if (lockRef.current) {
+      clearTimeout(lockRef.current);
+      lockRef.current = null;
+    }
     setPos((p) => ({ ...p, y }));
     placePiece();
   };
@@ -177,6 +232,10 @@ const Tetris = () => {
   const holdPiece = () => {
     if (!canHold) return;
     setCanHold(false);
+    if (lockRef.current) {
+      clearTimeout(lockRef.current);
+      lockRef.current = null;
+    }
     if (hold) {
       const temp = hold;
       setHold(piece);
@@ -184,7 +243,7 @@ const Tetris = () => {
     } else {
       setHold(piece);
       setPiece(next);
-      setNext(randomPiece());
+      setNext(bagPiece());
     }
     setPos({ x: Math.floor(WIDTH / 2) - 2, y: 0 });
   };
@@ -285,6 +344,25 @@ const Tetris = () => {
                     ) : null
                   )
                 )}
+            </div>
+          </div>
+          <div className="mb-4">
+            <div className="text-center mb-1">Next</div>
+            <div
+              className="relative border border-gray-700"
+              style={{ width: 4 * CELL_SIZE, height: 4 * CELL_SIZE }}
+            >
+              {next.shape.map((row, r) =>
+                row.map((c, col) =>
+                  c ? (
+                    <div
+                      key={`n-${r}-${col}`}
+                      className={`absolute w-4 h-4 border border-gray-700 ${next.color}`}
+                      style={{ top: r * CELL_SIZE, left: col * CELL_SIZE }}
+                    />
+                  ) : null
+                )
+              )}
             </div>
           </div>
           <div>Score: {score}</div>

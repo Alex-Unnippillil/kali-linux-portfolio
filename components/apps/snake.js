@@ -304,14 +304,16 @@ const Snake = () => {
           <button
             className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
             onClick={() => setPaused((p) => !p)}
+
           >
-            {paused ? 'Resume' : 'Pause'}
+            Retry
           </button>
           <button
             className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
             onClick={() => setWrap((w) => !w)}
+
           >
-            {wrap ? 'No Wrap' : 'Wrap'}
+            Replay
           </button>
           <select
             className="ml-2 px-1 bg-gray-700 rounded"
@@ -348,6 +350,7 @@ const Snake = () => {
         )}
       </div>
     </GameLayout>
+
   );
 };
 

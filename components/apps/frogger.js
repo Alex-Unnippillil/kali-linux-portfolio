@@ -6,6 +6,11 @@ const HEIGHT = 8;
 const SUB_STEP = 0.5;
 
 const PAD_POSITIONS = [1, 3, 5];
+const DIFFICULTY_MULTIPLIERS = {
+  easy: 0.8,
+  normal: 1,
+  hard: 1.2,
+};
 
 const makeRng = (seed) => {
   let t = seed;
@@ -30,9 +35,9 @@ const handlePads = (frogPos, pads) => {
   return { pads: newPads, dead: false, levelComplete, padHit: true };
 };
 
-const rampLane = (base, level, minSpawn) => ({
+const rampLane = (base, level, minSpawn, diffMult = 1) => ({
   ...base,
-  speed: base.speed * (1 + (level - 1) * 0.2),
+  speed: base.speed * diffMult * (1 + (level - 1) * 0.2),
   spawnRate: Math.max(minSpawn, base.spawnRate * (1 - (level - 1) * 0.1)),
 });
 
@@ -127,6 +132,7 @@ const Frogger = () => {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
+  const [difficulty, setDifficulty] = useState('normal');
   const nextLife = useRef(500);
   const holdRef = useRef();
 
@@ -197,20 +203,36 @@ const Frogger = () => {
     ReactGA.event({ category: 'Frogger', action: 'level_start', value: 1 });
   }, []);
 
-    const reset = useCallback((full = false) => {
-      setFrog(initialFrog);
-      setCars(carLaneDefs.map((l, i) => initLane(l, i + 1)));
-      setLogs(logLaneDefs.map((l, i) => initLane(l, i + 101)));
-    setStatus('');
-    if (full) {
-      setScore(0);
-      setLives(3);
-      setPads(PAD_POSITIONS.map(() => false));
-      setLevel(1);
-      nextLife.current = 500;
-      ReactGA.event({ category: 'Frogger', action: 'level_start', value: 1 });
-    }
-    }, []);
+    const reset = useCallback(
+      (full = false, diff = difficulty, lvl = level) => {
+        setFrog(initialFrog);
+        const mult = DIFFICULTY_MULTIPLIERS[diff];
+        setCars(
+          carLaneDefs.map((l, i) =>
+            initLane(rampLane(l, lvl, 0.3, mult), i + 1)
+          )
+        );
+        setLogs(
+          logLaneDefs.map((l, i) =>
+            initLane(rampLane(l, lvl, 0.5, mult), i + 101)
+          )
+        );
+        setStatus('');
+        if (full) {
+          setScore(0);
+          setLives(3);
+          setPads(PAD_POSITIONS.map(() => false));
+          setLevel(1);
+          nextLife.current = 500;
+          ReactGA.event({
+            category: 'Frogger',
+            action: 'level_start',
+            value: 1,
+          });
+        }
+      },
+      [difficulty, level]
+    );
 
     const loseLife = useCallback(() => {
       ReactGA.event({ category: 'Frogger', action: 'death', value: level });
@@ -257,13 +279,11 @@ const Frogger = () => {
           setStatus('Level Complete!');
           setScore((s) => s + 100);
           ReactGA.event({ category: 'Frogger', action: 'level_complete', value: level });
-          setLevel((l) => {
-            const newLevel = l + 1;
-            ReactGA.event({ category: 'Frogger', action: 'level_start', value: newLevel });
-            return newLevel;
-          });
+          const newLevel = level + 1;
+          setLevel(newLevel);
+          ReactGA.event({ category: 'Frogger', action: 'level_start', value: newLevel });
           setPads(PAD_POSITIONS.map(() => false));
-          reset();
+          reset(false, difficulty, newLevel);
           frogRef.current = { ...initialFrog };
         } else {
           if (padResult.padHit) {
@@ -290,20 +310,7 @@ const Frogger = () => {
     }
   }, [score]);
 
-  useEffect(() => {
-    setCars((prev) =>
-      prev.map((lane, i) => ({
-        ...lane,
-        ...rampLane(carLaneDefs[i], level, 0.3),
-      }))
-    );
-    setLogs((prev) =>
-      prev.map((lane, i) => ({
-        ...lane,
-        ...rampLane(logLaneDefs[i], level, 0.5),
-      }))
-    );
-  }, [level]);
+  // lanes are initialized via reset using current level and difficulty
 
   const renderCell = (x, y) => {
     const isFrog = Math.floor(frog.x) === x && frog.y === y;
@@ -325,11 +332,20 @@ const Frogger = () => {
       carLane.entities.some((e) => x >= Math.floor(e.x) && x < Math.floor(e.x + carLane.length))
     )
       className += ' bg-red-500';
-    else if (
-      logLane &&
-      logLane.entities.some((e) => x >= Math.floor(e.x) && x < Math.floor(e.x + logLane.length))
-    )
-      className += ' bg-yellow-700';
+    else if (logLane) {
+      const onLog = logLane.entities.some(
+        (e) => x >= Math.floor(e.x) && x < Math.floor(e.x + logLane.length)
+      );
+      const preview = logLane.entities.some((e) => {
+        const nextX = e.x + logLane.dir * logLane.speed;
+        return (
+          x >= Math.floor(nextX) &&
+          x < Math.floor(nextX + logLane.length)
+        );
+      });
+      if (onLog) className += ' bg-yellow-700';
+      else if (preview) className += ' bg-yellow-700 opacity-50';
+    }
 
     return <div key={`${x}-${y}`} className={className} />;
   };
@@ -361,6 +377,23 @@ const Frogger = () => {
       <div className="grid grid-cols-7 gap-1">{grid}</div>
       <div className="mt-4">Score: {score} Lives: {lives}</div>
       <div className="mt-1">{status}</div>
+      <div className="mt-2 flex items-center gap-2">
+        <label htmlFor="difficulty">Difficulty:</label>
+        <select
+          id="difficulty"
+          className="bg-gray-700"
+          value={difficulty}
+          onChange={(e) => {
+            const diff = e.target.value;
+            setDifficulty(diff);
+            reset(true, diff);
+          }}
+        >
+          <option value="easy">Easy</option>
+          <option value="normal">Normal</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
       <div className="grid grid-cols-3 gap-1 mt-4 sm:hidden">
         {mobileControls.map((c, i) =>
           c ? (

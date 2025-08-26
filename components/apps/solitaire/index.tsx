@@ -31,6 +31,8 @@ const Solitaire = () => {
   const [won, setWon] = useState(false);
   const [time, setTime] = useState(0);
   const timer = useRef<NodeJS.Timeout | null>(null);
+  const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const tableauRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     const start = useCallback(
       (mode: 1 | 3 = drawMode) => {
@@ -86,6 +88,31 @@ const Solitaire = () => {
 
   const finishDrag = () => setDrag(null);
 
+  const isInside = (rect: DOMRect, x: number, y: number) =>
+    x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!drag) return;
+    const { clientX, clientY } = e;
+
+    const foundationIndex = foundationRefs.current.findIndex(
+      (ref) => ref && isInside(ref.getBoundingClientRect(), clientX, clientY),
+    );
+    if (foundationIndex !== -1) {
+      dropToFoundation(foundationIndex);
+      return;
+    }
+
+    const tableauIndex = tableauRefs.current.findIndex(
+      (ref) => ref && isInside(ref.getBoundingClientRect(), clientX, clientY),
+    );
+    if (tableauIndex !== -1) {
+      dropToTableau(tableauIndex);
+      return;
+    }
+    finishDrag();
+  };
+
   const dropToTableau = (pileIndex: number) => {
     if (!drag) return;
     if (drag.source === 'tableau') {
@@ -130,6 +157,20 @@ const Solitaire = () => {
     });
   };
 
+  useEffect(() => {
+    if (
+      game.stock.length === 0 &&
+      game.tableau.every((p) => p.every((c) => c.faceUp))
+    ) {
+      setGame((g) => {
+        const n = autoComplete(g);
+        if (n !== g)
+          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+        return n;
+      });
+    }
+  }, [game]);
+
   const best = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('solitaireBest') || '{}' : '{}');
 
   return (
@@ -165,6 +206,7 @@ const Solitaire = () => {
               draggable
               onDoubleClick={() => handleDoubleClick('waste', 0)}
               onDragStart={() => handleDragStart('waste', -1, game.waste.length - 1)}
+              onDragEnd={handleDragEnd}
             >
               {renderCard(game.waste[game.waste.length - 1])}
             </div>
@@ -178,6 +220,7 @@ const Solitaire = () => {
             className="w-16 h-24"
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToFoundation(i)}
+            ref={(el) => (foundationRefs.current[i] = el)}
           >
             {pile.length ? renderCard(pile[pile.length - 1]) : (
               <div className="w-16 h-24 border border-dashed border-white rounded" />
@@ -192,6 +235,7 @@ const Solitaire = () => {
             className="relative w-16 h-96 border border-black"
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToTableau(i)}
+            ref={(el) => (tableauRefs.current[i] = el)}
           >
             {pile.map((card, idx) => (
               <div
@@ -201,6 +245,7 @@ const Solitaire = () => {
                 draggable={card.faceUp}
                 onDoubleClick={() => handleDoubleClick('tableau', i)}
                 onDragStart={() => handleDragStart('tableau', i, idx)}
+                onDragEnd={handleDragEnd}
               >
                 {card.faceUp ? renderCard(card) : renderFaceDown()}
               </div>

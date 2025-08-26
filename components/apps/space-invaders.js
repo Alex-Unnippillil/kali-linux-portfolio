@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import GameLayout from './GameLayout';
+import useAssetLoader from '../../hooks/useAssetLoader';
 
+const EXTRA_LIFE_THRESHOLDS = [1000, 5000, 10000];
 
 const SpaceInvaders = () => {
   const { loading, error } = useAssetLoader({
@@ -26,6 +28,7 @@ const SpaceInvaders = () => {
   const ufoTimer = useRef(0);
   const initialCount = useRef(0);
   const pattern = useRef(0);
+  const nextExtraLife = useRef(0);
 
   const [stage, setStage] = useState(1);
   const stageRef = useRef(stage);
@@ -146,6 +149,16 @@ const SpaceInvaders = () => {
     const addScore = (n) => {
       scoreRef.current += n;
       setScore(scoreRef.current);
+
+      if (
+        nextExtraLife.current < EXTRA_LIFE_THRESHOLDS.length &&
+        scoreRef.current >= EXTRA_LIFE_THRESHOLDS[nextExtraLife.current]
+      ) {
+        livesRef.current += 1;
+        setLives(livesRef.current);
+        nextExtraLife.current += 1;
+      }
+
       if (scoreRef.current > highScoreRef.current) {
         highScoreRef.current = scoreRef.current;
         setHighScore(highScoreRef.current);
@@ -173,6 +186,7 @@ const SpaceInvaders = () => {
         livesRef.current = 3;
         setLives(3);
         pattern.current = 0;
+        nextExtraLife.current = 0;
       }
       setupWave();
     };
@@ -290,7 +304,8 @@ const SpaceInvaders = () => {
       }
 
       const aliveCount = aliveInv.length;
-      const speed = baseSpeed * stageRef.current * (initialCount.current / (aliveCount || 1));
+      const progress = 1 - aliveCount / initialCount.current;
+      const speed = baseSpeed * stageRef.current * (1 + progress);
       let hitEdge = false;
       for (const inv of invaders.current) {
         if (!inv.alive) continue;
