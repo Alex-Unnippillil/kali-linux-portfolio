@@ -41,6 +41,7 @@
     "react-dom": "^18.2.0",
     "react-draggable": "^4.4.5",
     "react-force-graph": "^1.45.0",
+
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
     "react-onclickoutside": "^6.12.2",

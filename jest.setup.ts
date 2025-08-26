@@ -65,3 +65,37 @@ class WorkerMock {
 }
 // @ts-ignore
 global.Worker = WorkerMock as any;
+
+// Mock xterm which isn't available in the test environment
+jest.mock(
+  'xterm',
+  () => ({
+    Terminal: jest.fn().mockImplementation(() => ({
+      open: jest.fn(),
+      write: jest.fn(),
+      writeln: jest.fn(),
+      loadAddon: jest.fn(),
+      dispose: jest.fn(),
+      onKey: jest.fn(),
+      onData: jest.fn(),
+      focus: jest.fn(),
+    })),
+  }),
+  { virtual: true }
+);
+
+jest.mock(
+  'xterm-addon-fit',
+  () => ({
+    FitAddon: jest.fn().mockImplementation(() => ({ fit: jest.fn() })),
+  }),
+  { virtual: true }
+);
+
+jest.mock(
+  'xterm-addon-search',
+  () => ({
+    SearchAddon: jest.fn().mockImplementation(() => ({ findNext: jest.fn() })),
+  }),
+  { virtual: true }
+);
