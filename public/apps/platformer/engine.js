@@ -59,6 +59,76 @@ export function updatePhysics(player, input, dt) {
   if (player.vy < -1000) player.vy = -1000;
 }
 
+export function movePlayer(player, tiles, tileSize, dt) {
+  const getTile = (x, y) =>
+    tiles[y] && tiles[y][x] !== undefined ? tiles[y][x] : 0;
+
+  let ny = player.y + player.vy * dt;
+  player.onGround = false;
+  const dirY = Math.sign(player.vy);
+  if (dirY !== 0) {
+    const rangeY =
+      dirY > 0
+        ? [player.y + player.h, ny + player.h]
+        : [ny, player.y];
+    const startTileY = Math.floor(rangeY[0] / tileSize);
+    const endTileY = Math.floor(rangeY[1] / tileSize);
+    for (
+      let ty = startTileY;
+      dirY > 0 ? ty <= endTileY : ty >= endTileY;
+      ty += dirY
+    ) {
+      const minY = ty * tileSize;
+      const maxY = minY + tileSize;
+      const tilesLeft = Math.floor(player.x / tileSize);
+      const tilesRight = Math.floor(
+        (player.x + player.w - 1) / tileSize
+      );
+      for (let tx = tilesLeft; tx <= tilesRight; tx++) {
+        if (getTile(tx, ty) === 1) {
+          if (dirY > 0) {
+            ny = Math.min(ny, minY - player.h);
+            player.onGround = true;
+          } else {
+            ny = Math.max(ny, maxY);
+          }
+        }
+      }
+    }
+  }
+  player.y = ny;
+
+  let nx = player.x + player.vx * dt;
+  const dirX = Math.sign(player.vx);
+  if (dirX !== 0) {
+    const rangeX =
+      dirX > 0
+        ? [player.x + player.w, nx + player.w]
+        : [nx, player.x];
+    const startTileX = Math.floor(rangeX[0] / tileSize);
+    const endTileX = Math.floor(rangeX[1] / tileSize);
+    for (
+      let tx = startTileX;
+      dirX > 0 ? tx <= endTileX : tx >= endTileX;
+      tx += dirX
+    ) {
+      const minX = tx * tileSize;
+      const maxX = minX + tileSize;
+      const tilesTop = Math.floor(player.y / tileSize);
+      const tilesBottom = Math.floor(
+        (player.y + player.h - 1) / tileSize
+      );
+      for (let ty = tilesTop; ty <= tilesBottom; ty++) {
+        if (getTile(tx, ty) === 1) {
+          if (dirX > 0) nx = Math.min(nx, minX - player.w);
+          else nx = Math.max(nx, maxX);
+        }
+      }
+    }
+  }
+  player.x = nx;
+}
+
 export function collectCoin(tiles, x, y) {
   if (tiles[y] && tiles[y][x] === 5) {
     tiles[y][x] = 0;

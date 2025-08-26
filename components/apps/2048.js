@@ -2,7 +2,6 @@ import React, { useEffect, useCallback, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import GameLayout from './GameLayout';
 
-
 const SIZE = 4;
 
 const cloneBoard = (b) => b.map((row) => [...row]);
@@ -136,6 +135,7 @@ const Game2048 = () => {
       }
     },
     [board, won, lost, hardMode, setBoard, setLost, setWon]
+
   );
 
   useEffect(() => {
@@ -223,9 +223,13 @@ const Game2048 = () => {
         </div>
         {(won || lost) && (
           <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
+
         )}
-      </>
-    </GameLayout>
+      </div>
+      {(won || lost) && (
+        <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
+      )}
+    </div>
   );
 };
 

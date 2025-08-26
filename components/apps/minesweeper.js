@@ -164,6 +164,7 @@ const Minesweeper = () => {
   const [bestTime, setBestTime] = useState(null);
   const [bv, setBV] = useState(0);
   const [codeInput, setCodeInput] = useState('');
+  const [flags, setFlags] = useState(0);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -189,6 +190,7 @@ const Minesweeper = () => {
     setStartTime(Date.now());
     setShareCode(`${seed.toString(36)}-${x}-${y}`);
     setBV(calculateBV(newBoard));
+    setFlags(0);
   };
 
   const handleClick = (x, y) => {
@@ -274,6 +276,7 @@ const Minesweeper = () => {
     const cell = newBoard[x][y];
     if (cell.revealed) return;
     cell.flagged = !cell.flagged;
+    setFlags((f) => f + (cell.flagged ? 1 : -1));
     setBoard(newBoard);
   };
 
@@ -286,6 +289,7 @@ const Minesweeper = () => {
     setElapsed(0);
     setBV(0);
     setCodeInput('');
+    setFlags(0);
   };
 
   const copyCode = () => {
@@ -306,6 +310,7 @@ const Minesweeper = () => {
     setStartTime(null);
     setElapsed(0);
     setBV(0);
+    setFlags(0);
     if (parts.length === 3) {
       const x = parseInt(parts[1], 10);
       const y = parseInt(parts[2], 10);
@@ -317,6 +322,7 @@ const Minesweeper = () => {
         setStartTime(Date.now());
         setShareCode(codeInput.trim());
         setBV(calculateBV(newBoard));
+        setFlags(0);
       }
     }
     setCodeInput('');
@@ -350,6 +356,7 @@ const Minesweeper = () => {
           Load
         </button>
       </div>
+      <div className="mb-2">Mines: {MINES_COUNT - flags}</div>
       <div className="mb-2">3BV: {bv} | Best: {bestTime ? bestTime.toFixed(2) : '--'}s{status === 'won' ? ` | Time: ${elapsed.toFixed(2)}s` : ''}</div>
       <div className="grid grid-cols-8 gap-1" style={{ width: 'fit-content' }}>
         {Array.from({ length: BOARD_SIZE }).map((_, x) =>

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Howl } from 'howler';
 import GameLayout from './GameLayout';
 import usePersistentState from '../usePersistentState';
 
@@ -22,9 +23,19 @@ const padStyles = [
 ];
 
 const tones = [329.63, 261.63, 220, 164.81];
+const ERROR_SOUND_SRC = 'data:audio/wav;base64,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';
 
-export const createToneSchedule = (length, start, step) =>
-  Array.from({ length }, (_, i) => start + i * step);
+export const createToneSchedule = (length, start, step, ramp = 1) => {
+  const times = [];
+  let time = start;
+  let current = step;
+  for (let i = 0; i < length; i += 1) {
+    times.push(time);
+    time += current;
+    current *= ramp;
+  }
+  return times;
+};
 const baseSpeeds = {
   slow: 0.9,
   normal: 0.6,
@@ -44,6 +55,8 @@ const Simon = () => {
     []
   );
   const audioCtx = useRef(null);
+  const errorSound = useRef(null);
+  const [errorFlash, setErrorFlash] = useState(false);
 
   const scheduleTone = (freq, startTime, duration) => {
     const ctx =
@@ -82,15 +95,26 @@ const Simon = () => {
     setIsPlayerTurn(false);
     setStatus('Listen...');
     const start = ctx.currentTime + 0.1;
-    const delta = stepDuration();
-    const schedule = createToneSchedule(sequence.length, start, delta);
+    const baseDelta = stepDuration();
+    const ramp = 0.97;
+    const schedule = createToneSchedule(
+      sequence.length,
+      start,
+      baseDelta,
+      ramp
+    );
+    let currentDelta = baseDelta;
+    let finalDelta = baseDelta;
     schedule.forEach((time, i) => {
       const idx = sequence[i];
-      scheduleTone(tones[idx], time, delta);
+      scheduleTone(tones[idx], time, currentDelta);
       const delay = (time - ctx.currentTime) * 1000;
-      setTimeout(() => flashPad(idx, delta), delay);
+      setTimeout(() => flashPad(idx, currentDelta), delay);
+      finalDelta = currentDelta;
+      currentDelta *= ramp;
     });
-    const totalDelay = (schedule[schedule.length - 1] - ctx.currentTime + delta) * 1000;
+    const totalDelay =
+      (schedule[schedule.length - 1] - ctx.currentTime + finalDelta) * 1000;
     setTimeout(() => {
       setStatus('Your turn');
       setIsPlayerTurn(true);
@@ -132,6 +156,12 @@ const Simon = () => {
         setStep(step + 1);
       }
     } else {
+      if (!errorSound.current) {
+        errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
+      }
+      errorSound.current.play();
+      setErrorFlash(true);
+      setTimeout(() => setErrorFlash(false), 300);
       const streak = Math.max(sequence.length - 1, 0);
       setLeaderboard((prev) =>
         [...prev, streak].sort((a, b) => b - a).slice(0, 5)
@@ -151,25 +181,26 @@ const Simon = () => {
 
   return (
     <GameLayout onRestart={restartGame}>
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        {padStyles.map((pad, idx) => (
-          <button
-            // eslint-disable-next-line react/no-array-index-key
-            key={idx}
-            className={padClass(pad, idx)}
-            onPointerDown={() => handlePadClick(idx)}
+      <div className={errorFlash ? 'error-flash' : ''}>
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          {padStyles.map((pad, idx) => (
+            <button
+              // eslint-disable-next-line react/no-array-index-key
+              key={idx}
+              className={padClass(pad, idx)}
+              onPointerDown={() => handlePadClick(idx)}
+            >
+              {mode === 'colorblind' ? pad.symbol : ''}
+            </button>
+          ))}
+        </div>
+        <div className="mb-4">{status}</div>
+        <div className="flex gap-4">
+          <select
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
           >
-            {mode === 'colorblind' ? pad.symbol : ''}
-          </button>
-        ))}
-      </div>
-      <div className="mb-4">{status}</div>
-      <div className="flex gap-4">
-        <select
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          value={mode}
-          onChange={(e) => setMode(e.target.value)}
-        >
           <option value="classic">Classic</option>
           <option value="speed">Speed Up</option>
           <option value="colorblind">Colorblind</option>
@@ -183,21 +214,22 @@ const Simon = () => {
           <option value="normal">Normal</option>
           <option value="fast">Fast</option>
         </select>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={startGame}
-        >
-          Start
-        </button>
-      </div>
-      <div className="mt-4 text-center">
-        <div className="mb-1">Leaderboard</div>
-        <ol className="list-decimal list-inside">
-          {leaderboard.map((score, i) => (
-            // eslint-disable-next-line react/no-array-index-key
-            <li key={i}>{score}</li>
-          ))}
-        </ol>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={startGame}
+          >
+            Start
+          </button>
+        </div>
+        <div className="mt-4 text-center">
+          <div className="mb-1">Leaderboard</div>
+          <ol className="list-decimal list-inside">
+            {leaderboard.map((score, i) => (
+              // eslint-disable-next-line react/no-array-index-key
+              <li key={i}>{score}</li>
+            ))}
+          </ol>
+        </div>
       </div>
     </GameLayout>
   );

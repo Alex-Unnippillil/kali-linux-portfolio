@@ -1,4 +1,4 @@
-import { Player, updatePhysics, collectCoin, COYOTE_TIME, JUMP_BUFFER_TIME } from '../public/apps/platformer/engine.js';
+import { Player, updatePhysics, collectCoin, movePlayer, COYOTE_TIME, JUMP_BUFFER_TIME } from '../public/apps/platformer/engine.js';
 
 describe('platformer mechanics', () => {
   test('coyote time allows late jump', () => {
@@ -27,5 +27,17 @@ describe('platformer mechanics', () => {
     if (collectCoin(tiles, 0, 0)) score++;
     if (collectCoin(tiles, 0, 0)) score++;
     expect(score).toBe(1);
+  });
+
+  test('tile collision prevents falling through ground', () => {
+    const p = new Player();
+    p.vy = 100;
+    const tiles = [
+      [0],
+      [1],
+    ];
+    movePlayer(p, tiles, 16, 1);
+    expect(p.y).toBe(2);
+    expect(p.onGround).toBe(true);
   });
 });
