@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 
-const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
-const pluginServices = [];
+const baseProtocols = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
+const pluginProtocols = [];
 
 export const registerHydraProtocol = (protocol) => {
-  if (!pluginServices.includes(protocol)) {
-    pluginServices.push(protocol);
+  if (!pluginProtocols.includes(protocol)) {
+    pluginProtocols.push(protocol);
     window.dispatchEvent(new Event('hydra-protocols-changed'));
   }
 };
@@ -24,10 +24,10 @@ const saveWordlists = (key, lists) => {
 
 const HydraApp = () => {
   const [target, setTarget] = useState('');
-  const [service, setService] = useState('ssh');
-  const [availableServices, setAvailableServices] = useState([
-    ...baseServices,
-    ...pluginServices,
+  const [protocol, setProtocol] = useState('ssh');
+  const [availableProtocols, setAvailableProtocols] = useState([
+    ...baseProtocols,
+    ...pluginProtocols,
   ]);
 
   const [userLists, setUserLists] = useState([]);
@@ -35,8 +35,7 @@ const HydraApp = () => {
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedPass, setSelectedPass] = useState('');
   const [output, setOutput] = useState('');
-  const [running, setRunning] = useState(false);
-  const [paused, setPaused] = useState(false);
+  const [command, setCommand] = useState('');
 
   useEffect(() => {
     setUserLists(loadWordlists('hydraUserLists'));
@@ -65,7 +64,7 @@ const HydraApp = () => {
 
   useEffect(() => {
     const update = () =>
-      setAvailableServices([...baseServices, ...pluginServices]);
+      setAvailableProtocols([...baseProtocols, ...pluginProtocols]);
     window.addEventListener('hydra-protocols-changed', update);
     return () =>
       window.removeEventListener('hydra-protocols-changed', update);
@@ -85,53 +84,30 @@ const HydraApp = () => {
     listsSetter(lists.filter((l) => l.name !== name));
   };
 
-  const runHydra = async () => {
+  const dryRunHydra = () => {
     const user = userLists.find((l) => l.name === selectedUser);
     const pass = passLists.find((l) => l.name === selectedPass);
     if (!target || !user || !pass) {
+      setCommand('');
       setOutput('Please provide target, user list and password list');
       return;
     }
 
-    setRunning(true);
-    setPaused(false);
-    setOutput('');
+    const cmd = `hydra -L ${user.name} -P ${pass.name} ${protocol}://${target}`;
+    setCommand(cmd);
+    setOutput(
+      'Dry run only. No attack executed.\n\n' +
+        '⚠️ Account lockout risk: repeated attempts may trigger lockouts.\n' +
+        'Ensure testing complies with credential policies and authorization.'
+    );
+  };
+
+  const copyCommand = async () => {
     try {
-      const res = await fetch('/api/hydra', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          target,
-          service,
-          userList: user.content,
-          passList: pass.content,
-        }),
-      });
-      const data = await res.json();
-      setOutput(data.output || data.error || 'No output');
+      await navigator.clipboard.writeText(command);
     } catch (err) {
-      setOutput(err.message);
-    } finally {
-      setRunning(false);
+      console.error('Failed to copy command:', err);
     }
-  };
-
-  const pauseHydra = async () => {
-    setPaused(true);
-    await fetch('/api/hydra', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'pause' }),
-    });
-  };
-
-  const resumeHydra = async () => {
-    setPaused(false);
-    await fetch('/api/hydra', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'resume' }),
-    });
   };
 
   return (
@@ -148,15 +124,15 @@ const HydraApp = () => {
           />
         </div>
         <div>
-          <label className="block mb-1">Service</label>
+          <label className="block mb-1">Protocol</label>
           <select
-            value={service}
-            onChange={(e) => setService(e.target.value)}
+            value={protocol}
+            onChange={(e) => setProtocol(e.target.value)}
             className="w-full p-2 rounded text-black"
           >
-            {availableServices.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            {availableProtocols.map((p) => (
+              <option key={p} value={p}>
+                {p}
               </option>
             ))}
           </select>
@@ -234,34 +210,28 @@ const HydraApp = () => {
           </ul>
         </div>
         <button
-          onClick={runHydra}
-          disabled={running}
-          className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
+          onClick={dryRunHydra}
+          className="px-4 py-2 bg-green-600 rounded"
         >
-          {running ? 'Running...' : 'Run Hydra'}
+          Dry Run
         </button>
-        {running && !paused && (
-          <button
-            data-testid="pause-button"
-            onClick={pauseHydra}
-            className="ml-2 px-4 py-2 bg-yellow-600 rounded"
-          >
-            Pause
-          </button>
-        )}
-        {running && paused && (
-          <button
-            data-testid="resume-button"
-            onClick={resumeHydra}
-            className="ml-2 px-4 py-2 bg-blue-600 rounded"
-          >
-            Resume
-          </button>
-        )}
       </div>
-
+      {command && (
+        <div className="mt-4">
+          <div className="flex justify-between items-center mb-1">
+            <span>Command Synopsis</span>
+            <button
+              onClick={copyCommand}
+              className="px-2 py-1 text-sm bg-gray-700 rounded"
+            >
+              Copy
+            </button>
+          </div>
+          <pre className="bg-black p-2 overflow-auto whitespace-pre-wrap">{command}</pre>
+        </div>
+      )}
       {output && (
-        <pre className="mt-4 bg-black p-2 overflow-auto h-64 whitespace-pre-wrap">{output}</pre>
+        <pre className="mt-4 bg-black p-2 overflow-auto whitespace-pre-wrap">{output}</pre>
       )}
     </div>
   );
