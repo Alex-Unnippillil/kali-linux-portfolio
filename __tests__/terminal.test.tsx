@@ -80,4 +80,16 @@ describe('Terminal component', () => {
     expect(ref.current.getContent()).toContain('clear');
     expect(ref.current.getContent()).toContain('help');
   });
+
+  it('handles missing Worker gracefully', () => {
+    const ref = createRef();
+    const originalWorker = (global as any).Worker;
+    (global as any).Worker = undefined;
+    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
+    act(() => {
+      ref.current.runCommand('simulate');
+    });
+    expect(ref.current.getContent()).toContain('Web Workers are not supported');
+    (global as any).Worker = originalWorker;
+  });
 });

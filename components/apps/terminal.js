@@ -48,10 +48,17 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       prompt();
     } else if (trimmed === 'simulate') {
       termRef.current.writeln('');
-      termRef.current.writeln('Running heavy simulation...');
-      logRef.current += 'Running heavy simulation...\n';
-      workerRef.current.postMessage({ command: 'simulate' });
-      // prompt will be called when worker responds
+      if (workerRef.current) {
+        termRef.current.writeln('Running heavy simulation...');
+        logRef.current += 'Running heavy simulation...\n';
+        workerRef.current.postMessage({ command: 'simulate' });
+        // prompt will be called when worker responds
+      } else {
+        const msg = 'Web Workers are not supported in this environment.';
+        termRef.current.writeln(msg);
+        logRef.current += `${msg}\n`;
+        prompt();
+      }
     } else if (trimmed === 'clear') {
       termRef.current.clear();
       prompt();
@@ -182,13 +189,17 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
         showingSuggestionsRef.current = false;
       }
     });
-    workerRef.current = new Worker(new URL('./terminal.worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => {
-      term.writeln('');
-      term.writeln(String(e.data));
-      logRef.current += `${String(e.data)}\n`;
-      prompt();
-    };
+    if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
+      workerRef.current = new Worker(new URL('./terminal.worker.js', import.meta.url));
+      workerRef.current.onmessage = (e) => {
+        term.writeln('');
+        term.writeln(String(e.data));
+        logRef.current += `${String(e.data)}\n`;
+        prompt();
+      };
+    } else {
+      workerRef.current = null;
+    }
 
     const handleResize = () => fitAddon.fit();
     window.addEventListener('resize', handleResize);
