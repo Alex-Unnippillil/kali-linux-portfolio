@@ -53,7 +53,7 @@ const HangmanDrawing = ({ wrong }) => (
 const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
 const Hangman = () => {
-  const [theme, setTheme] = useState('tech');
+  const [category, setCategory] = useState('tech');
   const [difficulty, setDifficulty] = useState('easy');
   const [lengthIndex, setLengthIndex] = useState(0);
   const [word, setWord] = usePersistentState('hangman-word', '', (v) => typeof v === 'string');
@@ -62,6 +62,8 @@ const Hangman = () => {
   const [hint, setHint] = useState('');
   const [hintsUsed, setHintsUsed] = usePersistentState('hangman-hints', 0, (v) => typeof v === 'number');
   const [score, setScore] = usePersistentState('hangman-score', 0, (v) => typeof v === 'number');
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [bestStreak, setBestStreak] = usePersistentState('hangman-best-streak', 0, (v) => typeof v === 'number');
   const [revealed, setRevealed] = useState([]);
   const [gameEnded, setGameEnded] = useState(false);
   const [shake, setShake] = useState(false);
@@ -72,7 +74,7 @@ const Hangman = () => {
   const hintLimits = { easy: Infinity, medium: 1, hard: 0 };
 
   const getFilteredWords = () => {
-    const base = dictionaries[theme][difficulty];
+    const base = dictionaries[category][difficulty];
     return base.filter(
       (w) => w.length >= length.min && w.length <= length.max,
     );
@@ -100,6 +102,7 @@ const Hangman = () => {
     setScore(0);
     setRevealed([]);
     setGameEnded(false);
+    setCurrentStreak(0);
     setWord(selectWord());
     logGameStart('hangman');
   };
@@ -114,34 +117,50 @@ const Hangman = () => {
     firstLoad.current = false;
     initGame();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, difficulty, lengthIndex]);
+  }, [category, difficulty, lengthIndex]);
 
-  const handleGuess = (letter) => {
-    try {
-      const btn = document.getElementById(`key-${letter}`);
-      if (btn) {
-        btn.classList.add('key-press');
-        setTimeout(() => btn.classList.remove('key-press'), 100);
+  const isWinner = useCallback(
+    () => word && word.split('').every((l) => guessed.includes(l)),
+    [word, guessed]
+  );
+  const isLoser = useCallback(() => wrong >= 6, [wrong]);
+  const isGameOver = useCallback(() => isWinner() || isLoser(), [isWinner, isLoser]);
+
+  const handleGuess = useCallback(
+    (letter) => {
+      try {
+        const btn = document.getElementById(`key-${letter}`);
+        if (btn) {
+          btn.classList.add('key-press');
+          setTimeout(() => btn.classList.remove('key-press'), 100);
+        }
+        if (guessed.includes(letter) || isGameOver()) return;
+        logEvent({ category: 'hangman', action: 'guess', label: letter });
+        setGuessed((g) => [...g, letter]);
+        if (!word.includes(letter)) {
+          setWrong((w) => w + 1);
+          setScore((s) => s - 1);
+          setShake(true);
+          setCurrentStreak(0);
+          setTimeout(() => setShake(false), 500);
+        } else {
+          setScore((s) => s + 2);
+          setRevealed((r) => [...r, letter]);
+          setCurrentStreak((cs) => {
+            const ns = cs + 1;
+            setBestStreak((bs) => Math.max(bs, ns));
+            return ns;
+          });
+          setTimeout(() =>
+            setRevealed((r) => r.filter((l) => l !== letter)),
+          500);
+        }
+      } catch (err) {
+        logGameError('hangman', err?.message || String(err));
       }
-      if (guessed.includes(letter) || isGameOver()) return;
-      logEvent({ category: 'hangman', action: 'guess', label: letter });
-      setGuessed((g) => [...g, letter]);
-      if (!word.includes(letter)) {
-        setWrong((w) => w + 1);
-        setScore((s) => s - 1);
-        setShake(true);
-        setTimeout(() => setShake(false), 500);
-      } else {
-        setScore((s) => s + 2);
-        setRevealed((r) => [...r, letter]);
-        setTimeout(() =>
-          setRevealed((r) => r.filter((l) => l !== letter)),
-        500);
-      }
-    } catch (err) {
-      logGameError('hangman', err?.message || String(err));
-    }
-  };
+    },
+    [guessed, isGameOver, word]
+  );
 
   const useHint = () => {
     try {
@@ -164,13 +183,6 @@ const Hangman = () => {
     }
   };
 
-    const isWinner = useCallback(
-      () => word && word.split('').every((l) => guessed.includes(l)),
-      [word, guessed]
-    );
-    const isLoser = useCallback(() => wrong >= 6, [wrong]);
-    const isGameOver = useCallback(() => isWinner() || isLoser(), [isWinner, isLoser]);
-
   const reset = () => {
     initGame();
   };
@@ -184,7 +196,7 @@ const Hangman = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  });
+  }, [handleGuess]);
 
   useEffect(() => {
     const winner = word && word.split('').every((l) => guessed.includes(l));
@@ -210,10 +222,10 @@ const Hangman = () => {
     logEvent({
       category: 'hangman',
       action: 'category_select',
-      label: `${theme}-${difficulty}`,
+      label: `${category}-${difficulty}`,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, difficulty]);
+  }, [category, difficulty]);
 
   return (
     <div
@@ -223,8 +235,8 @@ const Hangman = () => {
     >
       <div className="flex space-x-2 mb-4">
         <select
-          value={theme}
-          onChange={(e) => setTheme(e.target.value)}
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
           className="bg-gray-700 p-1 rounded"
         >
           {Object.keys(dictionaries).map((t) => (
@@ -257,6 +269,9 @@ const Hangman = () => {
         </select>
       </div>
       <div className="mb-2">Score: {score}</div>
+      <div className="mb-2">
+        Streak: {currentStreak} (Best: {bestStreak})
+      </div>
       <HangmanDrawing wrong={wrong} />
       <div className="flex space-x-2 mb-4 text-2xl">
         {word.split('').map((letter, idx) => (
@@ -275,6 +290,7 @@ const Hangman = () => {
           <button
             id={`key-${letter}`}
             key={letter}
+            aria-label={`Guess letter ${letter.toUpperCase()}`}
             onClick={() => handleGuess(letter)}
             disabled={guessed.includes(letter) || isGameOver()}
             className={`px-2 py-1 rounded text-white ${
