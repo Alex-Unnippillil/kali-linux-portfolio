@@ -275,7 +275,6 @@ yarn lint
 - **`components/screen/*`** - lock screen, boot splash, navbar, app grid.
 - **`hooks/usePersistentState.ts`** - localStorage-backed state with validation + reset helper.
 - **`components/apps/GameLayout.tsx`** - standardized layout and help toggle for games.
-- **`components/LegalBanner.tsx`** - prominent legal/ethical disclaimer (always on in `_app.tsx`).
 
 ---
 
