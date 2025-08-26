@@ -19,6 +19,13 @@ const COLLISION_COOLDOWN = 60; // frames
 const MULTIPLIER_TIMEOUT = 180; // frames
 const MAX_MULTIPLIER = 5;
 
+// Difficulty presets
+const DIFFICULTY_PRESETS = {
+  easy: { count: 0.8, speed: 0.8 },
+  normal: { count: 1, speed: 1 },
+  hard: { count: 1.2, speed: 1.2 },
+};
+
 // Simple Quadtree for collision queries
 class Quadtree {
   constructor(x, y, w, h, depth = 0) {
@@ -96,11 +103,14 @@ const Asteroids = () => {
   const audioCtx = useRef(null);
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
   const controlsRef = useRef(useGameControls(canvasRef));
+  const [difficulty, setDifficulty] = useState(null);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [restartKey, setRestartKey] = useState(0);
 
   useEffect(() => {
+    if (!difficulty) return;
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
@@ -113,6 +123,8 @@ const Asteroids = () => {
 
     resize();
     window.addEventListener('resize', resize);
+
+    const diff = DIFFICULTY_PRESETS[difficulty];
 
     // Game state
     const ship = {
@@ -177,8 +189,10 @@ const Asteroids = () => {
     };
 
     // Spawn asteroids for a level
-    const spawnAsteroids = (count, speed = 1 + level * 0.3) => {
-      for (let i = 0; i < count; i += 1) {
+    const spawnAsteroids = (count) => {
+      const speed = (1 + level * 0.3) * diff.speed;
+      const total = Math.round(count * diff.count);
+      for (let i = 0; i < total; i += 1) {
         const angle = Math.random() * Math.PI * 2;
         const r = 15 + Math.random() * 25;
         asteroids.push({
@@ -509,7 +523,7 @@ const Asteroids = () => {
 
     requestRef.current = requestAnimationFrame(update);
     return cleanup;
-  }, [controlsRef, dpr, restartKey]);
+  }, [controlsRef, dpr, restartKey, difficulty]);
   const togglePause = () => {
     pausedRef.current = !pausedRef.current;
     setPaused(pausedRef.current);
@@ -520,6 +534,26 @@ const Asteroids = () => {
     setPaused(false);
     setRestartKey((k) => k + 1);
   };
+
+  if (!difficulty) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center bg-black text-white">
+        <h2 className="mb-4 text-xl">Select Difficulty</h2>
+        <div className="flex gap-4">
+          {Object.keys(DIFFICULTY_PRESETS).map((d) => (
+            <button
+              key={d}
+              type="button"
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600"
+              onClick={() => setDifficulty(d)}
+            >
+              {d.charAt(0).toUpperCase() + d.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <GameLayout paused={paused} onPause={togglePause} onRestart={restartGame}>
