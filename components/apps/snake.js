@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
 
 
 // size of the square play field
 const gridSize = 20;
+
+// speed progression settings
+const SPEED_STEP = 10;
+const MIN_SPEED = 50;
+const SPEED_INTERVAL = 5; // foods per speed increase
 
 // helper that finds a random unoccupied cell
 const randomCell = (occupied) => {
@@ -30,6 +36,7 @@ const Snake = () => {
   const [snake, setSnake] = useState([{ x: 10, y: 10 }]);
   const [direction, setDirection] = useState({ x: 0, y: -1 });
   const dirQueue = useRef([]); // buffered turns
+  const snakeRef = useRef(snake);
 
   // entities
   const [food, setFood] = useState(() => randomCell([{ x: 10, y: 10 }]));
@@ -70,13 +77,19 @@ const Snake = () => {
         setWrap(w);
         setSpeedSetting(s);
         setSpeed(speedLevels[s]);
-        const hs = localStorage.getItem(`snakeHighScore_${w ? 'wrap' : 'nowrap'}_${s}`);
+        const hs = localStorage.getItem(
+          `snakeHighScore_${w ? 'wrap' : 'nowrap'}_${s}`
+        );
         if (hs) setHighScore(parseInt(hs, 10));
       } catch {
         // ignore parse errors
       }
     }
   }, []);
+
+  useEffect(() => {
+    snakeRef.current = snake;
+  }, [snake]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -86,11 +99,21 @@ const Snake = () => {
     setSpeed(speedLevels[speedSetting]);
   }, [wrap, speedSetting]);
 
-  const enqueueDir = useCallback((dir) => {
-    const last = dirQueue.current.length ? dirQueue.current[dirQueue.current.length - 1] : direction;
-    if (last.x + dir.x === 0 && last.y + dir.y === 0) return; // prevent 180
-    dirQueue.current.push(dir);
-  }, [direction]);
+  const enqueueDir = useCallback(
+    (dir) => {
+      const last = dirQueue.current.length
+        ? dirQueue.current[dirQueue.current.length - 1]
+        : direction;
+      if (
+        snakeRef.current.length > 1 &&
+        last.x + dir.x === 0 &&
+        last.y + dir.y === 0
+      )
+        return; // prevent 180 into self
+      dirQueue.current.push(dir);
+    },
+    [direction]
+  );
 
   useGameControls(enqueueDir);
 
@@ -132,8 +155,13 @@ const Snake = () => {
         const occupied = [...newSnake, ...obstacles];
         const newFood = randomCell(occupied);
         setFood(newFood);
-        setScore((s) => s + 1);
-        setSpeed((s) => Math.max(50, s - 10));
+        setScore((s) => {
+          const ns = s + 1;
+          if (ns % SPEED_INTERVAL === 0) {
+            setSpeed((sp) => Math.max(MIN_SPEED, sp - SPEED_STEP));
+          }
+          return ns;
+        });
         setGrowCell(head);
       } else {
         newSnake.pop();
@@ -268,59 +296,35 @@ const Snake = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
-      <div className="mb-2 flex space-x-2">
-        <span>Score: {score}</span>
-        <span>| High Score: {highScore}</span>
-        <button
-          className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
-          onClick={() => setPaused((p) => !p)}
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
-          onClick={() => setWrap((w) => !w)}
-        >
-          {wrap ? 'No Wrap' : 'Wrap'}
-        </button>
-        <select
-          className="ml-2 px-1 bg-gray-700 rounded"
-          value={speedSetting}
-          onChange={(e) => setSpeedSetting(e.target.value)}
-        >
-          <option value="slow">Slow</option>
-          <option value="normal">Normal</option>
-          <option value="fast">Fast</option>
-        </select>
-      </div>
-      <div
-        className="grid"
-        style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
-      >
-        {cells}
-      </div>
-      {gameOver && (
-        <div className="mt-2 flex items-center space-x-2">
-          <span>Game Over</span>
-
+    <GameLayout instructions="Use arrow keys or swipe to move.">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
+        <div className="mb-2 flex space-x-2">
+          <span>Score: {score}</span>
+          <span>| High Score: {highScore}</span>
           <button
-            className="px-2 py-0.5 bg-gray-700 rounded"
+            className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
             onClick={() => setPaused((p) => !p)}
+
           >
-            {paused ? 'Resume' : 'Pause'}
+            Retry
           </button>
           <button
-            className="px-2 py-0.5 bg-gray-700 rounded"
+            className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
             onClick={() => setWrap((w) => !w)}
+
           >
-            {wrap ? 'No Wrap' : 'Wrap'}
+            Replay
           </button>
-        </>
-      }
-      instructions="Use arrow keys or swipe to move."
-    >
-      <>
+          <select
+            className="ml-2 px-1 bg-gray-700 rounded"
+            value={speedSetting}
+            onChange={(e) => setSpeedSetting(e.target.value)}
+          >
+            <option value="slow">Slow</option>
+            <option value="normal">Normal</option>
+            <option value="fast">Fast</option>
+          </select>
+        </div>
         <div
           className="grid"
           style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
@@ -344,10 +348,10 @@ const Snake = () => {
             </button>
           </div>
         )}
-      </>
+      </div>
     </GameLayout>
+
   );
 };
 
 export default Snake;
-

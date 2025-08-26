@@ -25,6 +25,7 @@ export class Shoe {
     this.decks = decks;
     this.penetration = penetration;
     this.shuffleCount = 0;
+    this.runningCount = 0;
     this.shuffle();
   }
 
@@ -37,6 +38,7 @@ export class Shoe {
     this.shufflePoint = Math.floor(this.cards.length * this.penetration);
     this.dealt = 0;
     this.shuffleCount += 1;
+    this.runningCount = 0;
     // burn one card
     this.draw();
   }
@@ -46,7 +48,11 @@ export class Shoe {
       this.shuffle();
     }
     this.dealt += 1;
-    return this.cards.pop();
+    const card = this.cards.pop();
+    const v = card.value;
+    if (['2', '3', '4', '5', '6'].includes(v)) this.runningCount += 1;
+    else if (['10', 'J', 'Q', 'K', 'A'].includes(v)) this.runningCount -= 1;
+    return card;
   }
 }
 
@@ -133,8 +139,8 @@ export function basicStrategy(playerCards, dealerUpCard, options = {}) {
 }
 
 export class BlackjackGame {
-  constructor({ decks = 6, bankroll = 10000, hitSoft17 = true } = {}) {
-    this.shoe = new Shoe(decks);
+  constructor({ decks = 6, bankroll = 10000, hitSoft17 = true, penetration = 0.75 } = {}) {
+    this.shoe = new Shoe(decks, penetration);
     this.bankroll = bankroll; // in chips (integers)
     this.stats = { wins: 0, losses: 0, pushes: 0, hands: 0 };
     this.hitSoft17 = hitSoft17;

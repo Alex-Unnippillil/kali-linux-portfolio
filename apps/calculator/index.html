@@ -8,8 +8,9 @@
 </head>
 <body>
   <div class="calculator">
-    <div id="display" class="display"></div>
-    <button id="toggle-scientific" class="toggle">Scientific</button>
+    <div id="display" class="display" tabindex="0"></div>
+    <button id="toggle-precise" class="toggle" aria-pressed="false">Precise Mode: Off</button>
+    <button id="toggle-scientific" class="toggle" aria-pressed="false">Scientific</button>
     <div class="buttons">
       <button class="btn" data-value="7">7</button>
       <button class="btn" data-value="8">8</button>
@@ -37,7 +38,9 @@
       <button class="btn" data-value="(">(</button>
       <button class="btn" data-value=")">)</button>
     </div>
+    <div id="history" class="history" aria-live="polite"></div>
   </div>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@13.2.3/lib/browser/math.js"></script>
   <script src="main.js"></script>
 </body>
 </html>

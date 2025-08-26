@@ -147,3 +147,47 @@ export const fireProjectile = (pool, props) => {
 export const deactivateProjectile = (p) => {
   p.active = false;
 };
+
+// ---- Enemy pooling ----
+export const createEnemyPool = (size) =>
+  Array.from({ length: size }, () => ({
+    active: false,
+    id: 0,
+    x: 0,
+    y: 0,
+    pathIndex: 0,
+    progress: 0,
+    health: 0,
+    resistance: 0,
+    baseSpeed: 1,
+    slow: null,
+    dot: null,
+  }));
+
+export const spawnEnemy = (pool, props) => {
+  const idx = pool.findIndex((e) => !e.active);
+  if (idx === -1) return null;
+  const enemy = pool[idx];
+  Object.assign(enemy, props, { active: true });
+  return enemy;
+};
+
+export const deactivateEnemy = (e) => {
+  e.active = false;
+};
+
+// ---- Sprite caching ----
+const spriteCache = new Map();
+
+export const loadSprite = (src) => {
+  if (spriteCache.has(src)) return spriteCache.get(src);
+  // In tests or server environments Image may be undefined
+  const img = typeof Image !== 'undefined' ? new Image() : { src };
+  img.src = src;
+  spriteCache.set(src, img);
+  return img;
+};
+
+export const clearSpriteCache = () => {
+  spriteCache.clear();
+};

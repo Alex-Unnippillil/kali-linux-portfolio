@@ -23,6 +23,7 @@ const ChessGame = () => {
   const [premove, setPremove] = useState(null);
   const [lastMove, setLastMove] = useState([]);
   const [skill, setSkill] = useState(5);
+
   const [whiteTime, setWhiteTime] = useState(initialTime);
   const [blackTime, setBlackTime] = useState(initialTime);
   const timerRef = useRef(null);
@@ -70,12 +71,60 @@ const ChessGame = () => {
     updateBoard();
   };
 
+  const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+
+  const evaluateBoard = (g) => {
+    let total = 0;
+    g.board().forEach((row) =>
+      row.forEach((piece) => {
+        if (piece) {
+          const val = pieceValues[piece.type];
+          total += piece.color === 'w' ? val : -val;
+        }
+      })
+    );
+    return total;
+  };
+
+  const minimax = (g, d, isMax) => {
+    if (d === 0 || g.game_over()) return evaluateBoard(g);
+    const moves = g.moves();
+    let best = isMax ? -Infinity : Infinity;
+    moves.forEach((move) => {
+      g.move(move);
+      const val = minimax(g, d - 1, !isMax);
+      g.undo();
+      best = isMax ? Math.max(best, val) : Math.min(best, val);
+    });
+    return best;
+  };
+
+  const getBestMove = (g, d) => {
+    const maximizing = g.turn() === 'w';
+    let bestMove = null;
+    let bestValue = maximizing ? -Infinity : Infinity;
+    g.moves().forEach((move) => {
+      g.move(move);
+      const val = minimax(g, d - 1, !maximizing);
+      g.undo();
+      if (
+        (maximizing && val > bestValue) ||
+        (!maximizing && val < bestValue)
+      ) {
+        bestValue = val;
+        bestMove = move;
+      }
+    });
+    return bestMove;
+  };
+
   const makeAIMove = () => {
     const moves = game.moves();
     if (moves.length > 0) {
       const move = moves[Math.floor(Math.random() * moves.length)];
       const aiResult = game.move(move, { sloppy: true });
       if (aiResult) setLastMove([aiResult.from, aiResult.to]);
+
       updateBoard();
       updateStatus();
       if (premove) {
@@ -92,6 +141,7 @@ const ChessGame = () => {
 
   const handleSquareClick = (file, rank) => {
     const square = 'abcdefgh'[file] + (8 - rank);
+    setCursor({ file, rank });
 
     if (game.turn() === 'b') {
       if (selected) {
@@ -127,6 +177,39 @@ const ChessGame = () => {
       }
     }
   };
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          setCursor((c) => ({ ...c, rank: Math.max(c.rank - 1, 0) }));
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          setCursor((c) => ({ ...c, rank: Math.min(c.rank + 1, 7) }));
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          setCursor((c) => ({ ...c, file: Math.max(c.file - 1, 0) }));
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          setCursor((c) => ({ ...c, file: Math.min(c.file + 1, 7) }));
+          break;
+        case 'Enter':
+        case ' ':
+          e.preventDefault();
+          handleSquareClick(cursor.file, cursor.rank);
+          break;
+        default:
+          break;
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursor]);
 
   const undo = () => {
     game.undo();
@@ -212,6 +295,7 @@ const ChessGame = () => {
     const squareColor = (file + rank) % 2 === 0 ? 'bg-gray-300' : 'bg-gray-700';
     const isHighlight = highlight.includes(squareName);
     const isLastMove = lastMove.includes(squareName);
+
     return (
       <div
         key={squareName}
@@ -221,6 +305,7 @@ const ChessGame = () => {
         } ${isHighlight ? 'bg-green-500 bg-opacity-50' : ''} ${
           isLastMove ? 'bg-yellow-500 bg-opacity-50' : ''
         }`}
+
       >
         {piece ? pieceUnicode[piece.type][piece.color] : ''}
       </div>
@@ -269,13 +354,13 @@ const ChessGame = () => {
         </button>
       </div>
       <div className="mt-2 flex items-center">
-        <label className="mr-2">Skill: {skill}</label>
+        <label className="mr-2">Depth: {depth}</label>
         <input
           type="range"
-          min="0"
-          max="20"
-          value={skill}
-          onChange={(e) => setSkill(Number(e.target.value))}
+          min="1"
+          max="3"
+          value={depth}
+          onChange={(e) => setDepth(Number(e.target.value))}
         />
       </div>
     </div>

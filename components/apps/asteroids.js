@@ -12,6 +12,13 @@ import {
 import useGameControls from './useGameControls';
 import GameLayout from './GameLayout';
 
+// Arcade-style tuning constants
+const THRUST = 0.1;
+const INERTIA = 0.99;
+const COLLISION_COOLDOWN = 60; // frames
+const MULTIPLIER_TIMEOUT = 180; // frames
+const MAX_MULTIPLIER = 5;
+
 // Simple Quadtree for collision queries
 class Quadtree {
   constructor(x, y, w, h, depth = 0) {
@@ -118,6 +125,7 @@ const Asteroids = () => {
       cooldown: 0,
       shield: 0,
       rapidFire: 0,
+      hitCooldown: 0,
     };
     let lives = 3;
     let score = 0;
@@ -131,6 +139,8 @@ const Asteroids = () => {
     const ufoBullets = [];
     const powerUps = [];
     let ufoTimer = 600; // frames until next UFO
+    let multiplier = 1;
+    let multiplierTimer = 0;
 
     // Particle pooling
     const spawnParticles = (x, y, count, color = 'white') => {
@@ -222,20 +232,23 @@ const Asteroids = () => {
     }
 
     function destroyShip() {
+      if (ship.hitCooldown > 0) return;
       if (ship.shield > 0) {
         ship.shield = 0;
         spawnParticles(ship.x, ship.y, 20, 'cyan');
-        return;
+      } else {
+        spawnParticles(ship.x, ship.y, 40, 'orange');
+        lives -= 1;
+        ga.death();
+        playSound(110);
+        ship.x = canvas.width / 2;
+        ship.y = canvas.height / 2;
+        ship.velX = 0;
+        ship.velY = 0;
+        ship.angle = 0;
+        multiplier = 1;
       }
-      spawnParticles(ship.x, ship.y, 40, 'orange');
-      lives -= 1;
-      ga.death();
-      playSound(110);
-      ship.x = canvas.width / 2;
-      ship.y = canvas.height / 2;
-      ship.velX = 0;
-      ship.velY = 0;
-      ship.angle = 0;
+      ship.hitCooldown = COLLISION_COOLDOWN;
       if (lives < 0) {
         lives = 3;
         score = 0;
@@ -250,7 +263,9 @@ const Asteroids = () => {
     function destroyAsteroid(index) {
       const a = asteroids[index];
       spawnParticles(a.x, a.y, 20, 'white');
-      score += 100;
+      score += 100 * multiplier;
+      multiplier = Math.min(multiplier + 1, MAX_MULTIPLIER);
+      multiplierTimer = MULTIPLIER_TIMEOUT;
       ga.split(a.r);
       if (a.r > 20) {
         for (let i = 0; i < 2; i += 1) {
@@ -276,7 +291,9 @@ const Asteroids = () => {
       spawnParticles(ufo.x, ufo.y, 40, 'purple');
       ufo.active = false;
       playSound(220);
-      score += 500;
+      score += 500 * multiplier;
+      multiplier = Math.min(multiplier + 1, MAX_MULTIPLIER);
+      multiplierTimer = MULTIPLIER_TIMEOUT;
     }
 
     const update = () => {
@@ -308,30 +325,28 @@ const Asteroids = () => {
 
       ship.angle += turn * 0.05;
       if (thrust > 0) {
-        ship.velX += Math.cos(ship.angle) * 0.1 * thrust;
-        ship.velY += Math.sin(ship.angle) * 0.1 * thrust;
+        ship.velX += Math.cos(ship.angle) * THRUST * thrust;
+        ship.velY += Math.sin(ship.angle) * THRUST * thrust;
         spawnParticles(ship.x - Math.cos(ship.angle) * 10, ship.y - Math.sin(ship.angle) * 10, 1, 'gray');
       }
-      ship.velX *= 0.99;
-      ship.velY *= 0.99;
-      ship.x += ship.velX;
-      ship.y += ship.velY;
+      ship.velX *= INERTIA;
+      ship.velY *= INERTIA;
+      ship.x = wrap(ship.x + ship.velX, canvas.width, ship.r);
+      ship.y = wrap(ship.y + ship.velY, canvas.height, ship.r);
       ship.cooldown = Math.max(0, ship.cooldown - 1);
       ship.rapidFire = Math.max(0, ship.rapidFire - 1);
       ship.shield = Math.max(0, ship.shield - 1);
-      ship.x = wrap(ship.x, canvas.width);
-      ship.y = wrap(ship.y, canvas.height);
+      ship.hitCooldown = Math.max(0, ship.hitCooldown - 1);
+
+      if (multiplierTimer > 0) multiplierTimer -= 1;
+      else multiplier = 1;
 
       updateBullets(bullets);
       updatePowerUps(powerUps);
 
       asteroids.forEach((a) => {
-        a.x += a.dx;
-        a.y += a.dy;
-        if (a.x < -a.r) a.x = canvas.width + a.r;
-        if (a.x > canvas.width + a.r) a.x = -a.r;
-        if (a.y < -a.r) a.y = canvas.height + a.r;
-        if (a.y > canvas.height + a.r) a.y = -a.r;
+        a.x = wrap(a.x + a.dx, canvas.width, a.r);
+        a.y = wrap(a.y + a.dy, canvas.height, a.r);
       });
 
       // UFO logic
@@ -481,7 +496,7 @@ const Asteroids = () => {
       // HUD
       ctx.fillStyle = 'white';
       ctx.font = '16px monospace';
-      ctx.fillText(`Score: ${score}`, 10, 20);
+      ctx.fillText(`Score: ${score} x${multiplier}`, 10, 20);
       ctx.fillText(`Lives: ${lives}`, 10, 40);
 
       requestRef.current = requestAnimationFrame(update);
