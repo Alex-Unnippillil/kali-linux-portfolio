@@ -1,6 +1,9 @@
 import React from 'react';
+import { useTheme } from '../../hooks/useTheme';
 
 export function Settings(props) {
+    const { theme, setTheme } = useTheme();
+
     const wallpapers = {
         "wall-1": "./images/wallpapers/wall-1.webp",
         "wall-2": "./images/wallpapers/wall-2.webp",
@@ -18,7 +21,18 @@ export function Settings(props) {
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
-            <div className=" md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(${wallpapers[props.currBgImgName]})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
+            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(${wallpapers[props.currBgImgName]})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <select
+                    value={theme}
+                    onChange={(e) => setTheme(e.target.value)}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                >
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                </select>
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
                 {
