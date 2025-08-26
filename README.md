@@ -203,6 +203,10 @@ yarn lint
 | Project Gallery | /apps/project-gallery | Utility / Media |
 | Quote_Generator | /apps/quote_generator | Utility / Media |
 
+### Terminal Commands
+- `clear` – clears the terminal display.
+- `help` – lists available commands.
+
 ### Games
 | Game | Route | Category |
 | --- | --- | --- |

@@ -12,7 +12,9 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const workerRef = useRef(null);
   const commandRef = useRef('');
   const logRef = useRef('');
-  const knownCommandsRef = useRef(new Set(['pwd', 'cd', 'simulate', 'clear', 'history']));
+  const knownCommandsRef = useRef(
+    new Set(['pwd', 'cd', 'simulate', 'history', 'clear', 'help']),
+  );
   const historyRef = useRef([]);
   const suggestionsRef = useRef([]);
   const suggestionIndexRef = useRef(0);
@@ -52,7 +54,12 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       // prompt will be called when worker responds
     } else if (trimmed === 'clear') {
       termRef.current.clear();
-      logRef.current = '';
+      prompt();
+    } else if (trimmed === 'help') {
+      termRef.current.writeln('');
+      const commands = Array.from(knownCommandsRef.current).sort().join(' ');
+      termRef.current.writeln(`Available commands: ${commands}`);
+      logRef.current += `Available commands: ${commands}\n`;
       prompt();
     } else if (trimmed === 'history') {
       termRef.current.writeln('');
@@ -94,7 +101,9 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     }
 
     if (!current) return;
-    const matches = Array.from(knownCommandsRef.current).filter((cmd) => cmd.startsWith(current));
+    const matches = Array.from(knownCommandsRef.current)
+      .filter((cmd) => cmd.startsWith(current))
+      .sort();
     if (matches.length === 1) {
       const completion = matches[0].slice(current.length);
       termRef.current.write(completion);
