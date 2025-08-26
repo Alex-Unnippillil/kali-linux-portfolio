@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { toCanvas } from 'html-to-image';
 
 // Preset character sets and color palettes
 const presetCharSets = {
@@ -45,10 +46,10 @@ export default function AsciiArt() {
   const [altText, setAltText] = useState('');
   const [typingMode, setTypingMode] = useState(false);
   const undoStack = useRef([]);
-  const [colors, setColors] = useState(null);
   const workerRef = useRef(null);
   const canvasRef = useRef(null);
   const editorRef = useRef(null);
+  const outputRef = useRef(null);
 
   // Load saved preferences
   useEffect(() => {
@@ -71,11 +72,10 @@ export default function AsciiArt() {
   useEffect(() => {
     workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
-      const { plain, html, ansi, colors: colorArr, width, height } = e.data;
+      const { plain, html, ansi, width, height } = e.data;
       setPlainAscii(plain);
       setAsciiHtml(html);
       setAnsiAscii(ansi);
-      setColors({ data: colorArr, width, height });
       setAltText(`ASCII art ${width}x${height}`);
     };
     return () => {
@@ -113,7 +113,6 @@ export default function AsciiArt() {
         let plain = '';
         let html = '';
         const chars = charSet.split('');
-        const colorArr = new Uint8ClampedArray(width * height * 3);
         for (let y = 0; y < height; y += 1) {
           let row = '';
           let htmlRow = '';
@@ -129,10 +128,6 @@ export default function AsciiArt() {
             htmlRow += useColor
               ? `<span style="color: rgb(${r},${g},${b})">${ch}</span>`
               : ch;
-            const cIdx = (y * width + x) * 3;
-            colorArr[cIdx] = r;
-            colorArr[cIdx + 1] = g;
-            colorArr[cIdx + 2] = b;
           }
           plain += `${row}\n`;
           html += `${htmlRow}<br/>`;
@@ -140,7 +135,6 @@ export default function AsciiArt() {
         setPlainAscii(plain);
         setAsciiHtml(html);
         setAnsiAscii(plain);
-        setColors({ data: colorArr, width, height });
       };
       img.src = URL.createObjectURL(file);
     }
@@ -163,38 +157,30 @@ export default function AsciiArt() {
     URL.revokeObjectURL(url);
   };
 
-  const downloadPng = () => {
-    if (!plainAscii || !colors) return;
-    const lines = plainAscii.trimEnd().split('\n');
-    const width = colors.width;
-    const height = colors.height;
-    const canvas = canvasRef.current;
-    canvas.width = width * cellSize;
-    canvas.height = height * cellSize;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.font = `${cellSize}px monospace`;
-    ctx.textBaseline = 'top';
-    for (let y = 0; y < height; y += 1) {
-      for (let x = 0; x < width; x += 1) {
-        const cIdx = (y * width + x) * 3;
-        const r = colors.data[cIdx];
-        const g = colors.data[cIdx + 1];
-        const b = colors.data[cIdx + 2];
-        ctx.fillStyle = useColor ? `rgb(${r},${g},${b})` : '#FFFFFF';
-        const ch = lines[y][x];
-        ctx.fillText(ch, x * cellSize, y * cellSize);
+  const downloadPng = async () => {
+    const node = typingMode ? editorRef.current : outputRef.current;
+    if (!node) return;
+    const bg = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-ub-cool-grey')
+      .trim();
+    try {
+      const canvas = await toCanvas(node, { backgroundColor: bg });
+      if (canvasRef.current) {
+        canvasRef.current.innerHTML = '';
+        canvasRef.current.appendChild(canvas);
       }
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'ascii-art.png';
+        link.click();
+        URL.revokeObjectURL(url);
+      });
+    } catch (err) {
+      /* ignore errors */
     }
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'ascii-art.png';
-      link.click();
-      URL.revokeObjectURL(url);
-    });
   };
 
   // Typing mode handlers
@@ -223,7 +209,7 @@ export default function AsciiArt() {
   };
 
   return (
-    <div className="h-full w-full flex flex-col p-4 bg-ub-cool-grey text-white overflow-auto">
+    <div className="h-full w-full flex flex-col p-4 bg-ub-cool-grey text-ubt-grey overflow-auto">
       <div className="mb-2 flex flex-wrap gap-2">
         <input
           type="file"
@@ -337,7 +323,7 @@ export default function AsciiArt() {
           ref={editorRef}
           value={plainAscii}
           onChange={handleEditorChange}
-          className="flex-1 font-mono bg-gray-800 text-white resize-none"
+          className="flex-1 font-mono bg-ub-cool-grey text-ubt-grey resize-none"
           style={{
             lineHeight: `${cellSize}px`,
             fontSize: `${cellSize}px`,
@@ -348,11 +334,12 @@ export default function AsciiArt() {
         />
       ) : (
         <pre
+          ref={outputRef}
           className="font-mono whitespace-pre overflow-auto flex-1"
           dangerouslySetInnerHTML={{ __html: asciiHtml }}
         />
       )}
-      <canvas ref={canvasRef} className="hidden w-full h-full" />
+      <div ref={canvasRef} className="hidden" />
       <div className="sr-only" aria-live="polite">
         {altText}
       </div>
