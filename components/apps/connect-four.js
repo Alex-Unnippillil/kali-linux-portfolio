@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import useGameControls from './useGameControls';
 
 const ROWS = 6;
@@ -9,6 +9,8 @@ const SLOT = CELL_SIZE + GAP;
 const ANIM_MS = 300;
 
 const createEmptyBoard = () => Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+
+const cloneBoard = (board) => board.map((r) => [...r]);
 
 const getValidRow = (board, col) => {
   for (let r = ROWS - 1; r >= 0; r--) {
@@ -157,6 +159,8 @@ const ConnectFour = () => {
   const [scores, setScores] = useState({ red: 0, yellow: 0 });
   const [depth, setDepth] = useState(4);
   const [animDisc, setAnimDisc] = useState(null);
+  const [history, setHistory] = useState([createEmptyBoard()]);
+  const aiTimeout = useRef(null);
   const [selectedCol, setSelectedCol] = useGameControls(COLS, (col) => dropDisc(col));
 
   const finalizeMove = (newBoard, color) => {
@@ -170,7 +174,7 @@ const ConnectFour = () => {
     } else {
       setPlayer(color === 'red' ? 'yellow' : 'red');
       if (color === 'red') {
-        setTimeout(aiMove, 300);
+        aiTimeout.current = setTimeout(aiMove, 300);
       }
     }
   };
@@ -184,9 +188,10 @@ const ConnectFour = () => {
       setAnimDisc((d) => ({ ...d, y: row }));
     }, 20);
     setTimeout(() => {
-      const newBoard = board.map((r) => [...r]);
+      const newBoard = cloneBoard(board);
       newBoard[row][col] = color;
       setBoard(newBoard);
+      setHistory((h) => [...h, cloneBoard(newBoard)]);
       setAnimDisc(null);
       finalizeMove(newBoard, color);
     }, ANIM_MS + 20);
@@ -197,11 +202,29 @@ const ConnectFour = () => {
     if (column !== undefined) dropDisc(column, 'yellow');
   };
 
+  const undoMove = () => {
+    if (history.length <= 1 || winner || animDisc) return;
+    if (aiTimeout.current) {
+      clearTimeout(aiTimeout.current);
+      aiTimeout.current = null;
+    }
+    setHistory((h) => {
+      const newHistory = h.slice(0, -1);
+      const prevBoard = newHistory[newHistory.length - 1];
+      setBoard(cloneBoard(prevBoard));
+      setWinner(null);
+      setWinningCells([]);
+      setPlayer((p) => (p === 'red' ? 'yellow' : 'red'));
+      return newHistory;
+    });
+  };
+
   const rematch = () => {
     setBoard(createEmptyBoard());
     setWinner(null);
     setWinningCells([]);
     setPlayer('red');
+    setHistory([createEmptyBoard()]);
   };
 
   return (
@@ -270,12 +293,21 @@ const ConnectFour = () => {
           </div>
         )}
       </div>
-      <button
-        className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={rematch}
-      >
-        Rematch
-      </button>
+      <div className="mt-4 flex gap-2">
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={undoMove}
+          disabled={history.length <= 1 || winner}
+        >
+          Undo
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={rematch}
+        >
+          Rematch
+        </button>
+      </div>
     </div>
   );
 };
