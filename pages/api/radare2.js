@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { action, hex, file } = req.body || {};
+  const { action, hex, file, query } = req.body || {};
 
   try {
     if (action === 'disasm' && hex) {
@@ -34,6 +34,20 @@ export default async function handler(req, res) {
       fs.unlink(tmpPath, () => {});
       if (error) return res.status(500).json({ error });
       return res.status(200).json({ result });
+    }
+
+    if (action === 'search' && hex && query) {
+      const { result, error } = await run(`rasm2 -d '${hex}'`);
+      if (error) return res.status(500).json({ error });
+      const matches = [];
+      const lowerResult = result.toLowerCase();
+      const lowerQuery = query.toLowerCase();
+      let idx = lowerResult.indexOf(lowerQuery);
+      while (idx !== -1) {
+        matches.push(idx);
+        idx = lowerResult.indexOf(lowerQuery, idx + lowerQuery.length);
+      }
+      return res.status(200).json({ result, matches });
     }
 
     return res.status(400).json({ error: 'Invalid request' });
