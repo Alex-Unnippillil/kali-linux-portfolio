@@ -138,6 +138,18 @@ const CarRacer = () => {
   const [difficulty, setDifficulty] = useState('normal');
 
   useEffect(() => {
+    try {
+      const stored = localStorage.getItem('car-racer-times');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) setLapTimes(parsed);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
     if (control === 'tilt') {
       const requestPermission = async () => {
         if (
@@ -369,7 +381,15 @@ const CarRacer = () => {
           const t = (now - lapStart) / 1000;
           setLaps((l) => l + 1);
           setLastLap(t);
-          setLapTimes((lts) => [...lts, t]);
+          setLapTimes((lts) => {
+            const updated = [...lts, t].sort((a, b) => a - b).slice(0, 5);
+            try {
+              localStorage.setItem('car-racer-times', JSON.stringify(updated));
+            } catch {
+              // ignore
+            }
+            return updated;
+          });
           ReactGA.event('lap_complete', { time: t });
           if (bestLapTime === null || t < bestLapTime) {
             bestLapTime = t;
@@ -423,7 +443,7 @@ const CarRacer = () => {
     sensitivityRef.current = val;
   };
 
-  const topTimes = [...lapTimes].sort((a, b) => a - b).slice(0, 5);
+  const topTimes = lapTimes;
 
   const handlePause = () => {
     setPaused((p) => !p);
@@ -434,8 +454,16 @@ const CarRacer = () => {
     setLapTime(0);
     setLastLap(null);
     setBestLap(null);
-    setLapTimes([]);
     setReset((r) => r + 1);
+  };
+
+  const handleResetLeaderboard = () => {
+    try {
+      localStorage.removeItem('car-racer-times');
+    } catch {
+      // ignore
+    }
+    setLapTimes([]);
   };
 
   const handleDifficulty = (e) => {
@@ -489,7 +517,15 @@ const CarRacer = () => {
         {bestLap !== null && <div>Best Lap: {bestLap.toFixed(2)}s</div>}
         {topTimes.length > 0 && (
           <div>
-            <div>Leaderboard:</div>
+            <div className="flex items-center justify-between">
+              <span>Leaderboard:</span>
+              <button
+                onClick={handleResetLeaderboard}
+                className="px-1 py-0.5 bg-gray-700"
+              >
+                Reset
+              </button>
+            </div>
             <ol>
               {topTimes.map((t, i) => (
                 <li key={i}>{t.toFixed(2)}s</li>
