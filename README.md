@@ -1,3 +1,12 @@
+# Kali Linux Portfolio
+
+> ⚖️ **Legal and Ethical Use Only**
+>
+> This project is intended for authorized security testing and educational purposes. Unauthorized access or malicious activity is prohibited.
+> Official guidance is available in the [Kali Linux Documentation](https://www.kali.org/docs/).
+
+All sample outputs in this repository are sanitized and static to avoid exposing sensitive information.
+
 ## Adding New Apps
 
 Heavy applications should be loaded with [`next/dynamic`](https://nextjs.org/docs/advanced-features/dynamic-import) so that they do not bloat the initial bundle.
