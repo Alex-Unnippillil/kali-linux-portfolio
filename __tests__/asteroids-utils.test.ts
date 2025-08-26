@@ -7,6 +7,10 @@ describe('wrap', () => {
   it('wraps negative values', () => {
     expect(wrap(-5, 100)).toBe(95);
   });
+  it('wraps with margin', () => {
+    expect(wrap(115, 100, 10)).toBe(-5);
+    expect(wrap(-15, 100, 10)).toBe(105);
+  });
 });
 
 describe('bullet pool', () => {
