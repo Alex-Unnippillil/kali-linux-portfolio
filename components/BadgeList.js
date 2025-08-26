@@ -10,7 +10,11 @@ const BadgeList = ({ badges, className = '' }) => {
 
   return (
     <div className={`flex flex-col items-center ${className}`}>
+      <label htmlFor="badge-filter" className="mb-1">
+        Filter skills
+      </label>
       <input
+        id="badge-filter"
         type="text"
         placeholder="Filter skills"
         className="mb-2 px-2 py-1 rounded text-black font-normal"
@@ -19,20 +23,27 @@ const BadgeList = ({ badges, className = '' }) => {
       />
       <div className="flex flex-wrap justify-center items-start w-full">
         {filteredBadges.map((badge, idx) => (
-          <img
+          <button
             key={idx}
+            type="button"
             className="m-1 hover:scale-110 transition-transform cursor-pointer"
-            src={badge.src}
-            alt={badge.alt}
-            title={badge.description || badge.label}
             onClick={() => setSelected(badge)}
-          />
+            aria-label={badge.label}
+          >
+            <img
+              src={badge.src}
+              alt={badge.alt}
+              title={badge.description || badge.label}
+            />
+          </button>
         ))}
       </div>
       {selected && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
           onClick={() => setSelected(null)}
+          role="dialog"
+          aria-modal="true"
         >
           <div
             className="bg-white text-black p-4 rounded shadow max-w-sm"
