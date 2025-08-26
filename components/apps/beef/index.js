@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 export default function Beef() {
   const [hooks, setHooks] = useState([]);
@@ -8,7 +8,7 @@ export default function Beef() {
 
   const baseUrl = process.env.NEXT_PUBLIC_BEEF_URL || 'http://127.0.0.1:3000';
 
-  const fetchHooks = async () => {
+  const fetchHooks = useCallback(async () => {
     try {
       const res = await fetch(`${baseUrl}/api/hooks`);
       const data = await res.json();
@@ -16,11 +16,11 @@ export default function Beef() {
     } catch (err) {
       console.error(err);
     }
-  };
+  }, [baseUrl]);
 
   useEffect(() => {
     fetchHooks();
-  }, []);
+  }, [fetchHooks]);
 
   const runModule = async () => {
     if (!selected || !moduleId) return;

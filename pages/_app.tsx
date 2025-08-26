@@ -4,6 +4,7 @@ import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
 import 'tailwindcss/tailwind.css';
 import '../styles/index.css';
+import LegalBanner from '../components/LegalBanner';
 
 function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
@@ -14,6 +15,7 @@ function MyApp({ Component, pageProps }: AppProps) {
   }, []);
   return (
     <>
+      <LegalBanner />
       <Component {...pageProps} />
       <Analytics />
     </>

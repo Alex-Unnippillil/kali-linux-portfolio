@@ -1,3 +1,8 @@
+# Kali Linux Portfolio
+
+- [Getting Started](docs/getting-started.md)
+- [Architecture](docs/architecture.md)
+
 ## Adding New Apps
 
 Heavy applications should be loaded with [`next/dynamic`](https://nextjs.org/docs/advanced-features/dynamic-import) so that they do not bloat the initial bundle.
@@ -72,8 +77,7 @@ The new game will then appear alongside the other games on the desktop.
 ## Privacy
 
 The contact application records only non-PII metadata in Google Analytics.
-Submissions trigger an event with `{ category: "contact", action: "submit_success" }`, and the
-free-text fields (name, subject, message) are never sent to analytics.
+Submissions trigger an event with `{ category: "contact", action: "submit_success" }`, and the free-text fields (name, subject, message) are never sent to analytics.
 
 ## Required CI Secrets
 
