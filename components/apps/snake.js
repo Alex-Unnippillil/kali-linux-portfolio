@@ -50,7 +50,8 @@ const Snake = () => {
   const [speedSetting, setSpeedSetting] = useState('normal');
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
+  // keep track of the highest snake length achieved
+  const [highLength, setHighLength] = useState(1);
   const [speed, setSpeed] = useState(speedLevels[speedSetting]); // ms per step
 
   // animation state
@@ -78,10 +79,10 @@ const Snake = () => {
         setWrap(w);
         setSpeedSetting(s);
         setSpeed(speedLevels[s]);
-        const hs = localStorage.getItem(
-          `snakeHighScore_${w ? 'wrap' : 'nowrap'}_${s}`
+        const hl = localStorage.getItem(
+          `snakeHighLength_${w ? 'wrap' : 'nowrap'}_${s}`
         );
-        if (hs) setHighScore(parseInt(hs, 10));
+        if (hl) setHighLength(parseInt(hl, 10));
       } catch {
         // ignore parse errors
       }
@@ -95,8 +96,8 @@ const Snake = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     localStorage.setItem('snakeMode', JSON.stringify({ wrap, speed: speedSetting }));
-    const hs = localStorage.getItem(`snakeHighScore_${wrap ? 'wrap' : 'nowrap'}_${speedSetting}`);
-    setHighScore(hs ? parseInt(hs, 10) : 0);
+    const hl = localStorage.getItem(`snakeHighLength_${wrap ? 'wrap' : 'nowrap'}_${speedSetting}`);
+    setHighLength(hl ? parseInt(hl, 10) : 1);
     setSpeed(speedLevels[speedSetting]);
   }, [wrap, speedSetting]);
 
@@ -258,16 +259,19 @@ const Snake = () => {
   }, [food]);
 
   useEffect(() => {
-    if (gameOver && score > highScore) {
-      setHighScore(score);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(
-          `snakeHighScore_${wrap ? 'wrap' : 'nowrap'}_${speedSetting}`,
-          score.toString()
-        );
+    if (gameOver) {
+      const length = snakeRef.current.length;
+      if (length > highLength) {
+        setHighLength(length);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(
+            `snakeHighLength_${wrap ? 'wrap' : 'nowrap'}_${speedSetting}`,
+            length.toString()
+          );
+        }
       }
     }
-  }, [gameOver, score, highScore, wrap, speedSetting]);
+  }, [gameOver, highLength, wrap, speedSetting]);
 
   const cells = [];
   for (let y = 0; y < gridSize; y += 1) {
@@ -300,21 +304,19 @@ const Snake = () => {
     <GameLayout instructions="Use arrow keys or swipe to move.">
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
         <div className="mb-2 flex space-x-2">
-          <span>Score: {score}</span>
-          <span>| High Score: {highScore}</span>
+          <span>Length: {snake.length}</span>
+          <span>| Best: {highLength}</span>
           <button
             className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
             onClick={() => setPaused((p) => !p)}
-
           >
-            Retry
+            {paused ? 'Resume' : 'Pause'}
           </button>
           <button
             className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
             onClick={() => setWrap((w) => !w)}
-
           >
-            Replay
+            {wrap ? 'No Wrap' : 'Wrap'}
           </button>
           <select
             className="ml-2 px-1 bg-gray-700 rounded"
