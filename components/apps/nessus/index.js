@@ -52,29 +52,53 @@ const Nessus = () => {
     return (
       <div className="h-full w-full bg-gray-900 text-white flex items-center justify-center">
         <form onSubmit={login} className="space-y-2 p-4 w-64">
+          <label htmlFor="nessus-url" className="block text-sm">
+            Nessus URL
+          </label>
           <input
+            id="nessus-url"
             className="w-full p-2 rounded text-black"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
+            aria-invalid={error ? 'true' : undefined}
+            aria-describedby={error ? 'nessus-error' : undefined}
             placeholder="https://nessus:8834"
           />
+          <label htmlFor="nessus-username" className="block text-sm">
+            Username
+          </label>
           <input
+            id="nessus-username"
             className="w-full p-2 rounded text-black"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
+            aria-invalid={error ? 'true' : undefined}
+            aria-describedby={error ? 'nessus-error' : undefined}
           />
+          <label htmlFor="nessus-password" className="block text-sm">
+            Password
+          </label>
           <input
+            id="nessus-password"
             type="password"
             className="w-full p-2 rounded text-black"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
+            aria-invalid={error ? 'true' : undefined}
+            aria-describedby={error ? 'nessus-error' : undefined}
           />
           <button type="submit" className="w-full bg-blue-600 py-2 rounded">
             Login
           </button>
-          {error && <div className="text-red-500 text-sm">{error}</div>}
+          {error && (
+            <p
+              id="nessus-error"
+              role="alert"
+              className="text-red-500 text-sm"
+            >
+              {error}
+            </p>
+          )}
         </form>
       </div>
     );
