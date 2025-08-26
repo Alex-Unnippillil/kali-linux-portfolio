@@ -1,12 +1,17 @@
 import figlet from 'figlet';
-import standard from 'figlet/importable-fonts/Standard.js';
-import slant from 'figlet/importable-fonts/Slant.js';
 
-figlet.parseFont('Standard', standard);
-figlet.parseFont('Slant', slant);
+const loadedFonts = {};
 
-self.onmessage = (e) => {
-  const { text, font } = e.data;
+self.onmessage = async (e) => {
+  const { text, font, baseUrl } = e.data;
+  if (font && !loadedFonts[font]) {
+    const module = await import(
+      /* webpackIgnore: true */ `${baseUrl}/${encodeURIComponent(font)}.js?module`
+    );
+    figlet.parseFont(font, module.default);
+    loadedFonts[font] = true;
+  }
   const rendered = figlet.textSync(text || '', { font });
   self.postMessage(rendered);
 };
+
