@@ -3,6 +3,7 @@ import { Terminal as XTerm } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { SearchAddon } from 'xterm-addon-search';
 
+
 const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const containerRef = useRef(null);
   const termRef = useRef(null);
