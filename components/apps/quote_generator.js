@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
+import usePersistentState from '../../hooks/usePersistentState';
 
 import offlineQuotes from './quotes.json';
 
@@ -38,6 +39,8 @@ const processQuotes = (data) => {
     .map((q) => {
       const content = q.content || q.quote || '';
       const author = q.author || 'Unknown';
+      const id = q._id || q.id;
+      const url = q.url || (id ? `https://quotable.io/quotes/${id}` : null);
       // Use provided tags when available, otherwise guess based on keywords
       let tags = Array.isArray(q.tags) ? q.tags.map((t) => t.toLowerCase()) : [];
       if (!tags.length) {
@@ -47,7 +50,7 @@ const processQuotes = (data) => {
         });
       }
       if (!tags.length) tags.push('general');
-      return { content, author, tags };
+      return { id, url, content, author, tags };
     })
     .filter(
       (q) =>
@@ -65,6 +68,11 @@ const QuoteGenerator = () => {
   const [search, setSearch] = useState('');
   const [fade, setFade] = useState(false);
   const [prefersReduced, setPrefersReduced] = useState(false);
+  const [favorites, setFavorites] = usePersistentState(
+    'quote-favorites',
+    [],
+    Array.isArray
+  );
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -158,6 +166,29 @@ const QuoteGenerator = () => {
     }
   };
 
+  const copyQuoteUrl = () => {
+    if (current?.url && navigator.clipboard) {
+      navigator.clipboard.writeText(current.url);
+    }
+  };
+
+  const isFavorite = current && favorites.some((f) => f.id ? f.id === current.id : f.content === current.content && f.author === current.author);
+
+  const toggleFavorite = () => {
+    if (!current) return;
+    setFavorites((prev) => {
+      const exists = prev.some((f) =>
+        f.id ? f.id === current.id : f.content === current.content && f.author === current.author
+      );
+      if (exists) {
+        return prev.filter((f) =>
+          f.id ? f.id !== current.id : f.content !== current.content || f.author !== current.author
+        );
+      }
+      return [...prev, current];
+    });
+  };
+
   const tweetQuote = () => {
     if (!current) return;
     const text = `"${current.content}" - ${current.author}`;
@@ -214,6 +245,20 @@ const QuoteGenerator = () => {
             onClick={copyQuote}
           >
             Copy
+          </button>
+          <button
+            className="px-2 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={copyQuoteUrl}
+            title="Copy URL"
+          >
+            🔗
+          </button>
+          <button
+            className="px-2 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={toggleFavorite}
+            title={isFavorite ? 'Remove Favorite' : 'Add Favorite'}
+          >
+            {isFavorite ? '★' : '☆'}
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
