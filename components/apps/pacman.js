@@ -38,12 +38,12 @@ const SCATTER_CORNERS = {
 };
 
 const modeSchedule = [
-  { mode: 'scatter', duration: 7 * 60 },
-  { mode: 'chase', duration: 20 * 60 },
-  { mode: 'scatter', duration: 7 * 60 },
-  { mode: 'chase', duration: 20 * 60 },
   { mode: 'scatter', duration: 5 * 60 },
-  { mode: 'chase', duration: 20 * 60 },
+  { mode: 'chase', duration: 15 * 60 },
+  { mode: 'scatter', duration: 5 * 60 },
+  { mode: 'chase', duration: 15 * 60 },
+  { mode: 'scatter', duration: 5 * 60 },
+  { mode: 'chase', duration: 15 * 60 },
   { mode: 'scatter', duration: 5 * 60 },
   { mode: 'chase', duration: Infinity },
 ];
@@ -92,6 +92,8 @@ const Pacman = () => {
   const [pellets, setPellets] = useState(0);
   const fruitRef = useRef({ active: false, x: 7, y: 3, timer: 0 });
   const statusRef = useRef('Playing');
+  const pausedRef = useRef(false);
+  const [paused, setPaused] = useState(false);
   const audioCtxRef = useRef(null);
   const touchStartRef = useRef(null);
 
@@ -425,16 +427,27 @@ const Pacman = () => {
     const handleKey = (e) => {
       switch (e.key) {
         case 'ArrowUp':
+          e.preventDefault();
           pacRef.current.nextDir = { x: 0, y: -1 };
           break;
         case 'ArrowDown':
+          e.preventDefault();
           pacRef.current.nextDir = { x: 0, y: 1 };
           break;
         case 'ArrowLeft':
+          e.preventDefault();
           pacRef.current.nextDir = { x: -1, y: 0 };
           break;
         case 'ArrowRight':
+          e.preventDefault();
           pacRef.current.nextDir = { x: 1, y: 0 };
+          break;
+        case 'p':
+        case 'P':
+          e.preventDefault();
+          pausedRef.current = !pausedRef.current;
+          statusRef.current = pausedRef.current ? 'Paused' : 'Playing';
+          setPaused(pausedRef.current);
           break;
         default:
           break;
@@ -465,9 +478,8 @@ const Pacman = () => {
 
     let id;
     const loop = () => {
-      if (statusRef.current === 'Playing') {
+      if (!pausedRef.current && statusRef.current === 'Playing') {
         stepRef.current();
-        draw();
         // simple gamepad polling
         const pads = navigator.getGamepads ? navigator.getGamepads() : [];
         if (pads) {
@@ -478,8 +490,9 @@ const Pacman = () => {
             if (Math.abs(ay) > 0.3) pacRef.current.nextDir = { x: 0, y: ay > 0 ? 1 : -1 };
           }
         }
-        id = requestAnimationFrame(loop);
       }
+      draw();
+      id = requestAnimationFrame(loop);
     };
 
     draw();
@@ -493,27 +506,6 @@ const Pacman = () => {
     };
   }, [loading, error, draw]);
 
-
-  useEffect(() => {
-    fetch('/pacman-levels.json')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.levels) {
-          setLevels(data.levels);
-          loadLevel(0, data.levels);
-        }
-      })
-      .catch(() => {});
-    const stored = window.localStorage.getItem('pacmanHighScore');
-    if (stored) setHighScore(parseInt(stored, 10));
-  }, [loadLevel]);
-
-  useEffect(() => {
-    if (score > highScore) {
-      setHighScore(score);
-      window.localStorage.setItem('pacmanHighScore', String(score));
-    }
-  }, [score, highScore]);
 
   if (loading) {
     return (
@@ -546,16 +538,25 @@ const Pacman = () => {
         ))}
       </select>
 
-      <canvas
-        ref={canvasRef}
-        width={WIDTH}
-        height={HEIGHT}
-        className="bg-black"
-      />
+      <div className="relative">
+        <canvas
+          ref={canvasRef}
+          width={WIDTH}
+          height={HEIGHT}
+          className="bg-black"
+        />
+        {paused && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center text-xl">
+            Paused
+          </div>
+        )}
+      </div>
 
       <div className="mt-2">Score: {score} | High: {highScore}</div>
       <div className="mt-1">Lives: {pacRef.current.lives}</div>
-      {statusRef.current !== 'Playing' && <div className="mt-2">{statusRef.current}</div>}
+      {statusRef.current !== 'Playing' && statusRef.current !== 'Paused' && (
+        <div className="mt-2">{statusRef.current}</div>
+      )}
     </div>
   );
 };
