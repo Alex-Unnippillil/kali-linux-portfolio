@@ -28,9 +28,22 @@ export function fisherYatesShuffle(array) {
   return arr;
 }
 
-export function createDeck(size) {
+export function createDeck(size, images = []) {
   const pairs = (size * size) / 2;
-  const selected = EMOJIS.slice(0, pairs);
-  const doubled = [...selected, ...selected].map((value, index) => ({ id: index, value }));
+
+  // Take as many uploaded images as needed for pairs
+  const selectedImages = images.slice(0, pairs).map((src) => ({ type: 'image', value: src }));
+  const remainingPairs = pairs - selectedImages.length;
+
+  // Use emojis to fill any remaining pairs
+  const selectedEmojis = EMOJIS.slice(0, remainingPairs).map((value) => ({ type: 'emoji', value }));
+
+  const combined = [...selectedImages, ...selectedEmojis];
+
+  const doubled = combined.flatMap((item, index) => [
+    { id: index * 2, ...item },
+    { id: index * 2 + 1, ...item },
+  ]);
+
   return fisherYatesShuffle(doubled);
 }

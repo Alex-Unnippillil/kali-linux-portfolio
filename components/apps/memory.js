@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createDeck } from './memory_utils';
 
 const modes = [2, 4, 6];
+const ALLOWED_TYPES = ['image/png', 'image/jpeg'];
+const MAX_SIZE = 1024 * 1024; // 1MB
 
 const Memory = () => {
   const [size, setSize] = useState(4);
@@ -15,13 +17,14 @@ const Memory = () => {
   const [stats, setStats] = useState({ games: 0, bestTime: null, bestMoves: null });
   const timerRef = useRef(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [customImages, setCustomImages] = useState([]);
 
     const key = useCallback(
       (s = size, t = timed) => `memory_${s}_${t ? 'timed' : 'casual'}`,
       [size, timed]
     );
 
-    const reset = useCallback((newSize = size) => {
+    const reset = useCallback((newSize = size, images = customImages) => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -30,8 +33,8 @@ const Memory = () => {
       setMoves(0);
       setFlipped([]);
       setMatched([]);
-      setCards(createDeck(newSize));
-    }, [size]);
+      setCards(createDeck(newSize, images));
+    }, [size, customImages]);
 
     useEffect(() => {
       reset(size);
@@ -117,6 +120,26 @@ const Memory = () => {
 
   const gridStyle = { gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` };
 
+  const handleUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    const valid = await Promise.all(
+      files.map(
+        (file) =>
+          new Promise((resolve) => {
+            if (!ALLOWED_TYPES.includes(file.type) || file.size > MAX_SIZE) {
+              return resolve(null);
+            }
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(file);
+          })
+      )
+    );
+    const images = valid.filter(Boolean);
+    setCustomImages(images);
+    reset(size, images);
+  };
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
       <div className="mb-2 flex flex-wrap items-center justify-center space-x-4">
@@ -151,6 +174,16 @@ const Memory = () => {
           />
           <span className="ml-1">Assistive</span>
         </label>
+        <label className="flex items-center">
+          <span>Images</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg"
+            multiple
+            className="ml-1 text-black"
+            onChange={handleUpload}
+          />
+        </label>
       </div>
       <div className="grid gap-2 mb-4" style={gridStyle}>
         {cards.map((card, idx) => {
@@ -170,7 +203,11 @@ const Memory = () => {
                   className="absolute inset-0 bg-gray-700 rounded flex items-center justify-center text-2xl"
                   style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
                 >
-                  {card.value}
+                  {card.type === 'image' ? (
+                    <img src={card.value} alt="card" className="w-full h-full object-cover rounded" />
+                  ) : (
+                    card.value
+                  )}
                 </div>
                 <div
                   className="absolute inset-0 bg-gray-600 rounded"
