@@ -1,11 +1,7 @@
 # Kali Linux Portfolio
 
-> ⚖️ **Legal and Ethical Use Only**
->
-> This project is intended for authorized security testing and educational purposes. Unauthorized access or malicious activity is prohibited.
-> Official guidance is available in the [Kali Linux Documentation](https://www.kali.org/docs/).
-
-All sample outputs in this repository are sanitized and static to avoid exposing sensitive information.
+- [Getting Started](docs/getting-started.md)
+- [Architecture](docs/architecture.md)
 
 ## Adding New Apps
 
@@ -81,8 +77,7 @@ The new game will then appear alongside the other games on the desktop.
 ## Privacy
 
 The contact application records only non-PII metadata in Google Analytics.
-Submissions trigger an event with `{ category: "contact", action: "submit_success" }`, and the
-free-text fields (name, subject, message) are never sent to analytics.
+Submissions trigger an event with `{ category: "contact", action: "submit_success" }`, and the free-text fields (name, subject, message) are never sent to analytics.
 
 ## Required CI Secrets
 

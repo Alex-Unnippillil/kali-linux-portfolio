@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 
+const banner = `Metasploit Framework Console (mock)\nType 'search <term>' to search modules.`;
+
 const MetasploitApp = () => {
   const [command, setCommand] = useState('');
-  const [output, setOutput] = useState('');
+  const [output, setOutput] = useState(banner);
   const [loading, setLoading] = useState(false);
 
   const runCommand = async () => {
@@ -16,9 +18,9 @@ const MetasploitApp = () => {
         body: JSON.stringify({ command: cmd }),
       });
       const data = await res.json();
-      setOutput(data.output || '');
+      setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`);
     } catch (e) {
-      setOutput(`Error: ${e.message}`);
+      setOutput((prev) => `${prev}\nError: ${e.message}`);
     } finally {
       setLoading(false);
     }
