@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import ReactGA from 'react-ga4';
+import LazyImage from '../LazyImage';
 
 const MAX_HISTORY = 50;
 
@@ -296,7 +297,13 @@ export class Terminal extends Component {
         ReactGA.event({ category: 'Sudo Access', action: 'lol' });
         result = (
           <div className="my-2 font-normal">
-            <img className="w-2/5" src="./images/memes/used-sudo-command.webp" alt="sudo meme" />
+            <LazyImage
+              className="w-2/5"
+              src="./images/memes/used-sudo-command.webp"
+              srcSet="./images/memes/used-sudo-command.webp 1x, ./images/memes/used-sudo-command.webp 2x"
+              sizes="(max-width: 768px) 60vw, 250px"
+              alt="sudo meme"
+            />
           </div>
         );
         break;

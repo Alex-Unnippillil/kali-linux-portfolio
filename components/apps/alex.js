@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
+import LazyImage from '../LazyImage';
 import Certs from './certs';
 
 export class AboutAlex extends Component {
@@ -249,10 +250,12 @@ const SkillSection = ({ title, badges }) => {
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map(badge => (
-          <img
+          <LazyImage
             key={badge.alt}
             className="m-1 cursor-pointer"
             src={badge.src}
+            srcSet={`${badge.src} 1x, ${badge.src} 2x`}
+            sizes="(max-width: 768px) 20vw, 10vw"
             alt={badge.alt}
             title={badge.description}
             onClick={() => setSelected(badge)}
@@ -377,8 +380,10 @@ function Skills() {
         <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
           <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
           <div className="bg-ub-gedit-light bg-opacity-20 p-1 md:p-2 rounded-md shadow-md">
-            <img
+            <LazyImage
               src="https://ghchart.rshah.org/Alex-Unnippillil"
+              srcSet="https://ghchart.rshah.org/Alex-Unnippillil 1x, https://ghchart.rshah.org/Alex-Unnippillil 2x"
+              sizes="(max-width: 768px) 90vw, 600px"
               alt="Alex Unnippillil's GitHub contribution graph"
               className="w-full rounded"
             />
