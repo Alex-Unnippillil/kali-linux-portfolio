@@ -5,6 +5,8 @@ import useGameControls from './useGameControls';
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
 const WIN_POINTS = 5; // points to win a game
+const SPEEDUP_RATE = 50; // px/s increase for progressive speed
+const MAX_BALL_SPEED = 600; // maximum ball speed in px/s
 
 // Pong component with spin, adjustable AI and experimental WebRTC multiplayer
 const WIDTH = 600;
@@ -56,12 +58,14 @@ const Pong = () => {
       y: height / 2 - paddleHeight / 2,
       vy: 0,
       scale: 1,
+      rot: 0,
     };
     const opponent = {
       x: width - paddleWidth - 10,
       y: height / 2 - paddleHeight / 2,
       vy: 0,
       scale: 1,
+      rot: 0,
     };
     const ball = {
       x: width / 2,
@@ -134,8 +138,9 @@ const Pong = () => {
       setMatchWinner(null);
       player.y = height / 2 - paddleHeight / 2;
       opponent.y = height / 2 - paddleHeight / 2;
-      player.vy = 0;
-      opponent.vy = 0;
+      player.rot = 0;
+      opponent.rot = 0;
+
       resetBall();
     };
 
@@ -146,12 +151,14 @@ const Pong = () => {
       ctx.fillStyle = 'white';
       ctx.save();
       ctx.translate(player.x + paddleWidth / 2, player.y + paddleHeight / 2);
+      ctx.rotate(player.rot);
       ctx.scale(1, player.scale);
       ctx.fillRect(-paddleWidth / 2, -paddleHeight / 2, paddleWidth, paddleHeight);
       ctx.restore();
 
       ctx.save();
       ctx.translate(opponent.x + paddleWidth / 2, opponent.y + paddleHeight / 2);
+      ctx.rotate(opponent.rot);
       ctx.scale(1, opponent.scale);
       ctx.fillRect(-paddleWidth / 2, -paddleHeight / 2, paddleWidth, paddleHeight);
       ctx.restore();
@@ -204,9 +211,20 @@ const Pong = () => {
       frame += 1;
       frameRef.current = frame;
 
-      // decay impact scaling
+      // progressive speedup with capped delta
+      const cappedDt = Math.min(dt, 0.02);
+      const speed = Math.hypot(ball.vx, ball.vy);
+      if (speed < MAX_BALL_SPEED) {
+        const nextSpeed = Math.min(speed + SPEEDUP_RATE * cappedDt, MAX_BALL_SPEED);
+        const ratio = nextSpeed / (speed || 1);
+        ball.vx *= ratio;
+        ball.vy *= ratio;
+      }
+
+      // decay impact scaling and rotation
       const decay = (obj) => {
         obj.scale += (1 - obj.scale) * 10 * dt;
+        if (obj.rot !== undefined) obj.rot += -obj.rot * 10 * dt;
       };
       decay(player);
       decay(opponent);
@@ -256,6 +274,7 @@ const Pong = () => {
         ball.vx = Math.abs(ball.vx) * dir;
         ball.vy += pad.vy * 0.1 + relative * 200;
         pad.scale = 1.2;
+        pad.rot = relative * 0.3;
         ball.scale = 1.2;
       };
 
@@ -307,6 +326,8 @@ const Pong = () => {
         setScores({ player: 0, opponent: 0 });
         player.y = height / 2 - paddleHeight / 2;
         opponent.y = height / 2 - paddleHeight / 2;
+        player.rot = 0;
+        opponent.rot = 0;
         resetBall(playerWon ? -1 : 1);
       }
 
