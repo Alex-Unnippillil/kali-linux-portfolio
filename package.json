@@ -25,6 +25,7 @@
     "expr-eval": "^2.0.2",
     "howler": "^2.2.4",
     "html-to-image": "^1.11.13",
+    "mathjs": "^13.0.1",
     "next": "^15.0.0",
     "phaser": "^3.90.0",
     "postcss": "^8.4.21",
