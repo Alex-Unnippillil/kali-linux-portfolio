@@ -113,11 +113,21 @@ const Pong = () => {
       return true;
     };
 
-    const resetBall = (dir = Math.random() > 0.5 ? 1 : -1) => {
+    let rngSeed = 1;
+    const rand = () => {
+      // simple LCG for deterministic randomness
+      rngSeed = (rngSeed * 1664525 + 1013904223) % 4294967296;
+      return rngSeed / 4294967296;
+    };
+
+    const resetBall = (dir = rand() > 0.5 ? 1 : -1) => {
       ball.x = width / 2;
       ball.y = height / 2;
       ball.vx = 200 * dir;
-      ball.vy = Math.random() * 160 - 80;
+      // ensure vertical speed has some variance but avoids near-zero values
+      let vy = rand() * 40 + 40; // 40-80
+      if (rand() > 0.5) vy *= -1;
+      ball.vy = vy;
     };
 
     resetRef.current = () => {
@@ -130,6 +140,7 @@ const Pong = () => {
       opponent.y = height / 2 - paddleHeight / 2;
       player.rot = 0;
       opponent.rot = 0;
+
       resetBall();
     };
 
@@ -162,16 +173,36 @@ const Pong = () => {
     };
 
     const applyInputs = (pad, control, dt) => {
-      const speed = 300; // px per second
-      const prev = pad.y;
+      const accel = 2000; // acceleration in px/s^2
+      const maxSpeed = 400; // max paddle speed
+      const friction = 2000; // deceleration when no input
+      const prevY = pad.y;
+
       if (control.touchY !== null) {
         pad.y = control.touchY - paddleHeight / 2;
+        pad.vy = (pad.y - prevY) / dt;
       } else {
-        if (control.up) pad.y -= speed * dt;
-        if (control.down) pad.y += speed * dt;
+        if (control.up) pad.vy -= accel * dt;
+        if (control.down) pad.vy += accel * dt;
+
+        if (!control.up && !control.down) {
+          if (pad.vy > 0) pad.vy = Math.max(0, pad.vy - friction * dt);
+          else if (pad.vy < 0) pad.vy = Math.min(0, pad.vy + friction * dt);
+        }
+
+        if (pad.vy > maxSpeed) pad.vy = maxSpeed;
+        if (pad.vy < -maxSpeed) pad.vy = -maxSpeed;
+
+        pad.y += pad.vy * dt;
       }
-      pad.y = Math.max(0, Math.min(height - paddleHeight, pad.y));
-      pad.vy = pad.y - prev;
+
+      if (pad.y < 0) {
+        pad.y = 0;
+        pad.vy = 0;
+      } else if (pad.y > height - paddleHeight) {
+        pad.y = height - paddleHeight;
+        pad.vy = 0;
+      }
     };
 
     const cpuHistory = [];
@@ -241,7 +272,7 @@ const Pong = () => {
         const relative = (ball.y - padCenter) / (paddleHeight / 2);
         // add spin based on paddle velocity and impact point
         ball.vx = Math.abs(ball.vx) * dir;
-        ball.vy += pad.vy * 5 + relative * 200;
+        ball.vy += pad.vy * 0.1 + relative * 200;
         pad.scale = 1.2;
         pad.rot = relative * 0.3;
         ball.scale = 1.2;

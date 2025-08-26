@@ -14,3 +14,54 @@ class ImageMock {
 
 // @ts-ignore - allow overriding the global Image for the test env
 global.Image = ImageMock as unknown as typeof Image;
+
+// Provide a minimal canvas mock so libraries like xterm.js can run under JSDOM
+// @ts-ignore
+HTMLCanvasElement.prototype.getContext = () => ({
+  fillRect: () => {},
+  clearRect: () => {},
+  getImageData: () => ({ data: [] }),
+  putImageData: () => {},
+  createImageData: () => [],
+  setTransform: () => {},
+  drawImage: () => {},
+  save: () => {},
+  restore: () => {},
+  beginPath: () => {},
+  moveTo: () => {},
+  lineTo: () => {},
+  closePath: () => {},
+  stroke: () => {},
+  translate: () => {},
+  scale: () => {},
+  rotate: () => {},
+  arc: () => {},
+  fill: () => {},
+  measureText: () => ({ width: 0 }),
+  transform: () => {},
+  rect: () => {},
+  clip: () => {},
+  createLinearGradient: () => ({ addColorStop: () => {} }),
+});
+
+// Basic matchMedia mock for libraries that expect it
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  // @ts-ignore
+  window.matchMedia = () => ({
+    matches: false,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+  });
+}
+
+// Minimal Worker mock for tests
+class WorkerMock {
+  postMessage() {}
+  terminate() {}
+  addEventListener() {}
+  removeEventListener() {}
+}
+// @ts-ignore
+global.Worker = WorkerMock as any;

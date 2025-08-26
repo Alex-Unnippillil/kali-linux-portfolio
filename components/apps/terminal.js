@@ -1,402 +1,110 @@
-import React, { Component } from 'react';
-import ReactGA from 'react-ga4';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { Terminal as XTerm } from 'xterm';
+import { FitAddon } from 'xterm-addon-fit';
+import { SearchAddon } from 'xterm-addon-search';
 
-const MAX_HISTORY = 50;
+const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
+  const containerRef = useRef(null);
+  const termRef = useRef(null);
+  const fitAddonRef = useRef(null);
+  const workerRef = useRef(null);
+  const commandRef = useRef('');
+  const logRef = useRef('');
 
-export class Terminal extends Component {
-  constructor() {
-    super();
-    this.child_directories = {
-      root: [
-        'books',
-        'projects',
-        'personal-documents',
-        'skills',
-        'languages',
-        'PDPU',
-        'interests'
-      ],
-      PDPU: ['Sem-6'],
-      books: [
-        'Eric-Jorgenson_The-Almanack-of-Naval-Ravikant.pdf',
-        'Elon Musk: How the Billionaire CEO of SpaceX.pdf',
-        'The $100 Startup_CHRIS_GUILLEBEAU.pdf',
-        'The_Magic_of_Thinking_Big.pdf'
-      ],
-      skills: [
-        'Front-end development',
-        'React.js',
-        'jQuery',
-        'Flutter',
-        'Express.js',
-        'SQL',
-        'Firebase'
-      ],
-      projects: [
-        'alex-unnippillil-portfolio',
-        'synonyms-list-react',
-        'economist.com-unlocked',
-        'Improve-Codeforces',
-        'flutter-banking-app',
-        'Meditech-Healthcare',
-        'CPU-Scheduling-APP-React-Native'
-      ],
-      interests: ['Software Engineering', 'Deep Learning', 'Cybersecurity'],
-      languages: ['Javascript', 'C++', 'Java', 'Dart']
-    };
-    this.state = {
-      history: [],
-      prevCommands: [],
-      commandIndex: 0,
-      currentDirectory: '~',
-      currDirName: 'root',
-      inputValue: ''
-    };
-  }
-
-  encode = (str = '') => {
-    const map = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;'
-    };
-    return str.replace(/[&<>"']/g, m => map[m]);
+  // Prompt helper
+  const prompt = () => {
+    termRef.current.write(`\r\nalex@kali:~$ `);
   };
 
-  childDirectories = parent => (
-    <div className="flex justify-start flex-wrap">
-        {this.child_directories[parent].map(file => (
-          <span key={file} className="font-bold mr-2 text-ubt-blue">&apos;{file}&apos;</span>
-        ))}
-    </div>
-  );
-
-  handleCommand = command => {
-    let words = command.split(' ').filter(Boolean);
-    let main = words[0];
-    words.shift();
-    let rest = words.join(' ').trim();
-    let { currentDirectory, currDirName } = this.state;
-    let result = null;
-
-    switch (main) {
-      case 'cd':
-        if (words.length === 0 || rest === '') {
-          currentDirectory = '~';
-          currDirName = 'root';
-        } else if (words.length > 1) {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">too many arguments, arguments must be &lt;1.</pre>
-            </div>
-          );
-        } else if (rest === 'personal-documents') {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`bash /${currDirName} : Permission denied 😏`}</pre>
-            </div>
-          );
-        } else if (this.child_directories[currDirName]?.includes(rest)) {
-          currentDirectory += '/' + rest;
-          currDirName = rest;
-        } else if (rest === '.' || rest === '..' || rest === '../') {
-          result = (
-            <div className="my-2 font-normal">
-                <pre className="whitespace-pre-wrap">Type &apos;cd&apos; to go back 😅</pre>
-            </div>
-          );
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`bash: cd: ${this.encode(words.join(' '))}: No such file or directory`}</pre>
-            </div>
-          );
-        }
-        break;
-      case 'ls':
-        let target = words[0];
-        if (target === '' || target === undefined || target === null) target = currDirName;
-        if (words.length > 1) {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">too many arguments, arguments must be &lt;1.</pre>
-            </div>
-          );
-        } else if (target in this.child_directories) {
-          result = <div className="my-2 font-normal">{this.childDirectories(target)}</div>;
-        } else if (target === 'personal-documents') {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">Nope! 🙃</pre>
-            </div>
-          );
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`ls: cannot access '${this.encode(words.join(' '))}': No such file or directory`}</pre>
-            </div>
-          );
-        }
-        break;
-      case 'mkdir':
-        if (words[0] !== undefined && words[0] !== '') {
-          this.props.addFolder(words[0]);
-          result = null;
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">mkdir: missing operand</pre>
-            </div>
-          );
-        }
-        break;
-      case 'pwd':
-        result = (
-          <div className="my-2 font-normal">
-            <pre className="whitespace-pre-wrap">{currentDirectory.replace('~', '/home/alex')}</pre>
-          </div>
-        );
-        break;
-      case 'code':
-        if (words[0] === '.' || words.length === 0) {
-          this.props.openApp('vscode');
-          result = null;
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands:[ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg]`}</pre>
-            </div>
-          );
-        }
-        break;
-      case 'echo':
-        result = (
-          <div className="my-2 font-normal">
-            <pre className="whitespace-pre-wrap">{this.encode(words.join(' '))}</pre>
-          </div>
-        );
-        break;
-      case 'x':
-        if (words[0] === '.' || words.length === 0) {
-          this.props.openApp('x');
-          result = null;
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
-            </div>
-          );
-        }
-        break;
-      case 'spotify':
-        if (words[0] === '.' || words.length === 0) {
-          this.props.openApp('spotify');
-          result = null;
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
-            </div>
-          );
-        }
-        break;
-      case 'chrome':
-        if (words[0] === '.' || words.length === 0) {
-          this.props.openApp('chrome');
-          result = null;
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
-            </div>
-          );
-        }
-        break;
-      case 'todoist':
-        if (words[0] === '.' || words.length === 0) {
-          this.props.openApp('todoist');
-          result = null;
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
-            </div>
-          );
-        }
-        break;
-      case 'trash':
-        if (words[0] === '.' || words.length === 0) {
-          this.props.openApp('trash');
-          result = null;
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
-            </div>
-          );
-        }
-        break;
-      case 'about-alex':
-        if (words[0] === '.' || words.length === 0) {
-          this.props.openApp('about-alex');
-          result = null;
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
-            </div>
-          );
-        }
-        break;
-      case 'terminal':
-        if (words[0] === '.' || words.length === 0) {
-          this.props.openApp('terminal');
-          result = null;
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
-            </div>
-          );
-        }
-        break;
-      case 'settings':
-        if (words[0] === '.' || words.length === 0) {
-          this.props.openApp('settings');
-          result = null;
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
-            </div>
-          );
-        }
-        break;
-      case 'sendmsg':
-        if (words[0] === '.' || words.length === 0) {
-          this.props.openApp('gedit');
-          result = null;
-        } else {
-          result = (
-            <div className="my-2 font-normal">
-              <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-, todoist, trash, settings, sendmsg ]`}</pre>
-            </div>
-          );
-        }
-        break;
-      case 'clear':
-        this.setState({ history: [], prevCommands: [], commandIndex: 0, inputValue: '' });
-        return null;
-      case 'exit':
-        document.getElementById('close-terminal')?.click();
-        return null;
-      case 'sudo':
-        ReactGA.event({ category: 'Sudo Access', action: 'lol' });
-        result = (
-          <div className="my-2 font-normal">
-            <img className="w-2/5" src="./images/memes/used-sudo-command.webp" alt="sudo meme" />
-          </div>
-        );
-        break;
-      default:
-        result = (
-          <div className="my-2 font-normal">
-            <pre className="whitespace-pre-wrap">{`Command '${this.encode(main)}' not found, or not yet implemented.\nAvailable Commands: [ cd, ls, pwd, echo, clear, exit, mkdir, code, x, spotify, chrome, about-alex, todoist, trash, settings, sendmsg ]`}</pre>
-          </div>
-        );
+  // Handle command execution
+  const runCommand = (command) => {
+    const trimmed = command.trim();
+    if (trimmed === 'pwd') {
+      termRef.current.writeln('');
+      termRef.current.writeln('/home/alex');
+      logRef.current += '/home/alex\n';
+      prompt();
+    } else if (trimmed.startsWith('cd ')) {
+      const target = trimmed.slice(3);
+      termRef.current.writeln('');
+      termRef.current.writeln(`bash: cd: ${target}: No such file or directory`);
+      logRef.current += `bash: cd: ${target}: No such file or directory\n`;
+      prompt();
+    } else if (trimmed === 'simulate') {
+      termRef.current.writeln('');
+      termRef.current.writeln('Running heavy simulation...');
+      logRef.current += 'Running heavy simulation...\n';
+      workerRef.current.postMessage({ command: 'simulate' });
+      // prompt will be called when worker responds
+    } else if (trimmed.length === 0) {
+      prompt();
+    } else {
+      termRef.current.writeln('');
+      termRef.current.writeln(`Command '${trimmed}' not found`);
+      logRef.current += `Command '${trimmed}' not found\n`;
+      prompt();
     }
-    return { result, currentDirectory, currDirName };
   };
 
-  runCommand = command => {
-    const promptDir = this.state.currentDirectory;
-    const info = this.handleCommand(command);
-    if (!info) {
-      this.setState(prev => ({
-        prevCommands: [...prev.prevCommands, command],
-        commandIndex: prev.prevCommands.length + 1,
-        inputValue: ''
-      }));
-      return;
-    }
-    const sanitizedCommand = this.encode(command);
-    this.setState(prev => {
-      const prevCommands = [...prev.prevCommands, command];
-      let history = [...prev.history, { directory: promptDir, command: sanitizedCommand, output: info.result }];
-      if (history.length > MAX_HISTORY) history = history.slice(history.length - MAX_HISTORY);
-      return {
-        history,
-        prevCommands,
-        commandIndex: prevCommands.length,
-        inputValue: '',
-        currentDirectory: info.currentDirectory,
-        currDirName: info.currDirName
-      };
+  // Initialise terminal
+  useEffect(() => {
+    const term = new XTerm({ cursorBlink: true, convertEol: true });
+    const fitAddon = new FitAddon();
+    const searchAddon = new SearchAddon();
+    term.loadAddon(fitAddon);
+    term.loadAddon(searchAddon);
+    term.open(containerRef.current);
+    termRef.current = term;
+    fitAddonRef.current = fitAddon;
+    fitAddon.fit();
+    term.write('Welcome to the portfolio terminal');
+    prompt();
+    term.onData((data) => {
+      if (data === '\r') {
+        runCommand(commandRef.current);
+        commandRef.current = '';
+      } else if (data === '\u0003') { // Ctrl+C
+        term.write('^C');
+        prompt();
+        commandRef.current = '';
+      } else if (data === '\u007F') { // Backspace
+        if (commandRef.current.length > 0) {
+          commandRef.current = commandRef.current.slice(0, -1);
+          term.write('\b \b');
+        }
+      } else {
+        commandRef.current += data;
+        term.write(data);
+      }
     });
-  };
+    workerRef.current = new Worker(new URL('./terminal.worker.js', import.meta.url));
+    workerRef.current.onmessage = (e) => {
+      term.writeln('');
+      term.writeln(String(e.data));
+      logRef.current += `${String(e.data)}\n`;
+      prompt();
+    };
 
-  checkKey = e => {
-    if (e.key === 'Enter') {
-      const command = this.state.inputValue.trim();
-      if (command.length === 0) return;
-      this.runCommand(command);
-    } else if (e.key === 'ArrowUp') {
-      const newIndex = Math.max(this.state.commandIndex - 1, 0);
-      this.setState({
-        commandIndex: newIndex,
-        inputValue: this.state.prevCommands[newIndex] || ''
-      });
-    } else if (e.key === 'ArrowDown') {
-      const newIndex = Math.min(this.state.commandIndex + 1, this.state.prevCommands.length);
-      this.setState({
-        commandIndex: newIndex,
-        inputValue: this.state.prevCommands[newIndex] || ''
-      });
-    }
-  };
+    const handleResize = () => fitAddon.fit();
+    window.addEventListener('resize', handleResize);
 
-  render() {
-    return (
-      <div className="h-full w-full bg-ub-cool-grey text-white text-sm font-bold" id="terminal-body">
-        {this.state.history.map((item, idx) => (
-          <React.Fragment key={idx}>
-            <div className="flex w-full h-5">
-              <div className="flex">
-                <div className="text-ubt-blue">alex@kali</div>
-                <div className="text-white mx-px font-medium">:</div>
-                <div className="text-ubt-blue">{item.directory}</div>
-                <div className="text-white mx-px font-medium mr-1">$</div>
-              </div>
-              <pre className="flex-1 whitespace-pre-wrap">{item.command}</pre>
-            </div>
-            {item.output}
-          </React.Fragment>
-        ))}
-        <div className="flex w-full h-5">
-          <div className="flex">
-            <div className="text-ubt-blue">alex@kali</div>
-            <div className="text-white mx-px font-medium">:</div>
-            <div className="text-ubt-blue">{this.state.currentDirectory}</div>
-            <div className="text-white mx-px font-medium mr-1">$</div>
-          </div>
-          <input
-            value={this.state.inputValue}
-            onChange={e => this.setState({ inputValue: e.target.value })}
-            onKeyDown={this.checkKey}
-            className="flex-1 bg-transparent outline-none"
-            spellCheck={false}
-            autoFocus
-          />
-        </div>
-      </div>
-    );
-  }
-}
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      workerRef.current?.terminate();
+      term.dispose();
+    };
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    runCommand,
+    getContent: () => logRef.current,
+  }));
+
+  return <div className="h-full w-full bg-ub-cool-grey" ref={containerRef} data-testid="xterm-container" />;
+});
 
 export default Terminal;
 
 export const displayTerminal = (addFolder, openApp) => {
-  return <Terminal addFolder={addFolder} openApp={openApp}></Terminal>;
+  return <Terminal addFolder={addFolder} openApp={openApp} />;
 };
