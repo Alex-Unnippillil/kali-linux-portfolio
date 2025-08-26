@@ -21,8 +21,9 @@ const ChessGame = () => {
   const [status, setStatus] = useState('Your move');
   const [highlight, setHighlight] = useState([]);
   const [premove, setPremove] = useState(null);
-  const [depth, setDepth] = useState(1);
-  const [cursor, setCursor] = useState({ file: 0, rank: 0 });
+  const [lastMove, setLastMove] = useState([]);
+  const [skill, setSkill] = useState(5);
+
   const [whiteTime, setWhiteTime] = useState(initialTime);
   const [blackTime, setBlackTime] = useState(initialTime);
   const timerRef = useRef(null);
@@ -63,6 +64,7 @@ const ChessGame = () => {
     setSelected(null);
     setHighlight([]);
     setPremove(null);
+    setLastMove([]);
     setStatus('Your move');
     setWhiteTime(initialTime);
     setBlackTime(initialTime);
@@ -117,15 +119,19 @@ const ChessGame = () => {
   };
 
   const makeAIMove = () => {
-    const move = getBestMove(game, depth);
-    if (move) {
-      game.move(move, { sloppy: true });
+    const moves = game.moves();
+    if (moves.length > 0) {
+      const move = moves[Math.floor(Math.random() * moves.length)];
+      const aiResult = game.move(move, { sloppy: true });
+      if (aiResult) setLastMove([aiResult.from, aiResult.to]);
+
       updateBoard();
       updateStatus();
       if (premove) {
         const result = game.move(premove, { sloppy: true });
         setPremove(null);
         if (result) {
+          setLastMove([result.from, result.to]);
           updateBoard();
           updateStatus();
         }
@@ -153,6 +159,7 @@ const ChessGame = () => {
       const move = { from: selected, to: square, promotion: 'q' };
       const result = game.move(move);
       if (result) {
+        setLastMove([result.from, result.to]);
         updateBoard();
         setSelected(null);
         setHighlight([]);
@@ -207,6 +214,9 @@ const ChessGame = () => {
   const undo = () => {
     game.undo();
     game.undo();
+    const history = game.history({ verbose: true });
+    const last = history[history.length - 1];
+    setLastMove(last ? [last.from, last.to] : []);
     updateBoard();
     updateStatus();
   };
@@ -226,6 +236,7 @@ const ChessGame = () => {
     const fen = prompt('Enter FEN');
     if (fen) {
       game.load(fen);
+      setLastMove([]);
       updateBoard();
       updateStatus();
     }
@@ -236,6 +247,9 @@ const ChessGame = () => {
     const pgn = prompt('Enter PGN');
     if (pgn) {
       game.load_pgn(pgn, { sloppy: true });
+      const history = game.history({ verbose: true });
+      const last = history[history.length - 1];
+      setLastMove(last ? [last.from, last.to] : []);
       updateBoard();
       updateStatus();
     }
@@ -251,6 +265,7 @@ const ChessGame = () => {
       setPremove(null);
       setSelected(null);
       setHighlight([]);
+      setLastMove([]);
       updateBoard();
       updateStatus();
     }
@@ -279,14 +294,18 @@ const ChessGame = () => {
     const isSelected = selected === squareName;
     const squareColor = (file + rank) % 2 === 0 ? 'bg-gray-300' : 'bg-gray-700';
     const isHighlight = highlight.includes(squareName);
-    const isCursor = cursor.file === file && cursor.rank === rank;
+    const isLastMove = lastMove.includes(squareName);
+
     return (
       <div
         key={squareName}
         {...pointerHandlers(() => handleSquareClick(file, rank))}
         className={`w-11 h-11 md:w-12 md:h-12 flex items-center justify-center select-none ${squareColor} ${
-          isSelected ? 'ring-2 ring-yellow-400' : isCursor ? 'ring-2 ring-blue-400' : ''
-        } ${isHighlight ? 'bg-green-500 bg-opacity-50' : ''}`}
+          isSelected ? 'ring-2 ring-yellow-400' : ''
+        } ${isHighlight ? 'bg-green-500 bg-opacity-50' : ''} ${
+          isLastMove ? 'bg-yellow-500 bg-opacity-50' : ''
+        }`}
+
       >
         {piece ? pieceUnicode[piece.type][piece.color] : ''}
       </div>
