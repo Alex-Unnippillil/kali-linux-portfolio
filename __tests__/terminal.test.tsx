@@ -1,5 +1,5 @@
 import React, { createRef, act } from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import Terminal from '../components/apps/terminal';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
@@ -24,5 +24,19 @@ describe('Terminal component', () => {
       ref.current.runCommand('cd nowhere');
     });
     expect(ref.current.getContent()).toContain("bash: cd: nowhere: No such file or directory");
+  });
+
+  it('supports history and clear commands', () => {
+    const ref = createRef();
+    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
+    act(() => {
+      ref.current.runCommand('pwd');
+      ref.current.runCommand('history');
+    });
+    expect(ref.current.getContent()).toContain('pwd');
+    act(() => {
+      ref.current.runCommand('clear');
+    });
+    expect(ref.current.getContent()).toBe('');
   });
 });

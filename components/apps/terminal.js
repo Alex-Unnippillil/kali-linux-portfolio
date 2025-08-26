@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
-import { Terminal as XTerm } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import { SearchAddon } from 'xterm-addon-search';
-import 'xterm/css/xterm.css';
+import { Terminal as XTerm } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import { SearchAddon } from '@xterm/addon-search';
+import '@xterm/xterm/css/xterm.css';
 
 
 const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
@@ -12,7 +12,8 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const workerRef = useRef(null);
   const commandRef = useRef('');
   const logRef = useRef('');
-  const knownCommandsRef = useRef(new Set(['pwd', 'cd', 'simulate']));
+  const knownCommandsRef = useRef(new Set(['pwd', 'cd', 'simulate', 'clear', 'history']));
+  const historyRef = useRef([]);
   const suggestionsRef = useRef([]);
   const suggestionIndexRef = useRef(0);
   const showingSuggestionsRef = useRef(false);
@@ -28,6 +29,9 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     const first = trimmed.split(' ')[0];
     if (first) {
       knownCommandsRef.current.add(first);
+    }
+    if (trimmed) {
+      historyRef.current.push(trimmed);
     }
     if (trimmed === 'pwd') {
       termRef.current.writeln('');
@@ -46,6 +50,16 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       logRef.current += 'Running heavy simulation...\n';
       workerRef.current.postMessage({ command: 'simulate' });
       // prompt will be called when worker responds
+    } else if (trimmed === 'clear') {
+      termRef.current.clear();
+      logRef.current = '';
+      prompt();
+    } else if (trimmed === 'history') {
+      termRef.current.writeln('');
+      const history = historyRef.current.join('\n');
+      termRef.current.writeln(history);
+      logRef.current += `${history}\n`;
+      prompt();
     } else if (trimmed.length === 0) {
       prompt();
     } else {
