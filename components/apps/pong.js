@@ -8,6 +8,13 @@ const WIN_POINTS = 5; // points to win a game
 const SPEEDUP_RATE = 50; // px/s increase for progressive speed
 const MAX_BALL_SPEED = 600; // maximum ball speed in px/s
 
+// Difficulty presets for AI reaction and paddle speed
+const DIFFICULTY_SETTINGS = {
+  easy: { reactionMs: 300, paddleSpeed: 260 },
+  medium: { reactionMs: 190, paddleSpeed: 320 },
+  hard: { reactionMs: 85, paddleSpeed: 380 },
+};
+
 // Pong component with spin, adjustable AI and experimental WebRTC multiplayer
 const WIDTH = 600;
 const HEIGHT = 400;
@@ -20,7 +27,7 @@ const Pong = () => {
   const frameRef = useRef(0);
 
   const [scores, setScores] = useState({ player: 0, opponent: 0 });
-  const [difficulty, setDifficulty] = useState(5); // 1-10 difficulty scale
+  const [difficulty, setDifficulty] = useState(null);
   const [match, setMatch] = useState({ player: 0, opponent: 0 });
   const [matchWinner, setMatchWinner] = useState(null);
   const [mode, setMode] = useState('cpu'); // 'cpu' or 'online'
@@ -43,6 +50,7 @@ const Pong = () => {
 
   // Main game effect
   useEffect(() => {
+    if (!difficulty) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -237,15 +245,14 @@ const Pong = () => {
       if (mode === 'cpu') {
         // adjustable difficulty AI using reaction delay and speed
         cpuHistory.push(ball.y);
-        const diff = difficulty / 10;
-        const reactionMs = 400 - diff * 350;
-        const aiSpeed = 200 + diff * 200;
-        const delayFrames = Math.floor((reactionMs / FRAME_TIME) || 0);
+        const { reactionMs, paddleSpeed } =
+          DIFFICULTY_SETTINGS[difficulty] || DIFFICULTY_SETTINGS.medium;
+        const delayFrames = Math.floor(reactionMs / FRAME_TIME);
         if (cpuHistory.length > delayFrames) {
           const target = cpuHistory.shift();
           const center = opponent.y + paddleHeight / 2;
-          if (center < target - 10) opponent.y += aiSpeed * dt;
-          else if (center > target + 10) opponent.y -= aiSpeed * dt;
+          if (center < target - 10) opponent.y += paddleSpeed * dt;
+          else if (center > target + 10) opponent.y -= paddleSpeed * dt;
           opponent.y = Math.max(0, Math.min(height - paddleHeight, opponent.y));
           opponent.vy = 0; // AI velocity not tracked for spin
         }
@@ -434,6 +441,34 @@ const Pong = () => {
     };
   };
 
+  if (!difficulty) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
+        <p className="mb-2">Select Difficulty</p>
+        <div className="space-x-2">
+          <button
+            className="px-3 py-1 bg-gray-700 rounded"
+            onClick={() => setDifficulty('easy')}
+          >
+            Easy
+          </button>
+          <button
+            className="px-3 py-1 bg-gray-700 rounded"
+            onClick={() => setDifficulty('medium')}
+          >
+            Medium
+          </button>
+          <button
+            className="px-3 py-1 bg-gray-700 rounded"
+            onClick={() => setDifficulty('hard')}
+          >
+            Hard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
       <canvas
@@ -446,16 +481,7 @@ const Pong = () => {
         <div className="mt-1 text-lg">Winner: {matchWinner}</div>
       )}
 
-      <div className="mt-2 flex items-center space-x-2">
-        <label>AI Difficulty: {difficulty}</label>
-        <input
-          type="range"
-          min="1"
-          max="10"
-          value={difficulty}
-          onChange={(e) => setDifficulty(parseInt(e.target.value, 10))}
-        />
-      </div>
+      <div className="mt-2">Difficulty: {difficulty}</div>
 
       <div className="mt-2 space-x-2">
         <button
