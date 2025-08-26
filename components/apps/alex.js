@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
+import Head from 'next/head';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
 import Certs from './certs';
@@ -53,6 +54,13 @@ export class AboutAlex extends Component {
 
     showNavBar = () => {
         this.setState({ navbar: !this.state.navbar });
+    }
+
+    handleLinkClick = (e) => {
+        const link = e.target.closest('a');
+        if (link && link.href) {
+            ReactGA.event({ category: 'link', action: 'click', label: link.href });
+        }
     }
 
     renderNavLinks = () => {
@@ -131,22 +139,22 @@ export class AboutAlex extends Component {
 
     render() {
         return (
-            <div className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
-                <div className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black">
+            <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative" onClick={this.handleLinkClick}>
+                <nav className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black">
                     {this.renderNavLinks()}
-                </div>
+                </nav>
                 <div onClick={this.showNavBar} className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1">
                     <div className=" w-3.5 border-t border-white"></div>
                     <div className=" w-3.5 border-t border-white" style={{ marginTop: "2pt", marginBottom: "2pt" }}></div>
                     <div className=" w-3.5 border-t border-white"></div>
-                    <div className={(this.state.navbar ? " visible animateShow z-30 " : " invisible ") + " md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20"}>
+                    <nav className={(this.state.navbar ? " visible animateShow z-30 " : " invisible ") + " md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20"}>
                         {this.renderNavLinks()}
-                    </div>
+                    </nav>
                 </div>
-                <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
+                <section className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
                     {this.state.screen}
-                </div>
-            </div>
+                </section>
+            </main>
         );
     }
 }
@@ -743,40 +751,60 @@ function Projects() {
     )
 }
 function Resume() {
+    const resumeUrl = '/assets/Alex-Unnippillil-Resume.pdf';
     const handleDownload = () => {
         ReactGA.event({ category: 'resume', action: 'download' });
     };
+    const handleViewerClick = () => {
+        ReactGA.event({ category: 'resume', action: 'view' });
+    };
+    const jsonLd = {
+        '@context': 'https://schema.org',
+        '@type': 'DigitalDocument',
+        name: 'Alex Unnippillil Resume',
+        url: resumeUrl,
+        encodingFormat: 'application/pdf',
+    };
 
     return (
-        <div className="h-full w-full flex flex-col">
-            <div className="p-2 text-right">
-                <a
-                    href="/assets/Alex-Unnippillil-Resume.pdf"
-                    download
-                    onClick={handleDownload}
-                    className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
-                >
-                    Download
-                </a>
-            </div>
-            <object
-                className="h-full w-full flex-1"
-                data="/assets/Alex-Unnippillil-Resume.pdf"
-                type="application/pdf"
-            >
-                <p className="p-4 text-center">
-                    Unable to display PDF.&nbsp;
+        <>
+            <Head>
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                />
+            </Head>
+            <section className="h-full w-full flex flex-col">
+                <header className="p-2 text-right">
                     <a
-                        href="/assets/Alex-Unnippillil-Resume.pdf"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline text-ubt-blue"
+                        href={resumeUrl}
+                        download
                         onClick={handleDownload}
+                        className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
                     >
-                        Download the resume
+                        Download
                     </a>
-                </p>
-            </object>
-        </div>
+                </header>
+                <object
+                    className="h-full w-full flex-1"
+                    data={resumeUrl}
+                    type="application/pdf"
+                    onClick={handleViewerClick}
+                >
+                    <p className="p-4 text-center">
+                        Unable to display PDF.&nbsp;
+                        <a
+                            href={resumeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline text-ubt-blue"
+                            onClick={handleDownload}
+                        >
+                            Download the resume
+                        </a>
+                    </p>
+                </object>
+            </section>
+        </>
     )
 }
