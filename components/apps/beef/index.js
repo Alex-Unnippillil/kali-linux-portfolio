@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import GuideOverlay from './GuideOverlay';
 
 export default function Beef() {
   const [hooks, setHooks] = useState([]);
   const [selected, setSelected] = useState(null);
   const [moduleId, setModuleId] = useState('');
   const [output, setOutput] = useState('');
+  const [showHelp, setShowHelp] = useState(false);
 
   const baseUrl = process.env.NEXT_PUBLIC_BEEF_URL || 'http://127.0.0.1:3000';
 
@@ -22,6 +24,13 @@ export default function Beef() {
     fetchHooks();
   }, [fetchHooks]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const dismissed = localStorage.getItem('beefHelpDismissed');
+      if (!dismissed) setShowHelp(true);
+    }
+  }, []);
+
   const runModule = async () => {
     if (!selected || !moduleId) return;
     try {
@@ -38,7 +47,8 @@ export default function Beef() {
   };
 
   return (
-    <div className="flex h-full w-full bg-ub-cool-grey text-white">
+    <div className="relative flex h-full w-full bg-ub-cool-grey text-white">
+      {showHelp && <GuideOverlay onClose={() => setShowHelp(false)} />}
       <div className="w-1/3 border-r border-gray-700 overflow-y-auto">
         <div className="flex items-center justify-between p-2">
           <h2 className="font-bold">Hooked Browsers</h2>
