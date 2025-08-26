@@ -4,6 +4,7 @@ import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
 import 'tailwindcss/tailwind.css';
 import '../styles/index.css';
+import { ThemeProvider } from '../hooks/useTheme';
 
 function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
@@ -13,10 +14,10 @@ function MyApp({ Component, pageProps }: AppProps) {
     }
   }, []);
   return (
-    <>
+    <ThemeProvider>
       <Component {...pageProps} />
       <Analytics />
-    </>
+    </ThemeProvider>
   );
 }
 
