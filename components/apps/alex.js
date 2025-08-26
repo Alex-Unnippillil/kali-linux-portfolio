@@ -182,7 +182,7 @@ function About() {
             </div>
             <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
                 <li className="list-pc">
-                    I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly evolving world of tech. I completed four years of a
+                    I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly evolving world of tech. I completed four years of a{" "}
                     <a
                         className=" underline cursor-pointer"
                         href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf"
@@ -190,8 +190,8 @@ function About() {
                         rel="noreferrer"
                     >
                         Nuclear Engineering
-                    </a>
-                    degree at Ontario Tech University before deciding to change my career goals and pursue my passion for
+                    </a>{" "}
+                    degree at Ontario Tech University before deciding to change my career goals and pursue my passion for{" "}
                     <a
                         className=" underline cursor-pointer"
                         href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf"
@@ -203,11 +203,11 @@ function About() {
                     .
                 </li>
                 <li className="mt-3 list-building">
-                    If you&apos;re looking for someone who always wants to help others and will put in the work 24/7, feel free to email
+                    If you&apos;re looking for someone who always wants to help others and will put in the work 24/7, feel free to email{" "}
                     <a className=" underline" href="mailto:alex.unnippillil@hotmail.com">alex.unnippillil@hotmail.com</a>.
                 </li>
                 <li className="mt-3 list-time">
-                    When I&apos;m not learning new technical skills, I enjoy reading books, rock climbing, or watching
+                    When I&apos;m not learning new technical skills, I enjoy reading books, rock climbing, or watching{" "}
                     <a
                         className=" underline cursor-pointer"
                         href="https://www.youtube.com/@Alex-Unnippillil/playlists"
@@ -215,8 +215,7 @@ function About() {
                         rel="noreferrer"
                     >
                         YouTube videos
-                    </a>
-                    and
+                    </a>{" "}and{" "}
                     <a
                         className=" underline cursor-pointer"
                         href="https://myanimelist.net/animelist/alex_u"
