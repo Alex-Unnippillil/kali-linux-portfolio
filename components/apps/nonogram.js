@@ -7,6 +7,7 @@ import {
   validateSolution,
   getPuzzleBySeed,
   puzzles,
+  getPossibleLineSolutions,
 } from './nonogramUtils';
 import usePersistentState from '../usePersistentState';
 
@@ -37,6 +38,8 @@ const Nonogram = () => {
   const [showMistakes, setShowMistakes] = useState(true);
   const [cellSize, setCellSize] = useState(32);
   const [selected, setSelected] = useState({ i: 0, j: 0 });
+  const [mistakes, setMistakes] = useState([]);
+  const [bestTime, setBestTime] = usePersistentState('nonogram-bestTime', null);
 
   const pending = useRef([]);
   const raf = useRef(null);
@@ -54,6 +57,27 @@ const Nonogram = () => {
             return evaluateLine(column, clue);
           })
         );
+        const m = g.map((row) => row.map(() => false));
+        rows.forEach((clue, i) => {
+          const sols = getPossibleLineSolutions(clue, g[i]);
+          if (sols.length) {
+            for (let j = 0; j < g[i].length; j++) {
+              if (g[i][j] === 1 && sols.every((s) => s[j] !== 1)) m[i][j] = true;
+              if (g[i][j] === -1 && sols.every((s) => s[j] !== 0)) m[i][j] = true;
+            }
+          }
+        });
+        cols.forEach((clue, j) => {
+          const col = g.map((row) => row[j]);
+          const sols = getPossibleLineSolutions(clue, col);
+          if (sols.length) {
+            for (let i = 0; i < col.length; i++) {
+              if (g[i][j] === 1 && sols.every((s) => s[i] !== 1)) m[i][j] = true;
+              if (g[i][j] === -1 && sols.every((s) => s[i] !== 0)) m[i][j] = true;
+            }
+          }
+        });
+        setMistakes(m);
       },
       [rows, cols]
     );
@@ -104,6 +128,7 @@ const Nonogram = () => {
                   action: 'puzzle_complete',
                   value: time,
                 });
+                if (!bestTime || time < bestTime) setBestTime(time);
               }
               return ng;
             });
@@ -111,7 +136,7 @@ const Nonogram = () => {
           });
         }
         },
-        [rows, cols, evaluate, setGrid]
+        [rows, cols, evaluate, setGrid, bestTime, setBestTime]
       );
 
   const painting = useRef(false);
@@ -426,10 +451,7 @@ const Nonogram = () => {
                   } ${cell === -1 ? 'text-gray-500' : ''} ${
                     cell === 2 ? 'text-gray-400' : ''
                   } ${
-                    showMistakes &&
-                    (rowState[i]?.contradiction || colState[j]?.contradiction)
-                      ? 'bg-red-300'
-                      : ''
+                    showMistakes && mistakes[i]?.[j] ? 'bg-red-300' : ''
                   } ${
                     selected.i === i && selected.j === j
                       ? 'ring-2 ring-yellow-400'
@@ -510,6 +532,9 @@ const Nonogram = () => {
         >
           +
         </button>
+        <span className="px-2">
+          Best: {bestTime !== null ? `${bestTime}s` : '-'}
+        </span>
       </div>
     </div>
   );
