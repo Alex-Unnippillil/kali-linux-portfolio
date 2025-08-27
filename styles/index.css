@@ -346,3 +346,15 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Trash thumbnails */
+.trash-thumbnail {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    transition: transform 0.2s;
+}
+
+.trash-thumbnail:hover {
+    transform: scale(1.1);
+}
