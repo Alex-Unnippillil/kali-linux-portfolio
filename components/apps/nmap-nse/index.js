@@ -16,6 +16,7 @@ const NmapNSEApp = () => {
   const [scriptSearch, setScriptSearch] = useState('');
   const [library, setLibrary] = useState([]);
   const [profiles, setProfiles] = useState([]);
+  const [stale, setStale] = useState(false);
 
   useEffect(() => {
     try {
@@ -27,6 +28,7 @@ const NmapNSEApp = () => {
       // ignore
     }
     (async () => {
+      const cacheKey = 'nmapScriptDb';
       try {
         const res = await fetch(
           'https://raw.githubusercontent.com/nmap/nmap/master/scripts/script.db'
@@ -36,8 +38,17 @@ const NmapNSEApp = () => {
           text.matchAll(/filename\s*=\s*"([^"]+)"/g)
         ).map((m) => m[1].replace(/\.nse$/, ''));
         setLibrary(names.map((n) => ({ name: n, description: '' })));
+        localStorage.setItem(cacheKey, text);
+        setStale(false);
       } catch (e) {
-        // ignore fetch errors
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const names = Array.from(
+            cached.matchAll(/filename\s*=\s*"([^"]+)"/g)
+          ).map((m) => m[1].replace(/\.nse$/, ''));
+          setLibrary(names.map((n) => ({ name: n, description: '' })));
+          setStale(true);
+        }
       }
     })();
   }, []);
@@ -97,6 +108,11 @@ const NmapNSEApp = () => {
   return (
     <div className="h-full w-full flex flex-col p-4 bg-ub-cool-grey text-white">
       <div className="mb-4">
+        {stale && (
+          <span className="inline-block mb-2 px-2 py-1 text-xs bg-yellow-600 text-black rounded">
+            stale
+          </span>
+        )}
         <input
           className="w-full p-2 mb-2 rounded text-black"
           type="text"
