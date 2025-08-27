@@ -1,33 +1,99 @@
 import React, { useEffect, useRef, useState } from 'react';
-import QRCode from 'qrcode';
-import jsQR from 'jsqr';
+import QRCodeStyling from 'qr-code-styling';
+
+const errorLevels = {
+  L: { label: 'Low', value: 1, percent: 7 },
+  M: { label: 'Medium', value: 2, percent: 15 },
+  Q: { label: 'Quartile', value: 3, percent: 25 },
+  H: { label: 'High', value: 4, percent: 30 },
+};
+
+const cornerStyles = [
+  { value: 'square', label: 'Square' },
+  { value: 'extra-rounded', label: 'Rounded' },
+  { value: 'dot', label: 'Dot' },
+];
+
+const getLuminance = (hex) => {
+  const rgb = hex
+    .replace('#', '')
+    .match(/.{2}/g)
+    .map((c) => parseInt(c, 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+  return 0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2];
+};
+
+const getContrast = (a, b) => {
+  const l1 = getLuminance(a);
+  const l2 = getLuminance(b);
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+};
 
 const QRTool = () => {
   const [text, setText] = useState('');
   const [decodedText, setDecodedText] = useState('');
   const [message, setMessage] = useState('');
-  const generateCanvasRef = useRef(null);
+  const [darkColor, setDarkColor] = useState('#000000');
+  const [lightColor, setLightColor] = useState('#ffffff');
+  const [cornerStyle, setCornerStyle] = useState('square');
+  const [errorLevel, setErrorLevel] = useState('M');
+  const [contrastMsg, setContrastMsg] = useState('');
+  const [contrastOk, setContrastOk] = useState(true);
+
+  const generateRef = useRef(null);
+  const qrRef = useRef(null);
   const scanCanvasRef = useRef(null);
   const videoRef = useRef(null);
   const animationRef = useRef(null);
+  const timeoutRef = useRef(null);
+  const workerRef = useRef(null);
+  const prefersReducedMotion = useRef(false);
+
+  useEffect(() => {
+    prefersReducedMotion.current = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+    qrRef.current = new QRCodeStyling({ width: 256, height: 256, type: 'canvas' });
+    qrRef.current.append(generateRef.current);
+  }, []);
+
+  useEffect(() => {
+    const ratio = getContrast(darkColor, lightColor);
+    const ok = ratio >= 4.5;
+    setContrastOk(ok);
+    setContrastMsg(`Contrast ratio: ${ratio.toFixed(2)}${ok ? '' : ' (needs ≥ 4.5)'}`);
+  }, [darkColor, lightColor]);
 
   const generate = () => {
-    if (!text) return;
-    QRCode.toCanvas(generateCanvasRef.current, text, { width: 256 }, (err) => {
-      if (err) console.error(err);
+    if (!text || !contrastOk) return;
+    qrRef.current.update({
+      data: text,
+      qrOptions: { errorCorrectionLevel: errorLevel },
+      dotsOptions: { color: darkColor },
+      backgroundOptions: { color: lightColor },
+      cornersSquareOptions: { type: cornerStyle, color: darkColor },
     });
   };
 
   const download = () => {
-    const link = document.createElement('a');
-    link.download = 'qr.png';
-    link.href = generateCanvasRef.current.toDataURL('image/png');
-    link.click();
+    qrRef.current?.download({ name: 'qr', extension: 'png' });
+  };
+
+  const initWorker = () => {
+    if (!workerRef.current) {
+      workerRef.current = new Worker(
+        new URL('./scan.worker.js', import.meta.url)
+      );
+      workerRef.current.onmessage = (e) => {
+        setDecodedText(e.data || 'No QR code found');
+      };
+    }
   };
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    initWorker();
     const img = new Image();
     img.onload = () => {
       const canvas = scanCanvasRef.current;
@@ -36,8 +102,11 @@ const QRTool = () => {
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
-      setDecodedText(code ? code.data : 'No QR code found');
+      workerRef.current.postMessage({
+        data: imageData.data,
+        width: imageData.width,
+        height: imageData.height,
+      });
     };
     img.onerror = () => setDecodedText('Could not load image');
     img.src = URL.createObjectURL(file);
@@ -51,16 +120,22 @@ const QRTool = () => {
       canvas.height = videoRef.current.videoHeight;
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
-      if (code) {
-        setDecodedText(code.data);
-      }
+      workerRef.current.postMessage({
+        data: imageData.data,
+        width: imageData.width,
+        height: imageData.height,
+      });
     }
-    animationRef.current = requestAnimationFrame(scan);
+    if (prefersReducedMotion.current) {
+      timeoutRef.current = setTimeout(scan, 1000);
+    } else {
+      animationRef.current = requestAnimationFrame(scan);
+    }
   };
 
   const startCamera = async () => {
     try {
+      initWorker();
       setMessage('Requesting camera permission...');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' },
@@ -81,14 +156,15 @@ const QRTool = () => {
       videoRef.current.srcObject = null;
     }
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (workerRef.current) {
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
     setMessage('');
   };
 
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
+  useEffect(() => () => stopCamera(), []);
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
@@ -102,10 +178,68 @@ const QRTool = () => {
           placeholder="Enter text"
           aria-label="Text to encode"
         />
-        <div className="flex space-x-2 mb-2">
+        <div className="flex flex-wrap gap-2 mb-2">
+          <label className="flex items-center space-x-2">
+            <span>Foreground</span>
+            <input
+              type="color"
+              value={darkColor}
+              onChange={(e) => setDarkColor(e.target.value)}
+              aria-label="Select foreground color"
+            />
+          </label>
+          <label className="flex items-center space-x-2">
+            <span>Background</span>
+            <input
+              type="color"
+              value={lightColor}
+              onChange={(e) => setLightColor(e.target.value)}
+              aria-label="Select background color"
+            />
+          </label>
+          <label className="flex items-center space-x-2">
+            <span>Corners</span>
+            <select
+              value={cornerStyle}
+              onChange={(e) => setCornerStyle(e.target.value)}
+              className="text-black p-1 rounded"
+              aria-label="Select corner style"
+            >
+              {cornerStyles.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center space-x-2">
+            <span>EC Level</span>
+            <select
+              value={errorLevel}
+              onChange={(e) => setErrorLevel(e.target.value)}
+              className="text-black p-1 rounded"
+              aria-label="Select error correction level"
+            >
+              {Object.keys(errorLevels).map((lvl) => (
+                <option key={lvl} value={lvl}>
+                  {lvl}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <p className="text-sm" aria-live="polite">
+          {contrastMsg}
+        </p>
+        <p className="text-sm" aria-live="polite">
+          Error correction strength: {errorLevels[errorLevel].label} (
+          {errorLevels[errorLevel].percent}% )
+        </p>
+        <div className="flex space-x-2 mb-2 mt-2">
           <button
             onClick={generate}
-            className="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
+            disabled={!contrastOk || !text}
+            className="px-4 py-2 bg-blue-700 hover:bg-blue-600 disabled:opacity-50 rounded text-white"
             aria-label="Generate QR code"
           >
             Generate
@@ -118,13 +252,18 @@ const QRTool = () => {
             Download
           </button>
         </div>
-        <canvas ref={generateCanvasRef} className="bg-white w-full h-full" />
-
+        <div ref={generateRef} className="bg-white w-64 h-64" aria-label="Generated QR code" />
       </div>
 
       <div>
         <h2 className="text-lg mb-2">Scan QR Code</h2>
-        <input type="file" accept="image/*" onChange={handleFile} className="mb-2" aria-label="Upload image to scan" />
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleFile}
+          className="mb-2"
+          aria-label="Upload image to scan"
+        />
         <div className="flex space-x-2 mb-2">
           <button
             onClick={startCamera}
@@ -142,14 +281,24 @@ const QRTool = () => {
           </button>
         </div>
         <div className="relative w-64 h-64 bg-black">
-          <video ref={videoRef} className="w-full h-full object-cover" aria-label="Camera preview" />
+          <video
+            ref={videoRef}
+            className="w-full h-full object-cover"
+            aria-label="Camera preview"
+          />
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="w-40 h-40 border-2 border-green-500" />
           </div>
         </div>
-        {message && <p className="mt-2">{message}</p>}
+        {message && (
+          <p className="mt-2" aria-live="polite">
+            {message}
+          </p>
+        )}
         {decodedText && (
-          <p className="mt-2 break-all">Decoded: {decodedText}</p>
+          <p className="mt-2 break-all" aria-live="polite">
+            Decoded: {decodedText}
+          </p>
         )}
         <canvas ref={scanCanvasRef} className="hidden" />
       </div>
