@@ -1,5 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useGameControls from './useGameControls';
+import { hitPause, shake } from './Games/common/gamefeel';
+import { useSettings } from './GameSettingsContext';
 
 const GRID_SIZE = 20;
 const CELL_SIZE = 16; // pixels
@@ -42,6 +44,8 @@ const Snake = () => {
     const stored = window.localStorage.getItem('snake_highscore');
     return stored ? parseInt(stored, 10) : 0;
   });
+
+  const { effects, effectMag } = useSettings();
 
   const beep = useCallback((freq) => {
     if (!sound) return;
@@ -145,6 +149,10 @@ const Snake = () => {
       head.x >= GRID_SIZE ||
       head.y >= GRID_SIZE
     ) {
+      if (effects) {
+        shake(canvasRef.current, 5 * effectMag);
+        hitPause(150 * effectMag, runningRef);
+      }
       setGameOver(true);
       setRunning(false);
       beep(120);
@@ -152,6 +160,10 @@ const Snake = () => {
     }
 
     if (snake.some((s) => s.x === head.x && s.y === head.y)) {
+      if (effects) {
+        shake(canvasRef.current, 5 * effectMag);
+        hitPause(150 * effectMag, runningRef);
+      }
       setGameOver(true);
       setRunning(false);
       beep(120);
@@ -162,12 +174,16 @@ const Snake = () => {
     if (head.x === foodRef.current.x && head.y === foodRef.current.y) {
       setScore((s) => s + 1);
       beep(440);
+      if (effects) {
+        shake(canvasRef.current, 2 * effectMag);
+        hitPause(60 * effectMag, runningRef);
+      }
       foodRef.current = randomFood(snake);
       if (!prefersReducedMotion.current) head.scale = 0;
     } else {
       snake.pop();
     }
-  }, [wrap, beep]);
+  }, [wrap, beep, effects, effectMag]);
 
   const loop = useCallback(
     (time) => {

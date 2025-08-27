@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
+import { hitPause, shake } from './Games/common/gamefeel';
+import { useSettings } from './GameSettingsContext';
 
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
@@ -42,6 +44,8 @@ const Pong = () => {
     }
     return [];
   });
+
+  const { effects, effectMag } = useSettings();
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -318,11 +322,19 @@ const Pong = () => {
         ball.y = ball.size;
         ball.vy *= -1;
         playSound(300);
+        if (effects) {
+          shake(canvas, 2 * effectMag);
+          hitPause(40 * effectMag, pausedRef);
+        }
       }
       if (ball.y > height - ball.size) {
         ball.y = height - ball.size;
         ball.vy *= -1;
         playSound(300);
+        if (effects) {
+          shake(canvas, 2 * effectMag);
+          hitPause(40 * effectMag, pausedRef);
+        }
       }
 
       const paddleCollision = (pad, dir) => {
@@ -342,6 +354,10 @@ const Pong = () => {
         ball.vx *= ratio;
         ball.vy *= ratio;
         playSound(440);
+        if (effects) {
+          shake(canvas, 3 * effectMag);
+          hitPause(40 * effectMag, pausedRef);
+        }
       };
 
       if (
@@ -454,7 +470,7 @@ const Pong = () => {
         motionQuery.removeListener(handleMotionChange);
       }
     };
-  }, [difficulty, mode, connected, matchWinner, controls, canvasRef]);
+  }, [difficulty, mode, connected, matchWinner, controls, canvasRef, effects, effectMag]);
 
   const reset = () => {
     if (resetRef.current) resetRef.current();
