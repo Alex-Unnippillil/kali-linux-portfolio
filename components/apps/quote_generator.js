@@ -64,6 +64,7 @@ const QuoteGenerator = () => {
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
   const [displayedText, setDisplayedText] = useState('');
+  const [ariaText, setAriaText] = useState('');
   const [prefersReduced, setPrefersReduced] = useState(false);
   const rafRef = useRef();
 
@@ -144,6 +145,10 @@ const QuoteGenerator = () => {
   };
 
   useEffect(() => {
+    if (current) setAriaText(`"${current.content}" - ${current.author}`);
+  }, [current]);
+
+  useEffect(() => {
     if (!current) return;
     cancelAnimationFrame(rafRef.current);
     if (prefersReduced) {
@@ -195,7 +200,7 @@ const QuoteGenerator = () => {
   const shareCard = () => {
     const node = document.getElementById('quote-card');
     if (!node) return;
-    requestAnimationFrame(() => {
+    const exportCard = () => {
       toPng(node)
         .then((dataUrl) => {
           const file = dataUrlToFile(dataUrl, 'quote.png');
@@ -223,7 +228,12 @@ const QuoteGenerator = () => {
         .catch(() => {
           /* ignore export errors */
         });
-    });
+    };
+    if (prefersReduced) {
+      exportCard();
+    } else {
+      requestAnimationFrame(exportCard);
+    }
   };
 
   const categories = useMemo(
@@ -237,16 +247,14 @@ const QuoteGenerator = () => {
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 overflow-auto">
       <div className="w-full max-w-md flex flex-col items-center">
-        <div
-          id="quote-card"
-          role="status"
-          aria-live="polite"
-          className="p-4 text-center"
-        >
+        <div id="quote-card" className="p-4 text-center">
           {current ? (
             <>
-              <p className="text-lg mb-2">&quot;{displayedText}&quot;</p>
-              <p className="text-sm text-gray-200">- {current.author}</p>
+              <p className="text-lg mb-2" aria-hidden="true">&quot;{displayedText}&quot;</p>
+              <p className="text-sm text-gray-200" aria-hidden="true">- {current.author}</p>
+              <span role="status" aria-live="polite" className="sr-only">
+                {ariaText}
+              </span>
             </>
           ) : (
             <p>No quotes found.</p>
@@ -275,7 +283,7 @@ const QuoteGenerator = () => {
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={shareCard}
           >
-            Share Card
+            Share as Card
           </button>
         </div>
         <div className="mt-4 flex flex-col w-full gap-2">
