@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef, useReducer } from 'react';
 import ReactGA from 'react-ga4';
 import { BlackjackGame, handValue, basicStrategy, cardValue } from './engine';
 
-const CHIP_VALUES = [1, 5, 25, 100];
-
 // simple reducer so that game actions can be dispatched and extended easily
 const gameReducer = (state, action) => {
   const game = state.gameRef.current;
@@ -123,10 +121,6 @@ const Blackjack = () => {
 
   useEffect(() => {
     const onKey = (e) => {
-      if (['1', '2', '3', '4'].includes(e.key) && bet >= 0 && playerHands.length === 0) {
-        const val = CHIP_VALUES[parseInt(e.key, 10) - 1];
-        if (bet + val <= bankroll) setBet(bet + val);
-      }
       if (e.key === 'Enter' && playerHands.length === 0 && bet > 0) start();
       if (playerHands.length > 0) {
         if (e.key.toLowerCase() === 'h') act('hit');
@@ -138,7 +132,7 @@ const Blackjack = () => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  });
+  }, [bet, playerHands.length]);
 
   const bustProbability = (hand) => {
     const total = handValue(hand.cards);
@@ -199,28 +193,23 @@ const Blackjack = () => {
         </label>
       </div>
       {playerHands.length === 0 ? (
-        <div className="mb-4">
+        <div className="mb-4 w-full">
           <div className="mb-2">Bet: {bet}</div>
-          <div className="flex space-x-2 mb-2">
-            {CHIP_VALUES.map((v) => (
-              <button
-                key={v}
-                className={`h-10 w-10 rounded-full flex items-center justify-center bg-gray-700 hover:bg-gray-600 ${
-                  bet + v > bankroll ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-                onClick={() => bet + v <= bankroll && setBet(bet + v)}
-                title={`Add ${v} chip`}
-              >
-                {v}
-              </button>
-            ))}
-            <button className="px-2 py-1 bg-gray-700" onClick={() => setBet(0)}>
-              Clear
-            </button>
-            <button className="px-2 py-1 bg-gray-700" onClick={start} disabled={bet === 0}>
-              Deal
-            </button>
-          </div>
+          <input
+            type="range"
+            min="0"
+            max={bankroll}
+            value={bet}
+            onChange={(e) => setBet(parseInt(e.target.value, 10))}
+            className="w-full"
+          />
+          <button
+            className="mt-2 w-full px-2 py-1 bg-gray-700"
+            onClick={start}
+            disabled={bet === 0}
+          >
+            Deal
+          </button>
         </div>
       ) : (
         <div className="mb-4">
@@ -233,15 +222,42 @@ const Blackjack = () => {
           <div className="mb-1">{`Player${playerHands.length > 1 ? ` ${idx + 1}` : ''}`}</div>
           {renderHand(hand, false, true)}
           {idx === current && playerHands.length > 0 && (
-            <div className="mt-2 flex flex-col items-start">
-              <div className="flex space-x-2">
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'hit' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('hit')}>Hit</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'stand' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('stand')}>Stand</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'double' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('double')}>Double</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'split' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('split')}>Split</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'surrender' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('surrender')}>Surrender</button>
+            <div className="mt-2 flex flex-col items-stretch">
+              <div className="flex flex-col space-y-2 w-full">
+                <button
+                  className={`w-full py-2 bg-gray-700 ${rec === 'hit' ? 'border-2 border-yellow-400' : ''}`}
+                  onClick={() => act('hit')}
+                >
+                  Hit
+                </button>
+                <button
+                  className={`w-full py-2 bg-gray-700 ${rec === 'stand' ? 'border-2 border-yellow-400' : ''}`}
+                  onClick={() => act('stand')}
+                >
+                  Stand
+                </button>
+                <button
+                  className={`w-full py-2 bg-gray-700 ${rec === 'double' ? 'border-2 border-yellow-400' : ''}`}
+                  onClick={() => act('double')}
+                >
+                  Double
+                </button>
+                <button
+                  className={`w-full py-2 bg-gray-700 ${rec === 'split' ? 'border-2 border-yellow-400' : ''}`}
+                  onClick={() => act('split')}
+                >
+                  Split
+                </button>
+                <button
+                  className={`w-full py-2 bg-gray-700 ${rec === 'surrender' ? 'border-2 border-yellow-400' : ''}`}
+                  onClick={() => act('surrender')}
+                >
+                  Surrender
+                </button>
               </div>
-              {showHints && rec && <div className="mt-1 text-sm">Hint: {rec.toUpperCase()}</div>}
+              {showHints && rec && (
+                <div className="mt-1 text-sm text-center">Hint: {rec.toUpperCase()}</div>
+              )}
             </div>
           )}
         </div>

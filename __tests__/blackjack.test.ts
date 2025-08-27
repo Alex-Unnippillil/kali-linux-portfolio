@@ -15,12 +15,14 @@ describe('Shoe mechanics', () => {
 });
 
 describe('Game actions', () => {
-  test('hit and bust', () => {
+  test('bust ends hand', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
     const deck = [card('10'), card('6'), card('9'), card('7'), card('9')];
     game.startRound(100, deck);
     game.hit();
     expect(game.playerHands[0].busted).toBe(true);
+    expect(game.playerHands[0].finished).toBe(true);
+    expect(game.current).toBe(1);
     expect(game.bankroll).toBe(900);
   });
 
