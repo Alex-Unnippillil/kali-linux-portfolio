@@ -51,8 +51,29 @@ export const createToneSchedule = (length, start, step, ramp = 1) => {
 };
 
 export const generateSequence = (length, seed) => {
-  const rng = seed ? seedrandom(seed) : Math.random;
-  return Array.from({ length }, () => Math.floor(rng() * 4));
+  if (seed) {
+    const rng = seedrandom(seed);
+    const seq = new Array(length);
+    for (let i = 0; i < length; i += 1) {
+      seq[i] = Math.floor(rng() * 4);
+    }
+    return seq;
+  }
+
+  const values = new Uint8Array(length);
+  if (typeof globalThis.crypto?.getRandomValues === 'function') {
+    globalThis.crypto.getRandomValues(values);
+  } else {
+    for (let i = 0; i < length; i += 1) {
+      values[i] = Math.floor(Math.random() * 256);
+    }
+  }
+
+  for (let i = 0; i < length; i += 1) {
+    values[i] &= 3;
+  }
+
+  return Array.from(values);
 };
 
 const Simon = () => {
@@ -67,6 +88,7 @@ const Simon = () => {
   const [thickOutline, setThickOutline] = useState(false);
   const [audioOnly, setAudioOnly] = useState(false);
   const [seed, setSeed] = useState('');
+  const [strictMode, setStrictMode] = useState(true);
   const [leaderboard, setLeaderboard] = usePersistentState(
     'simon_leaderboard',
     []
@@ -193,16 +215,26 @@ const Simon = () => {
       }
       errorSound.current.play();
       setErrorFlash(true);
-      const streak = Math.max(sequence.length - 1, 0);
-      setLeaderboard((prev) =>
-        [...prev, streak].sort((a, b) => b - a).slice(0, 5)
-      );
-      setIsPlayerTurn(false);
-      setStatus('Wrong pad! Game over.');
-      setTimeout(() => {
-        setErrorFlash(false);
-        restartGame();
-      }, 600);
+      if (strictMode) {
+        const streak = Math.max(sequence.length - 1, 0);
+        setLeaderboard((prev) =>
+          [...prev, streak].sort((a, b) => b - a).slice(0, 5)
+        );
+        setIsPlayerTurn(false);
+        setStatus('Wrong pad! Game over.');
+        setTimeout(() => {
+          setErrorFlash(false);
+          restartGame();
+        }, 600);
+      } else {
+        setStatus('Wrong pad! Try again.');
+        setIsPlayerTurn(false);
+        setTimeout(() => {
+          setErrorFlash(false);
+          setStep(0);
+          playSequence();
+        }, 600);
+      }
     }
   };
 
@@ -266,6 +298,14 @@ const Simon = () => {
             value={seed}
             onChange={(e) => setSeed(e.target.value)}
           />
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={strictMode}
+              onChange={(e) => setStrictMode(e.target.checked)}
+            />
+            Strict
+          </label>
           <label className="flex items-center gap-1">
             <input
               type="checkbox"
