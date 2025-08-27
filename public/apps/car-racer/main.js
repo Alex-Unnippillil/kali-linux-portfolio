@@ -124,6 +124,50 @@ function drawTrack(day) {
   ctx.stroke();
 }
 
+// draw a small minimap with car and ghost positions
+function renderMiniMap(g) {
+  const scale = 0.2;
+  const size = WIDTH * scale;
+  const pad = 10;
+  const x = WIDTH - size - pad;
+  const y = pad;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+  ctx.strokeStyle = '#777';
+  ctx.lineWidth = 80;
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(track[0].x, track[0].y);
+  for (let i = 1; i < track.length; i++) ctx.lineTo(track[i].x, track[i].y);
+  ctx.closePath();
+  ctx.stroke();
+
+  if (g) {
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.translate(g.x, g.y);
+    ctx.rotate(g.angle);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(-10, -5, 20, 10);
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.translate(car.x, car.y);
+  ctx.rotate(car.angle);
+  ctx.fillStyle = 'red';
+  ctx.fillRect(-10, -5, 20, 10);
+  ctx.restore();
+
+  ctx.restore();
+}
+
 // line side helper for lap detection
 const startLine = { x1: track[0].x, y1: track[0].y, x2: track[1].x, y2: track[1].y };
 function lineSide(p) {
@@ -236,9 +280,9 @@ function render() {
   ctx.fillStyle = lerpColor('#001a33', '#87CEEB', day);
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
   drawTrack(day);
-  // ghost
+  let g = null;
   if (bestLapTrace && bestLapTrace.length) {
-    const g = bestLapTrace[ghostIndex];
+    g = bestLapTrace[ghostIndex];
     if (g) {
       ctx.save();
       ctx.globalAlpha = 0.5;
@@ -247,7 +291,6 @@ function render() {
       ctx.fillStyle = '#fff';
       ctx.fillRect(-10, -5, 20, 10);
       ctx.restore();
-      ghostIndex = (ghostIndex + 1) % bestLapTrace.length;
     }
   }
   // car reflection
@@ -289,6 +332,8 @@ function render() {
     ctx.lineTo(drop.x + 2, drop.y + 10);
     ctx.stroke();
   }
+  renderMiniMap(g);
+  if (g) ghostIndex = (ghostIndex + 1) % bestLapTrace.length;
 }
 
 let last = performance.now();
