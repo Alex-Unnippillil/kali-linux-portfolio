@@ -12,6 +12,7 @@ const CHIP_COLORS = {
 
 const Card = ({ card, faceDown, peeking }) => {
   const [flipped, setFlipped] = useState(false);
+  const [hovered, setHovered] = useState(false);
   const prefersReduced = useRef(false);
 
   useEffect(() => {
@@ -32,9 +33,13 @@ const Card = ({ card, faceDown, peeking }) => {
 
   return (
     <div
-      className={`h-16 w-12 card ${flipped ? 'flipped' : ''} ${peeking ? 'peek' : ''} animate-deal`}
+      className={`h-16 w-12 card ${flipped ? 'flipped' : ''} ${
+        peeking || (faceDown && hovered) ? 'peek' : ''
+      } animate-deal`}
       aria-label={faceDown ? 'Hidden card' : `${card.value}${card.suit}`}
       role="img"
+      onMouseEnter={() => faceDown && setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <div className="card-face card-front" aria-hidden="true">{`${card.value}${card.suit}`}</div>
       <div className="card-face card-back" aria-hidden="true">?</div>
