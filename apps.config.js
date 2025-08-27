@@ -20,7 +20,6 @@ import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
-import { displayNikto } from './components/apps/nikto';
 
 const createDynamicApp = (path, name) =>
   dynamic(
@@ -87,6 +86,7 @@ const BluetoothApp = createDynamicApp('bluetooth', 'Bluetooth Tools');
 const DsniffApp = createDynamicApp('dsniff', 'dsniff');
 const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
+const NiktoApp = createDynamicApp('nikto', 'Nikto');
 
 const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
 
@@ -153,6 +153,7 @@ const displayWireshark = createDisplay(WiresharkApp);
 const displayBluetooth = createDisplay(BluetoothApp);
 const displayBeef = createDisplay(BeefApp);
 const displayMetasploit = createDisplay(MetasploitApp);
+const displayNikto = createDisplay(NiktoApp);
 const displayDsniff = createDisplay(DsniffApp);
 const displayGomoku = createDisplay(GomokuApp);
 const displayPinball = createDisplay(PinballApp);
@@ -684,7 +685,6 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayNikto,
   },
   {
     id: 'qr-tool',

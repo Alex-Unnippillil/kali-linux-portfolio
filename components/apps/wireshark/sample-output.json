@@ -1,0 +1,5 @@
+{
+  "tool": "wireshark",
+  "example": "Sample output for wireshark",
+  "info": "This is representative output for wireshark."
+}
