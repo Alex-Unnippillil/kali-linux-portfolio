@@ -1,3 +1,4 @@
+// Utilities for solving Sudoku puzzles and generating hints.
 const digits = '123456789';
 const rows = 'ABCDEFGHI';
 const cols = digits;
@@ -152,6 +153,11 @@ const boardToString = (board: number[][]): string => board.flat().map((n) => (n 
 
 const squareToIndices = (s: string): [number, number] => [rows.indexOf(s[0]), cols.indexOf(s[1])];
 
+/**
+ * Solves a Sudoku board.
+ * @param board - 9x9 puzzle grid where 0 represents an empty cell.
+ * @returns The solved board and the steps taken to reach the solution.
+ */
 export const solve = (board: number[][]): { solution: number[][]; steps: Step[] } => {
   const grid = boardToString(board);
   const steps: Step[] = [];
@@ -162,6 +168,11 @@ export const solve = (board: number[][]): { solution: number[][]; steps: Step[] 
   return { solution: stringToBoard(squares.map((s) => result[s]).join('')), steps };
 };
 
+/**
+ * Rates a puzzle based on the number of guesses required.
+ * @param board - Puzzle to evaluate.
+ * @returns Difficulty rating and the solving steps.
+ */
 export const ratePuzzle = (board: number[][]): { difficulty: string; steps: Step[] } => {
   const { steps } = solve(board);
   const guesses = steps.filter((s) => s.technique === 'guess').length;
@@ -172,6 +183,11 @@ export const ratePuzzle = (board: number[][]): { difficulty: string; steps: Step
   return { difficulty, steps };
 };
 
+/**
+ * Provides a hint for the given board.
+ * @param board - Current puzzle state.
+ * @returns A hint describing a single move or pair, or null if none found.
+ */
 export const getHint = (
   board: number[][],
 ):
@@ -237,4 +253,5 @@ export const getHint = (
 
 export const utils = { boardToString, stringToBoard };
 
-export default { solve, ratePuzzle, getHint };
+const sudokuSolver = { solve, ratePuzzle, getHint };
+export default sudokuSolver;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ratePuzzle, getHint, solve } from '../../workers/sudokuSolver';
 
+// Interactive Sudoku game with puzzle generation and solving utilities.
 const SIZE = 9;
 const range = (n) => Array.from({ length: n }, (_, i) => i);
 
@@ -84,6 +85,14 @@ const getCandidates = (board, r, c) => {
   return cand;
 };
 
+const HOLES_BY_DIFFICULTY = { easy: 35, medium: 45, hard: 55 };
+
+/**
+ * Generates a Sudoku puzzle and its solution.
+ * @param {'easy'|'medium'|'hard'} difficulty - Desired puzzle difficulty.
+ * @param {number} seed - Seed for deterministic generation.
+ * @returns {{puzzle: number[][], solution: number[][]}}
+ */
 const generateSudoku = (difficulty = 'easy', seed = Date.now()) => {
   const rng = createRNG(seed);
   const board = Array(SIZE)
@@ -92,8 +101,7 @@ const generateSudoku = (difficulty = 'easy', seed = Date.now()) => {
   solveBoard(board, 0, rng);
   const solution = board.map((row) => row.slice());
   const puzzle = board.map((row) => row.slice());
-  const holesByDiff = { easy: 35, medium: 45, hard: 55 };
-  let holes = holesByDiff[difficulty] || holesByDiff.easy;
+  let holes = HOLES_BY_DIFFICULTY[difficulty] || HOLES_BY_DIFFICULTY.easy;
   const positions = shuffle(range(SIZE * SIZE), rng);
   for (const pos of positions) {
     if (holes === 0) break;
