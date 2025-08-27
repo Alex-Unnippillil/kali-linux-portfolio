@@ -49,6 +49,8 @@ export class Trash extends Component {
         };
 
         this.modalRef = createRef();
+        this.contentRef = createRef();
+        this.lastFocused = null;
     }
 
     componentDidMount() {
@@ -106,6 +108,7 @@ export class Trash extends Component {
     };
 
     emptyTrash = () => {
+        this.lastFocused = document.activeElement;
         this.setState({ showEmptyModal: true }, () => {
             const first = this.modalRef.current?.querySelector('button');
             first && first.focus();
@@ -115,7 +118,9 @@ export class Trash extends Component {
 
     handleModalKey = (e) => {
         if (!this.state.showEmptyModal) return;
-        const focusable = this.modalRef.current?.querySelectorAll('button');
+        const focusable = this.modalRef.current?.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
         if (!focusable || focusable.length === 0) return;
         if (e.key === 'Escape') {
             e.preventDefault();
@@ -139,11 +144,14 @@ export class Trash extends Component {
             }, 'Trash emptied');
         });
         document.removeEventListener('keydown', this.handleModalKey);
+        this.lastFocused && this.lastFocused.focus();
     };
 
     cancelEmptyTrash = () => {
         document.removeEventListener('keydown', this.handleModalKey);
-        this.setState({ showEmptyModal: false });
+        this.setState({ showEmptyModal: false }, () => {
+            this.lastFocused && this.lastFocused.focus();
+        });
     };
 
     restoreSelected = () => {
@@ -262,21 +270,31 @@ export class Trash extends Component {
     }
 
     render() {
+        const { showEmptyModal, confirmDelete } = this.state;
+        const anyModal = showEmptyModal || confirmDelete;
         return (
             <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none relative">
-                <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
-                    <span className="font-bold ml-2">Trash</span>
-                    <div className="flex">
-                        <div onClick={this.restoreSelected} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 text-gray-300">Restore</div>
-                        <div onClick={this.emptyTrash} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty</div>
-                        <div onClick={this.selectFile} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Delete File</div>
+                <div ref={this.contentRef} aria-hidden={anyModal ? 'true' : undefined}>
+                    <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
+                        <span className="font-bold ml-2">Trash</span>
+                        <div className="flex">
+                            <div onClick={this.restoreSelected} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 text-gray-300">Restore</div>
+                            <div onClick={this.emptyTrash} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty</div>
+                            <div onClick={this.selectFile} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Delete File</div>
+                        </div>
                     </div>
+                    {this.state.empty ? this.emptyScreen() : this.showTrashItems()}
                 </div>
-                {this.state.empty ? this.emptyScreen() : this.showTrashItems()}
-                {this.state.showEmptyModal && (
+                {showEmptyModal && (
                     <div className="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4">
-                        <div ref={this.modalRef} className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full">
-                            <p className="mb-4">Empty trash?</p>
+                        <div
+                            ref={this.modalRef}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="empty-trash-title"
+                            className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full"
+                        >
+                            <h2 id="empty-trash-title" className="mb-4">Empty trash?</h2>
                             <div className="flex justify-end space-x-2">
                                 <button onClick={this.confirmEmptyTrash} className="px-3 py-1 bg-red-600 rounded">Empty</button>
                                 <button onClick={this.cancelEmptyTrash} className="px-3 py-1 bg-gray-600 rounded">Cancel</button>
@@ -284,7 +302,7 @@ export class Trash extends Component {
                         </div>
                     </div>
                 )}
-                {this.state.confirmDelete && (
+                {confirmDelete && (
                     <div className="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4">
                         <div className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full">
                             <p className="mb-2">Delete {this.state.fileHandle?.name}?</p>
