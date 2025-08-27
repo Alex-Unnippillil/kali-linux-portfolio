@@ -11,6 +11,8 @@ import {
   State,
   directionKeys,
   findHint,
+  wouldDeadlock,
+  Position,
 } from './engine';
 
 const CELL = 32;
@@ -25,6 +27,10 @@ const Sokoban: React.FC = () => {
   const [best, setBest] = useState<number | null>(null);
   const [hint, setHint] = useState<string>('');
   const [status, setStatus] = useState<string>('');
+  const [warnDir, setWarnDir] = useState<(typeof directionKeys)[number] | null>(null);
+  const [ghost, setGhost] = useState<Set<string>>(new Set());
+  const [puffs, setPuffs] = useState<{ id: number; x: number; y: number }[]>([]);
+  const puffId = React.useRef(0);
 
   const selectLevel = (i: number, pIdx: number = packIndex, pData: LevelPack[] = packs) => {
     const pack = pData[pIdx];
@@ -50,6 +56,7 @@ const Sokoban: React.FC = () => {
       setReach(reachable(st));
       setHint('');
       setStatus('');
+      setGhost(new Set());
       logEvent({ category: 'sokoban', action: 'undo' });
     }
   };
@@ -60,6 +67,7 @@ const Sokoban: React.FC = () => {
     setReach(reachable(st));
     setHint('');
     setStatus('');
+    setGhost(new Set());
   };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -130,13 +138,66 @@ const Sokoban: React.FC = () => {
       }
       if (!directionKeys.includes(e.key as any)) return;
       e.preventDefault();
-      const newState = move(state, e.key as any);
+      const dir = e.key as (typeof directionKeys)[number];
+      if (warnDir) {
+        if (warnDir === dir) {
+          const newState = move(state, dir);
+          if (newState !== state) {
+            setState(newState);
+            setReach(reachable(newState));
+            setHint('');
+            setStatus(newState.deadlocks.size ? 'Deadlock!' : '');
+            setGhost(new Set());
+            if (newState.pushes > state.pushes) {
+              const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
+              if (from) {
+                const [fx, fy] = from.split(',').map(Number);
+                const id = puffId.current++;
+                setPuffs((p) => [...p, { id, x: fx, y: fy }]);
+                setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
+              }
+              logEvent({ category: 'sokoban', action: 'push' });
+            }
+            if (isSolved(newState)) {
+              logGameEnd('sokoban', `level_complete`);
+              logEvent({
+                category: 'sokoban',
+                action: 'level_complete',
+                value: newState.pushes,
+              });
+              const bestKey = `sokoban-best-${packIndex}-${index}`;
+              const prevBest = localStorage.getItem(bestKey);
+              if (!prevBest || newState.pushes < Number(prevBest)) {
+                localStorage.setItem(bestKey, String(newState.pushes));
+                setBest(newState.pushes);
+              }
+            }
+          }
+          setWarnDir(null);
+          return;
+        }
+        setWarnDir(null);
+      }
+      if (wouldDeadlock(state, dir)) {
+        setStatus('Deadlock ahead! Press again to confirm.');
+        setWarnDir(dir);
+        return;
+      }
+      const newState = move(state, dir);
       if (newState === state) return;
       setState(newState);
       setReach(reachable(newState));
       setHint('');
       setStatus(newState.deadlocks.size ? 'Deadlock!' : '');
+      setGhost(new Set());
       if (newState.pushes > state.pushes) {
+        const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
+        if (from) {
+          const [fx, fy] = from.split(',').map(Number);
+          const id = puffId.current++;
+          setPuffs((p) => [...p, { id, x: fx, y: fy }]);
+          setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
+        }
         logEvent({ category: 'sokoban', action: 'push' });
       }
       if (isSolved(newState)) {
@@ -156,7 +217,7 @@ const Sokoban: React.FC = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [state, index, packIndex]);
+  }, [state, index, packIndex, warnDir]);
 
   const handleHint = () => {
     setHint('...');
@@ -170,6 +231,60 @@ const Sokoban: React.FC = () => {
     width: CELL,
     height: CELL,
   } as React.CSSProperties;
+
+  const keyPos = (p: Position) => `${p.x},${p.y}`;
+
+  const findPath = (target: Position): string[] => {
+    const start = state.player;
+    const q: Position[] = [start];
+    const prev = new Map<string, string | null>();
+    prev.set(keyPos(start), null);
+    while (q.length) {
+      const cur = q.shift()!;
+      if (cur.x === target.x && cur.y === target.y) {
+        const path: string[] = [];
+        let k = keyPos(cur);
+        while (prev.get(k)) {
+          path.push(k);
+          k = prev.get(k)!;
+        }
+        return path.reverse();
+      }
+      const dirs = [
+        { x: 0, y: -1 },
+        { x: 0, y: 1 },
+        { x: -1, y: 0 },
+        { x: 1, y: 0 },
+      ];
+      for (const d of dirs) {
+        const n = { x: cur.x + d.x, y: cur.y + d.y };
+        const k = keyPos(n);
+        if (prev.has(k)) continue;
+        if (
+          n.x < 0 ||
+          n.y < 0 ||
+          n.x >= state.width ||
+          n.y >= state.height ||
+          state.walls.has(k) ||
+          state.boxes.has(k)
+        )
+          continue;
+        prev.set(k, keyPos(cur));
+        q.push(n);
+      }
+    }
+    return [];
+  };
+
+  const handleHover = (x: number, y: number) => {
+    const k = `${x},${y}`;
+    if (!reach.has(k) || state.walls.has(k) || state.boxes.has(k)) {
+      setGhost(new Set());
+      return;
+    }
+    const path = findPath({ x, y });
+    setGhost(new Set(path));
+  };
 
   return (
     <div className="p-4 space-y-2 select-none">
@@ -202,6 +317,7 @@ const Sokoban: React.FC = () => {
       <div
         className="relative bg-gray-700"
         style={{ width: state.width * CELL, height: state.height * CELL }}
+        onMouseLeave={() => setGhost(new Set())}
       >
         {Array.from({ length: state.height }).map((_, y) =>
           Array.from({ length: state.width }).map((_, x) => {
@@ -209,6 +325,7 @@ const Sokoban: React.FC = () => {
             const isWall = state.walls.has(k);
             const isTarget = state.targets.has(k);
             const isReach = reach.has(k);
+            const inGhost = ghost.has(k);
             return (
               <React.Fragment key={k}>
                 <div
@@ -216,10 +333,17 @@ const Sokoban: React.FC = () => {
                     isTarget ? 'ring-2 ring-yellow-400' : ''
                   }`}
                   style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
+                  onMouseEnter={() => handleHover(x, y)}
                 />
                 {isReach && !isWall && (
                   <div
                     className="absolute bg-green-400 opacity-30"
+                    style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
+                  />
+                )}
+                {inGhost && (
+                  <div
+                    className="absolute bg-blue-300 opacity-40"
                     style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
                   />
                 )}
@@ -243,6 +367,13 @@ const Sokoban: React.FC = () => {
             />
           );
         })}
+        {puffs.map((p) => (
+          <div
+            key={p.id}
+            className="absolute pointer-events-none w-4 h-4 bg-gray-200 opacity-70 rounded-full animate-ping"
+            style={{ left: p.x * CELL + CELL / 2 - 8, top: p.y * CELL + CELL / 2 - 8 }}
+          />
+        ))}
         <div
           className="absolute bg-blue-400 transition-transform duration-100"
           style={{

@@ -1,5 +1,5 @@
 import { defaultLevels } from '../apps/sokoban/levels';
-import { loadLevel, move, undo, isSolved, findHint } from '../apps/sokoban/engine';
+import { loadLevel, move, undo, isSolved, findHint, wouldDeadlock } from '../apps/sokoban/engine';
 
 describe('sokoban engine', () => {
   test('simple level solvable', () => {
@@ -27,5 +27,17 @@ describe('sokoban engine', () => {
     const state = loadLevel(defaultLevels[0]);
     const hint = findHint(state);
     expect(hint).toBe('ArrowRight');
+  });
+
+  test('preflight corner deadlock', () => {
+    const level = ['#####', '#@$ #', '#  ##', '#####'];
+    const state = loadLevel(level);
+    expect(wouldDeadlock(state, 'ArrowRight')).toBe(true);
+  });
+
+  test('preflight edge deadlock', () => {
+    const level = ['#####', '#   #', '# $ #', '# @ #', '#####'];
+    const state = loadLevel(level);
+    expect(wouldDeadlock(state, 'ArrowUp')).toBe(true);
   });
 });
