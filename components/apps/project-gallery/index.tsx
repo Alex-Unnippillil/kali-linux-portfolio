@@ -1,48 +1,82 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
+import projectsData from './projects.json';
 
-const GITHUB_USER = 'Alex-Unnippillil';
+type Project = {
+  title: string;
+  description: string;
+  image: string;
+  tech: string[];
+  live?: string;
+  repo?: string;
+};
+
+const fuzzyMatch = (query: string, text: string) => {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  const t = text.toLowerCase();
+  let ti = 0;
+  for (const qc of q) {
+    ti = t.indexOf(qc, ti);
+    if (ti === -1) return false;
+    ti++;
+  }
+  return true;
+};
 
 export default function ProjectGallery() {
-  const [projects, setProjects] = useState([]);
+  const projects: Project[] = projectsData as Project[];
+  const [search, setSearch] = useState('');
+  const [tag, setTag] = useState<string | null>(null);
 
   useEffect(() => {
     ReactGA.event({ category: 'Application', action: 'Loaded Project Gallery' });
   }, []);
 
-  useEffect(() => {
-    const fetchRepos = async () => {
-      try {
-        const res = await fetch(
-          `https://api.github.com/users/${GITHUB_USER}/repos?sort=updated&per_page=9`
-        );
-        const data = await res.json();
-        const mapped = data.map((repo) => ({
-          title: repo.name,
-          description: repo.description || 'No description provided.',
-          image: `https://opengraph.githubassets.com/1/${GITHUB_USER}/${repo.name}`,
-          tech: [repo.language].filter(Boolean),
-          live: repo.homepage,
-          repo: repo.html_url,
-        }));
-        setProjects(mapped);
-      } catch (err) {
-        console.error('Failed to load repos', err);
-      }
-    };
-    fetchRepos();
-  }, []);
+  const tags = useMemo(
+    () => Array.from(new Set(projects.flatMap((p) => p.tech))),
+    [projects]
+  );
+
+  const filtered = projects.filter((p) => {
+    const matchesTag = tag ? p.tech.includes(tag) : true;
+    const matchesSearch = fuzzyMatch(search, p.title + ' ' + p.description);
+    return matchesTag && matchesSearch;
+  });
+
+  const toggleTag = (t: string) => setTag((prev) => (prev === t ? null : t));
 
   return (
     <div className="p-4 w-full h-full overflow-y-auto bg-ub-cool-grey text-white">
-      {projects.length === 0 ? (
-        <p className="text-center">Loading projects...</p>
+      <div className="mb-4 flex flex-wrap gap-2 items-center">
+        <input
+          type="text"
+          placeholder="Search projects..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="px-2 py-1 rounded text-black"
+        />
+        {tags.map((t) => (
+          <button
+            key={t}
+            onClick={() => toggleTag(t)}
+            className={`px-2 py-1 text-sm rounded border ${
+              tag === t ? 'bg-blue-600 border-blue-600' : 'border-gray-700'
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+      {filtered.length === 0 ? (
+        <p className="text-center">No projects found.</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project, index) => (
+          {filtered.map((project, index) => (
             <div
               key={index}
+              data-testid="project-card"
               className="rounded-md bg-ub-grey bg-opacity-20 border border-gray-700 overflow-hidden flex flex-col"
             >
               <div className="relative h-40 w-full">

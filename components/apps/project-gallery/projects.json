@@ -1,0 +1,26 @@
+[
+  {
+    "title": "Alpha Project",
+    "description": "First example project.",
+    "image": "https://placehold.co/600x400?text=Alpha",
+    "tech": ["React", "Node"],
+    "live": "https://alpha.example.com",
+    "repo": "https://github.com/example/alpha"
+  },
+  {
+    "title": "Beta Build",
+    "description": "Second example project.",
+    "image": "https://placehold.co/600x400?text=Beta",
+    "tech": ["Vue", "Django"],
+    "live": "https://beta.example.com",
+    "repo": "https://github.com/example/beta"
+  },
+  {
+    "title": "Gamma Gadget",
+    "description": "Third example project.",
+    "image": "https://placehold.co/600x400?text=Gamma",
+    "tech": ["React", "Django"],
+    "live": "https://gamma.example.com",
+    "repo": "https://github.com/example/gamma"
+  }
+]
