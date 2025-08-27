@@ -14,4 +14,8 @@ describe('Unit conversion', () => {
       convertUnit('length', 'meter', 'kilometer', 1234, 2)
     ).toBeCloseTo(1.23, 2);
   });
+
+  it('converts Celsius to Fahrenheit', () => {
+    expect(convertUnit('temperature', 'celsius', 'fahrenheit', 0)).toBeCloseTo(32);
+  });
 });
