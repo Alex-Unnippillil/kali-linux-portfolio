@@ -16,13 +16,116 @@ const unitMap = {
     pound: 'lb',
     ounce: 'oz',
   },
+  temperature: {
+    celsius: 'C',
+    fahrenheit: 'F',
+    kelvin: 'K',
+  },
+  base: {
+    binary: 2,
+    octal: 8,
+    decimal: 10,
+    hex: 16,
+  },
+  case: {
+    lower: 'lower',
+    upper: 'upper',
+    title: 'title',
+  },
+  date: {
+    millisecond: 1,
+    second: 1000,
+    minute: 60000,
+    hour: 3600000,
+    day: 86400000,
+  },
 };
 
 export const convertUnit = (category, from, to, amount, precision) => {
-  const fromUnit = unitMap[category][from];
-  const toUnit = unitMap[category][to];
-  const result = math.unit(amount, fromUnit).toNumber(toUnit);
-  return typeof precision === 'number' ? math.round(result, precision) : result;
+  switch (category) {
+    case 'length':
+    case 'weight': {
+      const fromUnit = unitMap[category][from];
+      const toUnit = unitMap[category][to];
+      if (!fromUnit || !toUnit) throw new Error('Invalid unit');
+      const result = math.unit(amount, fromUnit).toNumber(toUnit);
+      return typeof precision === 'number' ? math.round(result, precision) : result;
+    }
+    case 'temperature': {
+      const fromUnit = unitMap.temperature[from];
+      const toUnit = unitMap.temperature[to];
+      if (!fromUnit || !toUnit) throw new Error('Invalid unit');
+      let celsius;
+      switch (from) {
+        case 'celsius':
+          celsius = amount;
+          break;
+        case 'fahrenheit':
+          celsius = (amount - 32) * (5 / 9);
+          break;
+        case 'kelvin':
+          celsius = amount - 273.15;
+          break;
+        default:
+          throw new Error('Invalid unit');
+      }
+      let result;
+      switch (to) {
+        case 'celsius':
+          result = celsius;
+          break;
+        case 'fahrenheit':
+          result = celsius * (9 / 5) + 32;
+          break;
+        case 'kelvin':
+          result = celsius + 273.15;
+          break;
+        default:
+          throw new Error('Invalid unit');
+      }
+      return typeof precision === 'number' ? math.round(result, precision) : result;
+    }
+    case 'base': {
+      const fromBase = unitMap.base[from];
+      const toBase = unitMap.base[to];
+      if (!fromBase || !toBase) throw new Error('Invalid unit');
+      const dec = parseInt(String(amount), fromBase);
+      if (isNaN(dec)) throw new Error('Invalid value');
+      return dec.toString(toBase);
+    }
+    case 'case': {
+      const str = String(amount);
+      switch (to) {
+        case 'upper':
+          return str.toUpperCase();
+        case 'lower':
+          return str.toLowerCase();
+        case 'title':
+          return str
+            .toLowerCase()
+            .replace(/(^|\s)\S/g, (t) => t.toUpperCase());
+        default:
+          throw new Error('Invalid unit');
+      }
+    }
+    case 'date': {
+      const unit = unitMap.date[to];
+      if (!unit) throw new Error('Invalid unit');
+      const { start, end } = amount;
+      const diff = new Date(end).getTime() - new Date(start).getTime();
+      const result = diff / unit;
+      return typeof precision === 'number' ? math.round(result, precision) : result;
+    }
+    case 'timezone': {
+      const date = new Date(amount);
+      const fromDate = new Date(date.toLocaleString('en-US', { timeZone: from }));
+      const toDate = new Date(date.toLocaleString('en-US', { timeZone: to }));
+      const diff = (toDate.getTime() - fromDate.getTime()) / 60000; // minutes
+      return typeof precision === 'number' ? math.round(diff, precision) : diff;
+    }
+    default:
+      throw new Error('Invalid category');
+  }
 };
 
 const UnitConverter = () => {
@@ -40,20 +143,37 @@ const UnitConverter = () => {
   }, [category]);
 
   useEffect(() => {
-    if (value === '' || isNaN(parseFloat(value))) {
+    if (value === '') {
       setResult('');
       return;
     }
-    const converted = convertUnit(
-      category,
-      fromUnit,
-      toUnit,
-      parseFloat(value),
-      precision
-    );
-    setResult(
-      math.format(converted, { notation: 'fixed', precision })
-    );
+    let num;
+    try {
+      num = math.evaluate(value);
+    } catch {
+      setResult('');
+      return;
+    }
+    if (typeof num !== 'number' || isNaN(num)) {
+      setResult('');
+      return;
+    }
+    try {
+      const converted = convertUnit(
+        category,
+        fromUnit,
+        toUnit,
+        num,
+        precision
+      );
+      const formatted =
+        typeof converted === 'number'
+          ? math.format(converted, { notation: 'fixed', precision })
+          : String(converted);
+      setResult(formatted);
+    } catch {
+      setResult('');
+    }
   }, [value, fromUnit, toUnit, category, precision]);
 
   const units = Object.keys(unitMap[category]);
@@ -76,7 +196,7 @@ const UnitConverter = () => {
         Value
         <input
           className="text-black p-1 rounded"
-          type="number"
+          type="text"
           value={value}
           onChange={(e) => setValue(e.target.value)}
         />
@@ -91,7 +211,7 @@ const UnitConverter = () => {
           onChange={(e) => setPrecision(Number(e.target.value))}
         />
       </label>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 items-end">
         <label className="flex flex-col">
           From
           <select
@@ -121,9 +241,34 @@ const UnitConverter = () => {
           </select>
         </label>
       </div>
-      <div data-testid="unit-result" className="mt-2">
-        {result && `${value} ${fromUnit} = ${result} ${toUnit}`}
-      </div>
+      <button
+        data-testid="unit-swap"
+        className="bg-gray-600 p-1 rounded"
+        onClick={() => {
+          setFromUnit(toUnit);
+          setToUnit(fromUnit);
+        }}
+      >
+        Swap
+      </button>
+      {result && (
+        <div className="mt-2 flex items-center gap-2">
+          <span data-testid="unit-result">
+            {`${value} ${fromUnit} = ${result} ${toUnit}`}
+          </span>
+          <button
+            data-testid="unit-copy"
+            className="bg-gray-600 px-2 py-1 rounded"
+            onClick={() =>
+              navigator.clipboard?.writeText(
+                `${result}`
+              )
+            }
+          >
+            Copy
+          </button>
+        </div>
+      )}
     </div>
   );
 };
