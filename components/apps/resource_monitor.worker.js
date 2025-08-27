@@ -18,7 +18,6 @@ self.onmessage = (e) => {
     }
     reduceMotion = !!e.data.reduceMotion;
     startSampling();
-    if (!reduceMotion) self.requestAnimationFrame(draw);
   } else if (type === 'stress') {
     if (e.data.value && !stressing) {
       stressing = true;
@@ -27,6 +26,8 @@ self.onmessage = (e) => {
       stressing = false;
       clearTimeout(stressHandle);
     }
+  } else if (type === 'frame') {
+    if (!reduceMotion) draw();
   }
 };
 
@@ -77,7 +78,6 @@ function draw() {
   drawChart(ctx.cpu, data.cpu, '#00ff00', 'CPU %', 100);
   drawChart(ctx.memory, data.memory, '#ffd700', 'Memory %', 100);
   drawNetwork(ctx.network);
-  if (!reduceMotion) self.requestAnimationFrame(draw);
 }
 
 function drawChart(ctx2d, values, color, label, maxVal) {
