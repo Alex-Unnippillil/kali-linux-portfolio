@@ -133,7 +133,7 @@ export function randomizePlacement(noAdjacency = false) {
 }
 
 
-export class RandomSalvoAI {
+export class HuntTargetAI {
   constructor() {
     this.available = new Set(Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, i) => i));
     this.queue = [];
