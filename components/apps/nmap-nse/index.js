@@ -60,6 +60,16 @@ const NmapNSEApp = () => {
   const [library, setLibrary] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [trigger, setTrigger] = useState(0);
+  const openScriptDoc = (name) => {
+    window.open(
+      `https://nmap.org/nsedoc/scripts/${name}.html`,
+      '_blank',
+      'noopener,noreferrer'
+    );
+  };
+  const openExternal = (url) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   useEffect(() => {
     try {
@@ -220,14 +230,13 @@ const NmapNSEApp = () => {
             <ul className="list-disc pl-4 space-y-2">
               {list.map((s) => (
                 <li key={s.name}>
-                  <a
-                    href={`https://nmap.org/nsedoc/scripts/${s.name}.html`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => openScriptDoc(s.name)}
                     className="underline text-blue-400"
                   >
                     <code>{s.name}</code>
-                  </a>
+                  </button>
                   : {s.description}
                   <pre className="bg-black text-green-400 p-2 mt-1 rounded whitespace-pre-wrap">
 $ {s.command}
@@ -240,23 +249,21 @@ $ {s.command}
         ))}
         <p className="mt-2">
           Explore the full{' '}
-          <a
-            href="https://nmap.org/nsedoc/"
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => openExternal('https://nmap.org/nsedoc/')}
             className="underline text-blue-400"
           >
             NSE script index
-          </a>{' '}
+          </button>{' '}
           and the{' '}
-          <a
-            href="https://nmap.org/book/nse.html"
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => openExternal('https://nmap.org/book/nse.html')}
             className="underline text-blue-400"
           >
             Nmap book chapter on the NSE
-          </a>
+          </button>
           .
         </p>
       </div>
