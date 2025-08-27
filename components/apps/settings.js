@@ -3,7 +3,7 @@ import { useSettings } from '../../hooks/useSettings';
 import { resetSettings, defaults } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { theme, setTheme, accent, setAccent, wallpaper, setWallpaper } = useSettings();
+    const { theme, setTheme, accent, setAccent, wallpaper, setWallpaper, reducedMotion, setReducedMotion } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
 
@@ -79,6 +79,17 @@ export function Settings() {
                     onChange={(e) => setAccent(e.target.value)}
                     className="w-10 h-10 border border-ubt-cool-grey bg-ub-cool-grey"
                 />
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">
+                    Reduce motion:
+                    <input
+                        type="checkbox"
+                        className="ml-2"
+                        checked={reducedMotion}
+                        onChange={(e) => setReducedMotion(e.target.checked)}
+                    />
+                </label>
             </div>
             <div className="flex justify-center my-4">
                 <div

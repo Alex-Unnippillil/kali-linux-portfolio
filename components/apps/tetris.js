@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import confetti from 'canvas-confetti';
 import usePersistentState from '../usePersistentState';
 
@@ -103,15 +104,7 @@ const Tetris = () => {
   const [arr, setArr] = usePersistentState('tetris-arr', 50);
 
   const [shake, setShake] = useState(false);
-  const reducedMotion = useRef(false);
-
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => { reducedMotion.current = media.matches; };
-    update();
-    media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
-  }, []);
+  const reducedMotion = usePrefersReducedMotion();
 
   const softDropRef = useRef(false);
   const lockRef = useRef(null);
@@ -168,7 +161,7 @@ const Tetris = () => {
 
   const thud = useCallback(() => {
     playSound(120, 0.05);
-    if (!reducedMotion.current) {
+    if (!reducedMotion) {
       setShake(true);
       setTimeout(() => setShake(false), 100);
     }

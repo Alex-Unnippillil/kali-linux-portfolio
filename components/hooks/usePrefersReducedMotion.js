@@ -6,10 +6,19 @@ export default function usePrefersReducedMotion() {
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handleChange = () => setPrefersReduced(media.matches);
-    handleChange();
-    media.addEventListener('change', handleChange);
-    return () => media.removeEventListener('change', handleChange);
+    const update = () => {
+      setPrefersReduced(
+        media.matches || document.documentElement.classList.contains('reduced-motion'),
+      );
+    };
+    update();
+    media.addEventListener('change', update);
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => {
+      media.removeEventListener('change', update);
+      observer.disconnect();
+    };
   }, []);
 
   return prefersReduced;

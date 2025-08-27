@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 // Full bleed audio visualizer for the Spotify app
 // Uses Web Audio API to draw a spectrum on a canvas
@@ -11,9 +12,10 @@ export default function SpotifyApp() {
   const workerRef = useRef();
   const [level, setLevel] = useState(0);
   const [started, setStarted] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
-    if (!started) return;
+    if (!started || reducedMotion) return;
 
     const audioEl = audioRef.current;
     audioEl.crossOrigin = 'anonymous';
@@ -83,8 +85,6 @@ export default function SpotifyApp() {
       frameRef.current = requestAnimationFrame(draw);
     };
 
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-
     const stop = () => {
       cancelAnimationFrame(frameRef.current);
       audioCtx.suspend();
@@ -98,38 +98,27 @@ export default function SpotifyApp() {
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
         stop();
-      } else if (!mql.matches) {
+      } else {
         startDraw();
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
-    const handleMotionChange = (e) => {
-      if (e.matches) {
-        stop();
-      } else if (document.visibilityState === 'visible') {
-        startDraw();
-      }
-    };
-    mql.addEventListener('change', handleMotionChange);
-
-    if (!mql.matches) frameRef.current = requestAnimationFrame(draw);
+    frameRef.current = requestAnimationFrame(draw);
 
     return () => {
       stop();
       window.removeEventListener('resize', handleResize);
       document.removeEventListener('visibilitychange', handleVisibility);
-      mql.removeEventListener('change', handleMotionChange);
       analyser.disconnect();
       source.disconnect();
       audioCtx.close();
       workerRef.current?.terminate();
     };
-  }, [started]);
+  }, [started, reducedMotion]);
 
   const start = () => {
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (mql.matches) return;
+    if (reducedMotion) return;
     audioRef.current.play();
     setStarted(true);
   };

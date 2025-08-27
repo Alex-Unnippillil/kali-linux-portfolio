@@ -4,6 +4,7 @@ const DEFAULT_SETTINGS = {
   theme: 'system',
   accent: '#E95420',
   wallpaper: 'wall-2',
+  reducedMotion: false,
 };
 
 export async function getTheme() {
@@ -36,12 +37,24 @@ export async function setWallpaper(wallpaper) {
   await set('bg-image', wallpaper);
 }
 
+export async function getReducedMotion() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.reducedMotion;
+  const value = await get('reduced-motion');
+  return typeof value === 'boolean' ? value : DEFAULT_SETTINGS.reducedMotion;
+}
+
+export async function setReducedMotion(value) {
+  if (typeof window === 'undefined') return;
+  await set('reduced-motion', value);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
     del('theme'),
     del('accent'),
     del('bg-image'),
+    del('reduced-motion'),
   ]);
 }
 

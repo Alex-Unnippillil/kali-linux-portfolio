@@ -150,13 +150,18 @@ export class Window extends Component {
             posx = -510;
         }
         this.setWinowsPosition();
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('reduced-motion');
+        if (prefersReduced) {
+            this.props.hasMinimised(this.id);
+            return;
+        }
         // get corrosponding sidebar app's position
         var r = document.querySelector("#sidebar-" + this.id);
         var sidebBarApp = r.getBoundingClientRect();
 
         r = document.querySelector("#" + this.id);
         // translate window to that position
-        r.style.transform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
+        r.style.transform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`; 
         this.props.hasMinimised(this.id);
     }
 
@@ -192,6 +197,12 @@ export class Window extends Component {
 
     closeWindow = () => {
         this.setWinowsPosition();
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches || document.documentElement.classList.contains('reduced-motion');
+        if (prefersReduced) {
+            this.props.hideSideBar(this.id, false);
+            this.props.closed(this.id);
+            return;
+        }
         this.setState({ closed: true }, () => {
             this.props.hideSideBar(this.id, false);
             setTimeout(() => {
