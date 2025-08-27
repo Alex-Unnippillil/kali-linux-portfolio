@@ -168,6 +168,7 @@ const checkWin = (board) =>
 const Minesweeper = () => {
   const canvasRef = useRef(null);
   const audioRef = useRef(null);
+  const workerRef = useRef(null);
   const [board, setBoard] = useState(null);
   const [status, setStatus] = useState('ready');
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 2 ** 31));
@@ -183,6 +184,15 @@ const Minesweeper = () => {
   const [sound, setSound] = useState(true);
   const [ariaMessage, setAriaMessage] = useState('');
   const prefersReducedMotion = useRef(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
+      workerRef.current = new Worker(
+        new URL('./minesweeper.worker.js', import.meta.url),
+      );
+    }
+    return () => workerRef.current?.terminate();
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -229,7 +239,7 @@ const Minesweeper = () => {
           const py = x * CELL_SIZE;
           ctx.strokeStyle = '#111';
           ctx.lineWidth = 1;
-          ctx.fillStyle = cell.revealed ? '#9ca3af' : '#374151';
+          ctx.fillStyle = cell.revealed ? '#d1d5db' : '#1f2937';
           ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
           ctx.strokeRect(px, py, CELL_SIZE, CELL_SIZE);
           if (cell.revealed) {
@@ -293,51 +303,75 @@ const Minesweeper = () => {
   };
 
   const revealWave = (newBoard, sx, sy, onComplete) => {
-    const visited = Array.from({ length: BOARD_SIZE }, () =>
-      Array(BOARD_SIZE).fill(false),
-    );
-    const queue = [[sx, sy]];
-    visited[sx][sy] = true;
-    let idx = 0;
+    const animate = (order) => {
+      let idx = 0;
+      const step = () => {
+        let processed = 0;
+        const limit = 8;
+        while (idx < order.length && processed < limit) {
+          const [x, y] = order[idx++];
+          const cell = newBoard[x][y];
+          if (cell.revealed || cell.flagged) continue;
+          cell.revealed = true;
+          processed++;
+        }
+        setBoard(cloneBoard(newBoard));
+        if (idx < order.length) {
+          requestAnimationFrame(step);
+        } else {
+          onComplete?.(order.length);
+        }
+      };
+      requestAnimationFrame(step);
+    };
 
-    const step = () => {
-      let processed = 0;
-      const limit = 8;
-      while (idx < queue.length && processed < limit) {
-        const [x, y] = queue[idx++];
-        const cell = newBoard[x][y];
-        if (cell.revealed || cell.flagged) continue;
-        cell.revealed = true;
-        if (cell.adjacent === 0) {
-          for (let dx = -1; dx <= 1; dx++) {
-            for (let dy = -1; dy <= 1; dy++) {
-              if (dx === 0 && dy === 0) continue;
-              const nx = x + dx;
-              const ny = y + dy;
-              if (
-                nx >= 0 &&
-                nx < BOARD_SIZE &&
-                ny >= 0 &&
-                ny < BOARD_SIZE &&
-                !visited[nx][ny]
-              ) {
-                visited[nx][ny] = true;
-                queue.push([nx, ny]);
+    const computeOrder = () => {
+      if (workerRef.current) {
+        workerRef.current.onmessage = (e) => {
+          const { order } = e.data || {};
+          animate(order || []);
+        };
+        workerRef.current.postMessage({ board: newBoard, sx, sy });
+      } else {
+        const visited = Array.from({ length: BOARD_SIZE }, () =>
+          Array(BOARD_SIZE).fill(false),
+        );
+        const queue = [[sx, sy]];
+        visited[sx][sy] = true;
+        const order = [];
+        while (queue.length) {
+          const [x, y] = queue.shift();
+          const cell = newBoard[x][y];
+          if (cell.revealed || cell.flagged) continue;
+          order.push([x, y]);
+          if (cell.adjacent === 0) {
+            for (let dx = -1; dx <= 1; dx++) {
+              for (let dy = -1; dy <= 1; dy++) {
+                if (dx === 0 && dy === 0) continue;
+                const nx = x + dx;
+                const ny = y + dy;
+                if (
+                  nx >= 0 &&
+                  nx < BOARD_SIZE &&
+                  ny >= 0 &&
+                  ny < BOARD_SIZE &&
+                  !visited[nx][ny]
+                ) {
+                  const next = newBoard[nx][ny];
+                  if (!next.mine && !next.flagged && !next.revealed) {
+                    visited[nx][ny] = true;
+                    queue.push([nx, ny]);
+                  }
+                }
               }
             }
           }
         }
-        processed++;
-      }
-      setBoard(cloneBoard(newBoard));
-      if (idx < queue.length) {
-        requestAnimationFrame(step);
-      } else {
-        onComplete?.(queue.length);
+        animate(order);
       }
     };
 
-    requestAnimationFrame(step);
+    computeOrder();
   };
 
   const startGame = (x, y) => {
