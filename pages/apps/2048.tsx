@@ -57,7 +57,7 @@ const checkHighest = (board: number[][]) => {
   return m;
 };
 
-const addRandomTile = (b: number[][], rand: () => number) => {
+const addRandomTile = (b: number[][], rand: () => number, hard = false) => {
   const empty: [number, number][] = [];
   b.forEach((row, r) =>
     row.forEach((cell, c) => {
@@ -66,7 +66,111 @@ const addRandomTile = (b: number[][], rand: () => number) => {
   );
   if (empty.length === 0) return;
   const [r, c] = empty[Math.floor(rand() * empty.length)];
-  b[r][c] = rand() < 0.9 ? 2 : 4;
+  const prob = hard ? 0.6 : 0.9;
+  b[r][c] = rand() < prob ? 2 : 4;
+};
+
+// -------- Expectimax AI --------
+const getEmpty = (board: number[][]) => {
+  const empty: [number, number][] = [];
+  board.forEach((row, r) =>
+    row.forEach((cell, c) => {
+      if (cell === 0) empty.push([r, c]);
+    })
+  );
+  return empty;
+};
+
+const smoothness = (board: number[][]) => {
+  let sum = 0;
+  for (let r = 0; r < SIZE; r += 1) {
+    for (let c = 0; c < SIZE; c += 1) {
+      if (c < SIZE - 1 && board[r][c] && board[r][c + 1])
+        sum -= Math.abs(board[r][c] - board[r][c + 1]);
+      if (r < SIZE - 1 && board[r][c] && board[r + 1][c])
+        sum -= Math.abs(board[r][c] - board[r + 1][c]);
+    }
+  }
+  return sum;
+};
+
+const monotonicity = (board: number[][]) => {
+  const totals = [0, 0, 0, 0];
+  for (let r = 0; r < SIZE; r += 1) {
+    for (let c = 0; c < SIZE - 1; c += 1) {
+      const cur = board[r][c];
+      const next = board[r][c + 1];
+      if (cur > next) totals[0] += cur - next;
+      else totals[1] += next - cur;
+    }
+  }
+  for (let c = 0; c < SIZE; c += 1) {
+    for (let r = 0; r < SIZE - 1; r += 1) {
+      const cur = board[r][c];
+      const next = board[r + 1][c];
+      if (cur > next) totals[2] += cur - next;
+      else totals[3] += next - cur;
+    }
+  }
+  return Math.max(totals[0], totals[1]) + Math.max(totals[2], totals[3]);
+};
+
+const evaluate = (board: number[][]) =>
+  10 * getEmpty(board).length + monotonicity(board) + smoothness(board);
+
+const movesMap: Record<string, (b: number[][]) => number[][]> = {
+  ArrowLeft: moveLeft,
+  ArrowRight: moveRight,
+  ArrowUp: moveUp,
+  ArrowDown: moveDown,
+};
+
+const expectimax = (
+  board: number[][],
+  depth: number,
+  player: boolean,
+  hard: boolean,
+): number => {
+  if (depth === 0 || !hasMoves(board)) return evaluate(board);
+  if (player) {
+    let max = -Infinity;
+    Object.values(movesMap).forEach((fn) => {
+      const next = fn(board);
+      if (!boardsEqual(board, next)) {
+        const val = expectimax(next, depth - 1, false, hard);
+        if (val > max) max = val;
+      }
+    });
+    return max === -Infinity ? evaluate(board) : max;
+  }
+  const empty = getEmpty(board);
+  if (empty.length === 0) return evaluate(board);
+  const p4 = hard ? 0.4 : 0.1;
+  let total = 0;
+  empty.forEach(([r, c]) => {
+    board[r][c] = 2;
+    total += (1 - p4) * expectimax(board, depth - 1, true, hard);
+    board[r][c] = 4;
+    total += p4 * expectimax(board, depth - 1, true, hard);
+    board[r][c] = 0;
+  });
+  return total / empty.length;
+};
+
+const findBestMove = (board: number[][], depth = 3, hard = false): string | null => {
+  let best: string | null = null;
+  let bestScore = -Infinity;
+  Object.entries(movesMap).forEach(([dir, fn]) => {
+    const next = fn(board);
+    if (!boardsEqual(board, next)) {
+      const val = expectimax(next, depth - 1, false, hard);
+      if (val > bestScore) {
+        bestScore = val;
+        best = dir;
+      }
+    }
+  });
+  return best;
 };
 
 const tileColors: Record<number, string> = {
@@ -106,8 +210,8 @@ const Page2048 = () => {
   const rngRef = useRef(mulberry32(todaySeed()));
   const [board, setBoard] = useState<number[][]>(() => {
     const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-    addRandomTile(b, rngRef.current);
-    addRandomTile(b, rngRef.current);
+    addRandomTile(b, rngRef.current, false);
+    addRandomTile(b, rngRef.current, false);
     return b;
   });
   const [hard, setHard] = useState(false);
@@ -118,6 +222,11 @@ const Page2048 = () => {
   const [boardType, setBoardType] = useState<'classic' | 'hex'>('classic');
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
+
+  useEffect(() => {
+    setHint(findBestMove(board, 4, hard));
+  }, [board, hard]);
 
   const resetTimer = useCallback(() => {
     if (!hard) return;
@@ -152,7 +261,7 @@ const Page2048 = () => {
       if (dir === 'ArrowUp') moved = moveUp(board);
       if (dir === 'ArrowDown') moved = moveDown(board);
       if (!moved || boardsEqual(board, moved)) return;
-      addRandomTile(moved, rngRef.current);
+      addRandomTile(moved, rngRef.current, hard);
       const newHighest = checkHighest(moved);
       if ((newHighest === 2048 || newHighest === 4096) && newHighest > highest) {
         ReactGA.event('post_score', { score: newHighest, board: boardType });
@@ -164,7 +273,7 @@ const Page2048 = () => {
       if (newHighest >= 2048) setWon(true);
       else if (!hasMoves(moved)) setLost(true);
     },
-    [board, won, lost, highest, boardType, resetTimer]
+    [board, won, lost, highest, boardType, resetTimer, hard]
   );
 
   useEffect(() => {
@@ -181,8 +290,8 @@ const Page2048 = () => {
     const rand = mulberry32(todaySeed());
     rngRef.current = rand;
     const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-    addRandomTile(b, rand);
-    addRandomTile(b, rand);
+    addRandomTile(b, rand, hard);
+    addRandomTile(b, rand, hard);
     setBoard(b);
     setMoves([]);
     setWon(false);
@@ -211,9 +320,15 @@ const Page2048 = () => {
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
-      <div className="flex space-x-2">
+      <div className="flex space-x-2 items-center">
         <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={reset}>
           Reset
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => hint && handleMove(hint as any)}
+        >
+          AI
         </button>
         <label className="flex items-center space-x-1 px-2">
           <input type="checkbox" checked={hard} onChange={(e) => setHard(e.target.checked)} />
@@ -231,6 +346,7 @@ const Page2048 = () => {
           Close
         </button>
         {hard && <div className="ml-2">{timer}</div>}
+        <div className="ml-auto">Hint: {hint ? hint.replace('Arrow', '') : ''}</div>
       </div>
       <div className="grid grid-cols-4 gap-2">
         {board.map((row, rIdx) =>
