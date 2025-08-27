@@ -36,10 +36,28 @@ export const createToneSchedule = (length, start, step, ramp = 1) => {
   }
   return times;
 };
-const baseSpeeds = {
-  slow: 0.9,
-  normal: 0.6,
-  fast: 0.3,
+
+export const processGuess = (
+  sequence,
+  currentStep,
+  guess,
+  strict = false,
+  rand = Math.random
+) => {
+  if (sequence[currentStep] === guess) {
+    if (currentStep + 1 === sequence.length) {
+      return {
+        status: 'advance',
+        step: 0,
+        sequence: [...sequence, Math.floor(rand() * 4)],
+      };
+    }
+    return { status: 'progress', step: currentStep + 1, sequence };
+  }
+  if (strict) {
+    return { status: 'restart', step: 0, sequence: [] };
+  }
+  return { status: 'error', step: 0, sequence };
 };
 
 const Simon = () => {
@@ -49,7 +67,8 @@ const Simon = () => {
   const [activePad, setActivePad] = useState(null);
   const [status, setStatus] = useState('Press Start');
   const [mode, setMode] = useState('classic');
-  const [speed, setSpeed] = useState('normal');
+  const [timing, setTiming] = useState(0.6);
+  const [strict, setStrict] = useState(false);
   const [leaderboard, setLeaderboard] = usePersistentState(
     'simon_leaderboard',
     []
@@ -81,7 +100,7 @@ const Simon = () => {
   };
 
   const stepDuration = () => {
-    const base = baseSpeeds[speed] || baseSpeeds.normal;
+    const base = timing;
     if (mode === 'speed') {
       return Math.max(base - sequence.length * 0.02, 0.2);
     }
@@ -146,27 +165,38 @@ const Simon = () => {
     const duration = stepDuration();
     flashPad(idx, duration);
     scheduleTone(tones[idx], audioCtx.current.currentTime, duration);
-    if (sequence[step] === idx) {
-      if (step + 1 === sequence.length) {
-        setIsPlayerTurn(false);
-        setTimeout(() => {
-          setSequence((seq) => [...seq, Math.floor(Math.random() * 4)]);
-        }, 1000);
-      } else {
-        setStep(step + 1);
-      }
-    } else {
-      if (!errorSound.current) {
-        errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
-      }
-      errorSound.current.play();
-      setErrorFlash(true);
-      setTimeout(() => setErrorFlash(false), 300);
+    const result = processGuess(sequence, step, idx, strict);
+    if (result.status === 'progress') {
+      setStep(result.step);
+      return;
+    }
+
+    if (result.status === 'advance') {
+      setIsPlayerTurn(false);
+      setTimeout(() => {
+        setSequence(result.sequence);
+      }, 1000);
+      return;
+    }
+
+    if (!errorSound.current) {
+      errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
+    }
+    errorSound.current.play();
+    setErrorFlash(true);
+    setTimeout(() => setErrorFlash(false), 300);
+
+    if (result.status === 'restart') {
       const streak = Math.max(sequence.length - 1, 0);
       setLeaderboard((prev) =>
         [...prev, streak].sort((a, b) => b - a).slice(0, 5)
       );
       restartGame();
+    } else {
+      setIsPlayerTurn(false);
+      setStep(0);
+      setStatus('Listen...');
+      setTimeout(() => playSequence(), 1000);
     }
   };
 
@@ -195,25 +225,35 @@ const Simon = () => {
           ))}
         </div>
         <div className="mb-4">{status}</div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
           <select
             className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
             value={mode}
             onChange={(e) => setMode(e.target.value)}
           >
-          <option value="classic">Classic</option>
-          <option value="speed">Speed Up</option>
-          <option value="colorblind">Colorblind</option>
-        </select>
-        <select
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          value={speed}
-          onChange={(e) => setSpeed(e.target.value)}
-        >
-          <option value="slow">Slow</option>
-          <option value="normal">Normal</option>
-          <option value="fast">Fast</option>
-        </select>
+            <option value="classic">Classic</option>
+            <option value="speed">Speed Up</option>
+            <option value="colorblind">Colorblind</option>
+          </select>
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={strict}
+              onChange={(e) => setStrict(e.target.checked)}
+            />
+            Strict
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="text-sm">Timing {timing.toFixed(1)}s</span>
+            <input
+              type="range"
+              min="0.2"
+              max="1.2"
+              step="0.1"
+              value={timing}
+              onChange={(e) => setTiming(parseFloat(e.target.value))}
+            />
+          </label>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={startGame}
