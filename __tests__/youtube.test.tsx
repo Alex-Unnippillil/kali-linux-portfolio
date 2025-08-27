@@ -1,7 +1,8 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import YouTubeApp from '../components/apps/youtube';
+
+const loadApp = () => require('../components/apps/youtube').default;
 
 const mockVideos = [
   {
@@ -35,7 +36,36 @@ describe('YouTubeApp', () => {
     process.env.NEXT_PUBLIC_YOUTUBE_API_KEY = 'test';
   });
 
+  it('memoizes categories and sorted arrays', async () => {
+    const YouTubeApp = loadApp();
+    const categoriesRef = { current: null };
+    const sortedRef = { current: null };
+    const { rerender } = render(
+      <YouTubeApp
+        initialVideos={mockVideos}
+        categoriesRef={categoriesRef}
+        sortedRef={sortedRef}
+      />
+    );
+
+    await screen.findAllByTestId('video-card');
+    const firstCategories = categoriesRef.current;
+    const firstSorted = sortedRef.current;
+
+    rerender(
+      <YouTubeApp
+        initialVideos={mockVideos}
+        categoriesRef={categoriesRef}
+        sortedRef={sortedRef}
+      />
+    );
+
+    expect(categoriesRef.current).toBe(firstCategories);
+    expect(sortedRef.current).toBe(firstSorted);
+  });
+
   it('shows message when API key is missing', () => {
+    const YouTubeApp = loadApp();
     delete process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
     render(<YouTubeApp />);
     expect(
@@ -44,6 +74,7 @@ describe('YouTubeApp', () => {
   });
 
   it('renders video cards with thumbnail and metadata', () => {
+    const YouTubeApp = loadApp();
     render(<YouTubeApp initialVideos={mockVideos} />);
     const cards = screen.getAllByTestId('video-card');
     expect(cards).toHaveLength(mockVideos.length);
@@ -58,6 +89,7 @@ describe('YouTubeApp', () => {
   });
 
   it('filters videos when switching tabs', async () => {
+    const YouTubeApp = loadApp();
     const user = userEvent.setup();
     render(<YouTubeApp initialVideos={mockVideos} />);
     expect(screen.getAllByTestId('video-card')).toHaveLength(3);
@@ -67,6 +99,7 @@ describe('YouTubeApp', () => {
   });
 
   it('search input limits results by title', async () => {
+    const YouTubeApp = loadApp();
     const user = userEvent.setup();
     render(<YouTubeApp initialVideos={mockVideos} />);
     await user.type(screen.getByPlaceholderText(/search/i), 'Advanced');
@@ -76,6 +109,7 @@ describe('YouTubeApp', () => {
   });
 
   it('allows sorting after switching categories', async () => {
+    const YouTubeApp = loadApp();
     const user = userEvent.setup();
     render(<YouTubeApp initialVideos={mockVideos} />);
 
@@ -92,6 +126,7 @@ describe('YouTubeApp', () => {
   });
 
   it('sort options reorder videos', async () => {
+    const YouTubeApp = loadApp();
     const user = userEvent.setup();
     render(<YouTubeApp initialVideos={mockVideos} />);
     const getTitles = () =>
@@ -112,6 +147,7 @@ describe('YouTubeApp', () => {
   });
 
   it('handles videos missing metadata when sorting', async () => {
+    const YouTubeApp = loadApp();
     const user = userEvent.setup();
     const videosWithMissing = [
       ...mockVideos,
@@ -131,6 +167,7 @@ describe('YouTubeApp', () => {
   });
 
   it('fetches all pages from a playlist', async () => {
+    const YouTubeApp = loadApp();
     const responses = {
       channel: { items: [{ id: 'chan' }] },
       playlists: { items: [{ id: 'pl1', snippet: { title: 'PL1' } }] },
@@ -188,4 +225,99 @@ describe('YouTubeApp', () => {
     expect(screen.getByText('Video A')).toBeInTheDocument();
     expect(screen.getByText('Video B')).toBeInTheDocument();
   });
+
+  it('fetches multiple playlists concurrently and renders all videos', async () => {
+    const YouTubeApp = loadApp();
+    const originalFetch = global.fetch;
+    const responses = {
+      channel: { items: [{ id: 'chan' }] },
+      playlists: {
+        items: [
+          { id: 'pl1', snippet: { title: 'PL1' } },
+          { id: 'pl2', snippet: { title: 'PL2' } },
+        ],
+      },
+      pl1: {
+        items: [
+          {
+            snippet: {
+              resourceId: { videoId: 'a' },
+              title: 'Video A',
+              publishedAt: '2020-01-01T00:00:00Z',
+              thumbnails: { medium: { url: 'a.jpg' } },
+              channelTitle: 'x',
+            },
+          },
+        ],
+      },
+      pl2: {
+        items: [
+          {
+            snippet: {
+              resourceId: { videoId: 'c' },
+              title: 'Video C',
+              publishedAt: '2020-03-01T00:00:00Z',
+              thumbnails: { medium: { url: 'c.jpg' } },
+              channelTitle: 'x',
+            },
+          },
+        ],
+      },
+      favorites: { items: [] },
+    };
+
+    const resolvers = {};
+    global.fetch = jest.fn((url) => {
+      if (url.includes('channels'))
+        return Promise.resolve({ json: async () => responses.channel });
+      if (url.includes('playlists?'))
+        return Promise.resolve({ json: async () => responses.playlists });
+      if (url.includes('playlistItems')) {
+        const u = new URL(url);
+        const plId = u.searchParams.get('playlistId');
+        if (plId && plId.startsWith('LL'))
+          return Promise.resolve({ json: async () => responses.favorites });
+        return new Promise((resolve) => {
+          resolvers[plId] = () => resolve({ json: async () => responses[plId] });
+        });
+      }
+      return Promise.resolve({ json: async () => ({}) });
+    });
+
+    render(<YouTubeApp />);
+
+    await waitFor(() => {
+      expect(resolvers.pl1).toBeDefined();
+      expect(resolvers.pl2).toBeDefined();
+    });
+
+    resolvers.pl1();
+    resolvers.pl2();
+
+    const cards = await screen.findAllByTestId('video-card');
+    expect(cards).toHaveLength(2);
+    expect(screen.getByText('Video A')).toBeInTheDocument();
+    expect(screen.getByText('Video C')).toBeInTheDocument();
+
+    global.fetch = originalFetch;
+  });
+
+  it('category buttons and video cards retain transition classes', () => {
+    const YouTubeApp = loadApp();
+    render(<YouTubeApp initialVideos={mockVideos} />);
+    ['All', 'Dev', 'Cook'].forEach((name) => {
+      expect(screen.getByRole('button', { name })).toHaveClass('transition-colors');
+    });
+    screen
+      .getAllByTestId('video-card')
+      .forEach((card) => expect(card).toHaveClass('transition'));
+  });
+
+  it('renders videos with missing properties safely', () => {
+    const YouTubeApp = loadApp();
+    const incomplete = [{ id: '4' }];
+    render(<YouTubeApp initialVideos={incomplete} />);
+    expect(screen.getAllByTestId('video-card')).toHaveLength(1);
+  });
+
 });
