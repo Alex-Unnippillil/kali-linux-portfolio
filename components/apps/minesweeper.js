@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { registerGame } from '../../utils/gameEngine';
 
-const BOARD_SIZE = 8;
+export const BOARD_SIZE = 8;
 const MINES_COUNT = 10;
 
 // simple seeded pseudo random generator
@@ -84,7 +85,7 @@ const generateBoard = (seed, sx, sy) => {
   return board;
 };
 
-const revealCell = (board, x, y) => {
+export const revealCell = (board, x, y) => {
   const cell = board[x][y];
   if (cell.revealed || cell.flagged) return false;
   cell.revealed = true;
@@ -280,7 +281,7 @@ const Minesweeper = () => {
     setBoard(newBoard);
   };
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setBoard(null);
     setStatus('ready');
     setSeed(Math.floor(Math.random() * 2 ** 31));
@@ -290,7 +291,22 @@ const Minesweeper = () => {
     setBV(0);
     setCodeInput('');
     setFlags(0);
-  };
+  }, []);
+
+  const serialize = useCallback(
+    () => ({
+      board: board ? cloneBoard(board) : null,
+      status,
+      seed,
+      elapsed,
+      flags,
+    }),
+    [board, status, seed, elapsed, flags]
+  );
+
+  useEffect(() => {
+    registerGame('minesweeper', { reset, serialize });
+  }, [reset, serialize]);
 
   const copyCode = () => {
     if (typeof navigator !== 'undefined' && shareCode) {

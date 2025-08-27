@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import GameLayout from './GameLayout';
+import { registerGame } from '../../utils/gameEngine';
 
 const SIZE = 4;
 
@@ -28,7 +29,7 @@ const addRandomTile = (board, hard, count = 1) => {
   return board;
 };
 
-const slide = (row) => {
+export const slide = (row) => {
   const arr = row.filter((n) => n !== 0);
   for (let i = 0; i < arr.length - 1; i++) {
     if (arr[i] === arr[i + 1]) {
@@ -138,18 +139,27 @@ const Game2048 = () => {
 
   );
 
-  useEffect(() => {
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [handleKey]);
-
-  const reset = () => {
+  const reset = useCallback(() => {
     setBoard(initBoard(hardMode));
     setHistory([]);
     setWon(false);
     setLost(false);
     setAnimCells(new Set());
-  };
+  }, [hardMode, setBoard, setHistory, setWon, setLost]);
+
+  const serialize = useCallback(
+    () => ({ board: cloneBoard(board), won, lost, hardMode }),
+    [board, won, lost, hardMode]
+  );
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [handleKey]);
+
+  useEffect(() => {
+    registerGame('2048', { reset, serialize });
+  }, [reset, serialize]);
 
   const close = () => {
     document.getElementById('close-2048')?.click();
