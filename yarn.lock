@@ -6809,22 +6809,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"qr-code-styling@npm:^1.9.2":
-  version: 1.9.2
-  resolution: "qr-code-styling@npm:1.9.2"
-  dependencies:
-    qrcode-generator: "npm:^1.4.4"
-  checksum: 10c0/6296e115776ec7788dacc62f2ec0e54d861cfa2a82676bcf9adc693e8bce33552bd6bd92c9ff0478d2bff8610243f7010d7bd7bf85cf96fb41d8b60a36fa56e0
-  languageName: node
-  linkType: hard
-
-"qrcode-generator@npm:^1.4.4":
-  version: 1.5.2
-  resolution: "qrcode-generator@npm:1.5.2"
-  checksum: 10c0/4e0a43ba1c0212cf8ec39654cc7a5bebda96ee00453dc5732e98af4cf681c6786d2c189d4657d8d4fa6486f07573c1edb85fbb7af5e78972f843b7db8457a9b7
-  languageName: node
-  linkType: hard
-
 "qrcode@npm:^1.5.4":
   version: 1.5.4
   resolution: "qrcode@npm:1.5.4"
@@ -6835,6 +6819,13 @@ __metadata:
   bin:
     qrcode: bin/qrcode
   checksum: 10c0/ae1d57c9cff6099639a590b432c71b15e3bd3905ce4353e6d00c95dee6bb769a8f773f6a7575ecc1b8ed476bf79c5138a4a65cb380c682de3b926d7205d34d10
+  languageName: node
+  linkType: hard
+
+"qrcodejs2@npm:^0.0.2":
+  version: 0.0.2
+  resolution: "qrcodejs2@npm:0.0.2"
+  checksum: 10c0/c346cfeca185514467f394a7ee6a4fc392a444e63c97afde9bbdd5d5a685aef3f97c88d9062b2af6a0295b65c35aef0ace7c5a1716aee5db78ba5a439676e504
   languageName: node
   linkType: hard
 
@@ -8278,8 +8269,8 @@ __metadata:
     phaser: "npm:3.70.0"
     postcss: "npm:^8.4.21"
     prop-types: "npm:^15.8.1"
-    qr-code-styling: "npm:^1.9.2"
     qrcode: "npm:^1.5.4"
+    qrcodejs2: "npm:^0.0.2"
     react: "npm:^18.2.0"
     react-activity-calendar: "npm:^2.7.13"
     react-cytoscapejs: "npm:^2.0.0"

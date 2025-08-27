@@ -1,18 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import QRCodeStyling from 'qr-code-styling';
+
 
 const errorLevels = {
-  L: { label: 'Low', value: 1, percent: 7 },
-  M: { label: 'Medium', value: 2, percent: 15 },
-  Q: { label: 'Quartile', value: 3, percent: 25 },
-  H: { label: 'High', value: 4, percent: 30 },
+  L: { label: 'Low', percent: 7 },
+  M: { label: 'Medium', percent: 15 },
+  Q: { label: 'Quartile', percent: 25 },
+  H: { label: 'High', percent: 30 },
 };
-
-const cornerStyles = [
-  { value: 'square', label: 'Square' },
-  { value: 'extra-rounded', label: 'Rounded' },
-  { value: 'dot', label: 'Dot' },
-];
 
 const getLuminance = (hex) => {
   const rgb = hex
@@ -35,13 +29,16 @@ const QRTool = () => {
   const [message, setMessage] = useState('');
   const [darkColor, setDarkColor] = useState('#000000');
   const [lightColor, setLightColor] = useState('#ffffff');
-  const [cornerStyle, setCornerStyle] = useState('square');
   const [errorLevel, setErrorLevel] = useState('M');
+  const [size, setSize] = useState(256);
   const [contrastMsg, setContrastMsg] = useState('');
   const [contrastOk, setContrastOk] = useState(true);
+  const [isValid, setIsValid] = useState(false);
+  const [copyMsg, setCopyMsg] = useState('');
 
   const generateRef = useRef(null);
   const qrRef = useRef(null);
+  const qrClassRef = useRef(null);
   const scanCanvasRef = useRef(null);
   const videoRef = useRef(null);
   const animationRef = useRef(null);
@@ -53,8 +50,9 @@ const QRTool = () => {
     prefersReducedMotion.current = window.matchMedia(
       '(prefers-reduced-motion: reduce)'
     ).matches;
-    qrRef.current = new QRCodeStyling({ width: 256, height: 256, type: 'canvas' });
-    qrRef.current.append(generateRef.current);
+    import('qrcodejs2').then((mod) => {
+      qrClassRef.current = mod.default;
+    });
   }, []);
 
   useEffect(() => {
@@ -65,18 +63,33 @@ const QRTool = () => {
   }, [darkColor, lightColor]);
 
   const generate = () => {
-    if (!text || !contrastOk) return;
-    qrRef.current.update({
-      data: text,
-      qrOptions: { errorCorrectionLevel: errorLevel },
-      dotsOptions: { color: darkColor },
-      backgroundOptions: { color: lightColor },
-      cornersSquareOptions: { type: cornerStyle, color: darkColor },
+    if (!text || !contrastOk || !qrClassRef.current) return;
+    generateRef.current.innerHTML = '';
+    qrRef.current = new qrClassRef.current(generateRef.current, {
+      text,
+      width: size,
+      height: size,
+      colorDark: darkColor,
+      colorLight: lightColor,
+      correctLevel: qrClassRef.current.CorrectLevel[errorLevel],
     });
   };
 
   const download = () => {
-    qrRef.current?.download({ name: 'qr', extension: 'png' });
+    const canvas = generateRef.current?.querySelector('canvas');
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = 'qr.png';
+    link.click();
+  };
+
+  const copyDecoded = () => {
+    if (!isValid || !decodedText) return;
+    navigator.clipboard.writeText(decodedText).then(() => {
+      setCopyMsg('Copied!');
+      setTimeout(() => setCopyMsg(''), 2000);
+    });
   };
 
   const initWorker = () => {
@@ -85,7 +98,10 @@ const QRTool = () => {
         new URL('./scan.worker.js', import.meta.url)
       );
       workerRef.current.onmessage = (e) => {
-        setDecodedText(e.data || 'No QR code found');
+        const val = e.data;
+        setDecodedText(val || 'No QR code found');
+        setIsValid(!!val);
+        setCopyMsg('');
       };
     }
   };
@@ -162,6 +178,8 @@ const QRTool = () => {
       workerRef.current = null;
     }
     setMessage('');
+    setDecodedText('');
+    setIsValid(false);
   };
 
   useEffect(() => () => stopCamera(), []);
@@ -198,19 +216,17 @@ const QRTool = () => {
             />
           </label>
           <label className="flex items-center space-x-2">
-            <span>Corners</span>
-            <select
-              value={cornerStyle}
-              onChange={(e) => setCornerStyle(e.target.value)}
-              className="text-black p-1 rounded"
-              aria-label="Select corner style"
-            >
-              {cornerStyles.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
+            <span>Size</span>
+            <input
+              type="range"
+              min="128"
+              max="512"
+              step="32"
+              value={size}
+              onChange={(e) => setSize(Number(e.target.value))}
+              aria-label="Select size"
+            />
+            <span className="w-12 text-right">{size}px</span>
           </label>
           <label className="flex items-center space-x-2">
             <span>EC Level</span>
@@ -252,7 +268,12 @@ const QRTool = () => {
             Download
           </button>
         </div>
-        <div ref={generateRef} className="bg-white w-64 h-64" aria-label="Generated QR code" />
+        <div
+          ref={generateRef}
+          className="bg-white"
+          style={{ width: size, height: size }}
+          aria-label="Generated QR code"
+        />
       </div>
 
       <div>
@@ -296,9 +317,24 @@ const QRTool = () => {
           </p>
         )}
         {decodedText && (
-          <p className="mt-2 break-all" aria-live="polite">
-            Decoded: {decodedText}
-          </p>
+          <div
+            className="mt-2 break-all flex items-center space-x-2"
+            aria-live="polite"
+          >
+            <span>Decoded: {decodedText}</span>
+            {isValid && (
+              <button
+                onClick={copyDecoded}
+                className="px-2 py-1 bg-blue-700 hover:bg-blue-600 rounded text-white"
+                aria-label="Copy decoded text"
+              >
+                {copyMsg || 'Copy'}
+              </button>
+            )}
+            <span aria-label={isValid ? 'Valid QR code' : 'Invalid QR code'}>
+              {isValid ? '✅' : '❌'}
+            </span>
+          </div>
         )}
         <canvas ref={scanCanvasRef} className="hidden" />
       </div>
