@@ -1,281 +1,211 @@
-import React, { useState, useEffect } from 'react';
-import useGameControls from './useGameControls';
+import React, { useRef, useEffect, useState } from 'react';
 
 const ROWS = 6;
 const COLS = 7;
-const CELL_SIZE = 40; // tailwind h-10 w-10
-const GAP = 4; // gap-1 => 4px
-const SLOT = CELL_SIZE + GAP;
-const ANIM_MS = 300;
+const SIZE = 80;
 
-const createEmptyBoard = () => Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-
-const getValidRow = (board, col) => {
-  for (let r = ROWS - 1; r >= 0; r--) {
-    if (!board[r][col]) return r;
-  }
-  return -1;
-};
-
-const checkWinner = (board, player) => {
-  const dirs = [
-    { dr: 0, dc: 1 },
-    { dr: 1, dc: 0 },
-    { dr: 1, dc: 1 },
-    { dr: 1, dc: -1 },
-  ];
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (board[r][c] !== player) continue;
-      for (const { dr, dc } of dirs) {
-        const cells = [];
-        for (let i = 0; i < 4; i++) {
-          const rr = r + dr * i;
-          const cc = c + dc * i;
-          if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS) break;
-          if (board[rr][cc] !== player) break;
-          cells.push({ r: rr, c: cc });
-        }
-        if (cells.length === 4) return cells;
-      }
-    }
-  }
-  return null;
-};
-
-const isBoardFull = (board) => board[0].every(Boolean);
-
-const evaluateWindow = (window, player) => {
-  const opp = player === 'red' ? 'yellow' : 'red';
-  let score = 0;
-  const playerCount = window.filter((v) => v === player).length;
-  const oppCount = window.filter((v) => v === opp).length;
-  const empty = window.filter((v) => v === null).length;
-  if (playerCount === 4) score += 100;
-  else if (playerCount === 3 && empty === 1) score += 5;
-  else if (playerCount === 2 && empty === 2) score += 2;
-  if (oppCount === 3 && empty === 1) score -= 4;
-  return score;
-};
-
-const scorePosition = (board, player) => {
-  let score = 0;
-  const center = Math.floor(COLS / 2);
-  const centerArray = board.map((row) => row[center]);
-  score += centerArray.filter((v) => v === player).length * 3;
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS - 3; c++) {
-      score += evaluateWindow(board[r].slice(c, c + 4), player);
-    }
-  }
-  for (let c = 0; c < COLS; c++) {
-    for (let r = 0; r < ROWS - 3; r++) {
-      score += evaluateWindow(
-        [board[r][c], board[r + 1][c], board[r + 2][c], board[r + 3][c]],
-        player
-      );
-    }
-  }
-  for (let r = 0; r < ROWS - 3; r++) {
-    for (let c = 0; c < COLS - 3; c++) {
-      score += evaluateWindow(
-        [board[r][c], board[r + 1][c + 1], board[r + 2][c + 2], board[r + 3][c + 3]],
-        player
-      );
-    }
-  }
-  for (let r = 3; r < ROWS; r++) {
-    for (let c = 0; c < COLS - 3; c++) {
-      score += evaluateWindow(
-        [board[r][c], board[r - 1][c + 1], board[r - 2][c + 2], board[r - 3][c + 3]],
-        player
-      );
-    }
-  }
-  return score;
-};
-
-const getValidLocations = (board) => {
-  const locations = [];
-  for (let c = 0; c < COLS; c++) {
-    if (!board[0][c]) locations.push(c);
-  }
-  return locations;
-};
-
-const minimax = (board, depth, alpha, beta, maximizing) => {
-  const validLocations = getValidLocations(board);
-  const isTerminal =
-    checkWinner(board, 'red') ||
-    checkWinner(board, 'yellow') ||
-    validLocations.length === 0;
-  if (depth === 0 || isTerminal) {
-    if (checkWinner(board, 'yellow')) return { score: 1000000 };
-    if (checkWinner(board, 'red')) return { score: -1000000 };
-    return { score: scorePosition(board, 'yellow') };
-  }
-  if (maximizing) {
-    let value = -Infinity;
-    let column = validLocations[0];
-    for (const col of validLocations) {
-      const row = getValidRow(board, col);
-      const newBoard = board.map((r) => [...r]);
-      newBoard[row][col] = 'yellow';
-      const score = minimax(newBoard, depth - 1, alpha, beta, false).score;
-      if (score > value) {
-        value = score;
-        column = col;
-      }
-      alpha = Math.max(alpha, value);
-      if (alpha >= beta) break;
-    }
-    return { column, score: value };
-  } else {
-    let value = Infinity;
-    let column = validLocations[0];
-    for (const col of validLocations) {
-      const row = getValidRow(board, col);
-      const newBoard = board.map((r) => [...r]);
-      newBoard[row][col] = 'red';
-      const score = minimax(newBoard, depth - 1, alpha, beta, true).score;
-      if (score < value) {
-        value = score;
-        column = col;
-      }
-      beta = Math.min(beta, value);
-      if (alpha >= beta) break;
-    }
-    return { column, score: value };
-  }
-};
+const createBoard = () => Array.from({ length: ROWS }, () => Array(COLS).fill(0));
 
 const ConnectFour = () => {
-  const [board, setBoard] = useState(createEmptyBoard());
-  const [player, setPlayer] = useState('red');
-  const [winner, setWinner] = useState(null);
-  const [winningCells, setWinningCells] = useState([]);
-  const [scores, setScores] = useState({ red: 0, yellow: 0 });
-  const [depth, setDepth] = useState(4);
-  const [animDisc, setAnimDisc] = useState(null);
-  const [selectedCol, setSelectedCol] = useGameControls(COLS, (col) => dropDisc(col));
+  const canvasRef = useRef(null);
+  const dropRef = useRef(null);
+  const boardRef = useRef(createBoard());
+  const pausedRef = useRef(false);
+  const soundRef = useRef(true);
 
-  const finalizeMove = (newBoard, color) => {
-    const winCells = checkWinner(newBoard, color);
-    if (winCells) {
-      setWinner(color);
-      setWinningCells(winCells);
-      setScores((s) => ({ ...s, [color]: s[color] + 1 }));
-    } else if (isBoardFull(newBoard)) {
-      setWinner('draw');
-    } else {
-      setPlayer(color === 'red' ? 'yellow' : 'red');
-      if (color === 'red') {
-        setTimeout(aiMove, 300);
+  const [, setBoardState] = useState(boardRef.current);
+  const [current, setCurrent] = useState(1); // 1 red, 2 yellow
+  const [winner, setWinner] = useState(null);
+  const [paused, setPaused] = useState(false);
+  const [sound, setSound] = useState(true);
+  const [highScore, setHighScore] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('connect-four-highscore');
+      return saved ? parseInt(saved, 10) : 0;
+    }
+    return 0;
+  });
+  const [scores, setScores] = useState({ red: 0, yellow: 0 });
+  const highRef = useRef(0);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  useEffect(() => {
+    soundRef.current = sound;
+  }, [sound]);
+
+  useEffect(() => {
+    highRef.current = highScore;
+    localStorage.setItem('connect-four-highscore', String(highScore));
+  }, [highScore]);
+
+  const reset = () => {
+    boardRef.current = createBoard();
+    setBoardState(boardRef.current);
+    setWinner(null);
+    setCurrent(1);
+    dropRef.current = null;
+    setScores({ red: 0, yellow: 0 });
+  };
+
+  const togglePause = () => setPaused((p) => !p);
+  const toggleSound = () => setSound((s) => !s);
+
+  const beep = () => {
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 400;
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start();
+      gain.gain.setValueAtTime(0.2, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.1);
+      osc.stop(ac.currentTime + 0.1);
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const handleClick = (e) => {
+    if (winner || dropRef.current || pausedRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const col = Math.floor((e.clientX - rect.left) / SIZE);
+    if (col < 0 || col >= COLS) return;
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (boardRef.current[r][col] === 0) {
+        dropRef.current = { col, row: r, y: -SIZE, color: current };
+        break;
       }
     }
   };
 
-  const dropDisc = (col, color = player) => {
-    if (winner || animDisc) return;
-    const row = getValidRow(board, col);
-    if (row === -1) return;
-    setAnimDisc({ col, row, color, y: -1 });
-    setTimeout(() => {
-      setAnimDisc((d) => ({ ...d, y: row }));
-    }, 20);
-    setTimeout(() => {
-      const newBoard = board.map((r) => [...r]);
-      newBoard[row][col] = color;
-      setBoard(newBoard);
-      setAnimDisc(null);
-      finalizeMove(newBoard, color);
-    }, ANIM_MS + 20);
+  const checkWin = (board, row, col, color) => {
+    const dirs = [
+      [1, 0],
+      [0, 1],
+      [1, 1],
+      [1, -1],
+    ];
+    for (const [dx, dy] of dirs) {
+      let count = 1;
+      for (let i = 1; i < 4; i++) {
+        const r = row + dy * i;
+        const c = col + dx * i;
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS || board[r][c] !== color) break;
+        count++;
+      }
+      for (let i = 1; i < 4; i++) {
+        const r = row - dy * i;
+        const c = col - dx * i;
+        if (r < 0 || r >= ROWS || c < 0 || c >= COLS || board[r][c] !== color) break;
+        count++;
+      }
+      if (count >= 4) return true;
+    }
+    return false;
   };
 
-  const aiMove = () => {
-    const { column } = minimax(board, depth, -Infinity, Infinity, true);
-    if (column !== undefined) dropDisc(column, 'yellow');
-  };
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    canvas.width = COLS * SIZE;
+    canvas.height = ROWS * SIZE;
 
-  const rematch = () => {
-    setBoard(createEmptyBoard());
-    setWinner(null);
-    setWinningCells([]);
-    setPlayer('red');
-  };
+    let animId;
+    const render = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const x = c * SIZE + SIZE / 2;
+          const y = r * SIZE + SIZE / 2;
+          ctx.beginPath();
+          ctx.arc(x, y, SIZE / 2 - 5, 0, Math.PI * 2);
+          const cell = boardRef.current[r][c];
+          ctx.fillStyle = cell === 1 ? '#ef4444' : cell === 2 ? '#facc15' : '#1e3a8a';
+          ctx.fill();
+        }
+      }
+
+      if (dropRef.current && !pausedRef.current) {
+        const p = dropRef.current;
+        p.y += 8;
+        const target = p.row * SIZE;
+        if (p.y >= target) {
+          boardRef.current[p.row][p.col] = p.color;
+          setBoardState(boardRef.current.map((row) => row.slice()));
+          dropRef.current = null;
+          if (soundRef.current) beep();
+          if (checkWin(boardRef.current, p.row, p.col, p.color)) {
+            const winCol = p.color === 1 ? 'red' : 'yellow';
+            setWinner(winCol);
+            setScores((s) => {
+              const next = { ...s, [winCol]: s[winCol] + 1 };
+              const best = Math.max(next.red, next.yellow);
+              if (best > highRef.current) setHighScore(best);
+              return next;
+            });
+          } else if (boardRef.current[0].every((v) => v !== 0)) {
+            setWinner('draw');
+          } else {
+            setCurrent((c) => (c === 1 ? 2 : 1));
+          }
+        } else {
+          ctx.beginPath();
+          ctx.arc(p.col * SIZE + SIZE / 2, p.y + SIZE / 2, SIZE / 2 - 5, 0, Math.PI * 2);
+          ctx.fillStyle = p.color === 1 ? '#ef4444' : '#facc15';
+          ctx.fill();
+        }
+      }
+
+      animId = requestAnimationFrame(render);
+    };
+    animId = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animId);
+  }, []);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <div className="mb-2 flex gap-4 items-center">
         <div>Red: {scores.red}</div>
         <div>Yellow: {scores.yellow}</div>
-        <div>
-          Depth:
-          <select
-            className="ml-1 bg-gray-700"
-            value={depth}
-            onChange={(e) => setDepth(parseInt(e.target.value, 10))}
-          >
-            {[1, 2, 3, 4, 5].map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      {winner && (
-        <div className="mb-2 capitalize">
-          {winner === 'draw' ? 'Draw!' : `${winner} wins!`}
-        </div>
-      )}
-      <div className="relative">
-        <div className="grid grid-cols-7 gap-1">
-          {board.map((row, rIdx) =>
-            row.map((cell, cIdx) => {
-              const isWin = winningCells.some((p) => p.r === rIdx && p.c === cIdx);
-              return (
-                <div
-                  key={`${rIdx}-${cIdx}`}
-                  className={`h-10 w-10 flex items-center justify-center cursor-pointer ${
-                    cIdx === selectedCol ? 'bg-blue-600' : 'bg-blue-700'
-                  }`}
-                  onClick={() => dropDisc(cIdx)}
-                  onMouseEnter={() => setSelectedCol(cIdx)}
-                >
-                  {cell && (
-                    <div
-                      className={`h-8 w-8 rounded-full ${
-                        cell === 'red' ? 'bg-red-500' : 'bg-yellow-400'
-                      } ${isWin ? 'ring-4 ring-white' : ''}`}
-                    />
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-        {animDisc && (
-          <div
-            className="absolute left-0 top-0 transition-transform duration-300 ease-out"
-            style={{
-              transform: `translateX(${animDisc.col * SLOT}px) translateY(${animDisc.y * SLOT}px)`,
-            }}
-          >
-            <div
-              className={`h-8 w-8 rounded-full ${
-                animDisc.color === 'red' ? 'bg-red-500' : 'bg-yellow-400'
-              }`}
-            />
-          </div>
+        <div>High: {highScore}</div>
+        {winner && (
+          <div className="capitalize">{winner === 'draw' ? 'Draw' : `${winner} wins`}</div>
         )}
       </div>
-      <button
-        className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={rematch}
-      >
-        Rematch
-      </button>
+      <canvas
+        ref={canvasRef}
+        width={COLS * SIZE}
+        height={ROWS * SIZE}
+        className="bg-blue-700 cursor-pointer"
+        onClick={handleClick}
+      />
+      <div className="mt-4 flex gap-2">
+        <button className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded" onClick={reset}>
+          Reset
+        </button>
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={togglePause}
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={toggleSound}
+        >
+          {sound ? 'Sound: On' : 'Sound: Off'}
+        </button>
+      </div>
     </div>
   );
 };
