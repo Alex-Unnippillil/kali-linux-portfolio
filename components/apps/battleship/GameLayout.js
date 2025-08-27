@@ -1,6 +1,6 @@
 import React from 'react';
 
-const GameLayout = ({ children, difficulty, onDifficultyChange, onRestart, stats, showHeatmap, onToggleHeatmap }) => {
+const GameLayout = ({ children, difficulty, onDifficultyChange, onRestart, stats, showHeatmap, onToggleHeatmap, salvo, onToggleSalvo, fog, onToggleFog }) => {
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto">
       <div className="flex items-center space-x-2 mb-2">
@@ -20,6 +20,12 @@ const GameLayout = ({ children, difficulty, onDifficultyChange, onRestart, stats
         </button>
         <button className="px-2 py-1 bg-gray-700" onClick={onToggleHeatmap}>
           {showHeatmap ? 'Hide' : 'Show'} Heatmap
+        </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={onToggleSalvo}>
+          {salvo ? 'Salvo: On' : 'Salvo: Off'}
+        </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={onToggleFog}>
+          {fog ? 'Reveal Board' : 'Fog of War'}
         </button>
         {stats && (
           <div className="ml-4 text-sm">
