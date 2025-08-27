@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useReducer } from 'react';
 import ReactGA from 'react-ga4';
 import { BlackjackGame, handValue, basicStrategy, cardValue } from './engine';
+import usePersistentState from '../../../hooks/usePersistentState';
 
 const CHIP_VALUES = [1, 5, 25, 100];
 
@@ -53,6 +54,11 @@ const Blackjack = () => {
   const [shuffling, setShuffling] = useState(false);
   const [showCount, setShowCount] = useState(false);
   const [runningCount, setRunningCount] = useState(0);
+  const [highest, setHighest] = usePersistentState(
+    'blackjack-highest-bankroll',
+    gameRef.current.bankroll,
+    (v) => typeof v === 'number',
+  );
 
   const [_, dispatch] = useReducer(gameReducer, {
     gameRef,
@@ -62,6 +68,10 @@ const Blackjack = () => {
 
   const bankroll = gameRef.current.bankroll;
   const availableBankroll = bankroll - bet;
+
+  useEffect(() => {
+    if (bankroll > highest) setHighest(bankroll);
+  }, [bankroll, highest, setHighest]);
 
   const update = () => {
     setDealerHand([...gameRef.current.dealerHand]);
@@ -172,14 +182,15 @@ const Blackjack = () => {
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
       <div className="mb-2 flex items-center space-x-4">
         <div>Bankroll: {availableBankroll}</div>
+        <div>High: {highest}</div>
         <div className={`h-8 w-6 bg-gray-700 ${shuffling ? 'shuffle' : ''}`}></div>
         {showCount && <div>RC: {runningCount}</div>}
       </div>
       <div className="mb-2 flex items-center space-x-2">
-        <button className="px-2 py-1 bg-gray-700" onClick={() => setShowHints(!showHints)}>
+        <button className="px-2 py-1 bg-gray-700" onClick={() => setShowHints(!showHints)} tabIndex={0}>
           {showHints ? 'Hide Hints' : 'Show Hints'}
         </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={() => setShowCount(!showCount)}>
+        <button className="px-2 py-1 bg-gray-700" onClick={() => setShowCount(!showCount)} tabIndex={0}>
           {showCount ? 'Hide Count' : 'Show Count'}
         </button>
         <label className="flex items-center space-x-1">
@@ -210,14 +221,15 @@ const Blackjack = () => {
                 }`}
                 onClick={() => bet + v <= bankroll && setBet(bet + v)}
                 title={`Add ${v} chip`}
+                tabIndex={0}
               >
                 {v}
               </button>
             ))}
-            <button className="px-2 py-1 bg-gray-700" onClick={() => setBet(0)}>
+            <button className="px-2 py-1 bg-gray-700" onClick={() => setBet(0)} tabIndex={0}>
               Clear
             </button>
-            <button className="px-2 py-1 bg-gray-700" onClick={start} disabled={bet === 0}>
+            <button className="px-2 py-1 bg-gray-700" onClick={start} disabled={bet === 0} tabIndex={0}>
               Deal
             </button>
           </div>
@@ -232,22 +244,61 @@ const Blackjack = () => {
         <div key={idx} className="mb-2">
           <div className="mb-1">{`Player${playerHands.length > 1 ? ` ${idx + 1}` : ''}`}</div>
           {renderHand(hand, false, true)}
-          {idx === current && playerHands.length > 0 && (
-            <div className="mt-2 flex flex-col items-start">
-              <div className="flex space-x-2">
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'hit' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('hit')}>Hit</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'stand' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('stand')}>Stand</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'double' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('double')}>Double</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'split' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('split')}>Split</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'surrender' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('surrender')}>Surrender</button>
-              </div>
-              {showHints && rec && <div className="mt-1 text-sm">Hint: {rec.toUpperCase()}</div>}
-            </div>
-          )}
+            {idx === current && playerHands.length > 0 && (() => {
+              const canDoubleAction = bankroll >= hand.bet && hand.cards.length === 2;
+              const canSplitAction =
+                hand.cards.length === 2 &&
+                cardValue(hand.cards[0]) === cardValue(hand.cards[1]) &&
+                bankroll >= hand.bet;
+              return (
+                <div className="mt-2 flex flex-col items-start">
+                  <div className="flex space-x-2">
+                    <button
+                      className={`px-3 py-1 bg-gray-700 ${rec === 'hit' ? 'border-2 border-yellow-400' : ''}`}
+                      onClick={() => act('hit')}
+                      tabIndex={0}
+                    >
+                      Hit
+                    </button>
+                    <button
+                      className={`px-3 py-1 bg-gray-700 ${rec === 'stand' ? 'border-2 border-yellow-400' : ''}`}
+                      onClick={() => act('stand')}
+                      tabIndex={0}
+                    >
+                      Stand
+                    </button>
+                    <button
+                      className={`px-3 py-1 bg-gray-700 ${rec === 'double' ? 'border-2 border-yellow-400' : ''}`}
+                      onClick={() => act('double')}
+                      disabled={!canDoubleAction}
+                      tabIndex={0}
+                    >
+                      Double
+                    </button>
+                    <button
+                      className={`px-3 py-1 bg-gray-700 ${rec === 'split' ? 'border-2 border-yellow-400' : ''}`}
+                      onClick={() => act('split')}
+                      disabled={!canSplitAction}
+                      tabIndex={0}
+                    >
+                      Split
+                    </button>
+                    <button
+                      className={`px-3 py-1 bg-gray-700 ${rec === 'surrender' ? 'border-2 border-yellow-400' : ''}`}
+                      onClick={() => act('surrender')}
+                      tabIndex={0}
+                    >
+                      Surrender
+                    </button>
+                  </div>
+                  {showHints && rec && <div className="mt-1 text-sm">Hint: {rec.toUpperCase()}</div>}
+                </div>
+              );
+            })()}
         </div>
       ))}
       {showInsurance && (
-        <button className="px-3 py-1 bg-gray-700 mb-2" onClick={takeInsurance}>
+        <button className="px-3 py-1 bg-gray-700 mb-2" onClick={takeInsurance} tabIndex={0}>
           Take Insurance
         </button>
       )}
