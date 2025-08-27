@@ -54,6 +54,11 @@ export class Shoe {
     else if (['10', 'J', 'Q', 'K', 'A'].includes(v)) this.runningCount -= 1;
     return card;
   }
+
+  currentPenetration() {
+    const total = this.decks * 52;
+    return this.dealt / total;
+  }
 }
 
 export const cardValue = (card) => {
@@ -85,6 +90,15 @@ export const isSoft = (hand) => {
   });
   return aces > 0 && total <= 21;
 };
+
+// approximate house edge percentages based on common rules
+export function houseEdge({ decks = 6, hitSoft17 = true, surrender = true } = {}) {
+  const base = { 1: 0.17, 2: 0.35, 4: 0.48, 6: 0.54, 8: 0.56 };
+  let edge = base[decks] ?? 0.54 + (decks - 6) * 0.02;
+  if (hitSoft17) edge += 0.19; // dealer hits soft 17 increases edge
+  if (surrender) edge -= 0.08; // late surrender decreases edge
+  return edge;
+}
 
 // Basic strategy for 4-8 decks, dealer stands on soft 17, double after split allowed
 export function basicStrategy(playerCards, dealerUpCard, options = {}) {
@@ -139,11 +153,12 @@ export function basicStrategy(playerCards, dealerUpCard, options = {}) {
 }
 
 export class BlackjackGame {
-  constructor({ decks = 6, bankroll = 10000, hitSoft17 = true, penetration = 0.75 } = {}) {
+  constructor({ decks = 6, bankroll = 10000, hitSoft17 = true, penetration = 0.75, allowSurrender = true } = {}) {
     this.shoe = new Shoe(decks, penetration);
     this.bankroll = bankroll; // in chips (integers)
     this.stats = { wins: 0, losses: 0, pushes: 0, hands: 0 };
     this.hitSoft17 = hitSoft17;
+    this.allowSurrender = allowSurrender;
     this.resetRound();
   }
 
@@ -219,6 +234,7 @@ export class BlackjackGame {
   }
 
   surrender() {
+    if (!this.allowSurrender) throw new Error('Surrender not allowed');
     const hand = this.currentHand();
     if (hand.cards.length !== 2 || hand.finished) throw new Error('Cannot surrender');
     hand.finished = true;
