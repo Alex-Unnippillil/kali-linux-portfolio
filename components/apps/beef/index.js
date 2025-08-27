@@ -11,6 +11,12 @@ export default function Beef() {
 
   const baseUrl = process.env.NEXT_PUBLIC_BEEF_URL || 'http://127.0.0.1:3000';
 
+  const getStatus = (hook) => {
+    if (hook.status) return hook.status;
+    if (typeof hook.online === 'boolean') return hook.online ? 'online' : 'offline';
+    return 'idle';
+  };
+
   const fetchHooks = useCallback(async () => {
     try {
       const res = await fetch(`${baseUrl}/api/hooks`);
@@ -89,19 +95,33 @@ export default function Beef() {
             Refresh
           </button>
         </div>
-        <ul>
-          {hooks.map((hook) => (
-            <li
-              key={hook.session || hook.id}
-              onClick={() => setSelected(hook.session || hook.id)}
-              className={`p-2 cursor-pointer hover:bg-ub-gray-50 ${
-                selected === (hook.session || hook.id) ? 'bg-ub-gray-50 text-black' : ''
-              }`}
-            >
-              {hook.name || hook.session || hook.id}
-            </li>
-          ))}
-        </ul>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-2">
+          {hooks.length === 0 && (
+            <p className="col-span-full text-center text-sm">No hooks yet.</p>
+          )}
+          {hooks.map((hook) => {
+            const id = hook.session || hook.id;
+            const status = getStatus(hook);
+            return (
+              <div
+                key={id}
+                onClick={() => setSelected(id)}
+                className={`flex flex-col items-center p-2 cursor-pointer rounded hover:bg-ub-gray-50 ${
+                  selected === id ? 'bg-ub-gray-50 text-black' : ''
+                }`}
+              >
+                <img
+                  src={`/themes/Yaru/apps/beef-${status}.svg`}
+                  alt={status}
+                  className="w-12 h-12 mb-1"
+                />
+                <span className="text-xs text-center truncate w-full">
+                  {hook.name || id}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
       <div className="flex-1 p-4 overflow-y-auto">
         {selected ? (
