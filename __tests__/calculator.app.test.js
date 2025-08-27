@@ -18,7 +18,8 @@ function setupDom() {
       <div id="history"></div>
       <div id="paren-indicator"></div>
       <button id="print-tape"></button>
-    </body></html>`
+    </body></html>`,
+    { url: 'https://example.org' }
   );
   global.window = dom.window;
   global.document = dom.window.document;

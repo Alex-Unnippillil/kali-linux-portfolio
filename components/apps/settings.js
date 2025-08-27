@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../../hooks/useTheme';
-import { setWallpaper, resetSettings } from '../../utils/settingsStore';
+import { setWallpaper, resetSettings, getAccent, setAccent as saveAccent } from '../../utils/settingsStore';
 
 export function Settings(props) {
     const { theme, setTheme } = useTheme();
-    const [accent, setAccent] = useState('#4f46e5');
+    const [accent, setAccent] = useState(() => getAccent());
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
 
@@ -62,23 +62,30 @@ export function Settings(props) {
                 liveRegion.current.textContent = msg;
             }
         });
+        document.documentElement.style.setProperty('--color-accent', accent);
+        document.documentElement.style.setProperty('--color-accent-foreground', accentText());
+        saveAccent(accent);
         return () => cancelAnimationFrame(raf);
     }, [accent, theme]);
+
+    const toggleTheme = () => {
+        const order = ['light', 'dark', 'system'];
+        const next = order[(order.indexOf(theme) + 1) % order.length];
+        setTheme(next);
+    };
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(${wallpapers[props.currBgImgName]})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
             </div>
-            <div className="flex justify-center my-4">
+            <div className="flex justify-center my-4 items-center">
                 <label className="mr-2 text-ubt-grey">Theme:</label>
-                <select
-                    value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
+                <button
+                    onClick={toggleTheme}
                     className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
                 >
-                    <option value="dark">Dark</option>
-                    <option value="light">Light</option>
-                </select>
+                    {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                </button>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
@@ -91,15 +98,9 @@ export function Settings(props) {
                 />
             </div>
             <div className="flex justify-center my-4">
-                <div
-                    className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
-                    style={{ backgroundColor: theme === 'dark' ? '#000000' : '#ffffff', color: theme === 'dark' ? '#ffffff' : '#000000' }}
-                >
+                <div className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none bg-white text-black dark:bg-black dark:text-white">
                     <p className="mb-2 text-center">Preview</p>
-                    <button
-                        className="px-2 py-1 rounded"
-                        style={{ backgroundColor: accent, color: accentText() }}
-                    >
+                    <button className="px-2 py-1 rounded bg-accent text-accent-foreground">
                         Accent
                     </button>
                     <p className={`mt-2 text-sm text-center ${contrast >= 4.5 ? 'text-green-400' : 'text-red-400'}`}>

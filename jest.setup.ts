@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import { TextEncoder, TextDecoder } from 'util';
 
 // jsdom does not provide a global Image constructor which is used by
 // some components (e.g. window borders). A minimal mock is sufficient
@@ -14,6 +15,22 @@ class ImageMock {
 
 // @ts-ignore - allow overriding the global Image for the test env
 global.Image = ImageMock as unknown as typeof Image;
+
+// Polyfill TextEncoder/TextDecoder for node < 11
+// @ts-ignore
+if (typeof global.TextEncoder === 'undefined') global.TextEncoder = TextEncoder;
+// @ts-ignore
+if (typeof global.TextDecoder === 'undefined') global.TextDecoder = TextDecoder as any;
+
+// Ensure localStorage is available for tests that rely on it
+// @ts-ignore
+if (typeof global.localStorage === 'undefined') {
+  const { JSDOM } = require('jsdom');
+  const { window } = new JSDOM('', { url: 'https://example.org' });
+  global.window = window as any;
+  global.document = window.document as any;
+  global.localStorage = window.localStorage as any;
+}
 
 // Provide a minimal canvas mock so libraries like xterm.js can run under JSDOM
 // @ts-ignore
