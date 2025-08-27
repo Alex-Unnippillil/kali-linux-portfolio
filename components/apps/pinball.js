@@ -1,42 +1,52 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
-const WIDTH = 400;
-const HEIGHT = 500;
+import {
+  createGame,
+  update,
+  nudge,
+  flippersEnabled,
+  WIDTH,
+  HEIGHT,
+  FLOOR,
+} from './pinballPhysics';
 
 const Pinball = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+  const gameRef = useRef(createGame());
+
+  const setFlipper = (side, value) => {
+    gameRef.current.flippers[side] = value;
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const width = WIDTH;
-    const height = HEIGHT;
-
-    const ball = { x: width / 2, y: 50, vx: 100, vy: 0, r: 8 };
-    const gravity = 500; // px per second^2
-    const flippers = { left: false, right: false };
-    const floor = height - 20;
+    const game = gameRef.current;
 
     const keydown = (e) => {
-      if (e.key === 'ArrowLeft') flippers.left = true;
-      if (e.key === 'ArrowRight') flippers.right = true;
+      if (e.key === 'ArrowLeft') setFlipper('left', true);
+      if (e.key === 'ArrowRight') setFlipper('right', true);
     };
 
     const keyup = (e) => {
-      if (e.key === 'ArrowLeft') flippers.left = false;
-      if (e.key === 'ArrowRight') flippers.right = false;
+      if (e.key === 'ArrowLeft') setFlipper('left', false);
+      if (e.key === 'ArrowRight') setFlipper('right', false);
     };
 
     window.addEventListener('keydown', keydown);
     window.addEventListener('keyup', keyup);
 
-    const reset = () => {
-      ball.x = width / 2;
-      ball.y = 50;
-      ball.vx = 100 * (Math.random() > 0.5 ? 1 : -1);
-      ball.vy = 0;
+    let startX = 0;
+    const touchStart = (e) => {
+      startX = e.touches[0].clientX;
     };
+    const touchEnd = (e) => {
+      const dx = e.changedTouches[0].clientX - startX;
+      nudge(game, dx * 2);
+    };
+    canvas.addEventListener('touchstart', touchStart);
+    canvas.addEventListener('touchend', touchEnd);
 
     let last = 0;
     let animationId;
@@ -46,72 +56,77 @@ const Pinball = () => {
       const dt = (time - last) / 1000;
       last = time;
 
-      ball.vy += gravity * dt;
-      ball.x += ball.vx * dt;
-      ball.y += ball.vy * dt;
+      update(game, dt);
 
-      if (ball.x < ball.r) {
-        ball.x = ball.r;
-        ball.vx *= -1;
-      }
-      if (ball.x > width - ball.r) {
-        ball.x = width - ball.r;
-        ball.vx *= -1;
-      }
-
-      if (ball.y < ball.r) {
-        ball.y = ball.r;
-        ball.vy *= -1;
-      }
-
-      if (ball.y + ball.r > floor) {
-        if (flippers.left && ball.x < width / 2) {
-          ball.vy = -300;
-          ball.vx = -150;
-        } else if (flippers.right && ball.x >= width / 2) {
-          ball.vy = -300;
-          ball.vx = 150;
-        } else {
-          reset();
-        }
-      }
-
-      ctx.clearRect(0, 0, width, height);
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
       ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, width, height);
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      game.bumpers.forEach((b) => {
+        ctx.fillStyle = b.litTime > 0 ? '#ff0' : '#555';
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
 
       ctx.fillStyle = '#ff6f00';
       ctx.save();
-      ctx.translate(80, floor);
-      ctx.rotate(flippers.left ? -0.5 : 0);
+      ctx.translate(80, FLOOR);
+      ctx.rotate(game.flippers.left && flippersEnabled(game) ? -0.5 : 0);
       ctx.fillRect(-40, -5, 40, 10);
       ctx.restore();
 
       ctx.save();
-      ctx.translate(width - 80, floor);
-      ctx.rotate(flippers.right ? 0.5 : 0);
+      ctx.translate(WIDTH - 80, FLOOR);
+      ctx.rotate(game.flippers.right && flippersEnabled(game) ? 0.5 : 0);
       ctx.fillRect(0, -5, 40, 10);
       ctx.restore();
 
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+      ctx.arc(game.ball.x, game.ball.y, game.ball.r, 0, Math.PI * 2);
       ctx.fill();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = '16px monospace';
+      ctx.fillText(`Score: ${game.score}`, 10, 20);
+
+      if (!flippersEnabled(game)) {
+        ctx.fillStyle = '#f00';
+        ctx.fillText('TILT', WIDTH / 2 - 20, 20);
+      }
     };
 
-    reset();
     animationId = requestAnimationFrame(loop);
 
     return () => {
       cancelAnimationFrame(animationId);
       window.removeEventListener('keydown', keydown);
       window.removeEventListener('keyup', keyup);
+      canvas.removeEventListener('touchstart', touchStart);
+      canvas.removeEventListener('touchend', touchEnd);
     };
   }, [canvasRef]);
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey">
+    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey relative">
       <canvas ref={canvasRef} className="bg-black w-full h-full" />
+      <div className="absolute inset-x-0 bottom-0 flex">
+        <button
+          className="flex-1 h-16 opacity-20 bg-white"
+          onMouseDown={() => setFlipper('left', true)}
+          onMouseUp={() => setFlipper('left', false)}
+          onTouchStart={() => setFlipper('left', true)}
+          onTouchEnd={() => setFlipper('left', false)}
+        />
+        <button
+          className="flex-1 h-16 opacity-20 bg-white"
+          onMouseDown={() => setFlipper('right', true)}
+          onMouseUp={() => setFlipper('right', false)}
+          onTouchStart={() => setFlipper('right', true)}
+          onTouchEnd={() => setFlipper('right', false)}
+        />
+      </div>
     </div>
   );
 };

@@ -141,7 +141,7 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   pinball: {
     objective: 'Score points by hitting targets.',
-    controls: 'Left/right arrows control flippers, space to launch.',
+    controls: 'Left/right arrows or on-screen buttons control flippers; swipe to nudge.',
   },
 };
 
