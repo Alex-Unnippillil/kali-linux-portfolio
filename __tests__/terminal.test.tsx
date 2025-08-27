@@ -10,6 +10,7 @@ jest.mock(
       onData: jest.fn(),
       onKey: jest.fn(),
       dispose: jest.fn(),
+      clear: jest.fn(),
     })),
   }),
   { virtual: true }
@@ -38,43 +39,22 @@ import React, { createRef, act } from 'react';
 import { render } from '@testing-library/react';
 import Terminal from '../components/apps/terminal';
 
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
-jest.mock(
-  'xterm',
-  () => ({
-    Terminal: class {
-      open() {}
-      write() {}
-      onData() {}
-    },
-  }),
-  { virtual: true },
-
-);
-jest.mock(
-  'xterm-addon-fit',
-  () => ({
-    FitAddon: class {
-      fit() {}
-    },
-  }),
-  { virtual: true },
-
-);
-jest.mock(
-  'xterm-addon-search',
-  () => ({
-    SearchAddon: class {
-      activate() {}
-    },
-  }),
-  { virtual: true },
-);
-
-
-describe.skip('Terminal component', () => {
+  describe('Terminal component', () => {
   const addFolder = jest.fn();
   const openApp = jest.fn();
+
+  it('renders xterm container and exposes imperative api', () => {
+    const ref = createRef();
+    const { getByTestId } = render(
+      <Terminal ref={ref} addFolder={addFolder} openApp={openApp} />,
+    );
+    expect(getByTestId('xterm-container')).toBeInTheDocument();
+    expect(ref.current).toBeTruthy();
+    expect(typeof ref.current.runCommand).toBe('function');
+    expect(typeof ref.current.getContent).toBe('function');
+    expect(typeof ref.current.getCommand).toBe('function');
+    expect(typeof ref.current.historyNav).toBe('function');
+  });
 
   it('runs pwd command successfully', () => {
     const ref = createRef();
@@ -123,6 +103,28 @@ describe.skip('Terminal component', () => {
       ref.current.runCommand('simulate');
     });
     expect(ref.current.getContent()).toContain('Web Workers are not supported');
+    (global as any).Worker = originalWorker;
+  });
+
+  it('sends simulate command to worker and logs result', () => {
+    const ref = createRef();
+    const originalWorker = (global as any).Worker;
+    const postMessageMock = jest.fn();
+    const mockWorkerInstance: any = {
+      onmessage: null,
+      postMessage: (msg: any) => {
+        postMessageMock(msg);
+        mockWorkerInstance.onmessage?.({ data: 'Simulation complete' });
+      },
+      terminate: jest.fn(),
+    };
+    (global as any).Worker = jest.fn(() => mockWorkerInstance);
+    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
+    act(() => {
+      ref.current.runCommand('simulate');
+    });
+    expect(postMessageMock).toHaveBeenCalledWith({ command: 'simulate' });
+    expect(ref.current.getContent()).toContain('Simulation complete');
     (global as any).Worker = originalWorker;
   });
 
