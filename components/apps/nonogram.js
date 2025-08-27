@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import {
   evaluateLine,
-  autoFillLines,
+  propagateFills,
   findHint,
   validateSolution,
   getPuzzleBySeed,
@@ -37,6 +37,20 @@ const Nonogram = () => {
   const [showMistakes, setShowMistakes] = useState(true);
   const [cellSize, setCellSize] = useState(32);
   const [selected, setSelected] = useState({ i: 0, j: 0 });
+  const [rowCounts, setRowCounts] = useState([]);
+  const [colCounts, setColCounts] = useState([]);
+  const [useLives, setUseLives] = useState(false);
+  const [lives, setLives] = useState(null);
+  const [errorCells, setErrorCells] = useState([]);
+
+  const rowTotals = React.useMemo(
+    () => rows.map((clue) => clue.reduce((a, b) => a + b, 0)),
+    [rows]
+  );
+  const colTotals = React.useMemo(
+    () => cols.map((clue) => clue.reduce((a, b) => a + b, 0)),
+    [cols]
+  );
 
   const pending = useRef([]);
   const raf = useRef(null);
@@ -47,13 +61,18 @@ const Nonogram = () => {
 
     const evaluate = useCallback(
       (g) => {
-        setRowState(rows.map((clue, i) => evaluateLine(g[i], clue)));
-        setColState(
-          cols.map((clue, i) => {
-            const column = g.map((row) => row[i]);
-            return evaluateLine(column, clue);
-          })
+        const rEval = rows.map((clue, i) => evaluateLine(g[i], clue));
+        const cEval = cols.map((clue, i) => {
+          const column = g.map((row) => row[i]);
+          return evaluateLine(column, clue);
+        });
+        setRowState(rEval);
+        setColState(cEval);
+        setRowCounts(g.map((row) => row.filter((c) => c === 1).length));
+        setColCounts(
+          cols.map((_, i) => g.reduce((sum, row) => sum + (row[i] === 1 ? 1 : 0), 0))
         );
+        return { rowEval: rEval, colEval: cEval };
       },
       [rows, cols]
     );
@@ -70,6 +89,9 @@ const Nonogram = () => {
     setGrid(g);
     setRowMarks(Array(r.length).fill(false));
     setColMarks(Array(c.length).fill(false));
+    setRowCounts(Array(r.length).fill(0));
+    setColCounts(Array(c.length).fill(0));
+    setLives(useLives ? 3 : null);
     evaluate(g);
     setStarted(true);
     startTime.current = Date.now();
@@ -83,35 +105,61 @@ const Nonogram = () => {
 
       const scheduleToggle = useCallback(
         (i, j, mode) => {
-        pending.current.push({ i, j, mode });
-        if (!raf.current) {
-          raf.current = requestAnimationFrame(() => {
-            setGrid((g) => {
-              let ng = g.map((row) => row.slice());
-              pending.current.forEach(({ i, j, mode }) => {
-                if (mode === 'cross') ng[i][j] = ng[i][j] === -1 ? 0 : -1;
-                else if (mode === 'pencil') ng[i][j] = ng[i][j] === 2 ? 0 : 2;
-                else ng[i][j] = ng[i][j] === 1 ? 0 : 1;
-              });
-              pending.current = [];
-              ng = autoFillLines(ng, rows, cols);
-              evaluate(ng);
-              if (validateSolution(ng, rows, cols) && !completed.current) {
-                completed.current = true;
-                const time = Math.floor((Date.now() - startTime.current) / 1000);
-                ReactGA.event({
-                  category: 'nonogram',
-                  action: 'puzzle_complete',
-                  value: time,
+          if (useLives && lives !== null && lives <= 0) return;
+          pending.current.push({ i, j, mode });
+          if (!raf.current) {
+            raf.current = requestAnimationFrame(() => {
+              setGrid((g) => {
+                let ng = g.map((row) => row.slice());
+                const toggled = pending.current.slice();
+                pending.current.forEach(({ i, j, mode }) => {
+                  if (mode === 'cross') ng[i][j] = ng[i][j] === -1 ? 0 : -1;
+                  else if (mode === 'pencil') ng[i][j] = ng[i][j] === 2 ? 0 : 2;
+                  else ng[i][j] = ng[i][j] === 1 ? 0 : 1;
                 });
-              }
-              return ng;
+                pending.current = [];
+                ng = propagateFills(ng, rows, cols);
+                const { rowEval, colEval } = evaluate(ng);
+                if (useLives && lives !== null) {
+                  let errors = 0;
+                  toggled.forEach(({ i, j }) => {
+                    if (rowEval[i].contradiction || colEval[j].contradiction) {
+                      ng[i][j] = 0;
+                      errors += 1;
+                      setErrorCells((e) => [...e, { i, j }]);
+                      setTimeout(
+                        () =>
+                          setErrorCells((e) =>
+                            e.filter((c) => !(c.i === i && c.j === j))
+                          ),
+                        500
+                      );
+                    }
+                  });
+                  if (errors)
+                    setLives((l) => {
+                      if (l === null) return null;
+                      const nl = l - errors;
+                      if (nl <= 0) alert('Out of lives');
+                      return nl;
+                    });
+                }
+                if (validateSolution(ng, rows, cols) && !completed.current) {
+                  completed.current = true;
+                  const time = Math.floor((Date.now() - startTime.current) / 1000);
+                  ReactGA.event({
+                    category: 'nonogram',
+                    action: 'puzzle_complete',
+                    value: time,
+                  });
+                }
+                return ng;
+              });
+              raf.current = null;
             });
-            raf.current = null;
-          });
-        }
+          }
         },
-        [rows, cols, evaluate, setGrid]
+        [rows, cols, evaluate, setGrid, useLives, lives]
       );
 
   const painting = useRef(false);
@@ -227,9 +275,20 @@ const Nonogram = () => {
       evaluate(grid);
       if (!rowMarks.length) setRowMarks(Array(rows.length).fill(false));
       if (!colMarks.length) setColMarks(Array(cols.length).fill(false));
+      setLives(useLives ? 3 : null);
       setStarted(true);
     }
-  }, [rows, cols, grid, evaluate, rowMarks.length, colMarks.length, setRowMarks, setColMarks]);
+  }, [
+    rows,
+    cols,
+    grid,
+    evaluate,
+    rowMarks.length,
+    colMarks.length,
+    setRowMarks,
+    setColMarks,
+    useLives,
+  ]);
 
   const validate = () => {
     alert(validateSolution(grid, rows, cols) ? 'Puzzle solved!' : 'Not yet solved');
@@ -251,6 +310,7 @@ const Nonogram = () => {
             setGrid(p.grid);
             setRowMarks(Array(p.rows.length).fill(false));
             setColMarks(Array(p.cols.length).fill(false));
+            setLives(useLives ? 3 : null);
             evaluate(p.grid);
             setStarted(true);
           }
@@ -327,6 +387,9 @@ const Nonogram = () => {
                 setGrid(g);
                 setRowMarks(Array(p.rows.length).fill(false));
                 setColMarks(Array(p.cols.length).fill(false));
+                setRowCounts(Array(p.rows.length).fill(0));
+                setColCounts(Array(p.cols.length).fill(0));
+                setLives(useLives ? 3 : null);
                 evaluate(g);
                 setStarted(true);
                 startTime.current = Date.now();
@@ -372,7 +435,10 @@ const Nonogram = () => {
                 showMistakes && rowState[i]?.contradiction ? 'text-red-500' : ''
               }`}
             >
-              {clue.join(' ')}
+              {clue.join(' ')}{' '}
+              <span className="text-xs text-gray-400">
+                ({rowCounts[i]}/{rowTotals[i]})
+              </span>
             </div>
           ))}
         </div>
@@ -396,6 +462,9 @@ const Nonogram = () => {
                 style={{ width: cellSize }}
               >
                 {clue.join(' ')}
+                <div className="text-xs text-gray-400">
+                  {colCounts[i]}/{colTotals[i]}
+                </div>
               </div>
             ))}
           </div>
@@ -429,6 +498,10 @@ const Nonogram = () => {
                     showMistakes &&
                     (rowState[i]?.contradiction || colState[j]?.contradiction)
                       ? 'bg-red-300'
+                      : ''
+                  } ${
+                    errorCells.some((c) => c.i === i && c.j === j)
+                      ? 'bg-red-500'
                       : ''
                   } ${
                     selected.i === i && selected.j === j
@@ -466,6 +539,18 @@ const Nonogram = () => {
           onClick={toggleMistakes}
         >
           {showMistakes ? 'Hide Mistakes' : 'Show Mistakes'}
+        </button>
+        <button
+          className={`px-4 py-2 rounded ${
+            useLives ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500'
+          }`}
+          onClick={() => {
+            const nl = !useLives;
+            setUseLives(nl);
+            setLives(nl ? 3 : null);
+          }}
+        >
+          {useLives ? `Lives: ${lives}` : 'Lives Off'}
         </button>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"

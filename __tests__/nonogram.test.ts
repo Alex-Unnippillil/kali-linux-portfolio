@@ -1,4 +1,12 @@
-import { validateSolution, findHint, getPuzzleBySeed, generateLinePatterns, lineToClues } from '../components/apps/nonogramUtils';
+import {
+  validateSolution,
+  findHint,
+  getPuzzleBySeed,
+  generateLinePatterns,
+  lineToClues,
+  propagateFills,
+  puzzles,
+} from '../components/apps/nonogramUtils';
 
 describe('nonogram utilities', () => {
   test('validateSolution confirms grid matches clues', () => {
@@ -51,5 +59,16 @@ describe('nonogram utilities', () => {
     const a = getPuzzleBySeed('2024-01-01');
     const b = getPuzzleBySeed('2024-01-01');
     expect(a).toEqual(b);
+  });
+
+  test('propagateFills solves diamond without guessing', () => {
+    const p = puzzles.find((x) => x.name === 'Diamond');
+    if (!p) return;
+    let g = Array(p.rows.length)
+      .fill(null)
+      .map(() => Array(p.cols.length).fill(0));
+    g = propagateFills(g, p.rows, p.cols);
+    const normalized = g.map((row) => row.map((c) => (c === -1 ? 0 : c)));
+    expect(normalized).toEqual(p.grid);
   });
 });
