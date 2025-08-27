@@ -1,7 +1,18 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
-import emailjs from '@emailjs/browser';
+
+// Simple helper for notifications that falls back to alert()
+const notify = (title, body) => {
+    if (typeof window === 'undefined') return;
+    if ('Notification' in window && Notification.permission === 'granted') {
+        // eslint-disable-next-line no-new
+        new Notification(title, { body });
+    } else {
+        // eslint-disable-next-line no-alert
+        alert(`${title}: ${body}`);
+    }
+};
 
 export class Gedit extends Component {
 
@@ -12,25 +23,22 @@ export class Gedit extends Component {
             name: '',
             subject: '',
             message: '',
+            website: '', // honeypot field
             nameError: false,
             messageError: false,
         }
     }
-
-    componentDidMount() {
-        emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
-    }
-
     handleChange = (field) => (e) => {
         this.setState({ [field]: e.target.value, [`${field}Error`]: false });
     }
 
     sendMessage = async () => {
-        let { name, subject, message } = this.state;
+        let { name, subject, message, website } = this.state;
 
         name = name.trim();
         subject = subject.trim();
         message = message.trim();
+        website = website.trim();
 
         let error = false;
 
@@ -43,32 +51,53 @@ export class Gedit extends Component {
             this.setState({ message: '', messageError: true });
             error = true;
         }
+        if (website.length !== 0) {
+            // Honeypot filled in - likely a bot
+            return;
+        }
+
         if (error) return;
+
+        const lastContact = Number(localStorage.getItem('last-contact') || '0');
+        if (Date.now() - lastContact < 60000) {
+            notify('Slow down', 'Please wait before sending another message.');
+            return;
+        }
 
         this.setState({ sending: true });
 
-        const serviceID = process.env.NEXT_PUBLIC_SERVICE_ID;
-        const templateID = process.env.NEXT_PUBLIC_TEMPLATE_ID;
-        const templateParams = {
-            'name': name,
-            'subject': subject,
-            'message': message,
+        const attemptComplete = () => {
+            this.setState({ sending: false, name: '', subject: '', message: '', website: '' });
+            localStorage.setItem('last-contact', Date.now().toString());
+            document.getElementById('close-gedit')?.click();
+        };
+
+        const mailto = `mailto:alex.j.unnippillil@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message + '\n\nFrom: ' + name)}`;
+
+        if (navigator.onLine) {
+            try {
+                const res = await fetch('/api/contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, subject, message }),
+                });
+                if (res.ok) {
+                    notify('Message Sent', 'Thanks for reaching out!');
+                    ReactGA.event({
+                        category: 'contact',
+                        action: 'submit_success',
+                    });
+                    attemptComplete();
+                    return;
+                }
+            } catch (e) {
+                // fall through to mailto
+            }
         }
 
-        emailjs.send(serviceID, templateID, templateParams)
-            .then(() => {
-                this.setState({ sending: false, name: '', subject: '', message: '' });
-                document.getElementById('close-gedit')?.click();
-
-                ReactGA.event({
-                    category: "contact",
-                    action: "submit_success",
-                });
-            })
-            .catch(() => {
-                this.setState({ sending: false });
-                document.getElementById('close-gedit')?.click();
-            });
+        notify('Message Failed', 'Opening mail client');
+        window.open(mailto);
+        attemptComplete();
 
     }
 
@@ -91,6 +120,7 @@ export class Gedit extends Component {
                         <input id="sender-subject" value={this.state.subject} onChange={this.handleChange('subject')} className=" w-full my-1 text-ubt-gedit-blue focus:bg-ub-gedit-light gedit-subject outline-none text-sm font-normal pl-6 py-0.5 bg-transparent" placeholder="subject (may be a feedback for this website!)" spellCheck="false" autoComplete="off" type="text" />
                         <span className="absolute left-1 top-1/2 transform -translate-y-1/2 font-bold  text-sm text-ubt-gedit-blue">2</span>
                     </div>
+                    <input value={this.state.website} onChange={this.handleChange('website')} className="hidden" type="text" tabIndex="-1" autoComplete="off" />
                     <div className="relative flex-grow">
                         <textarea id="sender-message" value={this.state.message} onChange={this.handleChange('message')} className=" w-full gedit-message font-light text-sm resize-none h-full windowMainScreen outline-none tracking-wider pl-6 py-1 bg-transparent" placeholder={this.state.messageError ? "Message must not be Empty!" : "Message"} spellCheck="false" autoComplete="none" type="text" />
                         <span className="absolute left-1 top-1 font-bold  text-sm text-ubt-gedit-blue">3</span>
