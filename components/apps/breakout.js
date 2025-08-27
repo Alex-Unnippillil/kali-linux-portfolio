@@ -98,6 +98,14 @@ const BreakoutGame = ({ levels }) => {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
+    // Load power-up icons
+    const powerupImgs = {
+      expand: new Image(),
+      multi: new Image(),
+    };
+    powerupImgs.expand.src = "/apps/breakout/expand.svg";
+    powerupImgs.multi.src = "/apps/breakout/multi.svg";
+
     // Fit canvas to its container and device pixel ratio
     const fit = () => {
       const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
@@ -197,6 +205,7 @@ const BreakoutGame = ({ levels }) => {
                 y: brick.y + brick.h / 2,
                 type,
                 vy: 100,
+                angle: 0,
               });
             }
             break;
@@ -213,6 +222,7 @@ const BreakoutGame = ({ levels }) => {
       for (let i = powerUps.length - 1; i >= 0; i -= 1) {
         const p = powerUps[i];
         p.y += p.vy * dt;
+        p.angle += dt * 5;
         if (p.y + 8 > paddle.y && p.x > paddle.x && p.x < paddle.x + paddle.w) {
           if (p.type === "multi") {
             balls.push({
@@ -261,8 +271,17 @@ const BreakoutGame = ({ levels }) => {
 
       // Power-ups
       for (const p of powerUps) {
-        ctx.fillStyle = p.type === "multi" ? "red" : "blue";
-        ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
+        const img = powerupImgs[p.type];
+        if (img && img.complete) {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle);
+          ctx.drawImage(img, -8, -8, 16, 16);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = p.type === "multi" ? "red" : "blue";
+          ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
+        }
       }
 
       // HUD

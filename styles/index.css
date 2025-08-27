@@ -346,3 +346,26 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Breakout power-up sprite animations */
+.breakout-powerup {
+    width: 16px;
+    height: 16px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    animation: breakout-float 1s ease-in-out infinite;
+}
+
+.breakout-powerup.expand {
+    background-image: url('/apps/breakout/expand.svg');
+}
+
+.breakout-powerup.multi {
+    background-image: url('/apps/breakout/multi.svg');
+}
+
+@keyframes breakout-float {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+    100% { transform: translateY(0); }
+}
