@@ -16,6 +16,22 @@ const SPAWN_TIME = 1; // seconds between obstacles
 const BOOST_DURATION = 2; // boost length in seconds
 const NEAR_INTERVAL = 0.3;
 const FAR_INTERVAL = 0.5;
+const BG_NEAR_INTERVAL = 0.5;
+const BG_FAR_INTERVAL = 1;
+
+const MEDAL_THRESHOLDS = [
+  { name: 'bronze', score: 500 },
+  { name: 'silver', score: 1000 },
+  { name: 'gold', score: 1500 },
+];
+
+export const getMedal = (score) => {
+  let medal = null;
+  for (const { name, score: s } of MEDAL_THRESHOLDS) {
+    if (score >= s) medal = name;
+  }
+  return medal;
+};
 
 // Simple AABB collision used in game and tests
 export const checkCollision = (car, obstacle) =>
@@ -36,11 +52,13 @@ const CarRacer = () => {
   const obstaclesRef = useRef([]);
   const car = useRef({ lane: 1, y: HEIGHT - CAR_HEIGHT - 10, height: CAR_HEIGHT });
   const roadsideRef = useRef({ near: [], far: [] });
-    const [boost, setBoost] = useState(false);
-    const boostRef = useRef(0);
-    const reduceMotionRef = useRef(false);
-    const workerRef = useRef(null);
-    const lastRenderRef = useRef({});
+  const backgroundRef = useRef({ near: [], far: [] });
+  const [boost, setBoost] = useState(false);
+  const boostRef = useRef(0);
+  const reduceMotionRef = useRef(false);
+  const workerRef = useRef(null);
+  const lastRenderRef = useRef({});
+  const medalsRef = useRef({});
 
   const audioCtxRef = useRef(null);
   const playBeep = () => {
@@ -61,6 +79,11 @@ const CarRacer = () => {
   useEffect(() => {
     const stored = localStorage.getItem('car_racer_high');
     if (stored) setHighScore(parseInt(stored, 10));
+    try {
+      medalsRef.current = JSON.parse(localStorage.getItem('car_racer_medals') || '{}');
+    } catch {
+      medalsRef.current = {};
+    }
     if (typeof window !== 'undefined') {
       const media = window.matchMedia('(prefers-reduced-motion: reduce)');
       const updateMotion = () => {
@@ -90,6 +113,8 @@ const CarRacer = () => {
     let lineOffset = 0;
     let nearTimer = 0;
     let farTimer = 0;
+    let bgNearTimer = 0;
+    let bgFarTimer = 0;
     const postState = () => {
       const state = {
         car: { lane: car.current.lane, y: car.current.y },
@@ -99,6 +124,12 @@ const CarRacer = () => {
           : {
               near: roadsideRef.current.near.map((r) => r.y),
               far: roadsideRef.current.far.map((r) => r.y),
+            },
+        background: reduceMotionRef.current
+          ? null
+          : {
+              near: backgroundRef.current.near.map((s) => ({ x: s.x, y: s.y })),
+              far: backgroundRef.current.far.map((s) => ({ x: s.x, y: s.y })),
             },
         lineOffset,
       };
@@ -164,6 +195,29 @@ const CarRacer = () => {
           roadsideRef.current.far = roadsideRef.current.far.filter(
             (r) => r.y < HEIGHT + 20
           );
+
+          bgNearTimer += dt;
+          bgFarTimer += dt;
+          if (bgNearTimer > BG_NEAR_INTERVAL) {
+            backgroundRef.current.near.push({ x: Math.random() * WIDTH, y: -10 });
+            bgNearTimer = 0;
+          }
+          if (bgFarTimer > BG_FAR_INTERVAL) {
+            backgroundRef.current.far.push({ x: Math.random() * WIDTH, y: -10 });
+            bgFarTimer = 0;
+          }
+          backgroundRef.current.near.forEach((s) => {
+            s.y += speed * 0.3 * dt;
+          });
+          backgroundRef.current.far.forEach((s) => {
+            s.y += speed * 0.15 * dt;
+          });
+          backgroundRef.current.near = backgroundRef.current.near.filter(
+            (s) => s.y < HEIGHT
+          );
+          backgroundRef.current.far = backgroundRef.current.far.filter(
+            (s) => s.y < HEIGHT
+          );
         }
 
         for (const o of obstaclesRef.current) {
@@ -174,6 +228,7 @@ const CarRacer = () => {
               setHighScore(scoreRef.current);
               localStorage.setItem('car_racer_high', `${scoreRef.current}`);
             }
+            saveMedal(Math.floor(scoreRef.current));
             break;
           }
         }
@@ -243,6 +298,7 @@ const CarRacer = () => {
       setHighScore(scoreRef.current);
       localStorage.setItem('car_racer_high', `${scoreRef.current}`);
     }
+    saveMedal(Math.floor(scoreRef.current));
     obstaclesRef.current = [];
     car.current.lane = 1;
     scoreRef.current = 0;
@@ -264,6 +320,14 @@ const CarRacer = () => {
     setSound(soundRef.current);
   };
 
+  const saveMedal = (s) => {
+    const medal = getMedal(s);
+    if (medal) {
+      medalsRef.current[s] = medal;
+      localStorage.setItem('car_racer_medals', JSON.stringify(medalsRef.current));
+    }
+  };
+
   return (
     <div className="h-full w-full relative text-white select-none">
       <canvas ref={canvasRef} className="h-full w-full bg-black" />
@@ -274,6 +338,7 @@ const CarRacer = () => {
       >
         <div>Score: {score}</div>
         <div>High: {highScore}</div>
+        {getMedal(score) && <div data-testid="medal-display">Medal: {getMedal(score)}</div>}
         {boost && !reduceMotionRef.current && <div>Boost!</div>}
       </div>
       <div className="absolute bottom-2 left-2 space-x-2 z-10 text-sm">
