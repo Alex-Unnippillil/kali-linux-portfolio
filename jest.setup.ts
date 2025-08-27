@@ -111,3 +111,29 @@ jest.mock(
   }),
   { virtual: true }
 );
+
+jest.mock(
+  'xterm-addon-web-links',
+  () => ({
+    WebLinksAddon: class {
+      activate() {}
+      dispose() {}
+    },
+
+  }),
+  { virtual: true }
+);
+
+jest.mock(
+  'xterm-addon-serialize',
+  () => ({
+    SerializeAddon: class {
+      activate() {}
+      dispose() {}
+      serialize() { return ''; }
+      serializeAsHTML() { return ''; }
+    },
+
+  }),
+  { virtual: true }
+);
