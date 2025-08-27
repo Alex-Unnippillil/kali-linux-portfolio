@@ -27,6 +27,20 @@ export const TOWER_TYPES = {
   ],
 };
 
+// Base cost for each tower type
+export const TOWER_COSTS = {
+  single: 10,
+  splash: 15,
+  slow: 15,
+  aoe: 20,
+};
+
+export const getTowerCost = (type, level = 1) =>
+  (TOWER_COSTS[type] || 0) * level;
+
+export const getSellRefund = (type, level) =>
+  Math.floor(getTowerCost(type, level) * 0.5);
+
 export const getTowerDPS = (type, level) => {
   const stats = TOWER_TYPES[type]?.[level - 1];
   if (!stats) return 0;
@@ -174,6 +188,20 @@ export const spawnEnemy = (pool, props) => {
 
 export const deactivateEnemy = (e) => {
   e.active = false;
+};
+
+// Advance an enemy along the path. Returns true if it reaches the goal.
+export const advanceEnemy = (enemy, path, speed = 1) => {
+  enemy.progress += speed;
+  while (enemy.progress >= 1) {
+    const next = path[enemy.pathIndex + 1];
+    if (!next) return true;
+    enemy.x = next.x;
+    enemy.y = next.y;
+    enemy.pathIndex += 1;
+    enemy.progress -= 1;
+  }
+  return false;
 };
 
 // ---- Sprite caching ----
