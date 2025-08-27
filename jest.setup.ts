@@ -1,5 +1,22 @@
 import '@testing-library/jest-dom';
 
+jest.mock('react-ga4', () => ({
+  initialize: jest.fn(),
+  event: jest.fn(),
+  send: jest.fn(),
+}));
+
+class AudioMock {
+  play() {
+    return Promise.resolve();
+  }
+  pause() {}
+  addEventListener() {}
+  removeEventListener() {}
+}
+// @ts-ignore
+global.Audio = AudioMock as any;
+
 // jsdom does not provide a global Image constructor which is used by
 // some components (e.g. window borders). A minimal mock is sufficient
 // for our tests because we only rely on the instance existing.

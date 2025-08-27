@@ -3,20 +3,19 @@ import dynamic from 'next/dynamic';
 import { logEvent } from './utils/analytics';
 
 import { displayX } from './components/apps/x';
-import { displaySpotify } from './components/apps/spotify';
-import { displayVsCode } from './components/apps/vscode';
 import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/chrome';
 import { displayTrash } from './components/apps/trash';
 import { displayGedit } from './components/apps/gedit';
 import { displayAboutAlex } from './components/apps/alex';
-import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
 import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayNikto } from './components/apps/nikto';
+import { ExternalFrame } from './components';
+import appRegistry from './apps';
 
 const createDynamicApp = (path, name) =>
   dynamic(
@@ -490,6 +489,22 @@ const gameList = [
 ];
 
 export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+const externalApps = Object.entries(appRegistry).map(([id, meta]) => ({
+  id,
+  title: meta.title,
+  icon: meta.icon,
+  disabled: false,
+  favourite: false,
+  desktop_shortcut: false,
+  screen: () => (
+    <ExternalFrame
+      src={meta.url}
+      title={meta.title}
+      className="h-full w-full bg-ub-cool-grey"
+      frameBorder="0"
+    />
+  ),
+}));
 
 const apps = [
   {
@@ -501,6 +516,7 @@ const apps = [
     desktop_shortcut: true,
     screen: displayChrome,
   },
+  ...externalApps,
   {
     id: 'calc',
     title: 'Calc',
@@ -524,15 +540,6 @@ const apps = [
     screen: displayTerminal,
   },
   {
-    id: 'vscode',
-    title: 'Visual Studio Code',
-    icon: './themes/Yaru/apps/vscode.png',
-    disabled: false,
-    favourite: true,
-    desktop_shortcut: false,
-    screen: displayVsCode,
-  },
-  {
     id: 'x',
     title: 'X',
     icon: './themes/Yaru/apps/x.png',
@@ -540,15 +547,6 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayX,
-  },
-  {
-    id: 'spotify',
-    title: 'Spotify',
-    icon: './themes/Yaru/apps/spotify.svg',
-    disabled: false,
-    favourite: true,
-    desktop_shortcut: false,
-    screen: displaySpotify,
   },
   {
     id: 'youtube',
@@ -639,15 +637,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWireshark,
-  },
-  {
-    id: 'todoist',
-    title: 'Todoist',
-    icon: './themes/Yaru/apps/todoist.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayTodoist,
   },
   {
     id: 'trash',
