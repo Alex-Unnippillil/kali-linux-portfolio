@@ -1807,6 +1807,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/seedrandom@npm:^3":
+  version: 3.0.8
+  resolution: "@types/seedrandom@npm:3.0.8"
+  checksum: 10c0/6efdf3df34cd447ee235794946097c73b3d595a43d3afcf8a7edf08bf1111e32372f77edfe37478ba857d1d712361aff7022a5043c98a816dceb11a0e30e251c
+  languageName: node
+  linkType: hard
+
 "@types/stack-utils@npm:^2.0.3":
   version: 2.0.3
   resolution: "@types/stack-utils@npm:2.0.3"
@@ -8242,6 +8249,7 @@ __metadata:
     "@types/matter-js": "npm:0.20.0"
     "@types/node": "npm:^24.2.1"
     "@types/react": "npm:^19.1.10"
+    "@types/seedrandom": "npm:^3"
     "@types/three": "npm:^0.179.0"
     "@vercel/analytics": "npm:^1.5.0"
     "@xterm/addon-fit": "npm:^0.10.0"
@@ -8282,6 +8290,7 @@ __metadata:
     react-github-calendar: "npm:^4.5.9"
     react-onclickoutside: "npm:^6.12.2"
     react-twitter-embed: "npm:^4.0.4"
+    seedrandom: "npm:^3.0.5"
     stockfish: "npm:^16.0.0"
     swr: "npm:^2.2.5"
     tailwindcss: "npm:^3.2.4"
