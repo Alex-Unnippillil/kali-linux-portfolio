@@ -11,6 +11,8 @@ export default function SpotifyApp() {
   const workerRef = useRef();
   const [level, setLevel] = useState(0);
   const [started, setStarted] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const controlsRef = useRef({ play: () => {}, pause: () => {} });
 
   useEffect(() => {
     if (!started) return;
@@ -83,37 +85,39 @@ export default function SpotifyApp() {
       frameRef.current = requestAnimationFrame(draw);
     };
 
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    const stop = () => {
-      cancelAnimationFrame(frameRef.current);
-      audioCtx.suspend();
-    };
+      const stop = () => {
+        cancelAnimationFrame(frameRef.current);
+        audioCtx.suspend();
+      };
 
-    const startDraw = () => {
-      audioCtx.resume();
-      frameRef.current = requestAnimationFrame(draw);
-    };
+      const startDraw = () => {
+        audioCtx.resume();
+        if (!mql.matches) frameRef.current = requestAnimationFrame(draw);
+      };
 
-    const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        stop();
-      } else if (!mql.matches) {
-        startDraw();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibility);
+      controlsRef.current = { play: startDraw, pause: stop };
 
-    const handleMotionChange = (e) => {
-      if (e.matches) {
-        stop();
-      } else if (document.visibilityState === 'visible') {
-        startDraw();
-      }
-    };
-    mql.addEventListener('change', handleMotionChange);
+      const handleVisibility = () => {
+        if (document.visibilityState === 'hidden') {
+          stop();
+        } else if (!mql.matches) {
+          startDraw();
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibility);
 
-    if (!mql.matches) frameRef.current = requestAnimationFrame(draw);
+      const handleMotionChange = (e) => {
+        if (e.matches) {
+          stop();
+        } else if (document.visibilityState === 'visible') {
+          startDraw();
+        }
+      };
+      mql.addEventListener('change', handleMotionChange);
+
+      if (playing) startDraw();
 
     return () => {
       stop();
@@ -125,14 +129,23 @@ export default function SpotifyApp() {
       audioCtx.close();
       workerRef.current?.terminate();
     };
-  }, [started]);
+    }, [started]);
 
-  const start = () => {
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (mql.matches) return;
-    audioRef.current.play();
-    setStarted(true);
-  };
+    const togglePlayback = () => {
+      if (!started) {
+        setStarted(true);
+        setPlaying(true);
+        audioRef.current.play();
+      } else if (playing) {
+        setPlaying(false);
+        audioRef.current.pause();
+        controlsRef.current.pause();
+      } else {
+        setPlaying(true);
+        audioRef.current.play();
+        controlsRef.current.play();
+      }
+    };
 
   return (
     <div className="relative h-full w-full bg-black text-white">
@@ -141,20 +154,18 @@ export default function SpotifyApp() {
         src="https://cdn.pixabay.com/download/audio/2021/09/06/audio_2b34bf4ad0a7a022beed579b3709271b?filename=birthday-sparks-15015.mp3"
         loop
       />
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 h-full w-full"
-        aria-hidden="true"
-      />
-      {!started && (
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 h-full w-full"
+          aria-hidden="true"
+        />
         <button
           type="button"
-          onClick={start}
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded bg-white px-4 py-2 font-semibold text-black"
+          onClick={togglePlayback}
+          className="absolute left-4 top-4 rounded bg-white px-4 py-2 font-semibold text-black"
         >
-          Start visualization
+          {playing ? 'Pause' : 'Play'}
         </button>
-      )}
       {/* Screen reader announcement of audio level */}
       <div className="sr-only" aria-live="polite">
         Audio level {level}%
