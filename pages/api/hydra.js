@@ -1,8 +1,13 @@
 import { execFile } from 'child_process';
 import { promises as fs } from 'fs';
 import { randomUUID } from 'crypto';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 
 export default async function handler(req, res) {
+  // Hydra is an optional external dependency. Environments without the
+  // actual binary may stub this handler for demonstration purposes.
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
@@ -25,18 +30,25 @@ export default async function handler(req, res) {
     return;
   }
 
+  try {
+    await execFileAsync('which', ['hydra']);
+  } catch {
+    await fs.unlink(userPath).catch(() => {});
+    await fs.unlink(passPath).catch(() => {});
+    res.status(500).json({ error: 'Hydra not installed' });
+    return;
+  }
+
   const args = ['-L', userPath, '-P', passPath, `${service}://${target}`];
 
-  execFile('hydra', args, { timeout: 1000 * 60 }, (error, stdout, stderr) => {
-    // Clean up temp files
+  try {
+    const { stdout } = await execFileAsync('hydra', args, { timeout: 1000 * 60 });
+    res.status(200).json({ output: stdout.toString() });
+  } catch (error) {
+    const msg = error.stderr?.toString() || error.message;
+    res.status(500).json({ error: msg });
+  } finally {
     fs.unlink(userPath).catch(() => {});
     fs.unlink(passPath).catch(() => {});
-
-    if (error) {
-      const msg = stderr?.toString() || error.message;
-      res.status(200).json({ output: msg });
-      return;
-    }
-    res.status(200).json({ output: stdout.toString() });
-  });
+  }
 }
