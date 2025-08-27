@@ -346,3 +346,41 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+@keyframes tile-ripple {
+    from { box-shadow: 0 0 0 0 rgba(255,255,255,0.7); }
+    to { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+}
+
+.tile-merge {
+    position: relative;
+}
+
+.tile-merge::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: inherit;
+    box-shadow: 0 0 0 0 rgba(255,255,255,0.7);
+    animation: tile-ripple 0.3s ease-out;
+}
+
+@keyframes score-pop {
+    from { transform: translateY(0) scale(1); opacity: 1; }
+    to { transform: translateY(-10px) scale(1.2); opacity: 0; }
+}
+
+.score-pop {
+    animation: score-pop 0.6s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tile-pop,
+    .tile-merge::after,
+    .score-pop {
+        animation: none;
+    }
+}

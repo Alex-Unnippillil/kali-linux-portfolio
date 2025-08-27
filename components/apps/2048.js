@@ -30,15 +30,19 @@ const addRandomTile = (board, hard, count = 1) => {
 
 const slide = (row) => {
   const arr = row.filter((n) => n !== 0);
+  let score = 0;
+  const merges = [];
   for (let i = 0; i < arr.length - 1; i++) {
     if (arr[i] === arr[i + 1]) {
       arr[i] *= 2;
+      score += arr[i];
       arr[i + 1] = 0;
+      merges.push(i);
     }
   }
   const newRow = arr.filter((n) => n !== 0);
   while (newRow.length < SIZE) newRow.push(0);
-  return newRow;
+  return { row: newRow, score, merges };
 };
 
 const transpose = (board) =>
@@ -46,10 +50,41 @@ const transpose = (board) =>
 
 const flip = (board) => board.map((row) => [...row].reverse());
 
-const moveLeft = (board) => board.map((row) => slide(row));
-const moveRight = (board) => flip(moveLeft(flip(board)));
-const moveUp = (board) => transpose(moveLeft(transpose(board)));
-const moveDown = (board) => transpose(moveRight(transpose(board)));
+const moveLeft = (board) => {
+  let score = 0;
+  const merges = [];
+  const newBoard = board.map((row, r) => {
+    const { row: newRow, score: s, merges: m } = slide(row);
+    score += s;
+    m.forEach((c) => merges.push([r, c]));
+    return newRow;
+  });
+  return { board: newBoard, score, merges };
+};
+
+const moveRight = (board) => {
+  const flipped = flip(board);
+  const { board: moved, score, merges } = moveLeft(flipped);
+  const newBoard = flip(moved);
+  const adjusted = merges.map(([r, c]) => [r, SIZE - 1 - c]);
+  return { board: newBoard, score, merges: adjusted };
+};
+
+const moveUp = (board) => {
+  const t = transpose(board);
+  const { board: moved, score, merges } = moveLeft(t);
+  const newBoard = transpose(moved);
+  const adjusted = merges.map(([r, c]) => [c, r]);
+  return { board: newBoard, score, merges: adjusted };
+};
+
+const moveDown = (board) => {
+  const t = transpose(board);
+  const { board: moved, score, merges } = moveRight(t);
+  const newBoard = transpose(moved);
+  const adjusted = merges.map(([r, c]) => [c, r]);
+  return { board: newBoard, score, merges: adjusted };
+};
 
 const boardsEqual = (a, b) =>
   a.every((row, r) => row.every((cell, c) => cell === b[r][c]));
@@ -95,13 +130,36 @@ const Game2048 = () => {
   const [history, setHistory] = useState([]);
   const [hardMode, setHardMode] = usePersistentState('2048-hard', false, (v) => typeof v === 'boolean');
   const [animCells, setAnimCells] = useState(new Set());
+  const [mergeCells, setMergeCells] = useState(new Set());
+  const [score, setScore] = usePersistentState('2048-score', 0, (v) => typeof v === 'number');
+  const [scorePop, setScorePop] = useState(0);
 
   useEffect(() => {
     if (animCells.size > 0) {
-      const t = setTimeout(() => setAnimCells(new Set()), 200);
-      return () => clearTimeout(t);
+      const id = setTimeout(() => {
+        requestAnimationFrame(() => setAnimCells(new Set()));
+      }, 200);
+      return () => clearTimeout(id);
     }
   }, [animCells]);
+
+  useEffect(() => {
+    if (mergeCells.size > 0) {
+      const id = setTimeout(() => {
+        requestAnimationFrame(() => setMergeCells(new Set()));
+      }, 300);
+      return () => clearTimeout(id);
+    }
+  }, [mergeCells]);
+
+  useEffect(() => {
+    if (scorePop) {
+      const id = setTimeout(() => {
+        requestAnimationFrame(() => setScorePop(0));
+      }, 600);
+      return () => clearTimeout(id);
+    }
+  }, [scorePop]);
 
   const handleKey = useCallback(
     (e) => {
@@ -110,16 +168,17 @@ const Game2048 = () => {
         return;
       }
       if (won || lost) return;
-      let moved;
-      if (e.key === 'ArrowLeft') moved = moveLeft(board);
-      else if (e.key === 'ArrowRight') moved = moveRight(board);
-      else if (e.key === 'ArrowUp') moved = moveUp(board);
-      else if (e.key === 'ArrowDown') moved = moveDown(board);
+      let result;
+      if (e.key === 'ArrowLeft') result = moveLeft(board);
+      else if (e.key === 'ArrowRight') result = moveRight(board);
+      else if (e.key === 'ArrowUp') result = moveUp(board);
+      else if (e.key === 'ArrowDown') result = moveDown(board);
       else return;
+      const { board: moved, score: gained, merges } = result;
       if (!boardsEqual(board, moved)) {
         const beforeAdd = cloneBoard(moved);
         addRandomTile(moved, hardMode, hardMode ? 2 : 1);
-        setHistory((h) => [...h, cloneBoard(board)]);
+        setHistory((h) => [...h, { board: cloneBoard(board), score }]);
         const changed = new Set();
         for (let r = 0; r < SIZE; r++) {
           for (let c = 0; c < SIZE; c++) {
@@ -129,12 +188,19 @@ const Game2048 = () => {
           }
         }
         setAnimCells(changed);
-        setBoard(cloneBoard(moved));
-        if (checkWin(moved)) setWon(true);
-        else if (!hasMoves(moved)) setLost(true);
+        setMergeCells(new Set(merges.map(([r, c]) => `${r}-${c}`)));
+        requestAnimationFrame(() => {
+          setBoard(cloneBoard(moved));
+          if (gained) {
+            setScore((s) => s + gained);
+            setScorePop(gained);
+          }
+          if (checkWin(moved)) setWon(true);
+          else if (!hasMoves(moved)) setLost(true);
+        });
       }
     },
-    [board, won, lost, hardMode, setBoard, setLost, setWon]
+    [board, won, lost, hardMode, setBoard, setLost, setWon, setScore]
 
   );
 
@@ -149,6 +215,9 @@ const Game2048 = () => {
     setWon(false);
     setLost(false);
     setAnimCells(new Set());
+    setMergeCells(new Set());
+    setScore(0);
+    setScorePop(0);
   };
 
   const close = () => {
@@ -159,10 +228,12 @@ const Game2048 = () => {
     setHistory((h) => {
       if (h.length === 0) return h;
       const prev = h[h.length - 1];
-      setBoard(cloneBoard(prev));
-      setWon(checkWin(prev));
-      setLost(!hasMoves(prev));
+      setBoard(cloneBoard(prev.board));
+      setScore(prev.score);
+      setWon(checkWin(prev.board));
+      setLost(!hasMoves(prev.board));
       setAnimCells(new Set());
+      setMergeCells(new Set());
       return h.slice(0, -1);
     });
   };
@@ -204,6 +275,12 @@ const Game2048 = () => {
       }
     >
       <>
+        <div className="mb-2 text-lg font-semibold">
+          Score: <span aria-live="polite">{score}</span>
+          {scorePop > 0 && (
+            <span className="ml-2 text-green-400 font-bold score-pop">+{scorePop}</span>
+          )}
+        </div>
         <div className="grid grid-cols-4 gap-2">
           {board.map((row, rIdx) =>
             row.map((cell, cIdx) => {
@@ -213,7 +290,9 @@ const Game2048 = () => {
                   key={key}
                   className={`h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
                     cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
-                  } ${animCells.has(key) ? 'tile-pop' : ''}`}
+                  } ${animCells.has(key) ? 'tile-pop' : ''} ${
+                    mergeCells.has(key) ? 'tile-merge' : ''
+                  }`}
                 >
                   {cell !== 0 ? cell : ''}
                 </div>
