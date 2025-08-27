@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   SIZE,
+  DIRECTIONS,
   createBoard,
   computeLegalMoves,
   applyMove,
@@ -18,6 +19,10 @@ const Reversi = () => {
   const pausedRef = useRef(false);
   const animRef = useRef(0);
   const audioRef = useRef(null);
+  const workerRef = useRef(null);
+  const aiThinkingRef = useRef(false);
+  const reduceMotionRef = useRef(false);
+  const flippingRef = useRef([]);
 
   const [board, setBoard] = useState(() => createBoard());
   const [player, setPlayer] = useState('B');
@@ -30,6 +35,37 @@ const Reversi = () => {
   useEffect(() => { boardRef.current = board; }, [board]);
   useEffect(() => { playerRef.current = player; }, [player]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      reduceMotionRef.current = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+      if (typeof window.Worker === 'function') {
+        workerRef.current = new Worker(
+          new URL('./reversi.worker.js', import.meta.url)
+        );
+        workerRef.current.onmessage = (e) => {
+          aiThinkingRef.current = false;
+          const { move } = e.data;
+          if (!move) return;
+          const [r, c] = move;
+          const moves = computeLegalMoves(boardRef.current, 'W');
+          const key = `${r}-${c}`;
+          const flips = moves[key];
+          if (!flips) return;
+          const prev = boardRef.current.map((row) => row.slice());
+          const next = applyMove(prev, r, c, 'W', flips);
+          queueFlips(r, c, 'W', prev);
+          setBoard(next);
+          playSound();
+          setPlayer('B');
+        };
+      }
+    }
+    return () => workerRef.current?.terminate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // load wins from storage
   useEffect(() => {
@@ -62,6 +98,33 @@ const Reversi = () => {
     osc.stop(ctx.currentTime + 0.1);
   };
 
+  const queueFlips = (r, c, player, prevBoard) => {
+    if (reduceMotionRef.current) return;
+    const start = performance.now();
+    DIRECTIONS.forEach(([dr, dc]) => {
+      const seq = [];
+      let i = r + dr;
+      let j = c + dc;
+      while (
+        i >= 0 && i < SIZE && j >= 0 && j < SIZE &&
+        prevBoard[i][j] && prevBoard[i][j] !== player
+      ) {
+        seq.push([i, j]);
+        i += dr;
+        j += dc;
+      }
+      seq.forEach(([sr, sc], idx) => {
+        flippingRef.current.push({
+          key: `${sr}-${sc}`,
+          from: prevBoard[sr][sc],
+          to: player,
+          start: start + idx * 80,
+          duration: 300,
+        });
+      });
+    });
+  };
+
   // draw loop
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -81,9 +144,42 @@ const Reversi = () => {
         ctx.stroke();
       }
       const b = boardRef.current;
+      const now = performance.now();
       for (let r = 0; r < SIZE; r += 1) {
         for (let c = 0; c < SIZE; c += 1) {
           const cell = b[r][c];
+          const anim = flippingRef.current.find((a) => a.key === `${r}-${c}`);
+          if (anim) {
+            const t = (now - anim.start) / anim.duration;
+            if (t >= 1) {
+              const idx = flippingRef.current.indexOf(anim);
+              if (idx !== -1) flippingRef.current.splice(idx, 1);
+              ctx.beginPath();
+              ctx.arc(
+                c * CELL + CELL / 2,
+                r * CELL + CELL / 2,
+                CELL / 2 - 4,
+                0,
+                Math.PI * 2,
+              );
+              ctx.fillStyle = anim.to === 'B' ? '#000' : '#fff';
+              ctx.fill();
+            } else {
+              const scale = Math.abs(1 - 2 * t);
+              ctx.save();
+              ctx.translate(c * CELL + CELL / 2, r * CELL + CELL / 2);
+              ctx.scale(1, scale);
+              ctx.beginPath();
+              ctx.arc(0, 0, CELL / 2 - 4, 0, Math.PI * 2);
+              ctx.fillStyle =
+                t < 0.5
+                  ? anim.from === 'B' ? '#000' : '#fff'
+                  : anim.to === 'B' ? '#000' : '#fff';
+              ctx.fill();
+              ctx.restore();
+            }
+            continue;
+          }
           if (cell) {
             ctx.beginPath();
             ctx.arc(
@@ -99,7 +195,7 @@ const Reversi = () => {
         }
       }
       if (playerRef.current === 'B' && !pausedRef.current) {
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillStyle = '#ffff00';
         Object.keys(legalRef.current).forEach((key) => {
           const [r, c] = key.split('-').map(Number);
           ctx.beginPath();
@@ -139,20 +235,11 @@ const Reversi = () => {
       }
       return;
     }
-    if (player === 'W' && !paused) {
-      const t = setTimeout(() => {
-        const entries = Object.entries(moves);
-        let best = entries[0][0];
-        let max = entries[0][1].length;
-        entries.forEach(([k, f]) => {
-          if (f.length > max) { best = k; max = f.length; }
-        });
-        const [r, c] = best.split('-').map(Number);
-        setBoard((b) => applyMove(b, r, c, 'W', moves[best]));
-        playSound();
-        setPlayer('B');
-      }, 300);
-      return () => clearTimeout(t);
+    if (player === 'W' && !paused && !aiThinkingRef.current) {
+      aiThinkingRef.current = true;
+      if (workerRef.current) {
+        workerRef.current.postMessage({ board, player: 'W', depth: 3 });
+      }
     }
     setMessage(player === 'B' ? 'Your turn' : "AI's turn");
   }, [board, player, paused]);
@@ -168,7 +255,10 @@ const Reversi = () => {
     const key = `${r}-${c}`;
     const flips = legalRef.current[key];
     if (!flips) return;
-    setBoard((b) => applyMove(b, r, c, 'B', flips));
+    const prev = boardRef.current.map((row) => row.slice());
+    const next = applyMove(prev, r, c, 'B', flips);
+    queueFlips(r, c, 'B', prev);
+    setBoard(next);
     playSound();
     setPlayer('W');
   };
@@ -191,7 +281,7 @@ const Reversi = () => {
         className="bg-green-700"
       />
       <div className="mt-2">Wins - You: {wins.player} | AI: {wins.ai}</div>
-      <div className="mt-1">{message}</div>
+      <div className="mt-1" role="status" aria-live="polite">{message}</div>
       <div className="mt-2 flex space-x-2">
         <button
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
