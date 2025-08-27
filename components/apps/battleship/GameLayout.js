@@ -20,7 +20,7 @@ const GameLayout = ({ children, difficulty, onDifficultyChange, onRestart, stats
         </button>
         {stats && (
           <div className="ml-4 text-sm">
-            W: {stats.wins} L: {stats.losses}
+            W: {stats.wins} L: {stats.losses} Best: {stats.bestStreak}
           </div>
         )}
       </div>
