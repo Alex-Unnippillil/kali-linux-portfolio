@@ -1,325 +1,137 @@
-import React, { useRef, useEffect, useState } from 'react';
+// Bitboard-based Connect Four AI engine
+// Provides negamax search with alpha-beta pruning, iterative deepening,
+// and a transposition table. The board uses a 7x6 layout encoded into two
+// 64-bit bitboards represented with BigInt.
 
-const ROWS = 6;
 const COLS = 7;
-const SIZE = 80;
+const ROWS = 6;
+const COL_SHIFT = ROWS + 1; // extra bit per column
 
-const createBoard = () => Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+const BOTTOM_MASK = Array.from({ length: COLS }, (_, c) => 1n << BigInt(c * COL_SHIFT));
+const TOP_MASK = BOTTOM_MASK.map((m) => m << BigInt(ROWS));
+const COLUMN_MASK = Array.from(
+  { length: COLS },
+  (_, c) => ((1n << BigInt(ROWS)) - 1n) << BigInt(c * COL_SHIFT)
+);
+const MOVE_ORDER = [3, 4, 2, 5, 1, 6, 0]; // prefer center
+const WIN_SCORE = 1000000;
 
-const ConnectFour = () => {
-  const canvasRef = useRef(null);
-  const dropRef = useRef(null);
-  const boardRef = useRef(createBoard());
-  const pausedRef = useRef(false);
-  const soundRef = useRef(true);
-  const hoverRef = useRef({ col: null, row: null });
-  const reduceRef = useRef(false);
-  const winLineRef = useRef(null);
+class Position {
+  constructor(current = 0n, mask = 0n) {
+    this.current = current; // bitboard for current player
+    this.mask = mask; // bitboard for all discs
+  }
 
-  const [, setBoardState] = useState(boardRef.current);
-  const [current, setCurrent] = useState(1); // 1 red, 2 yellow
-  const [winner, setWinner] = useState(null);
-  const [paused, setPaused] = useState(false);
-  const [sound, setSound] = useState(true);
-  const [announcement, setAnnouncement] = useState("Red's turn");
-  const [highScore, setHighScore] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('connect-four-highscore');
-      return saved ? parseInt(saved, 10) : 0;
+  clone() {
+    return new Position(this.current, this.mask);
+  }
+
+  canPlay(col) {
+    return (this.mask & TOP_MASK[col]) === 0n;
+  }
+
+  play(col) {
+    // switch players and add disc in given column
+    this.current ^= this.mask;
+    this.mask |= this.mask + BOTTOM_MASK[col];
+  }
+
+  isWinningMove(col) {
+    const pos = this.current;
+    const m = this.mask;
+    const newPos = pos | ((m + BOTTOM_MASK[col]) & COLUMN_MASK[col]);
+    return Position.hasWon(newPos);
+  }
+
+  static hasWon(bitboard) {
+    // vertical
+    let m = bitboard & (bitboard >> BigInt(COL_SHIFT));
+    if (m & (m >> BigInt(2 * COL_SHIFT))) return true;
+    // horizontal
+    m = bitboard & (bitboard >> 1n);
+    if (m & (m >> 2n)) return true;
+    // diagonal /
+    m = bitboard & (bitboard >> BigInt(COL_SHIFT - 1));
+    if (m & (m >> BigInt(2 * (COL_SHIFT - 1)))) return true;
+    // diagonal \
+    m = bitboard & (bitboard >> BigInt(COL_SHIFT + 1));
+    if (m & (m >> BigInt(2 * (COL_SHIFT + 1)))) return true;
+    return false;
+  }
+
+  key() {
+    // unique key for transposition table
+    return `${this.current}_${this.mask}`;
+  }
+}
+
+export class ConnectFourAI {
+  constructor() {
+    this.position = new Position();
+    this.tt = new Map(); // transposition table
+  }
+
+  reset() {
+    this.position = new Position();
+    this.tt.clear();
+  }
+
+  canPlay(col) {
+    return this.position.canPlay(col);
+  }
+
+  play(col) {
+    this.position.play(col);
+  }
+
+  // Iterative deepening search for the best move
+  bestMove(maxDepth = 8) {
+    // Opening book: play center if board empty
+    if (this.position.mask === 0n) return 3;
+    let bestCol = MOVE_ORDER.find((c) => this.canPlay(c));
+    for (let depth = 1; depth <= maxDepth; depth++) {
+      const { column, score } = this.negamax(this.position, depth, -WIN_SCORE, WIN_SCORE);
+      if (column !== null) bestCol = column;
+      if (Math.abs(score) === WIN_SCORE) break; // found forced win or loss
     }
-    return 0;
-  });
-  const [scores, setScores] = useState({ red: 0, yellow: 0 });
-  const highRef = useRef(0);
+    return bestCol;
+  }
 
-  useEffect(() => {
-    pausedRef.current = paused;
-  }, [paused]);
-
-  useEffect(() => {
-    soundRef.current = sound;
-  }, [sound]);
-
-  useEffect(() => {
-    highRef.current = highScore;
-    localStorage.setItem('connect-four-highscore', String(highScore));
-  }, [highScore]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-      const update = () => {
-        reduceRef.current = mq.matches;
-      };
-      update();
-      mq.addEventListener('change', update);
-      return () => mq.removeEventListener('change', update);
+  negamax(position, depth, alpha, beta) {
+    const key = position.key();
+    const ttEntry = this.tt.get(key);
+    if (ttEntry && ttEntry.depth >= depth) {
+      return { column: ttEntry.column, score: ttEntry.score };
     }
-  }, []);
 
-  useEffect(() => {
-    if (winner) {
-      setAnnouncement(winner === 'draw' ? 'Game ended in draw' : `${winner} wins`);
-    } else {
-      setAnnouncement(`${current === 1 ? 'Red' : 'Yellow'}'s turn`);
+    const moves = MOVE_ORDER.filter((c) => position.canPlay(c));
+    if (depth === 0 || moves.length === 0) {
+      return { column: null, score: 0 };
     }
-  }, [current, winner]);
 
-  const reset = () => {
-    boardRef.current = createBoard();
-    setBoardState(boardRef.current);
-    setWinner(null);
-    setCurrent(1);
-    dropRef.current = null;
-    winLineRef.current = null;
-    setScores({ red: 0, yellow: 0 });
-  };
+    let bestCol = moves[0];
+    let bestScore = -WIN_SCORE;
 
-  const togglePause = () => setPaused((p) => !p);
-  const toggleSound = () => setSound((s) => !s);
-
-  const beep = () => {
-    try {
-      const ac = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ac.createOscillator();
-      const gain = ac.createGain();
-      osc.type = 'square';
-      osc.frequency.value = 400;
-      osc.connect(gain);
-      gain.connect(ac.destination);
-      osc.start();
-      gain.gain.setValueAtTime(0.2, ac.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.1);
-      osc.stop(ac.currentTime + 0.1);
-    } catch (e) {
-      // ignore
-    }
-  };
-
-  const handleClick = (e) => {
-    if (winner || dropRef.current || pausedRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const col = Math.floor((e.clientX - rect.left) / SIZE);
-    if (col < 0 || col >= COLS) return;
-    for (let r = ROWS - 1; r >= 0; r--) {
-      if (boardRef.current[r][col] === 0) {
-        dropRef.current = {
-          col,
-          row: r,
-          y: reduceRef.current ? r * SIZE : -SIZE,
-          color: current,
-          vel: 0,
-        };
-        break;
+    for (const col of moves) {
+      if (position.isWinningMove(col)) {
+        this.tt.set(key, { depth, column: col, score: WIN_SCORE });
+        return { column: col, score: WIN_SCORE };
       }
-    }
-  };
-
-  const handleMove = (e) => {
-    if (winner || dropRef.current || pausedRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const col = Math.floor((e.clientX - rect.left) / SIZE);
-    if (col < 0 || col >= COLS) {
-      hoverRef.current = { col: null, row: null };
-      return;
-    }
-    let row = null;
-    for (let r = ROWS - 1; r >= 0; r--) {
-      if (boardRef.current[r][col] === 0) {
-        row = r;
-        break;
+      const child = position.clone();
+      child.play(col);
+      const { score } = this.negamax(child, depth - 1, -beta, -alpha);
+      const val = -score;
+      if (val > bestScore) {
+        bestScore = val;
+        bestCol = col;
       }
-    }
-    hoverRef.current = { col, row };
-  };
-
-  const handleLeave = () => {
-    hoverRef.current = { col: null, row: null };
-  };
-
-  const checkWin = (board, row, col, color) => {
-    const dirs = [
-      [1, 0],
-      [0, 1],
-      [1, 1],
-      [1, -1],
-    ];
-    for (const [dx, dy] of dirs) {
-      const line = [[row, col]];
-      for (let i = 1; i < 4; i++) {
-        const r = row + dy * i;
-        const c = col + dx * i;
-        if (r < 0 || r >= ROWS || c < 0 || c >= COLS || board[r][c] !== color) break;
-        line.push([r, c]);
-      }
-      for (let i = 1; i < 4; i++) {
-        const r = row - dy * i;
-        const c = col - dx * i;
-        if (r < 0 || r >= ROWS || c < 0 || c >= COLS || board[r][c] !== color) break;
-        line.unshift([r, c]);
-      }
-      if (line.length >= 4) return line;
-    }
-    return null;
-  };
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    canvas.width = COLS * SIZE;
-    canvas.height = ROWS * SIZE;
-
-    let animId;
-    const render = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#1e3a8a';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < COLS; c++) {
-          const x = c * SIZE + SIZE / 2;
-          const y = r * SIZE + SIZE / 2;
-          ctx.beginPath();
-          ctx.arc(x, y, SIZE / 2 - 5, 0, Math.PI * 2);
-          const cell = boardRef.current[r][c];
-          ctx.fillStyle = cell === 1 ? '#ef4444' : cell === 2 ? '#facc15' : '#1e3a8a';
-          ctx.fill();
-        }
-      }
-
-      const hover = hoverRef.current;
-      if (hover.col !== null) {
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fillRect(hover.col * SIZE, 0, SIZE, canvas.height);
-      if (hover.row !== null && !dropRef.current && !pausedRef.current) {
-          ctx.beginPath();
-          ctx.arc(
-            hover.col * SIZE + SIZE / 2,
-            hover.row * SIZE + SIZE / 2,
-            SIZE / 2 - 5,
-            0,
-            Math.PI * 2
-          );
-          ctx.fillStyle =
-            current === 1 ? 'rgba(239,68,68,0.5)' : 'rgba(250,204,21,0.5)';
-          ctx.fill();
-      }
+      if (bestScore > alpha) alpha = bestScore;
+      if (alpha >= beta) break;
     }
 
-      if (dropRef.current && !pausedRef.current) {
-        const p = dropRef.current;
-        const target = p.row * SIZE;
-        if (!reduceRef.current) {
-          p.vel += 1.5;
-          p.y += p.vel;
-        } else {
-          p.y = target;
-        }
-        if (p.y >= target) {
-          p.y = target;
-          boardRef.current[p.row][p.col] = p.color;
-          setBoardState(boardRef.current.map((row) => row.slice()));
-          dropRef.current = null;
-          if (soundRef.current) beep();
-          const winLine = checkWin(boardRef.current, p.row, p.col, p.color);
-          if (winLine) {
-            winLineRef.current = winLine;
-            const winCol = p.color === 1 ? 'red' : 'yellow';
-            setWinner(winCol);
-            setScores((s) => {
-              const next = { ...s, [winCol]: s[winCol] + 1 };
-              const best = Math.max(next.red, next.yellow);
-              if (best > highRef.current) setHighScore(best);
-              return next;
-            });
-          } else if (boardRef.current[0].every((v) => v !== 0)) {
-            winLineRef.current = null;
-            setWinner('draw');
-          } else {
-            winLineRef.current = null;
-            setCurrent((c) => (c === 1 ? 2 : 1));
-          }
-        } else {
-          ctx.beginPath();
-          ctx.arc(
-            p.col * SIZE + SIZE / 2,
-            p.y + SIZE / 2,
-            SIZE / 2 - 5,
-            0,
-            Math.PI * 2
-          );
-          ctx.fillStyle = p.color === 1 ? '#ef4444' : '#facc15';
-          ctx.fill();
-        }
-      }
+    this.tt.set(key, { depth, column: bestCol, score: bestScore });
+    return { column: bestCol, score: bestScore };
+  }
+}
 
-      if (winner && winLineRef.current) {
-        const color = winner === 'red' ? '#ef4444' : '#facc15';
-        ctx.save();
-        ctx.lineWidth = 8;
-        ctx.strokeStyle = color;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = 20;
-        ctx.lineCap = 'round';
-        const line = winLineRef.current;
-        const start = line[0];
-        const end = line[line.length - 1];
-        ctx.beginPath();
-        ctx.moveTo(start[1] * SIZE + SIZE / 2, start[0] * SIZE + SIZE / 2);
-        ctx.lineTo(end[1] * SIZE + SIZE / 2, end[0] * SIZE + SIZE / 2);
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      animId = requestAnimationFrame(render);
-    };
-    animId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animId);
-  }, []);
-
-  return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <div className="mb-2 flex gap-4 items-center">
-        <div>Red: {scores.red}</div>
-        <div>Yellow: {scores.yellow}</div>
-        <div>High: {highScore}</div>
-        {winner && (
-          <div className="capitalize">{winner === 'draw' ? 'Draw' : `${winner} wins`}</div>
-        )}
-      </div>
-      <canvas
-        ref={canvasRef}
-        width={COLS * SIZE}
-        height={ROWS * SIZE}
-        className="bg-blue-700 cursor-pointer"
-        onClick={handleClick}
-        onMouseMove={handleMove}
-        onMouseLeave={handleLeave}
-      />
-      <div aria-live="polite" className="sr-only">
-        {announcement}
-      </div>
-      <div className="mt-4 flex gap-2">
-        <button className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded" onClick={reset}>
-          Reset
-        </button>
-        <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={togglePause}
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={toggleSound}
-        >
-          {sound ? 'Sound: On' : 'Sound: Off'}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-export default ConnectFour;
-
+export default ConnectFourAI;
