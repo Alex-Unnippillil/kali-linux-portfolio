@@ -11,6 +11,7 @@ let state = {
   car: { lane: 1, y: HEIGHT - CAR_HEIGHT - 10 },
   obstacles: [],
   roadside: { near: [], far: [] },
+  background: { near: [], far: [] },
   lineOffset: 0,
 };
 
@@ -28,6 +29,17 @@ function draw() {
   if (!ctx) return;
   ctx.fillStyle = '#333';
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+  if (state.background) {
+    ctx.fillStyle = '#111';
+    state.background.far.forEach(({ x, y }) => {
+      ctx.fillRect(x, y, 2, 2);
+    });
+    ctx.fillStyle = '#555';
+    state.background.near.forEach(({ x, y }) => {
+      ctx.fillRect(x, y, 3, 3);
+    });
+  }
 
   if (state.roadside) {
     ctx.fillStyle = '#999';
