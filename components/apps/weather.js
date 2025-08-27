@@ -118,21 +118,102 @@ const RainIcon = ({ still }) => {
   );
 };
 
+const SnowIcon = ({ still }) => {
+  const groupRef = useRef(null);
+  useEffect(() => {
+    if (still) return;
+    let y = 0;
+    let frame;
+    const animate = () => {
+      y = (y + 0.5) % 16;
+      if (groupRef.current)
+        groupRef.current.style.transform = `translateY(${y}px)`;
+      frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [still]);
+  return (
+    <svg
+      className="w-16 h-16 mb-4"
+      viewBox="0 0 64 64"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="4"
+      aria-hidden="true"
+    >
+      <path d="M20 40h24a8 8 0 0 0 0-16 12 12 0 0 0-22-4 10 10 0 0 0-2 20z" />
+      <g ref={groupRef} fill="currentColor" stroke="none">
+        {[12, 24, 36].map((x) => (
+          <circle key={x} cx={x} cy="46" r="2" />
+        ))}
+      </g>
+    </svg>
+  );
+};
+
+const ThunderIcon = ({ still }) => {
+  const boltRef = useRef(null);
+  useEffect(() => {
+    if (still) return;
+    let opacity = 1;
+    let dir = -0.05;
+    let frame;
+    const animate = () => {
+      opacity += dir;
+      if (opacity <= 0.2 || opacity >= 1) dir *= -1;
+      if (boltRef.current) boltRef.current.style.opacity = opacity;
+      frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [still]);
+  return (
+    <svg
+      className="w-16 h-16 mb-4"
+      viewBox="0 0 64 64"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path d="M20 46h28a10 10 0 0 0 0-20 14 14 0 0 0-26-6 12 12 0 0 0-2 26z" />
+      <path
+        ref={boltRef}
+        d="M32 36l6 0-6 10h6l-10 12 4-10h-6z"
+      />
+    </svg>
+  );
+};
+
 const conditionMap = [
   {
     codes: [0],
     gradient: 'bg-gradient-to-b from-blue-500 to-blue-700',
     Icon: SunIcon,
+    label: 'Clear sky',
   },
   {
     codes: [1, 2, 3],
     gradient: 'bg-gradient-to-b from-gray-500 to-gray-700',
     Icon: CloudIcon,
+    label: 'Cloudy',
   },
   {
     codes: [51, 53, 55, 61, 63, 65, 80, 81, 82],
     gradient: 'bg-gradient-to-b from-indigo-700 to-gray-900',
     Icon: RainIcon,
+    label: 'Rain',
+  },
+  {
+    codes: [71, 73, 75, 77, 85, 86],
+    gradient: 'bg-gradient-to-b from-sky-600 to-sky-800',
+    Icon: SnowIcon,
+    label: 'Snow',
+  },
+  {
+    codes: [95, 96, 99],
+    gradient: 'bg-gradient-to-b from-gray-700 to-gray-900',
+    Icon: ThunderIcon,
+    label: 'Thunderstorm',
   },
 ];
 
@@ -192,14 +273,18 @@ const Weather = () => {
       day: 'numeric',
     }).format(new Date(str));
 
-  const { gradient, Icon } = getCondition(data.current_weather.weathercode);
+  const { gradient, Icon, label } = getCondition(
+    data.current_weather.weathercode
+  );
 
   return (
     <div
       className={`h-full w-full flex flex-col items-center justify-center text-white p-4 overflow-auto ${gradient}`}
       aria-live="polite"
+      role="status"
     >
       <Icon still={reduceMotion} />
+      <div className="mb-2">{label}</div>
       <div className="text-4xl mb-4">
         {Math.round(data.current_weather.temperature)}°C
       </div>
