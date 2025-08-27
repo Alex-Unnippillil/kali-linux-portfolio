@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createDeck } from './memory_utils';
+import usePageVisibility from '../../hooks/usePageVisibility';
 
 const modes = [2, 4, 6];
 
@@ -14,6 +15,8 @@ const Memory = () => {
   const [time, setTime] = useState(0);
   const [stats, setStats] = useState({ games: 0, bestTime: null, bestMoves: null });
   const timerRef = useRef(null);
+  const wasRunning = useRef(false);
+  const isVisible = usePageVisibility();
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
     const key = useCallback(
@@ -81,6 +84,23 @@ const Memory = () => {
       media.addEventListener('change', handler);
       return () => media.removeEventListener('change', handler);
     }, []);
+
+    useEffect(() => {
+      if (!isVisible) {
+        if (timerRef.current) {
+          wasRunning.current = true;
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        } else {
+          wasRunning.current = false;
+        }
+      } else if (wasRunning.current) {
+        if (window.confirm('Resume game?')) {
+          startTimer();
+        }
+        wasRunning.current = false;
+      }
+    }, [isVisible]);
 
     useEffect(() => {
       if (cards.length && matched.length === cards.length) {
