@@ -1,120 +1,207 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import Matter from 'matter-js';
 import useCanvasResize from '../../hooks/useCanvasResize';
+import usePersistentState from '../../hooks/usePersistentState';
+
 const WIDTH = 400;
 const HEIGHT = 500;
+const DEFAULT_LAYOUT = { bumpers: [] };
 
 const Pinball = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+  const [layout, setLayout] = usePersistentState('pinball-layout', DEFAULT_LAYOUT);
+  const [editing, setEditing] = useState(false);
+  const [tilt, setTilt] = useState(false);
+  const [lightsEnabled, setLightsEnabled] = useState(true);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const nudgeTimes = useRef([]);
+  const bumpersRef = useRef([]);
+  const animRef = useRef();
+  const lightsRef = useRef(true);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const width = WIDTH;
-    const height = HEIGHT;
+    if (typeof window !== 'undefined') {
+      setPrefersReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    }
+  }, []);
 
-    const ball = { x: width / 2, y: 50, vx: 100, vy: 0, r: 8 };
-    const gravity = 500; // px per second^2
-    const flippers = { left: false, right: false };
-    const floor = height - 20;
+  useEffect(() => {
+    lightsRef.current = lightsEnabled;
+    bumpersRef.current.forEach((b) => {
+      b.body.render.fillStyle = lightsEnabled ? (b.lit ? '#ffd700' : '#444') : '#222';
+    });
+  }, [lightsEnabled]);
+
+  useEffect(() => {
+    if (!canvasRef.current || editing) return;
+    const { Engine, Render, Runner, Bodies, Composite, Body, Constraint, Events } = Matter;
+    const engine = Engine.create();
+    const world = engine.world;
+
+    const walls = [
+      Bodies.rectangle(WIDTH / 2, -10, WIDTH, 20, { isStatic: true }),
+      Bodies.rectangle(WIDTH / 2, HEIGHT + 10, WIDTH, 20, { isStatic: true }),
+      Bodies.rectangle(-10, HEIGHT / 2, 20, HEIGHT, { isStatic: true }),
+      Bodies.rectangle(WIDTH + 10, HEIGHT / 2, 20, HEIGHT, { isStatic: true }),
+    ];
+    Composite.add(world, walls);
+
+    const ball = Bodies.circle(WIDTH / 2, 50, 8, { restitution: 0.9 });
+    Composite.add(world, ball);
+
+    // flippers
+    const flipperLeft = Bodies.rectangle(110, HEIGHT - 40, 80, 20, { friction: 0, density: 1 });
+    const flipperRight = Bodies.rectangle(WIDTH - 110, HEIGHT - 40, 80, 20, { friction: 0, density: 1 });
+    Body.setInertia(flipperLeft, Infinity);
+    Body.setInertia(flipperRight, Infinity);
+    const pivotLeft = Constraint.create({ bodyA: flipperLeft, pointB: { x: 70, y: HEIGHT - 40 }, length: 0, stiffness: 1 });
+    const pivotRight = Constraint.create({ bodyA: flipperRight, pointB: { x: WIDTH - 70, y: HEIGHT - 40 }, length: 0, stiffness: 1 });
+    Composite.add(world, [flipperLeft, flipperRight, pivotLeft, pivotRight]);
+
+    // bumpers with lights
+    const bumpers = layout.bumpers.map((b, i) => {
+      const bumper = Bodies.circle(b.x, b.y, b.r, {
+        isStatic: true,
+        restitution: 1.5,
+        render: { fillStyle: lightsRef.current ? '#444' : '#222' },
+      });
+      bumper.plugin = { index: i };
+      Composite.add(world, bumper);
+      return { body: bumper, lit: false, flashUntil: 0 };
+    });
+    bumpersRef.current = bumpers;
+
+    const getBumperData = (body) => {
+      if (body.plugin && body.plugin.index != null) {
+        return bumpersRef.current[body.plugin.index];
+      }
+      return null;
+    };
+
+    Events.on(engine, 'collisionStart', (event) => {
+      event.pairs.forEach(({ bodyA, bodyB }) => {
+        const bumperData = getBumperData(bodyA) || getBumperData(bodyB);
+        if (bumperData && lightsRef.current) {
+          bumperData.lit = !bumperData.lit;
+          if (!prefersReducedMotion) {
+            bumperData.flashUntil = performance.now() + 100;
+            bumperData.body.render.fillStyle = '#fff';
+          } else {
+            bumperData.body.render.fillStyle = bumperData.lit ? '#ffd700' : '#444';
+          }
+        }
+      });
+    });
+
+    const render = Render.create({
+      canvas: canvasRef.current,
+      engine,
+      options: { width: WIDTH, height: HEIGHT, background: '#000', wireframes: false },
+    });
+    Render.run(render);
+    const runner = Runner.create();
+    Runner.run(runner, engine);
+
+    const animate = (time) => {
+      bumpersRef.current.forEach((b) => {
+        if (b.flashUntil && time > b.flashUntil) {
+          b.flashUntil = 0;
+          b.body.render.fillStyle = b.lit ? '#ffd700' : '#444';
+        }
+      });
+      animRef.current = requestAnimationFrame(animate);
+    };
+    animRef.current = requestAnimationFrame(animate);
 
     const keydown = (e) => {
-      if (e.key === 'ArrowLeft') flippers.left = true;
-      if (e.key === 'ArrowRight') flippers.right = true;
+      if (tilt) return;
+      if (e.key === 'ArrowLeft') Body.setAngle(flipperLeft, -0.5);
+      if (e.key === 'ArrowRight') Body.setAngle(flipperRight, 0.5);
+      if (e.key.toLowerCase() === 'n') {
+        const now = Date.now();
+        nudgeTimes.current = nudgeTimes.current.filter((t) => now - t < 3000);
+        nudgeTimes.current.push(now);
+        Body.applyForce(ball, ball.position, { x: 0.02, y: 0 });
+        if (nudgeTimes.current.length > 3) {
+          setTilt(true);
+        }
+      }
     };
-
     const keyup = (e) => {
-      if (e.key === 'ArrowLeft') flippers.left = false;
-      if (e.key === 'ArrowRight') flippers.right = false;
+      if (e.key === 'ArrowLeft') Body.setAngle(flipperLeft, 0);
+      if (e.key === 'ArrowRight') Body.setAngle(flipperRight, 0);
     };
-
     window.addEventListener('keydown', keydown);
     window.addEventListener('keyup', keyup);
 
-    const reset = () => {
-      ball.x = width / 2;
-      ball.y = 50;
-      ball.vx = 100 * (Math.random() > 0.5 ? 1 : -1);
-      ball.vy = 0;
-    };
-
-    let last = 0;
-    let animationId;
-
-    const loop = (time) => {
-      animationId = requestAnimationFrame(loop);
-      const dt = (time - last) / 1000;
-      last = time;
-
-      ball.vy += gravity * dt;
-      ball.x += ball.vx * dt;
-      ball.y += ball.vy * dt;
-
-      if (ball.x < ball.r) {
-        ball.x = ball.r;
-        ball.vx *= -1;
-      }
-      if (ball.x > width - ball.r) {
-        ball.x = width - ball.r;
-        ball.vx *= -1;
-      }
-
-      if (ball.y < ball.r) {
-        ball.y = ball.r;
-        ball.vy *= -1;
-      }
-
-      if (ball.y + ball.r > floor) {
-        if (flippers.left && ball.x < width / 2) {
-          ball.vy = -300;
-          ball.vx = -150;
-        } else if (flippers.right && ball.x >= width / 2) {
-          ball.vy = -300;
-          ball.vx = 150;
-        } else {
-          reset();
-        }
-      }
-
-      ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, width, height);
-
-      ctx.fillStyle = '#ff6f00';
-      ctx.save();
-      ctx.translate(80, floor);
-      ctx.rotate(flippers.left ? -0.5 : 0);
-      ctx.fillRect(-40, -5, 40, 10);
-      ctx.restore();
-
-      ctx.save();
-      ctx.translate(width - 80, floor);
-      ctx.rotate(flippers.right ? 0.5 : 0);
-      ctx.fillRect(0, -5, 40, 10);
-      ctx.restore();
-
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
-      ctx.fill();
-    };
-
-    reset();
-    animationId = requestAnimationFrame(loop);
-
     return () => {
-      cancelAnimationFrame(animationId);
       window.removeEventListener('keydown', keydown);
       window.removeEventListener('keyup', keyup);
+      Render.stop(render);
+      Runner.stop(runner);
+      Engine.clear(engine);
+      cancelAnimationFrame(animRef.current);
     };
-  }, [canvasRef]);
+  }, [canvasRef, layout, editing, tilt, prefersReducedMotion]);
+
+  const handleClick = (e) => {
+    if (!editing || !canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setLayout({ ...layout, bumpers: [...layout.bumpers, { x, y, r: 20 }] });
+  };
+
+  const saveShare = () => {
+    const json = JSON.stringify(layout);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(json);
+      alert('Layout copied to clipboard');
+    }
+  };
+
+  const resetTilt = () => {
+    setTilt(false);
+    nudgeTimes.current = [];
+  };
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey">
-      <canvas ref={canvasRef} className="bg-black w-full h-full" />
+    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white">
+      <div className="p-1 space-x-2">
+        <button className="px-2 bg-ub-orange text-black" onClick={() => setEditing(!editing)}>
+          {editing ? 'Play' : 'Edit'}
+        </button>
+        <button className="px-2 bg-ub-orange text-black" onClick={saveShare}>
+          Save/Share
+        </button>
+        <button
+          className="px-2 bg-ub-orange text-black"
+          onClick={() => setLightsEnabled(!lightsEnabled)}
+          aria-pressed={lightsEnabled}
+        >
+          {lightsEnabled ? 'Lights On' : 'Lights Off'}
+        </button>
+        {tilt && (
+          <span
+            className="ml-2 text-red-500 motion-safe:animate-pulse"
+            aria-live="assertive"
+            role="alert"
+          >
+            TILT <button onClick={resetTilt}>Reset</button>
+          </span>
+        )}
+      </div>
+      <canvas
+        ref={canvasRef}
+        onClick={handleClick}
+        className="bg-black"
+        width={WIDTH}
+        height={HEIGHT}
+      />
+      {editing && <div className="text-xs p-1">Click to add bumpers. Press Play when done.</div>}
+      <div className="text-xs p-1">Press &apos;n&apos; to nudge. Three nudges in 3s causes tilt.</div>
     </div>
   );
 };
 
 export default Pinball;
-

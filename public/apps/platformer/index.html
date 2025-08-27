@@ -7,13 +7,14 @@
 </head>
 <body>
   <canvas id="game" width="640" height="360"></canvas>
-  <div id="timer"></div>
-  <div id="complete" class="hidden">Level Complete!</div>
+  <div id="timer" aria-live="off"></div>
+  <div id="complete" class="hidden" role="status" aria-live="assertive">Level Complete!</div>
   <div id="controls">
     <button id="btnLeft">◀</button>
     <button id="btnRight">▶</button>
     <button id="btnJump">⮝</button>
   </div>
+  <div id="announcer" class="sr-only" aria-live="polite"></div>
   <script type="module" src="main.js"></script>
 </body>
 </html>

@@ -22,6 +22,7 @@ const tileSize = 20;
 const WIDTH = defaultMaze[0].length * tileSize;
 const HEIGHT = defaultMaze.length * tileSize;
 const speed = 1; // pixels per frame
+const PATH_LENGTH = 25; // number of positions to keep for ghost traces
 
 const dirs = [
   { x: 1, y: 0 },
@@ -79,10 +80,10 @@ const Pacman = () => {
   });
 
   const ghostsRef = useRef([
-    { name: 'blinky', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'red' },
-    { name: 'pinky', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'pink' },
-    { name: 'inky', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'cyan' },
-    { name: 'clyde', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'orange' },
+    { name: 'blinky', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'red', path: [] },
+    { name: 'pinky', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'pink', path: [] },
+    { name: 'inky', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'cyan', path: [] },
+    { name: 'clyde', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'orange', path: [] },
   ]);
 
   const modeRef = useRef({ index: 0, timer: modeSchedule[0].duration });
@@ -94,6 +95,25 @@ const Pacman = () => {
   const statusRef = useRef('Playing');
   const audioCtxRef = useRef(null);
   const touchStartRef = useRef(null);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const soundRef = useRef(true);
+  useEffect(() => {
+    soundRef.current = soundEnabled;
+  }, [soundEnabled]);
+  const [prefersReduced, setPrefersReduced] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = () => setPrefersReduced(media.matches);
+    handler();
+    media.addEventListener('change', handler);
+    return () => media.removeEventListener('change', handler);
+  }, []);
+  const [announcement, setAnnouncement] = useState('');
 
   const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);
   const isCenter = (pos) => Math.abs((pos % tileSize) - tileSize / 2) < 0.1;
@@ -104,6 +124,7 @@ const Pacman = () => {
   }, []);
 
   const playSound = (freq) => {
+    if (!soundRef.current) return;
     try {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -131,6 +152,7 @@ const Pacman = () => {
       g.x = 7 * tileSize;
       g.y = 3 * tileSize;
       g.dir = { x: 0, y: -1 };
+      g.path = [];
     });
   };
 
@@ -153,11 +175,16 @@ const Pacman = () => {
       statusRef.current = 'Playing';
       modeRef.current = { index: 0, timer: modeSchedule[0].duration };
       frightTimerRef.current = 0;
+      setPaused(false);
 
       resetPositions();
     },
     [levels]
   );
+
+  const reset = useCallback(() => {
+    loadLevel(levelIndex);
+  }, [loadLevel, levelIndex]);
 
   const targetFor = (ghost, pac) => {
     if (frightTimerRef.current > 0) return null;
@@ -191,15 +218,15 @@ const Pacman = () => {
     }
   };
 
-  const availableDirs = useCallback((gx, gy, dir) => {
-    const rev = { x: -dir.x, y: -dir.y };
-    return dirs.filter((d) => {
-      if (d.x === rev.x && d.y === rev.y) return false;
-      const nx = gx + d.x;
-      const ny = gy + d.y;
-      return tileAt(nx, ny) !== 1;
-    });
-  }, []);
+    const availableDirs = useCallback((gx, gy, dir) => {
+      const rev = { x: -dir.x, y: -dir.y };
+      return dirs.filter((d) => {
+        if (d.x === rev.x && d.y === rev.y) return false;
+        const nx = gx + d.x;
+        const ny = gy + d.y;
+        return tileAt(nx, ny) !== 1;
+      });
+    }, []);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -244,17 +271,37 @@ const Pacman = () => {
     const startAngle = angle + Math.PI / 6;
     const endAngle = angle - Math.PI / 6 + Math.PI * 2;
     ctx.moveTo(pac.x + tileSize / 2, pac.y + tileSize / 2);
-    ctx.arc(pac.x + tileSize / 2, pac.y + tileSize / 2, tileSize / 2 - 2, startAngle, endAngle, false);
+    const pulse = frightTimerRef.current > 0 && !prefersReduced ? 1 + 0.1 * Math.sin(Date.now() / 100) : 1;
+    ctx.arc(
+      pac.x + tileSize / 2,
+      pac.y + tileSize / 2,
+      (tileSize / 2 - 2) * pulse,
+      startAngle,
+      endAngle,
+      false
+    );
     ctx.closePath();
     ctx.fill();
 
     ghostsRef.current.forEach((g) => {
+      if (g.path && g.path.length > 1) {
+        ctx.strokeStyle = g.color;
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        g.path.forEach((p, i) => {
+          if (i === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
       ctx.fillStyle = frightTimerRef.current > 0 ? 'blue' : g.color;
       ctx.beginPath();
       ctx.arc(g.x + tileSize / 2, g.y + tileSize / 2, tileSize / 2 - 2, 0, Math.PI * 2);
       ctx.fill();
     });
-  }, []);
+  }, [prefersReduced]);
 
   const step = useCallback(() => {
     const pac = pacRef.current;
@@ -298,6 +345,7 @@ const Pacman = () => {
       } else {
         setScore((s) => s + 50);
         frightTimerRef.current = 6 * 60;
+        setAnnouncement('Pacman energized');
       }
       maze[pty][ptx] = 0;
     }
@@ -328,6 +376,9 @@ const Pacman = () => {
     // mode switching
     if (frightTimerRef.current > 0) {
       frightTimerRef.current--;
+      if (frightTimerRef.current === 0) {
+        setAnnouncement('Pacman is normal');
+      }
     } else {
       modeRef.current.timer--;
       if (modeRef.current.timer <= 0 && modeRef.current.index < modeSchedule.length - 1) {
@@ -366,6 +417,12 @@ const Pacman = () => {
       if (tileAt(ntx, nty) !== 1) {
         g.x += g.dir.x * gSpeed;
         g.y += g.dir.y * gSpeed;
+        if (!prefersReduced) {
+          g.path.push({ x: g.x + tileSize / 2, y: g.y + tileSize / 2 });
+          if (g.path.length > PATH_LENGTH) g.path.shift();
+        } else {
+          g.path = [];
+        }
       }
 
       const gtx = Math.floor((g.x + tileSize / 2) / tileSize);
@@ -388,7 +445,7 @@ const Pacman = () => {
         }
       }
     });
-  }, [pellets, score, availableDirs, levelIndex, isTunnel]);
+  }, [pellets, score, availableDirs, levelIndex, isTunnel, prefersReduced, setAnnouncement]);
 
   const stepRef = useRef(step);
   useEffect(() => {
@@ -436,6 +493,18 @@ const Pacman = () => {
         case 'ArrowRight':
           pacRef.current.nextDir = { x: 1, y: 0 };
           break;
+        case 'p':
+        case 'P':
+          setPaused((p) => !p);
+          break;
+        case 'r':
+        case 'R':
+          reset();
+          break;
+        case 'm':
+        case 'M':
+          setSoundEnabled((s) => !s);
+          break;
         default:
           break;
       }
@@ -465,9 +534,8 @@ const Pacman = () => {
 
     let id;
     const loop = () => {
-      if (statusRef.current === 'Playing') {
+      if (statusRef.current === 'Playing' && !pausedRef.current) {
         stepRef.current();
-        draw();
         // simple gamepad polling
         const pads = navigator.getGamepads ? navigator.getGamepads() : [];
         if (pads) {
@@ -478,12 +546,13 @@ const Pacman = () => {
             if (Math.abs(ay) > 0.3) pacRef.current.nextDir = { x: 0, y: ay > 0 ? 1 : -1 };
           }
         }
-        id = requestAnimationFrame(loop);
       }
+      draw();
+      id = requestAnimationFrame(loop);
     };
 
     draw();
-    loop();
+    id = requestAnimationFrame(loop);
 
     return () => {
       window.removeEventListener('keydown', handleKey);
@@ -491,29 +560,8 @@ const Pacman = () => {
       canvas.removeEventListener('touchend', handleTouchEnd);
       if (id) cancelAnimationFrame(id);
     };
-  }, [loading, error, draw]);
+  }, [loading, error, draw, reset, setPaused, setSoundEnabled]);
 
-
-  useEffect(() => {
-    fetch('/pacman-levels.json')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.levels) {
-          setLevels(data.levels);
-          loadLevel(0, data.levels);
-        }
-      })
-      .catch(() => {});
-    const stored = window.localStorage.getItem('pacmanHighScore');
-    if (stored) setHighScore(parseInt(stored, 10));
-  }, [loadLevel]);
-
-  useEffect(() => {
-    if (score > highScore) {
-      setHighScore(score);
-      window.localStorage.setItem('pacmanHighScore', String(score));
-    }
-  }, [score, highScore]);
 
   if (loading) {
     return (
@@ -555,7 +603,30 @@ const Pacman = () => {
 
       <div className="mt-2">Score: {score} | High: {highScore}</div>
       <div className="mt-1">Lives: {pacRef.current.lives}</div>
-      {statusRef.current !== 'Playing' && <div className="mt-2">{statusRef.current}</div>}
+      {(statusRef.current !== 'Playing' || paused) && (
+        <div className="mt-2">{paused ? 'Paused' : statusRef.current}</div>
+      )}
+      <div className="mt-2 space-x-2">
+        <button
+          className="px-2 py-1 bg-ub-grey rounded"
+          onClick={reset}
+        >
+          Reset
+        </button>
+        <button
+          className="px-2 py-1 bg-ub-grey rounded"
+          onClick={() => setPaused((p) => !p)}
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          className="px-2 py-1 bg-ub-grey rounded"
+          onClick={() => setSoundEnabled((s) => !s)}
+        >
+          {soundEnabled ? 'Sound On' : 'Sound Off'}
+        </button>
+      </div>
+      <div className="sr-only" aria-live="polite">{announcement}</div>
     </div>
   );
 };

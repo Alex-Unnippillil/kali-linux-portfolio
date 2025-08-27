@@ -10,6 +10,7 @@ import {
   suits,
   Card,
   GameState,
+  createDeck,
 } from '../components/apps/solitaire/engine';
 
 const card = (s: any, v: number, faceUp = true): Card => ({
@@ -30,6 +31,14 @@ const emptyState = (): GameState => ({
 });
 
 describe('Solitaire engine', () => {
+  test('createDeck supports deterministic seed', () => {
+    const a = createDeck(1234);
+    const b = createDeck(1234);
+    expect(a).toEqual(b);
+    const c = createDeck(5678);
+    expect(a).not.toEqual(c);
+  });
+
   test('initializeGame deals tableau correctly', () => {
     const game = initializeGame(1, Array.from({ length: 52 }, (_, i) => card(suits[i % 4], (i % 13) + 1, false)));
     expect(game.tableau.length).toBe(7);

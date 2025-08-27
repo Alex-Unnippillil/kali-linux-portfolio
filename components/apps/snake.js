@@ -1,357 +1,278 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import GameLayout from './GameLayout';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useGameControls from './useGameControls';
 
+const GRID_SIZE = 20;
+const CELL_SIZE = 16; // pixels
+const SPEED = 120; // ms per move
 
-// size of the square play field
-const gridSize = 20;
-
-// speed progression settings
-const SPEED_STEP = 10;
-const MIN_SPEED = 50;
-const SPEED_INTERVAL = 5; // foods per speed increase
-
-// helper that finds a random unoccupied cell
-const randomCell = (occupied) => {
-  let cell;
+const randomFood = (snake) => {
+  let pos;
   do {
-    cell = {
-      x: Math.floor(Math.random() * gridSize),
-      y: Math.floor(Math.random() * gridSize),
+    pos = {
+      x: Math.floor(Math.random() * GRID_SIZE),
+      y: Math.floor(Math.random() * GRID_SIZE),
     };
-  } while (occupied.some((p) => p.x === cell.x && p.y === cell.y));
-  return cell;
+  } while (snake.some((s) => s.x === pos.x && s.y === pos.y));
+  return pos;
 };
-
-const createObstacles = (count, occupied = []) => {
-  const obs = [];
-  while (obs.length < count) {
-    obs.push(randomCell([...occupied, ...obs]));
-  }
-  return obs;
-};
-
-const speedLevels = { slow: 200, normal: 150, fast: 100 };
 
 const Snake = () => {
-  // snake state and movement
-  const [snake, setSnake] = useState([{ x: 10, y: 10 }]);
-  const [direction, setDirection] = useState({ x: 0, y: -1 });
-  const dirQueue = useRef([]); // buffered turns
-  const snakeRef = useRef(snake);
+  const canvasRef = useRef(null);
+  const ctxRef = useRef(null);
+  const snakeRef = useRef([
+    { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2), scale: 1 },
+  ]);
+  const dirRef = useRef({ x: 1, y: 0 });
+  const foodRef = useRef(randomFood(snakeRef.current));
+  const moveQueueRef = useRef([]);
 
-  // entities
-  const [food, setFood] = useState(() => randomCell([{ x: 10, y: 10 }]));
-  const [obstacles, setObstacles] = useState(() => createObstacles(5, [{ x: 10, y: 10 }]));
+  const rafRef = useRef();
+  const lastRef = useRef(0);
+  const runningRef = useRef(true);
+  const audioCtx = useRef(null);
+  const prefersReducedMotion = useRef(false);
 
-  // game state
-  const [paused, setPaused] = useState(false);
+  const [running, setRunning] = useState(true);
   const [wrap, setWrap] = useState(false);
-  const [speedSetting, setSpeedSetting] = useState('normal');
-  const [gameOver, setGameOver] = useState(false);
+  const [sound, setSound] = useState(true);
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(0);
-  const [speed, setSpeed] = useState(speedLevels[speedSetting]); // ms per step
+  const [gameOver, setGameOver] = useState(false);
+  const [highScore, setHighScore] = useState(() => {
+    if (typeof window === 'undefined') return 0;
+    const stored = window.localStorage.getItem('snake_highscore');
+    return stored ? parseInt(stored, 10) : 0;
+  });
 
-  // animation state
-  const [growCell, setGrowCell] = useState(null);
-  const [foodAnim, setFoodAnim] = useState(false);
+  const beep = useCallback((freq) => {
+    if (!sound) return;
+    const ctx = audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.current = ctx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.value = freq;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+  }, [sound]);
 
-  // replay handling
-  const replayRef = useRef([]); // record of directions
-  const [replayData, setReplayData] = useState([]);
-  const [playingReplay, setPlayingReplay] = useState(false);
+  const draw = useCallback(() => {
+    const ctx = ctxRef.current;
+    if (!ctx) return;
 
-  // fixed time step loop
-  const lastTime = useRef(0);
-  const acc = useRef(0);
-  const animationFrameRef = useRef();
-  const replayFrameRef = useRef();
-  const replayLastTimeRef = useRef(0);
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+
+    // Ghost path preview
+    const ghost = [];
+    let gx = snakeRef.current[0].x;
+    let gy = snakeRef.current[0].y;
+    let gdir = dirRef.current;
+    const moves = moveQueueRef.current;
+    for (let i = 0; i < 5; i += 1) {
+      if (moves[i]) gdir = moves[i];
+      gx += gdir.x;
+      gy += gdir.y;
+      if (wrap) {
+        gx = (gx + GRID_SIZE) % GRID_SIZE;
+        gy = (gy + GRID_SIZE) % GRID_SIZE;
+      } else if (gx < 0 || gy < 0 || gx >= GRID_SIZE || gy >= GRID_SIZE) {
+        break;
+      }
+      ghost.push({ x: gx, y: gy });
+    }
+    if (ghost.length) {
+      ctx.fillStyle = 'rgba(74,222,128,0.5)';
+      ghost.forEach((g) => {
+        ctx.fillRect(g.x * CELL_SIZE, g.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      });
+    }
+
+    // Food
+    ctx.fillStyle = '#ef4444';
+    const food = foodRef.current;
+    ctx.fillRect(food.x * CELL_SIZE, food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+
+    // Snake segments
+    ctx.fillStyle = '#22c55e';
+    snakeRef.current.forEach((seg) => {
+      const scale = seg.scale ?? 1;
+      const size = CELL_SIZE * scale;
+      const offset = (CELL_SIZE - size) / 2;
+      ctx.fillRect(seg.x * CELL_SIZE + offset, seg.y * CELL_SIZE + offset, size, size);
+      if (scale < 1) {
+        seg.scale = Math.min(1, scale + 0.1);
+      }
+    });
+  }, [wrap]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const storedMode = localStorage.getItem('snakeMode');
-    if (storedMode) {
-      try {
-        const { wrap: w = false, speed: s = 'normal' } = JSON.parse(storedMode);
-        setWrap(w);
-        setSpeedSetting(s);
-        setSpeed(speedLevels[s]);
-        const hs = localStorage.getItem(
-          `snakeHighScore_${w ? 'wrap' : 'nowrap'}_${s}`
-        );
-        if (hs) setHighScore(parseInt(hs, 10));
-      } catch {
-        // ignore parse errors
-      }
+    const ctx = canvasRef.current?.getContext('2d');
+    ctxRef.current = ctx;
+    draw();
+  }, [draw]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      prefersReducedMotion.current = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
     }
   }, []);
 
-  useEffect(() => {
-    snakeRef.current = snake;
-  }, [snake]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem('snakeMode', JSON.stringify({ wrap, speed: speedSetting }));
-    const hs = localStorage.getItem(`snakeHighScore_${wrap ? 'wrap' : 'nowrap'}_${speedSetting}`);
-    setHighScore(hs ? parseInt(hs, 10) : 0);
-    setSpeed(speedLevels[speedSetting]);
-  }, [wrap, speedSetting]);
-
-  const enqueueDir = useCallback(
-    (dir) => {
-      const last = dirQueue.current.length
-        ? dirQueue.current[dirQueue.current.length - 1]
-        : direction;
+  const update = useCallback(() => {
+    const snake = snakeRef.current;
+    if (moveQueueRef.current.length) {
+      const next = moveQueueRef.current.shift();
       if (
-        snakeRef.current.length > 1 &&
-        last.x + dir.x === 0 &&
-        last.y + dir.y === 0
-      )
-        return; // prevent 180 into self
-      dirQueue.current.push(dir);
+        next &&
+        (dirRef.current.x + next.x !== 0 || dirRef.current.y + next.y !== 0)
+      ) {
+        dirRef.current = next;
+      }
+    }
+    const dir = dirRef.current;
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y, scale: 1 };
+
+    if (wrap) {
+      head.x = (head.x + GRID_SIZE) % GRID_SIZE;
+      head.y = (head.y + GRID_SIZE) % GRID_SIZE;
+    } else if (
+      head.x < 0 ||
+      head.y < 0 ||
+      head.x >= GRID_SIZE ||
+      head.y >= GRID_SIZE
+    ) {
+      setGameOver(true);
+      setRunning(false);
+      beep(120);
+      return;
+    }
+
+    if (snake.some((s) => s.x === head.x && s.y === head.y)) {
+      setGameOver(true);
+      setRunning(false);
+      beep(120);
+      return;
+    }
+
+    snake.unshift(head);
+    if (head.x === foodRef.current.x && head.y === foodRef.current.y) {
+      setScore((s) => s + 1);
+      beep(440);
+      foodRef.current = randomFood(snake);
+      if (!prefersReducedMotion.current) head.scale = 0;
+    } else {
+      snake.pop();
+    }
+  }, [wrap, beep]);
+
+  const loop = useCallback(
+    (time) => {
+      rafRef.current = requestAnimationFrame(loop);
+      if (runningRef.current && time - lastRef.current > SPEED) {
+        lastRef.current = time;
+        update();
+      }
+      draw();
     },
-    [direction]
+    [update, draw]
   );
 
-  useGameControls(enqueueDir);
-
-  // pause key
   useEffect(() => {
-    const handle = (e) => {
-      if (e.key === ' ') setPaused((p) => !p);
-    };
-    window.addEventListener('keydown', handle);
-    return () => window.removeEventListener('keydown', handle);
-  }, []);
-
-  // movement and game logic
-  const step = useCallback(() => {
-    setSnake((prev) => {
-      let dir = direction;
-      if (dirQueue.current.length) {
-        dir = dirQueue.current.shift();
-        setDirection(dir);
-      }
-
-      let head = { x: prev[0].x + dir.x, y: prev[0].y + dir.y };
-      if (wrap) {
-        head.x = (head.x + gridSize) % gridSize;
-        head.y = (head.y + gridSize) % gridSize;
-      }
-
-      const hitWall = head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize;
-      const hitSelf = prev.some((s) => s.x === head.x && s.y === head.y);
-      const hitObstacle = obstacles.some((o) => o.x === head.x && o.y === head.y);
-      if ((!wrap && hitWall) || hitSelf || hitObstacle) {
-        setGameOver(true);
-        setReplayData(replayRef.current);
-        return prev;
-      }
-
-      const newSnake = [head, ...prev];
-      if (head.x === food.x && head.y === food.y) {
-        const occupied = [...newSnake, ...obstacles];
-        const newFood = randomCell(occupied);
-        setFood(newFood);
-        setScore((s) => {
-          const ns = s + 1;
-          if (ns % SPEED_INTERVAL === 0) {
-            setSpeed((sp) => Math.max(MIN_SPEED, sp - SPEED_STEP));
-          }
-          return ns;
-        });
-        setGrowCell(head);
-      } else {
-        newSnake.pop();
-      }
-
-      replayRef.current.push(dir);
-      return newSnake;
-    });
-  }, [direction, food, obstacles, wrap]);
-
-  // fixed time step game loop using rAF
-  useEffect(() => {
-    const loop = (time) => {
-      if (!paused && !gameOver && !playingReplay) {
-        const delta = time - lastTime.current;
-        acc.current += delta;
-        while (acc.current > speed) {
-          step();
-          acc.current -= speed;
-        }
-      }
-      lastTime.current = time;
-      animationFrameRef.current = requestAnimationFrame(loop);
-    };
-    animationFrameRef.current = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animationFrameRef.current);
-  }, [paused, gameOver, step, speed, playingReplay]);
-
-  // replay playback
-  const playReplay = () => {
-    if (!replayData.length) return;
-    cancelAnimationFrame(replayFrameRef.current);
-    setPlayingReplay(true);
-    setSnake([{ x: 10, y: 10 }]);
-    let i = 0;
-    replayLastTimeRef.current = 0;
-    const run = (time) => {
-      if (!replayLastTimeRef.current) replayLastTimeRef.current = time;
-      if (i >= replayData.length) {
-        setPlayingReplay(false);
-        return;
-      }
-      if (time - replayLastTimeRef.current >= speed) {
-        setSnake((prev) => {
-          const dir = replayData[i];
-          i += 1;
-          let head = { x: prev[0].x + dir.x, y: prev[0].y + dir.y };
-          if (wrap) {
-            head.x = (head.x + gridSize) % gridSize;
-            head.y = (head.y + gridSize) % gridSize;
-          }
-          const ns = [head, ...prev];
-          ns.pop();
-          return ns;
-        });
-        replayLastTimeRef.current = time;
-      }
-      replayFrameRef.current = requestAnimationFrame(run);
-    };
-    replayFrameRef.current = requestAnimationFrame(run);
-  };
-
-  const reset = () => {
-    cancelAnimationFrame(replayFrameRef.current);
-    setSnake([{ x: 10, y: 10 }]);
-    setDirection({ x: 0, y: -1 });
-    dirQueue.current = [];
-    setFood(randomCell([{ x: 10, y: 10 }]));
-    setObstacles(createObstacles(5, [{ x: 10, y: 10 }]));
-    setScore(0);
-    setSpeed(speedLevels[speedSetting]);
-    setGameOver(false);
-    setPaused(false);
-    replayRef.current = [];
-    setReplayData([]);
-    setGrowCell(null);
-    setFoodAnim(false);
-  };
-
-  useEffect(() => () => cancelAnimationFrame(replayFrameRef.current), []);
+    runningRef.current = running;
+  }, [running]);
 
   useEffect(() => {
-    if (growCell) {
-      const t = setTimeout(() => setGrowCell(null), 200);
-      return () => clearTimeout(t);
-    }
-  }, [growCell]);
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [loop]);
 
-  useEffect(() => {
-    setFoodAnim(true);
-    const t = setTimeout(() => setFoodAnim(false), 200);
-    return () => clearTimeout(t);
-  }, [food]);
+  useGameControls(({ x, y }) => {
+    const queue = moveQueueRef.current;
+    const curr = queue.length ? queue[queue.length - 1] : dirRef.current;
+    if (curr.x + x === 0 && curr.y + y === 0) return;
+    queue.push({ x, y });
+  });
 
   useEffect(() => {
     if (gameOver && score > highScore) {
       setHighScore(score);
       if (typeof window !== 'undefined') {
-        localStorage.setItem(
-          `snakeHighScore_${wrap ? 'wrap' : 'nowrap'}_${speedSetting}`,
-          score.toString()
-        );
+        window.localStorage.setItem('snake_highscore', score.toString());
       }
     }
-  }, [gameOver, score, highScore, wrap, speedSetting]);
+  }, [gameOver, score, highScore]);
 
-  const cells = [];
-  for (let y = 0; y < gridSize; y += 1) {
-    for (let x = 0; x < gridSize; x += 1) {
-      const isSnake = snake.some((s) => s.x === x && s.y === y);
-      const isFood = food.x === x && food.y === y;
-      const isObstacle = obstacles.some((o) => o.x === x && o.y === y);
-      cells.push(
-        <div
-          key={`${x}-${y}`}
-          className={`w-4 h-4 border border-gray-700 transform transition-transform ${
-            isSnake
-              ? `bg-green-500 ${
-                  growCell && growCell.x === x && growCell.y === y
-                    ? 'scale-125'
-                    : 'scale-100'
-                }`
-              : isFood
-              ? `bg-red-500 ${foodAnim ? 'scale-125' : 'scale-100'}`
-              : isObstacle
-              ? 'bg-gray-500'
-              : 'bg-ub-cool-grey'
-          }`}
-        />
-      );
-    }
-  }
+  const reset = useCallback(() => {
+    snakeRef.current = [
+      { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2), scale: 1 },
+    ];
+    dirRef.current = { x: 1, y: 0 };
+    foodRef.current = randomFood(snakeRef.current);
+    moveQueueRef.current = [];
+    setScore(0);
+    setGameOver(false);
+    setRunning(true);
+    draw();
+  }, [draw]);
 
   return (
-    <GameLayout instructions="Use arrow keys or swipe to move.">
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
-        <div className="mb-2 flex space-x-2">
-          <span>Score: {score}</span>
-          <span>| High Score: {highScore}</span>
-          <button
-            className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
-            onClick={() => setPaused((p) => !p)}
-
-          >
-            Retry
-          </button>
-          <button
-            className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
-            onClick={() => setWrap((w) => !w)}
-
-          >
-            Replay
-          </button>
-          <select
-            className="ml-2 px-1 bg-gray-700 rounded"
-            value={speedSetting}
-            onChange={(e) => setSpeedSetting(e.target.value)}
-          >
-            <option value="slow">Slow</option>
-            <option value="normal">Normal</option>
-            <option value="fast">Fast</option>
-          </select>
-        </div>
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
+      <div className="relative">
+        <canvas
+          ref={canvasRef}
+          width={GRID_SIZE * CELL_SIZE}
+          height={GRID_SIZE * CELL_SIZE}
+          className="bg-gray-800 border border-gray-700"
+        />
         <div
-          className="grid"
-          style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
+          className="absolute top-2 left-2 text-sm"
+          aria-live="polite"
+          role="status"
+          aria-atomic="true"
         >
-          {cells}
+          Score: {score} | High: {highScore}
         </div>
         {gameOver && (
-          <div className="mt-2 flex items-center space-x-2">
-            <span>Game Over</span>
-            <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-              onClick={reset}
-            >
-              Retry
-            </button>
-            <button
-              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-              onClick={playReplay}
-            >
-              Replay
-            </button>
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
+            role="alert"
+            aria-live="assertive"
+          >
+            Game Over
           </div>
         )}
       </div>
-    </GameLayout>
-
+      <div className="mt-2 space-x-2">
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={reset}
+        >
+          Reset
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={() => setRunning((r) => !r)}
+        >
+          {running ? 'Pause' : 'Resume'}
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={() => setWrap((w) => !w)}
+        >
+          {wrap ? 'Wrap' : 'No Wrap'}
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={() => setSound((s) => !s)}
+        >
+          {sound ? 'Sound On' : 'Sound Off'}
+        </button>
+      </div>
+    </div>
   );
 };
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import HashcatApp, { detectHashType } from '../components/apps/hashcat';
+import progressInfo from '../components/apps/hashcat/progress.json';
 
 describe('HashcatApp', () => {
   it('auto-detects hash types', () => {
@@ -22,5 +23,12 @@ describe('HashcatApp', () => {
     await waitFor(() => {
       expect(getByTestId('benchmark-output').textContent).toMatch(/GPU0/);
     });
+  });
+
+  it('shows progress info from JSON', () => {
+    const { getByText } = render(<HashcatApp />);
+    expect(getByText(`Hash rate: ${progressInfo.hashRate}`)).toBeInTheDocument();
+    expect(getByText(`ETA: ${progressInfo.eta}`)).toBeInTheDocument();
+    expect(getByText(`Mode: ${progressInfo.mode}`)).toBeInTheDocument();
   });
 });

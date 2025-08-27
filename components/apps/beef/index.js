@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import GuideOverlay from './GuideOverlay';
+import HookGraph from './HookGraph';
 
 export default function Beef() {
   const [hooks, setHooks] = useState([]);
@@ -8,8 +9,18 @@ export default function Beef() {
   const [modules, setModules] = useState([]);
   const [output, setOutput] = useState('');
   const [showHelp, setShowHelp] = useState(false);
+  const [steps, setSteps] = useState([]);
+  const [liveMessage, setLiveMessage] = useState('');
+  const prevHooks = useRef(0);
+  const prevSteps = useRef(0);
 
   const baseUrl = process.env.NEXT_PUBLIC_BEEF_URL || 'http://127.0.0.1:3000';
+
+  const getStatus = (hook) => {
+    if (hook.status) return hook.status;
+    if (typeof hook.online === 'boolean') return hook.online ? 'online' : 'offline';
+    return 'idle';
+  };
 
   const fetchHooks = useCallback(async () => {
     try {
@@ -48,6 +59,23 @@ export default function Beef() {
     }
   }, []);
 
+  useEffect(() => {
+    if (hooks.length > prevHooks.current) {
+      const h = hooks[hooks.length - 1];
+      const id = h.session || h.id;
+      setLiveMessage(`Hook ${h.name || id} added`);
+    }
+    prevHooks.current = hooks.length;
+  }, [hooks, prevHooks]);
+
+  useEffect(() => {
+    if (steps.length > prevSteps.current) {
+      const s = steps[steps.length - 1];
+      setLiveMessage(`Module ${s.module} run on ${s.hook}`);
+    }
+    prevSteps.current = steps.length;
+  }, [steps, prevSteps]);
+
   const runModule = async () => {
     if (!selected || !moduleId) return;
     setOutput('');
@@ -73,6 +101,10 @@ export default function Beef() {
     } catch (e) {
       setOutput(e.toString());
     }
+    setSteps((prev) => [
+      ...prev,
+      { id: prev.length + 1, hook: selected, module: moduleId },
+    ]);
   };
 
   return (
@@ -89,21 +121,38 @@ export default function Beef() {
             Refresh
           </button>
         </div>
-        <ul>
-          {hooks.map((hook) => (
-            <li
-              key={hook.session || hook.id}
-              onClick={() => setSelected(hook.session || hook.id)}
-              className={`p-2 cursor-pointer hover:bg-ub-gray-50 ${
-                selected === (hook.session || hook.id) ? 'bg-ub-gray-50 text-black' : ''
-              }`}
-            >
-              {hook.name || hook.session || hook.id}
-            </li>
-          ))}
-        </ul>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-2">
+          {hooks.length === 0 && (
+            <p className="col-span-full text-center text-sm">No hooks yet.</p>
+          )}
+          {hooks.map((hook) => {
+            const id = hook.session || hook.id;
+            const status = getStatus(hook);
+            return (
+              <div
+                key={id}
+                onClick={() => setSelected(id)}
+                className={`flex flex-col items-center p-2 cursor-pointer rounded hover:bg-ub-gray-50 ${
+                  selected === id ? 'bg-ub-gray-50 text-black' : ''
+                }`}
+              >
+                <img
+                  src={`/themes/Yaru/apps/beef-${status}.svg`}
+                  alt={status}
+                  className="w-12 h-12 mb-1"
+                />
+                <span className="text-xs text-center truncate w-full">
+                  {hook.name || id}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <div className="flex-1 p-4 overflow-y-auto">
+      <div className="flex-1 p-4 overflow-y-auto flex flex-col">
+        <div className="h-64 mb-4">
+          <HookGraph hooks={hooks} steps={steps} />
+        </div>
         {selected ? (
           <>
             <div className="mb-2">
@@ -135,6 +184,7 @@ export default function Beef() {
           <p>Select a hooked browser to run modules.</p>
         )}
       </div>
+      <div aria-live="polite" className="sr-only">{liveMessage}</div>
     </div>
   );
 }

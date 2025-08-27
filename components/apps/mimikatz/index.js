@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import CredentialArtifactLocator from './CredentialLocator';
 
 const MimikatzApp = () => {
   const [modules, setModules] = useState([]);
@@ -124,6 +125,7 @@ const MimikatzApp = () => {
       <div className="flex-1 p-4 bg-ub-cool-grey overflow-auto">
         <h1 className="text-lg mb-4">Mimikatz</h1>
         <pre className="whitespace-pre-wrap mb-4">{output}</pre>
+        <CredentialArtifactLocator />
         <h2 className="text-lg mb-2">History</h2>
         <ul className="space-y-1">
           {history.map((h, idx) => (

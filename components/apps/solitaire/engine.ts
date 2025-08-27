@@ -24,27 +24,43 @@ const colors: Record<Suit, 'red' | 'black'> = {
   '♦': 'red',
 };
 
-export const createDeck = (): Card[] => {
+const mulberry32 = (a: number) => {
+  return () => {
+    let t = (a += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+export const createDeck = (seed?: number): Card[] => {
   const deck: Card[] = [];
   suits.forEach((suit) => {
     for (let value = 1; value <= 13; value += 1) {
       deck.push({ suit, value, color: colors[suit], faceUp: false });
     }
   });
-  // Shuffle using Fisher-Yates
+  // Shuffle using Fisher-Yates. Allow deterministic shuffles when a seed
+  // is provided so that a "daily deal" can be reproduced on every load.
+  const rand = seed !== undefined ? mulberry32(seed) : Math.random;
   for (let i = deck.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rand() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
   return deck;
 };
 
-export const initializeGame = (draw: 1 | 3 = 1, deck: Card[] = createDeck()): GameState => {
+export const initializeGame = (
+  draw: 1 | 3 = 1,
+  deck?: Card[],
+  seed?: number,
+): GameState => {
+  const workingDeck = deck || createDeck(seed);
   const tableau: Card[][] = Array.from({ length: 7 }, () => []);
   // Deal tableau
   for (let i = 0; i < 7; i += 1) {
     for (let j = 0; j <= i; j += 1) {
-      const card = deck.pop();
+      const card = workingDeck.pop();
       if (!card) break;
       tableau[i].push(card);
     }
@@ -54,7 +70,7 @@ export const initializeGame = (draw: 1 | 3 = 1, deck: Card[] = createDeck()): Ga
 
   return {
     tableau,
-    stock: deck,
+    stock: workingDeck,
     waste: [],
     foundations: Array.from({ length: 4 }, () => []),
     draw,

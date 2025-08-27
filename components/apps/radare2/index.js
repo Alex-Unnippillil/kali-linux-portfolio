@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import HexEditor from './HexEditor';
 import {
   saveSnippet,
   loadSnippets,
@@ -113,6 +114,7 @@ const Radare2 = () => {
           onChange={(e) => setHex(e.target.value)}
           placeholder="9090"
         />
+        <HexEditor hex={hex} />
         <button onClick={handleDisasm} className="px-4 py-2 bg-blue-600 rounded">
           Disassemble
         </button>

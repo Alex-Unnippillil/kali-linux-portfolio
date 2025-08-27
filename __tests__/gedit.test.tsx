@@ -32,6 +32,6 @@ describe('Gedit component', () => {
     fireEvent.change(screen.getByPlaceholderText('Message'), { target: { value: 'Hello' } });
     fireEvent.click(screen.getByText('Send'));
     expect(send).not.toHaveBeenCalled();
-    expect(screen.getByPlaceholderText('Name must not be Empty!')).toBeInTheDocument();
+    expect(screen.getByText('Name must not be empty')).toBeInTheDocument();
   });
 });

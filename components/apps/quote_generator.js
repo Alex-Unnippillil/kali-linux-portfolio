@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 
@@ -63,8 +63,10 @@ const QuoteGenerator = () => {
   const [current, setCurrent] = useState(null);
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
-  const [fade, setFade] = useState(false);
+  const [displayedText, setDisplayedText] = useState('');
+  const [ariaText, setAriaText] = useState('');
   const [prefersReduced, setPrefersReduced] = useState(false);
+  const rafRef = useRef();
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -139,16 +141,36 @@ const QuoteGenerator = () => {
     if (!filteredQuotes.length) return;
     const newQuote =
       filteredQuotes[Math.floor(Math.random() * filteredQuotes.length)];
-    if (prefersReduced) {
-      setCurrent(newQuote);
-    } else {
-      setFade(true);
-      setTimeout(() => {
-        setCurrent(newQuote);
-        setFade(false);
-      }, 300);
-    }
+    setCurrent(newQuote);
   };
+
+  useEffect(() => {
+    if (current) setAriaText(`"${current.content}" - ${current.author}`);
+  }, [current]);
+
+  useEffect(() => {
+    if (!current) return;
+    cancelAnimationFrame(rafRef.current);
+    if (prefersReduced) {
+      setDisplayedText(current.content);
+      return;
+    }
+    setDisplayedText('');
+    let index = 0;
+    let last = 0;
+    const step = (time) => {
+      if (time - last > 50) {
+        index++;
+        setDisplayedText(current.content.slice(0, index));
+        last = time;
+      }
+      if (index < current.content.length) {
+        rafRef.current = requestAnimationFrame(step);
+      }
+    };
+    rafRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [current, prefersReduced]);
 
   const copyQuote = () => {
     if (current && navigator.clipboard) {
@@ -165,15 +187,53 @@ const QuoteGenerator = () => {
     window.open(url, '_blank');
   };
 
-  const exportImage = () => {
+  const dataUrlToFile = (dataUrl, filename) => {
+    const arr = dataUrl.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
+    return new File([u8arr], filename, { type: mime });
+  };
+
+  const shareCard = () => {
     const node = document.getElementById('quote-card');
     if (!node) return;
-    toPng(node).then((dataUrl) => {
-      const link = document.createElement('a');
-      link.download = 'quote.png';
-      link.href = dataUrl;
-      link.click();
-    });
+    const exportCard = () => {
+      toPng(node)
+        .then((dataUrl) => {
+          const file = dataUrlToFile(dataUrl, 'quote.png');
+          const shareData = {
+            files: [file],
+            title: 'Quote',
+            text: current
+              ? `"${current.content}" - ${current.author}`
+              : 'Quote',
+          };
+          if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+            navigator.share(shareData).catch(() => {
+              const link = document.createElement('a');
+              link.download = 'quote.png';
+              link.href = dataUrl;
+              link.click();
+            });
+          } else {
+            const link = document.createElement('a');
+            link.download = 'quote.png';
+            link.href = dataUrl;
+            link.click();
+          }
+        })
+        .catch(() => {
+          /* ignore export errors */
+        });
+    };
+    if (prefersReduced) {
+      exportCard();
+    } else {
+      requestAnimationFrame(exportCard);
+    }
   };
 
   const categories = useMemo(
@@ -187,16 +247,14 @@ const QuoteGenerator = () => {
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 overflow-auto">
       <div className="w-full max-w-md flex flex-col items-center">
-        <div
-          id="quote-card"
-          className={`p-4 text-center transition-opacity duration-300 ${
-            fade && !prefersReduced ? 'opacity-0' : 'opacity-100'
-          }`}
-        >
+        <div id="quote-card" className="p-4 text-center">
           {current ? (
             <>
-              <p className="text-lg mb-2">&quot;{current.content}&quot;</p>
-              <p className="text-sm text-gray-300">- {current.author}</p>
+              <p className="text-lg mb-2" aria-hidden="true">&quot;{displayedText}&quot;</p>
+              <p className="text-sm text-gray-200" aria-hidden="true">- {current.author}</p>
+              <span role="status" aria-live="polite" className="sr-only">
+                {ariaText}
+              </span>
             </>
           ) : (
             <p>No quotes found.</p>
@@ -223,9 +281,9 @@ const QuoteGenerator = () => {
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={exportImage}
+            onClick={shareCard}
           >
-            Image
+            Share as Card
           </button>
         </div>
         <div className="mt-4 flex flex-col w-full gap-2">
@@ -254,5 +312,4 @@ const QuoteGenerator = () => {
 };
 
 export default QuoteGenerator;
-export const displayQuoteGenerator = () => <QuoteGenerator />;
 

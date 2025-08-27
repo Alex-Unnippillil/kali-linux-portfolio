@@ -8,6 +8,7 @@ import {
   spawnPowerUp,
   updatePowerUps,
   POWER_UPS,
+  createSeededRNG,
 } from './asteroids-utils';
 import useGameControls from './useGameControls';
 import GameLayout from './GameLayout';
@@ -18,6 +19,8 @@ const INERTIA = 0.99;
 const COLLISION_COOLDOWN = 60; // frames
 const MULTIPLIER_TIMEOUT = 180; // frames
 const MAX_MULTIPLIER = 5;
+const EXHAUST_COLOR = '#ffa500';
+const RADAR_COLORS = { outline: '#0f0', ship: '#fff', asteroid: '#0f0', ufo: '#f00' };
 
 // Simple Quadtree for collision queries
 class Quadtree {
@@ -99,10 +102,12 @@ const Asteroids = () => {
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [restartKey, setRestartKey] = useState(0);
+  const [liveText, setLiveText] = useState('');
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function resize() {
       const { clientWidth, clientHeight } = canvas;
@@ -141,9 +146,11 @@ const Asteroids = () => {
     let ufoTimer = 600; // frames until next UFO
     let multiplier = 1;
     let multiplierTimer = 0;
+    let rand = Math.random;
 
     // Particle pooling
     const spawnParticles = (x, y, count, color = 'white') => {
+      if (reduceMotion) return;
       for (let i = 0; i < particles.length && count > 0; i += 1) {
         const p = particles[i];
         if (!p.active) {
@@ -179,11 +186,11 @@ const Asteroids = () => {
     // Spawn asteroids for a level
     const spawnAsteroids = (count, speed = 1 + level * 0.3) => {
       for (let i = 0; i < count; i += 1) {
-        const angle = Math.random() * Math.PI * 2;
-        const r = 15 + Math.random() * 25;
+        const angle = rand() * Math.PI * 2;
+        const r = 15 + rand() * 25;
         asteroids.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
+          x: rand() * canvas.width,
+          y: rand() * canvas.height,
           dx: Math.cos(angle) * speed,
           dy: Math.sin(angle) * speed,
           r,
@@ -192,12 +199,22 @@ const Asteroids = () => {
     };
 
     const startLevel = () => {
+      rand = createSeededRNG(level);
       spawnAsteroids(3 + level * 2);
       ufoTimer = Math.max(300, 900 - level * 60);
     };
 
     startLevel();
     ga.start();
+
+    let lastAnnouncement = '';
+    const announce = () => {
+      const text = `Score ${score} x${multiplier} Lives ${lives}`;
+      if (text !== lastAnnouncement) {
+        lastAnnouncement = text;
+        setLiveText(text);
+      }
+    };
 
     // Gamepad support
     const padState = { turn: 0, thrust: 0, fire: false, hyperspace: false };
@@ -212,9 +229,9 @@ const Asteroids = () => {
     }
 
     function hyperspace() {
-      ship.x = Math.random() * canvas.width;
-      ship.y = Math.random() * canvas.height;
-      if (Math.random() < 0.1) destroyShip();
+      ship.x = rand() * canvas.width;
+      ship.y = rand() * canvas.height;
+      if (rand() < 0.1) destroyShip();
     }
 
     function fireBullet() {
@@ -229,6 +246,7 @@ const Asteroids = () => {
       );
       ship.cooldown = ship.rapidFire > 0 ? 5 : 15;
       playSound(880);
+      if ('vibrate' in navigator) navigator.vibrate(10);
     }
 
     function destroyShip() {
@@ -241,6 +259,7 @@ const Asteroids = () => {
         lives -= 1;
         ga.death();
         playSound(110);
+        if ('vibrate' in navigator) navigator.vibrate(200);
         ship.x = canvas.width / 2;
         ship.y = canvas.height / 2;
         ship.velX = 0;
@@ -269,13 +288,14 @@ const Asteroids = () => {
       ga.split(a.r);
       if (a.r > 20) {
         for (let i = 0; i < 2; i += 1) {
-          const angle = Math.random() * Math.PI * 2;
+          const angle = rand() * Math.PI * 2;
           asteroids.push({ x: a.x, y: a.y, dx: Math.cos(angle) * 2, dy: Math.sin(angle) * 2, r: a.r / 2 });
         }
       }
       asteroids.splice(index, 1);
       playSound(440);
-      if (Math.random() < 0.1) spawnPowerUp(powerUps, a.x, a.y);
+      if ('vibrate' in navigator) navigator.vibrate(50);
+      if (rand() < 0.1) spawnPowerUp(powerUps, a.x, a.y);
       if (score >= extraLifeScore) {
         lives += 1;
         extraLifeScore += 10000;
@@ -327,7 +347,12 @@ const Asteroids = () => {
       if (thrust > 0) {
         ship.velX += Math.cos(ship.angle) * THRUST * thrust;
         ship.velY += Math.sin(ship.angle) * THRUST * thrust;
-        spawnParticles(ship.x - Math.cos(ship.angle) * 10, ship.y - Math.sin(ship.angle) * 10, 1, 'gray');
+        spawnParticles(
+          ship.x - Math.cos(ship.angle) * 12,
+          ship.y - Math.sin(ship.angle) * 12,
+          3,
+          EXHAUST_COLOR,
+        );
       }
       ship.velX *= INERTIA;
       ship.velY *= INERTIA;
@@ -487,11 +512,37 @@ const Asteroids = () => {
       });
 
       // Particles
+      ctx.save();
       particles.forEach((p) => {
         if (!p.active) return;
+        ctx.globalAlpha = p.life / 30;
         ctx.fillStyle = p.color;
         ctx.fillRect(p.x, p.y, 2, 2);
       });
+      ctx.restore();
+
+      // Radar inset
+      if (!reduceMotion) {
+        const radarSize = 80;
+        const radarX = canvas.width - radarSize - 10;
+        const radarY = 10;
+        ctx.save();
+        ctx.strokeStyle = RADAR_COLORS.outline;
+        ctx.strokeRect(radarX, radarY, radarSize, radarSize);
+        const scaleX = radarSize / canvas.width;
+        const scaleY = radarSize / canvas.height;
+        ctx.fillStyle = RADAR_COLORS.ship;
+        ctx.fillRect(radarX + ship.x * scaleX - 1, radarY + ship.y * scaleY - 1, 3, 3);
+        ctx.fillStyle = RADAR_COLORS.asteroid;
+        asteroids.forEach((a) => {
+          ctx.fillRect(radarX + a.x * scaleX - 1, radarY + a.y * scaleY - 1, 2, 2);
+        });
+        if (ufo.active) {
+          ctx.fillStyle = RADAR_COLORS.ufo;
+          ctx.fillRect(radarX + ufo.x * scaleX - 1, radarY + ufo.y * scaleY - 1, 3, 3);
+        }
+        ctx.restore();
+      }
 
       // HUD
       ctx.fillStyle = 'white';
@@ -499,6 +550,7 @@ const Asteroids = () => {
       ctx.fillText(`Score: ${score} x${multiplier}`, 10, 20);
       ctx.fillText(`Lives: ${lives}`, 10, 40);
 
+      announce();
       requestRef.current = requestAnimationFrame(update);
     };
 
@@ -524,6 +576,9 @@ const Asteroids = () => {
   return (
     <GameLayout paused={paused} onPause={togglePause} onRestart={restartGame}>
       <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />
+      <div aria-live="polite" className="sr-only">
+        {liveText}
+      </div>
     </GameLayout>
   );
 };

@@ -1,4 +1,10 @@
-export const RAW_LEVELS = `
+export interface LevelPack {
+  name: string;
+  difficulty: string;
+  levels: string[][];
+}
+
+const RAW_TUTORIAL = `
 ; Simple tutorial level
 #####
 #@$.#
@@ -8,6 +14,22 @@ export const RAW_LEVELS = `
 ######
 #@ $.#
 ######
+`;
+
+const RAW_CLASSIC = `
+; Small puzzle
+######
+# .@ #
+# $$ #
+# .  #
+######
+
+; Room
+#######
+#  .  #
+# $#$ #
+# .@  #
+#######
 `;
 
 export function parseLevels(data: string): string[][] {
@@ -27,4 +49,10 @@ export function parseLevels(data: string): string[][] {
   return levels;
 }
 
-export const defaultLevels = parseLevels(RAW_LEVELS);
+export const LEVEL_PACKS: LevelPack[] = [
+  { name: 'Tutorial', difficulty: 'Easy', levels: parseLevels(RAW_TUTORIAL) },
+  { name: 'Classic', difficulty: 'Medium', levels: parseLevels(RAW_CLASSIC) },
+];
+
+export const defaultLevels = LEVEL_PACKS[0].levels;
+

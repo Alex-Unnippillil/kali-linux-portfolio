@@ -1,5 +1,5 @@
 import { defaultLevels } from '../apps/sokoban/levels';
-import { loadLevel, move, undo, isSolved } from '../apps/sokoban/engine';
+import { loadLevel, move, undo, isSolved, findHint } from '../apps/sokoban/engine';
 
 describe('sokoban engine', () => {
   test('simple level solvable', () => {
@@ -15,5 +15,17 @@ describe('sokoban engine', () => {
     expect(undone.player).toEqual(state.player);
     expect(Array.from(undone.boxes)).toEqual(Array.from(state.boxes));
     expect(undone.pushes).toBe(state.pushes);
+  });
+
+  test('detects corner deadlock', () => {
+    const level = ['#####', '#@$##', '# . #', '#####'];
+    const state = loadLevel(level);
+    expect(state.deadlocks.size).toBe(1);
+  });
+
+  test('solver hint gives first move', () => {
+    const state = loadLevel(defaultLevels[0]);
+    const hint = findHint(state);
+    expect(hint).toBe('ArrowRight');
   });
 });

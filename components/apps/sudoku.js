@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ratePuzzle, getHint } from '../../workers/sudokuSolver';
 
 const SIZE = 9;
 const range = (n) => Array.from({ length: n }, (_, i) => i);
@@ -120,10 +121,15 @@ const Sudoku = () => {
   const [autoNotes, setAutoNotes] = useState(false);
   const [hint, setHint] = useState('');
   const [hintCell, setHintCell] = useState(null);
+  const [ratedDifficulty, setRatedDifficulty] = useState('');
+  const [hintStats, setHintStats] = useState({});
   const [completed, setCompleted] = useState(false);
   const [time, setTime] = useState(0);
   const [bestTime, setBestTime] = useState(null);
   const timerRef = useRef(null);
+  const [shimmerRows, setShimmerRows] = useState([]);
+  const [shimmerCols, setShimmerCols] = useState([]);
+  const [ariaMessage, setAriaMessage] = useState('');
 
   const startGame = (seed) => {
     const { puzzle } = generateSudoku(difficulty, seed);
@@ -137,6 +143,13 @@ const Sudoku = () => {
     setCompleted(false);
     setHint('');
     setHintCell(null);
+    const { difficulty: rating, steps } = ratePuzzle(puzzle);
+    setRatedDifficulty(rating);
+    const stats = steps.reduce((acc, s) => {
+      acc[s.technique] = (acc[s.technique] || 0) + 1;
+      return acc;
+    }, {});
+    setHintStats(stats);
     setTime(0);
     setBestTime(() => {
       if (typeof window === 'undefined') return null;
@@ -231,8 +244,15 @@ const Sudoku = () => {
     setBoard(newBoard);
     setNotes(newNotes);
     if (autoNotes) applyAutoNotes(newBoard);
-    if (isBoardComplete(newBoard)) {
-      setCompleted(true);
+    if (!noteMode && !forceNote) {
+      if (hasConflict(newBoard, r, c, newBoard[r][c])) {
+        setAriaMessage(`Conflict at row ${r + 1}, column ${c + 1}`);
+      }
+      checkSolvedLines(newBoard, r, c);
+      if (isBoardComplete(newBoard)) {
+        setCompleted(true);
+        setAriaMessage('Sudoku completed');
+      }
     }
   };
 
@@ -249,20 +269,16 @@ const Sudoku = () => {
   };
 
   const getHintHandler = () => {
-    for (let r = 0; r < SIZE; r++) {
-      for (let c = 0; c < SIZE; c++) {
-        if (board[r][c] === 0) {
-          const cand = getCandidates(board, r, c);
-          if (cand.length === 1) {
-            setHint(`Cell (${r + 1},${c + 1}) must be ${cand[0]} (single candidate)`);
-            setHintCell({ r, c });
-            return;
-          }
-        }
-      }
+    const h = getHint(board);
+    if (h) {
+      setHint(`Cell (${h.r + 1},${h.c + 1}) must be ${h.value} (${h.technique})`);
+      setHintCell({ r: h.r, c: h.c });
+      setAriaMessage(`Hint: row ${h.r + 1} column ${h.c + 1} is ${h.value}`);
+    } else {
+      setHint('No hints available');
+      setHintCell(null);
+      setAriaMessage('No hints available');
     }
-    setHint('No simple hints available');
-    setHintCell(null);
   };
 
   const hasConflict = (b, r, c, val) => {
@@ -281,6 +297,33 @@ const Sudoku = () => {
       }
     }
     return false;
+  };
+
+  const checkSolvedLines = (b, r, c) => {
+    const rowSolved = !b[r].includes(0) && new Set(b[r]).size === SIZE;
+    const colArr = [];
+    for (let i = 0; i < SIZE; i++) colArr.push(b[i][c]);
+    const colSolved = !colArr.includes(0) && new Set(colArr).size === SIZE;
+    if (rowSolved && !shimmerRows.includes(r)) {
+      requestAnimationFrame(() =>
+        setShimmerRows((rows) => [...rows, r])
+      );
+      setAriaMessage(`Row ${r + 1} solved`);
+      setTimeout(
+        () => setShimmerRows((rows) => rows.filter((i) => i !== r)),
+        1000
+      );
+    }
+    if (colSolved && !shimmerCols.includes(c)) {
+      requestAnimationFrame(() =>
+        setShimmerCols((cols) => [...cols, c])
+      );
+      setAriaMessage(`Column ${c + 1} solved`);
+      setTimeout(
+        () => setShimmerCols((cols) => cols.filter((i) => i !== c)),
+        1000
+      );
+    }
   };
 
   const isBoardComplete = (b) => {
@@ -316,6 +359,7 @@ const Sudoku = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 select-none overflow-y-auto">
+      <div className="sr-only" aria-live="polite">{ariaMessage}</div>
       <div className="mb-2 flex space-x-2">
         <select
           className="text-black p-1"
@@ -377,15 +421,21 @@ const Sudoku = () => {
             const original = puzzle[r][c] !== 0;
             const conflict = hasConflict(board, r, c, val);
             const isHint = hintCell && hintCell.r === r && hintCell.c === c;
+            const shimmer = shimmerRows.includes(r) || shimmerCols.includes(c);
             return (
               <div
                 key={`${r}-${c}`}
-                className={`relative w-8 h-8 sm:w-10 sm:h-10 ${
+                className={`relative overflow-hidden w-8 h-8 sm:w-10 sm:h-10 ${
                   original ? 'bg-gray-300' : 'bg-white'
-                } ${conflict ? 'bg-red-300' : ''} ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
+                } ${conflict ? 'bg-red-700' : ''} ${shimmer ? 'shimmer' : ''} ${
+                  isHint ? 'ring-2 ring-yellow-400' : ''
+                }`}
               >
                 <input
-                  className="w-full h-full text-center text-black outline-none"
+                  className={`w-full h-full text-center outline-none bg-transparent ${
+                    conflict ? 'text-white' : 'text-black'
+                  }`}
+                  aria-label={`Row ${r + 1} Column ${c + 1}`}
                   value={val === 0 ? '' : val}
                   onChange={(e) => handleValue(r, c, e.target.value)}
                   onKeyDown={(e) => {
@@ -401,7 +451,7 @@ const Sudoku = () => {
                   inputMode="numeric"
                 />
                 {notes[r][c].length > 0 && val === 0 && (
-                  <div className="absolute inset-0 grid grid-cols-3 text-[8px] leading-3 text-gray-500 pointer-events-none">
+                  <div className="absolute inset-0 grid grid-cols-3 text-[8px] leading-3 text-gray-700 pointer-events-none">
                     {range(9).map((n) => (
                       <div key={n} className="flex items-center justify-center">
                         {notes[r][c].includes(n + 1) ? n + 1 : ''}
@@ -416,6 +466,32 @@ const Sudoku = () => {
       </div>
       {completed && <div className="mt-2">Completed!</div>}
       {hint && <div className="mt-2 text-yellow-300">{hint}</div>}
+      {ratedDifficulty && (
+        <div className="mt-2 text-gray-300">Difficulty: {ratedDifficulty}</div>
+      )}
+      {Object.keys(hintStats).length > 0 && (
+        <div className="mt-1 text-xs text-gray-400">
+          {Object.entries(hintStats).map(([k, v]) => (
+            <div key={k}>
+              {k}: {v}
+            </div>
+          ))}
+        </div>
+      )}
+      <style jsx>{`
+        @keyframes shimmer {
+          from { background-position: -200% 0; }
+          to { background-position: 200% 0; }
+        }
+        .shimmer {
+          background-image: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.6), rgba(255,255,255,0));
+          background-size: 200% 100%;
+          animation: shimmer 1s linear;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .shimmer { animation: none; }
+        }
+      `}</style>
     </div>
   );
 };
