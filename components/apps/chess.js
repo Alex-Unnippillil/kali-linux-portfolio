@@ -281,6 +281,8 @@ const ChessGame = () => {
   const [evalScore, setEvalScore] = useState(0);
   const [displayEval, setDisplayEval] = useState(0);
   const reduceMotionRef = useRef(false);
+  const evalPercent =
+    (1 / (1 + Math.exp(-displayEval / 200))) * 100;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -497,10 +499,16 @@ const ChessGame = () => {
       </div>
       <div className="mt-2">{status}</div>
       <div className="mt-2 w-full max-w-xs" aria-label="Evaluation">
-        <div className="h-4 bg-gray-700">
+        <div
+          className="h-4 bg-gray-700"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={evalPercent.toFixed(0)}
+        >
           <div
-            className={`h-full ${displayEval >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
-            style={{ width: `${(1 / (1 + Math.exp(-displayEval / 200))) * 100}%` }}
+            className={`h-full ${displayEval >= 0 ? 'bg-green-600' : 'bg-red-600'}`}
+            style={{ width: `${evalPercent}%` }}
           />
         </div>
         <div className="mt-1 text-sm" aria-live="polite">
