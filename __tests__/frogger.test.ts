@@ -1,4 +1,14 @@
-import { initLane, updateCars, handlePads, PAD_POSITIONS, rampLane, carLaneDefs, logLaneDefs } from '../components/apps/frogger';
+import {
+  initLane,
+  updateCars,
+  handlePads,
+  PAD_POSITIONS,
+  rampLane,
+  carLaneDefs,
+  logLaneDefs,
+  laneSpeedArrows,
+  loseLifeLogic,
+} from '../components/apps/frogger';
 
 describe('frogger mechanics', () => {
   test('lane spawn variance via lane-local RNG', () => {
@@ -43,5 +53,24 @@ describe('frogger mechanics', () => {
     expect(hard.speed).toBeCloseTo(carLaneDefs[0].speed * 1.2);
     const easy = rampLane(carLaneDefs[0], 1, 0.3, 0.8);
     expect(easy.speed).toBeCloseTo(carLaneDefs[0].speed * 0.8);
+  });
+
+  test('car collision removes a life', () => {
+    const frog = { x: 0, y: carLaneDefs[0].y };
+    const lane = {
+      ...carLaneDefs[0],
+      entities: [{ x: 0 }],
+      timer: 1,
+      rng: () => 0,
+    };
+    const result = updateCars([lane], frog, 0);
+    expect(result.dead).toBe(true);
+    expect(loseLifeLogic(3)).toBe(2);
+  });
+
+  test('lane speed arrows reflect lane speed', () => {
+    const slow = laneSpeedArrows(1, carLaneDefs[0].speed);
+    const fast = laneSpeedArrows(1, carLaneDefs[1].speed);
+    expect(slow.length).not.toBe(fast.length);
   });
 });
