@@ -43,34 +43,69 @@ function DesktopMenu(props) {
     }
 
     return (
-        <div id="desktop-menu" className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}>
-            <button onClick={props.addNewFolder} type="button" className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
+        <div
+            id="desktop-menu"
+            role="menu"
+            aria-label="Desktop context menu"
+            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+        >
+            <button
+                onClick={props.addNewFolder}
+                type="button"
+                role="menuitem"
+                aria-label="New Folder"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
                 <span className="ml-5">New Folder</span>
             </button>
             <Devider />
-            <div className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
+            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Paste</span>
             </div>
             <Devider />
-            <div className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
+            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Show Desktop in Files</span>
             </div>
-            <button onClick={openTerminal} type="button" className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
+            <button
+                onClick={openTerminal}
+                type="button"
+                role="menuitem"
+                aria-label="Open in Terminal"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
                 <span className="ml-5">Open in Terminal</span>
             </button>
             <Devider />
-            <button onClick={openSettings} type="button" className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
+            <button
+                onClick={openSettings}
+                type="button"
+                role="menuitem"
+                aria-label="Change Background"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
                 <span className="ml-5">Change Background...</span>
             </button>
             <Devider />
-            <div className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
+            <div role="menuitem" aria-label="Display Settings" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
                 <span className="ml-5">Display Settings</span>
             </div>
-            <button onClick={openSettings} type="button" className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
+            <button
+                onClick={openSettings}
+                type="button"
+                role="menuitem"
+                aria-label="Settings"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
                 <span className="ml-5">Settings</span>
             </button>
             <Devider />
-            <button onClick={goFullScreen} type="button" className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5">
+            <button
+                onClick={goFullScreen}
+                type="button"
+                role="menuitem"
+                aria-label={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
                 <span className="ml-5">{isFullScreen ? "Exit" : "Enter"} Full Screen</span>
             </button>
         </div>

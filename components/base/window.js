@@ -247,7 +247,12 @@ export class WindowXBorder extends Component {
 export function WindowEditButtons(props) {
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center">
-            <span className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.minimize}>
+            <button
+                type="button"
+                aria-label="Window minimize"
+                className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center"
+                onClick={props.minimize}
+            >
                 <NextImage
                     src="/themes/Yaru/window/window-minimize-symbolic.svg"
                     alt="Kali window minimize"
@@ -256,11 +261,16 @@ export function WindowEditButtons(props) {
                     height={20}
                     sizes="20px"
                 />
-            </span>
+            </button>
             {props.allowMaximize && (
                 props.isMaximised
                     ? (
-                        <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
+                        <button
+                            type="button"
+                            aria-label="Window restore"
+                            className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center"
+                            onClick={props.maximize}
+                        >
                             <NextImage
                                 src="/themes/Yaru/window/window-restore-symbolic.svg"
                                 alt="Kali window restore"
@@ -269,9 +279,14 @@ export function WindowEditButtons(props) {
                                 height={20}
                                 sizes="20px"
                             />
-                        </span>
+                        </button>
                     ) : (
-                        <span className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.maximize}>
+                        <button
+                            type="button"
+                            aria-label="Window maximize"
+                            className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center"
+                            onClick={props.maximize}
+                        >
                             <NextImage
                                 src="/themes/Yaru/window/window-maximize-symbolic.svg"
                                 alt="Kali window maximize"
@@ -280,10 +295,16 @@ export function WindowEditButtons(props) {
                                 height={20}
                                 sizes="20px"
                             />
-                        </span>
+                        </button>
                     )
             )}
-            <button tabIndex="-1" id={`close-${props.id}`} className="mx-1.5 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center" onClick={props.close}>
+            <button
+                type="button"
+                id={`close-${props.id}`}
+                aria-label="Window close"
+                className="mx-1.5 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center"
+                onClick={props.close}
+            >
                 <NextImage
                     src="/themes/Yaru/window/window-close-symbolic.svg"
                     alt="Kali window close"
