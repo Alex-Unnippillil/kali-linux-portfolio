@@ -61,20 +61,31 @@ const CredentialArtifactLocator = () => {
             width: `${progress}%`,
             transition: prefersReducedMotion ? 'none' : 'width 0.2s',
           }}
+          role="progressbar"
+          aria-label="scan progress"
+          aria-valuenow={progress}
+          aria-valuemin={0}
+          aria-valuemax={100}
         />
       </div>
       <ul>
         {results.map((r, idx) => (
           <li
             key={idx}
-            className={r.found ? 'text-green-400' : 'text-red-400'}
+            className={r.found ? 'text-ubt-green' : 'text-red-500'}
           >
             {r.label} - {r.found ? 'Found' : 'Not Found'}
           </li>
         ))}
       </ul>
       <div aria-live="polite" role="status" className="sr-only">
-        {results.map((r) => `${r.label}: ${r.found ? 'found' : 'not found'}`).join(', ')}
+        {scanning
+          ? `Scanning... ${progress}%`
+          : results
+              .map(
+                (r) => `${r.label}: ${r.found ? 'found' : 'not found'}`
+              )
+              .join(', ')}
       </div>
     </div>
   );
