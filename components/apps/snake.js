@@ -19,14 +19,18 @@ const randomFood = (snake) => {
 const Snake = () => {
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
-  const snakeRef = useRef([{ x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2) }]);
+  const snakeRef = useRef([
+    { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2), scale: 1 },
+  ]);
   const dirRef = useRef({ x: 1, y: 0 });
   const foodRef = useRef(randomFood(snakeRef.current));
+  const moveQueueRef = useRef([]);
 
   const rafRef = useRef();
   const lastRef = useRef(0);
   const runningRef = useRef(true);
   const audioCtx = useRef(null);
+  const prefersReducedMotion = useRef(false);
 
   const [running, setRunning] = useState(true);
   const [wrap, setWrap] = useState(false);
@@ -57,16 +61,52 @@ const Snake = () => {
   const draw = useCallback(() => {
     const ctx = ctxRef.current;
     if (!ctx) return;
+
     ctx.fillStyle = '#111827';
     ctx.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+
+    // Ghost path preview
+    const ghost = [];
+    let gx = snakeRef.current[0].x;
+    let gy = snakeRef.current[0].y;
+    let gdir = dirRef.current;
+    const moves = moveQueueRef.current;
+    for (let i = 0; i < 5; i += 1) {
+      if (moves[i]) gdir = moves[i];
+      gx += gdir.x;
+      gy += gdir.y;
+      if (wrap) {
+        gx = (gx + GRID_SIZE) % GRID_SIZE;
+        gy = (gy + GRID_SIZE) % GRID_SIZE;
+      } else if (gx < 0 || gy < 0 || gx >= GRID_SIZE || gy >= GRID_SIZE) {
+        break;
+      }
+      ghost.push({ x: gx, y: gy });
+    }
+    if (ghost.length) {
+      ctx.fillStyle = 'rgba(74,222,128,0.5)';
+      ghost.forEach((g) => {
+        ctx.fillRect(g.x * CELL_SIZE, g.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      });
+    }
+
+    // Food
     ctx.fillStyle = '#ef4444';
     const food = foodRef.current;
     ctx.fillRect(food.x * CELL_SIZE, food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+
+    // Snake segments
     ctx.fillStyle = '#22c55e';
     snakeRef.current.forEach((seg) => {
-      ctx.fillRect(seg.x * CELL_SIZE, seg.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      const scale = seg.scale ?? 1;
+      const size = CELL_SIZE * scale;
+      const offset = (CELL_SIZE - size) / 2;
+      ctx.fillRect(seg.x * CELL_SIZE + offset, seg.y * CELL_SIZE + offset, size, size);
+      if (scale < 1) {
+        seg.scale = Math.min(1, scale + 0.1);
+      }
     });
-  }, []);
+  }, [wrap]);
 
   useEffect(() => {
     const ctx = canvasRef.current?.getContext('2d');
@@ -74,10 +114,27 @@ const Snake = () => {
     draw();
   }, [draw]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      prefersReducedMotion.current = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+    }
+  }, []);
+
   const update = useCallback(() => {
     const snake = snakeRef.current;
+    if (moveQueueRef.current.length) {
+      const next = moveQueueRef.current.shift();
+      if (
+        next &&
+        (dirRef.current.x + next.x !== 0 || dirRef.current.y + next.y !== 0)
+      ) {
+        dirRef.current = next;
+      }
+    }
     const dir = dirRef.current;
-    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y, scale: 1 };
 
     if (wrap) {
       head.x = (head.x + GRID_SIZE) % GRID_SIZE;
@@ -106,20 +163,23 @@ const Snake = () => {
       setScore((s) => s + 1);
       beep(440);
       foodRef.current = randomFood(snake);
+      if (!prefersReducedMotion.current) head.scale = 0;
     } else {
       snake.pop();
     }
-    draw();
-  }, [wrap, draw, beep]);
+  }, [wrap, beep]);
 
-  const loop = useCallback((time) => {
-    rafRef.current = requestAnimationFrame(loop);
-    if (!runningRef.current) return;
-    if (time - lastRef.current > SPEED) {
-      lastRef.current = time;
-      update();
-    }
-  }, [update]);
+  const loop = useCallback(
+    (time) => {
+      rafRef.current = requestAnimationFrame(loop);
+      if (runningRef.current && time - lastRef.current > SPEED) {
+        lastRef.current = time;
+        update();
+      }
+      draw();
+    },
+    [update, draw]
+  );
 
   useEffect(() => {
     runningRef.current = running;
@@ -131,9 +191,10 @@ const Snake = () => {
   }, [loop]);
 
   useGameControls(({ x, y }) => {
-    const curr = dirRef.current;
+    const queue = moveQueueRef.current;
+    const curr = queue.length ? queue[queue.length - 1] : dirRef.current;
     if (curr.x + x === 0 && curr.y + y === 0) return;
-    dirRef.current = { x, y };
+    queue.push({ x, y });
   });
 
   useEffect(() => {
@@ -146,9 +207,12 @@ const Snake = () => {
   }, [gameOver, score, highScore]);
 
   const reset = useCallback(() => {
-    snakeRef.current = [{ x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2) }];
+    snakeRef.current = [
+      { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2), scale: 1 },
+    ];
     dirRef.current = { x: 1, y: 0 };
     foodRef.current = randomFood(snakeRef.current);
+    moveQueueRef.current = [];
     setScore(0);
     setGameOver(false);
     setRunning(true);
@@ -164,11 +228,20 @@ const Snake = () => {
           height={GRID_SIZE * CELL_SIZE}
           className="bg-gray-800 border border-gray-700"
         />
-        <div className="absolute top-2 left-2 text-sm">
+        <div
+          className="absolute top-2 left-2 text-sm"
+          aria-live="polite"
+          role="status"
+          aria-atomic="true"
+        >
           Score: {score} | High: {highScore}
         </div>
         {gameOver && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
+            role="alert"
+            aria-live="assertive"
+          >
             Game Over
           </div>
         )}
