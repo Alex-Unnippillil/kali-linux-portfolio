@@ -1,21 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const demoForecast = () => {
-  const now = new Date();
-  const day = (n) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + n);
-    return d.toISOString().slice(0, 10);
-  };
-  return {
-    current_weather: { temperature: 21, weathercode: 0 },
-    daily: {
-      time: [day(0), day(1), day(2)],
-      temperature_2m_max: [24, 23, 22],
-      temperature_2m_min: [16, 15, 14],
-      weathercode: [0, 1, 61],
-    },
-  };
+const defaultLocation = {
+  latitude: 40.7128,
+  longitude: -74.0060,
 };
 
 const SunIcon = ({ still }) => {
@@ -144,29 +131,39 @@ const Weather = () => {
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      if (!navigator.geolocation) {
-        setData(demoForecast());
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          try {
-            const { latitude, longitude } = pos.coords;
-            const url =
-              `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=auto`;
-            const res = await fetch(url);
-            if (!res.ok) throw new Error('Failed to fetch forecast');
-            const json = await res.json();
+    const fetchForecast = async (lat, lon) => {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=auto`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to fetch forecast');
+        const json = await res.json();
+        setData(json);
+      } catch {
+        try {
+          const cached = await caches.match(url);
+          if (cached) {
+            const json = await cached.json();
             setData(json);
-          } catch {
-            setData(demoForecast());
           }
-        },
-        () => setData(demoForecast())
-      );
+        } catch {
+          // ignore
+        }
+      }
     };
-    load();
+
+    if (!navigator.geolocation) {
+      fetchForecast(defaultLocation.latitude, defaultLocation.longitude);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        fetchForecast(latitude, longitude);
+      },
+      () => {
+        fetchForecast(defaultLocation.latitude, defaultLocation.longitude);
+      }
+    );
   }, []);
 
   useEffect(() => {
@@ -194,26 +191,62 @@ const Weather = () => {
 
   const { gradient, Icon } = getCondition(data.current_weather.weathercode);
 
+  const hourlyTemps = data.hourly.temperature_2m.slice(0, 24);
+  const hourlyTimes = data.hourly.time.slice(0, 24);
+  const maxTemp = Math.max(...hourlyTemps);
+  const minTemp = Math.min(...hourlyTemps);
+  const points = hourlyTemps
+    .map((t, i) => {
+      const x = (i / (hourlyTemps.length - 1)) * 100;
+      const y = ((maxTemp - t) / (maxTemp - minTemp || 1)) * 100;
+      return `${x},${y}`;
+    })
+    .join(' ');
+
   return (
     <div
-      className={`h-full w-full flex flex-col items-center justify-center text-white p-4 overflow-auto ${gradient}`}
+      className={`h-full w-full flex flex-col items-center justify-start text-white p-4 overflow-auto ${gradient}`}
       aria-live="polite"
     >
       <Icon still={reduceMotion} />
       <div className="text-4xl mb-4">
         {Math.round(data.current_weather.temperature)}°C
       </div>
-      <ul className="text-sm w-full max-w-xs space-y-1">
-        {data.daily.time.map((t, i) => (
-          <li key={t} className="flex justify-between">
-            <span>{formatDate(t)}</span>
-            <span>
-              {Math.round(data.daily.temperature_2m_max[i])}/
-              {Math.round(data.daily.temperature_2m_min[i])}°C
-            </span>
-          </li>
+      <div className="grid grid-cols-3 gap-2 w-full max-w-md mb-4 text-sm">
+        {data.daily.time.map((t, i) => {
+          const { Icon: DayIcon } = getCondition(
+            data.daily.weathercode[i]
+          );
+          return (
+            <div
+              key={t}
+              className="bg-white/10 rounded p-2 flex flex-col items-center"
+            >
+              <span>{formatDate(t)}</span>
+              <DayIcon still={reduceMotion} />
+              <span>
+                {Math.round(data.daily.temperature_2m_max[i])}/
+                {Math.round(data.daily.temperature_2m_min[i])}°C
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <svg viewBox="0 0 100 50" className="w-full max-w-md h-32">
+        <polyline
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          points={points}
+        />
+      </svg>
+      <div className="flex justify-between w-full max-w-md text-xs mt-2">
+        {hourlyTimes.map((t, i) => (
+          <span key={t} className="flex-1 text-center">
+            {new Date(t).getHours()}
+          </span>
         ))}
-      </ul>
+      </div>
     </div>
   );
 };
