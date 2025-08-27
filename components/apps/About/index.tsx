@@ -38,7 +38,7 @@ export default function AboutApp() {
       />
       <h2 id="about-heading" className="text-2xl font-bold mb-4">About</h2>
       <p className="mb-6 max-w-[60ch] leading-relaxed">
-        I'm Alex Unnippillil, a security engineer focused on building accessible
+        I&apos;m Alex Unnippillil, a security engineer focused on building accessible
         security tooling and exploring new web technologies.
       </p>
       <section aria-labelledby="now-heading" className="mb-6 max-w-[60ch]">
