@@ -10,9 +10,11 @@ const severityStyles = {
   low: 'bg-green-300 text-black',
 };
 
+const moduleTypes = ['auxiliary', 'exploit', 'post'];
+
 const timelineSteps = 5;
 
-const banner = `Metasploit Framework Console (mock)\nType 'search <term>' to search modules.`;
+const banner = `Metasploit Framework Console (mock)\nFor legal and ethical use only.\nType 'search <term>' to search modules.`;
 
 const MetasploitApp = () => {
   const [command, setCommand] = useState('');
@@ -54,12 +56,15 @@ const MetasploitApp = () => {
     );
   }, [query]);
 
-  const modulesBySeverity = useMemo(() => {
-    return modules.reduce((acc, m) => {
-      acc[m.severity] = acc[m.severity] ? [...acc[m.severity], m] : [m];
+  const modulesByType = useMemo(() => {
+    const filteredMods = modules.filter(
+      (m) => !selectedSeverity || m.severity === selectedSeverity
+    );
+    return moduleTypes.reduce((acc, type) => {
+      acc[type] = filteredMods.filter((m) => m.type === type);
       return acc;
     }, {});
-  }, []);
+  }, [selectedSeverity]);
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -92,6 +97,11 @@ const MetasploitApp = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const runDemo = () => {
+    const demoLogs = `msf6 > use exploit/windows/smb/ms17_010_eternalblue\n[*] Started reverse TCP handler on 0.0.0.0:4444\n[*] 192.168.1.100 - Connecting to target...\n[+] 192.168.1.100 - Connection established\n[*] 192.168.1.100 - Sending exploit...\n[+] 192.168.1.100 - Exploit completed, but no session was created.`;
+    setOutput((prev) => `${prev}\n${demoLogs}`);
   };
 
   const startReplay = () => {
@@ -128,6 +138,9 @@ const MetasploitApp = () => {
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white">
+      <div className="bg-yellow-400 text-black text-xs p-2 text-center">
+        For authorized security testing and educational use only.
+      </div>
       <div className="flex p-2">
         <input
           className="flex-grow bg-ub-grey text-white p-1 rounded"
@@ -144,6 +157,12 @@ const MetasploitApp = () => {
           className="ml-2 px-2 py-1 bg-ub-orange rounded"
         >
           Run
+        </button>
+        <button
+          onClick={runDemo}
+          className="ml-2 px-2 py-1 bg-green-600 text-black rounded"
+        >
+          Run Demo
         </button>
       </div>
       <div className="p-2">
@@ -180,15 +199,31 @@ const MetasploitApp = () => {
               </button>
             ))}
           </div>
-          {selectedSeverity && (
-            <ul style={animationStyle} className="max-h-40 overflow-auto text-xs">
-              {(modulesBySeverity[selectedSeverity] || []).map((m) => (
-                <li key={m.name} className="mb-1">
-                  <span className="font-mono">{m.name}</span> - {m.description}
-                </li>
-              ))}
-            </ul>
-          )}
+          {moduleTypes.map((type) => (
+            <div key={type} className="mb-2">
+              <h3 className="text-sm font-bold capitalize">{type}</h3>
+              <ul style={animationStyle} className="max-h-32 overflow-auto text-xs">
+                {(modulesByType[type] || []).map((m) => (
+                  <li key={m.name} className="mb-1">
+                    <span
+                      className={`px-1 rounded mr-1 ${severityStyles[m.severity]}`}
+                    >
+                      {m.severity}
+                    </span>
+                    <span className="font-mono">{m.name}</span> - {m.description}
+                    {m.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="ml-1 px-1 bg-ub-grey rounded"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
         <div className="mt-4">
           <button
