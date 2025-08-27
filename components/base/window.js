@@ -23,6 +23,8 @@ export class Window extends Component {
             snapPreview: null,
             snapPosition: null,
         }
+        this._usageTimeout = null;
+        this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
     }
 
     componentDidMount() {
@@ -34,12 +36,18 @@ export class Window extends Component {
 
         // on window resize, resize boundary
         window.addEventListener('resize', this.resizeBoundries);
+        if (this._uiExperiments) {
+            this.scheduleUsageCheck();
+        }
     }
 
     componentWillUnmount() {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         window.removeEventListener('resize', this.resizeBoundries);
+        if (this._usageTimeout) {
+            clearTimeout(this._usageTimeout);
+        }
     }
 
     setDefaultWindowDimenstion = () => {
@@ -64,7 +72,59 @@ export class Window extends Component {
                 width: window.innerWidth // parent width
                     - (window.innerWidth * (this.state.width / 100.0)) //this window's width
             }
+        }, () => {
+            if (this._uiExperiments) {
+                this.scheduleUsageCheck();
+            }
         });
+    }
+
+    computeContentUsage = () => {
+        const root = document.getElementById(this.id);
+        if (!root) return 100;
+        const container = root.querySelector('.windowMainScreen');
+        if (!container) return 100;
+        const inner = container.firstElementChild || container;
+        const innerRect = inner.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const area = containerRect.width * containerRect.height;
+        if (area === 0) return 100;
+        return (innerRect.width * innerRect.height) / area * 100;
+    }
+
+    scheduleUsageCheck = () => {
+        if (this._usageTimeout) {
+            clearTimeout(this._usageTimeout);
+        }
+        this._usageTimeout = setTimeout(() => {
+            const usage = this.computeContentUsage();
+            if (usage < 65) {
+                this.optimizeWindow();
+            }
+        }, 200);
+    }
+
+    optimizeWindow = () => {
+        const root = document.getElementById(this.id);
+        if (!root) return;
+        const container = root.querySelector('.windowMainScreen');
+        if (!container) return;
+
+        container.style.padding = '0px';
+
+        const shrink = () => {
+            const usage = this.computeContentUsage();
+            if (usage >= 80) return;
+            this.setState(prev => ({
+                width: Math.max(prev.width - 1, 20),
+                height: Math.max(prev.height - 1, 20)
+            }), () => {
+                if (this.computeContentUsage() < 80) {
+                    setTimeout(shrink, 50);
+                }
+            });
+        };
+        shrink();
     }
 
     changeCursorToMove = () => {
