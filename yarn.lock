@@ -1883,6 +1883,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/react-dom@npm:18":
+  version: 18.3.7
+  resolution: "@types/react-dom@npm:18.3.7"
+  peerDependencies:
+    "@types/react": ^18.0.0
+  checksum: 10c0/8bd309e2c3d1604a28a736a24f96cbadf6c05d5288cfef8883b74f4054c961b6b3a5e997fd5686e492be903c8f3380dba5ec017eff3906b1256529cd2d39603e
+  languageName: node
+  linkType: hard
+
 "@types/react@npm:^19.1.10":
   version: 19.1.11
   resolution: "@types/react@npm:19.1.11"
@@ -9452,6 +9461,7 @@ __metadata:
     "@types/matter-js": "npm:0.20.0"
     "@types/node": "npm:^24.2.1"
     "@types/react": "npm:^19.1.10"
+    "@types/react-dom": "npm:18"
     "@types/seedrandom": "npm:^3"
     "@types/three": "npm:^0.179.0"
     "@vercel/analytics": "npm:^1.5.0"

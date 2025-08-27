@@ -31,7 +31,7 @@ const Checkers = () => {
   const hintRequest = useRef(false);
   const pathRef = useRef<[number, number][]>([]);
   const makeMoveRef = useRef<((move: Move) => void) | null>(null);
-  const crownFrame = useRef<number>();
+  const crownFrame = useRef<number>(0);
 
   useEffect(() => {
     workerRef.current = new Worker('/checkers-worker.js');

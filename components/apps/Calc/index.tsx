@@ -307,7 +307,7 @@ const Calc = () => {
 
 export default Calc;
 
-export const displayTerminalCalc = (addFolder: any, openApp: any) => {
-  return <Calc addFolder={addFolder} openApp={openApp} />;
+export const displayTerminalCalc = () => {
+  return <Calc />;
 };
 
