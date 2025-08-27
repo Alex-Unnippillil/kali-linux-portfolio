@@ -41,7 +41,10 @@ export class Trash extends Component {
             fileHandle: null,
             filePreview: null,
             confirmDelete: false,
-        }
+            toast: null,
+        };
+
+        this.toastTimeout = null;
     }
 
     componentDidMount() {
@@ -60,9 +63,61 @@ export class Trash extends Component {
         if (children[1]) children[1].classList.toggle("bg-ub-orange");
     }
 
+    animateFall = (el, cb) => {
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced) {
+            cb && cb();
+            return;
+        }
+        const rect = el.getBoundingClientRect();
+        const distance = window.innerHeight - rect.top - rect.height;
+        const duration = 500;
+        let start;
+        const step = (ts) => {
+            if (!start) start = ts;
+            const progress = Math.min((ts - start) / duration, 1);
+            el.style.transform = `translateY(${progress * distance}px)`;
+            if (progress < 1) requestAnimationFrame(step);
+            else cb && cb();
+        };
+        requestAnimationFrame(step);
+    };
+
+    showUndoToast = (undoAction, message = 'Items deleted') => {
+        if (this.toastTimeout) clearTimeout(this.toastTimeout);
+        this.setState({ toast: { message, undoAction } });
+        this.toastTimeout = setTimeout(() => {
+            this.setState({ toast: null });
+        }, 5000);
+    };
+
+    undo = () => {
+        if (this.state.toast?.undoAction) this.state.toast.undoAction();
+        if (this.toastTimeout) clearTimeout(this.toastTimeout);
+        this.setState({ toast: null });
+    };
+
     emptyTrash = () => {
-        this.setState({ empty: true });
-        localStorage.setItem("trash-empty", true);
+        const items = document.querySelectorAll('.trash-item');
+        if (items.length === 0) {
+            this.setState({ empty: true });
+            localStorage.setItem('trash-empty', true);
+            return;
+        }
+        let finished = 0;
+        const done = () => {
+            finished++;
+            if (finished === items.length) {
+                this.setState({ empty: true }, () => {
+                    localStorage.setItem('trash-empty', true);
+                    this.showUndoToast(() => {
+                        this.setState({ empty: false });
+                        localStorage.setItem('trash-empty', false);
+                    }, 'Trash emptied');
+                });
+            }
+        };
+        items.forEach((el) => this.animateFall(el, done));
     };
 
     emptyScreen = () => {
@@ -87,7 +142,7 @@ export class Trash extends Component {
                 {
                     this.trashItems.map((item, index) => {
                         return (
-                            <div key={index} tabIndex="1" onFocus={this.focusFile} onBlur={this.focusFile} className="flex flex-col items-center text-sm outline-none w-16 my-2 mx-4">
+                            <div key={index} tabIndex="1" onFocus={this.focusFile} onBlur={this.focusFile} className="trash-item flex flex-col items-center text-sm outline-none w-16 my-2 mx-4">
                                 <div className="w-16 h-16 flex items-center justify-center">
                                     <Image
                                         src={item.icon}
@@ -140,7 +195,9 @@ export class Trash extends Component {
             console.error(err);
         }
         if (filePreview?.url) URL.revokeObjectURL(filePreview.url);
-        this.setState({ fileHandle: null, filePreview: null, confirmDelete: false });
+        this.setState({ fileHandle: null, filePreview: null, confirmDelete: false }, () => {
+            this.showUndoToast(null, `${fileHandle.name} deleted`);
+        });
     }
 
     cancelDelete = () => {
@@ -175,6 +232,18 @@ export class Trash extends Component {
                                 <button onClick={this.cancelDelete} className="px-3 py-1 bg-gray-600 rounded">Cancel</button>
                             </div>
                         </div>
+                    </div>
+                )}
+                {this.state.toast && (
+                    <div
+                        role="alert"
+                        aria-live="assertive"
+                        className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 text-white px-4 py-2 rounded shadow-md flex items-center"
+                    >
+                        <span>{this.state.toast.message}</span>
+                        {this.state.toast.undoAction && (
+                            <button onClick={this.undo} className="ml-4 underline focus:outline-none">Undo</button>
+                        )}
                     </div>
                 )}
             </div>
