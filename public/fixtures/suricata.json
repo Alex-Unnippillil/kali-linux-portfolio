@@ -1,0 +1,8 @@
+[
+  {
+    "timestamp": "2024-01-01T00:00:00Z",
+    "src_ip": "192.0.2.1",
+    "dest_ip": "198.51.100.2",
+    "alert": "ET MALWARE Test signature"
+  }
+]

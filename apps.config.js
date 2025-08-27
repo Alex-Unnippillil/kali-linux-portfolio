@@ -50,6 +50,7 @@ const SudokuApp = createDynamicApp('sudoku', 'Sudoku');
 const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
+const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 
@@ -85,6 +86,7 @@ const NessusApp = createDynamicApp('nessus', 'Nessus');
 const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
+const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
  
 
 
@@ -153,6 +155,7 @@ const displayNessus = createDisplay(NessusApp);
 const displayNmapNSE = createDisplay(NmapNSEApp);
 const displayOpenVAS = createDisplay(OpenVASApp);
 const displayReconNG = createDisplay(ReconNGApp);
+const displaySecurityTools = createDisplay(SecurityToolsApp);
 
 const displayHashcat = createDisplay(HashcatApp);
 
@@ -876,6 +879,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayReconNG,
+  },
+  {
+    id: 'security-tools',
+    title: 'Security Tools',
+    icon: './themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySecurityTools,
   },
   // Utilities are grouped separately
   ...utilities,
