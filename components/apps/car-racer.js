@@ -36,9 +36,11 @@ const CarRacer = () => {
   const obstaclesRef = useRef([]);
   const car = useRef({ lane: 1, y: HEIGHT - CAR_HEIGHT - 10, height: CAR_HEIGHT });
   const roadsideRef = useRef({ near: [], far: [] });
-  const [boost, setBoost] = useState(false);
-  const boostRef = useRef(0);
-  const reduceMotionRef = useRef(false);
+    const [boost, setBoost] = useState(false);
+    const boostRef = useRef(0);
+    const reduceMotionRef = useRef(false);
+    const workerRef = useRef(null);
+    const lastRenderRef = useRef({});
 
   const audioCtxRef = useRef(null);
   const playBeep = () => {
@@ -72,54 +74,44 @@ const CarRacer = () => {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    if (
+      !canvas ||
+      typeof window === 'undefined' ||
+      !window.Worker ||
+      !('OffscreenCanvas' in window)
+    )
+      return;
+    const worker = new Worker(new URL('./car-racer.renderer.js', import.meta.url));
+    workerRef.current = worker;
+    const offscreen = canvas.transferControlToOffscreen();
+    worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
     let last = performance.now();
     let spawnTimer = 0;
     let lineOffset = 0;
     let nearTimer = 0;
     let farTimer = 0;
-
-    const draw = () => {
-      ctx.fillStyle = '#333';
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-      if (!reduceMotionRef.current) {
-        ctx.fillStyle = '#999';
-        roadsideRef.current.far.forEach((r) => {
-          ctx.fillRect(2, r.y, 6, 20);
-          ctx.fillRect(WIDTH - 8, r.y, 6, 20);
-        });
-        ctx.fillStyle = '#ccc';
-        roadsideRef.current.near.forEach((r) => {
-          ctx.fillRect(0, r.y, 10, 30);
-          ctx.fillRect(WIDTH - 10, r.y, 10, 30);
-        });
-      }
-
-      // lane lines
-      ctx.strokeStyle = '#fff';
-      ctx.setLineDash([20, 20]);
-      ctx.lineWidth = 2;
-      ctx.lineDashOffset = -lineOffset;
-      for (let i = 1; i < LANES; i += 1) {
-        ctx.beginPath();
-        ctx.moveTo(i * LANE_WIDTH, 0);
-        ctx.lineTo(i * LANE_WIDTH, HEIGHT);
-        ctx.stroke();
-      }
-      ctx.setLineDash([]);
-
-      // player car
-      const carX = car.current.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
-      ctx.fillStyle = 'red';
-      ctx.fillRect(carX, car.current.y, CAR_WIDTH, CAR_HEIGHT);
-
-      // obstacles
-      ctx.fillStyle = 'blue';
-      for (const o of obstaclesRef.current) {
-        const ox = o.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
-        ctx.fillRect(ox, o.y, CAR_WIDTH, OBSTACLE_HEIGHT);
+    const postState = () => {
+      const state = {
+        car: { lane: car.current.lane, y: car.current.y },
+        obstacles: obstaclesRef.current.map((o) => ({ lane: o.lane, y: o.y })),
+        roadside: reduceMotionRef.current
+          ? null
+          : {
+              near: roadsideRef.current.near.map((r) => r.y),
+              far: roadsideRef.current.far.map((r) => r.y),
+            },
+        lineOffset,
+      };
+      const diff = {};
+      const lastState = lastRenderRef.current;
+      Object.keys(state).forEach((k) => {
+        if (JSON.stringify(state[k]) !== JSON.stringify(lastState[k])) {
+          diff[k] = state[k];
+        }
+      });
+      if (Object.keys(diff).length) {
+        worker.postMessage({ type: 'state', diff });
+        lastRenderRef.current = { ...lastState, ...diff };
       }
     };
 
@@ -200,12 +192,14 @@ const CarRacer = () => {
       } else {
         canvas.style.filter = 'none';
       }
-
-      draw();
+      postState();
       requestAnimationFrame(step);
     };
     const req = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(req);
+    return () => {
+      cancelAnimationFrame(req);
+      worker.terminate();
+    };
   }, [canvasRef, highScore]);
 
   const moveLeft = React.useCallback(() => {
