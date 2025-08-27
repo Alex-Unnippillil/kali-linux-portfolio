@@ -65,6 +65,7 @@ const QuoteGenerator = () => {
   const [search, setSearch] = useState('');
   const [fade, setFade] = useState(false);
   const [prefersReduced, setPrefersReduced] = useState(false);
+  const [favorites, setFavorites] = useState([]);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -75,6 +76,15 @@ const QuoteGenerator = () => {
   }, []);
 
   useEffect(() => {
+    const storedFavs = localStorage.getItem('favoriteQuotes');
+    if (storedFavs) {
+      try {
+        setFavorites(JSON.parse(storedFavs));
+      } catch {
+        /* ignore */
+      }
+    }
+
     const etag = localStorage.getItem('quotesEtag');
     const stored = localStorage.getItem('quotesData');
     if (stored) {
@@ -108,17 +118,18 @@ const QuoteGenerator = () => {
       });
   }, []);
 
-  const filteredQuotes = useMemo(
-    () =>
-      quotes.filter(
-        (q) =>
-          (!category || q.tags.includes(category)) &&
-          (!search ||
-            q.content.toLowerCase().includes(search.toLowerCase()) ||
-            q.author.toLowerCase().includes(search.toLowerCase()))
-      ),
-    [quotes, category, search]
-  );
+  const filteredQuotes = useMemo(() => {
+    const source = category === 'favorites' ? favorites : quotes;
+    return source.filter(
+      (q) =>
+        (!category ||
+          category === 'favorites' ||
+          q.tags.includes(category)) &&
+        (!search ||
+          q.content.toLowerCase().includes(search.toLowerCase()) ||
+          q.author.toLowerCase().includes(search.toLowerCase()))
+    );
+  }, [quotes, favorites, category, search]);
 
   useEffect(() => {
     if (!filteredQuotes.length) {
@@ -176,13 +187,28 @@ const QuoteGenerator = () => {
     });
   };
 
-  const categories = useMemo(
-    () =>
-      Array.from(new Set(quotes.flatMap((q) => q.tags))).filter((c) =>
-        SAFE_CATEGORIES.includes(c)
-      ),
-    [quotes]
-  );
+  const toggleFavorite = () => {
+    if (!current) return;
+    setFavorites((prev) => {
+      const exists = prev.some(
+        (q) => q.content === current.content && q.author === current.author
+      );
+      const updated = exists
+        ? prev.filter(
+            (q) => q.content !== current.content || q.author !== current.author
+          )
+        : [...prev, current];
+      localStorage.setItem('favoriteQuotes', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const categories = useMemo(() => {
+    const base = Array.from(new Set(quotes.flatMap((q) => q.tags))).filter((c) =>
+      SAFE_CATEGORIES.includes(c)
+    );
+    return favorites.length ? ['favorites', ...base] : base;
+  }, [quotes, favorites]);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 overflow-auto">
@@ -208,6 +234,16 @@ const QuoteGenerator = () => {
             onClick={changeQuote}
           >
             New Quote
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={toggleFavorite}
+          >
+            {current && favorites.some(
+              (q) => q.content === current.content && q.author === current.author
+            )
+              ? 'Unfavorite'
+              : 'Favorite'}
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
