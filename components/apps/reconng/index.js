@@ -132,10 +132,10 @@ const ReconNG = () => {
         },
       },
       {
-        selector: '$node > node',
-        style: {
-          'padding': '10px',
-          'background-opacity': 0.1,
+          selector: '$node > node',
+          style: {
+            'padding': 'var(--space-3)',
+            'background-opacity': 0.1,
           'border-color': '#555',
           label: 'data(label)',
           color: '#fff',
