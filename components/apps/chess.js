@@ -277,6 +277,51 @@ const ChessGame = () => {
       : Number(localStorage.getItem('chessElo') || 1200)
   );
   const animRef = useRef(null);
+  const trailsRef = useRef([]);
+  const [evalScore, setEvalScore] = useState(0);
+  const [displayEval, setDisplayEval] = useState(0);
+  const reduceMotionRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    reduceMotionRef.current = mq.matches;
+    const handler = () => (reduceMotionRef.current = mq.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  const updateEval = () => setEvalScore(evaluate(boardRef.current));
+
+  useEffect(() => {
+    updateEval();
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotionRef.current) {
+      setDisplayEval(evalScore);
+      return;
+    }
+    let frame;
+    const animate = () => {
+      setDisplayEval((prev) => {
+        const diff = evalScore - prev;
+        if (Math.abs(diff) < 1) return evalScore;
+        return prev + diff * 0.1;
+      });
+      frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [evalScore]);
+
+  const addTrail = (from, to) => {
+    const fx = (from & 15) * SQ + SQ / 2;
+    const fy = (7 - (from >> 4)) * SQ + SQ / 2;
+    const tx = (to & 15) * SQ + SQ / 2;
+    const ty = (7 - (to >> 4)) * SQ + SQ / 2;
+    trailsRef.current.push({ fx, fy, tx, ty, t: performance.now() });
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -313,6 +358,18 @@ const ChessGame = () => {
             );
           }
         }
+      }
+      const now = performance.now();
+      trailsRef.current = trailsRef.current.filter((t) => now - t.t < 1000);
+      for (const t of trailsRef.current) {
+        const age = (now - t.t) / 1000;
+        const alpha = reduceMotionRef.current ? 0.6 : Math.max(0, 1 - age);
+        ctx.strokeStyle = `rgba(255,0,0,${alpha})`;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(t.fx, t.fy);
+        ctx.lineTo(t.tx, t.ty);
+        ctx.stroke();
       }
       animRef.current = requestAnimationFrame(render);
     };
@@ -358,10 +415,12 @@ const ChessGame = () => {
     if (move) {
       boardRef.current[move.to] = boardRef.current[move.from];
       boardRef.current[move.from] = EMPTY;
+      addTrail(move.from, move.to);
       sideRef.current = -sideRef.current;
       if (sound) playBeep();
       setSelected(null);
       setMoves([]);
+      updateEval();
       checkGameState();
       setStatus('Your move');
     }
@@ -380,10 +439,12 @@ const ChessGame = () => {
       if (legal) {
         boardRef.current[legal.to] = boardRef.current[legal.from];
         boardRef.current[legal.from] = EMPTY;
+        addTrail(legal.from, legal.to);
         if (sound) playBeep();
         sideRef.current = -side;
         setSelected(null);
         setMoves([]);
+        updateEval();
         if (!checkGameState()) {
           setStatus('AI thinking...');
           setTimeout(aiMove, 200);
@@ -405,6 +466,8 @@ const ChessGame = () => {
     sideRef.current = WHITE;
     setSelected(null);
     setMoves([]);
+    trailsRef.current = [];
+    updateEval();
     setPaused(false);
     setStatus('Your move');
   };
@@ -433,6 +496,17 @@ const ChessGame = () => {
         </button>
       </div>
       <div className="mt-2">{status}</div>
+      <div className="mt-2 w-full max-w-xs" aria-label="Evaluation">
+        <div className="h-4 bg-gray-700">
+          <div
+            className={`h-full ${displayEval >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
+            style={{ width: `${(1 / (1 + Math.exp(-displayEval / 200))) * 100}%` }}
+          />
+        </div>
+        <div className="mt-1 text-sm" aria-live="polite">
+          Eval: {(evalScore / 100).toFixed(2)}
+        </div>
+      </div>
       <div className="mt-1">ELO: {elo}</div>
     </div>
   );
