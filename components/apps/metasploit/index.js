@@ -16,7 +16,9 @@ const timelineSteps = 5;
 
 const banner = `Metasploit Framework Console (mock)\nFor legal and ethical use only.\nType 'search <term>' to search modules.`;
 
-const MetasploitApp = () => {
+const MetasploitApp = ({
+  demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true',
+} = {}) => {
   const [command, setCommand] = useState('');
   const [output, setOutput] = usePersistentState('metasploit-history', banner);
   const [loading, setLoading] = useState(false);
@@ -35,8 +37,10 @@ const MetasploitApp = () => {
 
   // Refresh modules list in the background on mount
   useEffect(() => {
-    fetch('/api/metasploit').catch(() => {});
-  }, []);
+    if (!demoMode) {
+      fetch('/api/metasploit').catch(() => {});
+    }
+  }, [demoMode]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -85,13 +89,19 @@ const MetasploitApp = () => {
     if (!cmd) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/metasploit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: cmd }),
-      });
-      const data = await res.json();
-      setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`);
+      if (demoMode) {
+        setOutput(
+          (prev) => `${prev}\nmsf6 > ${cmd}\n[demo mode] command disabled`
+        );
+      } else {
+        const res = await fetch('/api/metasploit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: cmd }),
+        });
+        const data = await res.json();
+        setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`);
+      }
     } catch (e) {
       setOutput((prev) => `${prev}\nError: ${e.message}`);
     } finally {
@@ -100,8 +110,15 @@ const MetasploitApp = () => {
   };
 
   const runDemo = () => {
-    const demoLogs = `msf6 > use exploit/windows/smb/ms17_010_eternalblue\n[*] Started reverse TCP handler on 0.0.0.0:4444\n[*] 192.168.1.100 - Connecting to target...\n[+] 192.168.1.100 - Connection established\n[*] 192.168.1.100 - Sending exploit...\n[+] 192.168.1.100 - Exploit completed, but no session was created.`;
-    setOutput((prev) => `${prev}\n${demoLogs}`);
+    const first = modules[0];
+    setOutput(
+      (prev) =>
+        `${prev}\nmsf6 > use ${first.name}\n${first.transcript || ''}`
+    );
+  };
+
+  const showModule = (mod) => {
+    setOutput((prev) => `${prev}\nmsf6 > use ${mod.name}\n${mod.transcript || ''}`);
   };
 
   const startReplay = () => {
@@ -205,20 +222,26 @@ const MetasploitApp = () => {
               <ul style={animationStyle} className="max-h-32 overflow-auto text-xs">
                 {(modulesByType[type] || []).map((m) => (
                   <li key={m.name} className="mb-1">
-                    <span
-                      className={`px-1 rounded mr-1 ${severityStyles[m.severity]}`}
+                    <button
+                      type="button"
+                      onClick={() => showModule(m)}
+                      className="text-left w-full"
                     >
-                      {m.severity}
-                    </span>
-                    <span className="font-mono">{m.name}</span> - {m.description}
-                    {m.tags.map((t) => (
                       <span
-                        key={t}
-                        className="ml-1 px-1 bg-ub-grey rounded"
+                        className={`px-1 rounded mr-1 ${severityStyles[m.severity]}`}
                       >
-                        {t}
+                        {m.severity}
                       </span>
-                    ))}
+                      <span className="font-mono">{m.name}</span> - {m.description}
+                      {m.tags.map((t) => (
+                        <span
+                          key={t}
+                          className="ml-1 px-1 bg-ub-grey rounded"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </button>
                   </li>
                 ))}
               </ul>

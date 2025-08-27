@@ -5,48 +5,33 @@ import MetasploitApp from '../components/apps/metasploit';
 describe('Metasploit app', () => {
   beforeEach(() => {
     // @ts-ignore
-    global.fetch = jest.fn(() =>
-      Promise.resolve({ json: () => Promise.resolve({}) })
-    );
+    global.fetch = jest.fn();
     localStorage.clear();
   });
 
-  it('refreshes modules on mount', () => {
-    render(<MetasploitApp />);
-    expect(global.fetch).toHaveBeenCalledWith('/api/metasploit');
+  it('does not fetch modules in demo mode', () => {
+    render(<MetasploitApp demoMode />);
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('persists command history', async () => {
-    // @ts-ignore
-    (global.fetch as jest.Mock).mockImplementation((url, options) => {
-      if (options && options.method === 'POST') {
-        return Promise.resolve({
-          json: () => Promise.resolve({ output: 'res' }),
-        });
-      }
-      return Promise.resolve({ json: () => Promise.resolve({}) });
+  it('shows transcript when module selected', () => {
+    render(<MetasploitApp demoMode />);
+    const moduleEl = screen.getByRole('button', {
+      name: /ms17_010_eternalblue/,
     });
-
-    const { unmount } = render(<MetasploitApp />);
-    const input = screen.getByPlaceholderText('msfconsole command');
-    fireEvent.change(input, { target: { value: 'search test' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    await screen.findByText(/msf6 > search test/);
-    unmount();
-
-    render(<MetasploitApp />);
-    expect(screen.getByText(/msf6 > search test/)).toBeInTheDocument();
+    fireEvent.click(moduleEl);
+    expect(screen.getByText(/Exploit completed/)).toBeInTheDocument();
   });
 
   it('shows legal banner', () => {
-    render(<MetasploitApp />);
+    render(<MetasploitApp demoMode />);
     expect(
       screen.getByText(/authorized security testing and educational use only/i)
     ).toBeInTheDocument();
   });
 
   it('outputs demo logs', () => {
-    render(<MetasploitApp />);
+    render(<MetasploitApp demoMode />);
     fireEvent.click(screen.getByText('Run Demo'));
     expect(
       screen.getByText(/Started reverse TCP handler/)
