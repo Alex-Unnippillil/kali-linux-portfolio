@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import useAccessibleCanvas from '../../../hooks/useAccessibleCanvas';
 
 // Preset character sets and color palettes
 const presetCharSets = {
@@ -47,7 +48,7 @@ export default function AsciiArt() {
   const undoStack = useRef([]);
   const [colors, setColors] = useState(null);
   const workerRef = useRef(null);
-  const canvasRef = useRef(null);
+  const canvasRef = useAccessibleCanvas('ASCII art canvas');
   const editorRef = useRef(null);
 
   // Load saved preferences

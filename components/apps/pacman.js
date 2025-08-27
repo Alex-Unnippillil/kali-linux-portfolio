@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
+import useAccessibleCanvas from '../../hooks/useAccessibleCanvas';
 
 /**
  * Small Pacman implementation used inside the portfolio. The goal of this
@@ -59,7 +60,7 @@ const Pacman = () => {
     sounds: [],
   });
 
-  const canvasRef = useRef(null);
+  const canvasRef = useAccessibleCanvas('Pacman game canvas');
 
   // Levels file can override the maze and fruit tile
   const [levels, setLevels] = useState([
@@ -553,9 +554,13 @@ const Pacman = () => {
         className="bg-black"
       />
 
-      <div className="mt-2">Score: {score} | High: {highScore}</div>
-      <div className="mt-1">Lives: {pacRef.current.lives}</div>
-      {statusRef.current !== 'Playing' && <div className="mt-2">{statusRef.current}</div>}
+      <div aria-live="polite">
+        <div className="mt-2">Score: {score} | High: {highScore}</div>
+        <div className="mt-1">Lives: {pacRef.current.lives}</div>
+        {statusRef.current !== 'Playing' && (
+          <div className="mt-2">{statusRef.current}</div>
+        )}
+      </div>
     </div>
   );
 };

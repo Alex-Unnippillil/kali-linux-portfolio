@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import jsQR from 'jsqr';
+import useAccessibleCanvas from '../../../hooks/useAccessibleCanvas';
 
 const QRTool = () => {
   const [text, setText] = useState('');
   const [decodedText, setDecodedText] = useState('');
   const [message, setMessage] = useState('');
-  const generateCanvasRef = useRef(null);
-  const scanCanvasRef = useRef(null);
+  const generateCanvasRef = useAccessibleCanvas('Generated QR code canvas');
+  const scanCanvasRef = useAccessibleCanvas('QR scanning canvas');
   const videoRef = useRef(null);
   const animationRef = useRef(null);
 
@@ -147,10 +148,12 @@ const QRTool = () => {
             <div className="w-40 h-40 border-2 border-green-500" />
           </div>
         </div>
-        {message && <p className="mt-2">{message}</p>}
-        {decodedText && (
-          <p className="mt-2 break-all">Decoded: {decodedText}</p>
-        )}
+        <div aria-live="polite">
+          {message && <p className="mt-2">{message}</p>}
+          {decodedText && (
+            <p className="mt-2 break-all">Decoded: {decodedText}</p>
+          )}
+        </div>
         <canvas ref={scanCanvasRef} className="hidden" />
       </div>
     </div>

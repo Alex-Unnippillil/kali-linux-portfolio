@@ -120,7 +120,7 @@ export const advanceCheckpoints = (
 };
 
 const CarRacer = () => {
-  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT, 'Car Racer game canvas');
   const wheelRef = useRef(null);
   const steerButtonRef = useRef(0);
   const sensitivityRef = useRef(1);
@@ -446,7 +446,7 @@ const CarRacer = () => {
   return (
     <div className="relative h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
       <canvas ref={canvasRef} className="bg-black w-full h-full" />
-      <div className="absolute top-2 left-2 bg-black/60 p-2 rounded text-xs space-y-1">
+      <div className="absolute top-2 left-2 bg-black/60 p-2 rounded text-xs space-y-1" aria-live="polite">
         <div className="flex items-center gap-2">
           <label htmlFor="ctrl">Control:</label>
           <select

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import GameLayout from './GameLayout';
 import useAssetLoader from '../../hooks/useAssetLoader';
+import useAccessibleCanvas from '../../hooks/useAccessibleCanvas';
 
 const EXTRA_LIFE_THRESHOLDS = [1000, 5000, 10000];
 
@@ -10,7 +11,7 @@ const SpaceInvaders = () => {
     sounds: [],
   });
 
-  const canvasRef = useRef(null);
+  const canvasRef = useAccessibleCanvas('Space Invaders game canvas');
   const reqRef = useRef();
   const keys = useRef({});
   const touch = useRef({ left: false, right: false, fire: false });

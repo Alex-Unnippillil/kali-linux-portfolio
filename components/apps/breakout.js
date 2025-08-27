@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
+import useAccessibleCanvas from '../../hooks/useAccessibleCanvas';
 import levelsData from "./breakout-levels.json";
 import GameLayout from "./GameLayout";
 
@@ -79,7 +80,7 @@ const LevelEditor = ({ onSave, cols = 8, rows = 5 }) => {
 };
 
 const BreakoutGame = ({ levels }) => {
-  const canvasRef = useRef(null);
+  const canvasRef = useAccessibleCanvas('Breakout game canvas');
   const [level, setLevel] = useState(0);
   const scoreRef = useRef(0);
   const highScoresRef = useRef({});

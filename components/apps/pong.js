@@ -13,7 +13,7 @@ const WIDTH = 600;
 const HEIGHT = 400;
 
 const Pong = () => {
-  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT, 'Pong game canvas');
   const resetRef = useRef(null);
   const peerRef = useRef(null);
   const channelRef = useRef(null);
@@ -440,11 +440,13 @@ const Pong = () => {
         ref={canvasRef}
         className="bg-black w-full h-full touch-none"
       />
-      <div className="mt-2">Player: {scores.player} | Opponent: {scores.opponent}</div>
-      <div className="mt-1">Games: {match.player} | {match.opponent}</div>
-      {matchWinner && (
-        <div className="mt-1 text-lg">Winner: {matchWinner}</div>
-      )}
+      <div aria-live="polite">
+        <div className="mt-2">Player: {scores.player} | Opponent: {scores.opponent}</div>
+        <div className="mt-1">Games: {match.player} | {match.opponent}</div>
+        {matchWinner && (
+          <div className="mt-1 text-lg">Winner: {matchWinner}</div>
+        )}
+      </div>
 
       <div className="mt-2 flex items-center space-x-2">
         <label>AI Difficulty: {difficulty}</label>

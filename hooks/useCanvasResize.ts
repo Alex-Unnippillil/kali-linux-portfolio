@@ -1,7 +1,12 @@
-import { useRef, useEffect } from 'react';
+import { useEffect } from 'react';
+import useAccessibleCanvas from './useAccessibleCanvas';
 
-export default function useCanvasResize(baseWidth: number, baseHeight: number) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+export default function useCanvasResize(
+  baseWidth: number,
+  baseHeight: number,
+  label = 'Game canvas'
+) {
+  const canvasRef = useAccessibleCanvas(label);
 
   useEffect(() => {
     const canvas = canvasRef.current;

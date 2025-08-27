@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 const WIDTH = 400;
 const HEIGHT = 500;
 
 const Pinball = () => {
-  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT, 'Pinball game canvas');
+  const [liveText, setLiveText] = useState('Game ready');
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -36,6 +37,7 @@ const Pinball = () => {
       ball.y = 50;
       ball.vx = 100 * (Math.random() > 0.5 ? 1 : -1);
       ball.vy = 0;
+      setLiveText('Ball reset');
     };
 
     let last = 0;
@@ -110,9 +112,12 @@ const Pinball = () => {
   }, [canvasRef]);
 
   return (
-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey">
-      <canvas ref={canvasRef} className="bg-black w-full h-full" />
-    </div>
+    <>
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey">
+        <canvas ref={canvasRef} className="bg-black w-full h-full" />
+      </div>
+      <div aria-live="polite" className="sr-only">{liveText}</div>
+    </>
   );
 };
 
