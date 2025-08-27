@@ -1,46 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
-
-const GITHUB_USER = 'Alex-Unnippillil';
+import projectsData from './projects.json';
 
 export default function ProjectGallery() {
   const [projects, setProjects] = useState([]);
+  const [filter, setFilter] = useState('');
 
   useEffect(() => {
     ReactGA.event({ category: 'Application', action: 'Loaded Project Gallery' });
   }, []);
 
   useEffect(() => {
-    const fetchRepos = async () => {
-      try {
-        const res = await fetch(
-          `https://api.github.com/users/${GITHUB_USER}/repos?sort=updated&per_page=9`
-        );
-        const data = await res.json();
-        const mapped = data.map((repo) => ({
-          title: repo.name,
-          description: repo.description || 'No description provided.',
-          image: `https://opengraph.githubassets.com/1/${GITHUB_USER}/${repo.name}`,
-          tech: [repo.language].filter(Boolean),
-          live: repo.homepage,
-          repo: repo.html_url,
-        }));
-        setProjects(mapped);
-      } catch (err) {
-        console.error('Failed to load repos', err);
-      }
-    };
-    fetchRepos();
+    setProjects(projectsData);
   }, []);
+
+  const filtered = projects.filter((project) => {
+    const query = filter.toLowerCase();
+    return (
+      project.title.toLowerCase().includes(query) ||
+      project.tech.some((t) => t.toLowerCase().includes(query))
+    );
+  });
 
   return (
     <div className="p-4 w-full h-full overflow-y-auto bg-ub-cool-grey text-white">
+      <input
+        type="text"
+        placeholder="Search projects..."
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        className="mb-4 w-full px-2 py-1 rounded bg-gray-700 placeholder-gray-300 focus:outline-none"
+      />
       {projects.length === 0 ? (
         <p className="text-center">Loading projects...</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-center">No matching projects.</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((project, index) => (
+          {filtered.map((project, index) => (
             <div
               key={index}
               className="rounded-md bg-ub-grey bg-opacity-20 border border-gray-700 overflow-hidden flex flex-col"
@@ -87,7 +85,7 @@ export default function ProjectGallery() {
                       rel="noopener noreferrer"
                       className="px-3 py-1 text-sm border border-blue-600 rounded hover:bg-blue-600 hover:text-white"
                     >
-                      Repo
+                      Open Repo
                     </a>
                   )}
                 </div>
