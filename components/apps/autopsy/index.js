@@ -111,27 +111,51 @@ function Autopsy() {
           className="bg-ub-grey text-xs text-white p-2 rounded resize-none"
         />
       )}
-      {artifacts.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-sm font-bold">Timeline</div>
-          <ul className="space-y-1 text-xs">
-            {artifacts.map((a, idx) => (
-              <li key={idx} className="bg-ub-grey p-1 rounded">
-                <div>{new Date(a.timestamp).toLocaleString()}</div>
-                <div>
-                  {a.name} ({a.plugin})
-                </div>
-              </li>
-            ))}
-          </ul>
-          <button
-            onClick={downloadReport}
-            className="bg-ub-orange px-3 py-1 rounded text-sm"
-          >
-            Download Report
-          </button>
-        </div>
-      )}
+      {artifacts.length > 0 && (() => {
+        const times = artifacts.map((a) => new Date(a.timestamp).getTime());
+        const minTime = Math.min(...times);
+        const maxTime = Math.max(...times);
+        const range = maxTime - minTime || 1;
+        return (
+          <div className="space-y-2">
+            <div className="text-sm font-bold">Timeline</div>
+            <div className="timeline-bar">
+              {artifacts.map((a, idx) => {
+                const pos =
+                  ((new Date(a.timestamp).getTime() - minTime) / range) * 100;
+                return (
+                  <div
+                    key={idx}
+                    className="event-marker"
+                    style={{ left: `${pos}%` }}
+                  >
+                    <div className="event-details">
+                      {new Date(a.timestamp).toLocaleString()} - {a.name} (
+                      {a.plugin})
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <ul className="space-y-1 text-xs">
+              {artifacts.map((a, idx) => (
+                <li key={idx} className="bg-ub-grey p-1 rounded">
+                  <div>{new Date(a.timestamp).toLocaleString()}</div>
+                  <div>
+                    {a.name} ({a.plugin})
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={downloadReport}
+              className="bg-ub-orange px-3 py-1 rounded text-sm"
+            >
+              Download Report
+            </button>
+          </div>
+        );
+      })()}
     </div>
   );
 }
