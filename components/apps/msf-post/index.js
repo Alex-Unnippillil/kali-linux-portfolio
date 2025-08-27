@@ -103,19 +103,24 @@ const MsfPostApp = () => {
         {liveMessage}
       </div>
       <svg
-        role="img"
+        role="list"
         aria-label="Post-exploitation checklist"
         className="mt-4 mx-auto"
         width="220"
         height={steps.length * 80}
       >
         {steps.map((step, i) => (
-          <g key={step.label} transform={`translate(20, ${i * 70 + 20})`}>
+          <g
+            key={step.label}
+            role="listitem"
+            aria-label={`${step.label} ${step.done ? 'completed' : 'pending'}`}
+            transform={`translate(20, ${i * 70 + 20})`}
+          >
             <circle
               cx="0"
               cy="0"
               r="20"
-              fill={step.done ? '#22c55e' : '#4b5563'}
+              fill={step.done ? '#22c55e' : '#6b7280'}
             />
             {step.done && (
               <path
@@ -139,7 +144,7 @@ const MsfPostApp = () => {
                 y1="20"
                 x2="0"
                 y2="70"
-                stroke="#4b5563"
+                stroke="#6b7280"
                 strokeWidth="2"
               />
             )}
