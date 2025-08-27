@@ -447,16 +447,14 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 }
 
-.frogger-splash {
-    background-image: url('/apps/frogger/splash.svg');
-    background-repeat: no-repeat;
-    background-size: 128px 32px;
-    animation: frogger-splash 0.5s steps(4) forwards;
-    image-rendering: pixelated;
+@keyframes hangman-draw {
+    from { stroke-dashoffset: 100; }
+    to { stroke-dashoffset: 0; }
 }
 
-@keyframes frogger-splash {
-    from { background-position: 0 0; }
-    to { background-position: -128px 0; }
+.hangman-part {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: hangman-draw 0.5s ease-out forwards;
 
 }
