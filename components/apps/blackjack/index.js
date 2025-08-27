@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useReducer } from 'react';
 import ReactGA from 'react-ga4';
-import { BlackjackGame, handValue, basicStrategy, cardValue, Shoe } from './engine';
+import { BlackjackGame, handValue, basicStrategy, cardValue, Shoe, houseEdge } from './engine';
 
 const CHIP_VALUES = [1, 5, 25, 100];
 const CHIP_COLORS = {
@@ -137,9 +137,16 @@ const gameReducer = (state, action) => {
   return { ...state, version: state.version + 1 };
 };
 
-const Blackjack = () => {
-  const [penetration, setPenetration] = useState(0.75);
-  const gameRef = useRef(new BlackjackGame({ bankroll: 1000, penetration }));
+const Blackjack = ({
+  decks = 6,
+  hitSoft17 = true,
+  allowSurrender = true,
+  penetration: initialPenetration = 0.75,
+}) => {
+  const [penetration, setPenetration] = useState(initialPenetration);
+  const gameRef = useRef(
+    new BlackjackGame({ bankroll: 1000, penetration: initialPenetration, decks, hitSoft17, allowSurrender })
+  );
   const [bet, setBet] = useState(0);
   const [message, setMessage] = useState('Place your bet');
   const [dealerHand, setDealerHand] = useState([]);
@@ -151,8 +158,14 @@ const Blackjack = () => {
   const [shuffling, setShuffling] = useState(false);
   const [showCount, setShowCount] = useState(false);
   const [runningCount, setRunningCount] = useState(0);
+  const [shoePen, setShoePen] = useState(0);
+  const [autoPlay, setAutoPlay] = useState(false);
+  const [edge, setEdge] = useState(
+    houseEdge({ decks, hitSoft17, surrender: allowSurrender })
+  );
   const [practice, setPractice] = useState(false);
   const practiceShoe = useRef(new Shoe(1));
+  const shuffleCount = useRef(gameRef.current.shoe.shuffleCount);
   const [practiceCard, setPracticeCard] = useState(null);
   const [practiceGuess, setPracticeGuess] = useState('');
   const [streak, setStreak] = useState(0);
@@ -173,12 +186,33 @@ const Blackjack = () => {
     setStats({ ...gameRef.current.stats });
     setCurrent(gameRef.current.current);
     setRunningCount(gameRef.current.shoe.runningCount);
+    setShoePen(gameRef.current.shoe.currentPenetration());
+    if (gameRef.current.shoe.shuffleCount !== shuffleCount.current) {
+      shuffleCount.current = gameRef.current.shoe.shuffleCount;
+      setShuffling(true);
+      setTimeout(() => setShuffling(false), 500);
+    }
   };
 
   useEffect(() => {
     gameRef.current.shoe.penetration = penetration;
     gameRef.current.shoe.shufflePoint = Math.floor(gameRef.current.shoe.cards.length * penetration);
   }, [penetration]);
+
+  useEffect(() => {
+    const old = gameRef.current;
+    const newGame = new BlackjackGame({
+      decks,
+      hitSoft17,
+      penetration,
+      bankroll: old.bankroll,
+      allowSurrender,
+    });
+    newGame.stats = { ...old.stats };
+    gameRef.current = newGame;
+    setEdge(houseEdge({ decks, hitSoft17, surrender: allowSurrender }));
+    update();
+  }, [decks, hitSoft17, allowSurrender]);
 
   const start = () => {
     try {
@@ -228,8 +262,11 @@ const Blackjack = () => {
     if (!hand) return '';
     return basicStrategy(hand.cards, dealerHand[0], {
       canDouble: bankroll >= hand.bet,
-      canSplit: hand.cards.length === 2 && cardValue(hand.cards[0]) === cardValue(hand.cards[1]) && bankroll >= hand.bet,
-      canSurrender: hand.cards.length === 2,
+      canSplit:
+        hand.cards.length === 2 &&
+        cardValue(hand.cards[0]) === cardValue(hand.cards[1]) &&
+        bankroll >= hand.bet,
+      canSurrender: allowSurrender && hand.cards.length === 2,
     });
   };
 
@@ -279,6 +316,25 @@ const Blackjack = () => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
+
+  useEffect(() => {
+    if (!autoPlay || practice) return;
+    if (playerHands.length === 0 && bet > 0) {
+      const t = setTimeout(start, 500);
+      return () => clearTimeout(t);
+    }
+    if (playerHands.length > 0) {
+      if (gameRef.current.current >= gameRef.current.playerHands.length) {
+        const t = setTimeout(start, 800);
+        return () => clearTimeout(t);
+      }
+      const rec = recommended();
+      if (rec) {
+        const t = setTimeout(() => act(rec), 600);
+        return () => clearTimeout(t);
+      }
+    }
+  }, [autoPlay, playerHands, current, bet, practice]);
 
   const bustProbability = (hand) => {
     const total = handValue(hand.cards);
@@ -336,6 +392,8 @@ const Blackjack = () => {
       <div className="mb-2 flex items-center space-x-4">
         <div>Bankroll: {availableBankroll}</div>
         <div className={`h-8 w-6 bg-gray-700 ${shuffling ? 'shuffle' : ''}`}></div>
+        <div>Pen: {(shoePen * 100).toFixed(0)}%</div>
+        <div>Edge: {edge.toFixed(2)}%</div>
         {showCount && <div>RC: {runningCount}</div>}
       </div>
         <div className="mb-2 flex items-center space-x-2">
@@ -344,6 +402,9 @@ const Blackjack = () => {
           </button>
           <button className="px-2 py-1 bg-gray-700" onClick={() => setShowCount(!showCount)}>
             {showCount ? 'Hide Count' : 'Show Count'}
+          </button>
+          <button className={`px-2 py-1 bg-gray-700 ${autoPlay ? 'border-2 border-yellow-400' : ''}`} onClick={() => setAutoPlay(!autoPlay)}>
+            {autoPlay ? 'Stop Auto' : 'Autoplay'}
           </button>
           <button className="px-2 py-1 bg-gray-700" onClick={startPractice}>
             Practice Count
@@ -416,7 +477,15 @@ const Blackjack = () => {
                 <button className={`px-3 py-1 bg-gray-700 ${rec === 'stand' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('stand')}>Stand</button>
                 <button className={`px-3 py-1 bg-gray-700 ${rec === 'double' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('double')}>Double</button>
                 <button className={`px-3 py-1 bg-gray-700 ${rec === 'split' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('split')}>Split</button>
-                <button className={`px-3 py-1 bg-gray-700 ${rec === 'surrender' ? 'border-2 border-yellow-400' : ''}`} onClick={() => act('surrender')}>Surrender</button>
+                <button
+                  className={`px-3 py-1 bg-gray-700 ${
+                    rec === 'surrender' ? 'border-2 border-yellow-400' : ''
+                  } ${!allowSurrender ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  onClick={() => allowSurrender && act('surrender')}
+                  disabled={!allowSurrender}
+                >
+                  Surrender
+                </button>
               </div>
               {showHints && rec && <div className="mt-1 text-sm">Hint: {rec.toUpperCase()}</div>}
             </div>
