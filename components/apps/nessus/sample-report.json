@@ -1,6 +1,7 @@
 [
   {
     "id": "1",
+    "host": "192.168.0.1",
     "name": "OpenSSL Heartbeat Information Disclosure",
     "cvss": 5.0,
     "severity": "Medium",
@@ -8,6 +9,7 @@
   },
   {
     "id": "2",
+    "host": "192.168.0.2",
     "name": "Apache HTTP Server Privilege Escalation",
     "cvss": 7.5,
     "severity": "High",
@@ -15,6 +17,7 @@
   },
   {
     "id": "3",
+    "host": "192.168.0.3",
     "name": "Weak SSH Cipher",
     "cvss": 9.8,
     "severity": "Critical",
@@ -22,6 +25,7 @@
   },
   {
     "id": "4",
+    "host": "192.168.0.4",
     "name": "Outdated Software",
     "cvss": 2.5,
     "severity": "Low",

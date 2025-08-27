@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import sampleData from './sample-report.json';
 
 const severityLevels = ['All', 'Critical', 'High', 'Medium', 'Low'];
 const severityColors = {
@@ -8,14 +9,14 @@ const severityColors = {
   Low: '#1e40af',
 };
 
-const sampleHosts = [
-  { id: 1, host: '192.168.0.1', cvss: 9.8, severity: 'Critical' },
-  { id: 2, host: '192.168.0.2', cvss: 7.5, severity: 'High' },
-  { id: 3, host: '192.168.0.3', cvss: 5.0, severity: 'Medium' },
-  { id: 4, host: '192.168.0.4', cvss: 2.5, severity: 'Low' },
-];
+const defaultHosts = sampleData.map((d, i) => ({
+  id: d.id ?? i,
+  host: d.host ?? d.name,
+  cvss: d.cvss,
+  severity: d.severity,
+}));
 
-const HostBubbleChart = ({ hosts = sampleHosts }) => {
+const HostBubbleChart = ({ hosts = defaultHosts }) => {
   const [filter, setFilter] = useState('All');
   const [displayData, setDisplayData] = useState(hosts);
   const workerRef = useRef(null);
@@ -78,6 +79,7 @@ const HostBubbleChart = ({ hosts = sampleHosts }) => {
         role="img"
         aria-label="Host vulnerabilities bubble chart"
         className="mx-auto"
+        tabIndex={0}
       >
         {displayData.map((host) => {
           const x = ((host.index + 1) * 400) / (displayData.length + 1);
@@ -88,6 +90,7 @@ const HostBubbleChart = ({ hosts = sampleHosts }) => {
                 r={host.radius}
                 fill={severityColors[host.severity]}
                 aria-label={`${host.host} severity ${host.severity} CVSS ${host.cvss}`}
+                tabIndex={0}
                 style={{
                   transition: prefersReducedMotion ? 'none' : 'all 0.3s ease',
                 }}

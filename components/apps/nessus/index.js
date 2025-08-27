@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import HostBubbleChart from './HostBubbleChart';
+import sampleReport from './sample-report.json';
 
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {
@@ -37,12 +38,7 @@ export const recordFalsePositive = (scanId, reason) => {
 };
 
 const Nessus = () => {
-  const [url, setUrl] = useState('https://localhost:8834');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [token, setToken] = useState('');
-  const [scans, setScans] = useState([]);
-  const [error, setError] = useState('');
+  const [scans] = useState(sampleReport);
   const [jobs, setJobs] = useState([]);
   const [newJob, setNewJob] = useState({ scanId: '', schedule: '' });
   const [feedbackScan, setFeedbackScan] = useState(null);
@@ -53,10 +49,9 @@ const Nessus = () => {
     () =>
       scans.map((scan, i) => ({
         id: scan.id ?? i,
-        host: scan.name ?? `Host ${i + 1}`,
+        host: scan.host ?? scan.name ?? `Host ${i + 1}`,
         cvss: scan.cvss ?? ((i % 10) + 1),
-        severity:
-          scan.severity || ['Low', 'Medium', 'High', 'Critical'][i % 4],
+        severity: scan.severity,
       })),
     [scans]
   );
@@ -65,41 +60,6 @@ const Nessus = () => {
     setJobs(loadJobDefinitions());
     setFalsePositives(loadFalsePositives());
   }, []);
-
-  const login = async (e) => {
-    e.preventDefault();
-    setError('');
-    try {
-      const res = await fetch(`${url}/session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      if (!res.ok) throw new Error('Authentication failed');
-      const data = await res.json();
-      setToken(data.token);
-      fetchScans(data.token, url);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  const fetchScans = async (tkn = token, baseUrl = url) => {
-    try {
-      const res = await fetch(`${baseUrl}/scans`, {
-        headers: {
-          'X-Cookie': `token=${tkn}`,
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      });
-      if (!res.ok) throw new Error('Unable to fetch scans');
-      const data = await res.json();
-      setScans(data.scans || []);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
 
   const addJob = (e) => {
     e.preventDefault();
@@ -117,77 +77,10 @@ const Nessus = () => {
     setFeedbackText('');
   };
 
-  const logout = () => {
-    setToken('');
-    setScans([]);
-  };
-
-  if (!token) {
-    return (
-      <div className="h-full w-full bg-gray-900 text-white flex items-center justify-center">
-        <form onSubmit={login} className="space-y-2 p-4 w-64">
-          <label htmlFor="nessus-url" className="block text-sm">
-            Nessus URL
-          </label>
-          <input
-            id="nessus-url"
-            className="w-full p-2 rounded text-black"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? 'nessus-error' : undefined}
-            placeholder="https://nessus:8834"
-          />
-          <label htmlFor="nessus-username" className="block text-sm">
-            Username
-          </label>
-          <input
-            id="nessus-username"
-            className="w-full p-2 rounded text-black"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? 'nessus-error' : undefined}
-          />
-          <label htmlFor="nessus-password" className="block text-sm">
-            Password
-          </label>
-          <input
-            id="nessus-password"
-            type="password"
-            className="w-full p-2 rounded text-black"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? 'nessus-error' : undefined}
-          />
-          <button type="submit" className="w-full bg-blue-600 py-2 rounded">
-            Login
-          </button>
-          {error && (
-            <p
-              id="nessus-error"
-              role="alert"
-              className="text-red-500 text-sm"
-            >
-              {error}
-            </p>
-          )}
-        </form>
-      </div>
-    );
-  }
-
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl">Scans</h2>
-        <button onClick={logout} className="bg-red-600 px-2 py-1 rounded">
-          Logout
-        </button>
-      </div>
+      <h2 className="text-xl mb-4">Scans</h2>
       <HostBubbleChart hosts={hostData} />
-      {error && <div className="text-red-500 mb-2">{error}</div>}
       <form onSubmit={addJob} className="mb-4 space-x-2">
         <input
           className="p-1 rounded text-black"
@@ -222,7 +115,7 @@ const Nessus = () => {
           <li key={scan.id} className="border-b border-gray-700 pb-1">
             <div className="flex justify-between items-center">
               <span>
-                {scan.name} - {scan.status}
+                {scan.name} ({scan.severity})
               </span>
               <button
                 className="text-xs bg-yellow-600 px-2 py-1 rounded"
@@ -259,6 +152,11 @@ const Nessus = () => {
           </li>
         ))}
       </ul>
+      {falsePositives.length > 0 && (
+        <p className="mt-4 text-sm">
+          Recorded false positives: {falsePositives.length}
+        </p>
+      )}
     </div>
   );
 };
