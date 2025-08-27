@@ -119,6 +119,14 @@ const updateLogs = (prev, frogPos, dt) => {
   return { lanes: newLanes, frog: newFrog, dead };
 };
 
+const laneSpeedArrows = (dir, speed) => {
+  const count = Math.max(1, Math.ceil(Math.abs(speed) * 2));
+  const arrow = dir === 1 ? '>' : '<';
+  return arrow.repeat(count);
+};
+
+const loseLifeLogic = (lives) => Math.max(0, lives - 1);
+
 const Frogger = () => {
   const [frog, setFrog] = useState(initialFrog);
   const frogRef = useRef(frog);
@@ -135,6 +143,8 @@ const Frogger = () => {
   const [difficulty, setDifficulty] = useState('normal');
   const nextLife = useRef(500);
   const holdRef = useRef();
+  const [hopping, setHopping] = useState(false);
+  const hopRef = useRef();
 
   useEffect(() => { frogRef.current = frog; }, [frog]);
   useEffect(() => { carsRef.current = cars; }, [cars]);
@@ -146,10 +156,12 @@ const Frogger = () => {
       const x = prev.x + dx;
       const y = prev.y + dy;
       if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return prev;
-      if (navigator.vibrate) navigator.vibrate(50);
       if (dy === -1) setScore((s) => s + 10);
       return { x, y };
     });
+    setHopping(true);
+    clearTimeout(hopRef.current);
+    hopRef.current = setTimeout(() => setHopping(false), 100);
   };
 
   const startHold = (dx, dy) => {
@@ -235,9 +247,10 @@ const Frogger = () => {
     );
 
     const loseLife = useCallback(() => {
+      if (navigator.vibrate) navigator.vibrate(200);
       ReactGA.event({ category: 'Frogger', action: 'death', value: level });
       setLives((l) => {
-        const newLives = l - 1;
+        const newLives = loseLifeLogic(l);
         if (newLives <= 0) {
           setStatus('Game Over');
           setTimeout(() => reset(true), 1000);
@@ -319,7 +332,7 @@ const Frogger = () => {
     const carLane = cars.find((l) => l.y === y);
     const logLane = logs.find((l) => l.y === y);
 
-    let className = 'w-8 h-8';
+    let className = 'w-8 h-8 flex items-center justify-center';
     if (y === 0) {
       const idx = PAD_POSITIONS.indexOf(x);
       if (idx >= 0) className += pads[idx] ? ' bg-green-400' : ' bg-green-700';
@@ -328,7 +341,10 @@ const Frogger = () => {
     else if (y >= 4 && y <= 5) className += ' bg-gray-700';
     else className += ' bg-blue-700';
 
-    if (isFrog) className += ' bg-green-400';
+    if (isFrog)
+      className +=
+        ' bg-green-400 transform transition-transform duration-150' +
+        (hopping ? ' -translate-y-1' : '');
     else if (
       carLane &&
       carLane.entities.some((e) => x >= Math.floor(e.x) && x < Math.floor(e.x + carLane.length))
@@ -349,7 +365,23 @@ const Frogger = () => {
       else if (preview) className += ' bg-yellow-700 opacity-50';
     }
 
-    return <div key={`${x}-${y}`} className={className} />;
+    let content = null;
+    const lane = carLane || logLane;
+    if (lane) {
+      if ((lane.dir === 1 && x === 0) || (lane.dir === -1 && x === WIDTH - 1)) {
+        content = (
+          <span className="text-xs text-white opacity-75">
+            {laneSpeedArrows(lane.dir, lane.speed)}
+          </span>
+        );
+      }
+    }
+
+    return (
+      <div key={`${x}-${y}`} className={className}>
+        {content}
+      </div>
+    );
   };
 
   const grid = [];
@@ -401,7 +433,7 @@ const Frogger = () => {
           c ? (
             <button
               key={i}
-              className="w-12 h-12 bg-gray-700 opacity-50 flex items-center justify-center"
+              className="w-16 h-16 bg-gray-700 opacity-50 flex items-center justify-center"
               onTouchStart={() => startHold(c.dx, c.dy)}
               onTouchEnd={endHold}
               onMouseDown={() => startHold(c.dx, c.dy)}
@@ -411,7 +443,7 @@ const Frogger = () => {
               {c.label}
             </button>
           ) : (
-            <div key={i} className="w-12 h-12" />
+            <div key={i} className="w-16 h-16" />
           ),
         )}
       </div>
@@ -431,4 +463,6 @@ export {
   carLaneDefs,
   logLaneDefs,
   rampLane,
+  laneSpeedArrows,
+  loseLifeLogic,
 };
