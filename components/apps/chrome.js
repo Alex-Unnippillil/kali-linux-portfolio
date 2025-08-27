@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
+import ExternalFrame from '../ExternalFrame';
+import { FRAME_ALLOWLIST } from '../../apps.config';
 
 export class Chrome extends Component {
     constructor() {
@@ -86,7 +88,13 @@ export class Chrome extends Component {
         return (
             <div className="h-full w-full flex flex-col bg-ub-cool-grey">
                 {this.displayUrlBar()}
-                <iframe src={this.state.url} className="flex-grow" id="chrome-screen" frameBorder="0" title="Ubuntu Chrome Url"></iframe>
+                <ExternalFrame
+                    src={this.state.url}
+                    className="flex-grow"
+                    id="chrome-screen"
+                    title="Ubuntu Chrome Url"
+                    allowlist={FRAME_ALLOWLIST.chrome}
+                />
             </div>
         )
     }

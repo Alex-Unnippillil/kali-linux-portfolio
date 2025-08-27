@@ -17,6 +17,10 @@ import { displayConverter } from './components/apps/converter';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayNikto } from './components/apps/nikto';
+export const FRAME_ALLOWLIST = {
+  chrome: ["https://www.google.com/webhp?igu=1"],
+};
+
 
 const createDynamicApp = (path, name) =>
   dynamic(
