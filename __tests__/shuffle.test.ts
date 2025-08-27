@@ -1,4 +1,4 @@
-import { fisherYatesShuffle } from '../components/apps/memory_utils';
+import { fisherYatesShuffle, createSeededRNG, createDeck } from '../components/apps/memory_utils';
 
 describe('fisherYatesShuffle fairness', () => {
   test('distribution is roughly uniform', () => {
@@ -14,5 +14,20 @@ describe('fisherYatesShuffle fairness', () => {
     counts.forEach((c) => {
       expect(Math.abs(c - expected)).toBeLessThan(tolerance);
     });
+  });
+
+  test('seeded shuffle is deterministic', () => {
+    const arr = [1, 2, 3, 4, 5];
+    const rng1 = createSeededRNG('seed');
+    const rng2 = createSeededRNG('seed');
+    expect(fisherYatesShuffle(arr, rng1)).toEqual(fisherYatesShuffle(arr, rng2));
+  });
+});
+
+describe('createDeck seeding', () => {
+  test('same seed yields same deck', () => {
+    const deck1 = createDeck(2, { seed: 'race' });
+    const deck2 = createDeck(2, { seed: 'race' });
+    expect(deck1).toEqual(deck2);
   });
 });

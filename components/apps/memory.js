@@ -7,6 +7,9 @@ const Memory = () => {
   const [size, setSize] = useState(4);
   const [timed, setTimed] = useState(false);
   const [assistive, setAssistive] = useState(false);
+  const [practice, setPractice] = useState(false);
+  const [seed, setSeed] = useState('');
+  const [practiceStats, setPracticeStats] = useState({});
   const [cards, setCards] = useState([]);
   const [flipped, setFlipped] = useState([]);
   const [matched, setMatched] = useState([]);
@@ -21,21 +24,36 @@ const Memory = () => {
       [size, timed]
     );
 
-    const reset = useCallback((newSize = size) => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      setTime(0);
-      setMoves(0);
-      setFlipped([]);
-      setMatched([]);
-      setCards(createDeck(newSize));
-    }, [size]);
+    const reset = useCallback(
+      (newSize = size, newSeed = seed, newPractice = practice) => {
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+        setTime(0);
+        setMoves(0);
+        setFlipped([]);
+        setMatched([]);
+        setCards(
+          createDeck(newSize, {
+            seed: newSeed,
+            practice: newPractice,
+            practiceStats,
+          })
+        );
+      },
+      [size, seed, practice, practiceStats]
+    );
 
     useEffect(() => {
-      reset(size);
-    }, [size, reset]);
+      reset(size, seed, practice);
+    }, [size, seed, practice, reset]);
+
+    useEffect(() => {
+      if (typeof window === 'undefined') return;
+      const stored = JSON.parse(localStorage.getItem('memory_practice_stats') || '{}');
+      setPracticeStats(stored);
+    }, []);
 
     useEffect(() => {
       if (typeof window === 'undefined') return;
@@ -54,7 +72,7 @@ const Memory = () => {
   };
 
     const saveStats = useCallback(() => {
-      if (typeof window === 'undefined') return;
+      if (practice || typeof window === 'undefined') return;
       const current = JSON.parse(localStorage.getItem(key()) || '{}');
       const updated = {
         games: (current.games || 0) + 1,
@@ -71,7 +89,7 @@ const Memory = () => {
       };
       localStorage.setItem(key(), JSON.stringify(updated));
       setStats(updated);
-    }, [timed, time, moves, key]);
+    }, [timed, time, moves, key, practice]);
 
     useEffect(() => {
       if (typeof window === 'undefined') return;
@@ -107,8 +125,35 @@ const Memory = () => {
 
       if (cards[first].value === cards[second].value) {
         setMatched([...matched, first, second]);
+        if (practice) {
+          const val = cards[first].value;
+          const updated = {
+            ...practiceStats,
+            [val]: {
+              success: (practiceStats[val]?.success || 0) + 1,
+              fail: practiceStats[val]?.fail || 0,
+            },
+          };
+          setPracticeStats(updated);
+          localStorage.setItem('memory_practice_stats', JSON.stringify(updated));
+        }
         setTimeout(() => setFlipped([]), prefersReducedMotion ? 0 : 600);
       } else {
+        if (practice) {
+          const firstVal = cards[first].value;
+          const secondVal = cards[second].value;
+          const updated = { ...practiceStats };
+          updated[firstVal] = {
+            success: practiceStats[firstVal]?.success || 0,
+            fail: (practiceStats[firstVal]?.fail || 0) + 1,
+          };
+          updated[secondVal] = {
+            success: practiceStats[secondVal]?.success || 0,
+            fail: (practiceStats[secondVal]?.fail || 0) + 1,
+          };
+          setPracticeStats(updated);
+          localStorage.setItem('memory_practice_stats', JSON.stringify(updated));
+        }
         const delay = assistive ? 800 : 200;
         setTimeout(() => setFlipped([]), prefersReducedMotion ? 0 : delay);
       }
@@ -138,7 +183,7 @@ const Memory = () => {
             checked={timed}
             onChange={(e) => {
               setTimed(e.target.checked);
-              reset(size);
+              reset(size, seed, practice);
             }}
           />
           <span className="ml-1">Timed</span>
@@ -150,6 +195,23 @@ const Memory = () => {
             onChange={(e) => setAssistive(e.target.checked)}
           />
           <span className="ml-1">Assistive</span>
+        </label>
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={practice}
+            onChange={(e) => setPractice(e.target.checked)}
+          />
+          <span className="ml-1">Practice</span>
+        </label>
+        <label className="flex items-center">
+          Seed
+          <input
+            className="ml-1 text-black w-24"
+            value={seed}
+            onChange={(e) => setSeed(e.target.value)}
+            placeholder="seed"
+          />
         </label>
       </div>
       <div className="grid gap-2 mb-4" style={gridStyle}>
@@ -189,7 +251,7 @@ const Memory = () => {
       </div>
       <button
         className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={() => reset(size)}
+        onClick={() => reset(size, seed, practice)}
       >
         Reset
       </button>
