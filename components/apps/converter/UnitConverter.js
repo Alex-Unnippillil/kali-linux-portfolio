@@ -1,34 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { create, all } from 'mathjs';
-
-const math = create(all);
-
-const unitMap = {
-  length: {
-    meter: 'm',
-    kilometer: 'km',
-    mile: 'mi',
-    foot: 'ft',
-  },
-  mass: {
-    gram: 'g',
-    kilogram: 'kg',
-    pound: 'lb',
-    ounce: 'oz',
-  },
-  temperature: {
-    celsius: 'degC',
-    fahrenheit: 'degF',
-    kelvin: 'K',
-  },
-};
-
-export const convertUnit = (category, from, to, amount, precision) => {
-  const fromUnit = unitMap[category][from];
-  const toUnit = unitMap[category][to];
-  const result = math.unit(amount, fromUnit).toNumber(toUnit);
-  return typeof precision === 'number' ? math.round(result, precision) : result;
-};
+import { unitMap, categories, convertUnit, math } from './unitData';
 
 // A slider that displays a rounding preview bubble while dragging.
 const RoundingSlider = ({ value, precision, onChange, prefersReducedMotion }) => {
@@ -84,7 +55,7 @@ const RoundingSlider = ({ value, precision, onChange, prefersReducedMotion }) =>
 };
 
 const UnitConverter = () => {
-  const [category, setCategory] = useState('length');
+  const [category, setCategory] = useState(categories[0].value);
   const [fromUnit, setFromUnit] = useState('meter');
   const [toUnit, setToUnit] = useState('kilometer');
   const [leftVal, setLeftVal] = useState('');
@@ -174,9 +145,11 @@ const UnitConverter = () => {
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
-          <option value="length">Length</option>
-          <option value="mass">Mass</option>
-          <option value="temperature">Temperature</option>
+          {categories.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
         </select>
       </label>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
