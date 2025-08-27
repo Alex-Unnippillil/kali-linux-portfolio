@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 const SIZE = 9;
+const MAX_MISTAKES = 3;
 const range = (n) => Array.from({ length: n }, (_, i) => i);
 
 // Pseudo random generator so daily puzzles are deterministic
@@ -110,24 +111,48 @@ const generateSudoku = (difficulty = 'easy', seed = Date.now()) => {
   return { puzzle, solution };
 };
 
+const hasConflict = (b, r, c, val) => {
+  if (val === 0) return false;
+  for (let i = 0; i < SIZE; i++) {
+    if (i !== c && b[r][i] === val) return true;
+    if (i !== r && b[i][c] === val) return true;
+  }
+  const boxRow = Math.floor(r / 3) * 3;
+  const boxCol = Math.floor(c / 3) * 3;
+  for (let rr = 0; rr < 3; rr++) {
+    for (let cc = 0; cc < 3; cc++) {
+      const nr = boxRow + rr;
+      const nc = boxCol + cc;
+      if ((nr !== r || nc !== c) && b[nr][nc] === val) return true;
+    }
+  }
+  return false;
+};
+
 const Sudoku = () => {
   const [difficulty, setDifficulty] = useState('easy');
   const [useDaily, setUseDaily] = useState(true);
   const [puzzle, setPuzzle] = useState([]);
+  const [solution, setSolution] = useState([]);
   const [board, setBoard] = useState([]);
   const [notes, setNotes] = useState([]); // notes[r][c] = array of numbers
   const [noteMode, setNoteMode] = useState(false);
   const [autoNotes, setAutoNotes] = useState(false);
+  const [limitMistakes, setLimitMistakes] = useState(false);
+  const [mistakes, setMistakes] = useState(0);
+  const [failed, setFailed] = useState(false);
   const [hint, setHint] = useState('');
   const [hintCell, setHintCell] = useState(null);
+  const [selected, setSelected] = useState(null);
   const [completed, setCompleted] = useState(false);
   const [time, setTime] = useState(0);
   const [bestTime, setBestTime] = useState(null);
   const timerRef = useRef(null);
 
   const startGame = (seed) => {
-    const { puzzle } = generateSudoku(difficulty, seed);
+    const { puzzle, solution } = generateSudoku(difficulty, seed);
     setPuzzle(puzzle);
+    setSolution(solution);
     setBoard(puzzle.map((r) => r.slice()));
     setNotes(
       Array(SIZE)
@@ -135,6 +160,9 @@ const Sudoku = () => {
         .map(() => Array(SIZE).fill(0).map(() => []))
     );
     setCompleted(false);
+    setFailed(false);
+    setMistakes(0);
+    setSelected(null);
     setHint('');
     setHintCell(null);
     setTime(0);
@@ -161,10 +189,14 @@ const Sudoku = () => {
           setDifficulty(data.difficulty || 'easy');
           setUseDaily(data.useDaily ?? true);
           setPuzzle(data.puzzle);
+          setSolution(data.solution || []);
           setBoard(data.board);
           setNotes(data.notes);
           setCompleted(data.completed);
           setTime(data.time || 0);
+          setLimitMistakes(data.limitMistakes || false);
+          setMistakes(data.mistakes || 0);
+          setFailed(data.failed || false);
           const stored = localStorage.getItem(
             `sudoku-best-${data.difficulty || 'easy'}`,
           );
@@ -193,18 +225,22 @@ const Sudoku = () => {
     if (typeof window === 'undefined' || puzzle.length === 0) return;
     const data = {
       puzzle,
+      solution,
       board,
       notes,
       difficulty,
       useDaily,
       time,
       completed,
+      limitMistakes,
+      mistakes,
+      failed,
     };
     localStorage.setItem('sudoku-progress', JSON.stringify(data));
-  }, [board, notes, time, puzzle, difficulty, useDaily, completed]);
+  }, [board, notes, time, puzzle, solution, difficulty, useDaily, completed, limitMistakes, mistakes, failed]);
 
   useEffect(() => {
-    if (!completed || typeof window === 'undefined') return;
+    if (!completed || failed || typeof window === 'undefined') return;
     const key = `sudoku-best-${difficulty}`;
     const stored = localStorage.getItem(key);
     if (!stored || time < parseInt(stored, 10)) {
@@ -212,13 +248,14 @@ const Sudoku = () => {
       setBestTime(time);
     }
     localStorage.removeItem('sudoku-progress');
-  }, [completed, time, difficulty]);
+  }, [completed, failed, time, difficulty]);
 
   const handleValue = (r, c, value, forceNote = false) => {
-    if (!puzzle[r] || puzzle[r][c] !== 0) return;
+    if (!puzzle[r] || puzzle[r][c] !== 0 || completed) return;
     const v = parseInt(value, 10);
     const newBoard = board.map((row) => row.slice());
     const newNotes = notes.map((row) => row.map((n) => n.slice()));
+    let fail = false;
     if (noteMode || forceNote) {
       if (v >= 1 && v <= 9) {
         if (!newNotes[r][c].includes(v)) newNotes[r][c].push(v);
@@ -227,11 +264,20 @@ const Sudoku = () => {
     } else {
       newBoard[r][c] = !v || v < 1 || v > 9 ? 0 : v;
       newNotes[r][c] = [];
+      if (limitMistakes && v && solution[r][c] !== v) {
+        const newMistakes = mistakes + 1;
+        setMistakes(newMistakes);
+        if (newMistakes >= MAX_MISTAKES) {
+          fail = true;
+          setFailed(true);
+          setCompleted(true);
+        }
+      }
     }
     setBoard(newBoard);
     setNotes(newNotes);
     if (autoNotes) applyAutoNotes(newBoard);
-    if (isBoardComplete(newBoard)) {
+    if (!fail && isBoardComplete(newBoard)) {
       setCompleted(true);
     }
   };
@@ -263,24 +309,6 @@ const Sudoku = () => {
     }
     setHint('No simple hints available');
     setHintCell(null);
-  };
-
-  const hasConflict = (b, r, c, val) => {
-    if (val === 0) return false;
-    for (let i = 0; i < SIZE; i++) {
-      if (i !== c && b[r][i] === val) return true;
-      if (i !== r && b[i][c] === val) return true;
-    }
-    const boxRow = Math.floor(r / 3) * 3;
-    const boxCol = Math.floor(c / 3) * 3;
-    for (let rr = 0; rr < 3; rr++) {
-      for (let cc = 0; cc < 3; cc++) {
-        const nr = boxRow + rr;
-        const nc = boxCol + cc;
-        if ((nr !== r || nc !== c) && b[nr][nc] === val) return true;
-      }
-    }
-    return false;
   };
 
   const isBoardComplete = (b) => {
@@ -316,7 +344,7 @@ const Sudoku = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 select-none overflow-y-auto">
-      <div className="mb-2 flex space-x-2">
+      <div className="mb-2 flex flex-wrap items-center space-x-2">
         <select
           className="text-black p-1"
           value={difficulty}
@@ -344,6 +372,21 @@ const Sudoku = () => {
           />
           <span>Auto</span>
         </label>
+        <label className="flex items-center space-x-1">
+          <input
+            type="checkbox"
+            checked={limitMistakes}
+            onChange={(e) => {
+              setLimitMistakes(e.target.checked);
+              setMistakes(0);
+              setFailed(false);
+            }}
+          />
+          <span>Limit</span>
+        </label>
+        {limitMistakes && (
+          <span className="text-sm">{`Mistakes: ${mistakes}/${MAX_MISTAKES}`}</span>
+        )}
         <button className="px-2 py-1 bg-gray-700 rounded" onClick={getHintHandler}>
           Hint
         </button>
@@ -377,12 +420,19 @@ const Sudoku = () => {
             const original = puzzle[r][c] !== 0;
             const conflict = hasConflict(board, r, c, val);
             const isHint = hintCell && hintCell.r === r && hintCell.c === c;
+            const isSelected = selected && selected.r === r && selected.c === c;
+            const ringClass = isHint
+              ? 'ring-2 ring-yellow-400'
+              : isSelected
+              ? 'ring-2 ring-blue-400'
+              : '';
             return (
               <div
                 key={`${r}-${c}`}
+                onClick={() => setSelected({ r, c })}
                 className={`relative w-8 h-8 sm:w-10 sm:h-10 ${
                   original ? 'bg-gray-300' : 'bg-white'
-                } ${conflict ? 'bg-red-300' : ''} ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
+                } ${conflict ? 'bg-red-300' : ''} ${ringClass}`}
               >
                 <input
                   className="w-full h-full text-center text-black outline-none"
@@ -414,11 +464,31 @@ const Sudoku = () => {
           })
         )}
       </div>
-      {completed && <div className="mt-2">Completed!</div>}
+      <div className="mt-2 grid grid-cols-3 gap-1">
+        {range(9).map((n) => (
+          <button
+            key={n}
+            className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-700 rounded"
+            onClick={() => selected && handleValue(selected.r, selected.c, n + 1)}
+          >
+            {n + 1}
+          </button>
+        ))}
+        <button
+          className="col-span-3 h-8 sm:h-10 bg-gray-700 rounded"
+          onClick={() => selected && handleValue(selected.r, selected.c, 0)}
+        >
+          Clear
+        </button>
+      </div>
+      {completed && !failed && <div className="mt-2">Completed!</div>}
+      {completed && failed && <div className="mt-2">Too many mistakes</div>}
       {hint && <div className="mt-2 text-yellow-300">{hint}</div>}
     </div>
   );
 };
 
 export default Sudoku;
+
+export { generateSudoku, solveBoard, hasConflict };
 
