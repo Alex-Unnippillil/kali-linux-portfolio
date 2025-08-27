@@ -4,6 +4,8 @@ const MAX_POINTS = 50;
 let ctx = {};
 let data = { cpu: [], memory: [], down: [], up: [] };
 let reduceMotion = false;
+let stressing = false;
+let stressHandle;
 
 self.onmessage = (e) => {
   const { type } = e.data || {};
@@ -17,6 +19,14 @@ self.onmessage = (e) => {
     reduceMotion = !!e.data.reduceMotion;
     startSampling();
     if (!reduceMotion) self.requestAnimationFrame(draw);
+  } else if (type === 'stress') {
+    if (e.data.value && !stressing) {
+      stressing = true;
+      runStress();
+    } else if (!e.data.value && stressing) {
+      stressing = false;
+      clearTimeout(stressHandle);
+    }
   }
 };
 
@@ -42,6 +52,15 @@ function startSampling() {
     if (reduceMotion) draw();
     self.postMessage({ cpu, memory, down, up });
   }, 1000);
+}
+
+function runStress() {
+  if (!stressing) return;
+  const end = performance.now() + 50;
+  while (performance.now() < end) {
+    Math.sqrt(Math.random());
+  }
+  stressHandle = setTimeout(runStress, 0);
 }
 
 function push(cpu, memory, down, up) {

@@ -1,10 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const ResourceMonitor = () => {
   const cpuRef = useRef(null);
   const memoryRef = useRef(null);
   const networkRef = useRef(null);
   const liveRef = useRef(null);
+  const workerRef = useRef(null);
+  const [stress, setStress] = useState(false);
 
   useEffect(() => {
     if (
@@ -18,6 +20,7 @@ const ResourceMonitor = () => {
       return;
     }
     const worker = new Worker(new URL('./resource_monitor.worker.js', import.meta.url));
+    workerRef.current = worker;
     const cpuCanvas = cpuRef.current.transferControlToOffscreen();
     const memCanvas = memoryRef.current.transferControlToOffscreen();
     const netCanvas = networkRef.current.transferControlToOffscreen();
@@ -40,8 +43,23 @@ const ResourceMonitor = () => {
     return () => worker.terminate();
   }, []);
 
+  const toggleStress = () => {
+    const next = !stress;
+    setStress(next);
+    if (workerRef.current) workerRef.current.postMessage({ type: 'stress', value: next });
+  };
+
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu">
+      <div className="p-2">
+        <button
+          onClick={toggleStress}
+          aria-pressed={stress}
+          className="px-2 py-1 bg-ub-dark-grey rounded"
+        >
+          {stress ? 'Stop Stress' : 'Start Stress'}
+        </button>
+      </div>
       <div className="flex flex-col sm:flex-row flex-1 items-center justify-evenly gap-4 p-4">
         <canvas
           ref={cpuRef}

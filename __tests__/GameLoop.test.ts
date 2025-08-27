@@ -1,4 +1,4 @@
-import GameLoop from '../apps/games/GameLoop';
+import GameLoop from '../components/apps/Games/common/loop/GameLoop';
 
 let rafCb: FrameRequestCallback;
 
@@ -17,13 +17,24 @@ describe('GameLoop', () => {
     jest.restoreAllMocks();
   });
 
-  it('starts and ticks', () => {
+  it('ticks using fixed timestep and clamps large deltas', () => {
     const tick = jest.fn();
-    const loop = new GameLoop(tick);
+    const loop = new GameLoop(tick, undefined, { maxDt: 32 });
     loop.start();
-    expect(requestAnimationFrame).toHaveBeenCalled();
-    rafCb(16);
-    expect(tick).toHaveBeenCalledWith(16);
+    rafCb(1000);
+    expect(tick).toHaveBeenCalledTimes(2);
+    expect(tick).toHaveBeenNthCalledWith(1, 16);
+  });
+
+  it('renders with interpolation', () => {
+    const tick = jest.fn();
+    const render = jest.fn();
+    const loop = new GameLoop(tick, undefined, { render, interpolation: true });
+    loop.start();
+    rafCb(8);
+    expect(tick).not.toHaveBeenCalled();
+    expect(render).toHaveBeenCalledWith(0.5);
+    loop.stop();
   });
 
   it('handles input events', () => {
