@@ -58,6 +58,7 @@ const QRTool = () => {
   const animationRef = useRef(null);
   const timeoutRef = useRef(null);
   const workerRef = useRef(null);
+  const fileInputRef = useRef(null);
   const prefersReducedMotion = useRef(false);
 
   useEffect(() => {
@@ -147,6 +148,14 @@ const QRTool = () => {
   };
 
   const startCamera = async () => {
+    const allow = window.confirm(
+      'This tool uses your camera to scan QR codes. The video never leaves your device. Continue?'
+    );
+    if (!allow) {
+      setMessage('Camera access cancelled. Upload an image instead.');
+      fileInputRef.current?.focus();
+      return;
+    }
     try {
       initWorker();
       setMessage('Requesting camera permission...');
@@ -158,7 +167,8 @@ const QRTool = () => {
       setMessage('Place the QR code within the square');
       scan();
     } catch (err) {
-      setMessage('Camera permission denied or unavailable');
+      setMessage('Camera permission denied or unavailable. Upload an image instead.');
+      fileInputRef.current?.focus();
     }
   };
 
@@ -301,6 +311,7 @@ const QRTool = () => {
           onChange={handleFile}
           className="mb-2"
           aria-label="Upload image to scan"
+          ref={fileInputRef}
         />
         <div className="flex space-x-2 mb-2">
           <button
@@ -329,12 +340,16 @@ const QRTool = () => {
           </div>
         </div>
         {message && (
-          <p className="mt-2" aria-live="polite">
+          <p className="mt-2" aria-live="polite" role="status">
             {message}
           </p>
         )}
         {decodedText && decodedText !== 'No QR code found' && decodedText !== 'Could not load image' ? (
-          <div className="mt-2 flex items-center gap-2 break-all" aria-live="polite">
+          <div
+            className="mt-2 flex items-center gap-2 break-all"
+            aria-live="polite"
+            role="status"
+          >
             <span>Decoded: {decodedText}</span>
             <button
               onClick={() => navigator.clipboard.writeText(decodedText)}
@@ -354,7 +369,7 @@ const QRTool = () => {
           </div>
         ) : (
           decodedText && (
-            <p className="mt-2 break-all" aria-live="polite">
+            <p className="mt-2 break-all" aria-live="polite" role="status">
               {decodedText}
             </p>
           )
