@@ -69,10 +69,16 @@ const Sokoban = () => {
   const rafRef = useRef();
   const undoRef = useRef([]);
   const stateRef = useRef();
+  const initialState = parseLevel(levelPack.levels[0]);
+  const historyRef = useRef([initialState]);
+  const sliderRaf = useRef();
+  const liveRef = useRef();
+  const prefersReducedMotion = useRef(false);
 
   const [levels, setLevels] = useState(levelPack.levels);
   const [levelIndex, setLevelIndex] = useState(0);
-  const [state, setState] = useState(() => parseLevel(levelPack.levels[0]));
+  const [state, setState] = useState(initialState);
+  const [historyIndex, setHistoryIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = useState(true);
   const [best, setBest] = useState(null);
@@ -87,6 +93,11 @@ const Sokoban = () => {
   useEffect(() => {
     loadBest(levelIndex);
   }, [levelIndex]);
+
+  useEffect(() => {
+    prefersReducedMotion.current =
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
 
   const playBeep = () => {
     if (!sound) return;
@@ -114,6 +125,10 @@ const Sokoban = () => {
       player: res.player,
       moves: stateRef.current.moves + 1,
     };
+    historyRef.current = historyRef.current
+      .slice(0, historyIndex + 1)
+      .concat([newState]);
+    setHistoryIndex(historyRef.current.length - 1);
     setState(newState);
     playBeep();
     if (checkWin(res.board)) {
@@ -169,6 +184,7 @@ const Sokoban = () => {
     const prev = undoRef.current.pop();
     if (prev) {
       setState(prev);
+      setHistoryIndex((i) => Math.max(0, i - 1));
     }
   };
 
@@ -176,35 +192,53 @@ const Sokoban = () => {
     const st = parseLevel(levels[levelIndex]);
     setState(st);
     undoRef.current = [];
+    historyRef.current = [st];
+    setHistoryIndex(0);
+  };
+
+  const handleRewind = (e) => {
+    const idx = Number(e.target.value);
+    setHistoryIndex(idx);
+    const update = () => {
+      setState(historyRef.current[idx]);
+      if (liveRef.current) liveRef.current.textContent = `Rewind to move ${idx}`;
+    };
+    if (prefersReducedMotion.current) update();
+    else {
+      cancelAnimationFrame(sliderRaf.current);
+      sliderRaf.current = requestAnimationFrame(update);
+    }
   };
 
   const handleFile = (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const text = ev.target.result;
-        let parsed;
-        if (file.name.endsWith('.json')) {
-          const data = JSON.parse(text);
-          parsed = Array.isArray(data) ? data : data.levels;
-        } else {
-          parsed = parseLevelsFromText(text);
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const text = ev.target.result;
+          let parsed;
+          if (file.name.endsWith('.json')) {
+            const data = JSON.parse(text);
+            parsed = Array.isArray(data) ? data : data.levels;
+          } else {
+            parsed = parseLevelsFromText(text);
+          }
+          if (parsed && parsed.length) {
+            setLevels(parsed);
+            setLevelIndex(0);
+            const st = parseLevel(parsed[0]);
+            setState(st);
+            undoRef.current = [];
+            historyRef.current = [st];
+            setHistoryIndex(0);
+          }
+        } catch {
+          // ignore parse errors
         }
-        if (parsed && parsed.length) {
-          setLevels(parsed);
-          setLevelIndex(0);
-          const st = parseLevel(parsed[0]);
-          setState(st);
-          undoRef.current = [];
-        }
-      } catch {
-        // ignore parse errors
-      }
+      };
+      reader.readAsText(file);
     };
-    reader.readAsText(file);
-  };
 
   return (
     <GameLayout stage={levelIndex + 1}>
@@ -218,6 +252,8 @@ const Sokoban = () => {
             const st = parseLevel(levels[i]);
             setState(st);
             undoRef.current = [];
+            historyRef.current = [st];
+            setHistoryIndex(0);
           }}
         >
           {levels.map((_, i) => (
@@ -236,19 +272,29 @@ const Sokoban = () => {
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
-        <button
-          className="px-2 py-1 bg-gray-700 rounded"
-          onClick={() => setSound((s) => !s)}
-        >
-          {sound ? 'Sound On' : 'Sound Off'}
-        </button>
-        <input type="file" accept=".txt,.json" onChange={handleFile} />
-        <div>Moves: {state.moves}</div>
-        <div>Best: {best ?? '-'}</div>
-      </div>
-    </GameLayout>
-  );
-};
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={() => setSound((s) => !s)}
+          >
+            {sound ? 'Sound On' : 'Sound Off'}
+          </button>
+          <input type="file" accept=".txt,.json" onChange={handleFile} />
+          <input
+            type="range"
+            min="0"
+            max={historyRef.current.length - 1}
+            value={historyIndex}
+            onChange={handleRewind}
+            className="w-32 accent-blue-500 bg-gray-600"
+            aria-label="Rewind moves"
+          />
+          <div>Moves: {state.moves}</div>
+          <div>Best: {best ?? '-'}</div>
+          <div ref={liveRef} aria-live="polite" className="sr-only" />
+        </div>
+      </GameLayout>
+    );
+  };
 
 export default Sokoban;
 
