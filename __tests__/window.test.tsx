@@ -117,3 +117,47 @@ describe('Window snapping preview', () => {
     expect(screen.queryByTestId('snap-preview')).toBeNull();
   });
 });
+
+describe('Window snapping action', () => {
+  it('snaps to previewed position on drag stop', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      right: 100,
+      bottom: 100,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.setState({
+        snapPreview: { left: '0', top: '0', width: '50%', height: '100%' },
+        snapPosition: 'left'
+      }, () => {
+        ref.current!.handleStop();
+      });
+    });
+
+    expect(ref.current!.state.width).toBe(50);
+    expect(ref.current!.state.snapPreview).toBeNull();
+  });
+});
