@@ -119,6 +119,20 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     }
   };
 
+  const handlePause = () => {
+    setPaused((p) => {
+      const next = !p;
+      setAnnouncement(next ? 'Capture paused' : 'Capture resumed');
+      return next;
+    });
+  };
+
+  const handleScrub = (e) => {
+    const idx = parseInt(e.target.value, 10);
+    setViewIndex(idx);
+    setAnnouncement(`Viewing packets starting at index ${idx}`);
+  };
+
   return (
     <div className="w-full h-full flex flex-col bg-black text-green-400">
       <div className="p-2 flex space-x-2 bg-gray-900">
@@ -155,7 +169,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
         <button
-          onClick={() => setPaused((p) => !p)}
+          onClick={handlePause}
           className="px-3 py-1 bg-gray-700 rounded"
           aria-pressed={paused}
         >
@@ -166,7 +180,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           min="0"
           max={Math.max(0, timeline.length - VISIBLE)}
           value={viewIndex}
-          onChange={(e) => setViewIndex(parseInt(e.target.value, 10))}
+          onChange={handleScrub}
           aria-label="Scrub timeline"
           className="flex-1"
         />
