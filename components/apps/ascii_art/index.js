@@ -360,5 +360,3 @@ export default function AsciiArt() {
   );
 }
 
-export const displayAsciiArt = () => <AsciiArt />;
-

@@ -100,5 +100,3 @@ export default function ProjectGallery() {
   );
 }
 
-export const displayProjectGallery = () => <ProjectGallery />;
-

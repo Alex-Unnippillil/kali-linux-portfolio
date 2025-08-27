@@ -14,12 +14,8 @@ import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
 import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
-import { displayQrTool } from './components/apps/qr_tool';
-import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
-import { displayQuoteGenerator } from './components/apps/quote_generator';
-import { displayProjectGallery } from './components/apps/project-gallery';
 import { displayNikto } from './components/apps/nikto';
 
 const createDynamicApp = (path, name) =>
@@ -79,6 +75,10 @@ const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 
+const QrToolApp = createDynamicApp('qr_tool', 'QR Tool');
+const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
+const QuoteGeneratorApp = createDynamicApp('quote_generator', 'Quote Generator');
+const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 
@@ -144,6 +144,11 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayRadare2 = createDisplay(Radare2App);
+
+const displayQrTool = createDisplay(QrToolApp);
+const displayAsciiArt = createDisplay(AsciiArtApp);
+const displayQuoteGenerator = createDisplay(QuoteGeneratorApp);
+const displayProjectGallery = createDisplay(ProjectGalleryApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 

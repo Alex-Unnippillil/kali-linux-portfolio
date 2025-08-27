@@ -159,7 +159,3 @@ const QRTool = () => {
 
 export default QRTool;
 
-export const displayQrTool = () => {
-  return <QRTool />;
-};
-
