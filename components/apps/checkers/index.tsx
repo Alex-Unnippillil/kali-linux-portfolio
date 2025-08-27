@@ -25,6 +25,9 @@ const Checkers = () => {
   const [hint, setHint] = useState<Move | null>(null);
   const [lastMove, setLastMove] = useState<[number, number][]>([]);
   const [crowned, setCrowned] = useState<[number, number] | null>(null);
+  const [stats, setStats] = useState<{ games: number; wins: number; best: number }>(
+    { games: 0, wins: 0, best: 0 }
+  );
 
   const workerRef = useRef<Worker | null>(null);
   const hintRequest = useRef(false);
@@ -45,6 +48,15 @@ const Checkers = () => {
     };
     return () => workerRef.current?.terminate();
   }, []);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('checkersStats');
+    if (stored) setStats(JSON.parse(stored));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('checkersStats', JSON.stringify(stats));
+  }, [stats]);
 
   useEffect(() => {
     const saved = localStorage.getItem('checkersState');
@@ -102,6 +114,16 @@ const Checkers = () => {
     if (!move) return;
     makeMove(move);
   };
+
+  useEffect(() => {
+    if (!winner && !draw) return;
+    setStats((prev) => {
+      const games = prev.games + 1;
+      const wins = prev.wins + (winner === 'red' ? 1 : 0);
+      const rate = games ? wins / games : 0;
+      return { games, wins, best: Math.max(prev.best, rate) };
+    });
+  }, [winner, draw]);
 
     const makeMove = (move: Move) => {
     if (pathRef.current.length === 0) pathRef.current = [move.from, move.to];
@@ -227,16 +249,31 @@ const Checkers = () => {
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       {winner && <div className="mb-2 text-xl">{winner} wins!</div>}
       {draw && <div className="mb-2 text-xl">Draw!</div>}
+      <div className="mb-2 text-sm">Best win rate: {(stats.best * 100).toFixed(0)}%</div>
       <div className="grid grid-cols-8 gap-0">
         {board.map((row, r) =>
           row.map((cell, c) => {
             const isDark = (r + c) % 2 === 1;
-            const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
+            const move = moves.find((m) => m.to[0] === r && m.to[1] === c);
+            const isMove = !!move;
+            const isCaptureMove = !!move?.captured;
             const isHint = hint && hint.from[0] === r && hint.from[1] === c;
             const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
             const isSelected = selected && selected[0] === r && selected[1] === c;
             const isLast = lastMove.some((p) => p[0] === r && p[1] === c);
             const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
+            const validPiece =
+              !selected && allMoves.some((m) => m.from[0] === r && m.from[1] === c);
+            let ringClass = '';
+            if (isLast) ringClass = 'ring-2 ring-red-400';
+            else if (isSelected) ringClass = 'ring-2 ring-green-400';
+            else if (isHint || isHintDest)
+              ringClass = 'ring-2 ring-blue-400 animate-pulse';
+            else if (isMove)
+              ringClass = `ring-2 ${
+                isCaptureMove ? 'ring-red-400' : 'ring-yellow-300'
+              } animate-pulse`;
+            else if (validPiece) ringClass = 'ring-2 ring-blue-300';
             return (
               <div
                 key={`${r}-${c}`}
@@ -245,13 +282,7 @@ const Checkers = () => {
                 )}
                 className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
-                } ${isMove ? 'ring-2 ring-yellow-300 animate-pulse' : ''} ${
-                  isHint || isHintDest
-                    ? 'ring-2 ring-blue-400 animate-pulse'
-                    : ''
-                } ${isSelected ? 'ring-2 ring-green-400' : ''} ${
-                  isLast ? 'ring-2 ring-red-400' : ''
-                }`}
+                } ${ringClass}`}
               >
                 {cell && (
                   <div
