@@ -6,7 +6,7 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
-    '^@xterm/xterm/css/xterm.css$': '<rootDir>/__mocks__/styleMock.js',
+    '^xterm/css/xterm.css$': '<rootDir>/__mocks__/styleMock.js',
   },
 };
 
