@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 
 import offlineQuotes from './quotes.json';
 
-const SAFE_CATEGORIES = [
+const SAFE_TAGS = [
   'inspirational',
   'life',
   'love',
@@ -52,19 +52,34 @@ const processQuotes = (data) => {
     .filter(
       (q) =>
         !filter.isProfane(q.content) &&
-        q.tags.some((t) => SAFE_CATEGORIES.includes(t))
+        q.tags.some((t) => SAFE_TAGS.includes(t))
     );
 };
 
 const allOfflineQuotes = processQuotes(offlineQuotes);
 
+const createRng = (seedStr) => {
+  let h = 1779033703 ^ seedStr.length;
+  for (let i = 0; i < seedStr.length; i++) {
+    h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return () => {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    return ((h ^= h >>> 16) >>> 0) / 4294967296;
+  };
+};
+
 const QuoteGenerator = () => {
-  const [quotes, setQuotes] = useState(allOfflineQuotes);
+  const quotes = allOfflineQuotes;
   const [current, setCurrent] = useState(null);
-  const [category, setCategory] = useState('');
+  const [tag, setTag] = useState('');
   const [search, setSearch] = useState('');
+  const [seed, setSeed] = useState('');
   const [fade, setFade] = useState(false);
   const [prefersReduced, setPrefersReduced] = useState(false);
+  const rngRef = useRef(() => Math.random());
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -74,50 +89,16 @@ const QuoteGenerator = () => {
     return () => media.removeEventListener('change', handler);
   }, []);
 
-  useEffect(() => {
-    const etag = localStorage.getItem('quotesEtag');
-    const stored = localStorage.getItem('quotesData');
-    if (stored) {
-      try {
-        setQuotes(processQuotes(JSON.parse(stored)));
-      } catch {
-        // ignore parse error
-      }
-    }
-
-    fetch('https://api.quotable.io/quotes?limit=500', {
-      headers: etag ? { 'If-None-Match': etag } : {},
-    })
-      .then((res) => {
-        if (res.status === 200) {
-          const newEtag = res.headers.get('ETag');
-          res
-            .json()
-            .then((d) => {
-              localStorage.setItem('quotesData', JSON.stringify(d.results));
-              if (newEtag) localStorage.setItem('quotesEtag', newEtag);
-              setQuotes(processQuotes(d.results));
-            })
-            .catch(() => {
-              /* ignore parse errors */
-            });
-        }
-      })
-      .catch(() => {
-        /* ignore network errors */
-      });
-  }, []);
-
   const filteredQuotes = useMemo(
     () =>
       quotes.filter(
         (q) =>
-          (!category || q.tags.includes(category)) &&
+          (!tag || q.tags.includes(tag)) &&
           (!search ||
             q.content.toLowerCase().includes(search.toLowerCase()) ||
             q.author.toLowerCase().includes(search.toLowerCase()))
       ),
-    [quotes, category, search]
+    [quotes, tag, search]
   );
 
   useEffect(() => {
@@ -125,20 +106,15 @@ const QuoteGenerator = () => {
       setCurrent(null);
       return;
     }
-    const seed = new Date().toISOString().slice(0, 10);
-    const index =
-      Math.abs(
-        seed
-          .split('')
-          .reduce((a, c) => Math.imul(a, 31) + c.charCodeAt(0), 0)
-      ) % filteredQuotes.length;
+    rngRef.current = createRng(seed);
+    const index = Math.floor(rngRef.current() * filteredQuotes.length);
     setCurrent(filteredQuotes[index]);
-  }, [filteredQuotes]);
+  }, [filteredQuotes, seed]);
 
   const changeQuote = () => {
     if (!filteredQuotes.length) return;
     const newQuote =
-      filteredQuotes[Math.floor(Math.random() * filteredQuotes.length)];
+      filteredQuotes[Math.floor(rngRef.current() * filteredQuotes.length)];
     if (prefersReduced) {
       setCurrent(newQuote);
     } else {
@@ -176,10 +152,10 @@ const QuoteGenerator = () => {
     });
   };
 
-  const categories = useMemo(
+  const tags = useMemo(
     () =>
       Array.from(new Set(quotes.flatMap((q) => q.tags))).filter((c) =>
-        SAFE_CATEGORIES.includes(c)
+        SAFE_TAGS.includes(c)
       ),
     [quotes]
   );
@@ -195,8 +171,12 @@ const QuoteGenerator = () => {
         >
           {current ? (
             <>
-              <p className="text-lg mb-2">&quot;{current.content}&quot;</p>
-              <p className="text-sm text-gray-300">- {current.author}</p>
+              <p data-testid="quote-content" className="text-lg mb-2">
+                &quot;{current.content}&quot;
+              </p>
+              <p data-testid="quote-author" className="text-sm text-gray-300">
+                - {current.author}
+              </p>
             </>
           ) : (
             <p>No quotes found.</p>
@@ -230,18 +210,24 @@ const QuoteGenerator = () => {
         </div>
         <div className="mt-4 flex flex-col w-full gap-2">
           <input
+            value={seed}
+            onChange={(e) => setSeed(e.target.value)}
+            placeholder="Seed"
+            className="px-2 py-1 rounded text-black"
+          />
+          <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
             className="px-2 py-1 rounded text-black"
           />
           <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            value={tag}
+            onChange={(e) => setTag(e.target.value)}
             className="px-2 py-1 rounded text-black"
           >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
+            <option value="">All Tags</option>
+            {tags.map((cat) => (
               <option key={cat} value={cat}>
                 {cat}
               </option>
