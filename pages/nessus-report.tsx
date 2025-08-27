@@ -21,6 +21,7 @@ const circumference = 2 * Math.PI * radius;
 
 const NessusReport: React.FC = () => {
   const [selected, setSelected] = useState<Finding | null>(null);
+  const [severity, setSeverity] = useState<string>('All');
   const findings = data as Finding[];
 
   const counts = useMemo(() => {
@@ -29,6 +30,31 @@ const NessusReport: React.FC = () => {
       return acc;
     }, {});
   }, [findings]);
+
+  const filtered = useMemo(
+    () =>
+      findings.filter(
+        (f) => severity === 'All' || f.severity === severity
+      ),
+    [findings, severity]
+  );
+
+  const exportCSV = () => {
+    const rows = filtered.map((f) => [f.id, f.name, f.cvss, f.severity, f.description]);
+    const header = ['ID', 'Finding', 'CVSS', 'Severity', 'Description'];
+    const csv = [header, ...rows]
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'nessus_report.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const segments = useMemo(() => {
     const total = findings.length;
@@ -57,6 +83,30 @@ const NessusReport: React.FC = () => {
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen">
       <h1 className="text-2xl mb-4">Sample Nessus Report</h1>
+      <div className="flex items-center space-x-2 mb-4">
+        <label htmlFor="severity-filter" className="text-sm">
+          Filter severity
+        </label>
+        <select
+          id="severity-filter"
+          className="text-black p-1 rounded"
+          value={severity}
+          onChange={(e) => setSeverity(e.target.value)}
+        >
+          {['All', 'Critical', 'High', 'Medium', 'Low'].map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={exportCSV}
+          className="px-2 py-1 bg-blue-600 rounded text-sm"
+        >
+          Export CSV
+        </button>
+      </div>
       <svg
         width={(radius + 20) * 2}
         height={(radius + 20) * 2}
@@ -68,14 +118,14 @@ const NessusReport: React.FC = () => {
       <table className="w-full mb-4 text-sm">
         <thead>
           <tr className="text-left border-b border-gray-700">
-            <th className="py-1">ID</th>
-            <th className="py-1">Finding</th>
-            <th className="py-1">CVSS</th>
-            <th className="py-1">Severity</th>
+            <th className="py-1" scope="col">ID</th>
+            <th className="py-1" scope="col">Finding</th>
+            <th className="py-1" scope="col">CVSS</th>
+            <th className="py-1" scope="col">Severity</th>
           </tr>
         </thead>
         <tbody>
-          {findings.map((f) => (
+          {filtered.map((f) => (
             <tr
               key={f.id}
               className="border-b border-gray-800 cursor-pointer hover:bg-gray-800"
@@ -84,7 +134,14 @@ const NessusReport: React.FC = () => {
               <td className="py-1">{f.id}</td>
               <td className="py-1">{f.name}</td>
               <td className="py-1">{f.cvss}</td>
-              <td className="py-1">{f.severity}</td>
+              <td className="py-1">
+                <span
+                  className="px-2 py-0.5 rounded-full text-xs text-white"
+                  style={{ backgroundColor: severityColors[f.severity] }}
+                >
+                  {f.severity}
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>

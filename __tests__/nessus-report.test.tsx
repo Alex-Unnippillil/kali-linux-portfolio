@@ -13,4 +13,16 @@ describe('Nessus sample report', () => {
       screen.getByText(/Disclaimer: This sample report is for demonstration/)
     ).toBeInTheDocument();
   });
+
+  test('filters by severity', () => {
+    render(<NessusReport />);
+    fireEvent.change(screen.getByLabelText('Filter severity'), {
+      target: { value: 'High' },
+    });
+    const rows = screen.getAllByRole('row');
+    expect(rows.length).toBe(2); // header + 1 finding
+    expect(
+      screen.getByText('Apache HTTP Server Privilege Escalation')
+    ).toBeInTheDocument();
+  });
 });
