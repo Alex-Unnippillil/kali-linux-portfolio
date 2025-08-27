@@ -1,9 +1,9 @@
-const { JSDOM } = require('jsdom');
 const { TextEncoder, TextDecoder } = require('util');
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
+const { JSDOM } = require('jsdom');
 
 function setupDom() {
-  global.TextEncoder = TextEncoder;
-  global.TextDecoder = TextDecoder;
   const dom = new JSDOM(
     `<!DOCTYPE html><html><body>
       <input id="display" />
@@ -18,7 +18,8 @@ function setupDom() {
       <div id="history"></div>
       <div id="paren-indicator"></div>
       <button id="print-tape"></button>
-    </body></html>`
+    </body></html>`,
+    { url: 'http://localhost' }
   );
   global.window = dom.window;
   global.document = dom.window.document;
@@ -63,4 +64,3 @@ describe('calculator', () => {
     expect(calc.convertBase(bin, 2, 16).toUpperCase()).toBe(hex);
   });
 });
-

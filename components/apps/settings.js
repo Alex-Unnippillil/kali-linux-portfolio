@@ -1,11 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../../hooks/useTheme';
-import { setWallpaper, resetSettings } from '../../utils/settingsStore';
+import {
+    setWallpaper,
+    resetSettings,
+    getLocale,
+    setLocale,
+    getShortcuts,
+    setShortcuts,
+} from '../../utils/settingsStore';
 
 export function Settings(props) {
-    const { theme, setTheme } = useTheme();
-    const [accent, setAccent] = useState('#4f46e5');
+    const { theme, setTheme, accent, setAccent } = useTheme();
     const [contrast, setContrast] = useState(0);
+    const [currentWallpaper, setCurrentWallpaper] = useState(props.currBgImgName);
+    const [previewWallpaper, setPreviewWallpaper] = useState(props.currBgImgName);
+    const [locales, setLocales] = useState({});
+    const [locale, setLocaleState] = useState(getLocale());
+    const [shortcuts, setShortcutsState] = useState(getShortcuts());
+    const [shortcutInput, setShortcutInput] = useState('');
     const liveRegion = useRef(null);
 
     const wallpapers = {
@@ -19,11 +31,41 @@ export function Settings(props) {
         "wall-8": "./images/wallpapers/wall-8.webp",
     };
 
-    let changeBackgroundImage = (e) => {
-        const name = e.target.dataset.path;
-        setWallpaper(name);
+    useEffect(() => {
+        fetch('/locales.json').then(r => r.json()).then(setLocales).catch(() => { });
+    }, []);
+
+    const previewWallpaperChange = (name) => {
+        setPreviewWallpaper(name);
         props.changeBackgroundImage(name);
-    }
+    };
+
+    const selectWallpaper = (name) => {
+        setWallpaper(name);
+        setCurrentWallpaper(name);
+        previewWallpaperChange(name);
+    };
+
+    const handleLocaleChange = (e) => {
+        const value = e.target.value;
+        setLocaleState(value);
+        setLocale(value);
+    };
+
+    const addShortcut = () => {
+        const val = shortcutInput.trim();
+        if (!val) return;
+        const updated = [...shortcuts, val];
+        setShortcutsState(updated);
+        setShortcuts(updated);
+        setShortcutInput('');
+    };
+
+    const removeShortcut = (index) => {
+        const updated = shortcuts.filter((_, i) => i !== index);
+        setShortcutsState(updated);
+        setShortcuts(updated);
+    };
 
     let hexToRgb = (hex) => {
         hex = hex.replace('#', '');
@@ -63,11 +105,12 @@ export function Settings(props) {
             }
         });
         return () => cancelAnimationFrame(raf);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [accent, theme]);
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
-            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(${wallpapers[props.currBgImgName]})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
+            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(${wallpapers[previewWallpaper]})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Theme:</label>
@@ -78,6 +121,7 @@ export function Settings(props) {
                 >
                     <option value="dark">Dark</option>
                     <option value="light">Light</option>
+                    <option value="system">System</option>
                 </select>
             </div>
             <div className="flex justify-center my-4">
@@ -89,6 +133,18 @@ export function Settings(props) {
                     onChange={(e) => setAccent(e.target.value)}
                     className="w-10 h-10 border border-ubt-cool-grey bg-ub-cool-grey"
                 />
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Locale:</label>
+                <select
+                    value={locale}
+                    onChange={handleLocaleChange}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                >
+                    {Object.entries(locales).map(([key, val]) => (
+                        <option key={key} value={key}>{val.name}</option>
+                    ))}
+                </select>
             </div>
             <div className="flex justify-center my-4">
                 <div
@@ -117,7 +173,9 @@ export function Settings(props) {
                                 role="button"
                                 aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
                                 tabIndex="0"
-                                onFocus={changeBackgroundImage}
+                                onMouseEnter={() => previewWallpaperChange(name)}
+                                onMouseLeave={() => previewWallpaperChange(currentWallpaper)}
+                                onClick={() => selectWallpaper(name)}
                                 data-path={name}
                                 className={((name === props.currBgImgName) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
                                 style={{ backgroundImage: `url(${wallpapers[name]})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
@@ -125,6 +183,26 @@ export function Settings(props) {
                         );
                     })
                 }
+            </div>
+            <div className="flex flex-col items-center my-4 border-t border-gray-900 pt-4">
+                <label className="text-ubt-grey mb-2">Shortcuts:</label>
+                <ul>
+                    {shortcuts.map((s, i) => (
+                        <li key={i} className="flex items-center my-1">
+                            <span className="mr-2">{s}</span>
+                            <button onClick={() => removeShortcut(i)} className="text-red-400">x</button>
+                        </li>
+                    ))}
+                </ul>
+                <div className="flex mt-2">
+                    <input
+                        value={shortcutInput}
+                        onChange={(e) => setShortcutInput(e.target.value)}
+                        className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey mr-2"
+                        placeholder="New shortcut"
+                    />
+                    <button onClick={addShortcut} className="px-2 py-1 rounded bg-ub-orange text-white">Add</button>
+                </div>
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4">
                 <button
