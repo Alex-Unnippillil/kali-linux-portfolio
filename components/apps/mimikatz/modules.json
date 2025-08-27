@@ -1,5 +1,5 @@
 [
-  { "name": "sekurlsa", "description": "Retrieve credentials from memory" },
-  { "name": "lsadump", "description": "Dump LSASS secrets" },
-  { "name": "misc", "description": "Miscellaneous helper commands" }
+  { "name": "sekurlsa", "description": "Sample: retrieve credentials from memory" },
+  { "name": "lsadump", "description": "Sample: dump LSASS secrets" },
+  { "name": "misc", "description": "Sample helper commands only" }
 ]
