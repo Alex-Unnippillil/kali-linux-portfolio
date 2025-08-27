@@ -73,6 +73,7 @@ const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
+const LatencyTestApp = createDynamicApp('latency-test', 'Latency Test');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 
 const QrToolApp = createDynamicApp('qr_tool', 'QR Tool');
@@ -143,6 +144,7 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+const displayLatencyTest = createDisplay(LatencyTestApp);
 const displayRadare2 = createDisplay(Radare2App);
 
 const displayQrTool = createDisplay(QrToolApp);
@@ -872,6 +874,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayReconNG,
+  },
+  {
+    id: 'latency-test',
+    title: 'Latency Test',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayLatencyTest,
   },
   // Games are included so they appear alongside apps
   ...games,
