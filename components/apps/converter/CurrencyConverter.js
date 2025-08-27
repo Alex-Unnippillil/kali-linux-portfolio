@@ -33,12 +33,12 @@ const CurrencyConverter = () => {
         Amount
         <input
           className="text-black p-1 rounded"
-          type="number"
+          type="text"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
         />
       </label>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-2 items-end">
         <label className="flex flex-col">
           From
           <select
@@ -68,9 +68,34 @@ const CurrencyConverter = () => {
           </select>
         </label>
       </div>
-      <div data-testid="currency-result" className="mt-2">
-        {result && `${amount} ${from} = ${result} ${to}`}
-      </div>
+      <button
+        data-testid="currency-swap"
+        className="bg-gray-600 p-1 rounded"
+        onClick={() => {
+          setFrom(to);
+          setTo(from);
+        }}
+      >
+        Swap
+      </button>
+      {result && (
+        <div className="mt-2 flex items-center gap-2">
+          <span data-testid="currency-result">
+            {`${amount} ${from} = ${result} ${to}`}
+          </span>
+          <button
+            data-testid="currency-copy"
+            className="bg-gray-600 px-2 py-1 rounded"
+            onClick={() =>
+              navigator.clipboard?.writeText(
+                `${result}`
+              )
+            }
+          >
+            Copy
+          </button>
+        </div>
+      )}
     </div>
   );
 };
