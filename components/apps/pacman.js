@@ -66,6 +66,7 @@ const Pacman = () => {
     { name: 'Default', maze: defaultMaze, fruit: { x: 7, y: 3 } },
   ]);
   const [levelIndex, setLevelIndex] = useState(0);
+  const [ghostSpeed, setGhostSpeed] = useState(1);
 
   const mazeRef = useRef(defaultMaze.map((row) => row.slice()));
 
@@ -342,7 +343,7 @@ const Pacman = () => {
       const gy = g.y / tileSize;
       const gtxPrev = Math.floor((g.x + tileSize / 2) / tileSize);
       const gtyPrev = Math.floor((g.y + tileSize / 2) / tileSize);
-      const gSpeed = isTunnel(gtxPrev, gtyPrev) ? speed * TUNNEL_SPEED : speed;
+      const gSpeed = (isTunnel(gtxPrev, gtyPrev) ? speed * TUNNEL_SPEED : speed) * ghostSpeed;
 
       if (isCenter(g.x) && isCenter(g.y)) {
         let options = availableDirs(Math.floor(gx), Math.floor(gy), g.dir);
@@ -388,7 +389,7 @@ const Pacman = () => {
         }
       }
     });
-  }, [pellets, score, availableDirs, levelIndex, isTunnel]);
+  }, [pellets, score, availableDirs, levelIndex, isTunnel, ghostSpeed]);
 
   const stepRef = useRef(step);
   useEffect(() => {
@@ -531,20 +532,35 @@ const Pacman = () => {
     );
   }
 
-    return (
-
+  return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <select
-        className="mb-2 text-black"
-        value={levelIndex}
-        onChange={(e) => loadLevel(Number(e.target.value))}
-      >
-        {levels.map((lvl, i) => (
-          <option key={i} value={i}>
-            {lvl.name || `Level ${i + 1}`}
-          </option>
-        ))}
-      </select>
+      <label className="pacman-label">
+        Level
+        <select
+          className="pacman-select"
+          value={levelIndex}
+          onChange={(e) => loadLevel(Number(e.target.value))}
+        >
+          {levels.map((lvl, i) => (
+            <option key={i} value={i}>
+              {lvl.name || `Level ${i + 1}`}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="pacman-label">
+        Ghost Speed
+        <select
+          className="pacman-select"
+          value={ghostSpeed}
+          onChange={(e) => setGhostSpeed(Number(e.target.value))}
+        >
+          <option value={0.75}>Slow</option>
+          <option value={1}>Normal</option>
+          <option value={1.5}>Fast</option>
+        </select>
+      </label>
 
       <canvas
         ref={canvasRef}
