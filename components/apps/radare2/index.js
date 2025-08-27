@@ -1,12 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import HexEditor from './HexEditor';
-import {
-  saveSnippet,
-  loadSnippets,
-  parseGraph,
-  convertAnalysisToGhidra,
-} from './utils';
+import { saveSnippet, loadSnippets } from './utils';
 
 const ForceGraph2D = dynamic(
   () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
@@ -24,13 +19,56 @@ const Radare2 = () => {
   const [snippetName, setSnippetName] = useState('');
   const [snippetCommand, setSnippetCommand] = useState('');
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
+  const workerRef = useRef(null);
+  const visibleRef = useRef(true);
 
   useEffect(() => {
     setSnippets(loadSnippets());
   }, []);
 
   useEffect(() => {
-    setGraphData(parseGraph(analysis));
+    if (typeof Worker !== 'undefined') {
+      workerRef.current = new Worker(
+        new URL('./analysisWorker.js', import.meta.url)
+      );
+      workerRef.current.onmessage = (e) => {
+        if (e.data.type === 'graph') {
+          setGraphData(e.data.graphData);
+        } else if (e.data.type === 'export') {
+          const ghidra = e.data.ghidra;
+          const blob = new Blob([JSON.stringify(ghidra, null, 2)], {
+            type: 'application/json',
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'analysis.ghidra.json';
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      };
+      return () => workerRef.current.terminate();
+    }
+    return undefined;
+  }, []);
+
+  useEffect(() => {
+    const handleVis = () => {
+      const isVisible = document.visibilityState === 'visible';
+      visibleRef.current = isVisible;
+      workerRef.current?.postMessage({ type: isVisible ? 'resume' : 'pause' });
+      if (isVisible && analysis) {
+        workerRef.current?.postMessage({ type: 'graph', analysis });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVis);
+    return () => document.removeEventListener('visibilitychange', handleVis);
+  }, [analysis]);
+
+  useEffect(() => {
+    if (workerRef.current && analysis && visibleRef.current) {
+      workerRef.current.postMessage({ type: 'graph', analysis });
+    }
   }, [analysis]);
 
   const handleSaveSnippet = () => {
@@ -42,16 +80,8 @@ const Radare2 = () => {
   };
 
   const handleExport = () => {
-    const ghidra = convertAnalysisToGhidra(analysis);
-    const blob = new Blob([JSON.stringify(ghidra, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'analysis.ghidra.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!analysis) return;
+    workerRef.current?.postMessage({ type: 'export', analysis });
   };
 
   const handleDisasm = async () => {
