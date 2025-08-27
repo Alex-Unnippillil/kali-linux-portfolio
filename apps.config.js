@@ -201,6 +201,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayAsteroids,
+    defaultWidth: gameDefaults.defaultWidth,
+    defaultHeight: gameDefaults.defaultHeight,
   },
   {
     id: 'battleship',
