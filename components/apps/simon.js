@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Howl } from 'howler';
 import GameLayout from './GameLayout';
 import usePersistentState from '../usePersistentState';
@@ -50,10 +50,12 @@ const Simon = () => {
   const [status, setStatus] = useState('Press Start');
   const [mode, setMode] = useState('classic');
   const [speed, setSpeed] = useState('normal');
+  const [strict, setStrict] = useState(false);
   const [leaderboard, setLeaderboard] = usePersistentState(
     'simon_leaderboard',
     []
   );
+  const [longest, setLongest] = usePersistentState('simon_longest', 0);
   const audioCtx = useRef(null);
   const errorSound = useRef(null);
   const [errorFlash, setErrorFlash] = useState(false);
@@ -82,10 +84,7 @@ const Simon = () => {
 
   const stepDuration = () => {
     const base = baseSpeeds[speed] || baseSpeeds.normal;
-    if (mode === 'speed') {
-      return Math.max(base - sequence.length * 0.02, 0.2);
-    }
-    return base;
+    return Math.max(base * Math.pow(0.95, sequence.length), 0.1);
   };
 
   const playSequence = () => {
@@ -141,34 +140,67 @@ const Simon = () => {
     setStatus('Press Start');
   };
 
-  const handlePadClick = (idx) => {
-    if (!isPlayerTurn) return;
-    const duration = stepDuration();
-    flashPad(idx, duration);
-    scheduleTone(tones[idx], audioCtx.current.currentTime, duration);
-    if (sequence[step] === idx) {
-      if (step + 1 === sequence.length) {
-        setIsPlayerTurn(false);
-        setTimeout(() => {
-          setSequence((seq) => [...seq, Math.floor(Math.random() * 4)]);
-        }, 1000);
+  const handlePadClick = useCallback(
+    (idx) => {
+      if (!isPlayerTurn) return;
+      const duration = stepDuration();
+      flashPad(idx, duration);
+      scheduleTone(tones[idx], audioCtx.current.currentTime, duration);
+      if (sequence[step] === idx) {
+        if (step + 1 === sequence.length) {
+          setIsPlayerTurn(false);
+          setLongest((prev) => Math.max(prev, sequence.length));
+          setTimeout(() => {
+            setSequence((seq) => [...seq, Math.floor(Math.random() * 4)]);
+          }, 1000);
+        } else {
+          setStep(step + 1);
+        }
       } else {
-        setStep(step + 1);
+        if (!errorSound.current) {
+          errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
+        }
+        errorSound.current.play();
+        setErrorFlash(true);
+        setTimeout(() => setErrorFlash(false), 300);
+        const streak = Math.max(sequence.length - 1, 0);
+        setLeaderboard((prev) =>
+          [...prev, streak].sort((a, b) => b - a).slice(0, 5)
+        );
+        if (strict) {
+          restartGame();
+        } else {
+          setStep(0);
+          setIsPlayerTurn(false);
+          setStatus('Listen...');
+          setTimeout(() => playSequence(), 1000);
+        }
       }
-    } else {
-      if (!errorSound.current) {
-        errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
+    },
+    [isPlayerTurn, step, sequence, strict, playSequence]
+  );
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      const map = {
+        ArrowUp: 0,
+        ArrowRight: 1,
+        ArrowLeft: 2,
+        ArrowDown: 3,
+        '1': 0,
+        '2': 1,
+        '3': 2,
+        '4': 3,
+      };
+      const idx = map[e.key];
+      if (idx !== undefined) {
+        e.preventDefault();
+        handlePadClick(idx);
       }
-      errorSound.current.play();
-      setErrorFlash(true);
-      setTimeout(() => setErrorFlash(false), 300);
-      const streak = Math.max(sequence.length - 1, 0);
-      setLeaderboard((prev) =>
-        [...prev, streak].sort((a, b) => b - a).slice(0, 5)
-      );
-      restartGame();
-    }
-  };
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [handlePadClick]);
 
   const padClass = (pad, idx) => {
     const colors = mode === 'colorblind'
@@ -188,7 +220,10 @@ const Simon = () => {
               // eslint-disable-next-line react/no-array-index-key
               key={idx}
               className={padClass(pad, idx)}
-              onPointerDown={() => handlePadClick(idx)}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                handlePadClick(idx);
+              }}
             >
               {mode === 'colorblind' ? pad.symbol : ''}
             </button>
@@ -201,19 +236,26 @@ const Simon = () => {
             value={mode}
             onChange={(e) => setMode(e.target.value)}
           >
-          <option value="classic">Classic</option>
-          <option value="speed">Speed Up</option>
-          <option value="colorblind">Colorblind</option>
-        </select>
-        <select
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          value={speed}
-          onChange={(e) => setSpeed(e.target.value)}
-        >
-          <option value="slow">Slow</option>
-          <option value="normal">Normal</option>
-          <option value="fast">Fast</option>
-        </select>
+            <option value="classic">Classic</option>
+            <option value="colorblind">Colorblind</option>
+          </select>
+          <select
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            value={speed}
+            onChange={(e) => setSpeed(e.target.value)}
+          >
+            <option value="slow">Slow</option>
+            <option value="normal">Normal</option>
+            <option value="fast">Fast</option>
+          </select>
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={strict}
+              onChange={(e) => setStrict(e.target.checked)}
+            />
+            Strict
+          </label>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={startGame}
@@ -222,6 +264,7 @@ const Simon = () => {
           </button>
         </div>
         <div className="mt-4 text-center">
+          <div className="mb-2">Longest Sequence: {longest}</div>
           <div className="mb-1">Leaderboard</div>
           <ol className="list-decimal list-inside">
             {leaderboard.map((score, i) => (
