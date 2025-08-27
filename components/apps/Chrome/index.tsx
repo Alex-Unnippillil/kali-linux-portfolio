@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 import { Readability } from '@mozilla/readability';
 
@@ -71,7 +71,7 @@ const Chrome: React.FC = () => {
 
   const activeTab = tabs.find((t) => t.id === activeId)!;
 
-  const fetchArticle = async (tabId: number, url: string) => {
+  const fetchArticle = useCallback(async (tabId: number, url: string) => {
     try {
       const res = await fetch(url);
       const html = await res.text();
@@ -84,9 +84,9 @@ const Chrome: React.FC = () => {
     } catch {
       setArticles((prev) => ({ ...prev, [tabId]: '' }));
     }
-  };
+  }, []);
 
-  const navigate = async (raw: string) => {
+  const navigate = useCallback(async (raw: string) => {
     const url = formatUrl(raw);
     let blocked = false;
     try {
@@ -112,13 +112,16 @@ const Chrome: React.FC = () => {
     );
     setAddress(url);
     fetchArticle(activeId, url);
-  };
+  }, [activeId, fetchArticle]);
 
-  const onAddressKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') navigate(address);
-  };
+  const onAddressKey = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') navigate(address);
+    },
+    [address, navigate],
+  );
 
-  const addTab = () => {
+  const addTab = useCallback(() => {
     const id = Date.now();
     setTabs((prev) => [
       ...prev,
@@ -134,49 +137,52 @@ const Chrome: React.FC = () => {
     ]);
     setActiveId(id);
     setAddress(HOME_URL);
-  };
+  }, []);
 
-  const closeTab = (id: number) => {
-    setTabs((prev) => prev.filter((t) => t.id !== id));
-    setArticles((prev) => {
-      const { [id]: _omit, ...rest } = prev;
-      return rest;
-    });
-    if (id === activeId && tabs.length > 1) {
-      const idx = tabs.findIndex((t) => t.id === id);
-      const next = tabs[idx - 1] || tabs[idx + 1];
-      setActiveId(next.id);
-      setAddress(next.url);
-    }
-  };
+  const closeTab = useCallback(
+    (id: number) => {
+      setTabs((prev) => prev.filter((t) => t.id !== id));
+      setArticles((prev) => {
+        const { [id]: _omit, ...rest } = prev;
+        return rest;
+      });
+      if (id === activeId && tabs.length > 1) {
+        const idx = tabs.findIndex((t) => t.id === id);
+        const next = tabs[idx - 1] || tabs[idx + 1];
+        setActiveId(next.id);
+        setAddress(next.url);
+      }
+    },
+    [activeId, tabs],
+  );
 
-  const reload = () => {
+  const reload = useCallback(() => {
     iframeRef.current?.contentWindow?.location.reload();
-  };
+  }, []);
 
-  const stop = () => {
+  const stop = useCallback(() => {
     iframeRef.current?.contentWindow?.stop();
-  };
+  }, []);
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
     setTabs((prev) =>
       prev.map((t) =>
         t.id === activeId && t.historyIndex > 0
           ? { ...t, historyIndex: t.historyIndex - 1, url: t.history[t.historyIndex - 1] }
-          : t
-      )
+          : t,
+      ),
     );
-  };
+  }, [activeId]);
 
-  const goForward = () => {
+  const goForward = useCallback(() => {
     setTabs((prev) =>
       prev.map((t) =>
         t.id === activeId && t.historyIndex < t.history.length - 1
           ? { ...t, historyIndex: t.historyIndex + 1, url: t.history[t.historyIndex + 1] }
-          : t
-      )
+          : t,
+      ),
     );
-  };
+  }, [activeId]);
 
   useEffect(() => {
     setAddress(activeTab.url);
@@ -192,7 +198,7 @@ const Chrome: React.FC = () => {
     } catch {
       /* ignore */
     }
-  }, [activeId, activeTab.url, activeTab.muted]);
+  }, [activeId, activeTab.url, activeTab.muted, articles, fetchArticle]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -219,19 +225,19 @@ const Chrome: React.FC = () => {
     } catch {
       /* ignore cross-origin */
     }
-  }, [activeTab.id]);
+  }, [activeTab.id, activeTab.scroll]);
 
-  const doFind = () => {
+  const doFind = useCallback(() => {
     try {
       iframeRef.current?.contentWindow?.find(searchTerm);
     } catch {
       /* ignore */
     }
-  };
+  }, [searchTerm]);
 
-  const toggleMute = () => {
+  const toggleMute = useCallback(() => {
     setTabs((prev) =>
-      prev.map((t) => (t.id === activeId ? { ...t, muted: !t.muted } : t))
+      prev.map((t) => (t.id === activeId ? { ...t, muted: !t.muted } : t)),
     );
     try {
       // @ts-ignore
@@ -239,9 +245,9 @@ const Chrome: React.FC = () => {
     } catch {
       /* ignore */
     }
-  };
+  }, [activeId, activeTab.muted]);
 
-  const screenshot = async () => {
+  const screenshot = useCallback(async () => {
     if (!iframeRef.current) return;
     try {
       const dataUrl = await toPng(iframeRef.current);
@@ -252,7 +258,7 @@ const Chrome: React.FC = () => {
     } catch {
       /* ignore */
     }
-  };
+  }, []);
 
   const blockedView = (
     <div className="flex flex-col items-center justify-center w-full h-full text-center p-4">

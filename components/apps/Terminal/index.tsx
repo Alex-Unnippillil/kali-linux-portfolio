@@ -166,7 +166,7 @@ const TerminalPane = forwardRef<
         clearSuggestions();
         renderHint();
       },
-      [clearSuggestions],
+      [clearSuggestions, renderHint],
     );
 
     const runCommand = useCallback(
@@ -268,7 +268,7 @@ const TerminalPane = forwardRef<
         }
         renderHint();
       },
-      [prompt, updateLive, onSplit, renderHint],
+      [prompt, updateLive, onSplit, onClose, renderHint, clearSuggestions],
     );
 
     useEffect(() => {

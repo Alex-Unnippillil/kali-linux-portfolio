@@ -378,8 +378,8 @@ const Tetris = () => {
     return entry ? entry[0] : null;
   }, [keyBindings]);
 
-  const togglePause = () => setPaused((p) => !p);
-  const toggleSound = () => setSound((s) => !s);
+  const togglePause = useCallback(() => setPaused((p) => !p), [setPaused]);
+  const toggleSound = useCallback(() => setSound((s) => !s), [setSound]);
 
   const handleKeyDown = useCallback(
     (e) => {

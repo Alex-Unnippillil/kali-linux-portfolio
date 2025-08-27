@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 
 // Preset character sets and color palettes
 const presetCharSets = {
@@ -103,7 +103,7 @@ export default function AsciiArt() {
     };
   }, []);
 
-  const processFile = async () => {
+  const processFile = useCallback(async () => {
     if (!fileRef.current) return;
     const file = fileRef.current;
     const bitmap = await createImageBitmap(file);
@@ -175,26 +175,29 @@ export default function AsciiArt() {
       };
       img.src = URL.createObjectURL(file);
     }
-  };
+  }, [charSet, density, cellSize, paletteName, useColor, contrast]);
 
-  const handleFile = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    fileRef.current = file;
-    setImgSrc(URL.createObjectURL(file));
-    processFile();
-  };
+  const handleFile = useCallback(
+    (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      fileRef.current = file;
+      setImgSrc(URL.createObjectURL(file));
+      processFile();
+    },
+    [processFile],
+  );
 
   useEffect(() => {
     processFile();
-  }, [contrast, density, cellSize, charSet, paletteName, useColor]);
+  }, [processFile, contrast, density, cellSize, charSet, paletteName, useColor]);
 
-  const copyAscii = () => {
+  const copyAscii = useCallback(() => {
     const text = useColor ? ansiAscii : plainAscii;
     if (text) navigator.clipboard.writeText(text);
-  };
+  }, [useColor, ansiAscii, plainAscii]);
 
-  const downloadAscii = () => {
+  const downloadAscii = useCallback(() => {
     const text = useColor ? ansiAscii : plainAscii;
     if (!text) return;
     const blob = new Blob([text], { type: 'text/plain' });
@@ -204,9 +207,9 @@ export default function AsciiArt() {
     link.download = 'ascii-art.txt';
     link.click();
     URL.revokeObjectURL(url);
-  };
+  }, [useColor, ansiAscii, plainAscii]);
 
-  const downloadPng = () => {
+  const downloadPng = useCallback(() => {
     if (!plainAscii || !colors) return;
     const lines = plainAscii.trimEnd().split('\n');
     const width = colors.width;
@@ -238,7 +241,7 @@ export default function AsciiArt() {
       link.click();
       URL.revokeObjectURL(url);
     });
-  };
+  }, [plainAscii, colors, cellSize, useColor]);
 
   // Typing mode handlers
   const toggleTypingMode = () => {
