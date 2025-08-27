@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Breakout</title>
+  <style>
+    body { margin: 0; background: #000; color: #fff; font-family: sans-serif; }
+    #controls { background: #222; padding: 8px; text-align: center; }
+    #editor { display: grid; grid-template-columns: repeat(8, 24px); gap: 2px; justify-content: center; margin: 8px 0; }
+    #editor div { width: 24px; height: 20px; background: #444; cursor: pointer; }
+    #editor div.active { background: #fff; }
+    canvas { display: block; margin: 0 auto; background: #000; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
+</head>
+<body>
+  <div id="controls">
+    <button id="share">Share Level</button>
+  </div>
+  <div id="editor"></div>
+  <canvas id="game" width="640" height="480"></canvas>
+  <script src="main.js"></script>
+</body>
+</html>
