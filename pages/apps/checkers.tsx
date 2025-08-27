@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { pointerHandlers } from '../../utils/pointer';
 import {
   Board,
@@ -37,6 +37,50 @@ export default function CheckersPage() {
   const [noCapture, setNoCapture] = useState(0);
   const workerRef = useRef<Worker | null>(null);
 
+  const makeMove = useCallback(
+    (move: Move) => {
+      const { board: newBoard, capture } = applyMove(board, move);
+      const further = capture
+        ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
+        : [];
+      setBoard(newBoard);
+      if (capture && further.length) {
+        setSelected([move.to[0], move.to[1]]);
+        setMoves(further);
+        setNoCapture(0);
+        return;
+      }
+      const next = turn === 'red' ? 'black' : 'red';
+      const newNo = capture ? 0 : noCapture + 1;
+      setNoCapture(newNo);
+      if (isDraw(newNo)) {
+        setWinner('Draw');
+      } else {
+        const hasNext =
+          rule === 'forced'
+            ? hasMoves(newBoard, next)
+            : getAllMovesNoForce(newBoard, next).length > 0;
+        if (!hasNext) {
+          setWinner(turn);
+          return;
+        }
+        setTurn(next);
+        if (next === 'black') {
+          workerRef.current?.postMessage({
+            board: newBoard,
+            color: 'black',
+            difficulty,
+            algorithm,
+            enforceCapture: rule === 'forced',
+          });
+        }
+      }
+      setSelected(null);
+      setMoves([]);
+    },
+    [board, turn, noCapture, rule, difficulty, algorithm]
+  );
+
   useEffect(() => {
     workerRef.current = new Worker(new URL('../../workers/checkersAI.ts', import.meta.url));
     workerRef.current.onmessage = (e: MessageEvent<Move>) => {
@@ -44,7 +88,7 @@ export default function CheckersPage() {
       if (move) makeMove(move);
     };
     return () => workerRef.current?.terminate();
-  }, []);
+  }, [makeMove]);
 
   const allMoves = useMemo(
     () =>
@@ -69,47 +113,6 @@ export default function CheckersPage() {
   const tryMove = (r: number, c: number) => {
     const move = moves.find((m) => m.to[0] === r && m.to[1] === c);
     if (move) makeMove(move);
-  };
-
-  const makeMove = (move: Move) => {
-    const { board: newBoard, capture } = applyMove(board, move);
-    const further = capture
-      ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
-      : [];
-    setBoard(newBoard);
-    if (capture && further.length) {
-      setSelected([move.to[0], move.to[1]]);
-      setMoves(further);
-      setNoCapture(0);
-      return;
-    }
-    const next = turn === 'red' ? 'black' : 'red';
-    const newNo = capture ? 0 : noCapture + 1;
-    setNoCapture(newNo);
-    if (isDraw(newNo)) {
-      setWinner('Draw');
-    } else {
-      const hasNext =
-        rule === 'forced'
-          ? hasMoves(newBoard, next)
-          : getAllMovesNoForce(newBoard, next).length > 0;
-      if (!hasNext) {
-        setWinner(turn);
-        return;
-      }
-      setTurn(next);
-      if (next === 'black') {
-        workerRef.current?.postMessage({
-          board: newBoard,
-          color: 'black',
-          difficulty,
-          algorithm,
-          enforceCapture: rule === 'forced',
-        });
-      }
-    }
-    setSelected(null);
-    setMoves([]);
   };
 
   const reset = () => {
