@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { generateGrid, createRNG } from './generator';
 import type { Position, WordPlacement } from './types';
-import wordList from '../../components/apps/wordle_words.json';
 import { logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 
 const WORD_COUNT = 5;
@@ -38,18 +37,28 @@ const WordSearch: React.FC = () => {
   const [selecting, setSelecting] = useState(false);
   const [start, setStart] = useState<Position | null>(null);
   const [selection, setSelection] = useState<Position[]>([]);
+  const [wordList, setWordList] = useState<string[]>([]);
 
   function pickWords(s: string) {
     const rng = createRNG(s);
     const chosen = new Set<string>();
-    while (chosen.size < WORD_COUNT) {
+    while (wordList.length && chosen.size < WORD_COUNT) {
       const w = wordList[Math.floor(rng() * wordList.length)];
       chosen.add(w);
     }
     return Array.from(chosen);
   }
 
+  const preloadWords = useCallback(() => {
+    import('../../components/apps/wordle_words.json');
+  }, []);
+
   useEffect(() => {
+    import('../../components/apps/wordle_words.json').then((m) => setWordList(m.default));
+  }, []);
+
+  useEffect(() => {
+    if (!wordList.length) return;
     const queryWords =
       typeof wordsQuery === 'string'
         ? wordsQuery.split(',').map((w) => w.trim().toUpperCase()).filter(Boolean)
@@ -58,7 +67,7 @@ const WordSearch: React.FC = () => {
     const s = typeof seedQuery === 'string' ? seedQuery : defaultSeed;
     setSeed(s);
     setWords(queryWords.length ? queryWords : pickWords(s));
-  }, [seedQuery, wordsQuery]);
+  }, [seedQuery, wordsQuery, wordList]);
 
   useEffect(() => {
     if (!seed || !words.length) return;
@@ -129,7 +138,7 @@ const WordSearch: React.FC = () => {
   };
 
   return (
-    <div className="p-4 select-none">
+    <div className="p-4 select-none" onMouseEnter={preloadWords}>
       <div className="flex space-x-2 mb-2 print:hidden">
         <button
           type="button"
