@@ -36,6 +36,25 @@ const WORD_LISTS = {
 
 const WORD_COUNT = 5;
 
+const fetchTopicWords = async (topic) => {
+  if (!topic) return pickWords();
+  try {
+    if (typeof fetch !== 'function') return pickWords();
+    const res = await fetch(
+      `https://api.datamuse.com/words?topics=${encodeURIComponent(
+        topic,
+      )}&max=100`,
+    );
+    const data = await res.json();
+    const words = data
+      .map((d) => d.word.toUpperCase())
+      .filter((w) => w.length <= SIZE && /^[A-Z]+$/.test(w));
+    return words.sort(() => Math.random() - 0.5).slice(0, WORD_COUNT);
+  } catch {
+    return pickWords();
+  }
+};
+
 const usePersistentState = (key, initial) => {
   const [state, setState] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -142,11 +161,20 @@ const WordSearch = () => {
     [],
   );
   const [time, setTime] = usePersistentState('wordsearch-time', 0);
+  const [bestTime, setBestTime] = usePersistentState(
+    'wordsearch-best-time',
+    null,
+  );
+  const [topic, setTopic] = useState('');
   const [start, setStart] = useState(null);
   const [end, setEnd] = useState(null);
   const [selecting, setSelecting] = useState(false);
   const [selection, setSelection] = useState([]);
   const [hintCells, setHintCells] = useState([]);
+  const [animatingCells, setAnimatingCells] = useState([]);
+  const cellRefs = useRef(
+    Array.from({ length: SIZE }, () => Array(SIZE).fill(null)),
+  );
   const timerRef = useRef(null);
 
   const startTimer = () => {
@@ -157,6 +185,7 @@ const WordSearch = () => {
 
   useEffect(() => {
     startTimer();
+    cellRefs.current[0][0]?.focus();
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
@@ -164,11 +193,16 @@ const WordSearch = () => {
   }, []);
 
   useEffect(() => {
-    if (words && foundWords.length === words.length && timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+    if (words && foundWords.length === words.length) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (!bestTime || time < bestTime) {
+        setBestTime(time);
+      }
     }
-  }, [foundWords, words]);
+  }, [bestTime, foundWords, time, words]);
 
   useEffect(() => {
     if (start && end) {
@@ -195,12 +229,38 @@ const WordSearch = () => {
       if (match && !foundWords.includes(match)) {
         setFoundWords([...foundWords, match]);
         setFoundCells([...foundCells, ...selection]);
+        setAnimatingCells(selection);
+        setTimeout(() => setAnimatingCells([]), 1000);
       }
     }
     setSelecting(false);
     setStart(null);
     setEnd(null);
     setSelection([]);
+  };
+
+  const handleKeyDown = (e, r, c) => {
+    let nr = r;
+    let nc = c;
+    if (e.key === 'ArrowUp' && r > 0) nr = r - 1;
+    else if (e.key === 'ArrowDown' && r < SIZE - 1) nr = r + 1;
+    else if (e.key === 'ArrowLeft' && c > 0) nc = c - 1;
+    else if (e.key === 'ArrowRight' && c < SIZE - 1) nc = c + 1;
+    if (nr !== r || nc !== c) {
+      e.preventDefault();
+      const ref = cellRefs.current[nr][nc];
+      if (ref) ref.focus();
+      if (selecting) setEnd([nr, nc]);
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (!selecting) {
+        handleMouseDown(r, c);
+      } else {
+        setEnd([r, c]);
+        handleMouseUp();
+      }
+    }
   };
 
   const useHint = () => {
@@ -219,6 +279,20 @@ const WordSearch = () => {
     setTimeout(() => setHintCells([]), 1000);
   };
 
+  const generateFromTopic = async () => {
+    const words = await fetchTopicWords(topic);
+    setPuzzle(generatePuzzle(words));
+    setFoundWords([]);
+    setFoundCells([]);
+    setTime(0);
+    setHintCells([]);
+    setStart(null);
+    setEnd(null);
+    setSelection([]);
+    startTimer();
+    cellRefs.current[0][0]?.focus();
+  };
+
   const reset = () => {
     setPuzzle(generatePuzzle(pickWords()));
     setFoundWords([]);
@@ -229,6 +303,7 @@ const WordSearch = () => {
     setEnd(null);
     setSelection([]);
     startTimer();
+    cellRefs.current[0][0]?.focus();
   };
 
   return (
@@ -243,13 +318,28 @@ const WordSearch = () => {
             const isSelected = selection.some(([sr, sc]) => sr === r && sc === c);
             const isFound = foundCells.some(([sr, sc]) => sr === r && sc === c);
             const isHint = hintCells.some(([sr, sc]) => sr === r && sc === c);
+            const isAnimating = animatingCells.some(
+              ([sr, sc]) => sr === r && sc === c,
+            );
             return (
               <div
                 key={`${r}-${c}`}
+                ref={(el) => (cellRefs.current[r][c] = el)}
+                tabIndex={0}
+                onKeyDown={(e) => handleKeyDown(e, r, c)}
+                onFocus={() => selecting && setEnd([r, c])}
                 onMouseDown={() => handleMouseDown(r, c)}
                 onMouseEnter={() => handleMouseEnter(r, c)}
                 onMouseUp={handleMouseUp}
-                className={`h-8 w-8 flex items-center justify-center border border-gray-600 cursor-pointer ${isFound ? 'bg-green-600' : isHint ? 'bg-yellow-600' : isSelected ? 'bg-blue-600' : 'bg-gray-700'}`}
+                className={`h-8 w-8 flex items-center justify-center border border-gray-600 cursor-pointer transition-colors duration-300 ${
+                  isFound
+                    ? 'bg-green-600'
+                    : isHint
+                    ? 'bg-yellow-600'
+                    : isSelected
+                    ? 'bg-blue-600'
+                    : 'bg-gray-700'
+                } ${isAnimating ? 'animate-pulse' : ''}`}
               >
                 {letter}
               </div>
@@ -263,6 +353,21 @@ const WordSearch = () => {
             {w}
           </span>
         ))}
+      </div>
+      <div className="mt-4 flex gap-2">
+        <input
+          className="px-2 py-1 text-black"
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          placeholder="Topic"
+        />
+        <button
+          className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
+          onClick={generateFromTopic}
+          disabled={!topic}
+        >
+          Generate
+        </button>
       </div>
       <div className="mt-4 flex gap-4">
         <button
@@ -278,7 +383,7 @@ const WordSearch = () => {
           Reset
         </button>
       </div>
-      <div className="mt-2">Time: {time}s | Found: {foundWords.length}/{words.length} | Score:{' '}
+      <div className="mt-2">Time: {time}s | Best: {bestTime ?? '--'}s | Found: {foundWords.length}/{words.length} | Score:{' '}
         {foundWords.length * 10 - time}
       </div>
     </div>
