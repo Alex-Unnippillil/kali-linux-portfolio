@@ -6,7 +6,7 @@ import 'tailwindcss/tailwind.css';
 import '../styles/index.css';
 import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
-import { ThemeProvider } from '../hooks/useTheme';
+import { SettingsProvider } from '../hooks/useSettings';
 
 function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
@@ -21,10 +21,10 @@ function MyApp({ Component, pageProps }: AppProps) {
     }
   }, []);
   return (
-    <ThemeProvider>
+    <SettingsProvider>
       <Component {...pageProps} />
       <Analytics />
-    </ThemeProvider>
+    </SettingsProvider>
   );
 }
 

@@ -1,5 +1,6 @@
 const DEFAULT_SETTINGS = {
-  theme: 'dark',
+  theme: 'system',
+  accent: '#E95420',
   wallpaper: 'wall-2',
 };
 
@@ -11,6 +12,16 @@ export function getTheme() {
 export function setTheme(theme) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('theme', theme);
+}
+
+export function getAccent() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
+  return window.localStorage.getItem('accent') || DEFAULT_SETTINGS.accent;
+}
+
+export function setAccent(accent) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('accent', accent);
 }
 
 export function getWallpaper() {

@@ -4,13 +4,11 @@ import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
-import { getWallpaper, setWallpaper } from '../utils/settingsStore';
 
 interface UbuntuProps {}
 
 interface UbuntuState {
   screen_locked: boolean;
-  bg_image_name: string;
   booting_screen: boolean;
   shutDownScreen: boolean;
 }
@@ -24,7 +22,6 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
     super(props);
     this.state = {
       screen_locked: false,
-      bg_image_name: 'wall-2',
       booting_screen: true,
       shutDownScreen: false,
     };
@@ -41,9 +38,6 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
   };
 
   getLocalData = (): void => {
-    const bg_image_name = getWallpaper();
-    this.setState({ bg_image_name });
-
     const booting_screen = localStorage.getItem('booting_screen');
     if (booting_screen !== null && booting_screen !== undefined) {
       this.setState({ booting_screen: false });
@@ -86,11 +80,6 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
     localStorage.setItem('screen-locked', 'false');
   };
 
-  changeBackgroundImage = (img_name: string): void => {
-    this.setState({ bg_image_name: img_name });
-    setWallpaper(img_name);
-  };
-
   shutDown = (): void => {
     ReactGA.send({ hitType: 'pageview', page: '/switch-off', title: 'Custom Title' });
 
@@ -117,7 +106,6 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
       <div className="w-screen h-screen overflow-hidden" id="monitor-screen">
         <LockScreen
           isLocked={this.state.screen_locked}
-          bgImgName={this.state.bg_image_name}
           unLockScreen={this.unLockScreen}
         />
         <BootingScreen
@@ -126,7 +114,7 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
           turnOn={this.turnOn}
         />
         <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-        <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+        <Desktop />
       </div>
     );
   }
