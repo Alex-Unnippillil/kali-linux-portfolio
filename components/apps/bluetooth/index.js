@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import FormError from '../../ui/FormError';
 
 const mockData = [
   {
@@ -83,7 +84,7 @@ const BluetoothApp = () => {
           Use Mock Data
         </label>
       </div>
-      {error && <p className="mb-4 text-red-400">{error}</p>}
+      {error && <FormError className="mb-4 mt-0">{error}</FormError>}
       <ul className="space-y-2 overflow-auto">
         {services.map((service) => (
           <li key={service.uuid} className="border-b border-gray-700 pb-2">

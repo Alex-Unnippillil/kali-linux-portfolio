@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import FormError from '../components/ui/FormError';
 
 const DummyForm: React.FC = () => {
   const [name, setName] = useState('');
@@ -37,7 +38,7 @@ const DummyForm: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <form onSubmit={handleSubmit} className="w-full max-w-md rounded bg-white p-6 shadow-md">
         <h1 className="mb-4 text-xl font-bold">Contact Us</h1>
-        {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
+        {error && <FormError className="mb-4 mt-0">{error}</FormError>}
         {success && <p className="mb-4 text-sm text-green-600">Form submitted successfully!</p>}
         <label className="mb-2 block text-sm font-medium" htmlFor="name">Name</label>
         <input
