@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import GuideOverlay from './GuideOverlay';
+import HookGraph from './HookGraph';
 
 export default function Beef() {
   const [hooks, setHooks] = useState([]);
@@ -8,6 +9,10 @@ export default function Beef() {
   const [modules, setModules] = useState([]);
   const [output, setOutput] = useState('');
   const [showHelp, setShowHelp] = useState(false);
+  const [steps, setSteps] = useState([]);
+  const [liveMessage, setLiveMessage] = useState('');
+  const prevHooks = useRef(0);
+  const prevSteps = useRef(0);
 
   const baseUrl = process.env.NEXT_PUBLIC_BEEF_URL || 'http://127.0.0.1:3000';
 
@@ -54,6 +59,23 @@ export default function Beef() {
     }
   }, []);
 
+  useEffect(() => {
+    if (hooks.length > prevHooks.current) {
+      const h = hooks[hooks.length - 1];
+      const id = h.session || h.id;
+      setLiveMessage(`Hook ${h.name || id} added`);
+    }
+    prevHooks.current = hooks.length;
+  }, [hooks, prevHooks]);
+
+  useEffect(() => {
+    if (steps.length > prevSteps.current) {
+      const s = steps[steps.length - 1];
+      setLiveMessage(`Module ${s.module} run on ${s.hook}`);
+    }
+    prevSteps.current = steps.length;
+  }, [steps, prevSteps]);
+
   const runModule = async () => {
     if (!selected || !moduleId) return;
     setOutput('');
@@ -79,6 +101,10 @@ export default function Beef() {
     } catch (e) {
       setOutput(e.toString());
     }
+    setSteps((prev) => [
+      ...prev,
+      { id: prev.length + 1, hook: selected, module: moduleId },
+    ]);
   };
 
   return (
@@ -123,7 +149,10 @@ export default function Beef() {
           })}
         </div>
       </div>
-      <div className="flex-1 p-4 overflow-y-auto">
+      <div className="flex-1 p-4 overflow-y-auto flex flex-col">
+        <div className="h-64 mb-4">
+          <HookGraph hooks={hooks} steps={steps} />
+        </div>
         {selected ? (
           <>
             <div className="mb-2">
@@ -155,6 +184,7 @@ export default function Beef() {
           <p>Select a hooked browser to run modules.</p>
         )}
       </div>
+      <div aria-live="polite" className="sr-only">{liveMessage}</div>
     </div>
   );
 }
