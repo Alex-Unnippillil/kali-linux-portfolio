@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import DiscoveryMap from './DiscoveryMap';
 
 const scripts = [
   { name: 'http-title', description: 'Fetches page titles from HTTP services.' },
@@ -16,6 +17,7 @@ const NmapNSEApp = () => {
   const [scriptSearch, setScriptSearch] = useState('');
   const [library, setLibrary] = useState([]);
   const [profiles, setProfiles] = useState([]);
+  const [trigger, setTrigger] = useState(0);
 
   useEffect(() => {
     try {
@@ -68,6 +70,7 @@ const NmapNSEApp = () => {
 
   const runScan = async (t = target, s = script) => {
     if (!t) return;
+    setTrigger((v) => v + 1);
     setOutput('Running scan...');
     try {
       const res = await fetch(
@@ -155,6 +158,7 @@ const NmapNSEApp = () => {
           </button>
         </div>
       </div>
+      <DiscoveryMap trigger={trigger} />
       <div className="mb-4 text-sm">
         <h2 className="font-bold mb-2">Featured Scripts</h2>
         <ul className="list-disc pl-4 space-y-1">
