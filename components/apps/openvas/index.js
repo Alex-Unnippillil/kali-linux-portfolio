@@ -69,8 +69,19 @@ const OpenVASApp = () => {
 
   const handleCellClick = (likelihood, impact) => {
     const run = () => {
-      setFilter({ likelihood, impact });
-      setAnnounce(`Showing ${likelihood} likelihood and ${impact} impact findings`);
+      if (
+        filter &&
+        filter.likelihood === likelihood &&
+        filter.impact === impact
+      ) {
+        setFilter(null);
+        setAnnounce('Showing all findings');
+      } else {
+        setFilter({ likelihood, impact });
+        setAnnounce(
+          `Showing ${likelihood} likelihood and ${impact} impact findings`
+        );
+      }
     };
     if (reduceMotion.current) run();
     else requestAnimationFrame(run);
@@ -142,6 +153,7 @@ const OpenVASApp = () => {
                       key={`${likelihood}-${impact}`}
                       type="button"
                       onClick={() => handleCellClick(likelihood, impact)}
+                      disabled={count === 0}
                       className={`p-2 ${color(i, j)} text-white focus:outline-none w-full ${
                         reduceMotion.current ? '' : 'transition-transform hover:scale-105'
                       } ${
@@ -150,7 +162,7 @@ const OpenVASApp = () => {
                         filter.impact === impact
                           ? 'ring-2 ring-white'
                           : ''
-                      }`}
+                      } disabled:opacity-50`}
                       aria-label={`${count} findings with ${likelihood} likelihood and ${impact} impact`}
                     >
                       {count}
