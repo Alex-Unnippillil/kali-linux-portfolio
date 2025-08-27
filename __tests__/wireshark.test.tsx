@@ -49,5 +49,44 @@ describe('WiresharkApp', () => {
     expect(tcpRow).toHaveClass('text-red-500');
     expect(udpRow).toHaveClass('text-blue-500');
   });
+
+  it('filters packets by protocol chips', async () => {
+    const packets = [
+      { timestamp: '1', src: '1.1.1.1', dest: '2.2.2.2', protocol: 6, info: 'tcp packet' },
+      { timestamp: '2', src: '3.3.3.3', dest: '4.4.4.4', protocol: 17, info: 'udp packet' },
+    ];
+    const user = userEvent.setup();
+    render(<WiresharkApp initialPackets={packets} />);
+
+    const udpChip = screen.getByRole('button', { name: /udp/i });
+    await user.click(udpChip);
+
+    expect(screen.getByText('udp packet')).toBeInTheDocument();
+    expect(screen.queryByText('tcp packet')).not.toBeInTheDocument();
+  });
+
+  it('reveals decrypted column when TLS keys uploaded', async () => {
+    const packets = [
+      {
+        timestamp: '1',
+        src: '1.1.1.1',
+        dest: '2.2.2.2',
+        protocol: 6,
+        info: 'foo',
+        decrypted: 'secret',
+      },
+    ];
+    const user = userEvent.setup();
+    render(<WiresharkApp initialPackets={packets} />);
+
+    expect(screen.queryByText(/decrypted/i)).not.toBeInTheDocument();
+
+    const file = new File(['dummy'], 'key.log', { type: 'text/plain' });
+    const upload = screen.getByLabelText(/tls key file/i);
+    fireEvent.change(upload, { target: { files: [file] } });
+
+    expect(await screen.findByText(/decrypted/i)).toBeInTheDocument();
+    expect(screen.getByText('secret')).toBeInTheDocument();
+  });
 });
 
