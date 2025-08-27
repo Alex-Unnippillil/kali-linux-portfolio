@@ -1,8 +1,12 @@
 import React from 'react'
+import ExternalFrame from '../ExternalFrame'
+import ErrorBoundary from '../ErrorBoundary'
 
 export default function Todoist() {
     return (
-        <iframe src="https://todoist.com/showProject?id=220474322" frameBorder="0" title="Todoist" className="h-full w-full"></iframe>
+        <ErrorBoundary>
+            <ExternalFrame appId="todoist" className="h-full w-full" />
+        </ErrorBoundary>
         // just to bypass the headers 🙃
     )
 }

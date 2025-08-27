@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../usePersistentState';
+import ExternalFrame from '../ExternalFrame';
+import ErrorBoundary from '../ErrorBoundary';
 
 const Platformer = () => {
   const [levels, setLevels] = useState([]);
@@ -36,13 +38,14 @@ const Platformer = () => {
   }`;
 
   return (
-    <iframe
-      ref={frameRef}
-      src={src}
-      title="Platformer"
-      className="w-full h-full"
-      frameBorder="0"
-    ></iframe>
+    <ErrorBoundary>
+      <ExternalFrame
+        ref={frameRef}
+        src={src}
+        title="Platformer"
+        className="w-full h-full"
+      />
+    </ErrorBoundary>
   );
 };
 

@@ -111,3 +111,24 @@ jest.mock(
   }),
   { virtual: true }
 );
+
+// Mock analytics and audio libraries for headless CI
+jest.mock('react-ga4', () => ({
+  send: jest.fn(),
+  event: jest.fn(),
+}));
+
+jest.mock('howler', () => ({
+  Howl: class {
+    constructor() {}
+    play() {}
+    pause() {}
+    stop() {}
+    on() {}
+    off() {}
+  },
+  Howler: {
+    mute: () => {},
+    volume: () => {},
+  },
+}));
