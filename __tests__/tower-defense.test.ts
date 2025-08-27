@@ -11,6 +11,10 @@ import {
   deactivateEnemy,
   loadSprite,
   clearSpriteCache,
+  advanceEnemy,
+  START,
+  getTowerCost,
+  getSellRefund,
 } from '../components/apps/tower-defense-core';
 
 describe('tower defense core', () => {
@@ -55,5 +59,38 @@ describe('tower defense core', () => {
     const d1 = getTowerDPS('single', 1);
     const d2 = getTowerDPS('single', 2);
     expect(d2).toBeGreaterThan(d1);
+  });
+
+  test('enemy reaching base reduces life', () => {
+    const path = getPath([]);
+    const pool = createEnemyPool(1);
+    const enemy = spawnEnemy(pool, {
+      id: 1,
+      x: START.x,
+      y: START.y,
+      pathIndex: 0,
+      progress: 0,
+      health: 1,
+      resistance: 0,
+      baseSpeed: 1,
+      slow: null,
+      dot: null,
+    });
+    if (!enemy) throw new Error('no enemy');
+    let lives = 2;
+    while (true) {
+      if (advanceEnemy(enemy, path, 1)) {
+        lives -= 1;
+        break;
+      }
+    }
+    expect(lives).toBe(1);
+  });
+
+  test('sell refunds partial', () => {
+    const cost = getTowerCost('single', 1);
+    const refund = getSellRefund('single', 1);
+    expect(refund).toBe(Math.floor(cost * 0.5));
+    expect(refund).toBeLessThan(cost);
   });
 });
