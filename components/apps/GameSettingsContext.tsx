@@ -12,6 +12,10 @@ interface Settings {
   setHighContrast: (v: boolean) => void;
   quality: number;
   setQuality: (v: number) => void;
+  effects: boolean;
+  setEffects: (v: boolean) => void;
+  effectMag: number;
+  setEffectMag: (v: number) => void;
 }
 
 const SettingsContext = createContext<Settings | undefined>(undefined);
@@ -22,6 +26,14 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [colorBlind, setColorBlind] = usePersistedState('settings:colorBlind', false);
   const [highContrast, setHighContrast] = usePersistedState('settings:highContrast', false);
   const [quality, setQuality] = usePersistedState('settings:quality', 1);
+  const [effects, setEffects] = usePersistedState(
+    'settings:effects',
+    () =>
+      typeof window !== 'undefined'
+        ? !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        : true,
+  );
+  const [effectMag, setEffectMag] = usePersistedState('settings:effectMag', 1);
 
   return (
     <SettingsContext.Provider
@@ -36,6 +48,10 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setHighContrast,
         quality,
         setQuality,
+        effects,
+        setEffects,
+        effectMag,
+        setEffectMag,
       }}
     >
       {children}
