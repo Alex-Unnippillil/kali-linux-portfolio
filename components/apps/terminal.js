@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import '@xterm/xterm/css/xterm.css';
 
+const HISTORY_LIMIT = 50;
 
 const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const containerRef = useRef(null);
@@ -13,7 +14,24 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const commandRef = useRef('');
   const logRef = useRef('');
   const knownCommandsRef = useRef(
-    new Set(['pwd', 'cd', 'simulate', 'history', 'clear', 'help']),
+    new Set([
+      'pwd',
+      'cd',
+      'ls',
+      'echo',
+      'mkdir',
+      'clear',
+      'help',
+      'exit',
+      'code',
+      'x',
+      'spotify',
+      'chrome',
+      'about-alex',
+      'todoist',
+      'trash',
+      'settings',
+    ]),
   );
   const historyRef = useRef([]);
   const historyIndexRef = useRef(0);
@@ -29,6 +47,26 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   }, []);
 
   // Handle command execution
+  const clearTerminal = useCallback(() => {
+    termRef.current.clear();
+    logRef.current = '';
+    prompt();
+  }, [prompt]);
+
+  const commandMap = useMemo(
+    () => ({
+      code: 'vscode',
+      x: 'x',
+      spotify: 'spotify',
+      chrome: 'chrome',
+      'about-alex': 'about-alex',
+      todoist: 'todoist',
+      trash: 'trash',
+      settings: 'settings',
+    }),
+    [],
+  );
+
   const runCommand = useCallback((command) => {
     const trimmed = command.trim();
     const first = trimmed.split(' ')[0];
@@ -36,9 +74,13 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       knownCommandsRef.current.add(first);
     }
     if (trimmed) {
+      if (historyRef.current.length >= HISTORY_LIMIT) {
+        historyRef.current.shift();
+      }
       historyRef.current.push(trimmed);
     }
     historyIndexRef.current = historyRef.current.length;
+
     if (trimmed === 'pwd') {
       termRef.current.writeln('');
       termRef.current.writeln('/home/alex');
@@ -50,33 +92,40 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       termRef.current.writeln(`bash: cd: ${target}: No such file or directory`);
       logRef.current += `bash: cd: ${target}: No such file or directory\n`;
       prompt();
-    } else if (trimmed === 'simulate') {
+    } else if (trimmed === 'ls') {
       termRef.current.writeln('');
-      if (workerRef.current) {
-        termRef.current.writeln('Running heavy simulation...');
-        logRef.current += 'Running heavy simulation...\n';
-        workerRef.current.postMessage({ command: 'simulate' });
-        // prompt will be called when worker responds
-      } else {
-        const msg = 'Web Workers are not supported in this environment.';
-        termRef.current.writeln(msg);
-        logRef.current += `${msg}\n`;
-        prompt();
-      }
-    } else if (trimmed === 'clear') {
-      termRef.current.clear();
+      const list = 'Desktop Documents Downloads Music Pictures Videos';
+      termRef.current.writeln(list);
+      logRef.current += `${list}\n`;
       prompt();
+    } else if (trimmed.startsWith('echo ')) {
+      const msg = trimmed.slice(5);
+      termRef.current.writeln('');
+      termRef.current.writeln(msg);
+      logRef.current += `${msg}\n`;
+      prompt();
+    } else if (trimmed.startsWith('mkdir ')) {
+      const dir = trimmed.slice(6);
+      addFolder?.(dir);
+      termRef.current.writeln('');
+      termRef.current.writeln(`Created directory: ${dir}`);
+      logRef.current += `Created directory: ${dir}\n`;
+      prompt();
+    } else if (trimmed === 'clear') {
+      clearTerminal();
     } else if (trimmed === 'help') {
       termRef.current.writeln('');
       const commands = Array.from(knownCommandsRef.current).sort().join(' ');
       termRef.current.writeln(`Available commands: ${commands}`);
       logRef.current += `Available commands: ${commands}\n`;
       prompt();
-    } else if (trimmed === 'history') {
+    } else if (trimmed === 'exit') {
       termRef.current.writeln('');
-      const history = historyRef.current.join('\n');
-      termRef.current.writeln(history);
-      logRef.current += `${history}\n`;
+      termRef.current.writeln('logout');
+      logRef.current += 'logout\n';
+      prompt();
+    } else if (commandMap[trimmed]) {
+      openApp?.(commandMap[trimmed]);
       prompt();
     } else if (trimmed.length === 0) {
       prompt();
@@ -86,7 +135,7 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       logRef.current += `Command '${trimmed}' not found\n`;
       prompt();
     }
-  }, [prompt]);
+  }, [prompt, addFolder, openApp, clearTerminal, commandMap]);
 
   const renderSuggestions = useCallback(() => {
     termRef.current.writeln('');
@@ -203,6 +252,11 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
         commandRef.current = '';
         suggestionsRef.current = [];
         showingSuggestionsRef.current = false;
+      } else if (data === '\u000c') { // Ctrl+L
+        clearTerminal();
+        commandRef.current = '';
+        suggestionsRef.current = [];
+        showingSuggestionsRef.current = false;
       } else if (data === '\u007F') { // Backspace
         if (commandRef.current.length > 0) {
           commandRef.current = commandRef.current.slice(0, -1);
@@ -239,13 +293,14 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       workerRef.current?.terminate();
       term.dispose();
     };
-  }, [prompt, runCommand, handleTab, handleSuggestionNav, handleHistoryNav]);
+  }, [prompt, runCommand, handleTab, handleSuggestionNav, handleHistoryNav, clearTerminal]);
 
   useImperativeHandle(ref, () => ({
     runCommand,
     getContent: () => logRef.current,
     getCommand: () => commandRef.current,
     historyNav: handleHistoryNav,
+    triggerCtrlL: clearTerminal,
   }));
 
   return <div className="h-full w-full bg-ub-cool-grey" ref={containerRef} data-testid="xterm-container" />;
