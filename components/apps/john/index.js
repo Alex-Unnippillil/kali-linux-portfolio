@@ -183,15 +183,17 @@ const JohnApp = () => {
         </button>
         {loading && (
           <>
-            <div className="w-full bg-gray-700 rounded h-4 overflow-hidden mt-2">
+            <div className="w-full bg-gray-700 rounded h-4 overflow-hidden mt-2 relative">
               <div
                 className="h-full"
                 style={{
                   width: `${progress}%`,
                   backgroundImage:
-                    'repeating-linear-gradient(45deg,#10b981,#10b981 10px,#3b82f6 10px,#3b82f6 20px)',
+                    phase === 'wordlist'
+                      ? 'repeating-linear-gradient(45deg,#065f46,#065f46 10px,#1e3a8a 10px,#1e3a8a 20px)'
+                      : 'repeating-linear-gradient(45deg,#1e3a8a,#1e3a8a 10px,#065f46 10px,#065f46 20px)',
                   backgroundSize: '20px 20px',
-                  backgroundPosition: `${animOffset}px 0`,
+                  backgroundPosition: `${phase === 'wordlist' ? animOffset : -animOffset}px 0`,
                   transition: prefersReducedMotion ? 'none' : 'width 0.2s ease-out',
                 }}
                 role="progressbar"
@@ -201,11 +203,12 @@ const JohnApp = () => {
               >
                 <span className="sr-only">{`Progress ${Math.round(progress)} percent`}</span>
               </div>
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+                {`${Math.round(progress)}%`}
+              </span>
             </div>
             <p className="text-xs mt-1 text-white" aria-live="polite">
-              {phase === 'wordlist'
-                ? `Processing wordlist: ${Math.round(progress)}%`
-                : `Applying rules: ${Math.round(progress)}%`}
+              {`Keyspace ${Math.round(progress)}% - ${phase}`}
             </p>
           </>
         )}
