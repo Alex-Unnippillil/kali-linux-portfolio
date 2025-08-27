@@ -46,16 +46,20 @@ const addRandomTile = (board, hard, count = 1) => {
 const slide = (row) => {
   const arr = row.filter((n) => n !== 0);
   let merged = false;
+  let score = 0;
+  const mergedPositions = [];
   for (let i = 0; i < arr.length - 1; i++) {
     if (arr[i] === arr[i + 1]) {
       arr[i] *= 2;
+      score += arr[i];
       arr[i + 1] = 0;
       merged = true;
+      mergedPositions.push(i);
     }
   }
   const newRow = arr.filter((n) => n !== 0);
   while (newRow.length < SIZE) newRow.push(0);
-  return { row: newRow, merged };
+  return { row: newRow, merged, score, mergedPositions };
 };
 
 const transpose = (board) => board[0].map((_, c) => board.map((row) => row[c]));
@@ -64,27 +68,58 @@ const flip = (board) => board.map((row) => [...row].reverse());
 
 const moveLeft = (board) => {
   let merged = false;
-  const newBoard = board.map((row) => {
+  let score = 0;
+  const mergedCells = [];
+  const newBoard = board.map((row, r) => {
     const res = slide(row);
     if (res.merged) merged = true;
+    score += res.score;
+    res.mergedPositions.forEach((c) => mergedCells.push(`${r}-${c}`));
     return res.row;
   });
-  return { board: newBoard, merged };
+  return { board: newBoard, merged, score, mergedCells };
 };
 const moveRight = (board) => {
   const flipped = flip(board);
   const moved = moveLeft(flipped);
-  return { board: flip(moved.board), merged: moved.merged };
+  const mergedCells = moved.mergedCells.map((key) => {
+    const [r, c] = key.split('-').map(Number);
+    return `${r}-${SIZE - 1 - c}`;
+  });
+  return {
+    board: flip(moved.board),
+    merged: moved.merged,
+    score: moved.score,
+    mergedCells,
+  };
 };
 const moveUp = (board) => {
   const transposed = transpose(board);
   const moved = moveLeft(transposed);
-  return { board: transpose(moved.board), merged: moved.merged };
+  const mergedCells = moved.mergedCells.map((key) => {
+    const [r, c] = key.split('-').map(Number);
+    return `${c}-${r}`;
+  });
+  return {
+    board: transpose(moved.board),
+    merged: moved.merged,
+    score: moved.score,
+    mergedCells,
+  };
 };
 const moveDown = (board) => {
   const transposed = transpose(board);
   const moved = moveRight(transposed);
-  return { board: transpose(moved.board), merged: moved.merged };
+  const mergedCells = moved.mergedCells.map((key) => {
+    const [r, c] = key.split('-').map(Number);
+    return `${c}-${r}`;
+  });
+  return {
+    board: transpose(moved.board),
+    merged: moved.merged,
+    score: moved.score,
+    mergedCells,
+  };
 };
 
 const boardsEqual = (a, b) =>
@@ -146,13 +181,48 @@ const Game2048 = () => {
   const [hardMode, setHardMode] = usePersistentState('2048-hard', false, (v) => typeof v === 'boolean');
   const [colorBlind, setColorBlind] = usePersistentState('2048-cb', false, (v) => typeof v === 'boolean');
   const [animCells, setAnimCells] = useState(new Set());
+  const [mergeCells, setMergeCells] = useState(new Set());
+  const [score, setScore] = useState(0);
+  const [scorePop, setScorePop] = useState(false);
 
   useEffect(() => {
     if (animCells.size > 0) {
-      const t = setTimeout(() => setAnimCells(new Set()), 200);
-      return () => clearTimeout(t);
+      let frame;
+      const t = setTimeout(() => {
+        frame = requestAnimationFrame(() => setAnimCells(new Set()));
+      }, 200);
+      return () => {
+        clearTimeout(t);
+        frame && cancelAnimationFrame(frame);
+      };
     }
   }, [animCells]);
+
+  useEffect(() => {
+    if (mergeCells.size > 0) {
+      let frame;
+      const t = setTimeout(() => {
+        frame = requestAnimationFrame(() => setMergeCells(new Set()));
+      }, 400);
+      return () => {
+        clearTimeout(t);
+        frame && cancelAnimationFrame(frame);
+      };
+    }
+  }, [mergeCells]);
+
+  useEffect(() => {
+    if (scorePop) {
+      let frame;
+      const t = setTimeout(() => {
+        frame = requestAnimationFrame(() => setScorePop(false));
+      }, 300);
+      return () => {
+        clearTimeout(t);
+        frame && cancelAnimationFrame(frame);
+      };
+    }
+  }, [scorePop]);
 
   const handleDirection = useCallback(
     ({ x, y }) => {
@@ -163,18 +233,23 @@ const Game2048 = () => {
       else if (y === -1) result = moveUp(board);
       else if (y === 1) result = moveDown(board);
       else return;
-      const { board: moved, merged } = result;
+      const { board: moved, merged, score: gained, mergedCells } = result;
       if (!boardsEqual(board, moved)) {
         const added = addRandomTile(moved, hardMode, hardMode ? 2 : 1);
-        setHistory(cloneBoard(board));
+        setHistory({ board: cloneBoard(board), score });
         setAnimCells(new Set(added));
+        setMergeCells(new Set(mergedCells));
+        if (gained > 0) {
+          setScore((s) => s + gained);
+          setScorePop(true);
+        }
         setBoard(cloneBoard(moved));
         if (merged) navigator.vibrate?.(50);
         if (checkWin(moved)) setWon(true);
         else if (!hasMoves(moved)) setLost(true);
       }
     },
-    [board, won, lost, hardMode, setBoard, setLost, setWon],
+    [board, won, lost, hardMode, score, setBoard, setLost, setWon],
   );
 
   useGameControls(handleDirection);
@@ -195,6 +270,8 @@ const Game2048 = () => {
     setWon(false);
     setLost(false);
     setAnimCells(new Set());
+    setMergeCells(new Set());
+    setScore(0);
   };
 
   const close = () => {
@@ -203,17 +280,19 @@ const Game2048 = () => {
 
   const undo = () => {
     if (!history) return;
-    setBoard(cloneBoard(history));
-    setWon(checkWin(history));
-    setLost(!hasMoves(history));
+    setBoard(cloneBoard(history.board));
+    setScore(history.score);
+    setWon(checkWin(history.board));
+    setLost(!hasMoves(history.board));
     setAnimCells(new Set());
+    setMergeCells(new Set());
     setHistory(null);
   };
 
   return (
     <GameLayout>
       <>
-        <div className="mb-2 flex flex-wrap gap-2">
+        <div className="mb-2 flex flex-wrap gap-2 items-center">
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={reset}
@@ -249,6 +328,12 @@ const Game2048 = () => {
           >
             Close
           </button>
+          <div
+            className="px-4 py-2 bg-gray-700 rounded ml-auto"
+            aria-live="polite" aria-atomic="true"
+          >
+            Score: <span className={scorePop ? 'score-pop' : ''}>{score}</span>
+          </div>
         </div>
         <div className="grid grid-cols-4 gap-2">
           {board.map((row, rIdx) =>
@@ -258,11 +343,12 @@ const Game2048 = () => {
               return (
                 <div
                   key={key}
-                  className={`h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
+                  className={`relative overflow-hidden h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
                     cell ? colors[cell] || 'bg-gray-700' : 'bg-gray-800'
                   } ${animCells.has(key) ? 'tile-pop' : ''}`}
                 >
                   {cell !== 0 ? cell : ''}
+                  {mergeCells.has(key) && <span className="merge-ripple" />}
                 </div>
               );
             })
