@@ -29,6 +29,16 @@ const getContrast = (a, b) => {
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 };
 
+const isValidUrl = (str) => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(str);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const QRTool = () => {
   const [text, setText] = useState('');
   const [decodedText, setDecodedText] = useState('');
@@ -37,6 +47,7 @@ const QRTool = () => {
   const [lightColor, setLightColor] = useState('#ffffff');
   const [cornerStyle, setCornerStyle] = useState('square');
   const [errorLevel, setErrorLevel] = useState('M');
+  const [size, setSize] = useState(256);
   const [contrastMsg, setContrastMsg] = useState('');
   const [contrastOk, setContrastOk] = useState(true);
 
@@ -68,6 +79,8 @@ const QRTool = () => {
     if (!text || !contrastOk) return;
     qrRef.current.update({
       data: text,
+      width: size,
+      height: size,
       qrOptions: { errorCorrectionLevel: errorLevel },
       dotsOptions: { color: darkColor },
       backgroundOptions: { color: lightColor },
@@ -75,8 +88,8 @@ const QRTool = () => {
     });
   };
 
-  const download = () => {
-    qrRef.current?.download({ name: 'qr', extension: 'png' });
+  const download = (ext) => {
+    qrRef.current?.download({ name: 'qr', extension: ext });
   };
 
   const initWorker = () => {
@@ -227,6 +240,19 @@ const QRTool = () => {
               ))}
             </select>
           </label>
+          <label className="flex items-center space-x-2">
+            <span>Size</span>
+            <input
+              type="range"
+              min="128"
+              max="512"
+              step="32"
+              value={size}
+              onChange={(e) => setSize(parseInt(e.target.value, 10))}
+              aria-label="Select size"
+            />
+            <span className="text-sm">{size}px</span>
+          </label>
         </div>
         <p className="text-sm" aria-live="polite">
           {contrastMsg}
@@ -245,14 +271,26 @@ const QRTool = () => {
             Generate
           </button>
           <button
-            onClick={download}
+            onClick={() => download('png')}
             className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-white"
-            aria-label="Download QR code"
+            aria-label="Download PNG"
           >
-            Download
+            PNG
+          </button>
+          <button
+            onClick={() => download('svg')}
+            className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-white"
+            aria-label="Download SVG"
+          >
+            SVG
           </button>
         </div>
-        <div ref={generateRef} className="bg-white w-64 h-64" aria-label="Generated QR code" />
+        <div
+          ref={generateRef}
+          style={{ width: `${size}px`, height: `${size}px` }}
+          className="bg-white"
+          aria-label="Generated QR code"
+        />
       </div>
 
       <div>
@@ -295,10 +333,31 @@ const QRTool = () => {
             {message}
           </p>
         )}
-        {decodedText && (
-          <p className="mt-2 break-all" aria-live="polite">
-            Decoded: {decodedText}
-          </p>
+        {decodedText && decodedText !== 'No QR code found' && decodedText !== 'Could not load image' ? (
+          <div className="mt-2 flex items-center gap-2 break-all" aria-live="polite">
+            <span>Decoded: {decodedText}</span>
+            <button
+              onClick={() => navigator.clipboard.writeText(decodedText)}
+              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              aria-label="Copy decoded text"
+            >
+              Copy
+            </button>
+            <span
+              className={`px-2 py-1 text-xs rounded ${
+                isValidUrl(decodedText) ? 'bg-green-700' : 'bg-red-700'
+              }`}
+              aria-label={isValidUrl(decodedText) ? 'Valid URL' : 'Invalid URL'}
+            >
+              {isValidUrl(decodedText) ? 'Valid URL' : 'Invalid URL'}
+            </span>
+          </div>
+        ) : (
+          decodedText && (
+            <p className="mt-2 break-all" aria-live="polite">
+              {decodedText}
+            </p>
+          )
         )}
         <canvas ref={scanCanvasRef} className="hidden" />
       </div>
