@@ -4,6 +4,14 @@ const MsfPostApp = () => {
   const [modules, setModules] = useState([]);
   const [selected, setSelected] = useState('');
   const [output, setOutput] = useState('');
+  const [steps, setSteps] = useState([
+    { label: 'Gather System Info', done: false },
+    { label: 'Escalate Privileges', done: false },
+    { label: 'Establish Persistence', done: false },
+    { label: 'Cleanup Traces', done: false },
+  ]);
+  const [liveMessage, setLiveMessage] = useState('');
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
     const fetchModules = async () => {
@@ -19,6 +27,35 @@ const MsfPostApp = () => {
     fetchModules();
   }, []);
 
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleChange = () => setReduceMotion(mq.matches);
+    handleChange();
+    mq.addEventListener('change', handleChange);
+    return () => mq.removeEventListener('change', handleChange);
+  }, []);
+
+  const animateSteps = () => {
+    setSteps((prev) => prev.map((s) => ({ ...s, done: false })));
+    let index = 0;
+    const total = steps.length;
+    const update = () => {
+      setSteps((prev) =>
+        prev.map((s, i) => (i === index ? { ...s, done: true } : s))
+      );
+      setLiveMessage(`${steps[index].label} completed`);
+      index += 1;
+      if (index < total) {
+        if (reduceMotion) {
+          setTimeout(update, 0);
+        } else {
+          requestAnimationFrame(update);
+        }
+      }
+    };
+    update();
+  };
+
   const runModule = async () => {
     if (!selected) return;
     setOutput('Running...');
@@ -30,6 +67,7 @@ const MsfPostApp = () => {
       });
       const data = await res.json();
       setOutput(data.output || 'No output');
+      animateSteps();
     } catch (err) {
       setOutput('Error running module');
     }
@@ -61,6 +99,53 @@ const MsfPostApp = () => {
       <pre className="flex-1 bg-black p-2 overflow-auto whitespace-pre-wrap">
         {output}
       </pre>
+      <div className="sr-only" aria-live="polite" role="status">
+        {liveMessage}
+      </div>
+      <svg
+        role="img"
+        aria-label="Post-exploitation checklist"
+        className="mt-4 mx-auto"
+        width="220"
+        height={steps.length * 80}
+      >
+        {steps.map((step, i) => (
+          <g key={step.label} transform={`translate(20, ${i * 70 + 20})`}>
+            <circle
+              cx="0"
+              cy="0"
+              r="20"
+              fill={step.done ? '#22c55e' : '#4b5563'}
+            />
+            {step.done && (
+              <path
+                d="M-8 0 l4 4 l8 -8"
+                stroke="#fff"
+                strokeWidth="2"
+                fill="none"
+              />
+            )}
+            <text
+              x="40"
+              y="5"
+              fill={step.done ? '#22c55e' : '#d1d5db'}
+              fontSize="14"
+            >
+              {step.label}
+            </text>
+            {i < steps.length - 1 && (
+              <line
+                x1="0"
+                y1="20"
+                x2="0"
+                y2="70"
+                stroke="#4b5563"
+                strokeWidth="2"
+              />
+            )}
+          </g>
+        ))}
+      </svg>
     </div>
   );
 };
