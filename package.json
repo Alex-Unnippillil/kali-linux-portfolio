@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
+    "@mozilla/readability": "^0.6.0",
     "@vercel/analytics": "^1.5.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-search": "^0.15.0",
@@ -32,6 +33,7 @@
     "jsqr": "^1.4.0",
     "mathjs": "^14.6.0",
     "next": "^15.0.0",
+    "pdfjs-dist": "^5.4.54",
     "phaser": "3.70.0",
     "postcss": "^8.4.21",
     "prop-types": "^15.8.1",
@@ -41,7 +43,6 @@
     "react-dom": "^18.2.0",
     "react-draggable": "^4.4.5",
     "react-force-graph": "^1.45.0",
-
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
     "react-onclickoutside": "^6.12.2",
@@ -50,6 +51,7 @@
     "swr": "^2.2.5",
     "tailwindcss": "^3.2.4",
     "three": "^0.179.1",
+    "turndown": "^7.2.1",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
     "xterm-addon-search": "^0.13.0"
