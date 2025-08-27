@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import usePersistentState from '../../hooks/usePersistentState';
+import React, { useState, useEffect } from 'react';
+import Tape, { TapeEntry } from './Tape';
+import usePersistentState from '../../../hooks/usePersistentState';
 
 // --- Simple expression parser using the shunting-yard algorithm ---
 const FUNCTIONS = ['sin', 'cos', 'tan', 'sqrt', 'log'];
@@ -11,8 +12,8 @@ const OPERATORS = {
   '^': { precedence: 4, assoc: 'R', exec: (a, b) => Math.pow(a, b) },
 };
 
-const tokenize = (expr) => {
-  const tokens = [];
+const tokenize = (expr: string): any[] => {
+  const tokens: any[] = [];
   let i = 0;
   while (i < expr.length) {
     const ch = expr[i];
@@ -57,11 +58,11 @@ const tokenize = (expr) => {
   return tokens;
 };
 
-const toRpn = (tokens) => {
-  const output = [];
-  const ops = [];
-  let prev = null;
-  tokens.forEach((tok) => {
+const toRpn = (tokens: any[]): any[] => {
+  const output: any[] = [];
+  const ops: any[] = [];
+  let prev: any = null;
+  tokens.forEach((tok: any) => {
     if (tok.type === 'num') {
       output.push(tok);
     } else if (tok.type === 'func') {
@@ -109,9 +110,9 @@ const toRpn = (tokens) => {
   return output;
 };
 
-const evalRpn = (rpn) => {
-  const stack = [];
-  rpn.forEach((tok) => {
+const evalRpn = (rpn: any[]): number => {
+  const stack: number[] = [];
+  rpn.forEach((tok: any) => {
     if (tok.type === 'num') {
       stack.push(tok.value);
     } else if (tok.type === 'op') {
@@ -150,7 +151,7 @@ const evalRpn = (rpn) => {
   return stack[0];
 };
 
-export const evaluateExpression = (expression) => {
+export const evaluateExpression = (expression: string): string => {
   const trimmed = String(expression).trim();
   // handle quoted strings
   if (/^(['"]).*\1$/.test(trimmed)) {
@@ -167,12 +168,19 @@ export const evaluateExpression = (expression) => {
   }
 };
 
-const Calc = () => {
+const Calc: React.FC = () => {
   const [display, setDisplay] = useState('');
-  const [tape, setTape, resetTape] = usePersistentState(
+  const [tape, setTape, resetTape] = usePersistentState<TapeEntry[]>(
     'calc-tape',
     () => [],
-    (v) => Array.isArray(v) && v.every((s) => typeof s === 'string'),
+    (v): v is TapeEntry[] => Array.isArray(v) && v.every(
+      (e: any) => typeof e.expr === 'string' && typeof e.result === 'string',
+    ),
+  );
+  const [memory, setMemory] = usePersistentState<number>(
+    'calc-memory',
+    0,
+    (v): v is number => typeof v === 'number',
   );
 
   const handleCopy = async () => {
@@ -185,20 +193,52 @@ const Calc = () => {
     }
   };
 
-  const handleClick = (btn) => {
+  const handleEquals = () => {
+    const expr = display;
+    const result = evaluateExpression(expr);
+    setDisplay(result);
+    if (result !== 'Invalid Expression') {
+      setTape((prev) => [...prev, { expr, result }]);
+    }
+  };
+
+  const handleClick = (btn: any) => {
     if (btn.type === 'clear') {
       setDisplay('');
+    } else if (btn.type === 'mplus') {
+      const val = parseFloat(display);
+      if (!Number.isNaN(val)) setMemory((m) => m + val);
+    } else if (btn.type === 'mminus') {
+      const val = parseFloat(display);
+      if (!Number.isNaN(val)) setMemory((m) => m - val);
+    } else if (btn.type === 'mrecall') {
+      setDisplay(String(memory));
     } else if (btn.label === '=') {
-      const expr = display;
-      const result = evaluateExpression(expr);
-      setDisplay(result);
-      if (result !== 'Invalid Expression') {
-        setTape((prev) => [...prev, `${expr} = ${result}`]);
-      }
+      handleEquals();
     } else {
       setDisplay((prev) => prev + (btn.value || btn.label));
     }
   };
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        setDisplay((prev) => prev + e.key);
+      } else if ('+-*/^.()'.includes(e.key)) {
+        e.preventDefault();
+        setDisplay((prev) => prev + e.key);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleEquals();
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        setDisplay((prev) => prev.slice(0, -1));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [display]);
 
   const buttons = [
     { label: '7' }, { label: '8' }, { label: '9' }, { label: '/', ariaLabel: 'divide' },
@@ -207,7 +247,7 @@ const Calc = () => {
     { label: '0' }, { label: '.' }, { label: '=', ariaLabel: 'equals' }, { label: '+', ariaLabel: 'add' },
     { label: '(', ariaLabel: 'open parenthesis' }, { label: ')', ariaLabel: 'close parenthesis' }, { label: '^', ariaLabel: 'power' }, { label: 'sqrt', value: 'sqrt(', ariaLabel: 'square root' },
     { label: 'sin', value: 'sin(', ariaLabel: 'sine' }, { label: 'cos', value: 'cos(', ariaLabel: 'cosine' }, { label: 'tan', value: 'tan(', ariaLabel: 'tangent' }, { label: 'log', value: 'log(', ariaLabel: 'logarithm' },
-    { label: 'C', type: 'clear', colSpan: 2, ariaLabel: 'clear' },
+    { label: 'M+', type: 'mplus', ariaLabel: 'memory add' }, { label: 'M-', type: 'mminus', ariaLabel: 'memory subtract' }, { label: 'MR', type: 'mrecall', ariaLabel: 'memory recall' }, { label: 'C', type: 'clear', ariaLabel: 'clear' },
   ];
 
   return (
@@ -243,25 +283,7 @@ const Calc = () => {
           ))}
         </div>
       </div>
-      <div className="w-48 ml-4 flex flex-col">
-        <div className="flex items-center justify-between mb-2">
-          <span className="font-bold">Tape</span>
-          <button
-            aria-label="clear tape"
-            onClick={resetTape}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm"
-          >
-            Clear
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto bg-gray-800 rounded p-2 text-sm">
-          {tape.map((entry, idx) => (
-            <div key={idx} className="mb-1">
-              {entry}
-            </div>
-          ))}
-        </div>
-      </div>
+      <Tape entries={tape} onClear={resetTape} />
     </div>
   );
 };
