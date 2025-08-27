@@ -2,10 +2,10 @@ import React, { useMemo, useState } from 'react';
 import data from '../components/apps/nessus/sample-report.json';
 
 const severityColors: Record<string, string> = {
-  Critical: '#991b1b',
-  High: '#b45309',
-  Medium: '#a16207',
-  Low: '#1e40af',
+  Critical: '#b91c1c',
+  High: '#c2410c',
+  Medium: '#b45309',
+  Low: '#1d4ed8',
 };
 
 interface Finding {
@@ -65,54 +65,56 @@ const NessusReport: React.FC = () => {
       >
         {segments}
       </svg>
-      <table className="w-full mb-4 text-sm">
-        <thead>
-          <tr className="text-left border-b border-gray-700">
-            <th className="py-1">ID</th>
-            <th className="py-1">Finding</th>
-            <th className="py-1">CVSS</th>
-            <th className="py-1">Severity</th>
-          </tr>
-        </thead>
-        <tbody>
+      <div className="flex flex-col md:flex-row gap-4">
+        <ul className="md:w-1/2 space-y-2">
           {findings.map((f) => (
-            <tr
-              key={f.id}
-              className="border-b border-gray-800 cursor-pointer hover:bg-gray-800"
-              onClick={() => setSelected(f)}
-            >
-              <td className="py-1">{f.id}</td>
-              <td className="py-1">{f.name}</td>
-              <td className="py-1">{f.cvss}</td>
-              <td className="py-1">{f.severity}</td>
-            </tr>
+            <li key={f.id}>
+              <button
+                onClick={() => setSelected(f)}
+                className="w-full text-left p-2 rounded bg-gray-800 hover:bg-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white"
+              >
+                <div className="flex justify-between">
+                  <span className="font-medium">{f.name}</span>
+                  <span className="text-sm">{f.cvss}</span>
+                </div>
+                <div className="flex items-center space-x-2 mt-1">
+                  <span
+                    aria-hidden="true"
+                    className="w-3 h-3 rounded-full ring-2 ring-white"
+                    style={{ backgroundColor: severityColors[f.severity] }}
+                  />
+                  <span className="text-xs">{f.severity}</span>
+                </div>
+              </button>
+            </li>
           ))}
-        </tbody>
-      </table>
-      {selected && (
-        <div
-          role="dialog"
-          className="fixed top-0 right-0 h-full w-80 bg-gray-800 p-4 overflow-auto shadow-lg"
-        >
-          <button
-            type="button"
-            onClick={() => setSelected(null)}
-            className="mb-2 text-sm bg-red-600 px-2 py-1 rounded"
-          >
-            Close
-          </button>
-          <h2 className="text-xl mb-2">{selected.name}</h2>
-          <p className="text-sm mb-2">
-            CVSS {selected.cvss} ({selected.severity})
-          </p>
-          <p className="mb-4 text-sm whitespace-pre-wrap">
-            {selected.description}
-          </p>
-          <p className="text-xs text-gray-400">
-            Disclaimer: This sample report is for demonstration purposes only.
-          </p>
+        </ul>
+        <div className="md:flex-1">
+          {selected ? (
+            <section className="bg-gray-800 p-4 rounded h-full">
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="mb-2 text-sm bg-red-600 px-2 py-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-400"
+              >
+                Close
+              </button>
+              <h2 className="text-xl mb-2">{selected.name}</h2>
+              <p className="text-sm mb-2">
+                CVSS {selected.cvss} ({selected.severity})
+              </p>
+              <p className="mb-4 text-sm whitespace-pre-wrap">
+                {selected.description}
+              </p>
+              <p className="text-xs text-gray-400">
+                Disclaimer: This sample report is for demonstration purposes only.
+              </p>
+            </section>
+          ) : (
+            <p className="text-sm text-gray-400">Select a finding to view details.</p>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
