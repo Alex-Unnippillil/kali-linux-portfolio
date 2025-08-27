@@ -1,0 +1,11 @@
+{
+  "tasks": [
+    { "id": "task-1", "name": "Weekly Scan", "target": "192.168.1.10" },
+    { "id": "task-2", "name": "Datacenter Scan", "target": "10.0.0.5" }
+  ],
+  "results": [
+    { "host": "192.168.1.10", "severity": "High", "vulnerability": "CVE-2020-1234" },
+    { "host": "192.168.1.10", "severity": "Medium", "vulnerability": "CVE-2019-5678" },
+    { "host": "10.0.0.5", "severity": "Low", "vulnerability": "CVE-2021-9012" }
+  ]
+}

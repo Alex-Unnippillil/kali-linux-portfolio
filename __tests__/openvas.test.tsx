@@ -8,6 +8,19 @@ describe('OpenVASApp', () => {
       Promise.resolve({
         ok: true,
         text: () => Promise.resolve('scan complete'),
+        json: () =>
+          Promise.resolve({
+            tasks: [
+              { id: 'task-1', name: 'Weekly Scan', target: '192.168.1.10' },
+            ],
+            results: [
+              {
+                host: '192.168.1.10',
+                severity: 'High',
+                vulnerability: 'CVE-1',
+              },
+            ],
+          }),
       })
     ) as any;
 
@@ -69,6 +82,20 @@ describe('OpenVASApp', () => {
       expect(Notification).toHaveBeenCalledWith('OpenVAS Scan Failed', {
         body: 'fail',
       })
+    );
+  });
+
+  it('loads sample report and renders summary', async () => {
+    render(<OpenVASApp />);
+    fireEvent.click(screen.getByText('Load Sample Report'));
+    await waitFor(() =>
+      expect(screen.getByText('Weekly Scan')).toBeInTheDocument()
+    );
+    expect(screen.getByText('192.168.1.10')).toBeInTheDocument();
+    expect(screen.getByText('High')).toBeInTheDocument();
+    expect(screen.getByText('Download Sample PDF')).toHaveAttribute(
+      'href',
+      '/apps/openvas/sample-report.pdf'
     );
   });
 });
