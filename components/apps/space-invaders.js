@@ -32,6 +32,9 @@ const SpaceInvaders = () => {
   const pattern = useRef(0);
   const nextExtraLife = useRef(0);
   const setupWaveRef = useRef(() => {});
+  const muzzleFlash = useRef(0);
+  const prefersReducedMotion = useRef(false);
+  const [ariaMessage, setAriaMessage] = useState('');
 
   const [sound, setSound] = useState(true);
   const soundRef = useRef(sound);
@@ -40,6 +43,12 @@ const SpaceInvaders = () => {
   }, [sound]);
   const [isPaused, setIsPaused] = useState(false);
   const pausedRef = useRef(false);
+
+  useEffect(() => {
+    prefersReducedMotion.current =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }, []);
 
   const playSound = (freq) => {
     if (!soundRef.current) return;
@@ -53,6 +62,28 @@ const SpaceInvaders = () => {
     gain.gain.value = 0.1;
     osc.start();
     osc.stop(audioCtx.current.currentTime + 0.1);
+  };
+
+  const playSweep = (start, end, duration) => {
+    if (!soundRef.current) return;
+    if (!audioCtx.current)
+      audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.current.createOscillator();
+    const gain = audioCtx.current.createGain();
+    osc.frequency.setValueAtTime(start, audioCtx.current.currentTime);
+    osc.frequency.linearRampToValueAtTime(
+      end,
+      audioCtx.current.currentTime + duration
+    );
+    gain.gain.setValueAtTime(0.1, audioCtx.current.currentTime);
+    gain.gain.linearRampToValueAtTime(
+      0,
+      audioCtx.current.currentTime + duration
+    );
+    osc.connect(gain);
+    gain.connect(audioCtx.current.destination);
+    osc.start();
+    osc.stop(audioCtx.current.currentTime + duration);
   };
 
   const resetGame = () => {
@@ -248,6 +279,7 @@ const SpaceInvaders = () => {
 
       const p = player.current;
       p.cooldown -= dt;
+      if (muzzleFlash.current > 0) muzzleFlash.current -= dt;
 
       const left = keys.current['ArrowLeft'] || touch.current.left;
       const right = keys.current['ArrowRight'] || touch.current.right;
@@ -259,6 +291,7 @@ const SpaceInvaders = () => {
       if (fire && p.cooldown <= 0) {
         shoot(playerBullets.current, p.x + p.w / 2, p.y, 800);
         p.cooldown = p.rapid > 0 ? 0.15 : 0.5;
+        if (!prefersReducedMotion.current) muzzleFlash.current = 0.1;
       }
       if (p.rapid > 0) p.rapid -= dt;
 
@@ -391,6 +424,9 @@ const SpaceInvaders = () => {
         ufo.current.x = 0;
         ufo.current.dir = 1;
         ufoTimer.current = 0;
+        playSweep(200, 400, 0.5);
+        setAriaMessage('Saucer approaching');
+        setTimeout(() => setAriaMessage(''), 1000);
       }
       if (ufo.current.active) {
         ufo.current.x += 60 * dt * ufo.current.dir;
@@ -410,6 +446,10 @@ const SpaceInvaders = () => {
 
       ctx.fillStyle = 'white';
       ctx.fillRect(p.x, p.y, p.w, p.h);
+      if (muzzleFlash.current > 0) {
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(p.x + p.w / 2 - 2, p.y - 6, 4, 6);
+      }
 
       ctx.fillStyle = 'lime';
       invaders.current.forEach((inv) => {
@@ -446,7 +486,7 @@ const SpaceInvaders = () => {
       });
 
       if (ufo.current.active) {
-        ctx.fillStyle = 'purple';
+        ctx.fillStyle = '#ff00ff';
         ctx.fillRect(ufo.current.x, ufo.current.y, 30, 15);
       }
 
@@ -531,6 +571,9 @@ const SpaceInvaders = () => {
           >
             ▶
           </button>
+        </div>
+        <div aria-live="polite" className="sr-only">
+          {ariaMessage}
         </div>
       </div>
     </GameLayout>
