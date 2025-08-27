@@ -20,6 +20,19 @@ test('merging two 2s creates one 4', () => {
   expect(board[0][0]).toBe(4);
 });
 
+test('merge triggers animation', () => {
+  window.localStorage.setItem('2048-board', JSON.stringify([
+    [2, 2, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+  ]));
+  const { container } = render(<Game2048 />);
+  fireEvent.keyDown(window, { key: 'ArrowLeft' });
+  const firstCell = container.querySelector('.grid div');
+  expect(firstCell?.querySelector('.merge-ripple')).toBeTruthy();
+});
+
 test('undo only restores last move', () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
