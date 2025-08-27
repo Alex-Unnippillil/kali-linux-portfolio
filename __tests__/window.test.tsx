@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
+import { SNAP_EVENT } from '../utils/events';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
@@ -115,5 +116,39 @@ describe('Window snapping preview', () => {
     });
 
     expect(screen.queryByTestId('snap-preview')).toBeNull();
+  });
+});
+
+describe('Window snap event', () => {
+  it('emits onSnap when snapped', () => {
+    const ref = React.createRef<Window>();
+    const listener = jest.fn();
+    window.addEventListener(SNAP_EVENT, listener);
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.setState({ snapPosition: 'left' });
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(listener).toHaveBeenCalled();
+    expect(listener.mock.calls[0][0].detail).toEqual({ id: 'test-window', position: 'left' });
+
+    window.removeEventListener(SNAP_EVENT, listener);
   });
 });

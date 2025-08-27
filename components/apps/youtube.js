@@ -6,6 +6,7 @@ import React, {
   useRef,
 } from 'react';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
+import { SNAP_EVENT } from '../../utils/events';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
@@ -31,6 +32,19 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const tabListRef = useRef(null);
   const progressRaf = useRef();
   const scrollRaf = useRef();
+
+  const updatePlayerSize = useCallback(() => {
+    const player = playerRef.current;
+    if (player && typeof player.getIframe === 'function') {
+      const iframe = player.getIframe();
+      const parent = iframe?.parentElement;
+      if (parent) {
+        const width = parent.clientWidth;
+        const height = isMini ? parent.clientHeight : Math.round((width * 9) / 16);
+        player.setSize(width, height);
+      }
+    }
+  }, [isMini]);
 
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
   const privacy = process.env.NEXT_PUBLIC_PRIVACY_MODE === 'true';
@@ -136,6 +150,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
       setDuration(d);
       const c = player.getVideoData()?.chapters || [];
       setChapters(c);
+      updatePlayerSize();
     };
 
     const onStateChange = (e) => {
@@ -197,7 +212,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
       }
       player?.destroy();
     };
-  }, [currentVideo, prefersReducedMotion, privacy]);
+  }, [currentVideo, prefersReducedMotion, privacy, updatePlayerSize]);
 
   useEffect(() => {
     if (!currentVideo) return;
@@ -216,6 +231,11 @@ export default function YouTubeApp({ initialVideos = [] }) {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [currentVideo]);
+
+  useEffect(() => {
+    window.addEventListener(SNAP_EVENT, updatePlayerSize);
+    return () => window.removeEventListener(SNAP_EVENT, updatePlayerSize);
+  }, [updatePlayerSize]);
 
   useRovingTabIndex(tabListRef, true, 'horizontal');
 
@@ -238,6 +258,10 @@ export default function YouTubeApp({ initialVideos = [] }) {
       cancelAnimationFrame(scrollRaf.current);
     };
   }, [currentVideo]);
+
+  useEffect(() => {
+    updatePlayerSize();
+  }, [isMini, updatePlayerSize]);
 
   // When initial videos are passed in (e.g. during tests), populate playlists
   // from that data so the category tabs render correctly.

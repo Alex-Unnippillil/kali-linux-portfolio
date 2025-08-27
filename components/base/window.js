@@ -3,6 +3,7 @@ import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
+import { emitSnap } from '../../utils/events';
 
 export class Window extends Component {
     constructor(props) {
@@ -137,6 +138,9 @@ export class Window extends Component {
 
     handleStop = () => {
         this.changeCursorToDefault();
+        if (this.state.snapPosition) {
+            emitSnap({ id: this.id, position: this.state.snapPosition });
+        }
         this.setState({ snapPreview: null, snapPosition: null });
     }
 

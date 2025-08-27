@@ -10,6 +10,7 @@ import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import '@xterm/xterm/css/xterm.css';
+import { SNAP_EVENT } from '../../../utils/events';
 
 const promptText = 'alex@kali:~$ ';
 
@@ -397,6 +398,7 @@ const TerminalPane = forwardRef<
 
       const handleResize = () => fitAddon.fit();
       window.addEventListener('resize', handleResize);
+      window.addEventListener(SNAP_EVENT, handleResize);
       let resizeObserver: ResizeObserver | null = null;
       if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
         resizeObserver = new ResizeObserver(handleResize);
@@ -405,6 +407,7 @@ const TerminalPane = forwardRef<
 
       return () => {
         window.removeEventListener('resize', handleResize);
+        window.removeEventListener(SNAP_EVENT, handleResize);
         resizeObserver?.disconnect();
         workerRef.current?.terminate();
         if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
