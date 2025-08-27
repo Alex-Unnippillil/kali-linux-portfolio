@@ -53,18 +53,6 @@ const shuffle = (array) => {
   return array;
 };
 
-let bag = [];
-const bagPiece = () => {
-  if (bag.length === 0) bag = shuffle([...PIECES]);
-  const type = bag.pop();
-  return { ...TETROMINOS[type], type };
-};
-
-const randomPiece = () => {
-  const type = PIECES[Math.floor(Math.random() * PIECES.length)];
-  return { ...TETROMINOS[type], type };
-};
-
 const defaultKeys = {
   left: 'ArrowLeft',
   right: 'ArrowRight',
@@ -80,8 +68,18 @@ const defaultKeys = {
 
 const Tetris = () => {
   const canvasRef = useRef(null);
+  const bagRef = useRef([]);
+  const randomPiece = useCallback(() => {
+    const type = PIECES[Math.floor(Math.random() * PIECES.length)];
+    return { ...TETROMINOS[type], type };
+  }, []);
+  const bagPiece = useCallback(() => {
+    if (bagRef.current.length === 0) bagRef.current = shuffle([...PIECES]);
+    const type = bagRef.current.pop();
+    return { ...TETROMINOS[type], type };
+  }, []);
   const [useBag, setUseBag] = usePersistentState('tetris-use-bag', true);
-  const getPiece = useCallback(() => (useBag ? bagPiece() : randomPiece()), [useBag]);
+  const getPiece = useCallback(() => (useBag ? bagPiece() : randomPiece()), [useBag, bagPiece, randomPiece]);
   const [board, setBoard] = useState(createBoard);
   const [piece, setPiece] = useState(getPiece);
   const [pos, setPos] = useState({ x: Math.floor(WIDTH/2) - 2, y: 0 });
@@ -139,20 +137,34 @@ const Tetris = () => {
 
   const dropInterval = Math.max(100, 1000 - (level - 1) * 100);
 
-  const playSound = useCallback((freq = 440, duration = 0.1) => {
-    if (!sound) return;
-    try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      osc.type = 'square';
-      osc.frequency.value = freq;
-      osc.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + duration);
-    } catch {
-      /* ignore */
-    }
-  }, [sound]);
+  const audioCtxRef = useRef(null);
+  const playSound = useCallback(
+    (freq = 440, duration = 0.1) => {
+      if (!sound) return;
+      try {
+        const ctx =
+          audioCtxRef.current ||
+          new (window.AudioContext || window.webkitAudioContext)();
+        audioCtxRef.current = ctx;
+        const osc = ctx.createOscillator();
+        osc.type = 'square';
+        osc.frequency.value = freq;
+        osc.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch {
+        /* ignore */
+      }
+    },
+    [sound],
+  );
+
+  useEffect(
+    () => () => {
+      audioCtxRef.current?.close?.();
+    },
+    [],
+  );
 
   const thud = useCallback(() => {
     playSound(120, 0.05);
@@ -170,7 +182,7 @@ const Tetris = () => {
 
   const resetGame = useCallback(() => {
     setBoard(createBoard());
-    bag = [];
+    bagRef.current = [];
     setPiece(getPiece());
     setNext(getPiece());
     setPos({ x: Math.floor(WIDTH/2) - 2, y: 0 });
