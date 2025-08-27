@@ -163,18 +163,27 @@ export class Trash extends Component {
         });
     }
 
+    restoreAll = () => {
+        const { items } = this.state;
+        if (items.length === 0) return;
+        this.setState({ items: [], selected: [], empty: true }, () => {
+            localStorage.setItem('trash-empty', true);
+        });
+    }
+
     emptyScreen = () => {
         return (
             <div className="flex-grow flex flex-col justify-center items-center">
                 <Image
-                    className=" w-24"
+                    className="w-24"
                     src="/themes/Yaru/status/user-trash-symbolic.svg"
-                    alt="Ubuntu Trash"
+                    alt="Empty trash can icon"
                     width={96}
                     height={96}
                     sizes="96px"
                 />
-                <span className="font-bold mt-4 text-xl px-1 text-gray-400">Trash is Empty</span>
+                <span className="font-bold mt-4 text-xl px-1 text-gray-400">Trash is empty</span>
+                <span className="mt-2 text-gray-400">No items to restore</span>
             </div>
         );
     }
@@ -188,11 +197,19 @@ export class Trash extends Component {
                         return (
                             <div
                                 key={index}
-                                tabIndex="1"
+                                role="button"
+                                aria-pressed={selected}
+                                tabIndex={0}
                                 onFocus={this.focusFile}
                                 onBlur={this.focusFile}
                                 onClick={() => this.toggleSelect(index)}
-                                className={`trash-item flex flex-col items-center text-sm outline-none w-16 my-2 mx-4 ${selected ? 'opacity-60' : ''}`}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        this.toggleSelect(index);
+                                    }
+                                }}
+                                className={`trash-item flex flex-col items-center text-sm outline-none w-16 my-2 mx-4 rounded focus:ring-2 focus:ring-ub-orange ${selected ? 'opacity-60' : ''}`}
                             >
                                 <div className="w-16 h-16 flex items-center justify-center">
                                     <Image
@@ -277,10 +294,35 @@ export class Trash extends Component {
                 <div ref={this.contentRef} aria-hidden={anyModal ? 'true' : undefined}>
                     <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
                         <span className="font-bold ml-2">Trash</span>
+        
                         <div className="flex">
-                            <div onClick={this.restoreSelected} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 text-gray-300">Restore</div>
-                            <div onClick={this.emptyTrash} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty</div>
-                            <div onClick={this.selectFile} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Delete File</div>
+                            <button
+                                onClick={this.restoreSelected}
+                                disabled={this.state.selected.length === 0}
+                                className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 text-gray-300 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+                            >
+                                Restore
+                            </button>
+                            <button
+                                onClick={this.restoreAll}
+                                disabled={this.state.items.length === 0}
+                                className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 text-gray-300 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+                            >
+                                Restore All
+                            </button>
+                            <button
+                                onClick={this.emptyTrash}
+                                disabled={this.state.items.length === 0}
+                                className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+                            >
+                                Empty
+                            </button>
+                            <button
+                                onClick={this.selectFile}
+                                className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange"
+                            >
+                                Delete File
+                            </button>
                         </div>
                     </div>
                     {this.state.empty ? this.emptyScreen() : this.showTrashItems()}
