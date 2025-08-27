@@ -1659,6 +1659,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/matter-js@npm:0.20.0":
+  version: 0.20.0
+  resolution: "@types/matter-js@npm:0.20.0"
+  checksum: 10c0/adeedefd3eb3d7702eb834f1b0833a30c22e95f03155d1f757652d11ef67174c01c691c0b2bd3f01a1fc8cb3f52dc1bb5fa79a4d31ae03731c2951295231dde2
+  languageName: node
+  linkType: hard
+
 "@types/node@npm:*, @types/node@npm:^24.2.1":
   version: 24.3.0
   resolution: "@types/node@npm:24.3.0"
@@ -5738,6 +5745,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"matter-js@npm:0.20.0":
+  version: 0.20.0
+  resolution: "matter-js@npm:0.20.0"
+  checksum: 10c0/95d58f407205ad24c96422109c959999f474ef29af79b4c2ad7550bca97cdcdac99df31ebe35ab858d9863c8f6cd5205339fbbff70909b56a3e2a6a57200c51b
+  languageName: node
+  linkType: hard
+
 "merge-stream@npm:^2.0.0":
   version: 2.0.0
   resolution: "merge-stream@npm:2.0.0"
@@ -6669,7 +6683,6 @@ __metadata:
   linkType: hard
 
 "react-force-graph@npm:^1.45.0":
-
   version: 1.48.0
   resolution: "react-force-graph@npm:1.48.0"
   dependencies:
@@ -8012,6 +8025,7 @@ __metadata:
     "@types/figlet": "npm:^1"
     "@types/howler": "npm:^2"
     "@types/jest": "npm:30.0.0"
+    "@types/matter-js": "npm:0.20.0"
     "@types/node": "npm:^24.2.1"
     "@types/react": "npm:^19.1.10"
     "@types/three": "npm:^0.179.0"
@@ -8033,6 +8047,7 @@ __metadata:
     jest-environment-jsdom: "npm:30.0.5"
     jsqr: "npm:^1.4.0"
     mathjs: "npm:^14.6.0"
+    matter-js: "npm:0.20.0"
     next: "npm:^15.0.0"
     phaser: "npm:3.70.0"
     postcss: "npm:^8.4.21"
@@ -8043,7 +8058,6 @@ __metadata:
     react-dom: "npm:^18.2.0"
     react-draggable: "npm:^4.4.5"
     react-force-graph: "npm:^1.45.0"
-
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
     react-onclickoutside: "npm:^6.12.2"
