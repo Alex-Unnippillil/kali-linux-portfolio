@@ -4,17 +4,49 @@ export interface HangmanGame {
   wrong: number;
 }
 
-// A small default word list used when no word is provided. Keeping it here
-// keeps the game logic entirely self‑contained so engine consumers do not
-// need to manage their own dictionaries.
+// Basic dictionaries used by the hangman game. Having them here keeps the
+// engine self‑contained so consumers do not need to supply their own word
+// lists.
+export const FAMILY_WORDS = [
+  'mother',
+  'father',
+  'sister',
+  'brother',
+  'cousin',
+  'uncle',
+  'aunt',
+];
+
+export const SAT_WORDS = [
+  'aberration',
+  'convivial',
+  'equivocate',
+  'laconic',
+  'obdurate',
+  'quandary',
+  'venerate',
+];
+
+export const MOVIE_WORDS = [
+  'inception',
+  'avatar',
+  'casablanca',
+  'gladiator',
+  'titanic',
+  'goodfellas',
+  'amelie',
+];
+
+export const DICTIONARIES = {
+  family: FAMILY_WORDS,
+  sat: SAT_WORDS,
+  movie: MOVIE_WORDS,
+};
+
 export const WORDS = [
-  'code',
-  'bug',
-  'linux',
-  'react',
-  'docker',
-  'python',
-  'node',
+  ...FAMILY_WORDS,
+  ...SAT_WORDS,
+  ...MOVIE_WORDS,
 ];
 
 export const createGame = (word?: string): HangmanGame => {
