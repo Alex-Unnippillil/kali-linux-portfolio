@@ -5,12 +5,12 @@
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "TS_NODE_PROJECT=jsconfig.json next build",
     "start": "next start",
     "export": "next export",
     "test": "jest",
     "test:watch": "jest --watch",
-    "lint": "next lint",
+    "lint": "TS_NODE_PROJECT=jsconfig.json next lint",
     "a11y": "pa11y-ci --config pa11yci.json"
   },
   "engines": {
