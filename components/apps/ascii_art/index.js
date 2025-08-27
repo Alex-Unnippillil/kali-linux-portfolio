@@ -44,11 +44,16 @@ export default function AsciiArt() {
   const [useColor, setUseColor] = useState(true);
   const [altText, setAltText] = useState('');
   const [typingMode, setTypingMode] = useState(false);
+  const [contrast, setContrast] = useState(1);
+  const [density, setDensity] = useState(presetCharSets.standard.length);
+  const [imgSrc, setImgSrc] = useState(null);
   const undoStack = useRef([]);
   const [colors, setColors] = useState(null);
   const workerRef = useRef(null);
   const canvasRef = useRef(null);
   const editorRef = useRef(null);
+  const fileRef = useRef(null);
+  const prefersReducedMotion = useRef(false);
 
   // Load saved preferences
   useEffect(() => {
@@ -57,6 +62,9 @@ export default function AsciiArt() {
     const savedPalette = window.localStorage.getItem('ascii_palette');
     setCharSet(savedSet || presetCharSets.standard);
     setPaletteName(savedPalette || 'grayscale');
+    prefersReducedMotion.current = window
+      .matchMedia('(prefers-reduced-motion: reduce)')
+      .matches;
   }, []);
 
   // Persist preferences
@@ -67,39 +75,60 @@ export default function AsciiArt() {
     }
   }, [charSet, paletteName]);
 
+  // Update density when charset changes
+  useEffect(() => {
+    setDensity((d) => Math.min(d, charSet.length));
+  }, [charSet]);
+
   // Setup worker
   useEffect(() => {
     workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
       const { plain, html, ansi, colors: colorArr, width, height } = e.data;
-      setPlainAscii(plain);
-      setAsciiHtml(html);
-      setAnsiAscii(ansi);
-      setColors({ data: colorArr, width, height });
-      setAltText(`ASCII art ${width}x${height}`);
+      const update = () => {
+        setPlainAscii(plain);
+        setAsciiHtml(html);
+        setAnsiAscii(ansi);
+        setColors({ data: colorArr, width, height });
+        setAltText(`ASCII art ${width}x${height}`);
+      };
+      if (prefersReducedMotion.current) {
+        update();
+      } else {
+        requestAnimationFrame(update);
+      }
     };
     return () => {
       workerRef.current.terminate();
     };
   }, []);
 
-  const handleFile = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const processFile = async () => {
+    if (!fileRef.current) return;
+    const file = fileRef.current;
     const bitmap = await createImageBitmap(file);
+    const effectiveCharSet = (() => {
+      const chars = charSet.split('');
+      const step = chars.length / density;
+      let result = '';
+      for (let i = 0; i < density; i += 1) {
+        result += chars[Math.floor(i * step)] || '';
+      }
+      return result;
+    })();
     if (workerRef.current && typeof OffscreenCanvas !== 'undefined') {
       workerRef.current.postMessage(
         {
           bitmap,
-          charSet,
+          charSet: effectiveCharSet,
           cellSize,
           useColor,
           palette: palettes[paletteName],
+          contrast,
         },
         [bitmap]
       );
     } else {
-      // Fallback to processing on main thread
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -112,7 +141,7 @@ export default function AsciiArt() {
         const { data } = ctx.getImageData(0, 0, width, height);
         let plain = '';
         let html = '';
-        const chars = charSet.split('');
+        const chars = effectiveCharSet.split('');
         const colorArr = new Uint8ClampedArray(width * height * 3);
         for (let y = 0; y < height; y += 1) {
           let row = '';
@@ -122,8 +151,9 @@ export default function AsciiArt() {
             const r = data[idx];
             const g = data[idx + 1];
             const b = data[idx + 2];
-            const avg = (r + g + b) / 3;
-            const charIndex = Math.floor((avg / 255) * (chars.length - 1));
+            const avg = ((r + g + b) / 3 - 128) * contrast + 128;
+            const clamped = Math.max(0, Math.min(255, avg));
+            const charIndex = Math.floor((clamped / 255) * (chars.length - 1));
             const ch = chars[chars.length - 1 - charIndex];
             row += ch;
             htmlRow += useColor
@@ -141,10 +171,23 @@ export default function AsciiArt() {
         setAsciiHtml(html);
         setAnsiAscii(plain);
         setColors({ data: colorArr, width, height });
+        setAltText(`ASCII art ${width}x${height}`);
       };
       img.src = URL.createObjectURL(file);
     }
   };
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    fileRef.current = file;
+    setImgSrc(URL.createObjectURL(file));
+    processFile();
+  };
+
+  useEffect(() => {
+    processFile();
+  }, [contrast, density, cellSize, charSet, paletteName, useColor]);
 
   const copyAscii = () => {
     const text = useColor ? ansiAscii : plainAscii;
@@ -266,6 +309,31 @@ export default function AsciiArt() {
           />
         </label>
         <label className="flex items-center gap-2">
+          Contrast:
+          <input
+            type="range"
+            min="0.5"
+            max="2"
+            step="0.1"
+            value={contrast}
+            onChange={(e) => setContrast(Number(e.target.value))}
+            className="w-24"
+            aria-label="Contrast"
+          />
+        </label>
+        <label className="flex items-center gap-2">
+          Density:
+          <input
+            type="range"
+            min="2"
+            max={charSet.length || 2}
+            value={density}
+            onChange={(e) => setDensity(Number(e.target.value))}
+            className="w-24"
+            aria-label="Character density"
+          />
+        </label>
+        <label className="flex items-center gap-2">
           Palette:
           <select
             value={paletteName}
@@ -332,6 +400,13 @@ export default function AsciiArt() {
           Alt
         </button>
       </div>
+      {imgSrc && !typingMode && (
+        <img
+          src={imgSrc}
+          alt="original image preview"
+          className="max-h-48 mb-2 object-contain"
+        />
+      )}
       {typingMode ? (
         <textarea
           ref={editorRef}
