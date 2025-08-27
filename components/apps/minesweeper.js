@@ -165,6 +165,55 @@ const calculateBV = (board) => {
 const checkWin = (board) =>
   board.flat().every((cell) => cell.revealed || cell.mine);
 
+const calculateRiskMap = (board) => {
+  const risk = Array.from({ length: BOARD_SIZE }, () =>
+    Array(BOARD_SIZE).fill(0),
+  );
+  for (let x = 0; x < BOARD_SIZE; x++) {
+    for (let y = 0; y < BOARD_SIZE; y++) {
+      const cell = board[x][y];
+      if (cell.revealed || cell.flagged) continue;
+      let maxProb = 0;
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || nx >= BOARD_SIZE || ny < 0 || ny >= BOARD_SIZE) continue;
+          const nCell = board[nx][ny];
+          if (!nCell.revealed || nCell.mine || nCell.adjacent === 0) continue;
+          let flagged = 0;
+          let hidden = 0;
+          for (let ox = -1; ox <= 1; ox++) {
+            for (let oy = -1; oy <= 1; oy++) {
+              if (ox === 0 && oy === 0) continue;
+              const mx = nx + ox;
+              const my = ny + oy;
+              if (
+                mx < 0 ||
+                mx >= BOARD_SIZE ||
+                my < 0 ||
+                my >= BOARD_SIZE
+              )
+                continue;
+              const around = board[mx][my];
+              if (around.flagged) flagged++;
+              if (!around.revealed && !around.flagged) hidden++;
+            }
+          }
+          const remaining = nCell.adjacent - flagged;
+          if (remaining > 0 && hidden > 0) {
+            const prob = remaining / hidden;
+            if (prob > maxProb) maxProb = prob;
+          }
+        }
+      }
+      risk[x][y] = maxProb;
+    }
+  }
+  return risk;
+};
+
 const Minesweeper = () => {
   const canvasRef = useRef(null);
   const audioRef = useRef(null);
@@ -184,6 +233,9 @@ const Minesweeper = () => {
   const [sound, setSound] = useState(true);
   const [ariaMessage, setAriaMessage] = useState('');
   const prefersReducedMotion = useRef(false);
+  const [showRisk, setShowRisk] = useState(false);
+  const leftDown = useRef(false);
+  const rightDown = useRef(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
@@ -230,6 +282,7 @@ const Minesweeper = () => {
       ctx.font = '20px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      const riskMap = showRisk && board ? calculateRiskMap(board) : null;
       for (let x = 0; x < BOARD_SIZE; x++) {
         for (let y = 0; y < BOARD_SIZE; y++) {
           const cell = board
@@ -257,6 +310,12 @@ const Minesweeper = () => {
           } else if (cell.flagged) {
             ctx.fillStyle = '#f00';
             ctx.fillText('🚩', px + CELL_SIZE / 2, py + CELL_SIZE / 2);
+          } else if (showRisk && riskMap) {
+            const r = riskMap[x][y];
+            if (r > 0) {
+              ctx.fillStyle = `rgba(255,0,0,${r * 0.4})`;
+              ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+            }
           }
         }
       }
@@ -270,7 +329,7 @@ const Minesweeper = () => {
     };
     draw();
     return () => cancelAnimationFrame(frame);
-  }, [board, status, paused, flags]);
+  }, [board, status, paused, flags, showRisk]);
 
   const playSound = (type) => {
     if (!sound || typeof window === 'undefined') return;
@@ -495,19 +554,96 @@ const Minesweeper = () => {
     playSound('flag');
   };
 
-  const handleCanvasClick = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const y = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const x = Math.floor((e.clientY - rect.top) / CELL_SIZE);
-    handleClick(x, y);
+  const handleChord = (x, y) => {
+    if (status !== 'playing' || paused || !board) return;
+    const newBoard = cloneBoard(board);
+    const cell = newBoard[x][y];
+    if (!cell.revealed || cell.adjacent === 0) return;
+    let flagged = 0;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (
+          nx >= 0 &&
+          nx < BOARD_SIZE &&
+          ny >= 0 &&
+          ny < BOARD_SIZE &&
+          newBoard[nx][ny].flagged
+        ) {
+          flagged++;
+        }
+      }
+    }
+    if (flagged !== cell.adjacent) return;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (
+          nx >= 0 &&
+          nx < BOARD_SIZE &&
+          ny >= 0 &&
+          ny < BOARD_SIZE &&
+          !newBoard[nx][ny].flagged
+        ) {
+          const hit = revealCell(newBoard, nx, ny);
+          if (hit) {
+            setBoard(newBoard);
+            setStatus('lost');
+            playSound('boom');
+            setAriaMessage('Boom! Game over');
+            return;
+          }
+        }
+      }
+    }
+    setBoard(newBoard);
+    checkAndHandleWin(newBoard);
   };
 
-  const handleCanvasContext = (e) => {
-    e.preventDefault();
+  const handleMouseDown = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const y = Math.floor((e.clientX - rect.left) / CELL_SIZE);
     const x = Math.floor((e.clientY - rect.top) / CELL_SIZE);
-    toggleFlag(x, y);
+    if (e.button === 0) {
+      leftDown.current = true;
+    } else if (e.button === 2) {
+      rightDown.current = true;
+      e.preventDefault();
+    } else if (e.button === 1) {
+      handleChord(x, y);
+    }
+  };
+
+  const handleMouseUp = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const y = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+    const x = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    if (e.button === 0) {
+      if (rightDown.current) {
+        handleChord(x, y);
+        rightDown.current = false;
+      } else {
+        handleClick(x, y);
+      }
+      leftDown.current = false;
+    } else if (e.button === 2) {
+      if (leftDown.current) {
+        handleChord(x, y);
+        leftDown.current = false;
+      } else {
+        toggleFlag(x, y);
+      }
+      rightDown.current = false;
+    }
+  };
+
+  const handleMouseLeave = () => {
+    leftDown.current = false;
+    rightDown.current = false;
   };
 
   const reset = () => {
@@ -619,8 +755,10 @@ const Minesweeper = () => {
         ref={canvasRef}
         width={CANVAS_SIZE}
         height={CANVAS_SIZE}
-        onClick={handleCanvasClick}
-        onContextMenu={handleCanvasContext}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onContextMenu={(e) => e.preventDefault()}
         className="bg-gray-700 mb-4"
         style={{ imageRendering: 'pixelated' }}
       />
@@ -653,6 +791,12 @@ const Minesweeper = () => {
           onClick={toggleSound}
         >
           {sound ? 'Sound: On' : 'Sound: Off'}
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setShowRisk((r) => !r)}
+        >
+          {showRisk ? 'Risk: On' : 'Risk: Off'}
         </button>
       </div>
       <div aria-live="polite" className="sr-only">{ariaMessage}</div>
