@@ -154,7 +154,7 @@ const Memory = () => {
                   onClick={() => handleCardClick(i)}
                   aria-label={isFlipped ? `Card ${card.value}` : 'Hidden card'}
                   disabled={flipped.includes(i) || matched.includes(i) || paused}
-                  className={`relative w-full aspect-square [perspective:600px] rounded ${isHighlighted ? 'ring-4 ring-green-400' : ''}`}
+                  className={`relative w-full aspect-square [perspective:600px] rounded transform ${isHighlighted ? 'ring-4 ring-green-600' : ''} ${reduceMotion.current ? '' : 'transition-transform duration-200'} ${isHighlighted && !reduceMotion.current ? 'scale-105' : ''}`}
                 >
                   <div
                     className={`w-full h-full transition-transform ${reduceMotion.current ? '' : 'duration-500'} [transform-style:preserve-3d]`}
@@ -162,7 +162,7 @@ const Memory = () => {
                   >
                     <div className="absolute inset-0 rounded flex items-center justify-center bg-gray-700 text-white [backface-visibility:hidden]" />
                     <div
-                      className={`absolute inset-0 rounded flex items-center justify-center [transform:rotateY(180deg)] [backface-visibility:hidden] ${isHighlighted ? 'bg-green-500 text-black' : 'bg-gray-100 text-gray-900'} transition-colors duration-300`}
+                      className={`absolute inset-0 rounded flex items-center justify-center [transform:rotateY(180deg)] [backface-visibility:hidden] ${isHighlighted ? 'bg-green-500 text-black' : 'bg-gray-100 text-gray-900'} ${reduceMotion.current ? '' : 'transition-colors duration-300'}`}
                     >
                       <span className="text-2xl">{card.value}</span>
                     </div>
