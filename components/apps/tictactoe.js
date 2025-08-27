@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
-import confetti from 'canvas-confetti';
+import dynamic from 'next/dynamic';
 import GameLayout from './GameLayout';
+import ErrorBoundary from '../util-components/ErrorBoundary';
+
+const confettiModule = dynamic(() => import('canvas-confetti'), { ssr: false });
+const launchConfetti = (opts) => {
+  confettiModule.preload().then((m) => m.default(opts));
+};
 
 const winningLines = [
   [0, 1, 2],
@@ -108,7 +114,7 @@ const TicTacToe = () => {
     if (winner) {
       if (winner !== 'draw') {
         setWinningLine(line);
-        confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+        launchConfetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
       }
       setStatus(
         winner === 'draw' ? "It's a draw" : winner === player ? 'You win!' : 'You lose!'
@@ -228,7 +234,8 @@ const TicTacToe = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <ErrorBoundary>
+      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       {difficultySlider}
       <div className="grid grid-cols-3 gap-1 w-60 mb-4">
         {board.map((cell, idx) => (
@@ -275,8 +282,9 @@ const TicTacToe = () => {
           Reset
         </button>
       </div>
-    </div>
+      </div>
 
+    </ErrorBoundary>
   );
 };
 

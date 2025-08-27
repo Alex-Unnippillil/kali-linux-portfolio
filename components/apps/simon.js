@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Howl } from 'howler';
+import dynamic from 'next/dynamic';
 import GameLayout from './GameLayout';
 import usePersistentState from '../usePersistentState';
+import ErrorBoundary from '../util-components/ErrorBoundary';
+
+const howlerModule = dynamic(() => import('howler'), { ssr: false });
+const loadHowl = () => howlerModule.preload().then((m) => m.Howl);
 
 const padStyles = [
   {
@@ -157,9 +161,13 @@ const Simon = () => {
       }
     } else {
       if (!errorSound.current) {
-        errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
+        loadHowl().then((Howl) => {
+          errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
+          errorSound.current.play();
+        });
+      } else {
+        errorSound.current.play();
       }
-      errorSound.current.play();
       setErrorFlash(true);
       setTimeout(() => setErrorFlash(false), 300);
       const streak = Math.max(sequence.length - 1, 0);
@@ -180,8 +188,9 @@ const Simon = () => {
   };
 
   return (
-    <GameLayout onRestart={restartGame}>
-      <div className={errorFlash ? 'error-flash' : ''}>
+    <ErrorBoundary>
+      <GameLayout onRestart={restartGame}>
+        <div className={errorFlash ? 'error-flash' : ''}>
         <div className="grid grid-cols-2 gap-4 mb-4">
           {padStyles.map((pad, idx) => (
             <button
@@ -230,8 +239,9 @@ const Simon = () => {
             ))}
           </ol>
         </div>
-      </div>
-    </GameLayout>
+        </div>
+      </GameLayout>
+    </ErrorBoundary>
   );
 };
 

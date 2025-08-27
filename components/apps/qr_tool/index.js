@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import QRCode from 'qrcode';
-import jsQR from 'jsqr';
+import dynamic from 'next/dynamic';
+import ErrorBoundary from '../../util-components/ErrorBoundary';
+
+const QRCodeModule = dynamic(() => import('qrcode'), { ssr: false });
+const jsQRModule = dynamic(() => import('jsqr'), { ssr: false });
 
 const QRTool = () => {
   const [text, setText] = useState('');
@@ -13,8 +16,10 @@ const QRTool = () => {
 
   const generate = () => {
     if (!text) return;
-    QRCode.toCanvas(generateCanvasRef.current, text, { width: 256 }, (err) => {
-      if (err) console.error(err);
+    QRCodeModule.preload().then((m) => {
+      m.default.toCanvas(generateCanvasRef.current, text, { width: 256 }, (err) => {
+        if (err) console.error(err);
+      });
     });
   };
 
@@ -36,8 +41,10 @@ const QRTool = () => {
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
-      setDecodedText(code ? code.data : 'No QR code found');
+      jsQRModule.preload().then((m) => {
+        const code = m.default(imageData.data, imageData.width, imageData.height);
+        setDecodedText(code ? code.data : 'No QR code found');
+      });
     };
     img.onerror = () => setDecodedText('Could not load image');
     img.src = URL.createObjectURL(file);
@@ -51,10 +58,12 @@ const QRTool = () => {
       canvas.height = videoRef.current.videoHeight;
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
-      if (code) {
-        setDecodedText(code.data);
-      }
+      jsQRModule.preload().then((m) => {
+        const code = m.default(imageData.data, imageData.width, imageData.height);
+        if (code) {
+          setDecodedText(code.data);
+        }
+      });
     }
     animationRef.current = requestAnimationFrame(scan);
   };
@@ -91,7 +100,8 @@ const QRTool = () => {
   }, []);
 
   return (
-    <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
+    <ErrorBoundary>
+      <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
       <div className="mb-6">
         <h2 className="text-lg mb-2">Generate QR Code</h2>
         <input
@@ -153,7 +163,7 @@ const QRTool = () => {
         )}
         <canvas ref={scanCanvasRef} className="hidden" />
       </div>
-    </div>
+    </ErrorBoundary>
   );
 };
 
