@@ -2912,6 +2912,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cytoscape@npm:3.30.0":
+  version: 3.30.0
+  resolution: "cytoscape@npm:3.30.0"
+  checksum: 10c0/ffd463f27975b7d979c6f1a8c3472d95cbe2d75dc820aac27ad3e253eaa877da4c7ed4632a341394d911ba1804c5786a292a56387bbb34fcf0c9db69286e123e
+  languageName: node
+  linkType: hard
+
 "d3-array@npm:1 - 3, d3-array@npm:2 - 3, d3-array@npm:2.10.0 - 3":
   version: 3.2.4
   resolution: "d3-array@npm:3.2.4"
@@ -6669,7 +6676,6 @@ __metadata:
   linkType: hard
 
 "react-force-graph@npm:^1.45.0":
-
   version: 1.48.0
   resolution: "react-force-graph@npm:1.48.0"
   dependencies:
@@ -8023,6 +8029,7 @@ __metadata:
     bad-words: "npm:^3.0.4"
     canvas-confetti: "npm:1.9.3"
     chess.js: "npm:^1.0.0"
+    cytoscape: "npm:3.30.0"
     eslint: "npm:^9.13.0"
     eslint-config-next: "npm:^15.0.0"
     expr-eval: "npm:^2.0.2"
@@ -8043,7 +8050,6 @@ __metadata:
     react-dom: "npm:^18.2.0"
     react-draggable: "npm:^4.4.5"
     react-force-graph: "npm:^1.45.0"
-
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
     react-onclickoutside: "npm:^6.12.2"
