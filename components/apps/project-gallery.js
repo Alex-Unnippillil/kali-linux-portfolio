@@ -244,7 +244,7 @@ export default function ProjectGallery() {
                 </div>
                 <div className="p-3 flex flex-col flex-grow">
                   <h3 className="text-lg font-semibold">{project.title}</h3>
-                  <p className="text-sm text-gray-200 mt-1 flex-grow">
+                  <p className="text-sm text-gray-200 mt-1 flex-grow text-block">
                     {project.description}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1">
@@ -304,7 +304,7 @@ export default function ProjectGallery() {
                   Close
                 </button>
                 <h2 className="text-xl font-semibold mb-2">{selected.title}</h2>
-                <p className="mb-2">{selected.description}</p>
+                <p className="mb-2 text-block">{selected.description}</p>
                 <div className="flex flex-wrap gap-1 mb-2">
                   {selected.tech.map((t, i) => (
                     <span

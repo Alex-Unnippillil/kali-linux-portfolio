@@ -67,7 +67,7 @@ const ContactApp = () => {
   };
 
   return (
-    <div className="p-4 text-black">
+    <div className="p-4 text-black text-block">
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <input
           className="p-1 border"
