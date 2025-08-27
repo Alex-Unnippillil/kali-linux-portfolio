@@ -201,7 +201,7 @@ const Frogger = () => {
     osc.stop(ctx.currentTime + duration);
   };
 
-  const moveFrog = (dx, dy) => {
+  const moveFrog = useCallback((dx, dy) => {
     if (pausedRef.current) return;
     setFrog((prev) => {
       const x = prev.x + dx;
@@ -212,16 +212,19 @@ const Frogger = () => {
       playTone(440, 0.05);
       return { x, y };
     });
-  };
+  }, [setFrog, setScore]);
 
-  const startHold = (dx, dy) => {
-    moveFrog(dx, dy);
-    holdRef.current = setInterval(() => moveFrog(dx, dy), 220);
-  };
+  const startHold = useCallback(
+    (dx, dy) => {
+      moveFrog(dx, dy);
+      holdRef.current = setInterval(() => moveFrog(dx, dy), 220);
+    },
+    [moveFrog],
+  );
 
-  const endHold = () => {
+  const endHold = useCallback(() => {
     clearInterval(holdRef.current);
-  };
+  }, []);
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -235,7 +238,7 @@ const Frogger = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, []);
+  }, [moveFrog]);
 
   useEffect(() => {
     const container = document.getElementById('frogger-container');
@@ -262,7 +265,7 @@ const Frogger = () => {
       container?.removeEventListener('touchstart', handleStart);
       container?.removeEventListener('touchend', handleEnd);
     };
-  }, []);
+  }, [moveFrog]);
 
   useEffect(() => {
     ReactGA.event({ category: 'Frogger', action: 'level_start', value: 1 });

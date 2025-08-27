@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { BlackjackGame, basicStrategy, cardValue } from './blackjack/engine';
 
@@ -23,9 +23,16 @@ const Blackjack = () => {
   const [sound, setSound] = useState(true);
   const [options, setOptions] = useState({ decks: 6, hitSoft17: true });
 
-  const initGame = (br = bankroll) => {
-    gameRef.current = new BlackjackGame({ bankroll: br, decks: options.decks, hitSoft17: options.hitSoft17 });
-  };
+  const initGame = useCallback(
+    (br = bankroll) => {
+      gameRef.current = new BlackjackGame({
+        bankroll: br,
+        decks: options.decks,
+        hitSoft17: options.hitSoft17,
+      });
+    },
+    [bankroll, options.decks, options.hitSoft17],
+  );
 
   const computeCardPos = (handIdx, cardIdx, isDealer = false) => {
     if (isDealer) {
@@ -64,14 +71,14 @@ const Blackjack = () => {
     setBankroll(br);
     setHigh(hs);
     initGame(br);
-  }, []);
+  }, [initGame]);
 
   // re-init when options change and no active hand
   useEffect(() => {
     if (gameRef.current && gameRef.current.playerHands.length === 0) {
       initGame(bankroll);
     }
-  }, [options, bankroll]);
+  }, [options, bankroll, initGame]);
 
   // persist bankroll/highscore
   useEffect(() => {

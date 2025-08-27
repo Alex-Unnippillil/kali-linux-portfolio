@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Parser } from 'expr-eval';
 import usePersistentState from '../../../hooks/usePersistentState';
 
@@ -48,7 +48,7 @@ const Calc = () => {
     return Math.floor(diff / (1000 * 60 * 60 * 24));
   }, [date1, date2]);
 
-  const handleCopy = async (text: string) => {
+  const handleCopy = useCallback(async (text: string) => {
     try {
       if (navigator?.clipboard) {
         await navigator.clipboard.writeText(text);
@@ -56,66 +56,72 @@ const Calc = () => {
     } catch {
       // ignore clipboard errors
     }
-  };
+  }, []);
 
-  const evaluateAndTape = () => {
+  const evaluateAndTape = useCallback(() => {
     const expr = display;
     const result = evaluateExpression(expr);
     setDisplay(result);
     if (result !== 'Invalid Expression') {
       setTape((prev: string[]) => [...prev, `${expr} = ${result}`]);
     }
-  };
+  }, [display, setTape]);
 
-  const handleButton = (btn: any) => {
-    if (btn.type === 'clear') {
-      setDisplay('');
-    } else if (btn.label === '=') {
-      evaluateAndTape();
-    } else if (btn.type === 'delete') {
-      setDisplay((prev) => prev.slice(0, -1));
-    } else {
-      setDisplay((prev) => prev + (btn.value || btn.label));
-    }
-  };
+  const handleButton = useCallback(
+    (btn: any) => {
+      if (btn.type === 'clear') {
+        setDisplay('');
+      } else if (btn.label === '=') {
+        evaluateAndTape();
+      } else if (btn.type === 'delete') {
+        setDisplay((prev) => prev.slice(0, -1));
+      } else {
+        setDisplay((prev) => prev + (btn.value || btn.label));
+      }
+    },
+    [evaluateAndTape],
+  );
 
-  const handleMemoryAdd = () => {
+  const handleMemoryAdd = useCallback(() => {
     const val = parseFloat(evaluateExpression(display));
     if (!Number.isNaN(val)) setMemory((m: number) => m + val);
-  };
-  const handleMemorySubtract = () => {
+  }, [display, setMemory]);
+  const handleMemorySubtract = useCallback(() => {
     const val = parseFloat(evaluateExpression(display));
     if (!Number.isNaN(val)) setMemory((m: number) => m - val);
-  };
-  const handleMemoryRecall = () => {
+  }, [display, setMemory]);
+  const handleMemoryRecall = useCallback(() => {
     setDisplay(String(memory));
-  };
+  }, [memory]);
 
-  const handleScientific = (op: string) => {
-    const val = parseFloat(evaluateExpression(display));
-    if (Number.isNaN(val)) return;
-    let result: number;
-    switch (op) {
-      case '%':
-        result = val / 100;
-        break;
-      case 'sqrt':
-        result = Math.sqrt(val);
-        break;
-      case 'square':
-        result = val * val;
-        break;
-      case 'reciprocal':
-        result = 1 / val;
-        break;
-      case 'sign':
-        result = -val;
-        break;
-      default:
-        return;
-    }
-    setDisplay(formatNumber(result));
-  };
+  const handleScientific = useCallback(
+    (op: string) => {
+      const val = parseFloat(evaluateExpression(display));
+      if (Number.isNaN(val)) return;
+      let result: number;
+      switch (op) {
+        case '%':
+          result = val / 100;
+          break;
+        case 'sqrt':
+          result = Math.sqrt(val);
+          break;
+        case 'square':
+          result = val * val;
+          break;
+        case 'reciprocal':
+          result = 1 / val;
+          break;
+        case 'sign':
+          result = -val;
+          break;
+        default:
+          return;
+      }
+      setDisplay(formatNumber(result));
+    },
+    [display],
+  );
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {

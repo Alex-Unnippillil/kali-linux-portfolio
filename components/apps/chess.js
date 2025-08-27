@@ -339,7 +339,7 @@ const ChessGame = () => {
 
   useEffect(() => {
     updateMateHints();
-  }, [showHints]);
+  }, [updateMateHints]);
 
   const addTrail = (from, to) => {
     const fx = (from & 15) * SQ + SQ / 2;
@@ -365,7 +365,7 @@ const ChessGame = () => {
     }
   };
 
-  const updateMateHints = () => {
+  const updateMateHints = React.useCallback(() => {
     if (!showHints) {
       setMateSquares([]);
       return;
@@ -379,7 +379,7 @@ const ChessGame = () => {
       if (clone.isCheckmate()) mates.push(algToSq(m.to));
     }
     setMateSquares(mates);
-  };
+  }, [showHints]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
