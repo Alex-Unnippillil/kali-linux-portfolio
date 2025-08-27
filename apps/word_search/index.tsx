@@ -40,6 +40,9 @@ const WordSearchInner: React.FC = () => {
   const [placements, setPlacements] = useState<WordPlacement[]>([]);
   const [found, setFound] = useState<Set<string>>(new Set());
   const [foundCells, setFoundCells] = useState<Set<string>>(new Set());
+  const [hintCells, setHintCells] = useState<Set<string>>(new Set());
+  const [firstHints, setFirstHints] = useState(3);
+  const [lastHints, setLastHints] = useState(3);
   const [selecting, setSelecting] = useState(false);
   const [start, setStart] = useState<Position | null>(null);
   const [selection, setSelection] = useState<Position[]>([]);
@@ -59,6 +62,9 @@ const WordSearchInner: React.FC = () => {
         setPlacements(data.placements);
         setFound(new Set<string>(data.found));
         setFoundCells(new Set<string>(data.foundCells));
+        setHintCells(new Set<string>(data.hintCells || []));
+        setFirstHints(data.firstHints ?? 3);
+        setLastHints(data.lastHints ?? 3);
       }
     } catch {
       // ignore
@@ -94,6 +100,9 @@ const WordSearchInner: React.FC = () => {
     setPlacements(p);
     setFound(new Set());
     setFoundCells(new Set());
+    setHintCells(new Set());
+    setFirstHints(3);
+    setLastHints(3);
     startRef.current = Date.now();
     logGameStart('word_search');
   }, [seed, words]);
@@ -109,6 +118,9 @@ const WordSearchInner: React.FC = () => {
           placements,
           found: Array.from(found),
           foundCells: Array.from(foundCells),
+          hintCells: Array.from(hintCells),
+          firstHints,
+          lastHints,
         };
         window.localStorage.setItem(SAVE_KEY, JSON.stringify(data));
       } catch {
@@ -116,7 +128,7 @@ const WordSearchInner: React.FC = () => {
       }
     }, 5000);
     return () => clearInterval(id);
-  }, [seed, words, grid, placements, found, foundCells]);
+  }, [seed, words, grid, placements, found, foundCells, hintCells, firstHints, lastHints]);
 
   const handleMouseDown = (r: number, c: number) => {
     setSelecting(true);
@@ -149,6 +161,9 @@ const WordSearchInner: React.FC = () => {
         const newCells = new Set(foundCells);
         selection.forEach((p) => newCells.add(key(p)));
         setFoundCells(newCells);
+        const newHints = new Set(hintCells);
+        selection.forEach((p) => newHints.delete(key(p)));
+        setHintCells(newHints);
         if (newFound.size === words.length) {
           const time = Math.floor((Date.now() - startRef.current) / 1000);
           try {
@@ -190,6 +205,9 @@ const WordSearchInner: React.FC = () => {
     window.localStorage.removeItem(SAVE_KEY);
     setSeed('');
     setWords([]);
+    setHintCells(new Set());
+    setFirstHints(3);
+    setLastHints(3);
   };
 
   const loadGame = () => {
@@ -203,6 +221,9 @@ const WordSearchInner: React.FC = () => {
         setPlacements(data.placements);
         setFound(new Set<string>(data.found));
         setFoundCells(new Set<string>(data.foundCells));
+        setHintCells(new Set<string>(data.hintCells || []));
+        setFirstHints(data.firstHints ?? 3);
+        setLastHints(data.lastHints ?? 3);
       }
     } catch {
       // ignore
@@ -233,9 +254,65 @@ const WordSearchInner: React.FC = () => {
     });
   };
 
+  const useFirstHint = () => {
+    if (firstHints <= 0) return;
+    const remaining = placements.filter(
+      (p) => !found.has(p.word) && !hintCells.has(key(p.positions[0]))
+    );
+    if (!remaining.length) return;
+    const target = remaining[Math.floor(Math.random() * remaining.length)];
+    const newHints = new Set(hintCells);
+    newHints.add(key(target.positions[0]));
+    setHintCells(newHints);
+    setFirstHints(firstHints - 1);
+  };
+
+  const useLastHint = () => {
+    if (lastHints <= 0) return;
+    const remaining = placements.filter(
+      (p) =>
+        !found.has(p.word) &&
+        !hintCells.has(key(p.positions[p.positions.length - 1]))
+    );
+    if (!remaining.length) return;
+    const target = remaining[Math.floor(Math.random() * remaining.length)];
+    const newHints = new Set(hintCells);
+    newHints.add(key(target.positions[target.positions.length - 1]));
+    setHintCells(newHints);
+    setLastHints(lastHints - 1);
+  };
+  const progress = words.length ? found.size / words.length : 0;
+  const radius = 16;
+  const circumference = 2 * Math.PI * radius;
+
   return (
     <div className="p-4 select-none">
-      <div className="flex flex-wrap gap-2 mb-2 print:hidden">
+      <div className="flex flex-wrap gap-2 mb-2 print:hidden items-center">
+        <svg viewBox="0 0 36 36" className="w-10 h-10">
+          <circle
+            className="text-gray-300"
+            stroke="currentColor"
+            strokeWidth="4"
+            fill="transparent"
+            r={radius}
+            cx="18"
+            cy="18"
+          />
+          <circle
+            className="text-green-500"
+            stroke="currentColor"
+            strokeWidth="4"
+            fill="transparent"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference - progress * circumference}
+            strokeLinecap="round"
+            r={radius}
+            cx="18"
+            cy="18"
+            style={{ transition: 'stroke-dashoffset 0.5s' }}
+          />
+          <text x="18" y="20.5" textAnchor="middle" className="text-xs">{`${found.size}/${words.length}`}</text>
+        </svg>
         <button type="button" onClick={newPuzzle} className="px-2 py-1 bg-blue-700 text-white rounded">
           New
         </button>
@@ -262,6 +339,22 @@ const WordSearchInner: React.FC = () => {
           Import LB
         </button>
         <input ref={inputRef} type="file" className="hidden" onChange={importLeaderboard} />
+        <button
+          type="button"
+          onClick={useFirstHint}
+          disabled={firstHints <= 0}
+          className="px-2 py-1 bg-teal-700 text-white rounded disabled:opacity-50"
+        >
+          First Hint ({firstHints})
+        </button>
+        <button
+          type="button"
+          onClick={useLastHint}
+          disabled={lastHints <= 0}
+          className="px-2 py-1 bg-teal-700 text-white rounded disabled:opacity-50"
+        >
+          Last Hint ({lastHints})
+        </button>
         <label className="flex items-center space-x-1">
           <span className="text-sm">Quality</span>
           <input
@@ -279,7 +372,7 @@ const WordSearchInner: React.FC = () => {
             checked={highContrast}
             onChange={(e) => setHighContrast(e.target.checked)}
           />
-          <span className="text-sm">High Contrast</span>
+          <span className="text-sm">High Contrast Letters</span>
         </label>
       </div>
       <div
@@ -297,13 +390,14 @@ const WordSearchInner: React.FC = () => {
             const posKey = key({ row: r, col: c });
             const isSelected = selection.some((p) => p.row === r && p.col === c);
             const isFound = foundCells.has(posKey);
+            const isHint = hintCells.has(posKey);
             return (
               <div
                 key={posKey}
                 onMouseDown={() => handleMouseDown(r, c)}
                 onMouseEnter={() => handleMouseEnter(r, c)}
                 onMouseUp={handleMouseUp}
-                className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none ${isFound ? 'bg-green-300' : isSelected ? 'bg-yellow-300' : 'bg-white'}`}
+                className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none ${isFound ? 'bg-green-300' : isSelected ? 'bg-yellow-300' : isHint ? 'bg-blue-200' : 'bg-white'}`}
                 aria-label={`row ${r + 1} column ${c + 1} letter ${letter}`}
               >
                 {letter}
@@ -314,8 +408,11 @@ const WordSearchInner: React.FC = () => {
       </div>
       <ul className="mt-4 columns-2 md:columns-3">
         {words.map((w) => (
-          <li key={w} className={found.has(w) ? 'line-through text-gray-500' : ''}>
-            {w}
+          <li
+            key={w}
+            className={`relative overflow-hidden w-fit ${found.has(w) ? 'line-through text-gray-500' : ''}`}
+          >
+            <span className={found.has(w) ? 'word-found' : ''}>{w}</span>
           </li>
         ))}
       </ul>
