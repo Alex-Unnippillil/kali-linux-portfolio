@@ -231,8 +231,71 @@ function About() {
                     I also have interests in deep learning, software development, and animation.
                 </li>
             </ul>
+            <Timeline />
         </>
     )
+}
+
+function Timeline() {
+    const events = [
+        { date: '2012', description: 'Began Nuclear Engineering at Ontario Tech.' },
+        { date: '2016', description: 'Graduated with B. Eng.' },
+        { date: '2020', description: 'Started Networking and I.T. Security program.' },
+        { date: '2024', description: 'Graduated with BIT in Networking and I.T. Security.' },
+    ];
+
+    const [liveMessage, setLiveMessage] = React.useState('');
+
+    React.useEffect(() => {
+        const elements = document.querySelectorAll('.timeline-item');
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+        if (prefersReducedMotion.matches) {
+            elements.forEach(el => el.classList.add('opacity-100', 'translate-y-0'));
+            return;
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    requestAnimationFrame(() => {
+                        entry.target.classList.add('opacity-100', 'translate-y-0');
+                        setLiveMessage(entry.target.getAttribute('data-description') || '');
+                    });
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        elements.forEach(el => observer.observe(el));
+
+        return () => {
+            elements.forEach(el => observer.unobserve(el));
+        };
+    }, []);
+
+    return (
+        <div className="relative mt-8 w-5/6 md:w-3/4" aria-labelledby="timeline-heading">
+            <h2 id="timeline-heading" className="sr-only">Timeline</h2>
+            <div aria-live="polite" className="sr-only">{liveMessage}</div>
+            <div className="hidden opacity-100 translate-y-0" aria-hidden="true"></div>
+            <div className="border-l-2 border-ubt-blue ml-2">
+                {events.map((e, i) => (
+                    <div
+                        key={i}
+                        className="timeline-item opacity-0 translate-y-4 transition-all duration-700 ease-out relative mb-8 pl-4"
+                        data-description={`${e.date} ${e.description}`}
+                    >
+                        <div
+                            aria-hidden="true"
+                            className="w-3 h-3 bg-ubt-blue rounded-full absolute -left-1.5 top-1.5"
+                        ></div>
+                        <div className="text-ubt-blue font-bold">{e.date}</div>
+                        <p className="text-gray-200">{e.description}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 }
 function Education() {
     return (
