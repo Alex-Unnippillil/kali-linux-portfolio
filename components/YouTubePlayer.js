@@ -1,9 +1,12 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import Head from 'next/head';
+import { setWakeLock } from '../utils/wakeLock';
 
 export default function YouTubePlayer({ videoId }) {
   const [activated, setActivated] = useState(false);
   const playerRef = useRef(null);
+  const [awake, setAwake] = useState(false);
+  const [error, setError] = useState('');
 
   const loadPlayer = () => {
     if (activated) return;
@@ -32,6 +35,18 @@ export default function YouTubePlayer({ videoId }) {
     }
   };
 
+  const toggleWake = useCallback(async () => {
+    const next = !awake;
+    try {
+      await setWakeLock(next);
+      setAwake(next);
+      setError('');
+    } catch (err) {
+      setError(err?.message || String(err));
+      setAwake(false);
+    }
+  }, [awake]);
+
   return (
     <>
       <Head>
@@ -39,6 +54,18 @@ export default function YouTubePlayer({ videoId }) {
         <link rel="preconnect" href="https://i.ytimg.com" />
       </Head>
       <div className="relative w-full pb-[56.25%]">{/* 16:9 aspect ratio */}
+        <button
+          type="button"
+          aria-pressed={awake}
+          onClick={toggleWake}
+          aria-label="Toggle wake lock"
+          className="absolute top-2 right-2 z-10 bg-gray-700 text-white rounded px-2 py-1"
+        >
+          {awake ? 'Awake' : 'Sleep'}
+        </button>
+        {error && (
+          <p className="absolute bottom-2 left-2 text-xs text-red-500">{error}</p>
+        )}
         <div className="absolute inset-0" ref={playerRef}>
           {!activated && (
             <button
