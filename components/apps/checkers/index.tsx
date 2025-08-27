@@ -85,11 +85,16 @@ const Checkers = () => {
 
   const allMoves = useMemo(() => getAllMoves(board, turn), [board, turn]);
 
+  const captureSources = useMemo(() => {
+    const captures = allMoves.filter((m) => m.captured);
+    return new Set(captures.map((m) => `${m.from[0]}-${m.from[1]}`));
+  }, [allMoves]);
+  const mustCapture = captureSources.size > 0;
+
   const selectPiece = (r: number, c: number) => {
     const piece = board[r][c];
     if (winner || draw || !piece || piece.color !== turn) return;
     const pieceMoves = getPieceMoves(board, r, c);
-    const mustCapture = allMoves.some((m) => m.captured);
     const filtered = mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
     if (filtered.length) {
       setSelected([r, c]);
@@ -223,6 +228,13 @@ const Checkers = () => {
     workerRef.current?.postMessage({ board, color: turn, maxDepth: 8 });
   };
 
+  const handleKey = (r: number, c: number) => (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      selected ? tryMove(r, c) : selectPiece(r, c);
+    }
+  };
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       {winner && <div className="mb-2 text-xl">{winner} wins!</div>}
@@ -237,24 +249,39 @@ const Checkers = () => {
             const isSelected = selected && selected[0] === r && selected[1] === c;
             const isLast = lastMove.some((p) => p[0] === r && p[1] === c);
             const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
+            const isForced = captureSources.has(`${r}-${c}`);
             return (
               <div
                 key={`${r}-${c}`}
+                data-testid={`square-${r}-${c}`}
                 {...pointerHandlers(() =>
                   selected ? tryMove(r, c) : selectPiece(r, c)
                 )}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => (selected ? tryMove(r, c) : selectPiece(r, c))}
+                onKeyDown={handleKey(r, c)}
+                tabIndex={0}
                 className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
-                } ${isMove ? 'ring-2 ring-yellow-300 animate-pulse' : ''} ${
-                  isHint || isHintDest
+                } ${
+                  isMove
+                    ? 'ring-2 ring-yellow-300 animate-pulse'
+                    : isHint || isHintDest
                     ? 'ring-2 ring-blue-400 animate-pulse'
+                    : isSelected
+                    ? 'ring-2 ring-green-400'
+                    : isLast
+                    ? 'ring-2 ring-red-400'
+                    : isForced
+                    ? 'ring-2 ring-purple-400 animate-pulse'
                     : ''
-                } ${isSelected ? 'ring-2 ring-green-400' : ''} ${
-                  isLast ? 'ring-2 ring-red-400' : ''
                 }`}
               >
                 {cell && (
                   <div
+                    data-testid={`piece-${r}-${c}`}
+                    draggable
+                    onDragStart={() => selectPiece(r, c)}
                     className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center ${
                       cell.color === 'red' ? 'bg-red-500' : 'bg-black'
                     } ${cell.king ? 'border-4 border-yellow-300' : ''} ${
@@ -262,7 +289,7 @@ const Checkers = () => {
                     }`}
                   >
                     {cell.king && (
-                      <span className="text-yellow-300 text-sm font-bold">K</span>
+                      <span className="text-yellow-300 text-sm">👑</span>
                     )}
                   </div>
                 )}
