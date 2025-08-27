@@ -47,6 +47,31 @@ const Gauge = ({ value }) => (
   </div>
 );
 
+const ProgressGauge = ({ progress, info }) => (
+  <div
+    className="w-48"
+    role="progressbar"
+    aria-label="Hash cracking progress"
+    aria-valuemin={0}
+    aria-valuemax={100}
+    aria-valuenow={progress}
+    aria-valuetext={`${progress}%`}
+  >
+    <div className="text-sm mb-1">Progress: {progress}%</div>
+    <div className="w-full h-4 bg-gray-700 rounded">
+      <div
+        className="h-4 bg-blue-600 rounded"
+        style={{ width: `${progress}%` }}
+      />
+    </div>
+    <div role="status" aria-live="polite" className="text-sm mt-2">
+      <div>Hash rate: {info.hashRate}</div>
+      <div>ETA: {info.eta}</div>
+      <div>Mode: {info.mode}</div>
+    </div>
+  </div>
+);
+
 function HashcatApp() {
   const [hashType, setHashType] = useState(hashTypes[0].id);
   const [hashInput, setHashInput] = useState('');
@@ -192,32 +217,7 @@ function HashcatApp() {
         )}
       </div>
       <Gauge value={gpuUsage} />
-      <div
-        className="w-48"
-        role="progressbar"
-        aria-label="Hash cracking progress"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={progress}
-        aria-valuetext={`${progress}%`}
-      >
-        <div className="text-sm mb-1">Progress: {progress}%</div>
-        <div className="w-full h-4 bg-gray-700 rounded">
-          <div
-            className="h-4 bg-blue-600 rounded"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <div
-          role="status"
-          aria-live="polite"
-          className="text-sm mt-2"
-        >
-          <div>Hash rate: {progressInfo.hashRate}</div>
-          <div>ETA: {progressInfo.eta}</div>
-          <div>Mode: {progressInfo.mode}</div>
-        </div>
-      </div>
+      <ProgressGauge progress={progress} info={progressInfo} />
     </div>
   );
 }
