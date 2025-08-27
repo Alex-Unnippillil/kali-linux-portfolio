@@ -1,0 +1,33 @@
+{
+  "discovery": [
+    {
+      "name": "http-title",
+      "description": "Fetches page titles from HTTP services.",
+      "example": "80/tcp open  http\n| http-title: Example Domain\n|_Requested resource was /"
+    },
+    {
+      "name": "ssh-hostkey",
+      "description": "Retrieves the SSH host key.",
+      "example": "22/tcp open  ssh\n| ssh-hostkey:\n|   2048 SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA (RSA)\n|_  256 SHA256:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB (ED25519)"
+    }
+  ],
+  "vuln": [
+    {
+      "name": "smb-vuln-ms17-010",
+      "description": "Detects MS17-010 SMB vulnerabilities.",
+      "example": "445/tcp open  microsoft-ds\n| smb-vuln-ms17-010: VULNERABLE\n|   MS17-010: Microsoft SMBv1 Multiple Vulnerabilities\n|_  State: VULNERABLE"
+    },
+    {
+      "name": "http-vuln-cve2009-3960",
+      "description": "Checks for directory traversal vulnerability in HTTP servers.",
+      "example": "80/tcp open  http\n| http-vuln-cve2009-3960:\n|   VULNERABLE: Directory traversal\n|_  State: VULNERABLE"
+    }
+  ],
+  "safe": [
+    {
+      "name": "ftp-anon",
+      "description": "Checks for anonymous FTP access.",
+      "example": "21/tcp open  ftp\n| ftp-anon: Anonymous FTP login allowed (FTP code 230)\n|_-rw-r--r--   1 ftp      ftp            0 Jan 01 00:00 readme.txt"
+    }
+  ]
+}
