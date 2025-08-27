@@ -174,14 +174,23 @@ export const ratePuzzle = (board: number[][]): { difficulty: string; steps: Step
 
 export const getHint = (
   board: number[][],
-): { r: number; c: number; value: number; technique: string } | null => {
+):
+  | { type: 'single'; r: number; c: number; value: number; technique: string }
+  | { type: 'pair'; cells: { r: number; c: number }[]; values: number[]; technique: string }
+  | null => {
   const grid = boardToString(board);
   const values = parseGrid(grid);
   if (!values) return null;
   for (const s of squares) {
     const [r, c] = squareToIndices(s);
     if (board[r][c] === 0 && values[s].length === 1) {
-      return { r, c, value: parseInt(values[s], 10), technique: 'single candidate' };
+      return {
+        type: 'single',
+        r,
+        c,
+        value: parseInt(values[s], 10),
+        technique: 'single candidate',
+      };
     }
   }
   for (const u of unitList) {
@@ -190,9 +199,37 @@ export const getHint = (
       if (places.length === 1) {
         const [r, c] = squareToIndices(places[0]);
         if (board[r][c] === 0) {
-          return { r, c, value: parseInt(d, 10), technique: 'hidden single' };
+          return {
+            type: 'single',
+            r,
+            c,
+            value: parseInt(d, 10),
+            technique: 'hidden single',
+          };
         }
       }
+    }
+  }
+  for (const u of unitList) {
+    const pairSquares = u.filter((s) => values[s].length === 2);
+    const seen: Record<string, string> = {};
+    for (const s of pairSquares) {
+      const val = values[s];
+      if (seen[val]) {
+        const other = seen[val];
+        const [r1, c1] = squareToIndices(s);
+        const [r2, c2] = squareToIndices(other);
+        return {
+          type: 'pair',
+          cells: [
+            { r: r1, c: c1 },
+            { r: r2, c: c2 },
+          ],
+          values: val.split('').map((n) => parseInt(n, 10)),
+          technique: 'naked pair',
+        };
+      }
+      seen[val] = s;
     }
   }
   return null;
