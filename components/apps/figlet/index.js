@@ -5,6 +5,7 @@ const fonts = ['Standard', 'Slant'];
 const FigletApp = () => {
   const [text, setText] = useState('');
   const [font, setFont] = useState(fonts[0]);
+  const [color, setColor] = useState('#ffffff');
   const [output, setOutput] = useState('');
   const workerRef = useRef(null);
 
@@ -41,8 +42,20 @@ const FigletApp = () => {
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
+        <input
+          type="color"
+          className="w-8 h-8 p-0 border-none bg-gray-700"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+        />
       </div>
-      <pre className="flex-1 overflow-auto p-2 whitespace-pre">{output}</pre>
+      <pre
+        key={`${output}-${color}`}
+        className="flex-1 overflow-auto p-2 whitespace-pre fade-in"
+        style={{ color }}
+      >
+        {output}
+      </pre>
     </div>
   );
 };
