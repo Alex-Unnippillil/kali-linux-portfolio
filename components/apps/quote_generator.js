@@ -61,6 +61,8 @@ const allOfflineQuotes = processQuotes(offlineQuotes);
 const QuoteGenerator = () => {
   const [quotes, setQuotes] = useState(allOfflineQuotes);
   const [current, setCurrent] = useState(null);
+  const [index, setIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
   const [fade, setFade] = useState(false);
@@ -126,25 +128,33 @@ const QuoteGenerator = () => {
       return;
     }
     const seed = new Date().toISOString().slice(0, 10);
-    const index =
+    const seedIndex =
       Math.abs(
         seed
           .split('')
           .reduce((a, c) => Math.imul(a, 31) + c.charCodeAt(0), 0)
       ) % filteredQuotes.length;
-    setCurrent(filteredQuotes[index]);
+    setIndex(seedIndex);
+    setCurrent(filteredQuotes[seedIndex]);
   }, [filteredQuotes]);
 
-  const changeQuote = () => {
+  useEffect(() => {
+    if (filteredQuotes.length) {
+      setCurrent(filteredQuotes[index % filteredQuotes.length]);
+    }
+  }, [index, filteredQuotes]);
+
+  const changeQuote = (dir = 1) => {
     if (!filteredQuotes.length) return;
-    const newQuote =
-      filteredQuotes[Math.floor(Math.random() * filteredQuotes.length)];
+    const newIndex =
+      (index + dir + filteredQuotes.length) % filteredQuotes.length;
     if (prefersReduced) {
-      setCurrent(newQuote);
+      setIndex(newIndex);
     } else {
+      setDirection(dir);
       setFade(true);
       setTimeout(() => {
-        setCurrent(newQuote);
+        setIndex(newIndex);
         setFade(false);
       }, 300);
     }
@@ -189,8 +199,10 @@ const QuoteGenerator = () => {
       <div className="w-full max-w-md flex flex-col items-center">
         <div
           id="quote-card"
-          className={`p-4 text-center transition-opacity duration-300 ${
-            fade && !prefersReduced ? 'opacity-0' : 'opacity-100'
+          className={`p-4 quote-generator-text transition-opacity transition-transform duration-300 ${
+            fade && !prefersReduced
+              ? `opacity-0 ${direction === 1 ? '-translate-x-4' : 'translate-x-4'}`
+              : 'opacity-100 translate-x-0'
           }`}
         >
           {current ? (
@@ -202,31 +214,12 @@ const QuoteGenerator = () => {
             <p>No quotes found.</p>
           )}
         </div>
-        <div className="flex flex-wrap justify-center gap-2 mt-4">
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={changeQuote}
-          >
-            New Quote
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={copyQuote}
-          >
-            Copy
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={tweetQuote}
-          >
-            Tweet
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={exportImage}
-          >
-            Image
-          </button>
+        <div className="quote-generator-controls">
+          <button onClick={() => changeQuote(-1)}>Prev</button>
+          <button onClick={() => changeQuote(1)}>Next</button>
+          <button onClick={copyQuote}>Copy</button>
+          <button onClick={tweetQuote}>Tweet</button>
+          <button onClick={exportImage}>Image</button>
         </div>
         <div className="mt-4 flex flex-col w-full gap-2">
           <input
