@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const BOARD_SIZE = 8;
 const MINES_COUNT = 10;
 
 // simple seeded pseudo random generator
-const mulberry32 = (a) => {
+const mulberry32 = (a) => () => {
   let t = (a += 0x6d2b79f5);
   t = Math.imul(t ^ (t >>> 15), t | 1);
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -165,6 +165,9 @@ const Minesweeper = () => {
   const [bv, setBV] = useState(0);
   const [codeInput, setCodeInput] = useState('');
   const [flags, setFlags] = useState(0);
+  const pressTimer = useRef(null);
+  const longPress = useRef(false);
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -280,6 +283,30 @@ const Minesweeper = () => {
     setBoard(newBoard);
   };
 
+  const handleTouchStart = (x, y) => {
+    longPress.current = false;
+    pressTimer.current = setTimeout(() => {
+      handleRightClick({ preventDefault: () => {} }, x, y);
+      longPress.current = true;
+    }, 500);
+  };
+
+  const handleTouchEnd = (x, y) => {
+    if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+    }
+    if (!longPress.current) {
+      handleClick(x, y);
+    }
+  };
+
+  const handleWheel = (e) => {
+    if (e.ctrlKey) {
+      e.preventDefault();
+      setScale((s) => Math.min(3, Math.max(0.5, s - e.deltaY * 0.01)));
+    }
+  };
+
   const reset = () => {
     setBoard(null);
     setStatus('ready');
@@ -357,8 +384,19 @@ const Minesweeper = () => {
         </button>
       </div>
       <div className="mb-2">Mines: {MINES_COUNT - flags}</div>
+      <div data-testid="timer" className="mb-2">
+        Time: {status === 'playing' ? elapsed.toFixed(1) : '0.0'}s
+      </div>
       <div className="mb-2">3BV: {bv} | Best: {bestTime ? bestTime.toFixed(2) : '--'}s{status === 'won' ? ` | Time: ${elapsed.toFixed(2)}s` : ''}</div>
-      <div className="grid grid-cols-8 gap-1" style={{ width: 'fit-content' }}>
+      <div
+        className="overflow-auto"
+        onWheel={handleWheel}
+        style={{ touchAction: 'none' }}
+      >
+        <div
+          className="grid grid-cols-8 gap-1"
+          style={{ width: 'fit-content', transform: `scale(${scale})`, transformOrigin: '0 0' }}
+        >
         {Array.from({ length: BOARD_SIZE }).map((_, x) =>
           Array.from({ length: BOARD_SIZE }).map((_, y) => {
             const cell = board ? board[x][y] : { revealed: false, flagged: false, adjacent: 0, mine: false };
@@ -373,6 +411,9 @@ const Minesweeper = () => {
                 key={`${x}-${y}`}
                 onClick={() => handleClick(x, y)}
                 onContextMenu={(e) => handleRightClick(e, x, y)}
+                onTouchStart={() => handleTouchStart(x, y)}
+                onTouchEnd={() => handleTouchEnd(x, y)}
+                data-testid={`cell-${x}-${y}`}
                 className={`h-8 w-8 flex items-center justify-center text-sm font-bold ${cell.revealed ? 'bg-gray-400' : 'bg-gray-700 hover:bg-gray-600'}`}
               >
                 {display}
@@ -380,6 +421,7 @@ const Minesweeper = () => {
             );
           }),
         )}
+        </div>
       </div>
       <div className="mt-4 mb-2">
         {status === 'ready'
@@ -400,4 +442,5 @@ const Minesweeper = () => {
   );
 };
 
+export { BOARD_SIZE, revealCell, generateBoard };
 export default Minesweeper;
