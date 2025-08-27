@@ -6,6 +6,7 @@ import 'tailwindcss/tailwind.css';
 import '../styles/index.css';
 import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
+import '../styles/globals.css';
 import { SettingsProvider } from '../hooks/useSettings';
 
 function MyApp({ Component, pageProps }: AppProps) {
@@ -22,8 +23,10 @@ function MyApp({ Component, pageProps }: AppProps) {
   }, []);
   return (
     <SettingsProvider>
-      <Component {...pageProps} />
-      <Analytics />
+      <div className="app-root">
+        <Component {...pageProps} />
+        <Analytics />
+      </div>
     </SettingsProvider>
   );
 }
