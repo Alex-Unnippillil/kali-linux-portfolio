@@ -19,7 +19,7 @@ const InfoFrame = ({ title, link, description }: FrameProps) => (
 
 const SecurityEducation = () => (
   <main>
-    <div style={{ backgroundColor: '#fcd34d', padding: '1rem', textAlign: 'center', fontWeight: 'bold' }}>
+    <div style={{ backgroundColor: '#fcd34d', padding: 'var(--space-4)', textAlign: 'center', fontWeight: 'bold' }}>
       Use Kali Linux and related tools legally and ethically with proper authorization.
     </div>
     <div className="grid gap-4 p-4 md:grid-cols-2">

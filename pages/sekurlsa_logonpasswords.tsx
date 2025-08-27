@@ -72,7 +72,7 @@ const SekurlsaLogonpasswords = () => {
   return (
     <>
       <Meta />
-      <div style={{ backgroundColor: '#fcd34d', padding: '1rem', textAlign: 'center', fontWeight: 'bold' }}>
+        <div style={{ backgroundColor: '#fcd34d', padding: 'var(--space-4)', textAlign: 'center', fontWeight: 'bold' }}>
         Sanitized credential data for educational use only.
       </div>
       <main className="grid gap-4 p-4 md:grid-cols-2">
