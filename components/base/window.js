@@ -4,6 +4,10 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 
+const SECURITY_APPS = new Set([
+    'autopsy','beef','bluetooth','dsniff','ettercap','ghidra','hashcat','hydra','john','kismet','metasploit','msf-post','mimikatz','nessus','nmap-nse','openvas','radare2','reaver','reconng','volatility','wireshark','security-tools'
+]);
+
 export class Window extends Component {
     constructor(props) {
         super(props);
@@ -245,9 +249,9 @@ export class Window extends Component {
                         <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
                         {(this.id === "settings"
                             ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                            : <WindowMainScreen screen={this.props.screen} title={this.props.title} id={this.props.id}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
+                                openApp={this.props.openApp} demoMode={this.props.demoMode} />)}
                     </div>
                 </Draggable >
             </>
@@ -275,6 +279,11 @@ export class WindowYBorder extends Component {
         this.trpImg = new window.Image(0, 0);
         this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
         this.trpImg.style.opacity = 0;
+    }
+    componentWillUnmount() {
+        if (this.originalFetch) {
+            window.fetch = this.originalFetch;
+        }
     }
     render() {
         return (
@@ -387,11 +396,34 @@ export class WindowMainScreen extends Component {
         setTimeout(() => {
             this.setState({ setDarkBg: true });
         }, 3000);
+        if (this.props.demoMode && SECURITY_APPS.has(this.props.id)) {
+            this.originalFetch = window.fetch;
+            window.fetch = (input, init) => {
+                const url = typeof input === 'string' ? input : input.url;
+                if (url.startsWith('/api/')) {
+                    const path = url.split('?')[0].replace('/api', '');
+                    return this.originalFetch(`/demo${path}.json`).catch(() => this.originalFetch(`/demo${path}.txt`));
+                }
+                if (/^https?:/i.test(url)) {
+                    return Promise.resolve(new Response('', { status: 200 }));
+                }
+                return this.originalFetch(input, init);
+            };
+        }
+    }
+    componentWillUnmount() {
+        if (this.originalFetch) {
+            window.fetch = this.originalFetch;
+        }
     }
     render() {
+        const isSecurity = SECURITY_APPS.has(this.props.id);
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+            <div className={"relative w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}> 
+                {this.props.demoMode && isSecurity && (
+                    <div className="absolute top-0 right-0 m-2 px-2 py-1 bg-red-600 text-white text-xs font-bold rounded">Demo Mode</div>
+                )}
+                {this.props.screen(this.props.addFolder, this.props.openApp, this.props.demoMode)}
             </div>
         )
     }

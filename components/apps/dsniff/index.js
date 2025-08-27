@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
-import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
+import urlsnarfFixture from '../../../public/demo/dsniff/urlsnarf.json';
+import arpspoofFixture from '../../../public/demo/dsniff/arpspoof.json';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 const parseLines = (text) =>

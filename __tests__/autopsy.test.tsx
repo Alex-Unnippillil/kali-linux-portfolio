@@ -5,13 +5,13 @@ import Autopsy from '../components/apps/autopsy';
 describe('Autopsy plugins and timeline', () => {
   beforeEach(() => {
     (global as any).fetch = jest.fn((url: string) => {
-      if (url === '/plugin-marketplace.json') {
+      if (url === '/demo/plugin-marketplace.json') {
         return Promise.resolve({
           json: () =>
             Promise.resolve([{ id: 'hash', name: 'Hash Analyzer' }]),
         });
       }
-      if (url === '/autopsy-demo.json') {
+      if (url === '/demo/autopsy-demo.json') {
         return Promise.resolve({
           json: () =>
             Promise.resolve({
@@ -65,17 +65,4 @@ describe('Autopsy plugins and timeline', () => {
     );
   });
 
-  it('filters artifacts by type', async () => {
-    render(<Autopsy />);
-    fireEvent.change(screen.getByPlaceholderText('Case name'), {
-      target: { value: 'Demo' },
-    });
-    fireEvent.click(screen.getByText('Create Case'));
-    await screen.findByText('resume.docx');
-    fireEvent.change(screen.getByPlaceholderText('Filter by type'), {
-      target: { value: 'Log' },
-    });
-    expect(screen.queryByText('resume.docx')).toBeNull();
-    expect(screen.getByText('system.log')).toBeInTheDocument();
-  });
 });

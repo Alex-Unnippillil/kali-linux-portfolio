@@ -17,7 +17,7 @@ const NiktoReport: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch('/demo-data/nikto/report.json');
+        const res = await fetch('/demo/nikto/report.json');
         const data = await res.json();
         setFindings(data);
       } catch {

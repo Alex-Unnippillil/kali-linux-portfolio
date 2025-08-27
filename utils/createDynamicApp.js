@@ -19,7 +19,7 @@ export const createDynamicApp = (path, name) =>
     }
   );
 
-export const createDisplay = (Component) => (addFolder, openApp) => (
-  <Component addFolder={addFolder} openApp={openApp} />
+export const createDisplay = (Component) => (addFolder, openApp, demoMode) => (
+  <Component addFolder={addFolder} openApp={openApp} demoMode={demoMode} />
 );
 

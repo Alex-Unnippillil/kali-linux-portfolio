@@ -165,7 +165,7 @@ function Autopsy() {
   const parseWorkerRef = useRef(null);
 
   useEffect(() => {
-    fetch('/plugin-marketplace.json')
+    fetch('/demo/plugin-marketplace.json')
       .then((res) => res.json())
       .then(setPlugins)
       .catch(() => setPlugins([]));
@@ -188,7 +188,7 @@ function Autopsy() {
 
   useEffect(() => {
     if (!currentCase) return;
-    fetch('/autopsy-demo.json')
+    fetch('/demo/autopsy-demo.json')
       .then(async (res) => {
         const text = res.text
           ? await res.text()

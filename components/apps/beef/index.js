@@ -14,8 +14,8 @@ export default function Beef() {
   const prevHooks = useRef(0);
   const prevSteps = useRef(0);
 
-  const hooksUrl = '/demo-data/beef/hooks.json';
-  const modulesUrl = '/demo-data/beef/modules.json';
+  const hooksUrl = '/demo/beef/hooks.json';
+  const modulesUrl = '/demo/beef/modules.json';
 
   const getStatus = (hook) => {
     if (hook.status) return hook.status;

@@ -21,7 +21,7 @@ const NmapNSEPage: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch('/demo-data/nmap/scripts.json');
+        const res = await fetch('/demo/nmap/scripts.json');
         const json = await res.json();
         setData(json);
       } catch (e) {

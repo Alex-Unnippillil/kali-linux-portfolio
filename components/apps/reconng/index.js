@@ -54,7 +54,7 @@ const ReconNG = () => {
   }, []);
 
   useEffect(() => {
-    fetch('/reconng-marketplace.json')
+    fetch('/demo/reconng-marketplace.json')
       .then((r) => r.json())
       .then((d) => setMarketplace(d.modules || []))
       .catch(() => {});

@@ -1,0 +1,1 @@
+{ "scans": [{ "id": 1, "name": "Demo Scan", "status": "completed", "cvss": 5.0, "severity": "Medium" }] }

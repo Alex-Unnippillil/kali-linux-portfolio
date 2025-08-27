@@ -284,6 +284,7 @@ export class Desktop extends Component {
     }
 
     renderWindows = () => {
+        const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
         let windowsJsx = [];
         apps.forEach((app, index) => {
             if (this.state.closed_windows[app.id] === false) {
@@ -304,6 +305,7 @@ export class Desktop extends Component {
                     allowMaximize: app.allowMaximize,
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
+                    demoMode,
                 }
 
                 windowsJsx.push(

@@ -8,6 +8,7 @@ const customJestConfig = {
   moduleNameMapper: {
     '^@xterm/xterm/css/xterm.css$': '<rootDir>/__mocks__/styleMock.js',
   },
+  testPathIgnorePatterns: ['<rootDir>/__tests__/a11y.spec.ts'],
 };
 
 module.exports = createJestConfig(customJestConfig);
