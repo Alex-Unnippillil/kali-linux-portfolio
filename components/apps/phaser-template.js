@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Howl } from 'howler';
+import { dailySeed, generateSeedLink } from '../../utils/seed';
 
 // IndexedDB helpers for persistent highscore
 const DB_NAME = 'phaser-template';
@@ -45,8 +46,47 @@ async function setHighscore(score) {
   }
 }
 
-// Daily challenge seed based on YYYY-MM-DD
-export const dailySeed = new Date().toISOString().slice(0, 10);
+// Lightweight localStorage helpers for auto-save and leaderboards
+const STATE_KEY = 'phaser-template-state';
+const BOARD_KEY = 'phaser-template-board';
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STATE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveState(state) {
+  try {
+    localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  } catch {
+    // ignore
+  }
+}
+
+function updateLeaderboard(score) {
+  try {
+    const raw = localStorage.getItem(BOARD_KEY);
+    const board = raw ? JSON.parse(raw) : [];
+    board.push(score);
+    board.sort((a, b) => b - a);
+    localStorage.setItem(BOARD_KEY, JSON.stringify(board.slice(0, 10)));
+  } catch {
+    // ignore
+  }
+}
+
+// Re-export the dailySeed so games can share the same deterministic seed.
+// This comes from utils/seed and is based on the current date.
+export { dailySeed } from '../../utils/seed';
+
+// Shareable seed links allow players to challenge friends.
+export function getShareLink(seed = dailySeed) {
+  return generateSeedLink(seed);
+}
 
 // Simple Phaser scene demonstrating fixed timestep physics and controls
 class GameScene extends Phaser.Scene {
@@ -62,6 +102,12 @@ class GameScene extends Phaser.Scene {
     this.highscore = await getHighscore();
     this.scoreText = this.add.text(10, 10, 'Score: 0', { color: '#fff' });
     this.highText = this.add.text(10, 30, `Highscore: ${this.highscore}`, { color: '#fff' });
+
+    const saved = loadState();
+    if (saved) {
+      this.score = saved.score || 0;
+      this.scoreText.setText(`Score: ${this.score}`);
+    }
 
     // Input setup
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -82,6 +128,7 @@ class GameScene extends Phaser.Scene {
     this.jumpSound.play();
     this.score += 1;
     this.scoreText.setText(`Score: ${this.score}`);
+    saveState({ score: this.score });
   }
 
   update(time, delta) {
@@ -107,6 +154,7 @@ class GameScene extends Phaser.Scene {
       this.highscore = this.score;
       this.highText.setText(`Highscore: ${this.highscore}`);
     }
+    updateLeaderboard(this.score);
   }
 }
 
@@ -120,5 +168,12 @@ export function startPhaserGame(parent) {
     physics: { default: 'arcade' },
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   };
-  return new Phaser.Game(config);
+  const game = new Phaser.Game(config);
+  // Auto-pause when the tab loses visibility
+  const handleVisibility = () => {
+    if (document.hidden) game.scene.pause();
+    else game.scene.resume();
+  };
+  document.addEventListener('visibilitychange', handleVisibility);
+  return game;
 }
