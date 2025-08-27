@@ -199,6 +199,23 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: scaleAppImage 400ms 1 forwards;
 }
 
+/* Asteroids layering */
+.asteroids-container {
+    position: relative;
+}
+
+.asteroids-canvas,
+.asteroids-particle-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.asteroids-particle-canvas {
+    pointer-events: none;
+    z-index: 1;
+}
+
 @keyframes scaleAppImage {
     from {
         transform: translate(-50%, -50%) scale(1);

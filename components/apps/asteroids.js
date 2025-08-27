@@ -92,6 +92,7 @@ class Quadtree {
 
 const Asteroids = () => {
   const canvasRef = useRef(null);
+  const particlesCanvasRef = useRef(null);
   const requestRef = useRef();
   const audioCtx = useRef(null);
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
@@ -102,13 +103,18 @@ const Asteroids = () => {
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    const particlesCanvas = particlesCanvasRef.current;
     const ctx = canvas.getContext('2d');
+    const pCtx = particlesCanvas.getContext('2d');
 
     function resize() {
       const { clientWidth, clientHeight } = canvas;
       canvas.width = clientWidth * dpr;
       canvas.height = clientHeight * dpr;
+      particlesCanvas.width = clientWidth * dpr;
+      particlesCanvas.height = clientHeight * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     resize();
@@ -143,12 +149,12 @@ const Asteroids = () => {
     let multiplierTimer = 0;
 
     // Particle pooling
-    const spawnParticles = (x, y, count, color = 'white') => {
+    const spawnParticles = (x, y, count, color = 'white', maxSpeed = 3) => {
       for (let i = 0; i < particles.length && count > 0; i += 1) {
         const p = particles[i];
         if (!p.active) {
           const a = Math.random() * Math.PI * 2;
-          const speed = Math.random() * 2 + 1;
+          const speed = Math.random() * maxSpeed;
           p.active = true;
           p.x = x;
           p.y = y;
@@ -235,9 +241,9 @@ const Asteroids = () => {
       if (ship.hitCooldown > 0) return;
       if (ship.shield > 0) {
         ship.shield = 0;
-        spawnParticles(ship.x, ship.y, 20, 'cyan');
+        spawnParticles(ship.x, ship.y, 20, 'cyan', 3);
       } else {
-        spawnParticles(ship.x, ship.y, 40, 'orange');
+        spawnParticles(ship.x, ship.y, 40, 'orange', 4);
         lives -= 1;
         ga.death();
         playSound(110);
@@ -262,7 +268,7 @@ const Asteroids = () => {
 
     function destroyAsteroid(index) {
       const a = asteroids[index];
-      spawnParticles(a.x, a.y, 20, 'white');
+      spawnParticles(a.x, a.y, Math.round(a.r * 2), 'white', 4);
       score += 100 * multiplier;
       multiplier = Math.min(multiplier + 1, MAX_MULTIPLIER);
       multiplierTimer = MULTIPLIER_TIMEOUT;
@@ -288,7 +294,7 @@ const Asteroids = () => {
     }
 
     function destroyUfo() {
-      spawnParticles(ufo.x, ufo.y, 40, 'purple');
+      spawnParticles(ufo.x, ufo.y, 40, 'purple', 4);
       ufo.active = false;
       playSound(220);
       score += 500 * multiplier;
@@ -327,7 +333,7 @@ const Asteroids = () => {
       if (thrust > 0) {
         ship.velX += Math.cos(ship.angle) * THRUST * thrust;
         ship.velY += Math.sin(ship.angle) * THRUST * thrust;
-        spawnParticles(ship.x - Math.cos(ship.angle) * 10, ship.y - Math.sin(ship.angle) * 10, 1, 'gray');
+        spawnParticles(ship.x - Math.cos(ship.angle) * 10, ship.y - Math.sin(ship.angle) * 10, 1, 'gray', 1);
       }
       ship.velX *= INERTIA;
       ship.velY *= INERTIA;
@@ -428,6 +434,7 @@ const Asteroids = () => {
 
       // Rendering
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      pCtx.clearRect(0, 0, particlesCanvas.width, particlesCanvas.height);
 
       // Ship
       ctx.save();
@@ -489,8 +496,8 @@ const Asteroids = () => {
       // Particles
       particles.forEach((p) => {
         if (!p.active) return;
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, 2, 2);
+        pCtx.fillStyle = p.color;
+        pCtx.fillRect(p.x, p.y, 2, 2);
       });
 
       // HUD
@@ -523,7 +530,10 @@ const Asteroids = () => {
 
   return (
     <GameLayout paused={paused} onPause={togglePause} onRestart={restartGame}>
-      <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />
+      <div className="asteroids-container w-full h-full">
+        <canvas ref={canvasRef} className="asteroids-canvas bg-black w-full h-full touch-none" />
+        <canvas ref={particlesCanvasRef} className="asteroids-particle-canvas w-full h-full touch-none" />
+      </div>
     </GameLayout>
   );
 };
