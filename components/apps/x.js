@@ -1,22 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useSettings } from '../../hooks/useSettings';
 
 const MAX_CHARS = 280;
 const RADIUS = 18;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function XApp() {
-  const { theme } = useSettings();
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [timelineKey, setTimelineKey] = useState(0);
-  const [timelineLoaded, setTimelineLoaded] = useState(false);
-  const [scriptError, setScriptError] = useState(false);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [iframeError, setIframeError] = useState(false);
   const [media, setMedia] = useState([]);
   const [status, setStatus] = useState('');
   const [strokeOffset, setStrokeOffset] = useState(CIRCUMFERENCE);
+  const [query, setQuery] = useState('@AUnnippillil');
   const fileInputRef = useRef(null);
-  const timelineRef = useRef(null);
   const panelRef = useRef(null);
   const [shouldLoadTimeline, setShouldLoadTimeline] = useState(false);
 
@@ -88,47 +86,9 @@ export default function XApp() {
   }, []);
 
   useEffect(() => {
-    if (!shouldLoadTimeline) return;
-    const src = 'https://platform.twitter.com/widgets.js';
-    let script = document.querySelector(`script[src="${src}"]`);
-    let timeout;
-    const handleError = () => {
-      clearTimeout(timeout);
-      setScriptError(true);
-    };
-    const loadTimeline = () => {
-      clearTimeout(timeout);
-      if (!timelineRef.current || !window.twttr) return;
-      setScriptError(false);
-      timelineRef.current.innerHTML = '';
-      setTimelineLoaded(false);
-      window.twttr.widgets
-        .createTimeline(
-          { sourceType: 'profile', screenName: 'AUnnippillil' },
-          timelineRef.current,
-          { chrome: 'noheader noborders', theme }
-        )
-        .then(() => setTimelineLoaded(true))
-        .catch(() => setScriptError(true));
-    };
-    if (script && window.twttr) {
-      loadTimeline();
-    } else {
-      if (!script) {
-        script = document.createElement('script');
-        script.src = src;
-        script.async = true;
-        document.body.appendChild(script);
-      }
-      timeout = window.setTimeout(handleError, 10000);
-      script.addEventListener('load', loadTimeline, { once: true });
-      script.addEventListener('error', handleError, { once: true });
-    }
-    return () => {
-      clearTimeout(timeout);
-      script && script.removeEventListener('error', handleError);
-    };
-  }, [theme, timelineKey, shouldLoadTimeline]);
+    setIframeLoaded(false);
+    setIframeError(false);
+  }, [timelineKey, query]);
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col tweet-container">
@@ -225,40 +185,72 @@ export default function XApp() {
           {status}
         </div>
       </form>
-      <div ref={panelRef} className="flex-1 relative">
-        {!timelineLoaded && !scriptError && (
-          <ul className="p-4 space-y-4 tweet-feed" aria-hidden="true">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <li
-                key={i}
-                className="flex gap-4 border-b border-gray-700 pb-4 last:border-b-0"
+      <div ref={panelRef} className="flex-1 flex flex-col">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setTimelineKey((k) => k + 1);
+          }}
+          className="p-2 border-b border-gray-600 bg-gray-900"
+        >
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="@user or #hashtag"
+            className="w-full p-2 rounded bg-gray-800 text-gray-100 placeholder-gray-400"
+            style={{ maxInlineSize: '60ch' }}
+          />
+        </form>
+        <div className="flex-1 relative">
+          {!iframeLoaded && !iframeError && (
+            <ul className="p-4 space-y-4 tweet-feed" aria-hidden="true">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <li
+                  key={i}
+                  className="flex gap-4 border-b border-gray-700 pb-4 last:border-b-0"
+                >
+                  <div className="w-12 h-12 rounded-full bg-gray-700 motion-safe:animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-700 rounded w-3/4 motion-safe:animate-pulse" />
+                    <div className="h-4 bg-gray-700 rounded w-1/2 motion-safe:animate-pulse" />
+                    <div className="h-4 bg-gray-700 rounded w-full motion-safe:animate-pulse" />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {shouldLoadTimeline && !iframeError && (
+            <iframe
+              key={`${timelineKey}-${query}`}
+              src={`https://publish.twitter.com/?query=${encodeURIComponent(
+                query
+              )}&widget=Timeline`}
+              title="X timeline"
+              className={`${iframeLoaded ? 'block h-full w-full' : 'hidden'} tweet-feed`}
+              onLoad={() => setIframeLoaded(true)}
+              onError={() => setIframeError(true)}
+            />
+          )}
+          {iframeError && (
+            <div className="p-4 text-center space-y-2">
+              <iframe
+                src="/x-snapshot.html"
+                title="X snapshot"
+                className="w-full h-96"
+              />
+              <a
+                href={query.startsWith('#')
+                  ? `https://x.com/hashtag/${query.slice(1)}`
+                  : `https://x.com/${query.replace(/^@/, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline text-blue-500"
               >
-                <div className="w-12 h-12 rounded-full bg-gray-700 motion-safe:animate-pulse" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-700 rounded w-3/4 motion-safe:animate-pulse" />
-                  <div className="h-4 bg-gray-700 rounded w-1/2 motion-safe:animate-pulse" />
-                  <div className="h-4 bg-gray-700 rounded w-full motion-safe:animate-pulse" />
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div
-          ref={timelineRef}
-          className={`${timelineLoaded ? 'block h-full' : 'hidden'} tweet-feed`}
-        />
-        {scriptError && (
-          <div className="p-4 text-center">
-            <a
-              href="https://x.com/AUnnippillil"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline text-blue-500"
-            >
-              Open on x.com
-            </a>
-          </div>
-        )}
+                Open externally
+              </a>
+            </div>
+          )}
+        </div>
       </div>
       <style jsx>{`
         .tweet-container {
