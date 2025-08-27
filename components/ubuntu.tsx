@@ -28,7 +28,11 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
   }
 
   componentDidMount(): void {
-    this.getLocalData();
+    try {
+      this.getLocalData();
+    } catch {
+      this.setTimeOutBootScreen();
+    }
   }
 
   setTimeOutBootScreen = (): void => {
@@ -38,18 +42,38 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
   };
 
   getLocalData = (): void => {
-    const booting_screen = localStorage.getItem('booting_screen');
+    let booting_screen: string | null = null;
+    try {
+      booting_screen = localStorage.getItem('booting_screen');
+    } catch {
+      this.setTimeOutBootScreen();
+      return;
+    }
     if (booting_screen !== null && booting_screen !== undefined) {
       this.setState({ booting_screen: false });
     } else {
-      localStorage.setItem('booting_screen', 'false');
+      try {
+        localStorage.setItem('booting_screen', 'false');
+      } catch {
+        // ignore persistence when storage is unavailable
+      }
       this.setTimeOutBootScreen();
     }
 
-    const shut_down = localStorage.getItem('shut-down');
+    let shut_down: string | null = null;
+    try {
+      shut_down = localStorage.getItem('shut-down');
+    } catch {
+      return;
+    }
     if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
     else {
-      const screen_locked = localStorage.getItem('screen-locked');
+      let screen_locked: string | null = null;
+      try {
+        screen_locked = localStorage.getItem('screen-locked');
+      } catch {
+        return;
+      }
       if (screen_locked !== null && screen_locked !== undefined) {
         this.setState({ screen_locked: screen_locked === 'true' });
       }
