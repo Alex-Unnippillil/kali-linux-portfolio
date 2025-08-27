@@ -1,45 +1,18 @@
 import React from 'react';
-import { render, fireEvent, screen, act } from '@testing-library/react';
+import { render, fireEvent, screen } from '@testing-library/react';
 import Dsniff from '../components/apps/dsniff';
 
 describe('Dsniff component', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-    global.fetch = jest
-      .fn()
-      .mockResolvedValue({ text: () => Promise.resolve('') }) as any;
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
-    jest.resetAllMocks();
-  });
-
-  it('toggles simulation mode', () => {
+  it('shows fixture logs', async () => {
     render(<Dsniff />);
-    expect(screen.getByText('No data')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText('Simulation'));
-    act(() => {
-      jest.advanceTimersByTime(1000);
-    });
-    expect(screen.queryByText('No data')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText('Simulation'));
-    act(() => {
-      jest.advanceTimersByTime(0);
-    });
-    expect(screen.getByText('No data')).toBeInTheDocument();
+    expect(await screen.findByText('example.com')).toBeInTheDocument();
+    expect(await screen.findByText('test.com')).toBeInTheDocument();
   });
 
-  it('applies host filter', () => {
+  it('applies host filter', async () => {
     render(<Dsniff />);
-    fireEvent.click(screen.getByLabelText('Simulation'));
-    act(() => {
-      jest.advanceTimersByTime(2000);
-    });
+    await screen.findByText('example.com');
 
-    // Apply host filter
     fireEvent.change(screen.getByPlaceholderText('Value'), {
       target: { value: 'example.com' },
     });

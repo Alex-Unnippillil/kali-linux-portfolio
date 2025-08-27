@@ -1,9 +1,10 @@
+// Simulator: displays sample credential artifacts. For educational use only.
 import React, { useState, useEffect } from 'react';
 
 const artifacts = [
-  { label: 'SAM Database (simulation)', found: true },
-  { label: 'LSA Secrets (simulation)', found: true },
-  { label: 'DPAPI Master Keys (simulation)', found: false },
+  { label: 'SAM Database (sample)', found: true },
+  { label: 'LSA Secrets (sample)', found: true },
+  { label: 'DPAPI Master Keys (sample)', found: false },
 ];
 
 const CredentialArtifactLocator = () => {
@@ -47,6 +48,7 @@ const CredentialArtifactLocator = () => {
   return (
     <div className="mt-4 p-2 bg-ub-dark text-white rounded">
       <h2 className="text-lg mb-2">Credential Artifact Locator</h2>
+      <p className="text-xs mb-2 italic">Sample data only; no real credentials.</p>
       <button
         className="bg-green-600 rounded px-2 py-1 mb-2"
         onClick={handleScan}

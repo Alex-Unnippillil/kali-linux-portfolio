@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 
@@ -13,6 +13,9 @@ export default function ProjectGallery() {
   const [ariaMessage, setAriaMessage] = useState('');
   const [selected, setSelected] = useState(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [columns, setColumns] = useState(1);
+  const itemRefs = useRef([]);
+  itemRefs.current = [];
 
   useEffect(() => {
     ReactGA.event({ category: 'Application', action: 'Loaded Project Gallery' });
@@ -21,6 +24,17 @@ export default function ProjectGallery() {
         window.matchMedia('(prefers-reduced-motion: reduce)').matches
       );
     }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      const w = window.innerWidth;
+      setColumns(w >= 1024 ? 3 : w >= 640 ? 2 : 1);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -116,6 +130,47 @@ export default function ProjectGallery() {
     ? ''
     : 'transition transform duration-300 ease-out';
 
+  const handleKeyDown = (e, index, project) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setSelected(project);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      itemRefs.current[index + 1]?.focus();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      itemRefs.current[index - 1]?.focus();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      itemRefs.current[index + columns]?.focus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      itemRefs.current[index - columns]?.focus();
+    }
+  };
+
+  useEffect(() => {
+    if (!selected) return;
+    const handle = (e) => {
+      if (e.key === 'Escape') {
+        setSelected(null);
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        const idx = display.findIndex((p) => p.id === selected.id);
+        if (e.key === 'ArrowRight') {
+          const next = display[(idx + 1) % display.length];
+          setSelected(next);
+          itemRefs.current[(idx + 1) % display.length]?.focus();
+        } else {
+          const prev = display[(idx - 1 + display.length) % display.length];
+          setSelected(prev);
+          itemRefs.current[(idx - 1 + display.length) % display.length]?.focus();
+        }
+      }
+    };
+    document.addEventListener('keydown', handle);
+    return () => document.removeEventListener('keydown', handle);
+  }, [selected, display]);
+
   return (
     <div className="p-4 w-full h-full overflow-y-auto bg-ub-cool-grey text-white">
       <div aria-live="polite" className="sr-only">
@@ -161,9 +216,12 @@ export default function ProjectGallery() {
             ))}
           </div>
           <div className="columns-1 sm:columns-2 lg:columns-3 gap-4">
-            {display.map((project) => (
+            {display.map((project, index) => (
               <div
                 key={project.id}
+                ref={(el) => (itemRefs.current[index] = el)}
+                tabIndex={0}
+                onKeyDown={(e) => handleKeyDown(e, index, project)}
                 className={`mb-4 break-inside-avoid rounded-md bg-ub-grey bg-opacity-20 border border-gray-700 overflow-hidden flex flex-col opacity-100 translate-y-0 ${
                   project.status === 'entering'
                     ? 'opacity-0 translate-y-2'
@@ -181,6 +239,7 @@ export default function ProjectGallery() {
                     fill
                     className="object-cover"
                     sizes="100%"
+                    loading="lazy"
                   />
                 </div>
                 <div className="p-3 flex flex-col flex-grow">

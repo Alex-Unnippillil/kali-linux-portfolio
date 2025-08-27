@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useTheme } from '../../hooks/useTheme';
+import { useSettings } from '../../hooks/useSettings';
 
 const MAX_CHARS = 280;
 const RADIUS = 18;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function XApp() {
-  const { theme } = useTheme();
+  const { theme } = useSettings();
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [timelineKey, setTimelineKey] = useState(0);
@@ -17,6 +17,8 @@ export default function XApp() {
   const [strokeOffset, setStrokeOffset] = useState(CIRCUMFERENCE);
   const fileInputRef = useRef(null);
   const timelineRef = useRef(null);
+  const panelRef = useRef(null);
+  const [shouldLoadTimeline, setShouldLoadTimeline] = useState(false);
 
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
@@ -75,10 +77,27 @@ export default function XApp() {
   };
 
   useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setShouldLoadTimeline(true);
+        observer.disconnect();
+      }
+    });
+    if (panelRef.current) observer.observe(panelRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!shouldLoadTimeline) return;
     const src = 'https://platform.twitter.com/widgets.js';
     let script = document.querySelector(`script[src="${src}"]`);
-    const handleError = () => setScriptError(true);
+    let timeout;
+    const handleError = () => {
+      clearTimeout(timeout);
+      setScriptError(true);
+    };
     const loadTimeline = () => {
+      clearTimeout(timeout);
       if (!timelineRef.current || !window.twttr) return;
       setScriptError(false);
       timelineRef.current.innerHTML = '';
@@ -101,13 +120,15 @@ export default function XApp() {
         script.async = true;
         document.body.appendChild(script);
       }
+      timeout = window.setTimeout(handleError, 10000);
       script.addEventListener('load', loadTimeline, { once: true });
       script.addEventListener('error', handleError, { once: true });
     }
     return () => {
+      clearTimeout(timeout);
       script && script.removeEventListener('error', handleError);
     };
-  }, [theme, timelineKey]);
+  }, [theme, timelineKey, shouldLoadTimeline]);
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col">
@@ -203,7 +224,7 @@ export default function XApp() {
           {status}
         </div>
       </form>
-      <div className="flex-1 relative">
+      <div ref={panelRef} className="flex-1 relative">
         {!timelineLoaded && !scriptError && (
           <ul className="p-4 space-y-4" aria-hidden="true">
             {Array.from({ length: 3 }).map((_, i) => (

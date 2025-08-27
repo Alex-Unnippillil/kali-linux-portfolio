@@ -10,6 +10,7 @@ const HexEditor = ({ hex }) => {
   const miniMapRef = useRef(null);
   const containerRef = useRef(null);
   const prefersReduced = useRef(false);
+  const visibleRef = useRef(true);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -31,7 +32,18 @@ const HexEditor = ({ hex }) => {
   }, []);
 
   useEffect(() => {
-    if (workerRef.current) workerRef.current.postMessage(hex);
+    const handleVis = () => {
+      const isVisible = document.visibilityState === 'visible';
+      visibleRef.current = isVisible;
+      workerRef.current?.postMessage({ type: isVisible ? 'resume' : 'pause' });
+    };
+    document.addEventListener('visibilitychange', handleVis);
+    return () => document.removeEventListener('visibilitychange', handleVis);
+  }, []);
+
+  useEffect(() => {
+    if (workerRef.current && visibleRef.current)
+      workerRef.current.postMessage({ type: 'hex', hex });
   }, [hex]);
 
   useEffect(() => {
@@ -58,7 +70,7 @@ const HexEditor = ({ hex }) => {
       }
     };
     if (prefersReduced.current) draw();
-    else raf = requestAnimationFrame(draw);
+    else if (visibleRef.current) raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
   }, [bytes, selection]);
 

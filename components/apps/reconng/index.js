@@ -30,10 +30,28 @@ const ReconNG = () => {
   const [graphElements, setGraphElements] = useState([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const cyRef = useRef(null);
+  const [focusedNodeIndex, setFocusedNodeIndex] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [view, setView] = useState('run');
   const [marketplace, setMarketplace] = useState([]);
   const [apiKeys, setApiKeys] = usePersistentState('reconng-api-keys', {});
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = (input, init) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (/^https?:/i.test(url) && !url.startsWith(window.location.origin) && !url.startsWith('/')) {
+          return Promise.reject(new Error('Outbound requests blocked'));
+        }
+        return originalFetch(input, init);
+      };
+      return () => {
+        window.fetch = originalFetch;
+      };
+    }
+    return undefined;
+  }, []);
 
   useEffect(() => {
     fetch('/reconng-marketplace.json')
@@ -61,11 +79,15 @@ const ReconNG = () => {
           animate: !prefersReducedMotion,
         });
         layout.run();
+        const nodes = cyRef.current.nodes().filter((n) => !n.isParent());
+        nodes.unselect();
+        nodes[0]?.select();
       });
     }
     const nodeCount = graphElements.filter((el) => !el.data?.source).length;
     const edgeCount = graphElements.filter((el) => el.data?.source).length;
     setAriaMessage(`Graph updated with ${nodeCount} nodes and ${edgeCount} edges.`);
+    setFocusedNodeIndex(0);
   }, [graphElements, prefersReducedMotion]);
 
   const allModules = [...modules, ...marketplace];
@@ -162,6 +184,27 @@ const ReconNG = () => {
     requestAnimationFrame(() => setGraphElements([...nodes, ...edges]));
   };
 
+  const handleKeyDown = (e) => {
+    if (!cyRef.current) return;
+    const nodes = cyRef.current.nodes().filter((n) => !n.isParent());
+    if (nodes.length === 0) return;
+    let index = focusedNodeIndex;
+    if (['ArrowRight', 'ArrowDown', 'Tab'].includes(e.key)) {
+      e.preventDefault();
+      index = (focusedNodeIndex + 1) % nodes.length;
+    } else if (['ArrowLeft', 'ArrowUp'].includes(e.key)) {
+      e.preventDefault();
+      index = (focusedNodeIndex - 1 + nodes.length) % nodes.length;
+    } else {
+      return;
+    }
+    nodes.unselect();
+    const node = nodes[index];
+    node.select();
+    setFocusedNodeIndex(index);
+    setAriaMessage(`Selected node ${node.data('label')}`);
+  };
+
   return (
     <div className="flex flex-col h-full w-full bg-gray-900 text-white p-4">
       <div className="flex gap-2 mb-4">
@@ -218,7 +261,14 @@ const ReconNG = () => {
           </div>
           <pre className="flex-1 bg-black p-2 overflow-auto whitespace-pre-wrap mb-2">{output}</pre>
           {graphElements.length > 0 && (
-            <div className="bg-black p-2" style={{ height: '300px' }}>
+            <div
+              className="bg-black p-2"
+              style={{ height: '300px' }}
+              tabIndex={0}
+              onKeyDown={handleKeyDown}
+              role="application"
+              aria-label="Graph visualization"
+            >
               <CytoscapeComponent
                 elements={graphElements}
                 stylesheet={stylesheet}

@@ -1,6 +1,7 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
+import { computeBallSpin } from '../../utils/physics';
 
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
@@ -365,11 +366,14 @@ const Pong = () => {
       }
 
       const paddleCollision = (pad, dir) => {
-        const padCenter = pad.y + paddleHeight / 2;
-        const relative = (ball.y - padCenter) / (paddleHeight / 2);
-        // add spin based on paddle velocity and impact point
+        const { spin, relative } = computeBallSpin(
+          ball.y,
+          pad.y,
+          paddleHeight,
+          pad.vy
+        );
         ball.vx = Math.abs(ball.vx) * dir;
-        ball.vy += pad.vy * 0.1 + relative * 200;
+        ball.vy += spin;
         if (!prefersReducedMotion) {
           pad.scale = 1.2;
           pad.widthScale = 0.8;
@@ -472,19 +476,23 @@ const Pong = () => {
     };
 
     const handleMessage = (event) => {
-      const msg = JSON.parse(event.data);
-      if (msg.type === 'input') {
-        const { frame: f, up, down } = msg;
-        remoteKeys.up = up;
-        remoteKeys.down = down;
-        if (f < frame) {
-          // rollback to remote frame and resimulate
-          if (loadState(f)) {
-            for (let i = f; i < frame; i += 1) {
-              update(FRAME_TIME / 1000);
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'input') {
+          const { frame: f, up, down } = msg;
+          remoteKeys.up = up;
+          remoteKeys.down = down;
+          if (f < frame) {
+            // rollback to remote frame and resimulate
+            if (loadState(f)) {
+              for (let i = f; i < frame; i += 1) {
+                update(FRAME_TIME / 1000);
+              }
             }
           }
         }
+      } catch {
+        // ignore malformed messages
       }
     };
 
@@ -506,12 +514,12 @@ const Pong = () => {
     };
   }, [difficulty, mode, connected, matchWinner, controls, canvasRef]);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     if (resetRef.current) resetRef.current();
-  };
+  }, []);
 
   // --- WebRTC helpers ---
-  const createConnection = async () => {
+  const createConnection = useCallback(async () => {
     const pc = new RTCPeerConnection();
     const channel = pc.createDataChannel('pong');
     channel.onopen = () => setConnected(true);
@@ -532,15 +540,20 @@ const Pong = () => {
     pc.onicecandidate = (e) => {
       if (!e.candidate) setOfferSDP(JSON.stringify(pc.localDescription));
     };
-  };
+  }, []);
 
-  const acceptAnswer = async () => {
+  const acceptAnswer = useCallback(async () => {
     const pc = peerRef.current;
     if (!pc) return;
-    await pc.setRemoteDescription(JSON.parse(answerSDP));
-  };
+    try {
+      const desc = JSON.parse(answerSDP);
+      await pc.setRemoteDescription(desc);
+    } catch {
+      // ignore invalid SDP
+    }
+  }, [answerSDP]);
 
-  const joinConnection = async () => {
+  const joinConnection = useCallback(async () => {
     const pc = new RTCPeerConnection();
     pc.ondatachannel = (e) => {
       const channel = e.channel;
@@ -557,13 +570,19 @@ const Pong = () => {
       channelRef.current = channel;
     };
     peerRef.current = pc;
-    await pc.setRemoteDescription(JSON.parse(offerSDP));
+    try {
+      const desc = JSON.parse(offerSDP);
+      await pc.setRemoteDescription(desc);
+    } catch {
+      // ignore invalid SDP
+      return;
+    }
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     pc.onicecandidate = (e) => {
       if (!e.candidate) setAnswerSDP(JSON.stringify(pc.localDescription));
     };
-  };
+  }, [offerSDP]);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
@@ -597,6 +616,7 @@ const Pong = () => {
             step="0.1"
             value={speedMultiplier}
             onChange={(e) => setSpeedMultiplier(parseFloat(e.target.value))}
+            aria-label="Speed multiplier"
           />
         </div>
       ) : (
@@ -608,6 +628,7 @@ const Pong = () => {
             max="10"
             value={difficulty}
             onChange={(e) => setDifficulty(parseInt(e.target.value, 10))}
+            aria-label="AI difficulty"
           />
         </div>
       )}
@@ -646,6 +667,7 @@ const Pong = () => {
               className="w-full text-black"
               value={offerSDP}
               readOnly
+              aria-label="Generated offer SDP"
             />
           )}
           <textarea
@@ -653,6 +675,7 @@ const Pong = () => {
             placeholder="Paste remote SDP"
             value={answerSDP}
             onChange={(e) => setAnswerSDP(e.target.value)}
+            aria-label="Remote SDP"
           />
           <button
             className="px-2 py-1 bg-gray-700 rounded"

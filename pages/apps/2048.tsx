@@ -1,17 +1,15 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 
 const SIZE = 4;
 
 // simple seeded PRNG
-function mulberry32(seed: number) {
-  return function() {
-    let t = (seed += 0x6D2B79F5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+const mulberry32 = (seed: number) => () => {
+  let t = (seed += 0x6d2b79f5);
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
 
 const todaySeed = () => {
   const d = new Date();
@@ -104,7 +102,7 @@ const saveReplay = (replay: any) => {
   };
 };
 
-const Page2048: React.FC = () => {
+const Page2048 = () => {
   const rngRef = useRef(mulberry32(todaySeed()));
   const [board, setBoard] = useState<number[][]>(() => {
     const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));

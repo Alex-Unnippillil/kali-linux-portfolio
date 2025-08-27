@@ -23,6 +23,8 @@ const Nonogram = () => {
   // progress tracking
   const [rowTargets, setRowTargets] = useState(Array(height).fill(0));
   const [colTargets, setColTargets] = useState(Array(width).fill(0));
+  const [rowErrors, setRowErrors] = useState(Array(height).fill(false));
+  const [colErrors, setColErrors] = useState(Array(width).fill(false));
   const rowProgress = useRef(Array(height).fill(0));
   const colProgress = useRef(Array(width).fill(0));
   const rowCross = useRef(Array(height).fill(0));
@@ -134,41 +136,51 @@ const Nonogram = () => {
     const newRowTargets = rows.map((_, i) => {
       let correct = 0;
       let total = 0;
+      let error = false;
       for (let j = 0; j < width; j++) {
         if (solution[i][j] === 1) {
           total += 1;
           if (grid[i][j] === 1) correct += 1;
-        } else if (grid[i][j] === 1) correct -= 1;
+        } else if (grid[i][j] === 1) {
+          correct -= 1;
+          error = true;
+        }
       }
-      return total ? Math.max(0, Math.min(1, correct / total)) : 1;
+      return { target: total ? Math.max(0, Math.min(1, correct / total)) : 1, error };
     });
     const newColTargets = cols.map((_, j) => {
       let correct = 0;
       let total = 0;
+      let error = false;
       for (let i = 0; i < height; i++) {
         if (solution[i][j] === 1) {
           total += 1;
           if (grid[i][j] === 1) correct += 1;
-        } else if (grid[i][j] === 1) correct -= 1;
+        } else if (grid[i][j] === 1) {
+          correct -= 1;
+          error = true;
+        }
       }
-      return total ? Math.max(0, Math.min(1, correct / total)) : 1;
+      return { target: total ? Math.max(0, Math.min(1, correct / total)) : 1, error };
     });
-    setRowTargets(newRowTargets);
-    setColTargets(newColTargets);
+    setRowTargets(newRowTargets.map((r) => r.target));
+    setColTargets(newColTargets.map((c) => c.target));
+    setRowErrors(newRowTargets.map((r) => r.error));
+    setColErrors(newColTargets.map((c) => c.error));
     let message = '';
-    newRowTargets.forEach((p, i) => {
-      if (p === 1 && prevRow.current[i] < 1) {
+    newRowTargets.forEach(({ target }, i) => {
+      if (target === 1 && prevRow.current[i] < 1) {
         message = `Row ${i + 1} solved`;
         rowPulse.current[i] = 30;
       }
-      prevRow.current[i] = p;
+      prevRow.current[i] = target;
     });
-    newColTargets.forEach((p, j) => {
-      if (p === 1 && prevCol.current[j] < 1) {
+    newColTargets.forEach(({ target }, j) => {
+      if (target === 1 && prevCol.current[j] < 1) {
         message = `Column ${j + 1} solved`;
         colPulse.current[j] = 30;
       }
-      prevCol.current[j] = p;
+      prevCol.current[j] = target;
     });
     if (message) setLiveMessage(message);
   }, [grid, rows, cols, height, width, solution]);
@@ -203,12 +215,12 @@ const Nonogram = () => {
       colPulse.current = colPulse.current.map((p) => (p > 0 ? p - 1 : 0));
 
       // draw progress bars
-      ctx.fillStyle = '#15803d'; // row progress color (green-700)
       rowProgress.current.forEach((p, i) => {
+        ctx.fillStyle = rowErrors[i] ? '#b91c1c' : '#15803d';
         ctx.fillRect(0, CLUE_SPACE + i * CELL_SIZE, CLUE_SPACE * p, CELL_SIZE);
       });
-      ctx.fillStyle = '#1e40af'; // column progress color (blue-800)
       colProgress.current.forEach((p, j) => {
+        ctx.fillStyle = colErrors[j] ? '#b91c1c' : '#1e40af';
         ctx.fillRect(
           CLUE_SPACE + j * CELL_SIZE,
           0,
@@ -227,7 +239,9 @@ const Nonogram = () => {
         const xEnd = CLUE_SPACE - 4;
         const y = CLUE_SPACE + i * CELL_SIZE + CELL_SIZE * 0.7;
         const pulse = rowPulse.current[i];
-        if (pulse > 0) {
+        if (rowErrors[i]) {
+          ctx.fillStyle = '#b91c1c';
+        } else if (pulse > 0) {
           const intensity = 0.5 + 0.5 * Math.sin((pulse / 30) * Math.PI * 4);
           ctx.fillStyle = `rgba(34,197,94,${intensity})`;
         } else {
@@ -258,7 +272,9 @@ const Nonogram = () => {
           .reverse()
           .forEach((c, idx) => {
             const y = CLUE_SPACE - 4 - idx * 16;
-            if (pulse > 0) {
+            if (colErrors[j]) {
+              ctx.fillStyle = '#b91c1c';
+            } else if (pulse > 0) {
               const intensity = 0.5 + 0.5 * Math.sin((pulse / 30) * Math.PI * 4);
               ctx.fillStyle = `rgba(59,130,246,${intensity})`;
             } else {
@@ -305,7 +321,7 @@ const Nonogram = () => {
           const x = CLUE_SPACE + j * CELL_SIZE;
           const y = CLUE_SPACE + i * CELL_SIZE;
           if (cell === 1) {
-            ctx.fillStyle = '#222';
+            ctx.fillStyle = solution[i][j] === 1 ? '#222' : '#b91c1c';
             ctx.fillRect(x + 1, y + 1, CELL_SIZE - 1, CELL_SIZE - 1);
           } else if (cell === -1) {
             ctx.strokeStyle = '#a00';
@@ -335,7 +351,7 @@ const Nonogram = () => {
 
     animationRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationRef.current);
-  }, [rows, cols, paused, height, width, rowTargets, colTargets, reduceMotion]);
+  }, [rows, cols, paused, height, width, rowTargets, colTargets, rowErrors, colErrors, reduceMotion]);
 
   // mouse interaction
   const painting = useRef(false);
@@ -413,6 +429,7 @@ const Nonogram = () => {
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label={`Row ${i + 1} progress`}
+            aria-valuetext={rowErrors[i] ? 'error' : undefined}
           />
         ))}
         {colTargets.map((p, i) => (
@@ -423,6 +440,7 @@ const Nonogram = () => {
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label={`Column ${i + 1} progress`}
+            aria-valuetext={colErrors[i] ? 'error' : undefined}
           />
         ))}
       </div>

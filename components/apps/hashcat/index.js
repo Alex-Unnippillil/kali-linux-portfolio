@@ -123,8 +123,10 @@ function HashcatApp() {
   const [pattern, setPattern] = useState('');
   const [wordlistUrl, setWordlistUrl] = useState('');
   const [progress, setProgress] = useState(0);
+  const [isCracking, setIsCracking] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const workerRef = useRef(null);
+  const frameRef = useRef(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -142,41 +144,62 @@ function HashcatApp() {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  useEffect(() => {
-    let frame;
-    if (typeof window !== 'undefined') {
-      if (window.Worker) {
-        workerRef.current = new Worker(new URL('./progress.worker.js', import.meta.url));
-        workerRef.current.postMessage({ target: progressInfo.progress });
-        workerRef.current.onmessage = ({ data }) => {
-          const update = () => setProgress(data);
-          if (prefersReducedMotion) {
-            update();
-          } else {
-            frame = requestAnimationFrame(update);
+  const startCracking = () => {
+    if (isCracking) return;
+    setIsCracking(true);
+    setProgress(0);
+    if (typeof window === 'undefined') return;
+    if (window.Worker) {
+      workerRef.current = new Worker(
+        new URL('./progress.worker.js', import.meta.url)
+      );
+      workerRef.current.postMessage({ target: progressInfo.progress });
+      workerRef.current.onmessage = ({ data }) => {
+        const update = () => {
+          setProgress(data);
+          if (data >= progressInfo.progress) {
+            cancelCracking(false);
           }
         };
-      } else {
-        const target = progressInfo.progress;
         if (prefersReducedMotion) {
-          setProgress(target);
+          update();
         } else {
-          const animate = () => {
-            setProgress((p) => {
-              if (p >= target) return p;
-              frame = requestAnimationFrame(animate);
-              return p + 1;
-            });
-          };
-          frame = requestAnimationFrame(animate);
+          frameRef.current = requestAnimationFrame(update);
         }
-      }
+      };
+    } else {
+      const target = progressInfo.progress;
+      const animate = () => {
+        setProgress((p) => {
+          if (p >= target) {
+            cancelCracking(false);
+            return p;
+          }
+          frameRef.current = requestAnimationFrame(animate);
+          return p + 1;
+        });
+      };
+      frameRef.current = requestAnimationFrame(animate);
     }
-    return () => {
-      if (workerRef.current) workerRef.current.terminate();
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, [prefersReducedMotion]);
+  };
+
+  const cancelCracking = (reset = true) => {
+    if (workerRef.current) {
+      workerRef.current.postMessage({ cancel: true });
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
+    if (frameRef.current) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
+    setIsCracking(false);
+    if (reset) setProgress(0);
+  };
+
+  useEffect(() => {
+    return () => cancelCracking();
+  }, []);
 
   const selected = hashTypes.find((h) => h.id === hashType) || hashTypes[0];
   const selectedHash = selected.name;
@@ -260,8 +283,14 @@ function HashcatApp() {
             Download
           </a>
         )}
+        <div className="text-xs mt-1">Uploading wordlists is disabled.</div>
       </div>
       <Gauge value={gpuUsage} />
+      {!isCracking ? (
+        <button onClick={startCracking}>Start Cracking</button>
+      ) : (
+        <button onClick={() => cancelCracking()}>Cancel</button>
+      )}
       <ProgressGauge
         progress={progress}
         info={progressInfo}

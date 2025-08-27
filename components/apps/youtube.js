@@ -33,6 +33,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const scrollRaf = useRef();
 
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+  const privacy = process.env.NEXT_PUBLIC_PRIVACY_MODE === 'true';
 
   // Fetch videos from YouTube when an API key is available and no initial
   // videos are supplied. This mirrors the behaviour of the original app but
@@ -162,17 +163,25 @@ export default function YouTubeApp({ initialVideos = [] }) {
     const createPlayer = () => {
       player = new window.YT.Player(playerRef.current, {
         videoId: currentVideo.id,
+        host: privacy
+          ? 'https://www.youtube-nocookie.com'
+          : 'https://www.youtube.com',
         events: {
           onReady,
           onStateChange,
         },
-        playerVars: { origin: window.location.origin },
+        playerVars: {
+          enablejsapi: 1,
+          origin: window.location.origin,
+        },
       });
     };
 
     if (!window.YT) {
       const tag = document.createElement('script');
-      tag.src = 'https://www.youtube.com/iframe_api';
+      tag.src = `${
+        privacy ? 'https://www.youtube-nocookie.com' : 'https://www.youtube.com'
+      }/iframe_api`;
       tag.async = true;
       window.onYouTubeIframeAPIReady = createPlayer;
       document.body.appendChild(tag);
@@ -188,7 +197,25 @@ export default function YouTubeApp({ initialVideos = [] }) {
       }
       player?.destroy();
     };
-  }, [currentVideo, prefersReducedMotion]);
+  }, [currentVideo, prefersReducedMotion, privacy]);
+
+  useEffect(() => {
+    if (!currentVideo) return;
+    const handleKey = (e) => {
+      if (!playerRef.current) return;
+      if (e.key === ' ' || e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        const state = playerRef.current.getPlayerState();
+        if (state === window.YT.PlayerState.PLAYING) {
+          playerRef.current.pauseVideo();
+        } else {
+          playerRef.current.playVideo();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [currentVideo]);
 
   useRovingTabIndex(tabListRef, true, 'horizontal');
 
@@ -400,7 +427,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
                 <a
                   href={video.url}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="block"
                   onClick={(e) => {
                     e.preventDefault();
@@ -408,7 +435,12 @@ export default function YouTubeApp({ initialVideos = [] }) {
                   }}
                 >
                   {video.thumbnail && (
-                    <img src={video.thumbnail} alt={video.title} className="w-full" />
+                    <img
+                      src={video.thumbnail}
+                      alt={video.title}
+                      className="w-full"
+                      loading="lazy"
+                    />
                   )}
                   <div
                     className="p-2 font-semibold text-sm"

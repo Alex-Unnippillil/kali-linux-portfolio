@@ -67,9 +67,14 @@ const usePersistentState = (key, initial) => {
   return [state, setState];
 };
 
-const pickWords = (count) => {
-  const lists = Object.values(WORD_LISTS);
-  const list = lists[Math.floor(Math.random() * lists.length)];
+const pickWords = (count, theme) => {
+  let list;
+  if (theme && WORD_LISTS[theme]) {
+    list = WORD_LISTS[theme];
+  } else {
+    const lists = Object.values(WORD_LISTS);
+    list = lists[Math.floor(Math.random() * lists.length)];
+  }
   return [...list]
     .sort(() => Math.random() - 0.5)
     .slice(0, count);
@@ -140,6 +145,7 @@ const WordSearch = () => {
     'wordsearch-difficulty',
     'easy',
   );
+  const [theme, setTheme] = usePersistentState('wordsearch-theme', 'random');
   const { size: SIZE, count: WORD_COUNT } = DIFFICULTIES[difficulty];
   const [bestTimes, setBestTimes] = usePersistentState(
     'wordsearch-best-times',
@@ -148,7 +154,7 @@ const WordSearch = () => {
   const [sound, setSound] = usePersistentState('wordsearch-sound', true);
 
   const [puzzle, setPuzzle] = useState(() =>
-    generatePuzzle(SIZE, pickWords(WORD_COUNT)),
+    generatePuzzle(SIZE, pickWords(WORD_COUNT, theme === 'random' ? undefined : theme)),
   );
   const { grid, placements, words } = puzzle;
   const GRID_PIXELS = SIZE * (CELL_SIZE + GAP_SIZE) - GAP_SIZE;
@@ -166,6 +172,7 @@ const WordSearch = () => {
   const prefersReducedMotion = useRef(false);
   const [announcement, setAnnouncement] = useState('');
   const timerRef = useRef(null);
+  const gridRef = useRef(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -242,7 +249,7 @@ const WordSearch = () => {
   useEffect(() => {
     reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [difficulty]);
+  }, [difficulty, theme]);
 
   const handleMouseDown = (r, c) => {
     if (paused) return;
@@ -275,6 +282,43 @@ const WordSearch = () => {
     setSelection([]);
   };
 
+  const handleTouchStart = (e) => {
+    e.preventDefault();
+    if (paused) return;
+    const touch = e.touches[0];
+    const rect = gridRef.current.getBoundingClientRect();
+    const c = Math.floor(
+      (touch.clientX - rect.left) / (CELL_SIZE + GAP_SIZE),
+    );
+    const r = Math.floor(
+      (touch.clientY - rect.top) / (CELL_SIZE + GAP_SIZE),
+    );
+    if (r >= 0 && r < SIZE && c >= 0 && c < SIZE) {
+      handleMouseDown(r, c);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    e.preventDefault();
+    if (paused || !selecting) return;
+    const touch = e.touches[0];
+    const rect = gridRef.current.getBoundingClientRect();
+    const c = Math.floor(
+      (touch.clientX - rect.left) / (CELL_SIZE + GAP_SIZE),
+    );
+    const r = Math.floor(
+      (touch.clientY - rect.top) / (CELL_SIZE + GAP_SIZE),
+    );
+    if (r >= 0 && r < SIZE && c >= 0 && c < SIZE) {
+      handleMouseEnter(r, c);
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    e.preventDefault();
+    handleMouseUp();
+  };
+
   const useHint = () => {
     const remaining = words.filter((w) => !foundWords.includes(w));
     if (!remaining.length) return;
@@ -291,7 +335,12 @@ const WordSearch = () => {
   };
 
   function reset() {
-    setPuzzle(generatePuzzle(SIZE, pickWords(WORD_COUNT)));
+    setPuzzle(
+      generatePuzzle(
+        SIZE,
+        pickWords(WORD_COUNT, theme === 'random' ? undefined : theme),
+      ),
+    );
     setFoundWords([]);
     setFoundCells([]);
     setTime(0);
@@ -314,8 +363,16 @@ const WordSearch = () => {
           onMouseLeave={handleMouseUp}
         >
           <div
+            ref={gridRef}
             className="grid gap-1"
-            style={{ gridTemplateColumns: `repeat(${SIZE}, 2rem)` }}
+            style={{
+              gridTemplateColumns: `repeat(${SIZE}, 2rem)`,
+              touchAction: 'none',
+            }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
           >
             {grid.map((row, r) =>
               row.map((letter, c) => {
@@ -414,6 +471,18 @@ const WordSearch = () => {
             >
               {sound ? 'Sound Off' : 'Sound On'}
             </button>
+            <select
+              className="px-2 py-1 text-black"
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+            >
+              <option value="random">Random Theme</option>
+              {Object.keys(WORD_LISTS).map((t) => (
+                <option key={t} value={t}>
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </option>
+              ))}
+            </select>
             <select
               className="px-2 py-1 text-black"
               value={difficulty}

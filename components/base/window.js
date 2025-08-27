@@ -19,7 +19,9 @@ export class Window extends Component {
             parentSize: {
                 height: 100,
                 width: 100
-            }
+            },
+            snapPreview: null,
+            snapPosition: null,
         }
     }
 
@@ -105,6 +107,39 @@ export class Window extends Component {
         }
     }
 
+    checkSnapPreview = () => {
+        var r = document.querySelector("#" + this.id);
+        if (!r) return;
+        var rect = r.getBoundingClientRect();
+        const threshold = 30;
+        let snap = null;
+        if (rect.left <= threshold) {
+            snap = { left: '0', top: '0', width: '50%', height: '100%' };
+            this.setState({ snapPreview: snap, snapPosition: 'left' });
+        }
+        else if (rect.right >= window.innerWidth - threshold) {
+            snap = { left: '50%', top: '0', width: '50%', height: '100%' };
+            this.setState({ snapPreview: snap, snapPosition: 'right' });
+        }
+        else if (rect.top <= threshold) {
+            snap = { left: '0', top: '0', width: '100%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'top' });
+        }
+        else {
+            if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
+        }
+    }
+
+    handleDrag = () => {
+        this.checkOverlap();
+        this.checkSnapPreview();
+    }
+
+    handleStop = () => {
+        this.changeCursorToDefault();
+        this.setState({ snapPreview: null, snapPosition: null });
+    }
+
     focusWindow = () => {
         this.props.focus(this.id);
     }
@@ -175,38 +210,47 @@ export class Window extends Component {
 
     render() {
         return (
-            <Draggable
-                axis="both"
-                handle=".bg-ub-window-title"
-                grid={[1, 1]}
-                scale={1}
-                onStart={this.changeCursorToMove}
-                onStop={this.changeCursorToDefault}
-                onDrag={this.checkOverlap}
-                allowAnyClick={false}
-                defaultPosition={{ x: this.startX, y: this.startY }}
-                bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
-            >
-                <div
-                    style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                    className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
-                    id={this.id}
-                    role="dialog"
-                    aria-label={this.props.title}
-                    tabIndex={0}
-                    onKeyDown={this.handleKeyDown}
+            <>
+                {this.state.snapPreview && (
+                    <div
+                        data-testid="snap-preview"
+                        className="fixed border-2 border-dashed border-white pointer-events-none z-40"
+                        style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
+                    />
+                )}
+                <Draggable
+                    axis="both"
+                    handle=".bg-ub-window-title"
+                    grid={[1, 1]}
+                    scale={1}
+                    onStart={this.changeCursorToMove}
+                    onStop={this.handleStop}
+                    onDrag={this.handleDrag}
+                    allowAnyClick={false}
+                    defaultPosition={{ x: this.startX, y: this.startY }}
+                    bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
-                    {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                    {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                    <WindowTopBar title={this.props.title} />
-                    <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
-                    {(this.id === "settings"
-                        ? <Settings />
-                        : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                            addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                            openApp={this.props.openApp} />)}
-                </div>
-            </Draggable >
+                    <div
+                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        id={this.id}
+                        role="dialog"
+                        aria-label={this.props.title}
+                        tabIndex={0}
+                        onKeyDown={this.handleKeyDown}
+                    >
+                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
+                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                        <WindowTopBar title={this.props.title} />
+                        <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
+                        {(this.id === "settings"
+                            ? <Settings />
+                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                                openApp={this.props.openApp} />)}
+                    </div>
+                </Draggable >
+            </>
         )
     }
 }

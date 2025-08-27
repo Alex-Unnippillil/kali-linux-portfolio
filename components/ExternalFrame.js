@@ -39,7 +39,14 @@ export default function ExternalFrame({ src, title, prefetch = false, ...props }
           </button>
         </div>
       )}
-      <iframe src={src} title={title} {...props} />
+      <iframe
+        src={src}
+        title={title}
+        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
+        referrerPolicy="no-referrer"
+        {...props}
+      />
       {showDialog && (
         <dialog open>
           <p>Enable third-party cookies in your browser settings to use this app.</p>

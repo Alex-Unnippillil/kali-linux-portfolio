@@ -1,5 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
+jest.mock('react-cytoscapejs', () => () => null);
+jest.mock('../components/apps/beef/HookGraph', () => () => null);
+beforeAll(() => {
+  (global as any).URL.createObjectURL = () => '';
+});
 import { TextEncoder, TextDecoder } from 'util';
 import { ReadableStream } from 'stream/web';
 import Beef from '../components/apps/beef';

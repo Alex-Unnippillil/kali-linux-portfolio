@@ -35,6 +35,8 @@ export class SideBarApp extends Component {
             <button
                 type="button"
                 aria-label={this.props.title}
+                data-context="app"
+                data-app-id={this.props.id}
                 onClick={this.openApp}
                 onMouseEnter={() => {
                     this.setState({ showTitle: true });

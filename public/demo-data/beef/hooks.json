@@ -1,0 +1,6 @@
+{
+  "hooked_browsers": [
+    { "id": "demo1", "name": "Demo Client 1", "status": "online" },
+    { "id": "demo2", "name": "Demo Client 2", "status": "offline" }
+  ]
+}

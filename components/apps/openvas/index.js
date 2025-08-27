@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import chartData from './chart-data.json';
 
 // Simple helper for notifications that falls back to alert()
 const notify = (title, body) => {
@@ -10,6 +11,61 @@ const notify = (title, body) => {
     // eslint-disable-next-line no-alert
     alert(`${title}: ${body}`);
   }
+};
+
+const escapeHtml = (str = '') =>
+  str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+const SeverityChart = ({ data }) => {
+  const levels = ['low', 'medium', 'high', 'critical'];
+  const max = Math.max(...levels.map((l) => data[l] || 0), 1);
+  return (
+    <svg
+      viewBox="0 0 100 60"
+      role="img"
+      aria-label="OpenVAS findings severity chart"
+      className="w-full h-32 mb-4"
+    >
+      {levels.map((level, i) => {
+        const value = data[level] || 0;
+        const height = (value / max) * 50;
+        const x = i * 24 + 5;
+        const y = 55 - height;
+        return (
+          <g key={level}>
+            <rect
+              x={x}
+              y={y}
+              width="20"
+              height={height}
+              className={severityColors[level]}
+            />
+            <text
+              x={x + 10}
+              y="58"
+              textAnchor="middle"
+              className="fill-white text-[8px] capitalize"
+            >
+              {level}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+const severityLevels = ['All', 'Low', 'Medium', 'High', 'Critical'];
+const severityColors = {
+  low: 'bg-green-700',
+  medium: 'bg-yellow-700',
+  high: 'bg-orange-700',
+  critical: 'bg-red-700',
 };
 
 const OpenVASApp = () => {
@@ -24,14 +80,6 @@ const OpenVASApp = () => {
   const [announce, setAnnounce] = useState('');
   const workerRef = useRef(null);
   const reduceMotion = useRef(false);
-
-  const severityLevels = ['All', 'Low', 'Medium', 'High', 'Critical'];
-  const severityColors = {
-    low: 'bg-green-700',
-    medium: 'bg-yellow-700',
-    high: 'bg-orange-700',
-    critical: 'bg-red-700',
-  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -154,6 +202,7 @@ const OpenVASApp = () => {
           {loading ? 'Scanning...' : 'Scan'}
         </button>
       </div>
+      <SeverityChart data={chartData} />
       {findings.length > 0 && (
         <div className="mb-4">
           <div className="grid grid-cols-5 gap-1 text-center">
@@ -237,7 +286,9 @@ const OpenVASApp = () => {
               role="alert"
               className={`p-2 rounded ${severityColors[f.severity]} text-white`}
             >
-              {f.description}
+              <span
+                dangerouslySetInnerHTML={{ __html: escapeHtml(f.description) }}
+              />
             </li>
           ))}
         </ul>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import commonWords from './wordle_words.json';
 import altWords from './wordle_words_alt.json';
+import { getDailySeed } from '../../utils/dailyChallenge';
 
 // Determine today's puzzle key and pick a word from the dictionary
 // deterministically so everyone sees the same puzzle each day.
@@ -72,10 +73,10 @@ const evaluateGuess = (guess, answer) => {
 const Wordle = () => {
   const [dictName, setDictName] = usePersistentState('wordle-dictionary', 'common');
   const wordList = dictionaries[dictName];
-  const solution = useMemo(
-    () => wordList[hash(`${todayKey}-${dictName}`) % wordList.length],
-    [dictName, wordList]
-  );
+  const solution = useMemo(() => {
+    const seed = getDailySeed(`wordle-${dictName}`);
+    return wordList[hash(seed) % wordList.length];
+  }, [dictName, wordList]);
 
   // guesses for today are stored under a daily key so a new game starts each day
   const [guesses, setGuesses] = usePersistentState(
@@ -197,9 +198,53 @@ const Wordle = () => {
       return;
     }
 
-    if (hardMode && new Set(upper).size < 5) {
-      setMessage('Hard mode: no repeating letters.');
-      return;
+    if (hardMode) {
+      const requiredPos = {};
+      const requiredCounts = {};
+      const forbiddenPos = {};
+
+      guesses.forEach(({ guess: g, result }) => {
+        const localCounts = {};
+        for (let i = 0; i < 5; i += 1) {
+          const ch = g[i];
+          const res = result[i];
+          if (res === 'correct') {
+            requiredPos[i] = ch;
+            localCounts[ch] = (localCounts[ch] || 0) + 1;
+          } else if (res === 'present') {
+            forbiddenPos[i] = forbiddenPos[i] || new Set();
+            forbiddenPos[i].add(ch);
+            localCounts[ch] = (localCounts[ch] || 0) + 1;
+          }
+        }
+        Object.entries(localCounts).forEach(([ch, c]) => {
+          requiredCounts[ch] = Math.max(requiredCounts[ch] || 0, c);
+        });
+      });
+
+      for (const [idx, ch] of Object.entries(requiredPos)) {
+        if (upper[Number(idx)] !== ch) {
+          setMessage(`Hard mode: ${ch} must be in position ${Number(idx) + 1}.`);
+          return;
+        }
+      }
+
+      const guessCounts = {};
+      for (let i = 0; i < 5; i += 1) {
+        const ch = upper[i];
+        guessCounts[ch] = (guessCounts[ch] || 0) + 1;
+        if (forbiddenPos[i] && forbiddenPos[i].has(ch)) {
+          setMessage(`Hard mode: ${ch} cannot be in position ${i + 1}.`);
+          return;
+        }
+      }
+
+      for (const [ch, count] of Object.entries(requiredCounts)) {
+        if ((guessCounts[ch] || 0) < count) {
+          setMessage(`Hard mode: guess must contain ${ch}${count > 1 ? ` (${count}x)` : ''}.`);
+          return;
+        }
+      }
     }
 
     const result = evaluateGuess(upper, solution);

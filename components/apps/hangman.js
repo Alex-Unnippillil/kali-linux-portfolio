@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import confetti from 'canvas-confetti';
 import usePersistentState from '../../hooks/usePersistentState';
 import {
@@ -87,35 +93,38 @@ const Hangman = () => {
     return { counts, max };
   }, [dict]);
 
-  const playTone = (freq) => {
-    if (!sound) return;
-    try {
-      const ctx =
-        audioCtxRef.current ||
-        (audioCtxRef.current = new (window.AudioContext ||
-          window.webkitAudioContext)());
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = freq;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        ctx.currentTime + 0.2,
-      );
-      osc.stop(ctx.currentTime + 0.2);
-    } catch (err) {
-      // ignore audio errors
-    }
-  };
+  const playTone = useCallback(
+    (freq) => {
+      if (!sound) return;
+      try {
+        const ctx =
+          audioCtxRef.current ||
+          (audioCtxRef.current = new (window.AudioContext ||
+            window.webkitAudioContext)());
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          ctx.currentTime + 0.2,
+        );
+        osc.stop(ctx.currentTime + 0.2);
+      } catch (err) {
+        // ignore audio errors
+      }
+    },
+    [sound],
+  );
 
-  const pickWord = () => {
+  const pickWord = useCallback(() => {
     const list = DICTIONARIES[dict] || DICTIONARIES.family;
     return list[Math.floor(Math.random() * list.length)];
-  };
+  }, [dict]);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     try {
       setWord(pickWord());
       setGuessed([]);
@@ -132,12 +141,11 @@ const Hangman = () => {
     } catch (err) {
       logGameError('hangman', err?.message || String(err));
     }
-  };
+  }, [pickWord]);
 
   useEffect(() => {
     reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dict]);
+  }, [reset]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -147,7 +155,7 @@ const Hangman = () => {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  const hintOnce = () => {
+  const hintOnce = useCallback(() => {
     if (hintUsed || paused) return;
     const remaining = word
       .split('')
@@ -158,54 +166,60 @@ const Hangman = () => {
     setHintUsed(true);
     setScore((s) => s - 5);
     handleGuess(letter);
-  };
+  }, [hintUsed, paused, word, guessed, handleGuess]);
 
-  const handleGuess = (letter) => {
-    if (
-      paused ||
-      guessed.includes(letter) ||
-      wrong >= maxWrong ||
-      word.split('').every((l) => guessed.includes(l))
-    )
-      return;
-    logEvent({ category: 'hangman', action: 'guess', label: letter });
-    setGuessed((g) => [...g, letter]);
-    if (word.includes(letter)) {
-      playTone(600);
-      setScore((s) => s + 2);
-      setAnnouncement(`Correct guess: ${letter}`);
-    } else {
-      playTone(200);
-      const idx = wrong;
-      partStartRef.current[idx] = performance.now();
-      partProgressRef.current[idx] = reduceMotionRef.current ? 1 : 0;
-      setWrong((w) => w + 1);
-      setScore((s) => s - 1);
-      const remaining = maxWrong - (wrong + 1);
-      setAnnouncement(
-        `Wrong guess: ${letter}. ${remaining} ${
-          remaining === 1 ? 'try' : 'tries'
-        } left.`,
-      );
-    }
-  };
+  const handleGuess = useCallback(
+    (letter) => {
+      if (
+        paused ||
+        guessed.includes(letter) ||
+        wrong >= maxWrong ||
+        word.split('').every((l) => guessed.includes(l))
+      )
+        return;
+      logEvent({ category: 'hangman', action: 'guess', label: letter });
+      setGuessed((g) => [...g, letter]);
+      if (word.includes(letter)) {
+        playTone(600);
+        setScore((s) => s + 2);
+        setAnnouncement(`Correct guess: ${letter}`);
+      } else {
+        playTone(200);
+        const idx = wrong;
+        partStartRef.current[idx] = performance.now();
+        partProgressRef.current[idx] = reduceMotionRef.current ? 1 : 0;
+        setWrong((w) => w + 1);
+        setScore((s) => s - 1);
+        const remaining = maxWrong - (wrong + 1);
+        setAnnouncement(
+          `Wrong guess: ${letter}. ${remaining} ${
+            remaining === 1 ? 'try' : 'tries'
+          } left.`,
+        );
+      }
+    },
+    [paused, guessed, wrong, maxWrong, word, playTone, logEvent],
+  );
 
-  const togglePause = () => setPaused((p) => !p);
-  const toggleSound = () => setSound((s) => !s);
+  const togglePause = useCallback(() => setPaused((p) => !p), []);
+  const toggleSound = useCallback(() => setSound((s) => !s), []);
 
-  const keyHandler = (e) => {
-    const k = e.key.toLowerCase();
-    if (k === 'r') reset();
-    else if (k === 'p') togglePause();
-    else if (k === 'h') hintOnce();
-    else if (k === 's') toggleSound();
-    else if (/^[a-z]$/.test(k)) handleGuess(k);
-  };
+  const keyHandler = useCallback(
+    (e) => {
+      const k = e.key.toLowerCase();
+      if (k === 'r') reset();
+      else if (k === 'p') togglePause();
+      else if (k === 'h') hintOnce();
+      else if (k === 's') toggleSound();
+      else if (/^[a-z]$/.test(k)) handleGuess(k);
+    },
+    [reset, togglePause, hintOnce, toggleSound, handleGuess],
+  );
 
   useEffect(() => {
     window.addEventListener('keydown', keyHandler);
     return () => window.removeEventListener('keydown', keyHandler);
-  });
+  }, [keyHandler]);
 
   useEffect(() => {
     if (won || wrong >= maxWrong) {
@@ -220,7 +234,7 @@ const Hangman = () => {
     }
   }, [won, wrong, word, score, highscore, setHighscore]);
 
-  const draw = React.useCallback(
+  const draw = useCallback(
     (ctx) => {
       ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.fillStyle = '#1a1a1a';

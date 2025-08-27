@@ -1,0 +1,21 @@
+name: Accessibility
+
+on:
+  pull_request:
+
+jobs:
+  a11y:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: npx playwright install --with-deps
+      - run: |
+          yarn dev &
+          npx wait-on http://localhost:3000
+      - run: npx pa11y-ci --config pa11yci.json
+      - run: npx playwright test __tests__/a11y.spec.ts

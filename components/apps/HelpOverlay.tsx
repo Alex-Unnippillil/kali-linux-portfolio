@@ -118,7 +118,7 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   'word-search': {
     objective: 'Find all listed words in the grid.',
-    controls: 'Click and drag across letters to select words.',
+    controls: 'Click or swipe across letters to select words.',
   },
   wordle: {
     objective: 'Guess the hidden word in six tries.',

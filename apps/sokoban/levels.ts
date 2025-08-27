@@ -14,7 +14,7 @@ const RAW_TUTORIAL = `
 ######
 #@ $.#
 ######
-`;
+` as const;
 
 const RAW_CLASSIC = `
 ; Small puzzle
@@ -30,7 +30,7 @@ const RAW_CLASSIC = `
 # $#$ #
 # .@  #
 #######
-`;
+` as const;
 
 export function parseLevels(data: string): string[][] {
   const levels: string[][] = [];
@@ -52,7 +52,7 @@ export function parseLevels(data: string): string[][] {
 export const LEVEL_PACKS: LevelPack[] = [
   { name: 'Tutorial', difficulty: 'Easy', levels: parseLevels(RAW_TUTORIAL) },
   { name: 'Classic', difficulty: 'Medium', levels: parseLevels(RAW_CLASSIC) },
-];
+] as const;
 
 export const defaultLevels = LEVEL_PACKS[0].levels;
 

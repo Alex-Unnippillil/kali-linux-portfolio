@@ -2,18 +2,39 @@ import React, { useState } from 'react';
 
 export const isValidEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
 
+const sanitize = (str: string) =>
+  str.replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[c]!));
+
 export const processContactForm = async (
   data: { name: string; email: string; message: string; honeypot: string },
   fetchImpl: typeof fetch = fetch
 ) => {
+  const name = data.name.trim();
+  const email = data.email.trim();
+  const message = data.message.trim();
+
   if (data.honeypot) return { success: false };
-  if (!isValidEmail(data.email)) return { success: false, error: 'Invalid email' };
+  if (!name || name.length > 100) return { success: false, error: 'Invalid name' };
+  if (!isValidEmail(email)) return { success: false, error: 'Invalid email' };
+  if (!message || message.length > 1000)
+    return { success: false, error: 'Invalid message' };
 
   try {
     const res = await fetchImpl('/api/contact', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        name: sanitize(name),
+        email,
+        message: sanitize(message),
+        honeypot: '',
+      }),
     });
     if (!res.ok) return { success: false, error: 'Submission failed' };
     return { success: true };
@@ -34,7 +55,7 @@ const ContactApp = () => {
     e.preventDefault();
     const result = await processContactForm({ name, email, message, honeypot });
     if (!result.success) {
-      setError(result.error || 'Submission failed');
+      setError(result.error ? sanitize(result.error) : 'Submission failed');
       setSuccess(false);
     } else {
       setError('');

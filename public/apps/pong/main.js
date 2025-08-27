@@ -11,6 +11,13 @@ const player = { x: 10, y: canvas.height / 2 - paddleHeight / 2, vy: 0 };
 const opponent = { x: canvas.width - paddleWidth - 10, y: canvas.height / 2 - paddleHeight / 2, vy: 0 };
 const ball = { x: canvas.width / 2, y: canvas.height / 2, vx: 200, vy: 120, size: 8 };
 
+function computeBallSpin(ballY, paddleY, paddleHeight, paddleVy, spinFactor = 300, velocityFactor = 0.5) {
+  const padCenter = paddleY + paddleHeight / 2;
+  const relative = (ballY - padCenter) / (paddleHeight / 2);
+  const spin = paddleVy * velocityFactor + relative * spinFactor;
+  return { spin, relative };
+}
+
 const keys = {};
 document.addEventListener('keydown', (e) => (keys[e.code] = true));
 document.addEventListener('keyup', (e) => (keys[e.code] = false));
@@ -90,10 +97,14 @@ function update(dt) {
 }
 
 function paddleBounce(pad, dir) {
-  const padCenter = pad.y + paddleHeight / 2;
-  const relative = (ball.y - padCenter) / (paddleHeight / 2);
+  const { spin } = computeBallSpin(
+    ball.y,
+    pad.y,
+    paddleHeight,
+    pad.vy
+  );
   ball.vx = Math.abs(ball.vx) * dir;
-  ball.vy += pad.vy * 0.5 + relative * 300; // spin effect
+  ball.vy += spin;
   playBeep();
   rumble();
 }

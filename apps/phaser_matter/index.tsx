@@ -103,6 +103,8 @@ const PhaserMatter: React.FC = () => {
       jumpBufferTimer = 0;
       buffered = false;
       padJumpWasPressed = false;
+      parallax: Phaser.GameObjects.Rectangle[] = [];
+      checkpointFlags: { body: MatterJS.BodyType; flag: Phaser.GameObjects.Rectangle }[] = [];
 
       constructor() {
         super('level');
@@ -115,6 +117,22 @@ const PhaserMatter: React.FC = () => {
       create() {
         const data = this.cache.json.get('level');
         this.state = new GameState(data.spawn);
+
+        // Parallax background layers
+        data.parallaxLayers?.forEach((l: any) => {
+          const color = Phaser.Display.Color.HexStringToColor(l.color).color;
+          const rect = this.add
+            .rectangle(
+              data.bounds.width / 2,
+              data.bounds.height / 2,
+              data.bounds.width,
+              data.bounds.height,
+              color,
+            )
+            .setScrollFactor(l.scrollFactor)
+            .setDepth(-100);
+          this.parallax.push(rect);
+        });
 
         // Platforms
         data.platforms.forEach((p: any) => {
@@ -129,13 +147,17 @@ const PhaserMatter: React.FC = () => {
           });
         });
 
-        // Checkpoints
+        // Checkpoints with flags
         data.checkpoints.forEach((c: any) => {
-          this.matter.add.rectangle(c.x, c.y, c.width, c.height, {
+          const body = this.matter.add.rectangle(c.x, c.y, c.width, c.height, {
             isStatic: true,
             isSensor: true,
             label: 'checkpoint',
           });
+          const flag = this.add
+            .rectangle(c.x, c.y - c.height / 2, 10, 30, 0xff0000)
+            .setOrigin(0.5, 1);
+          this.checkpointFlags.push({ body, flag });
         });
 
         this.player = this.matter.add.image(data.spawn.x, data.spawn.y, undefined, undefined, {
@@ -151,6 +173,8 @@ const PhaserMatter: React.FC = () => {
         this.matter.world.on('collisionstart', (_: any, bodyA: MatterJS.BodyType, bodyB: MatterJS.BodyType) => {
           [bodyA, bodyB].forEach((body) => {
             if (body.label === 'checkpoint') {
+              const cp = this.checkpointFlags.find((c) => c.body === body);
+              if (cp) cp.flag.setFillStyle(0x00ff00);
               this.state.setCheckpoint({ x: body.position.x, y: body.position.y });
             }
             if (body.label === 'hazard') {

@@ -64,9 +64,9 @@ const QuoteGenerator = () => {
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
   const [displayedText, setDisplayedText] = useState('');
-  const [ariaText, setAriaText] = useState('');
   const [prefersReduced, setPrefersReduced] = useState(false);
   const rafRef = useRef();
+  const liveRef = useRef(null);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -77,7 +77,6 @@ const QuoteGenerator = () => {
   }, []);
 
   useEffect(() => {
-    const etag = localStorage.getItem('quotesEtag');
     const stored = localStorage.getItem('quotesData');
     if (stored) {
       try {
@@ -87,27 +86,34 @@ const QuoteGenerator = () => {
       }
     }
 
-    fetch('https://api.quotable.io/quotes?limit=500', {
-      headers: etag ? { 'If-None-Match': etag } : {},
-    })
-      .then((res) => {
-        if (res.status === 200) {
-          const newEtag = res.headers.get('ETag');
-          res
-            .json()
-            .then((d) => {
-              localStorage.setItem('quotesData', JSON.stringify(d.results));
-              if (newEtag) localStorage.setItem('quotesEtag', newEtag);
-              setQuotes(processQuotes(d.results));
-            })
-            .catch(() => {
-              /* ignore parse errors */
-            });
-        }
+    const fetchQuotes = () => {
+      const etag = localStorage.getItem('quotesEtag');
+      fetch('https://api.quotable.io/quotes?limit=500', {
+        headers: etag ? { 'If-None-Match': etag } : {},
       })
-      .catch(() => {
-        /* ignore network errors */
-      });
+        .then((res) => {
+          if (res.status === 200) {
+            const newEtag = res.headers.get('ETag');
+            res
+              .json()
+              .then((d) => {
+                localStorage.setItem('quotesData', JSON.stringify(d.results));
+                if (newEtag) localStorage.setItem('quotesEtag', newEtag);
+                setQuotes(processQuotes(d.results));
+              })
+              .catch(() => {
+                /* ignore parse errors */
+              });
+          }
+        })
+        .catch(() => {
+          /* ignore network errors */
+        });
+    };
+
+    if (navigator.onLine) fetchQuotes();
+    window.addEventListener('online', fetchQuotes);
+    return () => window.removeEventListener('online', fetchQuotes);
   }, []);
 
   const filteredQuotes = useMemo(
@@ -145,7 +151,12 @@ const QuoteGenerator = () => {
   };
 
   useEffect(() => {
-    if (current) setAriaText(`"${current.content}" - ${current.author}`);
+    if (!current || !liveRef.current) return;
+    liveRef.current.textContent = '';
+    const announcement = `"${current.content}" - ${current.author}`;
+    requestAnimationFrame(() => {
+      if (liveRef.current) liveRef.current.textContent = announcement;
+    });
   }, [current]);
 
   useEffect(() => {
@@ -252,9 +263,12 @@ const QuoteGenerator = () => {
             <>
               <p className="text-lg mb-2" aria-hidden="true">&quot;{displayedText}&quot;</p>
               <p className="text-sm text-gray-200" aria-hidden="true">- {current.author}</p>
-              <span role="status" aria-live="polite" className="sr-only">
-                {ariaText}
-              </span>
+              <span
+                role="status"
+                aria-live="polite"
+                className="sr-only"
+                ref={liveRef}
+              />
             </>
           ) : (
             <p>No quotes found.</p>

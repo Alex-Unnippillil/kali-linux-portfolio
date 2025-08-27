@@ -68,6 +68,11 @@ export default function YouTubeApp({ initialVideos = [] as Video[] }) {
 
   const current = queue[0] || null;
 
+  const privacy = process.env.NEXT_PUBLIC_PRIVACY_MODE === 'true';
+  const origin =
+    typeof window !== 'undefined' ? window.location.origin : '';
+  const embedBase = `https://${privacy ? 'www.youtube-nocookie.com' : 'www.youtube.com'}`;
+
   const playVideo = useCallback((video: Video) => {
     setQueue((q) => {
       const without = q.filter((v) => v.id !== video.id);
@@ -98,11 +103,15 @@ export default function YouTubeApp({ initialVideos = [] as Video[] }) {
         {filtered.map((video) => (
           <div key={video.id} className="relative pb-[56.25%]">
             <iframe
-              src={`https://www.youtube.com/embed/${video.id}`}
+              src={`${embedBase}/embed/${video.id}?enablejsapi=1&origin=${encodeURIComponent(origin)}`}
               title={video.title}
               className="absolute inset-0 w-full h-full"
+              sandbox="allow-same-origin allow-scripts allow-popups"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              referrerPolicy="no-referrer"
               allowFullScreen
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
             />
             <div className="absolute inset-x-0 bottom-0 flex justify-between p-1 bg-black/60 text-xs">
               <button
