@@ -1,5 +1,28 @@
 import React, { useState } from 'react';
 
+const DonutChart = ({ label, value, total }) => {
+  const radius = 30;
+  const circumference = 2 * Math.PI * radius;
+  const dash = total ? (value / total) * circumference : 0;
+  return (
+    <div className={`severity-chart severity-${label.toLowerCase()}`}>
+      <svg width="80" height="80">
+        <circle className="bg" cx="40" cy="40" r={radius} strokeWidth="8" fill="none" />
+        <circle
+          className="fg"
+          cx="40"
+          cy="40"
+          r={radius}
+          strokeWidth="8"
+          fill="none"
+          strokeDasharray={`${dash} ${circumference - dash}`}
+        />
+      </svg>
+      <span className="severity-label">{`${label.charAt(0).toUpperCase() + label.slice(1)} (${value})`}</span>
+    </div>
+  );
+};
+
 // Simple helper for notifications that falls back to alert()
 const notify = (title, body) => {
   if (typeof window === 'undefined') return;
@@ -18,11 +41,31 @@ const OpenVASApp = () => {
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [summaryUrl, setSummaryUrl] = useState(null);
+  const [severityCounts, setSeverityCounts] = useState(null);
+
+  const totalSeverity = severityCounts
+    ? Object.values(severityCounts).reduce((a, b) => a + b, 0)
+    : 0;
 
   const generateSummary = (data) => {
     const summary = `# OpenVAS Scan Summary\n\n- Target: ${target}\n- Group: ${group}\n\n## Output\n\n${data}`;
     const blob = new Blob([summary], { type: 'text/markdown' });
     setSummaryUrl(URL.createObjectURL(blob));
+  };
+
+  const calculateSeverity = (text) => {
+    const categories = {
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+      none: 0,
+    };
+    Object.keys(categories).forEach((key) => {
+      const regex = new RegExp(key, 'ig');
+      categories[key] = (text.match(regex) || []).length;
+    });
+    setSeverityCounts(categories);
   };
 
   const runScan = async () => {
@@ -38,6 +81,7 @@ const OpenVASApp = () => {
       const data = await res.text();
       setOutput(data);
       generateSummary(data);
+      calculateSeverity(data);
       notify('OpenVAS Scan Complete', `Target ${target} finished`);
     } catch (e) {
       setOutput(e.message);
@@ -72,6 +116,13 @@ const OpenVASApp = () => {
           {loading ? 'Scanning...' : 'Scan'}
         </button>
       </div>
+      {severityCounts && (
+        <div className="flex flex-wrap gap-4 mb-4">
+          {Object.entries(severityCounts).map(([label, value]) => (
+            <DonutChart key={label} label={label} value={value} total={totalSeverity} />
+          ))}
+        </div>
+      )}
       {output && (
         <pre className="bg-black text-green-400 p-2 rounded whitespace-pre-wrap">
           {output}
