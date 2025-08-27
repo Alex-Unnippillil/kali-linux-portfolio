@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 
+const MAX_TARGET_LENGTH = 2048;
+const MAX_TEXT_SIZE = 500000; // ~500kb
+
 const RadarChart = ({ data }) => {
   const labels = Object.keys(data);
   const counts = labels.map((l) => data[l] || 0);
@@ -13,13 +16,21 @@ const RadarChart = ({ data }) => {
       return `${x},${y}`;
     })
     .join(' ');
+
+  const altText =
+    labels.length > 0
+      ? labels.map((l) => `${l}: ${data[l] || 0}`).join(', ')
+      : 'no data';
+
   return (
     <svg
       viewBox="0 0 100 100"
       role="img"
-      aria-label="Nikto finding categories radar chart"
+      aria-label={`Nikto findings radar chart showing ${altText}`}
       className="w-full h-full"
     >
+      <title>Nikto findings</title>
+      <desc>{`Radar chart of categories with counts: ${altText}`}</desc>
       <polygon
         points={points}
         fill="rgba(34,197,94,0.4)"
@@ -59,8 +70,18 @@ const NiktoApp = () => {
   useEffect(() => {
     workerRef.current = new Worker(new URL('./nikto.worker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
-      setClusters(e.data.clusters);
-      setStatus('Scan complete');
+      const { clusters: c, error } = e.data || {};
+      if (error) {
+        setStatus(error);
+        setClusters({});
+      } else if (c) {
+        setClusters(c);
+        setStatus('Scan complete');
+      }
+    };
+    workerRef.current.onerror = () => {
+      setStatus('Worker error');
+      setLoading(false);
     };
     prefersReducedMotion.current = window.matchMedia(
       '(prefers-reduced-motion: reduce)'
@@ -87,12 +108,20 @@ const NiktoApp = () => {
 
   const runScan = async () => {
     if (!target) return;
+    if (target.length > MAX_TARGET_LENGTH) {
+      setStatus('Target too long');
+      return;
+    }
     setLoading(true);
     setStatus('Running scan');
     setClusters({});
     try {
       const res = await fetch(`/api/nikto?target=${encodeURIComponent(target)}`);
       const text = await res.text();
+      if (text.length > MAX_TEXT_SIZE) {
+        setStatus('Scan result too large to analyze');
+        return;
+      }
       workerRef.current?.postMessage({ text });
     } catch (err) {
       setStatus(`Error: ${err.message}`);
@@ -112,7 +141,7 @@ const NiktoApp = () => {
         <input
           type="text"
           value={target}
-          onChange={(e) => setTarget(e.target.value)}
+          onChange={(e) => setTarget(e.target.value.slice(0, MAX_TARGET_LENGTH))}
           placeholder="http://example.com"
           className="flex-1 p-2 rounded-l text-black"
         />

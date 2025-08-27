@@ -1,3 +1,6 @@
+const MAX_TEXT_SIZE = 500000; // ~500kb
+const MAX_LINES = 10000;
+
 const categories = {
   SQLi: /sql|database/i,
   XSS: /xss|cross|script/i,
@@ -7,8 +10,16 @@ const categories = {
 };
 
 self.onmessage = (e) => {
-  const { text } = e.data;
+  const text = e.data?.text;
+  if (typeof text !== 'string' || text.length > MAX_TEXT_SIZE) {
+    postMessage({ error: 'Input too large' });
+    return;
+  }
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length > MAX_LINES) {
+    postMessage({ error: 'Input too large' });
+    return;
+  }
   const clusters = {};
 
   lines.forEach((line) => {
