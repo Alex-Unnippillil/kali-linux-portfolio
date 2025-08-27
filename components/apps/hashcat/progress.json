@@ -1,6 +1,6 @@
 {
   "progress": 42,
-  "hashRate": "123 H/s",
-  "eta": "00:00:42",
+  "hashRate": ["123 H/s", "200 H/s", "321 H/s"],
+  "eta": ["00:00:42", "00:00:21", "00:00:00"],
   "mode": "Brute-force"
 }
