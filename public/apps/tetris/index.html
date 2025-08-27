@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tetris</title>
+  <style>
+    body { background: #111; color: #fff; font-family: sans-serif; text-align: center; }
+    canvas { background: #222; display: block; margin: 0 auto; }
+    #info { margin-top: 8px; }
+    #leaderboard { margin-top: 8px; }
+    button { margin: 2px; }
+  </style>
+</head>
+<body>
+  <h1>Tetris</h1>
+  <canvas id="board" width="200" height="400"></canvas>
+  <div id="info"></div>
+  <div>
+    <button id="mode-sprint">40 Line Sprint</button>
+    <button id="mode-marathon">Marathon</button>
+    <button id="hold-btn">Hold</button>
+  </div>
+  <div id="leaderboard"></div>
+  <script src="main.js"></script>
+</body>
+</html>
