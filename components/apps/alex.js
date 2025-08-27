@@ -112,6 +112,15 @@ export default displayAboutAlex;
 
 
 function About() {
+    const now = {
+        role: 'Cybersecurity Specialist',
+        learning: [
+            'Advanced penetration testing',
+            'Rust and Go',
+            'Cloud security automation'
+        ]
+    };
+
     return (
         <>
             <div className="w-20 md:w-28 my-4 full">
@@ -183,6 +192,15 @@ function About() {
                     I also have interests in deep learning, software development, and animation.
                 </li>
             </ul>
+            <div className="mt-6 w-5/6 md:w-3/4 bg-ub-cool-grey bg-opacity-50 border border-gray-600 rounded p-4 text-sm md:text-base">
+                <div className="text-xl font-medium mb-2">Now</div>
+                <p className="mb-2">Current role: <span className="font-semibold">{now.role}</span></p>
+                <ul className="list-disc ml-5">
+                    {now.learning.map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                    ))}
+                </ul>
+            </div>
             <Timeline />
         </>
     )

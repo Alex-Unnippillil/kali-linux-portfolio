@@ -8,7 +8,7 @@ export default function ProjectGallery() {
   const [projects, setProjects] = useState([]);
   const [display, setDisplay] = useState([]);
   const [filter, setFilter] = useState('');
-  const [techs, setTechs] = useState([]);
+  const [tags, setTags] = useState([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -25,7 +25,8 @@ export default function ProjectGallery() {
     const fetchRepos = async () => {
       try {
         const res = await fetch(
-          `https://api.github.com/users/${GITHUB_USER}/repos?sort=updated&per_page=9`
+          `https://api.github.com/users/${GITHUB_USER}/repos?sort=updated&per_page=9`,
+          { headers: { Accept: 'application/vnd.github.mercy-preview+json' } }
         );
         const data = await res.json();
         const mapped = data.map((repo) => ({
@@ -33,15 +34,13 @@ export default function ProjectGallery() {
           title: repo.name,
           description: repo.description || 'No description provided.',
           image: `https://opengraph.githubassets.com/1/${GITHUB_USER}/${repo.name}`,
-          tech: [repo.language].filter(Boolean),
+          tags: [...(repo.topics || []), repo.language].filter(Boolean),
           live: repo.homepage,
           repo: repo.html_url,
         }));
         setProjects(mapped);
         setDisplay(mapped);
-        setTechs([
-          ...new Set(mapped.flatMap((p) => p.tech)),
-        ]);
+        setTags([...(new Set(mapped.flatMap((p) => p.tags)))]);
         setAriaMessage(`Showing ${mapped.length} projects`);
       } catch (err) {
         console.error('Failed to load repos', err);
@@ -53,7 +52,7 @@ export default function ProjectGallery() {
   const updateDisplay = useCallback(
     (selected) => {
       const filtered = selected
-        ? projects.filter((p) => p.tech.includes(selected))
+        ? projects.filter((p) => p.tags.includes(selected))
         : projects;
       setAriaMessage(
         `Showing ${filtered.length} project${
@@ -128,7 +127,7 @@ export default function ProjectGallery() {
             >
               All
             </button>
-            {techs.map((t) => (
+            {tags.map((t) => (
               <button
                 key={t}
                 onClick={() => setFilter(t)}
@@ -143,7 +142,7 @@ export default function ProjectGallery() {
               </button>
             ))}
           </div>
-          <div className="columns-1 sm:columns-2 lg:columns-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {display.map((project) => (
               <div
                 key={project.id}
@@ -157,7 +156,7 @@ export default function ProjectGallery() {
                     : ''
                 } ${motionClass}`}
               >
-                <div className="relative w-full" style={{ aspectRatio: '3 / 2' }}>
+                <div className="relative w-full h-48 md:h-56 lg:h-64">
                   <Image
                     src={project.image}
                     alt={project.title}
@@ -172,7 +171,7 @@ export default function ProjectGallery() {
                     {project.description}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1">
-                    {project.tech.map((t, i) => (
+                    {project.tags.map((t, i) => (
                       <span
                         key={i}
                         className="px-2 py-0.5 text-xs rounded bg-gray-700 text-white"

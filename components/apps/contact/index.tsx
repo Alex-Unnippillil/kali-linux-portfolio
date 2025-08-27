@@ -53,14 +53,36 @@ const ContactApp = () => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [honeypot, setHoneypot] = useState('');
-  const [error, setError] = useState('');
+  const [feedback, setFeedback] = useState('');
+  const [status, setStatus] = useState<'idle' | 'error' | 'success'>('idle');
   const [reveal, setReveal] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const form = e.currentTarget;
+    if (!form.checkValidity()) {
+      const invalid = form.querySelector(':invalid') as
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | null;
+      if (invalid) {
+        setStatus('error');
+        setFeedback(invalid.validationMessage);
+        invalid.focus();
+      }
+      return;
+    }
     const result = await processContactForm({ name, email, message, honeypot });
-    if (!result.success) setError(result.error || 'Submission failed');
-    else setError('');
+    if (!result.success) {
+      setStatus('error');
+      setFeedback(result.error || 'Submission failed');
+    } else {
+      setStatus('success');
+      setFeedback('Message sent! Check your email client.');
+      setName('');
+      setEmail('');
+      setMessage('');
+    }
   };
 
   return (
@@ -76,6 +98,7 @@ const ContactApp = () => {
         <input
           className="p-1 border"
           placeholder="Email"
+          type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -92,15 +115,22 @@ const ContactApp = () => {
           tabIndex={-1}
           autoComplete="off"
           value={honeypot}
+          aria-hidden="true"
           onChange={(e) => setHoneypot(e.target.value)}
         />
         <button type="submit" className="bg-blue-500 text-white px-2 py-1">
           Send
         </button>
       </form>
-      {error && (
-        <div role="alert" className="text-red-500 mt-2">
-          {error}
+      {feedback && (
+        <div
+          role={status === 'error' ? 'alert' : 'status'}
+          aria-live="polite"
+          className={`mt-2 ${
+            status === 'error' ? 'text-red-500' : 'text-green-600'
+          }`}
+        >
+          {feedback}
         </div>
       )}
       <div className="mt-4">
