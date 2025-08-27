@@ -62,6 +62,8 @@ function TowerDefense() {
   const canvasRef = useRef(null);
   const towersRef = useRef([]);
   const enemiesRef = useRef([]);
+  const projectilesRef = useRef([]);
+  const decalsRef = useRef([]);
   const spawnRef = useRef({ count: 0, spawned: 0, timer: 0 });
   const [wave, setWave] = useState(1);
   const waveRef = useRef(wave);
@@ -73,6 +75,7 @@ function TowerDefense() {
   const runningRef = useRef(running);
   const [sound, setSound] = useState(true);
   const audioCtxRef = useRef(null);
+  const prefersReducedMotion = useRef(false);
 
   useEffect(() => { waveRef.current = wave; }, [wave]);
   useEffect(() => { runningRef.current = running; }, [running]);
@@ -92,6 +95,14 @@ function TowerDefense() {
       localStorage.setItem('td-highscore', String(score));
     }
   }, [score, highScore]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      prefersReducedMotion.current = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+    }
+  }, []);
 
   const playSound = () => {
     if (!sound) return;
@@ -122,6 +133,8 @@ function TowerDefense() {
   const reset = () => {
     towersRef.current = [];
     enemiesRef.current = [];
+    projectilesRef.current = [];
+    decalsRef.current = [];
     setWave(1);
     waveRef.current = 1;
     setLives(10);
@@ -142,7 +155,7 @@ function TowerDefense() {
       return;
     }
     if (pointOnPath(x, y)) return;
-    towersRef.current.push({ x, y, level: 1 });
+    towersRef.current.push({ x, y, level: 1, cooldown: 0 });
   };
 
   const update = (dt) => {
@@ -169,8 +182,8 @@ function TowerDefense() {
     });
 
     towersRef.current.forEach((t) => {
+      t.cooldown = (t.cooldown || 0) - dt;
       const range = 60 + t.level * 10;
-      const dps = 20 * t.level;
       let target = null;
       let minDist = Infinity;
       enemiesRef.current.forEach((e) => {
@@ -180,8 +193,44 @@ function TowerDefense() {
           minDist = dist;
         }
       });
-      if (target) target.hp -= dps * dt;
+      if (target && t.cooldown <= 0) {
+        projectilesRef.current.push({
+          x: t.x,
+          y: t.y,
+          target,
+          speed: 200,
+          damage: 5 * t.level,
+          trail: [],
+        });
+        t.cooldown = 0.5;
+      }
     });
+
+    projectilesRef.current.forEach((p) => {
+      if (!p.target) return;
+      p.trail.push({ x: p.x, y: p.y });
+      if (p.trail.length > 5) p.trail.shift();
+      const dx = p.target.x - p.x;
+      const dy = p.target.y - p.y;
+      const dist = Math.hypot(dx, dy);
+      const vx = (dx / dist) * p.speed;
+      const vy = (dy / dist) * p.speed;
+      p.x += vx * dt;
+      p.y += vy * dt;
+      if (dist < 5 || p.target.hp <= 0) {
+        if (p.target.hp > 0) p.target.hp -= p.damage;
+        decalsRef.current.push({ x: p.x, y: p.y, ttl: 0.3 });
+        p.hit = true;
+      }
+    });
+    projectilesRef.current = projectilesRef.current.filter(
+      (p) => !p.hit && p.target.hp > 0
+    );
+
+    decalsRef.current.forEach((d) => {
+      d.ttl -= dt;
+    });
+    decalsRef.current = decalsRef.current.filter((d) => d.ttl > 0);
 
     enemiesRef.current = enemiesRef.current.filter((e) => {
       if (e.hp <= 0) {
@@ -221,6 +270,14 @@ function TowerDefense() {
     for (let i = 1; i < PATH.length; i += 1) ctx.lineTo(PATH[i].x, PATH[i].y);
     ctx.stroke();
 
+    decalsRef.current.forEach((d) => {
+      const alpha = prefersReducedMotion.current ? 1 : d.ttl / 0.3;
+      ctx.fillStyle = `rgba(255,255,0,${alpha})`;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
     towersRef.current.forEach((t) => {
       ctx.fillStyle = 'blue';
       ctx.beginPath();
@@ -232,12 +289,33 @@ function TowerDefense() {
     });
 
     enemiesRef.current.forEach((e) => {
-      ctx.fillStyle = 'red';
+      ctx.fillStyle = '#b00';
       ctx.beginPath();
       ctx.arc(e.x, e.y, 8, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = 'green';
+      ctx.fillStyle = '#222';
+      ctx.fillRect(e.x - 10, e.y - 14, 20, 3);
+      ctx.fillStyle = '#0f0';
       ctx.fillRect(e.x - 10, e.y - 14, (20 * e.hp) / e.maxHp, 3);
+    });
+
+    projectilesRef.current.forEach((p) => {
+      if (!prefersReducedMotion.current) {
+        ctx.strokeStyle = 'rgba(255,255,0,0.5)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const tr = p.trail;
+        if (tr.length) {
+          ctx.moveTo(tr[0].x, tr[0].y);
+          for (let i = 1; i < tr.length; i += 1) ctx.lineTo(tr[i].x, tr[i].y);
+          ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#ff0';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.fill();
     });
   };
 
@@ -263,7 +341,7 @@ function TowerDefense() {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-2">
-      <div className="mb-2">
+      <div className="mb-2" aria-live="polite" role="status">
         <span className="mr-4">Wave: {wave}</span>
         <span className="mr-4">Lives: {lives}</span>
         <span className="mr-4">Score: {score}</span>
