@@ -1,8 +1,10 @@
-self.onmessage = () => {
+self.onmessage = ({ data }) => {
   const cells = [];
-  const cellSize = 10;
-  const cols = 30;
-  const rows = 15;
+  const {
+    cellSize = 10,
+    cols = 100,
+    rows = 60,
+  } = data || {};
   const types = ['process', 'dll', 'socket'];
 
   for (let y = 0; y < rows; y++) {

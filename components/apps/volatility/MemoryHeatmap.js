@@ -26,6 +26,7 @@ const MemoryHeatmap = ({ data }) => {
     dll: true,
     socket: true,
   });
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [announcement, setAnnouncement] = useState('');
   const prefersReducedMotion = useRef(false);
 
@@ -50,9 +51,14 @@ const MemoryHeatmap = ({ data }) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const filtered = data.filter((d) => filters[d.type]);
       filtered.forEach((cell) => {
+        const x = cell.x - offset.x;
+        const y = cell.y - offset.y;
+        if (x + cell.width < 0 || y + cell.height < 0 || x > canvas.width || y > canvas.height) {
+          return;
+        }
         ctx.fillStyle = colors[cell.type];
         ctx.globalAlpha = cell.value;
-        ctx.fillRect(cell.x, cell.y, cell.width, cell.height);
+        ctx.fillRect(x, y, cell.width, cell.height);
       });
       ctx.globalAlpha = 1;
       if (!prefersReducedMotion.current) {
@@ -62,7 +68,38 @@ const MemoryHeatmap = ({ data }) => {
 
     draw();
     return () => cancelAnimationFrame(frame);
-  }, [data, filters]);
+  }, [data, filters, offset]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const handleKeyDown = (e) => {
+      let dx = 0;
+      let dy = 0;
+      switch (e.key) {
+        case 'ArrowLeft':
+          dx = -10;
+          break;
+        case 'ArrowRight':
+          dx = 10;
+          break;
+        case 'ArrowUp':
+          dy = -10;
+          break;
+        case 'ArrowDown':
+          dy = 10;
+          break;
+        default:
+          break;
+      }
+      if (dx !== 0 || dy !== 0) {
+        setOffset((o) => ({ x: o.x + dx, y: o.y + dy }));
+        e.preventDefault();
+      }
+    };
+
+    canvas?.addEventListener('keydown', handleKeyDown);
+    return () => canvas?.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const toggle = (key) => setFilters((f) => ({ ...f, [key]: !f[key] }));
 
@@ -91,9 +128,10 @@ const MemoryHeatmap = ({ data }) => {
         ref={canvasRef}
         width={300}
         height={150}
+        tabIndex={0}
         role="img"
-        aria-label="Heatmap of memory regions"
-        className="border border-gray-500 w-full h-40"
+        aria-label="Heatmap of memory regions. Use arrow keys to pan."
+        className="border border-gray-500 w-full h-40 focus:outline-none"
       />
       <div className="sr-only" aria-live="polite">
         {announcement}
