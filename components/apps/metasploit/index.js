@@ -26,7 +26,6 @@ const MetasploitApp = () => {
   const [timeline, setTimeline] = useState([]);
   const [replaying, setReplaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [liveMsg, setLiveMsg] = useState('');
 
   const workerRef = useRef();
   const moduleRaf = useRef();
@@ -104,7 +103,6 @@ const MetasploitApp = () => {
     worker.onmessage = (e) => {
       if (e.data.step) {
         setTimeline((t) => [...t, e.data.step]);
-        setLiveMsg(e.data.step);
       } else if (e.data.done) {
         setReplaying(false);
         worker.terminate();
@@ -171,6 +169,7 @@ const MetasploitApp = () => {
               <button
                 key={s}
                 onClick={() => setSelectedSeverity(s)}
+                aria-pressed={selectedSeverity === s}
                 className={`px-2 py-1 rounded-full text-xs font-bold mr-2 mb-2 focus:outline-none ${severityStyles[s]} ${
                   selectedSeverity === s
                     ? 'ring-2 ring-white motion-safe:transition-transform motion-safe:duration-300 motion-safe:scale-110 motion-reduce:transition-none motion-reduce:scale-100'
@@ -198,17 +197,25 @@ const MetasploitApp = () => {
           >
             Replay Mock Exploit
           </button>
-          <div aria-live="polite" className="sr-only">
-            {liveMsg}
-          </div>
           {timeline.length > 0 && (
             <>
-              <ul className="mt-2 text-xs max-h-32 overflow-auto">
+              <ul
+                className="mt-2 text-xs max-h-32 overflow-auto"
+                role="log"
+                aria-live="polite"
+                aria-relevant="additions"
+              >
                 {timeline.map((t, i) => (
                   <li key={i}>{t}</li>
                 ))}
               </ul>
-              <div className="w-full bg-ub-grey h-2 mt-2">
+              <div
+                className="w-full bg-ub-grey h-2 mt-2"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(progress)}
+              >
                 <div
                   className="h-full bg-ub-orange"
                   style={{ width: `${progress}%` }}
