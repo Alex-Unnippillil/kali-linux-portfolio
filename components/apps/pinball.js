@@ -12,11 +12,29 @@ const Pinball = () => {
   const [layout, setLayout] = usePersistentState('pinball-layout', DEFAULT_LAYOUT);
   const [editing, setEditing] = useState(false);
   const [tilt, setTilt] = useState(false);
+  const [lightsEnabled, setLightsEnabled] = useState(true);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const nudgeTimes = useRef([]);
+  const bumpersRef = useRef([]);
+  const animRef = useRef();
+  const lightsRef = useRef(true);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setPrefersReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    }
+  }, []);
+
+  useEffect(() => {
+    lightsRef.current = lightsEnabled;
+    bumpersRef.current.forEach((b) => {
+      b.body.render.fillStyle = lightsEnabled ? (b.lit ? '#ffd700' : '#444') : '#222';
+    });
+  }, [lightsEnabled]);
 
   useEffect(() => {
     if (!canvasRef.current || editing) return;
-    const { Engine, Render, Runner, Bodies, Composite, Body, Constraint } = Matter;
+    const { Engine, Render, Runner, Bodies, Composite, Body, Constraint, Events } = Matter;
     const engine = Engine.create();
     const world = engine.world;
 
@@ -40,10 +58,39 @@ const Pinball = () => {
     const pivotRight = Constraint.create({ bodyA: flipperRight, pointB: { x: WIDTH - 70, y: HEIGHT - 40 }, length: 0, stiffness: 1 });
     Composite.add(world, [flipperLeft, flipperRight, pivotLeft, pivotRight]);
 
-    // bumpers
-    layout.bumpers.forEach((b) => {
-      const bumper = Bodies.circle(b.x, b.y, b.r, { isStatic: true, restitution: 1.5 });
+    // bumpers with lights
+    const bumpers = layout.bumpers.map((b, i) => {
+      const bumper = Bodies.circle(b.x, b.y, b.r, {
+        isStatic: true,
+        restitution: 1.5,
+        render: { fillStyle: lightsRef.current ? '#444' : '#222' },
+      });
+      bumper.plugin = { index: i };
       Composite.add(world, bumper);
+      return { body: bumper, lit: false, flashUntil: 0 };
+    });
+    bumpersRef.current = bumpers;
+
+    const getBumperData = (body) => {
+      if (body.plugin && body.plugin.index != null) {
+        return bumpersRef.current[body.plugin.index];
+      }
+      return null;
+    };
+
+    Events.on(engine, 'collisionStart', (event) => {
+      event.pairs.forEach(({ bodyA, bodyB }) => {
+        const bumperData = getBumperData(bodyA) || getBumperData(bodyB);
+        if (bumperData && lightsRef.current) {
+          bumperData.lit = !bumperData.lit;
+          if (!prefersReducedMotion) {
+            bumperData.flashUntil = performance.now() + 100;
+            bumperData.body.render.fillStyle = '#fff';
+          } else {
+            bumperData.body.render.fillStyle = bumperData.lit ? '#ffd700' : '#444';
+          }
+        }
+      });
     });
 
     const render = Render.create({
@@ -54,6 +101,17 @@ const Pinball = () => {
     Render.run(render);
     const runner = Runner.create();
     Runner.run(runner, engine);
+
+    const animate = (time) => {
+      bumpersRef.current.forEach((b) => {
+        if (b.flashUntil && time > b.flashUntil) {
+          b.flashUntil = 0;
+          b.body.render.fillStyle = b.lit ? '#ffd700' : '#444';
+        }
+      });
+      animRef.current = requestAnimationFrame(animate);
+    };
+    animRef.current = requestAnimationFrame(animate);
 
     const keydown = (e) => {
       if (tilt) return;
@@ -82,8 +140,9 @@ const Pinball = () => {
       Render.stop(render);
       Runner.stop(runner);
       Engine.clear(engine);
+      cancelAnimationFrame(animRef.current);
     };
-  }, [canvasRef, layout, editing, tilt]);
+  }, [canvasRef, layout, editing, tilt, prefersReducedMotion]);
 
   const handleClick = (e) => {
     if (!editing || !canvasRef.current) return;
@@ -115,8 +174,19 @@ const Pinball = () => {
         <button className="px-2 bg-ub-orange text-black" onClick={saveShare}>
           Save/Share
         </button>
+        <button
+          className="px-2 bg-ub-orange text-black"
+          onClick={() => setLightsEnabled(!lightsEnabled)}
+          aria-pressed={lightsEnabled}
+        >
+          {lightsEnabled ? 'Lights On' : 'Lights Off'}
+        </button>
         {tilt && (
-          <span className="ml-2 text-red-500">
+          <span
+            className="ml-2 text-red-500 motion-safe:animate-pulse"
+            aria-live="assertive"
+            role="alert"
+          >
             TILT <button onClick={resetTilt}>Reset</button>
           </span>
         )}
