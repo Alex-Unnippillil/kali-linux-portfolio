@@ -32,8 +32,9 @@ export class SideBarApp extends Component {
 
     render() {
         return (
-            <div
-                tabIndex="0"
+            <button
+                type="button"
+                aria-label={this.props.title}
                 onClick={this.openApp}
                 onMouseEnter={() => {
                     this.setState({ showTitle: true });
@@ -75,7 +76,7 @@ export class SideBarApp extends Component {
                 >
                     {this.props.title}
                 </div>
-            </div>
+            </button>
         );
     }
 }
