@@ -60,9 +60,13 @@ const CarRacer = () => {
     const stored = localStorage.getItem('car_racer_high');
     if (stored) setHighScore(parseInt(stored, 10));
     if (typeof window !== 'undefined') {
-      reduceMotionRef.current = window
-        .matchMedia('(prefers-reduced-motion: reduce)')
-        .matches;
+      const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const updateMotion = () => {
+        reduceMotionRef.current = media.matches;
+      };
+      updateMotion();
+      media.addEventListener('change', updateMotion);
+      return () => media.removeEventListener('change', updateMotion);
     }
   }, []);
 
@@ -81,12 +85,12 @@ const CarRacer = () => {
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
       if (!reduceMotionRef.current) {
-        ctx.fillStyle = '#777';
+        ctx.fillStyle = '#999';
         roadsideRef.current.far.forEach((r) => {
           ctx.fillRect(2, r.y, 6, 20);
           ctx.fillRect(WIDTH - 8, r.y, 6, 20);
         });
-        ctx.fillStyle = '#bbb';
+        ctx.fillStyle = '#ccc';
         roadsideRef.current.near.forEach((r) => {
           ctx.fillRect(0, r.y, 10, 30);
           ctx.fillRect(WIDTH - 10, r.y, 10, 30);
@@ -190,6 +194,13 @@ const CarRacer = () => {
         }
       }
 
+      if (!reduceMotionRef.current) {
+        const blur = boostRef.current > 0 ? (4 * boostRef.current) / BOOST_DURATION : 0;
+        canvas.style.filter = blur ? `blur(${blur}px)` : 'none';
+      } else {
+        canvas.style.filter = 'none';
+      }
+
       draw();
       requestAnimationFrame(step);
     };
@@ -261,35 +272,47 @@ const CarRacer = () => {
 
   return (
     <div className="h-full w-full relative text-white select-none">
-      <canvas
-        ref={canvasRef}
-        className="h-full w-full bg-black"
-        style={{ filter: boost && !reduceMotionRef.current ? 'blur(2px)' : 'none' }}
-      />
+      <canvas ref={canvasRef} className="h-full w-full bg-black" />
       <div
         className="absolute top-2 left-2 text-sm space-y-1 z-10"
         aria-live="polite"
+        role="status"
       >
         <div>Score: {score}</div>
         <div>High: {highScore}</div>
         {boost && !reduceMotionRef.current && <div>Boost!</div>}
       </div>
       <div className="absolute bottom-2 left-2 space-x-2 z-10 text-sm">
-        <button className="bg-gray-700 px-2" onClick={reset}>
+        <button
+          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          onClick={reset}
+        >
           Reset
         </button>
-        <button className="bg-gray-700 px-2" onClick={togglePause}>
+        <button
+          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          onClick={togglePause}
+        >
           {paused ? 'Resume' : 'Pause'}
         </button>
-        <button className="bg-gray-700 px-2" onClick={toggleSound}>
+        <button
+          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          onClick={toggleSound}
+        >
           {sound ? 'Sound: on' : 'Sound: off'}
         </button>
-        <button className="bg-gray-700 px-2" onClick={triggerBoost}>
+        <button
+          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          onClick={triggerBoost}
+        >
           Boost
         </button>
       </div>
       {!runningRef.current && (
-        <div className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-20">
+        <div
+          className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-20"
+          role="alert"
+        >
           <div className="text-center">
             <div className="text-2xl mb-2">Crash!</div>
             <div className="text-sm">Press Reset to play again</div>
