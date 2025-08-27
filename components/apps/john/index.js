@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   parseRules,
   distributeTasks,
@@ -16,6 +16,53 @@ const JohnApp = () => {
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [progress, setProgress] = useState(0);
+  const [phase, setPhase] = useState('wordlist');
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [animOffset, setAnimOffset] = useState(0);
+  const workerRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setPrefersReducedMotion(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (prefersReducedMotion) return undefined;
+    let frame;
+    const animate = () => {
+      setAnimOffset((o) => (o + 1) % 20);
+      frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [prefersReducedMotion]);
+
+  useEffect(() => () => workerRef.current?.terminate(), []);
+
+  const startProgress = (total) => {
+    if (workerRef.current) workerRef.current.terminate();
+    workerRef.current = new Worker(new URL('./progress.worker.js', import.meta.url));
+    workerRef.current.onmessage = (e) => {
+      const { percent, phase: p } = e.data;
+      setProgress(percent);
+      setPhase(p);
+    };
+    workerRef.current.postMessage({ type: 'init', total });
+  };
+
+  const incrementProgress = (p) => {
+    workerRef.current?.postMessage({ type: 'increment', phase: p });
+  };
+
+  const stopProgress = () => {
+    workerRef.current?.terminate();
+    workerRef.current = null;
+  };
 
   const handleRuleUpload = (e) => {
     const file = e.target.files?.[0];
@@ -49,6 +96,8 @@ const JohnApp = () => {
     setError('');
     setLoading(true);
     setOutput('');
+    const totalSteps = hashArr.length * 2;
+    startProgress(totalSteps);
     try {
       const assignments = endpointArr.length
         ? distributeTasks(hashArr, endpointArr)
@@ -56,12 +105,14 @@ const JohnApp = () => {
       const results = [];
       for (const [endpoint, hs] of Object.entries(assignments)) {
         for (const h of hs) {
+          incrementProgress('wordlist');
           const res = await fetch('/api/john', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ hash: h, rules }),
           });
           const data = await res.json();
+          incrementProgress('rules');
           results.push(
             `${endpoint} (${identifyHashType(h)}): ${
               data.output || data.error || 'No output'
@@ -70,9 +121,12 @@ const JohnApp = () => {
         }
       }
       setOutput(results.join('\n'));
+      setProgress(100);
+      setPhase('done');
     } catch (err) {
       setError(err.message);
     } finally {
+      stopProgress();
       setLoading(false);
     }
   };
@@ -127,6 +181,34 @@ const JohnApp = () => {
         >
           {loading ? 'Running...' : 'Crack'}
         </button>
+        {loading && (
+          <>
+            <div className="w-full bg-gray-700 rounded h-4 overflow-hidden mt-2">
+              <div
+                className="h-full"
+                style={{
+                  width: `${progress}%`,
+                  backgroundImage:
+                    'repeating-linear-gradient(45deg,#10b981,#10b981 10px,#3b82f6 10px,#3b82f6 20px)',
+                  backgroundSize: '20px 20px',
+                  backgroundPosition: `${animOffset}px 0`,
+                  transition: prefersReducedMotion ? 'none' : 'width 0.2s ease-out',
+                }}
+                role="progressbar"
+                aria-valuenow={Math.round(progress)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <span className="sr-only">{`Progress ${Math.round(progress)} percent`}</span>
+              </div>
+            </div>
+            <p className="text-xs mt-1 text-white" aria-live="polite">
+              {phase === 'wordlist'
+                ? `Processing wordlist: ${Math.round(progress)}%`
+                : `Applying rules: ${Math.round(progress)}%`}
+            </p>
+          </>
+        )}
         {error && (
           <p id="john-error" role="alert" className="text-red-500 text-sm">
             {error}
