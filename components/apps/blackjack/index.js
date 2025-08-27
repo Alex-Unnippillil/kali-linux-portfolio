@@ -3,6 +3,93 @@ import ReactGA from 'react-ga4';
 import { BlackjackGame, handValue, basicStrategy, cardValue } from './engine';
 
 const CHIP_VALUES = [1, 5, 25, 100];
+const CHIP_COLORS = {
+  1: 'bg-gray-200 text-black',
+  5: 'bg-red-800 text-white',
+  25: 'bg-green-800 text-white',
+  100: 'bg-blue-900 text-white',
+};
+
+const Card = ({ card, faceDown }) => {
+  const [flipped, setFlipped] = useState(false);
+  const prefersReduced = useRef(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      prefersReduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (faceDown) {
+      setFlipped(false);
+    } else if (prefersReduced.current) {
+      setFlipped(true);
+    } else {
+      requestAnimationFrame(() => setFlipped(true));
+    }
+  }, [faceDown, card]);
+
+  return (
+    <div
+      className={`h-16 w-12 card ${flipped ? 'flipped' : ''} animate-deal`}
+      aria-label={faceDown ? 'Hidden card' : `${card.value}${card.suit}`}
+    >
+      <div className="card-face card-front">{`${card.value}${card.suit}`}</div>
+      <div className="card-face card-back">?</div>
+    </div>
+  );
+};
+
+const BetChips = ({ amount }) => {
+  const [chips, setChips] = useState([]);
+  const stackRef = useRef(null);
+  const prefersReduced = useRef(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      prefersReduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+  }, []);
+
+  useEffect(() => {
+    const newChips = [];
+    let remaining = amount;
+    const values = [...CHIP_VALUES].reverse();
+    values.forEach((val) => {
+      const count = Math.floor(remaining / val);
+      remaining %= val;
+      for (let i = 0; i < count; i += 1) {
+        newChips.push({ val, id: `${val}-${i}-${amount}` });
+      }
+    });
+    setChips(newChips);
+  }, [amount]);
+
+  useEffect(() => {
+    if (!prefersReduced.current && stackRef.current) {
+      const last = stackRef.current.lastElementChild;
+      if (last) {
+        requestAnimationFrame(() => last.classList.add('chip-pop'));
+      }
+    }
+  }, [chips]);
+
+  return (
+    <div ref={stackRef} className="chip-stack relative h-10 w-10" aria-label={`Bet ${amount}`}> 
+      {chips.map((chip, index) => (
+        <div
+          key={chip.id}
+          className={`chip ${CHIP_COLORS[chip.val]}`}
+          style={{ top: `-${index * 2}px`, zIndex: index }}
+          aria-hidden="true"
+        >
+          {chip.val}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 // simple reducer so that game actions can be dispatched and extended easily
 const gameReducer = (state, action) => {
@@ -153,14 +240,11 @@ const Blackjack = () => {
       title={showProb ? `Bust chance: ${(bustProbability(hand) * 100).toFixed(1)}%` : undefined}
     >
       {hand.cards.map((card, idx) => (
-        <div
+        <Card
           key={idx}
-          className="h-16 w-12 bg-white text-black flex items-center justify-center card animate-deal"
-        >
-          {hideFirst && idx === 0 && playerHands.length > 0 && current < playerHands.length
-            ? '?'
-            : `${card.value}${card.suit}`}
-        </div>
+          card={card}
+          faceDown={hideFirst && idx === 0 && playerHands.length > 0 && current < playerHands.length}
+        />
       ))}
       <div className="ml-2 self-center">{handValue(hand.cards)}</div>
     </div>
@@ -200,16 +284,19 @@ const Blackjack = () => {
       </div>
       {playerHands.length === 0 ? (
         <div className="mb-4">
-          <div className="mb-2">Bet: {bet}</div>
+          <div className="mb-2 flex items-center space-x-2" aria-live="polite">
+            <span>Bet: {bet}</span>
+            <BetChips amount={bet} />
+          </div>
           <div className="flex space-x-2 mb-2">
             {CHIP_VALUES.map((v) => (
               <button
                 key={v}
-                className={`h-10 w-10 rounded-full flex items-center justify-center bg-gray-700 hover:bg-gray-600 ${
+                className={`chip ${CHIP_COLORS[v]} ${
                   bet + v > bankroll ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
                 onClick={() => bet + v <= bankroll && setBet(bet + v)}
-                title={`Add ${v} chip`}
+                aria-label={`Add ${v} chip`}
               >
                 {v}
               </button>
@@ -251,7 +338,7 @@ const Blackjack = () => {
           Take Insurance
         </button>
       )}
-      <div className="mt-4">{message}</div>
+      <div className="mt-4" aria-live="polite">{message}</div>
       <div className="mt-4 text-sm">Wins: {stats.wins} Losses: {stats.losses} Pushes: {stats.pushes}</div>
     </div>
   );
