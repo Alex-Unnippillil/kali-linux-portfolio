@@ -346,3 +346,12 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Checkers highlights */
+.checkers-highlight-piece {
+    box-shadow: 0 0 0 3px #4ade80;
+}
+
+.checkers-highlight-target {
+    box-shadow: 0 0 0 3px #fde047;
+}

@@ -68,6 +68,15 @@ export const getPieceMoves = (board: Board, r: number, c: number): Move[] => {
   return captures.length ? captures : moves;
 };
 
+export const getLegalMoves = (board: Board, r: number, c: number): Move[] => {
+  const piece = board[r][c];
+  if (!piece) return [];
+  const moves = getPieceMoves(board, r, c);
+  const all = getAllMoves(board, piece.color);
+  const mustCapture = all.some((m) => m.captured);
+  return mustCapture ? moves.filter((m) => m.captured) : moves;
+};
+
 export const getAllMoves = (board: Board, color: Color): Move[] => {
   let result: Move[] = [];
   for (let r = 0; r < 8; r++) {

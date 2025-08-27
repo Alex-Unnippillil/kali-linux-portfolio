@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import { pointerHandlers } from '../../../utils/pointer';
 import {
   createBoard,
   getPieceMoves,
-  getAllMoves,
+  getLegalMoves,
   applyMove,
   isDraw,
   hasMoves,
@@ -83,17 +83,13 @@ const Checkers = () => {
     localStorage.setItem('checkersState', JSON.stringify(state));
   }, [board, turn, history, future, noCapture, winner, draw, lastMove]);
 
-  const allMoves = useMemo(() => getAllMoves(board, turn), [board, turn]);
-
   const selectPiece = (r: number, c: number) => {
     const piece = board[r][c];
     if (winner || draw || !piece || piece.color !== turn) return;
-    const pieceMoves = getPieceMoves(board, r, c);
-    const mustCapture = allMoves.some((m) => m.captured);
-    const filtered = mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
-    if (filtered.length) {
+    const legal = getLegalMoves(board, r, c);
+    if (legal.length) {
       setSelected([r, c]);
-      setMoves(filtered);
+      setMoves(legal);
     }
   };
 
@@ -245,11 +241,11 @@ const Checkers = () => {
                 )}
                 className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
-                } ${isMove ? 'ring-2 ring-yellow-300 animate-pulse' : ''} ${
+                } ${isMove ? 'checkers-highlight-target' : ''} ${
                   isHint || isHintDest
                     ? 'ring-2 ring-blue-400 animate-pulse'
                     : ''
-                } ${isSelected ? 'ring-2 ring-green-400' : ''} ${
+                } ${isSelected ? 'checkers-highlight-piece' : ''} ${
                   isLast ? 'ring-2 ring-red-400' : ''
                 }`}
               >
