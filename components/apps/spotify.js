@@ -10,16 +10,10 @@ export default function SpotifyApp() {
   const frameRef = useRef();
   const workerRef = useRef();
   const [level, setLevel] = useState(0);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches;
-
-    // Do not start the visualizer if user prefers reduced motion
-    if (prefersReducedMotion) {
-      return;
-    }
+    if (!started) return;
 
     const audioEl = audioRef.current;
     audioEl.crossOrigin = 'anonymous';
@@ -89,24 +83,62 @@ export default function SpotifyApp() {
       frameRef.current = requestAnimationFrame(draw);
     };
 
-    frameRef.current = requestAnimationFrame(draw);
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const stop = () => {
+      cancelAnimationFrame(frameRef.current);
+      audioCtx.suspend();
+    };
+
+    const startDraw = () => {
+      audioCtx.resume();
+      frameRef.current = requestAnimationFrame(draw);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        stop();
+      } else if (!mql.matches) {
+        startDraw();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    const handleMotionChange = (e) => {
+      if (e.matches) {
+        stop();
+      } else if (document.visibilityState === 'visible') {
+        startDraw();
+      }
+    };
+    mql.addEventListener('change', handleMotionChange);
+
+    if (!mql.matches) frameRef.current = requestAnimationFrame(draw);
 
     return () => {
-      cancelAnimationFrame(frameRef.current);
+      stop();
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      mql.removeEventListener('change', handleMotionChange);
       analyser.disconnect();
       source.disconnect();
       audioCtx.close();
       workerRef.current?.terminate();
     };
-  }, []);
+  }, [started]);
+
+  const start = () => {
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (mql.matches) return;
+    audioRef.current.play();
+    setStarted(true);
+  };
 
   return (
     <div className="relative h-full w-full bg-black text-white">
       <audio
         ref={audioRef}
         src="https://cdn.pixabay.com/download/audio/2021/09/06/audio_2b34bf4ad0a7a022beed579b3709271b?filename=birthday-sparks-15015.mp3"
-        autoPlay
         loop
       />
       <canvas
@@ -114,6 +146,15 @@ export default function SpotifyApp() {
         className="absolute inset-0 h-full w-full"
         aria-hidden="true"
       />
+      {!started && (
+        <button
+          type="button"
+          onClick={start}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded bg-white px-4 py-2 font-semibold text-black"
+        >
+          Start visualization
+        </button>
+      )}
       {/* Screen reader announcement of audio level */}
       <div className="sr-only" aria-live="polite">
         Audio level {level}%
