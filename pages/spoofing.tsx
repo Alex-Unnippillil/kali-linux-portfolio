@@ -12,7 +12,7 @@ const ToolTile = ({ title, link, children }: TileProps) => (
     href={link}
     target="_blank"
     rel="noopener noreferrer"
-    className="block p-4 bg-ub-grey text-white rounded shadow hover:bg-black focus:outline-none focus:ring"
+    className="block p-4 bg-ub-grey text-white rounded shadow hover:bg-black  focus:ring"
   >
     <h2 className="text-xl mb-2">{title}</h2>
     {children}

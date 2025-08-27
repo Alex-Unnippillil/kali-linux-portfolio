@@ -226,7 +226,7 @@ const OpenVASApp = () => {
                       type="button"
                       onClick={() => handleCellClick(likelihood, impact)}
                       disabled={count === 0}
-                      className={`p-2 ${color(i, j)} text-white focus:outline-none w-full ${
+                      className={`p-2 ${color(i, j)} text-white  w-full ${
                         reduceMotion.current ? '' : 'transition-transform hover:scale-105'
                       } ${
                         filter &&
@@ -254,7 +254,7 @@ const OpenVASApp = () => {
                 key={level}
                 onClick={() => handleSeverityChange(level)}
                 aria-pressed={severity === level}
-                className={`px-3 py-1 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                className={`px-3 py-1 rounded-full text-sm  focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
                   severity === level
                     ? 'bg-white text-black'
                     : 'bg-gray-800 text-white'

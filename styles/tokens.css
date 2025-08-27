@@ -25,6 +25,7 @@
   --color-ub-dark-grey: #555555;
   --color-bg: #111111;
   --color-text: #F6F6F5;
+  --focus-color: var(--color-ubt-blue);
 
   /* Spacing scale */
   --space-1: 0.25rem;

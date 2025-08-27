@@ -114,7 +114,7 @@ export class Chrome extends Component {
                 {this.state.tabs.map((tab, idx) => {
                     if (!this.thumbRefs[idx]) this.thumbRefs[idx] = createRef();
                     return (
-                        <button key={idx} ref={this.thumbRefs[idx]} onClick={() => this.selectTab(idx)} className="relative focus:outline-none border border-white" aria-label={`Open tab ${idx + 1}`}>
+                        <button key={idx} ref={this.thumbRefs[idx]} onClick={() => this.selectTab(idx)} className="relative  border border-white" aria-label={`Open tab ${idx + 1}`}>
                             <iframe
                                 src={tab.url}
                                 title={`Tab ${idx + 1}`}
@@ -153,8 +153,8 @@ export class Chrome extends Component {
                         sizes="20px"
                     />
                 </div>
-                <input onKeyDown={this.checkKey} onChange={this.handleDisplayUrl} value={this.state.display_url} id="chrome-url-bar" className="outline-none bg-ub-grey rounded-full pl-3 py-0.5 mr-3 w-5/6 text-gray-300 focus:text-white" type="url" spellCheck={false} autoComplete="off" />
-                <button onClick={this.openGrid} className="mr-2 px-2 py-0.5 bg-gray-800 text-white rounded focus:outline-none focus:ring" aria-label="Show all tabs">Tabs</button>
+                <input onKeyDown={this.checkKey} onChange={this.handleDisplayUrl} value={this.state.display_url} id="chrome-url-bar" className=" bg-ub-grey rounded-full pl-3 py-0.5 mr-3 w-5/6 text-gray-300 focus:text-white" type="url" spellCheck={false} autoComplete="off" />
+                <button onClick={this.openGrid} className="mr-2 px-2 py-0.5 bg-gray-800 text-white rounded  focus:ring" aria-label="Show all tabs">Tabs</button>
             </div>
         );
     }

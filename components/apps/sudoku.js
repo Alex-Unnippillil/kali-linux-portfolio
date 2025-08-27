@@ -514,7 +514,7 @@ const Sudoku = () => {
                 } ${shimmer ? 'shimmer' : ''} ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
               >
                 <input
-                  className={`w-full h-full text-center outline-none bg-transparent ${
+                  className={`w-full h-full text-center  bg-transparent ${
                     conflict ? 'text-white' : wrong ? 'text-red-500' : 'text-black'
                   }`}
                   aria-label={`Row ${r + 1} Column ${c + 1}`}

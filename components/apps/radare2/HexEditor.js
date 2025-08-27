@@ -123,7 +123,7 @@ const HexEditor = ({ hex }) => {
                   key={i}
                   onMouseDown={() => handleMouseDown(i)}
                   onMouseEnter={() => handleMouseEnter(i)}
-                  className={`w-6 h-6 flex items-center justify-center rounded focus:outline-none focus:ring-2 focus:ring-yellow-300 ${
+                  className={`w-6 h-6 flex items-center justify-center rounded  focus:ring-2 focus:ring-yellow-300 ${
                     selected ? 'bg-yellow-300 text-black' : 'bg-gray-800'
                   }`}
                   style={{ minWidth: '1.5rem' }}

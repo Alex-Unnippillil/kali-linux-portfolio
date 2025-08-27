@@ -65,7 +65,7 @@ export class AboutAlex extends Component {
                         id={section.id}
                         tabIndex="0"
                         onFocus={this.changeScreen}
-                        className={(this.state.active_screen === section.id ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}
+                        className={(this.state.active_screen === section.id ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default  py-1.5  duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}
                     >
                         <Image
                             className=" w-3 md:w-4"

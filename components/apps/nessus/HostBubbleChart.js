@@ -62,7 +62,7 @@ const HostBubbleChart = ({ hosts = sampleHosts }) => {
             key={level}
             onClick={() => setFilter(level)}
             aria-pressed={filter === level}
-            className={`px-3 py-1 rounded-full text-sm border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+            className={`px-3 py-1 rounded-full text-sm border  focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
               filter === level
                 ? 'bg-white text-black border-gray-300'
                 : 'bg-gray-800 text-white border-gray-600'

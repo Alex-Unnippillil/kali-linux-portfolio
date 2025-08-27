@@ -148,7 +148,7 @@ const NiktoApp = () => {
         <button
           type="button"
           onClick={runScan}
-          className="px-4 bg-ubt-blue rounded-r focus:outline-none focus:ring-2 focus:ring-ubt-blue"
+          className="px-4 bg-ubt-blue rounded-r  focus:ring-2 focus:ring-ubt-blue"
         >
           Scan
         </button>

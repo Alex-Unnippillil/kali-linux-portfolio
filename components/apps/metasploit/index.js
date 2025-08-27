@@ -189,7 +189,7 @@ const MetasploitApp = () => {
                 key={s}
                 onClick={() => setSelectedSeverity(s)}
                 aria-pressed={selectedSeverity === s}
-                className={`px-2 py-1 rounded-full text-xs font-bold mr-2 mb-2 focus:outline-none ${severityStyles[s]} ${
+                className={`px-2 py-1 rounded-full text-xs font-bold mr-2 mb-2  ${severityStyles[s]} ${
                   selectedSeverity === s
                     ? 'ring-2 ring-white motion-safe:transition-transform motion-safe:duration-300 motion-safe:scale-110 motion-reduce:transition-none motion-reduce:scale-100'
                     : ''

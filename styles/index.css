@@ -1,5 +1,11 @@
 @import './tokens.css';
 
+/* Global focus style */
+:focus-visible {
+    outline: 2px solid var(--focus-color);
+    outline-offset: 2px;
+}
+
 body{
     font-family: var(--font-family-base);
     font-display: swap;
@@ -38,7 +44,6 @@ body{
 }
 
 input[type=range].ubuntu-slider {
-    outline: none;
     -webkit-appearance: none;
     background: linear-gradient(to right, rgba(175, 175, 175, 0.3) 0%, rgba(175, 175, 175, 0.3) 100%);
     background-position: center;

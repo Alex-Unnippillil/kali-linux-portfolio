@@ -192,7 +192,7 @@ export class Trash extends Component {
                                 onFocus={this.focusFile}
                                 onBlur={this.focusFile}
                                 onClick={() => this.toggleSelect(index)}
-                                className={`trash-item flex flex-col items-center text-sm outline-none w-16 my-2 mx-4 ${selected ? 'opacity-60' : ''}`}
+                                className={`trash-item flex flex-col items-center text-sm  w-16 my-2 mx-4 ${selected ? 'opacity-60' : ''}`}
                             >
                                 <div className="w-16 h-16 flex items-center justify-center">
                                     <Image

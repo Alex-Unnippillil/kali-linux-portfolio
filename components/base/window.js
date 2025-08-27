@@ -359,7 +359,7 @@ export function WindowEditButtons(props) {
                 type="button"
                 id={`close-${props.id}`}
                 aria-label="Window close"
-                className="mx-1.5 focus:outline-none cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center"
+                className="mx-1.5  cursor-default bg-ub-cool-grey bg-opacity-90 hover:bg-opacity-100 rounded-full flex justify-center mt-1 h-5 w-5 items-center"
                 onClick={props.close}
             >
                 <NextImage

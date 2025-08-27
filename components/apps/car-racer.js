@@ -343,25 +343,25 @@ const CarRacer = () => {
       </div>
       <div className="absolute bottom-2 left-2 space-x-2 z-10 text-sm">
         <button
-          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          className="bg-gray-700 px-2  focus:ring-2 focus:ring-white"
           onClick={reset}
         >
           Reset
         </button>
         <button
-          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          className="bg-gray-700 px-2  focus:ring-2 focus:ring-white"
           onClick={togglePause}
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
         <button
-          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          className="bg-gray-700 px-2  focus:ring-2 focus:ring-white"
           onClick={toggleSound}
         >
           {sound ? 'Sound: on' : 'Sound: off'}
         </button>
         <button
-          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          className="bg-gray-700 px-2  focus:ring-2 focus:ring-white"
           onClick={triggerBoost}
         >
           Boost

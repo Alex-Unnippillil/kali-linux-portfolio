@@ -186,7 +186,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
         )}
         <button
           onClick={onClose}
-          className="mt-4 px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
+          className="mt-4 px-3 py-1 bg-gray-700 rounded  focus:ring"
           autoFocus
         >
           Close

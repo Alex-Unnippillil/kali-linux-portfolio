@@ -114,7 +114,7 @@ const MemoryHeatmap = ({ data }) => {
             key={key}
             onClick={() => toggle(key)}
             aria-pressed={filters[key]}
-            className={`px-3 py-1 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+            className={`px-3 py-1 rounded-full text-sm font-medium  focus:ring-2 focus:ring-offset-2 ${
               filters[key]
                 ? `${chipColors[key]} text-white focus:ring-white`
                 : 'bg-gray-200 text-gray-800 focus:ring-black'
@@ -131,7 +131,7 @@ const MemoryHeatmap = ({ data }) => {
         tabIndex={0}
         role="img"
         aria-label="Heatmap of memory regions. Use arrow keys to pan."
-        className="border border-gray-500 w-full h-40 focus:outline-none"
+        className="border border-gray-500 w-full h-40 "
       />
       <div className="sr-only" aria-live="polite">
         {announcement}

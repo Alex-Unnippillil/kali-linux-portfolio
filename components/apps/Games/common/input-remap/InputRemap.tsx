@@ -32,7 +32,7 @@ const InputRemap: React.FC<Props> = ({ mapping, setKey, actions }) => {
           <button
             type="button"
             onClick={() => capture(action)}
-            className="px-2 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
+            className="px-2 py-1 bg-gray-700 rounded  focus:ring"
           >
             {waiting === action ? 'Press key...' : mapping[action]}
           </button>

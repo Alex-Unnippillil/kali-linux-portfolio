@@ -65,7 +65,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
           <button
             type="button"
             onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className="px-4 py-2 bg-gray-700 text-white rounded  focus:ring"
             autoFocus
           >
             Resume
@@ -77,7 +77,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
         aria-label="Help"
         aria-expanded={showHelp}
         onClick={toggle}
-        className="absolute top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+        className="absolute top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center  focus:ring"
       >
         ?
       </button>

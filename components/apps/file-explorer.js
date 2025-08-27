@@ -196,7 +196,7 @@ export default function FileExplorer() {
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
-            <textarea className="flex-1 p-2 bg-ub-cool-grey outline-none" value={content} onChange={onChange} />
+            <textarea className="flex-1 p-2 bg-ub-cool-grey " value={content} onChange={onChange} />
           )}
           <div className="p-2 border-t border-gray-600">
             <input

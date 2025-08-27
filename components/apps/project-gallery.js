@@ -191,7 +191,7 @@ export default function ProjectGallery() {
           <div className="mb-4 flex flex-wrap gap-2">
             <button
               onClick={() => setFilter('')}
-              className={`px-3 py-1 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+              className={`px-3 py-1 rounded-full text-sm  focus:ring-2 focus:ring-blue-400 ${
                 filter === ''
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-700 text-white'
@@ -204,7 +204,7 @@ export default function ProjectGallery() {
               <button
                 key={t}
                 onClick={() => setFilter(t)}
-                className={`px-3 py-1 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                className={`px-3 py-1 rounded-full text-sm  focus:ring-2 focus:ring-blue-400 ${
                   filter === t
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-700 text-white'
@@ -263,7 +263,7 @@ export default function ProjectGallery() {
                         href={project.live}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-500  focus:ring-2 focus:ring-blue-400"
                         onClick={(e) => e.stopPropagation()}
                       >
                         Live Demo
@@ -274,7 +274,7 @@ export default function ProjectGallery() {
                         href={project.repo}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1 text-sm border border-blue-600 rounded text-white hover:bg-blue-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        className="px-3 py-1 text-sm border border-blue-600 rounded text-white hover:bg-blue-600 hover:text-white  focus:ring-2 focus:ring-blue-400"
                         onClick={(e) => e.stopPropagation()}
                       >
                         Repo
@@ -282,7 +282,7 @@ export default function ProjectGallery() {
                     )}
                     <button
                       onClick={() => setSelected(project)}
-                      className="px-3 py-1 text-sm border border-gray-500 rounded text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      className="px-3 py-1 text-sm border border-gray-500 rounded text-white hover:bg-gray-700  focus:ring-2 focus:ring-blue-400"
                     >
                       Details
                     </button>
