@@ -21,7 +21,12 @@ const defaultMaze = [
 const tileSize = 20;
 const WIDTH = defaultMaze[0].length * tileSize;
 const HEIGHT = defaultMaze.length * tileSize;
-const speed = 1; // pixels per frame
+// Speeds are expressed in pixels per frame and derived from tile size
+// to keep movement consistent with the original game's timing.
+const BASE_SPEED = tileSize / 8; // ~1 tile every 8 frames
+const PAC_SPEED = BASE_SPEED;
+const GHOST_SPEED = BASE_SPEED;
+const FRIGHT_GHOST_SPEED = BASE_SPEED * 0.5;
 const PATH_LENGTH = 25; // number of positions to keep for ghost traces
 
 const dirs = [
@@ -378,7 +383,7 @@ const Pacman = () => {
 
     const pacTileX = Math.floor((pac.x + tileSize / 2) / tileSize);
     const pacTileY = Math.floor((pac.y + tileSize / 2) / tileSize);
-    const pacSpeed = isTunnel(pacTileX, pacTileY) ? speed * TUNNEL_SPEED : speed;
+    const pacSpeed = isTunnel(pacTileX, pacTileY) ? PAC_SPEED * TUNNEL_SPEED : PAC_SPEED;
 
     // move pacman
     const tx = Math.floor((pac.x + pac.dir.x * pacSpeed + tileSize / 2) / tileSize);
@@ -402,6 +407,10 @@ const Pacman = () => {
       } else {
         setScore((s) => s + 50);
         frightTimerRef.current = 6 * 60;
+        // reverse all ghosts when entering frightened mode
+        ghostsRef.current.forEach((g) => {
+          g.dir = { x: -g.dir.x, y: -g.dir.y };
+        });
         setAnnouncement('Pacman energized');
       }
       maze[pty][ptx] = 0;
@@ -457,7 +466,8 @@ const Pacman = () => {
       const gy = g.y / tileSize;
       const gtxPrev = Math.floor((g.x + tileSize / 2) / tileSize);
       const gtyPrev = Math.floor((g.y + tileSize / 2) / tileSize);
-      const gSpeed = isTunnel(gtxPrev, gtyPrev) ? speed * TUNNEL_SPEED : speed;
+      const baseGSpeed = frightTimerRef.current > 0 ? FRIGHT_GHOST_SPEED : GHOST_SPEED;
+      const gSpeed = isTunnel(gtxPrev, gtyPrev) ? baseGSpeed * TUNNEL_SPEED : baseGSpeed;
 
       if (isCenter(g.x) && isCenter(g.y)) {
         let options = availableDirs(Math.floor(gx), Math.floor(gy), g.dir);
