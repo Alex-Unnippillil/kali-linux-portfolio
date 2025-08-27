@@ -78,12 +78,15 @@ function TowerDefense() {
   const [running, setRunning] = useState(false);
   const runningRef = useRef(running);
   const [sound, setSound] = useState(true);
+  const [fast, setFast] = useState(false);
+  const speedRef = useRef(1);
   const audioCtxRef = useRef(null);
   const prefersReducedMotion = useRef(false);
 
   useEffect(() => { waveRef.current = wave; }, [wave]);
   useEffect(() => { runningRef.current = running; }, [running]);
   useEffect(() => { livesRef.current = lives; }, [lives]);
+  useEffect(() => { speedRef.current = fast ? 2 : 1; }, [fast]);
 
   useEffect(() => {
     const hs =
@@ -149,6 +152,8 @@ function TowerDefense() {
     setScore(0);
     setRunning(false);
     runningRef.current = false;
+    setFast(false);
+    speedRef.current = 1;
     startWave(1);
   };
 
@@ -370,6 +375,12 @@ function TowerDefense() {
     });
 
     towersRef.current.forEach((t) => {
+      const range = 60 + t.level * 10;
+      ctx.strokeStyle = 'rgba(0,0,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, range, 0, Math.PI * 2);
+      ctx.stroke();
       ctx.fillStyle = 'blue';
       ctx.beginPath();
       ctx.arc(t.x, t.y, 10, 0, Math.PI * 2);
@@ -424,7 +435,7 @@ function TowerDefense() {
     let last = performance.now();
     let frameId;
     const frame = (time) => {
-      const dt = (time - last) / 1000;
+      const dt = ((time - last) / 1000) * speedRef.current;
       last = time;
       if (runningRef.current) update(dt);
       draw(ctx);
@@ -453,6 +464,13 @@ function TowerDefense() {
           onClick={() => setRunning((r) => !r)}
         >
           {running ? 'Pause' : 'Resume'}
+        </button>
+        <button
+          type="button"
+          className="px-2 bg-gray-700"
+          onClick={() => setFast((f) => !f)}
+        >
+          {fast ? 'Speed: 2x' : 'Speed: 1x'}
         </button>
         <button type="button" className="px-2 bg-gray-700" onClick={reset}>
           Reset
