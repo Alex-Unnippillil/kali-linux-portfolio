@@ -3,7 +3,6 @@ import dynamic from 'next/dynamic';
 import { logEvent } from './utils/analytics';
 
 import { displayX } from './components/apps/x';
-import { displaySpotify } from './components/apps/spotify';
 import { displayVsCode } from './components/apps/vscode';
 import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/chrome';
@@ -74,6 +73,7 @@ const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
+const SpotifyApp = createDynamicApp('spotify', 'Spotify');
 
 const QrToolApp = createDynamicApp('qr_tool', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
@@ -144,6 +144,7 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayRadare2 = createDisplay(Radare2App);
+const displaySpotify = createDisplay(SpotifyApp);
 
 const displayQrTool = createDisplay(QrToolApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
