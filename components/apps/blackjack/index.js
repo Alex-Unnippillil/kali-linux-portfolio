@@ -34,9 +34,10 @@ const Card = ({ card, faceDown }) => {
     <div
       className={`h-16 w-12 card ${flipped ? 'flipped' : ''} animate-deal`}
       aria-label={faceDown ? 'Hidden card' : `${card.value}${card.suit}`}
+      role="img"
     >
-      <div className="card-face card-front">{`${card.value}${card.suit}`}</div>
-      <div className="card-face card-back">?</div>
+      <div className="card-face card-front" aria-hidden="true">{`${card.value}${card.suit}`}</div>
+      <div className="card-face card-back" aria-hidden="true">?</div>
     </div>
   );
 };
@@ -76,7 +77,12 @@ const BetChips = ({ amount }) => {
   }, [chips]);
 
   return (
-    <div ref={stackRef} className="chip-stack relative h-10 w-10" aria-label={`Bet ${amount}`}> 
+    <div
+      ref={stackRef}
+      className="chip-stack relative h-10 w-10"
+      aria-label={`Bet ${amount}`}
+      role="img"
+    >
       {chips.map((chip, index) => (
         <div
           key={chip.id}
@@ -349,7 +355,7 @@ const Blackjack = () => {
       </div>
       {playerHands.length === 0 ? (
         <div className="mb-4">
-          <div className="mb-2 flex items-center space-x-2" aria-live="polite">
+          <div className="mb-2 flex items-center space-x-2" aria-live="polite" role="status">
             <span>Bet: {bet}</span>
             <BetChips amount={bet} />
           </div>
@@ -403,7 +409,7 @@ const Blackjack = () => {
           Take Insurance
         </button>
       )}
-      <div className="mt-4" aria-live="polite">{message}</div>
+      <div className="mt-4" aria-live="polite" role="status">{message}</div>
       <div className="mt-4 text-sm">Wins: {stats.wins} Losses: {stats.losses} Pushes: {stats.pushes}</div>
     </div>
   );

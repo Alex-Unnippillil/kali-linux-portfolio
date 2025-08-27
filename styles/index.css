@@ -363,7 +363,8 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
         transform: none;
     }
     .chip-pop,
-    .animate-deal {
+    .animate-deal,
+    .shuffle {
         animation: none;
         transform: none;
         opacity: 1;
