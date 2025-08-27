@@ -77,44 +77,37 @@ const QuoteGenerator = () => {
   }, []);
 
   useEffect(() => {
-    const stored = localStorage.getItem('quotesData');
-    if (stored) {
+    const cached = localStorage.getItem('quoteCache');
+    if (cached) {
       try {
-        setQuotes(processQuotes(JSON.parse(stored)));
+        setQuotes(JSON.parse(cached));
+        return;
       } catch {
-        // ignore parse error
+        /* ignore parse errors */
       }
     }
-
-    const fetchQuotes = () => {
-      const etag = localStorage.getItem('quotesEtag');
-      fetch('https://api.quotable.io/quotes?limit=500', {
-        headers: etag ? { 'If-None-Match': etag } : {},
-      })
-        .then((res) => {
-          if (res.status === 200) {
-            const newEtag = res.headers.get('ETag');
-            res
-              .json()
-              .then((d) => {
-                localStorage.setItem('quotesData', JSON.stringify(d.results));
-                if (newEtag) localStorage.setItem('quotesEtag', newEtag);
-                setQuotes(processQuotes(d.results));
-              })
-              .catch(() => {
-                /* ignore parse errors */
-              });
-          }
-        })
-        .catch(() => {
-          /* ignore network errors */
-        });
-    };
-
-    if (navigator.onLine) fetchQuotes();
-    window.addEventListener('online', fetchQuotes);
-    return () => window.removeEventListener('online', fetchQuotes);
+    setQuotes(allOfflineQuotes.slice(0, 50));
   }, []);
+
+  useEffect(() => {
+    if (!navigator.onLine) return;
+    const url = `https://api.quotable.io/quotes?limit=50${
+      category ? `&tags=${encodeURIComponent(category)}` : ''
+    }`;
+    fetch(url)
+      .then((res) => res.json())
+      .then((d) => {
+        const processed = processQuotes(d.results);
+        setQuotes(processed);
+        localStorage.setItem(
+          'quoteCache',
+          JSON.stringify(processed.slice(0, 50))
+        );
+      })
+      .catch(() => {
+        /* ignore network errors */
+      });
+  }, [category]);
 
   const filteredQuotes = useMemo(
     () =>
@@ -191,11 +184,17 @@ const QuoteGenerator = () => {
     }
   };
 
-  const tweetQuote = () => {
+  const shareQuote = () => {
     if (!current) return;
     const text = `"${current.content}" - ${current.author}`;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    if (navigator.share) {
+      navigator.share({ text, title: 'Quote' }).catch(() => {
+        /* ignore share errors */
+      });
+    } else {
+      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    }
   };
 
   const dataUrlToFile = (dataUrl, filename) => {
@@ -247,13 +246,7 @@ const QuoteGenerator = () => {
     }
   };
 
-  const categories = useMemo(
-    () =>
-      Array.from(new Set(quotes.flatMap((q) => q.tags))).filter((c) =>
-        SAFE_CATEGORIES.includes(c)
-      ),
-    [quotes]
-  );
+  const categories = SAFE_CATEGORIES;
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 overflow-auto">
@@ -289,9 +282,9 @@ const QuoteGenerator = () => {
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={tweetQuote}
+            onClick={shareQuote}
           >
-            Tweet
+            Share
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
