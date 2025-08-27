@@ -40,6 +40,17 @@ const Dsniff = () => {
   const [simulate, setSimulate] = useState(false);
   const simInterval = useRef(null);
   const simIndex = useRef(0);
+  const [sortField, setSortField] = useState('protocol');
+  const [sortAsc, setSortAsc] = useState(true);
+
+  const sortBy = (field) => {
+    if (sortField === field) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortField(field);
+      setSortAsc(true);
+    }
+  };
 
   const fetchOutputs = async () => {
     try {
@@ -108,6 +119,14 @@ const Dsniff = () => {
       log[f.field].toLowerCase().includes(f.value.toLowerCase())
     );
     return searchMatch && filterMatch;
+  });
+
+  const sortedLogs = [...filteredLogs].sort((a, b) => {
+    const aVal = (a[sortField] || '').toLowerCase();
+    const bVal = (b[sortField] || '').toLowerCase();
+    if (aVal < bVal) return sortAsc ? -1 : 1;
+    if (aVal > bVal) return sortAsc ? 1 : -1;
+    return 0;
   });
 
   return (
@@ -187,12 +206,40 @@ const Dsniff = () => {
           ))}
         </div>
       </div>
-      <div className="bg-black text-green-500 p-2 h-40 overflow-auto whitespace-pre-wrap">
-        {filteredLogs.length ? (
-          filteredLogs.map((log, i) => <div key={i}>{log.raw}</div>)
-        ) : (
-          'No data'
-        )}
+      <div className="h-40 overflow-auto">
+        <table className="dsniff-table w-full">
+          <thead>
+            <tr>
+              <th onClick={() => sortBy('protocol')}>
+                Protocol {sortField === 'protocol' ? (sortAsc ? '▲' : '▼') : ''}
+              </th>
+              <th onClick={() => sortBy('host')}>
+                Host {sortField === 'host' ? (sortAsc ? '▲' : '▼') : ''}
+              </th>
+              <th>Raw</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedLogs.length ? (
+              sortedLogs.map((log, i) => (
+                <tr key={i}>
+                  <td>
+                    <span
+                      className={`status-indicator status-${log.protocol.toLowerCase()}`}
+                    ></span>
+                    {log.protocol}
+                  </td>
+                  <td>{log.host}</td>
+                  <td>{log.raw}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="3">No data</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
