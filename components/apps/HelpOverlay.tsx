@@ -1,4 +1,6 @@
 import React from 'react';
+import InputRemap from './Games/common/input-remap/InputRemap';
+import useInputMapping from './Games/common/input-remap/useInputMapping';
 
 interface HelpOverlayProps {
   gameId: string;
@@ -8,12 +10,19 @@ interface HelpOverlayProps {
 interface Instruction {
   objective: string;
   controls: string;
+  actions?: Record<string, string>;
 }
 
 export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   '2048': {
     objective: 'Reach the 2048 tile by merging numbers.',
     controls: 'Use the arrow keys to slide and combine tiles.',
+    actions: {
+      up: 'ArrowUp',
+      down: 'ArrowDown',
+      left: 'ArrowLeft',
+      right: 'ArrowRight',
+    },
   },
   asteroids: {
     objective: 'Destroy asteroids without crashing your ship.',
@@ -148,6 +157,7 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   const info = GAME_INSTRUCTIONS[gameId];
   if (!info) return null;
+  const [mapping, setKey] = useInputMapping(gameId, info.actions || {});
   return (
     <div
       className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
@@ -157,7 +167,23 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
       <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
         <h2 className="text-xl font-bold mb-2">{gameId} Help</h2>
         <p className="mb-2"><strong>Objective:</strong> {info.objective}</p>
-        <p><strong>Controls:</strong> {info.controls}</p>
+        {info.actions ? (
+          <>
+            <p>
+              <strong>Controls:</strong>{' '}
+              {Object.entries(mapping)
+                .map(([a, k]) => `${a}: ${k}`)
+                .join(', ')}
+            </p>
+            <div className="mt-2">
+              <InputRemap mapping={mapping} setKey={setKey} actions={info.actions} />
+            </div>
+          </>
+        ) : (
+          <p>
+            <strong>Controls:</strong> {info.controls}
+          </p>
+        )}
         <button
           onClick={onClose}
           className="mt-4 px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"

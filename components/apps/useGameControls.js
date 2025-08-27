@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { getMapping } from './Games/common/input-remap/useInputMapping';
 
 /**
  * Multifunctional game control hook.
@@ -7,21 +8,31 @@ import { useEffect, useRef } from 'react';
  * invoke the callback with a direction object.
  * If a ref is provided, an object describing input state is returned.
  */
-const useGameControls = (arg) => {
+const defaultMap = {
+  up: 'ArrowUp',
+  down: 'ArrowDown',
+  left: 'ArrowLeft',
+  right: 'ArrowRight',
+  fire: ' ',
+  hyperspace: 'h',
+};
+
+const useGameControls = (arg, gameId = 'default') => {
   if (typeof arg === 'function') {
     const onDirection = arg;
 
     // keyboard controls
     useEffect(() => {
       const handleKey = (e) => {
-        if (e.key === 'ArrowUp') onDirection({ x: 0, y: -1 });
-        if (e.key === 'ArrowDown') onDirection({ x: 0, y: 1 });
-        if (e.key === 'ArrowLeft') onDirection({ x: -1, y: 0 });
-        if (e.key === 'ArrowRight') onDirection({ x: 1, y: 0 });
+        const map = getMapping(gameId, defaultMap);
+        if (e.key === map.up) onDirection({ x: 0, y: -1 });
+        if (e.key === map.down) onDirection({ x: 0, y: 1 });
+        if (e.key === map.left) onDirection({ x: -1, y: 0 });
+        if (e.key === map.right) onDirection({ x: 1, y: 0 });
       };
       window.addEventListener('keydown', handleKey);
       return () => window.removeEventListener('keydown', handleKey);
-    }, [onDirection]);
+    }, [onDirection, gameId]);
 
     // touch swipe controls
     useEffect(() => {
@@ -67,13 +78,15 @@ const useGameControls = (arg) => {
 
   useEffect(() => {
     const handleDown = (e) => {
-      if (e.code === 'Space') stateRef.current.fire = true;
-      else if (e.key === 'h' || e.key === 'H') stateRef.current.hyperspace = true;
+      const map = getMapping(gameId, defaultMap);
+      if (e.key === map.fire) stateRef.current.fire = true;
+      else if (e.key === map.hyperspace) stateRef.current.hyperspace = true;
       else stateRef.current.keys[e.key] = true;
     };
     const handleUp = (e) => {
-      if (e.code === 'Space') stateRef.current.fire = false;
-      else if (e.key === 'h' || e.key === 'H') stateRef.current.hyperspace = false;
+      const map = getMapping(gameId, defaultMap);
+      if (e.key === map.fire) stateRef.current.fire = false;
+      else if (e.key === map.hyperspace) stateRef.current.hyperspace = false;
       else stateRef.current.keys[e.key] = false;
     };
     window.addEventListener('keydown', handleDown);
@@ -82,7 +95,7 @@ const useGameControls = (arg) => {
       window.removeEventListener('keydown', handleDown);
       window.removeEventListener('keyup', handleUp);
     };
-  }, []);
+  }, [gameId]);
 
   useEffect(() => {
     const canvas = canvasRef?.current;
