@@ -11,7 +11,44 @@ import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
 import '@xterm/xterm/css/xterm.css';
 
+export interface Command {
+  name: string;
+  help: string;
+  run: (argv: string[], term: any) => void;
+}
+
+import pwd from './commands/pwd';
+import cd from './commands/cd';
+import simulate from './commands/simulate';
+import historyCmd from './commands/history';
+import clearCmd from './commands/clear';
+import splitCmd from './commands/split';
+import exitCmd from './commands/exit';
+import demoNmap from './commands/demo-nmap';
+import demoHashcat from './commands/demo-hashcat';
+import helpCmd from './commands/help';
+import manCmd from './commands/man';
+
 const promptText = 'alex@kali:~$ ';
+
+const commandList: Command[] = [
+  pwd,
+  cd,
+  simulate,
+  historyCmd,
+  clearCmd,
+  splitCmd,
+  exitCmd,
+  demoNmap,
+  demoHashcat,
+  helpCmd,
+  manCmd,
+];
+
+const commandRegistry: Record<string, Command> = {};
+commandList.forEach((cmd) => {
+  commandRegistry[cmd.name] = cmd;
+});
 
 const TerminalPane = forwardRef<
   any,
@@ -24,20 +61,7 @@ const TerminalPane = forwardRef<
     const workerRef = useRef<any>(null);
     const commandRef = useRef('');
     const logRef = useRef('');
-    const knownCommandsRef = useRef(
-      new Set([
-        'pwd',
-        'cd',
-        'simulate',
-        'history',
-        'clear',
-        'help',
-        'split',
-        'exit',
-        'demo nmap',
-        'demo hashcat',
-      ]),
-    );
+    const knownCommandsRef = useRef(new Set(Object.keys(commandRegistry)));
     const historyRef = useRef<string[]>([]);
     const historyIndexRef = useRef(0);
     const suggestionsRef = useRef<string[]>([]);
@@ -172,10 +196,6 @@ const TerminalPane = forwardRef<
     const runCommand = useCallback(
       (command: string) => {
         const trimmed = command.trim();
-        const first = trimmed.split(' ')[0];
-        if (first) {
-          knownCommandsRef.current.add(first);
-        }
         if (trimmed) {
           historyRef.current.push(trimmed);
         }
@@ -186,89 +206,39 @@ const TerminalPane = forwardRef<
           updateLive(text);
         };
         clearSuggestions();
-        if (trimmed === 'pwd') {
-          termRef.current.writeln('');
-          writeLine('/home/alex');
-          prompt();
-        } else if (trimmed.startsWith('cd ')) {
-          const target = trimmed.slice(3);
-          termRef.current.writeln('');
-          writeLine(`bash: cd: ${target}: No such file or directory`);
-          prompt();
-        } else if (trimmed === 'simulate') {
-          termRef.current.writeln('');
-          if (workerRef.current) {
-            writeLine('Running heavy simulation...');
-            workerRef.current.postMessage({ command: 'simulate' });
-          } else {
-            const msg = 'Web Workers are not supported in this environment.';
-            writeLine(msg);
-            prompt();
-          }
-        } else if (trimmed === 'clear') {
-          termRef.current.clear();
-          prompt();
-        } else if (trimmed === 'help') {
-          termRef.current.writeln('');
-          const commands = Array.from(knownCommandsRef.current)
-            .sort()
-            .join(' ');
-          writeLine(`Available commands: ${commands}`);
-          prompt();
-        } else if (trimmed === 'history') {
-          termRef.current.writeln('');
-          const history = historyRef.current.join('\n');
-          writeLine(history);
-          prompt();
-        } else if (trimmed === 'split') {
-          termRef.current.writeln('');
-          writeLine('Opened new pane');
-          onSplit();
-          prompt();
-        } else if (trimmed === 'exit') {
-          termRef.current.writeln('');
-          writeLine('Closed pane');
-          onClose();
-          prompt();
-        } else if (trimmed === 'demo nmap') {
-          termRef.current.writeln('');
-          [
-            'Starting Nmap 7.93 ( https://nmap.org ) at 2024-03-15 12:00 UTC',
-            'Nmap scan report for example.com (93.184.216.34)',
-            'Host is up (0.013s latency).',
-            'Not shown: 998 filtered tcp ports',
-            'PORT   STATE SERVICE',
-            '80/tcp open  http',
-            '443/tcp open https',
-            'Nmap done: 1 IP address (1 host up) scanned in 0.20 seconds',
-          ].forEach(writeLine);
-          prompt();
-        } else if (trimmed === 'demo hashcat') {
-          termRef.current.writeln('');
-          [
-            'hashcat (v6.2.6) starting in benchmark mode...',
-            'OpenCL API (OpenCL 2.1) - Platform #1 [MockGPU]',
-            '* Device #1: Example GPU, 4096/8192 MB (1024 MB allocatable), 64MCU',
-            'Benchmark relevant options:',
-            '==========================',
-            '* --optimized-kernel-enable',
-            '--------------------------',
-            'Hashmode: 0 - MD5',
-            'Speed.#1.........: 12345.0 MH/s (10.00ms) @ Accel:32 Loops:1024 Thr:256 Vec:8',
-            'Started: Fri Mar 15 12:00:00 2024',
-            'Stopped: Fri Mar 15 12:00:01 2024',
-          ].forEach(writeLine);
-          prompt();
+        const names = Object.keys(commandRegistry).sort(
+          (a, b) => b.length - a.length,
+        );
+        const found = names.find(
+          (name) => trimmed === name || trimmed.startsWith(name + ' '),
+        );
+        if (found) {
+          knownCommandsRef.current.add(found);
+          const rest = trimmed.slice(found.length).trim();
+          const argv = rest ? rest.split(/\s+/) : [];
+          commandRegistry[found].run(argv, {
+            term: termRef.current,
+            writeLine,
+            prompt,
+            worker: workerRef.current,
+            split: onSplit,
+            exit: onClose,
+            history: historyRef.current,
+            clear: () => termRef.current.clear(),
+            registry: commandRegistry,
+          });
         } else if (trimmed.length === 0) {
           prompt();
         } else {
+          const first = trimmed.split(' ')[0];
+          if (first) knownCommandsRef.current.add(first);
           termRef.current.writeln('');
           writeLine(`Command '${trimmed}' not found`);
           prompt();
         }
         renderHint();
       },
-      [prompt, updateLive, onSplit, renderHint],
+      [prompt, updateLive, onSplit, onClose, renderHint],
     );
 
     useEffect(() => {
