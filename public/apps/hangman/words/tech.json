@@ -1,0 +1,5 @@
+{
+  "easy": ["code", "bug", "html", "css", "linux"],
+  "medium": ["react", "nextjs", "python", "docker", "node"],
+  "hard": ["javascript", "typescript", "portfolio", "framework", "terminal"]
+}

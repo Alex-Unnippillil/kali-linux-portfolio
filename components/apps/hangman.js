@@ -3,18 +3,8 @@ import usePersistentState from '../../hooks/usePersistentState';
 import confetti from 'canvas-confetti';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 
-const dictionaries = {
-  tech: {
-    easy: ['code', 'bug', 'html', 'css', 'linux'],
-    medium: ['react', 'nextjs', 'python', 'docker', 'node'],
-    hard: ['javascript', 'typescript', 'portfolio', 'framework', 'terminal'],
-  },
-  animals: {
-    easy: ['cat', 'dog', 'cow', 'bat', 'hen'],
-    medium: ['giraffe', 'monkey', 'rabbit', 'eagle'],
-    hard: ['alligator', 'chimpanzee', 'hippopotamus', 'rhinoceros'],
-  },
-};
+// Available word list themes correspond to JSON files in public/apps/hangman/words
+const themes = ['tech', 'animals'];
 
 const lengthOptions = [
   { label: 'Any', min: 0, max: Infinity },
@@ -65,6 +55,9 @@ const Hangman = () => {
   const [revealed, setRevealed] = useState([]);
   const [gameEnded, setGameEnded] = useState(false);
   const [shake, setShake] = useState(false);
+  const [dictionary, setDictionary] = useState({});
+  const [candidates, setCandidates] = useState([]);
+  const [entropy, setEntropy] = useState({ total: 0, current: 0, lastGain: 0 });
   const usedWordsRef = useRef([]);
 
   const length = lengthOptions[lengthIndex];
@@ -72,14 +65,13 @@ const Hangman = () => {
   const hintLimits = { easy: Infinity, medium: 1, hard: 0 };
 
   const getFilteredWords = () => {
-    const base = dictionaries[theme][difficulty];
+    const base = dictionary[difficulty] || [];
     return base.filter(
       (w) => w.length >= length.min && w.length <= length.max,
     );
   };
 
-  const selectWord = () => {
-    const options = getFilteredWords();
+  const selectWord = (options) => {
     let available = options.filter(
       (w) => !usedWordsRef.current.includes(w),
     );
@@ -93,6 +85,7 @@ const Hangman = () => {
   };
 
   const initGame = () => {
+    const options = getFilteredWords();
     setGuessed([]);
     setWrong(0);
     setHint('');
@@ -100,21 +93,34 @@ const Hangman = () => {
     setScore(0);
     setRevealed([]);
     setGameEnded(false);
-    setWord(selectWord());
+    setCandidates(options);
+    const totalEntropy = Math.log2(options.length || 1);
+    setEntropy({ total: totalEntropy, current: totalEntropy, lastGain: 0 });
+    setWord(selectWord(options));
     logGameStart('hangman');
   };
 
-  const firstLoad = useRef(true);
+  useEffect(() => {
+    let active = true;
+    fetch(`/apps/hangman/words/${theme}.json`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (active) {
+          setDictionary(data);
+        }
+      })
+      .catch((err) => logGameError('hangman', err?.message || String(err)));
+    return () => {
+      active = false;
+    };
+  }, [theme]);
+
   useEffect(() => {
     usedWordsRef.current = [];
-    if (firstLoad.current && word) {
-      firstLoad.current = false;
-      return;
-    }
-    firstLoad.current = false;
+    if (!dictionary[difficulty]) return;
     initGame();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, difficulty, lengthIndex]);
+  }, [dictionary, difficulty, lengthIndex]);
 
   const handleGuess = (letter) => {
     try {
@@ -125,6 +131,22 @@ const Hangman = () => {
       }
       if (guessed.includes(letter) || isGameOver()) return;
       logEvent({ category: 'hangman', action: 'guess', label: letter });
+
+      const prevCandidates = candidates;
+      const newCandidates = prevCandidates.filter((w) => {
+        for (let i = 0; i < word.length; i += 1) {
+          const actual = word[i] === letter;
+          const candidate = w[i] === letter;
+          if (actual !== candidate) return false;
+        }
+        return true;
+      });
+      const prevEntropy = Math.log2(prevCandidates.length || 1);
+      const newEntropy = Math.log2(newCandidates.length || 1);
+      const gain = prevEntropy - newEntropy;
+      setCandidates(newCandidates);
+      setEntropy({ total: entropy.total, current: newEntropy, lastGain: gain });
+
       setGuessed((g) => [...g, letter]);
       if (!word.includes(letter)) {
         setWrong((w) => w + 1);
@@ -134,9 +156,7 @@ const Hangman = () => {
       } else {
         setScore((s) => s + 2);
         setRevealed((r) => [...r, letter]);
-        setTimeout(() =>
-          setRevealed((r) => r.filter((l) => l !== letter)),
-        500);
+        setTimeout(() => setRevealed((r) => r.filter((l) => l !== letter)), 500);
       }
     } catch (err) {
       logGameError('hangman', err?.message || String(err));
@@ -227,7 +247,7 @@ const Hangman = () => {
           onChange={(e) => setTheme(e.target.value)}
           className="bg-gray-700 p-1 rounded"
         >
-          {Object.keys(dictionaries).map((t) => (
+          {themes.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
@@ -257,6 +277,21 @@ const Hangman = () => {
         </select>
       </div>
       <div className="mb-2">Score: {score}</div>
+      <div className="w-full max-w-xs bg-gray-700 h-2 mb-2">
+        <div
+          className="bg-green-500 h-full transition-all"
+          style={{
+            width: `${
+              entropy.total
+                ? ((entropy.total - entropy.current) / entropy.total) * 100
+                : 0
+            }%`,
+          }}
+        />
+      </div>
+      <div className="mb-2 text-sm">
+        Information gain: {entropy.lastGain.toFixed(2)} bits
+      </div>
       <HangmanDrawing wrong={wrong} />
       <div className="flex space-x-2 mb-4 text-2xl">
         {word.split('').map((letter, idx) => (
