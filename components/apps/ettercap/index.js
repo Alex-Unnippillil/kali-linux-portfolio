@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+const attackerMac = 'aa:aa:aa:aa:aa:aa';
+
 const randomMac = () =>
   Array.from({ length: 6 }, () =>
     Math.floor(Math.random() * 256)
@@ -14,6 +16,7 @@ const EttercapApp = () => {
   const [mac2, setMac2] = useState('');
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState('');
+  const [logs, setLogs] = useState([]);
 
   const containerRef = useRef(null);
   const attackerRef = useRef(null);
@@ -22,6 +25,7 @@ const EttercapApp = () => {
   const arrow1Ref = useRef(null);
   const arrow2Ref = useRef(null);
   const animationRef = useRef(null);
+  const logIntervalRef = useRef(null);
   const prefersReduced = useRef(false);
   const [lines, setLines] = useState({
     l1: { x1: 0, y1: 0, x2: 0, y2: 0 },
@@ -35,6 +39,8 @@ const EttercapApp = () => {
     media.addEventListener('change', handler);
     return () => media.removeEventListener('change', handler);
   }, []);
+
+  useEffect(() => () => clearInterval(logIntervalRef.current), []);
 
   const computeLines = () => {
     const container = containerRef.current?.getBoundingClientRect();
@@ -104,11 +110,22 @@ const EttercapApp = () => {
     setMac1(randomMac());
     setMac2(randomMac());
     setStatus(`Sending spoofed ARP replies to ${target1} and ${target2}`);
+    setLogs([]);
     setRunning(true);
+    logIntervalRef.current = setInterval(() => {
+      setLogs((prev) => {
+        const entries = [
+          `ARP reply ${target1} is-at ${attackerMac}`,
+          `ARP reply ${target2} is-at ${attackerMac}`,
+        ];
+        return [...prev, ...entries].slice(-50);
+      });
+    }, 1000);
   };
 
   const stopSpoof = () => {
     cancelAnimationFrame(animationRef.current);
+    clearInterval(logIntervalRef.current);
     setRunning(false);
     setStatus('ARP spoofing stopped');
   };
@@ -157,20 +174,20 @@ const EttercapApp = () => {
           className="p-2 bg-gray-800 border border-white rounded text-center"
         >
           <div>Attacker</div>
-          <div className="font-mono text-xs">aa:aa:aa:aa:aa:aa</div>
+          <div className="font-mono text-xs">{attackerMac}</div>
         </div>
         <div
           ref={target1Ref}
           className="p-2 bg-gray-800 border border-white rounded text-center"
         >
-          <div>{target1 || 'Target 1'}</div>
+          <div>{target1 || 'Victim'}</div>
           <div className="font-mono text-xs">{mac1 || '--:--:--:--:--:--'}</div>
         </div>
         <div
           ref={target2Ref}
           className="p-2 bg-gray-800 border border-white rounded text-center"
         >
-          <div>{target2 || 'Target 2'}</div>
+          <div>{target2 || 'Gateway'}</div>
           <div className="font-mono text-xs">{mac2 || '--:--:--:--:--:--'}</div>
         </div>
         {running && (
@@ -196,6 +213,15 @@ const EttercapApp = () => {
               strokeWidth="2"
               markerEnd="url(#arrowhead)"
             />
+            <text
+              x={(lines.l1.x1 + lines.l1.x2) / 2}
+              y={(lines.l1.y1 + lines.l1.y2) / 2 - 5}
+              fill="#fbbf24"
+              textAnchor="middle"
+              className="text-xs"
+            >
+              spoofed ARP
+            </text>
             <line
               x1={lines.l2.x1}
               y1={lines.l2.y1}
@@ -205,10 +231,39 @@ const EttercapApp = () => {
               strokeWidth="2"
               markerEnd="url(#arrowhead)"
             />
+            <text
+              x={(lines.l2.x1 + lines.l2.x2) / 2}
+              y={(lines.l2.y1 + lines.l2.y2) / 2 - 5}
+              fill="#fbbf24"
+              textAnchor="middle"
+              className="text-xs"
+            >
+              spoofed ARP
+            </text>
             <circle ref={arrow1Ref} r="4" fill="#fbbf24" />
             <circle ref={arrow2Ref} r="4" fill="#fbbf24" />
           </svg>
         )}
+      </div>
+      <div
+        className="mt-4 bg-black text-green-400 p-2 font-mono h-32 overflow-auto"
+        aria-label="terminal log"
+      >
+        {logs.map((l, i) => (
+          <div key={i}>{l}</div>
+        ))}
+      </div>
+      <div className="mt-4 text-xs bg-gray-800 p-2 rounded">
+        <p>
+          ARP poisoning works by sending forged Address Resolution Protocol
+          replies to the victim and gateway so they associate the attacker&rsquo;s MAC
+          address with each other&rsquo;s IP. This lets the attacker intercept the
+          traffic between them.
+        </p>
+        <p className="mt-2 text-yellow-400">
+          Disclaimer: for educational use only. Do not perform ARP spoofing on
+          networks without explicit permission.
+        </p>
       </div>
       <div aria-live="polite" className="sr-only">
         {status}
