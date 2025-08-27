@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
+import SecurityDisclaimer from '../../SecurityDisclaimer';
 
 const hashTypes = [
   { id: '0', name: 'MD5', regex: /^[a-f0-9]{32}$/i },
@@ -160,6 +161,7 @@ function HashcatApp() {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-ub-cool-grey text-white">
+      <SecurityDisclaimer />
       <div>
         <label className="mr-2" htmlFor="hash-input">
           Hash:

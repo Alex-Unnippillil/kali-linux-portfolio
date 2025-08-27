@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Waterfall from './Waterfall';
 import { protocolName, getRowColor } from './utils';
+import SecurityDisclaimer from '../../SecurityDisclaimer';
 
 // Determine if a packet matches the active filter expression
 const matchesFilter = (packet, filter) => {
@@ -15,9 +16,15 @@ const matchesFilter = (packet, filter) => {
   );
 };
 
+const samplePackets = [
+  { src: '192.168.0.2', dest: '8.8.8.8', protocol: 17, info: 'DNS query' },
+  { src: '8.8.8.8', dest: '192.168.0.2', protocol: 17, info: 'DNS response' },
+  { src: '192.168.0.2', dest: '93.184.216.34', protocol: 6, info: 'TCP handshake' },
+];
+
 const WiresharkApp = ({ initialPackets = [] }) => {
   const [packets, setPackets] = useState(initialPackets);
-  const [socket, setSocket] = useState(null);
+  const [captureInterval, setCaptureInterval] = useState(null);
   const [tlsKeys, setTlsKeys] = useState('');
   const [filter, setFilter] = useState('');
   const [colorRuleText, setColorRuleText] = useState('[]');
@@ -90,32 +97,27 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   };
 
   const startCapture = () => {
-    if (socket || typeof window === 'undefined') return;
-    const ws = new WebSocket('ws://localhost:8080');
-    ws.onopen = () => {
-      if (tlsKeys) {
-        ws.send(JSON.stringify({ type: 'tlsKeys', keys: tlsKeys }));
+    if (captureInterval || typeof window === 'undefined') return;
+    let idx = 0;
+    const id = setInterval(() => {
+      const base = samplePackets[idx % samplePackets.length];
+      const pkt = {
+        ...base,
+        timestamp: Date.now().toString(),
+      };
+      setPackets((prev) => [pkt, ...prev].slice(0, 500));
+      if (!pausedRef.current) {
+        workerRef.current?.postMessage(pkt);
       }
-    };
-    ws.onmessage = (event) => {
-      try {
-        const pkt = JSON.parse(event.data);
-        setPackets((prev) => [pkt, ...prev].slice(0, 500));
-        if (!pausedRef.current) {
-          workerRef.current?.postMessage(pkt);
-        }
-      } catch (e) {
-        // ignore malformed packets
-      }
-    };
-    ws.onclose = () => setSocket(null);
-    setSocket(ws);
+      idx++;
+    }, 1000);
+    setCaptureInterval(id);
   };
 
   const stopCapture = () => {
-    if (socket) {
-      socket.close();
-      setSocket(null);
+    if (captureInterval) {
+      clearInterval(captureInterval);
+      setCaptureInterval(null);
     }
   };
 
@@ -135,17 +137,18 @@ const WiresharkApp = ({ initialPackets = [] }) => {
 
   return (
     <div className="w-full h-full flex flex-col bg-black text-green-400">
+      <SecurityDisclaimer />
       <div className="p-2 flex space-x-2 bg-gray-900">
         <button
           onClick={startCapture}
-          disabled={!!socket}
+          disabled={!!captureInterval}
           className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
         >
           Start
         </button>
         <button
           onClick={stopCapture}
-          disabled={!socket}
+          disabled={!captureInterval}
           className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
         >
           Stop
