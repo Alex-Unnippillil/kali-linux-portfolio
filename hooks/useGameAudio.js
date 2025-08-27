@@ -23,12 +23,24 @@ export default function useGameAudio() {
   const [muted, setMuted] = usePersistedState('settings:audioMuted', false);
   const [gameVolume, setGameVolume] = useState(1);
   const [ready, setReady] = useState(false);
+  const [prefersReduced, setPrefersReduced] = useState(false);
+
+  // Respect the user's reduced motion preference by disabling audio entirely
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleChange = () => setPrefersReduced(media.matches);
+    handleChange();
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
+  }, []);
 
   // Create the audio graph after the first user interaction to comply with
   // autoplay policies.
   useEffect(() => {
+    if (prefersReduced) return;
+
     const initAudio = () => {
-      if (ready || ctxRef.current) return;
+      if (ready || ctxRef.current || prefersReduced) return;
       const Ctor = window.AudioContext || window.webkitAudioContext;
       if (!Ctor) return;
       const ctx = new Ctor();
@@ -56,7 +68,20 @@ export default function useGameAudio() {
         compressorRef.current = null;
       }
     };
-  }, [muted, gameVolume, ready]);
+  }, [muted, gameVolume, ready, prefersReduced]);
+
+  // Suspend the audio context when the tab is hidden to save resources
+  useEffect(() => {
+    const handleVisibility = () => {
+      const ctx = ctxRef.current;
+      if (!ctx) return;
+      if (document.hidden) ctx.suspend();
+      else ctx.resume();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () =>
+      document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   // Whenever mute/volume changes update the master gain accordingly.
   useEffect(() => {

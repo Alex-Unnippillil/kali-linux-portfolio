@@ -9,6 +9,7 @@ export default function SpotifyApp() {
   const audioRef = useRef(null);
   const frameRef = useRef();
   const workerRef = useRef();
+  const ctxRef = useRef(null);
   const [level, setLevel] = useState(0);
 
   useEffect(() => {
@@ -24,17 +25,7 @@ export default function SpotifyApp() {
     const audioEl = audioRef.current;
     audioEl.crossOrigin = 'anonymous';
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-
-    const source = audioCtx.createMediaElementSource(audioEl);
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
-
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
+    let analyser, source, bufferLength, dataArray;
     const canvas = canvasRef.current;
     const canvasCtx = canvas.getContext('2d');
 
@@ -89,14 +80,49 @@ export default function SpotifyApp() {
       frameRef.current = requestAnimationFrame(draw);
     };
 
-    frameRef.current = requestAnimationFrame(draw);
+    const start = async () => {
+      if (ctxRef.current) return;
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      ctxRef.current = audioCtx;
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      source = audioCtx.createMediaElementSource(audioEl);
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+      try {
+        await audioEl.play();
+      } catch {
+        /* ignore */
+      }
+      frameRef.current = requestAnimationFrame(draw);
+    };
+
+    const handleVisibility = () => {
+      if (!ctxRef.current) return;
+      if (document.hidden) {
+        audioEl.pause();
+        cancelAnimationFrame(frameRef.current);
+      } else {
+        audioEl.play().catch(() => {});
+        frameRef.current = requestAnimationFrame(draw);
+      }
+    };
+
+    window.addEventListener('pointerdown', start, { once: true });
+    window.addEventListener('keydown', start, { once: true });
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       cancelAnimationFrame(frameRef.current);
       window.removeEventListener('resize', handleResize);
-      analyser.disconnect();
-      source.disconnect();
-      audioCtx.close();
+      window.removeEventListener('pointerdown', start);
+      window.removeEventListener('keydown', start);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      ctxRef.current?.close();
+      analyser?.disconnect();
+      source?.disconnect();
       workerRef.current?.terminate();
     };
   }, []);
@@ -106,7 +132,6 @@ export default function SpotifyApp() {
       <audio
         ref={audioRef}
         src="https://cdn.pixabay.com/download/audio/2021/09/06/audio_2b34bf4ad0a7a022beed579b3709271b?filename=birthday-sparks-15015.mp3"
-        autoPlay
         loop
       />
       <canvas
