@@ -152,16 +152,18 @@ const Blackjack = () => {
       className="flex space-x-2"
       title={showProb ? `Bust chance: ${(bustProbability(hand) * 100).toFixed(1)}%` : undefined}
     >
-      {hand.cards.map((card, idx) => (
-        <div
-          key={idx}
-          className="h-16 w-12 bg-white text-black flex items-center justify-center card animate-deal"
-        >
-          {hideFirst && idx === 0 && playerHands.length > 0 && current < playerHands.length
-            ? '?'
-            : `${card.value}${card.suit}`}
-        </div>
-      ))}
+      {hand.cards.map((card, idx) => {
+        const hidden =
+          hideFirst && idx === 0 && playerHands.length > 0 && current < playerHands.length;
+        return (
+          <div key={idx} className="h-16 w-12 card-container animate-deal">
+            <div className={`card ${hidden ? '' : 'flipped'}`}>
+              <div className="card-front">{`${card.value}${card.suit}`}</div>
+              <div className="card-back">?</div>
+            </div>
+          </div>
+        );
+      })}
       <div className="ml-2 self-center">{handValue(hand.cards)}</div>
     </div>
   );
