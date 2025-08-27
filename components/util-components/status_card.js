@@ -5,19 +5,20 @@ import onClickOutside from 'react-onclickoutside';
 
 class Slider extends Component {
 	render() {
-		return (
-			<input
-				type="range"
-				onChange={this.props.onChange}
-				className={this.props.className}
-				name={this.props.name}
-				min="0"
-				max="100"
-				value={this.props.value}
-				step="1"
-			/>
-		);
-	}
+                        return (
+                        <input
+                                type="range"
+                                onChange={this.props.onChange}
+                                className={this.props.className}
+                                name={this.props.name}
+                                aria-label={this.props['aria-label'] || this.props.name}
+                                min="0"
+                                max="100"
+                                value={this.props.value}
+                                step="1"
+                        />
+                );
+        }
 }
 
 export class StatusCard extends Component {
@@ -89,15 +90,16 @@ export class StatusCard extends Component {
                                                         sizes="16px"
                                                 />
 					</div>
-					<Slider
-						onChange={this.handleSound}
-						className="ubuntu-slider w-2/3"
-						value={this.state.sound_level}
-						name="headphone_range"
-					/>
-				</div>
-				<div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
-					<div className="w-8">
+                                        <Slider
+                                                onChange={this.handleSound}
+                                                className="ubuntu-slider w-2/3"
+                                                value={this.state.sound_level}
+                                                name="headphone_range"
+                                                aria-label="Headphone volume"
+                                        />
+                                </div>
+                                <div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
+                                        <div className="w-8">
                                                 <Image
                                                         width={16}
                                                         height={16}
@@ -111,6 +113,7 @@ export class StatusCard extends Component {
                                                 className="ubuntu-slider w-2/3"
                                                 name="brightness_range"
                                                 value={this.state.brightness_level}
+                                                aria-label="Screen brightness"
                                         />
                                 </div>
                                 <div
