@@ -1,93 +1,134 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const BluetoothApp = () => {
-  const [devices, setDevices] = useState([]);
-  const [error, setError] = useState('');
+  const canvasRef = useRef(null);
+  const workerRef = useRef(null);
+  const animationRef = useRef(null);
+  const devicesRef = useRef([]);
+  const [devices, setDevices] = useState([]); // used only to redraw in reduced motion
+  const ariaRef = useRef(null);
+  const sweepRef = useRef(0);
+  const prefersReduceRef = useRef(false);
 
-  const scan = async () => {
-    setError('');
-    if (!navigator.bluetooth) {
-      setError('Web Bluetooth API is not supported in this browser.');
-      return;
-    }
-    try {
-      const device = await navigator.bluetooth.requestDevice({
-        acceptAllDevices: true,
-      });
-      setDevices((prev) => {
-        if (prev.find((d) => d.id === device.id)) return prev;
-        return [...prev, device];
-      });
-    } catch (e) {
-      setError(e.message || 'Failed to scan for devices');
-    }
+  const drawStatic = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = (canvas.width = canvas.offsetWidth);
+    const h = (canvas.height = canvas.offsetHeight);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+    const cx = w / 2;
+    const cy = h / 2;
+    const radius = Math.min(cx, cy);
+    devicesRef.current.forEach((d) => {
+      const r = d.distance * radius;
+      const x = cx + Math.cos(d.angle) * r;
+      const y = cy + Math.sin(d.angle) * r;
+      ctx.strokeStyle = '#39FF14';
+      ctx.beginPath();
+      ctx.arc(x, y, d.strength * 20 + 4, 0, Math.PI * 2);
+      ctx.stroke();
+    });
   };
 
-  const connect = async (device) => {
-    try {
-      if (!device.gatt.connected) {
-        await device.gatt.connect();
-        setDevices([...devices]);
+  const animate = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = (canvas.width = canvas.offsetWidth);
+    const h = (canvas.height = canvas.offsetHeight);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, w, h);
+    const cx = w / 2;
+    const cy = h / 2;
+    const radius = Math.min(cx, cy);
+
+    sweepRef.current += 0.02;
+    ctx.strokeStyle = '#39FF14';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(
+      cx + Math.cos(sweepRef.current) * radius,
+      cy + Math.sin(sweepRef.current) * radius,
+    );
+    ctx.stroke();
+
+    devicesRef.current.forEach((d) => {
+      const r = d.distance * radius;
+      const x = cx + Math.cos(d.angle) * r;
+      const y = cy + Math.sin(d.angle) * r;
+      ctx.fillStyle = '#39FF14';
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = `rgba(57,255,20,${1 - d.ring / (d.strength * radius + 1)})`;
+      ctx.beginPath();
+      ctx.arc(x, y, d.ring, 0, Math.PI * 2);
+      ctx.stroke();
+
+      d.ring += 2;
+      if (d.ring > d.strength * radius) {
+        d.ring = 0;
       }
-    } catch (e) {
-      setError(e.message || 'Failed to connect');
-    }
+    });
+
+    animationRef.current = requestAnimationFrame(animate);
   };
 
-  const disconnect = (device) => {
-    try {
-      if (device.gatt.connected) {
-        device.gatt.disconnect();
-        setDevices([...devices]);
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handle = () => {
+      prefersReduceRef.current = mq.matches;
+      if (prefersReduceRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        drawStatic();
+      } else {
+        animationRef.current = requestAnimationFrame(animate);
       }
-    } catch (e) {
-      setError(e.message || 'Failed to disconnect');
+    };
+    handle();
+    mq.addEventListener('change', handle);
+    return () => mq.removeEventListener('change', handle);
+  }, []);
+
+  useEffect(() => {
+    workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
+    workerRef.current.onmessage = (e) => {
+      const dev = { ...e.data, ring: 0 };
+      devicesRef.current.push(dev);
+      if (ariaRef.current) {
+        ariaRef.current.textContent = `${dev.name} detected`;
+      }
+      if (prefersReduceRef.current) {
+        setDevices([...devicesRef.current]);
+      }
+    };
+    workerRef.current.postMessage({ command: 'start' });
+    return () => {
+      workerRef.current.postMessage({ command: 'stop' });
+      workerRef.current.terminate();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (prefersReduceRef.current) {
+      drawStatic();
     }
-  };
+  }, [devices]);
+
+  useEffect(() => {
+    return () => cancelAnimationFrame(animationRef.current);
+  }, []);
 
   return (
-    <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
-      <div className="mb-4">
-        <button onClick={scan} className="px-4 py-2 bg-blue-600 rounded">
-          Scan for Devices
-        </button>
-      </div>
-      {error && <div className="mb-4 text-red-400">{error}</div>}
-      <ul>
-        {devices.map((device, idx) => (
-          <li
-            key={device.id || idx}
-            className="mb-2 flex items-center justify-between"
-          >
-            <span>{device.name || 'Unnamed device'}</span>
-            {device.gatt && device.gatt.connected ? (
-              <button
-                onClick={() => disconnect(device)}
-                className="px-2 py-1 bg-red-600 rounded"
-              >
-                Disconnect
-              </button>
-            ) : (
-              <button
-                onClick={() => connect(device)}
-                className="px-2 py-1 bg-green-600 rounded"
-              >
-                Connect
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
-      {devices.length === 0 && (
-        <div>No devices found. Click scan to search.</div>
-      )}
+    <div className="h-full w-full bg-black text-white relative" aria-label="Bluetooth radar">
+      <canvas ref={canvasRef} className="h-full w-full" />
+      <div ref={ariaRef} aria-live="polite" className="sr-only" />
     </div>
   );
 };
 
 export default BluetoothApp;
-
-export const displayBluetooth = () => {
-  return <BluetoothApp />;
-};
-
+export const displayBluetooth = () => <BluetoothApp />;
