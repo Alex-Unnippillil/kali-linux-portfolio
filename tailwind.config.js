@@ -56,10 +56,19 @@ module.exports = {
           '50%': { transform: 'scale(1.2) rotate(0deg)', opacity: '1' },
           '100%': { transform: 'scale(1) rotate(360deg)', opacity: '1' },
         },
+        mine: {
+          '0%': { transform: 'translate(0,0) scale(1)', backgroundColor: 'theme("colors.red.500")' },
+          '50%': {
+            transform: 'translate(-1px,1px) scale(1.1)',
+            backgroundColor: 'theme("colors.red.700")',
+          },
+          '100%': { transform: 'translate(0,0) scale(1)', backgroundColor: 'theme("colors.red.500")' },
+        },
       },
       animation: {
         glow: 'glow 1s ease-in-out infinite',
         flourish: 'flourish 0.6s ease-out',
+        mine: 'mine 0.4s ease-in-out',
       },
     },
   },

@@ -92,8 +92,8 @@ const generateBoard = (
   return board;
 };
 
-// Reveal cell and flood fill zeros
-const revealCell = (board: Cell[][], x: number, y: number): boolean => {
+// Reveal cell and flood fill zeros recursively (no animation)
+const revealCellRecursive = (board: Cell[][], x: number, y: number): boolean => {
   const cell = board[x][y];
   if (cell.revealed || cell.flagged) return false;
   cell.revealed = true;
@@ -105,12 +105,63 @@ const revealCell = (board: Cell[][], x: number, y: number): boolean => {
         const nx = x + dx;
         const ny = y + dy;
         if (nx >= 0 && nx < board.length && ny >= 0 && ny < board[0].length) {
-          revealCell(board, nx, ny);
+          revealCellRecursive(board, nx, ny);
         }
       }
     }
   }
   return false;
+};
+
+// Get cells to reveal in BFS order for ripple animation
+const getRippleOrder = (board: Cell[][], starts: [number, number][]): [number, number][] => {
+  const width = board.length;
+  const height = board[0].length;
+  const visited = Array.from({ length: width }, () => Array(height).fill(false));
+  const queue: [number, number][] = [];
+  for (const [sx, sy] of starts) {
+    if (
+      sx >= 0 &&
+      sx < width &&
+      sy >= 0 &&
+      sy < height &&
+      !visited[sx][sy] &&
+      !board[sx][sy].flagged &&
+      !board[sx][sy].mine
+    ) {
+      queue.push([sx, sy]);
+      visited[sx][sy] = true;
+    }
+  }
+  const order: [number, number][] = [];
+  while (queue.length) {
+    const [x, y] = queue.shift()!;
+    const cell = board[x][y];
+    if (cell.revealed || cell.flagged) continue;
+    order.push([x, y]);
+    if (cell.adjacent === 0) {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (
+            nx >= 0 &&
+            nx < width &&
+            ny >= 0 &&
+            ny < height &&
+            !visited[nx][ny] &&
+            !board[nx][ny].mine &&
+            !board[nx][ny].flagged
+          ) {
+            visited[nx][ny] = true;
+            queue.push([nx, ny]);
+          }
+        }
+      }
+    }
+  }
+  return order;
 };
 
 // Basic logical solver to ensure board solvable without guessing
@@ -140,7 +191,7 @@ const isSolvable = (board: Cell[][]): boolean => {
         if (!hidden.length) continue;
         if (flagged === cell.adjacent) {
           for (const n of hidden) {
-            const hit = revealCell(board, n.x, n.y);
+            const hit = revealCellRecursive(board, n.x, n.y);
             if (hit) return false;
             changed = true;
           }
@@ -169,19 +220,18 @@ const generateSolvableBoard = (
   while (attempt < 1000) {
     const currentSeed = seed + attempt;
     const board = generateBoard(currentSeed, width, height, mines, sx, sy);
-    revealCell(board, sx, sy);
-    if (board[sx][sy].adjacent !== 0) {
+    const testBoard = cloneBoard(board);
+    revealCellRecursive(testBoard, sx, sy);
+    if (testBoard[sx][sy].adjacent !== 0) {
       attempt++;
       continue;
     }
-    const testBoard = cloneBoard(board);
     if (isSolvable(testBoard)) {
       return { board, seed: currentSeed };
     }
     attempt++;
   }
   const board = generateBoard(seed, width, height, mines, sx, sy);
-  revealCell(board, sx, sy);
   return { board, seed };
 };
 
@@ -214,45 +264,62 @@ const Minesweeper: React.FC = () => {
     return () => clearInterval(id);
   }, [status, startTime]);
 
-  const startGame = (x: number, y: number) => {
+  const startGame = (x: number, y: number): Cell[][] => {
     const seed = Math.floor(Math.random() * 2 ** 31);
     const { board: newBoard } = generateSolvableBoard(seed, width, height, mines, x, y);
     setBoard(newBoard);
     setStatus('playing');
     setStartTime(Date.now());
     setFlags(0);
+    return newBoard;
   };
 
   const inBounds = (x: number, y: number) =>
     x >= 0 && x < width && y >= 0 && y < height;
 
   const handleReveal = (x: number, y: number) => {
-    if (!board) {
-      startGame(x, y);
-      return;
+    let currentBoard = board;
+    let currentStatus = status;
+    if (!currentBoard) {
+      currentBoard = startGame(x, y);
+      currentStatus = 'playing';
     }
-    if (status !== 'playing') return;
-    const newBoard = cloneBoard(board);
-    const hitMine = revealCell(newBoard, x, y);
-    if (hitMine) {
+    if (!currentBoard || currentStatus !== 'playing') return;
+    const newBoard = cloneBoard(currentBoard);
+    const cell = newBoard[x][y];
+    if (cell.revealed || cell.flagged) return;
+    if (cell.mine) {
+      for (let i = 0; i < newBoard.length; i++) {
+        for (let j = 0; j < newBoard[0].length; j++) {
+          if (newBoard[i][j].mine) newBoard[i][j].revealed = true;
+        }
+      }
       setBoard(newBoard);
       setStatus('lost');
       return;
     }
-    setBoard(newBoard);
-    if (newBoard.flat().every((c) => c.revealed || c.mine)) {
-      setStatus('won');
-      const time = (Date.now() - (startTime || 0)) / 1000;
-      setElapsed(time);
-      const key = `minesweeper-best-${width}x${height}-${mines}`;
-      if (typeof window !== 'undefined') {
-        const best = window.localStorage.getItem(key);
-        if (!best || time < parseFloat(best)) {
-          window.localStorage.setItem(key, time.toString());
-          setBestTime(time);
+    const order = getRippleOrder(newBoard, [[x, y]]);
+    order.forEach(([cx, cy], idx) => {
+      setTimeout(() => {
+        newBoard[cx][cy].revealed = true;
+        setBoard(cloneBoard(newBoard));
+        if (idx === order.length - 1) {
+          if (newBoard.flat().every((c) => c.revealed || c.mine)) {
+            setStatus('won');
+            const time = (Date.now() - (startTime || 0)) / 1000;
+            setElapsed(time);
+            const key = `minesweeper-best-${width}x${height}-${mines}`;
+            if (typeof window !== 'undefined') {
+              const best = window.localStorage.getItem(key);
+              if (!best || time < parseFloat(best)) {
+                window.localStorage.setItem(key, time.toString());
+                setBestTime(time);
+              }
+            }
+          }
         }
-      }
-    }
+      }, idx * 30);
+    });
   };
 
   const handleFlag = (x: number, y: number) => {
@@ -284,28 +351,47 @@ const Minesweeper: React.FC = () => {
     }
     if (flagged !== cell.adjacent) return;
     const newBoard = cloneBoard(board);
+    let hitMine = false;
+    const starts: [number, number][] = [];
     for (const [nx, ny] of hidden) {
-      const hit = revealCell(newBoard, nx, ny);
-      if (hit) {
-        setBoard(newBoard);
-        setStatus('lost');
-        return;
+      if (newBoard[nx][ny].mine) {
+        hitMine = true;
+      } else {
+        starts.push([nx, ny]);
       }
     }
-    setBoard(newBoard);
-    if (newBoard.flat().every((c) => c.revealed || c.mine)) {
-      setStatus('won');
-      const time = (Date.now() - (startTime || 0)) / 1000;
-      setElapsed(time);
-      const key = `minesweeper-best-${width}x${height}-${mines}`;
-      if (typeof window !== 'undefined') {
-        const best = window.localStorage.getItem(key);
-        if (!best || time < parseFloat(best)) {
-          window.localStorage.setItem(key, time.toString());
-          setBestTime(time);
+    if (hitMine) {
+      for (let i = 0; i < newBoard.length; i++) {
+        for (let j = 0; j < newBoard[0].length; j++) {
+          if (newBoard[i][j].mine) newBoard[i][j].revealed = true;
         }
       }
+      setBoard(newBoard);
+      setStatus('lost');
+      return;
     }
+    const order = getRippleOrder(newBoard, starts);
+    order.forEach(([cx, cy], idx) => {
+      setTimeout(() => {
+        newBoard[cx][cy].revealed = true;
+        setBoard(cloneBoard(newBoard));
+        if (idx === order.length - 1) {
+          if (newBoard.flat().every((c) => c.revealed || c.mine)) {
+            setStatus('won');
+            const time = (Date.now() - (startTime || 0)) / 1000;
+            setElapsed(time);
+            const key = `minesweeper-best-${width}x${height}-${mines}`;
+            if (typeof window !== 'undefined') {
+              const best = window.localStorage.getItem(key);
+              if (!best || time < parseFloat(best)) {
+                window.localStorage.setItem(key, time.toString());
+                setBestTime(time);
+              }
+            }
+          }
+        }
+      }, idx * 30);
+    });
   };
 
   const handlePointerDown = (e: React.PointerEvent, x: number, y: number) => {
@@ -366,8 +452,12 @@ const Minesweeper: React.FC = () => {
             return (
               <button
                 key={`${x}-${y}`}
-                className={`h-8 w-8 flex items-center justify-center text-sm font-bold ${
-                  cell.revealed ? 'bg-gray-400' : 'bg-gray-700 hover:bg-gray-600'
+                className={`h-8 w-8 flex items-center justify-center text-sm font-bold transition-colors ${
+                  cell.revealed
+                    ? cell.mine
+                      ? 'bg-red-500 animate-mine'
+                      : 'bg-gray-400'
+                    : 'bg-gray-700 hover:bg-gray-600'
                 }`}
                 onPointerDown={(e) => handlePointerDown(e, x, y)}
               >
