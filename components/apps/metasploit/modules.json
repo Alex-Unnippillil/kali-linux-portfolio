@@ -33,5 +33,26 @@
     "severity": "medium",
     "type": "post",
     "tags": ["ssh", "credentials"]
+  },
+  {
+    "name": "exploit/windows/http/atlassian_crowd_deserialization",
+    "description": "Atlassian Crowd Java deserialization RCE",
+    "severity": "high",
+    "type": "exploit",
+    "tags": ["http", "deserialization"]
+  },
+  {
+    "name": "auxiliary/scanner/ssh/ssh_version",
+    "description": "SSH version scanner",
+    "severity": "low",
+    "type": "auxiliary",
+    "tags": ["ssh", "scanner"]
+  },
+  {
+    "name": "post/windows/gather/enum_domain",
+    "description": "Windows domain enumeration",
+    "severity": "medium",
+    "type": "post",
+    "tags": ["windows", "recon"]
   }
 ]
