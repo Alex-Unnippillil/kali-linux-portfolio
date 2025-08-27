@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
+import GameShell from '../../components/GameShell';
 import { defaultLevels, parseLevels } from './levels';
 import {
   loadLevel,
@@ -140,10 +141,11 @@ const Sokoban: React.FC = () => {
   } as React.CSSProperties;
 
   return (
-    <div className="p-4 space-y-2 select-none">
-      <div className="flex space-x-2 mb-2">
-        <select value={index} onChange={(e) => selectLevel(Number(e.target.value))}>
-          {levels.map((_, i) => (
+    <GameShell gameKey="sokoban">
+      <div className="p-4 space-y-2 select-none">
+        <div className="flex space-x-2 mb-2">
+          <select value={index} onChange={(e) => selectLevel(Number(e.target.value))}>
+            {levels.map((_, i) => (
             <option key={i} value={i}>{`Level ${i + 1}`}</option>
           ))}
         </select>
@@ -209,7 +211,7 @@ const Sokoban: React.FC = () => {
           }}
         />
       </div>
-    </div>
+    </GameShell>
   );
 };
 

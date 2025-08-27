@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
+import GameShell from '../../components/GameShell';
 
 const PhaserMatter: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -65,7 +66,11 @@ const PhaserMatter: React.FC = () => {
     };
   }, []);
 
-  return <div ref={containerRef} />;
+  return (
+    <GameShell gameKey="phaser">
+      <div ref={containerRef} />
+    </GameShell>
+  );
 };
 
 export default PhaserMatter;
