@@ -84,6 +84,8 @@ const TicTacToe = () => {
   const winningLineRef = useRef(winningLine);
   const lastMoveRef = useRef(lastMove);
   const hintsRef = useRef(hints);
+  const strikeProgressRef = useRef(1);
+  const strikeStartRef = useRef(0);
 
   const startGame = (p) => {
     const a = p === 'X' ? 'O' : 'X';
@@ -97,6 +99,7 @@ const TicTacToe = () => {
     setLastMove(null);
     setScore({ player: 0, ai: 0, draw: 0 });
     setPaused(false);
+    strikeProgressRef.current = 1;
   };
 
   const handleClick = (idx) => {
@@ -126,9 +129,17 @@ const TicTacToe = () => {
     if (player === null || ai === null || paused) return;
     const { winner, line } = checkWinner(board);
     if (winner) {
+      const reduceMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       if (winner !== 'draw') {
         setWinningLine(line);
-        confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+        strikeStartRef.current =
+          typeof performance !== 'undefined' ? performance.now() : 0;
+        strikeProgressRef.current = reduceMotion ? 1 : 0;
+        if (!reduceMotion) {
+          confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
+        }
       }
       setStatus(
         winner === 'draw' ? "It's a draw" : winner === player ? 'You win!' : 'You lose!'
@@ -201,6 +212,29 @@ const TicTacToe = () => {
           const c = idx % 3;
           ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
         });
+        let p = strikeProgressRef.current;
+        if (p < 1) {
+          const now =
+            typeof performance !== 'undefined' ? performance.now() : 0;
+          p = Math.min((now - strikeStartRef.current) / 500, 1);
+          strikeProgressRef.current = p;
+        }
+        const startIdx = w[0];
+        const endIdx = w[2];
+        const startR = Math.floor(startIdx / 3);
+        const startC = startIdx % 3;
+        const endR = Math.floor(endIdx / 3);
+        const endC = endIdx % 3;
+        const startX = startC * cellSize + cellSize / 2;
+        const startY = startR * cellSize + cellSize / 2;
+        const endX = endC * cellSize + cellSize / 2;
+        const endY = endR * cellSize + cellSize / 2;
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(startX + (endX - startX) * p, startY + (endY - startY) * p);
+        ctx.stroke();
       } else if (l !== null) {
         ctx.fillStyle = 'rgba(0,0,255,0.3)';
         const r = Math.floor(l / 3);
@@ -319,6 +353,7 @@ const TicTacToe = () => {
     setLastMove(null);
     setStatus(player === 'X' ? 'Your turn' : "AI's turn");
     setPaused(false);
+    strikeProgressRef.current = 1;
   };
 
   const reset = () => {
@@ -331,6 +366,7 @@ const TicTacToe = () => {
     setLastMove(null);
     setScore({ player: 0, ai: 0, draw: 0 });
     setPaused(false);
+    strikeProgressRef.current = 1;
   };
 
   const difficultySlider = (
@@ -414,7 +450,9 @@ const TicTacToe = () => {
       <div className="mb-2 text-sm">
         Player: {score.player} | AI: {score.ai} | Draws: {score.draw} | Highscore: {highScore}
       </div>
-      <div className="mb-4">{paused ? 'Paused' : status}</div>
+      <div className="mb-4" role="status" aria-live="polite">
+        {paused ? 'Paused' : status}
+      </div>
       <div className="flex space-x-4 flex-wrap justify-center">
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
