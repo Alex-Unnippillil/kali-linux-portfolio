@@ -1,18 +1,18 @@
 import React from 'react';
+import ExternalFrame from '../ExternalFrame';
 
 export default function VsCode() {
-    return (
-        <iframe
-            src="https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md"
-            frameBorder="0"
-            title="VsCode"
-            className="h-full w-full bg-ub-cool-grey"
-            allow="accelerometer; camera; microphone; gyroscope; clipboard-write"
-            allowFullScreen
-        ></iframe>
-    );
+  return (
+    <ExternalFrame
+      src="https://vscode.dev/github/Alex-Unnippillil/kali-linux-portfolio"
+      title="VsCode"
+      className="h-full w-full bg-ub-cool-grey"
+      allow="accelerometer; camera; microphone; gyroscope; clipboard-write"
+      allowFullScreen
+    />
+  );
 }
 
 export const displayVsCode = () => {
-    return <VsCode />;
+  return <VsCode />;
 };
