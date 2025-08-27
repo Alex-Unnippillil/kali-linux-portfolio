@@ -1,6 +1,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { logEvent } from './utils/analytics';
+import { gameDefaultSizes, fallbackGameWindow } from './utils/gameDefaults';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
@@ -179,12 +180,6 @@ const displayHashcat = createDisplay(HashcatApp);
 const displayKismet = createDisplay(KismetApp);
 
 
-// Default window sizing for games to prevent oversized frames
-const gameDefaults = {
-  defaultWidth: 50,
-  defaultHeight: 60,
-};
-
 // Games list used for the "Games" folder on the desktop
 const gameList = [
   {
@@ -195,8 +190,6 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: display2048,
-    defaultWidth: 35,
-    defaultHeight: 45,
   },
   {
     id: 'asteroids',
@@ -489,7 +482,11 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+export const games = gameList.map((game) => ({
+  ...fallbackGameWindow,
+  ...(gameDefaultSizes[game.id] || {}),
+  ...game,
+}));
 
 const apps = [
   {
