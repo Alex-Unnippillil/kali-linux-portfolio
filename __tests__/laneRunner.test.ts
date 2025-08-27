@@ -11,6 +11,10 @@ describe('lane runner', () => {
     expect(updateScore(0, 5, 2)).toBe(10);
   });
 
+  test('score multipliers apply', () => {
+    expect(updateScore(0, 5, 2, 2)).toBe(20);
+  });
+
   test('tilt disabled when not permitted', async () => {
     const original = (global as any).DeviceOrientationEvent;
     (global as any).DeviceOrientationEvent = {

@@ -18,7 +18,12 @@ export const detectCollision = (
     (o) => o.lane === playerLane && Math.abs(o.y - playerY) < threshold
   );
 
-export const updateScore = (score, speed, dt) => score + speed * dt;
+// score increases based on distance travelled. A multiplier can be supplied
+// to reward players for maintaining higher speeds or other bonuses.
+// Defaults to 1 so existing behaviour remains unchanged when no multiplier
+// is provided.
+export const updateScore = (score, speed, dt, multiplier = 1) =>
+  score + speed * dt * multiplier;
 
 export const canUseTilt = async () => {
   if (typeof window === 'undefined') return false;
@@ -43,6 +48,7 @@ const LaneRunner = () => {
   const [sensitivity, setSensitivity] = useState(1);
   const [score, setScore] = useState(0);
   const [speed, setSpeed] = useState(0);
+  const [multiplier, setMultiplier] = useState(1);
   const [running, setRunning] = useState(true);
   const [reset, setReset] = useState(0);
   const gammaRef = useRef(0);
@@ -118,9 +124,11 @@ const LaneRunner = () => {
         alive = false;
         setRunning(false);
       }
-      sc = updateScore(sc, s, dt);
+      const mult = Math.floor(s / 200) + 1;
+      sc = updateScore(sc, s, dt, mult);
       setScore(sc);
       setSpeed(s);
+      setMultiplier(mult);
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
       ctx.fillStyle = 'cyan';
       const x = playerLane * LANE_WIDTH + 10;
@@ -153,6 +161,7 @@ const LaneRunner = () => {
       <div className="absolute top-2 left-2 bg-black/60 p-2 rounded text-xs space-y-1">
         <div>Score: {Math.floor(score)}</div>
         <div>Speed: {Math.round(speed)}</div>
+        <div>Mult: {multiplier}x</div>
         <div className="flex items-center gap-1">
           <label htmlFor="ctrl">Control:</label>
           <select
