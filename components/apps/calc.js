@@ -1,48 +1,130 @@
-import React, { useState } from 'react';
-const Parser = require('expr-eval').Parser;
+import React, { useEffect, useRef, useState } from 'react';
+import { create, all } from 'mathjs';
 
-// configure parser similar to previous implementation
-const parser = new Parser({
-  operators: {
-    add: true,
-    concatenate: true,
-    conditional: true,
-    divide: true,
-    factorial: true,
-    multiply: true,
-    power: true,
-    remainder: true,
-    subtract: true,
-
-    logical: false,
-    comparison: false,
-    'in': false,
-    assignment: true,
-  },
-});
+// configure mathjs to use BigNumbers to avoid FP errors
+const math = create(all, { number: 'BigNumber', precision: 64 });
 
 export const evaluateExpression = (expression) => {
-  let result = '';
   try {
-    result = parser.evaluate(expression);
+    const result = math.evaluate(expression);
+    // reject boolean results from comparisons
+    if (typeof result === 'boolean') return 'Invalid Expression';
+    if (typeof result === 'string') return result;
+    return math.format(result, { precision: 64 });
   } catch (e) {
-    result = 'Invalid Expression';
+    return 'Invalid Expression';
   }
-  return String(result);
 };
+
+const HISTORY_KEY = 'calcHistory';
+const MAX_HISTORY = 10;
 
 const Calc = () => {
   const [display, setDisplay] = useState('');
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const inputRef = useRef(null);
+
+  // load history from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      setHistory(Array.isArray(stored) ? stored.slice(0, MAX_HISTORY) : []);
+    } catch {
+      setHistory([]);
+    }
+  }, []);
+
+  const addHistory = (expr, result) => {
+    const entry = { expr, result };
+    const newHistory = [entry, ...history].slice(0, MAX_HISTORY);
+    setHistory(newHistory);
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const insertAtCursor = (text) => {
+    const el = inputRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const newValue = display.slice(0, start) + text + display.slice(end);
+    setDisplay(newValue);
+    requestAnimationFrame(() => {
+      const pos = start + text.length;
+      el.selectionStart = el.selectionEnd = pos;
+      el.focus();
+    });
+  };
+
+  const evaluate = () => {
+    const expr = display;
+    const result = evaluateExpression(expr);
+    addHistory(expr, result);
+    setDisplay(result);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (el) {
+        el.selectionStart = el.selectionEnd = el.value.length;
+        el.focus();
+      }
+    });
+  };
 
   const handleClick = (btn) => {
     if (btn.type === 'clear') {
       setDisplay('');
     } else if (btn.label === '=') {
-      setDisplay(evaluateExpression(display));
+      evaluate();
     } else {
-      setDisplay((prev) => prev + (btn.value || btn.label));
+      insertAtCursor(btn.value || btn.label);
     }
   };
+
+  // keyboard support
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.ctrlKey || e.metaKey) return;
+      const key = e.key;
+      if (/^[0-9.+\-*/^()]$/.test(key)) {
+        e.preventDefault();
+        insertAtCursor(key);
+        return;
+      }
+      if (key === 'Enter') {
+        e.preventDefault();
+        evaluate();
+        return;
+      }
+      if (key === 'Backspace' && document.activeElement !== inputRef.current) {
+        e.preventDefault();
+        const el = inputRef.current;
+        if (!el) return;
+        const start = el.selectionStart;
+        const end = el.selectionEnd;
+        if (start === end && start > 0) {
+          const newVal = display.slice(0, start - 1) + display.slice(end);
+          setDisplay(newVal);
+          requestAnimationFrame(() => {
+            const pos = start - 1;
+            el.selectionStart = el.selectionEnd = pos;
+          });
+        } else if (start !== end) {
+          const newVal = display.slice(0, start) + display.slice(end);
+          setDisplay(newVal);
+          requestAnimationFrame(() => {
+            el.selectionStart = el.selectionEnd = start;
+          });
+        }
+        return;
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [display]);
 
   const buttons = [
     { label: '7' }, { label: '8' }, { label: '9' }, { label: '/', ariaLabel: 'divide' },
@@ -56,12 +138,13 @@ const Calc = () => {
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white flex flex-col">
-      <div
-        data-testid="calc-display"
-        className="mb-4 h-16 bg-black text-right px-2 py-1 rounded overflow-x-auto flex items-end justify-end text-2xl"
-      >
-        {display}
-      </div>
+      <input
+        data-testid="calc-input"
+        ref={inputRef}
+        value={display}
+        onChange={(e) => setDisplay(e.target.value)}
+        className="mb-4 h-16 bg-black text-right px-2 py-1 rounded overflow-x-auto text-2xl"
+      />
       <div className="grid grid-cols-4 gap-2 flex-grow">
         {buttons.map((btn, idx) => (
           <button
@@ -76,6 +159,25 @@ const Calc = () => {
           </button>
         ))}
       </div>
+      <button
+        className="mt-2 bg-gray-800 hover:bg-gray-700 rounded p-2"
+        aria-expanded={showHistory}
+        onClick={() => setShowHistory((s) => !s)}
+      >
+        History
+      </button>
+      {showHistory && (
+        <div
+          data-testid="history-panel"
+          className="mt-2 flex flex-col gap-1 overflow-y-auto"
+        >
+          {history.map((h, idx) => (
+            <div key={idx} className="history-entry text-sm">
+              {h.expr} = {h.result}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
