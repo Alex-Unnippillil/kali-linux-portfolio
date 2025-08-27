@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import PseudoDisasmViewer from './PseudoDisasmViewer';
 
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
 
@@ -159,29 +160,32 @@ export default function GhidraApp() {
   const selectedBlock = BLOCKS.find((b) => b.id === selected);
 
   return (
-    <div className="w-full h-full flex bg-gray-900 text-gray-100">
-      <div className="w-1/3 border-r border-gray-700">
-        <ControlFlowGraph
-          blocks={BLOCKS}
-          selected={selected}
-          onSelect={setSelected}
-          prefersReducedMotion={prefersReducedMotion}
-        />
+    <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
+      <div className="flex flex-1">
+        <div className="w-1/3 border-r border-gray-700">
+          <ControlFlowGraph
+            blocks={BLOCKS}
+            selected={selected}
+            onSelect={setSelected}
+            prefersReducedMotion={prefersReducedMotion}
+          />
+        </div>
+        <pre
+          ref={decompileRef}
+          aria-label="Decompiled code"
+          className="w-1/3 overflow-auto p-2 whitespace-pre-wrap"
+        >
+          {selectedBlock.code.join('\n')}
+        </pre>
+        <pre
+          ref={hexRef}
+          aria-label="Hexadecimal representation"
+          className="w-1/3 overflow-auto p-2 whitespace-pre-wrap"
+        >
+          {hexMap[selected] || ''}
+        </pre>
       </div>
-      <pre
-        ref={decompileRef}
-        aria-label="Decompiled code"
-        className="w-1/3 overflow-auto p-2 whitespace-pre-wrap"
-      >
-        {selectedBlock.code.join('\n')}
-      </pre>
-      <pre
-        ref={hexRef}
-        aria-label="Hexadecimal representation"
-        className="w-1/3 overflow-auto p-2 whitespace-pre-wrap"
-      >
-        {hexMap[selected] || ''}
-      </pre>
+      <PseudoDisasmViewer />
       <div aria-live="polite" role="status" className="sr-only">
         {liveMessage}
       </div>
