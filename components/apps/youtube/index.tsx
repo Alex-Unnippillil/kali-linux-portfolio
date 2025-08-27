@@ -3,7 +3,14 @@ import React, {
   useState,
   useMemo,
   useCallback,
+  Suspense,
 } from 'react';
+import type { SyntheticEvent } from 'react';
+
+// Lazily load the YouTube player so that no iframe is mounted until a user
+// actually chooses to play a video. This keeps initial render light weight and
+// mirrors how the real YouTube site behaves.
+const LazyPlayer = React.lazy(() => import('./Player'));
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
@@ -16,6 +23,8 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('date');
   const [search, setSearch] = useState('');
+  const [currentVideo, setCurrentVideo] = useState(null);
+  const [thumbHd, setThumbHd] = useState(false);
 
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -137,17 +146,9 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const sorted = useMemo(() => {
     const list = [...filtered];
     switch (sortBy) {
-      case 'dateAsc':
-        return list.sort((a, b) =>
-          new Date(a.publishedAt || 0) - new Date(b.publishedAt || 0)
-        );
       case 'title':
         return list.sort((a, b) =>
           (a.title || '').localeCompare(b.title || '')
-        );
-      case 'playlist':
-        return list.sort((a, b) =>
-          (a.playlist || '').localeCompare(b.playlist || '')
         );
       case 'date':
       default:
@@ -159,8 +160,8 @@ export default function YouTubeApp({ initialVideos = [] }) {
 
   const handleCategoryClick = useCallback((cat) => setActiveCategory(cat), []);
 
-  const handleSortChange = useCallback((e) => {
-    const { value } = e.target;
+  const handleSortChange = useCallback((e: SyntheticEvent<HTMLSelectElement>) => {
+    const { value } = e.currentTarget;
     setSortBy(value);
   }, []);
 
@@ -185,6 +186,12 @@ export default function YouTubeApp({ initialVideos = [] }) {
               value={search}
               onChange={handleSearchChange}
             />
+            <button
+              onClick={() => setThumbHd((v) => !v)}
+              className="px-3 py-2 bg-gray-700 rounded"
+            >
+              {thumbHd ? 'SD Thumbs' : 'HD Thumbs'}
+            </button>
             <label htmlFor="sort" className="sr-only">
               Sort by
             </label>
@@ -195,9 +202,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
               onChange={handleSortChange}
             >
               <option value="date">Newest First</option>
-              <option value="dateAsc">Oldest First</option>
               <option value="title">Title (A-Z)</option>
-              <option value="playlist">Playlist</option>
             </select>
           </div>
 
@@ -226,9 +231,27 @@ export default function YouTubeApp({ initialVideos = [] }) {
                 data-testid="video-card"
                 className="bg-gray-800 rounded-lg overflow-hidden shadow flex flex-col hover:shadow-lg transition"
               >
-                <a href={video.url} target="_blank" rel="noreferrer" className="block">
-                  {video.thumbnail && (
-                    <img src={video.thumbnail} alt={video.title} className="w-full" />
+                <a
+                  href={video.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentVideo(video);
+                  }}
+                >
+                  {video.id && (
+                    <img
+                      src={
+                        thumbHd
+                          ? `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`
+                          : video.thumbnail ||
+                            `https://i.ytimg.com/vi/${video.id}/mqdefault.jpg`
+                      }
+                      alt={video.title}
+                      className="w-full"
+                    />
                   )}
                   <div
                     className="p-2 font-semibold text-sm"
@@ -249,6 +272,17 @@ export default function YouTubeApp({ initialVideos = [] }) {
               </div>
             ))}
           </div>
+
+          {currentVideo && (
+            <div className="fixed bottom-4 right-4 w-72 h-40 z-50 shadow-lg">
+              <Suspense fallback={<div className="w-full h-full bg-black" />}>
+                <LazyPlayer
+                  id={currentVideo.id}
+                  onClose={() => setCurrentVideo(null)}
+                />
+              </Suspense>
+            </div>
+          )}
         </>
       )}
     </div>
