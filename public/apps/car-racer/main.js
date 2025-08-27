@@ -168,17 +168,22 @@ function renderMiniMap(g) {
   ctx.restore();
 }
 
-// line side helper for lap detection
-const startLine = { x1: track[0].x, y1: track[0].y, x2: track[1].x, y2: track[1].y };
-function lineSide(p) {
-  return (startLine.x2 - startLine.x1) * (p.y - startLine.y1) - (startLine.y2 - startLine.y1) * (p.x - startLine.x1);
+// checkpoint helper
+function lineSideIdx(p, idx) {
+  const a = track[idx];
+  const b = track[(idx + 1) % track.length];
+  return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
 }
 
 // --- car setup ---
+const WHEELBASE = 40;
 const car = {
   x: track[0].x,
   y: track[0].y,
   angle: Math.atan2(track[1].y - track[0].y, track[1].x - track[0].x),
+  vx: 0,
+  vy: 0,
+  steer: 0,
   speed: 0,
 };
 
@@ -186,27 +191,23 @@ const keys = {};
 window.addEventListener('keydown', (e) => (keys[e.key] = true));
 window.addEventListener('keyup', (e) => (keys[e.key] = false));
 
-// ghost storage
-let bestReplay = null;
-try {
-  bestReplay = JSON.parse(localStorage.getItem('car-racer-best'));
-} catch (e) {}
-let bestLapTrace = bestReplay ? bestReplay.trace : null;
-let bestLapTime = bestReplay ? bestReplay.time : null;
-if (bestLapTime) document.getElementById('bestTime').textContent = bestLapTime.toFixed(2);
-
+// ghost and lap storage
+let lastLapTrace = null;
+let lastLapTime = null;
 let currentLapTrace = [];
-let lapLineCrossed = false;
+let currentCheckpointTimes = [];
+let lastCheckpointTimes = null;
+let nextCheckpoint = 1;
+let checkpointSide = lineSideIdx(car, nextCheckpoint);
+let startSide = lineSideIdx(car, 0);
 let lapStart = performance.now();
-let prevSide = lineSide(car);
+let lapActive = false;
 let ghostIndex = 0;
 
-function saveBest() {
-  if (bestLapTrace)
-    localStorage.setItem('car-racer-best', JSON.stringify({ time: bestLapTime, trace: bestLapTrace }));
-}
-
 function update(dt) {
+  // compute current speed
+  car.speed = Math.hypot(car.vx, car.vy);
+
   // controls
   let steer = 0;
   if (keys['ArrowLeft']) steer -= 1;
@@ -225,21 +226,44 @@ function update(dt) {
     steer += diff * 0.5;
   }
 
-  // physics
-  const ACCEL = 200;
-  const FRICTION = 50;
-  car.speed += accel * ACCEL * dt;
-  car.speed -= FRICTION * dt;
-  if (car.speed < 0) car.speed = 0;
-  let turn = steer * car.speed * 0.002;
+  const MAX_STEER = Math.PI / 3;
+  car.steer = steer * MAX_STEER;
+
+  // physics using kinematic bicycle model
+  const ACCEL = 400;
+  const FRICTION = 1.5;
+  const LAT_BASE = 8;
+
+  // heading update
+  car.angle += (car.speed / WHEELBASE) * Math.tan(car.steer) * dt;
+
+  // acceleration in forward direction
+  car.vx += Math.cos(car.angle) * accel * ACCEL * dt;
+  car.vy += Math.sin(car.angle) * accel * ACCEL * dt;
+
+  // transform velocity to car space
+  const sinA = Math.sin(car.angle);
+  const cosA = Math.cos(car.angle);
+  let forward = cosA * car.vx + sinA * car.vy;
+  let lateral = -sinA * car.vx + cosA * car.vy;
+
+  // apply friction and lateral slip
+  forward -= forward * FRICTION * dt;
+  const latFriction = LAT_BASE / (1 + car.speed * 0.05);
+  lateral -= lateral * latFriction * dt;
   if (tractionAssist) {
-    const maxLat = 300;
-    const lat = Math.abs(car.speed * turn);
-    if (lat > maxLat) turn = Math.sign(turn) * maxLat / car.speed;
+    const maxLat = 0.5 * car.speed;
+    if (Math.abs(lateral) > maxLat) lateral = Math.sign(lateral) * maxLat;
   }
-  car.angle += turn;
-  car.x += Math.cos(car.angle) * car.speed * dt;
-  car.y += Math.sin(car.angle) * car.speed * dt;
+
+  // back to world space
+  car.vx = cosA * forward - sinA * lateral;
+  car.vy = sinA * forward + cosA * lateral;
+
+  car.x += car.vx * dt;
+  car.y += car.vy * dt;
+
+  car.speed = Math.hypot(car.vx, car.vy);
 
   worldTime += dt;
   for (const drop of rainDrops) {
@@ -250,29 +274,48 @@ function update(dt) {
     }
   }
 
-  // lap logic
-  const side = lineSide(car);
-  if (prevSide < 0 && side >= 0) {
-    if (lapLineCrossed) {
-      const t = (performance.now() - lapStart) / 1000;
-      if (!bestLapTime || t < bestLapTime) {
-        bestLapTime = t;
-        bestLapTrace = currentLapTrace.slice();
-        document.getElementById('bestTime').textContent = t.toFixed(2);
-        saveBest();
-      }
-    }
-    lapStart = performance.now();
-    currentLapTrace = [];
-    ghostIndex = 0;
-    lapLineCrossed = true;
-  } else if (prevSide >= 0 && side < 0) {
-    lapLineCrossed = false;
+  // checkpoint logic
+  const cpSide = lineSideIdx(car, nextCheckpoint);
+  if (checkpointSide < 0 && cpSide >= 0) {
+    const t = (performance.now() - lapStart) / 1000;
+    currentCheckpointTimes.push(t);
+    nextCheckpoint = (nextCheckpoint + 1) % track.length;
+    checkpointSide = lineSideIdx(car, nextCheckpoint);
+  } else {
+    checkpointSide = cpSide;
   }
-  prevSide = side;
 
-  if (lapLineCrossed) currentLapTrace.push({ x: car.x, y: car.y, angle: car.angle });
-  document.getElementById('lapTime').textContent = ((performance.now() - lapStart) / 1000).toFixed(2);
+  // lap logic based on start line
+  const sSide = lineSideIdx(car, 0);
+  if (startSide < 0 && sSide >= 0) {
+    if (lapActive && nextCheckpoint === 0) {
+      const t = (performance.now() - lapStart) / 1000;
+      lastLapTime = t;
+      lastLapTrace = currentLapTrace.slice();
+      lastCheckpointTimes = currentCheckpointTimes.slice();
+      document.getElementById('lastTime').textContent = t.toFixed(2);
+      lapStart = performance.now();
+      currentLapTrace = [];
+      currentCheckpointTimes = [];
+      nextCheckpoint = 1;
+      checkpointSide = lineSideIdx(car, nextCheckpoint);
+      ghostIndex = 0;
+    } else {
+      lapStart = performance.now();
+      currentLapTrace = [];
+      currentCheckpointTimes = [];
+      nextCheckpoint = 1;
+      checkpointSide = lineSideIdx(car, nextCheckpoint);
+      lapActive = true;
+      ghostIndex = 0;
+    }
+  }
+  startSide = sSide;
+
+  if (lapActive) currentLapTrace.push({ x: car.x, y: car.y, angle: car.angle });
+
+  if (lapActive)
+    document.getElementById('lapTime').textContent = ((performance.now() - lapStart) / 1000).toFixed(2);
 }
 
 function render() {
@@ -281,8 +324,8 @@ function render() {
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
   drawTrack(day);
   let g = null;
-  if (bestLapTrace && bestLapTrace.length) {
-    g = bestLapTrace[ghostIndex];
+  if (lastLapTrace && lastLapTrace.length) {
+    g = lastLapTrace[ghostIndex];
     if (g) {
       ctx.save();
       ctx.globalAlpha = 0.5;
@@ -333,7 +376,7 @@ function render() {
     ctx.stroke();
   }
   renderMiniMap(g);
-  if (g) ghostIndex = (ghostIndex + 1) % bestLapTrace.length;
+  if (g) ghostIndex = (ghostIndex + 1) % lastLapTrace.length;
 }
 
 let last = performance.now();
