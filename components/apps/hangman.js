@@ -23,6 +23,31 @@ const words = [
 
 const maxWrong = 6;
 
+// Helper to draw a line segment based on progress
+const drawLine = (ctx, x1, y1, x2, y2, progress) => {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(
+    x1 + (x2 - x1) * progress,
+    y1 + (y2 - y1) * progress,
+  );
+  ctx.stroke();
+};
+
+// Individual hangman parts rendered progressively
+const HANGMAN_PARTS = [
+  (ctx, p) => {
+    ctx.beginPath();
+    ctx.arc(120, 60, 20, 0, Math.PI * 2 * p);
+    ctx.stroke();
+  },
+  (ctx, p) => drawLine(ctx, 120, 80, 120, 140, p),
+  (ctx, p) => drawLine(ctx, 120, 100, 90, 120, p),
+  (ctx, p) => drawLine(ctx, 120, 100, 150, 120, p),
+  (ctx, p) => drawLine(ctx, 120, 140, 100, 170, p),
+  (ctx, p) => drawLine(ctx, 120, 140, 140, 170, p),
+];
+
 const Hangman = () => {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
@@ -212,30 +237,7 @@ const Hangman = () => {
 
     const now = performance.now();
 
-    const drawLine = (x1, y1, x2, y2, progress) => {
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(
-        x1 + (x2 - x1) * progress,
-        y1 + (y2 - y1) * progress,
-      );
-      ctx.stroke();
-    };
-
-    const segments = [
-      (p) => {
-        ctx.beginPath();
-        ctx.arc(120, 60, 20, 0, Math.PI * 2 * p);
-        ctx.stroke();
-      },
-      (p) => drawLine(120, 80, 120, 140, p),
-      (p) => drawLine(120, 100, 90, 120, p),
-      (p) => drawLine(120, 100, 150, 120, p),
-      (p) => drawLine(120, 140, 100, 170, p),
-      (p) => drawLine(120, 140, 140, 170, p),
-    ];
-
-    segments.forEach((seg, i) => {
+    HANGMAN_PARTS.forEach((seg, i) => {
       let prog = partProgressRef.current[i];
       if (i < wrong && prog < 1) {
         const start = partStartRef.current[i];
@@ -244,7 +246,7 @@ const Hangman = () => {
           : Math.min((now - start) / 300, 1);
         partProgressRef.current[i] = prog;
       }
-      if (prog > 0) seg(prog);
+      if (prog > 0) seg(ctx, prog);
     });
 
     const letters = word.split('');
