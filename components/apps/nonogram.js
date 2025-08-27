@@ -1,514 +1,272 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import ReactGA from 'react-ga4';
-import {
-  evaluateLine,
-  autoFillLines,
-  findHint,
-  validateSolution,
-  getPuzzleBySeed,
-  puzzles,
-} from './nonogramUtils';
-import usePersistentState from '../usePersistentState';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
+import { validateSolution, puzzles } from './nonogramUtils';
 
-const parseClues = (text) =>
-  text
-    .trim()
-    .split('\n')
-    .map((line) =>
-      line
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean)
-        .map((n) => parseInt(n, 10))
-    );
+// visual settings
+const CELL_SIZE = 30;
+const CLUE_SPACE = 60; // space for row/column clues around grid
+
+// use a small sample puzzle
+const PUZZLE = puzzles[1]; // Diamond 5x5
 
 const Nonogram = () => {
-  const [rowInput, setRowInput] = useState('1\n3\n5\n3\n1');
-  const [colInput, setColInput] = useState('1 1\n3\n5\n3\n1 1');
-  const [rows, setRows] = usePersistentState('nonogram-rows', []);
-  const [cols, setCols] = usePersistentState('nonogram-cols', []);
-  const [grid, setGrid] = usePersistentState('nonogram-grid', []);
-  const [rowMarks, setRowMarks] = usePersistentState('nonogram-rowMarks', []);
-  const [colMarks, setColMarks] = usePersistentState('nonogram-colMarks', []);
-  const [rowState, setRowState] = useState([]);
-  const [colState, setColState] = useState([]);
-  const [started, setStarted] = useState(false);
-  const [pencil, setPencil] = useState(false);
-  const [showMistakes, setShowMistakes] = useState(true);
-  const [cellSize, setCellSize] = useState(32);
-  const [selected, setSelected] = useState({ i: 0, j: 0 });
+  const rows = PUZZLE.rows;
+  const cols = PUZZLE.cols;
+  const height = rows.length;
+  const width = cols.length;
 
-  const pending = useRef([]);
-  const raf = useRef(null);
-  const startTime = useRef(0);
-  const completed = useRef(false);
-  const touchTimer = useRef(null);
-  const touchCross = useRef(false);
-
-    const evaluate = useCallback(
-      (g) => {
-        setRowState(rows.map((clue, i) => evaluateLine(g[i], clue)));
-        setColState(
-          cols.map((clue, i) => {
-            const column = g.map((row) => row[i]);
-            return evaluateLine(column, clue);
-          })
-        );
-      },
-      [rows, cols]
-    );
-
-  const startGame = () => {
-    const r = parseClues(rowInput);
-    const c = parseClues(colInput);
-    if (!r.length || !c.length) return;
-    setRows(r);
-    setCols(c);
-    const g = Array(r.length)
-      .fill(null)
-      .map(() => Array(c.length).fill(0));
-    setGrid(g);
-    setRowMarks(Array(r.length).fill(false));
-    setColMarks(Array(c.length).fill(false));
-    evaluate(g);
-    setStarted(true);
-    startTime.current = Date.now();
-    completed.current = false;
-    ReactGA.event({
-      category: 'nonogram',
-      action: 'puzzle_start',
-      label: `${r.length}x${c.length}`,
-    });
-  };
-
-      const scheduleToggle = useCallback(
-        (i, j, mode) => {
-        pending.current.push({ i, j, mode });
-        if (!raf.current) {
-          raf.current = requestAnimationFrame(() => {
-            setGrid((g) => {
-              let ng = g.map((row) => row.slice());
-              pending.current.forEach(({ i, j, mode }) => {
-                if (mode === 'cross') ng[i][j] = ng[i][j] === -1 ? 0 : -1;
-                else if (mode === 'pencil') ng[i][j] = ng[i][j] === 2 ? 0 : 2;
-                else ng[i][j] = ng[i][j] === 1 ? 0 : 1;
-              });
-              pending.current = [];
-              ng = autoFillLines(ng, rows, cols);
-              evaluate(ng);
-              if (validateSolution(ng, rows, cols) && !completed.current) {
-                completed.current = true;
-                const time = Math.floor((Date.now() - startTime.current) / 1000);
-                ReactGA.event({
-                  category: 'nonogram',
-                  action: 'puzzle_complete',
-                  value: time,
-                });
-              }
-              return ng;
-            });
-            raf.current = null;
-          });
-        }
-        },
-        [rows, cols, evaluate, setGrid]
-      );
-
-  const painting = useRef(false);
-  const paintMode = useRef('fill');
-
-  const handleMouseDown = (i, j, mode) => {
-    painting.current = true;
-    paintMode.current = mode;
-    setSelected({ i, j });
-    scheduleToggle(i, j, mode);
-  };
-    const handleMouseEnter = (i, j) => {
-      if (painting.current) scheduleToggle(i, j, paintMode.current);
-    };
-    useEffect(() => {
-      const up = () => {
-        painting.current = false;
-      };
-      window.addEventListener('mouseup', up);
-      return () => window.removeEventListener('mouseup', up);
-    }, []);
-
-    const toggleMistakes = useCallback(() => {
-      ReactGA.event({
-        category: 'nonogram',
-        action: 'error_toggle',
-        value: showMistakes ? 0 : 1,
-      });
-      setShowMistakes(!showMistakes);
-    }, [showMistakes]);
-
-    const handleHint = useCallback(() => {
-      const h = findHint(rows, cols, grid);
-      if (h) {
-        ReactGA.event({ category: 'nonogram', action: 'hint' });
-        scheduleToggle(h.i, h.j, 'fill');
-      } else {
-        alert('No hints available');
-      }
-    }, [rows, cols, grid, scheduleToggle]);
-
-    // keyboard shortcuts
-    useEffect(() => {
-      if (!started) return;
-      const handler = (e) => {
-        if (
-          [
-            'ArrowUp',
-            'ArrowDown',
-            'ArrowLeft',
-            'ArrowRight',
-            ' ',
-            'Enter',
-            'x',
-            'p',
-            'h',
-            'e',
-          ].includes(e.key)
-        )
-          e.preventDefault();
-        switch (e.key) {
-          case 'ArrowUp':
-            setSelected((s) => ({ i: Math.max(0, s.i - 1), j: s.j }));
-            break;
-          case 'ArrowDown':
-            setSelected((s) => ({ i: Math.min(rows.length - 1, s.i + 1), j: s.j }));
-            break;
-          case 'ArrowLeft':
-            setSelected((s) => ({ i: s.i, j: Math.max(0, s.j - 1) }));
-            break;
-          case 'ArrowRight':
-            setSelected((s) => ({ i: s.i, j: Math.min(cols.length - 1, s.j + 1) }));
-            break;
-          case ' ': // fallthrough
-          case 'Enter':
-            scheduleToggle(selected.i, selected.j, pencil ? 'pencil' : 'fill');
-            break;
-          case 'x':
-            scheduleToggle(selected.i, selected.j, 'cross');
-            break;
-          case 'p':
-            setPencil((p) => !p);
-            break;
-          case 'h':
-            handleHint();
-            break;
-          case 'e':
-            toggleMistakes();
-            break;
-          default:
-            break;
-        }
-      };
-      window.addEventListener('keydown', handler);
-      return () => window.removeEventListener('keydown', handler);
-    }, [started, rows, cols, selected, pencil, scheduleToggle, handleHint, toggleMistakes]);
-
-    const handleTouchStart = (i, j) => {
-      touchCross.current = false;
-      touchTimer.current = setTimeout(() => {
-        scheduleToggle(i, j, 'cross');
-        touchCross.current = true;
-      }, 500);
-    };
-  const handleTouchEnd = (i, j) => {
-    if (touchTimer.current) clearTimeout(touchTimer.current);
-    if (!touchCross.current) scheduleToggle(i, j, pencil ? 'pencil' : 'fill');
-    touchCross.current = false;
-  };
-
+  // grid: 0 empty, 1 filled, -1 marked
+  const [grid, setGrid] = useState(
+    () => Array(height).fill(0).map(() => Array(width).fill(0))
+  );
+  const gridRef = useRef(grid);
   useEffect(() => {
-    if (rows.length && cols.length && grid.length) {
-      evaluate(grid);
-      if (!rowMarks.length) setRowMarks(Array(rows.length).fill(false));
-      if (!colMarks.length) setColMarks(Array(cols.length).fill(false));
-      setStarted(true);
+    gridRef.current = grid;
+  }, [grid]);
+
+  const canvasRef = useRef(null);
+  const animationRef = useRef();
+
+  const [mode, setMode] = useState('paint'); // paint or mark
+  const [paused, setPaused] = useState(false);
+  const [sound, setSound] = useState(true);
+  const [time, setTime] = useState(0);
+  const [highScore, setHighScore] = useState(null);
+  const startTime = useRef(Date.now());
+  const completed = useRef(false);
+
+  // load stored high score
+  useEffect(() => {
+    const hs = localStorage.getItem('nonogramHighScore');
+    if (hs) setHighScore(parseInt(hs, 10));
+    reset();
+  }, []);
+
+  const playSound = useCallback(() => {
+    if (!sound) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.frequency.value = 880;
+      osc.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.05);
+    } catch {
+      /* ignore */
     }
-  }, [rows, cols, grid, evaluate, rowMarks.length, colMarks.length, setRowMarks, setColMarks]);
+  }, [sound]);
 
-  const validate = () => {
-    alert(validateSolution(grid, rows, cols) ? 'Puzzle solved!' : 'Not yet solved');
-  };
-
-  const handleUpload = (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const p = JSON.parse(ev.target.result);
-        if (p.rows && p.cols) {
-          setRowInput(p.rows.map((r) => r.join(' ')).join('\n'));
-          setColInput(p.cols.map((c) => c.join(' ')).join('\n'));
-          if (p.grid) {
-            setRows(p.rows);
-            setCols(p.cols);
-            setGrid(p.grid);
-            setRowMarks(Array(p.rows.length).fill(false));
-            setColMarks(Array(p.cols.length).fill(false));
-            evaluate(p.grid);
-            setStarted(true);
-          }
+  const checkSolved = useCallback(
+    (ng) => {
+      if (validateSolution(ng, rows, cols) && !completed.current) {
+        completed.current = true;
+        const elapsed = Math.floor((Date.now() - startTime.current) / 1000);
+        setTime(elapsed);
+        if (highScore === null || elapsed < highScore) {
+          localStorage.setItem('nonogramHighScore', String(elapsed));
+          setHighScore(elapsed);
         }
-      } catch (err) {
-        alert('Invalid puzzle file');
+        playSound();
+        alert('Puzzle solved!');
       }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
+    },
+    [rows, cols, highScore, playSound]
+  );
 
-  if (!started)
-    return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-        <div className="flex mb-4 space-x-4">
-          <textarea
-            className="bg-gray-700 p-2"
-            rows={5}
-            value={rowInput}
-            onChange={(e) => setRowInput(e.target.value)}
-            placeholder="Row clues"
-          />
-          <textarea
-            className="bg-gray-700 p-2"
-            rows={5}
-            value={colInput}
-            onChange={(e) => setColInput(e.target.value)}
-            placeholder="Column clues"
-          />
-        </div>
-        <div className="space-x-2 flex items-center">
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={startGame}
-          >
-            Start
-          </button>
-          <label className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded cursor-pointer">
-            Upload
-            <input
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={handleUpload}
-            />
-          </label>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={() => {
-              const { rows: r, cols: c } = getPuzzleBySeed(
-                new Date().toISOString().slice(0, 10)
-              );
-              setRowInput(r.map((row) => row.join(' ')).join('\n'));
-              setColInput(c.map((col) => col.join(' ')).join('\n'));
-            }}
-          >
-            Daily
-          </button>
-        </div>
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          {puzzles.map((p, idx) => (
-            <button
-              key={idx}
-              className="p-1 bg-gray-700 hover:bg-gray-600 rounded"
-              onClick={() => {
-                setRowInput(p.rows.map((r) => r.join(' ')).join('\n'));
-                setColInput(p.cols.map((c) => c.join(' ')).join('\n'));
-                setRows(p.rows);
-                setCols(p.cols);
-                const g = Array(p.rows.length)
-                  .fill(null)
-                  .map(() => Array(p.cols.length).fill(0));
-                setGrid(g);
-                setRowMarks(Array(p.rows.length).fill(false));
-                setColMarks(Array(p.cols.length).fill(false));
-                evaluate(g);
-                setStarted(true);
-                startTime.current = Date.now();
-                completed.current = false;
-              }}
-            >
-              <div
-                className="grid gap-px mb-1"
-                style={{ gridTemplateColumns: `repeat(${p.cols.length}, 1fr)` }}
-              >
-                {p.grid.flat().map((cell, i) => (
-                  <div
-                    key={i}
-                    className={cell ? 'bg-gray-200' : 'bg-gray-500'}
-                    style={{ width: 16, height: 16 }}
-                  />
-                ))}
-              </div>
-              <div className="text-xs text-center">{p.name}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
+  const toggleCell = useCallback(
+    (i, j) => {
+      if (paused || completed.current) return;
+      setGrid((g) => {
+        const ng = g.map((row) => row.slice());
+        if (mode === 'paint') ng[i][j] = ng[i][j] === 1 ? 0 : 1;
+        else if (mode === 'mark') ng[i][j] = ng[i][j] === -1 ? 0 : -1;
+        checkSolved(ng);
+        return ng;
+      });
+      playSound();
+    },
+    [mode, paused, checkSolved, playSound]
+  );
+
+  const reset = useCallback(() => {
+    setGrid(Array(height).fill(0).map(() => Array(width).fill(0)));
+    startTime.current = Date.now();
+    setTime(0);
+    completed.current = false;
+    setPaused(false);
+  }, [height, width]);
+
+  // canvas drawing with rAF
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    canvas.width = CLUE_SPACE + width * CELL_SIZE + 1;
+    canvas.height = CLUE_SPACE + height * CELL_SIZE + 1;
+
+    const render = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#000';
+      ctx.font = '16px monospace';
+
+      // row clues
+      ctx.textAlign = 'right';
+      rows.forEach((clues, i) => {
+        ctx.fillText(
+          clues.join(' '),
+          CLUE_SPACE - 4,
+          CLUE_SPACE + i * CELL_SIZE + CELL_SIZE * 0.7
+        );
+      });
+
+      // column clues
+      ctx.textAlign = 'center';
+      cols.forEach((clues, j) => {
+        clues
+          .slice()
+          .reverse()
+          .forEach((c, idx) => {
+            ctx.fillText(
+              String(c),
+              CLUE_SPACE + j * CELL_SIZE + CELL_SIZE / 2,
+              CLUE_SPACE - 4 - idx * 16
+            );
+          });
+      });
+
+      // grid lines
+      ctx.strokeStyle = '#000';
+      for (let i = 0; i <= height; i++) {
+        ctx.beginPath();
+        ctx.moveTo(CLUE_SPACE, CLUE_SPACE + i * CELL_SIZE);
+        ctx.lineTo(CLUE_SPACE + width * CELL_SIZE, CLUE_SPACE + i * CELL_SIZE);
+        ctx.stroke();
+      }
+      for (let j = 0; j <= width; j++) {
+        ctx.beginPath();
+        ctx.moveTo(CLUE_SPACE + j * CELL_SIZE, CLUE_SPACE);
+        ctx.lineTo(
+          CLUE_SPACE + j * CELL_SIZE,
+          CLUE_SPACE + height * CELL_SIZE
+        );
+        ctx.stroke();
+      }
+
+      // cells
+      gridRef.current.forEach((row, i) => {
+        row.forEach((cell, j) => {
+          const x = CLUE_SPACE + j * CELL_SIZE;
+          const y = CLUE_SPACE + i * CELL_SIZE;
+          if (cell === 1) {
+            ctx.fillStyle = '#222';
+            ctx.fillRect(x + 1, y + 1, CELL_SIZE - 1, CELL_SIZE - 1);
+          } else if (cell === -1) {
+            ctx.strokeStyle = '#a00';
+            ctx.beginPath();
+            ctx.moveTo(x + 4, y + 4);
+            ctx.lineTo(x + CELL_SIZE - 4, y + CELL_SIZE - 4);
+            ctx.moveTo(x + CELL_SIZE - 4, y + 4);
+            ctx.lineTo(x + 4, y + CELL_SIZE - 4);
+            ctx.stroke();
+            ctx.strokeStyle = '#000';
+          }
+        });
+      });
+
+      if (paused) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.fillText('Paused', canvas.width / 2, canvas.height / 2);
+      } else if (!completed.current) {
+        setTime(Math.floor((Date.now() - startTime.current) / 1000));
+      }
+
+      animationRef.current = requestAnimationFrame(render);
+    };
+
+    animationRef.current = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animationRef.current);
+  }, [rows, cols, paused, height, width]);
+
+  // mouse interaction
+  const painting = useRef(false);
+  const handlePos = useCallback(
+    (e) => {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left - CLUE_SPACE;
+      const y = e.clientY - rect.top - CLUE_SPACE;
+      const i = Math.floor(y / CELL_SIZE);
+      const j = Math.floor(x / CELL_SIZE);
+      if (i >= 0 && i < height && j >= 0 && j < width) toggleCell(i, j);
+    },
+    [height, width, toggleCell]
+  );
+
+  const handleMouseDown = useCallback(
+    (e) => {
+      e.preventDefault();
+      painting.current = true;
+      handlePos(e);
+    },
+    [handlePos]
+  );
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (painting.current) handlePos(e);
+    },
+    [handlePos]
+  );
+  useEffect(() => {
+    const up = () => {
+      painting.current = false;
+    };
+    window.addEventListener('mouseup', up);
+    return () => window.removeEventListener('mouseup', up);
+  }, []);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
-      <div className="flex">
-        <div className="flex flex-col mr-2 text-right">
-          {rows.map((clue, i) => (
-            <div
-              key={i}
-              onClick={() =>
-                setRowMarks((m) => {
-                  const nm = m.slice();
-                  nm[i] = !nm[i];
-                  return nm;
-                })
-              }
-              className={`h-8 flex items-center justify-end pr-1 cursor-pointer ${
-                rowMarks[i] || rowState[i]?.solved ? 'line-through' : ''
-              } ${
-                showMistakes && rowState[i]?.contradiction ? 'text-red-500' : ''
-              }`}
-            >
-              {clue.join(' ')}
-            </div>
-          ))}
-        </div>
-        <div>
-          <div className="flex mb-1">
-            {cols.map((clue, i) => (
-              <div
-                key={i}
-                onClick={() =>
-                  setColMarks((m) => {
-                    const nm = m.slice();
-                    nm[i] = !nm[i];
-                    return nm;
-                  })
-                }
-                className={`text-center cursor-pointer ${
-                  colMarks[i] || colState[i]?.solved ? 'line-through' : ''
-                } ${
-                  showMistakes && colState[i]?.contradiction ? 'text-red-500' : ''
-                }`}
-                style={{ width: cellSize }}
-              >
-                {clue.join(' ')}
-              </div>
-            ))}
-          </div>
-          <div
-            className="grid"
-            style={{ gridTemplateColumns: `repeat(${cols.length}, ${cellSize}px)` }}
-          >
-            {grid.map((row, i) =>
-              row.map((cell, j) => (
-                <div
-                  key={`${i}-${j}`}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    const mode =
-                      e.button === 2
-                        ? 'cross'
-                        : pencil
-                        ? 'pencil'
-                        : 'fill';
-                    handleMouseDown(i, j, mode);
-                  }}
-                  onMouseEnter={() => handleMouseEnter(i, j)}
-                  onTouchStart={() => handleTouchStart(i, j)}
-                  onTouchEnd={() => handleTouchEnd(i, j)}
-                  onContextMenu={(e) => e.preventDefault()}
-                  className={`border border-gray-600 flex items-center justify-center cursor-pointer ${
-                    cell === 1 ? 'bg-gray-200' : ''
-                  } ${cell === -1 ? 'text-gray-500' : ''} ${
-                    cell === 2 ? 'text-gray-400' : ''
-                  } ${
-                    showMistakes &&
-                    (rowState[i]?.contradiction || colState[j]?.contradiction)
-                      ? 'bg-red-300'
-                      : ''
-                  } ${
-                    selected.i === i && selected.j === j
-                      ? 'ring-2 ring-yellow-400'
-                      : ''
-                  }`}
-                  style={{ width: cellSize, height: cellSize }}
-                >
-                  {cell === -1 ? 'X' : cell === 2 ? '·' : ''}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
+      <div className="mb-2">
+        Time: {time}s{highScore !== null && ` | Best: ${highScore}s`}
       </div>
-      <div className="mt-4 space-x-2 flex items-center">
+      <canvas
+        ref={canvasRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onContextMenu={(e) => e.preventDefault()}
+        className="bg-gray-200"
+      />
+      <div className="mt-2 space-x-2">
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={validate}
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setMode(mode === 'paint' ? 'mark' : 'paint')}
         >
-          Check
+          Mode: {mode === 'paint' ? 'Paint' : 'Mark'}
         </button>
         <button
-          className={`px-4 py-2 rounded ${
-            pencil ? 'bg-gray-500' : 'bg-gray-700 hover:bg-gray-600'
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={reset}
+        >
+          Reset
+        </button>
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setPaused((p) => !p)}
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          className={`px-3 py-1 rounded ${
+            sound ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500'
           }`}
-          onClick={() => setPencil(!pencil)}
+          onClick={() => setSound((s) => !s)}
         >
-          {pencil ? 'Pencil On' : 'Pencil Off'}
-        </button>
-        <button
-          className={`px-4 py-2 rounded ${
-            showMistakes ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500'
-          }`}
-          onClick={toggleMistakes}
-        >
-          {showMistakes ? 'Hide Mistakes' : 'Show Mistakes'}
-        </button>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={handleHint}
-        >
-          Hint
-        </button>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => {
-            const data = JSON.stringify({ rows, cols, grid });
-            if (navigator.clipboard) navigator.clipboard.writeText(data);
-            alert('Puzzle copied to clipboard');
-          }}
-        >
-          Copy
-        </button>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => {
-            const data = JSON.stringify({ rows, cols, grid });
-            const blob = new Blob([data], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'nonogram.json';
-            a.click();
-            URL.revokeObjectURL(url);
-          }}
-        >
-          Download
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => setCellSize((s) => Math.max(16, s - 4))}
-        >
-          -
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => setCellSize((s) => Math.min(64, s + 4))}
-        >
-          +
+          Sound: {sound ? 'On' : 'Off'}
         </button>
       </div>
     </div>
@@ -516,3 +274,4 @@ const Nonogram = () => {
 };
 
 export default Nonogram;
+
