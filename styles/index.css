@@ -346,3 +346,19 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Reversi legal move marker */
+.legal-move-marker {
+    width: 50%;
+    height: 50%;
+    border-radius: 50%;
+    opacity: 0.5;
+}
+
+.legal-move-marker-black {
+    background-color: black;
+}
+
+.legal-move-marker-white {
+    background-color: white;
+}

@@ -255,7 +255,13 @@ const Reversi = () => {
                   </div>
                 )}
                 {!cell && move && !isPreview && (
-                  <div className="w-2 h-2 rounded-full bg-white opacity-50" />
+                  <div
+                    className={`legal-move-marker ${
+                      player === 'B'
+                        ? 'legal-move-marker-black'
+                        : 'legal-move-marker-white'
+                    }`}
+                  />
                 )}
                 {!cell && isPreview && (
                   <div
