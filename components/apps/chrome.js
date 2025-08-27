@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
+import ExternalFrame from '../ExternalFrame';
+import ErrorBoundary from '../ErrorBoundary';
 
 export class Chrome extends Component {
     constructor() {
@@ -86,7 +88,15 @@ export class Chrome extends Component {
         return (
             <div className="h-full w-full flex flex-col bg-ub-cool-grey">
                 {this.displayUrlBar()}
-                <iframe src={this.state.url} className="flex-grow" id="chrome-screen" frameBorder="0" title="Ubuntu Chrome Url"></iframe>
+                <ErrorBoundary>
+                    <ExternalFrame
+                        appId="chrome"
+                        src={this.state.url}
+                        title="Ubuntu Chrome Url"
+                        className="flex-grow"
+                        id="chrome-screen"
+                    />
+                </ErrorBoundary>
             </div>
         )
     }

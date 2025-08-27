@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import usePersistentState from '../usePersistentState';
+import ExternalFrame from '../ExternalFrame';
+import ErrorBoundary from '../ErrorBoundary';
 
 const Platformer = () => {
   const [levels, setLevels] = useState([]);
@@ -7,7 +9,6 @@ const Platformer = () => {
     level: 0,
     checkpoint: null,
   });
-  const frameRef = useRef(null);
 
   useEffect(() => {
     fetch('/apps/platformer/levels.json')
@@ -36,13 +37,14 @@ const Platformer = () => {
   }`;
 
   return (
-    <iframe
-      ref={frameRef}
-      src={src}
-      title="Platformer"
-      className="w-full h-full"
-      frameBorder="0"
-    ></iframe>
+    <ErrorBoundary>
+      <ExternalFrame
+        appId="platformer"
+        src={src}
+        title="Platformer"
+        className="w-full h-full"
+      />
+    </ErrorBoundary>
   );
 };
 

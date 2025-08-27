@@ -111,3 +111,23 @@ jest.mock(
   }),
   { virtual: true }
 );
+
+// Minimal GA4 mock to avoid network requests during tests
+jest.mock('react-ga4', () => ({
+  initialize: jest.fn(),
+  send: jest.fn(),
+  event: jest.fn(),
+}));
+
+// Mock howler.js audio to prevent errors in JSDOM
+jest.mock('howler', () => ({
+  Howl: class {
+    constructor() {}
+    play() {}
+    stop() {}
+    pause() {}
+    seek() {
+      return 0;
+    }
+  },
+}));
