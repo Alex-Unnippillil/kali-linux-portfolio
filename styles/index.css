@@ -447,6 +447,17 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 }
 
+@keyframes tile-flip {
+    0% { transform: rotateX(0); }
+    50% { transform: rotateX(-90deg); }
+    100% { transform: rotateX(0); }
+}
+
+.tile-flip {
+    animation: tile-flip 0.6s ease;
+    transform-style: preserve-3d;
+}
+
 @keyframes hangman-draw {
     from { stroke-dashoffset: 100; }
     to { stroke-dashoffset: 0; }
