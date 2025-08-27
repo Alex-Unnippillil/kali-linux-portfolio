@@ -128,8 +128,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
     controls: 'Click a cell then type a number.',
   },
   'flappy-bird': {
-    objective: 'Fly through gaps between pipes.',
-    controls: 'Press space or click to flap.',
+    objective: 'Fly through gaps between pipes. Practice gates and easy mode available.',
+    controls: 'Space/click to flap. P: practice, G: easy gravity, M: reduced motion.',
   },
   'candy-crush': {
     objective: 'Match three candies to clear them.',

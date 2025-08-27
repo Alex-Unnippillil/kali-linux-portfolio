@@ -17,15 +17,25 @@ const FlappyBird = () => {
 
     const width = WIDTH;
     const height = HEIGHT;
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let reduceMotion =
+      localStorage.getItem('flappy-reduced-motion') === '1' ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // mode flags
+    let practiceMode = localStorage.getItem('flappy-practice') === '1';
+    let easyGravity = localStorage.getItem('flappy-easy-gravity') === '1';
 
     // physics constants
     let bird = { x: 50, y: height / 2, vy: 0 };
-    const gravity = 0.5;
+    const baseGravity = 0.5;
+    const easyGravityVal = 0.25;
+    let gravity = easyGravity ? easyGravityVal : baseGravity;
     const jump = -8;
 
     const pipeWidth = 40;
-    const gap = 80;
+    const baseGap = 80;
+    const practiceGap = 120;
+    let gap = practiceMode ? practiceGap : baseGap;
     const pipeInterval = 100;
     const pipeSpeed = 2;
 
@@ -38,11 +48,14 @@ const FlappyBird = () => {
     let highHz = localStorage.getItem('flappy-120hz') === '1';
     let fps = highHz ? 120 : 60;
 
-    // sky and clouds
+    // sky, clouds, and wind
     let skyFrame = 0;
     let skyProgress = 0;
     let cloudsBack = [];
     let cloudsFront = [];
+    let gust = 0;
+    let gustTimer = 0;
+    let foliage = [];
 
     function mixColor(c1, c2, t) {
       return `rgb(${Math.round(c1[0] + (c2[0] - c1[0]) * t)},${Math.round(
@@ -78,12 +91,27 @@ const FlappyBird = () => {
     function updateClouds() {
       if (reduceMotion) return;
       for (const c of cloudsBack) {
-        c.x -= c.speed;
+        c.x -= c.speed + gust * 0.2;
         if (c.x < -50) c.x = width + rand() * 50;
       }
       for (const c of cloudsFront) {
-        c.x -= c.speed;
+        c.x -= c.speed + gust * 0.4;
         if (c.x < -50) c.x = width + rand() * 50;
+      }
+    }
+
+    function updateWind() {
+      if (reduceMotion) {
+        gust = 0;
+        gustTimer = 0;
+        return;
+      }
+      if (gustTimer > 0) {
+        gustTimer -= 1;
+        if (gustTimer <= 0) gust = 0;
+      } else if (rand() < 0.005) {
+        gust = (rand() - 0.5) * 2;
+        gustTimer = 60;
       }
     }
 
@@ -109,6 +137,23 @@ const FlappyBird = () => {
       for (const c of cloudsFront) drawCloud(c);
     }
 
+    function drawFoliage() {
+      if (reduceMotion) return;
+      ctx.save();
+      ctx.strokeStyle = 'green';
+      ctx.lineWidth = 3;
+      for (const f of foliage) {
+        const sway = gust * 0.5 + Math.sin((frame + f.x) / 20) * 0.2;
+        const tipX = f.x + sway * f.h;
+        const tipY = height - 5 - f.h;
+        ctx.beginPath();
+        ctx.moveTo(f.x, height - 5);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     // seeded rng
     function createRandom(seed) {
       let s = seed % 2147483647;
@@ -118,6 +163,13 @@ const FlappyBird = () => {
 
     let seed = Date.now();
     let rand = createRandom(seed);
+
+    function initFoliage() {
+      foliage = Array.from({ length: 6 }, () => ({
+        x: rand() * width,
+        h: rand() * 20 + 20,
+      }));
+    }
 
     // medals
     const medalThresholds = [
@@ -167,7 +219,12 @@ const FlappyBird = () => {
       score = 0;
       running = true;
       flapFrames = [];
+      gravity = easyGravity ? easyGravityVal : baseGravity;
+      gap = practiceMode ? practiceGap : baseGap;
       initClouds();
+      initFoliage();
+      gust = 0;
+      gustTimer = 0;
     }
 
     function startGame(newSeed = Date.now()) {
@@ -185,12 +242,15 @@ const FlappyBird = () => {
     function draw() {
       drawBackground();
       drawClouds();
+      drawFoliage();
 
-      // pipes
+      // pipes / practice gates
       ctx.fillStyle = mixColor([34, 139, 34], [144, 238, 144], skyProgress);
       for (const pipe of pipes) {
+        if (practiceMode) ctx.globalAlpha = 0.4;
         ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
         ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, height - pipe.bottom);
+        if (practiceMode) ctx.globalAlpha = 1;
       }
 
       // bird
@@ -201,14 +261,22 @@ const FlappyBird = () => {
 
       // HUD
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(5, 5, 120, 70);
+      ctx.fillRect(5, 5, 160, 140);
       ctx.fillStyle = '#fff';
       ctx.font = '16px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`Score: ${score}`, 10, 20);
-      ctx.fillText(`Seed: ${seed}`, 10, 40);
+      let hudY = 20;
+      const hudLine = (text) => {
+        ctx.fillText(text, 10, hudY);
+        hudY += 20;
+      };
+      hudLine(`Score: ${score}`);
+      hudLine(`Seed: ${seed}`);
       const medal = getMedal(score);
-      if (medal) ctx.fillText(`Medal: ${medal}`, 10, 60);
+      if (medal) hudLine(`Medal: ${medal}`);
+      if (practiceMode) hudLine('Practice');
+      if (easyGravity) hudLine('Easy Gravity');
+      if (reduceMotion) hudLine('Reduced Motion');
 
       if (!running) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -229,6 +297,7 @@ const FlappyBird = () => {
 
       frame += 1;
 
+      updateWind();
       updateClouds();
 
       if (frame % pipeInterval === 0) addPipe();
@@ -254,6 +323,7 @@ const FlappyBird = () => {
 
         // collision with current pipe
         if (
+          !practiceMode &&
           pipe.x < bird.x + 10 &&
           pipe.x + pipeWidth > bird.x - 10 &&
           (bird.y - 10 < pipe.top || bird.y + 10 > pipe.bottom)
@@ -322,6 +392,23 @@ const FlappyBird = () => {
         highHz = !highHz;
         localStorage.setItem('flappy-120hz', highHz ? '1' : '0');
         if (running) startLoop();
+      } else if (e.code === 'KeyM') {
+        reduceMotion = !reduceMotion;
+        localStorage.setItem('flappy-reduced-motion', reduceMotion ? '1' : '0');
+        if (liveRef.current)
+          liveRef.current.textContent = `Reduced motion ${reduceMotion ? 'on' : 'off'}`;
+      } else if (e.code === 'KeyP') {
+        practiceMode = !practiceMode;
+        localStorage.setItem('flappy-practice', practiceMode ? '1' : '0');
+        if (liveRef.current)
+          liveRef.current.textContent = practiceMode ? 'Practice mode on' : 'Practice mode off';
+        startGame();
+      } else if (e.code === 'KeyG') {
+        easyGravity = !easyGravity;
+        localStorage.setItem('flappy-easy-gravity', easyGravity ? '1' : '0');
+        if (liveRef.current)
+          liveRef.current.textContent = easyGravity ? 'Easy gravity on' : 'Easy gravity off';
+        startGame();
       }
     }
 
