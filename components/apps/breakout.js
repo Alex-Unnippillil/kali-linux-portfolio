@@ -83,6 +83,12 @@ const BreakoutGame = ({ levels }) => {
   const [level, setLevel] = useState(0);
   const scoreRef = useRef(0);
   const highScoresRef = useRef({});
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const [soundOn, setSoundOn] = useState(true);
+  const soundRef = useRef(true);
+  const [resetKey, setResetKey] = useState(0);
+  const audioCtxRef = useRef(null);
 
   // Load saved level and highscores
   useEffect(() => {
@@ -93,10 +99,44 @@ const BreakoutGame = ({ levels }) => {
     highScoresRef.current = savedHigh && typeof savedHigh === "object" ? savedHigh : {};
   }, []);
 
+  const reset = () => {
+    scoreRef.current = 0;
+    setLevel(0);
+    setResetKey((k) => k + 1);
+  };
+
+  const togglePause = () => {
+    pausedRef.current = !pausedRef.current;
+    setPaused(pausedRef.current);
+  };
+
+  const toggleSound = () => {
+    soundRef.current = !soundRef.current;
+    setSoundOn(soundRef.current);
+  };
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
+
+    const audioCtx =
+      audioCtxRef.current ||
+      (typeof window !== "undefined"
+        ? new (window.AudioContext || window.webkitAudioContext)()
+        : null);
+    audioCtxRef.current = audioCtx;
+
+    const playSound = (freq) => {
+      if (!soundRef.current || !audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.1);
+    };
 
     // Fit canvas to its container and device pixel ratio
     const fit = () => {
@@ -131,6 +171,9 @@ const BreakoutGame = ({ levels }) => {
     const keyDown = (e) => {
       if (e.key === "ArrowLeft") keys.left = true;
       if (e.key === "ArrowRight") keys.right = true;
+      if (e.key === "p") togglePause();
+      if (e.key === "r") reset();
+      if (e.key === "m") toggleSound();
     };
     const keyUp = (e) => {
       if (e.key === "ArrowLeft") keys.left = false;
@@ -145,6 +188,11 @@ const BreakoutGame = ({ levels }) => {
     const loop = (time) => {
       const dt = Math.min(0.05, (time - lastTime) / 1000); // clamp big frame gaps
       lastTime = time;
+
+      if (pausedRef.current) {
+        animationId = requestAnimationFrame(loop);
+        return;
+      }
 
       // Update paddle
       paddle.x += (Number(keys.right) - Number(keys.left)) * 300 * dt;
@@ -161,8 +209,14 @@ const BreakoutGame = ({ levels }) => {
         ball.x += ball.vx * dt;
         ball.y += ball.vy * dt;
 
-        if (ball.x < ball.r || ball.x > width - ball.r) ball.vx *= -1;
-        if (ball.y < ball.r) ball.vy *= -1;
+        if (ball.x < ball.r || ball.x > width - ball.r) {
+          ball.vx *= -1;
+          playSound(100);
+        }
+        if (ball.y < ball.r) {
+          ball.vy *= -1;
+          playSound(100);
+        }
 
         // Paddle collision
         if (
@@ -171,8 +225,13 @@ const BreakoutGame = ({ levels }) => {
           ball.x < paddle.x + paddle.w &&
           ball.vy > 0
         ) {
-          ball.vy *= -1;
+          const hit = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+          const angle = hit * (Math.PI / 3);
+          const speed = Math.hypot(ball.vx, ball.vy);
+          ball.vx = speed * Math.sin(angle);
+          ball.vy = -speed * Math.cos(angle);
           ball.y = paddle.y - ball.r;
+          playSound(300);
         }
 
         // Brick collisions
@@ -188,6 +247,7 @@ const BreakoutGame = ({ levels }) => {
             brick.alive = false;
             ball.vy *= -1;
             scoreRef.current += 10;
+            playSound(200);
 
             // 20% chance to spawn a power-up
             if (Math.random() < 0.2) {
@@ -215,17 +275,17 @@ const BreakoutGame = ({ levels }) => {
         p.y += p.vy * dt;
         if (p.y + 8 > paddle.y && p.x > paddle.x && p.x < paddle.x + paddle.w) {
           if (p.type === "multi") {
-            balls.push({
-              x: paddle.x + paddle.w / 2,
-              y: paddle.y - 10,
-              vx: 150,
-              vy: -150,
-              r: 5,
-            });
+            const additions = [];
+            for (const b of balls) {
+              additions.push({ x: b.x, y: b.y, vx: -b.vx, vy: b.vy, r: b.r });
+              additions.push({ x: b.x, y: b.y, vx: b.vx, vy: -b.vy, r: b.r });
+            }
+            balls.push(...additions);
           } else if (p.type === "expand") {
             paddle.w = BASE_PADDLE_WIDTH * 1.5;
             paddleTimer = 10;
           }
+          playSound(250);
           powerUps.splice(i, 1);
         } else if (p.y > height) {
           powerUps.splice(i, 1);
@@ -269,9 +329,20 @@ const BreakoutGame = ({ levels }) => {
       ctx.fillStyle = "white";
       ctx.font = "14px monospace";
       ctx.textBaseline = "top";
+      ctx.textAlign = "left";
       ctx.fillText(`Level: ${level + 1}`, 10, 10);
       ctx.fillText(`Score: ${scoreRef.current}`, 10, 26);
       ctx.fillText(`High: ${highScoresRef.current[level] || 0}`, 10, 42);
+
+      if (pausedRef.current) {
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+        ctx.font = "20px monospace";
+        ctx.fillText("Paused", width / 2, height / 2);
+        ctx.textAlign = "left";
+      }
 
       // Level complete
       if (bricks.every((b) => !b.alive)) {
@@ -303,9 +374,36 @@ const BreakoutGame = ({ levels }) => {
       window.removeEventListener("keyup", keyUp);
       window.removeEventListener("resize", fit);
     };
-  }, [level, levels]);
+  }, [level, levels, resetKey]);
 
-  return <canvas ref={canvasRef} className="h-full w-full bg-black" />;
+  return (
+    <div className="relative h-full w-full">
+      <canvas ref={canvasRef} className="h-full w-full bg-black" />
+      <div className="absolute top-2 right-2 flex gap-2 z-10 text-xs">
+        <button
+          type="button"
+          className="bg-gray-700 px-2 py-1"
+          onClick={reset}
+        >
+          Reset
+        </button>
+        <button
+          type="button"
+          className="bg-gray-700 px-2 py-1"
+          onClick={togglePause}
+        >
+          {paused ? "Play" : "Pause"}
+        </button>
+        <button
+          type="button"
+          className="bg-gray-700 px-2 py-1"
+          onClick={toggleSound}
+        >
+          {soundOn ? "Mute" : "Sound"}
+        </button>
+      </div>
+    </div>
+  );
 };
 
 const Breakout = () => {
