@@ -1,4 +1,12 @@
-import { wrap, createBulletPool, spawnBullet, updateBullets, splitAsteroidTree } from '../components/apps/asteroids-utils';
+import {
+  wrap,
+  createBulletPool,
+  spawnBullet,
+  updateBullets,
+  splitAsteroidTree,
+  updateShipPosition,
+  handleBulletAsteroidCollision,
+} from '../components/apps/asteroids-utils';
 
 describe('wrap', () => {
   it('wraps positive overflow', () => {
@@ -42,5 +50,24 @@ describe('splitAsteroidTree', () => {
       tree.children[1].children[1].size,
     ];
     expect(leafSizes.every((s) => s === 20)).toBe(true);
+  });
+});
+
+describe('handleBulletAsteroidCollision', () => {
+  it('removes asteroid on collision', () => {
+    const asteroids = [{ x: 0, y: 0, dx: 0, dy: 0, r: 10 }];
+    const bullet = { x: 5, y: 0, r: 2, active: true };
+    const hit = handleBulletAsteroidCollision(asteroids, bullet);
+    expect(hit).toBe(true);
+    expect(asteroids).toHaveLength(0);
+    expect(bullet.active).toBe(false);
+  });
+});
+
+describe('updateShipPosition', () => {
+  it('wraps ship around screen edges', () => {
+    const ship = { x: 115, y: 50, velX: 0, velY: 0, r: 10 };
+    updateShipPosition(ship, 100, 100);
+    expect(ship.x).toBe(-5);
   });
 });

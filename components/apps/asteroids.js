@@ -8,6 +8,7 @@ import {
   spawnPowerUp,
   updatePowerUps,
   POWER_UPS,
+  createSeededRNG,
 } from './asteroids-utils';
 import useGameControls from './useGameControls';
 import GameLayout from './GameLayout';
@@ -141,6 +142,7 @@ const Asteroids = () => {
     let ufoTimer = 600; // frames until next UFO
     let multiplier = 1;
     let multiplierTimer = 0;
+    let rand = Math.random;
 
     // Particle pooling
     const spawnParticles = (x, y, count, color = 'white') => {
@@ -179,11 +181,11 @@ const Asteroids = () => {
     // Spawn asteroids for a level
     const spawnAsteroids = (count, speed = 1 + level * 0.3) => {
       for (let i = 0; i < count; i += 1) {
-        const angle = Math.random() * Math.PI * 2;
-        const r = 15 + Math.random() * 25;
+        const angle = rand() * Math.PI * 2;
+        const r = 15 + rand() * 25;
         asteroids.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height,
+          x: rand() * canvas.width,
+          y: rand() * canvas.height,
           dx: Math.cos(angle) * speed,
           dy: Math.sin(angle) * speed,
           r,
@@ -192,6 +194,7 @@ const Asteroids = () => {
     };
 
     const startLevel = () => {
+      rand = createSeededRNG(level);
       spawnAsteroids(3 + level * 2);
       ufoTimer = Math.max(300, 900 - level * 60);
     };
@@ -212,9 +215,9 @@ const Asteroids = () => {
     }
 
     function hyperspace() {
-      ship.x = Math.random() * canvas.width;
-      ship.y = Math.random() * canvas.height;
-      if (Math.random() < 0.1) destroyShip();
+      ship.x = rand() * canvas.width;
+      ship.y = rand() * canvas.height;
+      if (rand() < 0.1) destroyShip();
     }
 
     function fireBullet() {
@@ -229,6 +232,7 @@ const Asteroids = () => {
       );
       ship.cooldown = ship.rapidFire > 0 ? 5 : 15;
       playSound(880);
+      if ('vibrate' in navigator) navigator.vibrate(10);
     }
 
     function destroyShip() {
@@ -241,6 +245,7 @@ const Asteroids = () => {
         lives -= 1;
         ga.death();
         playSound(110);
+        if ('vibrate' in navigator) navigator.vibrate(200);
         ship.x = canvas.width / 2;
         ship.y = canvas.height / 2;
         ship.velX = 0;
@@ -269,13 +274,14 @@ const Asteroids = () => {
       ga.split(a.r);
       if (a.r > 20) {
         for (let i = 0; i < 2; i += 1) {
-          const angle = Math.random() * Math.PI * 2;
+          const angle = rand() * Math.PI * 2;
           asteroids.push({ x: a.x, y: a.y, dx: Math.cos(angle) * 2, dy: Math.sin(angle) * 2, r: a.r / 2 });
         }
       }
       asteroids.splice(index, 1);
       playSound(440);
-      if (Math.random() < 0.1) spawnPowerUp(powerUps, a.x, a.y);
+      if ('vibrate' in navigator) navigator.vibrate(50);
+      if (rand() < 0.1) spawnPowerUp(powerUps, a.x, a.y);
       if (score >= extraLifeScore) {
         lives += 1;
         extraLifeScore += 10000;
