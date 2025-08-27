@@ -66,6 +66,7 @@ export class Window extends Component {
     }
 
     changeCursorToMove = () => {
+        if (this.props.movable === false) return;
         this.focusWindow();
         if (this.state.maximized) {
             this.restoreWindow();
@@ -186,6 +187,7 @@ export class Window extends Component {
                 allowAnyClick={false}
                 defaultPosition={{ x: this.startX, y: this.startY }}
                 bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+                disabled={this.props.movable === false}
             >
                 <div
                     style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}

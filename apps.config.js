@@ -14,6 +14,7 @@ import { displayConverter } from './components/apps/converter';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayNikto } from './components/apps/nikto';
+import { displayChartViewer } from './components/apps/chart-viewer';
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
@@ -808,6 +809,16 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'chart-viewer',
+    title: 'Charts',
+    icon: './themes/Yaru/apps/resource-monitor.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayChartViewer,
+    movable: true,
   },
   {
     id: 'radare2',

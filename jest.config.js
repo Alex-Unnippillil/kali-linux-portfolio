@@ -7,6 +7,7 @@ const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   moduleNameMapper: {
     '^@xterm/xterm/css/xterm.css$': '<rootDir>/__mocks__/styleMock.js',
+    'react-cytoscapejs': '<rootDir>/__mocks__/react-cytoscapejs.js',
   },
 };
 
