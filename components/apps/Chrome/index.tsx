@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
+import { Readability } from '@mozilla/readability';
 
 interface TabData {
   id: number;
@@ -17,7 +18,13 @@ const HOME_URL = 'https://www.google.com/webhp?igu=1';
 const formatUrl = (value: string) => {
   let url = value.trim();
   if (!url) return HOME_URL;
-  if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+  const hasProtocol = /^https?:\/\//i.test(url);
+  const hasDot = /\./.test(url);
+  const hasSpace = /\s/.test(url);
+  if (!hasProtocol && (!hasDot || hasSpace)) {
+    return `https://www.google.com/search?q=${encodeURIComponent(url)}`;
+  }
+  if (!hasProtocol) url = `https://${url}`;
   return encodeURI(url);
 };
 
@@ -38,18 +45,46 @@ const saveTabs = (tabs: TabData[], active: number) => {
 const Chrome: React.FC = () => {
   const { tabs: storedTabs, active: storedActive } = readTabs();
   const [tabs, setTabs] = useState<TabData[]>(
-    storedTabs.length ? storedTabs : [{ id: Date.now(), url: HOME_URL, history: [HOME_URL], historyIndex: 0, scroll: 0 }]
+    storedTabs.length
+      ? storedTabs.map((t) => ({ blocked: false, muted: false, ...t }))
+      : [
+          {
+            id: Date.now(),
+            url: HOME_URL,
+            history: [HOME_URL],
+            historyIndex: 0,
+            scroll: 0,
+            blocked: false,
+            muted: false,
+          },
+        ]
   );
   const [activeId, setActiveId] = useState<number>(storedActive || tabs[0].id);
   const [address, setAddress] = useState<string>(tabs.find((t) => t.id === activeId)?.url || HOME_URL);
   const [searchTerm, setSearchTerm] = useState('');
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [articles, setArticles] = useState<Record<number, string>>({});
 
   useEffect(() => {
     saveTabs(tabs, activeId);
   }, [tabs, activeId]);
 
   const activeTab = tabs.find((t) => t.id === activeId)!;
+
+  const fetchArticle = async (tabId: number, url: string) => {
+    try {
+      const res = await fetch(url);
+      const html = await res.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const reader = new Readability(doc);
+      const parsed = reader.parse();
+      if (parsed) {
+        setArticles((prev) => ({ ...prev, [tabId]: parsed.content }));
+      }
+    } catch {
+      setArticles((prev) => ({ ...prev, [tabId]: '' }));
+    }
+  };
 
   const navigate = async (raw: string) => {
     const url = formatUrl(raw);
@@ -76,6 +111,7 @@ const Chrome: React.FC = () => {
       )
     );
     setAddress(url);
+    fetchArticle(activeId, url);
   };
 
   const onAddressKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -84,13 +120,28 @@ const Chrome: React.FC = () => {
 
   const addTab = () => {
     const id = Date.now();
-    setTabs((prev) => [...prev, { id, url: HOME_URL, history: [HOME_URL], historyIndex: 0, scroll: 0 }]);
+    setTabs((prev) => [
+      ...prev,
+      {
+        id,
+        url: HOME_URL,
+        history: [HOME_URL],
+        historyIndex: 0,
+        scroll: 0,
+        blocked: false,
+        muted: false,
+      },
+    ]);
     setActiveId(id);
     setAddress(HOME_URL);
   };
 
   const closeTab = (id: number) => {
     setTabs((prev) => prev.filter((t) => t.id !== id));
+    setArticles((prev) => {
+      const { [id]: _omit, ...rest } = prev;
+      return rest;
+    });
     if (id === activeId && tabs.length > 1) {
       const idx = tabs.findIndex((t) => t.id === id);
       const next = tabs[idx - 1] || tabs[idx + 1];
@@ -130,6 +181,18 @@ const Chrome: React.FC = () => {
   useEffect(() => {
     setAddress(activeTab.url);
   }, [activeTab.url]);
+
+  useEffect(() => {
+    if (!articles[activeId]) {
+      fetchArticle(activeId, activeTab.url);
+    }
+    try {
+      // @ts-ignore
+      if (iframeRef.current) iframeRef.current.muted = !!activeTab.muted;
+    } catch {
+      /* ignore */
+    }
+  }, [activeId, activeTab.url, activeTab.muted]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -263,8 +326,13 @@ const Chrome: React.FC = () => {
           📷
         </button>
       </div>
-      <div className="flex-grow bg-white relative">
-        {activeTab.blocked ? (
+      <div className="flex-grow bg-white relative overflow-auto">
+        {articles[activeId] ? (
+          <main
+            style={{ maxInlineSize: '60ch', margin: 'auto' }}
+            dangerouslySetInnerHTML={{ __html: articles[activeId] }}
+          />
+        ) : activeTab.blocked ? (
           blockedView
         ) : (
           <iframe
