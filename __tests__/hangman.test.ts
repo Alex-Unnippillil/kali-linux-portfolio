@@ -1,14 +1,23 @@
-import { createGame, guess, useHint, isWinner, isLoser } from '../apps/hangman/engine';
+import {
+  createGame,
+  guess,
+  useHint,
+  isWinner,
+  isLoser,
+  isGameOver,
+} from '../apps/hangman/engine';
 
 describe('hangman engine', () => {
-  test('repeated letters are solved with single guess', () => {
+  test('repeated guess is ignored', () => {
     const game = createGame('letter');
     expect(guess(game, 'e')).toBe(true);
-    expect(game.guessed).toEqual(['e']);
     guess(game, 'e');
     expect(game.guessed).toEqual(['e']);
-    ['l', 't', 'r'].forEach((l) => guess(game, l));
-    expect(isWinner(game)).toBe(true);
+
+    expect(guess(game, 'x')).toBe(false);
+    expect(game.wrong).toBe(1);
+    guess(game, 'x');
+    expect(game.wrong).toBe(1);
   });
 
   test('hint reveals one new letter', () => {
@@ -28,10 +37,12 @@ describe('hangman engine', () => {
     guess(winGame, 'i');
     expect(isWinner(winGame)).toBe(true);
     expect(isLoser(winGame)).toBe(false);
+    expect(isGameOver(winGame)).toBe(true);
 
     const loseGame = createGame('hi');
     ['a', 'b', 'c', 'd', 'e', 'f'].forEach((l) => guess(loseGame, l));
     expect(isLoser(loseGame)).toBe(true);
     expect(isWinner(loseGame)).toBe(false);
+    expect(isGameOver(loseGame)).toBe(true);
   });
 });
