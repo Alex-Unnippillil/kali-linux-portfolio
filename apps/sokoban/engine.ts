@@ -78,12 +78,16 @@ function cloneState(state: State): HistoryEntry {
   };
 }
 
-const DIRS: Record<string, Position> = {
+const DIRS = {
   ArrowUp: { x: 0, y: -1 },
   ArrowDown: { x: 0, y: 1 },
   ArrowLeft: { x: -1, y: 0 },
   ArrowRight: { x: 1, y: 0 },
-};
+} as const;
+
+export type DirectionKey = keyof typeof DIRS;
+
+export const directionKeys = Object.keys(DIRS) as DirectionKey[];
 
 function isWallOrBox(state: State, pos: Position): boolean {
   const k = key(pos);
@@ -111,7 +115,7 @@ function computeDeadlocks(state: State): Set<string> {
   return d;
 }
 
-export function move(state: State, dirKey: keyof typeof DIRS): State {
+export function move(state: State, dirKey: DirectionKey): State {
   const dir = DIRS[dirKey];
   if (!dir) return state;
   const next: Position = { x: state.player.x + dir.x, y: state.player.y + dir.y };
@@ -184,7 +188,6 @@ export function isSolved(state: State): boolean {
   return solved;
 }
 
-export const directionKeys = Object.keys(DIRS) as (keyof typeof DIRS)[];
 
 function isEdgeDeadlock(state: State, boxes: Set<string>, pos: Position): boolean {
   const k = key(pos);
@@ -236,7 +239,7 @@ function isEdgeDeadlock(state: State, boxes: Set<string>, pos: Position): boolea
   return false;
 }
 
-export function wouldDeadlock(state: State, dirKey: keyof typeof DIRS): boolean {
+export function wouldDeadlock(state: State, dirKey: DirectionKey): boolean {
   const dir = DIRS[dirKey];
   if (!dir) return false;
   const next: Position = { x: state.player.x + dir.x, y: state.player.y + dir.y };
@@ -277,11 +280,11 @@ const serialize = (player: Position, boxes: Set<string>) => {
   return `${player.x},${player.y}|${b}`;
 };
 
-export function findHint(state: State): keyof typeof DIRS | null {
+export function findHint(state: State): DirectionKey | null {
   const startBoxes = new Set(state.boxes);
   const startKey = serialize(state.player, startBoxes);
   const visited = new Set<string>([startKey]);
-  const q: { player: Position; boxes: Set<string>; path: (keyof typeof DIRS)[] }[] = [
+  const q: { player: Position; boxes: Set<string>; path: DirectionKey[] }[] = [
     { player: { ...state.player }, boxes: startBoxes, path: [] },
   ];
 
