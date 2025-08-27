@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { pointerHandlers } from '../../utils/pointer';
+import useWorker from '../../utils/worker';
 import {
   Board,
   Move,
@@ -35,16 +36,19 @@ export default function CheckersPage() {
   const [difficulty, setDifficulty] = useState(3);
   const [winner, setWinner] = useState<string | null>(null);
   const [noCapture, setNoCapture] = useState(0);
-  const workerRef = useRef<Worker | null>(null);
-
-  useEffect(() => {
-    workerRef.current = new Worker(new URL('../../workers/checkersAI.ts', import.meta.url));
-    workerRef.current.onmessage = (e: MessageEvent<Move>) => {
-      const move = e.data;
-      if (move) makeMove(move);
-    };
-    return () => workerRef.current?.terminate();
-  }, []);
+  const worker = useWorker<
+    {
+      board: Board;
+      color: 'black';
+      difficulty: number;
+      algorithm: 'alphabeta' | 'mcts';
+      enforceCapture: boolean;
+    },
+    Move
+  >('../../workers/checkersAI.ts', (e) => {
+    const move = e.data;
+    if (move) makeMove(move);
+  });
 
   const allMoves = useMemo(
     () =>
@@ -99,7 +103,7 @@ export default function CheckersPage() {
       }
       setTurn(next);
       if (next === 'black') {
-        workerRef.current?.postMessage({
+        worker?.postMessage({
           board: newBoard,
           color: 'black',
           difficulty,

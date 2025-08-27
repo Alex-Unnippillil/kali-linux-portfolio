@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import useWorker from '../../../utils/worker';
 
 // Font list must match those parsed in worker.js
 const fonts = ['Standard', 'Slant', 'Big', 'Ghost', 'Small'];
@@ -9,23 +10,20 @@ const FigletApp = () => {
   const [output, setOutput] = useState('');
   const [inverted, setInverted] = useState(false);
   const [announce, setAnnounce] = useState('');
-  const workerRef = useRef(null);
+  const worker = useWorker('./worker.js', (e) => setOutput(e.data));
   const frameRef = useRef(null);
   const announceTimer = useRef(null);
 
   useEffect(() => {
-    workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => setOutput(e.data);
     return () => {
-      workerRef.current?.terminate();
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
       clearTimeout(announceTimer.current);
     };
   }, []);
 
   const updateFiglet = () => {
-    if (workerRef.current) {
-      workerRef.current.postMessage({ text, font });
+    if (worker) {
+      worker.postMessage({ text, font });
     }
   };
 

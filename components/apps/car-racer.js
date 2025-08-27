@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
+import useWorker from '../../utils/worker';
 
 // Canvas dimensions
 const WIDTH = 300;
@@ -39,7 +40,7 @@ const CarRacer = () => {
     const [boost, setBoost] = useState(false);
     const boostRef = useRef(0);
     const reduceMotionRef = useRef(false);
-    const workerRef = useRef(null);
+    const worker = useWorker('./car-racer.renderer.js');
     const lastRenderRef = useRef({});
 
   const audioCtxRef = useRef(null);
@@ -77,12 +78,10 @@ const CarRacer = () => {
     if (
       !canvas ||
       typeof window === 'undefined' ||
-      !window.Worker ||
-      !('OffscreenCanvas' in window)
+      !('OffscreenCanvas' in window) ||
+      !worker
     )
       return;
-    const worker = new Worker(new URL('./car-racer.renderer.js', import.meta.url));
-    workerRef.current = worker;
     const offscreen = canvas.transferControlToOffscreen();
     worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
     let last = performance.now();
@@ -198,9 +197,8 @@ const CarRacer = () => {
     const req = requestAnimationFrame(step);
     return () => {
       cancelAnimationFrame(req);
-      worker.terminate();
     };
-  }, [canvasRef, highScore]);
+  }, [canvasRef, highScore, worker]);
 
   const moveLeft = React.useCallback(() => {
     if (car.current.lane > 0) {
@@ -237,6 +235,23 @@ const CarRacer = () => {
     window.addEventListener('keydown', handle);
     return () => window.removeEventListener('keydown', handle);
   }, [moveLeft, moveRight, triggerBoost]);
+
+  useEffect(() => {
+    const prevPaused = { current: false };
+    const handleVisibility = () => {
+      const hidden = document.visibilityState === 'hidden';
+      if (hidden) {
+        prevPaused.current = pausedRef.current;
+        pausedRef.current = true;
+        setPaused(true);
+      } else if (!prevPaused.current) {
+        pausedRef.current = false;
+        setPaused(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   const reset = () => {
     if (scoreRef.current > highScore) {
