@@ -13,10 +13,12 @@ import {
   spawnEnemy,
   deactivateEnemy,
   loadSprite,
+  getTowerCost,
 } from './tower-defense-core';
 
 const MAX_PROJECTILES = 100;
 const MAX_ENEMIES = 200;
+const ENEMY_REWARD = 5;
 
 const TowerDefense = () => {
   const [towers, setTowers] = useState([]);
@@ -28,6 +30,7 @@ const TowerDefense = () => {
   const [wave, setWave] = useState(1);
   const [speed, setSpeed] = useState(1);
   const [lives, setLives] = useState(20);
+  const [resources, setResources] = useState(100);
   const [towerType, setTowerType] = useState('single');
   const [waves, setWaves] = useState([{ count: 5, baseSpeed: 0.5, health: 5 }]);
   const [waveInput, setWaveInput] = useState(
@@ -121,12 +124,16 @@ const TowerDefense = () => {
       typeof window !== 'undefined' ? localStorage.getItem('td-state') : null;
     if (saved) {
       try {
-        const { towers: stTowers, wave: stWave, lives: stLives } = JSON.parse(
-          saved
-        );
+        const {
+          towers: stTowers,
+          wave: stWave,
+          lives: stLives,
+          resources: stResources,
+        } = JSON.parse(saved);
         setTowers(stTowers);
         setWave(stWave);
         setLives(stLives);
+        setResources(stResources ?? 100);
         setPath(getPath(stTowers));
         spawnWave(stWave);
         return;
@@ -142,10 +149,10 @@ const TowerDefense = () => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(
         'td-state',
-        JSON.stringify({ towers, wave, lives })
+        JSON.stringify({ towers, wave, lives, resources })
       );
     }
-  }, [towers, wave, lives]);
+  }, [towers, wave, lives, resources]);
 
   useEffect(() => {
     if (speed === 0) return undefined;
@@ -186,7 +193,9 @@ const TowerDefense = () => {
     const existing = towers.find((t) => t.x === x && t.y === y);
     if (existing) {
       const maxLevel = TOWER_TYPES[existing.type].length;
-      if (existing.level < maxLevel) {
+      const cost = getTowerCost(existing.type, existing.level + 1);
+      if (existing.level < maxLevel && resources >= cost) {
+        setResources((r) => r - cost);
         setTowers(
           towers.map((t) =>
             t.x === x && t.y === y ? { ...t, level: t.level + 1 } : t
@@ -196,10 +205,13 @@ const TowerDefense = () => {
       }
       return;
     }
+    const cost = getTowerCost(towerType, 1);
+    if (resources < cost) return;
     const newTower = { x, y, level: 1, type: towerType, cooldown: 0 };
     const newTowers = [...towers, newTower];
     const newPath = getPath(newTowers);
     if (newPath) {
+      setResources((r) => r - cost);
       setTowers(newTowers);
       setPath(newPath);
       ReactGA.event({ category: 'tower-defense', action: 'tower_place', label: towerType });
@@ -210,6 +222,8 @@ const TowerDefense = () => {
     e.preventDefault();
     const existing = towers.find((t) => t.x === x && t.y === y);
     if (existing) {
+      const refund = Math.floor(getTowerCost(existing.type, existing.level) / 2);
+      setResources((r) => r + refund);
       setTowers(towers.filter((t) => !(t.x === x && t.y === y)));
     }
   };
@@ -239,6 +253,7 @@ const TowerDefense = () => {
       }
       if (e.health <= 0) {
         deactivateEnemy(e);
+        setResources((r) => r + ENEMY_REWARD);
         return;
       }
       if (e.pathIndex >= path.length - 1) {
@@ -393,6 +408,7 @@ const TowerDefense = () => {
       <div className="mb-2 flex items-center space-x-2">
         <span>Wave: {wave}</span>
         <span>Lives: {lives}</span>
+        <span>Resources: {resources}</span>
         <button
           type="button"
           onClick={() => setSpeed(0)}

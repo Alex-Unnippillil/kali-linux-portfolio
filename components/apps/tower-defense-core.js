@@ -6,24 +6,24 @@ export const GOAL = { x: GRID_SIZE - 1, y: 4 };
 // Tower statistics per type and level
 export const TOWER_TYPES = {
   single: [
-    { damage: 1, range: 2, fireRate: 1 },
-    { damage: 2, range: 3, fireRate: 0.8 },
-    { damage: 3, range: 3, fireRate: 0.6 },
+    { damage: 1, range: 2, fireRate: 1, cost: 10 },
+    { damage: 2, range: 3, fireRate: 0.8, cost: 20 },
+    { damage: 3, range: 3, fireRate: 0.6, cost: 30 },
   ],
   splash: [
-    { damage: 1, range: 2, fireRate: 1, splash: 1 },
-    { damage: 2, range: 3, fireRate: 0.9, splash: 1 },
-    { damage: 3, range: 3, fireRate: 0.8, splash: 2 },
+    { damage: 1, range: 2, fireRate: 1, splash: 1, cost: 15 },
+    { damage: 2, range: 3, fireRate: 0.9, splash: 1, cost: 30 },
+    { damage: 3, range: 3, fireRate: 0.8, splash: 2, cost: 45 },
   ],
   slow: [
-    { damage: 0, range: 3, fireRate: 1, slow: { amount: 0.5, duration: 2 } },
-    { damage: 0, range: 3, fireRate: 0.8, slow: { amount: 0.6, duration: 2.5 } },
-    { damage: 0, range: 4, fireRate: 0.6, slow: { amount: 0.7, duration: 3 } },
+    { damage: 0, range: 3, fireRate: 1, slow: { amount: 0.5, duration: 2 }, cost: 12 },
+    { damage: 0, range: 3, fireRate: 0.8, slow: { amount: 0.6, duration: 2.5 }, cost: 24 },
+    { damage: 0, range: 4, fireRate: 0.6, slow: { amount: 0.7, duration: 3 }, cost: 36 },
   ],
   aoe: [
-    { damage: 0.5, range: 2, fireRate: 1, aoe: true },
-    { damage: 1, range: 3, fireRate: 1, aoe: true },
-    { damage: 1.5, range: 3, fireRate: 0.8, aoe: true },
+    { damage: 0.5, range: 2, fireRate: 1, aoe: true, cost: 20 },
+    { damage: 1, range: 3, fireRate: 1, aoe: true, cost: 40 },
+    { damage: 1.5, range: 3, fireRate: 0.8, aoe: true, cost: 60 },
   ],
 };
 
@@ -31,6 +31,11 @@ export const getTowerDPS = (type, level) => {
   const stats = TOWER_TYPES[type]?.[level - 1];
   if (!stats) return 0;
   return stats.damage / stats.fireRate;
+};
+
+export const getTowerCost = (type, level) => {
+  const stats = TOWER_TYPES[type]?.[level - 1];
+  return stats?.cost || 0;
 };
 
 // ---- Pathfinding with caching ----
