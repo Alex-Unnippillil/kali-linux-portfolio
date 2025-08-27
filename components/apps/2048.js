@@ -30,15 +30,19 @@ const addRandomTile = (board, hard, count = 1) => {
 
 const slide = (row) => {
   const arr = row.filter((n) => n !== 0);
+  const merged = [];
+  let gained = 0;
   for (let i = 0; i < arr.length - 1; i++) {
     if (arr[i] === arr[i + 1]) {
       arr[i] *= 2;
+      gained += arr[i];
       arr[i + 1] = 0;
+      merged.push(i);
     }
   }
   const newRow = arr.filter((n) => n !== 0);
   while (newRow.length < SIZE) newRow.push(0);
-  return newRow;
+  return { row: newRow, merged, score: gained };
 };
 
 const transpose = (board) =>
@@ -46,10 +50,41 @@ const transpose = (board) =>
 
 const flip = (board) => board.map((row) => [...row].reverse());
 
-const moveLeft = (board) => board.map((row) => slide(row));
-const moveRight = (board) => flip(moveLeft(flip(board)));
-const moveUp = (board) => transpose(moveLeft(transpose(board)));
-const moveDown = (board) => transpose(moveRight(transpose(board)));
+const moveLeft = (board) => {
+  let score = 0;
+  const merges = [];
+  const newBoard = board.map((row, r) => {
+    const { row: newRow, merged, score: s } = slide(row);
+    score += s;
+    merged.forEach((c) => merges.push([r, c]));
+    return newRow;
+  });
+  return { board: newBoard, score, merges };
+};
+
+const moveRight = (board) => {
+  const flipped = flip(board);
+  const { board: moved, score, merges } = moveLeft(flipped);
+  const newBoard = flip(moved);
+  const newMerges = merges.map(([r, c]) => [r, SIZE - 1 - c]);
+  return { board: newBoard, score, merges: newMerges };
+};
+
+const moveUp = (board) => {
+  const transposed = transpose(board);
+  const { board: moved, score, merges } = moveLeft(transposed);
+  const newBoard = transpose(moved);
+  const newMerges = merges.map(([r, c]) => [c, r]);
+  return { board: newBoard, score, merges: newMerges };
+};
+
+const moveDown = (board) => {
+  const transposed = transpose(board);
+  const { board: moved, score, merges } = moveRight(transposed);
+  const newBoard = transpose(moved);
+  const newMerges = merges.map(([r, c]) => [c, r]);
+  return { board: newBoard, score, merges: newMerges };
+};
 
 const boardsEqual = (a, b) =>
   a.every((row, r) => row.every((cell, c) => cell === b[r][c]));
@@ -95,6 +130,9 @@ const Game2048 = () => {
   const [history, setHistory] = useState([]);
   const [hardMode, setHardMode] = usePersistentState('2048-hard', false, (v) => typeof v === 'boolean');
   const [animCells, setAnimCells] = useState(new Set());
+  const [mergeCells, setMergeCells] = useState(new Set());
+  const [score, setScore] = useState(0);
+  const [popup, setPopup] = useState(0);
 
   useEffect(() => {
     if (animCells.size > 0) {
@@ -103,6 +141,20 @@ const Game2048 = () => {
     }
   }, [animCells]);
 
+  useEffect(() => {
+    if (mergeCells.size > 0) {
+      const t = setTimeout(() => setMergeCells(new Set()), 200);
+      return () => clearTimeout(t);
+    }
+  }, [mergeCells]);
+
+  useEffect(() => {
+    if (popup > 0) {
+      const t = setTimeout(() => setPopup(0), 600);
+      return () => clearTimeout(t);
+    }
+  }, [popup]);
+
   const handleKey = useCallback(
     (e) => {
       if (e.key === 'Escape') {
@@ -110,16 +162,17 @@ const Game2048 = () => {
         return;
       }
       if (won || lost) return;
-      let moved;
-      if (e.key === 'ArrowLeft') moved = moveLeft(board);
-      else if (e.key === 'ArrowRight') moved = moveRight(board);
-      else if (e.key === 'ArrowUp') moved = moveUp(board);
-      else if (e.key === 'ArrowDown') moved = moveDown(board);
+      let result;
+      if (e.key === 'ArrowLeft') result = moveLeft(board);
+      else if (e.key === 'ArrowRight') result = moveRight(board);
+      else if (e.key === 'ArrowUp') result = moveUp(board);
+      else if (e.key === 'ArrowDown') result = moveDown(board);
       else return;
+      const moved = result.board;
       if (!boardsEqual(board, moved)) {
         const beforeAdd = cloneBoard(moved);
         addRandomTile(moved, hardMode, hardMode ? 2 : 1);
-        setHistory((h) => [...h, cloneBoard(board)]);
+        setHistory((h) => [...h, { board: cloneBoard(board), score }]);
         const changed = new Set();
         for (let r = 0; r < SIZE; r++) {
           for (let c = 0; c < SIZE; c++) {
@@ -129,12 +182,17 @@ const Game2048 = () => {
           }
         }
         setAnimCells(changed);
+        setMergeCells(new Set(result.merges.map(([r, c]) => `${r}-${c}`)));
+        if (result.score > 0) {
+          setScore((s) => s + result.score);
+          setPopup(result.score);
+        }
         setBoard(cloneBoard(moved));
         if (checkWin(moved)) setWon(true);
         else if (!hasMoves(moved)) setLost(true);
       }
     },
-    [board, won, lost, hardMode, setBoard, setLost, setWon]
+    [board, won, lost, hardMode, setBoard, setLost, setWon, score]
 
   );
 
@@ -149,6 +207,9 @@ const Game2048 = () => {
     setWon(false);
     setLost(false);
     setAnimCells(new Set());
+    setMergeCells(new Set());
+    setScore(0);
+    setPopup(0);
   };
 
   const close = () => {
@@ -159,10 +220,12 @@ const Game2048 = () => {
     setHistory((h) => {
       if (h.length === 0) return h;
       const prev = h[h.length - 1];
-      setBoard(cloneBoard(prev));
-      setWon(checkWin(prev));
-      setLost(!hasMoves(prev));
+      setBoard(cloneBoard(prev.board));
+      setScore(prev.score);
+      setWon(checkWin(prev.board));
+      setLost(!hasMoves(prev.board));
       setAnimCells(new Set());
+      setMergeCells(new Set());
       return h.slice(0, -1);
     });
   };
@@ -204,6 +267,12 @@ const Game2048 = () => {
       }
     >
       <>
+        <div className="mb-2 text-xl relative">
+          Score: {score}
+          {popup > 0 && (
+            <span className="score-popup text-green-400">+{popup}</span>
+          )}
+        </div>
         <div className="grid grid-cols-4 gap-2">
           {board.map((row, rIdx) =>
             row.map((cell, cIdx) => {
@@ -213,7 +282,9 @@ const Game2048 = () => {
                   key={key}
                   className={`h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
                     cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
-                  } ${animCells.has(key) ? 'tile-pop' : ''}`}
+                  } ${animCells.has(key) ? 'tile-pop' : ''} ${
+                    mergeCells.has(key) ? 'tile-merge' : ''
+                  }`}
                 >
                   {cell !== 0 ? cell : ''}
                 </div>

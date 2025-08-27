@@ -346,3 +346,25 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+@keyframes tile-merge {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.tile-merge {
+    animation: tile-merge 0.2s ease-out;
+}
+
+@keyframes score-popup {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-20px); }
+}
+
+.score-popup {
+    position: absolute;
+    left: 100%;
+    margin-left: 0.5rem;
+    animation: score-popup 0.6s ease-out;
+}
