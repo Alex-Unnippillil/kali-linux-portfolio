@@ -1,0 +1,20 @@
+{
+  "target": "http://example.com",
+  "sections": [
+    {
+      "title": "Server Info",
+      "items": [
+        { "severity": "info", "message": "Server: Apache/2.4.41 (Ubuntu)" },
+        { "severity": "info", "message": "Allowed HTTP methods: GET, POST, OPTIONS, HEAD" }
+      ]
+    },
+    {
+      "title": "Potential Vulnerabilities",
+      "items": [
+        { "severity": "low", "message": "Cookie without HttpOnly flag" },
+        { "severity": "medium", "message": "X-Frame-Options header not present" },
+        { "severity": "high", "message": "Outdated OpenSSL version" }
+      ]
+    }
+  ]
+}
