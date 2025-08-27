@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Howl } from 'howler';
 import seedrandom from 'seedrandom';
 import GameLayout from './GameLayout';
@@ -38,6 +38,15 @@ const padStyles = [
 const tones = [329.63, 261.63, 220, 164.81];
 const ERROR_SOUND_SRC = 'data:audio/wav;base64,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';
 
+/**
+ * Create a schedule of times using a starting value, step and ramp factor.
+ *
+ * @param {number} length number of timestamps to generate
+ * @param {number} start initial time
+ * @param {number} step initial delta between times
+ * @param {number} [ramp=1] multiplier applied to the step each iteration
+ * @returns {number[]} generated schedule
+ */
 export const createToneSchedule = (length, start, step, ramp = 1) => {
   const times = [];
   let time = start;
@@ -50,6 +59,13 @@ export const createToneSchedule = (length, start, step, ramp = 1) => {
   return times;
 };
 
+/**
+ * Generate a sequence of pad indexes.
+ *
+ * @param {number} length length of the sequence
+ * @param {string|number} seed optional seed for deterministic results
+ * @returns {number[]} sequence of numbers between 0 and 3
+ */
 export const generateSequence = (length, seed) => {
   if (seed) {
     const rng = seedrandom(seed);
@@ -123,25 +139,28 @@ const Simon = () => {
     oscillator.stop(startTime + duration + 0.05);
   };
 
-  const flashPad = (idx, duration) => {
-    if ('vibrate' in navigator && !prefersReducedMotion) navigator.vibrate(50);
-    if (audioOnly) return;
-    window.requestAnimationFrame(() => setActivePad(idx));
-    setTimeout(
-      () => window.requestAnimationFrame(() => setActivePad(null)),
-      duration * 1000
-    );
-  };
+  const flashPad = useCallback(
+    (idx, duration) => {
+      if ('vibrate' in navigator && !prefersReducedMotion) navigator.vibrate(50);
+      if (audioOnly) return;
+      window.requestAnimationFrame(() => setActivePad(idx));
+      setTimeout(
+        () => window.requestAnimationFrame(() => setActivePad(null)),
+        duration * 1000
+      );
+    },
+    [audioOnly, prefersReducedMotion]
+  );
 
-  const stepDuration = () => {
+  const stepDuration = useCallback(() => {
     const base = 60 / bpm;
     if (mode === 'speed') {
       return Math.max(base - sequence.length * 0.02, 0.2);
     }
     return base;
-  };
+  }, [bpm, mode, sequence.length]);
 
-  const playSequence = () => {
+  const playSequence = useCallback(() => {
     const ctx =
       audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.current = ctx;
@@ -173,49 +192,40 @@ const Simon = () => {
       setIsPlayerTurn(true);
       setStep(0);
     }, totalDelay);
-  };
+  }, [flashPad, sequence, stepDuration]);
 
   useEffect(() => {
     if (sequence.length && !isPlayerTurn) {
       playSequence();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sequence]);
+  }, [sequence, isPlayerTurn, playSequence]);
 
-  const startGame = () => {
+  const startGame = useCallback(() => {
     rngRef.current = seed ? seedrandom(seed) : Math.random;
     setSequence([Math.floor(rngRef.current() * 4)]);
     setStatus('Listen...');
-  };
+  }, [seed]);
 
-  const restartGame = () => {
+  const restartGame = useCallback(() => {
     setSequence([]);
     setStep(0);
     setIsPlayerTurn(false);
     setStatus('Press Start');
-  };
+  }, []);
 
-  const handlePadClick = (idx) => {
-    if (!isPlayerTurn) return;
-    const duration = stepDuration();
-    flashPad(idx, duration);
-    scheduleTone(tones[idx], audioCtx.current.currentTime, duration);
-    if (sequence[step] === idx) {
-      if (step + 1 === sequence.length) {
-        setIsPlayerTurn(false);
-        setTimeout(() => {
-          setSequence((seq) => [...seq, Math.floor(rngRef.current() * 4)]);
-        }, 1000);
-      } else {
-        setStep(step + 1);
-      }
-    } else {
-      if (!errorSound.current) {
-        errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
-      }
-      errorSound.current.play();
-      setErrorFlash(true);
-      if (strictMode) {
+  const handlePadClick = useCallback(
+    (idx) => () => {
+      if (!isPlayerTurn) return;
+      const duration = stepDuration();
+      flashPad(idx, duration);
+      scheduleTone(tones[idx], audioCtx.current.currentTime, duration);
+
+      if (sequence[step] !== idx) {
+        if (!errorSound.current) {
+          errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
+        }
+        errorSound.current.play();
+        setErrorFlash(true);
         const streak = Math.max(sequence.length - 1, 0);
         setLeaderboard((prev) =>
           [...prev, streak].sort((a, b) => b - a).slice(0, 5)
@@ -226,31 +236,46 @@ const Simon = () => {
           setErrorFlash(false);
           restartGame();
         }, 600);
-      } else {
-        setStatus('Wrong pad! Try again.');
+        return;
+      }
+
+      if (step + 1 === sequence.length) {
         setIsPlayerTurn(false);
         setTimeout(() => {
-          setErrorFlash(false);
-          setStep(0);
-          playSequence();
-        }, 600);
+          setSequence((seq) => [...seq, Math.floor(rngRef.current() * 4)]);
+        }, 1000);
+      } else {
+        setStep(step + 1);
       }
-    }
-  };
+    },
+    [
+      flashPad,
+      isPlayerTurn,
+      restartGame,
+      sequence,
+      step,
+      stepDuration,
+      setLeaderboard,
+    ]
+  );
 
-  const padClass = (pad, idx) => {
-    const colors =
-      mode === 'colorblind' || audioOnly
-        ? { base: 'bg-gray-700', active: 'bg-gray-500' }
-        : pad.color;
-    const isActive = activePad === idx;
-    const ring = thickOutline ? 'ring-8' : 'ring-4';
-    return `h-32 w-32 rounded flex items-center justify-center text-3xl transition-shadow ${ring} ring-offset-2 ring-offset-gray-900 ${
-      isActive
-        ? `${colors.active} pad-pulse ring-white`
-        : `${colors.base} ring-transparent`
-    }`;
-  };
+
+  const padClass = useCallback(
+    (pad, idx) => {
+      const colors =
+        mode === 'colorblind' || audioOnly
+          ? { base: 'bg-gray-700', active: 'bg-gray-500' }
+          : pad.color;
+      const isActive = activePad === idx;
+      const ring = thickOutline ? 'ring-8' : 'ring-4';
+      return `h-32 w-32 rounded flex items-center justify-center text-3xl transition-shadow ${ring} ring-offset-2 ring-offset-gray-900 ${
+        isActive
+          ? `${colors.active} pad-pulse ring-white`
+          : `${colors.base} ring-transparent`
+      }`;
+    },
+    [activePad, audioOnly, mode, thickOutline]
+  );
 
   return (
     <GameLayout onRestart={restartGame}>
@@ -262,7 +287,7 @@ const Simon = () => {
               key={idx}
               className={padClass(pad, idx)}
               style={striped ? { backgroundImage: pad.pattern } : undefined}
-              onPointerDown={() => handlePadClick(idx)}
+              onPointerDown={handlePadClick(idx)}
               aria-label={`${pad.label} pad`}
             >
               {mode === 'colorblind' ? pad.symbol : ''}
