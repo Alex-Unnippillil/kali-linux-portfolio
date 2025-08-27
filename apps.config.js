@@ -18,6 +18,15 @@ import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayNikto } from './components/apps/nikto';
 
+export const iframeAllowlist = [
+  'https://ghbtns.com/',
+  'https://open.spotify.com/',
+  'https://todoist.com/',
+  'https://stackblitz.com/',
+  'https://ghidra.app',
+  'https://www.google.com/',
+];
+
 const createDynamicApp = (path, name) =>
   dynamic(
     () =>

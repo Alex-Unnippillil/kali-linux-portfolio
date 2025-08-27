@@ -1,9 +1,10 @@
 import React from 'react';
+import ExternalFrame from '../ExternalFrame';
 
 export default function SpotifyApp() {
   return (
     <div className="h-full w-full bg-ub-cool-grey">
-      <iframe
+      <ExternalFrame
         src="https://open.spotify.com/embed/playlist/37i9dQZF1E37fa3zdWtvQY?utm_source=generator&theme=0"
         title="Daily Mix 2"
         width="100%"
