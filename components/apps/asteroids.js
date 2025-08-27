@@ -139,7 +139,20 @@ const Asteroids = () => {
     const bullets = createBulletPool(40);
     const asteroids = [];
     const ga = createGA();
-    const particles = Array.from({ length: 256 }, () => ({ active: false, x: 0, y: 0, dx: 0, dy: 0, life: 0, color: 'white' }));
+    const particles = Array.from({ length: 256 }, () => ({
+      active: false,
+      x: 0,
+      y: 0,
+      dx: 0,
+      dy: 0,
+      life: 0,
+      maxLife: 0,
+      color: 'white',
+      size: 2,
+      type: 'spark',
+      angle: 0,
+      spin: 0,
+    }));
     const ufo = { active: false, x: 0, y: 0, dx: 0, dy: 0, r: 15, cooldown: 0 };
     const ufoBullets = [];
     const powerUps = [];
@@ -149,20 +162,30 @@ const Asteroids = () => {
     let rand = Math.random;
 
     // Particle pooling
-    const spawnParticles = (x, y, count, color = 'white') => {
+    const spawnParticles = (x, y, count, color = 'white', type = 'spark', baseAngle = 0) => {
       if (reduceMotion) return;
       for (let i = 0; i < particles.length && count > 0; i += 1) {
         const p = particles[i];
         if (!p.active) {
-          const a = Math.random() * Math.PI * 2;
-          const speed = Math.random() * 2 + 1;
+          let a = Math.random() * Math.PI * 2;
+          let speed = Math.random() * 2 + 1;
+          if (type === 'flame') {
+            a = baseAngle + Math.PI + (Math.random() - 0.5) * 0.5;
+            speed = Math.random() * 1.5 + 0.5;
+          }
           p.active = true;
           p.x = x;
           p.y = y;
           p.dx = Math.cos(a) * speed;
           p.dy = Math.sin(a) * speed;
-          p.life = 30;
+          const life = type === 'flame' ? 20 : 40;
+          p.life = life;
+          p.maxLife = life;
           p.color = color;
+          p.size = type === 'debris' ? Math.random() * 3 + 2 : 2;
+          p.type = type;
+          p.angle = type === 'flame' ? baseAngle : Math.random() * Math.PI * 2;
+          p.spin = type === 'debris' ? (Math.random() - 0.5) * 0.2 : 0;
           count -= 1;
         }
       }
@@ -255,7 +278,7 @@ const Asteroids = () => {
         ship.shield = 0;
         spawnParticles(ship.x, ship.y, 20, 'cyan');
       } else {
-        spawnParticles(ship.x, ship.y, 40, 'orange');
+        spawnParticles(ship.x, ship.y, 40, 'orange', 'debris');
         lives -= 1;
         ga.death();
         playSound(110);
@@ -281,7 +304,7 @@ const Asteroids = () => {
 
     function destroyAsteroid(index) {
       const a = asteroids[index];
-      spawnParticles(a.x, a.y, 20, 'white');
+      spawnParticles(a.x, a.y, 20, 'white', 'debris');
       score += 100 * multiplier;
       multiplier = Math.min(multiplier + 1, MAX_MULTIPLIER);
       multiplierTimer = MULTIPLIER_TIMEOUT;
@@ -308,7 +331,7 @@ const Asteroids = () => {
     }
 
     function destroyUfo() {
-      spawnParticles(ufo.x, ufo.y, 40, 'purple');
+      spawnParticles(ufo.x, ufo.y, 40, 'purple', 'debris');
       ufo.active = false;
       playSound(220);
       score += 500 * multiplier;
@@ -352,6 +375,8 @@ const Asteroids = () => {
           ship.y - Math.sin(ship.angle) * 12,
           3,
           EXHAUST_COLOR,
+          'flame',
+          ship.angle,
         );
       }
       ship.velX *= INERTIA;
@@ -406,6 +431,7 @@ const Asteroids = () => {
         if (!p.active) return;
         p.x += p.dx;
         p.y += p.dy;
+        p.angle += p.spin;
         p.life -= 1;
         if (p.life <= 0) p.active = false;
       });
@@ -515,9 +541,26 @@ const Asteroids = () => {
       ctx.save();
       particles.forEach((p) => {
         if (!p.active) return;
-        ctx.globalAlpha = p.life / 30;
+        ctx.globalAlpha = p.life / p.maxLife;
         ctx.fillStyle = p.color;
-        ctx.fillRect(p.x, p.y, 2, 2);
+        if (p.type === 'flame') {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle);
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(-p.size, p.size / 2);
+          ctx.lineTo(-p.size, -p.size / 2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        } else {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle);
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+          ctx.restore();
+        }
       });
       ctx.restore();
 
