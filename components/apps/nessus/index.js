@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import HostBubbleChart from './HostBubbleChart';
 
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {
@@ -47,6 +48,18 @@ const Nessus = () => {
   const [feedbackScan, setFeedbackScan] = useState(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [falsePositives, setFalsePositives] = useState([]);
+
+  const hostData = useMemo(
+    () =>
+      scans.map((scan, i) => ({
+        id: scan.id ?? i,
+        host: scan.name ?? `Host ${i + 1}`,
+        cvss: scan.cvss ?? ((i % 10) + 1),
+        severity:
+          scan.severity || ['Low', 'Medium', 'High', 'Critical'][i % 4],
+      })),
+    [scans]
+  );
 
   useEffect(() => {
     setJobs(loadJobDefinitions());
@@ -173,6 +186,7 @@ const Nessus = () => {
           Logout
         </button>
       </div>
+      <HostBubbleChart hosts={hostData} />
       {error && <div className="text-red-500 mb-2">{error}</div>}
       <form onSubmit={addJob} className="mb-4 space-x-2">
         <input
