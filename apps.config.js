@@ -462,7 +462,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayCandyCrush,
-
+  },
+  {
     id: 'gomoku',
     title: 'Gomoku',
     icon: './themes/Yaru/apps/gomoku.svg',
@@ -470,7 +471,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayGomoku,
-
+  },
+  {
     id: 'pinball',
     title: 'Pinball',
     icon: './themes/Yaru/apps/pinball.svg',
