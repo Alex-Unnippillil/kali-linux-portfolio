@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Line } from 'react-chartjs-2';
+import 'chart.js/auto';
 
 const Gauge = ({ value, label }) => {
   const radius = 45;
@@ -40,53 +42,62 @@ const Gauge = ({ value, label }) => {
   );
 };
 
-const LineChart = ({ data, color, label }) => {
-  const max = Math.max(...data, 1);
-  const points = data
-    .map((d, i) => {
-      const x = (i / Math.max(data.length - 1, 1)) * 100;
-      const y = 100 - (d / max) * 100;
-      return `${x},${y}`;
-    })
-    .join(' ');
-  const latest = data[data.length - 1];
-  return (
-    <div className="flex flex-col items-center flex-1">
-      <svg viewBox="0 0 100 100" className="w-full h-24">
-        <polyline fill="none" stroke={color} strokeWidth="2" points={points} />
-      </svg>
-      <span className="mt-1 text-white">
-        {label}
-        {latest !== undefined ? `: ${latest.toFixed(2)}` : ''}
-      </span>
-    </div>
-  );
-};
-
 const ResourceMonitor = () => {
   const [batteryLevel, setBatteryLevel] = useState(0);
-  const [memoryUsage, setMemoryUsage] = useState(0);
+  const [supportsBattery, setSupportsBattery] = useState(true);
+  const [memoryUsage, setMemoryUsage] = useState(null);
+  const [supportsMemory, setSupportsMemory] = useState(false);
   const [cpuUsage, setCpuUsage] = useState(null);
   const [resourceTimings, setResourceTimings] = useState([]);
   const [paintTimings, setPaintTimings] = useState([]);
   const [longTaskCount, setLongTaskCount] = useState(0);
   const [downloadRates, setDownloadRates] = useState([]);
   const [uploadRates, setUploadRates] = useState([]);
+  const [cpuHistory, setCpuHistory] = useState([]);
+  const [memoryHistory, setMemoryHistory] = useState([]);
+  const [fps, setFps] = useState(null);
+  const [fpsHistory, setFpsHistory] = useState([]);
   const [intervalMs, setIntervalMs] = useState(5000);
+  const [isPaused, setIsPaused] = useState(false);
+  const chartRef = useRef(null);
 
   const updateStats = async () => {
+    if (isPaused) return;
+
     if (navigator.getBattery) {
       try {
         const battery = await navigator.getBattery();
         setBatteryLevel(Math.round(battery.level * 100));
+        setSupportsBattery(true);
       } catch (e) {
-        // navigator.getBattery may reject on unsupported browsers
+        setSupportsBattery(false);
       }
+    } else {
+      setSupportsBattery(false);
     }
 
+    let memoryPercent = null;
     if (performance && performance.memory) {
       const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
-      setMemoryUsage(Math.round((usedJSHeapSize / totalJSHeapSize) * 100));
+      memoryPercent = Math.round((usedJSHeapSize / totalJSHeapSize) * 100);
+      setSupportsMemory(true);
+    } else if (performance && performance.measureUserAgentSpecificMemory) {
+      try {
+        const result = await performance.measureUserAgentSpecificMemory();
+        const used = result.bytes;
+        const total =
+          (navigator.deviceMemory || 0) * 1024 * 1024 * 1024 || used;
+        memoryPercent = Math.round((used / total) * 100);
+        setSupportsMemory(true);
+      } catch (e) {
+        setSupportsMemory(false);
+      }
+    } else {
+      setSupportsMemory(false);
+    }
+    if (memoryPercent !== null) {
+      setMemoryUsage(memoryPercent);
+      setMemoryHistory((prev) => [...prev.slice(-19), memoryPercent]);
     }
 
     if (typeof performance !== 'undefined' && performance.now) {
@@ -95,7 +106,12 @@ const ResourceMonitor = () => {
         const end = performance.now();
         const delay = end - start - 100;
         const usage = Math.min(100, Math.max(0, (delay / 100) * 100));
-        setCpuUsage(Math.round(usage));
+        const cpuVal = Math.round(usage);
+        setCpuUsage(cpuVal);
+        setCpuHistory((prev) => [...prev.slice(-19), cpuVal]);
+        if (fps !== null) {
+          setFpsHistory((prev) => [...prev.slice(-19), fps]);
+        }
       }, 100);
     }
 
@@ -111,9 +127,37 @@ const ResourceMonitor = () => {
 
   useEffect(() => {
     updateStats();
+    if (isPaused) return;
     const interval = setInterval(updateStats, intervalMs);
     return () => clearInterval(interval);
-  }, [intervalMs]);
+  }, [intervalMs, isPaused]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.requestAnimationFrame) {
+      return;
+    }
+    let frame = 0;
+    let last = performance.now();
+    let rafId;
+    const loop = (now) => {
+      if (!isPaused) {
+        frame++;
+        const delta = now - last;
+        if (delta >= 1000) {
+          const fpsNow = (frame * 1000) / delta;
+          setFps(Math.round(fpsNow));
+          frame = 0;
+          last = now;
+        }
+      } else {
+        last = now;
+        frame = 0;
+      }
+      rafId = requestAnimationFrame(loop);
+    };
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, [isPaused]);
 
   useEffect(() => {
     if (typeof performance !== 'undefined' && typeof PerformanceObserver !== 'undefined') {
@@ -153,6 +197,9 @@ const ResourceMonitor = () => {
     setLongTaskCount(0);
     setDownloadRates([]);
     setUploadRates([]);
+    setCpuHistory([]);
+    setMemoryHistory([]);
+    setFpsHistory([]);
     if (performance.clearResourceTimings) {
       performance.clearResourceTimings();
     }
@@ -160,28 +207,131 @@ const ResourceMonitor = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu">
-      <div className="p-2 bg-ub-dark-grey text-sm flex items-center">
-        <label className="mr-2">Update interval (ms):</label>
-        <input
-          type="number"
-          value={intervalMs}
-          onChange={(e) => setIntervalMs(Number(e.target.value))}
-          className="w-24 bg-black text-white px-1 rounded"
-        />
-      </div>
-      <div className="flex justify-evenly items-center flex-1">
-        <Gauge value={batteryLevel} label="Battery" />
-        {cpuUsage !== null && <Gauge value={cpuUsage} label="CPU" />}
-        <Gauge value={memoryUsage} label="Memory" />
-      </div>
-      <div className="bg-ub-dark-grey p-4 text-sm overflow-y-auto max-h-60">
-        <div>
-          <strong>Network</strong>
-          <div className="flex mt-1">
-            <LineChart data={downloadRates} color="#21c5c7" label="Download (Mbps)" />
-            <LineChart data={uploadRates} color="#f953c6" label="Upload (Mbps)" />
-          </div>
+        <div className="p-2 bg-ub-dark-grey text-sm flex items-center">
+          <label className="mr-2">Update interval (ms):</label>
+          <input
+            type="number"
+            value={intervalMs}
+            onChange={(e) => setIntervalMs(Number(e.target.value))}
+            className="w-24 bg-black text-white px-1 rounded mr-2"
+          />
+          <button
+            onClick={() => setIsPaused((p) => !p)}
+            className="px-2 py-1 bg-ubt-green text-black rounded"
+          >
+            {isPaused ? 'Resume' : 'Pause'}
+          </button>
         </div>
+        <div className="flex justify-evenly items-center flex-1">
+          {supportsBattery && <Gauge value={batteryLevel} label="Battery" />}
+          {cpuUsage !== null && <Gauge value={cpuUsage} label="CPU" />}
+          {supportsMemory && memoryUsage !== null && (
+            <Gauge value={memoryUsage} label="Memory" />
+          )}
+          {fps !== null && <Gauge value={fps} label="FPS" />}
+        </div>
+        <div className="bg-ub-dark-grey p-4 text-sm overflow-y-auto max-h-60">
+          <div>
+            <strong>Metrics</strong>
+            <Line
+              ref={chartRef}
+              data={{
+                labels: cpuHistory.map((_, i) => i.toString()),
+                datasets: [
+                  {
+                    label: 'CPU %',
+                    data: cpuHistory,
+                    borderColor: '#f87171',
+                    backgroundColor: 'transparent',
+                    yAxisID: 'y',
+                  },
+                  ...(supportsMemory
+                    ? [
+                        {
+                          label: 'Memory %',
+                          data: memoryHistory,
+                          borderColor: '#21c5c7',
+                          backgroundColor: 'transparent',
+                          yAxisID: 'y',
+                        },
+                      ]
+                    : []),
+                  ...(fpsHistory.length
+                    ? [
+                        {
+                          label: 'FPS',
+                          data: fpsHistory,
+                          borderColor: '#f953c6',
+                          backgroundColor: 'transparent',
+                          yAxisID: 'y1',
+                        },
+                      ]
+                    : []),
+                  ...(downloadRates.length
+                    ? [
+                        {
+                          label: 'Download (Mbps)',
+                          data: downloadRates,
+                          borderColor: '#06b6d4',
+                          backgroundColor: 'transparent',
+                          yAxisID: 'y2',
+                        },
+                      ]
+                    : []),
+                  ...(uploadRates.length
+                    ? [
+                        {
+                          label: 'Upload (Mbps)',
+                          data: uploadRates,
+                          borderColor: '#d946ef',
+                          backgroundColor: 'transparent',
+                          yAxisID: 'y2',
+                        },
+                      ]
+                    : []),
+                ],
+              }}
+              options={{
+                animation: false,
+                responsive: true,
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: { color: '#fff' },
+                  },
+                  y1: {
+                    beginAtZero: true,
+                    position: 'right',
+                    ticks: { color: '#fff' },
+                    grid: { drawOnChartArea: false },
+                  },
+                  y2: {
+                    beginAtZero: true,
+                    position: 'right',
+                    ticks: { color: '#fff' },
+                    grid: { drawOnChartArea: false },
+                  },
+                },
+                plugins: {
+                  legend: { labels: { color: '#fff' } },
+                },
+              }}
+            />
+            <button
+              onClick={() => {
+                if (!chartRef.current) return;
+                const url = chartRef.current.toBase64Image();
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'metrics.png';
+                link.click();
+              }}
+              className="mt-2 px-2 py-1 bg-ubt-blue text-black rounded"
+            >
+              Export PNG
+            </button>
+          </div>
         <div className="mt-4">
           <strong>Resource Timings</strong>
           <ul className="list-disc pl-5">
