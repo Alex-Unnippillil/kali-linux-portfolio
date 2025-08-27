@@ -25,7 +25,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
   }, [showHelp]);
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full" tabIndex={0} role="application">
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
       <button
         type="button"

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import ReactGA from 'react-ga4';
 import Quadtree from './quadtree';
+import useAccessibleCanvas from '../../hooks/useAccessibleCanvas';
 import {
   GRID_SIZE,
   START,
@@ -48,7 +49,7 @@ const TowerDefense = () => {
   const enemiesRef = useRef(enemies);
   const projectilesRef = useRef(projectiles);
   const wavesRef = useRef(waves);
-  const pathCanvasRef = useRef(null);
+  const pathCanvasRef = useAccessibleCanvas('Tower Defense path canvas');
 
   useEffect(() => {
     towersRef.current = towers;
@@ -390,7 +391,7 @@ const TowerDefense = () => {
         onChange={(e) => setWaveInput(e.target.value)}
         rows={4}
       />
-      <div className="mb-2 flex items-center space-x-2">
+      <div className="mb-2 flex items-center space-x-2" aria-live="polite">
         <span>Wave: {wave}</span>
         <span>Lives: {lives}</span>
         <button

@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import useAccessibleCanvas from '../../hooks/useAccessibleCanvas';
 import {
   wrap,
   createBulletPool,
@@ -91,7 +92,7 @@ class Quadtree {
 }
 
 const Asteroids = () => {
-  const canvasRef = useRef(null);
+  const canvasRef = useAccessibleCanvas('Asteroids game canvas');
   const requestRef = useRef();
   const audioCtx = useRef(null);
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;

@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 
 const WIDTH = 400;
 const HEIGHT = 300;
 
 const FlappyBird = () => {
-  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT, 'Flappy Bird game canvas');
+  const [liveText, setLiveText] = useState('Game ready');
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -43,6 +44,7 @@ const FlappyBird = () => {
       frame = 0;
       score = 0;
       running = true;
+      setLiveText('Game reset');
     }
 
     function flap() {
@@ -123,6 +125,7 @@ const FlappyBird = () => {
 
       if (passed) {
         score += passed;
+        setLiveText(`Score: ${score}`);
         pipes = pipes.filter((p) => p.x + pipeWidth >= 0);
       }
 
@@ -169,7 +172,12 @@ const FlappyBird = () => {
     };
   }, [canvasRef]);
 
-  return <canvas ref={canvasRef} className="w-full h-full bg-black" />;
+  return (
+    <>
+      <canvas ref={canvasRef} className="w-full h-full bg-black" />
+      <div aria-live="polite" className="sr-only">{liveText}</div>
+    </>
+  );
 };
 
 export default FlappyBird;

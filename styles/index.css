@@ -199,6 +199,22 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: scaleAppImage 400ms 1 forwards;
 }
 
+/* Accessibility: color-blind friendly patterns */
+.status-success {
+    background-color: var(--color-ubt-green);
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(255,255,255,0.3) 6px, rgba(255,255,255,0.3) 12px);
+}
+
+.status-warning {
+    background-color: var(--color-ubt-gedit-orange);
+    background-image: repeating-linear-gradient(-45deg, transparent, transparent 6px, rgba(0,0,0,0.2) 6px, rgba(0,0,0,0.2) 12px);
+}
+
+.status-error {
+    background-color: var(--color-ub-orange);
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(0,0,0,0.4) 6px, rgba(0,0,0,0.4) 12px);
+}
+
 @keyframes scaleAppImage {
     from {
         transform: translate(-50%, -50%) scale(1);
