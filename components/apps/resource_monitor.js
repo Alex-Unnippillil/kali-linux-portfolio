@@ -69,7 +69,9 @@ const ResourceMonitor = () => {
   const [cpuUsage, setCpuUsage] = useState(null);
   const [resourceTimings, setResourceTimings] = useState([]);
   const [paintTimings, setPaintTimings] = useState([]);
-  const [longTaskCount, setLongTaskCount] = useState(0);
+  const [longTasks, setLongTasks] = useState([]);
+  const [elementTimings, setElementTimings] = useState([]);
+  const [fcp, setFcp] = useState(null);
   const [downloadRates, setDownloadRates] = useState([]);
   const [uploadRates, setUploadRates] = useState([]);
   const [intervalMs, setIntervalMs] = useState(5000);
@@ -119,8 +121,23 @@ const ResourceMonitor = () => {
     if (typeof performance !== 'undefined' && typeof PerformanceObserver !== 'undefined') {
       const existingResources = performance.getEntriesByType('resource');
       const existingPaints = performance.getEntriesByType('paint');
+      const existingElements = performance.getEntriesByType('element');
       setResourceTimings(existingResources.map(({ name, duration }) => ({ name, duration })));
       setPaintTimings(existingPaints.map(({ name, startTime }) => ({ name, startTime })));
+      setElementTimings(
+        existingElements.map(({ identifier, startTime, duration, name }) => ({
+          identifier,
+          startTime,
+          duration,
+          name,
+        }))
+      );
+      existingPaints.forEach((entry) => {
+        if (entry.name === 'first-contentful-paint') {
+          setFcp(entry.startTime);
+          console.log('First Contentful Paint:', entry.startTime);
+        }
+      });
 
       const resourceObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries().map(({ name, duration }) => ({ name, duration }));
@@ -129,20 +146,54 @@ const ResourceMonitor = () => {
       resourceObserver.observe({ entryTypes: ['resource'] });
 
       const paintObserver = new PerformanceObserver((list) => {
-        const entries = list.getEntries().map(({ name, startTime }) => ({ name, startTime }));
-        setPaintTimings((prev) => [...prev, ...entries]);
+        const entries = list.getEntries();
+        entries.forEach((entry) => {
+          if (entry.name === 'first-contentful-paint') {
+            setFcp(entry.startTime);
+            console.log('First Contentful Paint:', entry.startTime);
+          }
+        });
+        setPaintTimings((prev) => [
+          ...prev,
+          ...entries.map(({ name, startTime }) => ({ name, startTime })),
+        ]);
       });
       paintObserver.observe({ entryTypes: ['paint'] });
 
       const longTaskObserver = new PerformanceObserver((list) => {
-        setLongTaskCount((prev) => prev + list.getEntries().length);
+        const entries = list.getEntries();
+        entries.forEach((entry) => console.log('Long Task:', entry));
+        setLongTasks((prev) => [
+          ...prev,
+          ...entries.map(({ startTime, duration, attribution }) => ({
+            startTime,
+            duration,
+            attribution,
+          })),
+        ]);
       });
       longTaskObserver.observe({ entryTypes: ['longtask'] });
+
+      const elementObserver = new PerformanceObserver((list) => {
+        const entries = list.getEntries();
+        entries.forEach((entry) => console.log('Element Timing:', entry));
+        setElementTimings((prev) => [
+          ...prev,
+          ...entries.map(({ identifier, startTime, duration, name }) => ({
+            identifier,
+            startTime,
+            duration,
+            name,
+          })),
+        ]);
+      });
+      elementObserver.observe({ entryTypes: ['element'] });
 
       return () => {
         resourceObserver.disconnect();
         paintObserver.disconnect();
         longTaskObserver.disconnect();
+        elementObserver.disconnect();
       };
     }
   }, []);
@@ -150,7 +201,9 @@ const ResourceMonitor = () => {
   const clearMetrics = () => {
     setResourceTimings([]);
     setPaintTimings([]);
-    setLongTaskCount(0);
+    setLongTasks([]);
+    setElementTimings([]);
+    setFcp(null);
     setDownloadRates([]);
     setUploadRates([]);
     if (performance.clearResourceTimings) {
@@ -192,13 +245,43 @@ const ResourceMonitor = () => {
         </div>
         <div className="mt-2">
           <strong>Paint Timings</strong>
+          {fcp !== null && <div className="ml-4">FCP: {fcp.toFixed(1)}ms</div>}
           <ul className="list-disc pl-5">
             {paintTimings.map((p, idx) => (
               <li key={idx}>{`${p.name}: ${p.startTime.toFixed(1)}ms`}</li>
             ))}
           </ul>
         </div>
-        <div className="mt-2">Long Tasks: {longTaskCount}</div>
+        <div className="mt-2">
+          <strong>Element Timings</strong>
+          <ul className="list-disc pl-5">
+            {elementTimings.map((e, idx) => (
+              <li key={idx}>{`${e.identifier || e.name}: ${e.startTime.toFixed(1)}ms`}</li>
+            ))}
+          </ul>
+        </div>
+        <div className="mt-2">
+          <strong>
+            Long Tasks ({longTasks.length})
+            {longTasks.length > 0 && (
+              <a
+                href="https://web.dev/long-tasks/"
+                target="_blank"
+                rel="noopener"
+                className="ml-2 text-ubt-blue underline"
+              >
+                why slow?
+              </a>
+            )}
+          </strong>
+          <ul className="list-disc pl-5">
+            {longTasks.map((t, idx) => (
+              <li key={idx}>{`${t.duration.toFixed(1)}ms - ${t.attribution
+                .map((a) => a.name)
+                .join(', ')}`}</li>
+            ))}
+          </ul>
+        </div>
         <button
           onClick={clearMetrics}
           className="mt-2 px-2 py-1 bg-ubt-green text-black rounded"
