@@ -1,4 +1,3 @@
-import type { AppProps } from 'next/app';
 import { useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
@@ -10,7 +9,10 @@ import '@xterm/xterm/css/xterm.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import DemoBanner from '../components/DemoBanner';
 
-function MyApp({ Component, pageProps }: AppProps) {
+/**
+ * @param {import('next/app').AppProps} props
+ */
+function MyApp({ Component, pageProps }) {
   useEffect(() => {
     const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
     if (trackingId) {

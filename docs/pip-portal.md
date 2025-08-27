@@ -28,7 +28,7 @@ function HudButton() {
   );
 }
 
-// in _app.tsx
+// in _app.jsx
 export default function App({ Component, pageProps }) {
   return (
     <PipPortalProvider>

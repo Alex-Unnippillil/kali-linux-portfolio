@@ -50,9 +50,9 @@ yarn export        # outputs to ./out
 
 ```
 pages/
-  _app.tsx               # global providers (Legal banner, GA init, Vercel Analytics)
-  _document.tsx
-  index.tsx              # mounts <Ubuntu />
+  _app.jsx               # global providers (Legal banner, GA init, Vercel Analytics)
+  _document.jsx
+  index.jsx              # mounts <Ubuntu />
   api/                   # (dev/server) stub routes for demo-only features
   apps/                  # a few example pages
 
