@@ -1,87 +1,38 @@
 import React from 'react';
-import {
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import NmapNSEApp from '../components/apps/nmap-nse';
+import NmapNseApp from '../components/apps/nmap-nse';
 
-describe('NmapNSEApp', () => {
+describe('Nmap NSE info', () => {
+  let writeText;
   beforeEach(() => {
-    localStorage.clear();
+    // @ts-ignore
+    global.fetch = jest.fn();
+    writeText = jest.fn();
+    // @ts-ignore
+    navigator.clipboard = { writeText: jest.fn() };
+    jest.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    cleanup();
+    jest.restoreAllMocks();
   });
 
-  it('searches across built-in and fetched scripts', async () => {
-    global.fetch = jest.fn(() =>
-      Promise.resolve({ text: () => Promise.resolve('filename = "extra.nse"') })
-    );
-
+  it('renders static content and handles commands', async () => {
     const user = userEvent.setup();
-    render(<NmapNSEApp />);
-
-    await waitFor(() => expect(global.fetch).toHaveBeenCalled());
-
-    const search = screen.getByLabelText(/search scripts/i);
-    await user.type(search, 'ftp');
-    const scriptSelect = screen.getByLabelText('script select');
-    let options = within(scriptSelect).getAllByRole('option');
-    expect(options).toHaveLength(1);
-    expect(options[0]).toHaveTextContent('ftp-anon');
-
-    await user.clear(search);
-    await user.type(search, 'extra');
-    expect(
-      within(scriptSelect).getByRole('option', { name: 'extra' })
-    ).toBeInTheDocument();
-  });
-
-  it('saves, loads and quick runs profiles', async () => {
-    global.fetch = jest.fn(() =>
-      Promise.resolve({ text: () => Promise.resolve('scan') })
-    );
-    const user = userEvent.setup();
-    const { unmount } = render(<NmapNSEApp />);
-
-    await user.type(
-      screen.getByPlaceholderText('Target host'),
-      'example.com'
-    );
-    await user.selectOptions(
-      screen.getByLabelText('script select'),
-      'ftp-anon'
-    );
-    await user.click(screen.getByRole('button', { name: /save profile/i }));
-
-    expect(JSON.parse(localStorage.getItem('nmapProfiles') || '[]')).toEqual([
-      { target: 'example.com', script: 'ftp-anon' },
-    ]);
-
-    unmount();
-    render(<NmapNSEApp />);
-    const profileSelect = screen.getByLabelText('profile select');
-    await user.selectOptions(profileSelect, '0');
-    expect(screen.getByPlaceholderText('Target host')).toHaveValue(
-      'example.com'
-    );
-    expect(screen.getByLabelText('script select')).toHaveValue('ftp-anon');
-
-    localStorage.setItem(
-      'lastNmapProfile',
-      JSON.stringify({ target: 'quick.com', script: 'dns-brute' })
-    );
-    await user.click(screen.getByRole('button', { name: /quick run/i }));
-    await waitFor(() =>
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.hackertarget.com/nmap/?q=quick.com&script=dns-brute'
-      )
+    // @ts-ignore
+    navigator.clipboard.writeText = writeText;
+    render(<NmapNseApp />);
+    expect(screen.getByText(/Scripting Engine/i)).toBeInTheDocument();
+    expect(global.fetch).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: /install/i }));
+    const copy = screen.getAllByLabelText('copy')[0];
+    await user.click(copy);
+    expect(writeText).toHaveBeenCalledWith('sudo apt install nmap');
+    const run = screen.getAllByLabelText('run')[0];
+    await user.click(run);
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('sudo apt install nmap')
     );
   });
 });
-
