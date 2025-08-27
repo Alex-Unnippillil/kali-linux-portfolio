@@ -1,6 +1,4 @@
-import React from 'react';
-import dynamic from 'next/dynamic';
-import { logEvent } from './utils/analytics';
+import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
@@ -17,27 +15,6 @@ import { displayConverter } from './components/apps/converter';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayNikto } from './components/apps/nikto';
-
-const createDynamicApp = (path, name) =>
-  dynamic(
-    () =>
-      import(`./components/apps/${path}`).then((mod) => {
-        logEvent({ category: 'Application', action: `Loaded ${name}` });
-        return mod.default;
-      }),
-    {
-      ssr: false,
-      loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-          {`Loading ${name}...`}
-        </div>
-      ),
-    }
-  );
-
-const createDisplay = (Component) => (addFolder, openApp) => (
-  <Component addFolder={addFolder} openApp={openApp} />
-);
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
