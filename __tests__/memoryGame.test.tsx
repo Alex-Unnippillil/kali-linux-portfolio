@@ -21,6 +21,7 @@ jest.mock('../components/apps/memory_utils', () => ({
     { id: 14, value: 'H' },
     { id: 15, value: 'H' },
   ],
+  fisherYatesShuffle: (arr) => arr,
 }));
 
 beforeEach(() => {
