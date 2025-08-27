@@ -1,7 +1,12 @@
 export type Color = 'red' | 'black';
 export interface Piece { color: Color; king: boolean; }
 export type Board = (Piece | null)[][];
-export interface Move { from:[number,number]; to:[number,number]; captured?:[number,number]; }
+export interface Move {
+  from: [number, number];
+  to: [number, number];
+  captured?: [number, number];
+  next?: Move[];
+}
 
 const directions: Record<Color, number[][]> = {
   red: [[-1, -1], [-1, 1]],
@@ -13,13 +18,37 @@ const inBounds = (r: number, c: number) => r >= 0 && r < 8 && c >= 0 && c < 8;
 const cloneBoard = (board: Board): Board =>
   board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
 
+const applyMove = (
+  board: Board,
+  move: Move,
+): { board: Board; capture: boolean; king: boolean } => {
+  const newBoard = cloneBoard(board);
+  const piece = newBoard[move.from[0]][move.from[1]]!;
+  newBoard[move.from[0]][move.from[1]] = null;
+  newBoard[move.to[0]][move.to[1]] = piece;
+  let capture = false;
+  if (move.captured) {
+    const [cr, cc] = move.captured;
+    newBoard[cr][cc] = null;
+    capture = true;
+  }
+  let king = false;
+  if (
+    !piece.king &&
+    ((piece.color === 'red' && move.to[0] === 0) ||
+      (piece.color === 'black' && move.to[0] === 7))
+  ) {
+    piece.king = true;
+    king = true;
+  }
+  return { board: newBoard, capture, king };
+};
+
 const getPieceMoves = (board: Board, r: number, c: number): Move[] => {
   const piece = board[r][c];
   if (!piece) return [];
   const dirs = [...directions[piece.color]];
-  if (piece.king) {
-    dirs.push(...directions[piece.color === 'red' ? 'black' : 'red']);
-  }
+  if (piece.king) dirs.push(...directions[piece.color === 'red' ? 'black' : 'red']);
   const moves: Move[] = [];
   const captures: Move[] = [];
   for (const [dr, dc] of dirs) {
@@ -33,7 +62,13 @@ const getPieceMoves = (board: Board, r: number, c: number): Move[] => {
       const r2 = r + dr * 2;
       const c2 = c + dc * 2;
       if (inBounds(r2, c2) && !board[r2][c2]) {
-        captures.push({ from: [r, c], to: [r2, c2], captured: [r1, c1] });
+        const move: Move = { from: [r, c], to: [r2, c2], captured: [r1, c1] };
+        const { board: nextBoard, king } = applyMove(board, move);
+        if (!king) {
+          const further = getPieceMoves(nextBoard, r2, c2).filter((m) => m.captured);
+          if (further.length) move.next = further;
+        }
+        captures.push(move);
       }
     }
   }
@@ -58,23 +93,12 @@ const getAllMoves = (
   return enforceCapture && anyCapture ? result.filter((m) => m.captured) : result;
 };
 
-const applyMove = (board: Board, move: Move): { board: Board } => {
-  const newBoard = cloneBoard(board);
-  const piece = newBoard[move.from[0]][move.from[1]]!;
-  newBoard[move.from[0]][move.from[1]] = null;
-  newBoard[move.to[0]][move.to[1]] = piece;
-  if (move.captured) {
-    const [cr, cc] = move.captured;
-    newBoard[cr][cc] = null;
+const applyMoveSeq = (board: Board, move: Move): Board => {
+  let result = applyMove(board, move).board;
+  if (move.next && move.next.length) {
+    result = applyMoveSeq(result, move.next[0]);
   }
-  if (
-    !piece.king &&
-    ((piece.color === 'red' && move.to[0] === 0) ||
-      (piece.color === 'black' && move.to[0] === 7))
-  ) {
-    piece.king = true;
-  }
-  return { board: newBoard };
+  return result;
 };
 
 const boardToBitboards = (board: Board) => {
@@ -104,17 +128,35 @@ const bitCount = (n: bigint) => {
 };
 
 const evaluate = (board: Board): number => {
-  const { red, black, kings } = boardToBitboards(board);
-  const redKings = red & kings;
-  const blackKings = black & kings;
-  const redMen = bitCount(red) - bitCount(redKings);
-  const blackMen = bitCount(black) - bitCount(blackKings);
+  let material = 0;
+  let advancement = 0;
+  let kingSafety = 0;
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
+      if (!piece) continue;
+      const sign = piece.color === 'red' ? 1 : -1;
+      material += sign * (piece.king ? 1.5 : 1);
+      if (!piece.king) {
+        advancement += sign * (piece.color === 'red' ? 7 - r : r);
+      } else {
+        for (const [dr, dc] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+          const r1 = r + dr;
+          const c1 = c + dc;
+          if (!inBounds(r1, c1)) continue;
+          const n = board[r1][c1];
+          if (n) kingSafety += sign * (n.color === piece.color ? 0.5 : -0.5);
+        }
+      }
+    }
+  }
   const mobility =
     getAllMoves(board, 'red', true).length - getAllMoves(board, 'black', true).length;
   return (
-    redMen - blackMen +
-    1.5 * (bitCount(redKings) - bitCount(blackKings)) +
-    0.1 * mobility
+    material +
+    0.1 * mobility +
+    0.05 * advancement +
+    0.1 * kingSafety
   );
 };
 
@@ -132,7 +174,7 @@ const alphaBeta = (
   if (!moves.length) return { score: maximizing ? -Infinity : Infinity };
   let bestMove = moves[0];
   for (const move of moves) {
-    const next = applyMove(board, move).board;
+    const next = applyMoveSeq(board, move);
     const { score } = alphaBeta(next, depth - 1, !maximizing, alpha, beta, enforceCapture);
     if (maximizing) {
       if (score > alpha) {
@@ -151,68 +193,24 @@ const alphaBeta = (
   return { score: maximizing ? alpha : beta, move: bestMove };
 };
 
-const randomPlayout = (
-  board: Board,
-  color: Color,
-  enforceCapture: boolean,
-): Color => {
-  let current = color;
-  let b = cloneBoard(board);
-  while (true) {
-    const moves = getAllMoves(b, current, enforceCapture);
-    if (moves.length === 0) return current === 'red' ? 'black' : 'red';
-    const move = moves[Math.floor(Math.random() * moves.length)];
-    b = applyMove(b, move).board;
-    current = current === 'red' ? 'black' : 'red';
-  }
-};
-
-const mcts = (
-  board: Board,
-  color: Color,
-  iterations: number,
-  enforceCapture: boolean,
-): Move | null => {
-  const moves = getAllMoves(board, color, enforceCapture);
-  if (!moves.length) return null;
-  const scores = new Array(moves.length).fill(0);
-  for (let i = 0; i < iterations; i++) {
-    const idx = i % moves.length;
-    const move = moves[idx];
-    const nextBoard = applyMove(board, move).board;
-    const winner = randomPlayout(nextBoard, color === 'red' ? 'black' : 'red', enforceCapture);
-    if (winner === color) scores[idx]++;
-  }
-  let best = 0;
-  for (let i = 1; i < moves.length; i++) {
-    if (scores[i] > scores[best]) best = i;
-  }
-  return moves[best];
-};
-
 self.onmessage = (e: MessageEvent) => {
-  const { board, color, difficulty, algorithm, enforceCapture } = e.data as {
+  const { board, color, maxDepth, enforceCapture } = e.data as {
     board: Board;
     color: Color;
-    difficulty: number;
-    algorithm: 'alphabeta' | 'mcts';
-    enforceCapture: boolean;
+    maxDepth: number;
+    enforceCapture?: boolean;
   };
-  let move: Move | null = null;
-  if (algorithm === 'mcts') {
-    move = mcts(board, color, Math.max(10, difficulty * 200), enforceCapture);
-  } else {
-    move = alphaBeta(
-      board,
-      Math.max(1, difficulty),
-      color === 'red',
-      -Infinity,
-      Infinity,
-      enforceCapture,
-    ).move || null;
-  }
+  const depth = Math.max(1, maxDepth);
+  const { move } = alphaBeta(
+    board,
+    depth,
+    color === 'red',
+    -Infinity,
+    Infinity,
+    enforceCapture ?? true,
+  );
   // eslint-disable-next-line no-restricted-globals
-  (self as any).postMessage(move);
-};
+  (self as any).postMessage(move || null);
+ };
 
 export {};

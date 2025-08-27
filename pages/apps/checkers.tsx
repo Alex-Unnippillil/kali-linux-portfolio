@@ -39,7 +39,7 @@ export default function CheckersPage() {
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('../../workers/checkersAI.ts', import.meta.url));
-    workerRef.current.onmessage = (e: MessageEvent<Move>) => {
+    workerRef.current.onmessage = (e: MessageEvent<Move | null>) => {
       const move = e.data;
       if (move) makeMove(move);
     };
@@ -71,16 +71,18 @@ export default function CheckersPage() {
     if (move) makeMove(move);
   };
 
-  const makeMove = (move: Move) => {
-    const { board: newBoard, capture } = applyMove(board, move);
-    const further = capture
-      ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
-      : [];
+  const makeMove = (move: Move, b: Board = board) => {
+    const { board: newBoard, capture } = applyMove(b, move);
+    const further = capture ? move.next || [] : [];
     setBoard(newBoard);
     if (capture && further.length) {
-      setSelected([move.to[0], move.to[1]]);
-      setMoves(further);
       setNoCapture(0);
+      if (turn === 'black') {
+        setTimeout(() => makeMove(further[0], newBoard), 0);
+      } else {
+        setSelected([move.to[0], move.to[1]]);
+        setMoves(further);
+      }
       return;
     }
     const next = turn === 'red' ? 'black' : 'red';
@@ -102,8 +104,7 @@ export default function CheckersPage() {
         workerRef.current?.postMessage({
           board: newBoard,
           color: 'black',
-          difficulty,
-          algorithm,
+          maxDepth: difficulty,
           enforceCapture: rule === 'forced',
         });
       }
