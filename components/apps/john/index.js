@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   parseRules,
   distributeTasks,
@@ -8,6 +8,22 @@ import {
 // Enhanced John the Ripper interface that supports rule uploads,
 // basic hash analysis and mock distribution of cracking tasks.
 
+const LineChart = ({ data }) => {
+  const max = Math.max(...data, 1);
+  const points = data
+    .map((d, i) => {
+      const x = (i / Math.max(data.length - 1, 1)) * 100;
+      const y = 100 - (d / max) * 100;
+      return `${x},${y}`;
+    })
+    .join(' ');
+  return (
+    <svg viewBox="0 0 100 100">
+      <polyline points={points} className="john-chart-line" />
+    </svg>
+  );
+};
+
 const JohnApp = () => {
   const [hashes, setHashes] = useState('');
   const [hashTypes, setHashTypes] = useState([]);
@@ -16,6 +32,28 @@ const JohnApp = () => {
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [guessHistory, setGuessHistory] = useState([]);
+  const guessInterval = useRef(null);
+
+  const startGuessSimulation = () => {
+    let count = 0;
+    setGuessHistory([]);
+    guessInterval.current = setInterval(() => {
+      count += Math.floor(Math.random() * 500 + 100);
+      setGuessHistory((prev) => [...prev.slice(-49), count]);
+    }, 1000);
+  };
+
+  const stopGuessSimulation = () => {
+    if (guessInterval.current) {
+      clearInterval(guessInterval.current);
+      guessInterval.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => stopGuessSimulation();
+  }, []);
 
   const handleRuleUpload = (e) => {
     const file = e.target.files?.[0];
@@ -49,6 +87,7 @@ const JohnApp = () => {
     setError('');
     setLoading(true);
     setOutput('');
+    startGuessSimulation();
     try {
       const assignments = endpointArr.length
         ? distributeTasks(hashArr, endpointArr)
@@ -74,6 +113,7 @@ const JohnApp = () => {
       setError(err.message);
     } finally {
       setLoading(false);
+      stopGuessSimulation();
     }
   };
 
@@ -133,6 +173,15 @@ const JohnApp = () => {
           </p>
         )}
       </form>
+      {guessHistory.length > 0 && (
+        <div className="p-4 john-chart">
+          <LineChart data={guessHistory} />
+          <div className="john-legend">
+            <span className="john-legend-color" />
+            <span>Guesses</span>
+          </div>
+        </div>
+      )}
       <pre className="flex-1 overflow-auto p-4 whitespace-pre-wrap">{output}</pre>
     </div>
   );
