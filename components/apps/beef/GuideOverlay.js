@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import useFocusTrap from '../../../hooks/useFocusTrap';
 
 const STORAGE_KEY = 'beefHelpDismissed';
 
@@ -17,8 +18,11 @@ export default function GuideOverlay({ onClose }) {
   const [step, setStep] = useState(0);
   const [dontShow, setDontShow] = useState(false);
   const containerRef = useRef(null);
+  const lastFocused = useRef(null);
+  useFocusTrap(containerRef);
 
   useEffect(() => {
+    lastFocused.current = document.activeElement;
     containerRef.current?.focus();
   }, []);
 
@@ -30,6 +34,7 @@ export default function GuideOverlay({ onClose }) {
         /* ignore storage errors */
       }
     }
+    lastFocused.current?.focus();
     onClose();
   };
 
