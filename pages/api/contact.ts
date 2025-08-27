@@ -1,14 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-const sanitize = (str: string) =>
-  String(str).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  }[c]!));
-
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
 const rateLimit = new Map<string, { count: number; start: number }>();
@@ -51,10 +42,5 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     return;
   }
 
-  console.log('contact message', {
-    name: sanitize(trimmedName),
-    email: sanitize(trimmedEmail),
-    message: sanitize(trimmedMessage),
-  });
   res.status(200).json({ ok: true });
 }
