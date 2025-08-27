@@ -2,6 +2,7 @@ import React, { useEffect, useCallback, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
+import { findHint } from '../../apps/games/_2048/ai';
 
 const SIZE = 4;
 
@@ -184,6 +185,9 @@ const Game2048 = () => {
   const [mergeCells, setMergeCells] = useState(new Set());
   const [score, setScore] = useState(0);
   const [scorePop, setScorePop] = useState(false);
+  const [combo, setCombo] = useState(0);
+  const [hint, setHint] = useState(null);
+  const [demo, setDemo] = useState(false);
 
   useEffect(() => {
     if (animCells.size > 0) {
@@ -224,6 +228,10 @@ const Game2048 = () => {
     }
   }, [scorePop]);
 
+  useEffect(() => {
+    setHint(findHint(board));
+  }, [board]);
+
   const handleDirection = useCallback(
     ({ x, y }) => {
       if (won || lost) return;
@@ -245,6 +253,20 @@ const Game2048 = () => {
         }
         setBoard(cloneBoard(moved));
         if (merged) navigator.vibrate?.(50);
+        if (mergedCells.length > 1) {
+          setCombo((c) => c + 1);
+          if (typeof window !== 'undefined') {
+            import('canvas-confetti').then((m) => {
+              try {
+                m.default({ particleCount: 80, spread: 60 });
+              } catch {
+                /* ignore */
+              }
+            });
+          }
+        } else {
+          setCombo(0);
+        }
         if (checkWin(moved)) setWon(true);
         else if (!hasMoves(moved)) setLost(true);
       }
@@ -253,6 +275,31 @@ const Game2048 = () => {
   );
 
   useGameControls(handleDirection);
+
+  useEffect(() => {
+    const stop = () => setDemo(false);
+    window.addEventListener('keydown', stop);
+    return () => window.removeEventListener('keydown', stop);
+  }, []);
+
+  useEffect(() => {
+    if (!demo) return;
+    const dirMap = {
+      ArrowLeft: { x: -1, y: 0 },
+      ArrowRight: { x: 1, y: 0 },
+      ArrowUp: { x: 0, y: -1 },
+      ArrowDown: { x: 0, y: 1 },
+    };
+    const id = setInterval(() => {
+      const best = findHint(board);
+      if (!best) {
+        setDemo(false);
+        return;
+      }
+      handleDirection(dirMap[best]);
+    }, 400);
+    return () => clearInterval(id);
+  }, [demo, board, handleDirection]);
 
   useEffect(() => {
     const esc = (e) => {
@@ -324,6 +371,12 @@ const Game2048 = () => {
           </label>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={() => setDemo((d) => !d)}
+          >
+            {demo ? 'Stop' : 'Demo'}
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={close}
           >
             Close
@@ -334,8 +387,14 @@ const Game2048 = () => {
           >
             Score: <span className={scorePop ? 'score-pop' : ''}>{score}</span>
           </div>
+          <div className="px-4 py-2 bg-gray-700 rounded" data-testid="combo-meter">
+            Combo: {combo}
+          </div>
+          <div className="px-4 py-2 bg-gray-700 rounded" data-testid="hint-display">
+            Hint: {hint ? hint.replace('Arrow', '') : ''}
+          </div>
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-2" data-combo={combo} style={{ filter: combo ? `hue-rotate(${combo * 45}deg)` : undefined }}>
           {board.map((row, rIdx) =>
             row.map((cell, cIdx) => {
               const key = `${rIdx}-${cIdx}`;
