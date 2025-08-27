@@ -24,7 +24,16 @@ const Stepper = ({
       window.matchMedia &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    let delay = prefersReducedMotion ? 0 : 500;
+    if (prefersReducedMotion) {
+      const final = Math.min(lockoutThreshold, totalAttempts);
+      setAttempt(final);
+      if (final >= lockoutThreshold) {
+        setLocked(true);
+      }
+      return;
+    }
+
+    let delay = 500;
 
     const tick = () => {
       requestAnimationFrame(() => {
@@ -37,7 +46,7 @@ const Stepper = ({
             }
             return final;
           }
-          if (!prefersReducedMotion && next >= backoffThreshold) {
+          if (next >= backoffThreshold) {
             delay = Math.min(delay * 2, 4000);
           }
           timerRef.current = setTimeout(tick, delay);
@@ -63,12 +72,12 @@ const Stepper = ({
           <div
             key={i}
             className={`w-4 h-4 rounded ${
-              i < attempt ? 'bg-green-400' : 'bg-gray-600'
+              i < attempt ? 'bg-green-400' : 'bg-gray-500'
             }`}
           />
         ))}
       </div>
-      <div className="sr-only" aria-live="polite">
+      <div className="sr-only" role="status" aria-live="polite">
         {locked ? 'Locked out' : `Attempt ${attempt} of ${lockoutThreshold}`}
       </div>
       {locked ? (
