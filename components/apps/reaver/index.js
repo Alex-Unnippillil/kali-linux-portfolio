@@ -23,17 +23,27 @@ export default function ReaverApp() {
   const [pin, setPin] = useState('');
   const [log, setLog] = useState('');
   const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const statusClass = (pct) => {
+    if (pct < 33) return 'low';
+    if (pct < 66) return 'medium';
+    return 'high';
+  };
 
   const startAttack = () => {
     setRunning(true);
     setLog(`Starting WPS PIN attack on ${bssid}\n`);
     let tries = 0;
+    setProgress(0);
     const interval = setInterval(() => {
       tries += 1;
       const guess = Math.floor(Math.random() * 1e8)
         .toString()
         .padStart(8, '0');
       setLog((prev) => `${prev}Trying PIN ${guess}\n`);
+      const pct = Math.min((tries / 5) * 100, 100);
+      setProgress(pct);
       if (tries >= 5) {
         clearInterval(interval);
         const result = derivePin(bssid);
@@ -67,6 +77,19 @@ export default function ReaverApp() {
       >
         Start Attack
       </button>
+      {progress > 0 && (
+        <>
+          <div className="reaver-progress-container mt-4">
+            <div
+              className={`reaver-progress-bar ${statusClass(progress)}`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className={`reaver-progress-text ${statusClass(progress)}`}>
+            {Math.floor(progress)}%
+          </div>
+        </>
+      )}
       {pin && (
         <div className="mt-4">
           <div className="mb-1">Discovered WPS PIN:</div>
