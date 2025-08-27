@@ -169,6 +169,9 @@ export default function GhidraApp() {
         className="w-full h-full bg-ub-cool-grey"
         frameBorder="0"
         title="Ghidra"
+        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
+        referrerPolicy="no-referrer"
       />
     );
   }

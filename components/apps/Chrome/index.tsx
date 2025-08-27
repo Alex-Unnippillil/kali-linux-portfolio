@@ -272,6 +272,10 @@ const Chrome: React.FC = () => {
             src={activeTab.url}
             title={activeTab.url}
             className="w-full h-full"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
+            referrerPolicy="no-referrer"
+            allowFullScreen
           />
         )}
       </div>

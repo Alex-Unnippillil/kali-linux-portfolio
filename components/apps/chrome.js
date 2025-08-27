@@ -115,7 +115,14 @@ export class Chrome extends Component {
                     if (!this.thumbRefs[idx]) this.thumbRefs[idx] = createRef();
                     return (
                         <button key={idx} ref={this.thumbRefs[idx]} onClick={() => this.selectTab(idx)} className="relative focus:outline-none border border-white" aria-label={`Open tab ${idx + 1}`}>
-                            <iframe src={tab.url} title={`Tab ${idx + 1}`} className="w-full h-32 pointer-events-none bg-white" />
+                            <iframe
+                                src={tab.url}
+                                title={`Tab ${idx + 1}`}
+                                className="w-full h-32 pointer-events-none bg-white"
+                                sandbox="allow-same-origin allow-scripts"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture"
+                                referrerPolicy="no-referrer"
+                            />
                         </button>
                     );
                 })}
@@ -157,7 +164,17 @@ export class Chrome extends Component {
             <div className="h-full w-full flex flex-col bg-ub-cool-grey relative">
                 {this.displayUrlBar()}
                 <div className="flex-grow relative">
-                    <iframe src={this.state.url} className="w-full h-full" id="chrome-screen" frameBorder="0" title="Ubuntu Chrome Url"></iframe>
+                    <iframe
+                        src={this.state.url}
+                        className="w-full h-full"
+                        id="chrome-screen"
+                        frameBorder="0"
+                        title="Ubuntu Chrome Url"
+                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
+                        referrerPolicy="no-referrer"
+                        allowFullScreen
+                    ></iframe>
                     {this.state.showGrid && this.renderGrid()}
                     <div aria-live="polite" ref={(el) => (this.liveRegion = el)} className="sr-only"></div>
                 </div>

@@ -106,7 +106,9 @@ export default function YouTubeApp({ initialVideos = [] as Video[] }) {
               src={`${embedBase}/embed/${video.id}?enablejsapi=1&origin=${encodeURIComponent(origin)}`}
               title={video.title}
               className="absolute inset-0 w-full h-full"
+              sandbox="allow-same-origin allow-scripts allow-popups"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              referrerPolicy="no-referrer"
               allowFullScreen
               loading="lazy"
               referrerPolicy="strict-origin-when-cross-origin"
