@@ -26,12 +26,16 @@ function setPreciseMode(on) {
   math.config(preciseMode ? { number: 'Fraction' } : { number: 'number' });
 }
 
-preciseToggle.addEventListener('click', () => setPreciseMode(!preciseMode));
+if (preciseToggle) {
+  preciseToggle.addEventListener('click', () => setPreciseMode(!preciseMode));
+}
 
-sciToggle.addEventListener('click', () => {
-  const isHidden = scientific.classList.toggle('hidden');
-  sciToggle.setAttribute('aria-pressed', (!isHidden).toString());
-});
+if (sciToggle && scientific) {
+  sciToggle.addEventListener('click', () => {
+    const isHidden = scientific.classList.toggle('hidden');
+    sciToggle.setAttribute('aria-pressed', (!isHidden).toString());
+  });
+}
 
 function setProgrammerMode(on) {
   programmerMode = on;
@@ -39,20 +43,30 @@ function setProgrammerMode(on) {
   progToggle.setAttribute('aria-pressed', programmerMode.toString());
 }
 
-progToggle.addEventListener('click', () => setProgrammerMode(!programmerMode));
+if (progToggle) {
+  progToggle.addEventListener('click', () => setProgrammerMode(!programmerMode));
+}
 
-historyToggle.addEventListener('click', () => {
-  const isHidden = historyEl.classList.toggle('hidden');
-  historyToggle.setAttribute('aria-pressed', (!isHidden).toString());
-});
+if (historyToggle && historyEl) {
+  historyToggle.addEventListener('click', () => {
+    const isHidden = historyEl.classList.toggle('hidden');
+    historyToggle.setAttribute('aria-pressed', (!isHidden).toString());
+  });
+}
 
-baseSelect.addEventListener('change', () => {
-  currentBase = parseInt(baseSelect.value, 10);
-});
+if (baseSelect) {
+  baseSelect.addEventListener('change', () => {
+    currentBase = parseInt(baseSelect.value, 10);
+  });
+}
 
-printBtn.addEventListener('click', printTape);
+if (printBtn) {
+  printBtn.addEventListener('click', printTape);
+}
 
-display.addEventListener('input', updateParenBalance);
+if (display) {
+  display.addEventListener('input', updateParenBalance);
+}
 
 function updateParenBalance() {
   const open = (display.value.match(/\(/g) || []).length;

@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../../hooks/useTheme';
-import { setWallpaper, resetSettings } from '../../utils/settingsStore';
+import { setWallpaper, resetSettings, getTelemetry, setTelemetry } from '../../utils/settingsStore';
 
 export function Settings(props) {
     const { theme, setTheme } = useTheme();
     const [accent, setAccent] = useState('#4f46e5');
     const [contrast, setContrast] = useState(0);
+    const [telemetryEnabled, setTelemetryEnabled] = useState(getTelemetry());
     const liveRegion = useRef(null);
 
     const wallpapers = {
@@ -79,6 +80,15 @@ export function Settings(props) {
                     <option value="dark">Dark</option>
                     <option value="light">Light</option>
                 </select>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey" htmlFor="telemetry-toggle">Telemetry:</label>
+                <input
+                    id="telemetry-toggle"
+                    type="checkbox"
+                    checked={telemetryEnabled}
+                    onChange={(e) => { setTelemetryEnabled(e.target.checked); setTelemetry(e.target.checked); }}
+                />
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
