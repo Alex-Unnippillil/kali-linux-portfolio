@@ -4,19 +4,41 @@ let history = JSON.parse(localStorage.getItem(historyKey)) || [];
 
 const list = document.getElementById('history');
 const clearBtn = document.getElementById('clear');
+const toast = document.getElementById('toast');
+
+function showToast(message) {
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1500);
+}
 
 function render() {
   list.innerHTML = '';
   history.forEach((item) => {
     const li = document.createElement('li');
-    li.textContent = item;
-    li.addEventListener('click', async () => {
+    const span = document.createElement('span');
+    span.textContent = item;
+    span.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(item);
+        showToast('Copied');
       } catch (err) {
         console.error('Failed to copy text:', err);
       }
     });
+    const btn = document.createElement('button');
+    btn.className = 'copy-btn';
+    btn.textContent = 'Copy';
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(item);
+        showToast('Copied');
+      } catch (err) {
+        console.error('Failed to copy text:', err);
+      }
+    });
+    li.appendChild(span);
+    li.appendChild(btn);
     list.appendChild(li);
   });
 }
