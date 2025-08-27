@@ -12,6 +12,7 @@ const Blackjack = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
   const gameRef = useRef(null);
   const animRef = useRef(null);
+  const animationsRef = useRef([]); // active tweens
   const audioCtxRef = useRef(null);
 
   const [bet, setBet] = useState(0);
@@ -20,15 +21,57 @@ const Blackjack = () => {
   const [message, setMessage] = useState('Place your bet');
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = useState(true);
+  const [options, setOptions] = useState({ decks: 6, hitSoft17: true });
 
-  // init bankroll/highscore
+  const initGame = (br = bankroll) => {
+    gameRef.current = new BlackjackGame({ bankroll: br, decks: options.decks, hitSoft17: options.hitSoft17 });
+  };
+
+  const computeCardPos = (handIdx, cardIdx, isDealer = false) => {
+    if (isDealer) {
+      return { x: WIDTH / 2 - CARD_W / 2 + cardIdx * CARD_W * 0.7, y: 40 };
+    }
+    const game = gameRef.current;
+    const baseX = WIDTH / 2 - (game.playerHands.length * CARD_W * 0.7) / 2 + handIdx * CARD_W * 1.5;
+    return { x: baseX + cardIdx * CARD_W * 0.7, y: HEIGHT - CARD_H - 60 };
+  };
+
+  const addCardAnimation = (card, handIdx, cardIdx, isDealer = false, faceDown = false, delay = 0) => {
+    const from = { x: WIDTH - CARD_W - 20, y: 20 };
+    const to = computeCardPos(handIdx, cardIdx, isDealer);
+    const ctrl = { x: WIDTH / 2, y: HEIGHT / 2 };
+    animationsRef.current.push({ type: 'card', card, from, to, ctrl, start: performance.now() + delay, duration: 500, faceDown });
+  };
+
+  const addChipAnimation = (index) => {
+    const from = { x: 50 + index * 40, y: HEIGHT + 10 };
+    const to = { x: WIDTH / 2, y: HEIGHT - CARD_H - 40 };
+    const ctrl = { x: WIDTH / 2, y: HEIGHT / 2 };
+    animationsRef.current.push({ type: 'chip', from, to, ctrl, start: performance.now(), duration: 300 });
+  };
+
+  const addBet = (value, idx) => {
+    if (bet + value > bankroll) return;
+    setBet(bet + value);
+    playChipSound();
+    addChipAnimation(idx);
+  };
+
+  // init bankroll/highscore and game
   useEffect(() => {
     const br = parseInt(localStorage.getItem('blackjackBankroll') || '1000', 10);
     const hs = parseInt(localStorage.getItem('blackjackHigh') || br.toString(), 10);
     setBankroll(br);
     setHigh(hs);
-    gameRef.current = new BlackjackGame({ bankroll: br });
+    initGame(br);
   }, []);
+
+  // re-init when options change and no active hand
+  useEffect(() => {
+    if (gameRef.current && gameRef.current.playerHands.length === 0) {
+      initGame(bankroll);
+    }
+  }, [options, bankroll]);
 
   // persist bankroll/highscore
   useEffect(() => {
@@ -53,12 +96,29 @@ const Blackjack = () => {
     osc.stop(ctx.currentTime + 0.1);
   };
 
+  const playChipSound = () => {
+    if (!sound) return;
+    const ctx = audioCtxRef.current || (audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)());
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 600 + Math.random() * 400; // pitch jitter
+    gain.gain.value = 0.15;
+    osc.start();
+    osc.stop(ctx.currentTime + 0.05);
+  };
+
   const start = () => {
     try {
-      gameRef.current.startRound(bet);
+      const { player, dealer } = gameRef.current.startRound(bet);
       setBet(0);
       setMessage('Hit, Stand, Double or Split');
       playSound();
+      addCardAnimation(player.cards[0], 0, 0, false, false, 0);
+      addCardAnimation(dealer[0], 0, 0, true, true, 150);
+      addCardAnimation(player.cards[1], 0, 1, false, false, 300);
+      addCardAnimation(dealer[1], 0, 1, true, false, 450);
     } catch (e) {
       setMessage(e.message);
     }
@@ -72,8 +132,19 @@ const Blackjack = () => {
 
   const act = (type) => {
     try {
+      const idx = gameRef.current.current;
       gameRef.current[type]();
       playSound();
+      if (['hit', 'double'].includes(type)) {
+        const hand = gameRef.current.playerHands[idx];
+        const card = hand.cards[hand.cards.length - 1];
+        addCardAnimation(card, idx, hand.cards.length - 1);
+      } else if (type === 'split') {
+        const hand1 = gameRef.current.playerHands[idx];
+        const hand2 = gameRef.current.playerHands[idx + 1];
+        addCardAnimation(hand1.cards[1], idx, 1);
+        addCardAnimation(hand2.cards[1], idx + 1, 1);
+      }
       if (gameRef.current.current >= gameRef.current.playerHands.length) {
         finishRound();
       }
@@ -84,7 +155,7 @@ const Blackjack = () => {
 
   const reset = () => {
     const br = 1000;
-    gameRef.current = new BlackjackGame({ bankroll: br });
+    initGame(br);
     setBankroll(br);
     setBet(0);
     setMessage('Place your bet');
@@ -111,6 +182,33 @@ const Blackjack = () => {
       ctx.restore();
     };
 
+    const runAnimations = () => {
+      const now = performance.now();
+      const next = [];
+      const animCards = new Set();
+      animationsRef.current.forEach((a) => {
+        if (now < a.start) {
+          next.push(a);
+          return;
+        }
+        const t = Math.min(1, (now - a.start) / a.duration);
+        const x = (1 - t) * (1 - t) * a.from.x + 2 * (1 - t) * t * a.ctrl.x + t * t * a.to.x;
+        const y = (1 - t) * (1 - t) * a.from.y + 2 * (1 - t) * t * a.ctrl.y + t * t * a.to.y;
+        if (a.type === 'card') {
+          drawCard(a.card, x, y, a.faceDown);
+          animCards.add(a.card);
+        } else if (a.type === 'chip') {
+          ctx.fillStyle = '#b8860b';
+          ctx.beginPath();
+          ctx.arc(x, y, 10, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (t < 1) next.push(a);
+      });
+      animationsRef.current = next;
+      return animCards;
+    };
+
     const loop = () => {
       if (!paused) {
         ctx.clearRect(0, 0, WIDTH, HEIGHT);
@@ -119,21 +217,55 @@ const Blackjack = () => {
 
         const game = gameRef.current;
         if (game) {
+          const animatedCards = runAnimations();
+          // spotlight on active hand
+          if (game.playerHands.length && game.current < game.playerHands.length) {
+            const pos = computeCardPos(game.current, 0);
+            const grad = ctx.createRadialGradient(
+              pos.x + CARD_W / 2,
+              pos.y + CARD_H / 2,
+              20,
+              pos.x + CARD_W / 2,
+              pos.y + CARD_H / 2,
+              120,
+            );
+            grad.addColorStop(0, 'rgba(255,255,255,0.2)');
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+          }
+
           const dealer = game.dealerHand;
           dealer.forEach((c, i) => {
             const hide = i === 0 && game.playerHands.length && game.current < game.playerHands.length;
-            const x = WIDTH / 2 - CARD_W / 2 + i * CARD_W * 0.7;
-            drawCard(c, x, 40, hide);
+            const { x, y } = computeCardPos(0, i, true);
+            if (!animatedCards.has(c)) drawCard(c, x, y, hide);
           });
 
           game.playerHands.forEach((hand, idx) => {
             const baseX = WIDTH / 2 - (game.playerHands.length * CARD_W * 0.7) / 2 + idx * CARD_W * 1.5;
             hand.cards.forEach((c, i) => {
-              drawCard(c, baseX + i * CARD_W * 0.7, HEIGHT - CARD_H - 60);
+              if (!animatedCards.has(c)) drawCard(c, baseX + i * CARD_W * 0.7, HEIGHT - CARD_H - 60);
             });
             ctx.fillStyle = 'white';
             ctx.font = '16px sans-serif';
             ctx.fillText(hand.bet.toString(), baseX, HEIGHT - 70);
+
+            const hint = basicStrategy(hand.cards, dealer[0], {
+              canDouble: game.bankroll >= hand.bet && hand.cards.length === 2,
+              canSplit:
+                hand.cards.length === 2 && cardValue(hand.cards[0]) === cardValue(hand.cards[1]) && game.bankroll >= hand.bet,
+              canSurrender: hand.cards.length === 2,
+            });
+            const badgeX = baseX + hand.cards.length * CARD_W * 0.7 + 10;
+            const badgeY = HEIGHT - CARD_H - 50;
+            ctx.fillStyle = 'gold';
+            ctx.beginPath();
+            ctx.arc(badgeX, badgeY, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.font = '12px sans-serif';
+            ctx.fillText(hint[0].toUpperCase(), badgeX - 4, badgeY + 4);
           });
         }
       }
@@ -143,18 +275,6 @@ const Blackjack = () => {
     animRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animRef.current);
   }, [paused, canvasRef]);
-
-  const hint = () => {
-    const game = gameRef.current;
-    if (!game || !game.playerHands.length || game.current >= game.playerHands.length) return '';
-    const hand = game.playerHands[game.current];
-    return basicStrategy(hand.cards, game.dealerHand[0], {
-      canDouble: game.bankroll >= hand.bet,
-      canSplit:
-        hand.cards.length === 2 && cardValue(hand.cards[0]) === cardValue(hand.cards[1]) && game.bankroll >= hand.bet,
-      canSurrender: hand.cards.length === 2,
-    });
-  };
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
@@ -172,15 +292,41 @@ const Blackjack = () => {
           Reset
         </button>
       </div>
+      <div className="mt-2 flex space-x-4 items-center">
+        <label className="flex items-center space-x-1">
+          <span>Decks</span>
+          <select
+            className="bg-gray-700"
+            value={options.decks}
+            onChange={(e) => setOptions((o) => ({ ...o, decks: parseInt(e.target.value, 10) }))}
+            disabled={gameRef.current && gameRef.current.playerHands.length > 0}
+          >
+            {[1, 2, 4, 6, 8].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center space-x-1">
+          <input
+            type="checkbox"
+            checked={options.hitSoft17}
+            onChange={(e) => setOptions((o) => ({ ...o, hitSoft17: e.target.checked }))}
+            disabled={gameRef.current && gameRef.current.playerHands.length > 0}
+          />
+          <span>Dealer hits soft 17</span>
+        </label>
+      </div>
       {gameRef.current && gameRef.current.playerHands.length === 0 ? (
         <div className="mt-2">
           <div>Bet: {bet}</div>
           <div className="flex space-x-2 mt-1">
-            {CHIP_VALUES.map((v) => (
+            {CHIP_VALUES.map((v, i) => (
               <button
                 key={v}
                 className={`px-2 py-1 bg-gray-700 ${bet + v > bankroll ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={() => bet + v <= bankroll && setBet(bet + v)}
+                onClick={() => addBet(v, i)}
               >
                 {v}
               </button>
@@ -209,7 +355,6 @@ const Blackjack = () => {
               Split
             </button>
           </div>
-          {hint() && <div className="mt-1 text-sm">Hint: {hint().toUpperCase()}</div>}
         </div>
       )}
       <div className="mt-2 text-sm">{message}</div>
