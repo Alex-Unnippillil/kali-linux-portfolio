@@ -145,6 +145,9 @@ const Sudoku = () => {
       .map(() => Array(SIZE).fill(false)),
   );
   const [solution, setSolution] = useState([]);
+  const inputRefs = useRef(
+    Array.from({ length: SIZE }, () => Array(SIZE).fill(null))
+  );
 
   const startGame = (seed) => {
     const { puzzle, solution } = generateSudoku(difficulty, seed);
@@ -304,6 +307,31 @@ const Sudoku = () => {
     }
   };
 
+  const handleKeyDown = (e, r, c) => {
+    if (e.key >= '1' && e.key <= '9') {
+      if (noteMode || e.shiftKey) {
+        e.preventDefault();
+        handleValue(r, c, e.key, true);
+      }
+      return;
+    }
+    if (
+      e.key === 'ArrowUp' ||
+      e.key === 'ArrowDown' ||
+      e.key === 'ArrowLeft' ||
+      e.key === 'ArrowRight'
+    ) {
+      e.preventDefault();
+      let nr = r;
+      let nc = c;
+      if (e.key === 'ArrowUp') nr = r > 0 ? r - 1 : r;
+      if (e.key === 'ArrowDown') nr = r < SIZE - 1 ? r + 1 : r;
+      if (e.key === 'ArrowLeft') nc = c > 0 ? c - 1 : c;
+      if (e.key === 'ArrowRight') nc = c < SIZE - 1 ? c + 1 : c;
+      inputRefs.current[nr][nc]?.focus();
+    }
+  };
+
   const applyAutoNotes = (b = board, m = manualNotes, n = notes) => {
     const newNotes = n.map((row) => row.map((nn) => nn.slice()));
     const newManual = m.map((row) => row.slice());
@@ -342,6 +370,18 @@ const Sudoku = () => {
       setHintCells([]);
       setAriaMessage('No hints available');
     }
+  };
+
+  const handleCheck = () => {
+    let errors = 0;
+    for (let r = 0; r < SIZE; r += 1) {
+      for (let c = 0; c < SIZE; c += 1) {
+        if (board[r][c] !== 0 && board[r][c] !== solution[r][c]) errors += 1;
+      }
+    }
+    setAriaMessage(
+      errors ? `${errors} incorrect ${errors === 1 ? 'cell' : 'cells'}` : 'No errors found'
+    );
   };
 
   const hasConflict = (b, r, c, val) => {
@@ -451,6 +491,12 @@ const Sudoku = () => {
           />
           <span>Auto</span>
         </label>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={handleCheck}
+        >
+          Check
+        </button>
         <button className="px-2 py-1 bg-gray-700 rounded" onClick={getHintHandler}>
           Hint
         </button>
@@ -501,7 +547,7 @@ const Sudoku = () => {
             return (
               <div
                 key={`${r}-${c}`}
-                className={`relative overflow-hidden w-8 h-8 sm:w-10 sm:h-10 ${
+                className={`relative overflow-hidden w-8 h-8 sm:w-10 sm:h-10 focus-within:ring-2 focus-within:ring-blue-500 ${
                   original ? 'bg-gray-300' : 'bg-white'
                 } ${inHighlight ? 'bg-yellow-100' : ''} ${
                   isSelected ? 'bg-yellow-200' : ''
@@ -509,25 +555,19 @@ const Sudoku = () => {
                   conflict
                     ? 'bg-red-700 error-pulse'
                     : wrong
-                    ? 'bg-red-200'
+                    ? 'bg-red-600'
                     : ''
                 } ${shimmer ? 'shimmer' : ''} ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
               >
                 <input
-                  className={`w-full h-full text-center outline-none bg-transparent ${
-                    conflict ? 'text-white' : wrong ? 'text-red-500' : 'text-black'
+                  className={`w-full h-full text-center bg-transparent outline-none focus:outline-none ${
+                    conflict || wrong ? 'text-white' : 'text-black'
                   }`}
+                  ref={(el) => (inputRefs.current[r][c] = el)}
+                  onKeyDown={(e) => handleKeyDown(e, r, c)}
                   aria-label={`Row ${r + 1} Column ${c + 1}`}
                   value={val === 0 ? '' : val}
                   onChange={(e) => handleValue(r, c, e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key >= '1' && e.key <= '9') {
-                      if (noteMode || e.shiftKey) {
-                        e.preventDefault();
-                        handleValue(r, c, e.key, true);
-                      }
-                    }
-                  }}
                   onFocus={() => setSelectedCell({ r, c })}
                   onBlur={() => setSelectedCell(null)}
                   maxLength={1}
