@@ -1,0 +1,9 @@
+[
+  {
+    "ts": "2024-01-01T00:00:00Z",
+    "uid": "C1",
+    "id_orig_h": "192.0.2.1",
+    "id_resp_h": "198.51.100.2",
+    "note": "HTTP request detected"
+  }
+]
