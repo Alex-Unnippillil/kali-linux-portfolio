@@ -14,6 +14,7 @@ const ConnectFour = () => {
   const soundRef = useRef(true);
   const hoverRef = useRef({ col: null, row: null });
   const reduceRef = useRef(false);
+  const winLineRef = useRef(null);
 
   const [, setBoardState] = useState(boardRef.current);
   const [current, setCurrent] = useState(1); // 1 red, 2 yellow
@@ -70,6 +71,7 @@ const ConnectFour = () => {
     setWinner(null);
     setCurrent(1);
     dropRef.current = null;
+    winLineRef.current = null;
     setScores({ red: 0, yellow: 0 });
   };
 
@@ -101,7 +103,13 @@ const ConnectFour = () => {
     if (col < 0 || col >= COLS) return;
     for (let r = ROWS - 1; r >= 0; r--) {
       if (boardRef.current[r][col] === 0) {
-        dropRef.current = { col, row: r, y: reduceRef.current ? r * SIZE : -SIZE, color: current };
+        dropRef.current = {
+          col,
+          row: r,
+          y: reduceRef.current ? r * SIZE : -SIZE,
+          color: current,
+          vel: 0,
+        };
         break;
       }
     }
@@ -137,22 +145,22 @@ const ConnectFour = () => {
       [1, -1],
     ];
     for (const [dx, dy] of dirs) {
-      let count = 1;
+      const line = [[row, col]];
       for (let i = 1; i < 4; i++) {
         const r = row + dy * i;
         const c = col + dx * i;
         if (r < 0 || r >= ROWS || c < 0 || c >= COLS || board[r][c] !== color) break;
-        count++;
+        line.push([r, c]);
       }
       for (let i = 1; i < 4; i++) {
         const r = row - dy * i;
         const c = col - dx * i;
         if (r < 0 || r >= ROWS || c < 0 || c >= COLS || board[r][c] !== color) break;
-        count++;
+        line.unshift([r, c]);
       }
-      if (count >= 4) return true;
+      if (line.length >= 4) return line;
     }
-    return false;
+    return null;
   };
 
   useEffect(() => {
@@ -184,7 +192,7 @@ const ConnectFour = () => {
       if (hover.col !== null) {
         ctx.fillStyle = 'rgba(255,255,255,0.2)';
         ctx.fillRect(hover.col * SIZE, 0, SIZE, canvas.height);
-        if (hover.row !== null && !dropRef.current && !pausedRef.current) {
+      if (hover.row !== null && !dropRef.current && !pausedRef.current) {
           ctx.beginPath();
           ctx.arc(
             hover.col * SIZE + SIZE / 2,
@@ -196,19 +204,27 @@ const ConnectFour = () => {
           ctx.fillStyle =
             current === 1 ? 'rgba(239,68,68,0.5)' : 'rgba(250,204,21,0.5)';
           ctx.fill();
-        }
       }
+    }
 
       if (dropRef.current && !pausedRef.current) {
         const p = dropRef.current;
         const target = p.row * SIZE;
-        if (!reduceRef.current) p.y += 8;
+        if (!reduceRef.current) {
+          p.vel += 1.5;
+          p.y += p.vel;
+        } else {
+          p.y = target;
+        }
         if (p.y >= target) {
+          p.y = target;
           boardRef.current[p.row][p.col] = p.color;
           setBoardState(boardRef.current.map((row) => row.slice()));
           dropRef.current = null;
           if (soundRef.current) beep();
-          if (checkWin(boardRef.current, p.row, p.col, p.color)) {
+          const winLine = checkWin(boardRef.current, p.row, p.col, p.color);
+          if (winLine) {
+            winLineRef.current = winLine;
             const winCol = p.color === 1 ? 'red' : 'yellow';
             setWinner(winCol);
             setScores((s) => {
@@ -218,25 +234,42 @@ const ConnectFour = () => {
               return next;
             });
           } else if (boardRef.current[0].every((v) => v !== 0)) {
+            winLineRef.current = null;
             setWinner('draw');
           } else {
+            winLineRef.current = null;
             setCurrent((c) => (c === 1 ? 2 : 1));
           }
         } else {
           ctx.beginPath();
           ctx.arc(
             p.col * SIZE + SIZE / 2,
-            (reduceRef.current ? target : p.y) + SIZE / 2,
+            p.y + SIZE / 2,
             SIZE / 2 - 5,
             0,
             Math.PI * 2
           );
           ctx.fillStyle = p.color === 1 ? '#ef4444' : '#facc15';
           ctx.fill();
-          if (reduceRef.current) {
-            p.y = target;
-          }
         }
+      }
+
+      if (winner && winLineRef.current) {
+        const color = winner === 'red' ? '#ef4444' : '#facc15';
+        ctx.save();
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 20;
+        ctx.lineCap = 'round';
+        const line = winLineRef.current;
+        const start = line[0];
+        const end = line[line.length - 1];
+        ctx.beginPath();
+        ctx.moveTo(start[1] * SIZE + SIZE / 2, start[0] * SIZE + SIZE / 2);
+        ctx.lineTo(end[1] * SIZE + SIZE / 2, end[0] * SIZE + SIZE / 2);
+        ctx.stroke();
+        ctx.restore();
       }
 
       animId = requestAnimationFrame(render);
