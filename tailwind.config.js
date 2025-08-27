@@ -56,10 +56,20 @@ module.exports = {
           '50%': { transform: 'scale(1.2) rotate(0deg)', opacity: '1' },
           '100%': { transform: 'scale(1) rotate(360deg)', opacity: '1' },
         },
+        drop: {
+          '0%': { transform: 'translateY(-1rem)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        nudge: {
+          '0%, 100%': { transform: 'translate(0, 0)' },
+          '50%': { transform: 'translate(-2px, 2px)' },
+        },
       },
       animation: {
         glow: 'glow 1s ease-in-out infinite',
         flourish: 'flourish 0.6s ease-out',
+        drop: 'drop 0.3s ease-out',
+        nudge: 'nudge 0.3s ease-out',
       },
     },
   },
