@@ -7,6 +7,12 @@ body{
     color: var(--color-text);
 }
 
+a:focus-visible,
+button:focus-visible {
+    outline: 2px solid var(--color-ubt-blue) !important;
+    outline-offset: 2px;
+}
+
 /* Top NavBar styling */
 
 .top-arrow-up {

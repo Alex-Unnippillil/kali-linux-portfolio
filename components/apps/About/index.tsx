@@ -37,17 +37,21 @@ export default function AboutApp() {
         className="mb-4"
       />
       <h2 id="about-heading" className="text-2xl font-bold mb-4">About</h2>
-      <section aria-labelledby="now-heading" className="mb-6">
+      <p className="mb-6 max-w-[60ch] leading-relaxed">
+        I'm Alex Unnippillil, a security engineer focused on building accessible
+        security tooling and exploring new web technologies.
+      </p>
+      <section aria-labelledby="now-heading" className="mb-6 max-w-[60ch]">
         <h3 id="now-heading" className="text-xl font-semibold mb-2">Now</h3>
-        <ul className="list-disc pl-5 space-y-1">
+        <ul className="list-disc pl-5 space-y-1 leading-relaxed">
           {nowItems.map((item, i) => (
             <li key={i}>{item}</li>
           ))}
         </ul>
       </section>
-      <section aria-labelledby="cv-heading" className="mb-6">
+      <section aria-labelledby="cv-heading" className="mb-6 max-w-[60ch]">
         <h3 id="cv-heading" className="text-xl font-semibold mb-2">CV Highlights</h3>
-        <ul className="list-disc pl-5 space-y-1">
+        <ul className="list-disc pl-5 space-y-1 leading-relaxed">
           {highlights.map((h, i) => (
             <li key={i}>
               <span className="font-medium">{h.role}</span> – {h.company} ({h.period})
