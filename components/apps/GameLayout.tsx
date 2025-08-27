@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -22,6 +23,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
+  const pauseRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(pauseRef, paused);
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const close = useCallback(() => setShowHelp(false), []);
@@ -72,10 +75,20 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const resume = useCallback(() => setPaused(false), []);
 
   return (
-    <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
+    <main
+      id={`${gameId}-main`}
+      aria-label={`${gameId} game area`}
+      aria-describedby={`${gameId}-hotkeys`}
+      className="relative h-full w-full"
+      data-reduced-motion={prefersReducedMotion}
+    >
+      <p id={`${gameId}-hotkeys`} className="sr-only">
+        Press ? for hotkeys
+      </p>
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
       {paused && (
         <div
+          ref={pauseRef}
           className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
           role="dialog"
           aria-modal="true"
@@ -83,7 +96,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <button
             type="button"
             onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className="px-4 py-2 bg-gray-700 text-white rounded focus-visible:outline focus-visible:ring"
             autoFocus
           >
             Resume
@@ -95,7 +108,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         aria-label="Help"
         aria-expanded={showHelp}
         onClick={toggle}
-        className="absolute top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+        className="absolute top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus-visible:outline focus-visible:ring"
       >
         ?
       </button>
@@ -107,7 +120,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         {highScore !== undefined && <div>High: {highScore}</div>}
       </div>
       {!prefersReducedMotion && <PerfOverlay />}
-    </div>
+    </main>
   );
 };
 

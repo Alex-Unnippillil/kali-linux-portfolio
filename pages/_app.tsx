@@ -24,6 +24,12 @@ function MyApp({ Component, pageProps }: AppProps) {
   }, []);
   return (
     <SettingsProvider>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:outline focus:ring"
+      >
+        Skip to content
+      </a>
       <DemoBanner />
       <Component {...pageProps} />
       <Analytics />

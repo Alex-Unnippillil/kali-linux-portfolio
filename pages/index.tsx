@@ -7,11 +7,13 @@ import MockTerminal from '../components/MockTerminal';
 const App: React.FC = () => (
   <>
     <Meta />
-    <Ubuntu />
-    <InstallButton />
-    <div className="p-4">
-      <MockTerminal />
-    </div>
+    <main id="main-content" aria-label="Main content">
+      <Ubuntu />
+      <InstallButton />
+      <div className="p-4">
+        <MockTerminal />
+      </div>
+    </main>
   </>
 );
 
