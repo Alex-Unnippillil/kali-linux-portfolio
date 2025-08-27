@@ -67,6 +67,10 @@ const Hangman = () => {
   const [shake, setShake] = useState(false);
   const usedWordsRef = useRef([]);
 
+  useEffect(() => {
+    logEvent('app_open', { id: 'hangman' });
+  }, []);
+
   const length = lengthOptions[lengthIndex];
 
   const hintLimits = { easy: Infinity, medium: 1, hard: 0 };
@@ -124,7 +128,7 @@ const Hangman = () => {
         setTimeout(() => btn.classList.remove('key-press'), 100);
       }
       if (guessed.includes(letter) || isGameOver()) return;
-      logEvent({ category: 'hangman', action: 'guess', label: letter });
+      logEvent('app_action', { id: 'hangman', action: 'guess', label: letter });
       setGuessed((g) => [...g, letter]);
       if (!word.includes(letter)) {
         setWrong((w) => w + 1);
@@ -155,7 +159,7 @@ const Hangman = () => {
         return acc;
       }, {});
       const best = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
-      logEvent({ category: 'hangman', action: 'hint' });
+      logEvent('app_action', { id: 'hangman', action: 'hint' });
       setHint(`Try letter ${best.toUpperCase()}`);
       setScore((s) => s - 5);
       setHintsUsed((h) => h + 1);
@@ -196,8 +200,8 @@ const Hangman = () => {
     useEffect(() => {
       if (!gameEnded && isGameOver()) {
         logGameEnd('hangman', isWinner() ? 'win' : 'lose');
-        logEvent({
-          category: 'hangman',
+        logEvent('app_action', {
+          id: 'hangman',
           action: 'game_over',
           label: isWinner() ? 'win' : 'lose',
           value: guessed.length,
@@ -207,8 +211,8 @@ const Hangman = () => {
     }, [gameEnded, guessed, isGameOver, isWinner]);
 
   useEffect(() => {
-    logEvent({
-      category: 'hangman',
+    logEvent('app_action', {
+      id: 'hangman',
       action: 'category_select',
       label: `${theme}-${difficulty}`,
     });

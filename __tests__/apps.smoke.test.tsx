@@ -5,6 +5,12 @@ import { render } from '@testing-library/react';
 
 // Some apps import this package which isn't installed in the test env
 jest.mock('styled-jsx/style', () => () => null, { virtual: true });
+jest.mock('../utils/analytics', () => ({
+  logEvent: jest.fn(),
+  logGameStart: jest.fn(),
+  logGameEnd: jest.fn(),
+  logGameError: jest.fn(),
+}));
 
 // Mock browser APIs that may be missing in the Jest environment
 beforeAll(() => {

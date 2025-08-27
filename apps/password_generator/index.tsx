@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { logEvent } from '../../utils/analytics';
 
 const LOWER = 'abcdefghijklmnopqrstuvwxyz';
 const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -13,7 +14,12 @@ const PasswordGenerator: React.FC = () => {
   const [useSymbols, setUseSymbols] = useState(false);
   const [password, setPassword] = useState('');
 
+  useEffect(() => {
+    logEvent('app_open', { id: 'password_generator' });
+  }, []);
+
   const generatePassword = () => {
+    logEvent('app_action', { id: 'password_generator', action: 'generate' });
     let chars = '';
     if (useLower) chars += LOWER;
     if (useUpper) chars += UPPER;
@@ -35,6 +41,7 @@ const PasswordGenerator: React.FC = () => {
     if (!password) return;
     try {
       await navigator.clipboard?.writeText(password);
+      logEvent('app_action', { id: 'password_generator', action: 'copy' });
     } catch (e) {
       // ignore
     }
