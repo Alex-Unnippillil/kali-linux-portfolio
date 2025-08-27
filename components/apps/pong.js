@@ -7,6 +7,7 @@ const FRAME_TIME = 1000 / 60; // ideal frame time in ms
 const WIN_POINTS = 5; // points to win a game
 const MAX_BALL_SPEED = 600; // maximum ball speed in px/s
 const HIT_SPEEDUP = 1.05; // speed multiplier when the ball hits a paddle
+const BALL_TRAIL_LENGTH = 10; // length of the ball trail
 
 // Pong component with spin, adjustable AI and experimental WebRTC multiplayer
 const WIDTH = 600;
@@ -116,9 +117,16 @@ const Pong = () => {
     };
 
     const ballTrail = [];
-    const prefersReducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches;
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let prefersReducedMotion = motionQuery.matches;
+    const handleMotionChange = (e) => {
+      prefersReducedMotion = e.matches;
+    };
+    if (motionQuery.addEventListener) {
+      motionQuery.addEventListener('change', handleMotionChange);
+    } else if (motionQuery.addListener) {
+      motionQuery.addListener(handleMotionChange);
+    }
 
     let playerScore = 0;
     let oppScore = 0;
@@ -198,10 +206,10 @@ const Pong = () => {
         ctx.fillStyle = 'white';
         for (let i = 0; i < ballTrail.length; i += 1) {
           const t = ballTrail[i];
-          const alpha = (i + 1) / ballTrail.length;
-          ctx.globalAlpha = alpha * 0.3;
+          const progress = (i + 1) / ballTrail.length;
+          ctx.globalAlpha = progress * 0.3;
           ctx.beginPath();
-          ctx.arc(t.x, t.y, ball.size, 0, Math.PI * 2);
+          ctx.arc(t.x, t.y, ball.size * progress, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.globalAlpha = 1;
@@ -302,7 +310,7 @@ const Pong = () => {
       ball.y += ball.vy * dt;
       if (!prefersReducedMotion) {
         ballTrail.push({ x: ball.x, y: ball.y });
-        if (ballTrail.length > 10) ballTrail.shift();
+        if (ballTrail.length > BALL_TRAIL_LENGTH) ballTrail.shift();
       }
 
       // wall collisions
@@ -323,10 +331,12 @@ const Pong = () => {
         // add spin based on paddle velocity and impact point
         ball.vx = Math.abs(ball.vx) * dir;
         ball.vy += pad.vy * 0.1 + relative * 200;
-        pad.scale = 1.2;
-        pad.widthScale = 0.8;
-        pad.rot = relative * 0.3;
-        ball.scale = 1.2;
+        if (!prefersReducedMotion) {
+          pad.scale = 1.2;
+          pad.widthScale = 0.8;
+          pad.rot = relative * 0.3;
+          ball.scale = 1.2;
+        }
         const speed = Math.hypot(ball.vx, ball.vy) * HIT_SPEEDUP;
         const ratio = Math.min(speed, MAX_BALL_SPEED) / Math.hypot(ball.vx, ball.vy);
         ball.vx *= ratio;
@@ -438,6 +448,11 @@ const Pong = () => {
 
     return () => {
       cancelAnimationFrame(animationId);
+      if (motionQuery.removeEventListener) {
+        motionQuery.removeEventListener('change', handleMotionChange);
+      } else if (motionQuery.removeListener) {
+        motionQuery.removeListener(handleMotionChange);
+      }
     };
   }, [difficulty, mode, connected, matchWinner, controls, canvasRef]);
 
@@ -506,7 +521,7 @@ const Pong = () => {
         ref={canvasRef}
         className="bg-black w-full h-full touch-none"
       />
-      <div className="mt-2" aria-live="polite">
+      <div className="mt-2" aria-live="polite" role="status">
         Player: {scores.player} | Opponent: {scores.opponent}
       </div>
       <div className="mt-1">Games: {match.player} | {match.opponent}</div>
