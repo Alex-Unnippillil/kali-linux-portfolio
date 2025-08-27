@@ -1,17 +1,14 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { promisify } from 'util';
 
-const run = (cmd) =>
-  new Promise((resolve) => {
-    exec(cmd, (error, stdout, stderr) => {
-      if (error) resolve({ error: stderr || error.message });
-      else resolve({ result: stdout });
-    });
-  });
+const execFileAsync = promisify(execFile);
 
 export default async function handler(req, res) {
+  // Radare2 utilities are optional; this endpoint may be stubbed when the
+  // binaries are unavailable.
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: 'Method not allowed' });
@@ -21,19 +18,42 @@ export default async function handler(req, res) {
 
   try {
     if (action === 'disasm' && hex) {
-      const { result, error } = await run(`rasm2 -d '${hex}'`);
-      if (error) return res.status(500).json({ error });
-      return res.status(200).json({ result });
+      try {
+        await execFileAsync('which', ['rasm2']);
+      } catch {
+        return res.status(500).json({ error: 'radare2 not installed' });
+      }
+      try {
+        const { stdout } = await execFileAsync('rasm2', ['-d', hex], {
+          timeout: 1000 * 60,
+        });
+        return res.status(200).json({ result: stdout });
+      } catch (error) {
+        const msg = error.stderr?.toString() || error.message;
+        return res.status(500).json({ error: msg });
+      }
     }
 
     if (action === 'analyze' && file) {
+      try {
+        await execFileAsync('which', ['rabin2']);
+      } catch {
+        return res.status(500).json({ error: 'radare2 not installed' });
+      }
       const buffer = Buffer.from(file, 'base64');
       const tmpPath = path.join(os.tmpdir(), `radare2-${Date.now()}`);
       fs.writeFileSync(tmpPath, buffer);
-      const { result, error } = await run(`rabin2 -I ${tmpPath}`);
-      fs.unlink(tmpPath, () => {});
-      if (error) return res.status(500).json({ error });
-      return res.status(200).json({ result });
+      try {
+        const { stdout } = await execFileAsync('rabin2', ['-I', tmpPath], {
+          timeout: 1000 * 60,
+        });
+        fs.unlink(tmpPath, () => {});
+        return res.status(200).json({ result: stdout });
+      } catch (error) {
+        fs.unlink(tmpPath, () => {});
+        const msg = error.stderr?.toString() || error.message;
+        return res.status(500).json({ error: msg });
+      }
     }
 
     return res.status(400).json({ error: 'Invalid request' });
