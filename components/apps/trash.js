@@ -1,55 +1,26 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
+import { trash } from '../../utils/trash';
 
 export class Trash extends Component {
     constructor() {
         super();
-        this.trashItems = [
-            {
-                name: "php",
-                icon: "/themes/filetypes/php.png"
-            },
-            {
-                name: "Angular.js",
-                icon: "/themes/filetypes/js.png"
-            },
-            {
-                name: "node_modules",
-                icon: "/themes/Yaru/system/folder.png"
-            },
-
-            {
-                name: "abandoned project",
-                icon: "/themes/Yaru/system/folder.png"
-            },
-            {
-                name: "INFR 4900U blockchain assignment AlexUnnippillil.zip",
-                icon: "/themes/filetypes/zip.png"
-            },
-            {
-                name: "cryptography project final",
-                icon: "/themes/Yaru/system/folder.png"
-            },
-            {
-                name: "project machine learning-final",
-                icon: "/themes/Yaru/system/folder.png"
-            },
-
-        ];
         this.state = {
-            empty: false,
+            items: trash.list(),
+            selectedId: null,
             fileHandle: null,
             filePreview: null,
             confirmDelete: false,
+            confirmEmpty: false,
         }
     }
 
     componentDidMount() {
-        // get user preference from local-storage
-        let wasEmpty = localStorage.getItem("trash-empty");
-        if (wasEmpty !== null && wasEmpty !== undefined) {
-            if (wasEmpty === "true") this.setState({ empty: true });
-        }
+        this.unsubscribe = trash.subscribe((items) => this.setState({ items }));
+    }
+
+    componentWillUnmount() {
+        if (this.unsubscribe) this.unsubscribe();
     }
 
     focusFile = (e) => {
@@ -60,9 +31,25 @@ export class Trash extends Component {
         if (children[1]) children[1].classList.toggle("bg-ub-orange");
     }
 
+    requestEmpty = () => {
+        this.setState({ confirmEmpty: true });
+    };
+
     emptyTrash = () => {
-        this.setState({ empty: true });
-        localStorage.setItem("trash-empty", true);
+        trash.empty();
+        this.setState({ selectedId: null, confirmEmpty: false });
+    };
+
+    cancelEmpty = () => {
+        this.setState({ confirmEmpty: false });
+    };
+
+    restoreItem = () => {
+        const { selectedId } = this.state;
+        if (selectedId) {
+            trash.restore(selectedId);
+            this.setState({ selectedId: null });
+        }
     };
 
     emptyScreen = () => {
@@ -85,19 +72,19 @@ export class Trash extends Component {
         return (
             <div className="flex-grow ml-4 flex flex-wrap items-start content-start justify-start overflow-y-auto windowMainScreen">
                 {
-                    this.trashItems.map((item, index) => {
+                    this.state.items.map((item) => {
                         return (
-                            <div key={index} tabIndex="1" onFocus={this.focusFile} onBlur={this.focusFile} className="flex flex-col items-center text-sm outline-none w-16 my-2 mx-4">
+                            <div key={item.id} tabIndex="1" onFocus={this.focusFile} onBlur={this.focusFile} onClick={() => this.setState({ selectedId: item.id })} className="flex flex-col items-center text-sm outline-none w-16 my-2 mx-4">
                                 <div className="w-16 h-16 flex items-center justify-center">
                                     <Image
-                                        src={item.icon}
+                                        src={item.payload?.icon || '/themes/Yaru/system/folder.png'}
                                         alt="Ubuntu File Icons"
                                         width={48}
                                         height={48}
                                         sizes="48px"
                                     />
                                 </div>
-                                <span className="text-center rounded px-0.5">{item.name}</span>
+                                <span className="text-center rounded px-0.5">{item.payload?.name || item.id}</span>
                             </div>
                         )
                     })
@@ -153,14 +140,14 @@ export class Trash extends Component {
         return (
             <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none relative">
                 <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
-                    <span className="font-bold ml-2">Trash</span>
+                    <span className="font-bold ml-2">Trash ({this.state.items.length})</span>
                     <div className="flex">
-                        <div className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded text-gray-300">Restore</div>
-                        <div onClick={this.emptyTrash} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty</div>
+                        <div onClick={this.restoreItem} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded text-gray-300 hover:bg-opacity-80">Restore</div>
+                        <div onClick={this.requestEmpty} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty</div>
                         <div onClick={this.selectFile} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Delete File</div>
                     </div>
                 </div>
-                {this.state.empty ? this.emptyScreen() : this.showTrashItems()}
+                {this.state.items.length === 0 ? this.emptyScreen() : this.showTrashItems()}
                 {this.state.confirmDelete && (
                     <div className="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4">
                         <div className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full">
@@ -173,6 +160,17 @@ export class Trash extends Component {
                             <div className="flex justify-end space-x-2">
                                 <button onClick={this.deleteSelected} className="px-3 py-1 bg-red-600 rounded">Delete</button>
                                 <button onClick={this.cancelDelete} className="px-3 py-1 bg-gray-600 rounded">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {this.state.confirmEmpty && (
+                    <div className="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4">
+                        <div className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full">
+                            <p className="mb-2">Empty trash? This will permanently delete {this.state.items.length} item(s).</p>
+                            <div className="flex justify-end space-x-2">
+                                <button onClick={this.emptyTrash} className="px-3 py-1 bg-red-600 rounded">Empty</button>
+                                <button onClick={this.cancelEmpty} className="px-3 py-1 bg-gray-600 rounded">Cancel</button>
                             </div>
                         </div>
                     </div>
