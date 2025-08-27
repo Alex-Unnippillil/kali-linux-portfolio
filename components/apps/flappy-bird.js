@@ -22,17 +22,46 @@ const FlappyBird = () => {
     const jump = -8;
 
     const pipeWidth = 40;
-    const gap = 80;
     const pipeInterval = 100;
     const pipeSpeed = 2;
+    const minGap = 60;
+    const maxGap = 120;
 
     let pipes = [];
     let frame = 0;
     let score = 0;
+    let highScore = 0;
+    let medal = '';
     let running = true;
+    let paused = false;
+    let soundOn = true;
     let animationFrameId = 0;
+    let audioCtx;
+
+    try {
+      const stored = localStorage.getItem('flappy_highscore');
+      if (stored) highScore = parseInt(stored, 10);
+    } catch {
+      /* ignore */
+    }
+
+    function playSound(freq, duration = 100) {
+      if (!soundOn) return;
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!audioCtx) audioCtx = new Ctx();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration / 1000);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration / 1000);
+    }
 
     function addPipe() {
+      const gap = minGap + Math.random() * (maxGap - minGap);
       const top = Math.random() * (height - gap - 40) + 20;
       pipes.push({ x: width, top, bottom: top + gap });
     }
@@ -42,11 +71,14 @@ const FlappyBird = () => {
       pipes = [];
       frame = 0;
       score = 0;
+      medal = '';
       running = true;
+      paused = false;
     }
 
     function flap() {
       bird.vy = jump;
+      playSound(600, 80);
     }
 
     function draw() {
@@ -72,8 +104,18 @@ const FlappyBird = () => {
       ctx.font = '16px sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(`Score: ${score}`, 10, 20);
+      ctx.fillText(`High: ${highScore}`, 10, 40);
+      ctx.fillText(`Sound: ${soundOn ? 'On' : 'Off'}`, 10, 60);
 
-      if (!running) {
+      if (paused && running) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.font = '24px sans-serif';
+        ctx.fillText('Paused', width / 2, height / 2);
+        ctx.textAlign = 'left';
+      } else if (!running) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(0, 0, width, height);
         ctx.fillStyle = 'white';
@@ -82,12 +124,13 @@ const FlappyBird = () => {
         ctx.fillText('Game Over', width / 2, height / 2);
         ctx.font = '16px sans-serif';
         ctx.fillText('Press Space or Click to restart', width / 2, height / 2 + 30);
+        if (medal) ctx.fillText(`Medal: ${medal}`, width / 2, height / 2 + 60);
         ctx.textAlign = 'left';
       }
     }
 
     function update() {
-      if (!running) return;
+      if (!running || paused) return;
 
       frame += 1;
 
@@ -99,6 +142,7 @@ const FlappyBird = () => {
       // top/bottom collision
       if (bird.y + 10 > height || bird.y - 10 < 0) {
         running = false;
+        playSound(220, 300);
       }
 
       // move pipes and track passed ones
@@ -114,6 +158,7 @@ const FlappyBird = () => {
           (bird.y - 10 < pipe.top || bird.y + 10 > pipe.bottom)
         ) {
           running = false;
+          playSound(220, 300);
         }
 
         if (pipe.x + pipeWidth < 0) {
@@ -123,7 +168,19 @@ const FlappyBird = () => {
 
       if (passed) {
         score += passed;
+        playSound(800, 80);
         pipes = pipes.filter((p) => p.x + pipeWidth >= 0);
+      }
+
+      if (!running) {
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem('flappy_highscore', String(highScore));
+        }
+        const s = score;
+        if (s >= 30) medal = 'Gold';
+        else if (s >= 20) medal = 'Silver';
+        else if (s >= 10) medal = 'Bronze';
       }
 
       draw();
@@ -134,22 +191,35 @@ const FlappyBird = () => {
     function handleKey(e) {
       if (e.code === 'Space') {
         e.preventDefault();
-        if (running) {
+        if (running && !paused) {
           flap();
-        } else {
+        } else if (!running) {
           reset();
           addPipe();
           animationFrameId = requestAnimationFrame(update);
         }
+      } else if (e.code === 'KeyP') {
+        paused = !paused;
+        if (!paused && running) animationFrameId = requestAnimationFrame(update);
+        draw();
+      } else if (e.code === 'KeyR') {
+        reset();
+        addPipe();
+        draw();
+        animationFrameId = requestAnimationFrame(update);
+      } else if (e.code === 'KeyM') {
+        soundOn = !soundOn;
+        draw();
       }
     }
 
     function handlePointer() {
-      if (running) {
+      if (running && !paused) {
         flap();
       } else {
         reset();
         addPipe();
+        draw();
         animationFrameId = requestAnimationFrame(update);
       }
     }
