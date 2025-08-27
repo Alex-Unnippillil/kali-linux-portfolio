@@ -1,22 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-
-const demoForecast = () => {
-  const now = new Date();
-  const day = (n) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() + n);
-    return d.toISOString().slice(0, 10);
-  };
-  return {
-    current_weather: { temperature: 21, weathercode: 0 },
-    daily: {
-      time: [day(0), day(1), day(2)],
-      temperature_2m_max: [24, 23, 22],
-      temperature_2m_min: [16, 15, 14],
-      weathercode: [0, 1, 61],
-    },
-  };
-};
+import React, { useEffect, useState, useRef } from 'react';
+import { DEFAULT_LOCATION, getForecast } from '../../lib/weather';
 
 const SunIcon = ({ still }) => {
   const ref = useRef(null);
@@ -92,8 +75,7 @@ const RainIcon = ({ still }) => {
     let frame;
     const animate = () => {
       y = (y + 1) % 16;
-      if (groupRef.current)
-        groupRef.current.style.transform = `translateY(${y}px)`;
+      if (groupRef.current) groupRef.current.style.transform = `translateY(${y}px)`;
       frame = requestAnimationFrame(animate);
     };
     frame = requestAnimationFrame(animate);
@@ -142,29 +124,22 @@ const getCondition = (code) =>
 const Weather = () => {
   const [data, setData] = useState(null);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [unit, setUnit] = useState('metric');
 
   useEffect(() => {
     const load = async () => {
-      if (!navigator.geolocation) {
-        setData(demoForecast());
-        return;
+      try {
+        const position = await new Promise((resolve, reject) => {
+          if (!navigator.geolocation) return reject();
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+        const { latitude, longitude } = position.coords;
+        const json = await getForecast({ latitude, longitude });
+        setData(json);
+      } catch {
+        const json = await getForecast(DEFAULT_LOCATION);
+        setData(json);
       }
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          try {
-            const { latitude, longitude } = pos.coords;
-            const url =
-              `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=auto`;
-            const res = await fetch(url);
-            if (!res.ok) throw new Error('Failed to fetch forecast');
-            const json = await res.json();
-            setData(json);
-          } catch {
-            setData(demoForecast());
-          }
-        },
-        () => setData(demoForecast())
-      );
     };
     load();
   }, []);
@@ -177,13 +152,8 @@ const Weather = () => {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  if (!data) {
-    return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
-        Loading...
-      </div>
-    );
-  }
+  const toUnit = (c) =>
+    unit === 'metric' ? c : c * (9 / 5) + 32;
 
   const formatDate = (str) =>
     new Intl.DateTimeFormat(undefined, {
@@ -192,28 +162,80 @@ const Weather = () => {
       day: 'numeric',
     }).format(new Date(str));
 
+  const formatTime = (str) =>
+    new Intl.DateTimeFormat(undefined, {
+      hour: 'numeric',
+      minute: 'numeric',
+    }).format(new Date(str));
+
+  if (!data) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
+        Loading...
+      </div>
+    );
+  }
+
   const { gradient, Icon } = getCondition(data.current_weather.weathercode);
+  const hourlyHours = data.hourly.time.slice(0, 24);
+  const hourlyTemps = data.hourly.temperature_2m.slice(0, 24);
+  const hourlyPrecip = data.hourly.precipitation_probability.slice(0, 24);
+  const maxTemp = Math.max(...hourlyTemps);
+  const minTemp = Math.min(...hourlyTemps);
+  const points = hourlyTemps
+    .map((t, i) => {
+      const x = (i / (hourlyTemps.length - 1)) * 100;
+      const y = 100 - ((t - minTemp) / (maxTemp - minTemp)) * 100;
+      return `${x},${y}`;
+    })
+    .join(' ');
 
   return (
     <div
-      className={`h-full w-full flex flex-col items-center justify-center text-white p-4 overflow-auto ${gradient}`}
+      className={`h-full w-full flex flex-col items-center text-white p-4 overflow-auto ${gradient}`}
       aria-live="polite"
     >
       <Icon still={reduceMotion} />
-      <div className="text-4xl mb-4">
-        {Math.round(data.current_weather.temperature)}°C
+      <div className="text-4xl mb-2">
+        {Math.round(toUnit(data.current_weather.temperature))}°
+        {unit === 'metric' ? 'C' : 'F'}
       </div>
-      <ul className="text-sm w-full max-w-xs space-y-1">
-        {data.daily.time.map((t, i) => (
+      <button
+        className="mb-4 px-2 py-1 bg-black/20 rounded"
+        onClick={() => setUnit(unit === 'metric' ? 'imperial' : 'metric')}
+      >
+        Switch to {unit === 'metric' ? '°F' : '°C'}
+      </button>
+      <div className="text-sm mb-4">
+        Sunrise: {formatTime(data.daily.sunrise[0])} | Sunset:{' '}
+        {formatTime(data.daily.sunset[0])}
+      </div>
+      <svg viewBox="0 0 100 100" className="w-full max-w-md h-24 mb-4">
+        <polyline points={points} fill="none" stroke="currentColor" strokeWidth="2" />
+      </svg>
+      <ul className="text-xs w-full max-w-md grid grid-cols-2 gap-2 mb-4">
+        {hourlyHours.map((t, i) => (
           <li key={t} className="flex justify-between">
-            <span>{formatDate(t)}</span>
+            <span>{formatTime(t)}</span>
             <span>
-              {Math.round(data.daily.temperature_2m_max[i])}/
-              {Math.round(data.daily.temperature_2m_min[i])}°C
+              {Math.round(toUnit(hourlyTemps[i]))}° / {hourlyPrecip[i]}%
             </span>
           </li>
         ))}
       </ul>
+      <div className="text-lg mb-2">Daily Forecast</div>
+      <div className="grid grid-cols-2 gap-2 w-full max-w-md mb-4">
+        {data.daily.time.map((t, i) => (
+          <div key={t} className="bg-black/20 p-2 rounded text-center">
+            <div className="text-sm">{formatDate(t)}</div>
+            <div className="text-lg">
+              {Math.round(toUnit(data.daily.temperature_2m_max[i]))}/
+              {Math.round(toUnit(data.daily.temperature_2m_min[i]))}°
+            </div>
+            <div className="text-xs">{data.daily.precipitation_probability_max[i]}%</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -223,4 +245,3 @@ export default Weather;
 export const displayWeather = () => {
   return <Weather />;
 };
-

@@ -1,4 +1,5 @@
 const CACHE_NAME = 'game-cache-v1';
+const WEATHER_CACHE = 'weather-cache-v1';
 const CORE_ASSETS = [
   '/',
   '/apps/sokoban',
@@ -20,6 +21,26 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  const url = new URL(event.request.url);
+  // Cache weather API responses separately with a network-first strategy
+  if (url.hostname === 'api.open-meteo.com') {
+    event.respondWith(
+      caches.open(WEATHER_CACHE).then(async (cache) => {
+        try {
+          const resp = await fetch(event.request);
+          cache.put(event.request, resp.clone());
+          return resp;
+        } catch (e) {
+          const cached = await cache.match(event.request);
+          if (cached) return cached;
+          throw e;
+        }
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((resp) => resp || fetch(event.request))
   );
