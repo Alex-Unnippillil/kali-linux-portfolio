@@ -19,6 +19,7 @@ function setupDom() {
       <div id="paren-indicator"></div>
       <button id="print-tape"></button>
     </body></html>`
+  , { url: "http://localhost" }
   );
   global.window = dom.window;
   global.document = dom.window.document;

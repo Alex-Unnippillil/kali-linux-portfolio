@@ -36,6 +36,7 @@
     "jsqr": "^1.4.0",
     "mathjs": "^14.6.0",
     "matter-js": "0.20.0",
+    "monaco-editor": "^0.52.2",
     "next": "^15.0.0",
     "pdfjs-dist": "^5.4.54",
     "phaser": "3.70.0",
