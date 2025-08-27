@@ -25,11 +25,13 @@ const Checkers = () => {
   const [hint, setHint] = useState<Move | null>(null);
   const [lastMove, setLastMove] = useState<[number, number][]>([]);
   const [crowned, setCrowned] = useState<[number, number] | null>(null);
+  const [ariaMessage, setAriaMessage] = useState('');
 
   const workerRef = useRef<Worker | null>(null);
   const hintRequest = useRef(false);
   const pathRef = useRef<[number, number][]>([]);
   const makeMoveRef = useRef<((move: Move) => void) | null>(null);
+  const crownFrame = useRef<number>();
 
   useEffect(() => {
     workerRef.current = new Worker('/checkers-worker.js');
@@ -94,6 +96,7 @@ const Checkers = () => {
     if (filtered.length) {
       setSelected([r, c]);
       setMoves(filtered);
+      setAriaMessage(`${filtered.length} legal move${filtered.length > 1 ? 's' : ''} available`);
     }
   };
 
@@ -113,7 +116,17 @@ const Checkers = () => {
     setBoard(newBoard);
     if (king) {
       setCrowned([move.to[0], move.to[1]]);
-      setTimeout(() => setCrowned(null), 1000);
+      setAriaMessage(`Piece crowned at row ${move.to[0] + 1}, column ${move.to[1] + 1}`);
+      if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
+      const start = performance.now();
+      const step = (now: number) => {
+        if (now - start > 1000) {
+          setCrowned(null);
+        } else {
+          crownFrame.current = requestAnimationFrame(step);
+        }
+      };
+      crownFrame.current = requestAnimationFrame(step);
     }
     if (capture && further.length) {
       setSelected([move.to[0], move.to[1]]);
@@ -159,12 +172,14 @@ const Checkers = () => {
     setMoves([]);
     setHint(null);
     setLastMove(pathRef.current);
+    setAriaMessage('');
     pathRef.current = [];
     };
 
     makeMoveRef.current = makeMove;
 
   const reset = () => {
+    if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
     setBoard(createBoard());
     setTurn('red');
     setSelected(null);
@@ -177,6 +192,7 @@ const Checkers = () => {
     setHint(null);
     setLastMove([]);
     setCrowned(null);
+    setAriaMessage('');
     pathRef.current = [];
     localStorage.removeItem('checkersState');
   };
@@ -195,6 +211,8 @@ const Checkers = () => {
     setMoves([]);
     setHint(null);
     setLastMove([]);
+    if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
+    setAriaMessage('');
     pathRef.current = [];
   };
 
@@ -212,6 +230,8 @@ const Checkers = () => {
     setMoves([]);
     setHint(null);
     setLastMove([]);
+    if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
+    setAriaMessage('');
     pathRef.current = [];
     if (next.turn === 'black') {
       workerRef.current?.postMessage({ board: next.board, color: 'black', maxDepth: 8 });
@@ -225,6 +245,9 @@ const Checkers = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <div aria-live="polite" className="sr-only">
+        {ariaMessage}
+      </div>
       {winner && <div className="mb-2 text-xl">{winner} wins!</div>}
       {draw && <div className="mb-2 text-xl">Draw!</div>}
       <div className="grid grid-cols-8 gap-0">
@@ -245,9 +268,13 @@ const Checkers = () => {
                 )}
                 className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
-                } ${isMove ? 'ring-2 ring-yellow-300 animate-pulse' : ''} ${
+                } ${
+                  isMove
+                    ? 'ring-4 ring-amber-300 ring-offset-2 ring-offset-black drop-shadow-[0_0_6px_#facc15] motion-safe:animate-glow'
+                    : ''
+                } ${
                   isHint || isHintDest
-                    ? 'ring-2 ring-blue-400 animate-pulse'
+                    ? 'ring-2 ring-blue-400 motion-safe:animate-pulse'
                     : ''
                 } ${isSelected ? 'ring-2 ring-green-400' : ''} ${
                   isLast ? 'ring-2 ring-red-400' : ''
@@ -258,7 +285,7 @@ const Checkers = () => {
                     className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center ${
                       cell.color === 'red' ? 'bg-red-500' : 'bg-black'
                     } ${cell.king ? 'border-4 border-yellow-300' : ''} ${
-                      isCrowned ? 'animate-bounce' : ''
+                      isCrowned ? 'motion-safe:animate-flourish' : ''
                     }`}
                   >
                     {cell.king && (
