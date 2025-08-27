@@ -18,19 +18,26 @@ const derivePin = (bssid) => {
   return `${num}`.padStart(7, '0') + cs;
 };
 
-function ProgressRing({ progress, prefersReduced }) {
+function ProgressRing({ progress, prefersReduced, status }) {
   const radius = 24;
   const stroke = 4;
   const normalizedRadius = radius - stroke * 2;
   const circumference = normalizedRadius * 2 * Math.PI;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
+  const color =
+    status === 'failure'
+      ? 'text-red-400'
+      : status === 'success'
+      ? 'text-green-400'
+      : 'text-green-400';
 
   return (
     <svg
       height={radius * 2}
       width={radius * 2}
-      className="text-green-400"
+      className={color}
       role="progressbar"
+      aria-label="Handshake progress"
       aria-valuemin="0"
       aria-valuemax="100"
       aria-valuenow={Math.round(progress)}
@@ -42,7 +49,9 @@ function ProgressRing({ progress, prefersReduced }) {
         strokeDasharray={`${circumference} ${circumference}`}
         style={{
           strokeDashoffset,
-          transition: prefersReduced ? 'none' : 'stroke-dashoffset 0.2s linear',
+          transition: prefersReduced
+            ? 'none'
+            : 'stroke-dashoffset 0.2s linear',
         }}
         r={normalizedRadius}
         cx={radius}
@@ -158,7 +167,11 @@ export default function ReaverApp() {
       </button>
       {running && (
         <div className="mt-4 flex items-center space-x-4">
-          <ProgressRing progress={progress} prefersReduced={prefersReduced} />
+          <ProgressRing
+            progress={progress}
+            prefersReduced={prefersReduced}
+            status={status}
+          />
           <div aria-live="polite" className="text-sm">
             {steps[step]}
           </div>
@@ -167,16 +180,18 @@ export default function ReaverApp() {
       {status && (
         <div
           className={`mt-4 text-sm ${
-            status === 'success' ? 'text-green-400' : 'text-red-400'
+            status === 'success' ? 'text-green-300' : 'text-red-300'
           }`}
-          aria-live="polite"
+          aria-live="assertive"
         >
           {status === 'success'
             ? `Handshake complete. PIN discovered: ${pin}`
             : 'Handshake failed. Invalid BSSID.'}
         </div>
       )}
-      <pre className="mt-4 bg-black text-green-400 p-2 h-48 overflow-y-auto font-mono whitespace-pre-wrap">
+      <pre
+        className="mt-4 bg-black text-green-400 p-2 h-48 overflow-y-auto font-mono whitespace-pre-wrap"
+      >
         {log}
       </pre>
     </div>
