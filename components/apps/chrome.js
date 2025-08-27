@@ -8,6 +8,8 @@ export class Chrome extends Component {
         this.state = {
             url: this.home_url,
             display_url: this.home_url,
+            loading: true,
+            favicon: this.getFavicon(this.home_url),
         }
     }
 
@@ -16,7 +18,13 @@ export class Chrome extends Component {
         // but many sites restrict being loaded inside an iframe which resulted
         // in error pages on reload. Default to the home page instead.
         // The "igu=1" parameter allows Google Search to load inside an iframe.
-        this.setState({ url: this.home_url, display_url: this.home_url }, this.refreshChrome);
+        this.setState(
+            { url: this.home_url, display_url: this.home_url, loading: true },
+            () => {
+                this.updateFavicon(this.home_url);
+                this.refreshChrome();
+            }
+        );
     }
 
     storeVisitedUrl = (url, display_url) => {
@@ -25,12 +33,19 @@ export class Chrome extends Component {
     }
 
     refreshChrome = () => {
-        document.getElementById("chrome-screen").src += '';
+        this.setState({ loading: true }, () => {
+            const iframe = document.getElementById("chrome-screen");
+            if (iframe) {
+                iframe.src = this.state.url;
+            }
+        });
     }
 
     goToHome = () => {
-        this.setState({ url: this.home_url, display_url: this.home_url });
-        this.refreshChrome();
+        this.setState({ url: this.home_url, display_url: this.home_url, loading: true }, () => {
+            this.updateFavicon(this.home_url);
+            this.refreshChrome();
+        });
     }
 
     checkKey = (e) => {
@@ -43,7 +58,8 @@ export class Chrome extends Component {
             }
 
             const display_url = encodeURI(url);
-            this.setState({ url: display_url, display_url }, () => {
+            this.setState({ url: display_url, display_url, loading: true }, () => {
+                this.updateFavicon(display_url);
                 this.storeVisitedUrl(display_url, display_url);
                 document.getElementById("chrome-url-bar").blur();
             });
@@ -52,6 +68,23 @@ export class Chrome extends Component {
 
     handleDisplayUrl = (e) => {
         this.setState({ display_url: e.target.value });
+    }
+
+    getFavicon = (url) => {
+        try {
+            const { hostname } = new URL(url);
+            return `https://www.google.com/s2/favicons?domain=${hostname}`;
+        } catch {
+            return '';
+        }
+    }
+
+    updateFavicon = (url) => {
+        this.setState({ favicon: this.getFavicon(url) });
+    }
+
+    handleIframeLoad = () => {
+        this.setState({ loading: false });
     }
 
     displayUrlBar = () => {
@@ -77,6 +110,21 @@ export class Chrome extends Component {
                         sizes="20px"
                     />
                 </div>
+                {this.state.loading && (
+                    <div className="mr-2 ml-1 flex justify-center items-center">
+                        <Image
+                            className="w-4 h-4 animate-spin"
+                            src="/themes/Yaru/status/process-working-symbolic.svg"
+                            alt="Loading"
+                            width={16}
+                            height={16}
+                            sizes="16px"
+                        />
+                    </div>
+                )}
+                {!this.state.loading && this.state.favicon && (
+                    <img className="w-4 h-4 mr-2 ml-1" src={this.state.favicon} alt="" />
+                )}
                 <input onKeyDown={this.checkKey} onChange={this.handleDisplayUrl} value={this.state.display_url} id="chrome-url-bar" className="outline-none bg-ub-grey rounded-full pl-3 py-0.5 mr-3 w-5/6 text-gray-300 focus:text-white" type="url" spellCheck={false} autoComplete="off" />
             </div>
         );
@@ -86,7 +134,7 @@ export class Chrome extends Component {
         return (
             <div className="h-full w-full flex flex-col bg-ub-cool-grey">
                 {this.displayUrlBar()}
-                <iframe src={this.state.url} className="flex-grow" id="chrome-screen" frameBorder="0" title="Ubuntu Chrome Url"></iframe>
+                <iframe src={this.state.url} className="flex-grow" id="chrome-screen" frameBorder="0" title="Ubuntu Chrome Url" onLoad={this.handleIframeLoad}></iframe>
             </div>
         )
     }
