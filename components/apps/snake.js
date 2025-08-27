@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
+import { gameLoop } from '../../utils/gameLoop';
 
 
 // size of the square play field
@@ -63,9 +64,7 @@ const Snake = () => {
   const [playingReplay, setPlayingReplay] = useState(false);
 
   // fixed time step loop
-  const lastTime = useRef(0);
-  const acc = useRef(0);
-  const animationFrameRef = useRef();
+  const loopStopRef = useRef(null);
   const replayFrameRef = useRef();
   const replayLastTimeRef = useRef(0);
 
@@ -173,22 +172,11 @@ const Snake = () => {
     });
   }, [direction, food, obstacles, wrap]);
 
-  // fixed time step game loop using rAF
+  // fixed time step game loop
   useEffect(() => {
-    const loop = (time) => {
-      if (!paused && !gameOver && !playingReplay) {
-        const delta = time - lastTime.current;
-        acc.current += delta;
-        while (acc.current > speed) {
-          step();
-          acc.current -= speed;
-        }
-      }
-      lastTime.current = time;
-      animationFrameRef.current = requestAnimationFrame(loop);
-    };
-    animationFrameRef.current = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animationFrameRef.current);
+    if (paused || gameOver || playingReplay) return undefined;
+    loopStopRef.current = gameLoop(() => step(), speed);
+    return () => loopStopRef.current && loopStopRef.current();
   }, [paused, gameOver, step, speed, playingReplay]);
 
   // replay playback

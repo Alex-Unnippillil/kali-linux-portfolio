@@ -24,7 +24,7 @@ const TowerDefense = () => {
   const [projectiles, setProjectiles] = useState(
     createProjectilePool(MAX_PROJECTILES)
   );
-  const [path, setPath] = useState(() => getPath([]));
+  const [path, setPath] = useState([]);
   const [wave, setWave] = useState(1);
   const [speed, setSpeed] = useState(1);
   const [lives, setLives] = useState(20);
@@ -49,6 +49,7 @@ const TowerDefense = () => {
   const projectilesRef = useRef(projectiles);
   const wavesRef = useRef(waves);
   const pathCanvasRef = useRef(null);
+  const pathWorkerRef = useRef(null);
 
   useEffect(() => {
     towersRef.current = towers;
@@ -75,10 +76,11 @@ const TowerDefense = () => {
   useEffect(() => {
     const canvas = pathCanvasRef.current;
     if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return; // control may be transferred to worker
     const cell = 32;
     canvas.width = GRID_SIZE * cell;
     canvas.height = GRID_SIZE * cell;
-    const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.strokeStyle = 'rgba(255,255,255,0.5)';
     ctx.lineWidth = 2;
@@ -91,6 +93,24 @@ const TowerDefense = () => {
     });
     ctx.stroke();
   }, [path]);
+
+  useEffect(() => {
+    pathWorkerRef.current = new Worker(
+      new URL('../../workers/pathWorker.ts', import.meta.url),
+    );
+    pathWorkerRef.current.onmessage = (e) => setPath(e.data.path || []);
+    const canvas = pathCanvasRef.current;
+    if (canvas && canvas.transferControlToOffscreen) {
+      const offscreen = canvas.transferControlToOffscreen();
+      pathWorkerRef.current.postMessage(
+        { towers: towersRef.current, canvas: offscreen },
+        [offscreen],
+      );
+    } else {
+      pathWorkerRef.current.postMessage({ towers: towersRef.current });
+    }
+    return () => pathWorkerRef.current?.terminate();
+  }, []);
 
   const spawnWave = (waveNum) => {
     ReactGA.event({ category: 'tower-defense', action: 'wave_start', value: waveNum });
@@ -127,7 +147,7 @@ const TowerDefense = () => {
         setTowers(stTowers);
         setWave(stWave);
         setLives(stLives);
-        setPath(getPath(stTowers));
+        pathWorkerRef.current?.postMessage({ towers: stTowers });
         spawnWave(stWave);
         return;
       } catch (err) {
@@ -162,7 +182,9 @@ const TowerDefense = () => {
   }, [speed]);
 
   useEffect(() => {
-    setPath(getPath(towers));
+    if (pathWorkerRef.current) {
+      pathWorkerRef.current.postMessage({ towers });
+    }
   }, [towers]);
 
   useEffect(() => {
