@@ -37,6 +37,22 @@ const HydraApp = () => {
   const [output, setOutput] = useState('');
   const [running, setRunning] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [attemptRates, setAttemptRates] = useState([]);
+
+  const chartPoints = () => {
+    if (!attemptRates.length) return '';
+    const max = Math.max(...attemptRates);
+    const width = 100;
+    const height = 50;
+    const denom = attemptRates.length - 1 || 1;
+    return attemptRates
+      .map((rate, idx) => {
+        const x = (idx / denom) * width;
+        const y = height - (rate / max) * height;
+        return `${x},${y}`;
+      })
+      .join(' ');
+  };
 
   useEffect(() => {
     setUserLists(loadWordlists('hydraUserLists'));
@@ -96,6 +112,7 @@ const HydraApp = () => {
     setRunning(true);
     setPaused(false);
     setOutput('');
+    setAttemptRates([]);
     try {
       const res = await fetch('/api/hydra', {
         method: 'POST',
@@ -108,7 +125,10 @@ const HydraApp = () => {
         }),
       });
       const data = await res.json();
-      setOutput(data.output || data.error || 'No output');
+      const outStr = data.output || data.error || 'No output';
+      setOutput(outStr);
+      const matches = [...outStr.matchAll(/\[STATUS\].*?([0-9.]+)\s+tries\/sec/gi)];
+      setAttemptRates(matches.map((m) => parseFloat(m[1])));
     } catch (err) {
       setOutput(err.message);
     } finally {
@@ -260,6 +280,22 @@ const HydraApp = () => {
         )}
       </div>
 
+      {attemptRates.length > 0 && (
+        <div className="mt-4 hydra-chart-container">
+          <svg
+            className="hydra-chart"
+            viewBox="0 0 100 50"
+            preserveAspectRatio="none"
+          >
+            <polyline
+              fill="none"
+              stroke="cyan"
+              strokeWidth="2"
+              points={chartPoints()}
+            />
+          </svg>
+        </div>
+      )}
       {output && (
         <pre className="mt-4 bg-black p-2 overflow-auto h-64 whitespace-pre-wrap">{output}</pre>
       )}
