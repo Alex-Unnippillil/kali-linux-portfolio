@@ -59,6 +59,7 @@ const MinesweeperApp = createDynamicApp('minesweeper', 'Minesweeper');
 const PongApp = createDynamicApp('pong', 'Pong');
 const PacmanApp = createDynamicApp('pacman', 'Pacman');
 const CarRacerApp = createDynamicApp('car-racer', 'Car Racer');
+const LaneRunnerApp = createDynamicApp('lane-runner', 'Lane Runner');
 const PlatformerApp = createDynamicApp('platformer', 'Platformer');
 const BattleshipApp = createDynamicApp('battleship', 'Battleship');
 const CheckersApp = createDynamicApp('checkers', 'Checkers');
@@ -125,6 +126,7 @@ const displayMinesweeper = createDisplay(MinesweeperApp);
 const displayPong = createDisplay(PongApp);
 const displayPacman = createDisplay(PacmanApp);
 const displayCarRacer = createDisplay(CarRacerApp);
+const displayLaneRunner = createDisplay(LaneRunnerApp);
 const displayPlatformer = createDisplay(PlatformerApp);
 const displayBattleship = createDisplay(BattleshipApp);
 const displayCheckers = createDisplay(CheckersApp);
@@ -237,6 +239,15 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayCarRacer,
+  },
+  {
+    id: 'lane-runner',
+    title: 'Lane Runner',
+    icon: './themes/Yaru/apps/car-racer.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayLaneRunner,
   },
   {
     id: 'checkers',
