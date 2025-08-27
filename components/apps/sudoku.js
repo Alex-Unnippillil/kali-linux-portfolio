@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ratePuzzle, getHint } from '../../workers/sudokuSolver';
 
 const SIZE = 9;
 const range = (n) => Array.from({ length: n }, (_, i) => i);
@@ -120,6 +121,8 @@ const Sudoku = () => {
   const [autoNotes, setAutoNotes] = useState(false);
   const [hint, setHint] = useState('');
   const [hintCell, setHintCell] = useState(null);
+  const [ratedDifficulty, setRatedDifficulty] = useState('');
+  const [hintStats, setHintStats] = useState({});
   const [completed, setCompleted] = useState(false);
   const [time, setTime] = useState(0);
   const [bestTime, setBestTime] = useState(null);
@@ -137,6 +140,13 @@ const Sudoku = () => {
     setCompleted(false);
     setHint('');
     setHintCell(null);
+    const { difficulty: rating, steps } = ratePuzzle(puzzle);
+    setRatedDifficulty(rating);
+    const stats = steps.reduce((acc, s) => {
+      acc[s.technique] = (acc[s.technique] || 0) + 1;
+      return acc;
+    }, {});
+    setHintStats(stats);
     setTime(0);
     setBestTime(() => {
       if (typeof window === 'undefined') return null;
@@ -249,20 +259,14 @@ const Sudoku = () => {
   };
 
   const getHintHandler = () => {
-    for (let r = 0; r < SIZE; r++) {
-      for (let c = 0; c < SIZE; c++) {
-        if (board[r][c] === 0) {
-          const cand = getCandidates(board, r, c);
-          if (cand.length === 1) {
-            setHint(`Cell (${r + 1},${c + 1}) must be ${cand[0]} (single candidate)`);
-            setHintCell({ r, c });
-            return;
-          }
-        }
-      }
+    const h = getHint(board);
+    if (h) {
+      setHint(`Cell (${h.r + 1},${h.c + 1}) must be ${h.value} (${h.technique})`);
+      setHintCell({ r: h.r, c: h.c });
+    } else {
+      setHint('No hints available');
+      setHintCell(null);
     }
-    setHint('No simple hints available');
-    setHintCell(null);
   };
 
   const hasConflict = (b, r, c, val) => {
@@ -416,6 +420,18 @@ const Sudoku = () => {
       </div>
       {completed && <div className="mt-2">Completed!</div>}
       {hint && <div className="mt-2 text-yellow-300">{hint}</div>}
+      {ratedDifficulty && (
+        <div className="mt-2 text-gray-300">Difficulty: {ratedDifficulty}</div>
+      )}
+      {Object.keys(hintStats).length > 0 && (
+        <div className="mt-1 text-xs text-gray-400">
+          {Object.entries(hintStats).map(([k, v]) => (
+            <div key={k}>
+              {k}: {v}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
