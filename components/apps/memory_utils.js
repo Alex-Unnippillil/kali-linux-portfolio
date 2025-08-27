@@ -49,5 +49,5 @@ export function createDeck(size, type = 'emoji') {
     selected = EMOJIS.slice(0, pairs).map((value) => ({ value }));
   }
   const doubled = [...selected, ...selected].map((card, index) => ({ id: index, ...card }));
-  return fisherYatesShuffle(doubled);
+  return doubled;
 }

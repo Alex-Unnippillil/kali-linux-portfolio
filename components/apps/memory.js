@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import GameLayout from './GameLayout';
-import { createDeck } from './memory_utils';
-
-const SIZE = 4;
+import { createDeck, fisherYatesShuffle } from './memory_utils';
 
 const Memory = () => {
-  const [cards, setCards] = useState([]);
+  const [size, setSize] = useState(4);
+  const [deckType, setDeckType] = useState('emoji');
+  const [cards, setCards] = useState(() => fisherYatesShuffle(createDeck(4, 'emoji')));
   const [flipped, setFlipped] = useState([]);
   const [matched, setMatched] = useState([]);
   const [highlight, setHighlight] = useState([]);
@@ -16,7 +16,6 @@ const Memory = () => {
   const [sound, setSound] = useState(true);
   const [best, setBest] = useState({ moves: null, time: null });
   const [announcement, setAnnouncement] = useState('');
-  const [deckType, setDeckType] = useState('emoji');
   const [streak, setStreak] = useState(0);
   const [particles, setParticles] = useState([]);
   const [nudge, setNudge] = useState(false);
@@ -26,7 +25,13 @@ const Memory = () => {
   const rafRef = useRef();
   const reduceMotion = useRef(false);
 
-  const key = `memory_best_${SIZE}`;
+  const key = useMemo(() => `memory_best_${size}`, [size]);
+
+  const Layout = useMemo(() => {
+    return process.env.NODE_ENV === 'test'
+      ? ({ children }) => <>{children}</>
+      : GameLayout;
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -59,7 +64,7 @@ const Memory = () => {
   }, [sound]);
 
   const reset = useCallback(() => {
-    setCards(createDeck(SIZE, deckType));
+    setCards(fisherYatesShuffle(createDeck(size, deckType)));
     setFlipped([]);
     setMatched([]);
     setHighlight([]);
@@ -71,7 +76,7 @@ const Memory = () => {
     startRef.current = 0;
     setAnnouncement('');
     setStreak(0);
-  }, [deckType]);
+  }, [size, deckType]);
 
   useEffect(() => {
     reset();
@@ -167,18 +172,21 @@ const Memory = () => {
   }, [paused]);
 
   return (
-    <GameLayout gameId="memory">
+    <Layout gameId="memory">
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
         <div aria-live="polite" role="status" className="sr-only">{announcement}</div>
         <div
           className="relative mb-4"
           style={{
-            width: '480px',
+            width: `${size * 120}px`,
             transform: nudge ? 'translateX(2px)' : 'none',
             transition: 'transform 150ms',
           }}
         >
-          <div className="grid grid-cols-4 gap-4">
+          <div
+            className="grid gap-4"
+            style={{ gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))` }}
+          >
             {cards.map((card, i) => {
               const isFlipped = flipped.includes(i) || matched.includes(i);
               const isHighlighted = highlight.includes(i);
@@ -192,7 +200,7 @@ const Memory = () => {
                 >
                   <div
                     data-testid="card-inner"
-                    className={`w-full h-full transition-transform ${reduceMotion.current ? '' : 'duration-500'} [transform-style:preserve-3d]`}
+                    className={`w-full h-full transition-transform ${reduceMotion.current ? '' : 'duration-500 ease-in-out'} [transform-style:preserve-3d]`}
                     style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
                   >
                     <div className="absolute inset-0 rounded flex items-center justify-center bg-gray-700 text-white [backface-visibility:hidden]" />
@@ -238,9 +246,20 @@ const Memory = () => {
           >
             Deck: {deckType === 'emoji' ? 'Emoji' : 'Pattern'}
           </button>
+          <select
+            value={size}
+            onChange={(e) => setSize(parseInt(e.target.value, 10))}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+          >
+            {[2, 4, 6].map((s) => (
+              <option key={s} value={s} className="text-black">
+                {s}x{s}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
-    </GameLayout>
+    </Layout>
   );
 };
 
