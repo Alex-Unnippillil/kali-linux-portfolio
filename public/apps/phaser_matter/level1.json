@@ -1,5 +1,9 @@
 {
   "spawn": { "x": 100, "y": 100 },
+  "parallaxLayers": [
+    { "color": "#99ccff", "scrollFactor": 0.2 },
+    { "color": "#6699cc", "scrollFactor": 0.5 }
+  ],
   "platforms": [
     { "x": 400, "y": 580, "width": 800, "height": 40 },
     { "x": 400, "y": 400, "width": 200, "height": 20 }
