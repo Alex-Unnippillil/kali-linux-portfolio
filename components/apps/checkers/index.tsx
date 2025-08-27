@@ -34,11 +34,13 @@ const Checkers = () => {
   const crownFrame = useRef<number>();
 
   useEffect(() => {
-    workerRef.current = new Worker('/checkers-worker.js');
-    workerRef.current.onmessage = (e: MessageEvent<Move>) => {
+    workerRef.current = new Worker(
+      new URL('../../../workers/checkersAI.ts', import.meta.url),
+    );
+    workerRef.current.onmessage = (e: MessageEvent<Move | null>) => {
       const move = e.data;
       if (hintRequest.current) {
-        setHint(move);
+        if (move) setHint(move);
         hintRequest.current = false;
         setTimeout(() => setHint(null), 1000);
       } else if (move) {
@@ -106,13 +108,11 @@ const Checkers = () => {
     makeMove(move);
   };
 
-    const makeMove = (move: Move) => {
+    const makeMove = (move: Move, b: Board = board) => {
     if (pathRef.current.length === 0) pathRef.current = [move.from, move.to];
     else pathRef.current.push(move.to);
-    const { board: newBoard, capture, king } = applyMove(board, move);
-    const further = capture
-      ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
-      : [];
+    const { board: newBoard, capture, king } = applyMove(b, move);
+    const further = capture ? move.next || [] : [];
     setBoard(newBoard);
     if (king) {
       setCrowned([move.to[0], move.to[1]]);
@@ -129,9 +129,13 @@ const Checkers = () => {
       crownFrame.current = requestAnimationFrame(step);
     }
     if (capture && further.length) {
-      setSelected([move.to[0], move.to[1]]);
-      setMoves(further);
       setNoCapture(0);
+      if (turn === 'black') {
+        setTimeout(() => makeMove(further[0], newBoard), 0);
+      } else {
+        setSelected([move.to[0], move.to[1]]);
+        setMoves(further);
+      }
       return;
     }
     const newHistory = [...history, { board, turn, no: noCapture }];
