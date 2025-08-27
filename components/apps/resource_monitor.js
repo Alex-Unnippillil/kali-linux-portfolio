@@ -1,10 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useFPS, useNetworkInformation, useResourceTiming } from '../../lib/perf/perfHooks';
 
 const ResourceMonitor = () => {
   const cpuRef = useRef(null);
   const memoryRef = useRef(null);
   const networkRef = useRef(null);
   const liveRef = useRef(null);
+  const fps = useFPS();
+  const netInfo = useNetworkInformation();
+  const resources = useResourceTiming();
+  const [latest, setLatest] = useState({ cpu: 0, memory: 0 });
 
   useEffect(() => {
     if (
@@ -31,14 +36,20 @@ const ResourceMonitor = () => {
       [cpuCanvas, memCanvas, netCanvas]
     );
     worker.onmessage = (e) => {
-      const { cpu, memory, down, up } = e.data || {};
-      if (liveRef.current) {
-        liveRef.current.textContent =
-          `CPU ${cpu.toFixed(1)}%, Memory ${memory.toFixed(1)}%, Download ${down.toFixed(1)} Mbps, Upload ${up.toFixed(1)} Mbps`;
-      }
+      const { cpu, memory } = e.data || {};
+      setLatest({ cpu, memory });
     };
     return () => worker.terminate();
   }, []);
+
+  useEffect(() => {
+    if (!liveRef.current) return;
+    const { cpu, memory } = latest;
+    const down = netInfo.downlink || 0;
+    const up = netInfo.uplink || 0;
+    liveRef.current.textContent =
+      `FPS ${fps.toFixed(1)}, CPU ${cpu.toFixed(1)}%, Memory ${memory.toFixed(1)}%, Download ${down.toFixed(1)} Mbps, Upload ${up.toFixed(1)} Mbps, Resources ${resources.length}`;
+  }, [fps, netInfo, latest, resources]);
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu">

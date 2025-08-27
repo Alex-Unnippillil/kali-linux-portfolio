@@ -29,14 +29,19 @@ function startSampling() {
     const cpu = Math.min(100, Math.max(0, (delay / 1000) * 100));
 
     let memory = 0;
-    if (performance && performance.memory) {
+    if ('memory' in performance) {
       const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
       memory = (usedJSHeapSize / totalJSHeapSize) * 100;
     }
 
-    const connection = navigator.connection || {};
-    const down = connection.downlink || 0;
-    const up = connection.uplink || connection.upload || 0;
+    let down = 0;
+    let up = 0;
+    if ('connection' in navigator) {
+      const connection = navigator.connection;
+      down = connection.downlink || 0;
+      // @ts-ignore fallbacks for older specs
+      up = connection.uplink || connection.upload || 0;
+    }
 
     push(cpu, memory, down, up);
     if (reduceMotion) draw();

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
+import { useFPS } from '../../lib/perf/perfHooks';
 
 const WIDTH = 400;
 const HEIGHT = 300;
@@ -7,6 +8,7 @@ const HEIGHT = 300;
 const FlappyBird = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
   const liveRef = useRef(null);
+  const fpsNow = useFPS();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -349,12 +351,17 @@ const FlappyBird = () => {
 
   return (
     <>
-      <canvas
-        ref={canvasRef}
-        className="w-full h-full bg-black"
-        role="img"
-        aria-label="Flappy Bird game"
-      />
+      <div className="relative w-full h-full">
+        <canvas
+          ref={canvasRef}
+          className="w-full h-full bg-black"
+          role="img"
+          aria-label="Flappy Bird game"
+        />
+        <div className="absolute top-2 left-2 z-10 text-white text-sm">
+          {`FPS: ${fpsNow.toFixed(1)}`}
+        </div>
+      </div>
       <div ref={liveRef} className="sr-only" aria-live="polite" />
     </>
   );
