@@ -3,12 +3,15 @@ import modules from './modules.json';
 import usePersistentState from '../../usePersistentState';
 
 const severities = ['critical', 'high', 'medium', 'low'];
+const types = ['auxiliary', 'exploit', 'post'];
 const severityStyles = {
   critical: 'bg-red-700 text-white',
   high: 'bg-orange-600 text-black',
   medium: 'bg-yellow-300 text-black',
   low: 'bg-green-300 text-black',
 };
+
+const demoLogs = `msf6 > search type:auxiliary portscan\nmsf6 > use auxiliary/scanner/portscan/tcp\nmsf6 auxiliary(scanner/portscan/tcp) > run\n[*] Scanning 192.168.1.1...\n[+] 192.168.1.1:80 - Port is open\n[*] Auxiliary module execution completed\nmsf6 auxiliary(scanner/portscan/tcp) > back`;
 
 const timelineSteps = 5;
 
@@ -44,7 +47,7 @@ const MetasploitApp = () => {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  const filtered = useMemo(() => {
+  const searchResults = useMemo(() => {
     const q = query.toLowerCase();
     if (!q) return [];
     return modules.filter(
@@ -54,12 +57,24 @@ const MetasploitApp = () => {
     );
   }, [query]);
 
-  const modulesBySeverity = useMemo(() => {
-    return modules.reduce((acc, m) => {
-      acc[m.severity] = acc[m.severity] ? [...acc[m.severity], m] : [m];
+  const filteredModules = useMemo(() => {
+    return modules.filter((m) => {
+      const q = query.toLowerCase();
+      const matchesQuery =
+        !q ||
+        m.name.toLowerCase().includes(q) ||
+        m.description.toLowerCase().includes(q);
+      const matchesSeverity = !selectedSeverity || m.severity === selectedSeverity;
+      return matchesQuery && matchesSeverity;
+    });
+  }, [query, selectedSeverity]);
+
+  const modulesByType = useMemo(() => {
+    return filteredModules.reduce((acc, m) => {
+      acc[m.type] = acc[m.type] ? [...acc[m.type], m] : [m];
       return acc;
     }, {});
-  }, []);
+  }, [filteredModules]);
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -92,6 +107,10 @@ const MetasploitApp = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const runDemo = () => {
+    setOutput((prev) => `${prev}\n${demoLogs}`);
   };
 
   const startReplay = () => {
@@ -128,6 +147,9 @@ const MetasploitApp = () => {
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white">
+      <div className="bg-red-800 text-white text-center p-2 text-xs">
+        Educational simulation only. Unauthorized use is illegal.
+      </div>
       <div className="flex p-2">
         <input
           className="flex-grow bg-ub-grey text-white p-1 rounded"
@@ -145,6 +167,12 @@ const MetasploitApp = () => {
         >
           Run
         </button>
+        <button
+          onClick={runDemo}
+          className="ml-2 px-2 py-1 bg-ub-orange rounded"
+        >
+          Run Demo
+        </button>
       </div>
       <div className="p-2">
         <input
@@ -156,7 +184,7 @@ const MetasploitApp = () => {
         />
         {query && (
           <ul className="mt-2 max-h-40 overflow-auto text-xs">
-            {filtered.map((m) => (
+            {searchResults.map((m) => (
               <li key={m.name} className="mb-1">
                 <span className="font-mono">{m.name}</span> - {m.description}
               </li>
@@ -180,15 +208,30 @@ const MetasploitApp = () => {
               </button>
             ))}
           </div>
-          {selectedSeverity && (
-            <ul style={animationStyle} className="max-h-40 overflow-auto text-xs">
-              {(modulesBySeverity[selectedSeverity] || []).map((m) => (
-                <li key={m.name} className="mb-1">
-                  <span className="font-mono">{m.name}</span> - {m.description}
-                </li>
-              ))}
-            </ul>
-          )}
+          <div style={animationStyle} className="space-y-4 max-h-60 overflow-auto text-xs">
+            {types.map((t) => (
+              <div key={t}>
+                <h3 className="mb-1 font-bold capitalize">{t}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(modulesByType[t] || []).map((m) => (
+                    <div key={m.name} className="bg-ub-grey p-2 rounded">
+                      <div className="font-mono break-all">{m.name}</div>
+                      <div className="mb-1">{m.description}</div>
+                      <div className="flex flex-wrap gap-1">
+                        <span className="px-1 rounded-full text-[10px] bg-ub-orange text-black">{m.type}</span>
+                        <span className={`px-1 rounded-full text-[10px] ${severityStyles[m.severity]}`}>{m.severity}</span>
+                        {m.tags.map((tag) => (
+                          <span key={tag} className="px-1 rounded-full text-[10px] bg-ub-cool-grey">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="mt-4">
           <button
