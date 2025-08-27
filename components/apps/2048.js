@@ -2,6 +2,7 @@ import React, { useEffect, useCallback, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
+import { GameSettingsProvider, useGameSettings } from './Games/common/settings';
 
 const SIZE = 4;
 
@@ -173,19 +174,20 @@ const validateBoard = (b) =>
     (row) => Array.isArray(row) && row.length === SIZE && row.every((n) => typeof n === 'number'),
   );
 
-const Game2048 = () => {
+const Game2048Inner = () => {
   const [board, setBoard] = usePersistentState('2048-board', initBoard, validateBoard);
   const [won, setWon] = usePersistentState('2048-won', false, (v) => typeof v === 'boolean');
   const [lost, setLost] = usePersistentState('2048-lost', false, (v) => typeof v === 'boolean');
   const [history, setHistory] = useState(null);
   const [hardMode, setHardMode] = usePersistentState('2048-hard', false, (v) => typeof v === 'boolean');
-  const [colorBlind, setColorBlind] = usePersistentState('2048-cb', false, (v) => typeof v === 'boolean');
+  const { colorBlind, setColorBlind, highContrast, reduceMotion, textScale } = useGameSettings();
   const [animCells, setAnimCells] = useState(new Set());
   const [mergeCells, setMergeCells] = useState(new Set());
   const [score, setScore] = useState(0);
   const [scorePop, setScorePop] = useState(false);
 
   useEffect(() => {
+    if (reduceMotion) return;
     if (animCells.size > 0) {
       let frame;
       const t = setTimeout(() => {
@@ -196,9 +198,10 @@ const Game2048 = () => {
         frame && cancelAnimationFrame(frame);
       };
     }
-  }, [animCells]);
+  }, [animCells, reduceMotion]);
 
   useEffect(() => {
+    if (reduceMotion) return;
     if (mergeCells.size > 0) {
       let frame;
       const t = setTimeout(() => {
@@ -209,9 +212,10 @@ const Game2048 = () => {
         frame && cancelAnimationFrame(frame);
       };
     }
-  }, [mergeCells]);
+  }, [mergeCells, reduceMotion]);
 
   useEffect(() => {
+    if (reduceMotion) return;
     if (scorePop) {
       let frame;
       const t = setTimeout(() => {
@@ -222,7 +226,7 @@ const Game2048 = () => {
         frame && cancelAnimationFrame(frame);
       };
     }
-  }, [scorePop]);
+  }, [scorePop, reduceMotion]);
 
   const handleDirection = useCallback(
     ({ x, y }) => {
@@ -237,19 +241,19 @@ const Game2048 = () => {
       if (!boardsEqual(board, moved)) {
         const added = addRandomTile(moved, hardMode, hardMode ? 2 : 1);
         setHistory({ board: cloneBoard(board), score });
-        setAnimCells(new Set(added));
-        setMergeCells(new Set(mergedCells));
+        setAnimCells(reduceMotion ? new Set() : new Set(added));
+        setMergeCells(reduceMotion ? new Set() : new Set(mergedCells));
         if (gained > 0) {
           setScore((s) => s + gained);
-          setScorePop(true);
+          if (!reduceMotion) setScorePop(true);
         }
         setBoard(cloneBoard(moved));
-        if (merged) navigator.vibrate?.(50);
+        if (merged && !reduceMotion) navigator.vibrate?.(50);
         if (checkWin(moved)) setWon(true);
         else if (!hasMoves(moved)) setLost(true);
       }
     },
-    [board, won, lost, hardMode, score, setBoard, setLost, setWon],
+    [board, won, lost, hardMode, score, reduceMotion, setBoard, setLost, setWon],
   );
 
   useGameControls(handleDirection);
@@ -329,13 +333,14 @@ const Game2048 = () => {
             Close
           </button>
           <div
-            className="px-4 py-2 bg-gray-700 rounded ml-auto"
+            className={`px-4 py-2 bg-gray-700 rounded ml-auto ${highContrast ? 'contrast-200' : ''}`}
             aria-live="polite" aria-atomic="true"
+            style={{ fontSize: `${textScale}rem` }}
           >
             Score: <span className={scorePop ? 'score-pop' : ''}>{score}</span>
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className={`grid grid-cols-4 gap-2 ${highContrast ? 'contrast-200' : ''}`}>
           {board.map((row, rIdx) =>
             row.map((cell, cIdx) => {
               const key = `${rIdx}-${cIdx}`;
@@ -345,10 +350,11 @@ const Game2048 = () => {
                   key={key}
                   className={`relative overflow-hidden h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
                     cell ? colors[cell] || 'bg-gray-700' : 'bg-gray-800'
-                  } ${animCells.has(key) ? 'tile-pop' : ''}`}
+                  } ${!reduceMotion && animCells.has(key) ? 'tile-pop' : ''}`}
+                  style={{ fontSize: `${2 * textScale}rem` }}
                 >
                   {cell !== 0 ? cell : ''}
-                  {mergeCells.has(key) && <span className="merge-ripple" />}
+                  {!reduceMotion && mergeCells.has(key) && <span className="merge-ripple" />}
                 </div>
               );
             })
@@ -361,6 +367,12 @@ const Game2048 = () => {
     </GameLayout>
   );
 };
+
+const Game2048 = () => (
+  <GameSettingsProvider>
+    <Game2048Inner />
+  </GameSettingsProvider>
+);
 
 export default Game2048;
 
