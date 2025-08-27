@@ -3,6 +3,23 @@
 const WIDTH = 800;
 const HEIGHT = 800;
 
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+function lerpColor(c1, c2, t) {
+  const r1 = parseInt(c1.slice(1, 3), 16);
+  const g1 = parseInt(c1.slice(3, 5), 16);
+  const b1 = parseInt(c1.slice(5, 7), 16);
+  const r2 = parseInt(c2.slice(1, 3), 16);
+  const g2 = parseInt(c2.slice(3, 5), 16);
+  const b2 = parseInt(c2.slice(5, 7), 16);
+  const r = Math.round(lerp(r1, r2, t));
+  const g = Math.round(lerp(g1, g2, t));
+  const b = Math.round(lerp(b1, b2, t));
+  return `rgb(${r},${g},${b})`;
+}
+
 // --- utility PRNG ---
 function strToSeed(str) {
   let h = 2166136261;
@@ -66,14 +83,31 @@ curveSel.addEventListener('change', () => {
   history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
 });
 
+let tractionAssist = params.get('assist') === '1';
+const assistChk = document.getElementById('assist');
+if (assistChk) {
+  assistChk.checked = tractionAssist;
+  assistChk.addEventListener('change', () => {
+    tractionAssist = assistChk.checked;
+    params.set('assist', tractionAssist ? '1' : '0');
+    history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
+  });
+}
+
 // --- canvas ---
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
 const track = generateTrack(strToSeed(seed));
 
-function drawTrack() {
-  ctx.strokeStyle = '#555';
+let worldTime = 0;
+const rainDrops = Array.from({ length: 80 }, () => ({
+  x: Math.random() * WIDTH,
+  y: Math.random() * HEIGHT,
+}));
+
+function drawTrack(day) {
+  ctx.strokeStyle = lerpColor('#333', '#777', day);
   ctx.lineWidth = 80;
   ctx.lineJoin = 'round';
   ctx.beginPath();
@@ -138,16 +172,39 @@ function update(dt) {
   if (keys['ArrowUp']) accel += 1;
   if (keys['ArrowDown']) accel -= 1;
 
+  if (car.speed < 50) {
+    const cx = WIDTH / 2;
+    const cy = HEIGHT / 2;
+    const desired = Math.atan2(cy - car.y, cx - car.x);
+    let diff = desired - car.angle;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    steer += diff * 0.5;
+  }
+
   // physics
   const ACCEL = 200;
   const FRICTION = 50;
   car.speed += accel * ACCEL * dt;
   car.speed -= FRICTION * dt;
   if (car.speed < 0) car.speed = 0;
-  const turn = steer * car.speed * 0.002;
+  let turn = steer * car.speed * 0.002;
+  if (tractionAssist) {
+    const maxLat = 300;
+    const lat = Math.abs(car.speed * turn);
+    if (lat > maxLat) turn = Math.sign(turn) * maxLat / car.speed;
+  }
   car.angle += turn;
   car.x += Math.cos(car.angle) * car.speed * dt;
   car.y += Math.sin(car.angle) * car.speed * dt;
+
+  worldTime += dt;
+  for (const drop of rainDrops) {
+    drop.y += 400 * dt;
+    if (drop.y > HEIGHT) {
+      drop.y = -20;
+      drop.x = Math.random() * WIDTH;
+    }
+  }
 
   // lap logic
   const side = lineSide(car);
@@ -175,8 +232,10 @@ function update(dt) {
 }
 
 function render() {
-  ctx.clearRect(0, 0, WIDTH, HEIGHT);
-  drawTrack();
+  const day = (Math.sin(worldTime * 0.05) + 1) / 2;
+  ctx.fillStyle = lerpColor('#001a33', '#87CEEB', day);
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  drawTrack(day);
   // ghost
   if (bestLapTrace && bestLapTrace.length) {
     const g = bestLapTrace[ghostIndex];
@@ -191,6 +250,16 @@ function render() {
       ghostIndex = (ghostIndex + 1) % bestLapTrace.length;
     }
   }
+  // car reflection
+  ctx.save();
+  ctx.translate(car.x, car.y);
+  ctx.rotate(car.angle);
+  ctx.scale(1, -1);
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = 'red';
+  ctx.fillRect(-10, -5, 20, 10);
+  ctx.restore();
+
   // player car
   ctx.save();
   ctx.translate(car.x, car.y);
@@ -198,6 +267,28 @@ function render() {
   ctx.fillStyle = 'red';
   ctx.fillRect(-10, -5, 20, 10);
   ctx.restore();
+
+  if (day < 0.3) {
+    ctx.save();
+    ctx.translate(car.x, car.y);
+    ctx.rotate(car.angle);
+    ctx.fillStyle = 'rgba(255,255,200,0.3)';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(400, -100);
+    ctx.lineTo(400, 100);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  for (const drop of rainDrops) {
+    ctx.beginPath();
+    ctx.moveTo(drop.x, drop.y);
+    ctx.lineTo(drop.x + 2, drop.y + 10);
+    ctx.stroke();
+  }
 }
 
 let last = performance.now();
