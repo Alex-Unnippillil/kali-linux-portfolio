@@ -252,7 +252,7 @@ const Game2048 = () => {
     [board, won, lost, hardMode, score, setBoard, setLost, setWon],
   );
 
-  useGameControls(handleDirection);
+  useGameControls(handleDirection, '2048');
 
   useEffect(() => {
     const esc = (e) => {
