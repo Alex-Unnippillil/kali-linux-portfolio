@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import usePersistentState from '../usePersistentState';
+import { registerGame } from '../../utils/gameEngine';
 
-const WIDTH = 10;
-const HEIGHT = 20;
+export const WIDTH = 10;
+export const HEIGHT = 20;
 const CELL_SIZE = 16; // px
 
 const TETROMINOS = {
@@ -71,6 +72,17 @@ const defaultKeys = {
   settings: 's',
 };
 
+export const clearLines = (board) => {
+  const filled = [];
+  for (let r = 0; r < HEIGHT; r += 1) {
+    if (board[r].every((c) => c)) filled.push(r);
+  }
+  if (filled.length === 0) return { board, cleared: 0, filled };
+  const compact = board.filter((_, r) => !filled.includes(r));
+  while (compact.length < HEIGHT) compact.unshift(Array(WIDTH).fill(0));
+  return { board: compact, cleared: filled.length, filled };
+};
+
 const Tetris = () => {
   const [board, setBoard] = useState(createBoard);
   const [piece, setPiece] = useState(bagPiece);
@@ -117,34 +129,47 @@ const Tetris = () => {
     }
   }, []);
 
+  const serialize = useCallback(
+    () => ({
+      board: board.map((row) => row.slice()),
+      piece,
+      pos,
+      next,
+      hold,
+      score,
+      level,
+      lines,
+    }),
+    [board, piece, pos, next, hold, score, level, lines]
+  );
+
+  useEffect(() => {
+    registerGame('tetris', { reset: resetGame, serialize });
+  }, [resetGame, serialize]);
+
   const placePiece = useCallback(() => {
     if (lockRef.current) {
       clearTimeout(lockRef.current);
       lockRef.current = null;
     }
     const newBoard = merge(board, piece.shape, pos.x, pos.y, piece.type);
-    const filled = [];
-    for (let r = 0; r < HEIGHT; r += 1) {
-      if (newBoard[r].every((c) => c)) filled.push(r);
-    }
-    if (filled.length) {
+    const { board: clearedBoard, cleared, filled } = clearLines(newBoard);
+    if (cleared) {
       // Animate clearing
       setBoard((b) =>
         b.map((row, r) => (filled.includes(r) ? row.map(() => 'clearing') : row))
       );
       setTimeout(() => {
-        const compact = newBoard.filter((_, r) => !filled.includes(r));
-        while (compact.length < HEIGHT) compact.unshift(Array(WIDTH).fill(0));
-        setBoard(compact);
+        setBoard(clearedBoard);
       }, 300);
-      const gained = filled.length * 100;
+      const gained = cleared * 100;
       setScore((s) => {
         const ns = s + gained;
         if (ns > highScore) setHighScore(ns);
         return ns;
       });
       setLines((l) => {
-        const nl = l + filled.length;
+        const nl = l + cleared;
         const nlvl = Math.floor(nl / 10) + 1;
         if (nlvl > level) {
           setLevel(nlvl);
