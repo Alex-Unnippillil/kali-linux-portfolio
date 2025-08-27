@@ -276,8 +276,6 @@ export class Desktop extends Component {
                     hideSideBar: this.hideSideBar,
                     hasMinimised: this.hasMinimised,
                     minimized: this.state.minimized_windows[app.id],
-                    changeBackgroundImage: this.props.changeBackgroundImage,
-                    bg_image_name: this.props.bg_image_name,
                     resizable: app.resizable,
                     allowMaximize: app.allowMaximize,
                     defaultWidth: app.defaultWidth,
@@ -515,7 +513,7 @@ export class Desktop extends Component {
                 </div>
 
                 {/* Background Image */}
-                <BackgroundImage img={this.props.bg_image_name} />
+                <BackgroundImage />
 
                 {/* Ubuntu Side Menu Bar */}
                 <SideBar apps={apps}
