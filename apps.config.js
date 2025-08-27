@@ -22,6 +22,14 @@ import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
 import { displayNikto } from './components/apps/nikto';
 
+export const allowlist = [
+  'https://platform.twitter.com',
+  'https://syndication.twitter.com',
+  'https://cdn.syndication.twimg.com',
+  'https://*.twitter.com',
+  'https://*.x.com',
+];
+
 const createDynamicApp = (path, name) =>
   dynamic(
     () =>
