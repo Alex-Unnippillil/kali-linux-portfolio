@@ -113,6 +113,38 @@ export const autoFillLines = (grid, rows, cols) => {
   return g;
 };
 
+export const propagateFills = (grid, rows, cols) => {
+  let g = grid.map((row) => row.slice());
+  let changed = true;
+  while (changed) {
+    changed = false;
+    rows.forEach((clue, i) => {
+      const forced = findForcedCellsInLine(clue, g[i]);
+      forced.forEach(({ index, value }) => {
+        if (g[i][index] !== value) {
+          g[i][index] = value;
+          changed = true;
+        }
+      });
+    });
+    cols.forEach((clue, j) => {
+      const col = g.map((row) => row[j]);
+      const forced = findForcedCellsInLine(clue, col);
+      forced.forEach(({ index, value }) => {
+        if (g[index][j] !== value) {
+          g[index][j] = value;
+          changed = true;
+        }
+      });
+    });
+    const filled = autoFillLines(g, rows, cols);
+    const diff = filled.some((row, r) => row.some((cell, c) => cell !== g[r][c]));
+    if (diff) changed = true;
+    g = filled;
+  }
+  return g;
+};
+
 export const validateSolution = (grid, rows, cols) => {
   const rowsValid = grid.every((row, i) =>
     JSON.stringify(lineToClues(row)) === JSON.stringify(rows[i])
@@ -179,6 +211,7 @@ const nonogramUtils = {
   findForcedCellsInLine,
   findHint,
   autoFillLines,
+  propagateFills,
   validateSolution,
   getPuzzleBySeed,
   puzzles,
