@@ -191,6 +191,7 @@ const Memory = () => {
                   className={`relative w-full aspect-square [perspective:600px] rounded transform ${isHighlighted ? 'ring-4 ring-green-600' : ''} ${reduceMotion.current ? '' : 'transition-transform duration-200'} ${isHighlighted && !reduceMotion.current ? 'scale-105' : ''}`}
                 >
                   <div
+                    data-testid="card-inner"
                     className={`w-full h-full transition-transform ${reduceMotion.current ? '' : 'duration-500'} [transform-style:preserve-3d]`}
                     style={{ transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
                   >
@@ -221,6 +222,7 @@ const Memory = () => {
           <div>Moves: {moves}</div>
           <div>Rating: {'★'.repeat(stars)}{'☆'.repeat(3 - stars)}</div>
           {best.moves != null && <div>Best: {best.moves}m/{best.time}s</div>}
+          <div data-testid="combo-meter">Combo: {streak}</div>
         </div>
         <div className="flex space-x-2">
           <button onClick={reset} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded">Reset</button>
