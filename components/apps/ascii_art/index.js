@@ -43,12 +43,10 @@ export default function AsciiArt() {
   const [cellSize, setCellSize] = useState(8);
   const [useColor, setUseColor] = useState(true);
   const [altText, setAltText] = useState('');
-  const [typingMode, setTypingMode] = useState(false);
-  const undoStack = useRef([]);
+  const [textMode, setTextMode] = useState(false);
+  const [inputText, setInputText] = useState('');
   const [colors, setColors] = useState(null);
-  const workerRef = useRef(null);
   const canvasRef = useRef(null);
-  const editorRef = useRef(null);
 
   // Load saved preferences
   useEffect(() => {
@@ -67,83 +65,119 @@ export default function AsciiArt() {
     }
   }, [charSet, paletteName]);
 
-  // Setup worker
-  useEffect(() => {
-    workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => {
-      const { plain, html, ansi, colors: colorArr, width, height } = e.data;
-      setPlainAscii(plain);
-      setAsciiHtml(html);
-      setAnsiAscii(ansi);
-      setColors({ data: colorArr, width, height });
-      setAltText(`ASCII art ${width}x${height}`);
-    };
-    return () => {
-      workerRef.current.terminate();
-    };
-  }, []);
+  const mapToPalette = (r, g, b) => {
+    const palette = palettes[paletteName] || [];
+    if (!palette.length) return [r, g, b];
+    let best = palette[0];
+    let bestDist = Infinity;
+    for (let i = 0; i < palette.length; i += 1) {
+      const p = palette[i];
+      const dr = r - p[0];
+      const dg = g - p[1];
+      const db = b - p[2];
+      const dist = dr * dr + dg * dg + db * db;
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = p;
+      }
+    }
+    return best;
+  };
 
-  const handleFile = async (e) => {
+  const processCanvas = (canvas, width, height) => {
+    const ctx = canvas.getContext('2d');
+    const { data } = ctx.getImageData(0, 0, width, height);
+    const chars = charSet.split('');
+    let plain = '';
+    let html = '';
+    let ansi = '';
+    const colorArr = new Uint8ClampedArray(width * height * 3);
+    for (let y = 0; y < height; y += 1) {
+      let row = '';
+      let htmlRow = '';
+      let ansiRow = '';
+      for (let x = 0; x < width; x += 1) {
+        const idx = (y * width + x) * 4;
+        let r = data[idx];
+        let g = data[idx + 1];
+        let b = data[idx + 2];
+        [r, g, b] = mapToPalette(r, g, b);
+        const avg = (r + g + b) / 3;
+        const charIndex = Math.floor((avg / 255) * (chars.length - 1));
+        const ch = chars[chars.length - 1 - charIndex];
+        row += ch;
+        htmlRow += useColor
+          ? `<span style="color: rgb(${r},${g},${b})">${ch}</span>`
+          : ch;
+        ansiRow += useColor
+          ? `\u001b[38;2;${r};${g};${b}m${ch}`
+          : ch;
+        const cIdx = (y * width + x) * 3;
+        colorArr[cIdx] = r;
+        colorArr[cIdx + 1] = g;
+        colorArr[cIdx + 2] = b;
+      }
+      plain += `${row}\n`;
+      html += `${htmlRow}<br/>`;
+      ansi += `${ansiRow}${useColor ? '\u001b[0m' : ''}\n`;
+    }
+    setPlainAscii(plain);
+    setAsciiHtml(html);
+    setAnsiAscii(ansi);
+    setColors({ data: colorArr, width, height });
+    setAltText(`ASCII art ${width}x${height}`);
+  };
+
+  const handleFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const bitmap = await createImageBitmap(file);
-    if (workerRef.current && typeof OffscreenCanvas !== 'undefined') {
-      workerRef.current.postMessage(
-        {
-          bitmap,
-          charSet,
-          cellSize,
-          useColor,
-          palette: palettes[paletteName],
-        },
-        [bitmap]
-      );
-    } else {
-      // Fallback to processing on main thread
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const width = Math.floor(img.width / cellSize);
-        const height = Math.floor(img.height / cellSize);
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(img, 0, 0, width, height);
-        const { data } = ctx.getImageData(0, 0, width, height);
-        let plain = '';
-        let html = '';
-        const chars = charSet.split('');
-        const colorArr = new Uint8ClampedArray(width * height * 3);
-        for (let y = 0; y < height; y += 1) {
-          let row = '';
-          let htmlRow = '';
-          for (let x = 0; x < width; x += 1) {
-            const idx = (y * width + x) * 4;
-            const r = data[idx];
-            const g = data[idx + 1];
-            const b = data[idx + 2];
-            const avg = (r + g + b) / 3;
-            const charIndex = Math.floor((avg / 255) * (chars.length - 1));
-            const ch = chars[chars.length - 1 - charIndex];
-            row += ch;
-            htmlRow += useColor
-              ? `<span style="color: rgb(${r},${g},${b})">${ch}</span>`
-              : ch;
-            const cIdx = (y * width + x) * 3;
-            colorArr[cIdx] = r;
-            colorArr[cIdx + 1] = g;
-            colorArr[cIdx + 2] = b;
-          }
-          plain += `${row}\n`;
-          html += `${htmlRow}<br/>`;
-        }
-        setPlainAscii(plain);
-        setAsciiHtml(html);
-        setAnsiAscii(plain);
-        setColors({ data: colorArr, width, height });
-      };
-      img.src = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const width = Math.floor(img.width / cellSize);
+      const height = Math.floor(img.height / cellSize);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      processCanvas(canvas, width, height);
+    };
+    img.src = URL.createObjectURL(file);
+  };
+
+  const handleTextInput = (e) => {
+    const text = e.target.value;
+    setInputText(text);
+    if (!text) {
+      setPlainAscii('');
+      setAsciiHtml('');
+      setAnsiAscii('');
+      setColors(null);
+      setAltText('');
+      return;
     }
+    const fontSize = cellSize * 8;
+    const textCanvas = document.createElement('canvas');
+    const tctx = textCanvas.getContext('2d');
+    tctx.font = `${fontSize}px monospace`;
+    const textWidth = Math.ceil(tctx.measureText(text).width);
+    textCanvas.width = textWidth;
+    textCanvas.height = fontSize;
+    tctx.fillStyle = '#000';
+    tctx.fillRect(0, 0, textCanvas.width, textCanvas.height);
+    tctx.fillStyle = '#fff';
+    tctx.textBaseline = 'top';
+    tctx.font = `${fontSize}px monospace`;
+    tctx.fillText(text, 0, 0);
+
+    const width = Math.max(1, Math.floor(textCanvas.width / cellSize));
+    const height = Math.max(1, Math.floor(textCanvas.height / cellSize));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(textCanvas, 0, 0, width, height);
+    processCanvas(canvas, width, height);
   };
 
   const copyAscii = () => {
@@ -197,40 +231,41 @@ export default function AsciiArt() {
     });
   };
 
-  // Typing mode handlers
-  const toggleTypingMode = () => {
-    setTypingMode(!typingMode);
-    setAltText('Custom ASCII art typing mode');
-  };
-
-  const handleEditorChange = (e) => {
-    undoStack.current.push(plainAscii);
-    setPlainAscii(e.target.value);
-    setAsciiHtml(e.target.value.replace(/\n/g, '<br/>'));
-  };
-
-  const undo = () => {
-    if (!undoStack.current.length) return;
-    const prev = undoStack.current.pop();
-    setPlainAscii(prev);
-    setAsciiHtml(prev.replace(/\n/g, '<br/>'));
-  };
-
   const playAltText = () => {
     if (!altText) return;
     const utter = new SpeechSynthesisUtterance(altText);
     window.speechSynthesis.speak(utter);
   };
 
+  const toggleTextMode = () => {
+    setTextMode(!textMode);
+    setInputText('');
+    setPlainAscii('');
+    setAsciiHtml('');
+    setAnsiAscii('');
+    setColors(null);
+    setAltText('');
+  };
+
   return (
     <div className="h-full w-full flex flex-col p-4 bg-ub-cool-grey text-white overflow-auto">
       <div className="mb-2 flex flex-wrap gap-2">
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFile}
-          className="mb-2"
-        />
+        {textMode ? (
+          <input
+            type="text"
+            value={inputText}
+            onChange={handleTextInput}
+            className="mb-2 px-1 bg-gray-700"
+            placeholder="Type here"
+          />
+        ) : (
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFile}
+            className="mb-2"
+          />
+        )}
         <label className="flex items-center gap-2">
           Charset:
           <input
@@ -310,20 +345,11 @@ export default function AsciiArt() {
         </button>
         <button
           type="button"
-          onClick={toggleTypingMode}
+          onClick={toggleTextMode}
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
         >
-          {typingMode ? 'Image Mode' : 'Typing Mode'}
+          {textMode ? 'Image Mode' : 'Text Mode'}
         </button>
-        {typingMode && (
-          <button
-            type="button"
-            onClick={undo}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          >
-            Undo
-          </button>
-        )}
         <button
           type="button"
           onClick={playAltText}
@@ -332,26 +358,10 @@ export default function AsciiArt() {
           Alt
         </button>
       </div>
-      {typingMode ? (
-        <textarea
-          ref={editorRef}
-          value={plainAscii}
-          onChange={handleEditorChange}
-          className="flex-1 font-mono bg-gray-800 text-white resize-none"
-          style={{
-            lineHeight: `${cellSize}px`,
-            fontSize: `${cellSize}px`,
-            backgroundSize: `${cellSize}px ${cellSize}px`,
-            backgroundImage:
-              'linear-gradient(0deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px)), linear-gradient(90deg, transparent calc(100% - 1px), rgba(255,255,255,0.1) calc(100% - 1px))',
-          }}
-        />
-      ) : (
-        <pre
-          className="font-mono whitespace-pre overflow-auto flex-1"
-          dangerouslySetInnerHTML={{ __html: asciiHtml }}
-        />
-      )}
+      <pre
+        className="font-mono whitespace-pre overflow-auto flex-1"
+        dangerouslySetInnerHTML={{ __html: asciiHtml }}
+      />
       <canvas ref={canvasRef} className="hidden w-full h-full" />
       <div className="sr-only" aria-live="polite">
         {altText}
