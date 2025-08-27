@@ -18,57 +18,9 @@ const defaultMap = {
 };
 
 const useGameControls = (arg, gameId = 'default') => {
-  if (typeof arg === 'function') {
-    const onDirection = arg;
+  const onDirection = typeof arg === 'function' ? arg : null;
+  const canvasRef = typeof arg === 'function' ? null : arg;
 
-    // keyboard controls
-    useEffect(() => {
-      const handleKey = (e) => {
-        const map = getMapping(gameId, defaultMap);
-        if (e.key === map.up) onDirection({ x: 0, y: -1 });
-        if (e.key === map.down) onDirection({ x: 0, y: 1 });
-        if (e.key === map.left) onDirection({ x: -1, y: 0 });
-        if (e.key === map.right) onDirection({ x: 1, y: 0 });
-      };
-      window.addEventListener('keydown', handleKey);
-      return () => window.removeEventListener('keydown', handleKey);
-    }, [onDirection, gameId]);
-
-    // touch swipe controls
-    useEffect(() => {
-      let startX = 0;
-      let startY = 0;
-
-      const start = (e) => {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-      };
-
-      const end = (e) => {
-        const dx = e.changedTouches[0].clientX - startX;
-        const dy = e.changedTouches[0].clientY - startY;
-        if (Math.abs(dx) > Math.abs(dy)) {
-          if (dx > 30) onDirection({ x: 1, y: 0 });
-          else if (dx < -30) onDirection({ x: -1, y: 0 });
-        } else {
-          if (dy > 30) onDirection({ x: 0, y: 1 });
-          else if (dy < -30) onDirection({ x: 0, y: -1 });
-        }
-      };
-
-      window.addEventListener('touchstart', start);
-      window.addEventListener('touchend', end);
-      return () => {
-        window.removeEventListener('touchstart', start);
-        window.removeEventListener('touchend', end);
-      };
-    }, [onDirection]);
-
-    return null;
-  }
-
-  // Advanced controls for games like Asteroids
-  const canvasRef = arg;
   const stateRef = useRef({
     keys: {},
     fire: false,
@@ -76,7 +28,54 @@ const useGameControls = (arg, gameId = 'default') => {
     joystick: { x: 0, y: 0, active: false, startX: 0, startY: 0 },
   });
 
+  // keyboard controls for directional callbacks
   useEffect(() => {
+    if (!onDirection) return;
+    const handleKey = (e) => {
+      const map = getMapping(gameId, defaultMap);
+      if (e.key === map.up) onDirection({ x: 0, y: -1 });
+      if (e.key === map.down) onDirection({ x: 0, y: 1 });
+      if (e.key === map.left) onDirection({ x: -1, y: 0 });
+      if (e.key === map.right) onDirection({ x: 1, y: 0 });
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onDirection, gameId]);
+
+  // touch swipe controls for directional callbacks
+  useEffect(() => {
+    if (!onDirection) return;
+    let startX = 0;
+    let startY = 0;
+
+    const start = (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    };
+
+    const end = (e) => {
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 30) onDirection({ x: 1, y: 0 });
+        else if (dx < -30) onDirection({ x: -1, y: 0 });
+      } else {
+        if (dy > 30) onDirection({ x: 0, y: 1 });
+        else if (dy < -30) onDirection({ x: 0, y: -1 });
+      }
+    };
+
+    window.addEventListener('touchstart', start);
+    window.addEventListener('touchend', end);
+    return () => {
+      window.removeEventListener('touchstart', start);
+      window.removeEventListener('touchend', end);
+    };
+  }, [onDirection]);
+
+  // advanced keyboard controls for ref-based usage
+  useEffect(() => {
+    if (onDirection) return;
     const handleDown = (e) => {
       const map = getMapping(gameId, defaultMap);
       if (e.key === map.fire) stateRef.current.fire = true;
@@ -95,11 +94,12 @@ const useGameControls = (arg, gameId = 'default') => {
       window.removeEventListener('keydown', handleDown);
       window.removeEventListener('keyup', handleUp);
     };
-  }, [gameId]);
+  }, [gameId, onDirection]);
 
+  // touch joystick controls for ref-based usage
   useEffect(() => {
-    const canvas = canvasRef?.current;
-    if (!canvas) return undefined;
+    if (onDirection || !canvasRef?.current) return;
+    const canvas = canvasRef.current;
 
     const rect = () => canvas.getBoundingClientRect();
 
@@ -139,9 +139,9 @@ const useGameControls = (arg, gameId = 'default') => {
       canvas.removeEventListener('touchmove', move);
       canvas.removeEventListener('touchend', end);
     };
-  }, [canvasRef]);
+  }, [canvasRef, onDirection]);
 
-  return stateRef.current;
+  return onDirection ? null : stateRef.current;
 };
 
 export default useGameControls;

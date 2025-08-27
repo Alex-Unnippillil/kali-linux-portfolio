@@ -97,7 +97,7 @@ const PhaserMatter: React.FC = () => {
 
     class LevelScene extends Phaser.Scene {
       player!: Phaser.Physics.Matter.Image;
-      state!: GameState;
+      gameState!: GameState;
       lastGrounded = 0;
       coyoteTime = 100; // ms
       jumpBufferTimer = 0;
@@ -116,7 +116,7 @@ const PhaserMatter: React.FC = () => {
 
       create() {
         const data = this.cache.json.get('level');
-        this.state = new GameState(data.spawn);
+        this.gameState = new GameState(data.spawn);
 
         // Parallax background layers
         data.parallaxLayers?.forEach((l: any) => {
@@ -160,7 +160,7 @@ const PhaserMatter: React.FC = () => {
           this.checkpointFlags.push({ body, flag });
         });
 
-        this.player = this.matter.add.image(data.spawn.x, data.spawn.y, undefined, undefined, {
+        this.player = this.matter.add.image(data.spawn.x, data.spawn.y, '', undefined, {
           shape: { type: 'rectangle', width: 32, height: 32 },
         });
 
@@ -175,10 +175,10 @@ const PhaserMatter: React.FC = () => {
             if (body.label === 'checkpoint') {
               const cp = this.checkpointFlags.find((c) => c.body === body);
               if (cp) cp.flag.setFillStyle(0x00ff00);
-              this.state.setCheckpoint({ x: body.position.x, y: body.position.y });
+              this.gameState.setCheckpoint({ x: body.position.x, y: body.position.y });
             }
             if (body.label === 'hazard') {
-              const s = this.state.checkpoint || this.state.spawn;
+              const s = this.gameState.checkpoint || this.gameState.spawn;
               this.player.setPosition(s.x, s.y);
               this.player.setVelocity(0, 0);
             }
@@ -191,7 +191,7 @@ const PhaserMatter: React.FC = () => {
         const speed = 5;
 
         // Poll gamepad for input
-        if (this.input.gamepad.total > 0) {
+        if (this.input.gamepad && this.input.gamepad.total > 0) {
           const pad = this.input.gamepad.getPad(0);
           const pm = padMapRef.current;
           ctrl.left = pad.buttons[pm.left]?.pressed;
@@ -210,7 +210,7 @@ const PhaserMatter: React.FC = () => {
         else if (ctrl.right) this.player.setVelocityX(speed);
         else this.player.setVelocityX(0);
 
-        const onGround = Math.abs(this.player.body.velocity.y) < 0.01;
+        const onGround = Math.abs(this.player.body?.velocity.y ?? 0) < 0.01;
         if (onGround) this.lastGrounded = time;
 
         if (ctrl.jumpPressed) {
@@ -240,7 +240,7 @@ const PhaserMatter: React.FC = () => {
         }
 
         const data = this.cache.json.get('level');
-        const pos = this.state.respawnIfOutOfBounds({ x: this.player.x, y: this.player.y }, data.bounds.fallY);
+        const pos = this.gameState.respawnIfOutOfBounds({ x: this.player.x, y: this.player.y }, data.bounds.fallY);
         if (pos !== this.player) {
           this.player.setPosition(pos.x, pos.y);
           this.player.setVelocity(0, 0);

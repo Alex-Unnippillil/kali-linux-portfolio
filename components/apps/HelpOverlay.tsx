@@ -156,8 +156,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
 
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   const info = GAME_INSTRUCTIONS[gameId];
+  const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
   if (!info) return null;
-  const [mapping, setKey] = useInputMapping(gameId, info.actions || {});
   return (
     <div
       className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
