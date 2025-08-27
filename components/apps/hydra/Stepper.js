@@ -6,6 +6,7 @@ const Stepper = ({
   backoffThreshold = 5,
   lockoutThreshold = 10,
   runId,
+  onAttemptChange = () => {},
 }) => {
   const [attempt, setAttempt] = useState(0);
   const [locked, setLocked] = useState(false);
@@ -14,6 +15,9 @@ const Stepper = ({
   useEffect(() => {
     setAttempt(0);
     setLocked(false);
+    onAttemptChange(0);
+    // onAttemptChange is stable enough for this use
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId]);
 
   useEffect(() => {
@@ -40,6 +44,7 @@ const Stepper = ({
         setAttempt((prev) => {
           const next = prev + 1;
           const final = Math.min(next, lockoutThreshold, totalAttempts);
+          onAttemptChange(final);
           if (final >= lockoutThreshold || final >= totalAttempts) {
             if (final >= lockoutThreshold) {
               setLocked(true);
@@ -76,9 +81,6 @@ const Stepper = ({
             }`}
           />
         ))}
-      </div>
-      <div className="sr-only" role="status" aria-live="polite">
-        {locked ? 'Locked out' : `Attempt ${attempt} of ${lockoutThreshold}`}
       </div>
       {locked ? (
         <div className="text-red-400 mt-1">Locked out</div>

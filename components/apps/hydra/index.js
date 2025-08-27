@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Stepper from './Stepper';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
@@ -39,6 +39,10 @@ const HydraApp = () => {
   const [running, setRunning] = useState(false);
   const [paused, setPaused] = useState(false);
   const [runId, setRunId] = useState(0);
+  const [announce, setAnnounce] = useState('');
+  const announceRef = useRef(0);
+
+  const LOCKOUT_THRESHOLD = 10;
 
   useEffect(() => {
     setUserLists(loadWordlists('hydraUserLists'));
@@ -93,6 +97,15 @@ const HydraApp = () => {
     (selectedUserList?.content.split('\n').filter(Boolean).length || 0) *
     (selectedPassList?.content.split('\n').filter(Boolean).length || 0);
 
+  const handleAttempt = (attempt) => {
+    const now = Date.now();
+    if (now - announceRef.current > 1000) {
+      const limit = Math.min(LOCKOUT_THRESHOLD, totalAttempts);
+      setAnnounce(`Attempt ${attempt} of ${limit}`);
+      announceRef.current = now;
+    }
+  };
+
   const runHydra = async () => {
     const user = selectedUserList;
     const pass = selectedPassList;
@@ -105,6 +118,8 @@ const HydraApp = () => {
     setPaused(false);
     setRunId((id) => id + 1);
     setOutput('');
+    setAnnounce('Hydra started');
+    announceRef.current = Date.now();
     try {
       const res = await fetch('/api/hydra', {
         method: 'POST',
@@ -118,8 +133,10 @@ const HydraApp = () => {
       });
       const data = await res.json();
       setOutput(data.output || data.error || 'No output');
+      setAnnounce('Hydra finished');
     } catch (err) {
       setOutput(err.message);
+      setAnnounce('Hydra failed');
     } finally {
       setRunning(false);
     }
@@ -127,6 +144,7 @@ const HydraApp = () => {
 
   const pauseHydra = async () => {
     setPaused(true);
+    setAnnounce('Hydra paused');
     await fetch('/api/hydra', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -136,11 +154,25 @@ const HydraApp = () => {
 
   const resumeHydra = async () => {
     setPaused(false);
+    setAnnounce('Hydra resumed');
     await fetch('/api/hydra', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'resume' }),
     });
+  };
+
+  const cancelHydra = async () => {
+    setRunning(false);
+    setPaused(false);
+    setRunId((id) => id + 1);
+    setOutput('');
+    await fetch('/api/hydra', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'cancel' }),
+    });
+    setAnnounce('Hydra cancelled');
   };
 
   return (
@@ -267,15 +299,29 @@ const HydraApp = () => {
             Resume
           </button>
         )}
+        {running && (
+          <button
+            data-testid="cancel-button"
+            onClick={cancelHydra}
+            className="ml-2 px-4 py-2 bg-red-600 rounded"
+          >
+            Cancel
+          </button>
+        )}
       </div>
 
       <Stepper
         active={running && !paused}
         totalAttempts={totalAttempts}
         backoffThreshold={5}
-        lockoutThreshold={10}
+        lockoutThreshold={LOCKOUT_THRESHOLD}
         runId={runId}
+        onAttemptChange={handleAttempt}
       />
+
+      <div role="status" aria-live="polite" className="sr-only">
+        {announce}
+      </div>
 
       {output && (
         <pre className="mt-4 bg-black p-2 overflow-auto h-64 whitespace-pre-wrap">{output}</pre>
