@@ -79,6 +79,8 @@ const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 
+const ShowcaseApp = createDynamicApp('showcase', 'Showcase');
+
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 
@@ -144,6 +146,8 @@ const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayRadare2 = createDisplay(Radare2App);
+
+const displayShowcase = createDisplay(ShowcaseApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -622,6 +626,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'showcase',
+    title: 'Showcase',
+    icon: './themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayShowcase,
   },
   {
     id: 'wireshark',
