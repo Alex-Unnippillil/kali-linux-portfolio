@@ -446,6 +446,15 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 }
 
+@keyframes tile-merge {
+    from { transform: scale(1.2); }
+    to { transform: scale(1); }
+}
+
+.tile-merge {
+    animation: tile-merge 0.2s ease-in-out;
+}
+
 @keyframes pad-pulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.6); }
     50% { box-shadow: 0 0 20px 5px rgba(255, 255, 255, 0.2); }
