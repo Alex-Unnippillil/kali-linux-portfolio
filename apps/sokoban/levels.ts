@@ -32,11 +32,13 @@ const RAW_CLASSIC = `
 #######
 ` as const;
 
+// Parses classic .xsb Sokoban level files into arrays of strings
 export function parseLevels(data: string): string[][] {
   const levels: string[][] = [];
   let current: string[] = [];
   data.split(/\r?\n/).forEach((line) => {
-    if (line.trim() === '' || line.trim().startsWith(';')) {
+    const trimmed = line.trim();
+    if (trimmed === '' || trimmed.startsWith(';') || trimmed.startsWith("'")) {
       if (current.length) {
         levels.push(current);
         current = [];

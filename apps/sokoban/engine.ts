@@ -15,6 +15,7 @@ interface HistoryEntry {
   player: Position;
   boxes: string[];
   pushes: number;
+  moves: number;
 }
 const key = (p: Position) => `${p.x},${p.y}`;
 
@@ -75,6 +76,7 @@ function cloneState(state: State): HistoryEntry {
     player: { ...state.player },
     boxes: Array.from(state.boxes),
     pushes: state.pushes,
+    moves: state.moves,
   };
 }
 
@@ -149,7 +151,7 @@ export function undo(state: State): State {
     player: { ...prev.player },
     boxes,
     pushes: prev.pushes,
-    moves: state.moves + 1,
+    moves: prev.moves,
     history: state.history.slice(0, -1),
   };
   restored.deadlocks = computeDeadlocks(restored);
@@ -280,7 +282,8 @@ const serialize = (player: Position, boxes: Set<string>) => {
   return `${player.x},${player.y}|${b}`;
 };
 
-export function findHint(state: State): DirectionKey | null {
+// Simple BFS solver used as a fallback when the IDA* solver fails
+function findHintBFS(state: State): DirectionKey | null {
   const startBoxes = new Set(state.boxes);
   const startKey = serialize(state.player, startBoxes);
   const visited = new Set<string>([startKey]);
@@ -317,4 +320,92 @@ export function findHint(state: State): DirectionKey | null {
     }
   }
   return null;
+}
+
+// Heuristic: sum of Manhattan distances from boxes to nearest targets
+function heuristic(state: State, boxes: Set<string>): number {
+  let h = 0;
+  boxes.forEach((b) => {
+    const [bx, by] = b.split(',').map(Number);
+    let min = Infinity;
+    state.targets.forEach((t) => {
+      const [tx, ty] = t.split(',').map(Number);
+      const d = Math.abs(tx - bx) + Math.abs(ty - by);
+      if (d < min) min = d;
+    });
+    h += min;
+  });
+  return h;
+}
+
+function isSolvedBoxes(state: State, boxes: Set<string>): boolean {
+  for (const b of boxes) {
+    if (!state.targets.has(b)) return false;
+  }
+  return true;
+}
+
+function idaSearch(
+  state: State,
+  player: Position,
+  boxes: Set<string>,
+  g: number,
+  bound: number,
+  path: DirectionKey[],
+  visited: Set<string>
+): [DirectionKey | null, number] {
+  const h = heuristic(state, boxes);
+  const f = g + h;
+  if (f > bound) return [null, f];
+  if (isSolvedBoxes(state, boxes)) return [path[0] ?? null, g];
+  let min = Infinity;
+  for (const dirKey of directionKeys) {
+    const dir = DIRS[dirKey];
+    const nextPlayer = { x: player.x + dir.x, y: player.y + dir.y };
+    const nextKey = key(nextPlayer);
+    if (state.walls.has(nextKey)) continue;
+    const newBoxes = new Set(boxes);
+    if (newBoxes.has(nextKey)) {
+      const beyond = { x: nextPlayer.x + dir.x, y: nextPlayer.y + dir.y };
+      const beyondKey = key(beyond);
+      if (state.walls.has(beyondKey) || newBoxes.has(beyondKey)) continue;
+      newBoxes.delete(nextKey);
+      newBoxes.add(beyondKey);
+      if (isDeadlockWith(state, newBoxes, beyond)) continue;
+      if (isEdgeDeadlock(state, newBoxes, beyond)) continue;
+    }
+    const ser = serialize(nextPlayer, newBoxes);
+    if (visited.has(ser)) continue;
+    visited.add(ser);
+    const [res, t] = idaSearch(state, nextPlayer, newBoxes, g + 1, bound, [...path, dirKey], visited);
+    if (res) return [res, t];
+    if (t < min) min = t;
+    visited.delete(ser);
+  }
+  return [null, min];
+}
+
+export function findHint(state: State): DirectionKey | null {
+  let bound = heuristic(state, state.boxes);
+  const startSer = serialize(state.player, state.boxes);
+  // iterative deepening
+  while (true) {
+    const visited = new Set<string>([startSer]);
+    const [res, t] = idaSearch(
+      state,
+      { ...state.player },
+      new Set(state.boxes),
+      0,
+      bound,
+      [],
+      visited
+    );
+    if (res) return res;
+    if (!Number.isFinite(t)) break;
+    bound = t;
+    // Safety cap to avoid infinite loops
+    if (bound > 1000) break;
+  }
+  // Fallback to BFS for complex cases
+  return findHintBFS(state);
 }
