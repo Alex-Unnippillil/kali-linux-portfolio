@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { getAudioContext, getDestination } from '../../utils/audioMixer';
 import {
   wrap,
   createBulletPool,
@@ -93,12 +94,15 @@ class Quadtree {
 const Asteroids = () => {
   const canvasRef = useRef(null);
   const requestRef = useRef();
-  const audioCtx = useRef(null);
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
   const controlsRef = useRef(useGameControls(canvasRef));
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [restartKey, setRestartKey] = useState(0);
+
+  useEffect(() => {
+    getAudioContext();
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -161,18 +165,22 @@ const Asteroids = () => {
       }
     };
 
-    // Audio using WebAudio lazily
+    // Audio routed through shared mixer
     const playSound = (freq) => {
-      if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
-      const ctxAudio = audioCtx.current;
+      const ctxAudio = getAudioContext();
+      const dest = getDestination();
+      if (!ctxAudio || !dest || ctxAudio.state !== 'running') return;
       const osc = ctxAudio.createOscillator();
       const gain = ctxAudio.createGain();
       osc.frequency.value = freq;
       osc.connect(gain);
-      gain.connect(ctxAudio.destination);
+      gain.connect(dest);
       osc.start();
       gain.gain.setValueAtTime(0.2, ctxAudio.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctxAudio.currentTime + 0.3);
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        ctxAudio.currentTime + 0.3
+      );
       osc.stop(ctxAudio.currentTime + 0.3);
     };
 

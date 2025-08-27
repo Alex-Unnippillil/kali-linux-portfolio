@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
+import { getAudioContext, getDestination } from '../../utils/audioMixer';
 
 /**
  * Small Pacman implementation used inside the portfolio. The goal of this
@@ -92,7 +93,9 @@ const Pacman = () => {
   const [pellets, setPellets] = useState(0);
   const fruitRef = useRef({ active: false, x: 7, y: 3, timer: 0 });
   const statusRef = useRef('Playing');
-  const audioCtxRef = useRef(null);
+  useEffect(() => {
+    getAudioContext();
+  }, []);
   const touchStartRef = useRef(null);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
@@ -116,15 +119,14 @@ const Pacman = () => {
   const playSound = (freq) => {
     if (!soundRef.current) return;
     try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      const ctx = audioCtxRef.current;
+      const ctx = getAudioContext();
+      const dest = getDestination();
+      if (!ctx || !dest || ctx.state !== 'running') return;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.frequency.value = freq;
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(dest);
       osc.start();
       osc.stop(ctx.currentTime + 0.1);
     } catch {

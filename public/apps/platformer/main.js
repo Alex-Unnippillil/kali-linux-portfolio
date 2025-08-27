@@ -1,4 +1,5 @@
 import { Player, updatePhysics, collectCoin, movePlayer } from './engine.js';
+import { getAudioContext, getDestination } from '../../../utils/audioMixer.js';
 
 const params = new URLSearchParams(location.search);
 const levelFile = params.get('lvl') || 'levels/level1.json';
@@ -12,6 +13,8 @@ if (cpParam) {
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const tileSize = 16;
+
+getAudioContext();
 
 let mapWidth = 0;
 let mapHeight = 0;
@@ -56,12 +59,14 @@ setupMobile();
 
 function playCoinSound() {
   try {
-    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const ac = getAudioContext();
+    const dest = getDestination();
+    if (!ac || !dest || ac.state !== 'running') return;
     const osc = ac.createOscillator();
     const gain = ac.createGain();
     osc.frequency.value = 800;
     osc.connect(gain);
-    gain.connect(ac.destination);
+    gain.connect(dest);
     osc.start();
     gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.2);
     osc.stop(ac.currentTime + 0.2);

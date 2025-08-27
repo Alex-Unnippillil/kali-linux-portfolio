@@ -1,9 +1,13 @@
+import { getAudioContext, getDestination } from '../../utils/audioMixer.js';
+
 let mode = 'timer';
 let timerInterval = null;
 let timerRemaining = 30;
 let stopwatchInterval = null;
 let stopwatchElapsed = 0;
 let lapNumber = 1;
+
+getAudioContext();
 
 const timerDisplay = document.getElementById('timerDisplay');
 const stopwatchDisplay = document.getElementById('stopwatchDisplay');
@@ -102,15 +106,16 @@ function lapWatch() {
 
 function playSound() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getAudioContext();
+    const dest = getDestination();
+    if (!ctx || !dest || ctx.state !== 'running') return;
     const oscillator = ctx.createOscillator();
     oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(440, ctx.currentTime);
-    oscillator.connect(ctx.destination);
+    oscillator.connect(dest);
     oscillator.start();
     setTimeout(() => {
       oscillator.stop();
-      ctx.close();
     }, 500);
   } catch (e) {
     console.error('AudioContext not supported', e);

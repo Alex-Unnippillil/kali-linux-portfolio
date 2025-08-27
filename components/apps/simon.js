@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Howl } from 'howler';
 import GameLayout from './GameLayout';
 import usePersistentState from '../usePersistentState';
+import { getAudioContext, getDestination } from '../../utils/audioMixer';
 
 const padStyles = [
   {
@@ -54,19 +55,21 @@ const Simon = () => {
     'simon_leaderboard',
     []
   );
-  const audioCtx = useRef(null);
+  useEffect(() => {
+    getAudioContext();
+  }, []);
   const errorSound = useRef(null);
   const [errorFlash, setErrorFlash] = useState(false);
 
   const scheduleTone = (freq, startTime, duration) => {
-    const ctx =
-      audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
-    audioCtx.current = ctx;
+    const ctx = getAudioContext();
+    const dest = getDestination();
+    if (!ctx || !dest || ctx.state !== 'running') return;
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
     oscillator.frequency.value = freq;
     oscillator.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(dest);
     gain.gain.setValueAtTime(0.0001, startTime);
     gain.gain.exponentialRampToValueAtTime(0.5, startTime + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
@@ -89,9 +92,9 @@ const Simon = () => {
   };
 
   const playSequence = () => {
-    const ctx =
-      audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
-    audioCtx.current = ctx;
+    const ctx = getAudioContext();
+    const dest = getDestination();
+    if (!ctx || !dest || ctx.state !== 'running') return;
     setIsPlayerTurn(false);
     setStatus('Listen...');
     const start = ctx.currentTime + 0.1;
@@ -143,9 +146,11 @@ const Simon = () => {
 
   const handlePadClick = (idx) => {
     if (!isPlayerTurn) return;
+    const ctx = getAudioContext();
+    if (!ctx || ctx.state !== 'running') return;
     const duration = stepDuration();
     flashPad(idx, duration);
-    scheduleTone(tones[idx], audioCtx.current.currentTime, duration);
+    scheduleTone(tones[idx], ctx.currentTime, duration);
     if (sequence[step] === idx) {
       if (step + 1 === sequence.length) {
         setIsPlayerTurn(false);
