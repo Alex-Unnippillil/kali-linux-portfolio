@@ -1,7 +1,9 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { GRID_SIZE, getPath } from './tower-defense-core';
 
 const WIDTH = 400;
 const HEIGHT = 400;
+const CELL_SIZE = WIDTH / GRID_SIZE;
 const BASE_SPAWN_COUNT = 5;
 const ENEMIES_PER_WAVE = 2;
 const SPAWN_INTERVAL = 0.5;
@@ -25,7 +27,6 @@ const DAMAGE_NUMBER_VY = -30;
 const DAMAGE_NUMBER_ACCEL = 200;
 const SHOCKWAVE_TTL = 0.3;
 const SHOCKWAVE_GROWTH = 200;
-const TOWER_PLACEMENT_RADIUS = 15;
 const TOWER_MAX_LEVEL = 3;
 const TOWER_RADIUS = 10;
 const PROJECTILE_RADIUS = 3;
@@ -34,74 +35,27 @@ const ENEMY_BAR_WIDTH = 20;
 const ENEMY_BAR_HEIGHT = 3;
 const ENEMY_BAR_OFFSET_X = 10;
 const ENEMY_BAR_OFFSET_Y = 14;
-
-// Simple fixed path
-const PATH = [
-  { x: 20, y: 20 },
-  { x: 380, y: 20 },
-  { x: 380, y: 200 },
-  { x: 20, y: 200 },
-  { x: 20, y: 380 },
-];
+const BASE_TOWER_COST = 20;
+const TOWER_COST_INC = 5;
+const BASE_UPGRADE_COST = 15;
 
 const TARGET_MODES = ['first', 'last', 'strongest', 'closest'];
 
-// Precompute path segments and length
-const pathSegments = [];
-let totalLength = 0;
-for (let i = 0; i < PATH.length - 1; i += 1) {
-  const a = PATH[i];
-  const b = PATH[i + 1];
-  const len = Math.hypot(b.x - a.x, b.y - a.y);
-  pathSegments.push({ a, b, len });
-  totalLength += len;
-}
-
-/**
- * Returns the coordinates at a distance `d` along the path.
- * @param {number} d distance along the path
- * @returns {{x:number,y:number}}
- */
-const getPointAt = (d) => {
-  let dist = d;
-  for (const seg of pathSegments) {
-    if (dist <= seg.len) {
-      const t = dist / seg.len;
-      return {
-        x: seg.a.x + (seg.b.x - seg.a.x) * t,
-        y: seg.a.y + (seg.b.y - seg.a.y) * t,
-      };
-    }
-    dist -= seg.len;
-  }
-  const last = pathSegments[pathSegments.length - 1];
-  return { x: last.b.x, y: last.b.y };
+// Compute path using A* from core and convert grid cells to pixels
+const computePath = (towers = []) => {
+  const gridPath = getPath(towers.map((t) => ({ x: t.gx, y: t.gy })));
+  return gridPath
+    ? gridPath.map((p) => ({
+        x: p.x * CELL_SIZE + CELL_SIZE / 2,
+        y: p.y * CELL_SIZE + CELL_SIZE / 2,
+        gx: p.x,
+        gy: p.y,
+      }))
+    : [];
 };
 
-/**
- * Checks whether the supplied point lies on or near the path.
- * @param {number} px
- * @param {number} py
- * @returns {boolean}
- */
-const pointOnPath = (px, py) => {
-  const threshold = 15;
-  for (const seg of pathSegments) {
-    const { a, b } = seg;
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const lengthSq = dx * dx + dy * dy;
-    const t = Math.max(
-      0,
-      Math.min(1, ((px - a.x) * dx + (py - a.y) * dy) / lengthSq)
-    );
-    const projX = a.x + t * dx;
-    const projY = a.y + t * dy;
-    const dist = Math.hypot(px - projX, py - projY);
-    if (dist < threshold) return true;
-  }
-  return false;
-};
+const pointOnPath = (gx, gy, path) =>
+  path.some((p) => p.gx === gx && p.gy === gy);
 
 /**
  * Tower defense game component.
@@ -122,12 +76,15 @@ function TowerDefense() {
   const [lives, setLives] = useState(INITIAL_LIVES);
   const livesRef = useRef(lives);
   const [score, setScore] = useState(0);
+  const [gold, setGold] = useState(100);
   const [highScore, setHighScore] = useState(0);
   const [running, setRunning] = useState(false);
   const runningRef = useRef(running);
   const [sound, setSound] = useState(true);
   const [fast, setFast] = useState(false);
   const speedRef = useRef(1);
+  const [selected, setSelected] = useState(null);
+  const pathRef = useRef(computePath([]));
   const audioCtxRef = useRef(null);
   const prefersReducedMotion = useRef(false);
 
@@ -202,10 +159,13 @@ function TowerDefense() {
     waveRef.current = 1;
     setLives(INITIAL_LIVES);
     setScore(0);
+    setGold(100);
     setRunning(false);
     runningRef.current = false;
     setFast(false);
     speedRef.current = 1;
+    setSelected(null);
+    pathRef.current = computePath([]);
     startWave(1);
   }, [startWave]);
 
@@ -213,32 +173,76 @@ function TowerDefense() {
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    const existing = towersRef.current.find(
-      (t) => Math.hypot(t.x - x, t.y - y) < TOWER_PLACEMENT_RADIUS
-    );
+    const gx = Math.floor(x / CELL_SIZE);
+    const gy = Math.floor(y / CELL_SIZE);
+    const existing = towersRef.current.find((t) => t.gx === gx && t.gy === gy);
     if (existing) {
+      setSelected(existing);
       if (e.shiftKey) {
         const idx = TARGET_MODES.indexOf(existing.mode || 'first');
         existing.mode = TARGET_MODES[(idx + 1) % TARGET_MODES.length];
-      } else if (existing.level < TOWER_MAX_LEVEL) existing.level += 1;
+      }
       return;
     }
-    if (pointOnPath(x, y)) return;
-    towersRef.current.push({ x, y, level: 1, cooldown: 0, mode: 'first' });
-  }, []);
+    if (pointOnPath(gx, gy, pathRef.current)) {
+      setSelected(null);
+      return;
+    }
+    const cost = BASE_TOWER_COST + towersRef.current.length * TOWER_COST_INC;
+    if (gold < cost) {
+      setSelected(null);
+      return;
+    }
+    const tower = {
+      x: gx * CELL_SIZE + CELL_SIZE / 2,
+      y: gy * CELL_SIZE + CELL_SIZE / 2,
+      gx,
+      gy,
+      level: 1,
+      cooldown: 0,
+      mode: 'first',
+    };
+    towersRef.current.push(tower);
+    setGold((g) => g - cost);
+    pathRef.current = computePath(towersRef.current);
+    setSelected(tower);
+  }, [gold]);
+
+  const upgradeSelected = useCallback(() => {
+    if (!selected || selected.level >= TOWER_MAX_LEVEL) return;
+    const cost = BASE_UPGRADE_COST * selected.level;
+    if (gold < cost) return;
+    selected.level += 1;
+    setGold((g) => g - cost);
+  }, [selected, gold]);
 
   const spawnEnemies = (dt) => {
     const spawn = spawnRef.current;
     spawn.timer += dt;
     if (spawn.spawned < spawn.count && spawn.timer >= SPAWN_INTERVAL) {
       const hp = BASE_ENEMY_HP + waveRef.current * ENEMY_HP_PER_WAVE;
+      const armorTiers = [
+        { type: 'light', resistance: 0.1 },
+        { type: 'medium', resistance: 0.25 },
+        { type: 'heavy', resistance: 0.4 },
+      ];
+      const armor =
+        armorTiers[Math.min(
+          Math.floor((waveRef.current - 1) / 3),
+          armorTiers.length - 1
+        )];
+      const path = pathRef.current.slice();
       enemiesRef.current.push({
-        dist: 0,
+        index: 0,
         speed: BASE_ENEMY_SPEED + waveRef.current * ENEMY_SPEED_PER_WAVE,
         hp,
         maxHp: hp,
-        x: PATH[0].x,
-        y: PATH[0].y,
+        armor: armor.type,
+        resistance: armor.resistance,
+        x: path[0].x,
+        y: path[0].y,
+        path,
+        progress: 0,
       });
       spawn.spawned += 1;
       spawn.timer = 0;
@@ -247,10 +251,25 @@ function TowerDefense() {
 
   const moveEnemies = (dt) => {
     enemiesRef.current.forEach((e) => {
-      e.dist += e.speed * dt;
-      const pos = getPointAt(e.dist);
-      e.x = pos.x;
-      e.y = pos.y;
+      const target = e.path[e.index + 1];
+      if (!target) return;
+      const dx = target.x - e.x;
+      const dy = target.y - e.y;
+      const dist = Math.hypot(dx, dy);
+      const step = e.speed * dt;
+      if (step >= dist) {
+        e.x = target.x;
+        e.y = target.y;
+        e.index += 1;
+        e.progress = e.index;
+      } else {
+        e.x += (dx / dist) * step;
+        e.y += (dy / dist) * step;
+        const segStart = e.path[e.index];
+        const segTotal = Math.hypot(target.x - segStart.x, target.y - segStart.y);
+        const segDist = Math.hypot(e.x - segStart.x, e.y - segStart.y);
+        e.progress = e.index + segDist / segTotal;
+      }
     });
   };
 
@@ -260,21 +279,21 @@ function TowerDefense() {
       const range = TOWER_BASE_RANGE + t.level * TOWER_RANGE_PER_LEVEL;
       let target = null;
       if (t.mode === 'first') {
-        let maxDistPath = -Infinity;
+        let maxProg = -Infinity;
         enemiesRef.current.forEach((e) => {
           const distToTower = Math.hypot(e.x - t.x, e.y - t.y);
-          if (distToTower < range && e.dist > maxDistPath) {
+          if (distToTower < range && e.progress > maxProg) {
             target = e;
-            maxDistPath = e.dist;
+            maxProg = e.progress;
           }
         });
       } else if (t.mode === 'last') {
-        let minDistPath = Infinity;
+        let minProg = Infinity;
         enemiesRef.current.forEach((e) => {
           const distToTower = Math.hypot(e.x - t.x, e.y - t.y);
-          if (distToTower < range && e.dist < minDistPath) {
+          if (distToTower < range && e.progress < minProg) {
             target = e;
-            minDistPath = e.dist;
+            minProg = e.progress;
           }
         });
       } else if (t.mode === 'strongest') {
@@ -324,11 +343,12 @@ function TowerDefense() {
       p.y += vy * dt;
       if (dist < PROJECTILE_HIT_DISTANCE || p.target.hp <= 0) {
         if (p.target.hp > 0) {
-          p.target.hp -= p.damage;
+          const dmg = p.damage * (1 - p.target.resistance);
+          p.target.hp -= dmg;
           damageNumbersRef.current.push({
             x: p.target.x,
             y: p.target.y,
-            dmg: p.damage,
+            dmg: dmg.toFixed(1),
             vy: DAMAGE_NUMBER_VY,
             ttl: DAMAGE_NUMBER_TTL,
           });
@@ -336,11 +356,12 @@ function TowerDefense() {
             if (e !== p.target) {
               const d = Math.hypot(e.x - p.x, e.y - p.y);
               if (d < AOE_RADIUS) {
-                e.hp -= p.damage;
+                const ad = p.damage * (1 - e.resistance);
+                e.hp -= ad;
                 damageNumbersRef.current.push({
                   x: e.x,
                   y: e.y,
-                  dmg: p.damage,
+                  dmg: ad.toFixed(1),
                   vy: DAMAGE_NUMBER_VY,
                   ttl: DAMAGE_NUMBER_TTL,
                 });
@@ -382,10 +403,11 @@ function TowerDefense() {
     enemiesRef.current = enemiesRef.current.filter((e) => {
       if (e.hp <= 0) {
         setScore((s) => s + 1);
+        setGold((g) => g + 5);
         playSound();
         return false;
       }
-      if (e.dist >= totalLength) {
+      if (e.index >= e.path.length - 1) {
         setLives((l) => l - 1);
         return false;
       }
@@ -406,6 +428,7 @@ function TowerDefense() {
       startWave(next);
       setRunning(false);
       runningRef.current = false;
+      setGold((g) => g + next * 10);
     }
   };
 
@@ -427,10 +450,13 @@ function TowerDefense() {
     ctx.strokeStyle = '#555';
     ctx.lineWidth = 20;
     ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(PATH[0].x, PATH[0].y);
-    for (let i = 1; i < PATH.length; i += 1) ctx.lineTo(PATH[i].x, PATH[i].y);
-    ctx.stroke();
+    const path = pathRef.current;
+    if (path.length) {
+      ctx.beginPath();
+      ctx.moveTo(path[0].x, path[0].y);
+      for (let i = 1; i < path.length; i += 1) ctx.lineTo(path[i].x, path[i].y);
+      ctx.stroke();
+    }
 
     decalsRef.current.forEach((d) => {
       const alpha = prefersReducedMotion.current ? 1 : d.ttl / DECAL_TTL;
@@ -450,12 +476,14 @@ function TowerDefense() {
     });
 
     towersRef.current.forEach((t) => {
-      const range = 60 + t.level * 10;
-      ctx.strokeStyle = 'rgba(0,0,255,0.3)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, range, 0, Math.PI * 2);
-      ctx.stroke();
+      if (selected === t) {
+        const range = TOWER_BASE_RANGE + t.level * TOWER_RANGE_PER_LEVEL;
+        ctx.strokeStyle = 'rgba(0,0,255,0.3)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, range, 0, Math.PI * 2);
+        ctx.stroke();
+      }
       ctx.fillStyle = 'blue';
       ctx.beginPath();
       ctx.arc(t.x, t.y, TOWER_RADIUS, 0, Math.PI * 2);
@@ -540,6 +568,7 @@ function TowerDefense() {
         <span className="mr-4">Wave: {wave}</span>
         <span className="mr-4">Lives: {lives}</span>
         <span className="mr-4">Score: {score}</span>
+        <span className="mr-4">Gold: {gold}</span>
         <span>Highscore: {highScore}</span>
       </div>
       <div className="mb-2 flex space-x-2">
@@ -575,6 +604,17 @@ function TowerDefense() {
         className="bg-black"
         onClick={handleClick}
       />
+      {selected && (
+        <div className="mt-2">
+          <button
+            type="button"
+            className="px-2 bg-gray-700"
+            onClick={upgradeSelected}
+          >
+            Upgrade ({BASE_UPGRADE_COST * selected.level})
+          </button>
+        </div>
+      )}
     </div>
   );
 }
