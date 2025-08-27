@@ -3,6 +3,7 @@ import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
+import Titlebar from '../window/Titlebar';
 
 export class Window extends Component {
     constructor(props) {
@@ -19,7 +20,8 @@ export class Window extends Component {
             parentSize: {
                 height: 100,
                 width: 100
-            }
+            },
+            title: props.title
         }
     }
 
@@ -75,6 +77,10 @@ export class Window extends Component {
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default" })
+    }
+
+    setTitle = (title) => {
+        this.setState({ title });
     }
 
     handleVerticleResize = () => {
@@ -185,13 +191,13 @@ export class Window extends Component {
                 >
                     {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                     {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                    <WindowTopBar title={this.props.title} />
+                    <Titlebar title={this.state.title} />
                     <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
                     {(this.id === "settings"
                         ? <Settings changeBackgroundImage={this.props.changeBackgroundImage} currBgImgName={this.props.bg_image_name} />
-                        : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                        : <WindowMainScreen screen={this.props.screen} title={this.state.title}
                             addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                            openApp={this.props.openApp} />)}
+                            openApp={this.props.openApp} setTitle={this.setTitle} />)}
                 </div>
             </Draggable >
         )
@@ -199,15 +205,6 @@ export class Window extends Component {
 }
 
 export default Window
-
-// Window's title bar
-export function WindowTopBar(props) {
-    return (
-        <div className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}>
-            <div className="flex justify-center text-sm font-bold">{props.title}</div>
-        </div>
-    )
-}
 
 // Window's Borders
 export class WindowYBorder extends Component {
@@ -312,8 +309,8 @@ export class WindowMainScreen extends Component {
     }
     render() {
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}> 
+                {this.props.screen(this.props.addFolder, this.props.openApp, this.props.setTitle)}
             </div>
         )
     }
