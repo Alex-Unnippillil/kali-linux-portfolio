@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 const MimikatzApp = () => {
   const [modules, setModules] = useState([]);
   const [output, setOutput] = useState('');
   const [history, setHistory] = useState([]);
+  const [credentials, setCredentials] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ key: 'user', direction: 'asc' });
   const [templates, setTemplates] = useState(() => {
     if (typeof window === 'undefined') return [];
     try {
@@ -28,17 +30,29 @@ const MimikatzApp = () => {
     ]);
   };
 
+  const parseCredentials = (text) => {
+    return text
+      .split('\n')
+      .map((line) => line.trim())
+      .map((line) => line.split(':'))
+      .filter((parts) => parts.length === 2)
+      .map(([user, password]) => ({ user: user.trim(), password: password.trim() }));
+  };
+
   const runCommand = async (cmd) => {
     try {
       const res = await fetch(
         `/api/mimikatz?command=${encodeURIComponent(cmd)}`
       );
       const data = await res.json();
-      setOutput(data.output || '');
-      addHistory(cmd, data.output || '');
+      const text = data.output || '';
+      setOutput(text);
+      setCredentials(parseCredentials(text));
+      addHistory(cmd, text);
     } catch (err) {
       const msg = `Error: ${err.message}`;
       setOutput(msg);
+      setCredentials([]);
       addHistory(cmd, msg);
     }
   };
@@ -62,13 +76,36 @@ const MimikatzApp = () => {
         body: JSON.stringify({ script }),
       });
       const data = await res.json();
-      setOutput(data.output || '');
-      addHistory(script, data.output || '');
+      const text = data.output || '';
+      setOutput(text);
+      setCredentials(parseCredentials(text));
+      addHistory(script, text);
     } catch (err) {
       const msg = `Error: ${err.message}`;
       setOutput(msg);
+      setCredentials([]);
       addHistory(script, msg);
     }
+  };
+
+  const sortedCredentials = useMemo(() => {
+    const sorted = [...credentials];
+    sorted.sort((a, b) => {
+      const aVal = a[sortConfig.key].toLowerCase();
+      const bVal = b[sortConfig.key].toLowerCase();
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return sorted;
+  }, [credentials, sortConfig]);
+
+  const requestSort = (key) => {
+    setSortConfig((current) => {
+      const direction =
+        current.key === key && current.direction === 'asc' ? 'desc' : 'asc';
+      return { key, direction };
+    });
   };
 
   return (
@@ -124,6 +161,27 @@ const MimikatzApp = () => {
       <div className="flex-1 p-4 bg-ub-cool-grey overflow-auto">
         <h1 className="text-lg mb-4">Mimikatz</h1>
         <pre className="whitespace-pre-wrap mb-4">{output}</pre>
+        {sortedCredentials.length > 0 && (
+          <>
+            <h2 className="text-lg mb-2">Recovered Credentials</h2>
+            <table className="credentials-table mb-4">
+              <thead>
+                <tr>
+                  <th onClick={() => requestSort('user')}>Username</th>
+                  <th onClick={() => requestSort('password')}>Password</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedCredentials.map((cred, idx) => (
+                  <tr key={idx}>
+                    <td>{cred.user}</td>
+                    <td>{cred.password}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
         <h2 className="text-lg mb-2">History</h2>
         <ul className="space-y-1">
           {history.map((h, idx) => (
