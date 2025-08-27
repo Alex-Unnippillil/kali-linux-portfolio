@@ -115,6 +115,7 @@ const Sudoku = () => {
   const [useDaily, setUseDaily] = useState(true);
   const [puzzle, setPuzzle] = useState([]);
   const [board, setBoard] = useState([]);
+  const [solution, setSolution] = useState([]);
   const [notes, setNotes] = useState([]); // notes[r][c] = array of numbers
   const [noteMode, setNoteMode] = useState(false);
   const [autoNotes, setAutoNotes] = useState(false);
@@ -124,10 +125,17 @@ const Sudoku = () => {
   const [time, setTime] = useState(0);
   const [bestTime, setBestTime] = useState(null);
   const timerRef = useRef(null);
+  const cellRefs = useRef(
+    Array(SIZE)
+      .fill(0)
+      .map(() => Array(SIZE).fill(null))
+  );
 
   const startGame = (seed) => {
-    const { puzzle } = generateSudoku(difficulty, seed);
+    const diffOffset = { easy: 1, medium: 2, hard: 3 }[difficulty] || 0;
+    const { puzzle, solution } = generateSudoku(difficulty, seed + diffOffset);
     setPuzzle(puzzle);
+    setSolution(solution);
     setBoard(puzzle.map((r) => r.slice()));
     setNotes(
       Array(SIZE)
@@ -162,6 +170,7 @@ const Sudoku = () => {
           setUseDaily(data.useDaily ?? true);
           setPuzzle(data.puzzle);
           setBoard(data.board);
+          setSolution(data.solution || []);
           setNotes(data.notes);
           setCompleted(data.completed);
           setTime(data.time || 0);
@@ -194,6 +203,7 @@ const Sudoku = () => {
     const data = {
       puzzle,
       board,
+      solution,
       notes,
       difficulty,
       useDaily,
@@ -201,7 +211,7 @@ const Sudoku = () => {
       completed,
     };
     localStorage.setItem('sudoku-progress', JSON.stringify(data));
-  }, [board, notes, time, puzzle, difficulty, useDaily, completed]);
+  }, [board, notes, time, puzzle, solution, difficulty, useDaily, completed]);
 
   useEffect(() => {
     if (!completed || typeof window === 'undefined') return;
@@ -236,6 +246,12 @@ const Sudoku = () => {
     }
   };
 
+  const focusCell = (r, c) => {
+    if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) return;
+    const cell = cellRefs.current[r][c];
+    if (cell) cell.focus();
+  };
+
   const applyAutoNotes = (b = board) => {
     const newNotes = Array(SIZE)
       .fill(0)
@@ -252,16 +268,18 @@ const Sudoku = () => {
     for (let r = 0; r < SIZE; r++) {
       for (let c = 0; c < SIZE; c++) {
         if (board[r][c] === 0) {
-          const cand = getCandidates(board, r, c);
-          if (cand.length === 1) {
-            setHint(`Cell (${r + 1},${c + 1}) must be ${cand[0]} (single candidate)`);
-            setHintCell({ r, c });
-            return;
-          }
+          const newBoard = board.map((row) => row.slice());
+          newBoard[r][c] = solution[r][c];
+          setBoard(newBoard);
+          setHint(`Cell (${r + 1},${c + 1}) = ${solution[r][c]}`);
+          setHintCell({ r, c });
+          if (autoNotes) applyAutoNotes(newBoard);
+          if (isBoardComplete(newBoard)) setCompleted(true);
+          return;
         }
       }
     }
-    setHint('No simple hints available');
+    setHint('No empty cells to fill');
     setHintCell(null);
   };
 
@@ -395,10 +413,27 @@ const Sudoku = () => {
                         handleValue(r, c, e.key, true);
                       }
                     }
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      focusCell(r - 1, c);
+                    }
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      focusCell(r + 1, c);
+                    }
+                    if (e.key === 'ArrowLeft') {
+                      e.preventDefault();
+                      focusCell(r, c - 1);
+                    }
+                    if (e.key === 'ArrowRight') {
+                      e.preventDefault();
+                      focusCell(r, c + 1);
+                    }
                   }}
                   maxLength={1}
                   disabled={original}
                   inputMode="numeric"
+                  ref={(el) => (cellRefs.current[r][c] = el)}
                 />
                 {notes[r][c].length > 0 && val === 0 && (
                   <div className="absolute inset-0 grid grid-cols-3 text-[8px] leading-3 text-gray-500 pointer-events-none">
