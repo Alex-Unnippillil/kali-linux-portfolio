@@ -52,10 +52,12 @@ export const score = () => vibrate(patterns.score);
 export const danger = () => vibrate(patterns.danger);
 export const gameOver = () => vibrate(patterns.gameOver);
 
-export default {
+const haptics = {
   vibrate,
   score,
   danger,
   gameOver,
   patterns,
 };
+
+export default haptics;
