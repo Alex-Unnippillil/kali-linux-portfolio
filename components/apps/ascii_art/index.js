@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
 
 // Preset character sets and color palettes
 const presetCharSets = {
@@ -38,9 +39,16 @@ export default function AsciiArt() {
   const [asciiHtml, setAsciiHtml] = useState('');
   const [plainAscii, setPlainAscii] = useState('');
   const [ansiAscii, setAnsiAscii] = useState('');
-  const [charSet, setCharSet] = useState('');
-  const [paletteName, setPaletteName] = useState('grayscale');
+  const [charSet, setCharSet] = usePersistentState(
+    'ascii_char_set',
+    presetCharSets.standard
+  );
+  const [paletteName, setPaletteName] = usePersistentState(
+    'ascii_palette',
+    'grayscale'
+  );
   const [cellSize, setCellSize] = useState(8);
+  const [outputWidth, setOutputWidth] = useState(80);
   const [useColor, setUseColor] = useState(true);
   const [altText, setAltText] = useState('');
   const [typingMode, setTypingMode] = useState(false);
@@ -49,23 +57,41 @@ export default function AsciiArt() {
   const workerRef = useRef(null);
   const canvasRef = useRef(null);
   const editorRef = useRef(null);
+  const [presets, setPresets] = usePersistentState('ascii_presets', []);
+  const [presetName, setPresetName] = useState('');
+  const [selectedPreset, setSelectedPreset] = useState('');
 
-  // Load saved preferences
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const savedSet = window.localStorage.getItem('ascii_char_set');
-    const savedPalette = window.localStorage.getItem('ascii_palette');
-    setCharSet(savedSet || presetCharSets.standard);
-    setPaletteName(savedPalette || 'grayscale');
-  }, []);
+  const savePreset = () => {
+    if (!presetName) return;
+    const newPreset = {
+      name: presetName,
+      charSet,
+      paletteName,
+      cellSize,
+      outputWidth,
+      useColor,
+    };
+    setPresets((prev) => {
+      const others = prev.filter((p) => p.name !== presetName);
+      return [...others, newPreset];
+    });
+    setPresetName('');
+  };
 
-  // Persist preferences
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('ascii_char_set', charSet);
-      window.localStorage.setItem('ascii_palette', paletteName);
-    }
-  }, [charSet, paletteName]);
+  const loadPreset = (name) => {
+    const p = presets.find((pr) => pr.name === name);
+    if (!p) return;
+    setCharSet(p.charSet);
+    setPaletteName(p.paletteName);
+    setCellSize(p.cellSize || 8);
+    setOutputWidth(p.outputWidth || 80);
+    setUseColor(p.useColor ?? true);
+  };
+
+  const deletePreset = (name) => {
+    setPresets((prev) => prev.filter((p) => p.name !== name));
+    if (selectedPreset === name) setSelectedPreset('');
+  };
 
   // Setup worker
   useEffect(() => {
@@ -92,7 +118,7 @@ export default function AsciiArt() {
         {
           bitmap,
           charSet,
-          cellSize,
+          width: outputWidth,
           useColor,
           palette: palettes[paletteName],
         },
@@ -104,8 +130,9 @@ export default function AsciiArt() {
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        const width = Math.floor(img.width / cellSize);
-        const height = Math.floor(img.height / cellSize);
+        const scale = img.width / outputWidth;
+        const width = outputWidth;
+        const height = Math.round(img.height / scale);
         canvas.width = width;
         canvas.height = height;
         ctx.drawImage(img, 0, 0, width, height);
@@ -266,6 +293,18 @@ export default function AsciiArt() {
           />
         </label>
         <label className="flex items-center gap-2">
+          Width:
+          <input
+            type="range"
+            min="20"
+            max="200"
+            value={outputWidth}
+            onChange={(e) => setOutputWidth(Number(e.target.value))}
+            className="bg-gray-700"
+          />
+          <span>{outputWidth}</span>
+        </label>
+        <label className="flex items-center gap-2">
           Palette:
           <select
             value={paletteName}
@@ -287,13 +326,6 @@ export default function AsciiArt() {
             onChange={(e) => setUseColor(e.target.checked)}
           />
         </label>
-        <button
-          type="button"
-          onClick={copyAscii}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-        >
-          Copy
-        </button>
         <button
           type="button"
           onClick={downloadAscii}
@@ -331,6 +363,45 @@ export default function AsciiArt() {
         >
           Alt
         </button>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Preset name"
+            value={presetName}
+            onChange={(e) => setPresetName(e.target.value)}
+            className="px-1 bg-gray-700"
+          />
+          <button
+            type="button"
+            onClick={savePreset}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          >
+            Save
+          </button>
+          <select
+            value={selectedPreset}
+            onChange={(e) => {
+              const name = e.target.value;
+              setSelectedPreset(name);
+              if (name) loadPreset(name);
+            }}
+            className="bg-gray-700"
+          >
+            <option value="">Load</option>
+            {presets.map((p) => (
+              <option key={p.name} value={p.name}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => deletePreset(selectedPreset)}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          >
+            Delete
+          </button>
+        </div>
       </div>
       {typingMode ? (
         <textarea
@@ -347,10 +418,19 @@ export default function AsciiArt() {
           }}
         />
       ) : (
-        <pre
-          className="font-mono whitespace-pre overflow-auto flex-1"
-          dangerouslySetInnerHTML={{ __html: asciiHtml }}
-        />
+        <div className="relative flex-1 overflow-auto">
+          <button
+            type="button"
+            onClick={copyAscii}
+            className="absolute right-2 top-2 px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          >
+            Copy
+          </button>
+          <pre
+            className="font-mono whitespace-pre h-full w-full"
+            dangerouslySetInnerHTML={{ __html: asciiHtml }}
+          />
+        </div>
       )}
       <canvas ref={canvasRef} className="hidden w-full h-full" />
       <div className="sr-only" aria-live="polite">
