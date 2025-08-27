@@ -22,6 +22,8 @@ export class Window extends Component {
             },
             snapPreview: null,
             snapPosition: null,
+            snapped: null,
+            lastSize: null,
         }
     }
 
@@ -72,6 +74,9 @@ export class Window extends Component {
         if (this.state.maximized) {
             this.restoreWindow();
         }
+        if (this.state.snapped) {
+            this.unsnapWindow();
+        }
         this.setState({ cursorType: "cursor-move" })
     }
 
@@ -94,6 +99,27 @@ export class Window extends Component {
         var rect = r.getBoundingClientRect();
         r.style.setProperty('--window-transform-x', rect.x.toFixed(1).toString() + "px");
         r.style.setProperty('--window-transform-y', (rect.y.toFixed(1) - 32).toString() + "px");
+    }
+
+    unsnapWindow = () => {
+        if (!this.state.snapped) return;
+        var r = document.querySelector("#" + this.id);
+        if (r) {
+            const x = r.style.getPropertyValue('--window-transform-x');
+            const y = r.style.getPropertyValue('--window-transform-y');
+            if (x && y) {
+                r.style.transform = `translate(${x},${y})`;
+            }
+        }
+        if (this.state.lastSize) {
+            this.setState({
+                width: this.state.lastSize.width,
+                height: this.state.lastSize.height,
+                snapped: null
+            }, this.resizeBoundries);
+        } else {
+            this.setState({ snapped: null }, this.resizeBoundries);
+        }
     }
 
     checkOverlap = () => {
@@ -137,7 +163,42 @@ export class Window extends Component {
 
     handleStop = () => {
         this.changeCursorToDefault();
-        this.setState({ snapPreview: null, snapPosition: null });
+        const snapPos = this.state.snapPosition;
+        if (snapPos) {
+            this.setWinowsPosition();
+            const { width, height } = this.state;
+            let newWidth = width;
+            let newHeight = height;
+            let transform = '';
+            if (snapPos === 'left') {
+                newWidth = 50;
+                newHeight = 96.3;
+                transform = 'translate(-1pt,-2pt)';
+            } else if (snapPos === 'right') {
+                newWidth = 50;
+                newHeight = 96.3;
+                transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+            } else if (snapPos === 'top') {
+                newWidth = 100.2;
+                newHeight = 50;
+                transform = 'translate(-1pt,-2pt)';
+            }
+            var r = document.querySelector("#" + this.id);
+            if (r && transform) {
+                r.style.transform = transform;
+            }
+            this.setState({
+                snapPreview: null,
+                snapPosition: null,
+                snapped: snapPos,
+                lastSize: { width, height },
+                width: newWidth,
+                height: newHeight
+            }, this.resizeBoundries);
+        }
+        else {
+            this.setState({ snapPreview: null, snapPosition: null });
+        }
     }
 
     focusWindow = () => {
@@ -205,6 +266,8 @@ export class Window extends Component {
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
+        } else if (e.key === 'ArrowDown' && e.altKey) {
+            this.unsnapWindow();
         }
     }
 

@@ -117,3 +117,140 @@ describe('Window snapping preview', () => {
     expect(screen.queryByTestId('snap-preview')).toBeNull();
   });
 });
+
+describe('Window snapping finalize and release', () => {
+  it('snaps window on drag stop near left edge', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 10,
+      right: 105,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 10,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('left');
+    expect(ref.current!.state.width).toBe(50);
+    expect(ref.current!.state.height).toBe(96.3);
+  });
+
+  it('releases snap with Alt+ArrowDown restoring size', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 10,
+      right: 105,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 10,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('left');
+
+    act(() => {
+      ref.current!.handleKeyDown({ key: 'ArrowDown', altKey: true } as any);
+    });
+
+    expect(ref.current!.state.snapped).toBeNull();
+    expect(ref.current!.state.width).toBe(60);
+    expect(ref.current!.state.height).toBe(85);
+  });
+
+  it('releases snap when starting drag', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 5,
+      top: 10,
+      right: 105,
+      bottom: 110,
+      width: 100,
+      height: 100,
+      x: 5,
+      y: 10,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleDrag();
+    });
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(ref.current!.state.snapped).toBe('left');
+
+    act(() => {
+      ref.current!.changeCursorToMove();
+    });
+
+    expect(ref.current!.state.snapped).toBeNull();
+    expect(ref.current!.state.width).toBe(60);
+    expect(ref.current!.state.height).toBe(85);
+  });
+});
