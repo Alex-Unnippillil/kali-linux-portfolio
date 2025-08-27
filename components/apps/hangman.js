@@ -27,6 +27,9 @@ const Hangman = () => {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const audioCtxRef = useRef(null);
+  const partProgressRef = useRef(new Array(maxWrong).fill(0));
+  const partStartRef = useRef(new Array(maxWrong).fill(0));
+  const reduceMotionRef = useRef(false);
 
   const [word, setWord] = useState('');
   const [guessed, setGuessed] = useState([]);
@@ -44,6 +47,7 @@ const Hangman = () => {
     0,
     (v) => typeof v === 'number',
   );
+  const [announcement, setAnnouncement] = useState('');
 
   const playTone = (freq) => {
     if (!sound) return;
@@ -79,6 +83,9 @@ const Hangman = () => {
       setHintUsed(false);
       setScore(0);
       setPaused(false);
+      partProgressRef.current = new Array(maxWrong).fill(0);
+      partStartRef.current = new Array(maxWrong).fill(0);
+      setAnnouncement('');
       logGameStart('hangman');
     } catch (err) {
       logGameError('hangman', err?.message || String(err));
@@ -88,6 +95,14 @@ const Hangman = () => {
   useEffect(() => {
     reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => (reduceMotionRef.current = mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
   }, []);
 
   const hintOnce = () => {
@@ -116,10 +131,20 @@ const Hangman = () => {
     if (word.includes(letter)) {
       playTone(600);
       setScore((s) => s + 2);
+      setAnnouncement(`Correct guess: ${letter}`);
     } else {
       playTone(200);
+      const idx = wrong;
+      partStartRef.current[idx] = performance.now();
+      partProgressRef.current[idx] = reduceMotionRef.current ? 1 : 0;
       setWrong((w) => w + 1);
       setScore((s) => s - 1);
+      const remaining = maxWrong - (wrong + 1);
+      setAnnouncement(
+        `Wrong guess: ${letter}. ${remaining} ${
+          remaining === 1 ? 'try' : 'tries'
+        } left.`,
+      );
     }
   };
 
@@ -144,8 +169,12 @@ const Hangman = () => {
     const won = word && word.split('').every((l) => guessed.includes(l));
     if (won || wrong >= maxWrong) {
       logGameEnd('hangman', won ? 'win' : 'lose');
-      if (won)
+      if (won) {
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        setAnnouncement('You won! Press R to play again.');
+      } else {
+        setAnnouncement(`You lost! ${word.toUpperCase()}. Press R to restart.`);
+      }
       if (score > highscore) setHighscore(score);
     }
   }, [wrong, guessed, word, score, highscore, setHighscore]);
@@ -181,41 +210,42 @@ const Hangman = () => {
     ctx.lineTo(120, 40);
     ctx.stroke();
 
-    if (wrong > 0) {
+    const now = performance.now();
+
+    const drawLine = (x1, y1, x2, y2, progress) => {
       ctx.beginPath();
-      ctx.arc(120, 60, 20, 0, Math.PI * 2);
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(
+        x1 + (x2 - x1) * progress,
+        y1 + (y2 - y1) * progress,
+      );
       ctx.stroke();
-    }
-    if (wrong > 1) {
-      ctx.beginPath();
-      ctx.moveTo(120, 80);
-      ctx.lineTo(120, 140);
-      ctx.stroke();
-    }
-    if (wrong > 2) {
-      ctx.beginPath();
-      ctx.moveTo(120, 100);
-      ctx.lineTo(90, 120);
-      ctx.stroke();
-    }
-    if (wrong > 3) {
-      ctx.beginPath();
-      ctx.moveTo(120, 100);
-      ctx.lineTo(150, 120);
-      ctx.stroke();
-    }
-    if (wrong > 4) {
-      ctx.beginPath();
-      ctx.moveTo(120, 140);
-      ctx.lineTo(100, 170);
-      ctx.stroke();
-    }
-    if (wrong > 5) {
-      ctx.beginPath();
-      ctx.moveTo(120, 140);
-      ctx.lineTo(140, 170);
-      ctx.stroke();
-    }
+    };
+
+    const segments = [
+      (p) => {
+        ctx.beginPath();
+        ctx.arc(120, 60, 20, 0, Math.PI * 2 * p);
+        ctx.stroke();
+      },
+      (p) => drawLine(120, 80, 120, 140, p),
+      (p) => drawLine(120, 100, 90, 120, p),
+      (p) => drawLine(120, 100, 150, 120, p),
+      (p) => drawLine(120, 140, 100, 170, p),
+      (p) => drawLine(120, 140, 140, 170, p),
+    ];
+
+    segments.forEach((seg, i) => {
+      let prog = partProgressRef.current[i];
+      if (i < wrong && prog < 1) {
+        const start = partStartRef.current[i];
+        prog = reduceMotionRef.current
+          ? 1
+          : Math.min((now - start) / 300, 1);
+        partProgressRef.current[i] = prog;
+      }
+      if (prog > 0) seg(prog);
+    });
 
     const letters = word.split('');
     letters.forEach((l, i) => {
@@ -276,12 +306,17 @@ const Hangman = () => {
   }, [draw]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={400}
-      height={250}
-      className="bg-ub-cool-grey w-full h-full"
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        width={400}
+        height={250}
+        className="bg-ub-cool-grey w-full h-full"
+      />
+      <div aria-live="polite" role="status" className="sr-only">
+        {announcement}
+      </div>
+    </>
   );
 };
 
