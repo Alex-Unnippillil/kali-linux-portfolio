@@ -151,7 +151,19 @@ const Reversi = () => {
           const anim = flippingRef.current.find((a) => a.key === `${r}-${c}`);
           if (anim) {
             const t = (now - anim.start) / anim.duration;
-            if (t >= 1) {
+            if (t <= 0) {
+              // Animation hasn't started yet; show original piece
+              ctx.beginPath();
+              ctx.arc(
+                c * CELL + CELL / 2,
+                r * CELL + CELL / 2,
+                CELL / 2 - 4,
+                0,
+                Math.PI * 2,
+              );
+              ctx.fillStyle = anim.from === 'B' ? '#000' : '#fff';
+              ctx.fill();
+            } else if (t >= 1) {
               const idx = flippingRef.current.indexOf(anim);
               if (idx !== -1) flippingRef.current.splice(idx, 1);
               ctx.beginPath();
