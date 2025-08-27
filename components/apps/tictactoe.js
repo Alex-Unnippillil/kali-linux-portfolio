@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import confetti from 'canvas-confetti';
-import GameLayout from './GameLayout';
+import { GameShell } from '../games';
 
 const winningLines = [
   [0, 1, 2],
@@ -64,7 +64,7 @@ const getMediumMove = (board, ai) => {
   return available[Math.floor(Math.random() * available.length)];
 };
 
-const TicTacToe = () => {
+const TicTacToe = ({ settings, setSettings, paused, setPaused }) => {
   const [board, setBoard] = useState(Array(9).fill(null));
   const [status, setStatus] = useState('Choose X or O');
   const [player, setPlayer] = useState(null);
@@ -74,6 +74,7 @@ const TicTacToe = () => {
   const [winningLine, setWinningLine] = useState([]);
   const [lastMove, setLastMove] = useState(null);
   const [score, setScore] = useState({ player: 0, ai: 0, draw: 0 });
+  const [showSettings, setShowSettings] = useState(false);
 
   const startGame = (p) => {
     const a = p === 'X' ? 'O' : 'X';
@@ -191,12 +192,14 @@ const TicTacToe = () => {
 
   if (player === null) {
     return (
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <div className={`h-full w-full flex flex-col items-center justify-center ${
+        settings.highContrast ? 'bg-black text-white' : 'bg-ub-cool-grey text-white'
+      } p-4`}>
         {difficultySlider}
         <div className="mb-4">Choose X or O</div>
         <div className="flex space-x-4">
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className={`${settings.highContrast ? 'bg-white text-black' : 'bg-gray-700 hover:bg-gray-600'} px-4 py-2 rounded`}
             onClick={() => startGame('X')}
             onTouchStart={() => startGame('X')}
             onKeyDown={(e) => {
@@ -209,7 +212,7 @@ const TicTacToe = () => {
             X
           </button>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className={`${settings.highContrast ? 'bg-white text-black' : 'bg-gray-700 hover:bg-gray-600'} px-4 py-2 rounded`}
             onClick={() => startGame('O')}
             onTouchStart={() => startGame('O')}
             onKeyDown={(e) => {
@@ -228,13 +231,64 @@ const TicTacToe = () => {
   }
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <div className={`h-full w-full flex flex-col items-center justify-center ${
+      settings.highContrast ? 'bg-black text-white' : 'bg-ub-cool-grey text-white'
+    } p-4 relative`}>
+      {showSettings && (
+        <div
+          className="absolute inset-0 bg-black/70 flex items-center justify-center z-20"
+          data-testid="settings-overlay"
+        >
+          <div className="bg-gray-800 p-4 rounded">
+            <label className="block mb-2">
+              <input
+                type="checkbox"
+                checked={settings.highContrast}
+                onChange={() => setSettings((s) => ({ ...s, highContrast: !s.highContrast }))}
+              />{' '}
+              High contrast
+            </label>
+            <label className="block mb-4">
+              <input
+                type="checkbox"
+                checked={settings.colorBlind}
+                onChange={() => setSettings((s) => ({ ...s, colorBlind: !s.colorBlind }))}
+              />{' '}
+              Color blind
+            </label>
+            <button
+              className="px-2 py-1 bg-gray-700 rounded"
+              onClick={() => setShowSettings(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="flex space-x-2 mb-2">
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={() => setPaused(!paused)}
+          data-testid="pause-btn"
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={() => setShowSettings(true)}
+          data-testid="settings-btn"
+        >
+          Settings
+        </button>
+      </div>
       {difficultySlider}
       <div className="grid grid-cols-3 gap-1 w-60 mb-4">
         {board.map((cell, idx) => (
           <button
             key={idx}
-            className={`h-20 w-20 text-4xl flex items-center justify-center bg-gray-700 hover:bg-gray-600 ${
+            className={`h-20 w-20 text-4xl flex items-center justify-center ${
+              settings.highContrast ? 'bg-white text-black' : 'bg-gray-700 hover:bg-gray-600'
+            } ${
               winningLine.includes(idx)
                 ? 'bg-green-600 animate-pulse'
                 : lastMove === idx
@@ -251,7 +305,17 @@ const TicTacToe = () => {
               }
             }}
           >
-            {cell}
+            <span
+              className={
+                settings.colorBlind
+                  ? cell === 'X'
+                    ? 'text-blue-400'
+                    : 'text-yellow-400'
+                  : ''
+              }
+            >
+              {cell}
+            </span>
           </button>
         ))}
       </div>
@@ -261,14 +325,18 @@ const TicTacToe = () => {
       <div className="mb-4">{status}</div>
       <div className="flex space-x-4">
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          className={`${
+            settings.highContrast ? 'bg-white text-black' : 'bg-gray-700 hover:bg-gray-600'
+          } px-4 py-2 rounded`}
           onClick={restart}
           onTouchStart={restart}
         >
           Restart
         </button>
         <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          className={`${
+            settings.highContrast ? 'bg-white text-black' : 'bg-gray-700 hover:bg-gray-600'
+          } px-4 py-2 rounded`}
           onClick={reset}
           onTouchStart={reset}
         >
@@ -284,8 +352,11 @@ export { checkWinner, minimax };
 
 export default function TicTacToeApp() {
   return (
-    <GameLayout gameId="tictactoe">
+    <GameShell
+      gameId="tictactoe"
+      initialSettings={{ highContrast: false, colorBlind: false }}
+    >
       <TicTacToe />
-    </GameLayout>
+    </GameShell>
   );
 }
