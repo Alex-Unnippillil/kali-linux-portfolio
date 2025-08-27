@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 const Parser = require('expr-eval').Parser;
+import GraphPad from './GraphPad';
+import { toFraction } from '../../utils/fraction';
+import { solveEquation } from '../../utils/solver';
 
 // configure parser similar to previous implementation
 const parser = new Parser({
@@ -33,12 +36,24 @@ export const evaluateExpression = (expression) => {
 
 const Calc = () => {
   const [display, setDisplay] = useState('');
+  const [fractionMode, setFractionMode] = useState(false);
+  const graphRef = useRef(null);
 
   const handleClick = (btn) => {
     if (btn.type === 'clear') {
       setDisplay('');
+    } else if (btn.value === 'plot') {
+      graphRef.current && graphRef.current.plot(display);
+    } else if (btn.value === 'frac') {
+      setFractionMode((f) => !f);
+    } else if (btn.value === 'solve') {
+      setDisplay(solveEquation(display));
     } else if (btn.label === '=') {
-      setDisplay(evaluateExpression(display));
+      let result = evaluateExpression(display);
+      if (fractionMode && !isNaN(result)) {
+        result = toFraction(parseFloat(result));
+      }
+      setDisplay(String(result));
     } else {
       setDisplay((prev) => prev + (btn.value || btn.label));
     }
@@ -51,7 +66,8 @@ const Calc = () => {
     { label: '0' }, { label: '.' }, { label: '=', ariaLabel: 'equals' }, { label: '+', ariaLabel: 'add' },
     { label: '(', ariaLabel: 'open parenthesis' }, { label: ')', ariaLabel: 'close parenthesis' }, { label: '^', ariaLabel: 'power' }, { label: 'sqrt', value: 'sqrt(', ariaLabel: 'square root' },
     { label: 'sin', value: 'sin(', ariaLabel: 'sine' }, { label: 'cos', value: 'cos(', ariaLabel: 'cosine' }, { label: 'tan', value: 'tan(', ariaLabel: 'tangent' }, { label: 'log', value: 'log(', ariaLabel: 'logarithm' },
-    { label: 'C', type: 'clear', colSpan: 2, ariaLabel: 'clear' },
+    { label: 'x', ariaLabel: 'x variable' }, { label: 'Frac', value: 'frac', ariaLabel: 'fraction mode' }, { label: 'Solve', value: 'solve', ariaLabel: 'solve equation' }, { label: 'Plot', value: 'plot', ariaLabel: 'plot graph' },
+    { label: 'C', type: 'clear', colSpan: 4, ariaLabel: 'clear' },
   ];
 
   return (
@@ -62,7 +78,7 @@ const Calc = () => {
       >
         {display}
       </div>
-      <div className="grid grid-cols-4 gap-2 flex-grow">
+      <div className="grid grid-cols-4 gap-2">
         {buttons.map((btn, idx) => (
           <button
             key={idx}
@@ -76,6 +92,7 @@ const Calc = () => {
           </button>
         ))}
       </div>
+      <GraphPad ref={graphRef} />
     </div>
   );
 };
