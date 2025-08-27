@@ -1,14 +1,10 @@
-export const RAW_LEVELS = `
-; Simple tutorial level
-#####
-#@$.#
-#####
+import fs from 'fs';
+import path from 'path';
 
-; Two box level
-######
-#@ $.#
-######
-`;
+export const RAW_LEVELS = fs.readFileSync(
+  path.join(__dirname, 'levels.txt'),
+  'utf-8'
+);
 
 export function parseLevels(data: string): string[][] {
   const levels: string[][] = [];
