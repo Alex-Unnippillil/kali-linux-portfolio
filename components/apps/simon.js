@@ -7,18 +7,22 @@ const padStyles = [
   {
     color: { base: 'bg-green-700', active: 'bg-green-500' },
     symbol: '▲',
+    label: 'green',
   },
   {
     color: { base: 'bg-red-700', active: 'bg-red-500' },
     symbol: '■',
+    label: 'red',
   },
   {
     color: { base: 'bg-yellow-500', active: 'bg-yellow-300' },
     symbol: '●',
+    label: 'yellow',
   },
   {
     color: { base: 'bg-blue-700', active: 'bg-blue-500' },
     symbol: '◆',
+    label: 'blue',
   },
 ];
 
@@ -86,7 +90,10 @@ const Simon = () => {
   const flashPad = (idx, duration) => {
     window.requestAnimationFrame(() => setActivePad(idx));
     if ('vibrate' in navigator && !prefersReducedMotion) navigator.vibrate(50);
-    setTimeout(() => setActivePad(null), duration * 1000);
+    setTimeout(
+      () => window.requestAnimationFrame(() => setActivePad(null)),
+      duration * 1000
+    );
   };
 
   const stepDuration = () => {
@@ -188,10 +195,10 @@ const Simon = () => {
       ? { base: 'bg-gray-700', active: 'bg-gray-500' }
       : pad.color;
     const isActive = activePad === idx;
-    return `h-32 w-32 rounded flex items-center justify-center text-3xl transition-shadow ${
+    return `h-32 w-32 rounded flex items-center justify-center text-3xl transition-shadow ring-4 ring-offset-2 ring-offset-gray-900 ${
       isActive
-        ? `${colors.active} pad-pulse ring-4 ring-white`
-        : `${colors.base} ring-4 ring-transparent`
+        ? `${colors.active} pad-pulse ring-white`
+        : `${colors.base} ring-transparent`
     }`;
   };
 
@@ -205,12 +212,15 @@ const Simon = () => {
               key={idx}
               className={padClass(pad, idx)}
               onPointerDown={() => handlePadClick(idx)}
+              aria-label={`${pad.label} pad`}
             >
               {mode === 'colorblind' ? pad.symbol : ''}
             </button>
           ))}
         </div>
-        <div className="mb-4" aria-live="assertive">{status}</div>
+        <div className="mb-4" aria-live="assertive" role="status">
+          {status}
+        </div>
         <div className="flex gap-4">
           <select
             className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
