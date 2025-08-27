@@ -2,10 +2,32 @@ import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 
 const hashTypes = [
-  { id: '0', name: 'MD5', regex: /^[a-f0-9]{32}$/i },
-  { id: '100', name: 'SHA1', regex: /^[a-f0-9]{40}$/i },
-  { id: '1400', name: 'SHA256', regex: /^[a-f0-9]{64}$/i },
-  { id: '3200', name: 'bcrypt', regex: /^\$2[aby]\$.{56}$/ },
+  {
+    id: '0',
+    name: 'MD5',
+    regex: /^[a-f0-9]{32}$/i,
+    example: 'd41d8cd98f00b204e9800998ecf8427e',
+  },
+  {
+    id: '100',
+    name: 'SHA1',
+    regex: /^[a-f0-9]{40}$/i,
+    example: 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+  },
+  {
+    id: '1400',
+    name: 'SHA256',
+    regex: /^[a-f0-9]{64}$/i,
+    example:
+      'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+  },
+  {
+    id: '3200',
+    name: 'bcrypt',
+    regex: /^\$2[aby]\$.{56}$/,
+    example:
+      '$2y$10$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  },
 ];
 
 export const detectHashType = (hash) => {
@@ -47,30 +69,51 @@ const Gauge = ({ value }) => (
   </div>
 );
 
-const ProgressGauge = ({ progress, info }) => (
-  <div
-    className="w-48"
-    role="progressbar"
-    aria-label="Hash cracking progress"
-    aria-valuemin={0}
-    aria-valuemax={100}
-    aria-valuenow={progress}
-    aria-valuetext={`${progress}%`}
-  >
-    <div className="text-sm mb-1">Progress: {progress}%</div>
-    <div className="w-full h-4 bg-gray-700 rounded">
-      <div
-        className="h-4 bg-blue-600 rounded"
-        style={{ width: `${progress}%` }}
-      />
+const ProgressGauge = ({ progress, info, reduceMotion }) => {
+  const hashRates = Array.isArray(info.hashRate)
+    ? info.hashRate
+    : [info.hashRate];
+  const etas = Array.isArray(info.eta) ? info.eta : [info.eta];
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (reduceMotion || hashRates.length === 1) {
+      setIndex(hashRates.length - 1);
+      return;
+    }
+    let i = 0;
+    const interval = setInterval(() => {
+      i = (i + 1) % hashRates.length;
+      setIndex(i);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [reduceMotion, hashRates.length]);
+
+  return (
+    <div
+      className="w-48"
+      role="progressbar"
+      aria-label="Hash cracking progress"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={progress}
+      aria-valuetext={`${progress}%`}
+    >
+      <div className="text-sm mb-1">Progress: {progress}%</div>
+      <div className="w-full h-4 bg-gray-700 rounded">
+        <div
+          className="h-4 bg-blue-600 rounded"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <div role="status" aria-live="polite" className="text-sm mt-2">
+        <div>Attempts/sec: {hashRates[index]}</div>
+        <div>ETA: {etas[index]}</div>
+        <div>Mode: {info.mode}</div>
+      </div>
     </div>
-    <div role="status" aria-live="polite" className="text-sm mt-2">
-      <div>Hash rate: {info.hashRate}</div>
-      <div>ETA: {info.eta}</div>
-      <div>Mode: {info.mode}</div>
-    </div>
-  </div>
-);
+  );
+};
 
 function HashcatApp() {
   const [hashType, setHashType] = useState(hashTypes[0].id);
@@ -135,7 +178,8 @@ function HashcatApp() {
     };
   }, [prefersReducedMotion]);
 
-  const selectedHash = hashTypes.find((h) => h.id === hashType)?.name;
+  const selected = hashTypes.find((h) => h.id === hashType) || hashTypes[0];
+  const selectedHash = selected.name;
 
   const handleHashChange = (e) => {
     const value = e.target.value.trim();
@@ -183,12 +227,13 @@ function HashcatApp() {
         >
           {hashTypes.map((h) => (
             <option key={h.id} value={h.id}>
-              {h.name}
+              {h.id} - {h.name}
             </option>
           ))}
         </select>
       </div>
       <div>Detected: {selectedHash}</div>
+      <div>Example hash: {selected.example}</div>
       <button onClick={runBenchmark}>Run Benchmark</button>
       {benchmark && (
         <div data-testid="benchmark-output">{benchmark}</div>
@@ -217,7 +262,11 @@ function HashcatApp() {
         )}
       </div>
       <Gauge value={gpuUsage} />
-      <ProgressGauge progress={progress} info={progressInfo} />
+      <ProgressGauge
+        progress={progress}
+        info={progressInfo}
+        reduceMotion={prefersReducedMotion}
+      />
     </div>
   );
 }

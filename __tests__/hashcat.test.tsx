@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react';
+import { render, fireEvent, waitFor, act } from '@testing-library/react';
 import HashcatApp, { detectHashType } from '../components/apps/hashcat';
 import progressInfo from '../components/apps/hashcat/progress.json';
 
@@ -25,10 +25,30 @@ describe('HashcatApp', () => {
     });
   });
 
-  it('shows progress info from JSON', () => {
+  it('animates attempts/sec and ETA from JSON', () => {
+    jest.useFakeTimers();
     const { getByText } = render(<HashcatApp />);
-    expect(getByText(`Hash rate: ${progressInfo.hashRate}`)).toBeInTheDocument();
-    expect(getByText(`ETA: ${progressInfo.eta}`)).toBeInTheDocument();
+    expect(
+      getByText(`Attempts/sec: ${progressInfo.hashRate[0]}`)
+    ).toBeInTheDocument();
+    act(() => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(
+      getByText(`Attempts/sec: ${progressInfo.hashRate[1]}`)
+    ).toBeInTheDocument();
+    expect(getByText(`ETA: ${progressInfo.eta[1]}`)).toBeInTheDocument();
     expect(getByText(`Mode: ${progressInfo.mode}`)).toBeInTheDocument();
+    jest.useRealTimers();
+  });
+
+  it('labels hashcat modes with example hashes', () => {
+    const { getByLabelText, getByText } = render(<HashcatApp />);
+    fireEvent.change(getByLabelText('Hash Type:'), { target: { value: '100' } });
+    expect(
+      getByText(
+        'Example hash: da39a3ee5e6b4b0d3255bfef95601890afd80709'
+      )
+    ).toBeInTheDocument();
   });
 });
