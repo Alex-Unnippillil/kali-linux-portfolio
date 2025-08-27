@@ -95,6 +95,7 @@ const Pong = () => {
       y: height / 2 - paddleHeight / 2,
       vy: 0,
       scale: 1,
+      widthScale: 1,
       rot: 0,
     };
     const opponent = {
@@ -102,6 +103,7 @@ const Pong = () => {
       y: height / 2 - paddleHeight / 2,
       vy: 0,
       scale: 1,
+      widthScale: 1,
       rot: 0,
     };
     const ball = {
@@ -112,6 +114,11 @@ const Pong = () => {
       size: 8,
       scale: 1,
     };
+
+    const ballTrail = [];
+    const prefersReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
 
     let playerScore = 0;
     let oppScore = 0;
@@ -187,18 +194,31 @@ const Pong = () => {
       ctx.fillStyle = 'black';
       ctx.fillRect(0, 0, width, height);
 
+      if (!prefersReducedMotion) {
+        ctx.fillStyle = 'white';
+        for (let i = 0; i < ballTrail.length; i += 1) {
+          const t = ballTrail[i];
+          const alpha = (i + 1) / ballTrail.length;
+          ctx.globalAlpha = alpha * 0.3;
+          ctx.beginPath();
+          ctx.arc(t.x, t.y, ball.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
       ctx.fillStyle = 'white';
       ctx.save();
       ctx.translate(player.x + paddleWidth / 2, player.y + paddleHeight / 2);
       ctx.rotate(player.rot);
-      ctx.scale(1, player.scale);
+      ctx.scale(player.widthScale, player.scale);
       ctx.fillRect(-paddleWidth / 2, -paddleHeight / 2, paddleWidth, paddleHeight);
       ctx.restore();
 
       ctx.save();
       ctx.translate(opponent.x + paddleWidth / 2, opponent.y + paddleHeight / 2);
       ctx.rotate(opponent.rot);
-      ctx.scale(1, opponent.scale);
+      ctx.scale(opponent.widthScale, opponent.scale);
       ctx.fillRect(-paddleWidth / 2, -paddleHeight / 2, paddleWidth, paddleHeight);
       ctx.restore();
 
@@ -250,7 +270,9 @@ const Pong = () => {
 
       // decay impact scaling and rotation
       const decay = (obj) => {
-        obj.scale += (1 - obj.scale) * 10 * dt;
+        if (obj.scale !== undefined) obj.scale += (1 - obj.scale) * 10 * dt;
+        if (obj.widthScale !== undefined)
+          obj.widthScale += (1 - obj.widthScale) * 10 * dt;
         if (obj.rot !== undefined) obj.rot += -obj.rot * 10 * dt;
       };
       decay(player);
@@ -278,6 +300,10 @@ const Pong = () => {
       // move ball
       ball.x += ball.vx * dt;
       ball.y += ball.vy * dt;
+      if (!prefersReducedMotion) {
+        ballTrail.push({ x: ball.x, y: ball.y });
+        if (ballTrail.length > 10) ballTrail.shift();
+      }
 
       // wall collisions
       if (ball.y < ball.size) {
@@ -298,6 +324,7 @@ const Pong = () => {
         ball.vx = Math.abs(ball.vx) * dir;
         ball.vy += pad.vy * 0.1 + relative * 200;
         pad.scale = 1.2;
+        pad.widthScale = 0.8;
         pad.rot = relative * 0.3;
         ball.scale = 1.2;
         const speed = Math.hypot(ball.vx, ball.vy) * HIT_SPEEDUP;
@@ -479,7 +506,9 @@ const Pong = () => {
         ref={canvasRef}
         className="bg-black w-full h-full touch-none"
       />
-      <div className="mt-2">Player: {scores.player} | Opponent: {scores.opponent}</div>
+      <div className="mt-2" aria-live="polite">
+        Player: {scores.player} | Opponent: {scores.opponent}
+      </div>
       <div className="mt-1">Games: {match.player} | {match.opponent}</div>
       {matchWinner && (
         <div className="mt-1 text-lg">Winner: {matchWinner}</div>
