@@ -26,6 +26,8 @@ const protocolInfo = {
   HTTP: 'Hypertext Transfer Protocol',
   HTTPS: 'HTTP over TLS/SSL',
   ARP: 'Address Resolution Protocol',
+  FTP: 'File Transfer Protocol',
+  SSH: 'Secure Shell',
 };
 
 // Example traffic used when simulation mode is enabled
@@ -78,6 +80,7 @@ const LogRow = ({ log, prefersReduced }) => {
         <abbr
           title={protocolInfo[log.protocol] || log.protocol}
           className="underline decoration-dotted cursor-help"
+          tabIndex={0}
         >
           {log.protocol}
         </abbr>
@@ -258,6 +261,7 @@ const Dsniff = () => {
       <div
         className="bg-black text-green-400 p-2 h-40 overflow-auto"
         aria-live="polite"
+        role="log"
       >
         {filteredLogs.length ? (
           <table className="w-full text-left text-sm">
