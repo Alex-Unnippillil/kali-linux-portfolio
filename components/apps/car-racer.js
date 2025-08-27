@@ -482,8 +482,6 @@ const CarRacer = () => {
             Restart
           </button>
         </div>
-        <div>Laps: {laps}</div>
-        <div>Speed: {Math.round(speed)}</div>
         <div>Lap Time: {lapTime.toFixed(2)}s</div>
         {lastLap !== null && <div>Last Lap: {lastLap.toFixed(2)}s</div>}
         {bestLap !== null && <div>Best Lap: {bestLap.toFixed(2)}s</div>}
@@ -497,6 +495,10 @@ const CarRacer = () => {
             </ol>
           </div>
         )}
+      </div>
+      <div className="car-dashboard">
+        <div className="car-dashboard-item">Speed: {Math.round(speed)}</div>
+        <div className="car-dashboard-item">Lap: {laps}</div>
       </div>
       {control === 'wheel' && (
         <div

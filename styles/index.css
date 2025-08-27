@@ -346,3 +346,21 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Car racer dashboard styling */
+.car-dashboard {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    display: flex;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+}
+
+.car-dashboard-item {
+    margin: 0;
+}
