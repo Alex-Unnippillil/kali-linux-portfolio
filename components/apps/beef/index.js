@@ -14,7 +14,8 @@ export default function Beef() {
   const prevHooks = useRef(0);
   const prevSteps = useRef(0);
 
-  const baseUrl = process.env.NEXT_PUBLIC_BEEF_URL || 'http://127.0.0.1:3000';
+  const hooksUrl = '/demo-data/beef/hooks.json';
+  const modulesUrl = '/demo-data/beef/modules.json';
 
   const getStatus = (hook) => {
     if (hook.status) return hook.status;
@@ -24,28 +25,26 @@ export default function Beef() {
 
   const fetchHooks = useCallback(async () => {
     try {
-      const res = await fetch(`${baseUrl}/api/hooks`);
+      const res = await fetch(hooksUrl);
       const data = await res.json();
       setHooks(data.hooked_browsers || []);
     } catch (err) {
       console.error(err);
     }
-  }, [baseUrl]);
+  }, [hooksUrl]);
 
   const fetchModules = useCallback(async () => {
     try {
-      const res = await fetch(`${baseUrl}/api/modules`);
+      const res = await fetch(modulesUrl);
       const data = await res.json();
       setModules(data.modules || []);
     } catch (err) {
       console.error(err);
     }
-  }, [baseUrl]);
+  }, [modulesUrl]);
 
   useEffect(() => {
     fetchHooks();
-    const id = setInterval(fetchHooks, 5000);
-    return () => clearInterval(id);
   }, [fetchHooks]);
 
   useEffect(() => {
@@ -76,31 +75,11 @@ export default function Beef() {
     prevSteps.current = steps.length;
   }, [steps, prevSteps]);
 
-  const runModule = async () => {
+  const runModule = () => {
     if (!selected || !moduleId) return;
     setOutput('');
-    try {
-      const res = await fetch(`${baseUrl}/api/modules/${moduleId}/${selected}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
-      if (res.body) {
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          const text = decoder.decode(value, { stream: true });
-          setOutput((prev) => prev + text);
-        }
-      } else {
-        const json = await res.json();
-        setOutput(JSON.stringify(json, null, 2));
-      }
-    } catch (e) {
-      setOutput(e.toString());
-    }
+    const mod = modules.find((m) => m.id === moduleId);
+    if (mod) setOutput(mod.output || '');
     setSteps((prev) => [
       ...prev,
       { id: prev.length + 1, hook: selected, module: moduleId },
@@ -108,7 +87,10 @@ export default function Beef() {
   };
 
   return (
-    <div className="relative flex h-full w-full bg-ub-cool-grey text-white">
+    <div className="relative flex h-full w-full bg-ub-cool-grey text-white pt-6">
+      <div className="absolute inset-x-0 top-0 bg-yellow-400 text-black text-center text-sm py-1 z-10">
+        Demo data, no live scanning
+      </div>
       {showHelp && <GuideOverlay onClose={() => setShowHelp(false)} />}
       <div className="w-1/3 border-r border-gray-700 overflow-y-auto">
         <div className="flex items-center justify-between p-2">
