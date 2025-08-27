@@ -809,9 +809,25 @@ function Resume() {
         ReactGA.event({ category: 'resume', action: 'download' });
     };
 
+    const shareContact = async () => {
+        const vcardUrl = '/assets/alex-unnippillil.vcf';
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Alex Unnippillil Contact',
+                    url: window.location.origin + vcardUrl,
+                });
+            } catch (err) {
+                console.error('Share failed', err);
+            }
+        } else {
+            window.location.href = vcardUrl;
+        }
+    };
+
     return (
         <div className="h-full w-full flex flex-col">
-            <div className="p-2 text-right">
+            <div className="p-2 text-right no-print space-x-2">
                 <a
                     href="/assets/Alex-Unnippillil-Resume.pdf"
                     download
@@ -820,6 +836,19 @@ function Resume() {
                 >
                     Download
                 </a>
+                <a
+                    href="/assets/alex-unnippillil.vcf"
+                    download
+                    className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
+                >
+                    vCard
+                </a>
+                <button
+                    onClick={shareContact}
+                    className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
+                >
+                    Share contact
+                </button>
             </div>
             <object
                 className="h-full w-full flex-1"

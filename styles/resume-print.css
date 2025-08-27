@@ -1,0 +1,15 @@
+@media print {
+  @page {
+    margin: 1in;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .windowMainScreen {
+    background: #fff !important;
+  }
+}
