@@ -30,7 +30,11 @@ describe('sudokuSolver', () => {
     const hint = getHint(puzzle);
     expect(hint).not.toBeNull();
     if (hint) {
-      expect(hint.value).toBeGreaterThan(0);
+      if ('value' in hint) {
+        expect(hint.value).toBeGreaterThan(0);
+      } else {
+        expect(hint.values.length).toBe(2);
+      }
     }
   });
 });
