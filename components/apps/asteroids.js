@@ -11,6 +11,7 @@ import {
 } from './asteroids-utils';
 import useGameControls from './useGameControls';
 import GameLayout from './GameLayout';
+import { useGamepad } from '../../utils/gamepad';
 
 // Arcade-style tuning constants
 const THRUST = 0.1;
@@ -18,6 +19,14 @@ const INERTIA = 0.99;
 const COLLISION_COOLDOWN = 60; // frames
 const MULTIPLIER_TIMEOUT = 180; // frames
 const MAX_MULTIPLIER = 5;
+
+// Default gamepad mappings (customizable)
+const GAMEPAD_MAPPING = {
+  turn: { axis: 0 },
+  thrust: { axis: 1, dir: -1 },
+  fire: 0,
+  hyperspace: 1,
+};
 
 // Simple Quadtree for collision queries
 class Quadtree {
@@ -96,6 +105,7 @@ const Asteroids = () => {
   const audioCtx = useRef(null);
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
   const controlsRef = useRef(useGameControls(canvasRef));
+  const gamepadRef = useGamepad(GAMEPAD_MAPPING);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [restartKey, setRestartKey] = useState(0);
@@ -199,18 +209,6 @@ const Asteroids = () => {
     startLevel();
     ga.start();
 
-    // Gamepad support
-    const padState = { turn: 0, thrust: 0, fire: false, hyperspace: false };
-    function pollGamepad() {
-      const pad = navigator.getGamepads ? navigator.getGamepads()[0] : null;
-      if (pad) {
-        padState.turn = pad.axes[0] || 0;
-        padState.thrust = pad.axes[1] < -0.2 ? -pad.axes[1] : 0;
-        padState.fire = pad.buttons[0].pressed;
-        padState.hyperspace = pad.buttons[1].pressed;
-      }
-    }
-
     function hyperspace() {
       ship.x = Math.random() * canvas.width;
       ship.y = Math.random() * canvas.height;
@@ -301,27 +299,25 @@ const Asteroids = () => {
         requestRef.current = requestAnimationFrame(update);
         return;
       }
-      pollGamepad();
+      const padState = gamepadRef.current;
       const { keys, joystick, fire, hyperspace: hyper } = controlsRef.current;
       const turn =
         (keys.ArrowLeft ? -1 : 0) +
         (keys.ArrowRight ? 1 : 0) +
-        padState.turn +
+        (padState.turn || 0) +
         (joystick.active ? joystick.x : 0);
       const thrust =
         (keys.ArrowUp ? 1 : 0) +
-        padState.thrust +
+        (padState.thrust || 0) +
         (joystick.active ? -joystick.y : 0);
-      if (fire) {
+      if (fire || padState.fire) {
         fireBullet();
         controlsRef.current.fire = false;
       }
-      if (hyper) {
+      if (hyper || padState.hyperspace) {
         hyperspace();
         controlsRef.current.hyperspace = false;
       }
-      if (padState.fire) fireBullet();
-      if (padState.hyperspace) hyperspace();
 
       ship.angle += turn * 0.05;
       if (thrust > 0) {
