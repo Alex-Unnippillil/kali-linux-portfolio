@@ -14,6 +14,12 @@ const SpaceInvaders = () => {
   const reqRef = useRef();
   const keys = useRef({});
   const touch = useRef({ left: false, right: false, fire: false });
+  const audioCtx = useRef(null);
+  const [sound, setSound] = useState(true);
+  const soundRef = useRef(sound);
+  useEffect(() => {
+    soundRef.current = sound;
+  }, [sound]);
 
   const player = useRef({ x: 0, y: 0, w: 20, h: 10, cooldown: 0, shield: false, rapid: 0 });
   const invaders = useRef([]);
@@ -52,6 +58,7 @@ const SpaceInvaders = () => {
   const highScoreRef = useRef(highScore);
   useEffect(() => {
     highScoreRef.current = highScore;
+    localStorage.setItem('si_highscore', highScore.toString());
   }, [highScore]);
 
   useEffect(() => {
@@ -122,17 +129,45 @@ const SpaceInvaders = () => {
     ];
 
     const handleKey = (e) => {
+      if (e.code === 'KeyM' && e.type === 'keydown') {
+        setSound((s) => !s);
+        return;
+      }
       keys.current[e.code] = e.type === 'keydown';
     };
     window.addEventListener('keydown', handleKey);
     window.addEventListener('keyup', handleKey);
 
-    const shoot = (pool, x, y) => {
+    const playSound = (freq) => {
+      if (!soundRef.current) return;
+      try {
+        if (!audioCtx.current)
+          audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = audioCtx.current;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          ctx.currentTime + 0.2
+        );
+        osc.stop(ctx.currentTime + 0.2);
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const shoot = (pool, x, y, freq) => {
       for (const b of pool) {
         if (!b.active) {
           b.x = x;
           b.y = y;
           b.active = true;
+          if (freq) playSound(freq);
           break;
         }
       }
@@ -162,7 +197,6 @@ const SpaceInvaders = () => {
       if (scoreRef.current > highScoreRef.current) {
         highScoreRef.current = scoreRef.current;
         setHighScore(highScoreRef.current);
-        localStorage.setItem('si_highscore', highScoreRef.current.toString());
       }
     };
 
@@ -171,13 +205,13 @@ const SpaceInvaders = () => {
         player.current.shield = false;
         return;
       }
+      playSound(110);
       livesRef.current -= 1;
       setLives(livesRef.current);
       if (livesRef.current <= 0) {
         if (scoreRef.current > highScoreRef.current) {
           highScoreRef.current = scoreRef.current;
           setHighScore(highScoreRef.current);
-          localStorage.setItem('si_highscore', highScoreRef.current.toString());
         }
         stageRef.current = 1;
         setStage(1);
@@ -207,17 +241,22 @@ const SpaceInvaders = () => {
 
       const fire = keys.current['Space'] || touch.current.fire;
       if (fire && p.cooldown <= 0) {
-        shoot(playerBullets.current, p.x + p.w / 2, p.y);
+        shoot(playerBullets.current, p.x + p.w / 2, p.y, 440);
         p.cooldown = p.rapid > 0 ? 0.15 : 0.5;
       }
       if (p.rapid > 0) p.rapid -= dt;
 
-      enemyCooldown.current -= dt;
       const aliveInv = invaders.current.filter((i) => i.alive);
+      const progress = 1 - aliveInv.length / initialCount.current;
+
+      enemyCooldown.current -= dt;
       if (enemyCooldown.current <= 0 && aliveInv.length) {
         const inv = aliveInv[Math.floor(Math.random() * aliveInv.length)];
-        shoot(enemyBullets.current, inv.x + 10, inv.y + 10);
-        enemyCooldown.current = 1;
+        shoot(enemyBullets.current, inv.x + 10, inv.y + 10, 220);
+        enemyCooldown.current = Math.max(
+          0.2,
+          1 - stageRef.current * 0.05 - progress * 0.5
+        );
       }
 
       moveBullets(playerBullets.current, dt);
@@ -304,8 +343,8 @@ const SpaceInvaders = () => {
       }
 
       const aliveCount = aliveInv.length;
-      const progress = 1 - aliveCount / initialCount.current;
-      const speed = baseSpeed * stageRef.current * (1 + progress);
+      const speed =
+        baseSpeed * stageRef.current * (1 + progress) * (1 + stageRef.current * 0.05);
       let hitEdge = false;
       for (const inv of invaders.current) {
         if (!inv.alive) continue;
@@ -433,6 +472,13 @@ const SpaceInvaders = () => {
     <GameLayout stage={stage} lives={lives} score={score} highScore={highScore}>
       <div className="h-full w-full relative bg-black text-white">
         <canvas ref={canvasRef} className="w-full h-full" />
+        <button
+          className="absolute top-2 right-2 bg-gray-700 px-2 py-1 rounded"
+          onClick={() => setSound((s) => !s)}
+          onTouchStart={() => setSound((s) => !s)}
+        >
+          {sound ? '🔊' : '🔇'}
+        </button>
         <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-8 md:hidden">
           <button
             className="bg-gray-700 px-4 py-2 rounded"
