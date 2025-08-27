@@ -1,368 +1,439 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Chess } from 'chess.js';
-import { pointerHandlers } from '../../utils/pointer';
-// Stockfish engine removed for compatibility; using simple AI instead
+import React, { useRef, useEffect, useState } from 'react';
 
-const pieceUnicode = {
-  p: { w: '♙', b: '♟' },
-  r: { w: '♖', b: '♜' },
-  n: { w: '♘', b: '♞' },
-  b: { w: '♗', b: '♝' },
-  q: { w: '♕', b: '♛' },
-  k: { w: '♔', b: '♚' },
+// 0x88 board representation utilities
+const EMPTY = 0;
+const PAWN = 1;
+const KNIGHT = 2;
+const BISHOP = 3;
+const ROOK = 4;
+const QUEEN = 5;
+const KING = 6;
+
+const WHITE = 1;
+const BLACK = -1;
+
+const pieceValues = {
+  [PAWN]: 100,
+  [KNIGHT]: 320,
+  [BISHOP]: 330,
+  [ROOK]: 500,
+  [QUEEN]: 900,
+  [KING]: 20000,
 };
 
-const initialTime = 5 * 60;
+const pieceUnicode = {
+  [PAWN]: { [WHITE]: '♙', [BLACK]: '♟' },
+  [KNIGHT]: { [WHITE]: '♘', [BLACK]: '♞' },
+  [BISHOP]: { [WHITE]: '♗', [BLACK]: '♝' },
+  [ROOK]: { [WHITE]: '♖', [BLACK]: '♜' },
+  [QUEEN]: { [WHITE]: '♕', [BLACK]: '♛' },
+  [KING]: { [WHITE]: '♔', [BLACK]: '♚' },
+};
+
+const SIZE = 320; // canvas size
+const SQ = SIZE / 8;
+
+// create initial board in 0x88
+const createInitialBoard = () => {
+  const b = new Int8Array(128);
+  const place = (sq, piece) => {
+    b[sq] = piece;
+  };
+
+  const backRank = [ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK];
+  for (let i = 0; i < 8; i++) {
+    place(i, backRank[i]);
+    place(16 + i, PAWN);
+    place(96 + i, -PAWN);
+    place(112 + i, -backRank[i]);
+  }
+  return b;
+};
+
+// move generation helpers
+const knightOffsets = [-33, -31, -18, -14, 14, 18, 31, 33];
+const bishopOffsets = [-17, -15, 15, 17];
+const rookOffsets = [-16, -1, 1, 16];
+const kingOffsets = [-17, -16, -15, -1, 1, 15, 16, 17];
+
+const inside = (sq) => (sq & 0x88) === 0;
+
+const isSquareAttacked = (board, sq, bySide) => {
+  const enemy = bySide;
+
+  // pawns
+  if (enemy === WHITE) {
+    if (inside(sq - 15) && board[sq - 15] === PAWN) return true;
+    if (inside(sq - 17) && board[sq - 17] === PAWN) return true;
+  } else {
+    if (inside(sq + 15) && board[sq + 15] === -PAWN) return true;
+    if (inside(sq + 17) && board[sq + 17] === -PAWN) return true;
+  }
+
+  // knights
+  for (const o of knightOffsets) {
+    const t = sq + o;
+    if (inside(t)) {
+      const p = board[t];
+      if (p === enemy * KNIGHT) return true;
+    }
+  }
+
+  // bishops/queens
+  for (const o of bishopOffsets) {
+    let t = sq + o;
+    while (inside(t)) {
+      const p = board[t];
+      if (p) {
+        if (p === enemy * BISHOP || p === enemy * QUEEN) return true;
+        break;
+      }
+      t += o;
+    }
+  }
+
+  // rooks/queens
+  for (const o of rookOffsets) {
+    let t = sq + o;
+    while (inside(t)) {
+      const p = board[t];
+      if (p) {
+        if (p === enemy * ROOK || p === enemy * QUEEN) return true;
+        break;
+      }
+      t += o;
+    }
+  }
+
+  // king
+  for (const o of kingOffsets) {
+    const t = sq + o;
+    if (inside(t) && board[t] === enemy * KING) return true;
+  }
+
+  return false;
+};
+
+const inCheck = (board, side) => {
+  for (let i = 0; i < 128; i++) {
+    if (!inside(i)) continue;
+    if (board[i] === side * KING) {
+      return isSquareAttacked(board, i, -side);
+    }
+  }
+  return false;
+};
+
+const generateMoves = (board, side) => {
+  const moves = [];
+
+  for (let from = 0; from < 128; from++) {
+    if (!inside(from)) continue;
+    const piece = board[from];
+    if (piece * side <= 0) continue;
+
+    const type = Math.abs(piece);
+
+    if (type === PAWN) {
+      const dir = side === WHITE ? 16 : -16;
+      const startRank = side === WHITE ? 1 : 6;
+      const rank = from >> 4;
+      const one = from + dir;
+      if (inside(one) && board[one] === EMPTY) {
+        moves.push({ from, to: one });
+        const two = from + dir * 2;
+        if (rank === startRank && board[two] === EMPTY)
+          moves.push({ from, to: two });
+      }
+      for (const cap of [dir + 1, dir - 1]) {
+        const to = from + cap;
+        if (inside(to) && board[to] * side < 0)
+          moves.push({ from, to });
+      }
+    } else if (type === KNIGHT) {
+      for (const o of knightOffsets) {
+        const to = from + o;
+        if (!inside(to)) continue;
+        if (board[to] * side <= 0) moves.push({ from, to });
+      }
+    } else if (type === BISHOP || type === ROOK || type === QUEEN) {
+      const dirs = [];
+      if (type === BISHOP || type === QUEEN) dirs.push(...bishopOffsets);
+      if (type === ROOK || type === QUEEN) dirs.push(...rookOffsets);
+      for (const o of dirs) {
+        let to = from + o;
+        while (inside(to)) {
+          const p = board[to];
+          if (p === EMPTY) moves.push({ from, to });
+          else {
+            if (p * side < 0) moves.push({ from, to });
+            break;
+          }
+          to += o;
+        }
+      }
+    } else if (type === KING) {
+      for (const o of kingOffsets) {
+        const to = from + o;
+        if (!inside(to)) continue;
+        if (board[to] * side <= 0) moves.push({ from, to });
+      }
+    }
+  }
+
+  // filter out moves that leave king in check
+  const legal = [];
+  for (const m of moves) {
+    const b = board.slice();
+    b[m.to] = b[m.from];
+    b[m.from] = EMPTY;
+    if (!inCheck(b, side)) legal.push(m);
+  }
+  return legal;
+};
+
+const evaluate = (board) => {
+  let score = 0;
+  for (let i = 0; i < 128; i++) {
+    if (!inside(i)) continue;
+    const piece = board[i];
+    if (piece > 0) score += pieceValues[piece];
+    else if (piece < 0) score -= pieceValues[-piece];
+  }
+  return score;
+};
+
+const minimax = (board, depth, alpha, beta, side) => {
+  if (depth === 0) return evaluate(board);
+
+  const moves = generateMoves(board, side);
+  if (moves.length === 0) return evaluate(board);
+
+  if (side === WHITE) {
+    let max = -Infinity;
+    for (const m of moves) {
+      const b = board.slice();
+      b[m.to] = b[m.from];
+      b[m.from] = EMPTY;
+      const val = minimax(b, depth - 1, alpha, beta, -side);
+      max = Math.max(max, val);
+      alpha = Math.max(alpha, val);
+      if (beta <= alpha) break;
+    }
+    return max;
+  }
+  let min = Infinity;
+  for (const m of moves) {
+    const b = board.slice();
+    b[m.to] = b[m.from];
+    b[m.from] = EMPTY;
+    const val = minimax(b, depth - 1, alpha, beta, -side);
+    min = Math.min(min, val);
+    beta = Math.min(beta, val);
+    if (beta <= alpha) break;
+  }
+  return min;
+};
+
+const getBestMove = (board, side, depth) => {
+  const moves = generateMoves(board, side);
+  let best = null;
+  let bestVal = side === WHITE ? -Infinity : Infinity;
+
+  for (const m of moves) {
+    const b = board.slice();
+    b[m.to] = b[m.from];
+    b[m.from] = EMPTY;
+    const val = minimax(b, depth - 1, -Infinity, Infinity, -side);
+    if ((side === WHITE && val > bestVal) || (side === BLACK && val < bestVal)) {
+      bestVal = val;
+      best = m;
+    }
+  }
+  return best;
+};
+
+const playBeep = () => {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = ctx.createOscillator();
+  osc.frequency.value = 400;
+  osc.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.1);
+};
 
 const ChessGame = () => {
-  const [game, setGame] = useState(new Chess());
-  const [board, setBoard] = useState(game.board());
+  const canvasRef = useRef(null);
+  const boardRef = useRef(createInitialBoard());
+  const sideRef = useRef(WHITE);
   const [selected, setSelected] = useState(null);
+  const [moves, setMoves] = useState([]);
   const [status, setStatus] = useState('Your move');
-  const [highlight, setHighlight] = useState([]);
-  const [premove, setPremove] = useState(null);
-  const [lastMove, setLastMove] = useState([]);
-  const [skill, setSkill] = useState(5);
-
-  const [whiteTime, setWhiteTime] = useState(initialTime);
-  const [blackTime, setBlackTime] = useState(initialTime);
-  const timerRef = useRef(null);
-
-  const updateBoard = () => {
-    setBoard(game.board());
-  };
-
-  const updateStatus = () => {
-    if (game.in_checkmate()) setStatus('Checkmate');
-    else if (game.in_draw()) setStatus('Draw');
-    else setStatus(game.turn() === 'w' ? 'Your move' : 'AI thinking...');
-  };
-
-  const startTimers = () => {
-    timerRef.current = setInterval(() => {
-      setWhiteTime((t) => (game.turn() === 'w' ? t - 1 : t));
-      setBlackTime((t) => (game.turn() === 'b' ? t - 1 : t));
-    }, 1000);
-  };
-
-  const stopTimers = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-  };
+  const [paused, setPaused] = useState(false);
+  const [sound, setSound] = useState(true);
+  const [elo, setElo] = useState(() =>
+    typeof window === 'undefined'
+      ? 1200
+      : Number(localStorage.getItem('chessElo') || 1200)
+  );
+  const animRef = useRef(null);
 
   useEffect(() => {
-    updateBoard();
-    startTimers();
-    return () => {
-      stopTimers();
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const render = () => {
+      ctx.clearRect(0, 0, SIZE, SIZE);
+      for (let r = 0; r < 8; r++) {
+        for (let f = 0; f < 8; f++) {
+          const x = f * SQ;
+          const y = (7 - r) * SQ;
+          const light = (r + f) % 2 === 0;
+          ctx.fillStyle = light ? '#eee' : '#555';
+          ctx.fillRect(x, y, SQ, SQ);
+
+          const sq = r * 16 + f;
+          if (selected === sq) {
+            ctx.fillStyle = 'rgba(255,255,0,0.4)';
+            ctx.fillRect(x, y, SQ, SQ);
+          } else if (moves.some((m) => m.from === selected && m.to === sq)) {
+            ctx.fillStyle = 'rgba(0,255,0,0.3)';
+            ctx.fillRect(x, y, SQ, SQ);
+          }
+
+          const piece = boardRef.current[sq];
+          if (piece) {
+            ctx.font = `${SQ - 10}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = piece > 0 ? '#000' : '#fff';
+            ctx.fillText(
+              pieceUnicode[Math.abs(piece)][piece > 0 ? WHITE : BLACK],
+              x + SQ / 2,
+              y + SQ / 2
+            );
+          }
+        }
+      }
+      animRef.current = requestAnimationFrame(render);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    animRef.current = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(animRef.current);
+  }, [selected, moves]);
+
+  const endGame = (result) => {
+    // result: 1 win, 0 draw, -1 loss
+    const score = result === 1 ? 1 : result === 0 ? 0.5 : 0;
+    const opp = 1200;
+    const expected = 1 / (1 + 10 ** ((opp - elo) / 400));
+    const k = 32;
+    const newElo = Math.round(elo + k * (score - expected));
+    setElo(newElo);
+    if (typeof window !== 'undefined')
+      localStorage.setItem('chessElo', String(newElo));
+  };
+
+  const checkGameState = () => {
+    const side = sideRef.current;
+    const legals = generateMoves(boardRef.current, side);
+    if (legals.length === 0) {
+      if (inCheck(boardRef.current, side)) {
+        if (side === WHITE) {
+          setStatus('Checkmate! You lose');
+          endGame(-1);
+        } else {
+          setStatus('Checkmate! You win');
+          endGame(1);
+        }
+      } else {
+        setStatus('Draw');
+        endGame(0);
+      }
+      return true;
+    }
+    return false;
+  };
+
+  const aiMove = () => {
+    const move = getBestMove(boardRef.current, sideRef.current, 2);
+    if (move) {
+      boardRef.current[move.to] = boardRef.current[move.from];
+      boardRef.current[move.from] = EMPTY;
+      sideRef.current = -sideRef.current;
+      if (sound) playBeep();
+      setSelected(null);
+      setMoves([]);
+      checkGameState();
+      setStatus('Your move');
+    }
+  };
+
+  const handleClick = (e) => {
+    if (paused) return;
+    const rect = e.target.getBoundingClientRect();
+    const file = Math.floor(((e.clientX - rect.left) / SIZE) * 8);
+    const rank = 7 - Math.floor(((e.clientY - rect.top) / SIZE) * 8);
+    const sq = rank * 16 + file;
+    const side = sideRef.current;
+
+    if (selected !== null) {
+      const legal = moves.find((m) => m.from === selected && m.to === sq);
+      if (legal) {
+        boardRef.current[legal.to] = boardRef.current[legal.from];
+        boardRef.current[legal.from] = EMPTY;
+        if (sound) playBeep();
+        sideRef.current = -side;
+        setSelected(null);
+        setMoves([]);
+        if (!checkGameState()) {
+          setStatus('AI thinking...');
+          setTimeout(aiMove, 200);
+        }
+        return;
+      }
+      setSelected(null);
+      setMoves([]);
+    } else {
+      if (boardRef.current[sq] * side > 0) {
+        setSelected(sq);
+        setMoves(generateMoves(boardRef.current, side).filter((m) => m.from === sq));
+      }
+    }
+  };
 
   const reset = () => {
-    const newGame = new Chess();
-    setGame(newGame);
+    boardRef.current = createInitialBoard();
+    sideRef.current = WHITE;
     setSelected(null);
-    setHighlight([]);
-    setPremove(null);
-    setLastMove([]);
+    setMoves([]);
+    setPaused(false);
     setStatus('Your move');
-    setWhiteTime(initialTime);
-    setBlackTime(initialTime);
-    updateBoard();
   };
 
-  const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
-
-  const evaluateBoard = (g) => {
-    let total = 0;
-    g.board().forEach((row) =>
-      row.forEach((piece) => {
-        if (piece) {
-          const val = pieceValues[piece.type];
-          total += piece.color === 'w' ? val : -val;
-        }
-      })
-    );
-    return total;
-  };
-
-  const minimax = (g, d, isMax) => {
-    if (d === 0 || g.game_over()) return evaluateBoard(g);
-    const moves = g.moves();
-    let best = isMax ? -Infinity : Infinity;
-    moves.forEach((move) => {
-      g.move(move);
-      const val = minimax(g, d - 1, !isMax);
-      g.undo();
-      best = isMax ? Math.max(best, val) : Math.min(best, val);
-    });
-    return best;
-  };
-
-  const getBestMove = (g, d) => {
-    const maximizing = g.turn() === 'w';
-    let bestMove = null;
-    let bestValue = maximizing ? -Infinity : Infinity;
-    g.moves().forEach((move) => {
-      g.move(move);
-      const val = minimax(g, d - 1, !maximizing);
-      g.undo();
-      if (
-        (maximizing && val > bestValue) ||
-        (!maximizing && val < bestValue)
-      ) {
-        bestValue = val;
-        bestMove = move;
-      }
-    });
-    return bestMove;
-  };
-
-  const makeAIMove = () => {
-    const moves = game.moves();
-    if (moves.length > 0) {
-      const move = moves[Math.floor(Math.random() * moves.length)];
-      const aiResult = game.move(move, { sloppy: true });
-      if (aiResult) setLastMove([aiResult.from, aiResult.to]);
-
-      updateBoard();
-      updateStatus();
-      if (premove) {
-        const result = game.move(premove, { sloppy: true });
-        setPremove(null);
-        if (result) {
-          setLastMove([result.from, result.to]);
-          updateBoard();
-          updateStatus();
-        }
-      }
-    }
-  };
-
-  const handleSquareClick = (file, rank) => {
-    const square = 'abcdefgh'[file] + (8 - rank);
-    setCursor({ file, rank });
-
-    if (game.turn() === 'b') {
-      if (selected) {
-        const move = { from: selected, to: square, promotion: 'q' };
-        setPremove(move);
-        setSelected(null);
-        setHighlight([]);
-      } else {
-        setSelected(square);
-      }
-      return;
-    }
-
-    if (selected) {
-      const move = { from: selected, to: square, promotion: 'q' };
-      const result = game.move(move);
-      if (result) {
-        setLastMove([result.from, result.to]);
-        updateBoard();
-        setSelected(null);
-        setHighlight([]);
-        updateStatus();
-        makeAIMove();
-      } else {
-        setSelected(square);
-      }
-    } else {
-      const piece = game.get(square);
-      if (piece && piece.color === game.turn()) {
-        setSelected(square);
-        const moves = game.moves({ square, verbose: true });
-        setHighlight(moves.map((m) => m.to));
-      }
-    }
-  };
-
-  useEffect(() => {
-    const onKeyDown = (e) => {
-      switch (e.key) {
-        case 'ArrowUp':
-          e.preventDefault();
-          setCursor((c) => ({ ...c, rank: Math.max(c.rank - 1, 0) }));
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          setCursor((c) => ({ ...c, rank: Math.min(c.rank + 1, 7) }));
-          break;
-        case 'ArrowLeft':
-          e.preventDefault();
-          setCursor((c) => ({ ...c, file: Math.max(c.file - 1, 0) }));
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          setCursor((c) => ({ ...c, file: Math.min(c.file + 1, 7) }));
-          break;
-        case 'Enter':
-        case ' ':
-          e.preventDefault();
-          handleSquareClick(cursor.file, cursor.rank);
-          break;
-        default:
-          break;
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cursor]);
-
-  const undo = () => {
-    game.undo();
-    game.undo();
-    const history = game.history({ verbose: true });
-    const last = history[history.length - 1];
-    setLastMove(last ? [last.from, last.to] : []);
-    updateBoard();
-    updateStatus();
-  };
-
-  const exportFen = () => {
-    // eslint-disable-next-line no-alert
-    alert(game.fen());
-  };
-
-  const exportPgn = () => {
-    // eslint-disable-next-line no-alert
-    alert(game.pgn());
-  };
-
-  const importFen = () => {
-    // eslint-disable-next-line no-alert
-    const fen = prompt('Enter FEN');
-    if (fen) {
-      game.load(fen);
-      setLastMove([]);
-      updateBoard();
-      updateStatus();
-    }
-  };
-
-  const importPgn = () => {
-    // eslint-disable-next-line no-alert
-    const pgn = prompt('Enter PGN');
-    if (pgn) {
-      game.load_pgn(pgn, { sloppy: true });
-      const history = game.history({ verbose: true });
-      const last = history[history.length - 1];
-      setLastMove(last ? [last.from, last.to] : []);
-      updateBoard();
-      updateStatus();
-    }
-  };
-
-  const loadPuzzle = async () => {
-    const text = await fetch('/chess/puzzles.pgn').then((res) => res.text());
-    const blocks = text.trim().split(/\n\n/);
-    const block = blocks[Math.floor(Math.random() * blocks.length)];
-    const fenMatch = block.match(/\[FEN "(.*)"\]/);
-    if (fenMatch) {
-      game.load(fenMatch[1]);
-      setPremove(null);
-      setSelected(null);
-      setHighlight([]);
-      setLastMove([]);
-      updateBoard();
-      updateStatus();
-    }
-  };
-
-  const exploreOpenings = async () => {
-    const text = await fetch('/chess/openings.pgn').then((res) => res.text());
-    const games = text.trim().split(/\n\n\n/);
-    const counts = {};
-    games.forEach((pgn) => {
-      const cg = new Chess();
-      cg.load_pgn(pgn, { sloppy: true });
-      const history = cg.history();
-      const move = history[game.history().length];
-      if (move) counts[move] = (counts[move] || 0) + 1;
-    });
-    const message = Object.keys(counts)
-      .map((m) => `${m} (${counts[m]})`)
-      .join(', ') || 'No data';
-    // eslint-disable-next-line no-alert
-    alert(message);
-  };
-
-  const renderSquare = (piece, file, rank) => {
-    const squareName = 'abcdefgh'[file] + (8 - rank);
-    const isSelected = selected === squareName;
-    const squareColor = (file + rank) % 2 === 0 ? 'bg-gray-300' : 'bg-gray-700';
-    const isHighlight = highlight.includes(squareName);
-    const isLastMove = lastMove.includes(squareName);
-
-    return (
-      <div
-        key={squareName}
-        {...pointerHandlers(() => handleSquareClick(file, rank))}
-        className={`w-11 h-11 md:w-12 md:h-12 flex items-center justify-center select-none ${squareColor} ${
-          isSelected ? 'ring-2 ring-yellow-400' : ''
-        } ${isHighlight ? 'bg-green-500 bg-opacity-50' : ''} ${
-          isLastMove ? 'bg-yellow-500 bg-opacity-50' : ''
-        }`}
-
-      >
-        {piece ? pieceUnicode[piece.type][piece.color] : ''}
-      </div>
-    );
-  };
+  const togglePause = () => setPaused((p) => !p);
+  const toggleSound = () => setSound((s) => !s);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-2">
-      <div className="grid grid-cols-8">
-        {board.map((row, rank) =>
-          row.map((piece, file) => renderSquare(piece, file, rank))
-        )}
-      </div>
-      <div className="mt-2 flex space-x-2">
-        <div>White: {whiteTime}s</div>
-        <div>Black: {blackTime}s</div>
-      </div>
-      <div className="mt-2">{status}</div>
-      <div className="mt-2 flex flex-wrap gap-2 justify-center">
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-2 select-none">
+      <canvas
+        ref={canvasRef}
+        width={SIZE}
+        height={SIZE}
+        onClick={handleClick}
+        className="border border-gray-600"
+      />
+      <div className="mt-2 flex gap-2">
         <button className="px-2 py-1 bg-gray-700" onClick={reset}>
           Reset
         </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={undo}>
-          Undo
+        <button className="px-2 py-1 bg-gray-700" onClick={togglePause}>
+          {paused ? 'Resume' : 'Pause'}
         </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={loadPuzzle}>
-          Puzzle
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700"
-          onClick={exploreOpenings}
-        >
-          Opening Explorer
-        </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={exportFen}>
-          Export FEN
-        </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={exportPgn}>
-          Export PGN
-        </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={importFen}>
-          Import FEN
-        </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={importPgn}>
-          Import PGN
+        <button className="px-2 py-1 bg-gray-700" onClick={toggleSound}>
+          {sound ? 'Sound Off' : 'Sound On'}
         </button>
       </div>
-      <div className="mt-2 flex items-center">
-        <label className="mr-2">Depth: {depth}</label>
-        <input
-          type="range"
-          min="1"
-          max="3"
-          value={depth}
-          onChange={(e) => setDepth(Number(e.target.value))}
-        />
-      </div>
+      <div className="mt-2">{status}</div>
+      <div className="mt-1">ELO: {elo}</div>
     </div>
   );
 };
