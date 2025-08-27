@@ -26,7 +26,9 @@ const renderFaceDown = () => (
 );
 
 const Solitaire = () => {
-  const [drawMode, setDrawMode] = useState<1 | 3>(1);
+  const [drawMode, setDrawMode] = useState<1 | 3>(() =>
+    typeof window !== 'undefined' && Number(localStorage.getItem('solitaireDrawMode')) === 3 ? 3 : 1,
+  );
   const [game, setGame] = useState<GameState>(() => initializeGame(drawMode));
   const [drag, setDrag] = useState<{ source: 'tableau' | 'waste'; pile: number; index: number } | null>(null);
   const [won, setWon] = useState(false);
@@ -55,13 +57,17 @@ const Solitaire = () => {
       if (!best.score || game.score > best.score) {
         localStorage.setItem('solitaireBest', JSON.stringify({ score: game.score, time }));
       }
+      const fastest = Number(localStorage.getItem('solitaireFastest') || '0');
+      if (!fastest || time < fastest) {
+        localStorage.setItem('solitaireFastest', String(time));
+      }
       return;
     }
     timer.current = setInterval(() => setTime((t) => t + 1), 1000);
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-    }, [won, game, time]);
+  }, [won, game, time]);
 
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {
@@ -173,6 +179,9 @@ const Solitaire = () => {
   }, [game]);
 
   const best = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('solitaireBest') || '{}' : '{}');
+  const fastest = Number(
+    typeof window !== 'undefined' ? localStorage.getItem('solitaireFastest') || '0' : '0',
+  );
 
   return (
     <div className="h-full w-full bg-green-700 text-white select-none p-2">
@@ -186,11 +195,13 @@ const Solitaire = () => {
         <div>Time: {time}s</div>
         <div>Redeals: {game.redeals}</div>
         <div>Best: {best.score ? `${best.score} (${best.time}s)` : 'N/A'}</div>
+        <div>Fastest: {fastest ? `${fastest}s` : 'N/A'}</div>
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={() => {
             const mode = drawMode === 1 ? 3 : 1;
             ReactGA.event({ category: 'Solitaire', action: 'variant_select', label: mode === 1 ? 'draw1' : 'draw3' });
+            localStorage.setItem('solitaireDrawMode', String(mode));
             setDrawMode(mode);
           }}
         >
@@ -205,6 +216,14 @@ const Solitaire = () => {
           {game.waste.length ? (
             <div
               draggable
+              role="button"
+              tabIndex={0}
+              aria-label={`${valueToString(
+                game.waste[game.waste.length - 1].value,
+              )}${game.waste[game.waste.length - 1].suit}`}
+              aria-grabbed={
+                drag?.source === 'waste' && drag.index === game.waste.length - 1
+              }
               onDoubleClick={() => handleDoubleClick('waste', 0)}
               onDragStart={() => handleDragStart('waste', -1, game.waste.length - 1)}
               onDragEnd={handleDragEnd}
@@ -224,6 +243,9 @@ const Solitaire = () => {
             ref={(el) => {
               foundationRefs.current[i] = el;
             }}
+            role="button"
+            aria-dropeffect="move"
+            aria-label={`Foundation ${i + 1}`}
           >
             {pile.length ? renderCard(pile[pile.length - 1]) : (
               <div className="w-16 h-24 border border-dashed border-white rounded" />
@@ -238,9 +260,12 @@ const Solitaire = () => {
             className="relative w-16 h-96 border border-black"
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToTableau(i)}
-              ref={(el) => {
-                tableauRefs.current[i] = el;
-              }}
+            ref={(el) => {
+              tableauRefs.current[i] = el;
+            }}
+            role="list"
+            aria-dropeffect="move"
+            aria-label={`Tableau ${i + 1}`}
           >
             {pile.map((card, idx) => (
               <div
@@ -251,6 +276,14 @@ const Solitaire = () => {
                 onDoubleClick={() => handleDoubleClick('tableau', i)}
                 onDragStart={() => handleDragStart('tableau', i, idx)}
                 onDragEnd={handleDragEnd}
+                role="button"
+                tabIndex={card.faceUp ? 0 : -1}
+                aria-label={`${valueToString(card.value)}${card.suit}`}
+                aria-grabbed={
+                  drag?.source === 'tableau' &&
+                  drag.pile === i &&
+                  drag.index === idx
+                }
               >
                 {card.faceUp ? renderCard(card) : renderFaceDown()}
               </div>
