@@ -36,14 +36,19 @@ const VolatilityApp = () => {
         <button
           onClick={analyze}
           disabled={!file || loading}
-          className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
+          className="px-4 py-2 bg-green-600 rounded disabled:opacity-50 flex items-center justify-center gap-2"
         >
+          {loading && <div className="progress-circle" />}
           {loading ? 'Analyzing...' : 'Analyze'}
         </button>
       </div>
-      <pre className="flex-1 overflow-auto p-4 bg-black text-green-400 whitespace-pre-wrap">
-        {output}
-      </pre>
+      <div className="flex-1 overflow-auto p-4 bg-black text-green-400 whitespace-pre-wrap flex items-center justify-center">
+        {loading ? (
+          <div className="progress-circle" />
+        ) : (
+          <pre className="w-full whitespace-pre-wrap">{output}</pre>
+        )}
+      </div>
     </div>
   );
 };
