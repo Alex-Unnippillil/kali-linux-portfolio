@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import usePersistentState from '../usePersistentState';
+import ExternalFrame from '../ExternalFrame';
 
 const Platformer = () => {
   const [levels, setLevels] = useState([]);
@@ -7,8 +8,6 @@ const Platformer = () => {
     level: 0,
     checkpoint: null,
   });
-  const frameRef = useRef(null);
-
   useEffect(() => {
     fetch('/apps/platformer/levels.json')
       .then(r => r.json())
@@ -36,13 +35,13 @@ const Platformer = () => {
   }`;
 
   return (
-    <iframe
-      ref={frameRef}
+    <ExternalFrame
       src={src}
       title="Platformer"
       className="w-full h-full"
       frameBorder="0"
-    ></iframe>
+      allowlist={[`/apps/platformer`]}
+    />
   );
 };
 

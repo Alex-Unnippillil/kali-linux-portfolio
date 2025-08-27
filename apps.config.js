@@ -21,6 +21,10 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
 import { displayNikto } from './components/apps/nikto';
+export const FRAME_ALLOWLIST = {
+  chrome: ["https://www.google.com/webhp?igu=1"],
+};
+
 
 const createDynamicApp = (path, name) =>
   dynamic(
