@@ -76,7 +76,7 @@ const SudokuApp = createDynamicApp('sudoku', 'Sudoku');
 const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
-const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
+const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
@@ -143,6 +143,7 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+const displayFileExplorer = createDisplay(FileExplorerApp);
 const displayRadare2 = createDisplay(Radare2App);
 
 const displayGhidra = createDisplay(GhidraApp);
@@ -577,6 +578,15 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displaySettings,
+  },
+  {
+    id: 'files',
+    title: 'Files',
+    icon: './themes/Yaru/system/folder.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFileExplorer,
   },
   {
     id: 'resource-monitor',
