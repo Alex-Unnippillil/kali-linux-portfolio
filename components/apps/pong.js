@@ -1,10 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
+import { updateScores, aiErrorOffset } from './pong-utils';
 
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
-const WIN_POINTS = 5; // points to win a game
+const WIN_POINTS = 11; // points to win a game
 const SPEEDUP_RATE = 50; // px/s increase for progressive speed
 const MAX_BALL_SPEED = 600; // maximum ball speed in px/s
 
@@ -179,7 +180,8 @@ const Pong = () => {
       const prevY = pad.y;
 
       if (control.touchY !== null) {
-        pad.y = control.touchY - paddleHeight / 2;
+        const target = control.touchY - paddleHeight / 2;
+        pad.y += (target - pad.y) * 10 * dt;
         pad.vy = (pad.y - prevY) / dt;
       } else {
         if (control.up) pad.vy -= accel * dt;
@@ -242,7 +244,8 @@ const Pong = () => {
         const aiSpeed = 200 + diff * 200;
         const delayFrames = Math.floor((reactionMs / FRAME_TIME) || 0);
         if (cpuHistory.length > delayFrames) {
-          const target = cpuHistory.shift();
+          let target = cpuHistory.shift();
+          target += aiErrorOffset(difficulty);
           const center = opponent.y + paddleHeight / 2;
           if (center < target - 10) opponent.y += aiSpeed * dt;
           else if (center > target + 10) opponent.y -= aiSpeed * dt;
@@ -299,14 +302,18 @@ const Pong = () => {
       }
 
       // scoring
-      if (ball.x < 0) {
-        oppScore += 1;
-        setScores({ player: playerScore, opponent: oppScore });
-        resetBall(1);
-      } else if (ball.x > width) {
-        playerScore += 1;
-        setScores({ player: playerScore, opponent: oppScore });
-        resetBall(-1);
+      const { scores: updatedScores, scorer } = updateScores(ball.x, width, {
+        player: playerScore,
+        opponent: oppScore,
+      });
+      if (scorer) {
+        playerScore = updatedScores.player;
+        oppScore = updatedScores.opponent;
+        setScores(updatedScores);
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate(100);
+        }
+        resetBall(scorer === 'player' ? -1 : 1);
       }
 
       // check game end
