@@ -4,18 +4,35 @@ import useAssetLoader from '../../hooks/useAssetLoader';
 
 const EXTRA_LIFE_THRESHOLDS = [1000, 5000, 10000];
 
-const SpaceInvaders = () => {
+const DIFFICULTIES = {
+  easy: { seed: 1, shield: 3 },
+  normal: { seed: 2, shield: 1 },
+  hard: { seed: 3, shield: 0 },
+};
+
+const makeRandom = (seed) => {
+  let value = seed % 2147483647;
+  if (value <= 0) value += 2147483646;
+  return () => {
+    value = (value * 16807) % 2147483647;
+    return (value - 1) / 2147483646;
+  };
+};
+
+const SpaceInvaders = ({ difficulty = 'normal' }) => {
   const { loading, error } = useAssetLoader({
     images: ['/themes/Yaru/status/ubuntu_white_hex.svg'],
     sounds: [],
   });
+  const settings = DIFFICULTIES[difficulty] || DIFFICULTIES.normal;
+  const rand = useRef(makeRandom(settings.seed));
 
   const canvasRef = useRef(null);
   const reqRef = useRef();
   const keys = useRef({});
   const touch = useRef({ left: false, right: false, fire: false });
 
-  const player = useRef({ x: 0, y: 0, w: 20, h: 10, cooldown: 0, shield: false, rapid: 0 });
+  const player = useRef({ x: 0, y: 0, w: 20, h: 10, cooldown: 0, shield: 0, rapid: 0 });
   const invaders = useRef([]);
   const invDir = useRef(1);
   const enemyCooldown = useRef(1);
@@ -29,6 +46,10 @@ const SpaceInvaders = () => {
   const initialCount = useRef(0);
   const pattern = useRef(0);
   const nextExtraLife = useRef(0);
+
+  const shotsFired = useRef(0);
+  const shotsHit = useRef(0);
+  const totalLives = 3;
 
   const [stage, setStage] = useState(1);
   const stageRef = useRef(stage);
@@ -76,11 +97,16 @@ const SpaceInvaders = () => {
     playerBullets.current = createBulletPool(20, -200);
     enemyBullets.current = createBulletPool(20, 200);
 
-    const rows = 4;
-    const cols = 8;
-    const spacing = 30;
+    const getFormation = () => {
+      const acc = shotsFired.current ? shotsHit.current / shotsFired.current : 0;
+      const risk = 1 - livesRef.current / totalLives;
+      if (acc > 0.7 && risk < 0.3) return { rows: 5, cols: 10, spacing: 25 };
+      if (acc < 0.3 || risk > 0.7) return { rows: 3, cols: 6, spacing: 35 };
+      return { rows: 4, cols: 8, spacing: 30 };
+    };
 
     const setupWave = () => {
+      const { rows, cols, spacing } = getFormation();
       const invArr = [];
       for (let r = 0; r < rows; r += 1) {
         for (let c = 0; c < cols; c += 1) {
@@ -88,7 +114,7 @@ const SpaceInvaders = () => {
             x: 30 + c * spacing,
             y: 30 + r * spacing,
             alive: true,
-            phase: Math.random() * Math.PI * 2,
+            phase: rand.current() * Math.PI * 2,
           });
         }
       }
@@ -97,7 +123,7 @@ const SpaceInvaders = () => {
 
       player.current.x = w / 2 - player.current.w / 2;
       player.current.cooldown = 0;
-      player.current.shield = false;
+      player.current.shield = 0;
       player.current.rapid = 0;
 
       playerBullets.current.forEach((b) => {
@@ -127,12 +153,13 @@ const SpaceInvaders = () => {
     window.addEventListener('keydown', handleKey);
     window.addEventListener('keyup', handleKey);
 
-    const shoot = (pool, x, y) => {
+    const shoot = (pool, x, y, playerShot = false) => {
       for (const b of pool) {
         if (!b.active) {
           b.x = x;
           b.y = y;
           b.active = true;
+          if (playerShot) shotsFired.current += 1;
           break;
         }
       }
@@ -167,8 +194,8 @@ const SpaceInvaders = () => {
     };
 
     const loseLife = () => {
-      if (player.current.shield) {
-        player.current.shield = false;
+      if (player.current.shield > 0) {
+        player.current.shield -= 1;
         return;
       }
       livesRef.current -= 1;
@@ -187,6 +214,8 @@ const SpaceInvaders = () => {
         setLives(3);
         pattern.current = 0;
         nextExtraLife.current = 0;
+        shotsFired.current = 0;
+        shotsHit.current = 0;
       }
       setupWave();
     };
@@ -207,7 +236,7 @@ const SpaceInvaders = () => {
 
       const fire = keys.current['Space'] || touch.current.fire;
       if (fire && p.cooldown <= 0) {
-        shoot(playerBullets.current, p.x + p.w / 2, p.y);
+        shoot(playerBullets.current, p.x + p.w / 2, p.y, true);
         p.cooldown = p.rapid > 0 ? 0.15 : 0.5;
       }
       if (p.rapid > 0) p.rapid -= dt;
@@ -215,7 +244,7 @@ const SpaceInvaders = () => {
       enemyCooldown.current -= dt;
       const aliveInv = invaders.current.filter((i) => i.alive);
       if (enemyCooldown.current <= 0 && aliveInv.length) {
-        const inv = aliveInv[Math.floor(Math.random() * aliveInv.length)];
+        const inv = aliveInv[Math.floor(rand.current() * aliveInv.length)];
         shoot(enemyBullets.current, inv.x + 10, inv.y + 10);
         enemyCooldown.current = 1;
       }
@@ -241,12 +270,13 @@ const SpaceInvaders = () => {
           ) {
             inv.alive = false;
             b.active = false;
+            shotsHit.current += 1;
             addScore(10);
-            if (Math.random() < 0.1)
+            if (rand.current() < 0.1)
               powerUps.current.push({
                 x: inv.x + 10,
                 y: inv.y + 10,
-                type: Math.random() < 0.5 ? 'shield' : 'rapid',
+                type: rand.current() < 0.5 ? 'shield' : 'rapid',
                 active: true,
               });
             break;
@@ -345,7 +375,7 @@ const SpaceInvaders = () => {
         if (!pu.active) continue;
         if (pu.x >= p.x && pu.x <= p.x + p.w && pu.y >= p.y && pu.y <= p.y + p.h) {
           pu.active = false;
-          if (pu.type === 'shield') p.shield = true;
+          if (pu.type === 'shield') p.shield = settings.shield;
           else p.rapid = 5;
         }
       }
@@ -376,7 +406,7 @@ const SpaceInvaders = () => {
         ctx.fillRect(pu.x - 5, pu.y - 5, 10, 10);
       });
 
-      if (p.shield) {
+      if (p.shield > 0) {
         ctx.strokeStyle = 'cyan';
         ctx.strokeRect(p.x - 2, p.y - 2, p.w + 4, p.h + 4);
       }
