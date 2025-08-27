@@ -93,6 +93,7 @@ const Wordle = () => {
   const [guess, setGuess] = useState('');
   const [message, setMessage] = useState('');
   const [analysis, setAnalysis] = useState('');
+  const [revealMap, setRevealMap] = useState({});
 
   // settings
   const [colorBlind, setColorBlind] = usePersistentState(
@@ -108,17 +109,18 @@ const Wordle = () => {
     setGuess('');
     setMessage('');
     setAnalysis('');
+    setRevealMap({});
   }, [dictName]);
 
   const colors = colorBlind
     ? {
-        correct: 'bg-blue-700 border-blue-700',
-        present: 'bg-orange-700 border-orange-700',
+        correct: 'bg-blue-800 border-blue-800',
+        present: 'bg-orange-600 border-orange-600',
         absent: 'bg-gray-700 border-gray-700',
       }
     : {
-        correct: 'bg-green-700 border-green-700',
-        present: 'bg-yellow-800 border-yellow-800',
+        correct: 'bg-green-600 border-green-600',
+        present: 'bg-yellow-500 border-yellow-500',
         absent: 'bg-gray-700 border-gray-700',
       };
 
@@ -230,29 +232,80 @@ const Wordle = () => {
     setMessage('Copied results to clipboard!');
   };
 
+  useEffect(() => {
+    if (!guesses.length) return;
+    const rowIndex = guesses.length - 1;
+
+    // reveal previous rows immediately
+    setRevealMap((prev) => {
+      const updated = { ...prev };
+      for (let r = 0; r < rowIndex; r += 1) {
+        for (let c = 0; c < 5; c += 1) {
+          updated[`${r}-${c}`] = true;
+        }
+      }
+      return updated;
+    });
+
+    if (typeof window === 'undefined') return;
+    const prefersReduce = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches;
+    if (prefersReduce) {
+      setRevealMap((prev) => {
+        const upd = { ...prev };
+        for (let c = 0; c < 5; c += 1) {
+          upd[`${rowIndex}-${c}`] = true;
+        }
+        return upd;
+      });
+      return;
+    }
+
+    let frame;
+    let start;
+    let last = -1;
+    const animate = (ts) => {
+      if (!start) start = ts;
+      const elapsed = ts - start;
+      const col = Math.min(4, Math.floor(elapsed / 200));
+      if (col > last) {
+        setRevealMap((prev) => ({
+          ...prev,
+          [`${rowIndex}-${col}`]: true,
+        }));
+        last = col;
+      }
+      if (last < 4) frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [guesses]);
+
   const renderCell = (row, col) => {
     const guessRow = guesses[row];
     const letter =
       guessRow?.guess[col] || (row === guesses.length ? guess[col] || '' : '');
     const status = guessRow?.result[col];
+    const revealed = revealMap[`${row}-${col}`];
     let classes =
       'w-10 h-10 md:w-12 md:h-12 flex items-center justify-center border-2 font-bold text-xl';
-    if (status) {
-      classes += ` ${colors[status]} text-white`;
+    if (status && revealed) {
+      classes += ` ${colors[status]} text-white tile-flip`;
     } else {
       classes += ' border-gray-600';
     }
     return (
-      <div key={col} className={classes}>
+      <div
+        key={col}
+        className={classes}
+        role="gridcell"
+        aria-label={status ? `${letter} ${status}` : letter}
+      >
         {letter}
       </div>
     );
   };
-
-  const shareString = () =>
-    `Wordle ${isSolved ? guesses.length : 'X'}/6\n${guesses
-      .map((g) => g.result.map((r) => emojiMap[r]).join(''))
-      .join('\n')}`;
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
@@ -285,9 +338,9 @@ const Wordle = () => {
         </select>
       </div>
 
-      <div className="grid grid-rows-6 gap-1">
+      <div className="grid grid-rows-6 gap-1" role="grid" aria-label="Wordle board">
         {Array.from({ length: 6 }).map((_, row) => (
-          <div key={row} className="grid grid-cols-5 gap-1">
+          <div key={row} className="grid grid-cols-5 gap-1" role="row">
             {Array.from({ length: 5 }).map((_, col) => renderCell(row, col))}
           </div>
         ))}
@@ -327,16 +380,24 @@ const Wordle = () => {
           >
             Share
           </button>
-          <textarea
-            readOnly
-            value={shareString()}
-            className="w-52 h-32 p-2 text-black"
-          />
+          <div
+            role="img"
+            aria-label="Emoji result grid"
+            className="font-mono leading-5"
+          >
+            {guesses.map((g, i) => (
+              <div key={i}>{g.result.map((r) => emojiMap[r]).join('')}</div>
+            ))}
+          </div>
         </div>
       )}
 
-      {analysis && <div className="text-sm">{analysis}</div>}
-      {message && <div className="text-sm">{message}</div>}
+      <div className="text-sm" aria-live="polite">
+        {analysis}
+      </div>
+      <div className="text-sm" aria-live="polite" role="status">
+        {message}
+      </div>
 
       <div className="flex flex-col items-center space-y-1">
         <div className="text-sm">

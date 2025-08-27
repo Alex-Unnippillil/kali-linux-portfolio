@@ -466,9 +466,21 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: buzz 0.6s linear;
 }
 
+@keyframes tile-flip {
+    0% { transform: rotateX(0deg); }
+    50% { transform: rotateX(90deg); }
+    100% { transform: rotateX(0deg); }
+}
+
+.tile-flip {
+    animation: tile-flip 0.6s ease forwards;
+    transform-style: preserve-3d;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .pad-pulse,
-    .buzz {
+    .buzz,
+    .tile-flip {
         animation: none;
     }
 }
