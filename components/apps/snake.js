@@ -32,11 +32,18 @@ const Snake = () => {
   const audioCtx = useRef(null);
   const prefersReducedMotion = useRef(false);
 
+  const scoreRef = useRef(0);
+  const prevRef = useRef(null);
+  const sparkleRef = useRef(null);
+  const portalAngleRef = useRef(0);
+
   const [running, setRunning] = useState(true);
   const [wrap, setWrap] = useState(false);
   const [sound, setSound] = useState(true);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [lives, setLives] = useState(1);
+  const [scoring, setScoring] = useState(true);
   const [highScore, setHighScore] = useState(() => {
     if (typeof window === 'undefined') return 0;
     const stored = window.localStorage.getItem('snake_highscore');
@@ -64,6 +71,32 @@ const Snake = () => {
 
     ctx.fillStyle = '#111827';
     ctx.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+
+    if (wrap) {
+      const angle = portalAngleRef.current;
+      const mid = Math.floor(GRID_SIZE / 2);
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2;
+      const drawPortal = (x, y) => {
+        ctx.save();
+        ctx.translate(
+          x * CELL_SIZE + CELL_SIZE / 2,
+          y * CELL_SIZE + CELL_SIZE / 2,
+        );
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.arc(0, 0, CELL_SIZE / 2, 0, Math.PI * 1.5);
+        ctx.stroke();
+        ctx.restore();
+      };
+      drawPortal(0, mid);
+      drawPortal(GRID_SIZE - 1, mid);
+      drawPortal(mid, 0);
+      drawPortal(mid, GRID_SIZE - 1);
+      if (!prefersReducedMotion.current) {
+        portalAngleRef.current = angle + 0.1;
+      }
+    }
 
     // Ghost path preview
     const ghost = [];
@@ -95,6 +128,23 @@ const Snake = () => {
     const food = foodRef.current;
     ctx.fillRect(food.x * CELL_SIZE, food.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
 
+    if (sparkleRef.current && !prefersReducedMotion.current) {
+      const { x, y, frame } = sparkleRef.current;
+      const cx = x * CELL_SIZE + CELL_SIZE / 2;
+      const cy = y * CELL_SIZE + CELL_SIZE / 2;
+      const radius = (frame / 10) * (CELL_SIZE / 2);
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - radius, cy);
+      ctx.lineTo(cx + radius, cy);
+      ctx.moveTo(cx, cy - radius);
+      ctx.lineTo(cx, cy + radius);
+      ctx.stroke();
+      sparkleRef.current.frame += 1;
+      if (sparkleRef.current.frame > 10) sparkleRef.current = null;
+    }
+
     // Snake segments
     ctx.fillStyle = '#22c55e';
     snakeRef.current.forEach((seg) => {
@@ -124,6 +174,12 @@ const Snake = () => {
 
   const update = useCallback(() => {
     const snake = snakeRef.current;
+    prevRef.current = {
+      snake: snake.map((s) => ({ ...s })),
+      dir: { ...dirRef.current },
+      food: { ...foodRef.current },
+      score: scoreRef.current,
+    };
     if (moveQueueRef.current.length) {
       const next = moveQueueRef.current.shift();
       if (
@@ -160,14 +216,25 @@ const Snake = () => {
 
     snake.unshift(head);
     if (head.x === foodRef.current.x && head.y === foodRef.current.y) {
-      setScore((s) => s + 1);
+      if (scoring) {
+        setScore((s) => {
+          const ns = s + 1;
+          scoreRef.current = ns;
+          return ns;
+        });
+      }
       beep(440);
       foodRef.current = randomFood(snake);
+      sparkleRef.current = {
+        x: foodRef.current.x,
+        y: foodRef.current.y,
+        frame: 0,
+      };
       if (!prefersReducedMotion.current) head.scale = 0;
     } else {
       snake.pop();
     }
-  }, [wrap, beep]);
+  }, [wrap, beep, scoring]);
 
   const loop = useCallback(
     (time) => {
@@ -206,6 +273,22 @@ const Snake = () => {
     }
   }, [gameOver, score, highScore]);
 
+  const rewind = useCallback(() => {
+    const prev = prevRef.current;
+    if (!prev || lives <= 0) return;
+    snakeRef.current = prev.snake.map((s) => ({ ...s }));
+    dirRef.current = { ...prev.dir };
+    foodRef.current = { ...prev.food };
+    moveQueueRef.current = [];
+    setScore(prev.score);
+    scoreRef.current = prev.score;
+    setGameOver(false);
+    setRunning(true);
+    setLives((l) => l - 1);
+    setScoring(false);
+    draw();
+  }, [lives, draw]);
+
   const reset = useCallback(() => {
     snakeRef.current = [
       { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2), scale: 1 },
@@ -213,9 +296,19 @@ const Snake = () => {
     dirRef.current = { x: 1, y: 0 };
     foodRef.current = randomFood(snakeRef.current);
     moveQueueRef.current = [];
+    sparkleRef.current = {
+      x: foodRef.current.x,
+      y: foodRef.current.y,
+      frame: 0,
+    };
+    scoreRef.current = 0;
+    prevRef.current = null;
+    portalAngleRef.current = 0;
     setScore(0);
     setGameOver(false);
     setRunning(true);
+    setLives(1);
+    setScoring(true);
     draw();
   }, [draw]);
 
@@ -234,7 +327,7 @@ const Snake = () => {
           role="status"
           aria-atomic="true"
         >
-          Score: {score} | High: {highScore}
+          Score: {score} | High: {highScore} | Lives: {lives}
         </div>
         {gameOver && (
           <div
@@ -242,7 +335,19 @@ const Snake = () => {
             role="alert"
             aria-live="assertive"
           >
-            Game Over
+            <div className="text-center">
+              Game Over
+              {lives > 0 && (
+                <div className="mt-2">
+                  <button
+                    className="px-2 py-1 bg-gray-700 rounded"
+                    onClick={rewind}
+                  >
+                    Rewind
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
