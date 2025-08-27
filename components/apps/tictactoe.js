@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactGA from 'react-ga4';
 import confetti from 'canvas-confetti';
 import GameLayout from './GameLayout';
@@ -74,6 +74,16 @@ const TicTacToe = () => {
   const [winningLine, setWinningLine] = useState([]);
   const [lastMove, setLastMove] = useState(null);
   const [score, setScore] = useState({ player: 0, ai: 0, draw: 0 });
+  const [paused, setPaused] = useState(false);
+  const [sound, setSound] = useState(true);
+  const [hints, setHints] = useState([]);
+  const [highScore, setHighScore] = useState(0);
+
+  const canvasRef = useRef(null);
+  const boardRef = useRef(board);
+  const winningLineRef = useRef(winningLine);
+  const lastMoveRef = useRef(lastMove);
+  const hintsRef = useRef(hints);
 
   const startGame = (p) => {
     const a = p === 'X' ? 'O' : 'X';
@@ -86,10 +96,11 @@ const TicTacToe = () => {
     setWinningLine([]);
     setLastMove(null);
     setScore({ player: 0, ai: 0, draw: 0 });
+    setPaused(false);
   };
 
   const handleClick = (idx) => {
-    if (player === null) return;
+    if (player === null || paused) return;
     if (board[idx] || checkWinner(board).winner) return;
     const filled = board.filter(Boolean).length;
     const isXTurn = filled % 2 === 0;
@@ -100,10 +111,19 @@ const TicTacToe = () => {
     setBoard(newBoard);
     setLastMove(idx);
     ReactGA.event({ category: 'TicTacToe', action: 'move', label: 'player' });
+    if (sound) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 440;
+      osc.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    }
   };
 
   useEffect(() => {
-    if (player === null || ai === null) return;
+    if (player === null || ai === null || paused) return;
     const { winner, line } = checkWinner(board);
     if (winner) {
       if (winner !== 'draw') {
@@ -143,6 +163,15 @@ const TicTacToe = () => {
         setTimeout(() => {
           setBoard(newBoard);
           setLastMove(index);
+          if (sound) {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.value = 660;
+            osc.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.1);
+          }
         }, 200);
         setAiMoves((m) => m + 1);
         ReactGA.event({ category: 'TicTacToe', action: 'move', label: 'ai' });
@@ -150,7 +179,138 @@ const TicTacToe = () => {
     } else {
       setStatus('Your turn');
     }
-  }, [board, player, ai, difficulty, aiMoves]);
+  }, [board, player, ai, difficulty, aiMoves, paused, sound]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const size = canvas.width;
+    const cellSize = size / 3;
+    let frame;
+    const draw = () => {
+      const b = boardRef.current;
+      const w = winningLineRef.current;
+      const l = lastMoveRef.current;
+      const h = hintsRef.current;
+      ctx.clearRect(0, 0, size, size);
+      if (w.length) {
+        ctx.fillStyle = 'rgba(0,255,0,0.3)';
+        w.forEach((idx) => {
+          const r = Math.floor(idx / 3);
+          const c = idx % 3;
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+        });
+      } else if (l !== null) {
+        ctx.fillStyle = 'rgba(0,0,255,0.3)';
+        const r = Math.floor(l / 3);
+        const c = l % 3;
+        ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+      }
+      if (h.length) {
+        ctx.fillStyle = 'rgba(255,255,0,0.3)';
+        h.forEach((idx) => {
+          const r = Math.floor(idx / 3);
+          const c = idx % 3;
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+        });
+      }
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      for (let i = 1; i < 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * cellSize, 0);
+        ctx.lineTo(i * cellSize, size);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * cellSize);
+        ctx.lineTo(size, i * cellSize);
+        ctx.stroke();
+      }
+      b.forEach((cell, idx) => {
+        if (cell) {
+          const r = Math.floor(idx / 3);
+          const c = idx % 3;
+          const x = c * cellSize + cellSize / 2;
+          const y = r * cellSize + cellSize / 2;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 4;
+          if (cell === 'X') {
+            ctx.beginPath();
+            ctx.moveTo(x - cellSize / 3, y - cellSize / 3);
+            ctx.lineTo(x + cellSize / 3, y + cellSize / 3);
+            ctx.moveTo(x + cellSize / 3, y - cellSize / 3);
+            ctx.lineTo(x - cellSize / 3, y + cellSize / 3);
+            ctx.stroke();
+          } else {
+            ctx.beginPath();
+            ctx.arc(x, y, cellSize / 3, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+      });
+      frame = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    boardRef.current = board;
+  }, [board]);
+  useEffect(() => {
+    winningLineRef.current = winningLine;
+  }, [winningLine]);
+  useEffect(() => {
+    lastMoveRef.current = lastMove;
+  }, [lastMove]);
+  useEffect(() => {
+    hintsRef.current = hints;
+  }, [hints]);
+
+  useEffect(() => {
+    if (score.player > highScore) {
+      setHighScore(score.player);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('tictactoeHighScore', String(score.player));
+      }
+    }
+  }, [score.player, highScore]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = parseInt(localStorage.getItem('tictactoeHighScore') || '0', 10);
+      setHighScore(stored);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!player || paused) {
+      setHints([]);
+      return;
+    }
+    const { winner } = checkWinner(board);
+    if (winner) {
+      setHints([]);
+      return;
+    }
+    const filled = board.filter(Boolean).length;
+    const isXTurn = filled % 2 === 0;
+    const currentTurn = isXTurn ? 'X' : 'O';
+    if (currentTurn !== player) {
+      setHints([]);
+      return;
+    }
+    const available = board.map((v, i) => (v ? null : i)).filter((v) => v !== null);
+    const moves = available.map((idx) => {
+      const newBoard = board.slice();
+      newBoard[idx] = player;
+      const score = minimax(newBoard, player === 'X' ? 'O' : 'X');
+      return { idx, score: score.score };
+    });
+    const best = Math.max(...moves.map((m) => m.score));
+    setHints(moves.filter((m) => m.score === best).map((m) => m.idx));
+  }, [board, player, paused]);
 
   const restart = () => {
     setBoard(Array(9).fill(null));
@@ -158,6 +318,7 @@ const TicTacToe = () => {
     setWinningLine([]);
     setLastMove(null);
     setStatus(player === 'X' ? 'Your turn' : "AI's turn");
+    setPaused(false);
   };
 
   const reset = () => {
@@ -169,6 +330,7 @@ const TicTacToe = () => {
     setWinningLine([]);
     setLastMove(null);
     setScore({ player: 0, ai: 0, draw: 0 });
+    setPaused(false);
   };
 
   const difficultySlider = (
@@ -188,6 +350,18 @@ const TicTacToe = () => {
       </div>
     </div>
   );
+
+  const handleCanvasClick = (e) => {
+    if (player === null || paused) return;
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const col = Math.floor((x / rect.width) * 3);
+    const row = Math.floor((y / rect.height) * 3);
+    const idx = row * 3 + col;
+    handleClick(idx);
+  };
 
   if (player === null) {
     return (
@@ -230,36 +404,18 @@ const TicTacToe = () => {
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       {difficultySlider}
-      <div className="grid grid-cols-3 gap-1 w-60 mb-4">
-        {board.map((cell, idx) => (
-          <button
-            key={idx}
-            className={`h-20 w-20 text-4xl flex items-center justify-center bg-gray-700 hover:bg-gray-600 ${
-              winningLine.includes(idx)
-                ? 'bg-green-600 animate-pulse'
-                : lastMove === idx
-                ? 'bg-blue-600'
-                : ''
-            }`}
-            onClick={() => handleClick(idx)}
-            onTouchStart={() => handleClick(idx)}
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleClick(idx);
-              }
-            }}
-          >
-            {cell}
-          </button>
-        ))}
-      </div>
+      <canvas
+        ref={canvasRef}
+        width={300}
+        height={300}
+        className="mb-4 bg-gray-700 w-60 h-60"
+        onClick={handleCanvasClick}
+      />
       <div className="mb-2 text-sm">
-        Player: {score.player} | AI: {score.ai} | Draws: {score.draw}
+        Player: {score.player} | AI: {score.ai} | Draws: {score.draw} | Highscore: {highScore}
       </div>
-      <div className="mb-4">{status}</div>
-      <div className="flex space-x-4">
+      <div className="mb-4">{paused ? 'Paused' : status}</div>
+      <div className="flex space-x-4 flex-wrap justify-center">
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={restart}
@@ -274,9 +430,22 @@ const TicTacToe = () => {
         >
           Reset
         </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setPaused((p) => !p)}
+          onTouchStart={() => setPaused((p) => !p)}
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setSound((s) => !s)}
+          onTouchStart={() => setSound((s) => !s)}
+        >
+          Sound: {sound ? 'On' : 'Off'}
+        </button>
       </div>
     </div>
-
   );
 };
 

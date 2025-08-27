@@ -381,6 +381,7 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+    ...gameDefaults,
   },
   {
     id: 'tetris',
