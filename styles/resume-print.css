@@ -3,13 +3,13 @@
     margin: 1in;
   }
   body {
-    background: #fff;
-    color: #000;
+    background: var(--color-surface);
+    color: var(--color-inverse);
   }
   .no-print {
     display: none !important;
   }
   .windowMainScreen {
-    background: #fff !important;
+    background: var(--color-surface) !important;
   }
 }
