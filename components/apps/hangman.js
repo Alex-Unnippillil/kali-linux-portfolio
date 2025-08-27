@@ -1,26 +1,24 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import usePersistentState from '../../hooks/usePersistentState';
+import React, { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
-import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
+import usePersistentState from '../../hooks/usePersistentState';
+import {
+  logEvent,
+  logGameStart,
+  logGameEnd,
+  logGameError,
+} from '../../utils/analytics';
 
-const dictionaries = {
-  tech: {
-    easy: ['code', 'bug', 'html', 'css', 'linux'],
-    medium: ['react', 'nextjs', 'python', 'docker', 'node'],
-    hard: ['javascript', 'typescript', 'portfolio', 'framework', 'terminal'],
-  },
-  animals: {
-    easy: ['cat', 'dog', 'cow', 'bat', 'hen'],
-    medium: ['giraffe', 'monkey', 'rabbit', 'eagle'],
-    hard: ['alligator', 'chimpanzee', 'hippopotamus', 'rhinoceros'],
-  },
-};
-
-const lengthOptions = [
-  { label: 'Any', min: 0, max: Infinity },
-  { label: '4-6', min: 4, max: 6 },
-  { label: '7-9', min: 7, max: 9 },
-  { label: '10+', min: 10, max: Infinity },
+const words = [
+  'code',
+  'bug',
+  'html',
+  'css',
+  'linux',
+  'react',
+  'nextjs',
+  'python',
+  'docker',
+  'node',
 ];
 
 const HangmanDrawing = ({ wrong }) => (
@@ -110,268 +108,303 @@ const HangmanDrawing = ({ wrong }) => (
 
 const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
 
+
+// Helper to draw a line segment based on progress
+const drawLine = (ctx, x1, y1, x2, y2, progress) => {
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(
+    x1 + (x2 - x1) * progress,
+    y1 + (y2 - y1) * progress,
+  );
+  ctx.stroke();
+};
+
+// Individual hangman parts rendered progressively
+const HANGMAN_PARTS = [
+  (ctx, p) => {
+    ctx.beginPath();
+    ctx.arc(120, 60, 20, 0, Math.PI * 2 * p);
+    ctx.stroke();
+  },
+  (ctx, p) => drawLine(ctx, 120, 80, 120, 140, p),
+  (ctx, p) => drawLine(ctx, 120, 100, 90, 120, p),
+  (ctx, p) => drawLine(ctx, 120, 100, 150, 120, p),
+  (ctx, p) => drawLine(ctx, 120, 140, 100, 170, p),
+  (ctx, p) => drawLine(ctx, 120, 140, 140, 170, p),
+];
+
 const Hangman = () => {
-  const [theme, setTheme] = useState('tech');
-  const [difficulty, setDifficulty] = useState('easy');
-  const [lengthIndex, setLengthIndex] = useState(0);
-  const [word, setWord] = usePersistentState('hangman-word', '', (v) => typeof v === 'string');
-  const [guessed, setGuessed] = usePersistentState('hangman-guessed', [], Array.isArray);
-  const [wrong, setWrong] = usePersistentState('hangman-wrong', 0, (v) => typeof v === 'number');
-  const [hint, setHint] = useState('');
-  const [hintsUsed, setHintsUsed] = usePersistentState('hangman-hints', 0, (v) => typeof v === 'number');
-  const [score, setScore] = usePersistentState('hangman-score', 0, (v) => typeof v === 'number');
-  const [revealed, setRevealed] = useState([]);
-  const [gameEnded, setGameEnded] = useState(false);
-  const [shake, setShake] = useState(false);
-  const usedWordsRef = useRef([]);
+  const canvasRef = useRef(null);
+  const animationRef = useRef(null);
+  const audioCtxRef = useRef(null);
+  const partProgressRef = useRef(new Array(maxWrong).fill(0));
+  const partStartRef = useRef(new Array(maxWrong).fill(0));
+  const reduceMotionRef = useRef(false);
 
-  const length = lengthOptions[lengthIndex];
+  const [word, setWord] = useState('');
+  const [guessed, setGuessed] = useState([]);
+  const [wrong, setWrong] = useState(0);
+  const [hintUsed, setHintUsed] = useState(false);
+  const [score, setScore] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [sound, setSound] = usePersistentState(
+    'hangman-sound',
+    true,
+    (v) => typeof v === 'boolean',
+  );
+  const [highscore, setHighscore] = usePersistentState(
+    'hangman-highscore',
+    0,
+    (v) => typeof v === 'number',
+  );
+  const [announcement, setAnnouncement] = useState('');
 
-  const hintLimits = { easy: Infinity, medium: 1, hard: 0 };
-
-  const getFilteredWords = () => {
-    const base = dictionaries[theme][difficulty];
-    return base.filter(
-      (w) => w.length >= length.min && w.length <= length.max,
-    );
-  };
-
-  const selectWord = () => {
-    const options = getFilteredWords();
-    let available = options.filter(
-      (w) => !usedWordsRef.current.includes(w),
-    );
-    if (available.length === 0) {
-      usedWordsRef.current = [];
-      available = options;
-    }
-    const choice = available[Math.floor(Math.random() * available.length)];
-    usedWordsRef.current.push(choice);
-    return choice;
-  };
-
-  const initGame = () => {
-    setGuessed([]);
-    setWrong(0);
-    setHint('');
-    setHintsUsed(0);
-    setScore(0);
-    setRevealed([]);
-    setGameEnded(false);
-    setWord(selectWord());
-    logGameStart('hangman');
-  };
-
-  const firstLoad = useRef(true);
-  useEffect(() => {
-    usedWordsRef.current = [];
-    if (firstLoad.current && word) {
-      firstLoad.current = false;
-      return;
-    }
-    firstLoad.current = false;
-    initGame();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, difficulty, lengthIndex]);
-
-  const handleGuess = (letter) => {
+  const playTone = (freq) => {
+    if (!sound) return;
     try {
-      const btn = document.getElementById(`key-${letter}`);
-      if (btn) {
-        btn.classList.add('key-press');
-        setTimeout(() => btn.classList.remove('key-press'), 100);
-      }
-      if (guessed.includes(letter) || isGameOver()) return;
-      logEvent({ category: 'hangman', action: 'guess', label: letter });
-      setGuessed((g) => [...g, letter]);
-      if (!word.includes(letter)) {
-        setWrong((w) => w + 1);
-        setScore((s) => s - 1);
-        setShake(true);
-        setTimeout(() => setShake(false), 500);
-      } else {
-        setScore((s) => s + 2);
-        setRevealed((r) => [...r, letter]);
-        setTimeout(() =>
-          setRevealed((r) => r.filter((l) => l !== letter)),
-        500);
-      }
+      const ctx =
+        audioCtxRef.current ||
+        (audioCtxRef.current = new (window.AudioContext ||
+          window.webkitAudioContext)());
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        ctx.currentTime + 0.2,
+      );
+      osc.stop(ctx.currentTime + 0.2);
     } catch (err) {
-      logGameError('hangman', err?.message || String(err));
+      // ignore audio errors
     }
   };
 
-  const useHint = () => {
-    try {
-      if (isGameOver() || hintsUsed >= hintLimits[difficulty]) return;
-      const remaining = word
-        .split('')
-        .filter((l) => !guessed.includes(l));
-      if (!remaining.length) return;
-      const counts = remaining.reduce((acc, l) => {
-        acc[l] = (acc[l] || 0) + 1;
-        return acc;
-      }, {});
-      const best = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
-      logEvent({ category: 'hangman', action: 'hint' });
-      setHint(`Try letter ${best.toUpperCase()}`);
-      setScore((s) => s - 5);
-      setHintsUsed((h) => h + 1);
-    } catch (err) {
-      logGameError('hangman', err?.message || String(err));
-    }
-  };
-
-    const isWinner = useCallback(
-      () => word && word.split('').every((l) => guessed.includes(l)),
-      [word, guessed]
-    );
-    const isLoser = useCallback(() => wrong >= 6, [wrong]);
-    const isGameOver = useCallback(() => isWinner() || isLoser(), [isWinner, isLoser]);
+  const pickWord = () =>
+    words[Math.floor(Math.random() * words.length)];
 
   const reset = () => {
-    initGame();
+    try {
+      setWord(pickWord());
+      setGuessed([]);
+      setWrong(0);
+      setHintUsed(false);
+      setScore(0);
+      setPaused(false);
+      partProgressRef.current = new Array(maxWrong).fill(0);
+      partStartRef.current = new Array(maxWrong).fill(0);
+      setAnnouncement('');
+      logGameStart('hangman');
+    } catch (err) {
+      logGameError('hangman', err?.message || String(err));
+    }
   };
 
   useEffect(() => {
-    const handler = (e) => {
-      const letter = e.key.toLowerCase();
-      if (/^[a-z]$/.test(letter)) {
-        handleGuess(letter);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => (reduceMotionRef.current = mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  const hintOnce = () => {
+    if (hintUsed || paused) return;
+    const remaining = word
+      .split('')
+      .filter((l) => !guessed.includes(l));
+    if (!remaining.length) return;
+    const letter =
+      remaining[Math.floor(Math.random() * remaining.length)];
+    setHintUsed(true);
+    setScore((s) => s - 5);
+    handleGuess(letter);
+  };
+
+  const handleGuess = (letter) => {
+    if (
+      paused ||
+      guessed.includes(letter) ||
+      wrong >= maxWrong ||
+      word.split('').every((l) => guessed.includes(l))
+    )
+      return;
+    logEvent({ category: 'hangman', action: 'guess', label: letter });
+    setGuessed((g) => [...g, letter]);
+    if (word.includes(letter)) {
+      playTone(600);
+      setScore((s) => s + 2);
+      setAnnouncement(`Correct guess: ${letter}`);
+    } else {
+      playTone(200);
+      const idx = wrong;
+      partStartRef.current[idx] = performance.now();
+      partProgressRef.current[idx] = reduceMotionRef.current ? 1 : 0;
+      setWrong((w) => w + 1);
+      setScore((s) => s - 1);
+      const remaining = maxWrong - (wrong + 1);
+      setAnnouncement(
+        `Wrong guess: ${letter}. ${remaining} ${
+          remaining === 1 ? 'try' : 'tries'
+        } left.`,
+      );
+    }
+  };
+
+  const togglePause = () => setPaused((p) => !p);
+  const toggleSound = () => setSound((s) => !s);
+
+  const keyHandler = (e) => {
+    const k = e.key.toLowerCase();
+    if (k === 'r') reset();
+    else if (k === 'p') togglePause();
+    else if (k === 'h') hintOnce();
+    else if (k === 's') toggleSound();
+    else if (/^[a-z]$/.test(k)) handleGuess(k);
+  };
+
+  useEffect(() => {
+    window.addEventListener('keydown', keyHandler);
+    return () => window.removeEventListener('keydown', keyHandler);
   });
 
   useEffect(() => {
-    const winner = word && word.split('').every((l) => guessed.includes(l));
-    if (winner) {
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-    }
-  }, [word, guessed]);
-
-    useEffect(() => {
-      if (!gameEnded && isGameOver()) {
-        logGameEnd('hangman', isWinner() ? 'win' : 'lose');
-        logEvent({
-          category: 'hangman',
-          action: 'game_over',
-          label: isWinner() ? 'win' : 'lose',
-          value: guessed.length,
-        });
-        setGameEnded(true);
+    const won = word && word.split('').every((l) => guessed.includes(l));
+    if (won || wrong >= maxWrong) {
+      logGameEnd('hangman', won ? 'win' : 'lose');
+      if (won) {
+        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        setAnnouncement('You won! Press R to play again.');
+      } else {
+        setAnnouncement(`You lost! ${word.toUpperCase()}. Press R to restart.`);
       }
-    }, [gameEnded, guessed, isGameOver, isWinner]);
+      if (score > highscore) setHighscore(score);
+    }
+  }, [wrong, guessed, word, score, highscore, setHighscore]);
+
+  const draw = React.useCallback(
+    (ctx) => {
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '20px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(
+      `Score: ${score}  High: ${highscore}`,
+      ctx.canvas.width / 2,
+      30,
+    );
+    ctx.fillText(
+      `Wrong: ${wrong}/${maxWrong}`,
+      ctx.canvas.width / 2,
+      60,
+    );
+
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(20, 230);
+    ctx.lineTo(180, 230);
+    ctx.moveTo(40, 20);
+    ctx.lineTo(40, 230);
+    ctx.lineTo(120, 20);
+    ctx.lineTo(120, 40);
+    ctx.stroke();
+
+    const now = performance.now();
+
+    HANGMAN_PARTS.forEach((seg, i) => {
+      let prog = partProgressRef.current[i];
+      if (i < wrong && prog < 1) {
+        const start = partStartRef.current[i];
+        prog = reduceMotionRef.current
+          ? 1
+          : Math.min((now - start) / 300, 1);
+        partProgressRef.current[i] = prog;
+      }
+      if (prog > 0) seg(ctx, prog);
+    });
+
+    const letters = word.split('');
+    letters.forEach((l, i) => {
+      const x = 40 + i * 30;
+      ctx.beginPath();
+      ctx.moveTo(x, 200);
+      ctx.lineTo(x + 20, 200);
+      ctx.stroke();
+      const char =
+        guessed.includes(l) || wrong >= maxWrong
+          ? l.toUpperCase()
+          : '';
+      ctx.fillText(char, x + 10, 190);
+    });
+
+    ctx.font = '16px monospace';
+    ctx.fillText(
+      'Type letters. H=hint R=reset P=pause S=sound',
+      ctx.canvas.width / 2,
+      240,
+    );
+
+    if (paused) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillStyle = '#fff';
+      ctx.fillText('Paused', ctx.canvas.width / 2, 120);
+    }
+
+    const won = word && letters.every((l) => guessed.includes(l));
+    if (won) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillStyle = '#0f0';
+      ctx.fillText('You Won! Press R', ctx.canvas.width / 2, 120);
+    } else if (wrong >= maxWrong) {
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillStyle = '#f00';
+      ctx.fillText(
+        `You Lost! ${word.toUpperCase()}`,
+        ctx.canvas.width / 2,
+        120,
+      );
+      ctx.fillText('Press R', ctx.canvas.width / 2, 150);
+    }
+  }, [word, guessed, wrong, paused, score, highscore]);
 
   useEffect(() => {
-    logEvent({
-      category: 'hangman',
-      action: 'category_select',
-      label: `${theme}-${difficulty}`,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, difficulty]);
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const render = () => {
+      draw(ctx);
+      animationRef.current = requestAnimationFrame(render);
+    };
+    render();
+    return () => cancelAnimationFrame(animationRef.current);
+  }, [draw]);
 
   return (
-    <div
-      className={`h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none ${
-        shake ? 'shake' : ''
-      }`}
-    >
-      <div className="flex space-x-2 mb-4">
-        <select
-          value={theme}
-          onChange={(e) => setTheme(e.target.value)}
-          className="bg-gray-700 p-1 rounded"
-        >
-          {Object.keys(dictionaries).map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-        <select
-          value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value)}
-          className="bg-gray-700 p-1 rounded"
-        >
-          {['easy', 'medium', 'hard'].map((d) => (
-            <option key={d} value={d}>
-              {d}
-            </option>
-          ))}
-        </select>
-        <select
-          value={lengthIndex}
-          onChange={(e) => setLengthIndex(Number(e.target.value))}
-          className="bg-gray-700 p-1 rounded"
-        >
-          {lengthOptions.map((opt, idx) => (
-            <option key={opt.label} value={idx}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+    <>
+      <canvas
+        ref={canvasRef}
+        width={400}
+        height={250}
+        className="bg-ub-cool-grey w-full h-full"
+      />
+      <div aria-live="polite" role="status" className="sr-only">
+        {announcement}
       </div>
-      <div className="mb-2">Score: {score}</div>
-      <HangmanDrawing wrong={wrong} />
-      <div className="flex space-x-2 mb-4 text-2xl">
-        {word.split('').map((letter, idx) => (
-          <span
-            key={idx}
-            className={`border-b-2 border-white px-1 ${
-              revealed.includes(letter) ? 'reveal' : ''
-            }`}
-          >
-            {guessed.includes(letter) || isLoser() ? letter : ''}
-          </span>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-2 mb-4">
-        {letters.map((letter) => (
-          <button
-            id={`key-${letter}`}
-            key={letter}
-            onClick={() => handleGuess(letter)}
-            disabled={guessed.includes(letter) || isGameOver()}
-            className={`px-2 py-1 rounded text-white ${
-              guessed.includes(letter)
-                ? word.includes(letter)
-                  ? 'bg-green-700'
-                  : 'bg-red-700'
-                : 'bg-gray-700 hover:bg-gray-600'
-            } disabled:bg-gray-600`}
-          >
-            {letter.toUpperCase()}
-          </button>
-        ))}
-      </div>
-      <div className="mb-2 h-6">
-        {isWinner() && 'You won!'}
-        {isLoser() && `You lost! The word was ${word}.`}
-      </div>
-      {hint && !isGameOver() && (
-        <div className="mb-2 h-6">Hint: {hint}</div>
-      )}
-      <div className="flex space-x-2">
-        <button
-          onClick={useHint}
-          disabled={
-            isGameOver() || hintsUsed >= hintLimits[difficulty]
-          }
-          className="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded disabled:bg-blue-500"
-        >
-          Hint (-5)
-        </button>
-        <button
-          onClick={reset}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        >
-          Reset
-        </button>
-      </div>
-    </div>
+    </>
   );
 };
 

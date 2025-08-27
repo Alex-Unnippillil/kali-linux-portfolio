@@ -185,3 +185,65 @@ export function isSolved(state: State): boolean {
 }
 
 export const directionKeys = Object.keys(DIRS) as (keyof typeof DIRS)[];
+
+// -- Solver utilities -------------------------------------------------------
+
+function isWallOrBoxWith(state: State, boxes: Set<string>, pos: Position): boolean {
+  const k = key(pos);
+  if (pos.x < 0 || pos.y < 0 || pos.x >= state.width || pos.y >= state.height) return true;
+  return state.walls.has(k) || boxes.has(k);
+}
+
+function isDeadlockWith(state: State, boxes: Set<string>, pos: Position): boolean {
+  const k = key(pos);
+  if (state.targets.has(k)) return false;
+  const up = isWallOrBoxWith(state, boxes, { x: pos.x, y: pos.y - 1 });
+  const down = isWallOrBoxWith(state, boxes, { x: pos.x, y: pos.y + 1 });
+  const left = isWallOrBoxWith(state, boxes, { x: pos.x - 1, y: pos.y });
+  const right = isWallOrBoxWith(state, boxes, { x: pos.x + 1, y: pos.y });
+  return (up && left) || (up && right) || (down && left) || (down && right);
+}
+
+const serialize = (player: Position, boxes: Set<string>) => {
+  const b = Array.from(boxes).sort().join(';');
+  return `${player.x},${player.y}|${b}`;
+};
+
+export function findHint(state: State): keyof typeof DIRS | null {
+  const startBoxes = new Set(state.boxes);
+  const startKey = serialize(state.player, startBoxes);
+  const visited = new Set<string>([startKey]);
+  const q: { player: Position; boxes: Set<string>; path: (keyof typeof DIRS)[] }[] = [
+    { player: { ...state.player }, boxes: startBoxes, path: [] },
+  ];
+
+  while (q.length) {
+    const cur = q.shift()!;
+    let solved = true;
+    cur.boxes.forEach((b) => {
+      if (!state.targets.has(b)) solved = false;
+    });
+    if (solved) return cur.path[0] ?? null;
+
+    for (const dirKey of directionKeys) {
+      const dir = DIRS[dirKey];
+      const nextPlayer = { x: cur.player.x + dir.x, y: cur.player.y + dir.y };
+      const nextKey = key(nextPlayer);
+      if (state.walls.has(nextKey)) continue;
+      const newBoxes = new Set(cur.boxes);
+      if (newBoxes.has(nextKey)) {
+        const beyond = { x: nextPlayer.x + dir.x, y: nextPlayer.y + dir.y };
+        const beyondKey = key(beyond);
+        if (state.walls.has(beyondKey) || newBoxes.has(beyondKey)) continue;
+        newBoxes.delete(nextKey);
+        newBoxes.add(beyondKey);
+        if (isDeadlockWith(state, newBoxes, beyond)) continue;
+      }
+      const ser = serialize(nextPlayer, newBoxes);
+      if (visited.has(ser)) continue;
+      visited.add(ser);
+      q.push({ player: nextPlayer, boxes: newBoxes, path: [...cur.path, dirKey] });
+    }
+  }
+  return null;
+}

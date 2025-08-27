@@ -1,6 +1,4 @@
-import React from 'react';
-import dynamic from 'next/dynamic';
-import { logEvent } from './utils/analytics';
+import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
@@ -14,34 +12,9 @@ import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
 import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
-import { displayQrTool } from './components/apps/qr_tool';
-import { displayAsciiArt } from './components/apps/ascii_art';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
-import { displayQuoteGenerator } from './components/apps/quote_generator';
-import { displayProjectGallery } from './components/apps/project-gallery';
 import { displayNikto } from './components/apps/nikto';
-
-const createDynamicApp = (path, name) =>
-  dynamic(
-    () =>
-      import(`./components/apps/${path}`).then((mod) => {
-        logEvent({ category: 'Application', action: `Loaded ${name}` });
-        return mod.default;
-      }),
-    {
-      ssr: false,
-      loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-          {`Loading ${name}...`}
-        </div>
-      ),
-    }
-  );
-
-const createDisplay = (Component) => (addFolder, openApp) => (
-  <Component addFolder={addFolder} openApp={openApp} />
-);
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
@@ -59,6 +32,7 @@ const MinesweeperApp = createDynamicApp('minesweeper', 'Minesweeper');
 const PongApp = createDynamicApp('pong', 'Pong');
 const PacmanApp = createDynamicApp('pacman', 'Pacman');
 const CarRacerApp = createDynamicApp('car-racer', 'Car Racer');
+const LaneRunnerApp = createDynamicApp('lane-runner', 'Lane Runner');
 const PlatformerApp = createDynamicApp('platformer', 'Platformer');
 const BattleshipApp = createDynamicApp('battleship', 'Battleship');
 const CheckersApp = createDynamicApp('checkers', 'Checkers');
@@ -76,9 +50,13 @@ const SudokuApp = createDynamicApp('sudoku', 'Sudoku');
 const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
-const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
+const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 
+const QrToolApp = createDynamicApp('qr_tool', 'QR Tool');
+const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
+const QuoteGeneratorApp = createDynamicApp('quote_generator', 'Quote Generator');
+const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 
@@ -125,6 +103,7 @@ const displayMinesweeper = createDisplay(MinesweeperApp);
 const displayPong = createDisplay(PongApp);
 const displayPacman = createDisplay(PacmanApp);
 const displayCarRacer = createDisplay(CarRacerApp);
+const displayLaneRunner = createDisplay(LaneRunnerApp);
 const displayPlatformer = createDisplay(PlatformerApp);
 const displayBattleship = createDisplay(BattleshipApp);
 const displayCheckers = createDisplay(CheckersApp);
@@ -143,7 +122,13 @@ const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
 const displayNonogram = createDisplay(NonogramApp);
 const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
+const displayFileExplorer = createDisplay(FileExplorerApp);
 const displayRadare2 = createDisplay(Radare2App);
+
+const displayQrTool = createDisplay(QrToolApp);
+const displayAsciiArt = createDisplay(AsciiArtApp);
+const displayQuoteGenerator = createDisplay(QuoteGeneratorApp);
+const displayProjectGallery = createDisplay(ProjectGalleryApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -173,9 +158,59 @@ const displayHashcat = createDisplay(HashcatApp);
 
 const displayKismet = createDisplay(KismetApp);
 
+// Utilities list used for the "Utilities" folder on the desktop
+const utilityList = [
+  {
+    id: 'qr-tool',
+    title: 'QR Tool',
+    icon: './themes/Yaru/apps/qr.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayQrTool,
+  },
+  {
+    id: 'ascii-art',
+    title: 'ASCII Art',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAsciiArt,
+  },
+  {
+    id: 'figlet',
+    title: 'Figlet',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFiglet,
+  },
+  {
+    id: 'quote-generator',
+    title: 'Quote Generator',
+    icon: './themes/Yaru/apps/quote.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayQuoteGenerator,
+  },
+  {
+    id: 'project-gallery',
+    title: 'Project Gallery',
+    icon: './themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayProjectGallery,
+  },
+];
+
+export const utilities = utilityList;
 
 // Default window sizing for games to prevent oversized frames
-const gameDefaults = {
+export const gameDefaults = {
   defaultWidth: 50,
   defaultHeight: 60,
 };
@@ -219,6 +254,7 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayBlackjack,
+    ...gameDefaults,
   },
   {
     id: 'breakout',
@@ -237,6 +273,15 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayCarRacer,
+  },
+  {
+    id: 'lane-runner',
+    title: 'Lane Runner',
+    icon: './themes/Yaru/apps/car-racer.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayLaneRunner,
   },
   {
     id: 'checkers',
@@ -381,6 +426,7 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+    ...gameDefaults,
   },
   {
     id: 'tetris',
@@ -462,7 +508,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayCandyCrush,
-
+  },
+  {
     id: 'gomoku',
     title: 'Gomoku',
     icon: './themes/Yaru/apps/gomoku.svg',
@@ -470,7 +517,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayGomoku,
-
+  },
+  {
     id: 'pinball',
     title: 'Pinball',
     icon: './themes/Yaru/apps/pinball.svg',
@@ -579,6 +627,15 @@ const apps = [
     screen: displaySettings,
   },
   {
+    id: 'files',
+    title: 'Files',
+    icon: './themes/Yaru/system/folder.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFileExplorer,
+  },
+  {
     id: 'resource-monitor',
     title: 'Resource Monitor',
     icon: './themes/Yaru/apps/resource-monitor.svg',
@@ -613,15 +670,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayMetasploit,
-  },
-  {
-    id: 'project-gallery',
-    title: 'Project Gallery',
-    icon: './themes/Yaru/apps/project-gallery.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayProjectGallery,
   },
   {
     id: 'wireshark',
@@ -687,15 +735,6 @@ const apps = [
     screen: displayNikto,
   },
   {
-    id: 'qr-tool',
-    title: 'QR Tool',
-    icon: './themes/Yaru/apps/qr.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayQrTool,
-  },
-  {
     id: 'autopsy',
     title: 'Autopsy',
     icon: './themes/Yaru/apps/autopsy.svg',
@@ -720,33 +759,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayNessus,
-  },
-  {
-    id: 'ascii-art',
-    title: 'ASCII Art',
-    icon: './themes/Yaru/apps/gedit.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayAsciiArt,
-  },
-  {
-    id: 'figlet',
-    title: 'Figlet',
-    icon: './themes/Yaru/apps/gedit.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayFiglet,
-  },
-  {
-    id: 'quote-generator',
-    title: 'Quote Generator',
-    icon: './themes/Yaru/apps/quote.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayQuoteGenerator,
   },
   {
     id: 'ghidra',
@@ -865,6 +877,8 @@ const apps = [
     desktop_shortcut: false,
     screen: displayReconNG,
   },
+  // Utilities are grouped separately
+  ...utilities,
   // Games are included so they appear alongside apps
   ...games,
 ];

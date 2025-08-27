@@ -4,6 +4,7 @@ import ReactGA from 'react-ga4';
 const WIDTH = 7;
 const HEIGHT = 8;
 const SUB_STEP = 0.5;
+const CELL = 32;
 
 const PAD_POSITIONS = [1, 3, 5];
 const DIFFICULTY_MULTIPLIERS = {
@@ -133,21 +134,75 @@ const Frogger = () => {
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
   const [difficulty, setDifficulty] = useState('normal');
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(paused);
+  const [sound, setSound] = useState(true);
+  const soundRef = useRef(sound);
+  const [highScore, setHighScore] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotionRef = useRef(reduceMotion);
+  const canvasRef = useRef(null);
+  const audioCtxRef = useRef(null);
   const nextLife = useRef(500);
   const holdRef = useRef();
+  const [splashes, setSplashes] = useState([]);
+
 
   useEffect(() => { frogRef.current = frog; }, [frog]);
   useEffect(() => { carsRef.current = cars; }, [cars]);
   useEffect(() => { logsRef.current = logs; }, [logs]);
   useEffect(() => { padsRef.current = pads; }, [pads]);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
+  useEffect(() => { soundRef.current = sound; }, [sound]);
+  useEffect(() => { reduceMotionRef.current = reduceMotion; }, [reduceMotion]);
+
+  useEffect(() => {
+    const saved = Number(localStorage.getItem('frogger-highscore') || 0);
+    setHighScore(saved);
+  }, []);
+  useEffect(() => {
+    if (score > highScore) {
+      setHighScore(score);
+      try {
+        localStorage.setItem('frogger-highscore', String(score));
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [score, highScore]);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = () => setReduceMotion(mql.matches);
+    handler();
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  const playTone = (freq, duration = 0.1) => {
+    if (!soundRef.current) return;
+    if (!audioCtxRef.current)
+      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = audioCtxRef.current;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  };
 
   const moveFrog = (dx, dy) => {
+    if (pausedRef.current) return;
     setFrog((prev) => {
       const x = prev.x + dx;
       const y = prev.y + dy;
       if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return prev;
       if (navigator.vibrate) navigator.vibrate(50);
       if (dy === -1) setScore((s) => s + 10);
+      playTone(440, 0.05);
       return { x, y };
     });
   };
@@ -164,9 +219,11 @@ const Frogger = () => {
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === 'ArrowLeft') moveFrog(-1, 0);
-      if (e.key === 'ArrowRight') moveFrog(1, 0);
-      if (e.key === 'ArrowUp') moveFrog(0, -1);
-      if (e.key === 'ArrowDown') moveFrog(0, 1);
+      else if (e.key === 'ArrowRight') moveFrog(1, 0);
+      else if (e.key === 'ArrowUp') moveFrog(0, -1);
+      else if (e.key === 'ArrowDown') moveFrog(0, 1);
+      else if (e.key === 'p' || e.key === 'P') setPaused((p) => !p);
+      else if (e.key === 'm' || e.key === 'M') setSound((s) => !s);
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
@@ -234,24 +291,114 @@ const Frogger = () => {
       [difficulty, level]
     );
 
-    const loseLife = useCallback(() => {
-      ReactGA.event({ category: 'Frogger', action: 'death', value: level });
-      setLives((l) => {
-        const newLives = l - 1;
-        if (newLives <= 0) {
-          setStatus('Game Over');
-          setTimeout(() => reset(true), 1000);
-          return 0;
-        }
-        reset();
-        return newLives;
-      });
-    }, [level, reset]);
+    const loseLife = useCallback(
+      (pos) => {
+        const id = Date.now();
+        setSplashes((s) => [...s, { x: Math.floor(pos.x), y: pos.y, id }]);
+        setTimeout(() =>
+          setSplashes((s) => s.filter((sp) => sp.id !== id)),
+        500);
+        ReactGA.event({ category: 'Frogger', action: 'death', value: level });
+        setLives((l) => {
+          const newLives = l - 1;
+          if (newLives <= 0) {
+            setStatus('Game Over');
+            setTimeout(() => reset(true), 1000);
+            return 0;
+          }
+          reset();
+          return newLives;
+        });
+      },
+      [level, reset]
+    );
 
 
-    useEffect(() => {
-      let last = performance.now();
+  const loseLife = useCallback(() => {
+    ReactGA.event({ category: 'Frogger', action: 'death', value: level });
+    playTone(220, 0.2);
+    setLives((l) => {
+      const newLives = l - 1;
+      if (newLives <= 0) {
+        setStatus('Game Over');
+        setTimeout(() => reset(true), 1000);
+        return 0;
+      }
+      reset();
+      return newLives;
+    });
+  }, [level, reset]);
+
+  useEffect(() => {
+    let last = performance.now();
     let raf;
+    const draw = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let y = 0; y < HEIGHT; y += 1) {
+        for (let x = 0; x < WIDTH; x += 1) {
+          if (y === 0) {
+            const idx = PAD_POSITIONS.indexOf(x);
+            if (idx >= 0) ctx.fillStyle = padsRef.current[idx] ? '#22c55e' : '#15803d';
+            else ctx.fillStyle = '#1e3a8a';
+            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+          } else if (y === 3 || y === 6) {
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+          } else if (y >= 4 && y <= 5) {
+            ctx.fillStyle = '#374151';
+            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+            ctx.fillStyle = '#9ca3af';
+            ctx.fillRect(x * CELL, y * CELL, CELL, 4);
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(x * CELL, y * CELL + CELL - 4, CELL, 4);
+          } else {
+            ctx.fillStyle = '#1e3a8a';
+            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+          }
+        }
+      }
+      const rippleColor = '#93c5fd';
+      if (reduceMotionRef.current) {
+        ctx.fillStyle = rippleColor;
+        for (let x = 0; x < WIDTH; x += 1) {
+          ctx.fillRect(x * CELL, CELL, CELL, 4);
+          ctx.fillRect(x * CELL, CELL * 3 - 4, CELL, 4);
+        }
+      } else {
+        const phase = rippleRef.current;
+        ctx.fillStyle = rippleColor;
+        for (let x = 0; x < WIDTH; x += 1) {
+          const offset = Math.sin(phase + x) * 2;
+          ctx.fillRect(x * CELL, CELL + offset, CELL, 4);
+          ctx.fillRect(x * CELL, CELL * 3 - 4 + offset, CELL, 4);
+        }
+      }
+      logsRef.current.forEach((lane) => {
+        ctx.fillStyle = '#d97706';
+        lane.entities.forEach((e) => {
+          ctx.fillRect(e.x * CELL, lane.y * CELL, lane.length * CELL, CELL);
+        });
+      });
+      carsRef.current.forEach((lane) => {
+        ctx.fillStyle = '#ef4444';
+        lane.entities.forEach((e) => {
+          ctx.fillRect(e.x * CELL, lane.y * CELL, lane.length * CELL, CELL);
+        });
+      });
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(frogRef.current.x * CELL, frogRef.current.y * CELL, CELL, CELL);
+      if (pausedRef.current) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = '20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Paused', canvas.width / 2, canvas.height / 2);
+      }
+    };
     const loop = (time) => {
       const dt = (time - last) / 1000;
       last = time;
@@ -267,43 +414,59 @@ const Frogger = () => {
         frogRef.current.x < 0 ||
         frogRef.current.x >= WIDTH
       ) {
-        loseLife();
+        loseLife(frogRef.current);
         frogRef.current = { ...initialFrog };
       } else {
         const padResult = handlePads(frogRef.current, padsRef.current);
         padsRef.current = padResult.pads;
         if (padResult.dead) {
-          loseLife();
-          frogRef.current = { ...initialFrog };
-        } else if (padResult.levelComplete) {
-          setStatus('Level Complete!');
-          setScore((s) => s + 100);
-          ReactGA.event({ category: 'Frogger', action: 'level_complete', value: level });
-          const newLevel = level + 1;
-          setLevel(newLevel);
-          ReactGA.event({ category: 'Frogger', action: 'level_start', value: newLevel });
-          setPads(PAD_POSITIONS.map(() => false));
-          reset(false, difficulty, newLevel);
+          loseLife(frogRef.current);
+
           frogRef.current = { ...initialFrog };
         } else {
-          if (padResult.padHit) {
-            setScore((s) => s + 100);
-            setPads([...padsRef.current]);
+          const padResult = handlePads(frogRef.current, padsRef.current);
+          padsRef.current = padResult.pads;
+          if (padResult.dead) {
+            loseLife();
             frogRef.current = { ...initialFrog };
+          } else if (padResult.levelComplete) {
+            setStatus('Level Complete!');
+            setScore((s) => s + 100);
+            playTone(880, 0.2);
+            ReactGA.event({
+              category: 'Frogger',
+              action: 'level_complete',
+              value: level,
+            });
+            const newLevel = level + 1;
+            setLevel(newLevel);
+            ReactGA.event({
+              category: 'Frogger',
+              action: 'level_start',
+              value: newLevel,
+            });
+            setPads(PAD_POSITIONS.map(() => false));
+            reset(false, difficulty, newLevel);
+            frogRef.current = { ...initialFrog };
+          } else {
+            if (padResult.padHit) {
+              setScore((s) => s + 100);
+              setPads([...padsRef.current]);
+              playTone(660, 0.1);
+              frogRef.current = { ...initialFrog };
+            }
           }
-          setCars([...carsRef.current]);
-          setLogs([...logsRef.current]);
-          setFrog({ ...frogRef.current });
         }
+        setFrog({ ...frogRef.current });
+        setCars([...carsRef.current]);
+        setLogs([...logsRef.current]);
       }
-
+      draw();
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  // Only include dynamic values to prevent unnecessary re-renders
   }, [difficulty, level, loseLife, reset]);
-
 
   useEffect(() => {
     if (score >= nextLife.current) {
@@ -318,6 +481,7 @@ const Frogger = () => {
     const isFrog = Math.floor(frog.x) === x && frog.y === y;
     const carLane = cars.find((l) => l.y === y);
     const logLane = logs.find((l) => l.y === y);
+    const splash = splashes.some((s) => s.x === x && s.y === y);
 
     let className = 'w-8 h-8';
     if (y === 0) {
@@ -349,7 +513,11 @@ const Frogger = () => {
       else if (preview) className += ' bg-yellow-700 opacity-50';
     }
 
-    return <div key={`${x}-${y}`} className={className} />;
+    return (
+      <div key={`${x}-${y}`} className={`${className} relative`}>
+        {splash && <div className="absolute inset-0 frogger-splash" />}
+      </div>
+    );
   };
 
   const grid = [];
@@ -376,10 +544,33 @@ const Frogger = () => {
       id="frogger-container"
       className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4"
     >
-      <div className="grid grid-cols-7 gap-1">{grid}</div>
-      <div className="mt-4">Score: {score} Lives: {lives}</div>
-      <div className="mt-1">{status}</div>
+      <canvas
+        ref={canvasRef}
+        width={WIDTH * CELL}
+        height={HEIGHT * CELL}
+        className="border border-gray-700"
+      />
+      <div className="mt-4" aria-live="polite">
+        Score: {score} High: {highScore} Lives: {lives}
+      </div>
+      <div className="mt-1" role="status" aria-live="polite">
+        {status}
+      </div>
       <div className="mt-2 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setPaused((p) => !p)}
+          className="px-2 py-1 bg-gray-700 rounded"
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setSound((s) => !s)}
+          className="px-2 py-1 bg-gray-700 rounded"
+        >
+          Sound: {sound ? 'On' : 'Off'}
+        </button>
         <label htmlFor="difficulty">Difficulty:</label>
         <select
           id="difficulty"

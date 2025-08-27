@@ -2,27 +2,74 @@ const display = document.getElementById('display');
 const buttons = document.querySelectorAll('.btn');
 const sciToggle = document.getElementById('toggle-scientific');
 const preciseToggle = document.getElementById('toggle-precise');
+const progToggle = document.getElementById('toggle-programmer');
+const historyToggle = document.getElementById('toggle-history');
 const scientific = document.getElementById('scientific');
+const programmer = document.getElementById('programmer');
+const baseSelect = document.getElementById('base-select');
 const historyEl = document.getElementById('history');
+const parenIndicator = document.getElementById('paren-indicator');
+const printBtn = document.getElementById('print-tape');
 
 let preciseMode = false;
+let programmerMode = false;
+let currentBase = 10;
+let lastResult = 0;
 let undoStack = [];
+let history = [];
+const HISTORY_KEY = 'calc-history';
+
+function setPreciseMode(on) {
+  preciseMode = on;
+  preciseToggle.textContent = `Precise Mode: ${preciseMode ? 'On' : 'Off'}`;
+  preciseToggle.setAttribute('aria-pressed', preciseMode.toString());
+  math.config(preciseMode ? { number: 'Fraction' } : { number: 'number' });
+}
+
+preciseToggle.addEventListener('click', () => setPreciseMode(!preciseMode));
 
 sciToggle.addEventListener('click', () => {
   const isHidden = scientific.classList.toggle('hidden');
   sciToggle.setAttribute('aria-pressed', (!isHidden).toString());
 });
 
-preciseToggle.addEventListener('click', () => {
-  preciseMode = !preciseMode;
-  preciseToggle.textContent = `Precise Mode: ${preciseMode ? 'On' : 'Off'}`;
-  preciseToggle.setAttribute('aria-pressed', preciseMode.toString());
-  math.config(
-    preciseMode
-      ? { number: 'BigNumber', precision: 64 }
-      : { number: 'number' }
-  );
+function setProgrammerMode(on) {
+  programmerMode = on;
+  programmer.classList.toggle('hidden', !programmerMode);
+  progToggle.setAttribute('aria-pressed', programmerMode.toString());
+}
+
+progToggle.addEventListener('click', () => setProgrammerMode(!programmerMode));
+
+historyToggle.addEventListener('click', () => {
+  const isHidden = historyEl.classList.toggle('hidden');
+  historyToggle.setAttribute('aria-pressed', (!isHidden).toString());
 });
+
+baseSelect.addEventListener('change', () => {
+  currentBase = parseInt(baseSelect.value, 10);
+});
+
+printBtn.addEventListener('click', printTape);
+
+display.addEventListener('input', updateParenBalance);
+
+function updateParenBalance() {
+  const open = (display.value.match(/\(/g) || []).length;
+  const close = (display.value.match(/\)/g) || []).length;
+  const diff = open - close;
+  parenIndicator.textContent = diff === 0 ? '' : diff > 0 ? `(${diff})` : 'Unbalanced';
+}
+
+function insertAtCursor(text) {
+  const start = display.selectionStart ?? display.value.length;
+  const end = display.selectionEnd ?? display.value.length;
+  const before = display.value.slice(0, start);
+  const after = display.value.slice(end);
+  display.value = before + text + after;
+  const pos = start + text.length;
+  display.selectionStart = display.selectionEnd = pos;
+}
 
 buttons.forEach((btn) => {
   btn.addEventListener('click', () => {
@@ -30,52 +77,105 @@ buttons.forEach((btn) => {
     const value = btn.dataset.value || btn.textContent;
 
     if (action === 'clear') {
-      undoStack.push(display.textContent);
-      display.textContent = '';
+      undoStack.push(display.value);
+      display.value = '';
       return;
     }
 
     if (action === 'equals') {
-      const expr = display.textContent;
+      const expr = display.value;
       const result = evaluate(expr);
       addHistory(expr, result);
       undoStack.push(expr);
-      display.textContent = result;
+      display.value = result;
+      lastResult = result;
       return;
     }
 
-    undoStack.push(display.textContent);
-    display.textContent += value;
+    if (action === 'ans') {
+      insertAtCursor(formatBase(lastResult));
+      return;
+    }
+
+    if (action === 'print') {
+      printTape();
+      return;
+    }
+
+    undoStack.push(display.value);
+    insertAtCursor(value);
+    display.focus();
   });
 });
 
+function convertBase(val, from, to) {
+  const num = parseInt(val, from);
+  if (isNaN(num)) return '0';
+  const sign = num < 0 ? '-' : '';
+  return sign + Math.abs(num).toString(to);
+}
+
+function formatBase(value, base = currentBase) {
+  return convertBase(String(value), 10, base).toUpperCase();
+}
+
 function evaluate(expression) {
   try {
-    const result = math.evaluate(expression);
+    if (programmerMode) {
+      const decimalExpr = expression.replace(/\b[0-9A-F]+\b/gi, (m) =>
+        parseInt(m, currentBase)
+      );
+      const result = math.evaluate(decimalExpr, { Ans: lastResult });
+      lastResult = result;
+      return formatBase(result);
+    }
+    const result = math.evaluate(expression, { Ans: lastResult });
+    lastResult = result;
     return result.toString();
   } catch (e) {
     return 'Error';
   }
 }
 
-function addHistory(expr, result) {
-  const entry = document.createElement('div');
-  entry.className = 'history-entry';
-  const text = document.createElement('span');
-  text.textContent = `${expr} = ${result}`;
-  const copy = document.createElement('button');
-  copy.textContent = 'Copy';
-  copy.addEventListener('click', () => {
-    navigator.clipboard.writeText(`${expr} = ${result}`);
+function renderHistory() {
+  historyEl.innerHTML = '';
+  history.forEach(({ expr, result }) => {
+    const entry = document.createElement('div');
+    entry.className = 'history-entry';
+    const text = document.createElement('span');
+    text.textContent = `${expr} = ${result}`;
+    entry.appendChild(text);
+    historyEl.appendChild(entry);
   });
-  entry.appendChild(text);
-  entry.appendChild(copy);
-  historyEl.prepend(entry);
+}
+
+function saveHistory() {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function addHistory(expr, result) {
+  history.unshift({ expr, result });
+  history = history.slice(0, 10);
+  saveHistory();
+  renderHistory();
+}
+
+function loadHistory() {
+  history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  history = history.slice(0, 10);
+  renderHistory();
+}
+
+function printTape() {
+  const text = history.map((h) => `${h.expr} = ${h.result}`).join('\n');
+  const win = window.open('', '', 'width=400,height=600');
+  win.document.write(`<pre>${text}</pre>`);
+  win.print();
 }
 
 function undo() {
   if (undoStack.length) {
-    display.textContent = undoStack.pop();
+    display.value = undoStack.pop();
   }
 }
 
@@ -88,73 +188,55 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  const key = e.key;
-  if (/^[0-9.+\-*/()]$/.test(key)) {
-    e.preventDefault();
-    undoStack.push(display.textContent);
-    display.textContent += key;
-    return;
-  }
-
-  if (key === 'Enter' || key === '=') {
-    e.preventDefault();
-    const expr = display.textContent;
-    const result = evaluate(expr);
-    addHistory(expr, result);
-    undoStack.push(expr);
-    display.textContent = result;
-    return;
-  }
-
-  if (key === 'Backspace') {
-    e.preventDefault();
-    undoStack.push(display.textContent);
-    display.textContent = display.textContent.slice(0, -1);
-    return;
-  }
-
-  if (key === 'Escape') {
-    e.preventDefault();
-    undoStack.push(display.textContent);
-    display.textContent = '';
-    return;
-  }
-
-  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
-    handleArrowNavigation(e);
+  if (e.target !== display) {
+    if (/^[-+*/0-9A-F().&|^~<>]$/i.test(e.key)) {
+      e.preventDefault();
+      undoStack.push(display.value);
+      insertAtCursor(e.key);
+      display.focus();
+      return;
+    }
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      undoStack.push(display.value);
+      display.value = display.value.slice(0, -1);
+      display.selectionStart = display.selectionEnd = display.value.length;
+      return;
+    }
+    if (e.key === 'Enter' || e.key === '=') {
+      e.preventDefault();
+      const expr = display.value;
+      const result = evaluate(expr);
+      addHistory(expr, result);
+      undoStack.push(expr);
+      display.value = result;
+      return;
+    }
+  } else {
+    if (e.key === 'Enter' || e.key === '=') {
+      e.preventDefault();
+      const expr = display.value;
+      const result = evaluate(expr);
+      addHistory(expr, result);
+      undoStack.push(expr);
+      display.value = result;
+      return;
+    }
   }
 });
 
-function handleArrowNavigation(e) {
-  const containers = [
-    document.querySelector('.buttons'),
-    document.getElementById('scientific'),
-  ];
-  for (const container of containers) {
-    if (container.classList.contains('hidden')) continue;
-    if (container.contains(document.activeElement)) {
-      const btns = Array.from(container.querySelectorAll('.btn'));
-      const index = btns.indexOf(document.activeElement);
-      const columns = 4;
-      let nextIndex = index;
-      switch (e.key) {
-        case 'ArrowRight':
-          if ((index + 1) % columns !== 0) nextIndex = index + 1;
-          break;
-        case 'ArrowLeft':
-          if (index % columns !== 0) nextIndex = index - 1;
-          break;
-        case 'ArrowDown':
-          if (index + columns < btns.length) nextIndex = index + columns;
-          break;
-        case 'ArrowUp':
-          if (index - columns >= 0) nextIndex = index - columns;
-          break;
-      }
-      btns[nextIndex]?.focus();
-      e.preventDefault();
-      break;
-    }
-  }
+display.focus();
+loadHistory();
+
+if (typeof module !== 'undefined') {
+  module.exports = {
+    evaluate,
+    addHistory,
+    loadHistory,
+    HISTORY_KEY,
+    setPreciseMode,
+    setProgrammerMode,
+    convertBase,
+  };
 }
 

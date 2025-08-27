@@ -46,6 +46,21 @@ module.exports = {
       zIndex: {
         '-10': '-10',
       },
+      keyframes: {
+        glow: {
+          '0%, 100%': { boxShadow: '0 0 0px theme("colors.amber.400")' },
+          '50%': { boxShadow: '0 0 8px theme("colors.amber.400")' },
+        },
+        flourish: {
+          '0%': { transform: 'scale(0.8) rotate(0deg)', opacity: '0' },
+          '50%': { transform: 'scale(1.2) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'scale(1) rotate(360deg)', opacity: '1' },
+        },
+      },
+      animation: {
+        glow: 'glow 1s ease-in-out infinite',
+        flourish: 'flourish 0.6s ease-out',
+      },
     },
   },
   plugins: [],

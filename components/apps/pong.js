@@ -5,8 +5,9 @@ import useGameControls from './useGameControls';
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
 const WIN_POINTS = 5; // points to win a game
-const SPEEDUP_RATE = 50; // px/s increase for progressive speed
 const MAX_BALL_SPEED = 600; // maximum ball speed in px/s
+const HIT_SPEEDUP = 1.05; // speed multiplier when the ball hits a paddle
+const BALL_TRAIL_LENGTH = 10; // length of the ball trail
 
 // Pong component with spin, adjustable AI and experimental WebRTC multiplayer
 const WIDTH = 600;
@@ -27,6 +28,43 @@ const Pong = () => {
   const [offerSDP, setOfferSDP] = useState('');
   const [answerSDP, setAnswerSDP] = useState('');
   const [connected, setConnected] = useState(false);
+  const audioCtxRef = useRef(null);
+  const [sound, setSound] = useState(true);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const [history, setHistory] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return JSON.parse(localStorage.getItem('pongHistory')) || [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  const playSound = (freq) => {
+    if (!sound) return;
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    } catch {
+      // ignore audio errors
+    }
+  };
 
   const controls = useGameControls(canvasRef, (state) => {
     if (mode === 'online' && channelRef.current) {
@@ -58,6 +96,7 @@ const Pong = () => {
       y: height / 2 - paddleHeight / 2,
       vy: 0,
       scale: 1,
+      widthScale: 1,
       rot: 0,
     };
     const opponent = {
@@ -65,6 +104,7 @@ const Pong = () => {
       y: height / 2 - paddleHeight / 2,
       vy: 0,
       scale: 1,
+      widthScale: 1,
       rot: 0,
     };
     const ball = {
@@ -75,6 +115,18 @@ const Pong = () => {
       size: 8,
       scale: 1,
     };
+
+    const ballTrail = [];
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let prefersReducedMotion = motionQuery.matches;
+    const handleMotionChange = (e) => {
+      prefersReducedMotion = e.matches;
+    };
+    if (motionQuery.addEventListener) {
+      motionQuery.addEventListener('change', handleMotionChange);
+    } else if (motionQuery.addListener) {
+      motionQuery.addListener(handleMotionChange);
+    }
 
     let playerScore = 0;
     let oppScore = 0;
@@ -136,6 +188,8 @@ const Pong = () => {
       setScores({ player: 0, opponent: 0 });
       setMatch({ player: 0, opponent: 0 });
       setMatchWinner(null);
+      setPaused(false);
+      pausedRef.current = false;
       player.y = height / 2 - paddleHeight / 2;
       opponent.y = height / 2 - paddleHeight / 2;
       player.rot = 0;
@@ -148,18 +202,31 @@ const Pong = () => {
       ctx.fillStyle = 'black';
       ctx.fillRect(0, 0, width, height);
 
+      if (!prefersReducedMotion) {
+        ctx.fillStyle = 'white';
+        for (let i = 0; i < ballTrail.length; i += 1) {
+          const t = ballTrail[i];
+          const progress = (i + 1) / ballTrail.length;
+          ctx.globalAlpha = progress * 0.3;
+          ctx.beginPath();
+          ctx.arc(t.x, t.y, ball.size * progress, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
       ctx.fillStyle = 'white';
       ctx.save();
       ctx.translate(player.x + paddleWidth / 2, player.y + paddleHeight / 2);
       ctx.rotate(player.rot);
-      ctx.scale(1, player.scale);
+      ctx.scale(player.widthScale, player.scale);
       ctx.fillRect(-paddleWidth / 2, -paddleHeight / 2, paddleWidth, paddleHeight);
       ctx.restore();
 
       ctx.save();
       ctx.translate(opponent.x + paddleWidth / 2, opponent.y + paddleHeight / 2);
       ctx.rotate(opponent.rot);
-      ctx.scale(1, opponent.scale);
+      ctx.scale(opponent.widthScale, opponent.scale);
       ctx.fillRect(-paddleWidth / 2, -paddleHeight / 2, paddleWidth, paddleHeight);
       ctx.restore();
 
@@ -205,25 +272,15 @@ const Pong = () => {
       }
     };
 
-    const cpuHistory = [];
-
     const update = (dt) => {
       frame += 1;
       frameRef.current = frame;
 
-      // progressive speedup with capped delta
-      const cappedDt = Math.min(dt, 0.02);
-      const speed = Math.hypot(ball.vx, ball.vy);
-      if (speed < MAX_BALL_SPEED) {
-        const nextSpeed = Math.min(speed + SPEEDUP_RATE * cappedDt, MAX_BALL_SPEED);
-        const ratio = nextSpeed / (speed || 1);
-        ball.vx *= ratio;
-        ball.vy *= ratio;
-      }
-
       // decay impact scaling and rotation
       const decay = (obj) => {
-        obj.scale += (1 - obj.scale) * 10 * dt;
+        if (obj.scale !== undefined) obj.scale += (1 - obj.scale) * 10 * dt;
+        if (obj.widthScale !== undefined)
+          obj.widthScale += (1 - obj.widthScale) * 10 * dt;
         if (obj.rot !== undefined) obj.rot += -obj.rot * 10 * dt;
       };
       decay(player);
@@ -235,20 +292,15 @@ const Pong = () => {
 
       // opponent (AI or remote)
       if (mode === 'cpu') {
-        // adjustable difficulty AI using reaction delay and speed
-        cpuHistory.push(ball.y);
-        const diff = difficulty / 10;
-        const reactionMs = 400 - diff * 350;
-        const aiSpeed = 200 + diff * 200;
-        const delayFrames = Math.floor((reactionMs / FRAME_TIME) || 0);
-        if (cpuHistory.length > delayFrames) {
-          const target = cpuHistory.shift();
-          const center = opponent.y + paddleHeight / 2;
-          if (center < target - 10) opponent.y += aiSpeed * dt;
-          else if (center > target + 10) opponent.y -= aiSpeed * dt;
-          opponent.y = Math.max(0, Math.min(height - paddleHeight, opponent.y));
-          opponent.vy = 0; // AI velocity not tracked for spin
-        }
+        const error = ball.y - (opponent.y + paddleHeight / 2);
+        const gain = difficulty * 10;
+        opponent.vy = error * gain;
+        const max = 400;
+        if (opponent.vy > max) opponent.vy = max;
+        if (opponent.vy < -max) opponent.vy = -max;
+        opponent.y += opponent.vy * dt;
+        if (opponent.y < 0) opponent.y = 0;
+        if (opponent.y > height - paddleHeight) opponent.y = height - paddleHeight;
       } else {
         applyInputs(opponent, remoteKeys, dt);
       }
@@ -256,15 +308,21 @@ const Pong = () => {
       // move ball
       ball.x += ball.vx * dt;
       ball.y += ball.vy * dt;
+      if (!prefersReducedMotion) {
+        ballTrail.push({ x: ball.x, y: ball.y });
+        if (ballTrail.length > BALL_TRAIL_LENGTH) ballTrail.shift();
+      }
 
       // wall collisions
       if (ball.y < ball.size) {
         ball.y = ball.size;
         ball.vy *= -1;
+        playSound(300);
       }
       if (ball.y > height - ball.size) {
         ball.y = height - ball.size;
         ball.vy *= -1;
+        playSound(300);
       }
 
       const paddleCollision = (pad, dir) => {
@@ -273,9 +331,17 @@ const Pong = () => {
         // add spin based on paddle velocity and impact point
         ball.vx = Math.abs(ball.vx) * dir;
         ball.vy += pad.vy * 0.1 + relative * 200;
-        pad.scale = 1.2;
-        pad.rot = relative * 0.3;
-        ball.scale = 1.2;
+        if (!prefersReducedMotion) {
+          pad.scale = 1.2;
+          pad.widthScale = 0.8;
+          pad.rot = relative * 0.3;
+          ball.scale = 1.2;
+        }
+        const speed = Math.hypot(ball.vx, ball.vy) * HIT_SPEEDUP;
+        const ratio = Math.min(speed, MAX_BALL_SPEED) / Math.hypot(ball.vx, ball.vy);
+        ball.vx *= ratio;
+        ball.vy *= ratio;
+        playSound(440);
       };
 
       if (
@@ -303,10 +369,12 @@ const Pong = () => {
         oppScore += 1;
         setScores({ player: playerScore, opponent: oppScore });
         resetBall(1);
+        playSound(200);
       } else if (ball.x > width) {
         playerScore += 1;
         setScores({ player: playerScore, opponent: oppScore });
         resetBall(-1);
+        playSound(200);
       }
 
       // check game end
@@ -317,7 +385,15 @@ const Pong = () => {
           if (playerWon) next.player += 1;
           else next.opponent += 1;
           if (next.player >= 2 || next.opponent >= 2) {
-            setMatchWinner(playerWon ? 'Player' : 'Opponent');
+            const winner = playerWon ? 'Player' : 'Opponent';
+            setMatchWinner(winner);
+            setHistory((h) => {
+              const newHist = [...h, { player: next.player, opponent: next.opponent, winner }];
+              try {
+                localStorage.setItem('pongHistory', JSON.stringify(newHist));
+              } catch {}
+              return newHist;
+            });
           }
           return next;
         });
@@ -338,7 +414,7 @@ const Pong = () => {
       const now = performance.now();
       const dt = Math.min((now - lastTime) / 1000, 0.1); // clamp big jumps
       lastTime = now;
-      if (!matchWinner) {
+      if (!pausedRef.current && !matchWinner) {
         update(dt);
       }
       draw();
@@ -372,10 +448,15 @@ const Pong = () => {
 
     return () => {
       cancelAnimationFrame(animationId);
+      if (motionQuery.removeEventListener) {
+        motionQuery.removeEventListener('change', handleMotionChange);
+      } else if (motionQuery.removeListener) {
+        motionQuery.removeListener(handleMotionChange);
+      }
     };
   }, [difficulty, mode, connected, matchWinner, controls, canvasRef]);
 
-  const resetGame = () => {
+  const reset = () => {
     if (resetRef.current) resetRef.current();
   };
 
@@ -440,7 +521,9 @@ const Pong = () => {
         ref={canvasRef}
         className="bg-black w-full h-full touch-none"
       />
-      <div className="mt-2">Player: {scores.player} | Opponent: {scores.opponent}</div>
+      <div className="mt-2" aria-live="polite" role="status">
+        Player: {scores.player} | Opponent: {scores.opponent}
+      </div>
       <div className="mt-1">Games: {match.player} | {match.opponent}</div>
       {matchWinner && (
         <div className="mt-1 text-lg">Winner: {matchWinner}</div>
@@ -502,12 +585,36 @@ const Pong = () => {
         </div>
       )}
 
-      <button
-        className="mt-2 px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={resetGame}
-      >
-        Reset
-      </button>
+      <div className="mt-2 space-x-2">
+        <button
+          className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setPaused((p) => !p)}
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setSound((s) => !s)}
+        >
+          Sound: {sound ? 'On' : 'Off'}
+        </button>
+        <button
+          className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={reset}
+        >
+          Reset
+        </button>
+      </div>
+
+      {history.length > 0 && (
+        <div className="mt-2 max-h-24 overflow-y-auto text-sm">
+          {history.map((h, i) => (
+            <div key={i}>
+              {h.player} - {h.opponent} ({h.winner})
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

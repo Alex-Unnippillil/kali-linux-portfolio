@@ -1,0 +1,32 @@
+[
+  {
+    "name": "London",
+    "tempC": 15,
+    "condition": "cloudy",
+    "icon": "04d"
+  },
+  {
+    "name": "New York",
+    "tempC": 22,
+    "condition": "clear sky",
+    "icon": "01d"
+  },
+  {
+    "name": "Tokyo",
+    "tempC": 18,
+    "condition": "light rain",
+    "icon": "10d"
+  },
+  {
+    "name": "Sydney",
+    "tempC": 25,
+    "condition": "sunny",
+    "icon": "01d"
+  },
+  {
+    "name": "Paris",
+    "tempC": 19,
+    "condition": "few clouds",
+    "icon": "02d"
+  }
+]

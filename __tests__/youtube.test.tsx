@@ -130,11 +130,68 @@ describe('YouTubeApp', () => {
     expect(screen.getAllByTestId('video-card')).toHaveLength(4);
   });
 
-  it('fetches all pages from a playlist', async () => {
+  it('renders videos with missing properties without crashing', () => {
+    const incomplete = [{ id: '5', url: 'https://youtu.be/5' }];
+    render(<YouTubeApp initialVideos={incomplete} />);
+    expect(screen.getAllByTestId('video-card')).toHaveLength(1);
+  });
+
+  it('category buttons include transition-colors class', () => {
+    render(<YouTubeApp initialVideos={mockVideos} />);
+    screen
+      .getAllByRole('button')
+      .forEach((btn) => expect(btn).toHaveClass('transition-colors'));
+  });
+
+  it('video cards include transition class', () => {
+    render(<YouTubeApp initialVideos={mockVideos} />);
+    screen
+      .getAllByTestId('video-card')
+      .forEach((card) => expect(card).toHaveClass('transition'));
+  });
+
+  it('memoizes categories and sorted lists between renders', async () => {
+    jest.resetModules();
+    const calls = [];
+    jest.doMock('react', () => {
+      const actual = jest.requireActual('react');
+      return {
+        ...actual,
+        useMemo: (fn, deps) => {
+          const wrapped = jest.fn(fn);
+          calls.push(wrapped);
+          return actual.useMemo(wrapped, deps);
+        },
+      };
+    });
+
+    const ReactTesting = await import('@testing-library/react/pure');
+    const { default: MemoApp } = await import('../components/apps/youtube');
+    const { rerender, unmount } = ReactTesting.render(
+      <MemoApp initialVideos={mockVideos} />
+    );
+
+    // categories (index 0) and sorted (index 2) should have executed once
+    expect(calls[0]).toHaveBeenCalledTimes(1);
+    expect(calls[2]).toHaveBeenCalledTimes(1);
+
+    rerender(<MemoApp initialVideos={mockVideos} />);
+    expect(calls[0]).toHaveBeenCalledTimes(1);
+    expect(calls[2]).toHaveBeenCalledTimes(1);
+
+    unmount();
+    jest.resetModules();
+  });
+  it('fetches videos from multiple playlists via Promise.all', async () => {
     const responses = {
       channel: { items: [{ id: 'chan' }] },
-      playlists: { items: [{ id: 'pl1', snippet: { title: 'PL1' } }] },
-      pl1Page1: {
+      playlists: {
+        items: [
+          { id: 'pl1', snippet: { title: 'PL1' } },
+          { id: 'pl2', snippet: { title: 'PL2' } },
+        ],
+      },
+      pl1: {
         items: [
           {
             snippet: {
@@ -146,39 +203,36 @@ describe('YouTubeApp', () => {
             },
           },
         ],
-        nextPageToken: 'page2',
       },
-      pl1Page2: {
+      pl2: {
         items: [
           {
             snippet: {
-              resourceId: { videoId: 'b' },
-              title: 'Video B',
-              publishedAt: '2020-02-01T00:00:00Z',
-              thumbnails: { medium: { url: 'b.jpg' } },
+              resourceId: { videoId: 'c' },
+              title: 'Video C',
+              publishedAt: '2020-03-01T00:00:00Z',
+              thumbnails: { medium: { url: 'c.jpg' } },
               channelTitle: 'x',
             },
           },
         ],
       },
-      favorites: { items: [] },
     };
 
-    global.fetch = jest.fn(async (url) => {
-      if (url.includes('channels')) return { json: async () => responses.channel };
+    global.fetch = jest.fn((url) => {
+      if (url.includes('channels'))
+        return Promise.resolve({ json: () => responses.channel });
       if (url.includes('playlists?'))
-        return { json: async () => responses.playlists };
+        return Promise.resolve({ json: () => responses.playlists });
       if (url.includes('playlistItems')) {
         const u = new URL(url);
         const plId = u.searchParams.get('playlistId');
-        const token = u.searchParams.get('pageToken');
-        if (plId === 'pl1' && !token)
-          return { json: async () => responses.pl1Page1 };
-        if (plId === 'pl1' && token === 'page2')
-          return { json: async () => responses.pl1Page2 };
-        return { json: async () => responses.favorites };
+        const data = plId === 'pl1' ? responses.pl1 : responses.pl2;
+        return new Promise((resolve) =>
+          setTimeout(() => resolve({ json: () => data }), 10)
+        );
       }
-      return { json: async () => ({}) };
+      return Promise.resolve({ json: () => ({}) });
     });
 
     render(<YouTubeApp />);
@@ -186,6 +240,12 @@ describe('YouTubeApp', () => {
     const cards = await screen.findAllByTestId('video-card');
     expect(cards).toHaveLength(2);
     expect(screen.getByText('Video A')).toBeInTheDocument();
-    expect(screen.getByText('Video B')).toBeInTheDocument();
+    expect(screen.getByText('Video C')).toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('playlistItems?part=snippet&playlistId=pl1')
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('playlistItems?part=snippet&playlistId=pl2')
+    );
   });
 });

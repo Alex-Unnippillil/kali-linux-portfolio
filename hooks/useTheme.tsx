@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, ReactNode } from 'react';
-import usePersistentState from './usePersistentState';
+import { createContext, useContext, useEffect, ReactNode, useState } from 'react';
+import { getTheme as loadTheme, setTheme as saveTheme } from '../utils/settingsStore';
 
 type Theme = 'light' | 'dark';
 
@@ -14,17 +14,18 @@ const ThemeContext = createContext<ThemeContextValue>({
 });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = usePersistentState<Theme>('theme', () => {
+  const [theme, setTheme] = useState<Theme>(() => {
     if (typeof document !== 'undefined' && document.documentElement.dataset.theme) {
       return document.documentElement.dataset.theme as Theme;
     }
-    return 'dark';
+    return loadTheme() as Theme;
   });
 
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.dataset.theme = theme;
     }
+    saveTheme(theme);
   }, [theme]);
 
   return (

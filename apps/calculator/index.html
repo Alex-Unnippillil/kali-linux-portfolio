@@ -8,9 +8,11 @@
 </head>
 <body>
   <div class="calculator">
-    <div id="display" class="display" tabindex="0"></div>
+    <input id="display" class="display" />
     <button id="toggle-precise" class="toggle" aria-pressed="false">Precise Mode: Off</button>
     <button id="toggle-scientific" class="toggle" aria-pressed="false">Scientific</button>
+    <button id="toggle-programmer" class="toggle" aria-pressed="false">Programmer</button>
+    <button id="toggle-history" class="toggle" aria-pressed="false">History</button>
     <div class="buttons">
       <button class="btn" data-value="7">7</button>
       <button class="btn" data-value="8">8</button>
@@ -38,7 +40,24 @@
       <button class="btn" data-value="(">(</button>
       <button class="btn" data-value=")">)</button>
     </div>
-    <div id="history" class="history" aria-live="polite"></div>
+    <div id="programmer" class="programmer hidden">
+      <select id="base-select">
+        <option value="2">Bin</option>
+        <option value="8">Oct</option>
+        <option value="10" selected>Dec</option>
+        <option value="16">Hex</option>
+      </select>
+      <button class="btn" data-value="&amp;">&amp;</button>
+      <button class="btn" data-value="|">|</button>
+      <button class="btn" data-value="^">^</button>
+      <button class="btn" data-value="~">~</button>
+      <button class="btn" data-value="<<">&lt;&lt;</button>
+      <button class="btn" data-value=">>">&gt;&gt;</button>
+      <button class="btn" data-action="ans">Ans</button>
+      <button id="print-tape" class="btn" data-action="print">Print</button>
+      <div id="paren-indicator"></div>
+    </div>
+    <div id="history" class="history hidden" aria-live="polite"></div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/mathjs@13.2.3/lib/browser/math.js"></script>
   <script src="main.js"></script>

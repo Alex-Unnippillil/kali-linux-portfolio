@@ -1,22 +1,27 @@
 [
   {
     "name": "exploit/windows/smb/ms17_010_eternalblue",
-    "description": "MS17-010 EternalBlue SMB Remote Windows Kernel Pool Corruption"
+    "description": "MS17-010 EternalBlue SMB Remote Windows Kernel Pool Corruption",
+    "severity": "critical"
   },
   {
     "name": "exploit/multi/http/struts2_content_type_ognl",
-    "description": "Apache Struts 2 Content-Type OGNL RCE"
+    "description": "Apache Struts 2 Content-Type OGNL RCE",
+    "severity": "high"
   },
   {
     "name": "exploit/unix/ftp/vsftpd_234_backdoor",
-    "description": "VSFTPD v2.3.4 Backdoor Command Execution"
+    "description": "VSFTPD v2.3.4 Backdoor Command Execution",
+    "severity": "medium"
   },
   {
     "name": "auxiliary/scanner/portscan/tcp",
-    "description": "TCP Port Scanner"
+    "description": "TCP Port Scanner",
+    "severity": "low"
   },
   {
     "name": "payload/windows/meterpreter/reverse_tcp",
-    "description": "Windows Meterpreter Reverse TCP"
+    "description": "Windows Meterpreter Reverse TCP",
+    "severity": "high"
   }
 ]

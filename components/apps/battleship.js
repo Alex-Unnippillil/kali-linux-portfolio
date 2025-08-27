@@ -9,60 +9,106 @@ import {
 import GameLayout from './battleship/GameLayout';
 import usePersistentState from '../hooks/usePersistentState';
 import useGameControls from './useGameControls';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 const CELL = 32; // px
 
 const createBoard = () => Array(BOARD_SIZE * BOARD_SIZE).fill(null);
 
+const HitRipple = () => {
+  const prefersReduced = usePrefersReducedMotion();
+  const [radius, setRadius] = useState(prefersReduced ? 12 : 0);
+
+  useEffect(() => {
+    if (prefersReduced) return;
+    let raf;
+    let start;
+    const animate = (time) => {
+      if (!start) start = time;
+      const progress = Math.min((time - start) / 300, 1); // 300ms
+      setRadius(12 * progress);
+      if (progress < 1) raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [prefersReduced]);
+
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      viewBox="0 0 32 32"
+      stroke="red"
+      strokeWidth="2"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="16" cy="16" r={radius} />
+    </svg>
+  );
+};
+
 const HitMarker = () => (
-  <svg
-    className="absolute inset-0 w-full h-full"
-    viewBox="0 0 32 32"
-    stroke="red"
-    strokeWidth="4"
-  >
-    <line x1="4" y1="4" x2="28" y2="28">
-      <animate
-        attributeName="stroke-opacity"
-        from="0"
-        to="1"
-        dur="0.2s"
-        fill="freeze"
-      />
-    </line>
-    <line x1="28" y1="4" x2="4" y2="28">
-      <animate
-        attributeName="stroke-opacity"
-        from="0"
-        to="1"
-        dur="0.2s"
-        fill="freeze"
-      />
-    </line>
-  </svg>
+  <div className="absolute inset-0">
+    <svg
+      className="w-full h-full"
+      viewBox="0 0 32 32"
+      stroke="red"
+      strokeWidth="4"
+      aria-hidden="true"
+    >
+      <line x1="4" y1="4" x2="28" y2="28">
+        <animate
+          attributeName="stroke-opacity"
+          from="0"
+          to="1"
+          dur="0.2s"
+          fill="freeze"
+        />
+      </line>
+      <line x1="28" y1="4" x2="4" y2="28">
+        <animate
+          attributeName="stroke-opacity"
+          from="0"
+          to="1"
+          dur="0.2s"
+          fill="freeze"
+        />
+      </line>
+    </svg>
+    <HitRipple />
+  </div>
 );
 
-const MissMarker = () => (
-  <svg
-    className="absolute inset-0 w-full h-full"
-    viewBox="0 0 32 32"
-    stroke="white"
-    strokeWidth="3"
-    fill="none"
-  >
-    <circle cx="16" cy="16" r="0">
-      <animate attributeName="r" from="0" to="10" dur="0.3s" fill="freeze" />
-      <animate attributeName="opacity" from="0" to="1" dur="0.3s" fill="freeze" />
-    </circle>
-  </svg>
-);
+const MissMarker = () => {
+  const prefersReduced = usePrefersReducedMotion();
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full"
+      viewBox="0 0 32 32"
+      stroke="white"
+      strokeWidth="3"
+      fill="none"
+      aria-hidden="true"
+    >
+      {prefersReduced ? (
+        <circle cx="16" cy="16" r="10" opacity="1" />
+      ) : (
+        <circle cx="16" cy="16" r="0">
+          <animate attributeName="r" from="0" to="10" dur="0.3s" fill="freeze" />
+          <animate attributeName="opacity" from="0" to="1" dur="0.3s" fill="freeze" />
+        </circle>
+      )}
+    </svg>
+  );
+};
 
 const Battleship = () => {
   const [phase, setPhase] = useState('placement');
   const [playerBoard, setPlayerBoard] = useState(createBoard());
   const [enemyBoard, setEnemyBoard] = useState(createBoard());
   const [ships, setShips] = useState([]); // player's ship objects
-  const [heat, setHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+  const [aiHeat, setAiHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+  const [guessHeat, setGuessHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
   const [message, setMessage] = useState('Place your ships');
   const [difficulty, setDifficulty] = useState('easy');
   const [ai, setAi] = useState(null);
@@ -87,7 +133,8 @@ const Battleship = () => {
       setEnemyBoard(placeShips(createBoard(), randomizePlacement()));
       setPhase('placement');
       setMessage('Place your ships');
-      setHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+      setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+      setGuessHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
       setAi(diff === 'hard' ? new MonteCarloAI() : new RandomSalvoAI());
       setCursor(0);
     },
@@ -143,6 +190,11 @@ const Battleship = () => {
       const hit = newBoard[idx] === 'ship';
       newBoard[idx] = hit ? 'hit' : 'miss';
       setEnemyBoard(newBoard);
+      setGuessHeat((h) => {
+        const nh = h.slice();
+        nh[idx]++;
+        return nh;
+      });
       if (!newBoard.includes('ship')) {
         setMessage('You win!');
         setPhase('done');
@@ -157,9 +209,9 @@ const Battleship = () => {
         const hit2 = pb[move] === 'ship';
         pb[move] = hit2 ? 'hit' : 'miss';
         setPlayerBoard(pb);
-        const nh = heat.slice();
+        const nh = aiHeat.slice();
         nh[move]++;
-        setHeat(nh);
+        setAiHeat(nh);
         ai.record(move, hit2);
         if (!pb.includes('ship')) {
           setMessage('AI wins!');
@@ -168,7 +220,7 @@ const Battleship = () => {
         } else setMessage(hit ? 'Hit!' : 'Miss!');
       }, 100); // simulate thinking
     },
-    [ai, enemyBoard, heat, phase, playerBoard, setEnemyBoard, setPlayerBoard, setHeat, setMessage, setPhase, setStats]
+      [ai, enemyBoard, aiHeat, phase, playerBoard, setEnemyBoard, setPlayerBoard, setAiHeat, setGuessHeat, setMessage, setPhase, setStats]
   );
 
   useGameControls(({ x, y }) => {
@@ -196,16 +248,25 @@ const Battleship = () => {
   const renderBoard = (board, isEnemy=false) => (
     <div className="grid" style={{gridTemplateColumns:`repeat(${BOARD_SIZE}, ${CELL}px)`}}>
       {board.map((cell,idx)=>{
-        const heatVal = heat[idx];
-        const color = heatVal? `rgba(255,0,0,${Math.min(heatVal/5,0.5)})` : 'transparent';
+        const heatArr = isEnemy ? guessHeat : aiHeat;
+        const heatVal = heatArr[idx];
+        const color = heatVal
+          ? isEnemy
+            ? `rgba(0,150,255,${Math.min(heatVal / 5, 0.6)})`
+            : `rgba(255,0,0,${Math.min(heatVal / 5, 0.7)})`
+          : 'transparent';
         return (
           <div key={idx} className="border border-ub-dark-grey relative" style={{width:CELL,height:CELL}}>
             {isEnemy && phase==='battle' && !['hit','miss'].includes(cell)?(
-              <button className="w-full h-full" onClick={()=>fire(idx)} />
+              <button
+                className="w-full h-full"
+                onClick={()=>fire(idx)}
+                aria-label={`fire at ${Math.floor(idx/BOARD_SIZE)+1},${(idx%BOARD_SIZE)+1}`}
+              />
             ):null}
             {cell==='hit' && <HitMarker />}
             {cell==='miss' && <MissMarker />}
-            {!isEnemy && <div className="absolute inset-0" style={{background:color}}/>}
+            <div className="absolute inset-0" style={{background:color}} aria-hidden="true" />
             {isEnemy && phase==='battle' && idx===cursor && (
               <div className="absolute inset-0 border-2 border-yellow-300 pointer-events-none" />
             )}
@@ -226,7 +287,7 @@ const Battleship = () => {
         onRestart={() => restart()}
         stats={stats}
       >
-        <div className="mb-2">{message}</div>
+        <div className="mb-2" aria-live="polite" role="status">{message}</div>
         {phase==='placement' && (
           <div className="flex space-x-4">
             <div className="relative border border-ub-dark-grey" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL}}>
