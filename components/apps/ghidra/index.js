@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import ExternalFrame from '../../ExternalFrame';
+import ErrorBoundary from '../../ErrorBoundary';
 
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
 
@@ -23,12 +25,14 @@ export default function GhidraApp() {
   if (useRemote) {
     const remoteUrl = process.env.NEXT_PUBLIC_GHIDRA_URL || 'https://ghidra.app';
     return (
-      <iframe
-        src={remoteUrl}
-        className="w-full h-full bg-ub-cool-grey"
-        frameBorder="0"
-        title="Ghidra"
-      />
+      <ErrorBoundary>
+        <ExternalFrame
+          appId="ghidra"
+          src={remoteUrl}
+          className="w-full h-full bg-ub-cool-grey"
+          title="Ghidra"
+        />
+      </ErrorBoundary>
     );
   }
 
