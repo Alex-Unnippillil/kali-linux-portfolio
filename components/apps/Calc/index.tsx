@@ -2,13 +2,21 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Parser } from 'expr-eval';
 import usePersistentState from '../../../hooks/usePersistentState';
 
+const formatNumber = (n: number) => {
+  if (Number.isInteger(n)) return String(n);
+  return parseFloat(n.toFixed(10)).toString();
+};
+
 export const evaluateExpression = (expression: string) => {
   const trimmed = String(expression).trim();
   if (/^(['"]).*\1$/.test(trimmed)) return trimmed.slice(1, -1);
   if (/[<>]/.test(trimmed)) return 'Invalid Expression';
   try {
     const result = Parser.evaluate(trimmed);
-    if (!Number.isFinite(result)) return 'Invalid Expression';
+    if (typeof result === 'number') {
+      if (!Number.isFinite(result)) return 'Invalid Expression';
+      return formatNumber(result);
+    }
     return String(result);
   } catch {
     return 'Invalid Expression';
@@ -106,18 +114,27 @@ const Calc = () => {
       default:
         return;
     }
-    setDisplay(String(result));
+    setDisplay(formatNumber(result));
   };
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (/[0-9.+\-*/^()%]/.test(e.key)) {
-        setDisplay((prev) => prev + e.key);
-      } else if (e.key === 'Enter') {
+      const keyMap: Record<string, string> = {
+        NumpadDivide: '/',
+        NumpadMultiply: '*',
+        NumpadSubtract: '-',
+        NumpadAdd: '+',
+        NumpadDecimal: '.',
+        NumpadEnter: 'Enter',
+      };
+      const key = keyMap[e.code] || e.key;
+      if (/[0-9.+\-*/^()%]/.test(key)) {
+        setDisplay((prev) => prev + key);
+      } else if (key === 'Enter') {
         evaluateAndTape();
-      } else if (e.key === 'Backspace') {
+      } else if (key === 'Backspace') {
         setDisplay((prev) => prev.slice(0, -1));
-      } else if (e.key.toLowerCase() === 'm') {
+      } else if (key.toLowerCase() === 'm') {
         if (e.shiftKey) {
           handleMemoryAdd();
         } else if (e.ctrlKey) {
@@ -154,6 +171,7 @@ const Calc = () => {
         <div className="mb-4 flex items-start">
           <div
             data-testid="calc-display"
+            aria-live="polite"
             className="flex-1 h-16 bg-black text-right px-2 py-1 rounded overflow-x-auto flex items-end justify-end text-2xl"
           >
             {display}
