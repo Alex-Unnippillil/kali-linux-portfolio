@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import GuideOverlay from './GuideOverlay';
+import BeefGraph from './Graph';
 
 export default function Beef() {
   const [hooks, setHooks] = useState([]);
@@ -8,6 +9,7 @@ export default function Beef() {
   const [modules, setModules] = useState([]);
   const [output, setOutput] = useState('');
   const [showHelp, setShowHelp] = useState(false);
+  const [steps, setSteps] = useState([]);
 
   const baseUrl = process.env.NEXT_PUBLIC_BEEF_URL || 'http://127.0.0.1:3000';
 
@@ -73,6 +75,7 @@ export default function Beef() {
     } catch (e) {
       setOutput(e.toString());
     }
+    setSteps((prev) => [...prev, { hook: selected, module: moduleId }]);
   };
 
   return (
@@ -104,6 +107,9 @@ export default function Beef() {
         </ul>
       </div>
       <div className="flex-1 p-4 overflow-y-auto">
+        <div className="mb-4">
+          <BeefGraph hooks={hooks} steps={steps} />
+        </div>
         {selected ? (
           <>
             <div className="mb-2">
