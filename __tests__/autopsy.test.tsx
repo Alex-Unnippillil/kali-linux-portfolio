@@ -4,12 +4,40 @@ import Autopsy from '../components/apps/autopsy';
 
 describe('Autopsy plugins and timeline', () => {
   beforeEach(() => {
-    (global as any).fetch = jest.fn(() =>
-      Promise.resolve({
-        json: () =>
-          Promise.resolve([{ id: 'hash', name: 'Hash Analyzer' }]),
-      })
-    );
+    (global as any).fetch = jest.fn((url: string) => {
+      if (url === '/plugin-marketplace.json') {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve([{ id: 'hash', name: 'Hash Analyzer' }]),
+        });
+      }
+      if (url === '/autopsy-demo.json') {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve({
+              artifacts: [
+                {
+                  name: 'resume.docx',
+                  type: 'Document',
+                  description: '',
+                  size: 123,
+                  plugin: 'metadata',
+                  timestamp: '2023-01-01T00:00:00Z',
+                },
+                {
+                  name: 'system.log',
+                  type: 'Log',
+                  description: '',
+                  size: 456,
+                  plugin: 'metadata',
+                  timestamp: '2023-01-02T00:00:00Z',
+                },
+              ],
+            }),
+        });
+      }
+      return Promise.resolve({ json: () => Promise.resolve([]) });
+    });
     class FileReaderMock {
       onload: ((e: any) => void) | null = null;
       readAsArrayBuffer() {
@@ -37,21 +65,17 @@ describe('Autopsy plugins and timeline', () => {
     );
   });
 
-  it('renders artifact on timeline after file upload', async () => {
+  it('filters artifacts by type', async () => {
     render(<Autopsy />);
     fireEvent.change(screen.getByPlaceholderText('Case name'), {
       target: { value: 'Demo' },
     });
     fireEvent.click(screen.getByText('Create Case'));
-    await screen.findByRole('combobox');
-    const file = new File([new Uint8Array(20)], 'test.bin', {
-      type: 'application/octet-stream',
+    await screen.findByText('resume.docx');
+    fireEvent.change(screen.getByPlaceholderText('Filter by type'), {
+      target: { value: 'Log' },
     });
-    fireEvent.change(screen.getByLabelText('Upload file'), {
-      target: { files: [file] },
-    });
-    await waitFor(() =>
-      expect(screen.getAllByText(/test.bin/).length).toBeGreaterThan(0)
-    );
+    expect(screen.queryByText('resume.docx')).toBeNull();
+    expect(screen.getByText('system.log')).toBeInTheDocument();
   });
 });
