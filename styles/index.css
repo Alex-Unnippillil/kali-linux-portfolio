@@ -346,3 +346,44 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Project gallery filter badges */
+.filter-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 9999px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--color-ubt-blue);
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.filter-badge:hover {
+    background-color: var(--color-ubt-blue);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.filter-badge-active {
+    background-color: var(--color-ubt-blue);
+    color: #fff;
+}
+
+.project-tile {
+    opacity: 0;
+    transform: scale(0.95);
+    animation: project-fade 0.3s forwards;
+    transition: transform 0.2s ease;
+}
+
+.project-tile:hover {
+    transform: scale(1.02);
+}
+
+@keyframes project-fade {
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
