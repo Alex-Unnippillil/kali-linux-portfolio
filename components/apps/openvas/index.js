@@ -20,9 +20,18 @@ const OpenVASApp = () => {
   const [summaryUrl, setSummaryUrl] = useState(null);
   const [findings, setFindings] = useState([]);
   const [filter, setFilter] = useState(null);
+  const [severity, setSeverity] = useState('All');
   const [announce, setAnnounce] = useState('');
   const workerRef = useRef(null);
   const reduceMotion = useRef(false);
+
+  const severityLevels = ['All', 'Low', 'Medium', 'High', 'Critical'];
+  const severityColors = {
+    low: 'bg-green-700',
+    medium: 'bg-yellow-700',
+    high: 'bg-orange-700',
+    critical: 'bg-red-700',
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -76,11 +85,25 @@ const OpenVASApp = () => {
     else requestAnimationFrame(run);
   };
 
+  const handleSeverityChange = (level) => {
+    const run = () => {
+      setSeverity(level);
+      setAnnounce(`Showing ${level} severity alerts`);
+    };
+    if (reduceMotion.current) run();
+    else requestAnimationFrame(run);
+  };
+
   const filteredFindings = filter
     ? findings.filter(
         (f) => f.likelihood === filter.likelihood && f.impact === filter.impact
       )
     : findings;
+
+  const displayFindings =
+    severity === 'All'
+      ? filteredFindings
+      : filteredFindings.filter((f) => f.severity === severity.toLowerCase());
 
   const matrix = ['low', 'medium', 'high', 'critical'].map((likelihood) =>
     ['low', 'medium', 'high', 'critical'].map((impact) =>
@@ -160,12 +183,50 @@ const OpenVASApp = () => {
               </React.Fragment>
             ))}
           </div>
+          <div
+            role="radiogroup"
+            aria-label="Filter alerts by severity"
+            className="flex flex-wrap gap-2 mt-4"
+          >
+            {severityLevels.map((level) => (
+              <button
+                key={level}
+                onClick={() => handleSeverityChange(level)}
+                aria-pressed={severity === level}
+                className={`px-3 py-1 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  severity === level
+                    ? 'bg-white text-black'
+                    : 'bg-gray-800 text-white'
+                }`}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-4 mt-2 text-sm" aria-label="Severity legend">
+            {severityLevels
+              .filter((l) => l !== 'All')
+              .map((level) => (
+                <div key={level} className="flex items-center">
+                  <span
+                    className={`w-3 h-3 mr-1 ${severityColors[level.toLowerCase()]}`}
+                  />
+                  {level}
+                </div>
+              ))}
+          </div>
         </div>
       )}
-      {filteredFindings.length > 0 && (
-        <ul className="mb-4 list-disc pl-5">
-          {filteredFindings.map((f, idx) => (
-            <li key={idx}>{f.description}</li>
+      {displayFindings.length > 0 && (
+        <ul className="mb-4 space-y-2">
+          {displayFindings.map((f, idx) => (
+            <li
+              key={idx}
+              role="alert"
+              className={`p-2 rounded ${severityColors[f.severity]} text-white`}
+            >
+              {f.description}
+            </li>
           ))}
         </ul>
       )}
@@ -186,6 +247,18 @@ const OpenVASApp = () => {
           Download Summary
         </a>
       )}
+      <footer className="mt-4 text-xs text-gray-400">
+        <a
+          href="https://www.openvas.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          Official OpenVAS documentation
+        </a>
+        . Use responsibly and only on systems you own or have permission to
+        test.
+      </footer>
     </div>
   );
 };
