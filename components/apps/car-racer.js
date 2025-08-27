@@ -13,6 +13,9 @@ const CAR_HEIGHT = 50;
 const OBSTACLE_HEIGHT = 40;
 const SPEED = 200; // pixels per second
 const SPAWN_TIME = 1; // seconds between obstacles
+const BOOST_DURATION = 2; // boost length in seconds
+const NEAR_INTERVAL = 0.3;
+const FAR_INTERVAL = 0.5;
 
 // Simple AABB collision used in game and tests
 export const checkCollision = (car, obstacle) =>
@@ -32,6 +35,10 @@ const CarRacer = () => {
   const runningRef = useRef(true);
   const obstaclesRef = useRef([]);
   const car = useRef({ lane: 1, y: HEIGHT - CAR_HEIGHT - 10, height: CAR_HEIGHT });
+  const roadsideRef = useRef({ near: [], far: [] });
+  const [boost, setBoost] = useState(false);
+  const boostRef = useRef(0);
+  const reduceMotionRef = useRef(false);
 
   const audioCtxRef = useRef(null);
   const playBeep = () => {
@@ -52,6 +59,11 @@ const CarRacer = () => {
   useEffect(() => {
     const stored = localStorage.getItem('car_racer_high');
     if (stored) setHighScore(parseInt(stored, 10));
+    if (typeof window !== 'undefined') {
+      reduceMotionRef.current = window
+        .matchMedia('(prefers-reduced-motion: reduce)')
+        .matches;
+    }
   }, []);
 
   useEffect(() => {
@@ -61,10 +73,25 @@ const CarRacer = () => {
     let last = performance.now();
     let spawnTimer = 0;
     let lineOffset = 0;
+    let nearTimer = 0;
+    let farTimer = 0;
 
     const draw = () => {
       ctx.fillStyle = '#333';
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      if (!reduceMotionRef.current) {
+        ctx.fillStyle = '#777';
+        roadsideRef.current.far.forEach((r) => {
+          ctx.fillRect(2, r.y, 6, 20);
+          ctx.fillRect(WIDTH - 8, r.y, 6, 20);
+        });
+        ctx.fillStyle = '#bbb';
+        roadsideRef.current.near.forEach((r) => {
+          ctx.fillRect(0, r.y, 10, 30);
+          ctx.fillRect(WIDTH - 10, r.y, 10, 30);
+        });
+      }
 
       // lane lines
       ctx.strokeStyle = '#fff';
@@ -97,7 +124,9 @@ const CarRacer = () => {
       last = time;
 
       if (!pausedRef.current && runningRef.current) {
-        lineOffset = (lineOffset + SPEED * dt) % 40;
+        const speedMult = boostRef.current > 0 ? 2 : 1;
+        const speed = SPEED * speedMult;
+        lineOffset = (lineOffset + speed * dt) % 40;
         spawnTimer += dt;
         if (spawnTimer > SPAWN_TIME) {
           const lane = Math.floor(Math.random() * LANES);
@@ -110,11 +139,36 @@ const CarRacer = () => {
         }
 
         obstaclesRef.current.forEach((o) => {
-          o.y += SPEED * dt;
+          o.y += speed * dt;
         });
         obstaclesRef.current = obstaclesRef.current.filter(
           (o) => o.y < HEIGHT + OBSTACLE_HEIGHT
         );
+
+        if (!reduceMotionRef.current) {
+          nearTimer += dt;
+          farTimer += dt;
+          if (nearTimer > NEAR_INTERVAL) {
+            roadsideRef.current.near.push({ y: -30 });
+            nearTimer = 0;
+          }
+          if (farTimer > FAR_INTERVAL) {
+            roadsideRef.current.far.push({ y: -20 });
+            farTimer = 0;
+          }
+          roadsideRef.current.near.forEach((r) => {
+            r.y += speed * 1.2 * dt;
+          });
+          roadsideRef.current.far.forEach((r) => {
+            r.y += speed * 0.5 * dt;
+          });
+          roadsideRef.current.near = roadsideRef.current.near.filter(
+            (r) => r.y < HEIGHT + 30
+          );
+          roadsideRef.current.far = roadsideRef.current.far.filter(
+            (r) => r.y < HEIGHT + 20
+          );
+        }
 
         for (const o of obstaclesRef.current) {
           if (checkCollision(car.current, o)) {
@@ -128,8 +182,12 @@ const CarRacer = () => {
           }
         }
 
-        scoreRef.current += dt * 100;
+        scoreRef.current += dt * 100 * speedMult;
         setScore(Math.floor(scoreRef.current));
+        if (boostRef.current > 0) {
+          boostRef.current -= dt;
+          if (boostRef.current <= 0) setBoost(false);
+        }
       }
 
       draw();
@@ -153,10 +211,17 @@ const CarRacer = () => {
     }
   }, []);
 
+  const triggerBoost = React.useCallback(() => {
+    if (reduceMotionRef.current) return;
+    boostRef.current = BOOST_DURATION;
+    setBoost(true);
+  }, []);
+
   useEffect(() => {
     const handle = (e) => {
       if (e.key === 'ArrowLeft' || e.key === 'a') moveLeft();
       if (e.key === 'ArrowRight' || e.key === 'd') moveRight();
+      if (e.key === 'ArrowUp' || e.key === 'w') triggerBoost();
       if (e.key === ' ') {
         setPaused((p) => {
           pausedRef.current = !p;
@@ -166,7 +231,7 @@ const CarRacer = () => {
     };
     window.addEventListener('keydown', handle);
     return () => window.removeEventListener('keydown', handle);
-  }, [moveLeft, moveRight]);
+  }, [moveLeft, moveRight, triggerBoost]);
 
   const reset = () => {
     if (scoreRef.current > highScore) {
@@ -196,10 +261,18 @@ const CarRacer = () => {
 
   return (
     <div className="h-full w-full relative text-white select-none">
-      <canvas ref={canvasRef} className="h-full w-full bg-black" />
-      <div className="absolute top-2 left-2 text-sm space-y-1 z-10">
+      <canvas
+        ref={canvasRef}
+        className="h-full w-full bg-black"
+        style={{ filter: boost && !reduceMotionRef.current ? 'blur(2px)' : 'none' }}
+      />
+      <div
+        className="absolute top-2 left-2 text-sm space-y-1 z-10"
+        aria-live="polite"
+      >
         <div>Score: {score}</div>
         <div>High: {highScore}</div>
+        {boost && !reduceMotionRef.current && <div>Boost!</div>}
       </div>
       <div className="absolute bottom-2 left-2 space-x-2 z-10 text-sm">
         <button className="bg-gray-700 px-2" onClick={reset}>
@@ -210,6 +283,9 @@ const CarRacer = () => {
         </button>
         <button className="bg-gray-700 px-2" onClick={toggleSound}>
           {sound ? 'Sound: on' : 'Sound: off'}
+        </button>
+        <button className="bg-gray-700 px-2" onClick={triggerBoost}>
+          Boost
         </button>
       </div>
       {!runningRef.current && (
