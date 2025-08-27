@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Draggable from 'react-draggable';
 import {
-  MonteCarloAI,
+  HuntTargetAI,
   RandomSalvoAI,
   BOARD_SIZE,
   randomizePlacement,
+  optimalPlacement,
 } from './battleship/ai';
 import GameLayout from './battleship/GameLayout';
 import usePersistentState from '../hooks/usePersistentState';
@@ -79,6 +80,14 @@ const Battleship = () => {
     losses: 0,
   });
   const [cursor, setCursor] = useState(0);
+  const [salvo, setSalvo] = useState(false);
+  const [fog, setFog] = useState(false);
+  const shotsPerTurn = salvo ? 3 : 1;
+  const [shotsLeft, setShotsLeft] = useState(shotsPerTurn);
+
+  useEffect(() => {
+    setShotsLeft(shotsPerTurn);
+  }, [salvo, shotsPerTurn]);
 
   const placeShips = useCallback((board, layout) => {
     const newBoard = board.slice();
@@ -92,15 +101,17 @@ const Battleship = () => {
       const newShips = layout.map((s, i) => ({ ...s, id: i }));
       setShips(newShips);
       setPlayerBoard(placeShips(createBoard(), newShips));
-      setEnemyBoard(placeShips(createBoard(), randomizePlacement()));
+      // Use player's previous guess heat to optimally place enemy ships
+      setEnemyBoard(placeShips(createBoard(), optimalPlacement(guessHeat)));
       setPhase('placement');
       setMessage('Place your ships');
       setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
       setGuessHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-      setAi(diff === 'hard' ? new MonteCarloAI() : new RandomSalvoAI());
+      setAi(diff === 'hard' ? new HuntTargetAI() : new RandomSalvoAI());
       setCursor(0);
+      setShotsLeft(salvo ? 3 : 1);
     },
-    [difficulty, placeShips]
+    [difficulty, placeShips, guessHeat, salvo]
   );
 
   useEffect(() => {
@@ -143,7 +154,38 @@ const Battleship = () => {
     }
     setPhase('battle');
     setMessage('Your turn');
+    setShotsLeft(shotsPerTurn);
   };
+
+  // AI fires `shotsPerTurn` times using probability heat map
+  const aiTurn = useCallback(() => {
+    let shots = shotsPerTurn;
+    const takeShot = () => {
+      const heat = ai.getHeatMap();
+      setAiHeat(heat);
+      const move = ai.nextMove();
+      if (move == null) return;
+      const pb = playerBoard.slice();
+      const hit2 = pb[move] === 'ship';
+      pb[move] = hit2 ? 'hit' : 'miss';
+      setPlayerBoard(pb);
+      ai.record(move, hit2);
+      if (!pb.includes('ship')) {
+        setMessage('AI wins!');
+        setPhase('done');
+        setStats((s) => ({ ...s, losses: s.losses + 1 }));
+        return;
+      }
+      shots--;
+      if (shots > 0) {
+        setTimeout(takeShot, 100);
+      } else {
+        setMessage('Your turn');
+        setShotsLeft(shotsPerTurn);
+      }
+    };
+    setTimeout(takeShot, 100);
+  }, [ai, playerBoard, setPlayerBoard, setAiHeat, setMessage, setPhase, setStats, shotsPerTurn]);
 
   const fire = useCallback(
     (idx) => {
@@ -163,26 +205,16 @@ const Battleship = () => {
         setStats((s) => ({ ...s, wins: s.wins + 1 }));
         return;
       }
-      // AI turn
-      setTimeout(() => {
-        const move = ai.nextMove();
-        if (move == null) return;
-        const pb = playerBoard.slice();
-        const hit2 = pb[move] === 'ship';
-        pb[move] = hit2 ? 'hit' : 'miss';
-        setPlayerBoard(pb);
-        const nh = aiHeat.slice();
-        nh[move]++;
-        setAiHeat(nh);
-        ai.record(move, hit2);
-        if (!pb.includes('ship')) {
-          setMessage('AI wins!');
-          setPhase('done');
-          setStats((s) => ({ ...s, losses: s.losses + 1 }));
-        } else setMessage(hit ? 'Hit!' : 'Miss!');
-      }, 100); // simulate thinking
+      const remaining = shotsLeft - 1;
+      if (remaining > 0) {
+        setShotsLeft(remaining);
+        setMessage(hit ? 'Hit!' : 'Miss!');
+      } else {
+        setMessage(hit ? 'Hit!' : 'Miss!');
+        aiTurn();
+      }
     },
-      [ai, enemyBoard, aiHeat, phase, playerBoard, setEnemyBoard, setPlayerBoard, setAiHeat, setGuessHeat, setMessage, setPhase, setStats]
+    [phase, enemyBoard, shotsLeft, aiTurn, setEnemyBoard, setGuessHeat, setMessage, setPhase, setStats]
   );
 
   useGameControls(({ x, y }) => {
@@ -207,36 +239,41 @@ const Battleship = () => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [phase, cursor, fire]);
 
-  const renderBoard = (board, isEnemy=false) => (
-    <div className="grid" style={{gridTemplateColumns:`repeat(${BOARD_SIZE}, ${CELL}px)`}}>
-      {board.map((cell,idx)=>{
-          const heatArr = isEnemy ? guessHeat : aiHeat;
+  const renderBoard = (board, isEnemy = false, hide = false) => {
+    const heatArr = isEnemy ? guessHeat : aiHeat;
+    const maxHeat = Math.max(...heatArr);
+    return (
+      <div className="grid" style={{ gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL}px)` }}>
+        {board.map((cell, idx) => {
           const heatVal = heatArr[idx];
-          const color = showHeatmap && heatVal
-            ? isEnemy
-              ? `rgba(0,150,255,${Math.min(heatVal / 5, 0.6)})`
-              : `rgba(255,0,0,${Math.min(heatVal / 5, 0.7)})`
-            : 'transparent';
-        return (
-          <div key={idx} className="border border-ub-dark-grey relative" style={{width:CELL,height:CELL}}>
-            {isEnemy && phase==='battle' && !['hit','miss'].includes(cell)?(
-              <button
-                className="w-full h-full"
-                onClick={()=>fire(idx)}
-                aria-label={`fire at ${Math.floor(idx/BOARD_SIZE)+1},${(idx%BOARD_SIZE)+1}`}
-              />
-            ):null}
-            {cell==='hit' && <HitMarker />}
-            {cell==='miss' && <MissMarker />}
-            <div className="absolute inset-0" style={{background:color}} aria-hidden="true" />
-            {isEnemy && phase==='battle' && idx===cursor && (
-              <div className="absolute inset-0 border-2 border-yellow-300 pointer-events-none" />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
+          const intensity = maxHeat ? heatVal / maxHeat : 0;
+          const color =
+            showHeatmap && heatVal
+              ? isEnemy
+                ? `rgba(0,150,255,${intensity})`
+                : `rgba(255,0,0,${intensity})`
+              : 'transparent';
+          return (
+            <div key={idx} className="border border-ub-dark-grey relative" style={{ width: CELL, height: CELL }}>
+              {isEnemy && phase === 'battle' && !['hit', 'miss'].includes(cell) ? (
+                <button
+                  className="w-full h-full"
+                  onClick={() => fire(idx)}
+                  aria-label={`fire at ${Math.floor(idx / BOARD_SIZE) + 1},${(idx % BOARD_SIZE) + 1}`}
+                />
+              ) : null}
+              {!hide && cell === 'hit' && <HitMarker />}
+              {!hide && cell === 'miss' && <MissMarker />}
+              <div className="absolute inset-0" style={{ background: color }} aria-hidden="true" />
+              {isEnemy && phase === 'battle' && idx === cursor && (
+                <div className="absolute inset-0 border-2 border-yellow-300 pointer-events-none" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto font-ubuntu">
@@ -250,6 +287,10 @@ const Battleship = () => {
           stats={stats}
           showHeatmap={showHeatmap}
           onToggleHeatmap={() => setShowHeatmap((h) => !h)}
+          salvo={salvo}
+          onToggleSalvo={() => setSalvo((s) => !s)}
+          fog={fog}
+          onToggleFog={() => setFog((f) => !f)}
         >
         <div className="mb-2" aria-live="polite" role="status">{message}</div>
         {phase==='placement' && (
@@ -270,9 +311,9 @@ const Battleship = () => {
           </div>
         )}
         {phase!=='placement' && (
-          <div className="flex space-x-8">
+            <div className="flex space-x-8">
             <div>{renderBoard(playerBoard)}</div>
-            <div>{renderBoard(enemyBoard,true)}</div>
+            <div>{renderBoard(enemyBoard,true,fog)}</div>
           </div>
         )}
       </GameLayout>

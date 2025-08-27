@@ -132,6 +132,157 @@ export function randomizePlacement(noAdjacency = false) {
   }
 }
 
+// Generate a layout that minimizes the provided heat map values.
+// `heat` is an array of length BOARD_SIZE*BOARD_SIZE representing
+// how often the opponent has targeted each cell.  We sample a number
+// of random layouts and keep the one occupying the coolest cells.
+export function optimalPlacement(heat = [], attempts = 500) {
+  let best = null;
+  let bestScore = Infinity;
+  for (let i = 0; i < attempts; i++) {
+    const layout = randomLayout(new Set(), new Set(), true);
+    if (!layout) continue;
+    const score = layout.reduce(
+      (sum, sh) =>
+        sum + sh.cells.reduce((s, c) => s + (heat[c] || 0), 0),
+      0
+    );
+    if (score < bestScore) {
+      bestScore = score;
+      best = layout;
+    }
+  }
+  return best || randomizePlacement(true);
+}
+
+// Hunt then target AI using probability heat map
+export class HuntTargetAI {
+  constructor() {
+    this.hits = new Set();
+    this.misses = new Set();
+    this.queue = [];
+  }
+
+  record(idx, hit) {
+    if (hit) {
+      this.hits.add(idx);
+      const x = idx % BOARD_SIZE;
+      const y = Math.floor(idx / BOARD_SIZE);
+      const neighbors = [
+        [x + 1, y],
+        [x - 1, y],
+        [x, y + 1],
+        [x, y - 1],
+      ];
+      neighbors.forEach(([nx, ny]) => {
+        if (nx >= 0 && ny >= 0 && nx < BOARD_SIZE && ny < BOARD_SIZE) {
+          const nIdx = ny * BOARD_SIZE + nx;
+          if (!this.hits.has(nIdx) && !this.misses.has(nIdx) && !this.queue.includes(nIdx)) {
+            this.queue.push(nIdx);
+          }
+        }
+      });
+      // if two hits align, keep only cells in that line
+      const hitArr = Array.from(this.hits);
+      if (hitArr.length >= 2) {
+        for (let i = 0; i < hitArr.length; i++) {
+          for (let j = i + 1; j < hitArr.length; j++) {
+            const a = hitArr[i];
+            const b = hitArr[j];
+            if (Math.floor(a / BOARD_SIZE) === Math.floor(b / BOARD_SIZE)) {
+              this.queue = this.queue.filter(
+                (q) => Math.floor(q / BOARD_SIZE) === Math.floor(a / BOARD_SIZE)
+              );
+            } else if (a % BOARD_SIZE === b % BOARD_SIZE) {
+              this.queue = this.queue.filter((q) => q % BOARD_SIZE === a % BOARD_SIZE);
+            }
+          }
+        }
+      }
+    } else {
+      this.misses.add(idx);
+    }
+  }
+
+  // Compute probability heat map based on remaining possibilities
+  getHeatMap() {
+    const scores = new Array(BOARD_SIZE * BOARD_SIZE).fill(0);
+    const guessed = new Set([...this.hits, ...this.misses]);
+    for (const len of SHIPS) {
+      for (let dir = 0; dir < 2; dir++) {
+        const maxX = dir === 0 ? BOARD_SIZE - len : BOARD_SIZE - 1;
+        const maxY = dir === 1 ? BOARD_SIZE - len : BOARD_SIZE - 1;
+        for (let x = 0; x <= maxX; x++) {
+          for (let y = 0; y <= maxY; y++) {
+            const cells = [];
+            let ok = true;
+            for (let i = 0; i < len; i++) {
+              const cx = x + (dir === 0 ? i : 0);
+              const cy = y + (dir === 1 ? i : 0);
+              const idx = cy * BOARD_SIZE + cx;
+              if (this.misses.has(idx)) {
+                ok = false;
+                break;
+              }
+              cells.push(idx);
+            }
+            if (!ok) continue;
+            // must cover all hits if they intersect this line
+            for (const h of this.hits) {
+              if (!cells.includes(h)) ok = false;
+            }
+            if (!ok) continue;
+            cells.forEach((c) => {
+              if (!guessed.has(c)) scores[c]++;
+            });
+          }
+        }
+      }
+    }
+    return scores;
+  }
+
+  nextMove() {
+    const heat = this.getHeatMap();
+    if (this.queue.length) {
+      let bestQ = -1;
+      let bestScore = -1;
+      for (const q of this.queue) {
+        if (heat[q] > bestScore) {
+          bestScore = heat[q];
+          bestQ = q;
+        }
+      }
+      if (bestQ >= 0) {
+        this.queue = this.queue.filter((q) => q !== bestQ);
+        return bestQ;
+      }
+    }
+    let best = -1;
+    let bestScore = -1;
+    let avail = [];
+    for (let i = 0; i < heat.length; i++) {
+      if (this.hits.has(i) || this.misses.has(i)) continue;
+      const x = i % BOARD_SIZE;
+      const y = Math.floor(i / BOARD_SIZE);
+      if (!this.queue.length && (x + y) % 2 === 1) continue;
+      avail.push(i);
+      if (heat[i] > bestScore) {
+        bestScore = heat[i];
+        best = i;
+      }
+    }
+    if (best >= 0) return best;
+    if (!avail.length) {
+      for (let i = 0; i < heat.length; i++) {
+        if (this.hits.has(i) || this.misses.has(i)) continue;
+        avail.push(i);
+      }
+    }
+    if (avail.length) return avail[Math.floor(Math.random() * avail.length)];
+    return null;
+  }
+}
 
 export class RandomSalvoAI {
   constructor() {
