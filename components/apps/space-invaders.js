@@ -33,8 +33,17 @@ const SpaceInvaders = () => {
   const nextExtraLife = useRef(0);
   const setupWaveRef = useRef(() => {});
   const muzzleFlash = useRef(0);
+  const hitFlash = useRef(0);
+  const shake = useRef(0);
+  const bombWarning = useRef({ time: 0, x: 0, y: 0 });
   const prefersReducedMotion = useRef(false);
   const [ariaMessage, setAriaMessage] = useState('');
+
+  const [difficulty, setDifficulty] = useState(1);
+  const difficultyRef = useRef(difficulty);
+  useEffect(() => {
+    difficultyRef.current = difficulty;
+  }, [difficulty]);
 
   const [sound, setSound] = useState(true);
   const soundRef = useRef(sound);
@@ -214,10 +223,10 @@ const SpaceInvaders = () => {
       }
     };
 
-    const moveBullets = (pool, dt) => {
+    const moveBullets = (pool, dt, mult = 1) => {
       for (const b of pool) {
         if (!b.active) continue;
-        b.y += b.dy * dt;
+        b.y += b.dy * dt * mult;
         if (b.y < 0 || b.y > h) b.active = false;
       }
     };
@@ -280,6 +289,14 @@ const SpaceInvaders = () => {
       const p = player.current;
       p.cooldown -= dt;
       if (muzzleFlash.current > 0) muzzleFlash.current -= dt;
+      if (hitFlash.current > 0) hitFlash.current -= dt;
+      if (shake.current > 0) shake.current -= dt;
+      if (bombWarning.current.time > 0) {
+        bombWarning.current.time -= dt;
+        if (bombWarning.current.time <= 0) {
+          shoot(enemyBullets.current, bombWarning.current.x, bombWarning.current.y, 200);
+        }
+      }
 
       const left = keys.current['ArrowLeft'] || touch.current.left;
       const right = keys.current['ArrowRight'] || touch.current.right;
@@ -297,14 +314,18 @@ const SpaceInvaders = () => {
 
       enemyCooldown.current -= dt;
       const aliveInv = invaders.current.filter((i) => i.alive);
-      if (enemyCooldown.current <= 0 && aliveInv.length) {
+      if (
+        enemyCooldown.current <= 0 &&
+        aliveInv.length &&
+        bombWarning.current.time <= 0
+      ) {
         const inv = aliveInv[Math.floor(Math.random() * aliveInv.length)];
-        shoot(enemyBullets.current, inv.x + 10, inv.y + 10, 200);
-        enemyCooldown.current = 1;
+        bombWarning.current = { time: 0.5, x: inv.x + 10, y: inv.y + 10 };
+        enemyCooldown.current = 1 / difficultyRef.current;
       }
 
       moveBullets(playerBullets.current, dt);
-      moveBullets(enemyBullets.current, dt);
+      moveBullets(enemyBullets.current, dt, difficultyRef.current);
       for (const pu of powerUps.current) {
         if (!pu.active) continue;
         pu.y += 40 * dt;
@@ -370,6 +391,10 @@ const SpaceInvaders = () => {
         if (!b.active) continue;
         if (b.x >= p.x && b.x <= p.x + p.w && b.y >= p.y && b.y <= p.y + p.h) {
           b.active = false;
+          if (!prefersReducedMotion.current) {
+            hitFlash.current = 0.2;
+            shake.current = 0.2;
+          }
           loseLife();
           return requestAnimationFrame(loop);
         }
@@ -390,7 +415,12 @@ const SpaceInvaders = () => {
 
       const aliveCount = aliveInv.length;
       const progress = 1 - aliveCount / initialCount.current;
-      const interval = baseInterval / (stageRef.current * (1 + progress));
+      let lowest = 0;
+      for (const inv of aliveInv) if (inv.y > lowest) lowest = inv.y;
+      const descent = lowest / h;
+      const interval =
+        baseInterval /
+        (stageRef.current * (1 + progress) * (1 + descent) * difficultyRef.current);
       stepTimer.current += dt;
       if (stepTimer.current >= interval) {
         stepTimer.current -= interval;
@@ -409,6 +439,8 @@ const SpaceInvaders = () => {
             if (inv.alive) inv.y += 10;
           }
         }
+        const beepFreq = 200 + descent * 800;
+        playSound(beepFreq);
       }
 
       if (aliveCount === 0) {
@@ -443,6 +475,12 @@ const SpaceInvaders = () => {
       }
 
       ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      if (shake.current > 0 && !prefersReducedMotion.current) {
+        const dx = (Math.random() - 0.5) * 5;
+        const dy = (Math.random() - 0.5) * 5;
+        ctx.translate(dx, dy);
+      }
 
       ctx.fillStyle = 'white';
       ctx.fillRect(p.x, p.y, p.w, p.h);
@@ -450,11 +488,19 @@ const SpaceInvaders = () => {
         ctx.fillStyle = 'yellow';
         ctx.fillRect(p.x + p.w / 2 - 2, p.y - 6, 4, 6);
       }
+      if (hitFlash.current > 0) {
+        ctx.fillStyle = 'orange';
+        ctx.fillRect(p.x - 5, p.y - 5, p.w + 10, p.h + 10);
+      }
 
       ctx.fillStyle = 'lime';
       invaders.current.forEach((inv) => {
         if (inv.alive) ctx.fillRect(inv.x, inv.y, 20, 15);
       });
+      if (bombWarning.current.time > 0) {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(bombWarning.current.x - 4, bombWarning.current.y - 4, 8, 8);
+      }
 
       ctx.fillStyle = 'red';
       playerBullets.current.forEach((b) => {
@@ -489,6 +535,8 @@ const SpaceInvaders = () => {
         ctx.fillStyle = '#ff00ff';
         ctx.fillRect(ufo.current.x, ufo.current.y, 30, 15);
       }
+
+      ctx.restore();
 
       reqRef.current = requestAnimationFrame(loop);
     };
@@ -530,6 +578,21 @@ const SpaceInvaders = () => {
       <div className="h-full w-full relative bg-black text-white">
         <canvas ref={canvasRef} className="w-full h-full" />
         <div className="absolute top-2 right-2 flex gap-2 z-10">
+          <div className="bg-gray-700 px-2 py-1 rounded flex items-center">
+            <label htmlFor="difficulty" className="text-xs mr-2">
+              Diff
+            </label>
+            <input
+              id="difficulty"
+              type="range"
+              min="1"
+              max="3"
+              step="1"
+              value={difficulty}
+              onChange={(e) => setDifficulty(Number(e.target.value))}
+              className="w-16"
+            />
+          </div>
           <button
             className="bg-gray-700 px-2 py-1 rounded"
             onClick={resetGame}
