@@ -41,11 +41,12 @@
     "react-dom": "^18.2.0",
     "react-draggable": "^4.4.5",
     "react-force-graph": "^1.45.0",
-
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
     "react-onclickoutside": "^6.12.2",
     "react-twitter-embed": "^4.0.4",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "stockfish": "^16.0.0",
     "swr": "^2.2.5",
     "tailwindcss": "^3.2.4",
