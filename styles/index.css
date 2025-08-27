@@ -346,3 +346,29 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Metasploit exploit result cards */
+.msf-card {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: #fff;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    font-size: 0.75rem;
+}
+
+.msf-card img {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+}
+
+.msf-card.success {
+    background-color: var(--color-ubt-green);
+}
+
+.msf-card.failure {
+    background-color: var(--color-ub-orange);
+}

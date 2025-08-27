@@ -9,6 +9,7 @@ const MetasploitApp = () => {
   const [output, setOutput] = usePersistentState('metasploit-history', banner);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
 
   // Refresh modules list in the background on mount
   useEffect(() => {
@@ -36,9 +37,13 @@ const MetasploitApp = () => {
         body: JSON.stringify({ command: cmd }),
       });
       const data = await res.json();
-      setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`);
+      const out = data.output || '';
+      const success = /success/i.test(out);
+      setResults((prev) => [...prev, { cmd, success }]);
+      setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n${out}`);
     } catch (e) {
       setOutput((prev) => `${prev}\nError: ${e.message}`);
+      setResults((prev) => [...prev, { cmd, success: false }]);
     } finally {
       setLoading(false);
     }
@@ -82,6 +87,26 @@ const MetasploitApp = () => {
           </ul>
         )}
       </div>
+      {results.length > 0 && (
+        <div className="p-2 flex flex-wrap">
+          {results.map((r, i) => (
+            <div
+              key={i}
+              className={`msf-card ${r.success ? 'success' : 'failure'}`}
+            >
+              <img
+                src={`/themes/Yaru/status/${
+                  r.success ? 'exploit-success.svg' : 'exploit-failure.svg'
+                }`}
+                alt={r.success ? 'success' : 'failure'}
+              />
+              <span className="ml-1">
+                {r.success ? 'Success' : 'Failed'}: {r.cmd}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       <pre className="flex-grow bg-black text-green-400 p-2 overflow-auto whitespace-pre-wrap">
         {loading ? 'Running...' : output}
       </pre>
