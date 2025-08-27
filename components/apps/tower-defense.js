@@ -12,6 +12,8 @@ const PATH = [
   { x: 20, y: 380 },
 ];
 
+const TARGET_MODES = ['first', 'last', 'strongest', 'closest'];
+
 // Precompute path segments and length
 const pathSegments = [];
 let totalLength = 0;
@@ -64,6 +66,8 @@ function TowerDefense() {
   const enemiesRef = useRef([]);
   const projectilesRef = useRef([]);
   const decalsRef = useRef([]);
+  const damageNumbersRef = useRef([]);
+  const shockwavesRef = useRef([]);
   const spawnRef = useRef({ count: 0, spawned: 0, timer: 0 });
   const [wave, setWave] = useState(1);
   const waveRef = useRef(wave);
@@ -71,7 +75,7 @@ function TowerDefense() {
   const livesRef = useRef(lives);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
-  const [running, setRunning] = useState(true);
+  const [running, setRunning] = useState(false);
   const runningRef = useRef(running);
   const [sound, setSound] = useState(true);
   const audioCtxRef = useRef(null);
@@ -128,6 +132,8 @@ function TowerDefense() {
 
   useEffect(() => {
     startWave(1);
+    setRunning(false);
+    runningRef.current = false;
   }, []);
 
   const reset = () => {
@@ -135,11 +141,14 @@ function TowerDefense() {
     enemiesRef.current = [];
     projectilesRef.current = [];
     decalsRef.current = [];
+    damageNumbersRef.current = [];
+    shockwavesRef.current = [];
     setWave(1);
     waveRef.current = 1;
     setLives(10);
     setScore(0);
-    setRunning(true);
+    setRunning(false);
+    runningRef.current = false;
     startWave(1);
   };
 
@@ -151,11 +160,14 @@ function TowerDefense() {
       (t) => Math.hypot(t.x - x, t.y - y) < 15
     );
     if (existing) {
-      if (existing.level < 3) existing.level += 1;
+      if (e.shiftKey) {
+        const idx = TARGET_MODES.indexOf(existing.mode || 'first');
+        existing.mode = TARGET_MODES[(idx + 1) % TARGET_MODES.length];
+      } else if (existing.level < 3) existing.level += 1;
       return;
     }
     if (pointOnPath(x, y)) return;
-    towersRef.current.push({ x, y, level: 1, cooldown: 0 });
+    towersRef.current.push({ x, y, level: 1, cooldown: 0, mode: 'first' });
   };
 
   const update = (dt) => {
@@ -185,14 +197,43 @@ function TowerDefense() {
       t.cooldown = (t.cooldown || 0) - dt;
       const range = 60 + t.level * 10;
       let target = null;
-      let minDist = Infinity;
-      enemiesRef.current.forEach((e) => {
-        const dist = Math.hypot(e.x - t.x, e.y - t.y);
-        if (dist < range && dist < minDist) {
-          target = e;
-          minDist = dist;
-        }
-      });
+      if (t.mode === 'first') {
+        let maxDistPath = -Infinity;
+        enemiesRef.current.forEach((e) => {
+          const distToTower = Math.hypot(e.x - t.x, e.y - t.y);
+          if (distToTower < range && e.dist > maxDistPath) {
+            target = e;
+            maxDistPath = e.dist;
+          }
+        });
+      } else if (t.mode === 'last') {
+        let minDistPath = Infinity;
+        enemiesRef.current.forEach((e) => {
+          const distToTower = Math.hypot(e.x - t.x, e.y - t.y);
+          if (distToTower < range && e.dist < minDistPath) {
+            target = e;
+            minDistPath = e.dist;
+          }
+        });
+      } else if (t.mode === 'strongest') {
+        let maxHp = -Infinity;
+        enemiesRef.current.forEach((e) => {
+          const distToTower = Math.hypot(e.x - t.x, e.y - t.y);
+          if (distToTower < range && e.hp > maxHp) {
+            target = e;
+            maxHp = e.hp;
+          }
+        });
+      } else {
+        let minDist = Infinity;
+        enemiesRef.current.forEach((e) => {
+          const distToTower = Math.hypot(e.x - t.x, e.y - t.y);
+          if (distToTower < range && distToTower < minDist) {
+            target = e;
+            minDist = distToTower;
+          }
+        });
+      }
       if (target && t.cooldown <= 0) {
         projectilesRef.current.push({
           x: t.x,
@@ -218,7 +259,33 @@ function TowerDefense() {
       p.x += vx * dt;
       p.y += vy * dt;
       if (dist < 5 || p.target.hp <= 0) {
-        if (p.target.hp > 0) p.target.hp -= p.damage;
+        if (p.target.hp > 0) {
+          p.target.hp -= p.damage;
+          damageNumbersRef.current.push({
+            x: p.target.x,
+            y: p.target.y,
+            dmg: p.damage,
+            vy: -30,
+            ttl: 1,
+          });
+          const radius = 30;
+          enemiesRef.current.forEach((e) => {
+            if (e !== p.target) {
+              const d = Math.hypot(e.x - p.x, e.y - p.y);
+              if (d < radius) {
+                e.hp -= p.damage;
+                damageNumbersRef.current.push({
+                  x: e.x,
+                  y: e.y,
+                  dmg: p.damage,
+                  vy: -30,
+                  ttl: 1,
+                });
+              }
+            }
+          });
+          shockwavesRef.current.push({ x: p.x, y: p.y, r: 0, ttl: 0.3 });
+        }
         decalsRef.current.push({ x: p.x, y: p.y, ttl: 0.3 });
         p.hit = true;
       }
@@ -231,6 +298,19 @@ function TowerDefense() {
       d.ttl -= dt;
     });
     decalsRef.current = decalsRef.current.filter((d) => d.ttl > 0);
+
+    damageNumbersRef.current.forEach((n) => {
+      n.ttl -= dt;
+      n.vy += 200 * dt;
+      n.y += n.vy * dt;
+    });
+    damageNumbersRef.current = damageNumbersRef.current.filter((n) => n.ttl > 0);
+
+    shockwavesRef.current.forEach((s) => {
+      s.ttl -= dt;
+      s.r += 200 * dt;
+    });
+    shockwavesRef.current = shockwavesRef.current.filter((s) => s.ttl > 0);
 
     enemiesRef.current = enemiesRef.current.filter((e) => {
       if (e.hp <= 0) {
@@ -254,6 +334,8 @@ function TowerDefense() {
       waveRef.current = next;
       setWave(next);
       startWave(next);
+      setRunning(false);
+      runningRef.current = false;
     }
   };
 
@@ -278,6 +360,15 @@ function TowerDefense() {
       ctx.fill();
     });
 
+    shockwavesRef.current.forEach((s) => {
+      const alpha = prefersReducedMotion.current ? 1 : s.ttl / 0.3;
+      ctx.strokeStyle = `rgba(255,255,0,${alpha})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.stroke();
+    });
+
     towersRef.current.forEach((t) => {
       ctx.fillStyle = 'blue';
       ctx.beginPath();
@@ -286,6 +377,7 @@ function TowerDefense() {
       ctx.fillStyle = 'white';
       ctx.font = '10px sans-serif';
       ctx.fillText(t.level, t.x - 3, t.y + 3);
+      ctx.fillText((t.mode ? t.mode[0] : 'f').toUpperCase(), t.x - 5, t.y + 15);
     });
 
     enemiesRef.current.forEach((e) => {
@@ -297,6 +389,13 @@ function TowerDefense() {
       ctx.fillRect(e.x - 10, e.y - 14, 20, 3);
       ctx.fillStyle = '#0f0';
       ctx.fillRect(e.x - 10, e.y - 14, (20 * e.hp) / e.maxHp, 3);
+    });
+
+    damageNumbersRef.current.forEach((n) => {
+      const alpha = n.ttl;
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.font = '12px sans-serif';
+      ctx.fillText(n.dmg, n.x, n.y);
     });
 
     projectilesRef.current.forEach((p) => {
