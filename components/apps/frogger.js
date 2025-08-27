@@ -5,6 +5,7 @@ const WIDTH = 7;
 const HEIGHT = 8;
 const SUB_STEP = 0.5;
 const CELL = 32;
+const RIPPLE_DURATION = 0.5;
 
 const PAD_POSITIONS = [1, 3, 5];
 const DIFFICULTY_MULTIPLIERS = {
@@ -145,7 +146,12 @@ const Frogger = () => {
   const audioCtxRef = useRef(null);
   const nextLife = useRef(500);
   const holdRef = useRef();
-  const [splashes, setSplashes] = useState([]);
+  const rippleRef = useRef(0);
+  const splashesRef = useRef([]);
+  const [slowTime, setSlowTime] = useState(false);
+  const slowTimeRef = useRef(slowTime);
+  const deathStreakRef = useRef(0);
+  const safeFlashRef = useRef(0);
 
 
   useEffect(() => { frogRef.current = frog; }, [frog]);
@@ -155,6 +161,7 @@ const Frogger = () => {
   useEffect(() => { pausedRef.current = paused; }, [paused]);
   useEffect(() => { soundRef.current = sound; }, [sound]);
   useEffect(() => { reduceMotionRef.current = reduceMotion; }, [reduceMotion]);
+  useEffect(() => { slowTimeRef.current = slowTime; }, [slowTime]);
 
   useEffect(() => {
     const saved = Number(localStorage.getItem('frogger-highscore') || 0);
@@ -224,6 +231,7 @@ const Frogger = () => {
       else if (e.key === 'ArrowDown') moveFrog(0, 1);
       else if (e.key === 'p' || e.key === 'P') setPaused((p) => !p);
       else if (e.key === 'm' || e.key === 'M') setSound((s) => !s);
+      else if (e.key === 't' || e.key === 'T') setSlowTime((s) => !s);
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
@@ -260,74 +268,64 @@ const Frogger = () => {
     ReactGA.event({ category: 'Frogger', action: 'level_start', value: 1 });
   }, []);
 
-    const reset = useCallback(
-      (full = false, diff = difficulty, lvl = level) => {
-        setFrog(initialFrog);
-        const mult = DIFFICULTY_MULTIPLIERS[diff];
-        setCars(
-          carLaneDefs.map((l, i) =>
-            initLane(rampLane(l, lvl, 0.3, mult), i + 1)
-          )
-        );
-        setLogs(
-          logLaneDefs.map((l, i) =>
-            initLane(rampLane(l, lvl, 0.5, mult), i + 101)
-          )
-        );
-        setStatus('');
-        if (full) {
-          setScore(0);
-          setLives(3);
-          setPads(PAD_POSITIONS.map(() => false));
-          setLevel(1);
-          nextLife.current = 500;
-          ReactGA.event({
-            category: 'Frogger',
-            action: 'level_start',
-            value: 1,
-          });
-        }
-      },
-      [difficulty, level]
-    );
-
-    const loseLife = useCallback(
-      (pos) => {
-        const id = Date.now();
-        setSplashes((s) => [...s, { x: Math.floor(pos.x), y: pos.y, id }]);
-        setTimeout(() =>
-          setSplashes((s) => s.filter((sp) => sp.id !== id)),
-        500);
-        ReactGA.event({ category: 'Frogger', action: 'death', value: level });
-        setLives((l) => {
-          const newLives = l - 1;
-          if (newLives <= 0) {
-            setStatus('Game Over');
-            setTimeout(() => reset(true), 1000);
-            return 0;
-          }
-          reset();
-          return newLives;
+  const reset = useCallback(
+    (full = false, diff = difficulty, lvl = level) => {
+      setFrog(initialFrog);
+      const mult = DIFFICULTY_MULTIPLIERS[diff];
+      setCars(
+        carLaneDefs.map((l, i) =>
+          initLane(rampLane(l, lvl, 0.3, mult), i + 1)
+        )
+      );
+      setLogs(
+        logLaneDefs.map((l, i) =>
+          initLane(rampLane(l, lvl, 0.5, mult), i + 101)
+        )
+      );
+      setStatus('');
+      if (full) {
+        setScore(0);
+        setLives(3);
+        setPads(PAD_POSITIONS.map(() => false));
+        setLevel(1);
+        nextLife.current = 500;
+        deathStreakRef.current = 0;
+        ReactGA.event({
+          category: 'Frogger',
+          action: 'level_start',
+          value: 1,
         });
-      },
-      [level, reset]
-    );
-
-
-  const loseLife = useCallback(() => {
-    ReactGA.event({ category: 'Frogger', action: 'death', value: level });
-    playTone(220, 0.2);
-    setLives((l) => {
-      const newLives = l - 1;
-      if (newLives <= 0) {
-        setStatus('Game Over');
-        setTimeout(() => reset(true), 1000);
-        return 0;
       }
-      reset();
-      return newLives;
-    });
-  }, [level, reset]);
+    },
+    [difficulty, level]
+  );
+
+  const loseLife = useCallback(
+    (pos) => {
+      if (pos && pos.y <= 2) {
+        splashesRef.current.push({
+          x: (Math.floor(pos.x) + 0.5) * CELL,
+          y: (pos.y + 0.5) * CELL,
+          t: 0,
+        });
+      }
+      deathStreakRef.current += 1;
+      if (deathStreakRef.current >= 2) safeFlashRef.current = 2;
+      ReactGA.event({ category: 'Frogger', action: 'death', value: level });
+      playTone(220, 0.2);
+      setLives((l) => {
+        const newLives = l - 1;
+        if (newLives <= 0) {
+          setStatus('Game Over');
+          setTimeout(() => reset(true), 1000);
+          return 0;
+        }
+        reset();
+        return newLives;
+      });
+    },
+    [level, reset]
+  );
 
   useEffect(() => {
     let last = performance.now();
@@ -337,16 +335,26 @@ const Frogger = () => {
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const phase = rippleRef.current;
       for (let y = 0; y < HEIGHT; y += 1) {
         for (let x = 0; x < WIDTH; x += 1) {
           if (y === 0) {
+            ctx.fillStyle = '#1e3a8a';
+            ctx.fillRect(x * CELL, 0, CELL, CELL);
             const idx = PAD_POSITIONS.indexOf(x);
-            if (idx >= 0) ctx.fillStyle = padsRef.current[idx] ? '#22c55e' : '#15803d';
-            else ctx.fillStyle = '#1e3a8a';
-            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+            if (idx >= 0) {
+              const color = padsRef.current[idx] ? '#22c55e' : '#15803d';
+              const bob = Math.sin(phase + x) * 2;
+              ctx.fillStyle = color;
+              ctx.fillRect(x * CELL, bob, CELL, CELL);
+            }
           } else if (y === 3 || y === 6) {
             ctx.fillStyle = '#15803d';
             ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+            if (safeFlashRef.current > 0 && Math.floor(phase * 8) % 2 === 0) {
+              ctx.fillStyle = 'rgba(251,191,36,0.5)';
+              ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+            }
           } else if (y >= 4 && y <= 5) {
             ctx.fillStyle = '#374151';
             ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
@@ -368,7 +376,6 @@ const Frogger = () => {
           ctx.fillRect(x * CELL, CELL * 3 - 4, CELL, 4);
         }
       } else {
-        const phase = rippleRef.current;
         ctx.fillStyle = rippleColor;
         for (let x = 0; x < WIDTH; x += 1) {
           const offset = Math.sin(phase + x) * 2;
@@ -383,10 +390,25 @@ const Frogger = () => {
         });
       });
       carsRef.current.forEach((lane) => {
-        ctx.fillStyle = '#ef4444';
         lane.entities.forEach((e) => {
-          ctx.fillRect(e.x * CELL, lane.y * CELL, lane.length * CELL, CELL);
+          const x = e.x * CELL;
+          const y = lane.y * CELL;
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(x, y, lane.length * CELL, CELL);
+          ctx.globalAlpha = 0.3;
+          ctx.fillRect(x - lane.dir * 8, y, lane.length * CELL, CELL);
+          ctx.globalAlpha = 1;
         });
+      });
+      splashesRef.current.forEach((sp) => {
+        const progress = sp.t / RIPPLE_DURATION;
+        const radius = progress * CELL;
+        ctx.strokeStyle = rippleColor;
+        ctx.globalAlpha = 1 - progress;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
       });
       ctx.fillStyle = '#22c55e';
       ctx.fillRect(frogRef.current.x * CELL, frogRef.current.y * CELL, CELL, CELL);
@@ -400,8 +422,14 @@ const Frogger = () => {
       }
     };
     const loop = (time) => {
-      const dt = (time - last) / 1000;
+      const rawDt = (time - last) / 1000;
       last = time;
+      const dt = rawDt * (slowTimeRef.current ? 0.7 : 1);
+      rippleRef.current += dt * 4;
+      if (safeFlashRef.current > 0) safeFlashRef.current -= dt;
+      splashesRef.current = splashesRef.current
+        .map((s) => ({ ...s, t: s.t + dt }))
+        .filter((s) => s.t < RIPPLE_DURATION);
 
       const carResult = updateCars(carsRef.current, frogRef.current, dt);
       carsRef.current = carResult.lanes;
@@ -421,46 +449,38 @@ const Frogger = () => {
         padsRef.current = padResult.pads;
         if (padResult.dead) {
           loseLife(frogRef.current);
-
           frogRef.current = { ...initialFrog };
-        } else {
-          const padResult = handlePads(frogRef.current, padsRef.current);
-          padsRef.current = padResult.pads;
-          if (padResult.dead) {
-            loseLife();
-            frogRef.current = { ...initialFrog };
-          } else if (padResult.levelComplete) {
-            setStatus('Level Complete!');
-            setScore((s) => s + 100);
-            playTone(880, 0.2);
-            ReactGA.event({
-              category: 'Frogger',
-              action: 'level_complete',
-              value: level,
-            });
-            const newLevel = level + 1;
-            setLevel(newLevel);
-            ReactGA.event({
-              category: 'Frogger',
-              action: 'level_start',
-              value: newLevel,
-            });
-            setPads(PAD_POSITIONS.map(() => false));
-            reset(false, difficulty, newLevel);
-            frogRef.current = { ...initialFrog };
-          } else {
-            if (padResult.padHit) {
-              setScore((s) => s + 100);
-              setPads([...padsRef.current]);
-              playTone(660, 0.1);
-              frogRef.current = { ...initialFrog };
-            }
-          }
+        } else if (padResult.levelComplete) {
+          setStatus('Level Complete!');
+          setScore((s) => s + 100);
+          playTone(880, 0.2);
+          ReactGA.event({
+            category: 'Frogger',
+            action: 'level_complete',
+            value: level,
+          });
+          const newLevel = level + 1;
+          setLevel(newLevel);
+          ReactGA.event({
+            category: 'Frogger',
+            action: 'level_start',
+            value: newLevel,
+          });
+          setPads(PAD_POSITIONS.map(() => false));
+          reset(false, difficulty, newLevel);
+          deathStreakRef.current = 0;
+          frogRef.current = { ...initialFrog };
+        } else if (padResult.padHit) {
+          setScore((s) => s + 100);
+          setPads([...padsRef.current]);
+          playTone(660, 0.1);
+          deathStreakRef.current = 0;
+          frogRef.current = { ...initialFrog };
         }
-        setFrog({ ...frogRef.current });
-        setCars([...carsRef.current]);
-        setLogs([...logsRef.current]);
       }
+      setFrog({ ...frogRef.current });
+      setCars([...carsRef.current]);
+      setLogs([...logsRef.current]);
       draw();
       raf = requestAnimationFrame(loop);
     };
@@ -476,56 +496,6 @@ const Frogger = () => {
   }, [score]);
 
   // lanes are initialized via reset using current level and difficulty
-
-  const renderCell = (x, y) => {
-    const isFrog = Math.floor(frog.x) === x && frog.y === y;
-    const carLane = cars.find((l) => l.y === y);
-    const logLane = logs.find((l) => l.y === y);
-    const splash = splashes.some((s) => s.x === x && s.y === y);
-
-    let className = 'w-8 h-8';
-    if (y === 0) {
-      const idx = PAD_POSITIONS.indexOf(x);
-      if (idx >= 0) className += pads[idx] ? ' bg-green-400' : ' bg-green-700';
-      else className += ' bg-blue-700';
-    } else if (y === 3 || y === 6) className += ' bg-green-700';
-    else if (y >= 4 && y <= 5) className += ' bg-gray-700';
-    else className += ' bg-blue-700';
-
-    if (isFrog) className += ' bg-green-400';
-    else if (
-      carLane &&
-      carLane.entities.some((e) => x >= Math.floor(e.x) && x < Math.floor(e.x + carLane.length))
-    )
-      className += ' bg-red-500';
-    else if (logLane) {
-      const onLog = logLane.entities.some(
-        (e) => x >= Math.floor(e.x) && x < Math.floor(e.x + logLane.length)
-      );
-      const preview = logLane.entities.some((e) => {
-        const nextX = e.x + logLane.dir * logLane.speed;
-        return (
-          x >= Math.floor(nextX) &&
-          x < Math.floor(nextX + logLane.length)
-        );
-      });
-      if (onLog) className += ' bg-yellow-700';
-      else if (preview) className += ' bg-yellow-700 opacity-50';
-    }
-
-    return (
-      <div key={`${x}-${y}`} className={`${className} relative`}>
-        {splash && <div className="absolute inset-0 frogger-splash" />}
-      </div>
-    );
-  };
-
-  const grid = [];
-  for (let y = 0; y < HEIGHT; y += 1) {
-    for (let x = 0; x < WIDTH; x += 1) {
-      grid.push(renderCell(x, y));
-    }
-  }
 
   const mobileControls = [
     null,
@@ -570,6 +540,13 @@ const Frogger = () => {
           className="px-2 py-1 bg-gray-700 rounded"
         >
           Sound: {sound ? 'On' : 'Off'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setSlowTime((s) => !s)}
+          className="px-2 py-1 bg-gray-700 rounded"
+        >
+          Time: {slowTime ? 'Slow' : 'Normal'}
         </button>
         <label htmlFor="difficulty">Difficulty:</label>
         <select
