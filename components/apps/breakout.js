@@ -325,20 +325,24 @@ const BreakoutGame = ({ levels }) => {
         }
       }
 
-      // Update shards
-      for (let i = shards.length - 1; i >= 0; i -= 1) {
-        const s = shards[i];
-        s.x += s.vx * dt;
-        s.y += s.vy * dt;
-        s.life -= dt * 2;
-        if (s.life <= 0) shards.splice(i, 1);
+      // Update shards (respect reduced motion)
+      if (!prefersReduced) {
+        for (let i = shards.length - 1; i >= 0; i -= 1) {
+          const s = shards[i];
+          s.x += s.vx * dt;
+          s.y += s.vy * dt;
+          s.life -= dt * 2;
+          if (s.life <= 0) shards.splice(i, 1);
+        }
       }
 
-      // Update fades
-      for (let i = fades.length - 1; i >= 0; i -= 1) {
-        const f = fades[i];
-        f.alpha -= dt * 2;
-        if (f.alpha <= 0) fades.splice(i, 1);
+      // Update fades for reduced motion users
+      if (prefersReduced) {
+        for (let i = fades.length - 1; i >= 0; i -= 1) {
+          const f = fades[i];
+          f.alpha -= dt * 2;
+          if (f.alpha <= 0) fades.splice(i, 1);
+        }
       }
 
       // Ensure at least one ball remains
@@ -368,19 +372,23 @@ const BreakoutGame = ({ levels }) => {
         }
       }
 
-      // Fades
-      for (const f of fades) {
-        ctx.fillStyle = `rgba(255,255,255,${f.alpha})`;
-        ctx.fillRect(f.x, f.y, f.w - 2, f.h - 2);
+      // Fades (reduced motion)
+      if (prefersReduced) {
+        for (const f of fades) {
+          ctx.fillStyle = `rgba(255,255,255,${f.alpha})`;
+          ctx.fillRect(f.x, f.y, f.w - 2, f.h - 2);
+        }
       }
 
       // Shards
-      ctx.fillStyle = "white";
-      for (const s of shards) {
-        ctx.globalAlpha = s.life;
-        ctx.fillRect(s.x, s.y, 2, 2);
+      if (!prefersReduced) {
+        ctx.fillStyle = "#fff";
+        for (const s of shards) {
+          ctx.globalAlpha = s.life;
+          ctx.fillRect(s.x, s.y, 2, 2);
+        }
+        ctx.globalAlpha = 1;
       }
-      ctx.globalAlpha = 1;
 
       // Power-ups
       for (const p of powerUps) {
@@ -442,7 +450,7 @@ const BreakoutGame = ({ levels }) => {
   return (
     <div className="relative h-full w-full">
       <canvas ref={canvasRef} className="h-full w-full bg-black" />
-      <div className="sr-only" aria-live="polite">
+      <div className="sr-only" aria-live="polite" role="status">
         {announce}
       </div>
       <div className="absolute top-2 right-2 flex gap-2 z-10 text-xs">
