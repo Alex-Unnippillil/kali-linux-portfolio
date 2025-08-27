@@ -6,7 +6,7 @@ const COLS = 7;
 const CELL_SIZE = 40; // tailwind h-10 w-10
 const GAP = 4; // gap-1 => 4px
 const SLOT = CELL_SIZE + GAP;
-const ANIM_MS = 300;
+const BOARD_HEIGHT = ROWS * SLOT - GAP;
 
 type Cell = 'red' | 'yellow' | null;
 type Board = Cell[][];
@@ -196,6 +196,8 @@ const ConnectFour = () => {
   const [winningCells, setWinningCells] = useState<{ r: number; c: number }[]>([]);
   const [animDisc, setAnimDisc] = useState<any>(null);
   const [selectedCol, setSelectedCol] = useGameControls(COLS, (col) => dropDisc(col));
+  const [aiDepth, setAiDepth] = useState(4);
+  const [winColumn, setWinColumn] = useState<number | null>(null);
   const [teaching, setTeaching] = useState<{ wins: { r: number; c: number }[][]; threats: { r: number; c: number }[][] }>({ wins: [], threats: [] });
 
   useEffect(() => {
@@ -203,18 +205,22 @@ const ConnectFour = () => {
     setTeaching({ wins: getImmediateLines(board, player), threats: getImmediateLines(board, opp) });
   }, [board, player]);
 
-  const finalizeMove = (newBoard: Board, color: Exclude<Cell, null>) => {
-    const winCells = checkWinner(newBoard, color);
-    if (winCells) {
-      setWinner(color);
-      setWinningCells(winCells);
-    } else if (isBoardFull(newBoard)) {
-      setWinner('draw' as any);
-    } else {
-      const next = color === 'red' ? 'yellow' : 'red';
-      setPlayer(next);
-    }
-  };
+  const finalizeMove = React.useCallback(
+    (newBoard: Board, color: Exclude<Cell, null>, col: number) => {
+      const winCells = checkWinner(newBoard, color);
+      if (winCells) {
+        setWinner(color);
+        setWinningCells(winCells);
+        setWinColumn(col);
+      } else if (isBoardFull(newBoard)) {
+        setWinner('draw' as any);
+      } else {
+        const next = color === 'red' ? 'yellow' : 'red';
+        setPlayer(next);
+      }
+    },
+    []
+  );
 
   const dropDisc = React.useCallback(
     (col: number, color: Exclude<Cell, null> = player) => {
@@ -222,25 +228,43 @@ const ConnectFour = () => {
       if (color !== player) return;
       const row = getValidRow(board, col);
       if (row === -1) return;
-      setAnimDisc({ col, row, color, y: -1 });
-      setTimeout(() => {
-        setAnimDisc((d: any) => ({ ...d, y: row }));
-      }, 20);
-      setTimeout(() => {
-        const newBoard = board.map((r) => [...r]);
-        newBoard[row][col] = color;
-        setBoard(newBoard);
-        setAnimDisc(null);
-        finalizeMove(newBoard, color);
-      }, ANIM_MS + 20);
+      setAnimDisc({ col, row, color, y: -SLOT, vy: 0, target: row * SLOT });
     },
     [winner, animDisc, player, board]
   );
 
+  useEffect(() => {
+    if (!animDisc) return;
+    let raf: number;
+    const animate = () => {
+      setAnimDisc((d: any) => {
+        if (!d) return d;
+        let { y, vy, target } = d;
+        vy += 1.5;
+        y += vy;
+        if (y >= target) {
+          y = target;
+          if (Math.abs(vy) < 1.5) {
+            const newBoard = board.map((r: Cell[]) => [...r]);
+            newBoard[d.row][d.col] = d.color;
+            setBoard(newBoard);
+            finalizeMove(newBoard, d.color, d.col);
+            return null;
+          }
+          vy = -vy * 0.5;
+        }
+        return { ...d, y, vy };
+      });
+      raf = requestAnimationFrame(animate);
+    };
+    raf = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(raf);
+  }, [animDisc, board, finalizeMove]);
+
   const aiMove = React.useCallback(() => {
-    const { column } = minimax(board, 6, -Infinity, Infinity, true);
+    const { column } = minimax(board, aiDepth, -Infinity, Infinity, true);
     if (column !== undefined) dropDisc(column, 'red');
-  }, [board, dropDisc]);
+  }, [board, dropDisc, aiDepth]);
 
   useEffect(() => {
     if (player === 'red' && !winner && !animDisc) {
@@ -255,6 +279,7 @@ const ConnectFour = () => {
     setWinner(null);
     setWinningCells([]);
     setPlayer('red');
+    setWinColumn(null);
   };
 
   const cellHighlight = (rIdx: number, cIdx: number) => {
@@ -271,15 +296,16 @@ const ConnectFour = () => {
           {winner === 'draw' ? 'Draw!' : `${winner} wins!`}
         </div>
       )}
-      <div className="relative">
+      <div className="relative" onMouseLeave={() => setSelectedCol(null)}>
         <div className="grid grid-cols-7 gap-1">
           {board.map((row, rIdx) =>
             row.map((cell, cIdx) => (
               <div
                 key={`${rIdx}-${cIdx}`}
-                className={`h-10 w-10 flex items-center justify-center cursor-pointer ${
-                  cIdx === selectedCol ? 'bg-blue-600' : 'bg-blue-700'
-                } ${cellHighlight(rIdx, cIdx)}`}
+                className={`h-10 w-10 flex items-center justify-center cursor-pointer bg-blue-700 ${cellHighlight(
+                  rIdx,
+                  cIdx
+                )}`}
                 onClick={() => dropDisc(cIdx, 'yellow')}
                 onMouseEnter={() => setSelectedCol(cIdx)}
               >
@@ -294,11 +320,29 @@ const ConnectFour = () => {
             ))
           )}
         </div>
+        {selectedCol !== null && (
+          <div
+            className="absolute top-0 pointer-events-none bg-gradient-to-b from-black/30 to-transparent"
+            style={{
+              left: selectedCol * SLOT,
+              width: CELL_SIZE,
+              height: BOARD_HEIGHT,
+            }}
+          />
+        )}
+        {winColumn !== null && (
+          <div
+            className="absolute"
+            style={{ left: winColumn * SLOT + CELL_SIZE / 2 - 4, top: -8 }}
+          >
+            <div className="h-2 w-2 rounded-full bg-green-400" />
+          </div>
+        )}
         {animDisc && (
           <div
-            className="absolute left-0 top-0 transition-transform duration-300 ease-out"
+            className="absolute left-0 top-0"
             style={{
-              transform: `translateX(${animDisc.col * SLOT}px) translateY(${animDisc.y * SLOT}px)`,
+              transform: `translateX(${animDisc.col * SLOT}px) translateY(${animDisc.y}px)`,
             }}
           >
             <div
@@ -309,12 +353,28 @@ const ConnectFour = () => {
           </div>
         )}
       </div>
-      <button
-        className="mt-4 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={rematch}
-      >
-        Rematch
-      </button>
+      <div className="mt-4 flex flex-col items-center gap-2">
+        <div className="flex items-center gap-2">
+          <label htmlFor="ai-depth" className="text-sm">
+            AI Depth: {aiDepth}
+          </label>
+          <input
+            id="ai-depth"
+            type="range"
+            min={1}
+            max={6}
+            value={aiDepth}
+            onChange={(e) => setAiDepth(parseInt(e.target.value, 10))}
+            className="w-32"
+          />
+        </div>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={rematch}
+        >
+          Rematch
+        </button>
+      </div>
     </div>
   );
 };
