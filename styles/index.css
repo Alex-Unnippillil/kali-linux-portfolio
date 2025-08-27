@@ -346,3 +346,29 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Theme preview cards */
+.theme-cards {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.theme-card {
+    width: 5rem;
+    height: 3rem;
+    border-radius: 0.25rem;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+    overflow: hidden;
+}
+
+.theme-card:hover {
+    transform: scale(1.05);
+    border-color: var(--color-ub-border-orange);
+}
+
+.theme-card.selected {
+    border-color: var(--color-ub-border-orange);
+}
