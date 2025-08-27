@@ -2,6 +2,13 @@
   "defaults": {
     "chromeLaunchConfig": {
       "args": ["--no-sandbox"]
+    },
+    "runners": ["axe", "htmlcs"],
+    "standard": "WCAG2AA",
+    "axe": {
+      "rules": {
+        "color-contrast": { "enabled": true }
+      }
     }
   },
   "urls": [

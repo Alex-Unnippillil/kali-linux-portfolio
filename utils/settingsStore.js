@@ -2,7 +2,7 @@ import { get, set, del } from 'idb-keyval';
 
 const DEFAULT_SETTINGS = {
   theme: 'system',
-  accent: '#E95420',
+  accent: 'var(--color-primary)',
   wallpaper: 'wall-2',
 };
 

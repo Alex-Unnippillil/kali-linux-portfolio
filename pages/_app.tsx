@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import ReactGA from 'react-ga4';
 import { Analytics } from '@vercel/analytics/next';
 import 'tailwindcss/tailwind.css';
+import '../styles/globals.css';
 import '../styles/index.css';
 import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
