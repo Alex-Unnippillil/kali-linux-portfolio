@@ -34,6 +34,10 @@ export class Trash extends Component {
                 name: "project machine learning-final",
                 icon: "/themes/Yaru/system/folder.png"
             },
+            {
+                name: "used-sudo-command.webp",
+                thumbnail: "/images/memes/used-sudo-command.webp"
+            },
 
         ];
         this.state = {
@@ -89,13 +93,18 @@ export class Trash extends Component {
                         return (
                             <div key={index} tabIndex="1" onFocus={this.focusFile} onBlur={this.focusFile} className="flex flex-col items-center text-sm outline-none w-16 my-2 mx-4">
                                 <div className="w-16 h-16 flex items-center justify-center">
-                                    <Image
-                                        src={item.icon}
-                                        alt="Ubuntu File Icons"
-                                        width={48}
-                                        height={48}
-                                        sizes="48px"
-                                    />
+                                    {item.thumbnail ? (
+                                        <img src={item.thumbnail} alt={item.name} className="trash-thumbnail" />
+                                    ) : (
+                                        <Image
+                                            src={item.icon}
+                                            alt={item.name}
+                                            width={48}
+                                            height={48}
+                                            sizes="48px"
+                                            className="trash-thumbnail"
+                                        />
+                                    )}
                                 </div>
                                 <span className="text-center rounded px-0.5">{item.name}</span>
                             </div>
