@@ -285,10 +285,12 @@ const BreakoutGame = ({ levels }) => {
             // 20% chance to spawn a power-up
             if (Math.random() < 0.2) {
               const type = Math.random() < 0.5 ? "multi" : "expand";
+              const color = type === "multi" ? "#e11d48" : "#3b82f6"; // red vs blue
               powerUps.push({
                 x: brick.x + brick.w / 2,
                 y: brick.y + brick.h / 2,
                 type,
+                color,
                 vy: 100,
               });
             }
@@ -392,8 +394,10 @@ const BreakoutGame = ({ levels }) => {
 
       // Power-ups
       for (const p of powerUps) {
-        ctx.fillStyle = p.type === "multi" ? "red" : "blue";
-        ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       // HUD
