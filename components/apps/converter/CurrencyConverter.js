@@ -2,29 +2,49 @@ import React, { useState, useEffect } from 'react';
 
 const CurrencyConverter = () => {
   const [rates, setRates] = useState({});
-  const [from, setFrom] = useState('USD');
-  const [to, setTo] = useState('EUR');
+  const [base, setBase] = useState('USD');
+  const [quote, setQuote] = useState('EUR');
   const [amount, setAmount] = useState('');
   const [result, setResult] = useState('');
+  const [lastUpdated, setLastUpdated] = useState('');
 
   useEffect(() => {
-    fetch('https://open.er-api.com/v6/latest/USD')
+    const cacheKey = `currencyRates_${base}`;
+    const cached = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;
+    if (cached) {
+      try {
+        const { rates, timestamp } = JSON.parse(cached);
+        setRates(rates);
+        setLastUpdated(timestamp);
+      } catch {
+        /* ignore */
+      }
+    }
+    fetch(`https://api.exchangerate.host/latest?base=${base}`)
       .then((res) => res.json())
-      .then((data) => setRates(data.rates || {}))
-      .catch(() => setRates({}));
-  }, []);
+      .then((data) => {
+        if (data && data.rates) {
+          setRates(data.rates);
+          const ts = new Date().toISOString();
+          setLastUpdated(ts);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(cacheKey, JSON.stringify({ rates: data.rates, timestamp: ts }));
+          }
+        }
+      })
+      .catch(() => {});
+  }, [base]);
 
   useEffect(() => {
-    if (!amount || !rates[from] || !rates[to]) {
+    if (!amount || !rates[quote]) {
       setResult('');
       return;
     }
-    const usdAmount = parseFloat(amount) / rates[from];
-    const converted = usdAmount * rates[to];
+    const converted = parseFloat(amount) * rates[quote];
     setResult(converted.toFixed(2));
-  }, [amount, from, to, rates]);
+  }, [amount, quote, rates]);
 
-  const currencyOptions = Object.keys(rates);
+  const currencyOptions = [base, ...Object.keys(rates)].sort();
 
   return (
     <div className="bg-gray-700 p-4 rounded flex flex-col gap-2">
@@ -40,11 +60,11 @@ const CurrencyConverter = () => {
       </label>
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col">
-          From
+          Base
           <select
             className="text-black p-1 rounded"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
+            value={base}
+            onChange={(e) => setBase(e.target.value)}
           >
             {currencyOptions.map((c) => (
               <option key={c} value={c}>
@@ -54,11 +74,11 @@ const CurrencyConverter = () => {
           </select>
         </label>
         <label className="flex flex-col">
-          To
+          Quote
           <select
             className="text-black p-1 rounded"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
+            value={quote}
+            onChange={(e) => setQuote(e.target.value)}
           >
             {currencyOptions.map((c) => (
               <option key={c} value={c}>
@@ -69,8 +89,11 @@ const CurrencyConverter = () => {
         </label>
       </div>
       <div data-testid="currency-result" className="mt-2">
-        {result && `${amount} ${from} = ${result} ${to}`}
+        {result && `${amount} ${base} = ${result} ${quote}`}
       </div>
+      {lastUpdated && (
+        <div className="text-xs">Last updated: {new Date(lastUpdated).toLocaleString()}</div>
+      )}
     </div>
   );
 };

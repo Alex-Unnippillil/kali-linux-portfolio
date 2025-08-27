@@ -8,7 +8,11 @@ describe('Unit conversion', () => {
   });
 
   it('converts kilograms to pounds', () => {
-    expect(convertUnit('weight', 'kilogram', 'pound', 1)).toBeCloseTo(2.20462, 5);
+    expect(convertUnit('mass', 'kilogram', 'pound', 1)).toBeCloseTo(2.20462, 5);
+  });
+
+  it('converts celsius to fahrenheit', () => {
+    expect(convertUnit('temperature', 'celsius', 'fahrenheit', 100)).toBeCloseTo(212);
   });
 
   it('respects precision when provided', () => {
