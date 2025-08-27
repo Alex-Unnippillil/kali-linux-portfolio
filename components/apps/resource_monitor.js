@@ -66,7 +66,11 @@ const LineChart = ({ data, color, label }) => {
 const ResourceMonitor = () => {
   const [batteryLevel, setBatteryLevel] = useState(0);
   const [memoryUsage, setMemoryUsage] = useState(0);
+  const [heap, setHeap] = useState({ used: 0, limit: 0 });
+  const [fps, setFps] = useState(0);
+  const [fpsHistory, setFpsHistory] = useState([]);
   const [cpuUsage, setCpuUsage] = useState(null);
+  const [cpuHistory, setCpuHistory] = useState([]);
   const [resourceTimings, setResourceTimings] = useState([]);
   const [paintTimings, setPaintTimings] = useState([]);
   const [longTaskCount, setLongTaskCount] = useState(0);
@@ -85,8 +89,9 @@ const ResourceMonitor = () => {
     }
 
     if (performance && performance.memory) {
-      const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
-      setMemoryUsage(Math.round((usedJSHeapSize / totalJSHeapSize) * 100));
+      const { usedJSHeapSize, jsHeapSizeLimit } = performance.memory;
+      setMemoryUsage(Math.round((usedJSHeapSize / jsHeapSizeLimit) * 100));
+      setHeap({ used: usedJSHeapSize, limit: jsHeapSizeLimit });
     }
 
     if (typeof performance !== 'undefined' && performance.now) {
@@ -114,6 +119,26 @@ const ResourceMonitor = () => {
     const interval = setInterval(updateStats, intervalMs);
     return () => clearInterval(interval);
   }, [intervalMs]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.requestAnimationFrame) return;
+    let frame;
+    let last = performance.now();
+    const expected = 1000 / 60;
+    const tick = () => {
+      const now = performance.now();
+      const delta = now - last;
+      const currentFps = 1000 / delta;
+      setFps(currentFps);
+      setFpsHistory((prev) => [...prev.slice(-59), currentFps]);
+      const load = Math.max(0, delta - expected);
+      setCpuHistory((prev) => [...prev.slice(-59), load]);
+      last = now;
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     if (typeof performance !== 'undefined' && typeof PerformanceObserver !== 'undefined') {
@@ -153,6 +178,8 @@ const ResourceMonitor = () => {
     setLongTaskCount(0);
     setDownloadRates([]);
     setUploadRates([]);
+    setFpsHistory([]);
+    setCpuHistory([]);
     if (performance.clearResourceTimings) {
       performance.clearResourceTimings();
     }
@@ -172,7 +199,18 @@ const ResourceMonitor = () => {
       <div className="flex justify-evenly items-center flex-1">
         <Gauge value={batteryLevel} label="Battery" />
         {cpuUsage !== null && <Gauge value={cpuUsage} label="CPU" />}
-        <Gauge value={memoryUsage} label="Memory" />
+        <div className="flex flex-col items-center">
+          <Gauge value={memoryUsage} label="Memory" />
+          {heap.limit > 0 && (
+            <span className="mt-1 text-xs text-white">
+              {(heap.used / 1048576).toFixed(1)} / {(heap.limit / 1048576).toFixed(1)} MB
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col items-center">
+          <span className="text-white text-[20px]">{fps.toFixed(0)}</span>
+          <span className="mt-2 text-white">FPS</span>
+        </div>
       </div>
       <div className="bg-ub-dark-grey p-4 text-sm overflow-y-auto max-h-60">
         <div>
@@ -180,6 +218,13 @@ const ResourceMonitor = () => {
           <div className="flex mt-1">
             <LineChart data={downloadRates} color="#21c5c7" label="Download (Mbps)" />
             <LineChart data={uploadRates} color="#f953c6" label="Upload (Mbps)" />
+          </div>
+        </div>
+        <div className="mt-4">
+          <strong>Performance</strong>
+          <div className="flex mt-1">
+            <LineChart data={fpsHistory} color="#21c5c7" label="FPS" />
+            <LineChart data={cpuHistory} color="#f953c6" label="CPU Load (ms)" />
           </div>
         </div>
         <div className="mt-4">
