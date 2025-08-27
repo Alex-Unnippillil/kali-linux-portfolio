@@ -26,7 +26,7 @@ const createDynamicApp = (path, name) =>
   dynamic(
     () =>
       import(`./components/apps/${path}`).then((mod) => {
-        logEvent({ category: 'Application', action: `Loaded ${name}` });
+        logEvent('app_action', { id: path, action: 'load' });
         return mod.default;
       }),
     {

@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { generateGrid, createRNG } from './generator';
 import type { Position, WordPlacement } from './types';
 import wordList from '../../components/apps/wordle_words.json';
-import { logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
+import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 
 const WORD_COUNT = 5;
 const GRID_SIZE = 12;
@@ -70,6 +70,10 @@ const WordSearch: React.FC = () => {
     logGameStart('word_search');
   }, [seed, words]);
 
+  useEffect(() => {
+    logEvent('app_open', { id: 'word_search' });
+  }, []);
+
   const handleMouseDown = (r: number, c: number) => {
     setSelecting(true);
     const s = { row: r, col: c };
@@ -114,6 +118,7 @@ const WordSearch: React.FC = () => {
     const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
     try {
       await navigator.clipboard?.writeText(url);
+      logEvent('app_action', { id: 'word_search', action: 'copy_link' });
     } catch (e: any) {
       logGameError('word_search', e?.message || String(e));
     }
@@ -126,6 +131,7 @@ const WordSearch: React.FC = () => {
       undefined,
       { shallow: true }
     );
+    logEvent('app_action', { id: 'word_search', action: 'new_puzzle' });
   };
 
   return (

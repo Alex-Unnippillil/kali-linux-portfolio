@@ -27,7 +27,7 @@ const Sokoban: React.FC = () => {
     setState(st);
     setReach(reachable(st));
     logGameStart('sokoban');
-    logEvent({ category: 'sokoban', action: 'level_select', value: i });
+    logEvent('app_action', { id: 'sokoban', action: 'level_select', value: i });
   };
 
   const handleUndo = () => {
@@ -35,7 +35,7 @@ const Sokoban: React.FC = () => {
     if (st !== state) {
       setState(st);
       setReach(reachable(st));
-      logEvent({ category: 'sokoban', action: 'undo' });
+      logEvent('app_action', { id: 'sokoban', action: 'undo' });
     }
   };
 
@@ -61,6 +61,7 @@ const Sokoban: React.FC = () => {
   };
 
   useEffect(() => {
+    logEvent('app_open', { id: 'sokoban' });
     logGameStart('sokoban');
     try {
       const params = new URLSearchParams(window.location.search);
@@ -113,12 +114,12 @@ const Sokoban: React.FC = () => {
       setState(newState);
       setReach(reachable(newState));
       if (newState.pushes > state.pushes) {
-        logEvent({ category: 'sokoban', action: 'push' });
+        logEvent('app_action', { id: 'sokoban', action: 'push' });
       }
       if (isSolved(newState)) {
         logGameEnd('sokoban', `level_complete`);
-        logEvent({
-          category: 'sokoban',
+        logEvent('app_action', {
+          id: 'sokoban',
           action: 'level_complete',
           value: newState.pushes,
         });

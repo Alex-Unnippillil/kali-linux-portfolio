@@ -2,6 +2,13 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react';
 import PasswordGenerator from '../apps/password_generator';
 
+jest.mock('../utils/analytics', () => ({
+  logEvent: jest.fn(),
+  logGameStart: jest.fn(),
+  logGameEnd: jest.fn(),
+  logGameError: jest.fn(),
+}));
+
 describe('PasswordGenerator', () => {
   it('generates password of specified length', () => {
     const { getByText, getByLabelText, getByTestId } = render(<PasswordGenerator />);

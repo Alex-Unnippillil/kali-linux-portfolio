@@ -1,6 +1,6 @@
 import ReactGA from 'react-ga4';
 
-type EventInput = Parameters<typeof ReactGA.event>[0];
+type EventParams = Record<string, any>;
 
 const safeEvent = (...args: Parameters<typeof ReactGA.event>): void => {
   try {
@@ -12,18 +12,20 @@ const safeEvent = (...args: Parameters<typeof ReactGA.event>): void => {
   }
 };
 
-export const logEvent = (event: EventInput): void => {
-  safeEvent(event as any);
+export const logEvent = (event: string, params?: EventParams): void => {
+  safeEvent(event as any, params as any);
 };
 
-export const logGameStart = (game: string): void => {
-  logEvent({ category: game, action: 'start' });
+export const logGameStart = (id: string): void => {
+  logEvent('game_start', { id });
 };
 
-export const logGameEnd = (game: string, label?: string): void => {
-  logEvent({ category: game, action: 'end', label });
+export const logGameEnd = (id: string, label?: string): void => {
+  logEvent('game_end', { id, label });
 };
 
-export const logGameError = (game: string, message?: string): void => {
-  logEvent({ category: game, action: 'error', label: message });
+export const logGameError = (id: string, message?: string): void => {
+  logEvent('game_error', { id, label: message });
 };
+
+export default { logEvent, logGameStart, logGameEnd, logGameError };

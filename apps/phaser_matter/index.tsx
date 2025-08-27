@@ -1,10 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
+import { logEvent } from '../../utils/analytics';
 
 const PhaserMatter: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    logEvent('app_open', { id: 'phaser_matter' });
     if (!containerRef.current) return;
 
     const config: Phaser.Types.Core.GameConfig = {
