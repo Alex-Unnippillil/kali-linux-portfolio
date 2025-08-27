@@ -25,7 +25,7 @@ describe('bullet pool', () => {
   it('reuses bullets after they expire', () => {
     const pool = createBulletPool(1);
     const first = spawnBullet(pool, 0, 0, 0, 0, 1);
-    updateBullets(pool); // bullet expires
+    updateBullets(pool, 1); // bullet expires
     const second = spawnBullet(pool, 0, 0, 0, 0, 1);
     expect(second).toBe(first);
   });

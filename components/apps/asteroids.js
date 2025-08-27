@@ -316,11 +316,15 @@ const Asteroids = () => {
       multiplierTimer = MULTIPLIER_TIMEOUT;
     }
 
-    const update = () => {
+    let last = performance.now();
+    const update = (time) => {
       if (pausedRef.current) {
         requestRef.current = requestAnimationFrame(update);
+        last = time;
         return;
       }
+      const dt = (time - last) / (1000 / 60);
+      last = time;
       pollGamepad();
       const { keys, joystick, fire, hyperspace: hyper } = controlsRef.current;
       const turn =
@@ -343,10 +347,10 @@ const Asteroids = () => {
       if (padState.fire) fireBullet();
       if (padState.hyperspace) hyperspace();
 
-      ship.angle += turn * 0.05;
+      ship.angle += turn * 0.05 * dt;
       if (thrust > 0) {
-        ship.velX += Math.cos(ship.angle) * THRUST * thrust;
-        ship.velY += Math.sin(ship.angle) * THRUST * thrust;
+        ship.velX += Math.cos(ship.angle) * THRUST * thrust * dt;
+        ship.velY += Math.sin(ship.angle) * THRUST * thrust * dt;
         spawnParticles(
           ship.x - Math.cos(ship.angle) * 12,
           ship.y - Math.sin(ship.angle) * 12,
@@ -354,31 +358,31 @@ const Asteroids = () => {
           EXHAUST_COLOR,
         );
       }
-      ship.velX *= INERTIA;
-      ship.velY *= INERTIA;
-      ship.x = wrap(ship.x + ship.velX, canvas.width, ship.r);
-      ship.y = wrap(ship.y + ship.velY, canvas.height, ship.r);
-      ship.cooldown = Math.max(0, ship.cooldown - 1);
-      ship.rapidFire = Math.max(0, ship.rapidFire - 1);
-      ship.shield = Math.max(0, ship.shield - 1);
-      ship.hitCooldown = Math.max(0, ship.hitCooldown - 1);
+      ship.velX *= INERTIA ** dt;
+      ship.velY *= INERTIA ** dt;
+      ship.x = wrap(ship.x + ship.velX * dt, canvas.width, ship.r);
+      ship.y = wrap(ship.y + ship.velY * dt, canvas.height, ship.r);
+      ship.cooldown = Math.max(0, ship.cooldown - dt);
+      ship.rapidFire = Math.max(0, ship.rapidFire - dt);
+      ship.shield = Math.max(0, ship.shield - dt);
+      ship.hitCooldown = Math.max(0, ship.hitCooldown - dt);
 
-      if (multiplierTimer > 0) multiplierTimer -= 1;
+      if (multiplierTimer > 0) multiplierTimer -= dt;
       else multiplier = 1;
 
-      updateBullets(bullets);
-      updatePowerUps(powerUps);
+      updateBullets(bullets, dt);
+      updatePowerUps(powerUps, dt);
 
       asteroids.forEach((a) => {
-        a.x = wrap(a.x + a.dx, canvas.width, a.r);
-        a.y = wrap(a.y + a.dy, canvas.height, a.r);
+        a.x = wrap(a.x + a.dx * dt, canvas.width, a.r);
+        a.y = wrap(a.y + a.dy * dt, canvas.height, a.r);
       });
 
       // UFO logic
       if (ufo.active) {
-        ufo.x += ufo.dx;
-        ufo.y += ufo.dy;
-        ufo.cooldown -= 1;
+        ufo.x += ufo.dx * dt;
+        ufo.y += ufo.dy * dt;
+        ufo.cooldown -= dt;
         if (ufo.cooldown <= 0) {
           const angle = Math.atan2(ship.y - ufo.y, ship.x - ufo.x);
           ufoBullets.push({ x: ufo.x, y: ufo.y, dx: Math.cos(angle) * 3, dy: Math.sin(angle) * 3, r: 2, life: 120 });
@@ -386,7 +390,7 @@ const Asteroids = () => {
           playSound(660);
         }
         if (ufo.x < -50 || ufo.x > canvas.width + 50) ufo.active = false;
-      } else if (ufoTimer-- <= 0) {
+      } else if ((ufoTimer -= dt) <= 0) {
         ufo.active = true;
         ufo.y = Math.random() * canvas.height;
         ufo.x = Math.random() < 0.5 ? -20 : canvas.width + 20;
@@ -396,17 +400,17 @@ const Asteroids = () => {
         ufoTimer = Math.max(300, 900 - level * 60);
       }
       ufoBullets.forEach((b) => {
-        b.x += b.dx;
-        b.y += b.dy;
-        b.life -= 1;
+        b.x += b.dx * dt;
+        b.y += b.dy * dt;
+        b.life -= dt;
       });
       for (let i = ufoBullets.length - 1; i >= 0; i -= 1) if (ufoBullets[i].life <= 0) ufoBullets.splice(i, 1);
 
       particles.forEach((p) => {
         if (!p.active) return;
-        p.x += p.dx;
-        p.y += p.dy;
-        p.life -= 1;
+        p.x += p.dx * dt;
+        p.y += p.dy * dt;
+        p.life -= dt;
         if (p.life <= 0) p.active = false;
       });
 
