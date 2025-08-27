@@ -26,10 +26,10 @@ function setPreciseMode(on) {
   math.config(preciseMode ? { number: 'Fraction' } : { number: 'number' });
 }
 
-preciseToggle.addEventListener('click', () => setPreciseMode(!preciseMode));
+preciseToggle?.addEventListener('click', () => setPreciseMode(!preciseMode));
 
-sciToggle.addEventListener('click', () => {
-  const isHidden = scientific.classList.toggle('hidden');
+sciToggle?.addEventListener('click', () => {
+  const isHidden = scientific?.classList.toggle('hidden');
   sciToggle.setAttribute('aria-pressed', (!isHidden).toString());
 });
 
@@ -39,20 +39,20 @@ function setProgrammerMode(on) {
   progToggle.setAttribute('aria-pressed', programmerMode.toString());
 }
 
-progToggle.addEventListener('click', () => setProgrammerMode(!programmerMode));
+progToggle?.addEventListener('click', () => setProgrammerMode(!programmerMode));
 
-historyToggle.addEventListener('click', () => {
-  const isHidden = historyEl.classList.toggle('hidden');
+historyToggle?.addEventListener('click', () => {
+  const isHidden = historyEl?.classList.toggle('hidden');
   historyToggle.setAttribute('aria-pressed', (!isHidden).toString());
 });
 
-baseSelect.addEventListener('change', () => {
+baseSelect?.addEventListener('change', () => {
   currentBase = parseInt(baseSelect.value, 10);
 });
 
-printBtn.addEventListener('click', printTape);
+printBtn?.addEventListener('click', printTape);
 
-display.addEventListener('input', updateParenBalance);
+display?.addEventListener('input', updateParenBalance);
 
 function updateParenBalance() {
   const open = (display.value.match(/\(/g) || []).length;
@@ -225,8 +225,10 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-display.focus();
-loadHistory();
+if (display) {
+  display.focus();
+  loadHistory();
+}
 
 if (typeof module !== 'undefined') {
   module.exports = {

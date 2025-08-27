@@ -1,126 +1,140 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
-// Full bleed audio visualizer for the Spotify app
-// Uses Web Audio API to draw a spectrum on a canvas
-// Adds accessibility and performance considerations per Definition of Done
+// Detect Premium auth; load Web Playback SDK when available.
+// Fallback to public embeds when Premium is unavailable.
+
+const PLAYLIST_EMBED =
+  'https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator';
+const TRACK_EMBED =
+  'https://open.spotify.com/embed/track/7ouMYWpwJ422jRcDASZB7P?utm_source=generator';
 
 export default function SpotifyApp() {
-  const canvasRef = useRef(null);
-  const audioRef = useRef(null);
-  const frameRef = useRef();
-  const workerRef = useRef();
-  const [level, setLevel] = useState(0);
+  const [isPremium, setIsPremium] = useState(null); // null = loading
+  const [player, setPlayer] = useState(null);
+  const [paused, setPaused] = useState(true);
+  const [sdkReady, setSdkReady] = useState(false);
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches;
+    const token =
+      (typeof window !== 'undefined' && localStorage.getItem('spotifyToken')) ||
+      process.env.NEXT_PUBLIC_SPOTIFY_TOKEN;
 
-    // Do not start the visualizer if user prefers reduced motion
-    if (prefersReducedMotion) {
+    if (!token) {
+      setIsPremium(false);
       return;
     }
 
-    const audioEl = audioRef.current;
-    audioEl.crossOrigin = 'anonymous';
-
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 256;
-
-    const source = audioCtx.createMediaElementSource(audioEl);
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
-
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
-    const canvas = canvasRef.current;
-    const canvasCtx = canvas.getContext('2d');
-
-    let width, height;
-    const handleResize = () => {
-      width = canvas.clientWidth;
-      height = canvas.clientHeight;
-      canvas.width = width;
-      canvas.height = height;
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-
-    // Web worker to compute average level off the main thread
-    workerRef.current = new Worker(
-      URL.createObjectURL(
-        new Blob(
-          [
-            `self.onmessage = (e) => {
-              const arr = e.data;
-              let sum = 0;
-              for (let i = 0; i < arr.length; i++) sum += arr[i];
-              self.postMessage(sum / arr.length);
-            };`
-          ],
-          { type: 'application/javascript' }
-        )
-      )
-    );
-    workerRef.current.onmessage = (e) =>
-      setLevel(Math.round((e.data / 255) * 100));
-
-    const draw = () => {
-      analyser.getByteFrequencyData(dataArray);
-
-      canvasCtx.fillStyle = '#000';
-      canvasCtx.fillRect(0, 0, width, height);
-
-      const barWidth = (width / bufferLength) * 2.5;
-      let x = 0;
-
-      for (let i = 0; i < bufferLength; i++) {
-        const barHeight = dataArray[i];
-        canvasCtx.fillStyle = '#39FF14'; // High contrast neon green
-        canvasCtx.fillRect(x, height - barHeight, barWidth, barHeight);
-        x += barWidth + 1;
-      }
-
-      // Post data to worker for ARIA level computation
-      workerRef.current.postMessage(Array.from(dataArray));
-
-      frameRef.current = requestAnimationFrame(draw);
-    };
-
-    frameRef.current = requestAnimationFrame(draw);
-
-    return () => {
-      cancelAnimationFrame(frameRef.current);
-      window.removeEventListener('resize', handleResize);
-      analyser.disconnect();
-      source.disconnect();
-      audioCtx.close();
-      workerRef.current?.terminate();
-    };
+    fetch('https://api.spotify.com/v1/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+      .then((data) => {
+        if (data.product === 'premium') {
+          setIsPremium(true);
+          loadSDK(token);
+        } else {
+          setIsPremium(false);
+        }
+      })
+      .catch(() => setIsPremium(false));
   }, []);
 
+  const loadSDK = (token) => {
+    const script = document.createElement('script');
+    script.src = 'https://sdk.scdn.co/spotify-player.js';
+    script.async = true;
+    document.body.appendChild(script);
+
+    window.onSpotifyWebPlaybackSDKReady = () => {
+      const newPlayer = new window.Spotify.Player({
+        name: 'Portfolio Web Player',
+        getOAuthToken: (cb) => cb(token),
+      });
+
+      newPlayer.addListener('ready', () => {
+        setSdkReady(true);
+      });
+
+      newPlayer.addListener('player_state_changed', (state) => {
+        if (!state) return;
+        setPaused(state.paused);
+      });
+
+      newPlayer.connect();
+      setPlayer(newPlayer);
+    };
+  };
+
+  useEffect(() => {
+    return () => {
+      player?.disconnect();
+    };
+  }, [player]);
+
+  const togglePlay = () => player?.togglePlay();
+  const nextTrack = () => player?.nextTrack();
+  const previousTrack = () => player?.previousTrack();
+
+  if (isPremium === null) {
+    return <div className="p-4">Loading...</div>;
+  }
+
+  if (!isPremium) {
+    return (
+      <div className="flex h-full w-full flex-col gap-4 bg-black p-2">
+        <iframe
+          title="spotify-playlist"
+          src={PLAYLIST_EMBED}
+          width="100%"
+          height="232"
+          frameBorder="0"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+        />
+        <iframe
+          title="spotify-track"
+          src={TRACK_EMBED}
+          width="100%"
+          height="152"
+          frameBorder="0"
+          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="relative h-full w-full bg-black text-white">
-      <audio
-        ref={audioRef}
-        src="https://cdn.pixabay.com/download/audio/2021/09/06/audio_2b34bf4ad0a7a022beed579b3709271b?filename=birthday-sparks-15015.mp3"
-        autoPlay
-        loop
-      />
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 h-full w-full"
-        aria-hidden="true"
-      />
-      {/* Screen reader announcement of audio level */}
-      <div className="sr-only" aria-live="polite">
-        Audio level {level}%
+    <div className="flex h-full flex-col items-center justify-center gap-4 bg-black p-4 text-white">
+      {sdkReady && (
+        <p className="text-sm" data-testid="connect-hint">
+          Player loaded. If you don't hear anything, open Spotify and select
+          "Portfolio Web Player" from the device list.
+        </p>
+      )}
+      <div className="flex gap-4">
+        <button
+          onClick={previousTrack}
+          aria-label="Previous"
+          className="rounded bg-gray-800 px-3 py-2"
+        >
+          ⏮
+        </button>
+        <button
+          onClick={togglePlay}
+          aria-label={paused ? 'Play' : 'Pause'}
+          className="rounded bg-gray-800 px-3 py-2"
+        >
+          {paused ? '▶️' : '⏸️'}
+        </button>
+        <button
+          onClick={nextTrack}
+          aria-label="Next"
+          className="rounded bg-gray-800 px-3 py-2"
+        >
+          ⏭
+        </button>
       </div>
     </div>
   );
 }
 
 export const displaySpotify = () => <SpotifyApp />;
-
