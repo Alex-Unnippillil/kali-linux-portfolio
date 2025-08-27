@@ -346,3 +346,16 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+.frogger-splash {
+    background-image: url('/apps/frogger/splash.svg');
+    background-repeat: no-repeat;
+    background-size: 128px 32px;
+    animation: frogger-splash 0.5s steps(4) forwards;
+    image-rendering: pixelated;
+}
+
+@keyframes frogger-splash {
+    from { background-position: 0 0; }
+    to { background-position: -128px 0; }
+}

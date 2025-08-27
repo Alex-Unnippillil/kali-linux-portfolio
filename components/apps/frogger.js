@@ -135,6 +135,7 @@ const Frogger = () => {
   const [difficulty, setDifficulty] = useState('normal');
   const nextLife = useRef(500);
   const holdRef = useRef();
+  const [splashes, setSplashes] = useState([]);
 
   useEffect(() => { frogRef.current = frog; }, [frog]);
   useEffect(() => { carsRef.current = cars; }, [cars]);
@@ -234,19 +235,27 @@ const Frogger = () => {
       [difficulty, level]
     );
 
-    const loseLife = useCallback(() => {
-      ReactGA.event({ category: 'Frogger', action: 'death', value: level });
-      setLives((l) => {
-        const newLives = l - 1;
-        if (newLives <= 0) {
-          setStatus('Game Over');
-          setTimeout(() => reset(true), 1000);
-          return 0;
-        }
-        reset();
-        return newLives;
-      });
-    }, [level, reset]);
+    const loseLife = useCallback(
+      (pos) => {
+        const id = Date.now();
+        setSplashes((s) => [...s, { x: Math.floor(pos.x), y: pos.y, id }]);
+        setTimeout(() =>
+          setSplashes((s) => s.filter((sp) => sp.id !== id)),
+        500);
+        ReactGA.event({ category: 'Frogger', action: 'death', value: level });
+        setLives((l) => {
+          const newLives = l - 1;
+          if (newLives <= 0) {
+            setStatus('Game Over');
+            setTimeout(() => reset(true), 1000);
+            return 0;
+          }
+          reset();
+          return newLives;
+        });
+      },
+      [level, reset]
+    );
 
 
     useEffect(() => {
@@ -267,13 +276,13 @@ const Frogger = () => {
         frogRef.current.x < 0 ||
         frogRef.current.x >= WIDTH
       ) {
-        loseLife();
+        loseLife(frogRef.current);
         frogRef.current = { ...initialFrog };
       } else {
         const padResult = handlePads(frogRef.current, padsRef.current);
         padsRef.current = padResult.pads;
         if (padResult.dead) {
-          loseLife();
+          loseLife(frogRef.current);
           frogRef.current = { ...initialFrog };
         } else if (padResult.levelComplete) {
           setStatus('Level Complete!');
@@ -318,6 +327,7 @@ const Frogger = () => {
     const isFrog = Math.floor(frog.x) === x && frog.y === y;
     const carLane = cars.find((l) => l.y === y);
     const logLane = logs.find((l) => l.y === y);
+    const splash = splashes.some((s) => s.x === x && s.y === y);
 
     let className = 'w-8 h-8';
     if (y === 0) {
@@ -349,7 +359,11 @@ const Frogger = () => {
       else if (preview) className += ' bg-yellow-700 opacity-50';
     }
 
-    return <div key={`${x}-${y}`} className={className} />;
+    return (
+      <div key={`${x}-${y}`} className={`${className} relative`}>
+        {splash && <div className="absolute inset-0 frogger-splash" />}
+      </div>
+    );
   };
 
   const grid = [];
