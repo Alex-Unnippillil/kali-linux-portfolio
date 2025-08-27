@@ -10,7 +10,11 @@ const CHANNEL_HANDLE = 'Alex-Unnippillil';
 // Renders a small YouTube browser similar to the YouTube mobile UI.
 // Videos can be fetched from the real API if an API key is provided or
 // injected via the `initialVideos` prop (used in tests).
-export default function YouTubeApp({ initialVideos = [] }) {
+export default function YouTubeApp({
+  initialVideos = [],
+  categoriesRef,
+  sortedRef,
+}) {
   const [videos, setVideos] = useState(initialVideos);
   const [playlists, setPlaylists] = useState([]); // [{id,title}]
   const [activeCategory, setActiveCategory] = useState('All');
@@ -123,6 +127,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
     ],
     [playlists, videos]
   );
+  if (categoriesRef) categoriesRef.current = categories;
 
   const filtered = useMemo(
     () =>
@@ -156,6 +161,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
         );
     }
   }, [filtered, sortBy]);
+  if (sortedRef) sortedRef.current = sorted;
 
   const handleCategoryClick = useCallback((cat) => setActiveCategory(cat), []);
 
