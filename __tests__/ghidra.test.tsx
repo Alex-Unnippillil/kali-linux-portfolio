@@ -1,9 +1,9 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import WiresharkApp from '../components/apps/wireshark';
+import GhidraApp from '../components/apps/ghidra';
 
-describe('Wireshark info', () => {
+describe('Ghidra info', () => {
   let writeText;
   beforeEach(() => {
     // @ts-ignore
@@ -18,24 +18,24 @@ describe('Wireshark info', () => {
     jest.restoreAllMocks();
   });
 
-  it('shows overview and supports copy/run', async () => {
+  it('displays content and resource link', async () => {
     const user = userEvent.setup();
     // @ts-ignore
     navigator.clipboard.writeText = writeText;
-    render(<WiresharkApp />);
-    expect(screen.getByText(/network protocol analyzer/i)).toBeInTheDocument();
+    render(<GhidraApp />);
+    expect(screen.getByText(/reverse engineering suite/i)).toBeInTheDocument();
     expect(global.fetch).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: /install/i }));
     const copy = screen.getAllByLabelText('copy')[0];
     await user.click(copy);
-    expect(writeText).toHaveBeenCalledWith('sudo apt install wireshark');
+    expect(writeText).toHaveBeenCalledWith('sudo apt install ghidra');
     const run = screen.getAllByLabelText('run')[0];
     await user.click(run);
     expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('sudo apt install wireshark')
+      expect.stringContaining('sudo apt install ghidra')
     );
     expect(
-      screen.getByRole('link', { name: /sample capture/i })
+      screen.getByRole('link', { name: /sample binary/i })
     ).toHaveAttribute('download');
   });
 });
