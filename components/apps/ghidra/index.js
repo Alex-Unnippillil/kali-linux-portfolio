@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 
+// Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
 
 const BLOCKS = [
@@ -30,6 +31,7 @@ const BLOCKS = [
   },
 ];
 
+// S6: Interactive control flow graph with accessible labelling
 function ControlFlowGraph({ blocks, selected, onSelect, prefersReducedMotion }) {
   return (
     <svg
@@ -89,7 +91,9 @@ export default function GhidraApp() {
   const hexRef = useRef(null);
   const syncing = useRef(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const hexWorkerRef = useRef(null);
 
+  // S1: Graceful remote fallback when WebAssembly is unavailable
   useEffect(() => {
     const wasmUrl = process.env.NEXT_PUBLIC_GHIDRA_WASM || DEFAULT_WASM;
     if (typeof WebAssembly === 'undefined') {
@@ -100,6 +104,7 @@ export default function GhidraApp() {
       .catch(() => setUseRemote(true));
   }, []);
 
+  // S2: Respect reduced motion preference
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const handler = (e) => setPrefersReducedMotion(e.matches);
@@ -108,22 +113,33 @@ export default function GhidraApp() {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
+  // S3: Offload hex generation to worker only when needed
   useEffect(() => {
-    const worker = new Worker(new URL('./hexWorker.js', import.meta.url));
-    worker.onmessage = (e) => {
+    hexWorkerRef.current = new Worker(new URL('./hexWorker.js', import.meta.url));
+    hexWorkerRef.current.onmessage = (e) => {
       setHexMap((m) => ({ ...m, [e.data.id]: e.data.hex }));
     };
-    BLOCKS.forEach((b) =>
-      worker.postMessage({ id: b.id, code: b.code.join('\n') })
-    );
-    return () => worker.terminate();
+    return () => hexWorkerRef.current.terminate();
   }, []);
 
+  useEffect(() => {
+    if (!hexWorkerRef.current) return;
+    const block = BLOCKS.find((b) => b.id === selected);
+    if (block && !hexMap[block.id]) {
+      hexWorkerRef.current.postMessage({
+        id: block.id,
+        code: block.code.join('\n'),
+      });
+    }
+  }, [selected, hexMap]);
+
+  // S4: Announce selected block changes via live region
   useEffect(() => {
     const block = BLOCKS.find((b) => b.id === selected);
     setLiveMessage(`Selected block ${block ? block.label : selected}`);
   }, [selected]);
 
+  // S5: Synchronize scrolling between decompile and hex panes
   useEffect(() => {
     const d = decompileRef.current;
     const h = hexRef.current;
@@ -170,6 +186,7 @@ export default function GhidraApp() {
             prefersReducedMotion={prefersReducedMotion}
           />
         </div>
+        {/* S7: ARIA-labelled panes for decompiled and hex views */}
         <pre
           ref={decompileRef}
           aria-label="Decompiled code"
@@ -186,6 +203,7 @@ export default function GhidraApp() {
         </pre>
       </div>
       <PseudoDisasmViewer />
+      {/* S8: Hidden live region for assistive tech announcements */}
       <div aria-live="polite" role="status" className="sr-only">
         {liveMessage}
       </div>
