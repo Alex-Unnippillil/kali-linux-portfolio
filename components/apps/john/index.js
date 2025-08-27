@@ -21,6 +21,7 @@ const JohnApp = () => {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [animOffset, setAnimOffset] = useState(0);
   const workerRef = useRef(null);
+  const controllerRef = useRef(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -98,6 +99,8 @@ const JohnApp = () => {
     setOutput('');
     const totalSteps = hashArr.length * 2;
     startProgress(totalSteps);
+    controllerRef.current = new AbortController();
+    const { signal } = controllerRef.current;
     try {
       const assignments = endpointArr.length
         ? distributeTasks(hashArr, endpointArr)
@@ -105,11 +108,13 @@ const JohnApp = () => {
       const results = [];
       for (const [endpoint, hs] of Object.entries(assignments)) {
         for (const h of hs) {
+          if (signal.aborted) throw new Error('cancelled');
           incrementProgress('wordlist');
           const res = await fetch('/api/john', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ hash: h, rules }),
+            signal,
           });
           const data = await res.json();
           incrementProgress('rules');
@@ -124,15 +129,26 @@ const JohnApp = () => {
       setProgress(100);
       setPhase('done');
     } catch (err) {
-      setError(err.message);
+      if (err.name !== 'AbortError' && err.message !== 'cancelled') {
+        setError(err.message);
+      }
     } finally {
+      controllerRef.current = null;
       stopProgress();
       setLoading(false);
     }
   };
 
+  const handleCancel = () => {
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    stopProgress();
+    setLoading(false);
+  };
+
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
+      <p className="text-xs text-yellow-300 p-2">Demo only – no real cracking performed.</p>
       <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-2">
         <label htmlFor="john-hashes" className="text-sm">
           Hashes (one per line)
@@ -174,13 +190,24 @@ const JohnApp = () => {
           placeholder="endpoint1, endpoint2"
           className="px-2 py-1 bg-gray-800 text-white rounded"
         />
-        <button
-          type="submit"
-          className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded self-start"
-          disabled={loading}
-        >
-          {loading ? 'Running...' : 'Crack'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="submit"
+            className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded self-start"
+            disabled={loading}
+          >
+            {loading ? 'Running...' : 'Crack'}
+          </button>
+          {loading && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="px-4 py-1 bg-red-700 hover:bg-red-600 rounded"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
         {loading && (
           <>
             <div className="w-full bg-gray-700 rounded h-4 overflow-hidden mt-2 relative">
