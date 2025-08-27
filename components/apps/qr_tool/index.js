@@ -6,6 +6,10 @@ const QRTool = () => {
   const [text, setText] = useState('');
   const [decodedText, setDecodedText] = useState('');
   const [message, setMessage] = useState('');
+  const [fgColor, setFgColor] = useState('#000000');
+  const [bgColor, setBgColor] = useState('#ffffff');
+  const [logo, setLogo] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
   const generateCanvasRef = useRef(null);
   const scanCanvasRef = useRef(null);
   const videoRef = useRef(null);
@@ -13,9 +17,39 @@ const QRTool = () => {
 
   const generate = () => {
     if (!text) return;
-    QRCode.toCanvas(generateCanvasRef.current, text, { width: 256 }, (err) => {
-      if (err) console.error(err);
-    });
+    QRCode.toCanvas(
+      generateCanvasRef.current,
+      text,
+      { width: 256, color: { dark: fgColor, light: bgColor } },
+      (err) => {
+        if (err) {
+          console.error(err);
+        } else if (logo) {
+          const ctx = generateCanvasRef.current.getContext('2d');
+          const img = new Image();
+          img.onload = () => {
+            const size = generateCanvasRef.current.width * 0.2;
+            const x =
+              (generateCanvasRef.current.width - size) / 2;
+            const y =
+              (generateCanvasRef.current.height - size) / 2;
+            ctx.drawImage(img, x, y, size, size);
+          };
+          img.src = logo;
+        }
+      },
+    );
+  };
+
+  const handleLogo = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      setLogo(reader.result);
+      setLogoPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const download = () => {
@@ -102,6 +136,41 @@ const QRTool = () => {
           placeholder="Enter text"
           aria-label="Text to encode"
         />
+        <div className="flex space-x-2 mb-2">
+          <label className="flex items-center space-x-1">
+            <span>FG</span>
+            <input
+              type="color"
+              value={fgColor}
+              onChange={(e) => setFgColor(e.target.value)}
+              className="color-picker"
+              aria-label="Foreground color"
+            />
+          </label>
+          <label className="flex items-center space-x-1">
+            <span>BG</span>
+            <input
+              type="color"
+              value={bgColor}
+              onChange={(e) => setBgColor(e.target.value)}
+              className="color-picker"
+              aria-label="Background color"
+            />
+          </label>
+        </div>
+        <div className="mb-2">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleLogo}
+            aria-label="Logo image"
+          />
+          {logoPreview && (
+            <div className="logo-preview mt-2">
+              <img src={logoPreview} alt="Logo preview" />
+            </div>
+          )}
+        </div>
         <div className="flex space-x-2 mb-2">
           <button
             onClick={generate}
