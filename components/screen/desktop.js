@@ -39,7 +39,9 @@ export class Desktop extends Component {
 
         this.fetchAppsData(() => {
             this.openApp('about-alex');
+            this.updateFavouritesFromStorage();
         });
+        window.addEventListener('favoritesUpdated', this.updateFavouritesFromStorage);
         this.setContextListeners();
         this.setEventListeners();
         this.checkForNewFolders();
@@ -47,6 +49,7 @@ export class Desktop extends Component {
 
     componentWillUnmount() {
         this.removeContextListeners();
+        window.removeEventListener('favoritesUpdated', this.updateFavouritesFromStorage);
     }
 
     checkForNewFolders = () => {
@@ -238,6 +241,31 @@ export class Desktop extends Component {
         this.initFavourite = { ...favourite_apps };
     }
 
+    updateFavouritesFromStorage = () => {
+        try {
+            const storedStr = localStorage.getItem('favorites');
+            if (storedStr === null) {
+                const list = Object.keys(this.state.favourite_apps).filter((id) => this.state.favourite_apps[id]);
+                localStorage.setItem('favorites', JSON.stringify(list));
+                return;
+            }
+            const stored = JSON.parse(storedStr) || [];
+            const favourite_apps = { ...this.state.favourite_apps };
+            Object.keys(favourite_apps).forEach((id) => {
+                favourite_apps[id] = stored.includes(id);
+            });
+            this.setState({ favourite_apps }, () => {
+                this.initFavourite = { ...favourite_apps };
+            });
+        } catch { }
+    }
+
+    saveFavourites = (favourite_apps) => {
+        const list = Object.keys(favourite_apps).filter((id) => favourite_apps[id]);
+        localStorage.setItem('favorites', JSON.stringify(list));
+        window.dispatchEvent(new Event('favoritesUpdated'));
+    }
+
     renderDesktopApps = () => {
         if (Object.keys(this.state.closed_windows).length === 0) return;
         let appsJsx = [];
@@ -282,6 +310,7 @@ export class Desktop extends Component {
                     allowMaximize: app.allowMaximize,
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
+                    apps: apps,
                 }
 
                 windowsJsx.push(
@@ -415,7 +444,10 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, this.focus(objId));
+                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                    this.focus(objId);
+                    this.saveFavourites(favourite_apps);
+                });
                 this.app_stack.push(objId);
             }, 200);
         }
@@ -437,7 +469,7 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps });
+        this.setState({ closed_windows, favourite_apps }, () => this.saveFavourites(favourite_apps));
     }
 
     focus = (objId) => {
