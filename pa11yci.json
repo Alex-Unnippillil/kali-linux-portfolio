@@ -2,10 +2,39 @@
   "defaults": {
     "chromeLaunchConfig": {
       "args": ["--no-sandbox"]
-    }
+    },
+    "runners": ["axe"],
+    "axe": {
+      "runOnly": {
+        "type": "rule",
+        "values": ["color-contrast", "label"]
+      }
+    },
+    "includeNotices": false,
+    "includeWarnings": false
   },
   "urls": [
     "http://localhost:3000",
-    "http://localhost:3000/apps"
+    "http://localhost:3000/apps",
+    "http://localhost:3000/apps/2048",
+    "http://localhost:3000/apps/blackjack",
+    "http://localhost:3000/apps/checkers",
+    "http://localhost:3000/apps/connect-four",
+    "http://localhost:3000/apps/minesweeper",
+    "http://localhost:3000/apps/nmap-nse",
+    "http://localhost:3000/apps/password_generator",
+    "http://localhost:3000/apps/phaser_matter",
+    "http://localhost:3000/apps/sokoban",
+    "http://localhost:3000/apps/word_search",
+    "http://localhost:3000/video-gallery",
+    "http://localhost:3000/security-education",
+    "http://localhost:3000/nessus-dashboard",
+    "http://localhost:3000/nessus-report",
+    "http://localhost:3000/nikto-report",
+    "http://localhost:3000/popular-modules",
+    "http://localhost:3000/post_exploitation",
+    "http://localhost:3000/sekurlsa_logonpasswords",
+    "http://localhost:3000/spoofing",
+    "http://localhost:3000/dummy-form"
   ]
 }

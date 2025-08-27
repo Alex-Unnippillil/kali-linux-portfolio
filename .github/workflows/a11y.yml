@@ -2,6 +2,8 @@ name: Accessibility
 
 on:
   pull_request:
+  push:
+    branches: [master]
 
 jobs:
   a11y:
