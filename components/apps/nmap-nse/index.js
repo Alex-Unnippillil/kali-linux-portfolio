@@ -2,12 +2,54 @@ import React, { useEffect, useMemo, useState } from 'react';
 import DiscoveryMap from './DiscoveryMap';
 
 const scripts = [
-  { name: 'http-title', description: 'Fetches page titles from HTTP services.' },
-  { name: 'ssl-cert', description: 'Retrieves TLS certificate information.' },
-  { name: 'smb-os-discovery', description: 'Discovers remote OS information via SMB.' },
-  { name: 'ftp-anon', description: 'Checks for anonymous FTP access.' },
-  { name: 'http-enum', description: 'Enumerates directories on web servers.' },
-  { name: 'dns-brute', description: 'Performs DNS subdomain brute force enumeration.' },
+  {
+    name: 'http-title',
+    category: 'discovery',
+    description: 'Fetches page titles from HTTP services.',
+    command: 'nmap -sV --script http-title <target>',
+    sampleOutput:
+      'PORT   STATE SERVICE VERSION\n80/tcp open  http\n| http-title: Example Domain\n|_Requested resource was /',
+  },
+  {
+    name: 'ssl-cert',
+    category: 'default',
+    description: 'Retrieves TLS certificate information.',
+    command: 'nmap -p 443 --script ssl-cert <target>',
+    sampleOutput:
+      'PORT    STATE SERVICE\n443/tcp open  https\n| ssl-cert: Subject: commonName=example.com\n| Not valid before: 2020-06-01T00:00:00\n|_Not valid after: 2022-06-01T12:00:00',
+  },
+  {
+    name: 'smb-os-discovery',
+    category: 'discovery',
+    description: 'Discovers remote OS information via SMB.',
+    command: 'nmap -p 445 --script smb-os-discovery <target>',
+    sampleOutput:
+      'PORT    STATE SERVICE\n445/tcp open  microsoft-ds\n| smb-os-discovery:\n|   OS: Windows 10 Pro 19041\n|   Computer name: HOST\n|_  Workgroup: WORKGROUP',
+  },
+  {
+    name: 'ftp-anon',
+    category: 'default',
+    description: 'Checks for anonymous FTP access.',
+    command: 'nmap -p 21 --script ftp-anon <target>',
+    sampleOutput:
+      'PORT   STATE SERVICE\n21/tcp open  ftp\n| ftp-anon: Anonymous FTP login allowed (FTP code 230)\n|_-rw-r--r--    1 ftp      ftp           73 Feb 02 00:15 welcome.msg',
+  },
+  {
+    name: 'http-enum',
+    category: 'discovery',
+    description: 'Enumerates directories on web servers.',
+    command: 'nmap -p 80 --script http-enum <target>',
+    sampleOutput:
+      'PORT   STATE SERVICE\n80/tcp open  http\n| http-enum:\n|   /admin/: Potential admin interface\n|_  /images/: Potentially interesting directory w/ listing',
+  },
+  {
+    name: 'dns-brute',
+    category: 'discovery',
+    description: 'Performs DNS subdomain brute force enumeration.',
+    command: 'nmap --script dns-brute <target>',
+    sampleOutput:
+      'Host scripts results:\n| dns-brute:\n|   mail.example.com - 192.0.2.10\n|   dev.example.com - 192.0.2.20\n|_  shop.example.com - 192.0.2.30',
+  },
 ];
 
 const NmapNSEApp = () => {
@@ -52,6 +94,13 @@ const NmapNSEApp = () => {
       ),
     [allScripts, scriptSearch]
   );
+
+  const scriptsByCategory = useMemo(() => {
+    return scripts.reduce((acc, s) => {
+      (acc[s.category] = acc[s.category] || []).push(s);
+      return acc;
+    }, {});
+  }, []);
 
   const saveProfile = () => {
     if (!target || !script) return;
@@ -99,6 +148,10 @@ const NmapNSEApp = () => {
 
   return (
     <div className="h-full w-full flex flex-col p-4 bg-ub-cool-grey text-white">
+      <p className="text-xs text-yellow-300 mb-4">
+        This interface displays static sample outputs for demonstration and does not
+        execute real network scans. Only scan targets you have permission to test.
+      </p>
       <div className="mb-4">
         <input
           className="w-full p-2 mb-2 rounded text-black"
@@ -161,13 +214,30 @@ const NmapNSEApp = () => {
       <DiscoveryMap trigger={trigger} />
       <div className="mb-4 text-sm">
         <h2 className="font-bold mb-2">Featured Scripts</h2>
-        <ul className="list-disc pl-4 space-y-1">
-          {scripts.map((s) => (
-            <li key={s.name}>
-              <code>{s.name}</code>: {s.description}
-            </li>
-          ))}
-        </ul>
+        {Object.entries(scriptsByCategory).map(([cat, list]) => (
+          <div key={cat} className="mb-3">
+            <h3 className="font-semibold capitalize">{cat}</h3>
+            <ul className="list-disc pl-4 space-y-2">
+              {list.map((s) => (
+                <li key={s.name}>
+                  <a
+                    href={`https://nmap.org/nsedoc/scripts/${s.name}.html`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline text-blue-400"
+                  >
+                    <code>{s.name}</code>
+                  </a>
+                  : {s.description}
+                  <pre className="bg-black text-green-400 p-2 mt-1 rounded whitespace-pre-wrap">
+$ {s.command}
+{s.sampleOutput}
+                  </pre>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
         <p className="mt-2">
           Explore the full{' '}
           <a
