@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
+import { useGamepad } from '../../utils/gamepad';
 
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
@@ -12,12 +13,19 @@ const MAX_BALL_SPEED = 600; // maximum ball speed in px/s
 const WIDTH = 600;
 const HEIGHT = 400;
 
+// Default gamepad mapping (customizable)
+const GAMEPAD_MAPPING = {
+  up: 12,
+  down: 13,
+};
+
 const Pong = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
   const resetRef = useRef(null);
   const peerRef = useRef(null);
   const channelRef = useRef(null);
   const frameRef = useRef(0);
+  const gamepadRef = useGamepad(GAMEPAD_MAPPING);
 
   const [scores, setScores] = useState({ player: 0, opponent: 0 });
   const [difficulty, setDifficulty] = useState(5); // 1-10 difficulty scale
@@ -230,8 +238,17 @@ const Pong = () => {
       decay(opponent);
       decay(ball);
 
-      // local player
-      applyInputs(player, controls.current, dt);
+      // local player with gamepad
+      const padState = gamepadRef.current;
+      applyInputs(
+        player,
+        {
+          ...controls.current,
+          up: controls.current.up || padState.up,
+          down: controls.current.down || padState.down,
+        },
+        dt
+      );
 
       // opponent (AI or remote)
       if (mode === 'cpu') {
@@ -373,7 +390,7 @@ const Pong = () => {
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, [difficulty, mode, connected, matchWinner, controls, canvasRef]);
+  }, [difficulty, mode, connected, matchWinner, controls, canvasRef, gamepadRef]);
 
   const resetGame = () => {
     if (resetRef.current) resetRef.current();

@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import ReactGA from 'react-ga4';
+import { useGamepad } from '../../utils/gamepad';
 
 // Track constants - circular course
 const WIDTH = 800;
@@ -57,6 +58,13 @@ const WAYPOINTS = [
 ];
 
 const NUM_AI = 6;
+
+// Default gamepad mappings (customizable)
+const GAMEPAD_MAPPING = {
+  steer: { axis: 0 },
+  accel: 0,
+  brake: 1,
+};
 
 const createCar = (x, y, color, isAI = false, angle = -Math.PI / 2) => ({
   x,
@@ -136,6 +144,7 @@ const CarRacer = () => {
   const pausedRef = useRef(false);
   const [reset, setReset] = useState(0);
   const [difficulty, setDifficulty] = useState('normal');
+  const gamepadRef = useGamepad(GAMEPAD_MAPPING);
 
   useEffect(() => {
     if (control === 'tilt') {
@@ -251,6 +260,14 @@ const CarRacer = () => {
         } else if (control === 'buttons') {
           steerInput = steerButtonRef.current * sensitivityRef.current;
           if (keys[' ']) accelInput = 1;
+        }
+        const pad = gamepadRef.current;
+        if (pad) {
+          if (typeof pad.steer === 'number' && Math.abs(pad.steer) > 0.2) {
+            steerInput = pad.steer;
+          }
+          if (pad.accel) accelInput = 1;
+          if (pad.brake) brakeInput = 1;
         }
         car.steer += (steerInput - car.steer) * dt * 5;
         car.accel = accelInput * 100;
