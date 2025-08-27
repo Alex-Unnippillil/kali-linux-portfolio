@@ -4,6 +4,7 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
+import { setWakeLock } from '../../utils/wakeLock';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
@@ -16,6 +17,8 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('date');
   const [search, setSearch] = useState('');
+  const [awake, setAwake] = useState(false);
+  const [wakeError, setWakeError] = useState('');
 
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -169,8 +172,32 @@ export default function YouTubeApp({ initialVideos = [] }) {
     setSearch(value);
   }, []);
 
+  const toggleWake = useCallback(async () => {
+    const next = !awake;
+    try {
+      await setWakeLock(next);
+      setAwake(next);
+      setWakeError('');
+    } catch (err) {
+      setWakeError(err?.message || String(err));
+      setAwake(false);
+    }
+  }, [awake]);
+
   return (
-    <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
+    <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white relative">
+      <button
+        type="button"
+        aria-pressed={awake}
+        onClick={toggleWake}
+        aria-label="Toggle wake lock"
+        className="absolute top-2 right-2 z-10 bg-gray-700 text-white rounded px-2 py-1"
+      >
+        {awake ? 'Awake' : 'Sleep'}
+      </button>
+      {wakeError && (
+        <p className="absolute bottom-2 left-2 text-xs text-red-500">{wakeError}</p>
+      )}
       {!apiKey && videos.length === 0 ? (
         <div className="p-2">
           <p>YouTube API key is not configured.</p>
