@@ -7,22 +7,20 @@ global.TextEncoder = TextEncoder;
 // @ts-ignore
 global.TextDecoder = TextDecoder as any;
 
-// Provide TextEncoder/TextDecoder for libraries requiring them
-import { TextEncoder, TextDecoder } from 'util';
+// Stub fetch so tests don't perform real network requests
 // @ts-ignore
-global.TextEncoder = TextEncoder;
-// @ts-ignore
-global.TextDecoder = TextDecoder;
+global.fetch = jest.fn(() =>
+  Promise.resolve({ json: () => Promise.resolve({}) })
+);
 
-// Provide global TextEncoder/Decoder for libraries like jsdom
-import { TextEncoder, TextDecoder } from 'util';
-if (typeof global.TextEncoder === 'undefined') {
+// Provide minimal URL.createObjectURL and URL.revokeObjectURL implementations
+if (!(URL as any).createObjectURL) {
   // @ts-ignore
-  global.TextEncoder = TextEncoder;
+  URL.createObjectURL = jest.fn(() => 'blob:mock');
 }
-if (typeof global.TextDecoder === 'undefined') {
+if (!(URL as any).revokeObjectURL) {
   // @ts-ignore
-  global.TextDecoder = TextDecoder;
+  URL.revokeObjectURL = jest.fn();
 }
 
 // jsdom does not provide a global Image constructor which is used by
@@ -40,34 +38,35 @@ class ImageMock {
 // @ts-ignore - allow overriding the global Image for the test env
 global.Image = ImageMock as unknown as typeof Image;
 
-// Provide a minimal canvas mock so libraries like xterm.js can run under JSDOM
+// Provide a canvas mock so libraries like xterm.js can run under JSDOM
 // @ts-ignore
-HTMLCanvasElement.prototype.getContext = () => ({
-  fillRect: () => {},
-  clearRect: () => {},
-  getImageData: () => ({ data: new Uint8ClampedArray() } as ImageData),
-  putImageData: () => {},
-  createImageData: () => new ImageData(0, 0),
-  setTransform: () => {},
-  drawImage: () => {},
-  save: () => {},
-  restore: () => {},
-  beginPath: () => {},
-  moveTo: () => {},
-  lineTo: () => {},
-  closePath: () => {},
-  stroke: () => {},
-  translate: () => {},
-  scale: () => {},
-  rotate: () => {},
-  arc: () => {},
-  fill: () => {},
-  measureText: () => ({ width: 0 } as TextMetrics),
-  transform: () => {},
-  rect: () => {},
-  clip: () => {},
-  createLinearGradient: () => ({ addColorStop: () => {} } as unknown as CanvasGradient),
-});
+HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
+  fillRect: jest.fn(),
+  clearRect: jest.fn(),
+  getImageData: jest.fn(() => ({ data: new Uint8ClampedArray() } as ImageData)),
+  putImageData: jest.fn(),
+  createImageData: jest.fn(() => new ImageData(0, 0)),
+  setTransform: jest.fn(),
+  drawImage: jest.fn(),
+  save: jest.fn(),
+  fillText: jest.fn(),
+  restore: jest.fn(),
+  beginPath: jest.fn(),
+  moveTo: jest.fn(),
+  lineTo: jest.fn(),
+  closePath: jest.fn(),
+  stroke: jest.fn(),
+  translate: jest.fn(),
+  scale: jest.fn(),
+  rotate: jest.fn(),
+  arc: jest.fn(),
+  fill: jest.fn(),
+  measureText: jest.fn(() => ({ width: 0 } as TextMetrics)),
+  transform: jest.fn(),
+  rect: jest.fn(),
+  clip: jest.fn(),
+  createLinearGradient: jest.fn(() => ({ addColorStop: jest.fn() } as unknown as CanvasGradient)),
+}));
 
 // Basic matchMedia mock for libraries that expect it
 if (typeof window !== 'undefined' && !window.matchMedia) {
@@ -101,6 +100,7 @@ if (typeof window !== 'undefined' && !window.localStorage) {
 
 // Minimal Worker mock for tests
 class WorkerMock {
+  onmessage: ((e: any) => void) | null = null;
   postMessage() {}
   terminate() {}
   addEventListener() {}
@@ -154,3 +154,9 @@ jest.mock(
   }),
   { virtual: true }
 );
+
+// Mock react-cytoscapejs to avoid parsing its ESM build during tests
+jest.mock('react-cytoscapejs', () => ({
+  __esModule: true,
+  default: () => null,
+}));
