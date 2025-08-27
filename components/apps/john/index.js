@@ -4,6 +4,7 @@ import {
   distributeTasks,
   identifyHashType,
 } from './utils';
+import FormError from '../../ui/FormError';
 
 // Enhanced John the Ripper interface that supports rule uploads,
 // basic hash analysis and mock distribution of cracking tasks.
@@ -239,11 +240,7 @@ const JohnApp = () => {
             </p>
           </>
         )}
-        {error && (
-          <p id="john-error" role="alert" className="text-red-500 text-sm">
-            {error}
-          </p>
-        )}
+        {error && <FormError id="john-error">{error}</FormError>}
       </form>
       <pre className="flex-1 overflow-auto p-4 whitespace-pre-wrap">{output}</pre>
     </div>

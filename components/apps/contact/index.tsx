@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import FormError from '../../ui/FormError';
 
 export const isValidEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
 
@@ -101,11 +102,7 @@ const ContactApp = () => {
           Send
         </button>
       </form>
-      {error && (
-        <div role="alert" className="text-red-500 mt-2">
-          {error}
-        </div>
-      )}
+      {error && <FormError>{error}</FormError>}
       {success && !error && (
         <div role="status" className="text-green-600 mt-2">
           Message sent!

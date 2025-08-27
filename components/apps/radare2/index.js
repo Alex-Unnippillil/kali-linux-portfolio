@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import HexEditor from './HexEditor';
 import { saveSnippet, loadSnippets } from './utils';
+import FormError from '../../ui/FormError';
 
 const ForceGraph2D = dynamic(
   () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
@@ -225,7 +226,7 @@ const Radare2 = () => {
       )}
 
       {loading && <p>Running...</p>}
-      {error && <p className="text-red-500">{error}</p>}
+      {error && <FormError className="mt-2">{error}</FormError>}
     </div>
   );
 };

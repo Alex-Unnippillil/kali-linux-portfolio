@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import HostBubbleChart from './HostBubbleChart';
+import FormError from '../../ui/FormError';
 
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {
@@ -164,15 +165,7 @@ const Nessus = () => {
           <button type="submit" className="w-full bg-blue-600 py-2 rounded">
             Login
           </button>
-          {error && (
-            <p
-              id="nessus-error"
-              role="alert"
-              className="text-red-500 text-sm"
-            >
-              {error}
-            </p>
-          )}
+          {error && <FormError id="nessus-error">{error}</FormError>}
         </form>
       </div>
     );
@@ -187,7 +180,7 @@ const Nessus = () => {
         </button>
       </div>
       <HostBubbleChart hosts={hostData} />
-      {error && <div className="text-red-500 mb-2">{error}</div>}
+      {error && <FormError className="mb-2">{error}</FormError>}
       <form onSubmit={addJob} className="mb-4 space-x-2">
         <input
           className="p-1 rounded text-black"
