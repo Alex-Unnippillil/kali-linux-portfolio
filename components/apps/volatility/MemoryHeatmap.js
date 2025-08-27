@@ -12,6 +12,13 @@ const colors = {
   socket: '#10b981', // green-500
 };
 
+// Use darker shades for chips to ensure sufficient contrast on white text
+const chipColors = {
+  process: 'bg-red-700',
+  dll: 'bg-blue-700',
+  socket: 'bg-green-700',
+};
+
 const MemoryHeatmap = ({ data }) => {
   const canvasRef = useRef(null);
   const [filters, setFilters] = useState({
@@ -72,7 +79,7 @@ const MemoryHeatmap = ({ data }) => {
             aria-pressed={filters[key]}
             className={`px-3 py-1 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${
               filters[key]
-                ? 'bg-blue-600 text-white focus:ring-white'
+                ? `${chipColors[key]} text-white focus:ring-white`
                 : 'bg-gray-200 text-gray-800 focus:ring-black'
             }`}
           >
