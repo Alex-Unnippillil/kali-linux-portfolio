@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 import { LEVEL_PACKS, LevelPack, parseLevels } from './levels';
 import {
@@ -13,6 +13,7 @@ import {
   findHint,
   wouldDeadlock,
   Position,
+  DirectionKey,
 } from './engine';
 
 const CELL = 32;
@@ -27,29 +28,35 @@ const Sokoban: React.FC = () => {
   const [best, setBest] = useState<number | null>(null);
   const [hint, setHint] = useState<string>('');
   const [status, setStatus] = useState<string>('');
-  const [warnDir, setWarnDir] = useState<(typeof directionKeys)[number] | null>(null);
+  const [warnDir, setWarnDir] = useState<DirectionKey | null>(null);
   const [ghost, setGhost] = useState<Set<string>>(new Set());
   const [puffs, setPuffs] = useState<{ id: number; x: number; y: number }[]>([]);
   const puffId = React.useRef(0);
 
-  const selectLevel = (i: number, pIdx: number = packIndex, pData: LevelPack[] = packs) => {
-    const pack = pData[pIdx];
-    const st = loadLevel(pack.levels[i]);
-    setPackIndex(pIdx);
-    setIndex(i);
-    setState(st);
-    setReach(reachable(st));
-    setHint('');
-    setStatus('');
-    logGameStart('sokoban');
-    logEvent({ category: 'sokoban', action: 'level_select', value: i });
-  };
+  const selectLevel = useCallback(
+    (i: number, pIdx: number = packIndex, pData: LevelPack[] = packs) => {
+      const pack = pData[pIdx];
+      const st = loadLevel(pack.levels[i]);
+      setPackIndex(pIdx);
+      setIndex(i);
+      setState(st);
+      setReach(reachable(st));
+      setHint('');
+      setStatus('');
+      logGameStart('sokoban');
+      logEvent({ category: 'sokoban', action: 'level_select', value: i });
+    },
+    [packIndex, packs]
+  );
 
-  const selectPack = (pIdx: number) => {
-    selectLevel(0, pIdx);
-  };
+  const selectPack = useCallback(
+    (pIdx: number) => {
+      selectLevel(0, pIdx);
+    },
+    [selectLevel]
+  );
 
-  const handleUndo = () => {
+  const handleUndo = useCallback(() => {
     const st = undoMove(state);
     if (st !== state) {
       setState(st);
@@ -59,33 +66,40 @@ const Sokoban: React.FC = () => {
       setGhost(new Set());
       logEvent({ category: 'sokoban', action: 'undo' });
     }
-  };
+  }, [state]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     const st = resetLevel(currentPack.levels[index]);
     setState(st);
     setReach(reachable(st));
     setHint('');
     setStatus('');
     setGhost(new Set());
-  };
+  }, [currentPack, index]);
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      const text = await file.text();
-      const lvl = parseLevels(text);
-      if (lvl.length) {
-        const customPack: LevelPack = { name: file.name || 'Custom', difficulty: 'Custom', levels: lvl };
-        const newPacks = [...LEVEL_PACKS, customPack];
-        setPacks(newPacks);
-        selectLevel(0, newPacks.length - 1, newPacks);
+  const handleFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      try {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const text = await file.text();
+        const lvl = parseLevels(text);
+        if (lvl.length) {
+          const customPack: LevelPack = {
+            name: file.name || 'Custom',
+            difficulty: 'Custom',
+            levels: lvl,
+          };
+          const newPacks = [...LEVEL_PACKS, customPack];
+          setPacks(newPacks);
+          selectLevel(0, newPacks.length - 1, newPacks);
+        }
+      } catch (err: unknown) {
+        logGameError('sokoban', err instanceof Error ? err.message : String(err));
       }
-    } catch (err: any) {
-      logGameError('sokoban', err?.message || String(err));
-    }
-  };
+    },
+    [selectLevel]
+  );
 
   useEffect(() => {
     logGameStart('sokoban');
@@ -113,8 +127,8 @@ const Sokoban: React.FC = () => {
           setReach(reachable(st));
         }
       }
-    } catch (err: any) {
-      logGameError('sokoban', err?.message || String(err));
+    } catch (err: unknown) {
+      logGameError('sokoban', err instanceof Error ? err.message : String(err));
     }
   }, []);
 
@@ -136,9 +150,9 @@ const Sokoban: React.FC = () => {
         handleUndo();
         return;
       }
-      if (!directionKeys.includes(e.key as any)) return;
+      if (!directionKeys.includes(e.key as DirectionKey)) return;
       e.preventDefault();
-      const dir = e.key as (typeof directionKeys)[number];
+      const dir = e.key as DirectionKey;
       if (warnDir) {
         if (warnDir === dir) {
           const newState = move(state, dir);
@@ -217,24 +231,24 @@ const Sokoban: React.FC = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [state, index, packIndex, warnDir]);
+  }, [state, index, packIndex, warnDir, handleReset, handleUndo]);
 
-  const handleHint = () => {
+  const handleHint = useCallback(() => {
     setHint('...');
     setTimeout(() => {
       const dir = findHint(state);
       setHint(dir ? dir.replace('Arrow', '') : 'No hint');
     }, 0);
-  };
+  }, [state]);
 
-  const cellStyle = {
-    width: CELL,
-    height: CELL,
-  } as React.CSSProperties;
+  const cellStyle = useMemo(
+    () => ({ width: CELL, height: CELL } as React.CSSProperties),
+    []
+  );
 
-  const keyPos = (p: Position) => `${p.x},${p.y}`;
+  const keyPos = useCallback((p: Position) => `${p.x},${p.y}`, []);
 
-  const findPath = (target: Position): string[] => {
+  const findPath = useCallback((target: Position): string[] => {
     const start = state.player;
     const q: Position[] = [start];
     const prev = new Map<string, string | null>();
@@ -274,17 +288,20 @@ const Sokoban: React.FC = () => {
       }
     }
     return [];
-  };
+  }, [keyPos, state]);
 
-  const handleHover = (x: number, y: number) => {
-    const k = `${x},${y}`;
-    if (!reach.has(k) || state.walls.has(k) || state.boxes.has(k)) {
-      setGhost(new Set());
-      return;
-    }
-    const path = findPath({ x, y });
-    setGhost(new Set(path));
-  };
+  const handleHover = useCallback(
+    (x: number, y: number) => {
+      const k = `${x},${y}`;
+      if (!reach.has(k) || state.walls.has(k) || state.boxes.has(k)) {
+        setGhost(new Set());
+        return;
+      }
+      const path = findPath({ x, y });
+      setGhost(new Set(path));
+    },
+    [findPath, reach, state]
+  );
 
   return (
     <div className="p-4 space-y-2 select-none">
