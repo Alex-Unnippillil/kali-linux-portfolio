@@ -1,8 +1,9 @@
-import React, { Component } from 'react';
+import React, { Component, useEffect, useState } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
 import Certs from './certs';
+import { marked } from 'marked';
 
 export class AboutAlex extends Component {
 
@@ -151,88 +152,44 @@ export class AboutAlex extends Component {
     }
 }
 
-export default AboutAlex;
-
-export const displayAboutAlex = () => {
-    return <AboutAlex />;
-}
-
-
 function About() {
+    const [content, setContent] = useState('');
+    const email = 'alex.unnippillil@hotmail.com';
+    const phone = '123-456-7890';
+
+    useEffect(() => {
+        fetch('/apps/alex/about.md')
+            .then((res) => res.text())
+            .then((text) => setContent(marked.parse(text)));
+    }, []);
+
+    const copy = (text) => navigator.clipboard.writeText(text);
+
     return (
-        <>
-            <div className="w-20 md:w-28 my-4 full">
-                <Image
-                    className="w-full"
-                    src="/images/logos/bitmoji.png"
-                    alt="Alex Unnippillil Logo"
-                    width={256}
-                    height={256}
-                    sizes="(max-width: 768px) 50vw, 25vw"
-                    priority
-                />
+        <div className="p-4 text-sm md:text-base">
+            <div dangerouslySetInnerHTML={{ __html: content }} />
+            <div className="mt-4 space-y-2">
+                <div>
+                    <span>{email}</span>
+                    <button
+                        className="ml-2 px-2 py-1 bg-ub-gedit-light rounded no-print"
+                        onClick={() => copy(email)}
+                    >
+                        Copy Email
+                    </button>
+                </div>
+                <div>
+                    <span>{phone}</span>
+                    <button
+                        className="ml-2 px-2 py-1 bg-ub-gedit-light rounded no-print"
+                        onClick={() => copy(phone)}
+                    >
+                        Copy Phone
+                    </button>
+                </div>
             </div>
-            <div className=" mt-4 md:mt-8 text-lg md:text-2xl text-center px-1">
-                <div>My name is <span className="font-bold">Alex Unnippillil</span>, </div>
-                 <div className="font-normal ml-1">I&apos;m a <span className="text-ubt-blue font-bold"> Cybersecurity Specialist!</span></div>
-            </div>
-            <div className=" mt-4 relative md:my-8 pt-px bg-white w-32 md:w-48">
-                <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-0"></div>
-                <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-0"></div>
-            </div>
-            <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
-                <li className="list-pc">
-                    I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly evolving world of tech. I completed four years of a
-                    <a
-                        className=" underline cursor-pointer"
-                        href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf"
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        Nuclear Engineering
-                    </a>
-                    degree at Ontario Tech University before deciding to change my career goals and pursue my passion for
-                    <a
-                        className=" underline cursor-pointer"
-                        href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf"
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        Networking and I.T. Security
-                    </a>
-                    .
-                </li>
-                <li className="mt-3 list-building">
-                    If you&apos;re looking for someone who always wants to help others and will put in the work 24/7, feel free to email
-                    <a className=" underline" href="mailto:alex.unnippillil@hotmail.com">alex.unnippillil@hotmail.com</a>.
-                </li>
-                <li className="mt-3 list-time">
-                    When I&apos;m not learning new technical skills, I enjoy reading books, rock climbing, or watching
-                    <a
-                        className=" underline cursor-pointer"
-                        href="https://www.youtube.com/@Alex-Unnippillil/playlists"
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        YouTube videos
-                    </a>
-                    and
-                    <a
-                        className=" underline cursor-pointer"
-                        href="https://myanimelist.net/animelist/alex_u"
-                        target="_blank"
-                        rel="noreferrer"
-                    >
-                        anime
-                    </a>
-                    .
-                </li>
-                <li className="mt-3 list-star">
-                    I also have interests in deep learning, software development, and animation.
-                </li>
-            </ul>
-        </>
-    )
+        </div>
+    );
 }
 function Education() {
     return (
@@ -743,40 +700,92 @@ function Projects() {
     )
 }
 function Resume() {
-    const handleDownload = () => {
-        ReactGA.event({ category: 'resume', action: 'download' });
+    const [data, setData] = useState(null);
+    const [hidden, setHidden] = useState({});
+
+    useEffect(() => {
+        fetch('/apps/alex/resume.json')
+            .then((res) => res.json())
+            .then((json) => setData(json))
+            .catch(() => { });
+    }, []);
+
+    const handleFile = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            try {
+                setData(JSON.parse(ev.target.result));
+            } catch (err) {
+                console.error(err);
+            }
+        };
+        reader.readAsText(file);
     };
 
-    return (
-        <div className="h-full w-full flex flex-col">
-            <div className="p-2 text-right">
-                <a
-                    href="/assets/Alex-Unnippillil-Resume.pdf"
-                    download
-                    onClick={handleDownload}
-                    className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
-                >
-                    Download
-                </a>
+    const toggle = (sec) => setHidden((h) => ({ ...h, [sec]: !h[sec] }));
+
+    if (!data) {
+        return (
+            <div className="p-4 no-print">
+                <input type="file" accept="application/json" onChange={handleFile} />
             </div>
-            <object
-                className="h-full w-full flex-1"
-                data="/assets/Alex-Unnippillil-Resume.pdf"
-                type="application/pdf"
-            >
-                <p className="p-4 text-center">
-                    Unable to display PDF.&nbsp;
-                    <a
-                        href="/assets/Alex-Unnippillil-Resume.pdf"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline text-ubt-blue"
-                        onClick={handleDownload}
-                    >
-                        Download the resume
-                    </a>
-                </p>
-            </object>
+        );
+    }
+
+    return (
+        <div className="p-4 space-y-4">
+            <div className="no-print flex space-x-4">
+                <input type="file" accept="application/json" onChange={handleFile} />
+                {['work', 'education'].map((sec) => (
+                    <label key={sec} className="capitalize">
+                        <input
+                            type="checkbox"
+                            checked={!hidden[sec]}
+                            onChange={() => toggle(sec)}
+                        />{' '}{sec}
+                    </label>
+                ))}
+            </div>
+            {data.basics && (
+                <section className={hidden.basics ? 'hidden print-hidden' : 'print-section'}>
+                    <h2 className="text-xl font-bold">{data.basics.name}</h2>
+                    <p>{data.basics.label}</p>
+                </section>
+            )}
+            {data.work && (
+                <section className={hidden.work ? 'hidden print-hidden' : 'print-section'}>
+                    <h3 className="font-bold">Work</h3>
+                    <ul>
+                        {data.work.map((job, idx) => (
+                            <li key={idx}>
+                                <div className="font-semibold">{job.position} - {job.company}</div>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
+            {data.education && (
+                <section className={hidden.education ? 'hidden print-hidden' : 'print-section'}>
+                    <h3 className="font-bold">Education</h3>
+                    <ul>
+                        {data.education.map((ed, idx) => (
+                            <li key={idx}>
+                                <div className="font-semibold">{ed.studyType} - {ed.institution}</div>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
         </div>
-    )
+    );
 }
+
+export { About, Resume };
+
+export default AboutAlex;
+
+export const displayAboutAlex = () => {
+    return <AboutAlex />;
+};

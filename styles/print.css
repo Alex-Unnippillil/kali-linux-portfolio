@@ -1,0 +1,11 @@
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-hidden {
+    display: none !important;
+  }
+  .print-section {
+    page-break-inside: avoid;
+  }
+}
