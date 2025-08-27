@@ -1,11 +1,16 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useGameControls from './useGameControls';
 import useGameHaptics from '../../hooks/useGameHaptics';
+import usePersistentState from '../../hooks/usePersistentState';
 
 const GRID_SIZE = 20;
 const CELL_SIZE = 16; // pixels
 const SPEED = 120; // ms per move
 
+/**
+ * Generate a random food position that does not overlap the snake.
+ * @param {Array<{x:number,y:number}>} snake current snake segments
+ */
 const randomFood = (snake) => {
   let pos;
   do {
@@ -39,27 +44,44 @@ const Snake = () => {
   const [sound, setSound] = useState(true);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
-  const [highScore, setHighScore] = useState(() => {
-    if (typeof window === 'undefined') return 0;
-    const stored = window.localStorage.getItem('snake_highscore');
-    return stored ? parseInt(stored, 10) : 0;
-  });
+  const [highScore, setHighScore] = usePersistentState(
+    'snake_highscore',
+    0,
+    (v) => typeof v === 'number',
+  );
 
-  const beep = useCallback((freq) => {
-    if (!sound) return;
-    const ctx = audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
-    audioCtx.current = ctx;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = freq;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    gain.gain.setValueAtTime(0.2, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.15);
-  }, [sound]);
+  /**
+   * Play a short tone if sound is enabled.
+   * @param {number} freq frequency in Hz
+   */
+  const beep = useCallback(
+    (freq) => {
+      if (!sound) return;
+      try {
+        const ctx =
+          audioCtx.current ||
+          new (window.AudioContext || window.webkitAudioContext)();
+        audioCtx.current = ctx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(
+          0.001,
+          ctx.currentTime + 0.15,
+        );
+        osc.start();
+        osc.stop(ctx.currentTime + 0.15);
+      } catch {
+        // ignore audio errors
+      }
+    },
+    [sound],
+  );
 
+  /** Render the current game state to the canvas. */
   const draw = useCallback(() => {
     const ctx = ctxRef.current;
     if (!ctx) return;
@@ -124,6 +146,7 @@ const Snake = () => {
     }
   }, []);
 
+  /** Advance the game state by one step. */
   const update = useCallback(() => {
     const snake = snakeRef.current;
     if (moveQueueRef.current.length) {
@@ -174,6 +197,7 @@ const Snake = () => {
     }
   }, [wrap, beep]);
 
+  /** Main animation loop driven by requestAnimationFrame. */
   const loop = useCallback(
     (time) => {
       rafRef.current = requestAnimationFrame(loop);
@@ -205,16 +229,14 @@ const Snake = () => {
   useEffect(() => {
     if (gameOver && score > highScore) {
       setHighScore(score);
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem('snake_highscore', score.toString());
-      }
     }
-  }, [gameOver, score, highScore]);
+  }, [gameOver, score, highScore, setHighScore]);
 
   useEffect(() => {
     if (gameOver) haptics.gameOver();
   }, [gameOver, haptics]);
 
+  /** Reset the game to its initial state. */
   const reset = useCallback(() => {
     snakeRef.current = [
       { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2), scale: 1 },
@@ -236,6 +258,8 @@ const Snake = () => {
           width={GRID_SIZE * CELL_SIZE}
           height={GRID_SIZE * CELL_SIZE}
           className="bg-gray-800 border border-gray-700"
+          tabIndex={0}
+          aria-label="Snake game board"
         />
         <div
           className="absolute top-2 left-2 text-sm"
