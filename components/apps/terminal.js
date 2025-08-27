@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
+import React, {
+  useEffect,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+  useCallback,
+} from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { SearchAddon } from '@xterm/addon-search';
@@ -20,73 +26,106 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const suggestionsRef = useRef([]);
   const suggestionIndexRef = useRef(0);
   const showingSuggestionsRef = useRef(false);
+  const ariaLiveRef = useRef(null);
+  const hintRef = useRef('');
+  const rafRef = useRef(null);
 
   const promptText = 'alex@kali:~$ ';
 
   // Prompt helper
+  const renderHint = () => {
+    if (typeof window === 'undefined' || !termRef.current) return;
+    if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
+    rafRef.current = window.requestAnimationFrame(() => {
+      const current = commandRef.current;
+      const match = Array.from(knownCommandsRef.current).find(
+        (cmd) => cmd.startsWith(current) && cmd !== current,
+      );
+      const hint = match ? match.slice(current.length) : '';
+      if (hintRef.current === hint) return;
+      hintRef.current = hint;
+      termRef.current.write('\u001b[s\u001b[0K');
+      if (hint) {
+        termRef.current.write(`\u001b[90m${hint}\u001b[0m`);
+      }
+      termRef.current.write('\u001b[u');
+    });
+  };
+
   const prompt = useCallback(() => {
     termRef.current.write(`\r\n${promptText}`);
+    renderHint();
+  }, []);
+
+  const updateLive = useCallback((msg) => {
+    if (ariaLiveRef.current) {
+      ariaLiveRef.current.textContent = msg;
+    }
   }, []);
 
   // Handle command execution
-  const runCommand = useCallback((command) => {
-    const trimmed = command.trim();
-    const first = trimmed.split(' ')[0];
-    if (first) {
-      knownCommandsRef.current.add(first);
-    }
-    if (trimmed) {
-      historyRef.current.push(trimmed);
-    }
-    historyIndexRef.current = historyRef.current.length;
-    if (trimmed === 'pwd') {
-      termRef.current.writeln('');
-      termRef.current.writeln('/home/alex');
-      logRef.current += '/home/alex\n';
-      prompt();
-    } else if (trimmed.startsWith('cd ')) {
-      const target = trimmed.slice(3);
-      termRef.current.writeln('');
-      termRef.current.writeln(`bash: cd: ${target}: No such file or directory`);
-      logRef.current += `bash: cd: ${target}: No such file or directory\n`;
-      prompt();
-    } else if (trimmed === 'simulate') {
-      termRef.current.writeln('');
-      if (workerRef.current) {
-        termRef.current.writeln('Running heavy simulation...');
-        logRef.current += 'Running heavy simulation...\n';
-        workerRef.current.postMessage({ command: 'simulate' });
-        // prompt will be called when worker responds
+  const runCommand = useCallback(
+    (command) => {
+      const trimmed = command.trim();
+      const first = trimmed.split(' ')[0];
+      if (first) {
+        knownCommandsRef.current.add(first);
+      }
+      if (trimmed) {
+        historyRef.current.push(trimmed);
+      }
+      historyIndexRef.current = historyRef.current.length;
+      const writeLine = (text) => {
+        termRef.current.writeln(text);
+        logRef.current += `${text}\n`;
+        updateLive(text);
+      };
+      if (trimmed === 'pwd') {
+        termRef.current.writeln('');
+        writeLine('/home/alex');
+        prompt();
+      } else if (trimmed.startsWith('cd ')) {
+        const target = trimmed.slice(3);
+        termRef.current.writeln('');
+        writeLine(`bash: cd: ${target}: No such file or directory`);
+        prompt();
+      } else if (trimmed === 'simulate') {
+        termRef.current.writeln('');
+        if (workerRef.current) {
+          writeLine('Running heavy simulation...');
+          workerRef.current.postMessage({ command: 'simulate' });
+          // prompt will be called when worker responds
+        } else {
+          const msg = 'Web Workers are not supported in this environment.';
+          writeLine(msg);
+          prompt();
+        }
+      } else if (trimmed === 'clear') {
+        termRef.current.clear();
+        prompt();
+      } else if (trimmed === 'help') {
+        termRef.current.writeln('');
+        const commands = Array.from(knownCommandsRef.current)
+          .sort()
+          .join(' ');
+        writeLine(`Available commands: ${commands}`);
+        prompt();
+      } else if (trimmed === 'history') {
+        termRef.current.writeln('');
+        const history = historyRef.current.join('\n');
+        writeLine(history);
+        prompt();
+      } else if (trimmed.length === 0) {
+        prompt();
       } else {
-        const msg = 'Web Workers are not supported in this environment.';
-        termRef.current.writeln(msg);
-        logRef.current += `${msg}\n`;
+        termRef.current.writeln('');
+        writeLine(`Command '${trimmed}' not found`);
         prompt();
       }
-    } else if (trimmed === 'clear') {
-      termRef.current.clear();
-      prompt();
-    } else if (trimmed === 'help') {
-      termRef.current.writeln('');
-      const commands = Array.from(knownCommandsRef.current).sort().join(' ');
-      termRef.current.writeln(`Available commands: ${commands}`);
-      logRef.current += `Available commands: ${commands}\n`;
-      prompt();
-    } else if (trimmed === 'history') {
-      termRef.current.writeln('');
-      const history = historyRef.current.join('\n');
-      termRef.current.writeln(history);
-      logRef.current += `${history}\n`;
-      prompt();
-    } else if (trimmed.length === 0) {
-      prompt();
-    } else {
-      termRef.current.writeln('');
-      termRef.current.writeln(`Command '${trimmed}' not found`);
-      logRef.current += `Command '${trimmed}' not found\n`;
-      prompt();
-    }
-  }, [prompt]);
+      renderHint();
+    },
+    [prompt, updateLive],
+  );
 
   const renderSuggestions = useCallback(() => {
     termRef.current.writeln('');
@@ -108,6 +147,7 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       commandRef.current = selection;
       suggestionsRef.current = [];
       showingSuggestionsRef.current = false;
+      renderHint();
       return;
     }
 
@@ -119,6 +159,7 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       const completion = matches[0].slice(current.length);
       termRef.current.write(completion);
       commandRef.current = matches[0];
+      renderHint();
     } else if (matches.length > 1) {
       suggestionsRef.current = matches;
       suggestionIndexRef.current = 0;
@@ -157,11 +198,20 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     commandRef.current = cmd;
     suggestionsRef.current = [];
     showingSuggestionsRef.current = false;
+    renderHint();
   }, []);
 
   // Initialise terminal
   useEffect(() => {
-    const term = new XTerm({ cursorBlink: true, convertEol: true });
+    const term = new XTerm({
+      cursorBlink: true,
+      convertEol: true,
+      theme: {
+        background: '#000000',
+        foreground: '#00ff00',
+        cursor: '#00ff00',
+      },
+    });
     const fitAddon = new FitAddon();
     const searchAddon = new SearchAddon();
     term.loadAddon(fitAddon);
@@ -170,7 +220,9 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     termRef.current = term;
     fitAddonRef.current = fitAddon;
     fitAddon.fit();
+    containerRef.current.classList.add('crt-terminal');
     term.write('Welcome to the portfolio terminal');
+    updateLive('Welcome to the portfolio terminal');
     prompt();
     term.onKey(({ key, domEvent }) => {
       if (domEvent.key === 'Tab') {
@@ -197,13 +249,13 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
         commandRef.current = '';
         suggestionsRef.current = [];
         showingSuggestionsRef.current = false;
-      } else if (data === '\u0003') { // Ctrl+C
+      } else if (data === '\u0003') {
         term.write('^C');
         prompt();
         commandRef.current = '';
         suggestionsRef.current = [];
         showingSuggestionsRef.current = false;
-      } else if (data === '\u007F') { // Backspace
+      } else if (data === '\u007F') {
         if (commandRef.current.length > 0) {
           commandRef.current = commandRef.current.slice(0, -1);
           term.write('\b \b');
@@ -218,14 +270,20 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
         suggestionsRef.current = [];
         showingSuggestionsRef.current = false;
       }
+      renderHint();
     });
     if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
-      workerRef.current = new Worker(new URL('./terminal.worker.js', import.meta.url));
+      workerRef.current = new Worker(
+        new URL('./terminal.worker.js', import.meta.url),
+      );
       workerRef.current.onmessage = (e) => {
         term.writeln('');
-        term.writeln(String(e.data));
-        logRef.current += `${String(e.data)}\n`;
+        const msg = String(e.data);
+        term.writeln(msg);
+        logRef.current += `${msg}\n`;
+        updateLive(msg);
         prompt();
+        renderHint();
       };
     } else {
       workerRef.current = null;
@@ -237,9 +295,10 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     return () => {
       window.removeEventListener('resize', handleResize);
       workerRef.current?.terminate();
+      if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
       term.dispose();
     };
-  }, [prompt, runCommand, handleTab, handleSuggestionNav, handleHistoryNav]);
+  }, [prompt, runCommand, handleTab, handleSuggestionNav, handleHistoryNav, updateLive]);
 
   useImperativeHandle(ref, () => ({
     runCommand,
@@ -248,7 +307,16 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     historyNav: handleHistoryNav,
   }));
 
-  return <div className="h-full w-full bg-ub-cool-grey" ref={containerRef} data-testid="xterm-container" />;
+  return (
+    <div
+      className="h-full w-full bg-ub-cool-grey"
+      ref={containerRef}
+      data-testid="xterm-container"
+      aria-label="Terminal"
+    >
+      <div ref={ariaLiveRef} aria-live="polite" className="sr-only" />
+    </div>
+  );
 });
 
 Terminal.displayName = 'Terminal';
