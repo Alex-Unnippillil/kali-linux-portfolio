@@ -4,6 +4,11 @@ import { useTheme } from '../../hooks/useTheme';
 export function Settings(props) {
     const { theme, setTheme } = useTheme();
 
+    const themes = {
+        dark: { bg: '#111111', window: '#201f1f' },
+        light: { bg: '#ffffff', window: '#f0f0f0' }
+    };
+
     const wallpapers = {
         "wall-1": "./images/wallpapers/wall-1.webp",
         "wall-2": "./images/wallpapers/wall-2.webp",
@@ -23,16 +28,28 @@ export function Settings(props) {
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(${wallpapers[props.currBgImgName]})`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
             </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
-                <select
-                    value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
-                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
-                >
-                    <option value="dark">Dark</option>
-                    <option value="light">Light</option>
-                </select>
+            <div className="flex flex-col items-center my-4">
+                <span className="text-ubt-grey mb-2">Theme:</span>
+                <div className="theme-cards">
+                    {
+                        Object.keys(themes).map((name) => (
+                            <div
+                                key={name}
+                                role="button"
+                                tabIndex="0"
+                                aria-label={`Select ${name} theme`}
+                                className={`theme-card${theme === name ? ' selected' : ''}`}
+                                onClick={() => setTheme(name)}
+                                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setTheme(name)}
+                            >
+                                <div className="w-full h-full overflow-hidden rounded-sm">
+                                    <div className="h-2/5 w-full" style={{ backgroundColor: themes[name].window }}></div>
+                                    <div className="h-3/5 w-full" style={{ backgroundColor: themes[name].bg }}></div>
+                                </div>
+                            </div>
+                        ))
+                    }
+                </div>
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
                 {
