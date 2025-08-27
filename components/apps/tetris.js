@@ -522,7 +522,11 @@ const Tetris = () => {
           width={WIDTH * CELL_SIZE}
           height={HEIGHT * CELL_SIZE}
           className="border border-gray-700 transition-transform"
-          style={{ transform: shake ? 'translateY(2px)' : 'none' }}
+          style={{
+            transform: shake ? 'translateY(2px)' : 'none',
+            height: '60vh',
+            maxHeight: '72vh',
+          }}
         />
         <div className="flex flex-col text-sm">
           <div className="mb-4">

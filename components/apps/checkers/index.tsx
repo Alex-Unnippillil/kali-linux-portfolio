@@ -243,6 +243,33 @@ const Checkers = () => {
     workerRef.current?.postMessage({ board, color: turn, maxDepth: 8 });
   };
 
+  const focusCell = (r: number, c: number) => {
+    document.getElementById(`cell-${r}-${c}`)?.focus();
+  };
+
+  const handleKey = (
+    r: number,
+    c: number,
+    e: React.KeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (e.key === 'ArrowUp' && r > 0) {
+      e.preventDefault();
+      focusCell(r - 1, c);
+    } else if (e.key === 'ArrowDown' && r < 7) {
+      e.preventDefault();
+      focusCell(r + 1, c);
+    } else if (e.key === 'ArrowLeft' && c > 0) {
+      e.preventDefault();
+      focusCell(r, c - 1);
+    } else if (e.key === 'ArrowRight' && c < 7) {
+      e.preventDefault();
+      focusCell(r, c + 1);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      selected ? tryMove(r, c) : selectPiece(r, c);
+    }
+  };
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <div aria-live="polite" className="sr-only">
@@ -250,7 +277,10 @@ const Checkers = () => {
       </div>
       {winner && <div className="mb-2 text-xl">{winner} wins!</div>}
       {draw && <div className="mb-2 text-xl">Draw!</div>}
-      <div className="grid grid-cols-8 gap-0">
+      <div
+        className="grid grid-cols-8 gap-0"
+        style={{ width: 'clamp(384px, 90vw, 560px)' }}
+      >
         {board.map((row, r) =>
           row.map((cell, c) => {
             const isDark = (r + c) % 2 === 1;
@@ -262,11 +292,14 @@ const Checkers = () => {
             const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
             return (
               <div
+                id={`cell-${r}-${c}`}
+                tabIndex={0}
+                onKeyDown={(e) => handleKey(r, c, e)}
                 key={`${r}-${c}`}
                 {...pointerHandlers(() =>
                   selected ? tryMove(r, c) : selectPiece(r, c)
                 )}
-                className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
+                className={`aspect-square flex items-center justify-center ${
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
                 } ${
                   isMove
@@ -282,7 +315,7 @@ const Checkers = () => {
               >
                 {cell && (
                   <div
-                    className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center ${
+                    className={`w-5/6 h-5/6 rounded-full flex items-center justify-center ${
                       cell.color === 'red' ? 'bg-red-500' : 'bg-black'
                     } ${cell.king ? 'border-4 border-yellow-300' : ''} ${
                       isCrowned ? 'motion-safe:animate-flourish' : ''

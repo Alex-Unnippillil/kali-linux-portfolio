@@ -20,6 +20,7 @@ const Memory = () => {
   const [streak, setStreak] = useState(0);
   const [particles, setParticles] = useState([]);
   const [nudge, setNudge] = useState(false);
+  const [dragging, setDragging] = useState(null);
 
   const runningRef = useRef(false);
   const startRef = useRef(0);
@@ -188,7 +189,11 @@ const Memory = () => {
                   onClick={() => handleCardClick(i)}
                   aria-label={isFlipped ? `Card ${card.value}` : 'Hidden card'}
                   disabled={flipped.includes(i) || matched.includes(i) || paused}
-                  className={`relative w-full aspect-square [perspective:600px] rounded transform ${isHighlighted ? 'ring-4 ring-green-600' : ''} ${reduceMotion.current ? '' : 'transition-transform duration-200'} ${isHighlighted && !reduceMotion.current ? 'scale-105' : ''}`}
+                  onPointerDown={() => setDragging(i)}
+                  onPointerUp={() => setDragging(null)}
+                  onPointerLeave={() => setDragging(null)}
+                  className={`relative w-full aspect-square min-w-[64px] min-h-[64px] [perspective:600px] rounded transform ${isHighlighted ? 'ring-4 ring-green-600' : ''} ${dragging === i ? 'ring-4 ring-blue-400 scale-105' : ''} ${reduceMotion.current ? '' : 'transition-transform duration-200'} ${isHighlighted && !reduceMotion.current ? 'scale-105' : ''}`}
+                  style={{ touchAction: 'none' }}
                 >
                   <div
                     data-testid="card-inner"

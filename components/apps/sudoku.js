@@ -478,7 +478,10 @@ const Sudoku = () => {
           </span>
         )}
       </div>
-      <div className="grid grid-cols-9" style={{ gap: '2px' }}>
+      <div
+        className="grid grid-cols-9"
+        style={{ gap: '2px', height: '60vh', maxHeight: '72vh' }}
+      >
         {board.map((row, r) =>
           row.map((val, c) => {
             const original = puzzle[r][c] !== 0;
@@ -509,13 +512,13 @@ const Sudoku = () => {
                   conflict
                     ? 'bg-red-700 error-pulse'
                     : wrong
-                    ? 'bg-red-200'
+                    ? 'bg-red-600'
                     : ''
                 } ${shimmer ? 'shimmer' : ''} ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
               >
                 <input
                   className={`w-full h-full text-center outline-none bg-transparent ${
-                    conflict ? 'text-white' : wrong ? 'text-red-500' : 'text-black'
+                    conflict || wrong ? 'text-white' : 'text-black'
                   }`}
                   aria-label={`Row ${r + 1} Column ${c + 1}`}
                   value={val === 0 ? '' : val}
