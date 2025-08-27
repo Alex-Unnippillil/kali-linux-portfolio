@@ -3,6 +3,7 @@ import React, {
   useState,
   useMemo,
   useCallback,
+  useRef,
 } from 'react';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
@@ -16,6 +17,18 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('date');
   const [search, setSearch] = useState('');
+
+  // Currently playing video and player state
+  const [currentVideo, setCurrentVideo] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [chapters, setChapters] = useState([]);
+  const [isMini, setIsMini] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const playerRef = useRef(null);
+  const containerRef = useRef(null);
+  const progressRaf = useRef();
+  const scrollRaf = useRef();
 
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
@@ -100,6 +113,101 @@ export default function YouTubeApp({ initialVideos = [] }) {
     fetchData();
   }, [apiKey, initialVideos.length]);
 
+  // Track prefers-reduced-motion to disable transitions/animations
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handle = () => setPrefersReducedMotion(mq.matches);
+    handle();
+    mq.addEventListener('change', handle);
+    return () => mq.removeEventListener('change', handle);
+  }, []);
+
+  // Initialize and monitor the YouTube player when a video is selected
+  useEffect(() => {
+    if (!currentVideo) return;
+    let player;
+
+    const onReady = () => {
+      const d = player.getDuration();
+      setDuration(d);
+      const c = player.getVideoData()?.chapters || [];
+      setChapters(c);
+    };
+
+    const onStateChange = (e) => {
+      if (e.data === window.YT.PlayerState.PLAYING) {
+        const update = () => {
+          const d = player.getDuration();
+          const t = player.getCurrentTime();
+          if (d) setProgress(t / d);
+          if (prefersReducedMotion) {
+            progressRaf.current = setTimeout(update, 1000);
+          } else {
+            progressRaf.current = requestAnimationFrame(update);
+          }
+        };
+        update();
+      } else {
+        if (prefersReducedMotion) {
+          clearTimeout(progressRaf.current);
+        } else {
+          cancelAnimationFrame(progressRaf.current);
+        }
+      }
+    };
+
+    const createPlayer = () => {
+      player = new window.YT.Player(playerRef.current, {
+        videoId: currentVideo.id,
+        events: {
+          onReady,
+          onStateChange,
+        },
+        playerVars: { origin: window.location.origin },
+      });
+    };
+
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      tag.async = true;
+      window.onYouTubeIframeAPIReady = createPlayer;
+      document.body.appendChild(tag);
+    } else {
+      createPlayer();
+    }
+
+    return () => {
+      if (prefersReducedMotion) {
+        clearTimeout(progressRaf.current);
+      } else {
+        cancelAnimationFrame(progressRaf.current);
+      }
+      player?.destroy();
+    };
+  }, [currentVideo, prefersReducedMotion]);
+
+  // Dock the player as a mini version when scrolled out of view
+  useEffect(() => {
+    if (!currentVideo) return;
+    const checkMini = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      setIsMini(rect.top < 0);
+    };
+    const onScroll = () => {
+      if (scrollRaf.current) cancelAnimationFrame(scrollRaf.current);
+      scrollRaf.current = requestAnimationFrame(checkMini);
+    };
+    checkMini();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(scrollRaf.current);
+    };
+  }, [currentVideo]);
+
   // When initial videos are passed in (e.g. during tests), populate playlists
   // from that data so the category tabs render correctly.
   useEffect(() => {
@@ -171,6 +279,58 @@ export default function YouTubeApp({ initialVideos = [] }) {
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
+      {currentVideo && (
+        <div
+          ref={containerRef}
+          className={`bg-black ${
+            isMini
+              ? 'fixed bottom-2 right-2 w-48 z-50 shadow-lg'
+              : 'w-full'
+          } ${prefersReducedMotion ? '' : 'transition-all duration-300'}`}
+        >
+          <div className={isMini ? 'w-full h-28' : 'relative w-full pb-[56.25%]'}>
+            <div
+              ref={playerRef}
+              className={isMini ? 'w-full h-full' : 'absolute inset-0'}
+            />
+          </div>
+          <div
+            className="relative h-2 bg-gray-700"
+            role="progressbar"
+            aria-label="Video progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progress * 100)}
+          >
+            <div
+              className="absolute top-0 left-0 h-full bg-red-600"
+              style={{ width: `${progress * 100}%` }}
+            />
+            {chapters.map((ch, i) => {
+              const start = ch.startTime || 0;
+              const end = chapters[i + 1]?.startTime ?? duration;
+              const left = (start / duration) * 100;
+              const width = ((end - start) / duration) * 100;
+              const heat = (i + 1) / chapters.length;
+              return (
+                <div
+                  key={i}
+                  aria-hidden="true"
+                  className="absolute top-0 h-full"
+                  style={{
+                    left: `${left}%`,
+                    width: `${width}%`,
+                    background: `rgba(59,130,246,${0.3 + 0.7 * heat})`,
+                  }}
+                />
+              );
+            })}
+          </div>
+          <div className="sr-only" aria-live="polite">
+            {`Progress ${Math.round(progress * 100)} percent`}
+          </div>
+        </div>
+      )}
       {!apiKey && videos.length === 0 ? (
         <div className="p-2">
           <p>YouTube API key is not configured.</p>
@@ -219,14 +379,23 @@ export default function YouTubeApp({ initialVideos = [] }) {
           </div>
 
           {/* Video list */}
-          <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+          <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4"> 
             {sorted.map((video) => (
               <div
                 key={video.id}
                 data-testid="video-card"
                 className="bg-gray-800 rounded-lg overflow-hidden shadow flex flex-col hover:shadow-lg transition"
               >
-                <a href={video.url} target="_blank" rel="noreferrer" className="block">
+                <a
+                  href={video.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCurrentVideo(video);
+                  }}
+                >
                   {video.thumbnail && (
                     <img src={video.thumbnail} alt={video.title} className="w-full" />
                   )}
