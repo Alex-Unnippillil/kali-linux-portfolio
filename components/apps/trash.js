@@ -1,57 +1,38 @@
-import React, { Component } from 'react';
+import React, { Component, createRef } from 'react';
 import Image from 'next/image';
+
+const INITIAL_ITEMS = [
+    { name: 'php', icon: '/themes/filetypes/php.png' },
+    { name: 'Angular.js', icon: '/themes/filetypes/js.png' },
+    { name: 'node_modules', icon: '/themes/Yaru/system/folder.png' },
+    { name: 'abandoned project', icon: '/themes/Yaru/system/folder.png' },
+    { name: 'INFR 4900U blockchain assignment AlexUnnippillil.zip', icon: '/themes/filetypes/zip.png' },
+    { name: 'cryptography project final', icon: '/themes/Yaru/system/folder.png' },
+    { name: 'project machine learning-final', icon: '/themes/Yaru/system/folder.png' },
+];
 
 export class Trash extends Component {
     constructor() {
         super();
-        this.trashItems = [
-            {
-                name: "php",
-                icon: "/themes/filetypes/php.png"
-            },
-            {
-                name: "Angular.js",
-                icon: "/themes/filetypes/js.png"
-            },
-            {
-                name: "node_modules",
-                icon: "/themes/Yaru/system/folder.png"
-            },
-
-            {
-                name: "abandoned project",
-                icon: "/themes/Yaru/system/folder.png"
-            },
-            {
-                name: "INFR 4900U blockchain assignment AlexUnnippillil.zip",
-                icon: "/themes/filetypes/zip.png"
-            },
-            {
-                name: "cryptography project final",
-                icon: "/themes/Yaru/system/folder.png"
-            },
-            {
-                name: "project machine learning-final",
-                icon: "/themes/Yaru/system/folder.png"
-            },
-
-        ];
         this.state = {
-            empty: false,
+            items: [...INITIAL_ITEMS],
             fileHandle: null,
             filePreview: null,
             confirmDelete: false,
             toast: null,
+            showEmptyModal: false,
         };
 
         this.toastTimeout = null;
+        this.confirmRef = createRef();
+        this.cancelRef = createRef();
+        this.lastEmptied = [];
     }
 
     componentDidMount() {
-        // get user preference from local-storage
-        let wasEmpty = localStorage.getItem("trash-empty");
-        if (wasEmpty !== null && wasEmpty !== undefined) {
-            if (wasEmpty === "true") this.setState({ empty: true });
+        const wasEmpty = localStorage.getItem('trash-empty');
+        if (wasEmpty === 'true') {
+            this.setState({ items: [] });
         }
     }
 
@@ -88,7 +69,7 @@ export class Trash extends Component {
         this.setState({ toast: { message, undoAction } });
         this.toastTimeout = setTimeout(() => {
             this.setState({ toast: null });
-        }, 5000);
+        }, 6000);
     };
 
     undo = () => {
@@ -97,27 +78,60 @@ export class Trash extends Component {
         this.setState({ toast: null });
     };
 
-    emptyTrash = () => {
-        const items = document.querySelectorAll('.trash-item');
-        if (items.length === 0) {
-            this.setState({ empty: true });
-            localStorage.setItem('trash-empty', true);
-            return;
+    openEmptyModal = () => {
+        if (this.state.items.length === 0) return;
+        this.setState({ showEmptyModal: true }, () => {
+            this.confirmRef.current?.focus();
+        });
+    };
+
+    handleModalKeyDown = (e) => {
+        if (e.key === 'Tab') {
+            if (e.shiftKey) {
+                if (document.activeElement === this.confirmRef.current) {
+                    e.preventDefault();
+                    this.cancelRef.current?.focus();
+                }
+            } else {
+                if (document.activeElement === this.cancelRef.current) {
+                    e.preventDefault();
+                    this.confirmRef.current?.focus();
+                }
+            }
+        } else if (e.key === 'Enter') {
+            this.confirmEmpty();
+        } else if (e.key === 'Escape') {
+            this.cancelEmpty();
         }
+    };
+
+    confirmEmpty = () => {
+        const items = [...this.state.items];
+        const els = document.querySelectorAll('.trash-item');
         let finished = 0;
         const done = () => {
             finished++;
-            if (finished === items.length) {
-                this.setState({ empty: true }, () => {
+            if (finished === els.length) {
+                this.setState({ items: [], showEmptyModal: false }, () => {
                     localStorage.setItem('trash-empty', true);
+                    this.lastEmptied = items;
                     this.showUndoToast(() => {
-                        this.setState({ empty: false });
+                        this.setState({ items: this.lastEmptied });
                         localStorage.setItem('trash-empty', false);
                     }, 'Trash emptied');
                 });
             }
         };
-        items.forEach((el) => this.animateFall(el, done));
+        if (els.length === 0) {
+            this.setState({ items: [], showEmptyModal: false });
+            localStorage.setItem('trash-empty', true);
+            return;
+        }
+        els.forEach((el) => this.animateFall(el, done));
+    };
+
+    cancelEmpty = () => {
+        this.setState({ showEmptyModal: false });
     };
 
     emptyScreen = () => {
@@ -139,27 +153,29 @@ export class Trash extends Component {
     showTrashItems = () => {
         return (
             <div className="flex-grow ml-4 flex flex-wrap items-start content-start justify-start overflow-y-auto windowMainScreen">
-                {
-                    this.trashItems.map((item, index) => {
-                        return (
-                            <div key={index} tabIndex="1" onFocus={this.focusFile} onBlur={this.focusFile} className="trash-item flex flex-col items-center text-sm outline-none w-16 my-2 mx-4">
-                                <div className="w-16 h-16 flex items-center justify-center">
-                                    <Image
-                                        src={item.icon}
-                                        alt="Ubuntu File Icons"
-                                        width={48}
-                                        height={48}
-                                        sizes="48px"
-                                    />
-                                </div>
-                                <span className="text-center rounded px-0.5">{item.name}</span>
-                            </div>
-                        )
-                    })
-                }
+                {this.state.items.map((item, index) => (
+                    <div
+                        key={index}
+                        tabIndex="1"
+                        onFocus={this.focusFile}
+                        onBlur={this.focusFile}
+                        className="trash-item flex flex-col items-center text-sm outline-none w-16 my-2 mx-4"
+                    >
+                        <div className="w-16 h-16 flex items-center justify-center">
+                            <Image
+                                src={item.icon}
+                                alt="Ubuntu File Icons"
+                                width={48}
+                                height={48}
+                                sizes="48px"
+                            />
+                        </div>
+                        <span className="text-center rounded px-0.5">{item.name}</span>
+                    </div>
+                ))}
             </div>
         );
-    }
+    };
 
     selectFile = async () => {
         if (!window.showOpenFilePicker) {
@@ -184,21 +200,30 @@ export class Trash extends Component {
         }
     }
 
-    deleteSelected = async () => {
-        const { fileHandle, filePreview } = this.state;
+    deleteSelected = () => {
+        const { fileHandle, filePreview, items } = this.state;
         if (!fileHandle) return;
-        try {
-            if (fileHandle.remove) {
-                await fileHandle.remove();
-            }
-        } catch (err) {
-            console.error(err);
-        }
+        const newItem = { name: fileHandle.name, icon: '/themes/Yaru/system/folder.png', handle: fileHandle };
         if (filePreview?.url) URL.revokeObjectURL(filePreview.url);
-        this.setState({ fileHandle: null, filePreview: null, confirmDelete: false }, () => {
-            this.showUndoToast(null, `${fileHandle.name} deleted`);
-        });
-    }
+        this.setState(
+            {
+                items: [...items, newItem],
+                fileHandle: null,
+                filePreview: null,
+                confirmDelete: false,
+            },
+            () => {
+                localStorage.setItem('trash-empty', 'false');
+                this.showUndoToast(() => {
+                    this.setState((prev) => {
+                        const updated = prev.items.filter((i) => i !== newItem);
+                        localStorage.setItem('trash-empty', updated.length === 0 ? 'true' : 'false');
+                        return { items: updated };
+                    });
+                }, `${fileHandle.name} moved to Trash`);
+            }
+        );
+    };
 
     cancelDelete = () => {
         const { filePreview } = this.state;
@@ -213,11 +238,11 @@ export class Trash extends Component {
                     <span className="font-bold ml-2">Trash</span>
                     <div className="flex">
                         <div className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded text-gray-300">Restore</div>
-                        <div onClick={this.emptyTrash} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty</div>
+                        <div onClick={this.openEmptyModal} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty</div>
                         <div onClick={this.selectFile} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Delete File</div>
                     </div>
                 </div>
-                {this.state.empty ? this.emptyScreen() : this.showTrashItems()}
+                {this.state.items.length === 0 ? this.emptyScreen() : this.showTrashItems()}
                 {this.state.confirmDelete && (
                     <div className="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4">
                         <div className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full">
@@ -230,6 +255,21 @@ export class Trash extends Component {
                             <div className="flex justify-end space-x-2">
                                 <button onClick={this.deleteSelected} className="px-3 py-1 bg-red-600 rounded">Delete</button>
                                 <button onClick={this.cancelDelete} className="px-3 py-1 bg-gray-600 rounded">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {this.state.showEmptyModal && (
+                    <div className="absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4">
+                        <div
+                            className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full"
+                            tabIndex="-1"
+                            onKeyDown={this.handleModalKeyDown}
+                        >
+                            <p className="mb-4">Empty Trash ({this.state.items.length} items)?</p>
+                            <div className="flex justify-end space-x-2">
+                                <button ref={this.confirmRef} onClick={this.confirmEmpty} className="px-3 py-1 bg-red-600 rounded">Empty</button>
+                                <button ref={this.cancelRef} onClick={this.cancelEmpty} className="px-3 py-1 bg-gray-600 rounded">Cancel</button>
                             </div>
                         </div>
                     </div>

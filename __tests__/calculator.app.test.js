@@ -4,8 +4,9 @@ const { TextEncoder, TextDecoder } = require('util');
 function setupDom() {
   global.TextEncoder = TextEncoder;
   global.TextDecoder = TextDecoder;
-  const dom = new JSDOM(
-    `<!DOCTYPE html><html><body>
+  const dom = new JSDOM('', { url: 'https://example.org/' });
+  Object.defineProperty(window, 'localStorage', { value: dom.window.localStorage });
+  document.body.innerHTML = `
       <input id="display" />
       <div class="buttons"></div>
       <button id="toggle-scientific"></button>
@@ -18,13 +19,9 @@ function setupDom() {
       <div id="history"></div>
       <div id="paren-indicator"></div>
       <button id="print-tape"></button>
-    </body></html>`
-  );
-  global.window = dom.window;
-  global.document = dom.window.document;
-  global.localStorage = dom.window.localStorage;
-  global.navigator = dom.window.navigator;
-  global.math = require('mathjs');
+  `;
+  const { create, all } = require('mathjs');
+  global.math = create(all);
 }
 
 describe('calculator', () => {
