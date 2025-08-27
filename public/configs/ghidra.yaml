@@ -1,0 +1,5 @@
+title: Ghidra
+homepage: https://ghidra-sre.org/
+docs: https://ghidra-sre.org/Documentation.html
+license: Apache-2.0
+safe_embed: true
