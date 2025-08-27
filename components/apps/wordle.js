@@ -3,15 +3,20 @@ import wordList from './wordle_words.json';
 
 // Determine today's puzzle key and pick a word from the dictionary
 // deterministically so everyone sees the same puzzle each day.
-const todayKey = new Date().toISOString().split('T')[0];
-function hash(str) {
+export function hash(str) {
   let h = 0;
   for (let i = 0; i < str.length; i += 1) {
     h = Math.imul(31, h) + str.charCodeAt(i);
   }
   return Math.abs(h);
 }
-const solution = wordList[hash(todayKey) % wordList.length];
+
+export function getSolutionForDate(dateStr) {
+  return wordList[hash(dateStr) % wordList.length];
+}
+
+const todayKey = new Date().toISOString().split('T')[0];
+const solution = getSolutionForDate(todayKey);
 
 // Persist state to localStorage so that refreshes keep progress/history
 // and games reset each day.
@@ -36,7 +41,7 @@ function usePersistentState(key, defaultValue) {
 }
 
 // Evaluate a guess against the solution producing statuses for each letter.
-const evaluateGuess = (guess, answer) => {
+export const evaluateGuess = (guess, answer) => {
   const result = Array(5).fill('absent');
   const answerArr = answer.split('');
   const used = Array(5).fill(false);
@@ -71,6 +76,7 @@ const Wordle = () => {
   const [history, setHistory] = usePersistentState('wordle-history', {});
   const [guess, setGuess] = useState('');
   const [message, setMessage] = useState('');
+  const [keyStatuses, setKeyStatuses] = useState({});
 
   // settings
   const [colorBlind, setColorBlind] = usePersistentState(
@@ -98,8 +104,7 @@ const Wordle = () => {
     ? { correct: '🟦', present: '🟧', absent: '⬛' }
     : { correct: '🟩', present: '🟨', absent: '⬛' };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = () => {
     if (isGameOver) return;
     const upper = guess.toUpperCase();
     if (upper.length !== 5) return;
@@ -109,11 +114,28 @@ const Wordle = () => {
       return;
     }
 
+    if (!wordList.includes(upper)) {
+      setMessage('Not in word list.');
+      return;
+    }
+
     const result = evaluateGuess(upper, solution);
     const next = [...guesses, { guess: upper, result }];
     setGuesses(next);
     setGuess('');
     setMessage('');
+
+    setKeyStatuses((ks) => {
+      const updated = { ...ks };
+      result.forEach((r, i) => {
+        const ch = upper[i];
+        const prev = updated[ch];
+        if (prev === 'correct') return;
+        if (prev === 'present' && r === 'absent') return;
+        updated[ch] = r;
+      });
+      return updated;
+    });
 
     if (upper === solution || next.length === 6) {
       setHistory({
@@ -136,20 +158,30 @@ const Wordle = () => {
     setMessage('Copied results to clipboard!');
   };
 
+  const shapes = { correct: '●', present: '▲', absent: '■' };
+
   const renderCell = (row, col) => {
     const guessRow = guesses[row];
     const letter =
       guessRow?.guess[col] || (row === guesses.length ? guess[col] || '' : '');
     const status = guessRow?.result[col];
     let classes =
-      'w-10 h-10 md:w-12 md:h-12 flex items-center justify-center border-2 font-bold text-xl';
+      'relative w-10 h-10 md:w-12 md:h-12 flex items-center justify-center border-2 font-bold text-xl';
     if (status) {
       classes += ` ${colors[status]} text-white`;
     } else {
       classes += ' border-gray-600';
     }
     return (
-      <div key={col} className={classes}>
+      <div key={col} className={classes} aria-label={status || 'empty'}>
+        {status && (
+          <span
+            className="absolute top-0 left-0 text-[10px]"
+            aria-hidden="true"
+          >
+            {shapes[status]}
+          </span>
+        )}
         {letter}
       </div>
     );
@@ -159,6 +191,31 @@ const Wordle = () => {
     `Wordle ${isSolved ? guesses.length : 'X'}/6\n${guesses
       .map((g) => g.result.map((r) => emojiMap[r]).join(''))
       .join('\n')}`;
+
+  const keyboardRows = [
+    'QWERTYUIOP'.split(''),
+    'ASDFGHJKL'.split(''),
+    ['ENTER', ...'ZXCVBNM'.split(''), '⌫'],
+  ];
+
+  const onKey = (key) => {
+    if (isGameOver) return;
+    if (key === 'ENTER') {
+      handleSubmit();
+    } else if (key === '⌫' || key === 'BACKSPACE') {
+      setGuess((g) => g.slice(0, -1));
+    } else if (/^[A-Z]$/.test(key) && guess.length < 5) {
+      setGuess((g) => (g + key).toUpperCase());
+    }
+  };
+
+  useEffect(() => {
+    const handler = (e) => {
+      onKey(e.key.toUpperCase());
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [guess, isGameOver]);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
@@ -192,22 +249,39 @@ const Wordle = () => {
       </div>
 
       {!isGameOver && (
-        <form onSubmit={handleSubmit} className="flex space-x-2">
-          <input
-            type="text"
-            maxLength={5}
-            value={guess}
-            onChange={(e) => setGuess(e.target.value.toUpperCase())}
-            className="w-32 p-2 text-black text-center uppercase"
-            placeholder="Guess"
-          />
-          <button
-            type="submit"
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          >
-            Submit
-          </button>
-        </form>
+        <div className="flex flex-col items-center">
+          {keyboardRows.map((row, i) => (
+            <div key={i} className="flex justify-center">
+              {row.map((k) => {
+                const status = keyStatuses[k];
+                let classes =
+                  'relative m-0.5 flex items-center justify-center rounded text-sm h-10';
+                if (k.length > 1) classes += ' w-12';
+                else classes += ' w-8';
+                if (status) classes += ` ${colors[status]} text-white`;
+                else classes += ' bg-gray-500';
+                return (
+                  <button
+                    key={k}
+                    onClick={() => onKey(k)}
+                    className={classes}
+                    aria-label={k}
+                  >
+                    {status && (
+                      <span
+                        className="absolute top-0 left-0 text-[8px]"
+                        aria-hidden="true"
+                      >
+                        {shapes[status]}
+                      </span>
+                    )}
+                    {k}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       )}
 
       {isGameOver && (
