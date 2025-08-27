@@ -73,6 +73,15 @@ const Dsniff = () => {
   const [newValue, setNewValue] = useState('');
   const [prefersReduced, setPrefersReduced] = useState(false);
 
+  const sampleCommand = 'urlsnarf -i eth0';
+  const sampleOutput = urlsnarfFixture.slice(0, 1).join('\n');
+
+  const copySampleCommand = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(sampleCommand);
+    }
+  };
+
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     const handler = () => setPrefersReduced(media.matches);
@@ -115,6 +124,57 @@ const Dsniff = () => {
       <h1 className="text-lg mb-2">dsniff</h1>
       <div className="mb-2 text-yellow-300 text-sm">
         For lab use only – simulated traffic
+      </div>
+
+      <div className="mb-4 flex flex-col md:flex-row gap-4" data-testid="how-it-works">
+        <div className="md:w-1/2 bg-black p-2">
+          <h2 className="font-bold mb-2 text-sm">How it works</h2>
+          <svg
+            viewBox="0 0 200 80"
+            role="img"
+            aria-label="Attacker intercepting traffic between victim and server"
+            className="w-full h-32"
+          >
+            <title>dsniff flow</title>
+            <desc>Attacker positioned between victim and server capturing HTTP requests</desc>
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                <polygon points="0 0,10 3.5,0 7" fill="#fbbf24" />
+              </marker>
+            </defs>
+            <rect x="10" y="25" width="50" height="30" fill="#1f2937" />
+            <text x="35" y="43" fontSize="10" fill="#fff" textAnchor="middle">
+              Victim
+            </text>
+            <rect x="140" y="25" width="50" height="30" fill="#1f2937" />
+            <text x="165" y="43" fontSize="10" fill="#fff" textAnchor="middle">
+              Server
+            </text>
+            <rect x="80" y="10" width="40" height="60" fill="#374151" />
+            <text x="100" y="43" fontSize="10" fill="#fff" textAnchor="middle">
+              Attacker
+            </text>
+            <line x1="60" y1="40" x2="80" y2="40" stroke="#fbbf24" strokeWidth="2" markerEnd="url(#arrow)" />
+            <line x1="120" y1="40" x2="140" y2="40" stroke="#fbbf24" strokeWidth="2" markerEnd="url(#arrow)" />
+          </svg>
+          <p className="text-xs mt-2">
+            Tools like <code>urlsnarf</code> sniff traffic and log requests for analysis.
+          </p>
+        </div>
+        <div className="md:w-1/2 bg-black p-2 flex flex-col">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-bold text-sm">Sample command</span>
+            <button
+              onClick={copySampleCommand}
+              className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            >
+              Copy sample command
+            </button>
+          </div>
+          <pre className="text-xs bg-ub-dark p-2 flex-1 overflow-auto" aria-label="sample command output">
+            {`${sampleCommand}\n${sampleOutput}`}
+          </pre>
+        </div>
       </div>
       <div className="mb-2 flex space-x-2 items-center">
         <button
