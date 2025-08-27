@@ -1,0 +1,27 @@
+[
+  {
+    "content": "Stay hungry, stay foolish.",
+    "author": "Steve Jobs",
+    "tags": ["inspiration", "technology"]
+  },
+  {
+    "content": "The only limit to our realization of tomorrow is our doubts of today.",
+    "author": "Franklin D. Roosevelt",
+    "tags": ["inspiration"]
+  },
+  {
+    "content": "Imagination is more important than knowledge.",
+    "author": "Albert Einstein",
+    "tags": ["wisdom", "science"]
+  },
+  {
+    "content": "Life is what happens when you're busy making other plans.",
+    "author": "John Lennon",
+    "tags": ["life"]
+  },
+  {
+    "content": "Be yourself; everyone else is already taken.",
+    "author": "Oscar Wilde",
+    "tags": ["humor", "life"]
+  }
+]
