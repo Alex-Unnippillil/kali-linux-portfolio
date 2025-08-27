@@ -447,73 +447,16 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 }
 
-@keyframes merge-ripple {
-    from { transform: scale(0); opacity: 0.5; }
-    to { transform: scale(3); opacity: 0; }
+.frogger-splash {
+    background-image: url('/apps/frogger/splash.svg');
+    background-repeat: no-repeat;
+    background-size: 128px 32px;
+    animation: frogger-splash 0.5s steps(4) forwards;
+    image-rendering: pixelated;
 }
 
-.merge-ripple {
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: rgba(255, 255, 255, 0.5);
-    pointer-events: none;
-    animation: merge-ripple 0.4s ease-out;
-}
+@keyframes frogger-splash {
+    from { background-position: 0 0; }
+    to { background-position: -128px 0; }
 
-@keyframes score-pop {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-}
-
-.score-pop {
-    display: inline-block;
-    animation: score-pop 0.3s ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .merge-ripple,
-    .tile-pop,
-    .score-pop {
-        animation: none;
-    }
-}
-
-@keyframes pad-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5); }
-    50% { box-shadow: 0 0 25px 8px rgba(255, 255, 255, 0.3); }
-}
-
-.pad-pulse {
-    animation: pad-pulse 0.6s ease-in-out;
-}
-
-@keyframes buzz {
-    10%, 90% { transform: translateX(-2px); }
-    20%, 80% { transform: translateX(2px); }
-    30%, 50%, 70% { transform: translateX(-4px); }
-    40%, 60% { transform: translateX(4px); }
-}
-
-.buzz {
-    animation: buzz 0.6s linear;
-}
-
-@keyframes tile-flip {
-    0% { transform: rotateX(0deg); }
-    50% { transform: rotateX(90deg); }
-    100% { transform: rotateX(0deg); }
-}
-
-.tile-flip {
-    animation: tile-flip 0.6s ease forwards;
-    transform-style: preserve-3d;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .pad-pulse,
-    .buzz,
-    .tile-flip {
-        animation: none;
-    }
 }

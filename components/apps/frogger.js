@@ -145,7 +145,8 @@ const Frogger = () => {
   const audioCtxRef = useRef(null);
   const nextLife = useRef(500);
   const holdRef = useRef();
-  const rippleRef = useRef(0);
+  const [splashes, setSplashes] = useState([]);
+
 
   useEffect(() => { frogRef.current = frog; }, [frog]);
   useEffect(() => { carsRef.current = cars; }, [cars]);
@@ -259,33 +260,59 @@ const Frogger = () => {
     ReactGA.event({ category: 'Frogger', action: 'level_start', value: 1 });
   }, []);
 
-  const reset = useCallback(
-    (full = false, diff = difficulty, lvl = level) => {
-      setFrog(initialFrog);
-      const mult = DIFFICULTY_MULTIPLIERS[diff];
-      setCars(
-        carLaneDefs.map((l, i) => initLane(rampLane(l, lvl, 0.3, mult), i + 1))
-      );
-      setLogs(
-        logLaneDefs.map((l, i) => initLane(rampLane(l, lvl, 0.5, mult), i + 101))
-      );
-      setStatus('');
-      setPaused(false);
-      if (full) {
-        setScore(0);
-        setLives(3);
-        setPads(PAD_POSITIONS.map(() => false));
-        setLevel(1);
-        nextLife.current = 500;
-        ReactGA.event({
-          category: 'Frogger',
-          action: 'level_start',
-          value: 1,
+    const reset = useCallback(
+      (full = false, diff = difficulty, lvl = level) => {
+        setFrog(initialFrog);
+        const mult = DIFFICULTY_MULTIPLIERS[diff];
+        setCars(
+          carLaneDefs.map((l, i) =>
+            initLane(rampLane(l, lvl, 0.3, mult), i + 1)
+          )
+        );
+        setLogs(
+          logLaneDefs.map((l, i) =>
+            initLane(rampLane(l, lvl, 0.5, mult), i + 101)
+          )
+        );
+        setStatus('');
+        if (full) {
+          setScore(0);
+          setLives(3);
+          setPads(PAD_POSITIONS.map(() => false));
+          setLevel(1);
+          nextLife.current = 500;
+          ReactGA.event({
+            category: 'Frogger',
+            action: 'level_start',
+            value: 1,
+          });
+        }
+      },
+      [difficulty, level]
+    );
+
+    const loseLife = useCallback(
+      (pos) => {
+        const id = Date.now();
+        setSplashes((s) => [...s, { x: Math.floor(pos.x), y: pos.y, id }]);
+        setTimeout(() =>
+          setSplashes((s) => s.filter((sp) => sp.id !== id)),
+        500);
+        ReactGA.event({ category: 'Frogger', action: 'death', value: level });
+        setLives((l) => {
+          const newLives = l - 1;
+          if (newLives <= 0) {
+            setStatus('Game Over');
+            setTimeout(() => reset(true), 1000);
+            return 0;
+          }
+          reset();
+          return newLives;
         });
-      }
-    },
-    [difficulty, level]
-  );
+      },
+      [level, reset]
+    );
+
 
   const loseLife = useCallback(() => {
     ReactGA.event({ category: 'Frogger', action: 'death', value: level });
@@ -375,20 +402,26 @@ const Frogger = () => {
     const loop = (time) => {
       const dt = (time - last) / 1000;
       last = time;
-      rippleRef.current += dt;
-      if (!pausedRef.current) {
-        const carResult = updateCars(carsRef.current, frogRef.current, dt);
-        carsRef.current = carResult.lanes;
-        const logResult = updateLogs(logsRef.current, frogRef.current, dt);
-        logsRef.current = logResult.lanes;
-        frogRef.current = logResult.frog;
-        if (
-          carResult.dead ||
-          logResult.dead ||
-          frogRef.current.x < 0 ||
-          frogRef.current.x >= WIDTH
-        ) {
-          loseLife();
+
+      const carResult = updateCars(carsRef.current, frogRef.current, dt);
+      carsRef.current = carResult.lanes;
+      const logResult = updateLogs(logsRef.current, frogRef.current, dt);
+      logsRef.current = logResult.lanes;
+      frogRef.current = logResult.frog;
+      if (
+        carResult.dead ||
+        logResult.dead ||
+        frogRef.current.x < 0 ||
+        frogRef.current.x >= WIDTH
+      ) {
+        loseLife(frogRef.current);
+        frogRef.current = { ...initialFrog };
+      } else {
+        const padResult = handlePads(frogRef.current, padsRef.current);
+        padsRef.current = padResult.pads;
+        if (padResult.dead) {
+          loseLife(frogRef.current);
+
           frogRef.current = { ...initialFrog };
         } else {
           const padResult = handlePads(frogRef.current, padsRef.current);
@@ -441,6 +474,58 @@ const Frogger = () => {
       nextLife.current += 500;
     }
   }, [score]);
+
+  // lanes are initialized via reset using current level and difficulty
+
+  const renderCell = (x, y) => {
+    const isFrog = Math.floor(frog.x) === x && frog.y === y;
+    const carLane = cars.find((l) => l.y === y);
+    const logLane = logs.find((l) => l.y === y);
+    const splash = splashes.some((s) => s.x === x && s.y === y);
+
+    let className = 'w-8 h-8';
+    if (y === 0) {
+      const idx = PAD_POSITIONS.indexOf(x);
+      if (idx >= 0) className += pads[idx] ? ' bg-green-400' : ' bg-green-700';
+      else className += ' bg-blue-700';
+    } else if (y === 3 || y === 6) className += ' bg-green-700';
+    else if (y >= 4 && y <= 5) className += ' bg-gray-700';
+    else className += ' bg-blue-700';
+
+    if (isFrog) className += ' bg-green-400';
+    else if (
+      carLane &&
+      carLane.entities.some((e) => x >= Math.floor(e.x) && x < Math.floor(e.x + carLane.length))
+    )
+      className += ' bg-red-500';
+    else if (logLane) {
+      const onLog = logLane.entities.some(
+        (e) => x >= Math.floor(e.x) && x < Math.floor(e.x + logLane.length)
+      );
+      const preview = logLane.entities.some((e) => {
+        const nextX = e.x + logLane.dir * logLane.speed;
+        return (
+          x >= Math.floor(nextX) &&
+          x < Math.floor(nextX + logLane.length)
+        );
+      });
+      if (onLog) className += ' bg-yellow-700';
+      else if (preview) className += ' bg-yellow-700 opacity-50';
+    }
+
+    return (
+      <div key={`${x}-${y}`} className={`${className} relative`}>
+        {splash && <div className="absolute inset-0 frogger-splash" />}
+      </div>
+    );
+  };
+
+  const grid = [];
+  for (let y = 0; y < HEIGHT; y += 1) {
+    for (let x = 0; x < WIDTH; x += 1) {
+      grid.push(renderCell(x, y));
+    }
+  }
 
   const mobileControls = [
     null,
