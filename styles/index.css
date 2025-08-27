@@ -346,3 +346,20 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Resource monitor chart container */
+.resource-chart {
+    width: 100%;
+    height: 6rem;
+}
+
+@media (min-width: 768px) {
+    .resource-chart {
+        height: 8rem;
+    }
+}
+
+.resource-chart canvas {
+    width: 100% !important;
+    height: 100% !important;
+}

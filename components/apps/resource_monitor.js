@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const Gauge = ({ value, label }) => {
   const radius = 45;
@@ -41,20 +41,66 @@ const Gauge = ({ value, label }) => {
 };
 
 const LineChart = ({ data, color, label }) => {
-  const max = Math.max(...data, 1);
-  const points = data
-    .map((d, i) => {
-      const x = (i / Math.max(data.length - 1, 1)) * 100;
-      const y = 100 - (d / max) * 100;
-      return `${x},${y}`;
-    })
-    .join(' ');
+  const canvasRef = useRef(null);
+  const chartRef = useRef(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const createChart = async () => {
+      const { default: Chart } = await import('chart.js/auto');
+      if (!canvasRef.current || !isMounted) return;
+      chartRef.current = new Chart(canvasRef.current, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              data: [],
+              borderColor: color,
+              borderWidth: 2,
+              fill: false,
+              tension: 0.3,
+            },
+          ],
+        },
+        options: {
+          animation: false,
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+          },
+          scales: {
+            x: { display: false },
+            y: {
+              ticks: { color: '#fff' },
+              grid: { color: 'rgba(255,255,255,0.1)' },
+            },
+          },
+        },
+      });
+    };
+    createChart();
+    return () => {
+      isMounted = false;
+      if (chartRef.current) {
+        chartRef.current.destroy();
+      }
+    };
+  }, [color]);
+
+  useEffect(() => {
+    if (chartRef.current) {
+      chartRef.current.data.labels = data.map((_, i) => i);
+      chartRef.current.data.datasets[0].data = data;
+      chartRef.current.update('none');
+    }
+  }, [data]);
+
   const latest = data[data.length - 1];
   return (
-    <div className="flex flex-col items-center flex-1">
-      <svg viewBox="0 0 100 100" className="w-full h-24">
-        <polyline fill="none" stroke={color} strokeWidth="2" points={points} />
-      </svg>
+    <div className="flex flex-col items-center flex-1 resource-chart">
+      <canvas ref={canvasRef} />
       <span className="mt-1 text-white">
         {label}
         {latest !== undefined ? `: ${latest.toFixed(2)}` : ''}
