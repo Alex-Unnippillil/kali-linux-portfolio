@@ -1,72 +1,74 @@
-import React, { useState } from 'react';
-
-import dynamic from 'next/dynamic';
-
-// Load the Twitter embed only on the client to avoid SSR issues.
-const TwitterTimelineEmbed = dynamic(
-  () => import('react-twitter-embed').then((mod) => mod.TwitterTimelineEmbed),
-  { ssr: false }
-);
+import React, { useEffect, useRef, useState } from 'react';
+import Script from 'next/script';
 
 export default function XApp() {
-  const [text, setText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [timelineKey, setTimelineKey] = useState(0);
+  const [handle, setHandle] = useState('');
+  const inputRef = useRef(null);
+  const timelineRef = useRef(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!text.trim()) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch('/api/x', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim() }),
-      });
-      if (res.ok) {
-        setText('');
-        setTimelineKey((k) => k + 1);
-      }
-    } catch (err) {
-      // Silently fail for now
-    } finally {
-      setSubmitting(false);
+  const loadTimeline = async (h) => {
+    if (!window.twttr || !timelineRef.current) return;
+    timelineRef.current.innerHTML = '';
+    if (h.includes('/')) {
+      const [owner, slug] = h.split('/').map((s) => s.trim());
+      await window.twttr.widgets.createTimeline(
+        { sourceType: 'list', ownerScreenName: owner, slug },
+        timelineRef.current,
+        { chrome: 'noheader noborders' }
+      );
+    } else {
+      await window.twttr.widgets.createTimeline(
+        { sourceType: 'profile', screenName: h },
+        timelineRef.current,
+        { chrome: 'noheader noborders' }
+      );
     }
+  };
+
+  useEffect(() => {
+    const stored = localStorage.getItem('x-handle') || 'AUnnippillil';
+    setHandle(stored);
+  }, []);
+
+  useEffect(() => {
+    if (handle && window.twttr) loadTimeline(handle);
+  }, [handle]);
+
+  const onSearch = (e) => {
+    e.preventDefault();
+    const value = inputRef.current.value.trim().replace(/^@/, '');
+    if (!value) return;
+    localStorage.setItem('x-handle', value);
+    setHandle(value);
   };
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col">
+      <Script
+        src="https://platform.twitter.com/widgets.js"
+        strategy="lazyOnload"
+        onLoad={() => handle && loadTimeline(handle)}
+      />
       <form
-        onSubmit={handleSubmit}
-        className="p-2 flex flex-col gap-2 border-b border-gray-600"
+        onSubmit={onSearch}
+        className="p-2 flex gap-2 border-b border-gray-600"
       >
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="What's happening?"
-          className="w-full p-2 rounded bg-gray-800 text-white"
+        <input
+          ref={inputRef}
+          defaultValue={handle}
+          placeholder="Enter profile or owner/list"
+          className="flex-1 p-2 rounded bg-gray-800 text-white"
         />
         <button
           type="submit"
-          disabled={submitting || !text.trim()}
-          className="self-end px-4 py-1 bg-blue-500 text-white rounded disabled:opacity-50"
+          className="px-4 py-1 bg-blue-500 text-white rounded"
         >
-          {submitting ? 'Posting...' : 'Post'}
+          Load
         </button>
       </form>
-      <div className="flex-1">
-        <TwitterTimelineEmbed
-          key={timelineKey}
-          sourceType="profile"
-          screenName="AUnnippillil"
-          options={{ chrome: 'noheader noborders' }}
-          className="w-full h-full"
-        />
-      </div>
-
+      <div id="timeline" ref={timelineRef} className="flex-1" />
     </div>
   );
 }
 
 export const displayX = () => <XApp />;
-

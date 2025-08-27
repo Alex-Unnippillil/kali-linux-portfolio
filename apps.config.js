@@ -18,6 +18,14 @@ import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayNikto } from './components/apps/nikto';
 
+export const allowlist = [
+  'https://platform.twitter.com',
+  'https://syndication.twitter.com',
+  'https://cdn.syndication.twimg.com',
+  'https://*.twitter.com',
+  'https://*.x.com',
+];
+
 const createDynamicApp = (path, name) =>
   dynamic(
     () =>
