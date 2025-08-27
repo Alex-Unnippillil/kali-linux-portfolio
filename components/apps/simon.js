@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Howl } from 'howler';
+import seedrandom from 'seedrandom';
 import GameLayout from './GameLayout';
 import usePersistentState from '../usePersistentState';
 
@@ -8,21 +9,29 @@ const padStyles = [
     color: { base: 'bg-green-700', active: 'bg-green-500' },
     symbol: '▲',
     label: 'green',
+    pattern:
+      'repeating-linear-gradient(45deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)',
   },
   {
     color: { base: 'bg-red-700', active: 'bg-red-500' },
     symbol: '■',
     label: 'red',
+    pattern:
+      'repeating-linear-gradient(-45deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)',
   },
   {
     color: { base: 'bg-yellow-500', active: 'bg-yellow-300' },
     symbol: '●',
     label: 'yellow',
+    pattern:
+      'repeating-linear-gradient(0deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)',
   },
   {
     color: { base: 'bg-blue-700', active: 'bg-blue-500' },
     symbol: '◆',
     label: 'blue',
+    pattern:
+      'repeating-linear-gradient(90deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)',
   },
 ];
 
@@ -40,10 +49,10 @@ export const createToneSchedule = (length, start, step, ramp = 1) => {
   }
   return times;
 };
-const baseSpeeds = {
-  slow: 0.9,
-  normal: 0.6,
-  fast: 0.3,
+
+export const generateSequence = (length, seed) => {
+  const rng = seed ? seedrandom(seed) : Math.random;
+  return Array.from({ length }, () => Math.floor(rng() * 4));
 };
 
 const Simon = () => {
@@ -53,13 +62,18 @@ const Simon = () => {
   const [activePad, setActivePad] = useState(null);
   const [status, setStatus] = useState('Press Start');
   const [mode, setMode] = useState('classic');
-  const [speed, setSpeed] = useState('normal');
+  const [bpm, setBpm] = useState(100);
+  const [striped, setStriped] = useState(false);
+  const [thickOutline, setThickOutline] = useState(false);
+  const [audioOnly, setAudioOnly] = useState(false);
+  const [seed, setSeed] = useState('');
   const [leaderboard, setLeaderboard] = usePersistentState(
     'simon_leaderboard',
     []
   );
   const audioCtx = useRef(null);
   const errorSound = useRef(null);
+  const rngRef = useRef(Math.random);
   const [errorFlash, setErrorFlash] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -88,8 +102,9 @@ const Simon = () => {
   };
 
   const flashPad = (idx, duration) => {
-    window.requestAnimationFrame(() => setActivePad(idx));
     if ('vibrate' in navigator && !prefersReducedMotion) navigator.vibrate(50);
+    if (audioOnly) return;
+    window.requestAnimationFrame(() => setActivePad(idx));
     setTimeout(
       () => window.requestAnimationFrame(() => setActivePad(null)),
       duration * 1000
@@ -97,7 +112,7 @@ const Simon = () => {
   };
 
   const stepDuration = () => {
-    const base = baseSpeeds[speed] || baseSpeeds.normal;
+    const base = 60 / bpm;
     if (mode === 'speed') {
       return Math.max(base - sequence.length * 0.02, 0.2);
     }
@@ -146,7 +161,8 @@ const Simon = () => {
   }, [sequence]);
 
   const startGame = () => {
-    setSequence([Math.floor(Math.random() * 4)]);
+    rngRef.current = seed ? seedrandom(seed) : Math.random;
+    setSequence([Math.floor(rngRef.current() * 4)]);
     setStatus('Listen...');
   };
 
@@ -166,7 +182,7 @@ const Simon = () => {
       if (step + 1 === sequence.length) {
         setIsPlayerTurn(false);
         setTimeout(() => {
-          setSequence((seq) => [...seq, Math.floor(Math.random() * 4)]);
+          setSequence((seq) => [...seq, Math.floor(rngRef.current() * 4)]);
         }, 1000);
       } else {
         setStep(step + 1);
@@ -191,11 +207,13 @@ const Simon = () => {
   };
 
   const padClass = (pad, idx) => {
-    const colors = mode === 'colorblind'
-      ? { base: 'bg-gray-700', active: 'bg-gray-500' }
-      : pad.color;
+    const colors =
+      mode === 'colorblind' || audioOnly
+        ? { base: 'bg-gray-700', active: 'bg-gray-500' }
+        : pad.color;
     const isActive = activePad === idx;
-    return `h-32 w-32 rounded flex items-center justify-center text-3xl transition-shadow ring-4 ring-offset-2 ring-offset-gray-900 ${
+    const ring = thickOutline ? 'ring-8' : 'ring-4';
+    return `h-32 w-32 rounded flex items-center justify-center text-3xl transition-shadow ${ring} ring-offset-2 ring-offset-gray-900 ${
       isActive
         ? `${colors.active} pad-pulse ring-white`
         : `${colors.base} ring-transparent`
@@ -211,6 +229,7 @@ const Simon = () => {
               // eslint-disable-next-line react/no-array-index-key
               key={idx}
               className={padClass(pad, idx)}
+              style={striped ? { backgroundImage: pad.pattern } : undefined}
               onPointerDown={() => handlePadClick(idx)}
               aria-label={`${pad.label} pad`}
             >
@@ -221,25 +240,56 @@ const Simon = () => {
         <div className="mb-4" aria-live="assertive" role="status">
           {status}
         </div>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4 items-center">
           <select
             className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
             value={mode}
             onChange={(e) => setMode(e.target.value)}
           >
-          <option value="classic">Classic</option>
-          <option value="speed">Speed Up</option>
-          <option value="colorblind">Colorblind</option>
-        </select>
-        <select
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          value={speed}
-          onChange={(e) => setSpeed(e.target.value)}
-        >
-          <option value="slow">Slow</option>
-          <option value="normal">Normal</option>
-          <option value="fast">Fast</option>
-        </select>
+            <option value="classic">Classic</option>
+            <option value="speed">Speed Up</option>
+            <option value="colorblind">Colorblind</option>
+          </select>
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min="60"
+              max="140"
+              value={bpm}
+              onChange={(e) => setBpm(Number(e.target.value))}
+            />
+            <span>{bpm} BPM</span>
+          </div>
+          <input
+            className="px-2 py-1 w-24 bg-gray-700 hover:bg-gray-600 rounded"
+            placeholder="Seed"
+            value={seed}
+            onChange={(e) => setSeed(e.target.value)}
+          />
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={striped}
+              onChange={(e) => setStriped(e.target.checked)}
+            />
+            Stripes
+          </label>
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={thickOutline}
+              onChange={(e) => setThickOutline(e.target.checked)}
+            />
+            Thick outline
+          </label>
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={audioOnly}
+              onChange={(e) => setAudioOnly(e.target.checked)}
+            />
+            Audio only
+          </label>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={startGame}
