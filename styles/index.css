@@ -199,6 +199,48 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: scaleAppImage 400ms 1 forwards;
 }
 
+/* Autopsy timeline styling */
+.timeline-bar {
+    position: relative;
+    height: 8px;
+    background: var(--color-ub-warm-grey);
+    border-radius: 4px;
+    margin-top: 8px;
+}
+
+.event-marker {
+    position: absolute;
+    top: -4px;
+    width: 8px;
+    height: 16px;
+    background: var(--color-ub-orange);
+    border-radius: 4px;
+    transform: translateX(-50%);
+    cursor: pointer;
+}
+
+.event-details {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-ub-grey);
+    color: var(--color-text);
+    white-space: nowrap;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 10;
+}
+
+.event-marker:hover .event-details {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 @keyframes scaleAppImage {
     from {
         transform: translate(-50%, -50%) scale(1);
