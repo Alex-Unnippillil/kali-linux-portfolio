@@ -23,6 +23,11 @@
     --color-ub-dark-grey: #555555;
     --color-bg: #111111;
     --color-text: #F6F6F5;
+    --color-sev-critical: #dc2626;
+    --color-sev-high: #ea580c;
+    --color-sev-medium: #facc15;
+    --color-sev-low: #16a34a;
+    --color-sev-none: #3b82f6;
 }
 
 [data-theme='light'] {
@@ -346,3 +351,36 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Severity donut widgets */
+.severity-chart {
+    --severity-color: var(--color-sev-none);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.severity-chart svg {
+    transform: rotate(-90deg);
+}
+
+.severity-chart circle.bg {
+    stroke: rgba(255, 255, 255, 0.1);
+}
+
+.severity-chart circle.fg {
+    stroke: var(--severity-color);
+    transition: stroke-dasharray 0.3s ease;
+}
+
+.severity-chart .severity-label {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+}
+
+.severity-critical { --severity-color: var(--color-sev-critical); }
+.severity-high { --severity-color: var(--color-sev-high); }
+.severity-medium { --severity-color: var(--color-sev-medium); }
+.severity-low { --severity-color: var(--color-sev-low); }
+.severity-none { --severity-color: var(--color-sev-none); }
