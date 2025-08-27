@@ -33,12 +33,12 @@ export function spawnBullet(pool, x, y, dx, dy, life = 60) {
   return null;
 }
 
-export function updateBullets(pool) {
+export function updateBullets(pool, dt = 1) {
   for (const b of pool) {
     if (!b.active) continue;
-    b.x += b.dx;
-    b.y += b.dy;
-    b.life -= 1;
+    b.x += b.dx * dt;
+    b.y += b.dy * dt;
+    b.life -= dt;
     if (b.life <= 0) b.active = false;
   }
 }
@@ -78,10 +78,10 @@ export function spawnPowerUp(list, x, y) {
   list.push({ type, x, y, r: 12, life: 600 });
 }
 
-export function updatePowerUps(list) {
+export function updatePowerUps(list, dt = 1) {
   for (let i = list.length - 1; i >= 0; i -= 1) {
     const p = list[i];
-    p.life -= 1;
+    p.life -= dt;
     if (p.life <= 0) list.splice(i, 1);
   }
 }

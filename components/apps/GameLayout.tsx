@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import HelpOverlay from './HelpOverlay';
+import HUD from './Games/common/HUD';
 
 interface GameLayoutProps {
   gameId: string;
@@ -9,6 +10,7 @@ interface GameLayoutProps {
 const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [muted, setMuted] = useState(false);
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
@@ -54,6 +56,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
 
   return (
     <div className="relative h-full w-full">
+      <HUD paused={paused} muted={muted} onPause={setPaused} onMute={setMuted} />
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
       {paused && (
         <div
