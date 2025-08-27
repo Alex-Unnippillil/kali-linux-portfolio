@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import QRCode from 'qrcode';
-import jsQR from 'jsqr';
+import { logEvent } from '../../../utils/ga';
 
-const QRTool = () => {
+const QRToolComponent = () => {
   const [text, setText] = useState('');
   const [decodedText, setDecodedText] = useState('');
   const [message, setMessage] = useState('');
@@ -11,11 +10,13 @@ const QRTool = () => {
   const videoRef = useRef(null);
   const animationRef = useRef(null);
 
-  const generate = () => {
+  const generate = async () => {
     if (!text) return;
+    const QRCode = await import('qrcode');
     QRCode.toCanvas(generateCanvasRef.current, text, { width: 256 }, (err) => {
       if (err) console.error(err);
     });
+    logEvent('app_action', { id: 'qr_tool', action: 'generate' });
   };
 
   const download = () => {
@@ -23,27 +24,30 @@ const QRTool = () => {
     link.download = 'qr.png';
     link.href = generateCanvasRef.current.toDataURL('image/png');
     link.click();
+    logEvent('app_action', { id: 'qr_tool', action: 'download' });
   };
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const img = new Image();
-    img.onload = () => {
+    img.onload = async () => {
       const canvas = scanCanvasRef.current;
       const ctx = canvas.getContext('2d');
       canvas.width = img.width;
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const jsQR = await import('jsqr');
       const code = jsQR(imageData.data, imageData.width, imageData.height);
       setDecodedText(code ? code.data : 'No QR code found');
     };
     img.onerror = () => setDecodedText('Could not load image');
     img.src = URL.createObjectURL(file);
+    logEvent('app_action', { id: 'qr_tool', action: 'upload' });
   };
 
-  const scan = () => {
+  const scan = async () => {
     if (videoRef.current && scanCanvasRef.current) {
       const canvas = scanCanvasRef.current;
       const ctx = canvas.getContext('2d');
@@ -51,6 +55,7 @@ const QRTool = () => {
       canvas.height = videoRef.current.videoHeight;
       ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const jsQR = await import('jsqr');
       const code = jsQR(imageData.data, imageData.width, imageData.height);
       if (code) {
         setDecodedText(code.data);
@@ -69,6 +74,7 @@ const QRTool = () => {
       await videoRef.current.play();
       setMessage('Place the QR code within the square');
       scan();
+      logEvent('app_action', { id: 'qr_tool', action: 'start_camera' });
     } catch (err) {
       setMessage('Camera permission denied or unavailable');
     }
@@ -82,16 +88,28 @@ const QRTool = () => {
     }
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
     setMessage('');
+    logEvent('app_action', { id: 'qr_tool', action: 'stop_camera' });
   };
 
   useEffect(() => {
+    logEvent('app_open', { id: 'qr_tool' });
     return () => {
       stopCamera();
     };
   }, []);
 
   return (
-    <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
+    <div
+      className="h-full w-full p-4 bg-gray-900 text-white overflow-auto"
+      role="application"
+      aria-label="QR Tool"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          window.history.back();
+        }
+      }}
+    >
       <div className="mb-6">
         <h2 className="text-lg mb-2">Generate QR Code</h2>
         <input
@@ -119,7 +137,6 @@ const QRTool = () => {
           </button>
         </div>
         <canvas ref={generateCanvasRef} className="bg-white w-full h-full" />
-
       </div>
 
       <div>
@@ -157,9 +174,14 @@ const QRTool = () => {
   );
 };
 
-export default QRTool;
+import { ErrorBoundary } from '../../ErrorBoundary';
 
-export const displayQrTool = () => {
-  return <QRTool />;
-};
+export default function QRTool() {
+  return (
+    <ErrorBoundary>
+      <QRToolComponent />
+    </ErrorBoundary>
+  );
+}
 
+export const displayQrTool = () => <QRTool />;
