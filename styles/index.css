@@ -199,6 +199,35 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: scaleAppImage 400ms 1 forwards;
 }
 
+/* Terminal enhancements */
+.crt-terminal {
+    background: #000000;
+    color: #00ff00;
+    text-shadow: 0 0 2px #00ff00;
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+}
+
+.crt-terminal .xterm-screen,
+.crt-terminal .xterm-viewport {
+    background: transparent;
+}
+
+.xterm .xterm-cursor {
+    animation: cursor-pulse 1s steps(2) infinite;
+}
+
+@keyframes cursor-pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.2; }
+    100% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .xterm .xterm-cursor {
+        animation: none;
+    }
+}
+
 @keyframes scaleAppImage {
     from {
         transform: translate(-50%, -50%) scale(1);
