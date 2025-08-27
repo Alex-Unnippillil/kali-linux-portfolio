@@ -270,7 +270,7 @@ const Checkers = () => {
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
                 } ${
                   isMove
-                    ? 'ring-4 ring-amber-300 ring-offset-2 ring-offset-black drop-shadow-[0_0_6px_#facc15] motion-safe:animate-glow'
+                    ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-black drop-shadow-[0_0_8px_#fbbf24] motion-safe:animate-glow'
                     : ''
                 } ${
                   isHint || isHintDest

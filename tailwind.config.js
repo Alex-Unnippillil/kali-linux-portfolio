@@ -48,8 +48,8 @@ module.exports = {
       },
       keyframes: {
         glow: {
-          '0%, 100%': { boxShadow: '0 0 0px theme("colors.amber.300")' },
-          '50%': { boxShadow: '0 0 8px theme("colors.amber.300")' },
+          '0%, 100%': { boxShadow: '0 0 0px theme("colors.amber.400")' },
+          '50%': { boxShadow: '0 0 8px theme("colors.amber.400")' },
         },
         flourish: {
           '0%': { transform: 'scale(0.8) rotate(0deg)', opacity: '0' },
