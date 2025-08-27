@@ -9,8 +9,10 @@ interface FrameProps {
 const InfoFrame = ({ title, link, description }: FrameProps) => (
   <iframe
     title={title}
-    sandbox=""
-    srcDoc={`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"></head><body><h2>${title}</h2><p>${description}</p><p><a href='${link}' target='_blank' rel='noopener noreferrer'>Official Documentation</a></p></body></html>`}
+    sandbox="allow-popups"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture"
+    referrerPolicy="no-referrer"
+    srcDoc={`<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'></head><body><h2>${title}</h2><p>${description}</p><p><a href='${link}' target='_blank' rel='noopener noreferrer'>Official Documentation</a></p></body></html>`}
     style={{ width: '100%', border: '1px solid #ccc', height: '200px' }}
   />
 );

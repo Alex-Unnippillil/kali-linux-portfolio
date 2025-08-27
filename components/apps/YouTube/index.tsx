@@ -101,7 +101,9 @@ export default function YouTubeApp({ initialVideos = [] as Video[] }) {
               src={`https://www.youtube.com/embed/${video.id}`}
               title={video.title}
               className="absolute inset-0 w-full h-full"
+              sandbox="allow-same-origin allow-scripts allow-popups"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              referrerPolicy="no-referrer"
               allowFullScreen
             />
             <div className="absolute inset-x-0 bottom-0 flex justify-between p-1 bg-black/60 text-xs">

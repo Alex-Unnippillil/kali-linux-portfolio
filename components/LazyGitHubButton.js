@@ -29,6 +29,9 @@ const LazyGitHubButton = ({ user, repo }) => {
           width="150"
           height="20"
           title={`${repo}-star`}
+          sandbox="allow-same-origin allow-scripts"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture"
+          referrerPolicy="no-referrer"
         ></iframe>
       ) : (
         <div className="h-5 w-24 bg-gray-200 animate-pulse rounded"></div>
