@@ -1,9 +1,13 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
+import usePageVisibility from '../hooks/usePageVisibility';
 
 export default function YouTubePlayer({ videoId }) {
   const [activated, setActivated] = useState(false);
   const playerRef = useRef(null);
+  const playerInstance = useRef(null);
+  const wasPlaying = useRef(false);
+  const isVisible = usePageVisibility();
 
   const loadPlayer = () => {
     if (activated) return;
@@ -12,7 +16,7 @@ export default function YouTubePlayer({ videoId }) {
     const createPlayer = () => {
       if (!playerRef.current) return;
       // eslint-disable-next-line no-undef
-      new YT.Player(playerRef.current, {
+      playerInstance.current = new YT.Player(playerRef.current, {
         videoId,
         playerVars: { origin: window.location.origin },
       });
@@ -31,6 +35,24 @@ export default function YouTubePlayer({ videoId }) {
       }
     }
   };
+
+  useEffect(() => {
+    const player = playerInstance.current;
+    if (!player) return;
+    if (!isVisible) {
+      if (player.getPlayerState && player.getPlayerState() === 1) {
+        wasPlaying.current = true;
+        player.pauseVideo();
+      } else {
+        wasPlaying.current = false;
+      }
+    } else if (wasPlaying.current) {
+      if (typeof window !== 'undefined' && window.confirm('Resume video?')) {
+        player.playVideo();
+      }
+      wasPlaying.current = false;
+    }
+  }, [isVisible]);
 
   return (
     <>

@@ -4,6 +4,8 @@ let timerRemaining = 30;
 let stopwatchInterval = null;
 let stopwatchElapsed = 0;
 let lapNumber = 1;
+let resumeTimer = false;
+let resumeWatch = false;
 
 const timerDisplay = document.getElementById('timerDisplay');
 const stopwatchDisplay = document.getElementById('stopwatchDisplay');
@@ -39,11 +41,13 @@ function updateTimerDisplay() {
   timerDisplay.textContent = formatTime(timerRemaining);
 }
 
-function startTimer() {
+function startTimer(reset = true) {
   if (timerInterval) return;
-  const mins = parseInt(minutesInput.value, 10) || 0;
-  const secs = parseInt(secondsInput.value, 10) || 0;
-  timerRemaining = mins * 60 + secs;
+  if (reset) {
+    const mins = parseInt(minutesInput.value, 10) || 0;
+    const secs = parseInt(secondsInput.value, 10) || 0;
+    timerRemaining = mins * 60 + secs;
+  }
   updateTimerDisplay();
   timerInterval = setInterval(() => {
     timerRemaining--;
@@ -117,7 +121,7 @@ function playSound() {
   }
 }
 
-document.getElementById('startTimer').addEventListener('click', startTimer);
+document.getElementById('startTimer').addEventListener('click', () => startTimer());
 document.getElementById('stopTimer').addEventListener('click', stopTimer);
 document.getElementById('resetTimer').addEventListener('click', resetTimer);
 
@@ -129,3 +133,25 @@ document.getElementById('lapWatch').addEventListener('click', lapWatch);
 // Initialize displays
 updateTimerDisplay();
 updateStopwatchDisplay();
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (timerInterval) {
+      stopTimer();
+      resumeTimer = true;
+    }
+    if (stopwatchInterval) {
+      stopWatch();
+      resumeWatch = true;
+    }
+  } else {
+    if (resumeTimer || resumeWatch) {
+      if (window.confirm('Resume?')) {
+        if (resumeTimer) startTimer(false);
+        if (resumeWatch) startWatch();
+      }
+      resumeTimer = false;
+      resumeWatch = false;
+    }
+  }
+});
