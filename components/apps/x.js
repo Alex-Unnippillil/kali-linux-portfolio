@@ -131,10 +131,10 @@ export default function XApp() {
   }, [theme, timelineKey, shouldLoadTimeline]);
 
   return (
-    <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col">
+    <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col tweet-container">
       <form
         onSubmit={handleSubmit}
-        className="p-2 flex flex-col gap-2 border-b border-gray-600 bg-gray-900 text-gray-100"
+        className="p-2 flex flex-col gap-2 border-b border-gray-600 bg-gray-900 text-gray-100 tweet-form"
       >
         <textarea
           value={text}
@@ -142,6 +142,7 @@ export default function XApp() {
           placeholder="What's happening?"
           maxLength={MAX_CHARS}
           className="w-full p-2 rounded bg-gray-800 text-gray-100 placeholder-gray-400"
+          style={{ maxInlineSize: '60ch' }}
         />
 
         {media.length > 0 && (
@@ -151,7 +152,7 @@ export default function XApp() {
                 <img
                   src={m.url}
                   alt={m.file.name}
-                  className="max-h-32 rounded object-cover"
+                  className="max-h-32 rounded object-cover media-image"
                 />
                 <button
                   type="button"
@@ -226,7 +227,7 @@ export default function XApp() {
       </form>
       <div ref={panelRef} className="flex-1 relative">
         {!timelineLoaded && !scriptError && (
-          <ul className="p-4 space-y-4" aria-hidden="true">
+          <ul className="p-4 space-y-4 tweet-feed" aria-hidden="true">
             {Array.from({ length: 3 }).map((_, i) => (
               <li
                 key={i}
@@ -242,7 +243,10 @@ export default function XApp() {
             ))}
           </ul>
         )}
-        <div ref={timelineRef} className={timelineLoaded ? 'block h-full' : 'hidden'} />
+        <div
+          ref={timelineRef}
+          className={`${timelineLoaded ? 'block h-full' : 'hidden'} tweet-feed`}
+        />
         {scriptError && (
           <div className="p-4 text-center">
             <a
@@ -256,7 +260,30 @@ export default function XApp() {
           </div>
         )}
       </div>
-
+      <style jsx>{`
+        .tweet-container {
+          container-type: inline-size;
+        }
+        .tweet-feed {
+          max-inline-size: 60ch;
+          margin-inline: auto;
+          width: 100%;
+        }
+        @container (max-width: 480px) {
+          .tweet-form {
+            padding: 0.25rem;
+          }
+          .media-image {
+            max-height: 4rem;
+            object-fit: contain;
+          }
+          .tweet-feed iframe,
+          .tweet-feed img {
+            width: 100%;
+            height: auto;
+          }
+        }
+      `}</style>
     </div>
   );
 }
