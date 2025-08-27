@@ -4,9 +4,10 @@ import {
   pathComputationCount,
   createProjectilePool,
   fireProjectile,
-  deactivateProjectile,
-  getTowerDPS,
-  createEnemyPool,
+    deactivateProjectile,
+    getTowerDPS,
+    getTowerCost,
+    createEnemyPool,
   spawnEnemy,
   deactivateEnemy,
   loadSprite,
@@ -55,5 +56,11 @@ describe('tower defense core', () => {
     const d1 = getTowerDPS('single', 1);
     const d2 = getTowerDPS('single', 2);
     expect(d2).toBeGreaterThan(d1);
+  });
+
+  test('cost increases on upgrade', () => {
+    const c1 = getTowerCost('single', 1);
+    const c2 = getTowerCost('single', 2);
+    expect(c2).toBeGreaterThan(c1);
   });
 });
