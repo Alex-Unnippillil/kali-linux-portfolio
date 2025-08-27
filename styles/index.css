@@ -346,3 +346,17 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Converter category icon styles */
+.converter-category-icon {
+    width: 32px;
+    height: 32px;
+}
+
+.converter-category {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
