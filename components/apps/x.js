@@ -1,26 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
-
-import dynamic from 'next/dynamic';
-
-// Load the Twitter embed only on the client to avoid SSR issues.
-const TwitterTimelineEmbed = dynamic(
-  () => import('react-twitter-embed').then((mod) => mod.TwitterTimelineEmbed),
-  { ssr: false }
-);
+import { useTheme } from '../../hooks/useTheme';
 
 const MAX_CHARS = 280;
 const RADIUS = 18;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function XApp() {
+  const { theme } = useTheme();
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [timelineKey, setTimelineKey] = useState(0);
   const [timelineLoaded, setTimelineLoaded] = useState(false);
+  const [scriptError, setScriptError] = useState(false);
   const [media, setMedia] = useState([]);
   const [status, setStatus] = useState('');
   const [strokeOffset, setStrokeOffset] = useState(CIRCUMFERENCE);
   const fileInputRef = useRef(null);
+  const timelineRef = useRef(null);
 
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
@@ -77,6 +73,41 @@ export default function XApp() {
       setSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    const src = 'https://platform.twitter.com/widgets.js';
+    let script = document.querySelector(`script[src="${src}"]`);
+    const handleError = () => setScriptError(true);
+    const loadTimeline = () => {
+      if (!timelineRef.current || !window.twttr) return;
+      setScriptError(false);
+      timelineRef.current.innerHTML = '';
+      setTimelineLoaded(false);
+      window.twttr.widgets
+        .createTimeline(
+          { sourceType: 'profile', screenName: 'AUnnippillil' },
+          timelineRef.current,
+          { chrome: 'noheader noborders', theme }
+        )
+        .then(() => setTimelineLoaded(true))
+        .catch(() => setScriptError(true));
+    };
+    if (script && window.twttr) {
+      loadTimeline();
+    } else {
+      if (!script) {
+        script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        document.body.appendChild(script);
+      }
+      script.addEventListener('load', loadTimeline, { once: true });
+      script.addEventListener('error', handleError, { once: true });
+    }
+    return () => {
+      script && script.removeEventListener('error', handleError);
+    };
+  }, [theme, timelineKey]);
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col">
@@ -173,7 +204,7 @@ export default function XApp() {
         </div>
       </form>
       <div className="flex-1 relative">
-        {!timelineLoaded && (
+        {!timelineLoaded && !scriptError && (
           <ul className="p-4 space-y-4" aria-hidden="true">
             {Array.from({ length: 3 }).map((_, i) => (
               <li
@@ -190,16 +221,19 @@ export default function XApp() {
             ))}
           </ul>
         )}
-        <div className={timelineLoaded ? 'block' : 'hidden'}>
-          <TwitterTimelineEmbed
-            key={timelineKey}
-            sourceType="profile"
-            screenName="AUnnippillil"
-            options={{ chrome: 'noheader noborders' }}
-            onLoad={() => setTimelineLoaded(true)}
-            className="w-full h-full"
-          />
-        </div>
+        <div ref={timelineRef} className={timelineLoaded ? 'block h-full' : 'hidden'} />
+        {scriptError && (
+          <div className="p-4 text-center">
+            <a
+              href="https://x.com/AUnnippillil"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-blue-500"
+            >
+              Open on x.com
+            </a>
+          </div>
+        )}
       </div>
 
     </div>
