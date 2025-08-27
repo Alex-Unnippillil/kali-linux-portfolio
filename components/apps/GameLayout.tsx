@@ -1,15 +1,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 interface GameLayoutProps {
-  gameId: string;
+  gameId?: string;
   children: React.ReactNode;
+  stage?: number;
+  lives?: number;
+  score?: number;
+  highScore?: number;
 }
 
-const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
+const GameLayout: React.FC<GameLayoutProps> = ({
+  gameId = 'unknown',
+  children,
+  stage,
+  lives,
+  score,
+  highScore,
+}) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
@@ -40,21 +53,26 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
     return () => window.removeEventListener('keydown', handler);
   }, [showHelp]);
 
-  // Auto-pause when page becomes hidden
+  // Auto-pause when page becomes hidden or window loses focus
   useEffect(() => {
-    const handler = () => {
+    const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
         setPaused(true);
       }
     };
-    document.addEventListener('visibilitychange', handler);
-    return () => document.removeEventListener('visibilitychange', handler);
+    const handleBlur = () => setPaused(true);
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('blur', handleBlur);
+    };
   }, []);
 
   const resume = useCallback(() => setPaused(false), []);
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
       {paused && (
         <div
@@ -82,7 +100,13 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
         ?
       </button>
       {children}
-      <PerfOverlay />
+      <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
+        {stage !== undefined && <div>Stage: {stage}</div>}
+        {lives !== undefined && <div>Lives: {lives}</div>}
+        {score !== undefined && <div>Score: {score}</div>}
+        {highScore !== undefined && <div>High: {highScore}</div>}
+      </div>
+      {!prefersReducedMotion && <PerfOverlay />}
     </div>
   );
 };
