@@ -9,6 +9,9 @@ const BluetoothApp = () => {
   const ariaRef = useRef(null);
   const sweepRef = useRef(0);
   const prefersReduceRef = useRef(false);
+  const [supported, setSupported] = useState(null);
+  const [deviceName, setDeviceName] = useState('');
+  const [gattInfo, setGattInfo] = useState([]);
 
   const drawStatic = () => {
     const canvas = canvasRef.current;
@@ -94,6 +97,7 @@ const BluetoothApp = () => {
   }, []);
 
   useEffect(() => {
+    if (supported === false) return;
     workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
       const dev = { ...e.data, ring: 0 };
@@ -110,7 +114,7 @@ const BluetoothApp = () => {
       workerRef.current.postMessage({ command: 'stop' });
       workerRef.current.terminate();
     };
-  }, []);
+  }, [supported]);
 
   useEffect(() => {
     if (prefersReduceRef.current) {
@@ -122,10 +126,81 @@ const BluetoothApp = () => {
     return () => cancelAnimationFrame(animationRef.current);
   }, []);
 
+  useEffect(() => {
+    setSupported(typeof navigator !== 'undefined' && !!navigator.bluetooth);
+  }, []);
+
+  const handleScan = async () => {
+    try {
+      const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
+      setDeviceName(device.name || device.id);
+      if (!device.gatt) {
+        setGattInfo([]);
+        return;
+      }
+      const server = await device.gatt.connect();
+      const services = await server.getPrimaryServices();
+      const info = [];
+      for (const service of services) {
+        const characteristics = await service.getCharacteristics();
+        info.push({
+          uuid: service.uuid,
+          characteristics: characteristics.map((c) => c.uuid),
+        });
+      }
+      setGattInfo(info);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (supported === null) return null;
+
+  if (supported === false) {
+    return (
+      <div className="h-full w-full bg-black text-white flex items-center justify-center">
+        <div className="bg-gray-800 p-4 rounded text-center">
+          <p className="mb-2">Web Bluetooth API not supported.</p>
+          <a
+            href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Bluetooth_API"
+            target="_blank"
+            rel="noreferrer"
+            className="underline text-blue-400"
+          >
+            Learn more
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full bg-black text-white relative" aria-label="Bluetooth radar">
       <canvas ref={canvasRef} className="h-full w-full" />
       <div ref={ariaRef} aria-live="polite" className="sr-only" />
+      <div className="absolute top-2 left-2 z-10">
+        <button
+          onClick={handleScan}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+        >
+          Scan for BLE
+        </button>
+      </div>
+      {deviceName && (
+        <div className="absolute top-12 left-2 right-2 max-h-1/2 overflow-auto bg-gray-900 bg-opacity-75 p-2 rounded">
+          <h2 className="font-bold mb-2 break-words">{deviceName}</h2>
+          {gattInfo.map((s) => (
+            <div key={s.uuid} className="mb-2">
+              <h3 className="text-sm font-semibold break-all">Service: {s.uuid}</h3>
+              <ul className="ml-4 list-disc">
+                {s.characteristics.map((c) => (
+                  <li key={c} className="text-xs break-all">Characteristic: {c}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
