@@ -60,6 +60,7 @@ const NmapNSEApp = () => {
   const [library, setLibrary] = useState([]);
   const [profiles, setProfiles] = useState([]);
   const [trigger, setTrigger] = useState(0);
+  const [category, setCategory] = useState('all');
 
   useEffect(() => {
     try {
@@ -87,12 +88,18 @@ const NmapNSEApp = () => {
   }, []);
 
   const allScripts = useMemo(() => [...scripts, ...library], [library]);
+  const categories = useMemo(
+    () => Array.from(new Set(scripts.map((s) => s.category))),
+    []
+  );
   const filteredScripts = useMemo(
     () =>
-      allScripts.filter((s) =>
-        s.name.toLowerCase().includes(scriptSearch.toLowerCase())
+      allScripts.filter(
+        (s) =>
+          s.name.toLowerCase().includes(scriptSearch.toLowerCase()) &&
+          (category === 'all' || s.category === category)
       ),
-    [allScripts, scriptSearch]
+    [allScripts, scriptSearch, category]
   );
 
   const scriptsByCategory = useMemo(() => {
@@ -168,6 +175,19 @@ const NmapNSEApp = () => {
           value={scriptSearch}
           onChange={(e) => setScriptSearch(e.target.value)}
         />
+        <select
+          aria-label="category select"
+          className="w-full p-2 mb-2 rounded text-black"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          <option value="all">All categories</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
         <select
           aria-label="script select"
           className="w-full p-2 mb-2 rounded text-black"
