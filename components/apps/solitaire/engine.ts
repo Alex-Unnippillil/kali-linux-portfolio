@@ -184,23 +184,22 @@ export const autoMove = (
   return moveToFoundation(state, 'tableau', index);
 };
 
+export const autoCompleteStep = (state: GameState): GameState => {
+  const fromWaste = moveToFoundation(state, 'waste', null);
+  if (fromWaste !== state) return fromWaste;
+  for (let i = 0; i < state.tableau.length; i += 1) {
+    const next = moveToFoundation(state, 'tableau', i);
+    if (next !== state) return next;
+  }
+  return state;
+};
+
 export const autoComplete = (state: GameState): GameState => {
   let current = state;
-  let moved = true;
-  while (moved) {
-    moved = false;
-    const fromWaste = moveToFoundation(current, 'waste', null);
-    if (fromWaste !== current) {
-      current = fromWaste;
-      moved = true;
-    }
-    for (let i = 0; i < current.tableau.length; i += 1) {
-      const next = moveToFoundation(current, 'tableau', i);
-      if (next !== current) {
-        current = next;
-        moved = true;
-      }
-    }
+  while (true) {
+    const next = autoCompleteStep(current);
+    if (next === current) break;
+    current = next;
   }
   return current;
 };
