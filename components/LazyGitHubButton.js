@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { ExternalFrame } from '.';
 
 const LazyGitHubButton = ({ user, repo }) => {
   const ref = useRef(null);
@@ -22,14 +23,14 @@ const LazyGitHubButton = ({ user, repo }) => {
   return (
     <div ref={ref} className="inline-block">
       {visible ? (
-        <iframe
+        <ExternalFrame
           src={`https://ghbtns.com/github-btn.html?user=${user}&repo=${repo}&type=star&count=true`}
           frameBorder="0"
           scrolling="0"
           width="150"
           height="20"
           title={`${repo}-star`}
-        ></iframe>
+        />
       ) : (
         <div className="h-5 w-24 bg-gray-200 animate-pulse rounded"></div>
       )}

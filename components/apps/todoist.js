@@ -1,12 +1,18 @@
-import React from 'react'
+import React from 'react';
+import { ExternalFrame } from '..';
 
 export default function Todoist() {
-    return (
-        <iframe src="https://todoist.com/showProject?id=220474322" frameBorder="0" title="Todoist" className="h-full w-full"></iframe>
-        // just to bypass the headers 🙃
-    )
+  return (
+    <ExternalFrame
+      src="https://todoist.com/showProject?id=220474322"
+      frameBorder="0"
+      title="Todoist"
+      className="h-full w-full"
+    />
+    // just to bypass the headers 🙃
+  );
 }
 
 export const displayTodoist = () => {
-    return <Todoist />;
+  return <Todoist />;
 };

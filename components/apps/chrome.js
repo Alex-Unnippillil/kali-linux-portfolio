@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
+import { ExternalFrame } from '..';
 
 export class Chrome extends Component {
     constructor() {
@@ -86,7 +87,7 @@ export class Chrome extends Component {
         return (
             <div className="h-full w-full flex flex-col bg-ub-cool-grey">
                 {this.displayUrlBar()}
-                <iframe src={this.state.url} className="flex-grow" id="chrome-screen" frameBorder="0" title="Ubuntu Chrome Url"></iframe>
+                <ExternalFrame src={this.state.url} className="flex-grow" id="chrome-screen" frameBorder="0" title="Ubuntu Chrome Url" />
             </div>
         )
     }
