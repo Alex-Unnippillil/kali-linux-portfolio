@@ -2,7 +2,7 @@ import { useEffect, useCallback, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
-import { findHint } from '../../apps/games/_2048/ai';
+// Expectimax AI logic implemented within this file
 
 const SIZE = 4;
 
@@ -27,40 +27,40 @@ const initBoard = (hard = false) => {
   return board;
 };
 
-const addRandomTile = (board, hard, count = 1) => {
+const addRandomTile = (board, hard) => {
   const added = [];
-  for (let i = 0; i < count; i++) {
-    const empty = [];
-    board.forEach((row, r) =>
-      row.forEach((cell, c) => {
-        if (cell === 0) empty.push([r, c]);
-      }),
-    );
-    if (empty.length === 0) return added;
-    const [r, c] = empty[Math.floor(rng() * empty.length)];
-    board[r][c] = hard ? 4 : rng() < 0.9 ? 2 : 4;
-    added.push(`${r}-${c}`);
-  }
+  const empty = [];
+  board.forEach((row, r) =>
+    row.forEach((cell, c) => {
+      if (cell === 0) empty.push([r, c]);
+    }),
+  );
+  if (empty.length === 0) return added;
+  const [r, c] = empty[Math.floor(rng() * empty.length)];
+  const prob = hard ? 0.6 : 0.9; // more 4s in hard mode
+  board[r][c] = rng() < prob ? 2 : 4;
+  added.push(`${r}-${c}`);
   return added;
 };
 
 const slide = (row) => {
   const arr = row.filter((n) => n !== 0);
-  let merged = false;
+  const newRow = [];
   let score = 0;
   const mergedPositions = [];
-  for (let i = 0; i < arr.length - 1; i++) {
+  for (let i = 0; i < arr.length; i++) {
     if (arr[i] === arr[i + 1]) {
-      arr[i] *= 2;
-      score += arr[i];
-      arr[i + 1] = 0;
-      merged = true;
-      mergedPositions.push(i);
+      const val = arr[i] * 2;
+      newRow.push(val);
+      score += val;
+      mergedPositions.push(newRow.length - 1);
+      i++;
+    } else {
+      newRow.push(arr[i]);
     }
   }
-  const newRow = arr.filter((n) => n !== 0);
   while (newRow.length < SIZE) newRow.push(0);
-  return { row: newRow, merged, score, mergedPositions };
+  return { row: newRow, merged: mergedPositions.length > 0, score, mergedPositions };
 };
 
 const transpose = (board) => board[0].map((_, c) => board.map((row) => row[c]));
@@ -139,6 +139,104 @@ const hasMoves = (board) => {
   return false;
 };
 
+// ---------- Expectimax AI ----------
+const getEmpty = (board) => {
+  const empty = [];
+  board.forEach((row, r) =>
+    row.forEach((cell, c) => {
+      if (cell === 0) empty.push([r, c]);
+    }),
+  );
+  return empty;
+};
+
+const smoothness = (board) => {
+  let sum = 0;
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (c < SIZE - 1 && board[r][c] && board[r][c + 1])
+        sum -= Math.abs(board[r][c] - board[r][c + 1]);
+      if (r < SIZE - 1 && board[r][c] && board[r + 1][c])
+        sum -= Math.abs(board[r][c] - board[r + 1][c]);
+    }
+  }
+  return sum;
+};
+
+const monotonicity = (board) => {
+  const totals = [0, 0, 0, 0];
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE - 1; c++) {
+      const cur = board[r][c];
+      const next = board[r][c + 1];
+      if (cur > next) totals[0] += cur - next;
+      else totals[1] += next - cur;
+    }
+  }
+  for (let c = 0; c < SIZE; c++) {
+    for (let r = 0; r < SIZE - 1; r++) {
+      const cur = board[r][c];
+      const next = board[r + 1][c];
+      if (cur > next) totals[2] += cur - next;
+      else totals[3] += next - cur;
+    }
+  }
+  return Math.max(totals[0], totals[1]) + Math.max(totals[2], totals[3]);
+};
+
+const evaluate = (board) =>
+  10 * getEmpty(board).length + monotonicity(board) + smoothness(board);
+
+const movesMap = {
+  ArrowLeft: moveLeft,
+  ArrowRight: moveRight,
+  ArrowUp: moveUp,
+  ArrowDown: moveDown,
+};
+
+const expectimax = (board, depth, player, hard) => {
+  if (depth === 0 || !hasMoves(board)) return evaluate(board);
+  if (player) {
+    let max = -Infinity;
+    Object.values(movesMap).forEach((fn) => {
+      const { board: next } = fn(board);
+      if (!boardsEqual(board, next)) {
+        const val = expectimax(next, depth - 1, false, hard);
+        if (val > max) max = val;
+      }
+    });
+    return max === -Infinity ? evaluate(board) : max;
+  }
+  const empty = getEmpty(board);
+  if (empty.length === 0) return evaluate(board);
+  const p4 = hard ? 0.4 : 0.1;
+  let total = 0;
+  empty.forEach(([r, c]) => {
+    board[r][c] = 2;
+    total += (1 - p4) * expectimax(board, depth - 1, true, hard);
+    board[r][c] = 4;
+    total += p4 * expectimax(board, depth - 1, true, hard);
+    board[r][c] = 0;
+  });
+  return total / empty.length;
+};
+
+const findBestMove = (board, depth = 3, hard = false) => {
+  let best = null;
+  let bestScore = -Infinity;
+  Object.entries(movesMap).forEach(([dir, fn]) => {
+    const { board: next } = fn(board);
+    if (!boardsEqual(board, next)) {
+      const val = expectimax(next, depth - 1, false, hard);
+      if (val > bestScore) {
+        bestScore = val;
+        best = dir;
+      }
+    }
+  });
+  return best;
+};
+
 const tileColors = {
   2: 'bg-gray-300 text-gray-800',
   4: 'bg-gray-400 text-gray-800',
@@ -184,6 +282,7 @@ const Game2048 = () => {
   const [colorBlind, setColorBlind] = usePersistentState('2048-cb', false, (v) => typeof v === 'boolean');
   const [animCells, setAnimCells] = useState(new Set());
   const [mergeCells, setMergeCells] = useState(new Set());
+  const [moveDir, setMoveDir] = useState(null);
   const [score, setScore] = useState(0);
   const [scorePop, setScorePop] = useState(false);
   const [combo, setCombo] = useState(0);
@@ -217,6 +316,13 @@ const Game2048 = () => {
   }, [mergeCells]);
 
   useEffect(() => {
+    if (moveDir) {
+      const t = setTimeout(() => setMoveDir(null), 200);
+      return () => clearTimeout(t);
+    }
+  }, [moveDir]);
+
+  useEffect(() => {
     if (scorePop) {
       let frame;
       const t = setTimeout(() => {
@@ -230,24 +336,34 @@ const Game2048 = () => {
   }, [scorePop]);
 
   useEffect(() => {
-    setHint(findHint(board));
-  }, [board]);
+    setHint(findBestMove(board, 4, hardMode));
+  }, [board, hardMode]);
 
   const handleDirection = useCallback(
     ({ x, y }) => {
       if (won || lost) return;
       let result;
-      if (x === -1) result = moveLeft(board);
-      else if (x === 1) result = moveRight(board);
-      else if (y === -1) result = moveUp(board);
-      else if (y === 1) result = moveDown(board);
-      else return;
+      let dir = null;
+      if (x === -1) {
+        result = moveLeft(board);
+        dir = 'left';
+      } else if (x === 1) {
+        result = moveRight(board);
+        dir = 'right';
+      } else if (y === -1) {
+        result = moveUp(board);
+        dir = 'up';
+      } else if (y === 1) {
+        result = moveDown(board);
+        dir = 'down';
+      } else return;
       const { board: moved, merged, score: gained, mergedCells } = result;
       if (!boardsEqual(board, moved)) {
-        const added = addRandomTile(moved, hardMode, hardMode ? 2 : 1);
+        const added = addRandomTile(moved, hardMode);
         setHistory((h) => [...h, { board: cloneBoard(board), score, moves }]);
         setAnimCells(new Set(added));
         setMergeCells(new Set(mergedCells));
+        setMoveDir(dir);
         if (gained > 0) {
           setScore((s) => s + gained);
           setScorePop(true);
@@ -293,7 +409,7 @@ const Game2048 = () => {
       ArrowDown: { x: 0, y: 1 },
     };
     const id = setInterval(() => {
-      const best = findHint(board);
+      const best = findBestMove(board, 4, hardMode);
       if (!best) {
         setDemo(false);
         return;
@@ -301,7 +417,7 @@ const Game2048 = () => {
       handleDirection(dirMap[best]);
     }, 400);
     return () => clearInterval(id);
-  }, [demo, board, handleDirection]);
+  }, [demo, board, handleDirection, hardMode]);
 
   useEffect(() => {
     const esc = (e) => {
@@ -412,7 +528,9 @@ const Game2048 = () => {
                   key={key}
                   className={`relative overflow-hidden h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
                     cell ? colors[cell] || 'bg-gray-700' : 'bg-gray-800'
-                  } ${animCells.has(key) ? 'tile-pop' : ''}`}
+                  } ${animCells.has(key) ? 'tile-pop' : ''} ${
+                    moveDir ? `tile-move-${moveDir}` : ''
+                  }`}
                 >
                   {cell !== 0 ? cell : ''}
                   {mergeCells.has(key) && <span className="merge-ripple" />}
