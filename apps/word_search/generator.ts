@@ -1,13 +1,15 @@
 import type { Position, WordPlacement } from './types';
 
+type RNG = () => number;
+
 // simple seeded RNG using xmur3 and mulberry32
-function xmur3(str: string) {
+function xmur3(str: string): () => number {
   let h = 1779033703 ^ str.length;
   for (let i = 0; i < str.length; i += 1) {
     h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
     h = (h << 13) | (h >>> 19);
   }
-  return function () {
+  return function (): number {
     h = Math.imul(h ^ (h >>> 16), 2246822507);
     h = Math.imul(h ^ (h >>> 13), 3266489909);
     h ^= h >>> 16;
@@ -15,8 +17,8 @@ function xmur3(str: string) {
   };
 }
 
-function mulberry32(a: number) {
-  return function () {
+function mulberry32(a: number): RNG {
+  return function (): number {
     let t = (a += 0x6d2b79f5);
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -24,12 +26,17 @@ function mulberry32(a: number) {
   };
 }
 
-export function createRNG(seed: string) {
+export function createRNG(seed: string): RNG {
   const seedFunc = xmur3(seed);
   return mulberry32(seedFunc());
 }
 
-const DIRECTIONS = [
+interface Direction {
+  readonly dx: number;
+  readonly dy: number;
+}
+
+const DIRECTIONS: readonly Direction[] = [
   { dx: 1, dy: 0 },
   { dx: -1, dy: 0 },
   { dx: 0, dy: 1 },
