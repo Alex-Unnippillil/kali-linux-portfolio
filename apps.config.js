@@ -215,8 +215,8 @@ export const utilities = utilityList;
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
-  defaultWidth: 50,
-  defaultHeight: 60,
+  defaultWidth: 58,
+  defaultHeight: 72,
 };
 
 // Games list used for the "Games" folder on the desktop
@@ -304,6 +304,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayChess,
+    defaultWidth: 64,
+    defaultHeight: 79,
   },
   {
     id: 'connect-four',
@@ -421,6 +423,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displaySolitaire,
+    defaultWidth: 64,
+    defaultHeight: 79,
   },
   {
     id: 'tictactoe',
@@ -449,6 +453,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTowerDefense,
+    defaultWidth: 64,
+    defaultHeight: 79,
   },
   {
     id: 'word-search',
