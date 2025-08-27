@@ -18,11 +18,13 @@ const NmapNSEPage: React.FC = () => {
     }
   }, []);
   const openScriptDoc = useCallback((name: string) => {
-    window.open(
-      `https://nmap.org/nsedoc/scripts/${name}.html`,
-      '_blank',
-      'noopener,noreferrer'
-    );
+    if (typeof window !== 'undefined') {
+      window.open(
+        `https://nmap.org/nsedoc/scripts/${name}.html`,
+        '_blank',
+        'noopener,noreferrer'
+      );
+    }
   }, []);
 
   useEffect(() => {
