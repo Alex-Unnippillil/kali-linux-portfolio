@@ -91,6 +91,17 @@ const Tetris = () => {
   const [sound, setSound] = usePersistentState('tetris-sound', true);
   const [tSpin, setTSpin] = useState(false);
 
+  const [shake, setShake] = useState(false);
+  const reducedMotion = useRef(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => { reducedMotion.current = media.matches; };
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
   const softDropRef = useRef(false);
   const lockRef = useRef(null);
   const lastRotateRef = useRef(false);
@@ -122,6 +133,14 @@ const Tetris = () => {
       /* ignore */
     }
   }, [sound]);
+
+  const thud = useCallback(() => {
+    playSound(120, 0.05);
+    if (!reducedMotion.current) {
+      setShake(true);
+      setTimeout(() => setShake(false), 100);
+    }
+  }, [playSound]);
 
   const getDropY = useCallback((b = boardRef.current, sh = pieceRef.current.shape, x = posRef.current.x, y = posRef.current.y) => {
     let dy = y;
@@ -167,6 +186,7 @@ const Tetris = () => {
       lockRef.current = null;
     }
     const newBoard = merge(boardRef.current, pieceRef.current.shape, posRef.current.x, posRef.current.y, pieceRef.current.type);
+    thud();
     const filled = [];
     for (let r = 0; r < HEIGHT; r += 1) {
       if (newBoard[r].every((c) => c)) filled.push(r);
@@ -216,7 +236,7 @@ const Tetris = () => {
     if (!canMove(newBoard, next.shape, Math.floor(WIDTH/2) - 2, 0)) {
       resetGame();
     }
-  }, [highScore, isTSpin, level, maxLevel, next, playSound, resetGame, setHighScore, setMaxLevel]);
+  }, [highScore, isTSpin, level, maxLevel, next, playSound, resetGame, setHighScore, setMaxLevel, thud]);
 
   const moveDown = useCallback((soft = false) => {
     softDropRef.current = soft;
@@ -320,7 +340,7 @@ const Tetris = () => {
     else if (action === 'reset') resetGame();
     else if (action === 'sound') toggleSound();
     else if (action === 'settings') setShowSettings((s) => !s);
-  }, [actionFromKey, hardDrop, holdPiece, move, moveDown, rotatePiece, resetGame]);
+  }, [actionFromKey, hardDrop, holdPiece, move, moveDown, rotatePiece, resetGame, togglePause, toggleSound]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKey);
@@ -345,8 +365,12 @@ const Tetris = () => {
     pieceRef.current.shape.forEach((row, r) => {
       row.forEach((c, col) => {
         if (c) {
+          const x = (posRef.current.x + col) * CELL_SIZE;
+          const y = (ghostY + r) * CELL_SIZE;
           ctx.fillStyle = pieceRef.current.color;
-          ctx.fillRect((posRef.current.x + col) * CELL_SIZE, (ghostY + r) * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+          ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+          ctx.strokeStyle = '#f9fafb';
+          ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
         }
       });
     });
@@ -404,13 +428,24 @@ const Tetris = () => {
           ref={canvasRef}
           width={WIDTH * CELL_SIZE}
           height={HEIGHT * CELL_SIZE}
-          className="border border-gray-700"
+          className="border border-gray-700 transition-transform"
+          style={{ transform: shake ? 'translateY(2px)' : 'none' }}
         />
         <div className="flex flex-col text-sm">
           <div className="mb-4">
-            <div className="text-center mb-1">Hold</div>
-            <div className="relative border border-gray-700" style={{ width: 4 * CELL_SIZE, height: 4 * CELL_SIZE }}>
-              {hold && cellPreview(hold)}
+            <div className="text-center mb-1" id="hold-label">Hold</div>
+            <div
+              className="relative border border-gray-700"
+              style={{ width: 4 * CELL_SIZE, height: 4 * CELL_SIZE }}
+              aria-live="polite"
+              aria-labelledby="hold-label"
+            >
+              {hold && (
+                <>
+                  {cellPreview(hold)}
+                  <span className="sr-only">Hold piece: {hold.type}</span>
+                </>
+              )}
             </div>
           </div>
           <div className="mb-4">
@@ -419,10 +454,12 @@ const Tetris = () => {
               {cellPreview(next)}
             </div>
           </div>
-          <div>Score: {score}</div>
-          <div>High: {highScore}</div>
-          <div>Level: {level}</div>
-          <div>Lines: {lines}</div>
+          <div aria-live="polite">
+            <div>Score: {score}</div>
+            <div>High: {highScore}</div>
+            <div>Level: {level}</div>
+            <div>Lines: {lines}</div>
+          </div>
           <div className="mt-2 space-x-1">
             <button className="px-2 py-1 bg-blue-500" onClick={resetGame}>Reset</button>
             <button className="px-2 py-1 bg-blue-500" onClick={togglePause}>{paused ? 'Resume' : 'Pause'}</button>
