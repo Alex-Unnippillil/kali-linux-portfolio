@@ -346,3 +346,34 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Horizontal timeline for About section */
+.timeline {
+    display: flex;
+    overflow-x: auto;
+    gap: 1rem;
+    padding-bottom: 0.5rem;
+}
+
+.timeline-milestone {
+    flex: 0 0 auto;
+    text-align: center;
+    min-width: 6rem;
+    transition: transform 0.2s ease;
+    cursor: default;
+}
+
+.timeline-milestone:hover {
+    transform: scale(1.05);
+}
+
+.milestone-icon {
+    width: 32px;
+    height: 32px;
+    transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.timeline-milestone:hover .milestone-icon {
+    filter: drop-shadow(0 0 4px var(--color-ubt-blue));
+    transform: scale(1.1);
+}

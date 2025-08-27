@@ -159,6 +159,28 @@ export const displayAboutAlex = () => {
 
 
 function About() {
+    const milestones = [
+        {
+            year: '2012',
+            text: 'Started High School',
+            icon: '/themes/Yaru/status/education.svg'
+        },
+        {
+            year: '2016',
+            text: 'Graduated High School',
+            icon: '/themes/Yaru/status/experience.svg'
+        },
+        {
+            year: '2020',
+            text: 'Joined Ontario Tech University',
+            icon: '/themes/Yaru/status/projects.svg'
+        },
+        {
+            year: '2024',
+            text: 'Completed Networking and I.T. Security',
+            icon: '/themes/Yaru/status/download.svg'
+        }
+    ];
     return (
         <>
             <div className="w-20 md:w-28 my-4 full">
@@ -231,6 +253,15 @@ function About() {
                     I also have interests in deep learning, software development, and animation.
                 </li>
             </ul>
+            <div className="timeline w-5/6 md:w-3/4 mt-6 mb-2">
+                {milestones.map((m) => (
+                    <div key={m.year} className="timeline-milestone">
+                        <Image src={m.icon} alt={m.text} width={32} height={32} className="milestone-icon" />
+                        <div className="font-bold mt-1">{m.year}</div>
+                        <div className="text-xs md:text-sm">{m.text}</div>
+                    </div>
+                ))}
+            </div>
         </>
     )
 }
