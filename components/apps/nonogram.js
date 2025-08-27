@@ -25,6 +25,10 @@ const Nonogram = () => {
   const [colTargets, setColTargets] = useState(Array(width).fill(0));
   const rowProgress = useRef(Array(height).fill(0));
   const colProgress = useRef(Array(width).fill(0));
+  const rowCross = useRef(Array(height).fill(0));
+  const colCross = useRef(Array(width).fill(0));
+  const rowPulse = useRef(Array(height).fill(0));
+  const colPulse = useRef(Array(width).fill(0));
   const prevRow = useRef(Array(height).fill(0));
   const prevCol = useRef(Array(width).fill(0));
   const [liveMessage, setLiveMessage] = useState('');
@@ -45,6 +49,7 @@ const Nonogram = () => {
   const [mode, setMode] = useState('paint'); // paint or mark
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = useState(true);
+  const [preventIllegal, setPreventIllegal] = useState(false);
   const [time, setTime] = useState(0);
   const [highScore, setHighScore] = useState(null);
   const startTime = useRef(Date.now());
@@ -88,19 +93,23 @@ const Nonogram = () => {
     [rows, cols, highScore, playSound]
   );
 
-  const toggleCell = useCallback(
-    (i, j) => {
+  const setCellValue = useCallback(
+    (i, j, value) => {
       if (paused || completed.current) return;
       setGrid((g) => {
         const ng = g.map((row) => row.slice());
-        if (mode === 'paint') ng[i][j] = ng[i][j] === 1 ? 0 : 1;
-        else if (mode === 'mark') ng[i][j] = ng[i][j] === -1 ? 0 : -1;
+        if (preventIllegal) {
+          if (value === 1 && solution[i][j] !== 1) return g;
+          if (value === -1 && solution[i][j] === 1) return g;
+        }
+        if (ng[i][j] === value) return g;
+        ng[i][j] = value;
         checkSolved(ng);
         return ng;
       });
       playSound();
     },
-    [mode, paused, checkSolved, playSound]
+    [paused, preventIllegal, solution, checkSolved, playSound]
   );
 
   const reset = useCallback(() => {
@@ -148,11 +157,17 @@ const Nonogram = () => {
     setColTargets(newColTargets);
     let message = '';
     newRowTargets.forEach((p, i) => {
-      if (p === 1 && prevRow.current[i] < 1) message = `Row ${i + 1} solved`;
+      if (p === 1 && prevRow.current[i] < 1) {
+        message = `Row ${i + 1} solved`;
+        rowPulse.current[i] = 30;
+      }
       prevRow.current[i] = p;
     });
     newColTargets.forEach((p, j) => {
-      if (p === 1 && prevCol.current[j] < 1) message = `Column ${j + 1} solved`;
+      if (p === 1 && prevCol.current[j] < 1) {
+        message = `Column ${j + 1} solved`;
+        colPulse.current[j] = 30;
+      }
       prevCol.current[j] = p;
     });
     if (message) setLiveMessage(message);
@@ -176,6 +191,16 @@ const Nonogram = () => {
         const target = colTargets[j];
         return reduceMotion ? target : p + (target - p) * 0.1;
       });
+      rowCross.current = rowCross.current.map((p, i) => {
+        const target = rowTargets[i] === 1 ? 1 : 0;
+        return reduceMotion ? target : p + (target - p) * 0.2;
+      });
+      colCross.current = colCross.current.map((p, j) => {
+        const target = colTargets[j] === 1 ? 1 : 0;
+        return reduceMotion ? target : p + (target - p) * 0.2;
+      });
+      rowPulse.current = rowPulse.current.map((p) => (p > 0 ? p - 1 : 0));
+      colPulse.current = colPulse.current.map((p) => (p > 0 ? p - 1 : 0));
 
       // draw progress bars
       ctx.fillStyle = '#15803d'; // row progress color (green-700)
@@ -198,26 +223,62 @@ const Nonogram = () => {
       // row clues
       ctx.textAlign = 'right';
       rows.forEach((clues, i) => {
-        ctx.fillText(
-          clues.join(' '),
-          CLUE_SPACE - 4,
-          CLUE_SPACE + i * CELL_SIZE + CELL_SIZE * 0.7
-        );
+        const text = clues.join(' ');
+        const xEnd = CLUE_SPACE - 4;
+        const y = CLUE_SPACE + i * CELL_SIZE + CELL_SIZE * 0.7;
+        const pulse = rowPulse.current[i];
+        if (pulse > 0) {
+          const intensity = 0.5 + 0.5 * Math.sin((pulse / 30) * Math.PI * 4);
+          ctx.fillStyle = `rgba(34,197,94,${intensity})`;
+        } else {
+          ctx.fillStyle = '#000';
+        }
+        ctx.fillText(text, xEnd, y);
+        const textWidth = ctx.measureText(text).width;
+        const progress = rowCross.current[i];
+        if (progress > 0) {
+          ctx.strokeStyle = '#a00';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(xEnd - textWidth, y - 8);
+          ctx.lineTo(xEnd - textWidth + textWidth * progress, y - 8);
+          ctx.stroke();
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = '#000';
+        }
       });
 
       // column clues
       ctx.textAlign = 'center';
       cols.forEach((clues, j) => {
+        const x = CLUE_SPACE + j * CELL_SIZE + CELL_SIZE / 2;
+        const pulse = colPulse.current[j];
         clues
           .slice()
           .reverse()
           .forEach((c, idx) => {
-            ctx.fillText(
-              String(c),
-              CLUE_SPACE + j * CELL_SIZE + CELL_SIZE / 2,
-              CLUE_SPACE - 4 - idx * 16
-            );
+            const y = CLUE_SPACE - 4 - idx * 16;
+            if (pulse > 0) {
+              const intensity = 0.5 + 0.5 * Math.sin((pulse / 30) * Math.PI * 4);
+              ctx.fillStyle = `rgba(59,130,246,${intensity})`;
+            } else {
+              ctx.fillStyle = '#000';
+            }
+            ctx.fillText(String(c), x, y);
           });
+        const progress = colCross.current[j];
+        if (progress > 0) {
+          const topY = CLUE_SPACE - 4 - (clues.length - 1) * 16 - 8;
+          const bottomY = CLUE_SPACE - 4 + 8;
+          ctx.strokeStyle = '#a00';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x, topY);
+          ctx.lineTo(x, topY + (bottomY - topY) * progress);
+          ctx.stroke();
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = '#000';
+        }
       });
 
       // grid lines
@@ -278,32 +339,60 @@ const Nonogram = () => {
 
   // mouse interaction
   const painting = useRef(false);
-  const handlePos = useCallback(
-    (e) => {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const x = e.clientX - rect.left - CLUE_SPACE;
-      const y = e.clientY - rect.top - CLUE_SPACE;
-      const i = Math.floor(y / CELL_SIZE);
-      const j = Math.floor(x / CELL_SIZE);
-      if (i >= 0 && i < height && j >= 0 && j < width) toggleCell(i, j);
-    },
-    [height, width, toggleCell]
-  );
+  const dragValue = useRef(0);
+  const dragStart = useRef({ i: 0, j: 0 });
+  const dragAxis = useRef(null);
+
+  const getCell = useCallback((e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left - CLUE_SPACE;
+    const y = e.clientY - rect.top - CLUE_SPACE;
+    return {
+      i: Math.floor(y / CELL_SIZE),
+      j: Math.floor(x / CELL_SIZE),
+    };
+  }, []);
 
   const handleMouseDown = useCallback(
     (e) => {
       e.preventDefault();
+      const { i, j } = getCell(e);
+      if (i < 0 || i >= height || j < 0 || j >= width) return;
       painting.current = true;
-      handlePos(e);
+      dragStart.current = { i, j };
+      dragAxis.current = null;
+      const current = gridRef.current[i][j];
+      if (mode === 'paint') dragValue.current = current === 1 ? 0 : 1;
+      else dragValue.current = current === -1 ? 0 : -1;
+      setCellValue(i, j, dragValue.current);
     },
-    [handlePos]
+    [getCell, height, width, mode, setCellValue]
   );
+
   const handleMouseMove = useCallback(
     (e) => {
-      if (painting.current) handlePos(e);
+      if (!painting.current) return;
+      const { i, j } = getCell(e);
+      if (i < 0 || i >= height || j < 0 || j >= width) return;
+      if (dragAxis.current === null) {
+        if (i !== dragStart.current.i || j !== dragStart.current.j) {
+          dragAxis.current =
+            Math.abs(i - dragStart.current.i) > Math.abs(j - dragStart.current.j)
+              ? 'col'
+              : 'row';
+        } else {
+          return;
+        }
+      }
+      let ni = i;
+      let nj = j;
+      if (dragAxis.current === 'row') ni = dragStart.current.i;
+      else if (dragAxis.current === 'col') nj = dragStart.current.j;
+      setCellValue(ni, nj, dragValue.current);
     },
-    [handlePos]
+    [getCell, height, width, setCellValue]
   );
+
   useEffect(() => {
     const up = () => {
       painting.current = false;
@@ -373,6 +462,14 @@ const Nonogram = () => {
           onClick={() => setSound((s) => !s)}
         >
           Sound: {sound ? 'On' : 'Off'}
+        </button>
+        <button
+          className={`px-3 py-1 rounded ${
+            preventIllegal ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-500'
+          }`}
+          onClick={() => setPreventIllegal((p) => !p)}
+        >
+          Strict: {preventIllegal ? 'On' : 'Off'}
         </button>
       </div>
     </div>
