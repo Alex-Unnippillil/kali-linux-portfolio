@@ -346,3 +346,29 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Quote generator */
+.quote-generator-text {
+    text-align: center;
+}
+
+.quote-generator-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.quote-generator-controls button {
+    background-color: var(--color-ub-cool-grey);
+    color: var(--color-text);
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    border: none;
+}
+
+.quote-generator-controls button:hover {
+    background-color: var(--color-ub-warm-grey);
+}
