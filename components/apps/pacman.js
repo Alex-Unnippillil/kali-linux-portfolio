@@ -88,6 +88,10 @@ const Pacman = () => {
 
   const modeRef = useRef({ index: 0, timer: modeSchedule[0].duration });
   const frightTimerRef = useRef(0);
+  const [modeInfo, setModeInfo] = useState({
+    mode: modeSchedule[0].mode,
+    timer: modeSchedule[0].duration,
+  });
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [pellets, setPellets] = useState(0);
@@ -114,6 +118,7 @@ const Pacman = () => {
     return () => media.removeEventListener('change', handler);
   }, []);
   const [announcement, setAnnouncement] = useState('');
+  const squashRef = useRef(0);
 
   const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);
   const isCenter = (pos) => Math.abs((pos % tileSize) - tileSize / 2) < 0.1;
@@ -265,23 +270,43 @@ const Pacman = () => {
     }
 
     const pac = pacRef.current;
+    const ptx = Math.floor((pac.x + tileSize / 2) / tileSize);
+    const pty = Math.floor((pac.y + tileSize / 2) / tileSize);
+    if (!prefersReduced && isTunnel(ptx, pty) && (pac.dir.x || pac.dir.y)) {
+      ctx.strokeStyle = 'white';
+      ctx.lineWidth = 2;
+      const lineCount = 10;
+      for (let i = 0; i < lineCount; i++) {
+        const angle = (Date.now() / 50 + (i * (Math.PI * 2)) / lineCount) % (Math.PI * 2);
+        const len = tileSize;
+        ctx.beginPath();
+        ctx.moveTo(pac.x + tileSize / 2, pac.y + tileSize / 2);
+        ctx.lineTo(
+          pac.x + tileSize / 2 + Math.cos(angle) * len,
+          pac.y + tileSize / 2 + Math.sin(angle) * len
+        );
+        ctx.stroke();
+      }
+    }
     ctx.fillStyle = 'yellow';
-    ctx.beginPath();
     const angle = Math.atan2(pac.dir.y, pac.dir.x);
     const startAngle = angle + Math.PI / 6;
     const endAngle = angle - Math.PI / 6 + Math.PI * 2;
-    ctx.moveTo(pac.x + tileSize / 2, pac.y + tileSize / 2);
-    const pulse = frightTimerRef.current > 0 && !prefersReduced ? 1 + 0.1 * Math.sin(Date.now() / 100) : 1;
-    ctx.arc(
-      pac.x + tileSize / 2,
-      pac.y + tileSize / 2,
-      (tileSize / 2 - 2) * pulse,
-      startAngle,
-      endAngle,
-      false
-    );
+    const pulse =
+      frightTimerRef.current > 0 && !prefersReduced
+        ? 1 + 0.1 * Math.sin(Date.now() / 100)
+        : 1;
+    const squash = squashRef.current;
+    ctx.save();
+    ctx.translate(pac.x + tileSize / 2, pac.y + tileSize / 2);
+    if (pac.dir.x !== 0) ctx.scale(1, 1 - squash);
+    else ctx.scale(1 - squash, 1);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, (tileSize / 2 - 2) * pulse, startAngle, endAngle, false);
     ctx.closePath();
     ctx.fill();
+    ctx.restore();
 
     ghostsRef.current.forEach((g) => {
       if (g.path && g.path.length > 1) {
@@ -300,11 +325,42 @@ const Pacman = () => {
       ctx.beginPath();
       ctx.arc(g.x + tileSize / 2, g.y + tileSize / 2, tileSize / 2 - 2, 0, Math.PI * 2);
       ctx.fill();
+
+      // eyes
+      const eyeOffsetX = 5;
+      const eyeOffsetY = 5;
+      const pupilOffset = 2;
+      const dx = pac.x - g.x;
+      const dy = pac.y - g.y;
+      const ang = Math.atan2(dy, dx);
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.arc(g.x + tileSize / 2 - eyeOffsetX, g.y + tileSize / 2 - eyeOffsetY, 4, 0, Math.PI * 2);
+      ctx.arc(g.x + tileSize / 2 + eyeOffsetX, g.y + tileSize / 2 - eyeOffsetY, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'black';
+      ctx.beginPath();
+      ctx.arc(
+        g.x + tileSize / 2 - eyeOffsetX + Math.cos(ang) * pupilOffset,
+        g.y + tileSize / 2 - eyeOffsetY + Math.sin(ang) * pupilOffset,
+        2,
+        0,
+        Math.PI * 2
+      );
+      ctx.arc(
+        g.x + tileSize / 2 + eyeOffsetX + Math.cos(ang) * pupilOffset,
+        g.y + tileSize / 2 - eyeOffsetY + Math.sin(ang) * pupilOffset,
+        2,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
     });
-  }, [prefersReduced]);
+  }, [prefersReduced, isTunnel]);
 
   const step = useCallback(() => {
     const pac = pacRef.current;
+    squashRef.current *= 0.8;
     const maze = mazeRef.current;
     const randomMode = levelIndex < TARGET_MODE_LEVEL;
 
@@ -339,6 +395,7 @@ const Pacman = () => {
 
     // pellets and energizers
     if (maze[pty][ptx] === 2 || maze[pty][ptx] === 3) {
+      squashRef.current = 0.3;
       if (maze[pty][ptx] === 2) {
         setScore((s) => s + 10);
         setPellets((p) => p + 1);
@@ -386,6 +443,13 @@ const Pacman = () => {
         modeRef.current.timer = modeSchedule[modeRef.current.index].duration;
       }
     }
+    setModeInfo({
+      mode:
+        frightTimerRef.current > 0
+          ? 'fright'
+          : modeSchedule[modeRef.current.index].mode,
+      timer: frightTimerRef.current > 0 ? frightTimerRef.current : modeRef.current.timer,
+    });
 
     // move ghosts
     ghostsRef.current.forEach((g) => {
@@ -600,6 +664,10 @@ const Pacman = () => {
         height={HEIGHT}
         className="bg-black"
       />
+
+      <div className="mt-2 px-2 py-1 bg-ub-grey rounded">
+        {modeInfo.mode.toUpperCase()} {Math.ceil(modeInfo.timer / 60)}s
+      </div>
 
       <div className="mt-2">Score: {score} | High: {highScore}</div>
       <div className="mt-1">Lives: {pacRef.current.lives}</div>
