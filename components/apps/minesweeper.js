@@ -401,3 +401,5 @@ const Minesweeper = () => {
 };
 
 export default Minesweeper;
+
+export const displayMinesweeper = (addFolder, openApp) => <Minesweeper addFolder={addFolder} openApp={openApp} />;

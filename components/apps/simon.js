@@ -236,3 +236,5 @@ const Simon = () => {
 };
 
 export default Simon;
+
+export const displaySimon = (addFolder, openApp) => <Simon addFolder={addFolder} openApp={openApp} />;

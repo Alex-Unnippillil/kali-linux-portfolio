@@ -336,3 +336,5 @@ const Breakout = () => {
 };
 
 export default Breakout;
+
+export const displayBreakout = (addFolder, openApp) => <Breakout addFolder={addFolder} openApp={openApp} />;

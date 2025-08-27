@@ -198,3 +198,5 @@ const Memory = () => {
 };
 
 export default Memory;
+
+export const displayMemory = (addFolder, openApp) => <Memory addFolder={addFolder} openApp={openApp} />;

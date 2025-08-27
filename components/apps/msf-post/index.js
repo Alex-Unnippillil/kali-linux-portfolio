@@ -66,3 +66,5 @@ const MsfPostApp = () => {
 };
 
 export default MsfPostApp;
+
+export const displayMsfPost = (addFolder, openApp) => <MsfPostApp addFolder={addFolder} openApp={openApp} />;

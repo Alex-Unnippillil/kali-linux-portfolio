@@ -432,3 +432,5 @@ export {
   logLaneDefs,
   rampLane,
 };
+
+export const displayFrogger = (addFolder, openApp) => <Frogger addFolder={addFolder} openApp={openApp} />;

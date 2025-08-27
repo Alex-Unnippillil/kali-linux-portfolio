@@ -516,3 +516,5 @@ const Nonogram = () => {
 };
 
 export default Nonogram;
+
+export const displayNonogram = (addFolder, openApp) => <Nonogram addFolder={addFolder} openApp={openApp} />;

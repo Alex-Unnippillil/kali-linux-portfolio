@@ -319,3 +319,5 @@ const Hangman = () => {
 
 export default Hangman;
 
+
+export const displayHangman = (addFolder, openApp) => <Hangman addFolder={addFolder} openApp={openApp} />;

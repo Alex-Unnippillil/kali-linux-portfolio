@@ -118,3 +118,5 @@ const Pinball = () => {
 
 export default Pinball;
 
+
+export const displayPinball = (addFolder, openApp) => <Pinball addFolder={addFolder} openApp={openApp} />;

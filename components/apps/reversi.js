@@ -356,3 +356,5 @@ const Reversi = () => {
 
 export default Reversi;
 
+
+export const displayReversi = (addFolder, openApp) => <Reversi addFolder={addFolder} openApp={openApp} />;

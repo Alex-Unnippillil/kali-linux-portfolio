@@ -530,3 +530,5 @@ const Asteroids = () => {
 
 export default Asteroids;
 
+
+export const displayAsteroids = (addFolder, openApp) => <Asteroids addFolder={addFolder} openApp={openApp} />;

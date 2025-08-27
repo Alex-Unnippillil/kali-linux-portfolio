@@ -38,3 +38,5 @@ export default function GhidraApp() {
     </div>
   );
 }
+
+export const displayGhidra = (addFolder, openApp) => <GhidraApp addFolder={addFolder} openApp={openApp} />;

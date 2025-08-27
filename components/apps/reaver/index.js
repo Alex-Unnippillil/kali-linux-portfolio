@@ -80,3 +80,5 @@ export default function ReaverApp() {
   );
 }
 
+
+export const displayReaver = (addFolder, openApp) => <ReaverApp addFolder={addFolder} openApp={openApp} />;

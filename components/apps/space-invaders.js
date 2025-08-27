@@ -462,3 +462,5 @@ const SpaceInvaders = () => {
 };
 
 export default SpaceInvaders;
+
+export const displaySpaceInvaders = (addFolder, openApp) => <SpaceInvaders addFolder={addFolder} openApp={openApp} />;

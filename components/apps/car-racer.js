@@ -541,3 +541,5 @@ const CarRacer = () => {
 
 export default CarRacer;
 
+
+export const displayCarRacer = (addFolder, openApp) => <CarRacer addFolder={addFolder} openApp={openApp} />;

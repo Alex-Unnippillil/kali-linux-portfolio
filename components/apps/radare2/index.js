@@ -199,3 +199,5 @@ const Radare2 = () => {
 };
 
 export default Radare2;
+
+export const displayRadare2 = (addFolder, openApp) => <Radare2 addFolder={addFolder} openApp={openApp} />;

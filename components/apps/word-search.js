@@ -287,3 +287,5 @@ const WordSearch = () => {
 
 export default WordSearch;
 
+
+export const displayWordSearch = (addFolder, openApp) => <WordSearch addFolder={addFolder} openApp={openApp} />;

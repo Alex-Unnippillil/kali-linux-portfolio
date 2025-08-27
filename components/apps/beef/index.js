@@ -138,3 +138,5 @@ export default function Beef() {
     </div>
   );
 }
+
+export const displayBeef = (addFolder, openApp) => <Beef addFolder={addFolder} openApp={openApp} />;

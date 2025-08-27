@@ -282,3 +282,5 @@ const ConnectFour = () => {
 
 export default ConnectFour;
 
+
+export const displayConnectFour = (addFolder, openApp) => <ConnectFour addFolder={addFolder} openApp={openApp} />;

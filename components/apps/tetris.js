@@ -407,3 +407,5 @@ const Tetris = () => {
 };
 
 export default Tetris;
+
+export const displayTetris = (addFolder, openApp) => <Tetris addFolder={addFolder} openApp={openApp} />;
