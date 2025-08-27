@@ -7,14 +7,19 @@ import {
   moveWasteToTableau,
   moveToFoundation,
   autoMove,
+  autoCompleteStep,
   autoComplete,
   valueToString,
   GameState,
   Card,
 } from './engine';
 
+const CARD_CLASSES = 'w-20 h-32 sm:w-16 sm:h-24';
+
 const renderCard = (card: Card) => (
-  <div className="w-16 h-24 rounded border border-black bg-white flex items-center justify-center transition-transform duration-300" >
+  <div
+    className={`${CARD_CLASSES} rounded border border-black bg-white flex items-center justify-center transition-transform duration-300`}
+  >
     <span className={card.color === 'red' ? 'text-red-600' : ''}>
       {valueToString(card.value)}{card.suit}
     </span>
@@ -22,7 +27,7 @@ const renderCard = (card: Card) => (
 );
 
 const renderFaceDown = () => (
-  <div className="w-16 h-24 rounded border border-black bg-blue-800" />
+  <div className={`${CARD_CLASSES} rounded border border-black bg-blue-800`} />
 );
 
 const Solitaire = () => {
@@ -34,6 +39,7 @@ const Solitaire = () => {
   const timer = useRef<NodeJS.Timeout | null>(null);
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const tableauRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const lastTap = useRef(0);
 
     const start = useCallback(
       (mode: 1 | 3 = drawMode) => {
@@ -158,18 +164,41 @@ const Solitaire = () => {
     });
   };
 
+  const handleTap = (source: 'tableau' | 'waste', pile: number) => {
+    const now = Date.now();
+    if (now - lastTap.current < 300) {
+      handleDoubleClick(source, pile);
+    }
+    lastTap.current = now;
+  };
+
+  const autoTimer = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
+    const done = () => {
+      if (autoTimer.current) {
+        clearInterval(autoTimer.current);
+        autoTimer.current = null;
+      }
+    };
     if (
+      autoTimer.current === null &&
       game.stock.length === 0 &&
       game.tableau.every((p) => p.every((c) => c.faceUp))
     ) {
-      setGame((g) => {
-        const n = autoComplete(g);
-        if (n !== g)
+      autoTimer.current = setInterval(() => {
+        setGame((g) => {
+          const n = autoCompleteStep(g);
+          if (n === g) {
+            done();
+            return g;
+          }
           ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
-        return n;
-      });
+          return n;
+        });
+      }, 200);
     }
+    return done;
   }, [game]);
 
   const best = JSON.parse(typeof window !== 'undefined' ? localStorage.getItem('solitaireBest') || '{}' : '{}');
@@ -198,27 +227,28 @@ const Solitaire = () => {
         </button>
       </div>
       <div className="flex space-x-4 mb-4">
-        <div className="w-16 h-24" onClick={draw}>
+        <div className={CARD_CLASSES} onClick={draw}>
           {game.stock.length ? renderFaceDown() : <div />}
         </div>
-        <div className="w-16 h-24" onDragOver={(e) => e.preventDefault()}>
+        <div className={CARD_CLASSES} onDragOver={(e) => e.preventDefault()}>
           {game.waste.length ? (
             <div
               draggable
               onDoubleClick={() => handleDoubleClick('waste', 0)}
+              onTouchEnd={() => handleTap('waste', 0)}
               onDragStart={() => handleDragStart('waste', -1, game.waste.length - 1)}
               onDragEnd={handleDragEnd}
             >
               {renderCard(game.waste[game.waste.length - 1])}
             </div>
           ) : (
-            <div className="w-16 h-24" />
+            <div className={CARD_CLASSES} />
           )}
         </div>
         {game.foundations.map((pile, i) => (
           <div
             key={`f-${i}`}
-            className="w-16 h-24"
+            className={CARD_CLASSES}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToFoundation(i)}
             ref={(el) => {
@@ -226,7 +256,7 @@ const Solitaire = () => {
             }}
           >
             {pile.length ? renderCard(pile[pile.length - 1]) : (
-              <div className="w-16 h-24 border border-dashed border-white rounded" />
+              <div className={`${CARD_CLASSES} border border-dashed border-white rounded`} />
             )}
           </div>
         ))}
@@ -235,12 +265,12 @@ const Solitaire = () => {
         {game.tableau.map((pile, i) => (
           <div
             key={`t-${i}`}
-            className="relative w-16 h-96 border border-black"
+            className="relative w-20 sm:w-16 h-96 border border-black"
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToTableau(i)}
-              ref={(el) => {
-                tableauRefs.current[i] = el;
-              }}
+            ref={(el) => {
+              tableauRefs.current[i] = el;
+            }}
           >
             {pile.map((card, idx) => (
               <div
@@ -249,6 +279,7 @@ const Solitaire = () => {
                 style={{ top: idx * 24 }}
                 draggable={card.faceUp}
                 onDoubleClick={() => handleDoubleClick('tableau', i)}
+                onTouchEnd={() => handleTap('tableau', i)}
                 onDragStart={() => handleDragStart('tableau', i, idx)}
                 onDragEnd={handleDragEnd}
               >

@@ -5,6 +5,7 @@ import {
   moveWasteToTableau,
   moveToFoundation,
   autoMove,
+  autoCompleteStep,
   autoComplete,
   isWin,
   suits,
@@ -92,11 +93,26 @@ describe('Solitaire engine', () => {
     expect(r.tableau[0].length).toBe(1);
   });
 
+  test('moveToFoundation rejects illegal move from waste', () => {
+    const state = emptyState();
+    state.waste = [card('♠', 2, true)];
+    const r = moveToFoundation(state, 'waste', null);
+    expect(r.waste.length).toBe(1);
+    expect(r.foundations[suits.indexOf('♠')].length).toBe(0);
+  });
+
   test('autoMove moves aces from waste', () => {
     const state = emptyState();
     state.waste = [card('♦', 1, true)];
     const r = autoMove(state, 'waste', null);
     expect(r.foundations[suits.indexOf('♦')].length).toBe(1);
+  });
+
+  test('autoMove moves tableau cards when legal', () => {
+    const state = emptyState();
+    state.tableau[0] = [card('♣', 1, true)];
+    const r = autoMove(state, 'tableau', 0);
+    expect(r.foundations[suits.indexOf('♣')].length).toBe(1);
   });
 
   test('autoComplete moves all possible cards to foundation', () => {
@@ -108,6 +124,18 @@ describe('Solitaire engine', () => {
     expect(r.foundations[suits.indexOf('♠')].length).toBe(4);
     expect(r.waste.length).toBe(0);
     expect(r.tableau[0].length).toBe(0);
+  });
+
+  test('autoCompleteStep moves one card at a time', () => {
+    const state = emptyState();
+    state.foundations[suits.indexOf('♠')] = [card('♠', 1, true)];
+    state.waste = [card('♠', 2, true)];
+    state.tableau[0] = [card('♠', 3, true)];
+    const step1 = autoCompleteStep(state);
+    expect(step1.foundations[suits.indexOf('♠')].length).toBe(2);
+    expect(step1.waste.length).toBe(0);
+    const step2 = autoCompleteStep(step1);
+    expect(step2.foundations[suits.indexOf('♠')].length).toBe(3);
   });
 
   test('isWin detects completed game', () => {
