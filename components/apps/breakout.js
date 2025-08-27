@@ -89,6 +89,16 @@ const BreakoutGame = ({ levels }) => {
   const soundRef = useRef(true);
   const [resetKey, setResetKey] = useState(0);
   const audioCtxRef = useRef(null);
+  const [prefersReduced, setPrefersReduced] = useState(false);
+  const [announce, setAnnounce] = useState("");
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handler = () => setPrefersReduced(media.matches);
+    handler();
+    media.addEventListener("change", handler);
+    return () => media.removeEventListener("change", handler);
+  }, []);
 
   // Load saved level and highscores
   useEffect(() => {
@@ -165,6 +175,8 @@ const BreakoutGame = ({ levels }) => {
     };
     const balls = [{ x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 }];
     const powerUps = [];
+    const shards = [];
+    const fades = [];
     let paddleTimer = 0;
 
     const keys = { left: false, right: false };
@@ -248,6 +260,27 @@ const BreakoutGame = ({ levels }) => {
             ball.vy *= -1;
             scoreRef.current += 10;
             playSound(200);
+            setAnnounce(`Score ${scoreRef.current}`);
+
+            if (prefersReduced) {
+              fades.push({
+                x: brick.x,
+                y: brick.y,
+                w: brick.w,
+                h: brick.h,
+                alpha: 1,
+              });
+            } else {
+              for (let s = 0; s < 8; s += 1) {
+                shards.push({
+                  x: ball.x,
+                  y: ball.y,
+                  vx: (Math.random() - 0.5) * 200,
+                  vy: (Math.random() - 0.5) * 200,
+                  life: 1,
+                });
+              }
+            }
 
             // 20% chance to spawn a power-up
             if (Math.random() < 0.2) {
@@ -292,6 +325,22 @@ const BreakoutGame = ({ levels }) => {
         }
       }
 
+      // Update shards
+      for (let i = shards.length - 1; i >= 0; i -= 1) {
+        const s = shards[i];
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        s.life -= dt * 2;
+        if (s.life <= 0) shards.splice(i, 1);
+      }
+
+      // Update fades
+      for (let i = fades.length - 1; i >= 0; i -= 1) {
+        const f = fades[i];
+        f.alpha -= dt * 2;
+        if (f.alpha <= 0) fades.splice(i, 1);
+      }
+
       // Ensure at least one ball remains
       if (balls.length === 0) {
         balls.push({ x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 });
@@ -318,6 +367,20 @@ const BreakoutGame = ({ levels }) => {
           ctx.fillRect(brick.x, brick.y, brick.w - 2, brick.h - 2);
         }
       }
+
+      // Fades
+      for (const f of fades) {
+        ctx.fillStyle = `rgba(255,255,255,${f.alpha})`;
+        ctx.fillRect(f.x, f.y, f.w - 2, f.h - 2);
+      }
+
+      // Shards
+      ctx.fillStyle = "white";
+      for (const s of shards) {
+        ctx.globalAlpha = s.life;
+        ctx.fillRect(s.x, s.y, 2, 2);
+      }
+      ctx.globalAlpha = 1;
 
       // Power-ups
       for (const p of powerUps) {
@@ -374,11 +437,14 @@ const BreakoutGame = ({ levels }) => {
       window.removeEventListener("keyup", keyUp);
       window.removeEventListener("resize", fit);
     };
-  }, [level, levels, resetKey]);
+  }, [level, levels, resetKey, prefersReduced]);
 
   return (
     <div className="relative h-full w-full">
       <canvas ref={canvasRef} className="h-full w-full bg-black" />
+      <div className="sr-only" aria-live="polite">
+        {announce}
+      </div>
       <div className="absolute top-2 right-2 flex gap-2 z-10 text-xs">
         <button
           type="button"
