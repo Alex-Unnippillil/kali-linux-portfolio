@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import progressInfo from './progress.json';
 
 const hashTypes = [
   { id: '0', name: 'MD5', regex: /^[a-f0-9]{32}$/i },
@@ -53,6 +54,9 @@ function HashcatApp() {
   const [benchmark, setBenchmark] = useState('');
   const [pattern, setPattern] = useState('');
   const [wordlistUrl, setWordlistUrl] = useState('');
+  const [progress, setProgress] = useState(0);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const workerRef = useRef(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -60,6 +64,51 @@ function HashcatApp() {
     }, 3000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleChange = () => setPrefersReducedMotion(mediaQuery.matches);
+    handleChange();
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    let frame;
+    if (typeof window !== 'undefined') {
+      if (window.Worker) {
+        workerRef.current = new Worker(new URL('./progress.worker.js', import.meta.url));
+        workerRef.current.postMessage({ target: progressInfo.progress });
+        workerRef.current.onmessage = ({ data }) => {
+          const update = () => setProgress(data);
+          if (prefersReducedMotion) {
+            update();
+          } else {
+            frame = requestAnimationFrame(update);
+          }
+        };
+      } else {
+        const target = progressInfo.progress;
+        if (prefersReducedMotion) {
+          setProgress(target);
+        } else {
+          const animate = () => {
+            setProgress((p) => {
+              if (p >= target) return p;
+              frame = requestAnimationFrame(animate);
+              return p + 1;
+            });
+          };
+          frame = requestAnimationFrame(animate);
+        }
+      }
+    }
+    return () => {
+      if (workerRef.current) workerRef.current.terminate();
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [prefersReducedMotion]);
 
   const selectedHash = hashTypes.find((h) => h.id === hashType)?.name;
 
@@ -143,6 +192,32 @@ function HashcatApp() {
         )}
       </div>
       <Gauge value={gpuUsage} />
+      <div
+        className="w-48"
+        role="progressbar"
+        aria-label="Hash cracking progress"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={progress}
+        aria-valuetext={`${progress}%`}
+      >
+        <div className="text-sm mb-1">Progress: {progress}%</div>
+        <div className="w-full h-4 bg-gray-700 rounded">
+          <div
+            className="h-4 bg-blue-600 rounded"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div
+          role="status"
+          aria-live="polite"
+          className="text-sm mt-2"
+        >
+          <div>Hash rate: {progressInfo.hashRate}</div>
+          <div>ETA: {progressInfo.eta}</div>
+          <div>Mode: {progressInfo.mode}</div>
+        </div>
+      </div>
     </div>
   );
 }
