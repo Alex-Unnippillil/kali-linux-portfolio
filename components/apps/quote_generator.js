@@ -125,7 +125,7 @@ const QuoteGenerator = () => {
       setCurrent(null);
       return;
     }
-    const seed = new Date().toISOString().slice(0, 10);
+    const seed = new Date().toDateString();
     const index =
       Math.abs(
         seed
