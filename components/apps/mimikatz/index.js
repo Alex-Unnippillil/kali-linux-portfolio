@@ -1,7 +1,31 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+
+const modulesData = [
+  {
+    name: 'sekurlsa',
+    description: 'Retrieve credentials from memory',
+    sampleOutput: 'sekurlsa::logonpasswords\n[REDACTED]',
+    hardening:
+      'https://learn.microsoft.com/en-us/windows/security/identity-protection/credential-guard/credential-guard',
+  },
+  {
+    name: 'lsadump',
+    description: 'Dump LSASS secrets',
+    sampleOutput: 'lsadump::lsa /patch\n[REDACTED]',
+    hardening:
+      'https://learn.microsoft.com/en-us/windows-server/security/credentials-protection-and-management/configuring-additional-lsa-protection',
+  },
+  {
+    name: 'misc',
+    description: 'Miscellaneous helper commands',
+    sampleOutput: 'misc::cmd\n[REDACTED]',
+    hardening:
+      'https://learn.microsoft.com/en-us/windows/security/threat-protection/windows-security-baselines',
+  },
+];
 
 const MimikatzApp = () => {
-  const [modules, setModules] = useState([]);
+  const [modules] = useState(modulesData);
   const [output, setOutput] = useState('');
   const [history, setHistory] = useState([]);
   const [templates, setTemplates] = useState(() => {
@@ -15,12 +39,6 @@ const MimikatzApp = () => {
   const [templateName, setTemplateName] = useState('');
   const [templateScript, setTemplateScript] = useState('');
 
-  useEffect(() => {
-    fetch('/api/mimikatz')
-      .then((res) => res.json())
-      .then((data) => setModules(data.modules || []));
-  }, []);
-
   const addHistory = (command, text) => {
     setHistory((h) => [
       { timestamp: new Date().toISOString(), command, output: text },
@@ -28,19 +46,11 @@ const MimikatzApp = () => {
     ]);
   };
 
-  const runCommand = async (cmd) => {
-    try {
-      const res = await fetch(
-        `/api/mimikatz?command=${encodeURIComponent(cmd)}`
-      );
-      const data = await res.json();
-      setOutput(data.output || '');
-      addHistory(cmd, data.output || '');
-    } catch (err) {
-      const msg = `Error: ${err.message}`;
-      setOutput(msg);
-      addHistory(cmd, msg);
-    }
+  const runCommand = (cmd) => {
+    const mod = modules.find((m) => m.name === cmd);
+    const result = mod?.sampleOutput || `[${cmd} output redacted]`;
+    setOutput(result);
+    addHistory(cmd, result);
   };
 
   const saveTemplate = () => {
@@ -54,21 +64,10 @@ const MimikatzApp = () => {
     setTemplateScript('');
   };
 
-  const runTemplate = async (script) => {
-    try {
-      const res = await fetch('/api/mimikatz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script }),
-      });
-      const data = await res.json();
-      setOutput(data.output || '');
-      addHistory(script, data.output || '');
-    } catch (err) {
-      const msg = `Error: ${err.message}`;
-      setOutput(msg);
-      addHistory(script, msg);
-    }
+  const runTemplate = (script) => {
+    const msg = '[Template execution redacted]';
+    setOutput(msg);
+    addHistory(script, msg);
   };
 
   return (
@@ -77,13 +76,22 @@ const MimikatzApp = () => {
         <h2 className="text-lg mb-2">Modules</h2>
         <ul>
           {modules.map((m) => (
-            <li key={m.name}>
+            <li key={m.name} className="mb-2">
               <button
                 className="w-full text-left py-1 hover:bg-ub-cool-grey"
                 onClick={() => runCommand(m.name)}
               >
                 {m.name}
               </button>
+              <p className="text-xs">{m.description}</p>
+              <a
+                className="text-xs text-blue-400 underline"
+                href={m.hardening}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Windows hardening tips
+              </a>
             </li>
           ))}
         </ul>
