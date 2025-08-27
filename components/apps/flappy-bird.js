@@ -3,6 +3,31 @@ import useCanvasResize from '../../hooks/useCanvasResize';
 
 const WIDTH = 400;
 const HEIGHT = 300;
+const GRAVITY = 0.5;
+const JUMP = -8;
+const PIPE_WIDTH = 40;
+const PIPE_INTERVAL = 100;
+const PIPE_SPEED = 2;
+
+export const flapBird = (bird, jump) => {
+  bird.vy = jump;
+};
+
+export const calculateGap = (score) => Math.max(40, 80 - score * 2);
+
+export const createState = (width, height) => ({
+  bird: { x: 50, y: height / 2, vy: 0 },
+  pipes: [],
+  frame: 0,
+  score: 0,
+});
+
+export const resetState = (state, width, height) => {
+  state.bird = { x: 50, y: height / 2, vy: 0 };
+  state.pipes = [];
+  state.frame = 0;
+  state.score = 0;
+};
 
 const FlappyBird = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
@@ -17,148 +42,99 @@ const FlappyBird = () => {
     const width = WIDTH;
     const height = HEIGHT;
 
-    let bird = { x: 50, y: height / 2, vy: 0 };
-    const gravity = 0.5;
-    const jump = -8;
-
-    const pipeWidth = 40;
-    const gap = 80;
-    const pipeInterval = 100;
-    const pipeSpeed = 2;
-
-    let pipes = [];
-    let frame = 0;
-    let score = 0;
-    let running = true;
+    let state = createState(width, height);
     let animationFrameId = 0;
 
     function addPipe() {
+      const gap = calculateGap(state.score);
       const top = Math.random() * (height - gap - 40) + 20;
-      pipes.push({ x: width, top, bottom: top + gap });
+      state.pipes.push({ x: width, top, bottom: top + gap });
     }
 
     function reset() {
-      bird = { x: 50, y: height / 2, vy: 0 };
-      pipes = [];
-      frame = 0;
-      score = 0;
-      running = true;
-    }
-
-    function flap() {
-      bird.vy = jump;
+      resetState(state, width, height);
+      addPipe();
     }
 
     function draw() {
-      // background
       ctx.fillStyle = '#87CEEB';
       ctx.fillRect(0, 0, width, height);
 
-      // pipes
       ctx.fillStyle = '#228B22';
-      for (const pipe of pipes) {
-        ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
-        ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, height - pipe.bottom);
+      for (const pipe of state.pipes) {
+        ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.top);
+        ctx.fillRect(pipe.x, pipe.bottom, PIPE_WIDTH, height - pipe.bottom);
       }
 
-      // bird
       ctx.fillStyle = 'yellow';
       ctx.beginPath();
-      ctx.arc(bird.x, bird.y, 10, 0, Math.PI * 2);
+      ctx.arc(state.bird.x, state.bird.y, 10, 0, Math.PI * 2);
       ctx.fill();
 
-      // HUD
       ctx.fillStyle = 'black';
       ctx.font = '16px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(`Score: ${score}`, 10, 20);
-
-      if (!running) {
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
-        ctx.fillRect(0, 0, width, height);
-        ctx.fillStyle = 'white';
-        ctx.textAlign = 'center';
-        ctx.font = '24px sans-serif';
-        ctx.fillText('Game Over', width / 2, height / 2);
-        ctx.font = '16px sans-serif';
-        ctx.fillText('Press Space or Click to restart', width / 2, height / 2 + 30);
-        ctx.textAlign = 'left';
-      }
+      ctx.fillText(`Score: ${state.score}`, 10, 20);
     }
 
     function update() {
-      if (!running) return;
+      state.frame += 1;
 
-      frame += 1;
+      if (state.frame % PIPE_INTERVAL === 0) addPipe();
 
-      if (frame % pipeInterval === 0) addPipe();
+      state.bird.vy += GRAVITY;
+      state.bird.y += state.bird.vy;
 
-      bird.vy += gravity;
-      bird.y += bird.vy;
-
-      // top/bottom collision
-      if (bird.y + 10 > height || bird.y - 10 < 0) {
-        running = false;
+      if (state.bird.y + 10 > height || state.bird.y - 10 < 0) {
+        navigator.vibrate?.(100);
+        reset();
       }
 
-      // move pipes and track passed ones
       let passed = 0;
-      for (let i = 0; i < pipes.length; i++) {
-        const pipe = pipes[i];
-        pipe.x -= pipeSpeed;
+      for (let i = 0; i < state.pipes.length; i++) {
+        const pipe = state.pipes[i];
+        pipe.x -= PIPE_SPEED;
 
-        // collision with current pipe
         if (
-          pipe.x < bird.x + 10 &&
-          pipe.x + pipeWidth > bird.x - 10 &&
-          (bird.y - 10 < pipe.top || bird.y + 10 > pipe.bottom)
+          pipe.x < state.bird.x + 10 &&
+          pipe.x + PIPE_WIDTH > state.bird.x - 10 &&
+          (state.bird.y - 10 < pipe.top || state.bird.y + 10 > pipe.bottom)
         ) {
-          running = false;
+          navigator.vibrate?.(100);
+          reset();
+          break;
         }
 
-        if (pipe.x + pipeWidth < 0) {
+        if (pipe.x + PIPE_WIDTH < 0) {
           passed += 1;
         }
       }
 
       if (passed) {
-        score += passed;
-        pipes = pipes.filter((p) => p.x + pipeWidth >= 0);
+        state.score += passed;
+        state.pipes = state.pipes.filter((p) => p.x + PIPE_WIDTH >= 0);
       }
 
       draw();
-
-      if (running) animationFrameId = requestAnimationFrame(update);
+      animationFrameId = requestAnimationFrame(update);
     }
 
     function handleKey(e) {
       if (e.code === 'Space') {
         e.preventDefault();
-        if (running) {
-          flap();
-        } else {
-          reset();
-          addPipe();
-          animationFrameId = requestAnimationFrame(update);
-        }
+        flapBird(state.bird, JUMP);
       }
     }
 
     function handlePointer() {
-      if (running) {
-        flap();
-      } else {
-        reset();
-        addPipe();
-        animationFrameId = requestAnimationFrame(update);
-      }
+      flapBird(state.bird, JUMP);
     }
 
     window.addEventListener('keydown', handleKey, { passive: false });
     canvas.addEventListener('mousedown', handlePointer);
     canvas.addEventListener('touchstart', handlePointer, { passive: true });
 
-    addPipe();
+    reset();
     animationFrameId = requestAnimationFrame(update);
 
     return () => {
