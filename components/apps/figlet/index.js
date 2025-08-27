@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-// Font list must match those parsed in worker.js
-const fonts = ['Standard', 'Slant', 'Big', 'Ghost', 'Small'];
-
 const FigletApp = () => {
   const [text, setText] = useState('');
-  const [font, setFont] = useState(fonts[0]);
+  const [fonts, setFonts] = useState(['Standard']);
+  const [font, setFont] = useState('Standard');
   const [output, setOutput] = useState('');
   const [inverted, setInverted] = useState(false);
   const [announce, setAnnounce] = useState('');
@@ -15,7 +13,17 @@ const FigletApp = () => {
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => setOutput(e.data);
+    workerRef.current.onmessage = (e) => {
+      if (e.data?.type === 'fonts') {
+        setFonts(e.data.fonts);
+        setFont(e.data.fonts[0]);
+      } else if (e.data?.type === 'render') {
+        setOutput(e.data.output);
+        setAnnounce('Preview updated');
+        clearTimeout(announceTimer.current);
+        announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
+      }
+    };
     return () => {
       workerRef.current?.terminate();
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
@@ -82,14 +90,13 @@ const FigletApp = () => {
           Invert
         </button>
       </div>
-      <pre
-        aria-live="polite"
-        className={`flex-1 overflow-auto p-2 whitespace-pre transition-colors motion-reduce:transition-none ${
-          inverted ? 'bg-white text-black' : 'bg-black text-white'
-        }`}
-      >
-        {output}
-      </pre>
+        <pre
+          className={`flex-1 overflow-auto p-2 whitespace-pre transition-colors motion-reduce:transition-none ${
+            inverted ? 'bg-white text-black' : 'bg-black text-white'
+          }`}
+        >
+          {output}
+        </pre>
       <div aria-live="polite" className="sr-only">
         {announce}
       </div>
