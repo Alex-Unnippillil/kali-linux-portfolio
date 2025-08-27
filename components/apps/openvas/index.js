@@ -106,6 +106,31 @@ const OpenVASApp = () => {
     return ['bg-green-700', 'bg-yellow-700', 'bg-orange-700', 'bg-red-700'][idx];
   };
 
+  const exportCSV = () => {
+    if (filteredFindings.length === 0) return;
+    const headers = ['Host', 'Severity', 'Impact', 'Likelihood', 'Description'];
+    const rows = filteredFindings.map((f) =>
+      [f.host || '', f.severity, f.impact, f.likelihood, f.description.replace(/"/g, '""')]
+    );
+    const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'openvas-findings.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const groupedFindings = filteredFindings.reduce((acc, f) => {
+    const host = f.host || 'unknown';
+    if (!acc[host]) {
+      acc[host] = { low: [], medium: [], high: [], critical: [] };
+    }
+    acc[host][f.severity].push(f);
+    return acc;
+  }, {});
+
   return (
     <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
       <h2 className="text-lg mb-2">OpenVAS Scanner</h2>
@@ -175,11 +200,33 @@ const OpenVASApp = () => {
         </div>
       )}
       {filteredFindings.length > 0 && (
-        <ul className="mb-4 list-disc pl-5">
-          {filteredFindings.map((f, idx) => (
-            <li key={idx}>{f.description}</li>
+        <div className="mb-4">
+          {Object.entries(groupedFindings).map(([host, sevMap]) => (
+            <div key={host} className="mb-2">
+              <div className="font-bold">Host: {host}</div>
+              {['low', 'medium', 'high', 'critical'].map(
+                (sev) =>
+                  sevMap[sev].length > 0 && (
+                    <div key={sev} className="ml-4">
+                      <div className="capitalize font-semibold">{sev}</div>
+                      <ul className="list-disc pl-5">
+                        {sevMap[sev].map((f, idx) => (
+                          <li key={idx}>{f.description}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+              )}
+            </div>
           ))}
-        </ul>
+          <button
+            type="button"
+            onClick={exportCSV}
+            className="mt-2 px-4 py-2 bg-blue-600 rounded"
+          >
+            Export Visible to CSV
+          </button>
+        </div>
       )}
       <div aria-live="polite" className="sr-only">
         {announce}
