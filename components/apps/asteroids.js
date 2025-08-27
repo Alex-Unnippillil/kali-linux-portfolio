@@ -20,6 +20,7 @@ const COLLISION_COOLDOWN = 60; // frames
 const MULTIPLIER_TIMEOUT = 180; // frames
 const MAX_MULTIPLIER = 5;
 const EXHAUST_COLOR = '#ffa500';
+const SHIELD_DURATION = 600; // frames
 const RADAR_COLORS = { outline: '#0f0', ship: '#fff', asteroid: '#0f0', ufo: '#f00' };
 
 // Simple Quadtree for collision queries
@@ -160,6 +161,8 @@ const Asteroids = () => {
     let multiplier = 1;
     let multiplierTimer = 0;
     let rand = Math.random;
+    let waveBannerText = '';
+    let waveBannerTimer = 0;
 
     // Particle pooling
     const spawnParticles = (x, y, count, color = 'white', type = 'spark', baseAngle = 0) => {
@@ -225,6 +228,9 @@ const Asteroids = () => {
       rand = createSeededRNG(level);
       spawnAsteroids(3 + level * 2);
       ufoTimer = Math.max(300, 900 - level * 60);
+      waveBannerText = `Wave ${level}`;
+      waveBannerTimer = 120;
+      setLiveText(waveBannerText);
     };
 
     startLevel();
@@ -390,6 +396,7 @@ const Asteroids = () => {
 
       if (multiplierTimer > 0) multiplierTimer -= 1;
       else multiplier = 1;
+      if (waveBannerTimer > 0) waveBannerTimer -= 1;
 
       updateBullets(bullets);
       updatePowerUps(powerUps);
@@ -471,7 +478,7 @@ const Asteroids = () => {
       powerUps.forEach((p, i) => {
         const dist = Math.hypot(p.x - ship.x, p.y - ship.y);
         if (dist < p.r + ship.r) {
-          if (p.type === POWER_UPS.SHIELD) ship.shield = 600;
+        if (p.type === POWER_UPS.SHIELD) ship.shield = SHIELD_DURATION;
           else ship.rapidFire = 600;
           powerUps.splice(i, 1);
         }
@@ -493,9 +500,20 @@ const Asteroids = () => {
       ctx.stroke();
       ctx.restore();
       if (ship.shield > 0) {
+        const ratio = ship.shield / SHIELD_DURATION;
         ctx.beginPath();
+        ctx.strokeStyle = 'rgba(0,255,255,0.3)';
         ctx.arc(ship.x, ship.y, ship.r + 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
         ctx.strokeStyle = 'cyan';
+        ctx.arc(
+          ship.x,
+          ship.y,
+          ship.r + 4,
+          -Math.PI / 2,
+          -Math.PI / 2 + Math.PI * 2 * ratio
+        );
         ctx.stroke();
       }
 
@@ -592,6 +610,16 @@ const Asteroids = () => {
       ctx.font = '16px monospace';
       ctx.fillText(`Score: ${score} x${multiplier}`, 10, 20);
       ctx.fillText(`Lives: ${lives}`, 10, 40);
+
+      if (waveBannerTimer > 0) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, waveBannerTimer / 30);
+        ctx.fillStyle = 'white';
+        ctx.font = '24px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(waveBannerText, canvas.width / 2, canvas.height / 2);
+        ctx.restore();
+      }
 
       announce();
       requestRef.current = requestAnimationFrame(update);
