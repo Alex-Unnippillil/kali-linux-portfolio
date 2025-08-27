@@ -178,6 +178,10 @@ const BreakoutGame = ({ levels }) => {
     const shards = [];
     const fades = [];
     let paddleTimer = 0;
+    let hitPause = 0;
+    let pulse = 0;
+    let aimTime = 0;
+    const ADVANCED_LEVEL = 3;
 
     const keys = { left: false, right: false };
     const keyDown = (e) => {
@@ -198,8 +202,14 @@ const BreakoutGame = ({ levels }) => {
     let lastTime = performance.now();
 
     const loop = (time) => {
-      const dt = Math.min(0.05, (time - lastTime) / 1000); // clamp big frame gaps
+      const delta = (time - lastTime) / 1000;
       lastTime = time;
+      if (hitPause > 0) {
+        hitPause -= delta;
+        animationId = requestAnimationFrame(loop);
+        return;
+      }
+      const dt = Math.min(0.05, delta); // clamp big frame gaps
 
       if (pausedRef.current) {
         animationId = requestAnimationFrame(loop);
@@ -214,6 +224,8 @@ const BreakoutGame = ({ levels }) => {
         paddleTimer -= dt;
         if (paddleTimer <= 0) paddle.w = BASE_PADDLE_WIDTH;
       }
+
+      if (aimTime > 0) aimTime -= dt;
 
       // Update balls
       for (let i = balls.length - 1; i >= 0; i -= 1) {
@@ -243,6 +255,7 @@ const BreakoutGame = ({ levels }) => {
           ball.vx = speed * Math.sin(angle);
           ball.vy = -speed * Math.cos(angle);
           ball.y = paddle.y - ball.r;
+          aimTime = 0.3;
           playSound(300);
         }
 
@@ -262,6 +275,9 @@ const BreakoutGame = ({ levels }) => {
             playSound(200);
             setAnnounce(`Score ${scoreRef.current}`);
 
+            hitPause = 0.075;
+            pulse = 1;
+
             if (prefersReduced) {
               fades.push({
                 x: brick.x,
@@ -271,12 +287,15 @@ const BreakoutGame = ({ levels }) => {
                 alpha: 1,
               });
             } else {
+              const impactAngle = Math.atan2(ball.vy, ball.vx);
               for (let s = 0; s < 8; s += 1) {
+                const spread = (Math.random() - 0.5) * (Math.PI / 3);
+                const speed = 100 + Math.random() * 100;
                 shards.push({
                   x: ball.x,
                   y: ball.y,
-                  vx: (Math.random() - 0.5) * 200,
-                  vy: (Math.random() - 0.5) * 200,
+                  vx: Math.cos(impactAngle + spread) * speed,
+                  vy: Math.sin(impactAngle + spread) * speed,
                   life: 1,
                 });
               }
@@ -345,9 +364,12 @@ const BreakoutGame = ({ levels }) => {
         }
       }
 
+      if (pulse > 0) pulse = Math.max(0, pulse - dt * 5);
+
       // Ensure at least one ball remains
       if (balls.length === 0) {
         balls.push({ x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 });
+        aimTime = 0.3;
       }
 
       // Render
@@ -357,6 +379,24 @@ const BreakoutGame = ({ levels }) => {
       // Paddle
       ctx.fillStyle = "white";
       ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+
+      // Aim line
+      if (aimTime > 0 && balls[0]) {
+        const advanced = level >= ADVANCED_LEVEL;
+        const alpha = advanced ? aimTime / 0.3 : 1;
+        ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+        const px = paddle.x + paddle.w / 2;
+        const py = paddle.y;
+        const guide = balls[0];
+        const speed = Math.hypot(guide.vx, guide.vy) || 1;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(
+          px + (guide.vx / speed) * 100,
+          py + (guide.vy / speed) * 100
+        );
+        ctx.stroke();
+      }
 
       // Balls
       for (const ball of balls) {
@@ -388,6 +428,12 @@ const BreakoutGame = ({ levels }) => {
           ctx.fillRect(s.x, s.y, 2, 2);
         }
         ctx.globalAlpha = 1;
+      }
+
+      // Pulse overlay
+      if (pulse > 0) {
+        ctx.fillStyle = `rgba(255,255,255,${pulse})`;
+        ctx.fillRect(0, 0, width, height);
       }
 
       // Power-ups
