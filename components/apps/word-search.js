@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+// Approximate pixel size of each grid cell for SVG overlay calculations
+const CELL_SIZE = 32;
+const GAP_SIZE = 4; // grid gap-1 in pixels
+
 const WORD_LISTS = {
   tech: [
     'REACT',
@@ -147,6 +151,7 @@ const WordSearch = () => {
     generatePuzzle(SIZE, pickWords(WORD_COUNT)),
   );
   const { grid, placements, words } = puzzle;
+  const GRID_PIXELS = SIZE * (CELL_SIZE + GAP_SIZE) - GAP_SIZE;
   const [foundWords, setFoundWords] = useState([]);
   const [foundCells, setFoundCells] = useState([]);
   const [time, setTime] = useState(0);
@@ -156,7 +161,18 @@ const WordSearch = () => {
   const [selecting, setSelecting] = useState(false);
   const [selection, setSelection] = useState([]);
   const [hintCells, setHintCells] = useState([]);
+  const [lassos, setLassos] = useState([]);
+  const polyRefs = useRef([]);
+  const prefersReducedMotion = useRef(false);
+  const [announcement, setAnnouncement] = useState('');
   const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      prefersReducedMotion.current =
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+  }, []);
 
   const playBeep = () => {
     if (!sound) return;
@@ -207,6 +223,23 @@ const WordSearch = () => {
   }, [start, end]);
 
   useEffect(() => {
+    if (!lassos.length || prefersReducedMotion.current) return;
+    const poly = polyRefs.current[lassos.length - 1];
+    if (!poly) return;
+    const length = poly.getTotalLength();
+    poly.style.strokeDasharray = length;
+    poly.style.strokeDashoffset = length;
+    let begin;
+    const animate = (ts) => {
+      if (begin === undefined) begin = ts;
+      const progress = Math.min((ts - begin) / 600, 1);
+      poly.style.strokeDashoffset = length * (1 - progress);
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }, [lassos]);
+
+  useEffect(() => {
     reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [difficulty]);
@@ -231,6 +264,8 @@ const WordSearch = () => {
       if (match && !foundWords.includes(match)) {
         setFoundWords([...foundWords, match]);
         setFoundCells([...foundCells, ...selection]);
+        setLassos((ls) => [...ls, { word: match, path: selection }]);
+        setAnnouncement(`${match} found`);
         playBeep();
       }
     }
@@ -264,6 +299,9 @@ const WordSearch = () => {
     setStart(null);
     setEnd(null);
     setSelection([]);
+    setLassos([]);
+    polyRefs.current = [];
+    setAnnouncement('');
     setPaused(false);
   }
 
@@ -271,36 +309,65 @@ const WordSearch = () => {
     <div className="h-full w-full flex items-start justify-center bg-ub-cool-grey text-white p-4 select-none">
       <div className="flex">
         <div
-          className="grid gap-1 mr-4"
-          style={{ gridTemplateColumns: `repeat(${SIZE}, 2rem)` }}
+          className="relative mr-4"
+          style={{ width: GRID_PIXELS, height: GRID_PIXELS }}
           onMouseLeave={handleMouseUp}
         >
-          {grid.map((row, r) =>
-            row.map((letter, c) => {
-              const isSelected = selection.some(([sr, sc]) => sr === r && sc === c);
-              const isFound = foundCells.some(([sr, sc]) => sr === r && sc === c);
-              const isHint = hintCells.some(([sr, sc]) => sr === r && sc === c);
-              return (
-                <div
-                  key={`${r}-${c}`}
-                  onMouseDown={() => handleMouseDown(r, c)}
-                  onMouseEnter={() => handleMouseEnter(r, c)}
-                  onMouseUp={handleMouseUp}
-                  className={`h-8 w-8 flex items-center justify-center border border-gray-600 cursor-pointer ${
-                    isFound
-                      ? 'bg-green-600'
-                      : isHint
-                      ? 'bg-yellow-600'
-                      : isSelected
-                      ? 'bg-blue-600'
-                      : 'bg-gray-700'
-                  }`}
-                >
-                  {letter}
-                </div>
-              );
-            }),
-          )}
+          <div
+            className="grid gap-1"
+            style={{ gridTemplateColumns: `repeat(${SIZE}, 2rem)` }}
+          >
+            {grid.map((row, r) =>
+              row.map((letter, c) => {
+                const isSelected = selection.some(([sr, sc]) => sr === r && sc === c);
+                const isFound = foundCells.some(([sr, sc]) => sr === r && sc === c);
+                const isHint = hintCells.some(([sr, sc]) => sr === r && sc === c);
+                return (
+                  <div
+                    key={`${r}-${c}`}
+                    onMouseDown={() => handleMouseDown(r, c)}
+                    onMouseEnter={() => handleMouseEnter(r, c)}
+                    onMouseUp={handleMouseUp}
+                    className={`h-8 w-8 flex items-center justify-center border border-gray-600 cursor-pointer ${
+                      isFound
+                        ? 'bg-green-600'
+                        : isHint
+                        ? 'bg-yellow-600'
+                        : isSelected
+                        ? 'bg-blue-600'
+                        : 'bg-gray-700'
+                    }`}
+                  >
+                    {letter}
+                  </div>
+                );
+              }),
+            )}
+          </div>
+          <svg
+            className="absolute top-0 left-0 pointer-events-none"
+            width={GRID_PIXELS}
+            height={GRID_PIXELS}
+          >
+            {lassos.map((l, i) => (
+              <polyline
+                key={l.word}
+                ref={(el) => (polyRefs.current[i] = el)}
+                points={l.path
+                  .map(
+                    ([r, c]) =>
+                      `${c * (CELL_SIZE + GAP_SIZE) + CELL_SIZE / 2},${
+                        r * (CELL_SIZE + GAP_SIZE) + CELL_SIZE / 2
+                      }`,
+                  )
+                  .join(' ')}
+                stroke="rgb(250 204 21)"
+                strokeWidth="4"
+                fill="none"
+                strokeLinecap="round"
+              />
+            ))}
+          </svg>
         </div>
         <div className="flex flex-col w-48">
           <div className="mb-2">
@@ -361,6 +428,7 @@ const WordSearch = () => {
           </div>
         </div>
       </div>
+      <div aria-live="polite" className="sr-only">{announcement}</div>
     </div>
   );
 };
