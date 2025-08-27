@@ -205,7 +205,11 @@ const UnitConverter = () => {
               onChange={(e) => setFromUnit(e.target.value)}
             >
               {units.map((u) => (
-                <option key={u} value={u}>
+                <option
+                  key={u}
+                  value={u}
+                  aria-label={`${u} (${unitMap[category][u]})`}
+                >
                   {u}
                 </option>
               ))}
@@ -237,7 +241,11 @@ const UnitConverter = () => {
               onChange={(e) => setToUnit(e.target.value)}
             >
               {units.map((u) => (
-                <option key={u} value={u}>
+                <option
+                  key={u}
+                  value={u}
+                  aria-label={`${u} (${unitMap[category][u]})`}
+                >
                   {u}
                 </option>
               ))}
