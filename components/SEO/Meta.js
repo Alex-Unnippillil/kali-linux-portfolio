@@ -1,5 +1,6 @@
 import React from 'react'
 import Head from 'next/head';
+import DOMPurify from 'dompurify';
 
 export default function Meta() {
     return (
@@ -52,12 +53,14 @@ export default function Meta() {
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{
-                    __html: JSON.stringify({
-                        "@context": "https://schema.org",
-                        "@type": "Person",
-                        name: "Alex Unnippillil",
-                        url: "https://unnippillil.com/",
-                    }),
+                    __html: DOMPurify.sanitize(
+                        JSON.stringify({
+                            "@context": "https://schema.org",
+                            "@type": "Person",
+                            name: "Alex Unnippillil",
+                            url: "https://unnippillil.com/",
+                        })
+                    ),
                 }}
             />
         </Head>

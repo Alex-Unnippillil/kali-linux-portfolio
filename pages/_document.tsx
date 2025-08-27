@@ -1,4 +1,6 @@
 import Document, { Html, Head, Main, NextScript, DocumentContext, DocumentInitialProps } from 'next/document';
+import createDOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
 
 class MyDocument extends Document {
   static async getInitialProps(ctx: DocumentContext): Promise<DocumentInitialProps> {
@@ -12,7 +14,7 @@ class MyDocument extends Document {
         <Head>
           <script
             dangerouslySetInnerHTML={{
-              __html: `
+              __html: createDOMPurify(new JSDOM('').window).sanitize(`
               (function() {
                 try {
                   var stored = window.localStorage.getItem('theme');
@@ -20,7 +22,7 @@ class MyDocument extends Document {
                   document.documentElement.dataset.theme = theme;
                 } catch (e) {}
               })();
-            `,
+            `),
             }}
           />
         </Head>
