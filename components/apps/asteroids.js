@@ -148,6 +148,18 @@ const Asteroids = () => {
     let multiplierTimer = 0;
     let rand = Math.random;
 
+    // Background starfield
+    const stars = Array.from({ length: 100 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      depth: Math.random() * 3 + 1,
+    }));
+    let warp = 0;
+    let shake = 0;
+    const startShake = (amt) => {
+      shake = Math.max(shake, amt);
+    };
+
     // Particle pooling
     const spawnParticles = (x, y, count, color = 'white') => {
       if (reduceMotion) return;
@@ -231,6 +243,7 @@ const Asteroids = () => {
     function hyperspace() {
       ship.x = rand() * canvas.width;
       ship.y = rand() * canvas.height;
+      warp = 1;
       if (rand() < 0.1) destroyShip();
     }
 
@@ -254,8 +267,10 @@ const Asteroids = () => {
       if (ship.shield > 0) {
         ship.shield = 0;
         spawnParticles(ship.x, ship.y, 20, 'cyan');
+        startShake(10);
       } else {
         spawnParticles(ship.x, ship.y, 40, 'orange');
+        startShake(20);
         lives -= 1;
         ga.death();
         playSound(110);
@@ -282,6 +297,7 @@ const Asteroids = () => {
     function destroyAsteroid(index) {
       const a = asteroids[index];
       spawnParticles(a.x, a.y, 20, 'white');
+      startShake(5);
       score += 100 * multiplier;
       multiplier = Math.min(multiplier + 1, MAX_MULTIPLIER);
       multiplierTimer = MULTIPLIER_TIMEOUT;
@@ -309,6 +325,7 @@ const Asteroids = () => {
 
     function destroyUfo() {
       spawnParticles(ufo.x, ufo.y, 40, 'purple');
+      startShake(10);
       ufo.active = false;
       playSound(220);
       score += 500 * multiplier;
@@ -362,6 +379,13 @@ const Asteroids = () => {
       ship.rapidFire = Math.max(0, ship.rapidFire - 1);
       ship.shield = Math.max(0, ship.shield - 1);
       ship.hitCooldown = Math.max(0, ship.hitCooldown - 1);
+
+      stars.forEach((s) => {
+        s.x = wrap(s.x - ship.velX / s.depth, canvas.width);
+        s.y = wrap(s.y - ship.velY / s.depth, canvas.height);
+      });
+      if (warp > 0) warp = Math.max(0, warp - 0.02);
+      if (shake > 0) shake *= 0.9;
 
       if (multiplierTimer > 0) multiplierTimer -= 1;
       else multiplier = 1;
@@ -453,6 +477,28 @@ const Asteroids = () => {
 
       // Rendering
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      if (shake > 0) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+      // Starfield
+      if (warp > 0) {
+        ctx.strokeStyle = 'white';
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        stars.forEach((s) => {
+          const dx = s.x - cx;
+          const dy = s.y - cy;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(s.x + dx * warp * 10, s.y + dy * warp * 10);
+          ctx.stroke();
+        });
+      } else {
+        ctx.fillStyle = 'white';
+        stars.forEach((s) => {
+          ctx.fillRect(s.x, s.y, s.depth, s.depth);
+        });
+      }
 
       // Ship
       ctx.save();
@@ -471,6 +517,14 @@ const Asteroids = () => {
         ctx.arc(ship.x, ship.y, ship.r + 4, 0, Math.PI * 2);
         ctx.strokeStyle = 'cyan';
         ctx.stroke();
+      }
+      if (ship.hitCooldown > 0) {
+        ctx.beginPath();
+        ctx.arc(ship.x, ship.y, ship.r + 20, 0, Math.PI * 2);
+        ctx.strokeStyle = 'yellow';
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
 
       // Bullets
@@ -519,6 +573,32 @@ const Asteroids = () => {
         ctx.fillStyle = p.color;
         ctx.fillRect(p.x, p.y, 2, 2);
       });
+      ctx.restore();
+
+      // Offscreen enemy arrows
+      const drawArrow = (x, y, angle) => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-10, 5);
+        ctx.lineTo(-10, -5);
+        ctx.closePath();
+        ctx.fillStyle = 'white';
+        ctx.fill();
+        ctx.restore();
+      };
+      const drawOffscreenArrow = (obj) => {
+        if (obj.x >= 0 && obj.x <= canvas.width && obj.y >= 0 && obj.y <= canvas.height) return;
+        const angle = Math.atan2(obj.y - ship.y, obj.x - ship.x);
+        const x = Math.min(Math.max(obj.x, 10), canvas.width - 10);
+        const y = Math.min(Math.max(obj.y, 10), canvas.height - 10);
+        drawArrow(x, y, angle);
+      };
+      asteroids.forEach(drawOffscreenArrow);
+      if (ufo.active) drawOffscreenArrow(ufo);
+
       ctx.restore();
 
       // Radar inset
