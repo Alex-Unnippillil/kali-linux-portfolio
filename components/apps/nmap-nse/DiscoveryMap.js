@@ -8,99 +8,105 @@ const DiscoveryMap = ({ trigger }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const supportsWorker =
-      typeof window !== 'undefined' &&
-      window.Worker &&
-      'OffscreenCanvas' in window;
-    let worker;
+    // For consistency across browsers, render in the main thread.
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const hosts = Array.from({ length: 5 }, (_, i) => {
+      const x = width / 2 + 100 * Math.cos((i / 5) * 2 * Math.PI);
+      const y = height / 2 + 100 * Math.sin((i / 5) * 2 * Math.PI);
+      const angle = Math.atan2(y - height / 2, x - width / 2);
+      return { x, y, angle, discovered: false };
+    });
+
+    const fogCanvas = document.createElement('canvas');
+    fogCanvas.width = width;
+    fogCanvas.height = height;
+    const fogCtx = fogCanvas.getContext('2d');
+    fogCtx.fillStyle = 'rgba(0,0,0,0.6)';
+    fogCtx.fillRect(0, 0, width, height);
+
+    let angle = 0;
+    const sweep = Math.PI / 8;
     let animationFrame;
+    const prefersReducedMotion = window
+      .matchMedia('(prefers-reduced-motion: reduce)')
+      .matches;
 
-    if (supportsWorker) {
-      worker = new Worker(new URL('./discovery.worker.js', import.meta.url));
-      const offscreen = canvas.transferControlToOffscreen();
-      const reduceMotion = window
-        .matchMedia('(prefers-reduced-motion: reduce)')
-        .matches;
-      worker.postMessage(
-        { type: 'init', canvas: offscreen, reduceMotion },
-        [offscreen]
-      );
-      worker.onmessage = (e) => {
-        const { message } = e.data || {};
-        if (message) setAriaMessage(message);
-      };
-    } else {
-      const ctx = canvas.getContext('2d');
-      const width = canvas.width;
-      const height = canvas.height;
-      const hosts = Array.from({ length: 5 }, (_, i) => ({
-        x: width / 2 + 100 * Math.cos((i / 5) * 2 * Math.PI),
-        y: height / 2 + 100 * Math.sin((i / 5) * 2 * Math.PI),
-        discovered: false,
-        scripted: false,
-      }));
-      let step = 0;
-      const prefersReducedMotion = window
-        .matchMedia('(prefers-reduced-motion: reduce)')
-        .matches;
+    const drawBase = () => {
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fillRect(0, 0, width, height);
 
-      const draw = () => {
-        ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = '#1a1a1a';
-        ctx.fillRect(0, 0, width, height);
+      ctx.beginPath();
+      ctx.fillStyle = '#ffffff';
+      ctx.arc(width / 2, height / 2, 5, 0, Math.PI * 2);
+      ctx.fill();
 
-        ctx.beginPath();
-        ctx.fillStyle = '#ffffff';
-        ctx.arc(width / 2, height / 2, 5, 0, Math.PI * 2);
-        ctx.fill();
+      hosts.forEach((host) => {
+        if (host.discovered) {
+          ctx.beginPath();
+          ctx.strokeStyle = '#4ade80';
+          ctx.lineWidth = 2;
+          ctx.moveTo(width / 2, height / 2);
+          ctx.lineTo(host.x, host.y);
+          ctx.stroke();
 
-        hosts.forEach((host) => {
-          if (host.discovered) {
-            ctx.beginPath();
-            ctx.strokeStyle = '#4ade80';
-            ctx.lineWidth = 2;
-            ctx.moveTo(width / 2, height / 2);
-            ctx.lineTo(host.x, host.y);
-            ctx.stroke();
+          ctx.beginPath();
+          ctx.fillStyle = '#4ade80';
+          ctx.arc(host.x, host.y, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
 
-            ctx.beginPath();
-            ctx.fillStyle = host.scripted ? '#4ade80' : '#60a5fa';
-            ctx.arc(host.x, host.y, 5, 0, Math.PI * 2);
-            ctx.fill();
+      ctx.drawImage(fogCanvas, 0, 0);
+    };
+
+    const tick = () => {
+      if (!prefersReducedMotion) {
+        angle += 0.05;
+
+        fogCtx.save();
+        fogCtx.globalCompositeOperation = 'destination-out';
+        fogCtx.translate(width / 2, height / 2);
+        fogCtx.rotate(angle);
+        fogCtx.beginPath();
+        fogCtx.moveTo(0, 0);
+        fogCtx.arc(0, 0, Math.max(width, height), -sweep / 2, sweep / 2);
+        fogCtx.closePath();
+        fogCtx.fill();
+        fogCtx.restore();
+        fogCtx.globalCompositeOperation = 'source-over';
+
+        hosts.forEach((h, idx) => {
+          if (!h.discovered) {
+            const diff = (angle - h.angle + Math.PI * 2) % (Math.PI * 2);
+            if (diff < sweep) {
+              h.discovered = true;
+              setAriaMessage(`Host ${idx + 1} discovered`);
+            }
           }
         });
-      };
 
-      const tick = () => {
-        if (!prefersReducedMotion) {
-          if (step < hosts.length) {
-            hosts[step].discovered = true;
-            setAriaMessage(`Host ${step + 1} discovered`);
-          } else if (step < hosts.length * 2) {
-            const idx = step - hosts.length;
-            hosts[idx].scripted = true;
-            setAriaMessage(`Script stage completed for host ${idx + 1}`);
-          } else {
-            draw();
-            return;
-          }
-          step += 1;
+        drawBase();
+        if (angle < Math.PI * 2) {
+          animationFrame = requestAnimationFrame(tick);
         } else {
-          hosts.forEach((h) => {
-            h.discovered = true;
-            h.scripted = true;
-          });
+          setAriaMessage('Scan complete');
         }
-        draw();
-        animationFrame = requestAnimationFrame(tick);
-      };
+      } else {
+        hosts.forEach((h) => {
+          h.discovered = true;
+        });
+        fogCtx.clearRect(0, 0, width, height);
+        drawBase();
+      }
+    };
 
-      draw();
-      animationFrame = requestAnimationFrame(tick);
-    }
+    drawBase();
+    animationFrame = requestAnimationFrame(tick);
 
     return () => {
-      if (worker) worker.terminate();
       if (animationFrame) cancelAnimationFrame(animationFrame);
     };
   }, [trigger]);

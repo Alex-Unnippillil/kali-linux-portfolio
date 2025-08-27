@@ -61,6 +61,7 @@ const pointOnPath = (px, py) => {
 function TowerDefense() {
   const canvasRef = useRef(null);
   const towersRef = useRef([]);
+  const placingRef = useRef(null);
   const enemiesRef = useRef([]);
   const projectilesRef = useRef([]);
   const decalsRef = useRef([]);
@@ -143,19 +144,73 @@ function TowerDefense() {
     startWave(1);
   };
 
-  const handleClick = (e) => {
+  const canPlace = (x, y) => {
+    if (pointOnPath(x, y)) return false;
+    return !towersRef.current.some((t) => Math.hypot(t.x - x, t.y - y) < 20);
+  };
+
+  const handleMouseDown = (e) => {
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const existing = towersRef.current.find(
-      (t) => Math.hypot(t.x - x, t.y - y) < 15
-    );
+    const getPos = (ev) => ({ x: ev.clientX - rect.left, y: ev.clientY - rect.top });
+    const start = getPos(e);
+    const existing = towersRef.current.find((t) => Math.hypot(t.x - start.x, t.y - start.y) < 15);
     if (existing) {
       if (existing.level < 3) existing.level += 1;
       return;
     }
-    if (pointOnPath(x, y)) return;
-    towersRef.current.push({ x, y, level: 1, cooldown: 0 });
+    placingRef.current = { ...start, angle: 0, valid: canPlace(start.x, start.y) };
+
+    const move = (ev) => {
+      const pos = getPos(ev);
+      placingRef.current = {
+        ...placingRef.current,
+        ...pos,
+        valid: canPlace(pos.x, pos.y),
+      };
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+      window.removeEventListener('keydown', rotate);
+      const placing = placingRef.current;
+      placingRef.current = null;
+      if (placing && placing.valid) {
+        towersRef.current.push({
+          x: placing.x,
+          y: placing.y,
+          angle: placing.angle,
+          level: 1,
+          cooldown: 0,
+        });
+      }
+    };
+    const rotate = (ev) => {
+      if (ev.key === 'r' || ev.key === 'R') {
+        if (placingRef.current)
+          placingRef.current.angle =
+            (placingRef.current.angle + Math.PI / 8) % (Math.PI * 2);
+      }
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+    window.addEventListener('keydown', rotate);
+  };
+
+  const placeRandomTower = () => {
+    for (let i = 0; i < 100; i += 1) {
+      const x = 20 + Math.random() * (WIDTH - 40);
+      const y = 20 + Math.random() * (HEIGHT - 40);
+      if (canPlace(x, y) && towersRef.current.every((t) => Math.hypot(t.x - x, t.y - y) > 30)) {
+        towersRef.current.push({
+          x,
+          y,
+          angle: Math.random() * Math.PI * 2,
+          level: 1,
+          cooldown: 0,
+        });
+        break;
+      }
+    }
   };
 
   const update = (dt) => {
@@ -279,13 +334,22 @@ function TowerDefense() {
     });
 
     towersRef.current.forEach((t) => {
+      ctx.save();
+      ctx.translate(t.x, t.y);
+      ctx.rotate(t.angle || 0);
       ctx.fillStyle = 'blue';
       ctx.beginPath();
-      ctx.arc(t.x, t.y, 10, 0, Math.PI * 2);
+      ctx.arc(0, 0, 10, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = 'white';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(10, 0);
+      ctx.stroke();
       ctx.fillStyle = 'white';
       ctx.font = '10px sans-serif';
-      ctx.fillText(t.level, t.x - 3, t.y + 3);
+      ctx.fillText(t.level, -3, 3);
+      ctx.restore();
     });
 
     enemiesRef.current.forEach((e) => {
@@ -317,6 +381,23 @@ function TowerDefense() {
       ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
       ctx.fill();
     });
+
+    const placing = placingRef.current;
+    if (placing) {
+      ctx.save();
+      ctx.translate(placing.x, placing.y);
+      ctx.rotate(placing.angle || 0);
+      ctx.fillStyle = placing.valid ? 'rgba(0,255,0,0.5)' : 'rgba(255,0,0,0.5)';
+      ctx.beginPath();
+      ctx.arc(0, 0, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'white';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(10, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
   };
 
   useEffect(() => {
@@ -365,13 +446,20 @@ function TowerDefense() {
         >
           {sound ? 'Sound: On' : 'Sound: Off'}
         </button>
+        <button
+          type="button"
+          className="px-2 bg-gray-700"
+          onClick={placeRandomTower}
+        >
+          Randomize
+        </button>
       </div>
       <canvas
         ref={canvasRef}
         width={WIDTH}
         height={HEIGHT}
         className="bg-black"
-        onClick={handleClick}
+        onMouseDown={handleMouseDown}
       />
     </div>
   );
