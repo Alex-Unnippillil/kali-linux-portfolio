@@ -1,28 +1,12 @@
-import 'fake-indexeddb/auto';
-import '@testing-library/jest-dom';
-import { TextEncoder, TextDecoder } from 'util';
+require('fake-indexeddb/auto');
+require('@testing-library/jest-dom');
+const { TextEncoder, TextDecoder } = require('util');
 
-// Provide TextEncoder/TextDecoder for libraries that expect them in the test environment
-// @ts-ignore
-global.TextEncoder = TextEncoder;
-// @ts-ignore
-global.TextDecoder = TextDecoder as any;
-
-// Provide TextEncoder/TextDecoder for libraries requiring them
-import { TextEncoder, TextDecoder } from 'util';
-// @ts-ignore
-global.TextEncoder = TextEncoder;
-// @ts-ignore
-global.TextDecoder = TextDecoder;
-
-// Provide global TextEncoder/Decoder for libraries like jsdom
-import { TextEncoder, TextDecoder } from 'util';
+// Provide global TextEncoder/TextDecoder for libraries expecting them
 if (typeof global.TextEncoder === 'undefined') {
-  // @ts-ignore
   global.TextEncoder = TextEncoder;
 }
 if (typeof global.TextDecoder === 'undefined') {
-  // @ts-ignore
   global.TextDecoder = TextDecoder;
 }
 
@@ -38,15 +22,13 @@ class ImageMock {
   }
 }
 
-// @ts-ignore - allow overriding the global Image for the test env
-global.Image = ImageMock as unknown as typeof Image;
+global.Image = ImageMock;
 
 // Provide a minimal canvas mock so libraries like xterm.js can run under JSDOM
-// @ts-ignore
 HTMLCanvasElement.prototype.getContext = () => ({
   fillRect: () => {},
   clearRect: () => {},
-  getImageData: () => ({ data: new Uint8ClampedArray() } as ImageData),
+  getImageData: () => ({ data: new Uint8ClampedArray() }),
   putImageData: () => {},
   createImageData: () => new ImageData(0, 0),
   setTransform: () => {},
@@ -63,16 +45,15 @@ HTMLCanvasElement.prototype.getContext = () => ({
   rotate: () => {},
   arc: () => {},
   fill: () => {},
-  measureText: () => ({ width: 0 } as TextMetrics),
+  measureText: () => ({ width: 0 }),
   transform: () => {},
   rect: () => {},
   clip: () => {},
-  createLinearGradient: () => ({ addColorStop: () => {} } as unknown as CanvasGradient),
+  createLinearGradient: () => ({ addColorStop: () => {} }),
 });
 
 // Basic matchMedia mock for libraries that expect it
 if (typeof window !== 'undefined' && !window.matchMedia) {
-  // @ts-ignore
   window.matchMedia = () => ({
     matches: false,
     addEventListener: () => {},
@@ -84,20 +65,19 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
 
 // Simple localStorage mock for environments without it
 if (typeof window !== 'undefined' && !window.localStorage) {
-  const store: Record<string, string> = {};
-  // @ts-ignore
+  const store = {};
   window.localStorage = {
-    getItem: (key: string) => (key in store ? store[key] : null),
-    setItem: (key: string, value: string) => {
+    getItem: (key) => (key in store ? store[key] : null),
+    setItem: (key, value) => {
       store[key] = String(value);
     },
-    removeItem: (key: string) => {
+    removeItem: (key) => {
       delete store[key];
     },
     clear: () => {
       for (const k in store) delete store[k];
     },
-  } as Storage;
+  };
 }
 
 // Minimal Worker mock for tests
@@ -107,8 +87,7 @@ class WorkerMock {
   addEventListener() {}
   removeEventListener() {}
 }
-// @ts-ignore
-global.Worker = WorkerMock as any;
+global.Worker = WorkerMock;
 
 // Mock xterm and addons so terminal tests run without the real library
 jest.mock(
@@ -126,7 +105,6 @@ jest.mock(
         return { active: { getLine: () => ({ translateToString: () => '' }) } };
       }
     },
-
   }),
   { virtual: true }
 );
@@ -139,7 +117,6 @@ jest.mock(
       dispose() {}
       fit() {}
     },
-
   }),
   { virtual: true }
 );
@@ -151,7 +128,7 @@ jest.mock(
       activate() {}
       dispose() {}
     },
-
   }),
   { virtual: true }
 );
+
