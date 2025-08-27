@@ -78,6 +78,8 @@ const TicTacToe = () => {
   const [sound, setSound] = useState(true);
   const [hints, setHints] = useState([]);
   const [highScore, setHighScore] = useState(0);
+  const [theme, setTheme] = useState('classic');
+  const [seriesLength, setSeriesLength] = useState(3);
 
   const canvasRef = useRef(null);
   const boardRef = useRef(board);
@@ -86,6 +88,7 @@ const TicTacToe = () => {
   const hintsRef = useRef(hints);
   const strikeProgressRef = useRef(1);
   const strikeStartRef = useRef(0);
+  const themeRef = useRef(theme);
 
   const startGame = (p) => {
     const a = p === 'X' ? 'O' : 'X';
@@ -141,14 +144,34 @@ const TicTacToe = () => {
           confetti({ particleCount: 75, spread: 60, origin: { y: 0.6 } });
         }
       }
-      setStatus(
-        winner === 'draw' ? "It's a draw" : winner === player ? 'You win!' : 'You lose!'
-      );
-      setScore((s) => ({
-        player: s.player + (winner === player ? 1 : 0),
-        ai: s.ai + (winner === ai ? 1 : 0),
-        draw: s.draw + (winner === 'draw' ? 1 : 0),
-      }));
+      const winsNeeded = Math.ceil(seriesLength / 2);
+      setScore((s) => {
+        const newScore = {
+          player: s.player + (winner === player ? 1 : 0),
+          ai: s.ai + (winner === ai ? 1 : 0),
+          draw: s.draw + (winner === 'draw' ? 1 : 0),
+        };
+        if (
+          winner !== 'draw' &&
+          (newScore.player >= winsNeeded || newScore.ai >= winsNeeded)
+        ) {
+          setPaused(true);
+          setStatus(
+            newScore.player > newScore.ai
+              ? 'Series won!'
+              : 'Series lost!'
+          );
+        } else {
+          setStatus(
+            winner === 'draw'
+              ? "It's a draw"
+              : winner === player
+              ? 'You win!'
+              : 'You lose!'
+          );
+        }
+        return newScore;
+      });
       ReactGA.event({ category: 'TicTacToe', action: 'game_over', label: winner });
       return;
     }
@@ -204,6 +227,7 @@ const TicTacToe = () => {
       const w = winningLineRef.current;
       const l = lastMoveRef.current;
       const h = hintsRef.current;
+      const t = themeRef.current;
       ctx.clearRect(0, 0, size, size);
       if (w.length) {
         ctx.fillStyle = 'rgba(0,255,0,0.3)';
@@ -216,7 +240,7 @@ const TicTacToe = () => {
         if (p < 1) {
           const now =
             typeof performance !== 'undefined' ? performance.now() : 0;
-          p = Math.min((now - strikeStartRef.current) / 500, 1);
+          p = Math.min((now - strikeStartRef.current) / 400, 1);
           strikeProgressRef.current = p;
         }
         const startIdx = w[0];
@@ -231,10 +255,25 @@ const TicTacToe = () => {
         const endY = endR * cellSize + cellSize / 2;
         ctx.strokeStyle = '#00ff00';
         ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.lineTo(startX + (endX - startX) * p, startY + (endY - startY) * p);
-        ctx.stroke();
+        ctx.lineCap = 'round';
+        const rand = (n) => {
+          const x = Math.sin(n * 999) * 10000;
+          return x - Math.floor(x);
+        };
+        const drawHandLine = () => {
+          const steps = 20;
+          ctx.beginPath();
+          ctx.moveTo(startX, startY);
+          for (let i = 1; i <= steps * p; i++) {
+            const tStep = i / steps;
+            const jitter = 1.5;
+            const x = startX + (endX - startX) * tStep + (rand(i) * 2 - 1) * jitter;
+            const y = startY + (endY - startY) * tStep + (rand(i + steps) * 2 - 1) * jitter;
+            ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        };
+        drawHandLine();
       } else if (l !== null) {
         ctx.fillStyle = 'rgba(0,0,255,0.3)';
         const r = Math.floor(l / 3);
@@ -267,19 +306,27 @@ const TicTacToe = () => {
           const c = idx % 3;
           const x = c * cellSize + cellSize / 2;
           const y = r * cellSize + cellSize / 2;
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 4;
-          if (cell === 'X') {
-            ctx.beginPath();
-            ctx.moveTo(x - cellSize / 3, y - cellSize / 3);
-            ctx.lineTo(x + cellSize / 3, y + cellSize / 3);
-            ctx.moveTo(x + cellSize / 3, y - cellSize / 3);
-            ctx.lineTo(x - cellSize / 3, y + cellSize / 3);
-            ctx.stroke();
+          if (t === 'emoji') {
+            ctx.font = `${cellSize * 0.8}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(cell, x, y + 2);
           } else {
-            ctx.beginPath();
-            ctx.arc(x, y, cellSize / 3, 0, Math.PI * 2);
-            ctx.stroke();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 4;
+            if (cell === 'X') {
+              ctx.beginPath();
+              ctx.moveTo(x - cellSize / 3, y - cellSize / 3);
+              ctx.lineTo(x + cellSize / 3, y + cellSize / 3);
+              ctx.moveTo(x + cellSize / 3, y - cellSize / 3);
+              ctx.lineTo(x - cellSize / 3, y + cellSize / 3);
+              ctx.stroke();
+            } else {
+              ctx.beginPath();
+              ctx.arc(x, y, cellSize / 3, 0, Math.PI * 2);
+              ctx.stroke();
+            }
           }
         }
       });
@@ -301,6 +348,12 @@ const TicTacToe = () => {
   useEffect(() => {
     hintsRef.current = hints;
   }, [hints]);
+  useEffect(() => {
+    themeRef.current = theme;
+  }, [theme]);
+  useEffect(() => {
+    setScore({ player: 0, ai: 0, draw: 0 });
+  }, [seriesLength]);
 
   useEffect(() => {
     if (score.player > highScore) {
@@ -369,6 +422,21 @@ const TicTacToe = () => {
     strikeProgressRef.current = 1;
   };
 
+  const toggleStartPlayer = () => {
+    if (player === null) return;
+    const newPlayer = player === 'X' ? 'O' : 'X';
+    const newAi = newPlayer === 'X' ? 'O' : 'X';
+    setPlayer(newPlayer);
+    setAi(newAi);
+    setBoard(Array(9).fill(null));
+    setAiMoves(0);
+    setWinningLine([]);
+    setLastMove(null);
+    setStatus(newPlayer === 'X' ? 'Your turn' : "AI's turn");
+    setPaused(false);
+    strikeProgressRef.current = 1;
+  };
+
   const difficultySlider = (
     <div className="w-56 mb-4">
       <input
@@ -384,6 +452,34 @@ const TicTacToe = () => {
         <span>Medium</span>
         <span>Hard</span>
       </div>
+    </div>
+  );
+
+  const themeSelector = (
+    <div className="mb-4">
+      <label className="mr-2">Theme:</label>
+      <select
+        value={theme}
+        onChange={(e) => setTheme(e.target.value)}
+        className="bg-gray-700 rounded p-1"
+      >
+        <option value="classic">Classic</option>
+        <option value="emoji">Emoji</option>
+      </select>
+    </div>
+  );
+
+  const seriesSelector = (
+    <div className="mb-4">
+      <label className="mr-2">Series:</label>
+      <select
+        value={seriesLength}
+        onChange={(e) => setSeriesLength(parseInt(e.target.value, 10))}
+        className="bg-gray-700 rounded p-1"
+      >
+        <option value={3}>Best of 3</option>
+        <option value={5}>Best of 5</option>
+      </select>
     </div>
   );
 
@@ -403,6 +499,8 @@ const TicTacToe = () => {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
         {difficultySlider}
+        {themeSelector}
+        {seriesSelector}
         <div className="mb-4">Choose X or O</div>
         <div className="flex space-x-4">
           <button
@@ -440,6 +538,8 @@ const TicTacToe = () => {
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       {difficultySlider}
+      {themeSelector}
+      {seriesSelector}
       <canvas
         ref={canvasRef}
         width={300}
@@ -448,7 +548,7 @@ const TicTacToe = () => {
         onClick={handleCanvasClick}
       />
       <div className="mb-2 text-sm">
-        Player: {score.player} | AI: {score.ai} | Draws: {score.draw} | Highscore: {highScore}
+        Series (Bo{seriesLength}): Player {score.player} - AI {score.ai} | Draws: {score.draw} | Highscore: {highScore}
       </div>
       <div className="mb-4" role="status" aria-live="polite">
         {paused ? 'Paused' : status}
@@ -467,6 +567,13 @@ const TicTacToe = () => {
           onTouchStart={reset}
         >
           Reset
+        </button>
+        <button
+          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={toggleStartPlayer}
+          onTouchStart={toggleStartPlayer}
+        >
+          Start: {player}
         </button>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
