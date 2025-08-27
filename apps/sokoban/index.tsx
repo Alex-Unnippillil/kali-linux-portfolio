@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
-import { defaultLevels, parseLevels } from './levels';
+import { LEVEL_PACKS, LevelPack, parseLevels } from './levels';
 import {
   loadLevel,
   move,
@@ -10,24 +10,37 @@ import {
   isSolved,
   State,
   directionKeys,
+  findHint,
 } from './engine';
 
 const CELL = 32;
 
 const Sokoban: React.FC = () => {
-  const [levels, setLevels] = useState<string[][]>(defaultLevels);
+  const [packs, setPacks] = useState<LevelPack[]>(LEVEL_PACKS);
+  const [packIndex, setPackIndex] = useState(0);
   const [index, setIndex] = useState(0);
-  const [state, setState] = useState<State>(() => loadLevel(defaultLevels[0]));
-  const [reach, setReach] = useState<Set<string>>(reachable(loadLevel(defaultLevels[0])));
+  const currentPack = packs[packIndex];
+  const [state, setState] = useState<State>(() => loadLevel(currentPack.levels[0]));
+  const [reach, setReach] = useState<Set<string>>(reachable(loadLevel(currentPack.levels[0])));
   const [best, setBest] = useState<number | null>(null);
+  const [hint, setHint] = useState<string>('');
+  const [status, setStatus] = useState<string>('');
 
-  const selectLevel = (i: number) => {
-    const st = loadLevel(levels[i]);
+  const selectLevel = (i: number, pIdx: number = packIndex, pData: LevelPack[] = packs) => {
+    const pack = pData[pIdx];
+    const st = loadLevel(pack.levels[i]);
+    setPackIndex(pIdx);
     setIndex(i);
     setState(st);
     setReach(reachable(st));
+    setHint('');
+    setStatus('');
     logGameStart('sokoban');
     logEvent({ category: 'sokoban', action: 'level_select', value: i });
+  };
+
+  const selectPack = (pIdx: number) => {
+    selectLevel(0, pIdx);
   };
 
   const handleUndo = () => {
@@ -35,14 +48,18 @@ const Sokoban: React.FC = () => {
     if (st !== state) {
       setState(st);
       setReach(reachable(st));
+      setHint('');
+      setStatus('');
       logEvent({ category: 'sokoban', action: 'undo' });
     }
   };
 
   const handleReset = () => {
-    const st = resetLevel(levels[index]);
+    const st = resetLevel(currentPack.levels[index]);
     setState(st);
     setReach(reachable(st));
+    setHint('');
+    setStatus('');
   };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,8 +69,10 @@ const Sokoban: React.FC = () => {
       const text = await file.text();
       const lvl = parseLevels(text);
       if (lvl.length) {
-        setLevels(lvl);
-        selectLevel(0);
+        const customPack: LevelPack = { name: file.name || 'Custom', difficulty: 'Custom', levels: lvl };
+        const newPacks = [...LEVEL_PACKS, customPack];
+        setPacks(newPacks);
+        selectLevel(0, newPacks.length - 1, newPacks);
       }
     } catch (err: any) {
       logGameError('sokoban', err?.message || String(err));
@@ -76,8 +95,11 @@ const Sokoban: React.FC = () => {
           }
         }
         if (parsed.length) {
-          setLevels(parsed);
+          const customPack: LevelPack = { name: 'Custom', difficulty: 'Custom', levels: parsed };
+          const newPacks = [...LEVEL_PACKS, customPack];
+          setPacks(newPacks);
           const st = loadLevel(parsed[0]);
+          setPackIndex(newPacks.length - 1);
           setIndex(0);
           setState(st);
           setReach(reachable(st));
@@ -89,10 +111,10 @@ const Sokoban: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const k = `sokoban-best-${index}`;
+    const k = `sokoban-best-${packIndex}-${index}`;
     const b = localStorage.getItem(k);
     setBest(b ? Number(b) : null);
-  }, [index]);
+  }, [index, packIndex]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -112,6 +134,8 @@ const Sokoban: React.FC = () => {
       if (newState === state) return;
       setState(newState);
       setReach(reachable(newState));
+      setHint('');
+      setStatus(newState.deadlocks.size ? 'Deadlock!' : '');
       if (newState.pushes > state.pushes) {
         logEvent({ category: 'sokoban', action: 'push' });
       }
@@ -122,7 +146,7 @@ const Sokoban: React.FC = () => {
           action: 'level_complete',
           value: newState.pushes,
         });
-        const bestKey = `sokoban-best-${index}`;
+        const bestKey = `sokoban-best-${packIndex}-${index}`;
         const prevBest = localStorage.getItem(bestKey);
         if (!prevBest || newState.pushes < Number(prevBest)) {
           localStorage.setItem(bestKey, String(newState.pushes));
@@ -132,7 +156,15 @@ const Sokoban: React.FC = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [state, index]);
+  }, [state, index, packIndex]);
+
+  const handleHint = () => {
+    setHint('...');
+    setTimeout(() => {
+      const dir = findHint(state);
+      setHint(dir ? dir.replace('Arrow', '') : 'No hint');
+    }, 0);
+  };
 
   const cellStyle = {
     width: CELL,
@@ -141,9 +173,14 @@ const Sokoban: React.FC = () => {
 
   return (
     <div className="p-4 space-y-2 select-none">
-      <div className="flex space-x-2 mb-2">
+      <div className="flex flex-wrap space-x-2 mb-2 items-center">
+        <select value={packIndex} onChange={(e) => selectPack(Number(e.target.value))}>
+          {packs.map((p, i) => (
+            <option key={p.name} value={i}>{`${p.name} (${p.difficulty})`}</option>
+          ))}
+        </select>
         <select value={index} onChange={(e) => selectLevel(Number(e.target.value))}>
-          {levels.map((_, i) => (
+          {currentPack.levels.map((_, i) => (
             <option key={i} value={i}>{`Level ${i + 1}`}</option>
           ))}
         </select>
@@ -154,8 +191,13 @@ const Sokoban: React.FC = () => {
         <button type="button" onClick={handleReset} className="px-2 py-1 bg-gray-300 rounded">
           Reset
         </button>
+        <button type="button" onClick={handleHint} className="px-2 py-1 bg-gray-300 rounded">
+          Hint
+        </button>
         <div className="ml-4">Pushes: {state.pushes}</div>
         <div>Best: {best ?? '-'}</div>
+        {hint && <div className="ml-4">Hint: {hint}</div>}
+        {status && <div className="ml-4 text-red-500">{status}</div>}
       </div>
       <div
         className="relative bg-gray-700"
