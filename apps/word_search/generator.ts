@@ -29,7 +29,7 @@ export function createRNG(seed: string) {
   return mulberry32(seedFunc());
 }
 
-const DIRECTIONS = [
+const ALL_DIRECTIONS = [
   { dx: 1, dy: 0 },
   { dx: -1, dy: 0 },
   { dx: 0, dy: 1 },
@@ -40,6 +40,12 @@ const DIRECTIONS = [
   { dx: -1, dy: 1 },
 ];
 
+export const DIFFICULTY_SETTINGS = {
+  easy: { size: 8, directions: ALL_DIRECTIONS.slice(0, 4), wordCount: 5 },
+  medium: { size: 12, directions: ALL_DIRECTIONS, wordCount: 8 },
+  hard: { size: 16, directions: ALL_DIRECTIONS, wordCount: 12 },
+};
+
 export interface GenerateResult {
   grid: string[][];
   placements: WordPlacement[];
@@ -47,16 +53,18 @@ export interface GenerateResult {
 
 export function generateGrid(
   words: string[],
-  size = 12,
+  difficulty: keyof typeof DIFFICULTY_SETTINGS = 'medium',
   seed = 'seed'
 ): GenerateResult {
+  const { size, directions } =
+    DIFFICULTY_SETTINGS[difficulty] || DIFFICULTY_SETTINGS.medium;
   const rng = createRNG(seed);
   const grid: string[][] = Array.from({ length: size }, () => Array(size).fill(''));
   const placements: WordPlacement[] = [];
   words.forEach((w) => {
     const word = w.toUpperCase();
     for (let attempt = 0; attempt < 200; attempt += 1) {
-      const dir = DIRECTIONS[Math.floor(rng() * DIRECTIONS.length)];
+      const dir = directions[Math.floor(rng() * directions.length)];
       const maxRow = dir.dy > 0 ? size - word.length : dir.dy < 0 ? word.length - 1 : size - 1;
       const maxCol = dir.dx > 0 ? size - word.length : dir.dx < 0 ? word.length - 1 : size - 1;
       const startRow = Math.floor(rng() * (maxRow + 1));
