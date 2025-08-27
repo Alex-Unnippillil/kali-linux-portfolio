@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
+import { computeBallSpin } from '../../utils/physics';
 
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
@@ -365,11 +366,14 @@ const Pong = () => {
       }
 
       const paddleCollision = (pad, dir) => {
-        const padCenter = pad.y + paddleHeight / 2;
-        const relative = (ball.y - padCenter) / (paddleHeight / 2);
-        // add spin based on paddle velocity and impact point
+        const { spin, relative } = computeBallSpin(
+          ball.y,
+          pad.y,
+          paddleHeight,
+          pad.vy
+        );
         ball.vx = Math.abs(ball.vx) * dir;
-        ball.vy += pad.vy * 0.1 + relative * 200;
+        ball.vy += spin;
         if (!prefersReducedMotion) {
           pad.scale = 1.2;
           pad.widthScale = 0.8;
