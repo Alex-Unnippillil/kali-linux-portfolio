@@ -7,6 +7,7 @@ import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
+import AppMenu from '../context-menus/app-menu';
 import ReactGA from 'react-ga4';
 
 export class Desktop extends Component {
@@ -28,7 +29,9 @@ export class Desktop extends Component {
             context_menus: {
                 desktop: false,
                 default: false,
+                app: false,
             },
+            context_app: null,
             showNameBar: false,
         }
     }
@@ -94,13 +97,23 @@ export class Desktop extends Component {
     checkContextMenu = (e) => {
         e.preventDefault();
         this.hideAllContextMenu();
-        switch (e.target.dataset.context) {
+        const target = e.target.closest('[data-context]');
+        const context = target ? target.dataset.context : null;
+        const appId = target ? target.dataset.appId : null;
+        switch (context) {
             case "desktop-area":
                 ReactGA.event({
                     category: `Context Menu`,
                     action: `Opened Desktop Context Menu`
                 });
                 this.showContextMenu(e, "desktop");
+                break;
+            case "app":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened App Context Menu`
+                });
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
                 break;
             default:
                 ReactGA.event({
@@ -134,7 +147,7 @@ export class Desktop extends Component {
         Object.keys(menus).forEach(key => {
             menus[key] = false;
         });
-        this.setState({ context_menus: menus });
+        this.setState({ context_menus: menus, context_app: null });
     }
 
     getMenuPosition = (e) => {
@@ -158,6 +171,14 @@ export class Desktop extends Component {
     }
 
     fetchAppsData = (callback) => {
+        let pinnedApps = localStorage.getItem('pinnedApps')
+        if (pinnedApps) {
+            pinnedApps = JSON.parse(pinnedApps)
+            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id) })
+        } else {
+            pinnedApps = apps.filter(app => app.favourite).map(app => app.id)
+            localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        }
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
         apps.forEach((app) => {
@@ -438,6 +459,32 @@ export class Desktop extends Component {
         this.setState({ closed_windows, favourite_apps });
     }
 
+    pinApp = (id) => {
+        let favourite_apps = { ...this.state.favourite_apps }
+        favourite_apps[id] = true
+        this.initFavourite[id] = true
+        const app = apps.find(a => a.id === id)
+        if (app) app.favourite = true
+        let pinnedApps = JSON.parse(localStorage.getItem('pinnedApps')) || []
+        if (!pinnedApps.includes(id)) pinnedApps.push(id)
+        localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        this.setState({ favourite_apps })
+        this.hideAllContextMenu()
+    }
+
+    unpinApp = (id) => {
+        let favourite_apps = { ...this.state.favourite_apps }
+        if (this.state.closed_windows[id]) favourite_apps[id] = false
+        this.initFavourite[id] = false
+        const app = apps.find(a => a.id === id)
+        if (app) app.favourite = false
+        let pinnedApps = JSON.parse(localStorage.getItem('pinnedApps')) || []
+        pinnedApps = pinnedApps.filter(appId => appId !== id)
+        localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        this.setState({ favourite_apps })
+        this.hideAllContextMenu()
+    }
+
     focus = (objId) => {
         // removes focus from all window and 
         // gives focus to window with 'id = objId'
@@ -533,6 +580,13 @@ export class Desktop extends Component {
                 {/* Context Menus */}
                 <DesktopMenu active={this.state.context_menus.desktop} openApp={this.openApp} addNewFolder={this.addNewFolder} />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
+                <AppMenu
+                    active={this.state.context_menus.app}
+                    pinned={this.initFavourite[this.state.context_app]}
+                    pinApp={() => this.pinApp(this.state.context_app)}
+                    unpinApp={() => this.unpinApp(this.state.context_app)}
+                    onClose={this.hideAllContextMenu}
+                />
 
                 {/* Folder Input Name Bar */}
                 {
