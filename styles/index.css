@@ -346,3 +346,14 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Simple chart container used in Wireshark packets/second graph */
+.chart-container {
+    height: 120px;
+    padding: 4px;
+}
+
+.chart-container svg {
+    width: 100%;
+    height: 100%;
+}

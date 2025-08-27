@@ -1,5 +1,32 @@
 import React, { useEffect, useState } from 'react';
 
+// Simple line chart to display packets per second
+const PacketsPerSecondChart = ({ data = [] }) => {
+  if (!data.length) return <div className="chart-container" />;
+
+  const max = Math.max(...data, 1);
+  const points = data
+    .map((count, i) => {
+      const x = (i / (data.length - 1)) * 100;
+      const y = 100 - (count / max) * 100;
+      return `${x},${y}`;
+    })
+    .join(' ');
+
+  return (
+    <div className="chart-container">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+        <polyline
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+          points={points}
+        />
+      </svg>
+    </div>
+  );
+};
+
 const protocolName = (proto) => {
   switch (proto) {
     case 6:
@@ -44,6 +71,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const [filter, setFilter] = useState('');
   const [colorRuleText, setColorRuleText] = useState('[]');
   const [colorRules, setColorRules] = useState([]);
+  const [pps, setPps] = useState([]); // packets per second data
 
   // Load persisted filter on mount
   useEffect(() => {
@@ -85,7 +113,17 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     ws.onmessage = (event) => {
       try {
         const pkt = JSON.parse(event.data);
+        const now = Math.floor(Date.now() / 1000);
         setPackets((prev) => [pkt, ...prev].slice(0, 500));
+        setPps((prev) => {
+          const next = [...prev];
+          if (next.length && next[next.length - 1].t === now) {
+            next[next.length - 1].c += 1;
+          } else {
+            next.push({ t: now, c: 1 });
+          }
+          return next.slice(-60);
+        });
       } catch (e) {
         // ignore malformed packets
       }
@@ -137,6 +175,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
       </div>
+      <PacketsPerSecondChart data={pps.map((p) => p.c)} />
       <div className="flex-1 overflow-auto">
         <table className="min-w-full text-xs">
           <thead className="bg-gray-800">
