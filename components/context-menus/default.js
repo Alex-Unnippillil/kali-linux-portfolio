@@ -9,7 +9,9 @@ function DefaultMenu(props) {
 
     const handleKeyDown = (e) => {
         if (e.key === 'Escape') {
-            props.onClose && props.onClose()
+            if (props.onClose) {
+                props.onClose();
+            }
         }
     }
 

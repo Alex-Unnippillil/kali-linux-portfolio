@@ -19,7 +19,6 @@ export default function YouTubePlayer({ videoId }) {
 
     const createPlayer = () => {
       if (!containerRef.current) return;
-      // eslint-disable-next-line no-undef
       playerRef.current = new YT.Player(containerRef.current, {
         videoId,
         playerVars: { origin: window.location.origin },
