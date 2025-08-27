@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-
-const fonts = ['Standard', 'Slant'];
+import fonts from './fonts.json';
 
 const FigletApp = () => {
   const [text, setText] = useState('');
-  const [font, setFont] = useState(fonts[0]);
+  const [font, setFont] = useState(fonts[0] || '');
   const [output, setOutput] = useState('');
   const workerRef = useRef(null);
 
@@ -41,6 +40,12 @@ const FigletApp = () => {
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
+        <button
+          className="bg-gray-700 px-2"
+          onClick={() => navigator.clipboard.writeText(output)}
+        >
+          Copy
+        </button>
       </div>
       <pre className="flex-1 overflow-auto p-2 whitespace-pre">{output}</pre>
     </div>
