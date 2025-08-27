@@ -21,6 +21,9 @@
 # misc
 .DS_Store
 *.pem
+lighthouse/
+playwright-report/
+test-results/
 
 # debug
 npm-debug.log*
