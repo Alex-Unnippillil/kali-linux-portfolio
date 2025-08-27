@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import confetti from 'canvas-confetti';
 import usePersistentState from '../usePersistentState';
 
 const WIDTH = 10;
@@ -59,6 +60,11 @@ const bagPiece = () => {
   return { ...TETROMINOS[type], type };
 };
 
+const randomPiece = () => {
+  const type = PIECES[Math.floor(Math.random() * PIECES.length)];
+  return { ...TETROMINOS[type], type };
+};
+
 const defaultKeys = {
   left: 'ArrowLeft',
   right: 'ArrowRight',
@@ -74,10 +80,12 @@ const defaultKeys = {
 
 const Tetris = () => {
   const canvasRef = useRef(null);
+  const [useBag, setUseBag] = usePersistentState('tetris-use-bag', true);
+  const getPiece = useCallback(() => (useBag ? bagPiece() : randomPiece()), [useBag]);
   const [board, setBoard] = useState(createBoard);
-  const [piece, setPiece] = useState(bagPiece);
+  const [piece, setPiece] = useState(getPiece);
   const [pos, setPos] = useState({ x: Math.floor(WIDTH/2) - 2, y: 0 });
-  const [next, setNext] = useState(bagPiece);
+  const [next, setNext] = useState(getPiece);
   const [hold, setHold] = useState(null);
   const [canHold, setCanHold] = useState(true);
   const [score, setScore] = useState(0);
@@ -90,6 +98,11 @@ const Tetris = () => {
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = usePersistentState('tetris-sound', true);
   const [tSpin, setTSpin] = useState(false);
+
+  const [glow, setGlow] = useState([]);
+  const [danger, setDanger] = useState(false);
+  const [das, setDas] = usePersistentState('tetris-das', 150);
+  const [arr, setArr] = usePersistentState('tetris-arr', 50);
 
   const [shake, setShake] = useState(false);
   const reducedMotion = useRef(false);
@@ -108,6 +121,9 @@ const Tetris = () => {
   const dropCounter = useRef(0);
   const lastTime = useRef(0);
   const animationRef = useRef(null);
+  const dasTimer = useRef({ left: null, right: null });
+  const arrTimer = useRef({ left: null, right: null });
+  const keyHeld = useRef({ left: false, right: false });
 
   const boardRef = useRef(board);
   const pieceRef = useRef(piece);
@@ -116,6 +132,10 @@ const Tetris = () => {
   useEffect(() => { boardRef.current = board; }, [board]);
   useEffect(() => { pieceRef.current = piece; }, [piece]);
   useEffect(() => { posRef.current = pos; }, [pos]);
+  useEffect(() => {
+    const top = board.findIndex((row) => row.some((c) => c));
+    setDanger(top !== -1 && top < 4);
+  }, [board]);
 
   const dropInterval = Math.max(100, 1000 - (level - 1) * 100);
 
@@ -151,19 +171,20 @@ const Tetris = () => {
   const resetGame = useCallback(() => {
     setBoard(createBoard());
     bag = [];
-    setPiece(bagPiece());
-    setNext(bagPiece());
+    setPiece(getPiece());
+    setNext(getPiece());
     setPos({ x: Math.floor(WIDTH/2) - 2, y: 0 });
     setScore(0);
     setLevel(1);
     setLines(0);
     setHold(null);
     setCanHold(true);
+    setGlow([]);
     if (lockRef.current) {
       clearTimeout(lockRef.current);
       lockRef.current = null;
     }
-  }, []);
+  }, [getPiece]);
 
   const isTSpin = useCallback((b, p, position) => {
     if (p.type !== 'T' || !lastRotateRef.current) return false;
@@ -185,7 +206,13 @@ const Tetris = () => {
       clearTimeout(lockRef.current);
       lockRef.current = null;
     }
-    const newBoard = merge(boardRef.current, pieceRef.current.shape, posRef.current.x, posRef.current.y, pieceRef.current.type);
+    const newBoard = merge(
+      boardRef.current,
+      pieceRef.current.shape,
+      posRef.current.x,
+      posRef.current.y,
+      pieceRef.current.type,
+    );
     thud();
     const filled = [];
     for (let r = 0; r < HEIGHT; r += 1) {
@@ -198,26 +225,42 @@ const Tetris = () => {
       tSpinScore = 400;
       setTimeout(() => setTSpin(false), 1000);
     }
+    const currentNext = next;
+    const upcoming = getPiece();
     if (filled.length) {
       playSound();
-      const compact = newBoard.filter((_, r) => !filled.includes(r));
-      while (compact.length < HEIGHT) compact.unshift(Array(WIDTH).fill(0));
-      setBoard(compact);
-      const gained = filled.length * 100 + tSpinScore;
-      setScore((s) => {
-        const ns = s + gained;
-        if (ns > highScore) setHighScore(ns);
-        return ns;
-      });
-      setLines((l) => {
-        const nl = l + filled.length;
-        const nlvl = Math.floor(nl / 10) + 1;
-        if (nlvl > level) {
-          setLevel(nlvl);
-          if (nlvl > maxLevel) setMaxLevel(nlvl);
+      confetti({ particleCount: 80, spread: 70 });
+      setBoard(newBoard);
+      setGlow(filled);
+      setTimeout(() => {
+        const compact = newBoard.filter((_, r) => !filled.includes(r));
+        while (compact.length < HEIGHT) compact.unshift(Array(WIDTH).fill(0));
+        setBoard(compact);
+        const gained = filled.length * 100 + tSpinScore;
+        setScore((s) => {
+          const ns = s + gained;
+          if (ns > highScore) setHighScore(ns);
+          return ns;
+        });
+        setLines((l) => {
+          const nl = l + filled.length;
+          const nlvl = Math.floor(nl / 10) + 1;
+          if (nlvl > level) {
+            setLevel(nlvl);
+            if (nlvl > maxLevel) setMaxLevel(nlvl);
+          }
+          return nl;
+        });
+        setGlow([]);
+        setPiece(currentNext);
+        setNext(upcoming);
+        setPos({ x: Math.floor(WIDTH/2) - 2, y: 0 });
+        setCanHold(true);
+        lastRotateRef.current = false;
+        if (!canMove(compact, currentNext.shape, Math.floor(WIDTH/2) - 2, 0)) {
+          resetGame();
         }
-        return nl;
-      });
+      }, 100);
     } else {
       setBoard(newBoard);
       if (tSpinScore) {
@@ -227,16 +270,16 @@ const Tetris = () => {
           return ns;
         });
       }
+      setPiece(currentNext);
+      setNext(upcoming);
+      setPos({ x: Math.floor(WIDTH/2) - 2, y: 0 });
+      setCanHold(true);
+      lastRotateRef.current = false;
+      if (!canMove(newBoard, currentNext.shape, Math.floor(WIDTH/2) - 2, 0)) {
+        resetGame();
+      }
     }
-    setPiece(next);
-    setNext(bagPiece());
-    setPos({ x: Math.floor(WIDTH/2) - 2, y: 0 });
-    setCanHold(true);
-    lastRotateRef.current = false;
-    if (!canMove(newBoard, next.shape, Math.floor(WIDTH/2) - 2, 0)) {
-      resetGame();
-    }
-  }, [highScore, isTSpin, level, maxLevel, next, playSound, resetGame, setHighScore, setMaxLevel, thud]);
+  }, [getPiece, highScore, isTSpin, level, maxLevel, next, playSound, resetGame, setHighScore, setMaxLevel, thud]);
 
   const moveDown = useCallback((soft = false) => {
     softDropRef.current = soft;
@@ -312,11 +355,11 @@ const Tetris = () => {
     } else {
       setHold(pieceRef.current);
       setPiece(next);
-      setNext(bagPiece());
+      setNext(getPiece());
     }
     setPos({ x: Math.floor(WIDTH/2) - 2, y: 0 });
     lastRotateRef.current = false;
-  }, [canHold, hold, next]);
+  }, [canHold, getPiece, hold, next]);
 
   const actionFromKey = useCallback((key) => {
     const entry = Object.entries(keyBindings).find(([, k]) => k.toLowerCase() === key.toLowerCase());
@@ -326,40 +369,78 @@ const Tetris = () => {
   const togglePause = () => setPaused((p) => !p);
   const toggleSound = () => setSound((s) => !s);
 
-  const handleKey = useCallback((e) => {
-    const action = actionFromKey(e.key.length === 1 ? e.key : e.code);
-    if (!action) return;
-    e.preventDefault();
-    if (action === 'left') move(-1);
-    else if (action === 'right') move(1);
-    else if (action === 'down') moveDown(true);
-    else if (action === 'rotate') rotatePiece();
-    else if (action === 'drop') hardDrop();
-    else if (action === 'hold') holdPiece();
-    else if (action === 'pause') togglePause();
-    else if (action === 'reset') resetGame();
-    else if (action === 'sound') toggleSound();
-    else if (action === 'settings') setShowSettings((s) => !s);
-  }, [actionFromKey, hardDrop, holdPiece, move, moveDown, rotatePiece, resetGame, togglePause, toggleSound]);
+  const handleKeyDown = useCallback(
+    (e) => {
+      const action = actionFromKey(e.key.length === 1 ? e.key : e.code);
+      if (!action) return;
+      e.preventDefault();
+      if (action === 'left' || action === 'right') {
+        const dir = action === 'left' ? -1 : 1;
+        move(dir);
+        if (!keyHeld.current[action]) {
+          keyHeld.current[action] = true;
+          dasTimer.current[action] = setTimeout(() => {
+            arrTimer.current[action] = setInterval(() => move(dir), arr);
+          }, das);
+        }
+      } else if (action === 'down') moveDown(true);
+      else if (action === 'rotate') rotatePiece();
+      else if (action === 'drop') hardDrop();
+      else if (action === 'hold') holdPiece();
+      else if (action === 'pause') togglePause();
+      else if (action === 'reset') resetGame();
+      else if (action === 'sound') toggleSound();
+      else if (action === 'settings') setShowSettings((s) => !s);
+    },
+    [actionFromKey, arr, das, hardDrop, holdPiece, move, moveDown, rotatePiece, resetGame, togglePause, toggleSound],
+  );
+
+  const handleKeyUp = useCallback(
+    (e) => {
+      const action = actionFromKey(e.key.length === 1 ? e.key : e.code);
+      if (!action) return;
+      if (action === 'left' || action === 'right') {
+        keyHeld.current[action] = false;
+        if (dasTimer.current[action]) {
+          clearTimeout(dasTimer.current[action]);
+          dasTimer.current[action] = null;
+        }
+        if (arrTimer.current[action]) {
+          clearInterval(arrTimer.current[action]);
+          arrTimer.current[action] = null;
+        }
+      }
+    },
+    [actionFromKey],
+  );
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [handleKey]);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [handleKeyDown, handleKeyUp]);
 
-  const draw = useCallback((ctx) => {
-    ctx.fillStyle = '#1f2937';
-    ctx.fillRect(0, 0, WIDTH * CELL_SIZE, HEIGHT * CELL_SIZE);
-    boardRef.current.forEach((row, y) => {
-      row.forEach((cell, x) => {
-        if (cell) {
-          ctx.fillStyle = TETROMINOS[cell].color;
-          ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-          ctx.strokeStyle = '#111827';
-          ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+  const draw = useCallback(
+    (ctx) => {
+      ctx.fillStyle = '#1f2937';
+      ctx.fillRect(0, 0, WIDTH * CELL_SIZE, HEIGHT * CELL_SIZE);
+      boardRef.current.forEach((row, y) => {
+        row.forEach((cell, x) => {
+          if (cell) {
+            ctx.fillStyle = TETROMINOS[cell].color;
+            ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            ctx.strokeStyle = '#111827';
+            ctx.strokeRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+          }
+        });
+        if (glow.includes(y)) {
+          ctx.fillStyle = 'rgba(255,255,255,0.3)';
+          ctx.fillRect(0, y * CELL_SIZE, WIDTH * CELL_SIZE, CELL_SIZE);
         }
       });
-    });
     const ghostY = getDropY();
     ctx.globalAlpha = 0.3;
     pieceRef.current.shape.forEach((row, r) => {
@@ -385,7 +466,7 @@ const Tetris = () => {
         }
       });
     });
-  }, [getDropY]);
+  }, [getDropY, glow]);
 
   useEffect(() => {
     const ctx = canvasRef.current.getContext('2d');
@@ -467,12 +548,48 @@ const Tetris = () => {
           </div>
         </div>
       </div>
-      {tSpin && <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-4xl">T-Spin!</div>}
-      {paused && <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-4xl">Paused</div>}
+      {danger && (
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-red-800/40 to-transparent" />
+      )}
+      {tSpin && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-4xl">T-Spin!</div>
+      )}
+      {paused && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-4xl">Paused</div>
+      )}
       {showSettings && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-gray-800 p-4 rounded">
-            <h2 className="mb-2 text-center">Key Bindings</h2>
+            <h2 className="mb-2 text-center">Settings</h2>
+            <div className="mb-2 flex items-center">
+              <label className="w-24">7-Bag</label>
+              <input
+                type="checkbox"
+                checked={useBag}
+                onChange={(e) => setUseBag(e.target.checked)}
+              />
+            </div>
+            <div className="mb-2 flex items-center">
+              <label className="w-24">DAS {das}ms</label>
+              <input
+                type="range"
+                min="50"
+                max="500"
+                value={das}
+                onChange={(e) => setDas(Number(e.target.value))}
+              />
+            </div>
+            <div className="mb-2 flex items-center">
+              <label className="w-24">ARR {arr}ms</label>
+              <input
+                type="range"
+                min="10"
+                max="200"
+                value={arr}
+                onChange={(e) => setArr(Number(e.target.value))}
+              />
+            </div>
+            <h3 className="mb-2 text-center">Key Bindings</h3>
             {Object.keys(keyBindings).map((k) => (
               <div key={k} className="flex items-center mb-2">
                 <label className="w-24 capitalize">{k}</label>
