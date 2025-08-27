@@ -1,0 +1,9 @@
+/* Global styles */
+.app-root {
+  container-type: inline-size;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ub-border-orange);
+  outline-offset: 2px;
+}

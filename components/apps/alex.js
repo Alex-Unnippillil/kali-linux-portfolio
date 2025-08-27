@@ -90,7 +90,7 @@ export class AboutAlex extends Component {
                 </div>
                 <div onClick={this.showNavBar} className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1">
                     <div className=" w-3.5 border-t border-white"></div>
-                    <div className=" w-3.5 border-t border-white" style={{ marginTop: "2pt", marginBottom: "2pt" }}></div>
+                    <div className=" w-3.5 border-t border-white" style={{ marginTop: "var(--space-1)", marginBottom: "var(--space-1)" }}></div>
                     <div className=" w-3.5 border-t border-white"></div>
                     <div className={(this.state.navbar ? " visible animateShow z-30 " : " invisible ") + " md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20"}>
                         {this.renderNavLinks()}

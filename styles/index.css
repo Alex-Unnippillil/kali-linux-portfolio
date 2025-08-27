@@ -359,7 +359,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .emoji-list>li {
-    padding-left: 10px;
+    padding-left: var(--space-3);
 }
 
 .list-pc {
