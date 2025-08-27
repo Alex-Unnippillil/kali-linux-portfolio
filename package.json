@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
+    "@sentry/nextjs": "^8.0.0",
     "@vercel/analytics": "^1.5.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-search": "^0.15.0",
@@ -41,7 +42,6 @@
     "react-dom": "^18.2.0",
     "react-draggable": "^4.4.5",
     "react-force-graph": "^1.45.0",
-
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
     "react-onclickoutside": "^6.12.2",
@@ -55,6 +55,7 @@
     "xterm-addon-search": "^0.13.0"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.13.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^16.3.0",

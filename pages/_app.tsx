@@ -6,6 +6,23 @@ import 'tailwindcss/tailwind.css';
 import '../styles/index.css';
 import '@xterm/xterm/css/xterm.css';
 import { ThemeProvider } from '../hooks/useTheme';
+import * as Sentry from '@sentry/nextjs';
+
+const ENV = process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.NODE_ENV || 'development';
+const dsnMap: Record<string, string | undefined> = {
+  production: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  preview: process.env.NEXT_PUBLIC_SENTRY_DSN_PREVIEW,
+  development: process.env.NEXT_PUBLIC_SENTRY_DSN_DEV,
+};
+const SENTRY_DSN = dsnMap[ENV];
+
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: ENV,
+    tracesSampleRate: 1.0,
+  });
+}
 
 function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
