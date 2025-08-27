@@ -68,49 +68,55 @@ const ContactApp = () => {
 
   return (
     <div className="p-4 text-black">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-        <input
-          className="p-1 border"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <input
-          className="p-1 border"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <textarea
-          className="p-1 border"
-          placeholder="Message"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          required
-        />
-        <input
-          className="hidden"
-          tabIndex={-1}
-          autoComplete="off"
-          value={honeypot}
-          onChange={(e) => setHoneypot(e.target.value)}
-        />
-        <button type="submit" className="bg-blue-500 text-white px-2 py-1">
-          Send
-        </button>
-      </form>
-      {error && (
-        <div role="alert" className="text-red-500 mt-2">
-          {error}
+      <div style={{ maxInlineSize: '60ch' }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+          <label htmlFor="name">Name</label>
+          <input
+            id="name"
+            className="p-1 border"
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            className="p-1 border"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <label htmlFor="message">Message</label>
+          <textarea
+            id="message"
+            className="p-1 border"
+            placeholder="Message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            required
+          />
+          <input
+            className="hidden"
+            tabIndex={-1}
+            autoComplete="off"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+          />
+          <button type="submit" className="bg-blue-500 text-white px-2 py-1">
+            Send
+          </button>
+        </form>
+        <div aria-live="polite">
+          {error && <div className="text-red-500 mt-2">{error}</div>}
+          {success && !error && (
+            <div role="status" className="text-green-600 mt-2">
+              Message sent!
+            </div>
+          )}
         </div>
-      )}
-      {success && !error && (
-        <div role="status" className="text-green-600 mt-2">
-          Message sent!
-        </div>
-      )}
+      </div>
     </div>
   );
 };
