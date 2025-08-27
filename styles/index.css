@@ -346,3 +346,21 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* ASCII art font selector styles */
+.ascii-font-select {
+    background-color: var(--color-ub-cool-grey);
+    color: var(--color-text);
+    padding: 4px 8px;
+    border: 1px solid var(--color-ubt-warm-grey);
+    border-radius: 4px;
+}
+
+.ascii-preview {
+    background-color: var(--color-ub-grey);
+    color: var(--color-text);
+    padding: 1rem;
+    border: 1px solid var(--color-ubt-warm-grey);
+    overflow: auto;
+    white-space: pre;
+}
