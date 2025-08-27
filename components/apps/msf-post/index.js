@@ -1,5 +1,19 @@
 import React, { useEffect, useState } from 'react';
 
+const SAMPLE_MODULES = [
+  'post/multi/recon/local_exploit_suggester',
+  'post/windows/manage/enable_rdp',
+  'post/linux/gather/enum_network',
+];
+
+const escapeText = (text) =>
+  text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 const MsfPostApp = () => {
   const [modules, setModules] = useState([]);
   const [selected, setSelected] = useState('');
@@ -14,17 +28,7 @@ const MsfPostApp = () => {
   const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
-    const fetchModules = async () => {
-      try {
-        const res = await fetch('/api/metasploit/modules?type=post');
-        const data = await res.json();
-        setModules(data.modules || []);
-      } catch (err) {
-        setModules([]);
-      }
-    };
-
-    fetchModules();
+    setModules(SAMPLE_MODULES);
   }, []);
 
   useEffect(() => {
@@ -56,20 +60,22 @@ const MsfPostApp = () => {
     update();
   };
 
-  const runModule = async () => {
+  const runModule = () => {
     if (!selected) return;
-    setOutput('Running...');
-    try {
-      const res = await fetch('/api/metasploit/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ module: selected }),
-      });
-      const data = await res.json();
-      setOutput(data.output || 'No output');
-      animateSteps();
-    } catch (err) {
-      setOutput('Error running module');
+    setOutput(`# Running ${selected}\nSample output line 1\nSample output line 2`);
+    animateSteps();
+  };
+
+  const copyAsCode = async () => {
+    if (!output) return;
+    const escaped = escapeText(output);
+    const codeBlock = '```\n' + escaped + '\n```';
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(codeBlock);
+      } catch (err) {
+        /* ignore clipboard errors */
+      }
     }
   };
 
@@ -94,6 +100,12 @@ const MsfPostApp = () => {
           className="ml-2 px-4 py-2 bg-blue-600 rounded"
         >
           Run
+        </button>
+        <button
+          onClick={copyAsCode}
+          className="ml-2 px-4 py-2 bg-green-600 rounded"
+        >
+          Copy as code
         </button>
       </div>
       <pre className="flex-1 bg-black p-2 overflow-auto whitespace-pre-wrap">
