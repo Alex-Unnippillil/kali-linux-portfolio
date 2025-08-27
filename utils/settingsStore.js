@@ -1,42 +1,48 @@
+import { get, set, del } from 'idb-keyval';
+
 const DEFAULT_SETTINGS = {
   theme: 'system',
   accent: '#E95420',
   wallpaper: 'wall-2',
 };
 
-export function getTheme() {
+export async function getTheme() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.theme;
-  return window.localStorage.getItem('theme') || DEFAULT_SETTINGS.theme;
+  return (await get('theme')) || DEFAULT_SETTINGS.theme;
 }
 
-export function setTheme(theme) {
+export async function setTheme(theme) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('theme', theme);
+  await set('theme', theme);
 }
 
-export function getAccent() {
+export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
-  return window.localStorage.getItem('accent') || DEFAULT_SETTINGS.accent;
+  return (await get('accent')) || DEFAULT_SETTINGS.accent;
 }
 
-export function setAccent(accent) {
+export async function setAccent(accent) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('accent', accent);
+  await set('accent', accent);
 }
 
-export function getWallpaper() {
+export async function getWallpaper() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaper;
-  return window.localStorage.getItem('bg-image') || DEFAULT_SETTINGS.wallpaper;
+  return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
 }
 
-export function setWallpaper(wallpaper) {
+export async function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem('bg-image', wallpaper);
+  await set('bg-image', wallpaper);
 }
 
-export function resetSettings() {
+export async function resetSettings() {
   if (typeof window === 'undefined') return;
-  window.localStorage.clear();
+  await Promise.all([
+    del('theme'),
+    del('accent'),
+    del('bg-image'),
+  ]);
 }
 
 export const defaults = DEFAULT_SETTINGS;
