@@ -4,17 +4,31 @@ import React, {
   useMemo,
   useCallback,
 } from 'react';
+import YouTubePlayer from '../../YouTubePlayer';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
+
+type Video = {
+  id: string;
+  title?: string;
+  playlist?: string;
+  publishedAt?: string;
+  thumbnail?: string;
+  url?: string;
+};
+
+type Props = {
+  initialVideos?: Video[];
+};
 
 // Renders a small YouTube browser similar to the YouTube mobile UI.
 // Videos can be fetched from the real API if an API key is provided or
 // injected via the `initialVideos` prop (used in tests).
-export default function YouTubeApp({ initialVideos = [] }) {
-  const [videos, setVideos] = useState(initialVideos);
-  const [playlists, setPlaylists] = useState([]); // [{id,title}]
+export default function YouTubeApp({ initialVideos = [] }: Props) {
+  const [videos, setVideos] = useState<Video[]>(initialVideos);
+  const [playlists, setPlaylists] = useState<{ id: string; title: string }[]>([]);
   const [activeCategory, setActiveCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('date');
+  const [sortBy, setSortBy] = useState<'date' | 'title'>('date');
   const [search, setSearch] = useState('');
 
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
@@ -38,21 +52,19 @@ export default function YouTubeApp({ initialVideos = [] }) {
           `https://www.googleapis.com/youtube/v3/playlists?part=snippet&channelId=${channelId}&maxResults=50&key=${apiKey}`
         );
         const playlistsData = await playlistsRes.json();
-        const list = playlistsData.items?.map((p) => ({
-          id: p.id,
-          title: p.snippet.title,
-        })) || [];
+        const list =
+          playlistsData.items?.map((p: any) => ({
+            id: p.id,
+            title: p.snippet.title,
+          })) || [];
 
-        // Include the automatically generated "Liked videos" playlist
         const favoritesId = `LL${channelId}`;
         list.push({ id: favoritesId, title: 'Favorites' });
         setPlaylists(list);
 
-        // Helper to fetch *all* videos from a playlist by following the
-        // YouTube API's `nextPageToken` pagination.
-        async function fetchPlaylistVideos(pl) {
+        async function fetchPlaylistVideos(pl: { id: string; title: string }) {
           let pageToken;
-          const items = [];
+          const items: Video[] = [];
 
           do {
             const tokenParam = pageToken ? `&pageToken=${pageToken}` : '';
@@ -62,7 +74,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
             const data = await res.json();
 
             items.push(
-              ...(data.items?.map((item) => {
+              ...(data.items?.map((item: any) => {
                 const id = item.snippet.resourceId.videoId;
                 return {
                   id,
@@ -72,7 +84,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
                   thumbnail: item.snippet.thumbnails?.medium?.url,
                   channelTitle: item.snippet.channelTitle,
                   url: `https://www.youtube.com/watch?v=${id}`,
-                };
+                } as Video;
               }) || [])
             );
 
@@ -86,8 +98,6 @@ export default function YouTubeApp({ initialVideos = [] }) {
           list.map((pl) => fetchPlaylistVideos(pl))
         );
 
-        // Replace the existing feed and deduplicate by video ID to
-        // prevent stale entries from accumulating in the list.
         const flat = allVideosData.flat();
         const unique = Array.from(new Map(flat.map((v) => [v.id, v])).values());
         setVideos(unique);
@@ -105,7 +115,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
   useEffect(() => {
     if (initialVideos.length) {
       const titles = Array.from(new Set(initialVideos.map((v) => v.playlist)));
-      setPlaylists(titles.map((title) => ({ id: title, title })));
+      setPlaylists(titles.map((title) => ({ id: title!, title: title! })));
     }
   }, [initialVideos]);
 
@@ -116,7 +126,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
         new Set(
           [
             ...playlists.map((p) => p.title),
-            ...videos.map((v) => v.playlist),
+            ...videos.map((v) => v.playlist || ''),
           ].filter(Boolean)
         )
       ),
@@ -128,45 +138,27 @@ export default function YouTubeApp({ initialVideos = [] }) {
     () =>
       videos
         .filter((v) => activeCategory === 'All' || v.playlist === activeCategory)
-        .filter((v) =>
-          (v.title || '').toLowerCase().includes(search.toLowerCase())
-        ),
+        .filter((v) => (v.title || '').toLowerCase().includes(search.toLowerCase())),
     [videos, activeCategory, search]
   );
 
   const sorted = useMemo(() => {
     const list = [...filtered];
-    switch (sortBy) {
-      case 'dateAsc':
-        return list.sort((a, b) =>
-          new Date(a.publishedAt || 0) - new Date(b.publishedAt || 0)
-        );
-      case 'title':
-        return list.sort((a, b) =>
-          (a.title || '').localeCompare(b.title || '')
-        );
-      case 'playlist':
-        return list.sort((a, b) =>
-          (a.playlist || '').localeCompare(b.playlist || '')
-        );
-      case 'date':
-      default:
-        return list.sort((a, b) =>
-          new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0)
-        );
+    if (sortBy === 'title') {
+      return list.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
     }
+    // default newest first
+    return list.sort(
+      (a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime()
+    );
   }, [filtered, sortBy]);
 
-  const handleCategoryClick = useCallback((cat) => setActiveCategory(cat), []);
-
-  const handleSortChange = useCallback((e) => {
-    const { value } = e.target;
-    setSortBy(value);
+  const handleCategoryClick = useCallback((cat: string) => setActiveCategory(cat), []);
+  const handleSortChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSortBy(e.target.value as 'date' | 'title');
   }, []);
-
-  const handleSearchChange = useCallback((e) => {
-    const { value } = e.target;
-    setSearch(value);
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
   }, []);
 
   return (
@@ -195,13 +187,11 @@ export default function YouTubeApp({ initialVideos = [] }) {
               onChange={handleSortChange}
             >
               <option value="date">Newest First</option>
-              <option value="dateAsc">Oldest First</option>
               <option value="title">Title (A-Z)</option>
-              <option value="playlist">Playlist</option>
             </select>
           </div>
 
-          {/* Category tabs */}
+          {/* Category chips */}
           <div className="overflow-x-auto px-3 pb-2 flex flex-wrap gap-2">
             {categories.map((cat) => (
               <button
@@ -226,25 +216,22 @@ export default function YouTubeApp({ initialVideos = [] }) {
                 data-testid="video-card"
                 className="bg-gray-800 rounded-lg overflow-hidden shadow flex flex-col hover:shadow-lg transition"
               >
-                <a href={video.url} target="_blank" rel="noreferrer" className="block">
-                  {video.thumbnail && (
-                    <img src={video.thumbnail} alt={video.title} className="w-full" />
-                  )}
-                  <div
-                    className="p-2 font-semibold text-sm"
-                    title={video.title}
-                    style={{
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {video.title}
-                  </div>
-                </a>
+                <YouTubePlayer videoId={video.id} />
+                <div
+                  className="p-2 font-semibold text-sm"
+                  title={video.title}
+                  data-testid="video-title"
+                  style={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {video.title}
+                </div>
                 <div className="px-2 pb-2 text-xs text-gray-300">
-                  {video.playlist} • {new Date(video.publishedAt).toLocaleDateString()}
+                  {video.playlist} • {new Date(video.publishedAt || 0).toLocaleDateString()}
                 </div>
               </div>
             ))}
