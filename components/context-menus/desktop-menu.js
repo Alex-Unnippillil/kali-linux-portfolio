@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import logger from '../../utils/logger'
 
 function DesktopMenu(props) {
 
@@ -38,7 +39,7 @@ function DesktopMenu(props) {
             }
         }
         catch (e) {
-            console.log(e)
+            logger.error(e)
         }
     }
 
