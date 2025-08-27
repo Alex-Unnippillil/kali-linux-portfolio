@@ -254,5 +254,4 @@ const QuoteGenerator = () => {
 };
 
 export default QuoteGenerator;
-export const displayQuoteGenerator = () => <QuoteGenerator />;
 
