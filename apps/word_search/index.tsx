@@ -32,14 +32,15 @@ const SAVE_KEY = 'game:word_search:save';
 const LB_KEY = 'game:word_search:leaderboard';
 
 interface WordSearchInnerProps {
-  getDailySeed?: () => Promise<string>;
+  seed: string;
 }
 
-const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
+const WordSearchInner: React.FC<WordSearchInnerProps> = ({ seed: seedProp }) => {
   const router = useRouter();
-  const { seed: seedQuery, words: wordsQuery } = router.query as { seed?: string; words?: string };
+  const { words: wordsQuery } = router.query as { words?: string };
   const [seed, setSeed] = useState('');
   const [words, setWords] = useState<string[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [grid, setGrid] = useState<string[][]>([]);
   const [placements, setPlacements] = useState<WordPlacement[]>([]);
   const [found, setFound] = useState<Set<string>>(new Set());
@@ -53,27 +54,33 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const startRef = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const { quality, setQuality, highContrast, setHighContrast } = useSettings();
-
-  // load saved game on mount
+  // load saved game on mount or initialize with seed
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(SAVE_KEY);
       if (saved) {
         const data = JSON.parse(saved);
-        setSeed(data.seed);
-        setWords(data.words);
-        setGrid(data.grid);
-        setPlacements(data.placements);
-        setFound(new Set<string>(data.found));
-        setFoundCells(new Set<string>(data.foundCells));
-        setHintCells(new Set<string>(data.hintCells || []));
-        setFirstHints(data.firstHints ?? 3);
-        setLastHints(data.lastHints ?? 3);
+        if (data.seed === seedProp) {
+          setSeed(data.seed);
+          setWords(data.words);
+          setGrid(data.grid);
+          setPlacements(data.placements);
+          setFound(new Set<string>(data.found));
+          setFoundCells(new Set<string>(data.foundCells));
+          setHintCells(new Set<string>(data.hintCells || []));
+          setFirstHints(data.firstHints ?? 3);
+          setLastHints(data.lastHints ?? 3);
+          setLoaded(true);
+          return;
+        }
       }
     } catch {
       // ignore
     }
-  }, []);
+    setSeed(seedProp);
+    setWords([]);
+    setLoaded(true);
+  }, [seedProp]);
 
   function pickWords(s: string) {
     const rng = createRNG(s);
@@ -86,19 +93,14 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   }
 
   useEffect(() => {
-    if (seed && words.length) return; // skip if loaded
-    const init = async () => {
-      const queryWords =
-        typeof wordsQuery === 'string'
-          ? wordsQuery.split(',').map((w) => w.trim().toUpperCase()).filter(Boolean)
-          : [];
-      const defaultSeed = (await getDailySeed?.()) ?? new Date().toISOString().split('T')[0];
-      const s = typeof seedQuery === 'string' ? seedQuery : defaultSeed;
-      setSeed(s);
-      setWords(queryWords.length ? queryWords : pickWords(s));
-    };
-    void init();
-  }, [seedQuery, wordsQuery, seed, words.length, getDailySeed]);
+    if (!loaded) return;
+    if (!seed || words.length) return;
+    const queryWords =
+      typeof wordsQuery === 'string'
+        ? wordsQuery.split(',').map((w) => w.trim().toUpperCase()).filter(Boolean)
+        : [];
+    setWords(queryWords.length ? queryWords : pickWords(seed));
+  }, [loaded, seed, words.length, wordsQuery]);
 
   useEffect(() => {
     if (!seed || !words.length) return;
@@ -210,7 +212,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
 
   const restart = () => {
     window.localStorage.removeItem(SAVE_KEY);
-    setSeed('');
+    setSeed(seedProp);
     setWords([]);
     setHintCells(new Set());
     setFirstHints(3);
@@ -428,13 +430,13 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
 };
 
 interface WordSearchProps {
-  getDailySeed?: () => Promise<string>;
+  seed: string;
 }
 
-const WordSearch: React.FC<WordSearchProps> = ({ getDailySeed }) => (
+const WordSearch: React.FC<WordSearchProps> = ({ seed }) => (
   <SettingsProvider>
     <GameLayout gameId="word_search">
-      <WordSearchInner getDailySeed={getDailySeed} />
+      <WordSearchInner seed={seed} />
     </GameLayout>
   </SettingsProvider>
 );
