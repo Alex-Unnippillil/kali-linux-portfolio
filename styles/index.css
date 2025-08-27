@@ -346,3 +346,27 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Connect Four winning disc animations */
+@keyframes flash {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+@keyframes redFlash {
+    0%, 100% { background-color: #ef4444; }
+    50% { background-color: #f87171; }
+}
+
+@keyframes yellowFlash {
+    0%, 100% { background-color: #facc15; }
+    50% { background-color: #fde047; }
+}
+
+.flash-red {
+    animation: flash 1s infinite, redFlash 1s infinite;
+}
+
+.flash-yellow {
+    animation: flash 1s infinite, yellowFlash 1s infinite;
+}

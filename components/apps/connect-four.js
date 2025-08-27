@@ -247,7 +247,9 @@ const ConnectFour = () => {
                     <div
                       className={`h-8 w-8 rounded-full ${
                         cell === 'red' ? 'bg-red-500' : 'bg-yellow-400'
-                      } ${isWin ? 'ring-4 ring-white' : ''}`}
+                      } ${
+                        isWin ? (cell === 'red' ? 'flash-red' : 'flash-yellow') : ''
+                      }`}
                     />
                   )}
                 </div>
