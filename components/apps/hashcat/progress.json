@@ -1,6 +1,11 @@
 {
-  "progress": 42,
-  "hashRate": "123 H/s",
-  "eta": "00:00:42",
-  "mode": "Brute-force"
+  "mode": "Brute-force",
+  "disclaimer": "Simulation only. Do not use for unauthorized access.",
+  "steps": [
+    { "percent": 25, "attemptsPerSec": "100 H/s", "eta": "00:00:30" },
+    { "percent": 75, "attemptsPerSec": "120 H/s", "eta": "00:00:10" },
+    { "percent": 100, "attemptsPerSec": "0 H/s", "eta": "00:00:00", "cracked": [
+        { "hash": "5f4dcc3b5aa765d61d8327deb882cf99", "password": "password" }
+    ] }
+  ]
 }

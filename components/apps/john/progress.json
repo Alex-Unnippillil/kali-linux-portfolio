@@ -1,0 +1,10 @@
+{
+  "disclaimer": "Simulation only. Do not use for unauthorized access.",
+  "steps": [
+    { "percent": 30, "attemptsPerSec": "80 H/s", "eta": "00:00:20", "phase": "wordlist" },
+    { "percent": 60, "attemptsPerSec": "90 H/s", "eta": "00:00:10", "phase": "rules" },
+    { "percent": 100, "attemptsPerSec": "0 H/s", "eta": "00:00:00", "phase": "done", "cracked": [
+        { "hash": "5f4dcc3b5aa765d61d8327deb882cf99", "password": "password" }
+    ] }
+  ]
+}

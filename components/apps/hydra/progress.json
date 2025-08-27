@@ -1,0 +1,10 @@
+{
+  "disclaimer": "Simulation only. Do not use for unauthorized access.",
+  "steps": [
+    { "percent": 25, "attemptsPerSec": "50 attempts/s", "eta": "00:00:30" },
+    { "percent": 75, "attemptsPerSec": "55 attempts/s", "eta": "00:00:10" },
+    { "percent": 100, "attemptsPerSec": "0 attempts/s", "eta": "00:00:00", "cracked": [
+        { "user": "admin", "password": "password123" }
+    ] }
+  ]
+}

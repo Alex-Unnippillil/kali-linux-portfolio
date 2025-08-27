@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import progressInfo from './progress.json';
 
 const hashTypes = [
@@ -56,7 +56,9 @@ function HashcatApp() {
   const [wordlistUrl, setWordlistUrl] = useState('');
   const [progress, setProgress] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const workerRef = useRef(null);
+  const [attemptRate, setAttemptRate] = useState(progressInfo.steps[0].attemptsPerSec);
+  const [eta, setEta] = useState(progressInfo.steps[0].eta);
+  const [cracked, setCracked] = useState([]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -75,40 +77,19 @@ function HashcatApp() {
   }, []);
 
   useEffect(() => {
-    let frame;
-    if (typeof window !== 'undefined') {
-      if (window.Worker) {
-        workerRef.current = new Worker(new URL('./progress.worker.js', import.meta.url));
-        workerRef.current.postMessage({ target: progressInfo.progress });
-        workerRef.current.onmessage = ({ data }) => {
-          const update = () => setProgress(data);
-          if (prefersReducedMotion) {
-            update();
-          } else {
-            frame = requestAnimationFrame(update);
-          }
-        };
-      } else {
-        const target = progressInfo.progress;
-        if (prefersReducedMotion) {
-          setProgress(target);
-        } else {
-          const animate = () => {
-            setProgress((p) => {
-              if (p >= target) return p;
-              frame = requestAnimationFrame(animate);
-              return p + 1;
-            });
-          };
-          frame = requestAnimationFrame(animate);
-        }
-      }
-    }
-    return () => {
-      if (workerRef.current) workerRef.current.terminate();
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, [prefersReducedMotion]);
+    const steps = progressInfo.steps;
+    let i = 0;
+    const id = setInterval(() => {
+      const step = steps[i];
+      setProgress(step.percent);
+      setAttemptRate(step.attemptsPerSec);
+      setEta(step.eta);
+      if (step.cracked) setCracked(step.cracked);
+      i++;
+      if (i >= steps.length) clearInterval(id);
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const selectedHash = hashTypes.find((h) => h.id === hashType)?.name;
 
@@ -213,11 +194,17 @@ function HashcatApp() {
           aria-live="polite"
           className="text-sm mt-2"
         >
-          <div>Hash rate: {progressInfo.hashRate}</div>
-          <div>ETA: {progressInfo.eta}</div>
+          <div>Attempts/sec: {attemptRate}</div>
+          <div>ETA: {eta}</div>
           <div>Mode: {progressInfo.mode}</div>
         </div>
       </div>
+      {cracked.length > 0 && (
+        <pre className="mt-4 text-xs bg-black p-2 rounded">
+          {cracked.map((c) => `${c.hash}: ${c.password}`).join('\n')}
+        </pre>
+      )}
+      <p className="text-xs text-yellow-300 mt-2">{progressInfo.disclaimer}</p>
     </div>
   );
 }

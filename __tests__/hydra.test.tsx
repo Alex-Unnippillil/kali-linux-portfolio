@@ -30,7 +30,7 @@ describe('Hydra wordlists', () => {
   });
 });
 
-describe('Hydra pause and resume', () => {
+describe('Hydra progress', () => {
   beforeEach(() => {
     localStorage.setItem(
       'hydraUserLists',
@@ -42,40 +42,15 @@ describe('Hydra pause and resume', () => {
     );
   });
 
-  it('pauses and resumes cracking progress', async () => {
-    let runResolve: Function = () => {};
-    // @ts-ignore
-    global.fetch = jest.fn((url, options) => {
-      if (options && options.body && options.body.includes('action')) {
-        return Promise.resolve({ json: async () => ({}) });
-      }
-      return new Promise((resolve) => {
-        runResolve = () => resolve({ json: async () => ({ output: '' }) });
-      });
-    });
-
+  it('shows fixture progress and results', async () => {
     render(<HydraApp />);
     fireEvent.change(screen.getByPlaceholderText('192.168.0.1'), {
       target: { value: '1.1.1.1' },
     });
     fireEvent.click(screen.getByText('Run Hydra'));
 
-    const pauseBtn = await screen.findByTestId('pause-button');
-    fireEvent.click(pauseBtn);
-    expect(global.fetch).toHaveBeenCalledWith(
-      '/api/hydra',
-      expect.objectContaining({ body: JSON.stringify({ action: 'pause' }) })
-    );
-
-    const resumeBtn = await screen.findByTestId('resume-button');
-    fireEvent.click(resumeBtn);
-    expect(global.fetch).toHaveBeenCalledWith(
-      '/api/hydra',
-      expect.objectContaining({ body: JSON.stringify({ action: 'resume' }) })
-    );
-
-    await act(async () => {
-      runResolve();
-    });
+    await screen.findByText(/Attempts\/sec:/i);
+    await screen.findByText('admin:password123', {}, { timeout: 5000 });
+    expect(await screen.findByText(/Simulation only/)).toBeInTheDocument();
   });
 });

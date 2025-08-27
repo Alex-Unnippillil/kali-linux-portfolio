@@ -27,8 +27,12 @@ describe('HashcatApp', () => {
 
   it('shows progress info from JSON', () => {
     const { getByText } = render(<HashcatApp />);
-    expect(getByText(`Hash rate: ${progressInfo.hashRate}`)).toBeInTheDocument();
-    expect(getByText(`ETA: ${progressInfo.eta}`)).toBeInTheDocument();
+    const first = progressInfo.steps[0];
+    expect(
+      getByText(`Attempts/sec: ${first.attemptsPerSec}`)
+    ).toBeInTheDocument();
+    expect(getByText(`ETA: ${first.eta}`)).toBeInTheDocument();
     expect(getByText(`Mode: ${progressInfo.mode}`)).toBeInTheDocument();
+    expect(getByText(progressInfo.disclaimer)).toBeInTheDocument();
   });
 });

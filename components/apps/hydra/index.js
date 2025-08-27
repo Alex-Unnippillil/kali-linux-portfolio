@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Stepper from './Stepper';
+import progressData from './progress.json';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -37,8 +38,12 @@ const HydraApp = () => {
   const [selectedPass, setSelectedPass] = useState('');
   const [output, setOutput] = useState('');
   const [running, setRunning] = useState(false);
-  const [paused, setPaused] = useState(false);
   const [runId, setRunId] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [attemptRate, setAttemptRate] = useState('');
+  const [eta, setEta] = useState('');
+  const [cracked, setCracked] = useState([]);
+  const progressRef = useRef(null);
 
   useEffect(() => {
     setUserLists(loadWordlists('hydraUserLists'));
@@ -93,55 +98,41 @@ const HydraApp = () => {
     (selectedUserList?.content.split('\n').filter(Boolean).length || 0) *
     (selectedPassList?.content.split('\n').filter(Boolean).length || 0);
 
-  const runHydra = async () => {
+  const runHydra = () => {
     const user = selectedUserList;
     const pass = selectedPassList;
     if (!target || !user || !pass) {
       setOutput('Please provide target, user list and password list');
       return;
     }
-
     setRunning(true);
-    setPaused(false);
     setRunId((id) => id + 1);
     setOutput('');
-    try {
-      const res = await fetch('/api/hydra', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          target,
-          service,
-          userList: user.content,
-          passList: pass.content,
-        }),
-      });
-      const data = await res.json();
-      setOutput(data.output || data.error || 'No output');
-    } catch (err) {
-      setOutput(err.message);
-    } finally {
-      setRunning(false);
-    }
+    setCracked([]);
+    setProgress(0);
+    if (progressRef.current) clearInterval(progressRef.current);
+    const steps = progressData.steps;
+    let i = 0;
+    progressRef.current = setInterval(() => {
+      const step = steps[i];
+      setProgress(step.percent);
+      setAttemptRate(step.attemptsPerSec);
+      setEta(step.eta);
+      if (step.cracked) {
+        setCracked(step.cracked);
+        setOutput(step.cracked.map((c) => `${c.user}:${c.password}`).join('\n'));
+      }
+      i++;
+      if (i >= steps.length) {
+        clearInterval(progressRef.current);
+        setRunning(false);
+      }
+    }, 1000);
   };
 
-  const pauseHydra = async () => {
-    setPaused(true);
-    await fetch('/api/hydra', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'pause' }),
-    });
-  };
-
-  const resumeHydra = async () => {
-    setPaused(false);
-    await fetch('/api/hydra', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'resume' }),
-    });
-  };
+  useEffect(() => {
+    return () => clearInterval(progressRef.current);
+  }, []);
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
@@ -249,36 +240,36 @@ const HydraApp = () => {
         >
           {running ? 'Running...' : 'Run Hydra'}
         </button>
-        {running && !paused && (
-          <button
-            data-testid="pause-button"
-            onClick={pauseHydra}
-            className="ml-2 px-4 py-2 bg-yellow-600 rounded"
-          >
-            Pause
-          </button>
-        )}
-        {running && paused && (
-          <button
-            data-testid="resume-button"
-            onClick={resumeHydra}
-            className="ml-2 px-4 py-2 bg-blue-600 rounded"
-          >
-            Resume
-          </button>
-        )}
       </div>
 
       <Stepper
-        active={running && !paused}
+        active={running}
         totalAttempts={totalAttempts}
         backoffThreshold={5}
         lockoutThreshold={10}
         runId={runId}
       />
 
+      {running && (
+        <div className="mt-4">
+          <div className="w-full bg-gray-700 h-4 rounded">
+            <div
+              className="h-4 bg-blue-600"
+              style={{ width: `${progress}%`, transition: 'width 1s linear' }}
+            />
+          </div>
+          <div className="text-sm mt-1">
+            <div>Attempts/sec: {attemptRate}</div>
+            <div>ETA: {eta}</div>
+          </div>
+        </div>
+      )}
+
       {output && (
         <pre className="mt-4 bg-black p-2 overflow-auto h-64 whitespace-pre-wrap">{output}</pre>
+      )}
+      {cracked.length > 0 && (
+        <p className="text-xs text-yellow-300 mt-2">{progressData.disclaimer}</p>
       )}
     </div>
   );

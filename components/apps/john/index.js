@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   parseRules,
-  distributeTasks,
   identifyHashType,
 } from './utils';
+import progressData from './progress.json';
 
 // Enhanced John the Ripper interface that supports rule uploads,
 // basic hash analysis and mock distribution of cracking tasks.
@@ -20,7 +20,8 @@ const JohnApp = () => {
   const [phase, setPhase] = useState('wordlist');
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [animOffset, setAnimOffset] = useState(0);
-  const workerRef = useRef(null);
+  const [attemptRate, setAttemptRate] = useState(progressData.steps[0].attemptsPerSec);
+  const [eta, setEta] = useState(progressData.steps[0].eta);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -42,28 +43,40 @@ const JohnApp = () => {
     return () => cancelAnimationFrame(frame);
   }, [prefersReducedMotion]);
 
-  useEffect(() => () => workerRef.current?.terminate(), []);
-
-  const startProgress = (total) => {
-    if (workerRef.current) workerRef.current.terminate();
-    workerRef.current = new Worker(new URL('./progress.worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => {
-      const { percent, phase: p } = e.data;
-      setProgress(percent);
-      setPhase(p);
-    };
-    workerRef.current.postMessage({ type: 'init', total });
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const hashArr = hashes.split(/\r?\n/).filter(Boolean);
+    if (!hashArr.length) {
+      setError('At least one hash is required');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    setOutput('');
+    setProgress(0);
+    setPhase('wordlist');
+    let i = 0;
+    const steps = progressData.steps;
+    const id = setInterval(() => {
+      const step = steps[i];
+      setProgress(step.percent);
+      setAttemptRate(step.attemptsPerSec);
+      setEta(step.eta);
+      setPhase(step.phase);
+      if (step.cracked) {
+        setOutput(
+          step.cracked
+            .map((c) => `${c.hash}: ${c.password}`)
+            .join('\n') + `\n\n${progressData.disclaimer}`
+        );
+      }
+      i++;
+      if (i >= steps.length) {
+        clearInterval(id);
+        setLoading(false);
+      }
+    }, 1000);
   };
-
-  const incrementProgress = (p) => {
-    workerRef.current?.postMessage({ type: 'increment', phase: p });
-  };
-
-  const stopProgress = () => {
-    workerRef.current?.terminate();
-    workerRef.current = null;
-  };
-
   const handleRuleUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -82,54 +95,6 @@ const JohnApp = () => {
     setHashTypes(arr.map((h) => identifyHashType(h)));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const hashArr = hashes.split(/\r?\n/).filter(Boolean);
-    if (!hashArr.length) {
-      setError('At least one hash is required');
-      return;
-    }
-    const endpointArr = endpoints
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    setError('');
-    setLoading(true);
-    setOutput('');
-    const totalSteps = hashArr.length * 2;
-    startProgress(totalSteps);
-    try {
-      const assignments = endpointArr.length
-        ? distributeTasks(hashArr, endpointArr)
-        : { local: hashArr };
-      const results = [];
-      for (const [endpoint, hs] of Object.entries(assignments)) {
-        for (const h of hs) {
-          incrementProgress('wordlist');
-          const res = await fetch('/api/john', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hash: h, rules }),
-          });
-          const data = await res.json();
-          incrementProgress('rules');
-          results.push(
-            `${endpoint} (${identifyHashType(h)}): ${
-              data.output || data.error || 'No output'
-            }`
-          );
-        }
-      }
-      setOutput(results.join('\n'));
-      setProgress(100);
-      setPhase('done');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      stopProgress();
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
@@ -204,8 +169,11 @@ const JohnApp = () => {
             </div>
             <p className="text-xs mt-1 text-white" aria-live="polite">
               {phase === 'wordlist'
-                ? `Processing wordlist: ${Math.round(progress)}%`
-                : `Applying rules: ${Math.round(progress)}%`}
+                ? 'Processing wordlist'
+                : phase === 'rules'
+                ? 'Applying rules'
+                : 'Done'}
+              {` - ${attemptRate} - ETA ${eta}`}
             </p>
           </>
         )}
