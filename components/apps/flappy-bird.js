@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 
 const WIDTH = 400;
@@ -6,6 +6,7 @@ const HEIGHT = 300;
 
 const FlappyBird = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+  const liveRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -16,6 +17,7 @@ const FlappyBird = () => {
 
     const width = WIDTH;
     const height = HEIGHT;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     // physics constants
     let bird = { x: 50, y: height / 2, vy: 0 };
@@ -35,6 +37,77 @@ const FlappyBird = () => {
     let loopId = 0;
     let highHz = localStorage.getItem('flappy-120hz') === '1';
     let fps = highHz ? 120 : 60;
+
+    // sky and clouds
+    let skyFrame = 0;
+    let skyProgress = 0;
+    let cloudsBack = [];
+    let cloudsFront = [];
+
+    function mixColor(c1, c2, t) {
+      return `rgb(${Math.round(c1[0] + (c2[0] - c1[0]) * t)},${Math.round(
+        c1[1] + (c2[1] - c1[1]) * t
+      )},${Math.round(c1[2] + (c2[2] - c1[2]) * t)})`;
+    }
+
+    function makeCloud(speed) {
+      return {
+        x: rand() * width,
+        y: rand() * (height / 2),
+        speed,
+        scale: rand() * 0.5 + 0.5,
+      };
+    }
+
+    function initClouds() {
+      cloudsBack = Array.from({ length: 3 }, () => makeCloud(0.2));
+      cloudsFront = Array.from({ length: 3 }, () => makeCloud(0.5));
+    }
+
+    function drawCloud(c) {
+      ctx.save();
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.ellipse(c.x, c.y, 20 * c.scale, 12 * c.scale, 0, 0, Math.PI * 2);
+      ctx.ellipse(c.x + 15 * c.scale, c.y + 2 * c.scale, 20 * c.scale, 12 * c.scale, 0, 0, Math.PI * 2);
+      ctx.ellipse(c.x - 15 * c.scale, c.y + 2 * c.scale, 20 * c.scale, 12 * c.scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function updateClouds() {
+      if (reduceMotion) return;
+      for (const c of cloudsBack) {
+        c.x -= c.speed;
+        if (c.x < -50) c.x = width + rand() * 50;
+      }
+      for (const c of cloudsFront) {
+        c.x -= c.speed;
+        if (c.x < -50) c.x = width + rand() * 50;
+      }
+    }
+
+    function drawBackground() {
+      if (reduceMotion) {
+        ctx.fillStyle = '#87CEEB';
+        ctx.fillRect(0, 0, width, height);
+        skyProgress = 0;
+        return;
+      }
+      const cycle = fps * 20;
+      skyProgress = (Math.sin((skyFrame / cycle) * Math.PI * 2) + 1) / 2;
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, mixColor([135, 206, 235], [0, 0, 64], skyProgress));
+      grad.addColorStop(1, mixColor([135, 206, 235], [0, 0, 32], skyProgress));
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+      skyFrame += 1;
+    }
+
+    function drawClouds() {
+      for (const c of cloudsBack) drawCloud(c);
+      for (const c of cloudsFront) drawCloud(c);
+    }
 
     // seeded rng
     function createRandom(seed) {
@@ -94,12 +167,14 @@ const FlappyBird = () => {
       score = 0;
       running = true;
       flapFrames = [];
+      initClouds();
     }
 
     function startGame(newSeed = Date.now()) {
       reset(newSeed);
       addPipe();
       startLoop();
+      if (liveRef.current) liveRef.current.textContent = 'Score: 0';
     }
 
     function flap(record = true) {
@@ -108,12 +183,11 @@ const FlappyBird = () => {
     }
 
     function draw() {
-      // background
-      ctx.fillStyle = '#87CEEB';
-      ctx.fillRect(0, 0, width, height);
+      drawBackground();
+      drawClouds();
 
       // pipes
-      ctx.fillStyle = '#228B22';
+      ctx.fillStyle = mixColor([34, 139, 34], [144, 238, 144], skyProgress);
       for (const pipe of pipes) {
         ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
         ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, height - pipe.bottom);
@@ -126,7 +200,9 @@ const FlappyBird = () => {
       ctx.fill();
 
       // HUD
-      ctx.fillStyle = 'black';
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(5, 5, 120, 70);
+      ctx.fillStyle = '#fff';
       ctx.font = '16px sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(`Score: ${score}`, 10, 20);
@@ -152,6 +228,8 @@ const FlappyBird = () => {
       if (!running) return;
 
       frame += 1;
+
+      updateClouds();
 
       if (frame % pipeInterval === 0) addPipe();
 
@@ -191,6 +269,7 @@ const FlappyBird = () => {
       if (passed) {
         score += passed;
         pipes = pipes.filter((p) => p.x + pipeWidth >= 0);
+        if (liveRef.current) liveRef.current.textContent = `Score: ${score}`;
       }
 
       draw();
@@ -202,17 +281,26 @@ const FlappyBird = () => {
         }
         isReplaying = false;
         stopLoop();
+        if (liveRef.current) liveRef.current.textContent = `Game over. Final score: ${score}`;
       }
     }
 
     function startLoop() {
       stopLoop();
       fps = highHz ? 120 : 60;
-      loopId = setInterval(update, 1000 / fps);
+      let last = performance.now();
+      const frameFunc = (now) => {
+        loopId = requestAnimationFrame(frameFunc);
+        if (now - last >= 1000 / fps) {
+          update();
+          last = now;
+        }
+      };
+      loopId = requestAnimationFrame(frameFunc);
     }
 
     function stopLoop() {
-      if (loopId) clearInterval(loopId);
+      if (loopId) cancelAnimationFrame(loopId);
     }
 
     function handleKey(e) {
@@ -259,7 +347,17 @@ const FlappyBird = () => {
     };
   }, [canvasRef]);
 
-  return <canvas ref={canvasRef} className="w-full h-full bg-black" />;
+  return (
+    <>
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full bg-black"
+        role="img"
+        aria-label="Flappy Bird game"
+      />
+      <div ref={liveRef} className="sr-only" aria-live="polite" />
+    </>
+  );
 };
 
 export default FlappyBird;
