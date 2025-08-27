@@ -1,9 +1,20 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import MemoryHeatmap from './MemoryHeatmap';
 
 const VolatilityApp = () => {
   const [file, setFile] = useState(null);
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [heatmapData, setHeatmapData] = useState([]);
+  const workerRef = useRef(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
+      workerRef.current = new Worker(new URL('./heatmap.worker.js', import.meta.url));
+      workerRef.current.onmessage = (e) => setHeatmapData(e.data);
+    }
+    return () => workerRef.current?.terminate();
+  }, []);
 
   const analyze = async () => {
     if (!file) return;
@@ -18,6 +29,7 @@ const VolatilityApp = () => {
       });
       const text = await res.text();
       setOutput(text);
+      workerRef.current?.postMessage({});
     } catch (err) {
       setOutput('Analysis failed');
     } finally {
@@ -41,6 +53,7 @@ const VolatilityApp = () => {
           {loading ? 'Analyzing...' : 'Analyze'}
         </button>
       </div>
+      <MemoryHeatmap data={heatmapData} />
       <pre className="flex-1 overflow-auto p-4 bg-black text-green-400 whitespace-pre-wrap">
         {output}
       </pre>
