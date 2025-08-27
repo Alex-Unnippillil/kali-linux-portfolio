@@ -50,6 +50,13 @@ const QRTool = () => {
   const [size, setSize] = useState(256);
   const [contrastMsg, setContrastMsg] = useState('');
   const [contrastOk, setContrastOk] = useState(true);
+  const [cornerColor, setCornerColor] = useState('#000000');
+  const [logo, setLogo] = useState(null);
+  const [activeTab, setActiveTab] = useState('data');
+  const [cameras, setCameras] = useState([]);
+  const [deviceId, setDeviceId] = useState('');
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
 
   const generateRef = useRef(null);
   const qrRef = useRef(null);
@@ -60,6 +67,7 @@ const QRTool = () => {
   const workerRef = useRef(null);
   const fileInputRef = useRef(null);
   const prefersReducedMotion = useRef(false);
+  const flipRef = useRef(false);
 
   useEffect(() => {
     prefersReducedMotion.current = window.matchMedia(
@@ -70,11 +78,30 @@ const QRTool = () => {
   }, []);
 
   useEffect(() => {
+    const fetchDevices = async () => {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const video = devices.filter((d) => d.kind === 'videoinput');
+        setCameras(video);
+        if (video[0]) setDeviceId(video[0].deviceId);
+      } catch {
+        // ignore
+      }
+    };
+    fetchDevices();
+  }, []);
+
+  useEffect(() => {
     const ratio = getContrast(darkColor, lightColor);
     const ok = ratio >= 4.5;
     setContrastOk(ok);
     setContrastMsg(`Contrast ratio: ${ratio.toFixed(2)}${ok ? '' : ' (needs ≥ 4.5)'}`);
   }, [darkColor, lightColor]);
+
+  useEffect(() => {
+    generate();
+  }, [darkColor, lightColor, cornerStyle, cornerColor, errorLevel, size, logo, text, contrastOk]);
 
   const generate = () => {
     if (!text || !contrastOk) return;
@@ -85,12 +112,23 @@ const QRTool = () => {
       qrOptions: { errorCorrectionLevel: errorLevel },
       dotsOptions: { color: darkColor },
       backgroundOptions: { color: lightColor },
-      cornersSquareOptions: { type: cornerStyle, color: darkColor },
+      cornersSquareOptions: { type: cornerStyle, color: cornerColor },
+      cornersDotOptions: { color: cornerColor },
+      image: logo,
+      imageOptions: { crossOrigin: 'anonymous', margin: 4 },
     });
   };
 
   const download = (ext) => {
     qrRef.current?.download({ name: 'qr', extension: ext });
+  };
+
+  const handleLogo = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setLogo(reader.result);
+    reader.readAsDataURL(file);
   };
 
   const initWorker = () => {
@@ -120,6 +158,7 @@ const QRTool = () => {
         data: imageData.data,
         width: imageData.width,
         height: imageData.height,
+        flip: false,
       });
     };
     img.onerror = () => setDecodedText('Could not load image');
@@ -138,6 +177,7 @@ const QRTool = () => {
         data: imageData.data,
         width: imageData.width,
         height: imageData.height,
+        flip: flipRef.current,
       });
     }
     if (prefersReducedMotion.current) {
@@ -145,6 +185,16 @@ const QRTool = () => {
     } else {
       animationRef.current = requestAnimationFrame(scan);
     }
+  };
+
+  const toggleTorch = () => {
+    const track = videoRef.current?.srcObject?.getVideoTracks()[0];
+    if (!track) return;
+    const newTorch = !torchOn;
+    track
+      .applyConstraints({ advanced: [{ torch: newTorch }] })
+      .then(() => setTorchOn(newTorch))
+      .catch(() => {});
   };
 
   const startCamera = async () => {
@@ -159,18 +209,26 @@ const QRTool = () => {
     try {
       initWorker();
       setMessage('Requesting camera permission...');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-      });
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
-      setMessage('Place the QR code within the square');
-      scan();
-    } catch (err) {
-      setMessage('Camera permission denied or unavailable. Upload an image instead.');
-      fileInputRef.current?.focus();
-    }
-  };
+        const constraints = deviceId
+          ? { video: { deviceId: { exact: deviceId } } }
+          : { video: { facingMode: 'environment' } };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const track = stream.getVideoTracks()[0];
+        flipRef.current = track.getSettings()?.facingMode === 'user';
+        const caps = track.getCapabilities ? track.getCapabilities() : {};
+        setTorchSupported(!!caps.torch);
+        setTorchOn(false);
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        setCameras(devices.filter((d) => d.kind === 'videoinput'));
+        setMessage('Place the QR code within the square');
+        scan();
+      } catch (err) {
+        setMessage('Camera permission denied or unavailable. Upload an image instead.');
+        fileInputRef.current?.focus();
+      }
+    };
 
   const stopCamera = () => {
     const stream = videoRef.current?.srcObject;
@@ -180,155 +238,233 @@ const QRTool = () => {
     }
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    if (workerRef.current) {
-      workerRef.current.terminate();
-      workerRef.current = null;
-    }
-    setMessage('');
-  };
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+      setTorchSupported(false);
+      setTorchOn(false);
+      flipRef.current = false;
+      setMessage('');
+    };
 
   useEffect(() => () => stopCamera(), []);
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
-      <div className="mb-6">
-        <h2 className="text-lg mb-2">Generate QR Code</h2>
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          className="w-full p-2 mb-2 rounded text-black"
-          placeholder="Enter text"
-          aria-label="Text to encode"
-        />
-        <div className="flex flex-wrap gap-2 mb-2">
-          <label className="flex items-center space-x-2">
-            <span>Foreground</span>
-            <input
-              type="color"
-              value={darkColor}
-              onChange={(e) => setDarkColor(e.target.value)}
-              aria-label="Select foreground color"
-            />
-          </label>
-          <label className="flex items-center space-x-2">
-            <span>Background</span>
-            <input
-              type="color"
-              value={lightColor}
-              onChange={(e) => setLightColor(e.target.value)}
-              aria-label="Select background color"
-            />
-          </label>
-          <label className="flex items-center space-x-2">
-            <span>Corners</span>
-            <select
-              value={cornerStyle}
-              onChange={(e) => setCornerStyle(e.target.value)}
-              className="text-black p-1 rounded"
-              aria-label="Select corner style"
+        <div className="mb-6">
+          <h2 className="text-lg mb-2">Generate QR Code</h2>
+          <div className="mb-2 flex space-x-2">
+            <button
+              onClick={() => setActiveTab('data')}
+              className={`px-2 py-1 rounded text-white ${
+                activeTab === 'data' ? 'bg-blue-700' : 'bg-gray-700'
+              }`}
             >
-              {cornerStyles.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center space-x-2">
-            <span>EC Level</span>
-            <select
-              value={errorLevel}
-              onChange={(e) => setErrorLevel(e.target.value)}
-              className="text-black p-1 rounded"
-              aria-label="Select error correction level"
+              Data
+            </button>
+            <button
+              onClick={() => setActiveTab('design')}
+              className={`px-2 py-1 rounded text-white ${
+                activeTab === 'design' ? 'bg-blue-700' : 'bg-gray-700'
+              }`}
             >
-              {Object.keys(errorLevels).map((lvl) => (
-                <option key={lvl} value={lvl}>
-                  {lvl}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center space-x-2">
-            <span>Size</span>
-            <input
-              type="range"
-              min="128"
-              max="512"
-              step="32"
-              value={size}
-              onChange={(e) => setSize(parseInt(e.target.value, 10))}
-              aria-label="Select size"
-            />
-            <span className="text-sm">{size}px</span>
-          </label>
+              Design
+            </button>
+          </div>
+          {activeTab === 'data' && (
+            <div>
+              <input
+                type="text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="w-full p-2 mb-2 rounded text-black"
+                placeholder="Enter text"
+                aria-label="Text to encode"
+              />
+              <label className="flex items-center space-x-2 mb-2">
+                <span>EC Level</span>
+                <select
+                  value={errorLevel}
+                  onChange={(e) => setErrorLevel(e.target.value)}
+                  className="text-black p-1 rounded"
+                  aria-label="Select error correction level"
+                >
+                  {Object.keys(errorLevels).map((lvl) => (
+                    <option key={lvl} value={lvl}>
+                      {lvl}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center space-x-2 mb-2">
+                <span>Size</span>
+                <input
+                  type="range"
+                  min="128"
+                  max="512"
+                  step="32"
+                  value={size}
+                  onChange={(e) => setSize(parseInt(e.target.value, 10))}
+                  aria-label="Select size"
+                />
+                <span className="text-sm">{size}px</span>
+              </label>
+              <button
+                onClick={generate}
+                disabled={!contrastOk || !text}
+                className="px-4 py-2 bg-blue-700 hover:bg-blue-600 disabled:opacity-50 rounded text-white"
+                aria-label="Generate QR code"
+              >
+                Generate
+              </button>
+            </div>
+          )}
+          {activeTab === 'design' && (
+            <div>
+              <div className="flex flex-wrap gap-2 mb-2">
+                <label className="flex items-center space-x-2">
+                  <span>Foreground</span>
+                  <input
+                    type="color"
+                    value={darkColor}
+                    onChange={(e) => setDarkColor(e.target.value)}
+                    aria-label="Select foreground color"
+                  />
+                </label>
+                <label className="flex items-center space-x-2">
+                  <span>Background</span>
+                  <input
+                    type="color"
+                    value={lightColor}
+                    onChange={(e) => setLightColor(e.target.value)}
+                    aria-label="Select background color"
+                  />
+                </label>
+                <label className="flex items-center space-x-2">
+                  <span>Eye Color</span>
+                  <input
+                    type="color"
+                    value={cornerColor}
+                    onChange={(e) => setCornerColor(e.target.value)}
+                    aria-label="Select eye color"
+                  />
+                </label>
+                <label className="flex items-center space-x-2">
+                  <span>Eye Shape</span>
+                  <select
+                    value={cornerStyle}
+                    onChange={(e) => setCornerStyle(e.target.value)}
+                    className="text-black p-1 rounded"
+                    aria-label="Select corner style"
+                  >
+                    {cornerStyles.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <span>Logo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogo}
+                    aria-label="Upload logo"
+                  />
+                </label>
+              </div>
+              <p className="text-sm" aria-live="polite">
+                {contrastMsg}
+              </p>
+              <p className="text-sm" aria-live="polite">
+                Error correction strength: {errorLevels[errorLevel].label} (
+                {errorLevels[errorLevel].percent}% )
+              </p>
+              <div className="flex space-x-2 mb-2 mt-2">
+                <button
+                  onClick={generate}
+                  disabled={!contrastOk || !text}
+                  className="px-4 py-2 bg-blue-700 hover:bg-blue-600 disabled:opacity-50 rounded text-white"
+                  aria-label="Update QR code"
+                >
+                  Update
+                </button>
+                <button
+                  onClick={() => download('png')}
+                  className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-white"
+                  aria-label="Download PNG"
+                >
+                  PNG
+                </button>
+                <button
+                  onClick={() => download('svg')}
+                  className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-white"
+                  aria-label="Download SVG"
+                >
+                  SVG
+                </button>
+              </div>
+              <div
+                ref={generateRef}
+                style={{ width: `${size}px`, height: `${size}px` }}
+                className="bg-white"
+                aria-label="Generated QR code"
+              />
+            </div>
+          )}
         </div>
-        <p className="text-sm" aria-live="polite">
-          {contrastMsg}
-        </p>
-        <p className="text-sm" aria-live="polite">
-          Error correction strength: {errorLevels[errorLevel].label} (
-          {errorLevels[errorLevel].percent}% )
-        </p>
-        <div className="flex space-x-2 mb-2 mt-2">
-          <button
-            onClick={generate}
-            disabled={!contrastOk || !text}
-            className="px-4 py-2 bg-blue-700 hover:bg-blue-600 disabled:opacity-50 rounded text-white"
-            aria-label="Generate QR code"
-          >
-            Generate
-          </button>
-          <button
-            onClick={() => download('png')}
-            className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-white"
-            aria-label="Download PNG"
-          >
-            PNG
-          </button>
-          <button
-            onClick={() => download('svg')}
-            className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-white"
-            aria-label="Download SVG"
-          >
-            SVG
-          </button>
-        </div>
-        <div
-          ref={generateRef}
-          style={{ width: `${size}px`, height: `${size}px` }}
-          className="bg-white"
-          aria-label="Generated QR code"
-        />
-      </div>
 
-      <div>
-        <h2 className="text-lg mb-2">Scan QR Code</h2>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleFile}
-          className="mb-2"
-          aria-label="Upload image to scan"
-          ref={fileInputRef}
-        />
-        <div className="flex space-x-2 mb-2">
-          <button
-            onClick={startCamera}
-            className="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
-            aria-label="Start camera for scanning"
-          >
-            Start Camera
-          </button>
-          <button
-            onClick={stopCamera}
-            className="px-4 py-2 bg-red-700 hover:bg-red-600 rounded text-white"
-            aria-label="Stop camera"
-          >
-            Stop Camera
-          </button>
-        </div>
+        <div>
+          <h2 className="text-lg mb-2">Scan QR Code</h2>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFile}
+            className="mb-2"
+            aria-label="Upload image to scan"
+            ref={fileInputRef}
+          />
+          {cameras.length > 0 && (
+            <select
+              value={deviceId}
+              onChange={(e) => setDeviceId(e.target.value)}
+              className="mb-2 text-black p-1 rounded"
+              aria-label="Select camera device"
+            >
+              {cameras.map((cam, i) => (
+                <option key={cam.deviceId} value={cam.deviceId}>
+                  {cam.label || `Camera ${i + 1}`}
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="flex space-x-2 mb-2">
+            <button
+              onClick={startCamera}
+              className="px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
+              aria-label="Start camera for scanning"
+            >
+              Start Camera
+            </button>
+            <button
+              onClick={stopCamera}
+              className="px-4 py-2 bg-red-700 hover:bg-red-600 rounded text-white"
+              aria-label="Stop camera"
+            >
+              Stop Camera
+            </button>
+            {torchSupported && (
+              <button
+                onClick={toggleTorch}
+                className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded text-white"
+                aria-label="Toggle torch"
+              >
+                {torchOn ? 'Torch Off' : 'Torch On'}
+              </button>
+            )}
+          </div>
         <div className="relative w-64 h-64 bg-black">
           <video
             ref={videoRef}
