@@ -50,6 +50,12 @@ const Pong = () => {
     const width = WIDTH;
     const height = HEIGHT;
 
+    const style = getComputedStyle(canvas);
+    const trailLength =
+      parseInt(style.getPropertyValue('--pong-trail-length'), 10) || 10;
+    const trailOpacity =
+      parseFloat(style.getPropertyValue('--pong-trail-opacity')) || 0.2;
+
     const paddleHeight = 80;
     const paddleWidth = 10;
 
@@ -75,6 +81,8 @@ const Pong = () => {
       size: 8,
       scale: 1,
     };
+
+    const trail = [];
 
     let playerScore = 0;
     let oppScore = 0;
@@ -128,6 +136,7 @@ const Pong = () => {
       let vy = rand() * 40 + 40; // 40-80
       if (rand() > 0.5) vy *= -1;
       ball.vy = vy;
+      trail.length = 0;
     };
 
     resetRef.current = () => {
@@ -149,6 +158,16 @@ const Pong = () => {
       ctx.fillRect(0, 0, width, height);
 
       ctx.fillStyle = 'white';
+      for (let i = 0; i < trail.length; i += 1) {
+        const t = trail[i];
+        const alpha = (i + 1) / trail.length * trailOpacity;
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, ball.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
       ctx.save();
       ctx.translate(player.x + paddleWidth / 2, player.y + paddleHeight / 2);
       ctx.rotate(player.rot);
@@ -256,6 +275,9 @@ const Pong = () => {
       // move ball
       ball.x += ball.vx * dt;
       ball.y += ball.vy * dt;
+
+      trail.push({ x: ball.x, y: ball.y });
+      if (trail.length > trailLength) trail.shift();
 
       // wall collisions
       if (ball.y < ball.size) {
@@ -438,7 +460,7 @@ const Pong = () => {
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
       <canvas
         ref={canvasRef}
-        className="bg-black w-full h-full touch-none"
+        className="bg-black w-full h-full touch-none pong-canvas"
       />
       <div className="mt-2">Player: {scores.player} | Opponent: {scores.opponent}</div>
       <div className="mt-1">Games: {match.player} | {match.opponent}</div>

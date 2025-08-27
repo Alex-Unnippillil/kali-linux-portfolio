@@ -346,3 +346,9 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Pong ball trail styling */
+.pong-canvas {
+    --pong-trail-opacity: 0.25;
+    --pong-trail-length: 15;
+}
