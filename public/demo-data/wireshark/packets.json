@@ -1,0 +1,23 @@
+[
+  {
+    "timestamp": "1",
+    "src": "192.168.0.1",
+    "dest": "192.168.0.2",
+    "protocol": 6,
+    "info": "Sample TCP packet"
+  },
+  {
+    "timestamp": "2",
+    "src": "10.0.0.1",
+    "dest": "10.0.0.2",
+    "protocol": 17,
+    "info": "Sample UDP packet"
+  },
+  {
+    "timestamp": "3",
+    "src": "8.8.8.8",
+    "dest": "1.1.1.1",
+    "protocol": 1,
+    "info": "Sample ICMP packet"
+  }
+]

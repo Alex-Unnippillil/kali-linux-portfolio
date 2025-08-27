@@ -1,3 +1,5 @@
+// This component simulates packet capture using local JSON fixtures and avoids
+// parsing user supplied PCAP data or establishing network connections.
 import React, { useEffect, useRef, useState } from 'react';
 import Waterfall from './Waterfall';
 import { protocolName, getRowColor } from './utils';
@@ -17,8 +19,6 @@ const matchesFilter = (packet, filter) => {
 
 const WiresharkApp = ({ initialPackets = [] }) => {
   const [packets, setPackets] = useState(initialPackets);
-  const [socket, setSocket] = useState(null);
-  const [tlsKeys, setTlsKeys] = useState('');
   const [filter, setFilter] = useState('');
   const [colorRuleText, setColorRuleText] = useState('[]');
   const [colorRules, setColorRules] = useState([]);
@@ -76,8 +76,6 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     }
   };
 
-  const handleTLSKeyChange = (e) => setTlsKeys(e.target.value);
-
   const handleColorRulesChange = (e) => {
     const text = e.target.value;
     setColorRuleText(text);
@@ -89,35 +87,19 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     }
   };
 
-  const startCapture = () => {
-    if (socket || typeof window === 'undefined') return;
-    const ws = new WebSocket('ws://localhost:8080');
-    ws.onopen = () => {
-      if (tlsKeys) {
-        ws.send(JSON.stringify({ type: 'tlsKeys', keys: tlsKeys }));
-      }
-    };
-    ws.onmessage = (event) => {
-      try {
-        const pkt = JSON.parse(event.data);
-        setPackets((prev) => [pkt, ...prev].slice(0, 500));
-        if (!pausedRef.current) {
-          workerRef.current?.postMessage(pkt);
-        }
-      } catch (e) {
-        // ignore malformed packets
-      }
-    };
-    ws.onclose = () => setSocket(null);
-    setSocket(ws);
-  };
-
-  const stopCapture = () => {
-    if (socket) {
-      socket.close();
-      setSocket(null);
-    }
-  };
+  // Load packet data from the bundled fixture and send it to the worker.
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof fetch === 'undefined') return;
+    fetch('/demo-data/wireshark/packets.json')
+      .then((res) => res.json())
+      .then((data) => {
+        setPackets(data);
+        data.forEach((pkt) => workerRef.current?.postMessage(pkt));
+      })
+      .catch(() => {
+        // ignore errors loading fixture
+      });
+  }, []);
 
   const handlePause = () => {
     setPaused((p) => {
@@ -136,26 +118,6 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   return (
     <div className="w-full h-full flex flex-col bg-black text-green-400">
       <div className="p-2 flex space-x-2 bg-gray-900">
-        <button
-          onClick={startCapture}
-          disabled={!!socket}
-          className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
-        >
-          Start
-        </button>
-        <button
-          onClick={stopCapture}
-          disabled={!socket}
-          className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
-        >
-          Stop
-        </button>
-        <input
-          value={tlsKeys}
-          onChange={handleTLSKeyChange}
-          placeholder="TLS keys"
-          className="px-2 py-1 bg-gray-800 rounded text-white"
-        />
         <input
           value={filter}
           onChange={handleFilterChange}
