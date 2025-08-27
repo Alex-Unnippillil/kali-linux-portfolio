@@ -1,5 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react';
 
+const parseScripts = (text) => {
+  const lines = text.split('\n');
+  const general = [];
+  const scripts = [];
+  let current = null;
+
+  lines.forEach((line) => {
+    const match = line.match(/^\|_?\s*(\S+?):\s?(.*)/);
+    if (match) {
+      current = { name: match[1], lines: [match[2]], open: false };
+      scripts.push(current);
+    } else if ((line.startsWith('|') || line.startsWith('|_')) && current) {
+      current.lines.push(line.replace(/^\|_?\s*/, ''));
+    } else {
+      current = null;
+      general.push(line);
+    }
+  });
+
+  return { general: general.join('\n'), scripts };
+};
+
 const scripts = [
   { name: 'http-title', description: 'Fetches page titles from HTTP services.' },
   { name: 'ssl-cert', description: 'Retrieves TLS certificate information.' },
@@ -13,6 +35,7 @@ const NmapNSEApp = () => {
   const [target, setTarget] = useState('');
   const [script, setScript] = useState(scripts[0].name);
   const [output, setOutput] = useState('');
+  const [sections, setSections] = useState([]);
   const [scriptSearch, setScriptSearch] = useState('');
   const [library, setLibrary] = useState([]);
   const [profiles, setProfiles] = useState([]);
@@ -69,18 +92,22 @@ const NmapNSEApp = () => {
   const runScan = async (t = target, s = script) => {
     if (!t) return;
     setOutput('Running scan...');
+    setSections([]);
     try {
       const res = await fetch(
         `https://api.hackertarget.com/nmap/?q=${encodeURIComponent(t)}&script=${encodeURIComponent(s)}`
       );
       const text = await res.text();
-      setOutput(text);
+      const parsed = parseScripts(text);
+      setOutput(parsed.general);
+      setSections(parsed.scripts);
       localStorage.setItem(
         'lastNmapProfile',
         JSON.stringify({ target: t, script: s })
       );
     } catch (e) {
       setOutput('Error running scan');
+      setSections([]);
     }
   };
 
@@ -186,9 +213,32 @@ const NmapNSEApp = () => {
           .
         </p>
       </div>
-      <pre className="flex-grow overflow-auto bg-black text-green-400 p-2 rounded">
-        {output}
-      </pre>
+      <div className="flex-grow overflow-auto bg-black text-green-400 p-2 rounded">
+        {output && <pre className="mb-2 whitespace-pre-wrap">{output}</pre>}
+        {sections.map((sec, idx) => (
+          <div
+            key={`${sec.name}-${idx}`}
+            className={`panel ${sec.open ? 'open' : ''}`}
+          >
+            <div
+              className="panel-header"
+              onClick={() =>
+                setSections((prev) =>
+                  prev.map((s, i) =>
+                    i === idx ? { ...s, open: !s.open } : s
+                  )
+                )
+              }
+            >
+              <span className="panel-icon" />
+              <span>{sec.name}</span>
+            </div>
+            <pre className="panel-content whitespace-pre-wrap">
+              {sec.lines.join('\n')}
+            </pre>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

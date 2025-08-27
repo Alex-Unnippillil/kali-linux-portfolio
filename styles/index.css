@@ -199,6 +199,44 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: scaleAppImage 400ms 1 forwards;
 }
 
+/* Panel styling for grouped script output */
+.panel {
+    border: 1px solid var(--color-ub-dark-grey);
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+}
+
+.panel-header {
+    cursor: pointer;
+    background-color: var(--color-ub-cool-grey);
+    padding: 0.25rem 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.panel-icon {
+    width: 1rem;
+    margin-right: 0.5rem;
+}
+
+.panel-icon::before {
+    content: '\25B6';
+}
+
+.panel.open .panel-icon::before {
+    content: '\25BC';
+}
+
+.panel-content {
+    display: none;
+    padding: 0.5rem;
+    background-color: var(--color-ub-grey);
+}
+
+.panel.open .panel-content {
+    display: block;
+}
+
 @keyframes scaleAppImage {
     from {
         transform: translate(-50%, -50%) scale(1);
