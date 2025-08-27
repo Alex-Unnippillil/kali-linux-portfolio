@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { pointerHandlers } from '../../utils/pointer';
-// Stockfish engine removed for compatibility; using simple AI instead
+// Uses Stockfish via web worker for move evaluation
 
 const pieceUnicode = {
   p: { w: '♙', b: '♟' },
@@ -22,11 +22,17 @@ const ChessGame = () => {
   const [highlight, setHighlight] = useState([]);
   const [premove, setPremove] = useState(null);
   const [lastMove, setLastMove] = useState([]);
-  const [skill, setSkill] = useState(5);
+  const [analysis, setAnalysis] = useState(null);
 
   const [whiteTime, setWhiteTime] = useState(initialTime);
   const [blackTime, setBlackTime] = useState(initialTime);
   const timerRef = useRef(null);
+  const workerRef = useRef(null);
+  const [depth, setDepth] = useState(12);
+  const [cursor, setCursor] = useState({ file: 0, rank: 0 });
+  const [puzzles, setPuzzles] = useState([]);
+  const [puzzle, setPuzzle] = useState(null);
+  const [puzzleIndex, setPuzzleIndex] = useState(0);
 
   const updateBoard = () => {
     setBoard(game.board());
@@ -52,8 +58,24 @@ const ChessGame = () => {
   useEffect(() => {
     updateBoard();
     startTimers();
+    const worker = new Worker('/chess/engine.js');
+    workerRef.current = worker;
+    worker.postMessage('uci');
+    fetch('/chess/puzzles.pgn')
+      .then((res) => res.text())
+      .then((text) => {
+        const blocks = text.trim().split(/\n\n/).filter(Boolean);
+        const parsed = blocks.map((pgn) => {
+          const cg = new Chess();
+          cg.load_pgn(pgn);
+          const headers = cg.header();
+          return { fen: headers.FEN, moves: cg.history() };
+        });
+        setPuzzles(parsed);
+      });
     return () => {
       stopTimers();
+      worker.terminate();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -65,68 +87,58 @@ const ChessGame = () => {
     setHighlight([]);
     setPremove(null);
     setLastMove([]);
+    setAnalysis(null);
+    setPuzzle(null);
     setStatus('Your move');
     setWhiteTime(initialTime);
     setBlackTime(initialTime);
     updateBoard();
   };
 
-  const pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
-
-  const evaluateBoard = (g) => {
-    let total = 0;
-    g.board().forEach((row) =>
-      row.forEach((piece) => {
-        if (piece) {
-          const val = pieceValues[piece.type];
-          total += piece.color === 'w' ? val : -val;
+  // Stockfish helpers
+  const analyseFen = (fen, search) =>
+    new Promise((resolve) => {
+      const worker = workerRef.current;
+      let score = 0;
+      const listener = (e) => {
+        const line = e.data || '';
+        if (line.startsWith('info') && line.includes('score')) {
+          const match = line.match(/score (cp|mate) (-?\d+)/);
+          if (match) {
+            score =
+              match[1] === 'mate'
+                ? match[2] > 0
+                  ? 100000
+                  : -100000
+                : parseInt(match[2], 10);
+          }
+        } else if (line.startsWith('bestmove')) {
+          worker.removeEventListener('message', listener);
+          const move = line.split(' ')[1];
+          resolve({ move, score });
         }
-      })
-    );
-    return total;
-  };
-
-  const minimax = (g, d, isMax) => {
-    if (d === 0 || g.game_over()) return evaluateBoard(g);
-    const moves = g.moves();
-    let best = isMax ? -Infinity : Infinity;
-    moves.forEach((move) => {
-      g.move(move);
-      const val = minimax(g, d - 1, !isMax);
-      g.undo();
-      best = isMax ? Math.max(best, val) : Math.min(best, val);
+      };
+      worker.addEventListener('message', listener);
+      worker.postMessage(`position fen ${fen}`);
+      worker.postMessage(
+        `go depth ${depth}${search ? ` searchmoves ${search}` : ''}`
+      );
     });
-    return best;
-  };
 
-  const getBestMove = (g, d) => {
-    const maximizing = g.turn() === 'w';
-    let bestMove = null;
-    let bestValue = maximizing ? -Infinity : Infinity;
-    g.moves().forEach((move) => {
-      g.move(move);
-      const val = minimax(g, d - 1, !maximizing);
-      g.undo();
-      if (
-        (maximizing && val > bestValue) ||
-        (!maximizing && val < bestValue)
-      ) {
-        bestValue = val;
-        bestMove = move;
-      }
-    });
-    return bestMove;
-  };
-
-  const makeAIMove = () => {
-    const moves = game.moves();
-    if (moves.length > 0) {
-      const move = moves[Math.floor(Math.random() * moves.length)];
+  const makeAIMove = async () => {
+    const { move } = await analyseFen(game.fen());
+    if (move) {
       const aiResult = game.move(move, { sloppy: true });
       if (aiResult) setLastMove([aiResult.from, aiResult.to]);
-
       updateBoard();
       updateStatus();
+      const evalAfter = await analyseFen(game.fen());
+      setAnalysis({
+        eval: evalAfter.score,
+        bestMove: evalAfter.move,
+        loss: 0,
+        blunder: false,
+      });
       if (premove) {
         const result = game.move(premove, { sloppy: true });
         setPremove(null);
@@ -139,9 +151,46 @@ const ChessGame = () => {
     }
   };
 
-  const handleSquareClick = (file, rank) => {
+  const handleSquareClick = async (file, rank) => {
     const square = 'abcdefgh'[file] + (8 - rank);
     setCursor({ file, rank });
+
+    if (puzzle) {
+      if (selected) {
+        const move = { from: selected, to: square, promotion: 'q' };
+        const result = game.move(move);
+        if (result) {
+          const san = result.san;
+          const expected = puzzle.moves[puzzleIndex];
+          if (san === expected) {
+            setLastMove([result.from, result.to]);
+            setPuzzleIndex(puzzleIndex + 1);
+            if (puzzleIndex + 1 >= puzzle.moves.length) {
+              setStatus('Puzzle solved!');
+              setPuzzle(null);
+            } else if (puzzle.moves[puzzleIndex + 1]) {
+              game.move(puzzle.moves[puzzleIndex + 1], { sloppy: true });
+              setPuzzleIndex(puzzleIndex + 2);
+            }
+            setSelected(null);
+            setHighlight([]);
+            updateBoard();
+          } else {
+            setStatus('Incorrect. Try again.');
+            game.undo();
+            updateBoard();
+          }
+        }
+      } else {
+        const piece = game.get(square);
+        if (piece && piece.color === game.turn()) {
+          setSelected(square);
+          const moves = game.moves({ square, verbose: true });
+          setHighlight(moves.map((m) => m.to));
+        }
+      }
+      return;
+    }
 
     if (game.turn() === 'b') {
       if (selected) {
@@ -157,6 +206,7 @@ const ChessGame = () => {
 
     if (selected) {
       const move = { from: selected, to: square, promotion: 'q' };
+      const prevFen = game.fen();
       const result = game.move(move);
       if (result) {
         setLastMove([result.from, result.to]);
@@ -164,7 +214,17 @@ const ChessGame = () => {
         setSelected(null);
         setHighlight([]);
         updateStatus();
-        makeAIMove();
+        const uci = `${result.from}${result.to}${result.promotion || ''}`;
+        const best = await analyseFen(prevFen);
+        const actual = await analyseFen(prevFen, uci);
+        const loss = best.score - actual.score;
+        setAnalysis({
+          eval: actual.score,
+          bestMove: best.move,
+          loss,
+          blunder: loss > 100,
+        });
+        await makeAIMove();
       } else {
         setSelected(square);
       }
@@ -255,20 +315,20 @@ const ChessGame = () => {
     }
   };
 
-  const loadPuzzle = async () => {
-    const text = await fetch('/chess/puzzles.pgn').then((res) => res.text());
-    const blocks = text.trim().split(/\n\n/);
-    const block = blocks[Math.floor(Math.random() * blocks.length)];
-    const fenMatch = block.match(/\[FEN "(.*)"\]/);
-    if (fenMatch) {
-      game.load(fenMatch[1]);
-      setPremove(null);
-      setSelected(null);
-      setHighlight([]);
-      setLastMove([]);
-      updateBoard();
-      updateStatus();
-    }
+  const startPuzzle = () => {
+    if (!puzzles.length) return;
+    const p = puzzles[Math.floor(Math.random() * puzzles.length)];
+    const newGame = new Chess(p.fen);
+    setGame(newGame);
+    setBoard(newGame.board());
+    setPuzzle(p);
+    setPuzzleIndex(0);
+    setPremove(null);
+    setSelected(null);
+    setHighlight([]);
+    setLastMove([]);
+    setAnalysis(null);
+    setStatus('Solve the puzzle');
   };
 
   const exploreOpenings = async () => {
@@ -323,15 +383,23 @@ const ChessGame = () => {
         <div>White: {whiteTime}s</div>
         <div>Black: {blackTime}s</div>
       </div>
-      <div className="mt-2">{status}</div>
-      <div className="mt-2 flex flex-wrap gap-2 justify-center">
+        <div className="mt-2">{status}</div>
+        {analysis && (
+          <div className="mt-1 text-sm">
+            Eval: {(analysis.eval / 100).toFixed(2)} | Best: {analysis.bestMove}
+            {analysis.blunder && (
+              <span className="text-red-500 ml-2">Blunder!</span>
+            )}
+          </div>
+        )}
+        <div className="mt-2 flex flex-wrap gap-2 justify-center">
         <button className="px-2 py-1 bg-gray-700" onClick={reset}>
           Reset
         </button>
         <button className="px-2 py-1 bg-gray-700" onClick={undo}>
           Undo
         </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={loadPuzzle}>
+        <button className="px-2 py-1 bg-gray-700" onClick={startPuzzle}>
           Puzzle
         </button>
         <button
@@ -354,14 +422,14 @@ const ChessGame = () => {
         </button>
       </div>
       <div className="mt-2 flex items-center">
-        <label className="mr-2">Depth: {depth}</label>
-        <input
-          type="range"
-          min="1"
-          max="3"
-          value={depth}
-          onChange={(e) => setDepth(Number(e.target.value))}
-        />
+          <label className="mr-2">Depth: {depth}</label>
+          <input
+            type="range"
+            min="8"
+            max="20"
+            value={depth}
+            onChange={(e) => setDepth(Number(e.target.value))}
+          />
       </div>
     </div>
   );
