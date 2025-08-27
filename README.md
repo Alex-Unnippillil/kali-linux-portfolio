@@ -341,4 +341,19 @@ See [`LICENSE`](./LICENSE).
 - `test` → `jest`
 - `test:watch` → `jest --watch`
 - `lint` → `next lint`
+- `smoke` → `node scripts/smoke-all-apps.mjs`
+
+### Smoke Tests
+
+Start the development server in one terminal:
+
+```bash
+npm run dev
+```
+
+In another terminal, run the Playwright smoke test which visits every `/apps/*` route and fails on console errors:
+
+```bash
+npm run smoke
+```
 

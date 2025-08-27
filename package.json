@@ -11,7 +11,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "next lint",
-    "a11y": "pa11y-ci --config pa11yci.json"
+    "a11y": "pa11y-ci --config pa11yci.json",
+    "smoke": "node scripts/smoke-all-apps.mjs"
   },
   "engines": {
     "node": "20.x"
