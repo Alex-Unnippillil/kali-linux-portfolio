@@ -3,7 +3,7 @@ import { useSettings } from '../../hooks/useSettings';
 import { resetSettings, defaults } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { theme, setTheme, accent, setAccent, wallpaper, setWallpaper } = useSettings();
+    const { theme, setTheme, accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
 
@@ -81,6 +81,28 @@ export function Settings() {
                 />
             </div>
             <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Density:</label>
+                <select
+                    value={density}
+                    onChange={(e) => setDensity(e.target.value)}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                >
+                    <option value="regular">Regular</option>
+                    <option value="compact">Compact</option>
+                </select>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={reducedMotion}
+                        onChange={(e) => setReducedMotion(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Reduced Motion
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
                 <div
                     className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
                     style={{ backgroundColor: theme === 'dark' ? '#000000' : '#ffffff', color: theme === 'dark' ? '#ffffff' : '#000000' }}
@@ -124,7 +146,7 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4">
                 <button
-                    onClick={async () => { await resetSettings(); setTheme(defaults.theme); setAccent(defaults.accent); setWallpaper(defaults.wallpaper); }}
+                    onClick={async () => { await resetSettings(); setTheme(defaults.theme); setAccent(defaults.accent); setWallpaper(defaults.wallpaper); setDensity(defaults.density); setReducedMotion(defaults.reducedMotion); }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
                     Reset Desktop
