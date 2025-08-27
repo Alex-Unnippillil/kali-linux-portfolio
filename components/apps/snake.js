@@ -2,6 +2,17 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
 
+// simple deterministic PRNG (https://stackoverflow.com/a/47593316)
+const createRng = (seed) => {
+  return () => {
+    seed |= 0; // ensure int
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
 
 // size of the square play field
 const gridSize = 20;
@@ -11,24 +22,32 @@ const SPEED_STEP = 10;
 const MIN_SPEED = 50;
 const SPEED_INTERVAL = 5; // foods per speed increase
 
-// helper that finds a random unoccupied cell
-const randomCell = (occupied) => {
+// helper that finds a random unoccupied cell using provided rng
+const randomCell = (rng, occupied) => {
   let cell;
   do {
     cell = {
-      x: Math.floor(Math.random() * gridSize),
-      y: Math.floor(Math.random() * gridSize),
+      x: Math.floor(rng() * gridSize),
+      y: Math.floor(rng() * gridSize),
     };
   } while (occupied.some((p) => p.x === cell.x && p.y === cell.y));
   return cell;
 };
 
-const createObstacles = (count, occupied = []) => {
+const createObstacles = (rng, count, occupied = []) => {
   const obs = [];
   while (obs.length < count) {
-    obs.push(randomCell([...occupied, ...obs]));
+    obs.push(randomCell(rng, [...occupied, ...obs]));
   }
   return obs;
+};
+
+const createPortals = (rng, occupied = []) => {
+  const pts = [];
+  while (pts.length < 2) {
+    pts.push(randomCell(rng, [...occupied, ...pts]));
+  }
+  return pts;
 };
 
 const speedLevels = { slow: 200, normal: 150, fast: 100 };
@@ -40,13 +59,20 @@ const Snake = () => {
   const dirQueue = useRef([]); // buffered turns
   const snakeRef = useRef(snake);
 
+  // deterministic rng seed
+  const [seed, setSeed] = useState(Date.now());
+  const rngRef = useRef(createRng(seed));
+
   // entities
-  const [food, setFood] = useState(() => randomCell([{ x: 10, y: 10 }]));
-  const [obstacles, setObstacles] = useState(() => createObstacles(5, [{ x: 10, y: 10 }]));
+  const [food, setFood] = useState(() => randomCell(rngRef.current, [{ x: 10, y: 10 }]));
+  const [obstacles, setObstacles] = useState(() =>
+    createObstacles(rngRef.current, 5, [{ x: 10, y: 10 }])
+  );
+  const [portals, setPortals] = useState([]); // pair of teleport cells
 
   // game state
   const [paused, setPaused] = useState(false);
-  const [wrap, setWrap] = useState(false);
+  const [mode, setMode] = useState('normal'); // normal | wrap | portal
   const [speedSetting, setSpeedSetting] = useState('normal');
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
@@ -59,7 +85,7 @@ const Snake = () => {
 
   // replay handling
   const replayRef = useRef([]); // record of directions
-  const [replayData, setReplayData] = useState([]);
+  const [replayData, setReplayData] = useState(null);
   const [playingReplay, setPlayingReplay] = useState(false);
 
   // fixed time step loop
@@ -71,16 +97,14 @@ const Snake = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const storedMode = localStorage.getItem('snakeMode');
-    if (storedMode) {
+    const stored = localStorage.getItem('snakeMode');
+    if (stored) {
       try {
-        const { wrap: w = false, speed: s = 'normal' } = JSON.parse(storedMode);
-        setWrap(w);
+        const { mode: m = 'normal', speed: s = 'normal' } = JSON.parse(stored);
+        setMode(m);
         setSpeedSetting(s);
         setSpeed(speedLevels[s]);
-        const hs = localStorage.getItem(
-          `snakeHighScore_${w ? 'wrap' : 'nowrap'}_${s}`
-        );
+        const hs = localStorage.getItem(`snakeHighScore_${m}_${s}`);
         if (hs) setHighScore(parseInt(hs, 10));
       } catch {
         // ignore parse errors
@@ -94,11 +118,11 @@ const Snake = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    localStorage.setItem('snakeMode', JSON.stringify({ wrap, speed: speedSetting }));
-    const hs = localStorage.getItem(`snakeHighScore_${wrap ? 'wrap' : 'nowrap'}_${speedSetting}`);
+    localStorage.setItem('snakeMode', JSON.stringify({ mode, speed: speedSetting }));
+    const hs = localStorage.getItem(`snakeHighScore_${mode}_${speedSetting}`);
     setHighScore(hs ? parseInt(hs, 10) : 0);
     setSpeed(speedLevels[speedSetting]);
-  }, [wrap, speedSetting]);
+  }, [mode, speedSetting]);
 
   const enqueueDir = useCallback(
     (dir) => {
@@ -128,50 +152,65 @@ const Snake = () => {
   }, []);
 
   // movement and game logic
-  const step = useCallback(() => {
-    setSnake((prev) => {
-      let dir = direction;
-      if (dirQueue.current.length) {
-        dir = dirQueue.current.shift();
-        setDirection(dir);
-      }
+  const step = useCallback(
+    (replayDir) => {
+      setSnake((prev) => {
+        let dir = direction;
+        if (replayDir) {
+          dir = replayDir;
+          setDirection(dir);
+        } else if (dirQueue.current.length) {
+          dir = dirQueue.current.shift();
+          setDirection(dir);
+        }
 
-      let head = { x: prev[0].x + dir.x, y: prev[0].y + dir.y };
-      if (wrap) {
-        head.x = (head.x + gridSize) % gridSize;
-        head.y = (head.y + gridSize) % gridSize;
-      }
+        let head = { x: prev[0].x + dir.x, y: prev[0].y + dir.y };
+        if (mode === 'wrap') {
+          head.x = (head.x + gridSize) % gridSize;
+          head.y = (head.y + gridSize) % gridSize;
+        }
 
-      const hitWall = head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize;
-      const hitSelf = prev.some((s) => s.x === head.x && s.y === head.y);
-      const hitObstacle = obstacles.some((o) => o.x === head.x && o.y === head.y);
-      if ((!wrap && hitWall) || hitSelf || hitObstacle) {
-        setGameOver(true);
-        setReplayData(replayRef.current);
-        return prev;
-      }
-
-      const newSnake = [head, ...prev];
-      if (head.x === food.x && head.y === food.y) {
-        const occupied = [...newSnake, ...obstacles];
-        const newFood = randomCell(occupied);
-        setFood(newFood);
-        setScore((s) => {
-          const ns = s + 1;
-          if (ns % SPEED_INTERVAL === 0) {
-            setSpeed((sp) => Math.max(MIN_SPEED, sp - SPEED_STEP));
+        if (mode === 'portal' && portals.length === 2) {
+          const idx = portals.findIndex((p) => p.x === head.x && p.y === head.y);
+          if (idx !== -1) {
+            head = { ...portals[1 - idx] };
           }
-          return ns;
-        });
-        setGrowCell(head);
-      } else {
-        newSnake.pop();
-      }
+        }
 
-      replayRef.current.push(dir);
-      return newSnake;
-    });
-  }, [direction, food, obstacles, wrap]);
+        const outOfBounds =
+          head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize;
+        const hitWall = mode !== 'wrap' && outOfBounds;
+        const hitSelf = prev.some((s) => s.x === head.x && s.y === head.y);
+        const hitObstacle = obstacles.some((o) => o.x === head.x && o.y === head.y);
+        if (hitWall || hitSelf || hitObstacle) {
+          setGameOver(true);
+          setReplayData({ seed, mode, steps: replayRef.current });
+          return prev;
+        }
+
+        const newSnake = [head, ...prev];
+        if (head.x === food.x && head.y === food.y) {
+          const occupied = [...newSnake, ...obstacles, ...portals];
+          const newFood = randomCell(rngRef.current, occupied);
+          setFood(newFood);
+          setScore((s) => {
+            const ns = s + 1;
+            if (ns % SPEED_INTERVAL === 0) {
+              setSpeed((sp) => Math.max(MIN_SPEED, sp - SPEED_STEP));
+            }
+            return ns;
+          });
+          setGrowCell(head);
+        } else {
+          newSnake.pop();
+        }
+
+        if (!playingReplay) replayRef.current.push(dir);
+        return newSnake;
+      });
+    },
+    [direction, food, obstacles, portals, mode, seed, playingReplay]
+  );
 
   // fixed time step game loop using rAF
   useEffect(() => {
@@ -193,31 +232,22 @@ const Snake = () => {
 
   // replay playback
   const playReplay = () => {
-    if (!replayData.length) return;
+    if (!replayData) return;
     cancelAnimationFrame(replayFrameRef.current);
+    // reset game with stored seed and mode
+    reset(replayData.seed, replayData.mode, true);
     setPlayingReplay(true);
-    setSnake([{ x: 10, y: 10 }]);
     let i = 0;
     replayLastTimeRef.current = 0;
     const run = (time) => {
       if (!replayLastTimeRef.current) replayLastTimeRef.current = time;
-      if (i >= replayData.length) {
+      if (i >= replayData.steps.length) {
         setPlayingReplay(false);
         return;
       }
       if (time - replayLastTimeRef.current >= speed) {
-        setSnake((prev) => {
-          const dir = replayData[i];
-          i += 1;
-          let head = { x: prev[0].x + dir.x, y: prev[0].y + dir.y };
-          if (wrap) {
-            head.x = (head.x + gridSize) % gridSize;
-            head.y = (head.y + gridSize) % gridSize;
-          }
-          const ns = [head, ...prev];
-          ns.pop();
-          return ns;
-        });
+        step(replayData.steps[i]);
+        i += 1;
         replayLastTimeRef.current = time;
       }
       replayFrameRef.current = requestAnimationFrame(run);
@@ -225,19 +255,32 @@ const Snake = () => {
     replayFrameRef.current = requestAnimationFrame(run);
   };
 
-  const reset = () => {
+  const reset = (seedOverride, modeOverride = mode, keepReplay = false) => {
     cancelAnimationFrame(replayFrameRef.current);
-    setSnake([{ x: 10, y: 10 }]);
+    const newSeed = seedOverride ?? Date.now();
+    setSeed(newSeed);
+    rngRef.current = createRng(newSeed);
+    const start = { x: 10, y: 10 };
+    setSnake([start]);
     setDirection({ x: 0, y: -1 });
     dirQueue.current = [];
-    setFood(randomCell([{ x: 10, y: 10 }]));
-    setObstacles(createObstacles(5, [{ x: 10, y: 10 }]));
+    setMode(modeOverride);
+    const obs = createObstacles(rngRef.current, 5, [start]);
+    setObstacles(obs);
+    const pts =
+      modeOverride === 'portal'
+        ? createPortals(rngRef.current, [start, ...obs])
+        : [];
+    setPortals(pts);
+    setFood(randomCell(rngRef.current, [start, ...obs, ...pts]));
     setScore(0);
     setSpeed(speedLevels[speedSetting]);
     setGameOver(false);
     setPaused(false);
-    replayRef.current = [];
-    setReplayData([]);
+    if (!keepReplay) {
+      replayRef.current = [];
+      setReplayData(null);
+    }
     setGrowCell(null);
     setFoodAnim(false);
   };
@@ -262,12 +305,12 @@ const Snake = () => {
       setHighScore(score);
       if (typeof window !== 'undefined') {
         localStorage.setItem(
-          `snakeHighScore_${wrap ? 'wrap' : 'nowrap'}_${speedSetting}`,
+          `snakeHighScore_${mode}_${speedSetting}`,
           score.toString()
         );
       }
     }
-  }, [gameOver, score, highScore, wrap, speedSetting]);
+  }, [gameOver, score, highScore, mode, speedSetting]);
 
   const cells = [];
   for (let y = 0; y < gridSize; y += 1) {
@@ -275,6 +318,7 @@ const Snake = () => {
       const isSnake = snake.some((s) => s.x === x && s.y === y);
       const isFood = food.x === x && food.y === y;
       const isObstacle = obstacles.some((o) => o.x === x && o.y === y);
+      const isPortal = portals.some((p) => p.x === x && p.y === y);
       cells.push(
         <div
           key={`${x}-${y}`}
@@ -289,6 +333,8 @@ const Snake = () => {
               ? `bg-red-500 ${foodAnim ? 'scale-125' : 'scale-100'}`
               : isObstacle
               ? 'bg-gray-500'
+              : isPortal
+              ? 'bg-blue-500'
               : 'bg-ub-cool-grey'
           }`}
         />
@@ -299,23 +345,38 @@ const Snake = () => {
   return (
     <GameLayout instructions="Use arrow keys or swipe to move.">
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
-        <div className="mb-2 flex space-x-2">
+        <div className="mb-2 flex flex-wrap items-center space-x-2">
           <span>Score: {score}</span>
           <span>| High Score: {highScore}</span>
+          <span>| Seed: {seed}</span>
           <button
             className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
             onClick={() => setPaused((p) => !p)}
-
           >
-            Retry
+            {paused ? 'Resume' : 'Pause'}
           </button>
           <button
             className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
-            onClick={() => setWrap((w) => !w)}
-
+            onClick={() => reset()}
+          >
+            Reset
+          </button>
+          <button
+            className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
+            onClick={playReplay}
+            disabled={!replayData}
           >
             Replay
           </button>
+          <select
+            className="ml-2 px-1 bg-gray-700 rounded"
+            value={mode}
+            onChange={(e) => reset(undefined, e.target.value)}
+          >
+            <option value="normal">Normal</option>
+            <option value="wrap">Wrap</option>
+            <option value="portal">Portal</option>
+          </select>
           <select
             className="ml-2 px-1 bg-gray-700 rounded"
             value={speedSetting}
