@@ -1,13 +1,14 @@
 import React, { useRef, useState } from 'react';
 import Head from 'next/head';
 
-export default function YouTubePlayer({ videoId }) {
+export default function YouTubePlayer({ videoId, onPlay }) {
   const [activated, setActivated] = useState(false);
   const playerRef = useRef(null);
 
   const loadPlayer = () => {
     if (activated) return;
     setActivated(true);
+    if (onPlay) onPlay(videoId);
 
     const createPlayer = () => {
       if (!playerRef.current) return;
