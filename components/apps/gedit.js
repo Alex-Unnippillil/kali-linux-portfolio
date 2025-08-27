@@ -19,6 +19,17 @@ export class Gedit extends Component {
 
     componentDidMount() {
         emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
+        window.addEventListener('keydown', this.handleKey);
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener('keydown', this.handleKey);
+    }
+
+    handleKey = (e) => {
+        if (e.key === 'Escape') {
+            document.getElementById('close-gedit')?.click();
+        }
     }
 
     handleChange = (field) => (e) => {
@@ -74,25 +85,25 @@ export class Gedit extends Component {
 
     render() {
         return (
-            <div className="w-full h-full relative flex flex-col bg-ub-cool-grey text-white select-none">
+            <div className="w-full h-full relative flex flex-col bg-ub-cool-grey text-white select-none" role="dialog" aria-labelledby="gedit-label">
                 <div className="flex items-center justify-between w-full bg-ub-gedit-light bg-opacity-60 border-b border-t border-blue-400 text-sm">
-                    <span className="font-bold ml-2">Send a Message to Me</span>
+                    <label id="gedit-label" className="font-bold ml-2">Send a Message to Me</label>
                     <div className="flex">
-                        <div onClick={this.sendMessage} className="border border-black bg-black bg-opacity-50 px-3 py-0.5 my-1 mx-1 rounded hover:bg-opacity-80">Send</div>
+                        <button type="button" tabIndex={4} onClick={this.sendMessage} className="border border-black bg-black bg-opacity-50 px-3 py-0.5 my-1 mx-1 rounded hover:bg-opacity-80">Send</button>
                     </div>
                 </div>
                 <div className="relative flex-grow flex flex-col bg-ub-gedit-dark font-normal windowMainScreen">
                     <div className="absolute left-0 top-0 h-full px-2 bg-ub-gedit-darker"></div>
                     <div className="relative">
-                        <input id="sender-name" value={this.state.name} onChange={this.handleChange('name')} className=" w-full text-ubt-gedit-orange focus:bg-ub-gedit-light outline-none font-medium text-sm pl-6 py-0.5 bg-transparent" placeholder={this.state.nameError ? "Name must not be Empty!" : "Your Email / Name :"} spellCheck="false" autoComplete="off" type="text" />
+                        <input id="sender-name" tabIndex={1} value={this.state.name} onChange={this.handleChange('name')} className=" w-full text-ubt-gedit-orange focus:bg-ub-gedit-light outline-none font-medium text-sm pl-6 py-0.5 bg-transparent" placeholder={this.state.nameError ? "Name must not be Empty!" : "Your Email / Name :"} spellCheck="false" autoComplete="off" type="text" />
                         <span className="absolute left-1 top-1/2 transform -translate-y-1/2 font-bold light text-sm text-ubt-gedit-blue">1</span>
                     </div>
                     <div className="relative">
-                        <input id="sender-subject" value={this.state.subject} onChange={this.handleChange('subject')} className=" w-full my-1 text-ubt-gedit-blue focus:bg-ub-gedit-light gedit-subject outline-none text-sm font-normal pl-6 py-0.5 bg-transparent" placeholder="subject (may be a feedback for this website!)" spellCheck="false" autoComplete="off" type="text" />
+                        <input id="sender-subject" tabIndex={2} value={this.state.subject} onChange={this.handleChange('subject')} className=" w-full my-1 text-ubt-gedit-blue focus:bg-ub-gedit-light gedit-subject outline-none text-sm font-normal pl-6 py-0.5 bg-transparent" placeholder="subject (may be a feedback for this website!)" spellCheck="false" autoComplete="off" type="text" />
                         <span className="absolute left-1 top-1/2 transform -translate-y-1/2 font-bold  text-sm text-ubt-gedit-blue">2</span>
                     </div>
                     <div className="relative flex-grow">
-                        <textarea id="sender-message" value={this.state.message} onChange={this.handleChange('message')} className=" w-full gedit-message font-light text-sm resize-none h-full windowMainScreen outline-none tracking-wider pl-6 py-1 bg-transparent" placeholder={this.state.messageError ? "Message must not be Empty!" : "Message"} spellCheck="false" autoComplete="none" type="text" />
+                        <textarea id="sender-message" tabIndex={3} value={this.state.message} onChange={this.handleChange('message')} className=" w-full gedit-message font-light text-sm resize-none h-full windowMainScreen outline-none tracking-wider pl-6 py-1 bg-transparent" placeholder={this.state.messageError ? "Message must not be Empty!" : "Message"} spellCheck="false" autoComplete="none" type="text" />
                         <span className="absolute left-1 top-1 font-bold  text-sm text-ubt-gedit-blue">3</span>
                     </div>
                 </div>
