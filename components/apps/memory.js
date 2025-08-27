@@ -16,12 +16,21 @@ const Memory = () => {
   const timerRef = useRef(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
-    const key = useCallback(
-      (s = size, t = timed) => `memory_${s}_${t ? 'timed' : 'casual'}`,
-      [size, timed]
-    );
+  const startTimer = () => {
+    if (!timerRef.current) {
+      timerRef.current = setInterval(() => setTime((t) => t + 1), 1000);
+    }
+  };
 
-    const reset = useCallback((newSize = size) => {
+  const key = useCallback(
+    (s = size, t = timed) => `memory_${s}_${t ? 'timed' : 'casual'}`,
+    [size, timed]
+  );
+
+  const stateKey = useCallback(() => `${key()}_state`, [key]);
+
+  const reset = useCallback(
+    (newSize = size) => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -31,27 +40,47 @@ const Memory = () => {
       setFlipped([]);
       setMatched([]);
       setCards(createDeck(newSize));
-    }, [size]);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(stateKey());
+      }
+    },
+    [size, stateKey]
+  );
 
-    useEffect(() => {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = JSON.parse(localStorage.getItem(stateKey()) || 'null');
+    if (saved && saved.cards && saved.cards.length === size * size) {
+      setCards(saved.cards);
+      setFlipped(saved.flipped || []);
+      setMatched(saved.matched || []);
+      setMoves(saved.moves || 0);
+      setTime(saved.time || 0);
+      if ((saved.time || 0) > 0 || (saved.moves || 0) > 0) {
+        startTimer();
+      }
+    } else {
       reset(size);
-    }, [size, reset]);
-
-    useEffect(() => {
-      if (typeof window === 'undefined') return;
-      const stored = JSON.parse(localStorage.getItem(key()) || '{}');
-      setStats({
-        games: stored.games || 0,
-        bestTime: stored.bestTime ?? null,
-        bestMoves: stored.bestMoves ?? null,
-      });
-    }, [key]);
-
-  const startTimer = () => {
-    if (!timerRef.current) {
-      timerRef.current = setInterval(() => setTime((t) => t + 1), 1000);
     }
-  };
+  }, [size, stateKey, reset]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = JSON.parse(localStorage.getItem(key()) || '{}');
+    setStats({
+      games: stored.games || 0,
+      bestTime: stored.bestTime ?? null,
+      bestMoves: stored.bestMoves ?? null,
+    });
+  }, [key]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem(
+      stateKey(),
+      JSON.stringify({ cards, flipped, matched, moves, time })
+    );
+  }, [cards, flipped, matched, moves, time, stateKey]);
 
     const saveStats = useCallback(() => {
       if (typeof window === 'undefined') return;
@@ -89,8 +118,11 @@ const Memory = () => {
           timerRef.current = null;
         }
         saveStats();
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(stateKey());
+        }
       }
-    }, [matched, cards, saveStats]);
+    }, [matched, cards, saveStats, stateKey]);
 
   const handleFlip = (idx) => {
     if (flipped.includes(idx) || matched.includes(idx)) return;
