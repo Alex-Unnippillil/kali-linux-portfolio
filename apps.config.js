@@ -1,6 +1,6 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
-import { displayX } from './components/apps/x';
+import { displayX } from './components/apps/X';
 import { displaySpotify } from './components/apps/spotify';
 import { displayVsCode } from './components/apps/vscode';
 import { displaySettings } from './components/apps/settings';
@@ -50,6 +50,7 @@ const SudokuApp = createDynamicApp('sudoku', 'Sudoku');
 const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
 const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
 const TetrisApp = createDynamicApp('tetris', 'Tetris');
+const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 

@@ -1,4 +1,12 @@
 import '@testing-library/jest-dom';
+import { TextEncoder, TextDecoder } from 'util';
+
+// Polyfill TextEncoder/TextDecoder for environments lacking them
+// @ts-ignore
+if (typeof global.TextEncoder === 'undefined') global.TextEncoder = TextEncoder;
+// @ts-ignore
+if (typeof global.TextDecoder === 'undefined')
+  global.TextDecoder = TextDecoder as unknown as typeof TextDecoder;
 
 // jsdom does not provide a global Image constructor which is used by
 // some components (e.g. window borders). A minimal mock is sufficient
