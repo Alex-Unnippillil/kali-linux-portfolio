@@ -1,0 +1,9 @@
+appId: com.unnippillil.app
+productName: Unnippillil
+directories:
+  output: dist
+files:
+  - electron/**
+  - package.json
+extraMetadata:
+  main: electron/main.js

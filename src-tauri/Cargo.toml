@@ -1,0 +1,13 @@
+[package]
+name = "unnippillil"
+version = "0.1.0"
+authors = ["Unnippillil"]
+edition = "2021"
+description = "Desktop wrapper for Unnippillil PWA"
+
+[dependencies]
+tauri = { version = "2", features = ["shell-open"] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = ["config-json"] }
+
