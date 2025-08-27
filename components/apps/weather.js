@@ -8,13 +8,20 @@ const demoForecast = () => {
     return d.toISOString().slice(0, 10);
   };
   return {
-    current_weather: { temperature: 21 },
+    current_weather: { temperature: 21, weathercode: 0 },
     daily: {
       time: [day(0), day(1), day(2)],
       temperature_2m_max: [24, 23, 22],
       temperature_2m_min: [16, 15, 14],
+      weathercode: [0, 1, 2],
     },
   };
+};
+
+const codeToIcon = (code) => {
+  if ([0].includes(code)) return 'sunny';
+  if ([1, 2, 3, 45, 48].includes(code)) return 'cloudy';
+  return 'rain';
 };
 
 const Weather = () => {
@@ -63,13 +70,19 @@ const Weather = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 overflow-auto">
-      <div className="text-4xl mb-4">
-        {Math.round(data.current_weather.temperature)}°C
+      <div className="mb-4 flex flex-col items-center">
+        <div className={`weather-icon weather-${codeToIcon(data.current_weather.weathercode)} mb-2`} />
+        <div className="text-4xl">
+          {Math.round(data.current_weather.temperature)}°C
+        </div>
       </div>
       <ul className="text-sm w-full max-w-xs space-y-1">
         {data.daily.time.map((t, i) => (
-          <li key={t} className="flex justify-between">
-            <span>{formatDate(t)}</span>
+          <li key={t} className="flex justify-between items-center">
+            <span className="flex items-center space-x-2">
+              <span>{formatDate(t)}</span>
+              <span className={`weather-icon weather-${codeToIcon(data.daily.weathercode[i])}`} />
+            </span>
             <span>
               {Math.round(data.daily.temperature_2m_max[i])}/
               {Math.round(data.daily.temperature_2m_min[i])}°C

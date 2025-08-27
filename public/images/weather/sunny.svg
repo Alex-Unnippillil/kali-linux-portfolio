@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="20" fill="orange"/>
+  <g stroke="orange" stroke-width="4">
+    <line x1="50" y1="5" x2="50" y2="20"/>
+    <line x1="50" y1="80" x2="50" y2="95"/>
+    <line x1="5" y1="50" x2="20" y2="50"/>
+    <line x1="80" y1="50" x2="95" y2="50"/>
+    <line x1="18" y1="18" x2="28" y2="28"/>
+    <line x1="82" y1="82" x2="72" y2="72"/>
+    <line x1="18" y1="82" x2="28" y2="72"/>
+    <line x1="82" y1="18" x2="72" y2="28"/>
+    <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0 50 50" to="360 50 50" dur="10s" repeatCount="indefinite"/>
+  </g>
+</svg>

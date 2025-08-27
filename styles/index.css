@@ -346,3 +346,13 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+/* Weather icons */
+.weather-icon {
+    width: 40px;
+    height: 40px;
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+.weather-sunny { background-image: url('/images/weather/sunny.svg'); }
+.weather-cloudy { background-image: url('/images/weather/cloudy.svg'); }
+.weather-rain { background-image: url('/images/weather/rain.svg'); }
