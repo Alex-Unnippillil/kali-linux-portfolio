@@ -23,6 +23,9 @@ const ChessGame = () => {
   const [premove, setPremove] = useState(null);
   const [lastMove, setLastMove] = useState([]);
   const [skill, setSkill] = useState(5);
+  const [depth, setDepth] = useState(1);
+  const [suggestedMove, setSuggestedMove] = useState(null);
+  const [cursor, setCursor] = useState({ file: 0, rank: 0 });
 
   const [whiteTime, setWhiteTime] = useState(initialTime);
   const [blackTime, setBlackTime] = useState(initialTime);
@@ -103,8 +106,8 @@ const ChessGame = () => {
     const maximizing = g.turn() === 'w';
     let bestMove = null;
     let bestValue = maximizing ? -Infinity : Infinity;
-    g.moves().forEach((move) => {
-      g.move(move);
+    g.moves({ verbose: true }).forEach((move) => {
+      g.move(move.san);
       const val = minimax(g, d - 1, !maximizing);
       g.undo();
       if (
@@ -116,6 +119,12 @@ const ChessGame = () => {
       }
     });
     return bestMove;
+  };
+
+  const squareToCoords = (sq) => {
+    const file = sq.charCodeAt(0) - 97;
+    const rank = 8 - parseInt(sq[1], 10);
+    return { x: file + 0.5, y: rank + 0.5 };
   };
 
   const makeAIMove = () => {
@@ -138,6 +147,17 @@ const ChessGame = () => {
       }
     }
   };
+
+  useEffect(() => {
+    if (game.turn() === 'w') {
+      const copy = new Chess(game.fen());
+      const best = getBestMove(copy, depth);
+      setSuggestedMove(best);
+    } else {
+      setSuggestedMove(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [board, depth]);
 
   const handleSquareClick = (file, rank) => {
     const square = 'abcdefgh'[file] + (8 - rank);
@@ -314,9 +334,43 @@ const ChessGame = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-2">
-      <div className="grid grid-cols-8">
-        {board.map((row, rank) =>
-          row.map((piece, file) => renderSquare(piece, file, rank))
+      <div className="relative">
+        <div className="grid grid-cols-8">
+          {board.map((row, rank) =>
+            row.map((piece, file) => renderSquare(piece, file, rank))
+          )}
+        </div>
+        {suggestedMove && (
+          <svg
+            className="absolute top-0 left-0 w-full h-full pointer-events-none"
+            viewBox="0 0 8 8"
+          >
+            <defs>
+              <marker
+                id="arrowhead"
+                markerWidth="0.3"
+                markerHeight="0.3"
+                refX="0.15"
+                refY="0.15"
+                orient="auto"
+              >
+                <polygon points="0 0, 0.3 0.15, 0 0.3" className="arrowhead" />
+              </marker>
+            </defs>
+            <line
+              x1={squareToCoords(suggestedMove.from).x}
+              y1={squareToCoords(suggestedMove.from).y}
+              x2={squareToCoords(suggestedMove.to).x}
+              y2={squareToCoords(suggestedMove.to).y}
+              className="suggestion-arrow"
+            />
+            <circle
+              cx={squareToCoords(suggestedMove.to).x}
+              cy={squareToCoords(suggestedMove.to).y}
+              r="0.2"
+              className="hint-circle"
+            />
+          </svg>
         )}
       </div>
       <div className="mt-2 flex space-x-2">
@@ -363,6 +417,20 @@ const ChessGame = () => {
           onChange={(e) => setDepth(Number(e.target.value))}
         />
       </div>
+      <style jsx>{`
+        .suggestion-arrow {
+          stroke: rgba(0, 255, 0, 0.8);
+          stroke-width: 0.15;
+          fill: none;
+          marker-end: url(#arrowhead);
+        }
+        .arrowhead {
+          fill: rgba(0, 255, 0, 0.8);
+        }
+        .hint-circle {
+          fill: rgba(0, 255, 0, 0.5);
+        }
+      `}</style>
     </div>
   );
 };
