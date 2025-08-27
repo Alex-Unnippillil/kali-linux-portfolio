@@ -11,7 +11,7 @@ const HEIGHT = 480;
 const BASE_PADDLE_WIDTH = 80;
 
 // Build bricks from a 0/1 layout grid
-const buildBricks = (layout, width) => {
+export const buildBricks = (layout, width) => {
   const rows = layout.length;
   const cols = layout[0].length;
   const brickWidth = width / cols;
@@ -31,6 +31,76 @@ const buildBricks = (layout, width) => {
     }
   }
   return bricks;
+};
+
+// Resolve paddle collisions with optional magnet and precision assist
+export const handlePaddleCollision = (
+  ball,
+  paddle,
+  magnet = false,
+  assist = false
+) => {
+  if (
+    ball.y + ball.r > paddle.y &&
+    ball.x > paddle.x &&
+    ball.x < paddle.x + paddle.w &&
+    ball.vy > 0
+  ) {
+    ball.y = paddle.y - ball.r;
+    if (magnet) {
+      ball.stuck = true;
+      ball.vx = 0;
+      ball.vy = 0;
+    } else {
+      ball.vy *= -1;
+      if (assist) {
+        const hit =
+          (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+        ball.vx = hit * Math.abs(ball.vy);
+      }
+    }
+    return true;
+  }
+  return false;
+};
+
+// Handle brick collisions, scoring and power-ups
+export const handleBallBrickCollision = (
+  ball,
+  bricks,
+  scoreRef,
+  powerUps = []
+) => {
+  for (let b = 0; b < bricks.length; b += 1) {
+    const brick = bricks[b];
+    if (
+      brick.alive &&
+      ball.x > brick.x &&
+      ball.x < brick.x + brick.w &&
+      ball.y > brick.y &&
+      ball.y < brick.y + brick.h
+    ) {
+      brick.alive = false;
+      ball.vy *= -1;
+      if (scoreRef) scoreRef.current += 10;
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      if (powerUps) {
+        if (Math.random() < 0.2) {
+          const type = Math.random() < 0.5 ? "multi" : "expand";
+          powerUps.push({
+            x: brick.x + brick.w / 2,
+            y: brick.y + brick.h / 2,
+            type,
+            vy: 100,
+          });
+        }
+      }
+      return true;
+    }
+  }
+  return false;
 };
 
 const LevelEditor = ({ onSave, cols = 8, rows = 5 }) => {
@@ -83,6 +153,9 @@ const BreakoutGame = ({ levels }) => {
   const [level, setLevel] = useState(0);
   const scoreRef = useRef(0);
   const highScoresRef = useRef({});
+  const livesRef = useRef(3);
+  const magnetRef = useRef(false);
+  const assistRef = useRef(false);
 
   // Load saved level and highscores
   useEffect(() => {
@@ -131,6 +204,16 @@ const BreakoutGame = ({ levels }) => {
     const keyDown = (e) => {
       if (e.key === "ArrowLeft") keys.left = true;
       if (e.key === "ArrowRight") keys.right = true;
+      if (e.key === "m") magnetRef.current = !magnetRef.current;
+      if (e.key === "p") assistRef.current = !assistRef.current;
+      if (e.key === " ") {
+        balls.forEach((b) => {
+          if (b.stuck) {
+            b.stuck = false;
+            b.vy = -150;
+          }
+        });
+      }
     };
     const keyUp = (e) => {
       if (e.key === "ArrowLeft") keys.left = false;
@@ -158,50 +241,25 @@ const BreakoutGame = ({ levels }) => {
       // Update balls
       for (let i = balls.length - 1; i >= 0; i -= 1) {
         const ball = balls[i];
+        if (ball.stuck) {
+          ball.x = paddle.x + paddle.w / 2;
+          ball.y = paddle.y - ball.r;
+          continue;
+        }
         ball.x += ball.vx * dt;
         ball.y += ball.vy * dt;
 
         if (ball.x < ball.r || ball.x > width - ball.r) ball.vx *= -1;
         if (ball.y < ball.r) ball.vy *= -1;
 
-        // Paddle collision
-        if (
-          ball.y + ball.r > paddle.y &&
-          ball.x > paddle.x &&
-          ball.x < paddle.x + paddle.w &&
-          ball.vy > 0
-        ) {
-          ball.vy *= -1;
-          ball.y = paddle.y - ball.r;
-        }
+        handlePaddleCollision(
+          ball,
+          paddle,
+          magnetRef.current,
+          assistRef.current
+        );
 
-        // Brick collisions
-        for (let b = 0; b < bricks.length; b += 1) {
-          const brick = bricks[b];
-          if (
-            brick.alive &&
-            ball.x > brick.x &&
-            ball.x < brick.x + brick.w &&
-            ball.y > brick.y &&
-            ball.y < brick.y + brick.h
-          ) {
-            brick.alive = false;
-            ball.vy *= -1;
-            scoreRef.current += 10;
-
-            // 20% chance to spawn a power-up
-            if (Math.random() < 0.2) {
-              const type = Math.random() < 0.5 ? "multi" : "expand";
-              powerUps.push({
-                x: brick.x + brick.w / 2,
-                y: brick.y + brick.h / 2,
-                type,
-                vy: 100,
-              });
-            }
-            break;
-          }
-        }
+        handleBallBrickCollision(ball, bricks, scoreRef, powerUps);
 
         // Ball lost
         if (ball.y > height + ball.r) {
@@ -232,9 +290,23 @@ const BreakoutGame = ({ levels }) => {
         }
       }
 
-      // Ensure at least one ball remains
+      // Ensure at least one ball remains and handle lives
       if (balls.length === 0) {
-        balls.push({ x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 });
+        livesRef.current -= 1;
+        if (livesRef.current > 0) {
+          balls.push({
+            x: width / 2,
+            y: height / 2,
+            vx: 150,
+            vy: -150,
+            r: 5,
+          });
+        } else {
+          livesRef.current = 3;
+          scoreRef.current = 0;
+          setLevel(0);
+          bricks = buildBricks(levels[0], width);
+        }
       }
 
       // Render
@@ -272,6 +344,17 @@ const BreakoutGame = ({ levels }) => {
       ctx.fillText(`Level: ${level + 1}`, 10, 10);
       ctx.fillText(`Score: ${scoreRef.current}`, 10, 26);
       ctx.fillText(`High: ${highScoresRef.current[level] || 0}`, 10, 42);
+      ctx.fillText(`Lives: ${livesRef.current}`, 10, 58);
+      ctx.fillText(
+        `Mag: ${magnetRef.current ? "ON" : "OFF"}`,
+        width - 100,
+        10
+      );
+      ctx.fillText(
+        `Aim: ${assistRef.current ? "ON" : "OFF"}`,
+        width - 100,
+        26
+      );
 
       // Level complete
       if (bricks.every((b) => !b.alive)) {
