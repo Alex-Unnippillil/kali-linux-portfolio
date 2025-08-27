@@ -1,0 +1,11 @@
+{
+  "arpTable": [
+    { "ip": "192.168.0.1", "mac": "aa:bb:cc:dd:ee:ff" },
+    { "ip": "192.168.0.2", "mac": "11:22:33:44:55:66" },
+    { "ip": "192.168.0.3", "mac": "77:88:99:aa:bb:cc" }
+  ],
+  "flows": [
+    { "source": "192.168.0.2", "destination": "192.168.0.3", "protocol": "HTTP" },
+    { "source": "192.168.0.3", "destination": "192.168.0.2", "protocol": "HTTP" }
+  ]
+}

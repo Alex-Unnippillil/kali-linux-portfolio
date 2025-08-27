@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import data from './data.json';
 
+const { arpTable, flows } = data;
 const attackerMac = 'aa:aa:aa:aa:aa:aa';
 
 const randomMac = () =>
@@ -252,6 +254,58 @@ const EttercapApp = () => {
         {logs.map((l, i) => (
           <div key={i}>{l}</div>
         ))}
+      </div>
+      <div className="mt-4">
+        <h2 className="font-semibold">ARP Table</h2>
+        <table className="w-full text-left border-collapse mt-2">
+          <caption className="sr-only">Mock ARP entries</caption>
+          <thead>
+            <tr>
+              <th scope="col" className="border-b px-2 py-1">
+                IP Address
+              </th>
+              <th scope="col" className="border-b px-2 py-1">
+                MAC Address
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {arpTable.map(({ ip, mac }) => (
+              <tr key={ip}>
+                <td className="px-2 py-1 font-mono">{ip}</td>
+                <td className="px-2 py-1 font-mono">{mac}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="mt-4">
+        <h2 className="font-semibold">Observed Flows</h2>
+        <table className="w-full text-left border-collapse mt-2">
+          <caption className="sr-only">Mock network flows</caption>
+          <thead>
+            <tr>
+              <th scope="col" className="border-b px-2 py-1">
+                Source
+              </th>
+              <th scope="col" className="border-b px-2 py-1">
+                Destination
+              </th>
+              <th scope="col" className="border-b px-2 py-1">
+                Protocol
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {flows.map((f, i) => (
+              <tr key={`${f.source}-${f.destination}-${i}`}>
+                <td className="px-2 py-1 font-mono">{f.source}</td>
+                <td className="px-2 py-1 font-mono">{f.destination}</td>
+                <td className="px-2 py-1">{f.protocol}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       <div className="mt-4 text-xs bg-gray-800 p-2 rounded">
         <p>
