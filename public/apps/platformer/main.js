@@ -9,6 +9,15 @@ if (cpParam) {
   if (!isNaN(cx) && !isNaN(cy)) checkpoint = { x: cx, y: cy };
 }
 
+const speedrun = params.get('speedrun') === '1';
+const storeKey = `speedrun_${levelFile}`;
+let runData = { positions: [], splits: [] };
+let ghostData = null;
+let ghost = { x: 0, y: 0 };
+let ghostIndex = 0;
+const splitTimes = [];
+let splitsEl = null;
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const tileSize = 16;
@@ -28,6 +37,12 @@ const effects = [];
 
 const timerEl = document.getElementById('timer');
 const completeEl = document.getElementById('complete');
+
+if (speedrun) {
+  splitsEl = document.createElement('div');
+  splitsEl.id = 'splits';
+  document.body.appendChild(splitsEl);
+}
 
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
@@ -75,19 +90,27 @@ function loadLevel(name) {
       mapWidth = data.width;
       mapHeight = data.height;
       tiles = data.tiles;
-      spawn = data.spawn;
-      if (checkpoint) spawn = checkpoint;
-      player.x = spawn.x;
-      player.y = spawn.y;
-      player.vx = player.vy = 0;
-      score = 0;
-      coinTotal = 0;
-      for (let y = 0; y < mapHeight; y++) {
-        for (let x = 0; x < mapWidth; x++) if (tiles[y][x] === 5) coinTotal++;
-      }
-      levelStart = performance.now();
-    });
-}
+        spawn = data.spawn;
+        if (checkpoint) spawn = checkpoint;
+        player.x = spawn.x;
+        player.y = spawn.y;
+        player.vx = player.vy = 0;
+        score = 0;
+        coinTotal = 0;
+        for (let y = 0; y < mapHeight; y++) {
+          for (let x = 0; x < mapWidth; x++) if (tiles[y][x] === 5) coinTotal++;
+        }
+        levelStart = performance.now();
+        if (speedrun) {
+          runData = { positions: [], splits: [] };
+          ghostIndex = 0;
+          splitTimes.length = 0;
+          if (splitsEl) splitsEl.innerHTML = '';
+          const saved = localStorage.getItem(storeKey);
+          ghostData = saved ? JSON.parse(saved).positions : null;
+        }
+      });
+  }
 loadLevel(levelFile);
 
 let last = 0;
@@ -106,11 +129,25 @@ function update(dt) {
     right: keys['ArrowRight'],
     jump: keys['Space']
   };
-  updatePhysics(player, input, dt);
-  movePlayer(player, tiles, tileSize, dt);
-  updateEffects(dt);
+    updatePhysics(player, input, dt);
+    movePlayer(player, tiles, tileSize, dt);
+    updateEffects(dt);
 
-  if (player.y > mapHeight * tileSize) respawn();
+    if (speedrun) {
+      const elapsed = (performance.now() - levelStart) / 1000;
+      runData.positions.push({ t: elapsed, x: player.x, y: player.y });
+      if (ghostData) {
+        while (
+          ghostIndex < ghostData.length - 1 &&
+          ghostData[ghostIndex + 1].t <= elapsed
+        )
+          ghostIndex++;
+        ghost.x = ghostData[ghostIndex].x;
+        ghost.y = ghostData[ghostIndex].y;
+      }
+    }
+
+    if (player.y > mapHeight * tileSize) respawn();
 
   const cx = Math.floor((player.x + player.w / 2) / tileSize);
   const cy = Math.floor((player.y + player.h / 2) / tileSize);
@@ -120,12 +157,13 @@ function update(dt) {
     effects.push({ x: cx * tileSize + tileSize / 2, y: cy * tileSize + tileSize / 2, life: 0 });
     playCoinSound();
   }
-  const tile = getTile(cx, cy);
-  if (tile === 6) {
-    tiles[cy][cx] = 0;
-    spawn = { x: cx * tileSize, y: cy * tileSize };
-    window.parent.postMessage({ type: 'checkpoint', checkpoint: spawn }, '*');
-  }
+    const tile = getTile(cx, cy);
+    if (tile === 6) {
+      tiles[cy][cx] = 0;
+      spawn = { x: cx * tileSize, y: cy * tileSize };
+      window.parent.postMessage({ type: 'checkpoint', checkpoint: spawn }, '*');
+      if (speedrun) addSplit(`CP${splitTimes.length + 1}`);
+    }
 
   const centerX = camera.x + canvas.width / 2;
   const centerY = camera.y + canvas.height / 2;
@@ -140,26 +178,49 @@ function update(dt) {
   camera.x = Math.max(0, Math.min(camera.x, mapWidth * tileSize - canvas.width));
   camera.y = Math.max(0, Math.min(camera.y, mapHeight * tileSize - canvas.height));
 
-  const elapsed = ((performance.now() - levelStart) / 1000).toFixed(2);
-  timerEl.textContent = `Time: ${elapsed}s`;
+    const elapsed = ((performance.now() - levelStart) / 1000).toFixed(2);
+    timerEl.textContent = `Time: ${elapsed}s`;
 
-  if (coinTotal === 0 && score > 0) {
-    if (completeEl) completeEl.classList.remove('hidden');
-    window.parent.postMessage({ type: 'levelComplete' }, '*');
-    coinTotal = -1;
+    if (coinTotal === 0 && score > 0) {
+      if (completeEl) completeEl.classList.remove('hidden');
+      window.parent.postMessage({ type: 'levelComplete' }, '*');
+      coinTotal = -1;
+      if (speedrun) {
+        addSplit('Finish');
+        const total = runData.positions.length
+          ? runData.positions[runData.positions.length - 1].t
+          : 0;
+        runData.splits = splitTimes;
+        runData.total = total;
+        const saved = localStorage.getItem(storeKey);
+        const best = saved ? JSON.parse(saved) : null;
+        if (!best || total < best.total) {
+          localStorage.setItem(storeKey, JSON.stringify(runData));
+        }
+      }
+    }
   }
-}
 
-function respawn() {
-  player.x = spawn.x;
-  player.y = spawn.y;
-  player.vx = player.vy = 0;
-}
+  function respawn() {
+    player.x = spawn.x;
+    player.y = spawn.y;
+    player.vx = player.vy = 0;
+  }
 
-function getTile(x, y) {
-  if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight) return 0;
-  return tiles[y][x];
-}
+  function getTile(x, y) {
+    if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight) return 0;
+    return tiles[y][x];
+  }
+
+  function addSplit(name) {
+    const t = ((performance.now() - levelStart) / 1000).toFixed(2);
+    splitTimes.push({ name, time: t });
+    if (splitsEl) {
+      const line = document.createElement('div');
+      line.textContent = `${name}: ${t}s`;
+      splitsEl.appendChild(line);
+    }
+  }
 
 function updateEffects(dt) {
   for (let i = effects.length - 1; i >= 0; i--) {
@@ -210,11 +271,15 @@ function draw() {
     }
   }
 
-  drawEffects();
+    drawEffects();
+    if (speedrun && ghostData) {
+      ctx.fillStyle = 'rgba(0,255,255,0.5)';
+      ctx.fillRect(ghost.x - camera.x, ghost.y - camera.y, player.w, player.h);
+    }
 
-  ctx.fillStyle = '#0f0';
-  ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
-}
+    ctx.fillStyle = '#0f0';
+    ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
+  }
 
 window.addEventListener('keydown', e => {
   if (e.code === 'KeyR') respawn();
