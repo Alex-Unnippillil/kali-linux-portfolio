@@ -240,6 +240,7 @@ yarn lint
 | Sudoku | /apps/sudoku | Game |
 | Tetris | /apps/tetris | Game |
 | Tic Tac Toe | /apps/tictactoe | Game |
+| Tic Tac Toe 3D | /apps/tictactoe-3d | Game |
 | Tower Defense | /apps/tower-defense | Game |
 | Word Search | /apps/word-search | Game |
 | Wordle | /apps/wordle | Game |
