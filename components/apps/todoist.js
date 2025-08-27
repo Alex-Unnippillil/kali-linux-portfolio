@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { loadTasks, saveTasks } from '../../lib/db/tasks';
+import { get, set, createStore } from 'idb-keyval';
 
 const initialGroups = {
   Today: [],
@@ -20,17 +20,34 @@ export default function Todoist() {
   const [search, setSearch] = useState('');
   const dragged = useRef({ group: '', id: null, title: '' });
   const liveRef = useRef(null);
+  const workerRef = useRef(null);
   const prefersReducedMotion = useRef(
     typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 
+  const store = createStore('portfolio-tasks', 'tasks');
+  const KEY = 'all';
+
   useEffect(() => {
-    loadTasks().then((data) => {
+    get(KEY, store).then((data) => {
       if (data) {
         setGroups({ ...initialGroups, ...data });
       }
     });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
+      workerRef.current = new Worker(new URL('./todoist.worker.js', import.meta.url));
+      workerRef.current.onmessage = (e) => {
+        const { groups: newGroups, taskTitle, to } = e.data || {};
+        if (newGroups && taskTitle && to) {
+          finalizeMove(newGroups, taskTitle, to);
+        }
+      };
+    }
+    return () => workerRef.current?.terminate();
   }, []);
 
   const announce = (task, group) => {
@@ -41,7 +58,7 @@ export default function Todoist() {
 
   const finalizeMove = (newGroups, taskTitle, to) => {
     setGroups(newGroups);
-    saveTasks(newGroups);
+    set(KEY, newGroups, store).catch(() => {});
     announce(taskTitle, to);
     if (!prefersReducedMotion.current) {
       requestAnimationFrame(() => {
@@ -61,8 +78,12 @@ export default function Todoist() {
     const { group: from, id, title } = dragged.current;
     if (!id || from === group) return;
     if (WIP_LIMITS[group] && groups[group].length >= WIP_LIMITS[group]) return;
-    const newGroups = moveTask(groups, from, group, id);
-    finalizeMove(newGroups, title, group);
+    if (workerRef.current) {
+      workerRef.current.postMessage({ type: 'move', groups, from, to: group, id });
+    } else {
+      const newGroups = moveTask(groups, from, group, id);
+      finalizeMove(newGroups, title, group);
+    }
   };
 
   const handleDragOver = (e) => e.preventDefault();
@@ -106,8 +127,18 @@ export default function Todoist() {
       const colIndex = names.indexOf(group);
       const target = names[colIndex + dir];
       if (target && !(WIP_LIMITS[target] && groups[target].length >= WIP_LIMITS[target])) {
-        const newGroups = moveTask(groups, group, target, task.id);
-        finalizeMove(newGroups, task.title, target);
+        if (workerRef.current) {
+          workerRef.current.postMessage({
+            type: 'move',
+            groups,
+            from: group,
+            to: target,
+            id: task.id,
+          });
+        } else {
+          const newGroups = moveTask(groups, group, target, task.id);
+          finalizeMove(newGroups, task.title, target);
+        }
       }
     }
   };

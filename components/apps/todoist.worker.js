@@ -1,5 +1,7 @@
 self.onmessage = (e) => {
-  const { groups, from, to, id } = e.data || {};
+  const { type } = e.data || {};
+  if (type !== 'move') return;
+  const { groups, from, to, id } = e.data;
   const newGroups = {
     ...groups,
     [from]: [...groups[from]],
