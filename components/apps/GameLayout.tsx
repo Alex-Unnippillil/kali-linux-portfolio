@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import HelpOverlay from './HelpOverlay';
+import PerfOverlay from './Games/common/perf';
 
 interface GameLayoutProps {
   gameId: string;
@@ -81,6 +82,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
         ?
       </button>
       {children}
+      <PerfOverlay />
     </div>
   );
 };
