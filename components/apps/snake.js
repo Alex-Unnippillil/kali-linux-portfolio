@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useGameControls from './useGameControls';
+import useGameHaptics from '../../hooks/useGameHaptics';
 
 const GRID_SIZE = 20;
 const CELL_SIZE = 16; // pixels
@@ -30,6 +31,7 @@ const Snake = () => {
   const lastRef = useRef(0);
   const runningRef = useRef(true);
   const audioCtx = useRef(null);
+  const haptics = useGameHaptics();
   const prefersReducedMotion = useRef(false);
 
   const [running, setRunning] = useState(true);
@@ -145,6 +147,7 @@ const Snake = () => {
       head.x >= GRID_SIZE ||
       head.y >= GRID_SIZE
     ) {
+      haptics.danger();
       setGameOver(true);
       setRunning(false);
       beep(120);
@@ -152,6 +155,7 @@ const Snake = () => {
     }
 
     if (snake.some((s) => s.x === head.x && s.y === head.y)) {
+      haptics.danger();
       setGameOver(true);
       setRunning(false);
       beep(120);
@@ -161,6 +165,7 @@ const Snake = () => {
     snake.unshift(head);
     if (head.x === foodRef.current.x && head.y === foodRef.current.y) {
       setScore((s) => s + 1);
+      haptics.score();
       beep(440);
       foodRef.current = randomFood(snake);
       if (!prefersReducedMotion.current) head.scale = 0;
@@ -205,6 +210,10 @@ const Snake = () => {
       }
     }
   }, [gameOver, score, highScore]);
+
+  useEffect(() => {
+    if (gameOver) haptics.gameOver();
+  }, [gameOver, haptics]);
 
   const reset = useCallback(() => {
     snakeRef.current = [
@@ -270,6 +279,12 @@ const Snake = () => {
           onClick={() => setSound((s) => !s)}
         >
           {sound ? 'Sound On' : 'Sound Off'}
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={haptics.toggle}
+        >
+          {haptics.enabled ? 'Haptics On' : 'Haptics Off'}
         </button>
       </div>
     </div>
