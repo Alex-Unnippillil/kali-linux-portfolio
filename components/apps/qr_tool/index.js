@@ -6,6 +6,9 @@ const QRTool = () => {
   const [text, setText] = useState('');
   const [decodedText, setDecodedText] = useState('');
   const [message, setMessage] = useState('');
+  const [scanError, setScanError] = useState('');
+  const [format, setFormat] = useState('png');
+  const [svgData, setSvgData] = useState('');
   const generateCanvasRef = useRef(null);
   const scanCanvasRef = useRef(null);
   const videoRef = useRef(null);
@@ -16,17 +19,48 @@ const QRTool = () => {
     QRCode.toCanvas(generateCanvasRef.current, text, { width: 256 }, (err) => {
       if (err) console.error(err);
     });
+    QRCode.toString(text, { type: 'svg', width: 256 }, (err, data) => {
+      if (err) console.error(err);
+      else setSvgData(data);
+    });
   };
 
   const download = () => {
-    const link = document.createElement('a');
-    link.download = 'qr.png';
-    link.href = generateCanvasRef.current.toDataURL('image/png');
-    link.click();
+    if (format === 'png') {
+      const link = document.createElement('a');
+      link.download = 'qr.png';
+      link.href = generateCanvasRef.current.toDataURL('image/png');
+      link.click();
+    } else {
+      const blob = new Blob([svgData], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = 'qr.svg';
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const copy = async () => {
+    try {
+      if (format === 'png') {
+        generateCanvasRef.current.toBlob(async (blob) => {
+          if (blob) await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        });
+      } else {
+        const blob = new Blob([svgData], { type: 'image/svg+xml' });
+        await navigator.clipboard.write([new ClipboardItem({ 'image/svg+xml': blob })]);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
+    setDecodedText('');
+    setScanError('');
     if (!file) return;
     const img = new Image();
     img.onload = () => {
@@ -37,9 +71,10 @@ const QRTool = () => {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const code = jsQR(imageData.data, imageData.width, imageData.height);
-      setDecodedText(code ? code.data : 'No QR code found');
+      if (code) setDecodedText(code.data);
+      else setScanError('No QR code found');
     };
-    img.onerror = () => setDecodedText('Could not load image');
+    img.onerror = () => setScanError('Could not load image');
     img.src = URL.createObjectURL(file);
   };
 
@@ -111,12 +146,28 @@ const QRTool = () => {
             Generate
           </button>
           <button
+            onClick={copy}
+            className="px-4 py-2 bg-purple-700 hover:bg-purple-600 rounded text-white"
+            aria-label="Copy QR code to clipboard"
+          >
+            Copy
+          </button>
+          <button
             onClick={download}
             className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-white"
             aria-label="Download QR code"
           >
             Download
           </button>
+          <select
+            value={format}
+            onChange={(e) => setFormat(e.target.value)}
+            className="p-2 rounded text-black"
+            aria-label="Select download format"
+          >
+            <option value="png">PNG</option>
+            <option value="svg">SVG</option>
+          </select>
         </div>
         <canvas ref={generateCanvasRef} className="bg-white w-full h-full" />
 
@@ -148,6 +199,7 @@ const QRTool = () => {
           </div>
         </div>
         {message && <p className="mt-2">{message}</p>}
+        {scanError && <p className="mt-2 text-red-400">{scanError}</p>}
         {decodedText && (
           <p className="mt-2 break-all">Decoded: {decodedText}</p>
         )}
