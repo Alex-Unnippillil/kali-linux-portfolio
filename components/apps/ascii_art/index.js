@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { fonts } from '../figlet/fontLoader';
+import { rasterizeFiglet } from '../figlet/rasterize';
 
 // Preset character sets and color palettes
 const presetCharSets = {
@@ -49,6 +51,10 @@ export default function AsciiArt() {
   const workerRef = useRef(null);
   const canvasRef = useRef(null);
   const editorRef = useRef(null);
+  const [figText, setFigText] = useState('');
+  const [figFont, setFigFont] = useState(fonts[0]);
+  const [figOutput, setFigOutput] = useState('');
+  const figWorkerRef = useRef(null);
 
   // Load saved preferences
   useEffect(() => {
@@ -82,6 +88,20 @@ export default function AsciiArt() {
       workerRef.current.terminate();
     };
   }, []);
+
+  useEffect(() => {
+    figWorkerRef.current = new Worker(new URL('../figlet/worker.js', import.meta.url));
+    figWorkerRef.current.onmessage = (e) => setFigOutput(e.data);
+    return () => {
+      figWorkerRef.current?.terminate();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (figWorkerRef.current) {
+      figWorkerRef.current.postMessage({ text: figText, font: figFont });
+    }
+  }, [figText, figFont]);
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
@@ -195,6 +215,15 @@ export default function AsciiArt() {
       link.click();
       URL.revokeObjectURL(url);
     });
+  };
+
+  const downloadFigletPng = () => {
+    if (!figOutput) return;
+    const url = rasterizeFiglet(figOutput);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'figlet.png';
+    link.click();
   };
 
   // Typing mode handlers
@@ -332,6 +361,34 @@ export default function AsciiArt() {
           Alt
         </button>
       </div>
+      <div className="mb-2 flex flex-wrap gap-2">
+        <select
+          value={figFont}
+          onChange={(e) => setFigFont(e.target.value)}
+          className="bg-gray-700"
+        >
+          {fonts.map((f) => (
+            <option key={f} value={f}>
+              {f}
+            </option>
+          ))}
+        </select>
+        <input
+          type="text"
+          value={figText}
+          onChange={(e) => setFigText(e.target.value)}
+          className="flex-1 px-2 bg-gray-700 text-white"
+          placeholder="Figlet text"
+        />
+        <button
+          type="button"
+          onClick={downloadFigletPng}
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+        >
+          PNG
+        </button>
+      </div>
+      <pre className="font-mono whitespace-pre mb-2">{figOutput}</pre>
       {typingMode ? (
         <textarea
           ref={editorRef}
