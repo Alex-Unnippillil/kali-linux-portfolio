@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import usePersistentState from '../../hooks/usePersistentState';
 
@@ -21,6 +21,12 @@ const ReconNG = () => {
   const [view, setView] = useState('run');
   const [marketplace, setMarketplace] = useState([]);
   const [apiKeys, setApiKeys] = usePersistentState('reconng-api-keys', {});
+  const graphRef = useRef();
+  const icon = useMemo(() => {
+    const img = new Image();
+    img.src = '/themes/Yaru/apps/reconng.svg';
+    return img;
+  }, []);
 
   useEffect(() => {
     fetch('/reconng-marketplace.json')
@@ -29,19 +35,28 @@ const ReconNG = () => {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const nodes = allModules.map((id) => ({ id }));
+    const links = allModules.slice(1).map((id, i) => ({
+      source: allModules[i],
+      target: id,
+    }));
+    setGraphData({ nodes, links });
+  }, [marketplace]);
+
   const allModules = [...modules, ...marketplace];
 
   const runModule = () => {
     if (!target) return;
     setOutput(`Running ${selectedModule} on ${target}...\nResults will appear here.`);
-    setGraphData({
-      nodes: [
-        { id: selectedModule },
-        { id: target },
-      ],
-      links: [
-        { source: selectedModule, target },
-      ],
+    setGraphData((prev) => {
+      const nodes = prev.nodes.some((n) => n.id === target)
+        ? prev.nodes
+        : [...prev.nodes, { id: target }];
+      return {
+        nodes,
+        links: [...prev.links, { source: selectedModule, target }],
+      };
     });
   };
 
@@ -102,7 +117,34 @@ const ReconNG = () => {
           <pre className="flex-1 bg-black p-2 overflow-auto whitespace-pre-wrap mb-2">{output}</pre>
           {graphData.nodes.length > 0 && (
             <div className="bg-black p-2" style={{ height: '300px' }}>
-              <ForceGraph2D graphData={graphData} />
+              <ForceGraph2D
+                ref={graphRef}
+                graphData={graphData}
+                linkColor={() => 'rgba(59,130,246,0.4)'}
+                linkWidth={() => 1}
+                nodeCanvasObject={(node, ctx, globalScale) => {
+                  const size = 16;
+                  if (icon.complete) {
+                    ctx.drawImage(icon, node.x - size / 2, node.y - size / 2, size, size);
+                  } else {
+                    icon.onload = () => graphRef.current && graphRef.current.refresh();
+                  }
+                  const label = node.id;
+                  const fontSize = 8 / globalScale;
+                  ctx.font = `${fontSize}px sans-serif`;
+                  ctx.fillStyle = '#fff';
+                  ctx.textAlign = 'center';
+                  ctx.textBaseline = 'top';
+                  ctx.fillText(label, node.x, node.y + size / 2 + 2 / globalScale);
+                }}
+                nodePointerAreaPaint={(node, color, ctx) => {
+                  const size = 16;
+                  ctx.fillStyle = color;
+                  ctx.beginPath();
+                  ctx.arc(node.x, node.y, size / 2, 0, 2 * Math.PI, false);
+                  ctx.fill();
+                }}
+              />
             </div>
           )}
         </>
