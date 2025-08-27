@@ -251,7 +251,188 @@ export const getHint = (
   return null;
 };
 
+/**
+ * Algorithm X with Dancing Links implementation for fast Sudoku solving.
+ * Provides instantaneous solving and puzzle validation.
+ */
+
+class DLXNode {
+  left: DLXNode;
+  right: DLXNode;
+  up: DLXNode;
+  down: DLXNode;
+  column: DLXColumn;
+  row: number;
+
+  constructor() {
+    this.left = this;
+    this.right = this;
+    this.up = this;
+    this.down = this;
+    this.column = null as unknown as DLXColumn;
+    this.row = -1;
+  }
+}
+
+class DLXColumn extends DLXNode {
+  size: number;
+  name: number;
+
+  constructor(name: number) {
+    super();
+    this.size = 0;
+    this.name = name;
+    this.column = this;
+  }
+}
+
+interface Placement {
+  r: number;
+  c: number;
+  n: number;
+}
+
+const buildDLX = (board: number[][]): { header: DLXColumn; placements: Placement[] } => {
+  const header = new DLXColumn(-1);
+  header.left = header.right = header;
+  const columns: DLXColumn[] = [];
+  for (let i = 0; i < 324; i++) {
+    const col = new DLXColumn(i);
+    columns.push(col);
+    col.right = header;
+    col.left = header.left;
+    header.left.right = col;
+    header.left = col;
+  }
+
+  const placements: Placement[] = [];
+  let rowIndex = 0;
+
+  const addRow = (cols: number[]) => {
+    let first: DLXNode | null = null;
+    for (const c of cols) {
+      const column = columns[c];
+      const node = new DLXNode();
+      node.column = column;
+      node.row = rowIndex;
+
+      // vertical links
+      node.down = column;
+      node.up = column.up;
+      column.up.down = node;
+      column.up = node;
+      column.size++;
+
+      // horizontal links
+      if (!first) {
+        first = node;
+        node.left = node.right = node;
+      } else {
+        node.left = first.left;
+        node.right = first;
+        first.left.right = node;
+        first.left = node;
+      }
+    }
+    rowIndex++;
+  };
+
+  for (let r = 0; r < 9; r++) {
+    for (let c = 0; c < 9; c++) {
+      for (let n = 1; n <= 9; n++) {
+        const val = board[r][c];
+        if (val !== 0 && val !== n) continue;
+        const box = Math.floor(r / 3) * 3 + Math.floor(c / 3);
+        const cols = [
+          r * 9 + c,
+          81 + r * 9 + (n - 1),
+          162 + c * 9 + (n - 1),
+          243 + box * 9 + (n - 1),
+        ];
+        placements.push({ r, c, n });
+        addRow(cols);
+      }
+    }
+  }
+
+  return { header, placements };
+};
+
+const solveAllDLX = (board: number[][], limit = 1): number[][][] => {
+  const { header, placements } = buildDLX(board);
+  const solutions: DLXNode[][] = [];
+  const solution: DLXNode[] = [];
+
+  const cover = (column: DLXColumn) => {
+    column.right.left = column.left;
+    column.left.right = column.right;
+    for (let i = column.down; i !== column; i = i.down) {
+      for (let j = i.right; j !== i; j = j.right) {
+        j.down.up = j.up;
+        j.up.down = j.down;
+        j.column.size--;
+      }
+    }
+  };
+
+  const uncover = (column: DLXColumn) => {
+    for (let i = column.up; i !== column; i = i.up) {
+      for (let j = i.left; j !== i; j = j.left) {
+        j.column.size++;
+        j.down.up = j;
+        j.up.down = j;
+      }
+    }
+    column.right.left = column;
+    column.left.right = column;
+  };
+
+  const search = () => {
+    if (solutions.length >= limit) return;
+    if (header.right === header) {
+      solutions.push(solution.slice());
+      return;
+    }
+
+    // choose column with minimum size
+    let c = header.right as DLXColumn;
+    for (let j = c.right as DLXColumn; j !== header; j = j.right as DLXColumn) {
+      if (j.size < c.size) c = j;
+    }
+
+    cover(c);
+    for (let r = c.down; r !== c; r = r.down) {
+      solution.push(r);
+      for (let j = r.right; j !== r; j = j.right) cover(j.column);
+      search();
+      if (solutions.length >= limit) return;
+      solution.pop();
+      for (let j = r.left; j !== r; j = j.left) uncover(j.column);
+    }
+    uncover(c);
+  };
+
+  search();
+
+  return solutions.map((sol) => {
+    const out = Array.from({ length: 9 }, () => Array(9).fill(0));
+    for (const node of sol) {
+      const p = placements[node.row];
+      out[p.r][p.c] = p.n;
+    }
+    return out;
+  });
+};
+
+export const solveDLX = (board: number[][]): number[][] => {
+  const sols = solveAllDLX(board, 1);
+  if (sols.length === 0) throw new Error('No solution');
+  return sols[0];
+};
+
+export const validateDLX = (board: number[][]): boolean => solveAllDLX(board, 2).length === 1;
+
 export const utils = { boardToString, stringToBoard };
 
-const sudokuSolver = { solve, ratePuzzle, getHint };
+const sudokuSolver = { solve, ratePuzzle, getHint, solveDLX, validateDLX };
 export default sudokuSolver;
