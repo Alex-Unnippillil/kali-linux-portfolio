@@ -1,24 +1,30 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import jsQR from 'jsqr';
+import QrScanner from 'qr-scanner';
+
+QrScanner.WORKER_PATH = '/qr-scanner-worker.min.js';
 
 const QRTool = () => {
   const [text, setText] = useState('');
   const [decodedText, setDecodedText] = useState('');
   const [message, setMessage] = useState('');
+  const [cameras, setCameras] = useState([]);
+  const [selectedCamera, setSelectedCamera] = useState('');
+  const [canDownload, setCanDownload] = useState(false);
   const generateCanvasRef = useRef(null);
-  const scanCanvasRef = useRef(null);
   const videoRef = useRef(null);
-  const animationRef = useRef(null);
+  const qrScannerRef = useRef(null);
 
   const generate = () => {
     if (!text) return;
     QRCode.toCanvas(generateCanvasRef.current, text, { width: 256 }, (err) => {
       if (err) console.error(err);
+      else setCanDownload(true);
     });
   };
 
   const download = () => {
+    if (!canDownload) return;
     const link = document.createElement('a');
     link.download = 'qr.png';
     link.href = generateCanvasRef.current.toDataURL('image/png');
@@ -30,61 +36,57 @@ const QRTool = () => {
     if (!file) return;
     const img = new Image();
     img.onload = () => {
-      const canvas = scanCanvasRef.current;
+      const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = img.width;
       canvas.height = img.height;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
-      setDecodedText(code ? code.data : 'No QR code found');
+      QrScanner.scanImage(canvas)
+        .then((result) => setDecodedText(result.data || result))
+        .catch(() => setDecodedText('No QR code found'));
     };
     img.onerror = () => setDecodedText('Could not load image');
     img.src = URL.createObjectURL(file);
   };
-
-  const scan = () => {
-    if (videoRef.current && scanCanvasRef.current) {
-      const canvas = scanCanvasRef.current;
-      const ctx = canvas.getContext('2d');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
-      if (code) {
-        setDecodedText(code.data);
-      }
-    }
-    animationRef.current = requestAnimationFrame(scan);
-  };
-
   const startCamera = async () => {
     try {
       setMessage('Requesting camera permission...');
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
+        video: selectedCamera ? { deviceId: { exact: selectedCamera } } : true,
       });
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
+      qrScannerRef.current = new QrScanner(videoRef.current, (result) => {
+        setDecodedText(result.data);
+      });
+      await qrScannerRef.current.start();
       setMessage('Place the QR code within the square');
-      scan();
     } catch (err) {
       setMessage('Camera permission denied or unavailable');
     }
   };
 
   const stopCamera = () => {
+    qrScannerRef.current?.stop();
+    qrScannerRef.current?.destroy();
+    qrScannerRef.current = null;
     const stream = videoRef.current?.srcObject;
     if (stream) {
       stream.getTracks().forEach((t) => t.stop());
       videoRef.current.srcObject = null;
     }
-    if (animationRef.current) cancelAnimationFrame(animationRef.current);
     setMessage('');
   };
 
   useEffect(() => {
+    navigator.mediaDevices
+      ?.enumerateDevices()
+      .then((devices) => {
+        const vids = devices.filter((d) => d.kind === 'videoinput');
+        setCameras(vids);
+        if (vids[0]) setSelectedCamera(vids[0].deviceId);
+      })
+      .catch(() => {});
     return () => {
       stopCamera();
     };
@@ -110,13 +112,15 @@ const QRTool = () => {
           >
             Generate
           </button>
-          <button
-            onClick={download}
-            className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-white"
-            aria-label="Download QR code"
-          >
-            Download
-          </button>
+          {canDownload && (
+            <button
+              onClick={download}
+              className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded text-white"
+              aria-label="Download QR code"
+            >
+              Download
+            </button>
+          )}
         </div>
         <canvas ref={generateCanvasRef} className="bg-white w-full h-full" />
 
@@ -125,6 +129,20 @@ const QRTool = () => {
       <div>
         <h2 className="text-lg mb-2">Scan QR Code</h2>
         <input type="file" accept="image/*" onChange={handleFile} className="mb-2" aria-label="Upload image to scan" />
+        {cameras.length > 0 && (
+          <select
+            value={selectedCamera}
+            onChange={(e) => setSelectedCamera(e.target.value)}
+            className="mb-2 p-2 rounded text-black"
+            aria-label="Select camera"
+          >
+            {cameras.map((cam, i) => (
+              <option key={cam.deviceId} value={cam.deviceId}>
+                {cam.label || `Camera ${i + 1}`}
+              </option>
+            ))}
+          </select>
+        )}
         <div className="flex space-x-2 mb-2">
           <button
             onClick={startCamera}
@@ -148,10 +166,7 @@ const QRTool = () => {
           </div>
         </div>
         {message && <p className="mt-2">{message}</p>}
-        {decodedText && (
-          <p className="mt-2 break-all">Decoded: {decodedText}</p>
-        )}
-        <canvas ref={scanCanvasRef} className="hidden" />
+        {decodedText && <p className="mt-2 break-all">Decoded: {decodedText}</p>}
       </div>
     </div>
   );
