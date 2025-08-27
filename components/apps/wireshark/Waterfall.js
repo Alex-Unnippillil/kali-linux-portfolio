@@ -1,3 +1,5 @@
+// Renders packet timelines using only bundled JSON fixtures; no user supplied
+// packet data is processed.
 import React, { useEffect, useRef } from 'react';
 import { protocolName, getRowColor } from './utils';
 

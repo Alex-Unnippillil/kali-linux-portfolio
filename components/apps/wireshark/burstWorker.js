@@ -1,3 +1,4 @@
+// Groups packets from the local fixture into bursts; external data is ignored.
 let last = 0;
 let timeline = [];
 self.onmessage = (e) => {

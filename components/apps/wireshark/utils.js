@@ -1,3 +1,4 @@
+// Helper utilities operating on the trusted packet fixtures.
 export const protocolName = (proto) => {
   switch (proto) {
     case 6:
