@@ -1,12 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
-import { generateGrid, createRNG } from './generator';
+import { generateGrid, createRNG, DIFFICULTY_SETTINGS } from './generator';
 import type { Position, WordPlacement } from './types';
 import wordList from '../../components/apps/wordle_words.json';
 import { logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
-
-const WORD_COUNT = 5;
-const GRID_SIZE = 12;
 
 function key(p: Position) {
   return `${p.row}-${p.col}`;
@@ -28,8 +25,13 @@ function computePath(start: Position, end: Position): Position[] {
 
 const WordSearch: React.FC = () => {
   const router = useRouter();
-  const { seed: seedQuery, words: wordsQuery } = router.query as { seed?: string; words?: string };
+  const { seed: seedQuery, words: wordsQuery, difficulty: diffQuery } = router.query as {
+    seed?: string;
+    words?: string;
+    difficulty?: string;
+  };
   const [seed, setSeed] = useState('');
+  const [difficulty, setDifficulty] = useState<keyof typeof DIFFICULTY_SETTINGS>('medium');
   const [words, setWords] = useState<string[]>([]);
   const [grid, setGrid] = useState<string[][]>([]);
   const [placements, setPlacements] = useState<WordPlacement[]>([]);
@@ -38,11 +40,16 @@ const WordSearch: React.FC = () => {
   const [selecting, setSelecting] = useState(false);
   const [start, setStart] = useState<Position | null>(null);
   const [selection, setSelection] = useState<Position[]>([]);
+  const [time, setTime] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [hintsLeft, setHintsLeft] = useState(3);
+  const [hintCells, setHintCells] = useState<Set<string>>(new Set());
 
-  function pickWords(s: string) {
+  function pickWords(s: string, diff: keyof typeof DIFFICULTY_SETTINGS) {
     const rng = createRNG(s);
+    const count = DIFFICULTY_SETTINGS[diff].wordCount;
     const chosen = new Set<string>();
-    while (chosen.size < WORD_COUNT) {
+    while (chosen.size < count) {
       const w = wordList[Math.floor(rng() * wordList.length)];
       chosen.add(w);
     }
@@ -56,19 +63,32 @@ const WordSearch: React.FC = () => {
         : [];
     const defaultSeed = new Date().toISOString().split('T')[0];
     const s = typeof seedQuery === 'string' ? seedQuery : defaultSeed;
+    const diff =
+      diffQuery === 'easy' || diffQuery === 'hard' || diffQuery === 'medium'
+        ? (diffQuery as keyof typeof DIFFICULTY_SETTINGS)
+        : 'medium';
     setSeed(s);
-    setWords(queryWords.length ? queryWords : pickWords(s));
-  }, [seedQuery, wordsQuery]);
+    setDifficulty(diff);
+    setWords(queryWords.length ? queryWords : pickWords(s, diff));
+  }, [seedQuery, wordsQuery, diffQuery]);
 
   useEffect(() => {
     if (!seed || !words.length) return;
-    const { grid: g, placements: p } = generateGrid(words, GRID_SIZE, seed);
+    const { grid: g, placements: p } = generateGrid(words, difficulty, seed);
     setGrid(g);
     setPlacements(p);
     setFound(new Set());
     setFoundCells(new Set());
+    setHintCells(new Set());
+    setHintsLeft(3);
+    if (timerRef.current) clearInterval(timerRef.current);
+    setTime(0);
+    timerRef.current = setInterval(() => setTime((t) => t + 1), 1000);
     logGameStart('word_search');
-  }, [seed, words]);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [seed, words, difficulty]);
 
   const handleMouseDown = (r: number, c: number) => {
     setSelecting(true);
@@ -102,6 +122,7 @@ const WordSearch: React.FC = () => {
       selection.forEach((p) => newCells.add(key(p)));
       setFoundCells(newCells);
       if (newFound.size === words.length) {
+        if (timerRef.current) clearInterval(timerRef.current);
         logGameEnd('word_search');
       }
     }
@@ -110,7 +131,7 @@ const WordSearch: React.FC = () => {
   };
 
   const copyLink = async () => {
-    const params = new URLSearchParams({ seed, words: words.join(',') });
+    const params = new URLSearchParams({ seed, difficulty, words: words.join(',') });
     const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
     try {
       await navigator.clipboard?.writeText(url);
@@ -122,15 +143,26 @@ const WordSearch: React.FC = () => {
   const newPuzzle = () => {
     const newSeed = Math.random().toString(36).slice(2);
     router.replace(
-      { pathname: router.pathname, query: { seed: newSeed, words: words.join(',') } },
+      { pathname: router.pathname, query: { seed: newSeed, difficulty } },
       undefined,
       { shallow: true }
     );
   };
 
+  const showHint = () => {
+    if (hintsLeft <= 0) return;
+    const remaining = placements.filter((p) => !found.has(p.word));
+    if (!remaining.length) return;
+    const choice = remaining[Math.floor(Math.random() * remaining.length)];
+    const cells = new Set(choice.positions.map((p) => key(p)));
+    setHintCells(cells);
+    setHintsLeft((h) => h - 1);
+    setTimeout(() => setHintCells(new Set()), 1000);
+  };
+
   return (
     <div className="p-4 select-none">
-      <div className="flex space-x-2 mb-2 print:hidden">
+      <div className="flex space-x-2 mb-2 print:hidden items-center">
         <button
           type="button"
           onClick={newPuzzle}
@@ -138,6 +170,21 @@ const WordSearch: React.FC = () => {
         >
           New
         </button>
+        <select
+          value={difficulty}
+          onChange={(e) =>
+            router.replace(
+              { pathname: router.pathname, query: { seed, difficulty: e.target.value } },
+              undefined,
+              { shallow: true }
+            )
+          }
+          className="px-2 py-1 text-black rounded"
+        >
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
         <button
           type="button"
           onClick={copyLink}
@@ -152,11 +199,20 @@ const WordSearch: React.FC = () => {
         >
           Print
         </button>
+        <button
+          type="button"
+          onClick={showHint}
+          disabled={hintsLeft <= 0}
+          className="px-2 py-1 bg-purple-700 text-white rounded disabled:opacity-50"
+        >
+          Hint ({hintsLeft})
+        </button>
+        <div className="ml-auto">{Math.floor(time / 60)}:{('0' + (time % 60)).slice(-2)}</div>
       </div>
       <div
         style={{
-          gridTemplateColumns: `repeat(${GRID_SIZE}, 2rem)`,
-          gridTemplateRows: `repeat(${GRID_SIZE}, 2rem)`,
+          gridTemplateColumns: `repeat(${DIFFICULTY_SETTINGS[difficulty].size}, 2rem)`,
+          gridTemplateRows: `repeat(${DIFFICULTY_SETTINGS[difficulty].size}, 2rem)`,
         }}
         className="grid border w-max"
         onMouseLeave={handleMouseUp}
@@ -166,13 +222,22 @@ const WordSearch: React.FC = () => {
             const posKey = key({ row: r, col: c });
             const isSelected = selection.some((p) => p.row === r && p.col === c);
             const isFound = foundCells.has(posKey);
+            const isHint = hintCells.has(posKey);
             return (
               <div
                 key={posKey}
                 onMouseDown={() => handleMouseDown(r, c)}
                 onMouseEnter={() => handleMouseEnter(r, c)}
                 onMouseUp={handleMouseUp}
-                className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none ${isFound ? 'bg-green-300' : isSelected ? 'bg-yellow-300' : 'bg-white'}`}
+                className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none ${
+                  isFound
+                    ? 'bg-green-300'
+                    : isHint
+                    ? 'bg-blue-300'
+                    : isSelected
+                    ? 'bg-yellow-300'
+                    : 'bg-white'
+                }`}
               >
                 {letter}
               </div>
