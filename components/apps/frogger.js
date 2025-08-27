@@ -316,30 +316,37 @@ const Frogger = () => {
             const idx = PAD_POSITIONS.indexOf(x);
             if (idx >= 0) ctx.fillStyle = padsRef.current[idx] ? '#22c55e' : '#15803d';
             else ctx.fillStyle = '#1e3a8a';
-          } else if (y === 3 || y === 6) ctx.fillStyle = '#15803d';
-          else if (y >= 4 && y <= 5) ctx.fillStyle = '#374151';
-          else ctx.fillStyle = '#1e3a8a';
-          ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
-          if (y >= 4 && y <= 5) {
+            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+          } else if (y === 3 || y === 6) {
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+          } else if (y >= 4 && y <= 5) {
+            ctx.fillStyle = '#374151';
+            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+            ctx.fillStyle = '#9ca3af';
+            ctx.fillRect(x * CELL, y * CELL, CELL, 4);
             ctx.fillStyle = '#111827';
             ctx.fillRect(x * CELL, y * CELL + CELL - 4, CELL, 4);
+          } else {
+            ctx.fillStyle = '#1e3a8a';
+            ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
           }
         }
       }
-      const rippleColor = '#60a5fa';
+      const rippleColor = '#93c5fd';
       if (reduceMotionRef.current) {
         ctx.fillStyle = rippleColor;
         for (let x = 0; x < WIDTH; x += 1) {
-          ctx.fillRect(x * CELL, CELL, CELL, 2);
-          ctx.fillRect(x * CELL, CELL * 3 - 2, CELL, 2);
+          ctx.fillRect(x * CELL, CELL, CELL, 4);
+          ctx.fillRect(x * CELL, CELL * 3 - 4, CELL, 4);
         }
       } else {
         const phase = rippleRef.current;
         ctx.fillStyle = rippleColor;
         for (let x = 0; x < WIDTH; x += 1) {
           const offset = Math.sin(phase + x) * 2;
-          ctx.fillRect(x * CELL, CELL + offset, CELL, 2);
-          ctx.fillRect(x * CELL, CELL * 3 - 2 + offset, CELL, 2);
+          ctx.fillRect(x * CELL, CELL + offset, CELL, 4);
+          ctx.fillRect(x * CELL, CELL * 3 - 4 + offset, CELL, 4);
         }
       }
       logsRef.current.forEach((lane) => {
