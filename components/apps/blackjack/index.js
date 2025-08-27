@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useReducer } from 'react';
 import ReactGA from 'react-ga4';
-import { BlackjackGame, handValue, basicStrategy, cardValue } from './engine';
+import { BlackjackGame, handValue, basicStrategy, cardValue, Shoe } from './engine';
 
 const CHIP_VALUES = [1, 5, 25, 100];
 
@@ -53,6 +53,11 @@ const Blackjack = () => {
   const [shuffling, setShuffling] = useState(false);
   const [showCount, setShowCount] = useState(false);
   const [runningCount, setRunningCount] = useState(0);
+  const [practice, setPractice] = useState(false);
+  const practiceShoe = useRef(new Shoe(1));
+  const [practiceCard, setPracticeCard] = useState(null);
+  const [practiceGuess, setPracticeGuess] = useState('');
+  const [streak, setStreak] = useState(0);
 
   const [_, dispatch] = useReducer(gameReducer, {
     gameRef,
@@ -91,6 +96,10 @@ const Blackjack = () => {
   };
 
   const act = (type) => {
+    const rec = recommended();
+    if (rec && rec !== type) {
+      ReactGA.event({ category: 'Blackjack', action: 'deviation', label: `${rec}->${type}` });
+    }
     dispatch({ type });
     update();
     if (gameRef.current.current >= gameRef.current.playerHands.length) {
@@ -121,8 +130,36 @@ const Blackjack = () => {
     });
   };
 
+  const startPractice = () => {
+    practiceShoe.current.shuffle();
+    setStreak(0);
+    setPracticeCard(practiceShoe.current.draw());
+    setPractice(true);
+    ReactGA.event({ category: 'Blackjack', action: 'count_practice_start' });
+  };
+
+  const submitPractice = () => {
+    const guess = parseInt(practiceGuess, 10);
+    if (guess === practiceShoe.current.runningCount) {
+      setStreak((s) => s + 1);
+    } else {
+      ReactGA.event({ category: 'Blackjack', action: 'count_streak', value: streak });
+      setStreak(0);
+    }
+    setPracticeGuess('');
+    setPracticeCard(practiceShoe.current.draw());
+  };
+
+  const endPractice = () => {
+    if (streak > 0) {
+      ReactGA.event({ category: 'Blackjack', action: 'count_streak', value: streak });
+    }
+    setPractice(false);
+  };
+
   useEffect(() => {
     const onKey = (e) => {
+      if (practice) return;
       if (['1', '2', '3', '4'].includes(e.key) && bet >= 0 && playerHands.length === 0) {
         const val = CHIP_VALUES[parseInt(e.key, 10) - 1];
         if (bet + val <= bankroll) setBet(bet + val);
@@ -168,6 +205,31 @@ const Blackjack = () => {
 
   const rec = showHints ? recommended() : '';
 
+  if (practice) {
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+        {practiceCard && (
+          <div className="text-4xl mb-4">{`${practiceCard.value}${practiceCard.suit}`}</div>
+        )}
+        <input
+          type="number"
+          value={practiceGuess}
+          onChange={(e) => setPracticeGuess(e.target.value)}
+          className="text-black mb-2 px-2 py-1"
+        />
+        <div className="flex space-x-2">
+          <button className="px-3 py-1 bg-gray-700" onClick={submitPractice}>
+            Submit
+          </button>
+          <button className="px-3 py-1 bg-gray-700" onClick={endPractice}>
+            Exit
+          </button>
+        </div>
+        <div className="mt-4">Streak: {streak}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
       <div className="mb-2 flex items-center space-x-4">
@@ -175,18 +237,21 @@ const Blackjack = () => {
         <div className={`h-8 w-6 bg-gray-700 ${shuffling ? 'shuffle' : ''}`}></div>
         {showCount && <div>RC: {runningCount}</div>}
       </div>
-      <div className="mb-2 flex items-center space-x-2">
-        <button className="px-2 py-1 bg-gray-700" onClick={() => setShowHints(!showHints)}>
-          {showHints ? 'Hide Hints' : 'Show Hints'}
-        </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={() => setShowCount(!showCount)}>
-          {showCount ? 'Hide Count' : 'Show Count'}
-        </button>
-        <label className="flex items-center space-x-1">
-          <span className="text-sm">Pen</span>
-          <input
-            type="number"
-            step="0.05"
+        <div className="mb-2 flex items-center space-x-2">
+          <button className="px-2 py-1 bg-gray-700" onClick={() => setShowHints(!showHints)}>
+            {showHints ? 'Hide Hints' : 'Show Hints'}
+          </button>
+          <button className="px-2 py-1 bg-gray-700" onClick={() => setShowCount(!showCount)}>
+            {showCount ? 'Hide Count' : 'Show Count'}
+          </button>
+          <button className="px-2 py-1 bg-gray-700" onClick={startPractice}>
+            Practice Count
+          </button>
+          <label className="flex items-center space-x-1">
+            <span className="text-sm">Pen</span>
+            <input
+              type="number"
+              step="0.05"
             min="0.5"
             max="0.95"
             value={penetration}
