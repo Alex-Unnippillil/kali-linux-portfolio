@@ -24,6 +24,9 @@ export default function GuideOverlay({ onClose }) {
     >
       <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
         <h2 className="text-xl font-bold mb-2">BeEF Workflow</h2>
+        <p className="mb-2 text-sm font-semibold text-yellow-400">
+          Demo only. No real exploitation is performed.
+        </p>
         <ul className="list-disc pl-5 mb-4 space-y-1">
           <li>Use <strong>Refresh</strong> to load hooked browsers.</li>
           <li>Select a browser from the list to target.</li>
@@ -36,8 +39,8 @@ export default function GuideOverlay({ onClose }) {
             checked={dontShow}
             onChange={(e) => setDontShow(e.target.checked)}
           />
-            <span>Don&apos;t show again</span>
-          </label>
+          <span>Don&apos;t show again</span>
+        </label>
         <button
           onClick={handleClose}
           className="mt-4 px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
