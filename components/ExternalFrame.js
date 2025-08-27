@@ -15,19 +15,49 @@ export default function ExternalFrame({ src, title, prefetch = false, onLoad: on
   const [cookiesBlocked, setCookiesBlocked] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
     try {
       document.cookie = 'third_party_cookie_test=1';
-      const blocked = !document.cookie.includes('third_party_cookie_test=1');
-      setCookiesBlocked(blocked);
+      const blockedCookie = !document.cookie.includes('third_party_cookie_test=1');
+      setCookiesBlocked(blockedCookie);
     } catch {
       setCookiesBlocked(true);
     }
   }, []);
 
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch(src, { method: 'HEAD', mode: 'cors' });
+        const xfo = res.headers.get('x-frame-options');
+        const csp = res.headers.get('content-security-policy');
+        if (xfo || (csp && /frame-ancestors|frame-src|child-src/.test(csp))) {
+          setBlocked(true);
+        }
+      } catch {
+        setBlocked(true);
+      }
+    };
+    if (isAllowed(src)) {
+      check();
+    }
+  }, [src]);
+
   if (!isAllowed(src)) {
     return null;
+  }
+
+  if (blocked) {
+    return (
+      <div className="flex flex-col items-center justify-center w-full h-full text-center p-4">
+        <p className="mb-2">This site refused to connect.</p>
+        <a href={src} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
+          Open in new tab
+        </a>
+      </div>
+    );
   }
 
   return (
