@@ -3,10 +3,21 @@ import React, { useEffect, useRef, useState } from 'react';
 const DiscoveryMap = ({ trigger }) => {
   const canvasRef = useRef(null);
   const [ariaMessage, setAriaMessage] = useState('');
+  const [stage, setStage] = useState('');
+  const [prefersReduced, setPrefersReduced] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handle = () => setPrefersReduced(mq.matches);
+    handle();
+    mq.addEventListener('change', handle);
+    return () => mq.removeEventListener('change', handle);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    setStage('Discovery');
 
     const supportsWorker =
       typeof window !== 'undefined' &&
@@ -25,9 +36,20 @@ const DiscoveryMap = ({ trigger }) => {
         { type: 'init', canvas: offscreen, reduceMotion },
         [offscreen]
       );
+      let discovered = 0;
+      let scripted = 0;
       worker.onmessage = (e) => {
         const { message } = e.data || {};
-        if (message) setAriaMessage(message);
+        if (message) {
+          setAriaMessage(message);
+          if (message.startsWith('Host')) {
+            discovered += 1;
+            setStage(discovered === 5 ? 'Scripting' : 'Discovery');
+          } else if (message.startsWith('Script stage')) {
+            scripted += 1;
+            setStage(scripted === 5 ? 'Complete' : 'Scripting');
+          }
+        }
       };
     } else {
       const ctx = canvas.getContext('2d');
@@ -43,6 +65,8 @@ const DiscoveryMap = ({ trigger }) => {
       const prefersReducedMotion = window
         .matchMedia('(prefers-reduced-motion: reduce)')
         .matches;
+      let discovered = 0;
+      let scripted = 0;
 
       const draw = () => {
         ctx.clearRect(0, 0, width, height);
@@ -75,10 +99,14 @@ const DiscoveryMap = ({ trigger }) => {
         if (!prefersReducedMotion) {
           if (step < hosts.length) {
             hosts[step].discovered = true;
+            discovered += 1;
+            setStage(discovered === hosts.length ? 'Scripting' : 'Discovery');
             setAriaMessage(`Host ${step + 1} discovered`);
           } else if (step < hosts.length * 2) {
             const idx = step - hosts.length;
             hosts[idx].scripted = true;
+            scripted += 1;
+            setStage(scripted === hosts.length ? 'Complete' : 'Scripting');
             setAriaMessage(`Script stage completed for host ${idx + 1}`);
           } else {
             draw();
@@ -90,6 +118,7 @@ const DiscoveryMap = ({ trigger }) => {
             h.discovered = true;
             h.scripted = true;
           });
+          setStage('Complete');
         }
         draw();
         animationFrame = requestAnimationFrame(tick);
@@ -107,6 +136,13 @@ const DiscoveryMap = ({ trigger }) => {
 
   return (
     <div className="w-full mb-4">
+      <div
+        className={`text-center text-sm mb-2 transition-opacity ${
+          prefersReduced ? '' : 'duration-500'
+        } ${stage ? 'opacity-100' : 'opacity-0'}`}
+      >
+        Stage: {stage}
+      </div>
       <canvas
         ref={canvasRef}
         width={300}
