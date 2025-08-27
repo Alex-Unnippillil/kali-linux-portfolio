@@ -73,6 +73,7 @@ const Checkers = () => {
 
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = useState(true);
+  const [difficulty, setDifficulty] = useState('hard');
   const [wins, setWins] = useState({ player: 0, ai: 0 });
   const [winner, setWinner] = useState(null);
 
@@ -206,13 +207,21 @@ const Checkers = () => {
   );
 
   const aiMove = useCallback(() => {
-    const { move } = minimax(boardRef.current, 'black', 3);
+    let move;
+    if (difficulty === 'easy') {
+      const moves = getAllMoves(boardRef.current, 'black');
+      move = moves[Math.floor(Math.random() * moves.length)];
+    } else if (difficulty === 'medium') {
+      ({ move } = minimax(boardRef.current, 'black', 2));
+    } else {
+      ({ move } = minimax(boardRef.current, 'black', 3));
+    }
     if (move) makeMove(move);
     else {
       setWinner('red');
       setWins((w) => ({ ...w, player: w.player + 1 }));
     }
-  }, [makeMove]);
+  }, [makeMove, difficulty]);
 
   useEffect(() => {
     if (turn === 'black' && !winner && !paused) {
@@ -264,6 +273,23 @@ const Checkers = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <div className="w-56 mb-4">
+        <input
+          type="range"
+          min="0"
+          max="2"
+          value={[ 'easy', 'medium', 'hard' ].indexOf(difficulty)}
+          onChange={(e) =>
+            setDifficulty(['easy', 'medium', 'hard'][parseInt(e.target.value, 10)])
+          }
+          className="w-full"
+        />
+        <div className="flex justify-between text-xs">
+          <span>Easy</span>
+          <span>Medium</span>
+          <span>Hard</span>
+        </div>
+      </div>
       <canvas
         ref={canvasRef}
         width={BOARD_PIXELS}
