@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 interface GameLayoutProps {
   gameId: string;
@@ -10,9 +11,22 @@ interface GameLayoutProps {
 const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
+  const helpButtonRef = useRef<HTMLButtonElement>(null);
+  const pauseRef = useRef<HTMLDivElement>(null);
+  const lastPaused = useRef<HTMLElement | null>(null);
 
-  const close = useCallback(() => setShowHelp(false), []);
+  const close = useCallback(() => {
+    setShowHelp(false);
+    helpButtonRef.current?.focus();
+  }, []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
+
+  useFocusTrap(pauseRef, paused);
+  useEffect(() => {
+    if (paused) {
+      lastPaused.current = document.activeElement as HTMLElement;
+    }
+  }, [paused]);
 
   // Show tutorial overlay on first visit
   useEffect(() => {
@@ -51,13 +65,17 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
     return () => document.removeEventListener('visibilitychange', handler);
   }, []);
 
-  const resume = useCallback(() => setPaused(false), []);
+  const resume = useCallback(() => {
+    setPaused(false);
+    lastPaused.current?.focus();
+  }, []);
 
   return (
     <div className="relative h-full w-full">
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
       {paused && (
         <div
+          ref={pauseRef}
           className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
           role="dialog"
           aria-modal="true"
@@ -74,6 +92,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
       )}
       <button
         type="button"
+        ref={helpButtonRef}
         aria-label="Help"
         aria-expanded={showHelp}
         onClick={toggle}

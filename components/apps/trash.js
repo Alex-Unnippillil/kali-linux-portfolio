@@ -117,14 +117,16 @@ export class Trash extends Component {
     };
 
     handleModalKey = (e) => {
-        if (!this.state.showEmptyModal) return;
+        const { showEmptyModal, confirmDelete } = this.state;
+        if (!showEmptyModal && !confirmDelete) return;
         const focusable = this.modalRef.current?.querySelectorAll(
             'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
         );
         if (!focusable || focusable.length === 0) return;
         if (e.key === 'Escape') {
             e.preventDefault();
-            this.cancelEmptyTrash();
+            if (showEmptyModal) this.cancelEmptyTrash();
+            if (confirmDelete) this.cancelDelete();
         } else if (e.key === 'Tab') {
             e.preventDefault();
             const elements = Array.from(focusable);
@@ -229,7 +231,12 @@ export class Trash extends Component {
                 const text = await file.text();
                 preview = { type: 'text', text: text.slice(0, 100) };
             }
-            this.setState({ fileHandle: handle, filePreview: preview, confirmDelete: true });
+            this.lastFocused = document.activeElement;
+            this.setState({ fileHandle: handle, filePreview: preview, confirmDelete: true }, () => {
+                const first = this.modalRef.current?.querySelector('button');
+                first && first.focus();
+                document.addEventListener('keydown', this.handleModalKey);
+            });
         } catch (err) {
             console.error(err);
         }
@@ -238,6 +245,7 @@ export class Trash extends Component {
     deleteSelected = async () => {
         const { fileHandle, filePreview, items } = this.state;
         if (!fileHandle) return;
+        document.removeEventListener('keydown', this.handleModalKey);
         const newItem = {
             name: fileHandle.name,
             icon: "/themes/Yaru/system/folder.png",
@@ -260,13 +268,17 @@ export class Trash extends Component {
                     return { items: remaining, empty };
                 });
             }, `${fileHandle.name} moved to Trash`);
+            this.lastFocused && this.lastFocused.focus();
         });
     }
 
     cancelDelete = () => {
         const { filePreview } = this.state;
         if (filePreview?.url) URL.revokeObjectURL(filePreview.url);
-        this.setState({ fileHandle: null, filePreview: null, confirmDelete: false });
+        document.removeEventListener('keydown', this.handleModalKey);
+        this.setState({ fileHandle: null, filePreview: null, confirmDelete: false }, () => {
+            this.lastFocused && this.lastFocused.focus();
+        });
     }
 
     render() {
@@ -278,9 +290,9 @@ export class Trash extends Component {
                     <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
                         <span className="font-bold ml-2">Trash</span>
                         <div className="flex">
-                            <div onClick={this.restoreSelected} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 text-gray-300">Restore</div>
-                            <div onClick={this.emptyTrash} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty</div>
-                            <div onClick={this.selectFile} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Delete File</div>
+                            <button type="button" onClick={this.restoreSelected} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 text-gray-300">Restore</button>
+                            <button type="button" onClick={this.emptyTrash} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Empty</button>
+                            <button type="button" onClick={this.selectFile} className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80">Delete File</button>
                         </div>
                     </div>
                     {this.state.empty ? this.emptyScreen() : this.showTrashItems()}
@@ -304,8 +316,14 @@ export class Trash extends Component {
                 )}
                 {confirmDelete && (
                     <div className="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4">
-                        <div className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full">
-                            <p className="mb-2">Delete {this.state.fileHandle?.name}?</p>
+                        <div
+                            ref={this.modalRef}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="delete-file-title"
+                            className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full"
+                        >
+                            <p id="delete-file-title" className="mb-2">Delete {this.state.fileHandle?.name}?</p>
                             {this.state.filePreview?.type === 'image' ? (
                                 <img src={this.state.filePreview.url} alt="Preview" className="max-w-xs max-h-64 mb-2" />
                             ) : (

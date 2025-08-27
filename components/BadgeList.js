@@ -1,8 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const BadgeList = ({ badges, className = '' }) => {
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState(null);
+  const modalRef = useRef(null);
+  const lastFocused = useRef(null);
+  useFocusTrap(modalRef, !!selected);
+
+  const openBadge = (badge) => {
+    lastFocused.current = document.activeElement;
+    setSelected(badge);
+  };
+
+  const closeModal = () => {
+    setSelected(null);
+    lastFocused.current?.focus();
+  };
 
   const filteredBadges = badges.filter((badge) =>
     badge.label.toLowerCase().includes(filter.toLowerCase())
@@ -27,7 +41,7 @@ const BadgeList = ({ badges, className = '' }) => {
             key={idx}
             type="button"
             className="m-1 hover:scale-110 transition-transform cursor-pointer"
-            onClick={() => setSelected(badge)}
+            onClick={() => openBadge(badge)}
             aria-label={badge.label}
           >
             <img
@@ -41,9 +55,10 @@ const BadgeList = ({ badges, className = '' }) => {
       {selected && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          onClick={() => setSelected(null)}
+          onClick={closeModal}
           role="dialog"
           aria-modal="true"
+          ref={modalRef}
         >
           <div
             className="bg-white text-black p-4 rounded shadow max-w-sm"
@@ -53,7 +68,8 @@ const BadgeList = ({ badges, className = '' }) => {
             <div className="text-sm">{selected.description}</div>
             <button
               className="mt-4 px-2 py-1 bg-blue-600 text-white rounded"
-              onClick={() => setSelected(null)}
+              onClick={closeModal}
+              autoFocus
             >
               Close
             </button>
