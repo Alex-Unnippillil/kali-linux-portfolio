@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 const severityLevels = ['All', 'Critical', 'High', 'Medium', 'Low'];
 const severityColors = {
@@ -15,11 +15,12 @@ const sampleHosts = [
   { id: 4, host: '192.168.0.4', cvss: 2.5, severity: 'Low' },
 ];
 
-const scaleRadius = (cvss) => cvss * 5;
-
 const HostBubbleChart = ({ hosts = sampleHosts }) => {
   const [filter, setFilter] = useState('All');
   const [displayData, setDisplayData] = useState(hosts);
+  const workerRef = useRef(null);
+  const rafRef = useRef(0);
+
   const prefersReducedMotion = useMemo(
     () =>
       typeof window !== 'undefined' &&
@@ -28,13 +29,26 @@ const HostBubbleChart = ({ hosts = sampleHosts }) => {
   );
 
   useEffect(() => {
-    let raf = requestAnimationFrame(() => {
-      const filtered =
-        filter === 'All' ? hosts : hosts.filter((h) => h.severity === filter);
-      setDisplayData(filtered);
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [filter, hosts]);
+    workerRef.current = new Worker(
+      new URL('./filter.worker.js', import.meta.url)
+    );
+    const worker = workerRef.current;
+    worker.onmessage = (e) => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      const data = e.data || [];
+      rafRef.current = requestAnimationFrame(() => setDisplayData(data));
+    };
+    worker.postMessage({ hosts, filter });
+    return () => {
+      worker.terminate();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    workerRef.current?.postMessage({ hosts, filter });
+  }, [hosts, filter]);
 
   return (
     <div className="mb-4">
@@ -65,14 +79,13 @@ const HostBubbleChart = ({ hosts = sampleHosts }) => {
         aria-label="Host vulnerabilities bubble chart"
         className="mx-auto"
       >
-        {displayData.map((host, i) => {
-          const radius = scaleRadius(host.cvss);
-          const x = ((i + 1) * 400) / (displayData.length + 1);
+        {displayData.map((host) => {
+          const x = ((host.index + 1) * 400) / (displayData.length + 1);
           const y = 150;
           return (
             <g key={host.id} transform={`translate(${x},${y})`}>
               <circle
-                r={radius}
+                r={host.radius}
                 fill={severityColors[host.severity]}
                 aria-label={`${host.host} severity ${host.severity} CVSS ${host.cvss}`}
                 style={{
