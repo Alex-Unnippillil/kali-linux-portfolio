@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import usePersistentState from '../usePersistentState';
+import { share } from '../../utils/share';
 
 const WIDTH = 10;
 const HEIGHT = 20;
@@ -375,6 +376,18 @@ const Tetris = () => {
           <div>High: {highScore}</div>
           <div>Level: {level}</div>
           <div>Max Level: {maxLevel}</div>
+          <button
+            onClick={() =>
+              share({
+                title: 'Tetris High Score',
+                text: `I scored ${highScore} points in Tetris!`,
+                url: window.location.href,
+              })
+            }
+            className="mt-2 px-2 py-1 bg-green-600 rounded hover:bg-green-500"
+          >
+            Share
+          </button>
         </div>
       </div>
       {showSettings && (
