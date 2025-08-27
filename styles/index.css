@@ -346,3 +346,45 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Minesweeper themes */
+.minesweeper-easy {
+    background-color: #4caf50;
+}
+
+.minesweeper-medium {
+    background-color: #2196f3;
+}
+
+.minesweeper-hard {
+    background-color: #f44336;
+}
+
+.minesweeper-easy .ms-cell {
+    background-color: #4caf50;
+}
+
+.minesweeper-easy .ms-cell:hover {
+    background-color: #43a047;
+}
+
+.minesweeper-medium .ms-cell {
+    background-color: #2196f3;
+}
+
+.minesweeper-medium .ms-cell:hover {
+    background-color: #1e88e5;
+}
+
+.minesweeper-hard .ms-cell {
+    background-color: #f44336;
+}
+
+.minesweeper-hard .ms-cell:hover {
+    background-color: #e53935;
+}
+
+.ms-cell.revealed {
+    background-color: #9e9e9e;
+    color: #000;
+}
