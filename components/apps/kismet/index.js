@@ -87,6 +87,61 @@ const ChannelOccupancy = ({ networks }) => {
   );
 };
 
+// Generic virtualized list to efficiently render large datasets
+const VirtualizedList = ({
+  items,
+  rowHeight,
+  renderRow,
+  keyExtractor = (_, i) => i,
+  className = '',
+  overscan = 5,
+}) => {
+  const containerRef = useRef(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [height, setHeight] = useState(0);
+
+  useEffect(() => {
+    if (containerRef.current) setHeight(containerRef.current.clientHeight);
+  }, []);
+
+  const onScroll = (e) => setScrollTop(e.currentTarget.scrollTop);
+  const totalHeight = items.length * rowHeight;
+  const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
+  const endIndex = Math.min(
+    items.length,
+    Math.ceil((scrollTop + height) / rowHeight) + overscan
+  );
+  const visibleItems = items.slice(startIndex, endIndex);
+
+  return (
+    <div
+      ref={containerRef}
+      onScroll={onScroll}
+      className={`overflow-y-auto ${className}`}
+    >
+      <ul style={{ height: totalHeight, position: 'relative' }}>
+        {visibleItems.map((item, i) => {
+          const index = startIndex + i;
+          return (
+            <li
+              key={keyExtractor(item, index)}
+              style={{
+                position: 'absolute',
+                top: index * rowHeight,
+                height: rowHeight,
+                left: 0,
+                right: 0,
+              }}
+            >
+              {renderRow(item, index)}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+};
+
 const KismetApp = () => {
   const [networks, setNetworks] = useState([]);
   const [packets, setPackets] = useState([]);
@@ -123,15 +178,16 @@ const KismetApp = () => {
       <span className="font-bold">Kismet</span>
       </div>
       <div className="flex flex-grow overflow-hidden">
-        <div className="w-1/2 p-2 overflow-y-auto">
+        <div className="w-1/2 p-2 flex flex-col">
           <h2 className="text-sm font-semibold mb-2">Nearby Networks</h2>
           {networks.length ? (
-            <ul aria-live="polite">
-              {networks.map((net) => (
-                <li
-                  key={net.ssid}
-                  className="flex items-center justify-between mb-1"
-                >
+            <VirtualizedList
+              items={networks}
+              rowHeight={40}
+              keyExtractor={(n) => n.ssid}
+              className="flex-grow"
+              renderRow={(net) => (
+                <div className="flex items-center justify-between p-1">
                   <span className="truncate w-24" title={net.ssid}>
                     {net.ssid}
                   </span>
@@ -139,24 +195,28 @@ const KismetApp = () => {
                   <span className="text-gray-400 text-xs w-16 text-right">
                     {net.strength} dBm
                   </span>
-                </li>
-              ))}
-            </ul>
+                </div>
+              )}
+            />
           ) : (
             <p className="text-gray-400 text-sm">No networks detected.</p>
           )}
           <ChannelOccupancy networks={networks} />
         </div>
-        <div className="w-1/2 p-2 overflow-y-auto border-l border-gray-700">
+        <div className="w-1/2 p-2 flex flex-col border-l border-gray-700">
           <h2 className="text-sm font-semibold mb-2">Packet Capture</h2>
           {packets.length ? (
-            <ul aria-live="polite">
-              {packets.slice(-100).map((pkt, idx) => (
-                <li key={`${pkt.ts}-${idx}`} className="text-xs mb-1">
+            <VirtualizedList
+              items={packets}
+              rowHeight={20}
+              keyExtractor={(pkt, idx) => `${pkt.ts}-${idx}`}
+              className="flex-grow"
+              renderRow={(pkt) => (
+                <div className="text-xs">
                   [{new Date(pkt.ts).toLocaleTimeString()}] {pkt.from} → {pkt.to}
-                </li>
-              ))}
-            </ul>
+                </div>
+              )}
+            />
           ) : (
             <p className="text-gray-400 text-sm">No packets captured.</p>
           )}
