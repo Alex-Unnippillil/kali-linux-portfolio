@@ -2868,6 +2868,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cose-base@npm:^1.0.0":
+  version: 1.0.3
+  resolution: "cose-base@npm:1.0.3"
+  dependencies:
+    layout-base: "npm:^1.0.0"
+  checksum: 10c0/a6e400b1d101393d6af0967c1353355777c1106c40417c5acaef6ca8bdda41e2fc9398f466d6c85be30290943ad631f2590569f67b3fd5368a0d8318946bd24f
+  languageName: node
+  linkType: hard
+
 "cross-spawn@npm:^7.0.3, cross-spawn@npm:^7.0.6":
   version: 7.0.6
   resolution: "cross-spawn@npm:7.0.6"
@@ -2909,6 +2918,24 @@ __metadata:
   version: 3.1.3
   resolution: "csstype@npm:3.1.3"
   checksum: 10c0/80c089d6f7e0c5b2bd83cf0539ab41474198579584fa10d86d0cafe0642202343cbc119e076a0b1aece191989477081415d66c9fefbf3c957fc2fc4b7009f248
+  languageName: node
+  linkType: hard
+
+"cytoscape-cose-bilkent@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "cytoscape-cose-bilkent@npm:4.1.0"
+  dependencies:
+    cose-base: "npm:^1.0.0"
+  peerDependencies:
+    cytoscape: ^3.2.0
+  checksum: 10c0/5e2480ddba9da1a68e700ed2c674cbfd51e9efdbd55788f1971a68de4eb30708e3b3a5e808bf5628f7a258680406bbe6586d87a9133e02a9bdc1ab1a92f512f2
+  languageName: node
+  linkType: hard
+
+"cytoscape@npm:^3.33.1":
+  version: 3.33.1
+  resolution: "cytoscape@npm:3.33.1"
+  checksum: 10c0/dffcf5f74df4d91517c4faf394df880d8283ce76edef19edba0c762941cf4f18daf7c4c955ec50c794f476ace39ad4394f8c98483222bd2682e1fd206e976411
   languageName: node
   linkType: hard
 
@@ -5576,6 +5603,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"layout-base@npm:^1.0.0":
+  version: 1.0.2
+  resolution: "layout-base@npm:1.0.2"
+  checksum: 10c0/2a55d0460fd9f6ed53d7e301b9eb3dea19bda03815d616a40665ce6dc75c1f4d62e1ca19a897da1cfaf6de1b91de59cd6f2f79ba1258f3d7fccc7d46ca7f3337
+  languageName: node
+  linkType: hard
+
 "leven@npm:^3.1.0":
   version: 3.1.0
   resolution: "leven@npm:3.1.0"
@@ -6643,6 +6677,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-cytoscapejs@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "react-cytoscapejs@npm:2.0.0"
+  dependencies:
+    prop-types: "npm:^15.8.1"
+  peerDependencies:
+    cytoscape: ^3.2.19
+    react: ">=15.0.0"
+  checksum: 10c0/4a7679fc5e78428433620a48c81795416804d7317845445ca572091c6826b8519a4a10dae38d78555c1aefd1f6e6f317fad73d3f6acde272c5abeeaf09742834
+  languageName: node
+  linkType: hard
+
 "react-dom@npm:^18.2.0":
   version: 18.3.1
   resolution: "react-dom@npm:18.3.1"
@@ -6669,7 +6715,6 @@ __metadata:
   linkType: hard
 
 "react-force-graph@npm:^1.45.0":
-
   version: 1.48.0
   resolution: "react-force-graph@npm:1.48.0"
   dependencies:
@@ -8023,6 +8068,8 @@ __metadata:
     bad-words: "npm:^3.0.4"
     canvas-confetti: "npm:1.9.3"
     chess.js: "npm:^1.0.0"
+    cytoscape: "npm:^3.33.1"
+    cytoscape-cose-bilkent: "npm:^4.1.0"
     eslint: "npm:^9.13.0"
     eslint-config-next: "npm:^15.0.0"
     expr-eval: "npm:^2.0.2"
@@ -8040,10 +8087,10 @@ __metadata:
     qrcode: "npm:^1.5.4"
     react: "npm:^18.2.0"
     react-activity-calendar: "npm:^2.7.13"
+    react-cytoscapejs: "npm:^2.0.0"
     react-dom: "npm:^18.2.0"
     react-draggable: "npm:^4.4.5"
     react-force-graph: "npm:^1.45.0"
-
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
     react-onclickoutside: "npm:^6.12.2"

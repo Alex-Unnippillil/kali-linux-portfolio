@@ -1,9 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+} from 'react';
 import dynamic from 'next/dynamic';
 import usePersistentState from '../../hooks/usePersistentState';
 
-const ForceGraph2D = dynamic(
-  () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
+const CytoscapeComponent = dynamic(
+  async () => {
+    const cytoscape = (await import('cytoscape')).default;
+    const coseBilkent = (await import('cytoscape-cose-bilkent')).default;
+    cytoscape.use(coseBilkent);
+    return (await import('react-cytoscapejs')).default;
+  },
   { ssr: false },
 );
 
@@ -17,7 +27,10 @@ const ReconNG = () => {
   const [selectedModule, setSelectedModule] = useState(modules[0]);
   const [target, setTarget] = useState('');
   const [output, setOutput] = useState('');
-  const [graphData, setGraphData] = useState({ nodes: [], links: [] });
+  const [graphElements, setGraphElements] = useState([]);
+  const [ariaMessage, setAriaMessage] = useState('');
+  const cyRef = useRef(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [view, setView] = useState('run');
   const [marketplace, setMarketplace] = useState([]);
   const [apiKeys, setApiKeys] = usePersistentState('reconng-api-keys', {});
@@ -29,20 +42,122 @@ const ReconNG = () => {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+      setPrefersReducedMotion(mediaQuery.matches);
+      const handler = (e) => setPrefersReducedMotion(e.matches);
+      mediaQuery.addEventListener('change', handler);
+      return () => mediaQuery.removeEventListener('change', handler);
+    }
+    return undefined;
+  }, []);
+
+  useEffect(() => {
+    if (cyRef.current) {
+      const layout = cyRef.current.layout({
+        name: 'cose-bilkent',
+        animate: !prefersReducedMotion,
+      });
+      layout.run();
+    }
+    const nodeCount = graphElements.filter((el) => !el.data?.source).length;
+    const edgeCount = graphElements.filter((el) => el.data?.source).length;
+    setAriaMessage(`Graph updated with ${nodeCount} nodes and ${edgeCount} edges.`);
+  }, [graphElements, prefersReducedMotion]);
+
   const allModules = [...modules, ...marketplace];
+
+  const stylesheet = useMemo(
+    () => [
+      {
+        selector: 'node[type="domain"]',
+        style: {
+          'background-color': '#1f77b4',
+          shape: 'round-rectangle',
+          color: '#fff',
+          label: 'data(label)',
+        },
+      },
+      {
+        selector: 'node[type="person"]',
+        style: {
+          'background-color': '#ff7f0e',
+          shape: 'ellipse',
+          color: '#fff',
+          label: 'data(label)',
+        },
+      },
+      {
+        selector: 'node[type="asset"]',
+        style: {
+          'background-color': '#2ca02c',
+          shape: 'diamond',
+          color: '#fff',
+          label: 'data(label)',
+        },
+      },
+      {
+        selector: 'edge',
+        style: {
+          width: 2,
+          'line-color': '#ccc',
+          'target-arrow-color': '#ccc',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+        },
+      },
+      {
+        selector: '$node > node',
+        style: {
+          'padding': '10px',
+          'background-opacity': 0.1,
+          'border-color': '#555',
+          label: 'data(label)',
+          color: '#fff',
+        },
+      },
+    ],
+    [],
+  );
 
   const runModule = () => {
     if (!target) return;
     setOutput(`Running ${selectedModule} on ${target}...\nResults will appear here.`);
-    setGraphData({
-      nodes: [
-        { id: selectedModule },
-        { id: target },
-      ],
-      links: [
-        { source: selectedModule, target },
-      ],
-    });
+    const nodes = [
+      { data: { id: 'domains', label: 'Domains' } },
+      { data: { id: 'people', label: 'People' } },
+      { data: { id: 'assets', label: 'Assets' } },
+      {
+        data: {
+          id: target,
+          label: target,
+          parent: 'domains',
+          type: 'domain',
+        },
+      },
+      {
+        data: {
+          id: 'John Doe',
+          label: 'John Doe',
+          parent: 'people',
+          type: 'person',
+        },
+      },
+      {
+        data: {
+          id: 'Server1',
+          label: 'Server1',
+          parent: 'assets',
+          type: 'asset',
+        },
+      },
+    ];
+    const edges = [
+      { data: { id: 'e1', source: target, target: 'John Doe' } },
+      { data: { id: 'e2', source: 'John Doe', target: 'Server1' } },
+    ];
+    requestAnimationFrame(() => setGraphElements([...nodes, ...edges]));
   };
 
   return (
@@ -100,11 +215,21 @@ const ReconNG = () => {
             </button>
           </div>
           <pre className="flex-1 bg-black p-2 overflow-auto whitespace-pre-wrap mb-2">{output}</pre>
-          {graphData.nodes.length > 0 && (
+          {graphElements.length > 0 && (
             <div className="bg-black p-2" style={{ height: '300px' }}>
-              <ForceGraph2D graphData={graphData} />
+              <CytoscapeComponent
+                elements={graphElements}
+                stylesheet={stylesheet}
+                style={{ width: '100%', height: '100%' }}
+                cy={(cy) => {
+                  cyRef.current = cy;
+                }}
+              />
             </div>
           )}
+          <div role="status" aria-live="polite" className="sr-only">
+            {ariaMessage}
+          </div>
         </>
       )}
       {view === 'settings' && (
