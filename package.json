@@ -32,6 +32,7 @@
     "figlet": "^1.8.2",
     "howler": "^2.2.4",
     "html-to-image": "^1.11.13",
+    "idb-keyval": "^6.2.1",
     "jsqr": "^1.4.0",
     "mathjs": "^14.6.0",
     "next": "^15.0.0",
