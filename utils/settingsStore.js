@@ -1,6 +1,7 @@
 const DEFAULT_SETTINGS = {
   theme: 'dark',
   wallpaper: 'wall-2',
+  pwaEnabled: true,
 };
 
 export function getTheme() {
@@ -21,6 +22,17 @@ export function getWallpaper() {
 export function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem('bg-image', wallpaper);
+}
+
+export function getPwaEnabled() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.pwaEnabled;
+  const value = window.localStorage.getItem('pwa-enabled');
+  return value === null ? DEFAULT_SETTINGS.pwaEnabled : value === 'true';
+}
+
+export function setPwaEnabled(enabled) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('pwa-enabled', String(enabled));
 }
 
 export function resetSettings() {

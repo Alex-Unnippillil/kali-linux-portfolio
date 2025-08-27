@@ -7,14 +7,16 @@ import '../styles/index.css';
 import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
 import { ThemeProvider } from '../hooks/useTheme';
+import { getPwaEnabled } from '../utils/settingsStore';
 
 function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
+    if (!navigator.onLine) return;
     const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
     if (trackingId) {
       ReactGA.initialize(trackingId);
     }
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && getPwaEnabled()) {
       navigator.serviceWorker.register('/service-worker.js').catch(() => {
         // ignore registration errors
       });
