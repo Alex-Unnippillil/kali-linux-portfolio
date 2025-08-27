@@ -19,18 +19,61 @@ export const EMOJIS = [
   '\u{1F345}'  // tomato
 ];
 
-export function fisherYatesShuffle(array) {
+export function createSeededRNG(seed) {
+  let s;
+  if (typeof seed === 'string') {
+    s = 0;
+    for (let i = 0; i < seed.length; i++) {
+      s = (s * 31 + seed.charCodeAt(i)) >>> 0;
+    }
+  } else {
+    s = seed >>> 0;
+  }
+  return function () {
+    s = (s * 1664525 + 1013904223) % 4294967296;
+    return s / 4294967296;
+  };
+}
+
+export function fisherYatesShuffle(array, rng = Math.random) {
   const arr = array.slice();
   for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
 }
 
-export function createDeck(size) {
+function selectWeightedEmojis(pairs, stats, rng) {
+  const weighted = [];
+  EMOJIS.forEach((emoji) => {
+    const record = stats[emoji] || { success: 0, fail: 0 };
+    const weight = Math.max(1, record.fail - record.success + 1);
+    for (let i = 0; i < weight; i++) {
+      weighted.push(emoji);
+    }
+  });
+  const shuffled = fisherYatesShuffle(weighted, rng);
+  const selected = [];
+  for (const val of shuffled) {
+    if (!selected.includes(val)) {
+      selected.push(val);
+      if (selected.length === pairs) break;
+    }
+  }
+  return selected;
+}
+
+export function createDeck(size, options = {}) {
+  const { seed, practice, practiceStats = {} } = options;
+  const rng = seed !== undefined && seed !== '' ? createSeededRNG(seed) : Math.random;
   const pairs = (size * size) / 2;
-  const selected = EMOJIS.slice(0, pairs);
+  let selected;
+  if (practice) {
+    selected = selectWeightedEmojis(pairs, practiceStats, rng);
+  } else {
+    selected = fisherYatesShuffle(EMOJIS, rng).slice(0, pairs);
+  }
   const doubled = [...selected, ...selected].map((value, index) => ({ id: index, value }));
-  return fisherYatesShuffle(doubled);
+  return fisherYatesShuffle(doubled, rng);
 }
