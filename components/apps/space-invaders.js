@@ -4,6 +4,13 @@ import useAssetLoader from '../../hooks/useAssetLoader';
 
 const EXTRA_LIFE_THRESHOLDS = [1000, 5000, 10000];
 
+// Testable helpers
+export const bulletHitsInvader = (inv, b) =>
+  b.x >= inv.x && b.x <= inv.x + 20 && b.y >= inv.y && b.y <= inv.y + 15;
+
+export const waveAdvance = (invArr, stage) =>
+  invArr.every((i) => !i.alive) ? stage + 1 : stage;
+
 const SpaceInvaders = () => {
   const { loading, error } = useAssetLoader({
     images: ['/themes/Yaru/status/ubuntu_white_hex.svg'],
@@ -29,6 +36,7 @@ const SpaceInvaders = () => {
   const initialCount = useRef(0);
   const pattern = useRef(0);
   const nextExtraLife = useRef(0);
+  const waveTimer = useRef(0);
 
   const [stage, setStage] = useState(1);
   const stageRef = useRef(stage);
@@ -111,6 +119,7 @@ const SpaceInvaders = () => {
         s.hp = 6;
       });
       ufo.current.active = false;
+      waveTimer.current = 2;
     };
 
     setupWave();
@@ -193,10 +202,27 @@ const SpaceInvaders = () => {
 
     let last = performance.now();
     const loop = (time) => {
-      const dt = (time - last) / 1000;
+      let dt = (time - last) / 1000;
       last = time;
+      if (dt > 0.05) dt = 0.05;
 
       const p = player.current;
+
+      if (waveTimer.current > 0) {
+        waveTimer.current -= dt;
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = 'white';
+        invaders.current.forEach((inv) => {
+          if (inv.alive) ctx.fillRect(inv.x, inv.y, 20, 15);
+        });
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+        ctx.textAlign = 'center';
+        ctx.font = '20px monospace';
+        ctx.fillText(`Wave ${stageRef.current}`, w / 2, h / 2);
+        reqRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
       p.cooldown -= dt;
 
       const left = keys.current['ArrowLeft'] || touch.current.left;
@@ -232,13 +258,7 @@ const SpaceInvaders = () => {
       for (const b of playerBullets.current) {
         if (!b.active) continue;
         for (const inv of invaders.current) {
-          if (
-            inv.alive &&
-            b.x >= inv.x &&
-            b.x <= inv.x + 20 &&
-            b.y >= inv.y &&
-            b.y <= inv.y + 15
-          ) {
+          if (inv.alive && bulletHitsInvader(inv, b)) {
             inv.alive = false;
             b.active = false;
             addScore(10);
@@ -322,11 +342,14 @@ const SpaceInvaders = () => {
         }
       }
 
-      if (aliveCount === 0) {
-        stageRef.current += 1;
+      const nextStage = waveAdvance(invaders.current, stageRef.current);
+      if (nextStage !== stageRef.current) {
+        stageRef.current = nextStage;
         setStage(stageRef.current);
         pattern.current = (pattern.current + 1) % 2;
         setupWave();
+        reqRef.current = requestAnimationFrame(loop);
+        return;
       }
 
       ufoTimer.current += dt;
