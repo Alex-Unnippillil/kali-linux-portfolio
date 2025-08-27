@@ -14,12 +14,14 @@ const SpaceInvaders = () => {
   const reqRef = useRef();
   const keys = useRef({});
   const touch = useRef({ left: false, right: false, fire: false });
+  const audioCtx = useRef(null);
 
   const player = useRef({ x: 0, y: 0, w: 20, h: 10, cooldown: 0, shield: false, rapid: 0 });
   const invaders = useRef([]);
   const invDir = useRef(1);
   const enemyCooldown = useRef(1);
-  const baseSpeed = 20;
+  const baseInterval = 0.6;
+  const stepTimer = useRef(0);
   const playerBullets = useRef([]);
   const enemyBullets = useRef([]);
   const powerUps = useRef([]);
@@ -29,6 +31,48 @@ const SpaceInvaders = () => {
   const initialCount = useRef(0);
   const pattern = useRef(0);
   const nextExtraLife = useRef(0);
+  const setupWaveRef = useRef(() => {});
+
+  const [sound, setSound] = useState(true);
+  const soundRef = useRef(sound);
+  useEffect(() => {
+    soundRef.current = sound;
+  }, [sound]);
+  const [isPaused, setIsPaused] = useState(false);
+  const pausedRef = useRef(false);
+
+  const playSound = (freq) => {
+    if (!soundRef.current) return;
+    if (!audioCtx.current)
+      audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.current.createOscillator();
+    const gain = audioCtx.current.createGain();
+    osc.frequency.value = freq;
+    osc.connect(gain);
+    gain.connect(audioCtx.current.destination);
+    gain.gain.value = 0.1;
+    osc.start();
+    osc.stop(audioCtx.current.currentTime + 0.1);
+  };
+
+  const resetGame = () => {
+    stageRef.current = 1;
+    setStage(1);
+    scoreRef.current = 0;
+    setScore(0);
+    livesRef.current = 3;
+    setLives(3);
+    pattern.current = 0;
+    nextExtraLife.current = 0;
+    pausedRef.current = false;
+    setIsPaused(false);
+    setupWaveRef.current();
+  };
+
+  const togglePause = () => {
+    pausedRef.current = !pausedRef.current;
+    setIsPaused(pausedRef.current);
+  };
 
   const [stage, setStage] = useState(1);
   const stageRef = useRef(stage);
@@ -112,7 +156,7 @@ const SpaceInvaders = () => {
       });
       ufo.current.active = false;
     };
-
+    setupWaveRef.current = setupWave;
     setupWave();
 
     shelters.current = [
@@ -127,12 +171,13 @@ const SpaceInvaders = () => {
     window.addEventListener('keydown', handleKey);
     window.addEventListener('keyup', handleKey);
 
-    const shoot = (pool, x, y) => {
+    const shoot = (pool, x, y, freq) => {
       for (const b of pool) {
         if (!b.active) {
           b.x = x;
           b.y = y;
           b.active = true;
+          if (freq) playSound(freq);
           break;
         }
       }
@@ -196,6 +241,11 @@ const SpaceInvaders = () => {
       const dt = (time - last) / 1000;
       last = time;
 
+      if (pausedRef.current) {
+        reqRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
       const p = player.current;
       p.cooldown -= dt;
 
@@ -207,7 +257,7 @@ const SpaceInvaders = () => {
 
       const fire = keys.current['Space'] || touch.current.fire;
       if (fire && p.cooldown <= 0) {
-        shoot(playerBullets.current, p.x + p.w / 2, p.y);
+        shoot(playerBullets.current, p.x + p.w / 2, p.y, 800);
         p.cooldown = p.rapid > 0 ? 0.15 : 0.5;
       }
       if (p.rapid > 0) p.rapid -= dt;
@@ -216,7 +266,7 @@ const SpaceInvaders = () => {
       const aliveInv = invaders.current.filter((i) => i.alive);
       if (enemyCooldown.current <= 0 && aliveInv.length) {
         const inv = aliveInv[Math.floor(Math.random() * aliveInv.length)];
-        shoot(enemyBullets.current, inv.x + 10, inv.y + 10);
+        shoot(enemyBullets.current, inv.x + 10, inv.y + 10, 200);
         enemyCooldown.current = 1;
       }
 
@@ -242,6 +292,7 @@ const SpaceInvaders = () => {
             inv.alive = false;
             b.active = false;
             addScore(10);
+            playSound(400);
             if (Math.random() < 0.1)
               powerUps.current.push({
                 x: inv.x + 10,
@@ -277,6 +328,7 @@ const SpaceInvaders = () => {
           ufo.current.active = false;
           b.active = false;
           addScore(50);
+          playSound(1000);
         }
       }
 
@@ -305,20 +357,24 @@ const SpaceInvaders = () => {
 
       const aliveCount = aliveInv.length;
       const progress = 1 - aliveCount / initialCount.current;
-      const speed = baseSpeed * stageRef.current * (1 + progress);
-      let hitEdge = false;
-      for (const inv of invaders.current) {
-        if (!inv.alive) continue;
-        inv.x += invDir.current * speed * dt;
-        if (pattern.current === 1) {
-          inv.y += Math.sin(time / 200 + inv.phase) * 0.5;
-        }
-        if (inv.x < 10 || inv.x > w - 30) hitEdge = true;
-      }
-      if (hitEdge) {
-        invDir.current *= -1;
+      const interval = baseInterval / (stageRef.current * (1 + progress));
+      stepTimer.current += dt;
+      if (stepTimer.current >= interval) {
+        stepTimer.current -= interval;
+        let hitEdge = false;
         for (const inv of invaders.current) {
-          if (inv.alive) inv.y += 10;
+          if (!inv.alive) continue;
+          inv.x += invDir.current * 10;
+          if (pattern.current === 1) {
+            inv.y += Math.sin(time / 200 + inv.phase) * 0.5;
+          }
+          if (inv.x < 10 || inv.x > w - 30) hitEdge = true;
+        }
+        if (hitEdge) {
+          invDir.current *= -1;
+          for (const inv of invaders.current) {
+            if (inv.alive) inv.y += 10;
+          }
         }
       }
 
@@ -330,7 +386,7 @@ const SpaceInvaders = () => {
       }
 
       ufoTimer.current += dt;
-      if (!ufo.current.active && ufoTimer.current > 10) {
+      if (!ufo.current.active && ufoTimer.current > 15 && Math.random() < 0.02) {
         ufo.current.active = true;
         ufo.current.x = 0;
         ufo.current.dir = 1;
@@ -433,6 +489,26 @@ const SpaceInvaders = () => {
     <GameLayout stage={stage} lives={lives} score={score} highScore={highScore}>
       <div className="h-full w-full relative bg-black text-white">
         <canvas ref={canvasRef} className="w-full h-full" />
+        <div className="absolute top-2 right-2 flex gap-2 z-10">
+          <button
+            className="bg-gray-700 px-2 py-1 rounded"
+            onClick={resetGame}
+          >
+            Reset
+          </button>
+          <button
+            className="bg-gray-700 px-2 py-1 rounded"
+            onClick={togglePause}
+          >
+            {isPaused ? 'Resume' : 'Pause'}
+          </button>
+          <button
+            className="bg-gray-700 px-2 py-1 rounded"
+            onClick={() => setSound((s) => !s)}
+          >
+            {sound ? 'Sound On' : 'Sound Off'}
+          </button>
+        </div>
         <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-8 md:hidden">
           <button
             className="bg-gray-700 px-4 py-2 rounded"
