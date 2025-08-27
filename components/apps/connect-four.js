@@ -12,12 +12,15 @@ const ConnectFour = () => {
   const boardRef = useRef(createBoard());
   const pausedRef = useRef(false);
   const soundRef = useRef(true);
+  const hoverRef = useRef({ col: null, row: null });
+  const reduceRef = useRef(false);
 
   const [, setBoardState] = useState(boardRef.current);
   const [current, setCurrent] = useState(1); // 1 red, 2 yellow
   const [winner, setWinner] = useState(null);
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = useState(true);
+  const [announcement, setAnnouncement] = useState("Red's turn");
   const [highScore, setHighScore] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('connect-four-highscore');
@@ -40,6 +43,26 @@ const ConnectFour = () => {
     highRef.current = highScore;
     localStorage.setItem('connect-four-highscore', String(highScore));
   }, [highScore]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+      const update = () => {
+        reduceRef.current = mq.matches;
+      };
+      update();
+      mq.addEventListener('change', update);
+      return () => mq.removeEventListener('change', update);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (winner) {
+      setAnnouncement(winner === 'draw' ? 'Game ended in draw' : `${winner} wins`);
+    } else {
+      setAnnouncement(`${current === 1 ? 'Red' : 'Yellow'}'s turn`);
+    }
+  }, [current, winner]);
 
   const reset = () => {
     boardRef.current = createBoard();
@@ -78,10 +101,32 @@ const ConnectFour = () => {
     if (col < 0 || col >= COLS) return;
     for (let r = ROWS - 1; r >= 0; r--) {
       if (boardRef.current[r][col] === 0) {
-        dropRef.current = { col, row: r, y: -SIZE, color: current };
+        dropRef.current = { col, row: r, y: reduceRef.current ? r * SIZE : -SIZE, color: current };
         break;
       }
     }
+  };
+
+  const handleMove = (e) => {
+    if (winner || dropRef.current || pausedRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const col = Math.floor((e.clientX - rect.left) / SIZE);
+    if (col < 0 || col >= COLS) {
+      hoverRef.current = { col: null, row: null };
+      return;
+    }
+    let row = null;
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (boardRef.current[r][col] === 0) {
+        row = r;
+        break;
+      }
+    }
+    hoverRef.current = { col, row };
+  };
+
+  const handleLeave = () => {
+    hoverRef.current = { col: null, row: null };
   };
 
   const checkWin = (board, row, col, color) => {
@@ -135,10 +180,29 @@ const ConnectFour = () => {
         }
       }
 
+      const hover = hoverRef.current;
+      if (hover.col !== null) {
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(hover.col * SIZE, 0, SIZE, canvas.height);
+        if (hover.row !== null && !dropRef.current && !pausedRef.current) {
+          ctx.beginPath();
+          ctx.arc(
+            hover.col * SIZE + SIZE / 2,
+            hover.row * SIZE + SIZE / 2,
+            SIZE / 2 - 5,
+            0,
+            Math.PI * 2
+          );
+          ctx.fillStyle =
+            current === 1 ? 'rgba(239,68,68,0.5)' : 'rgba(250,204,21,0.5)';
+          ctx.fill();
+        }
+      }
+
       if (dropRef.current && !pausedRef.current) {
         const p = dropRef.current;
-        p.y += 8;
         const target = p.row * SIZE;
+        if (!reduceRef.current) p.y += 8;
         if (p.y >= target) {
           boardRef.current[p.row][p.col] = p.color;
           setBoardState(boardRef.current.map((row) => row.slice()));
@@ -160,9 +224,18 @@ const ConnectFour = () => {
           }
         } else {
           ctx.beginPath();
-          ctx.arc(p.col * SIZE + SIZE / 2, p.y + SIZE / 2, SIZE / 2 - 5, 0, Math.PI * 2);
+          ctx.arc(
+            p.col * SIZE + SIZE / 2,
+            (reduceRef.current ? target : p.y) + SIZE / 2,
+            SIZE / 2 - 5,
+            0,
+            Math.PI * 2
+          );
           ctx.fillStyle = p.color === 1 ? '#ef4444' : '#facc15';
           ctx.fill();
+          if (reduceRef.current) {
+            p.y = target;
+          }
         }
       }
 
@@ -188,7 +261,12 @@ const ConnectFour = () => {
         height={ROWS * SIZE}
         className="bg-blue-700 cursor-pointer"
         onClick={handleClick}
+        onMouseMove={handleMove}
+        onMouseLeave={handleLeave}
       />
+      <div aria-live="polite" className="sr-only">
+        {announcement}
+      </div>
       <div className="mt-4 flex gap-2">
         <button className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded" onClick={reset}>
           Reset
