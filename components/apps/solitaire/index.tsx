@@ -7,13 +7,12 @@ import {
   moveTableauToTableau,
   moveWasteToTableau,
   moveToFoundation,
-  autoMove,
-  autoComplete,
   valueToString,
   GameState,
   Card,
   createDeck,
   findHint,
+  suits,
 } from './engine';
 
 type Variant = 'klondike' | 'spider' | 'freecell';
@@ -69,6 +68,10 @@ const Solitaire = () => {
   const timer = useRef<NodeJS.Timeout | null>(null);
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const tableauRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const wasteRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [flying, setFlying] = useState<AnimatedCard[]>([]);
+  const [autoCompleting, setAutoCompleting] = useState(false);
   const [winnableOnly, setWinnableOnly] = useState(false);
   const [hint, setHint] = useState<{ source: 'tableau' | 'waste'; pile: number; index: number } | null>(null);
 
@@ -274,6 +277,75 @@ const Solitaire = () => {
     finishDrag();
   };
 
+  const flyMove = useCallback(
+    (
+      fromState: GameState,
+      toState: GameState,
+      source: 'waste' | 'tableau',
+      pile: number | null,
+      cb: () => void = () => {},
+    ) => {
+      const root = rootRef.current;
+      if (!root) {
+        setGame(toState);
+        cb();
+        return;
+      }
+      const rootRect = root.getBoundingClientRect();
+      let fromX = 0;
+      let fromY = 0;
+      let card: Card;
+      if (source === 'waste') {
+        card = fromState.waste[fromState.waste.length - 1];
+        const rect = wasteRef.current?.getBoundingClientRect();
+        if (rect) {
+          fromX = rect.left - rootRect.left;
+          fromY = rect.top - rootRect.top;
+        }
+      } else {
+        card = fromState.tableau[pile!][fromState.tableau[pile!].length - 1];
+        const rect = tableauRefs.current[pile!]?.getBoundingClientRect();
+        if (rect) {
+          fromX = rect.left - rootRect.left;
+          fromY = rect.top - rootRect.top + (fromState.tableau[pile!].length - 1) * 24;
+        }
+      }
+      const destIndex = suits.indexOf(card.suit);
+      const destRect = foundationRefs.current[destIndex]?.getBoundingClientRect();
+      const toX = destRect ? destRect.left - rootRect.left : fromX;
+      const toY = destRect ? destRect.top - rootRect.top : fromY;
+      const tempFoundations = toState.foundations.map((p, i) =>
+        i === destIndex ? p.slice(0, -1) : p,
+      );
+      const tempState = {
+        ...toState,
+        foundations: tempFoundations,
+        score: toState.score - 10,
+      };
+      setGame(tempState);
+      const anim: AnimatedCard = {
+        ...card,
+        x: fromX,
+        y: fromY,
+        angle: 0,
+        tx: toX,
+        ty: toY,
+      };
+      setFlying((f) => [...f, anim]);
+      requestAnimationFrame(() => {
+        setFlying((f) =>
+          f.map((c) => (c === anim ? { ...c, x: toX, y: toY } : c)),
+        );
+      });
+      setTimeout(() => {
+        setFlying((f) => f.filter((c) => c !== anim));
+        setGame(toState);
+        cb();
+      }, 300);
+    },
+    [foundationRefs, tableauRefs, wasteRef, rootRef],
+  );
+
   const dropToTableau = (pileIndex: number) => {
     if (!drag) return;
     if (drag.source === 'tableau') {
@@ -311,26 +383,54 @@ const Solitaire = () => {
   };
 
   const handleDoubleClick = (source: 'tableau' | 'waste', pile: number) => {
-    setGame((g) => {
-      const n = autoMove(g, source, source === 'tableau' ? pile : null);
-      if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
-      return n;
-    });
+    const current = game;
+    const next = moveToFoundation(
+      current,
+      source,
+      source === 'tableau' ? pile : null,
+    );
+    if (next !== current) {
+      ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+      flyMove(
+        current,
+        next,
+        source,
+        source === 'tableau' ? pile : null,
+      );
+    }
   };
+
+  const autoCompleteNext = useCallback(
+    (g: GameState) => {
+      let next = moveToFoundation(g, 'waste', null);
+      if (next !== g) {
+        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+        flyMove(g, next, 'waste', null, () => autoCompleteNext(next));
+        return;
+      }
+      for (let i = 0; i < g.tableau.length; i += 1) {
+        next = moveToFoundation(g, 'tableau', i);
+        if (next !== g) {
+          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+          flyMove(g, next, 'tableau', i, () => autoCompleteNext(next));
+          return;
+        }
+      }
+      setAutoCompleting(false);
+    },
+    [flyMove],
+  );
 
   useEffect(() => {
     if (
+      !autoCompleting &&
       game.stock.length === 0 &&
       game.tableau.every((p) => p.every((c) => c.faceUp))
     ) {
-      setGame((g) => {
-        const n = autoComplete(g);
-        if (n !== g)
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
-        return n;
-      });
+      setAutoCompleting(true);
+      autoCompleteNext(game);
     }
-  }, [game]);
+  }, [game, autoCompleteNext, autoCompleting]);
   if (variant !== 'klondike') {
     return (
       <div className="h-full w-full bg-green-700 text-white select-none p-2">
@@ -356,10 +456,22 @@ const Solitaire = () => {
   }
 
   return (
-    <div className="h-full w-full bg-green-700 text-white select-none p-2 relative overflow-hidden">
+    <div
+      ref={rootRef}
+      className="h-full w-full bg-green-700 text-white select-none p-2 relative overflow-hidden"
+    >
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
       </div>
+      {flying.map((c, i) => (
+        <div
+          key={`fly-${i}`}
+          className="absolute transition-transform duration-300"
+          style={{ transform: `translate(${c.x}px, ${c.y}px)` }}
+        >
+          {renderCard(c)}
+        </div>
+      ))}
       {won && !prefersReducedMotion &&
         cascade.map((c, i) => (
           <div
@@ -448,6 +560,7 @@ const Solitaire = () => {
         <div className="w-16 h-24" onDragOver={(e) => e.preventDefault()}>
           {game.waste.length ? (
             <div
+              ref={wasteRef}
               draggable
               onDoubleClick={() => handleDoubleClick('waste', 0)}
               onDragStart={() => handleDragStart('waste', -1, game.waste.length - 1)}
