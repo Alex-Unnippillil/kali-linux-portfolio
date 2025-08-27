@@ -119,7 +119,8 @@ export default function GhidraApp() {
   }, []);
 
   useEffect(() => {
-    setLiveMessage(`Selected block ${selected}`);
+    const block = BLOCKS.find((b) => b.id === selected);
+    setLiveMessage(`Selected block ${block ? block.label : selected}`);
   }, [selected]);
 
   useEffect(() => {
@@ -169,12 +170,14 @@ export default function GhidraApp() {
       </div>
       <pre
         ref={decompileRef}
+        aria-label="Decompiled code"
         className="w-1/3 overflow-auto p-2 whitespace-pre-wrap"
       >
         {selectedBlock.code.join('\n')}
       </pre>
       <pre
         ref={hexRef}
+        aria-label="Hexadecimal representation"
         className="w-1/3 overflow-auto p-2 whitespace-pre-wrap"
       >
         {hexMap[selected] || ''}
