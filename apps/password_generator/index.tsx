@@ -79,12 +79,12 @@ const PasswordGenerator: React.FC = () => {
           type="text"
           readOnly
           value={password}
-          className="flex-1 text-black px-2 py-1"
+          className="flex-1 text-black px-2 py-1 font-mono leading-[1.2] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
         />
         <button
           type="button"
           onClick={copyToClipboard}
-          className="px-3 py-1 bg-blue-600 rounded"
+          className="px-3 py-1 bg-blue-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
         >
           Copy
         </button>

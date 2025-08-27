@@ -470,3 +470,17 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: word-found-highlight 0.6s forwards;
     display: inline-block;
 }
+
+/* Ensure monospace layout for app outputs */
+textarea,
+pre {
+    font-family: monospace;
+    line-height: 1.2;
+}
+
+/* Visible focus rings for copy buttons and text areas */
+button:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid #3B82F6;
+    outline-offset: 2px;
+}

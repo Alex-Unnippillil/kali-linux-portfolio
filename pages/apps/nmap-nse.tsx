@@ -10,6 +10,13 @@ type ScriptData = Record<string, Script[]>;
 
 const NmapNSEPage: React.FC = () => {
   const [data, setData] = useState<ScriptData>({});
+  const copyExample = useCallback((text: string) => {
+    try {
+      navigator.clipboard?.writeText(text);
+    } catch (e) {
+      // ignore copy errors
+    }
+  }, []);
   const openScriptDoc = useCallback((name: string) => {
     window.open(
       `https://nmap.org/nsedoc/scripts/${name}.html`,
@@ -51,7 +58,16 @@ const NmapNSEPage: React.FC = () => {
                 {script.name}
               </button>
               <p className="mb-2">{script.description}</p>
-              <pre className="bg-black text-green-400 p-2 rounded overflow-auto">{script.example}</pre>
+              <pre className="bg-black text-green-400 p-2 rounded overflow-auto font-mono leading-[1.2]">
+                {script.example}
+              </pre>
+              <button
+                type="button"
+                onClick={() => copyExample(script.example)}
+                className="mt-2 px-2 py-1 bg-blue-700 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+              >
+                Copy
+              </button>
             </div>
           ))}
         </div>
