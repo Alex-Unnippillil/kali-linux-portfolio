@@ -346,3 +346,21 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Bluetooth signal strength indicator */
+.bluetooth-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 12px;
+}
+
+.bluetooth-bar {
+    width: 3px;
+    background: linear-gradient(to top, var(--color-ubt-green), var(--color-ubt-blue));
+    opacity: 0.3;
+}
+
+.bluetooth-bar.active {
+    opacity: 1;
+}

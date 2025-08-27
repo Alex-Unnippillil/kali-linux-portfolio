@@ -4,6 +4,9 @@ const BluetoothApp = () => {
   const [devices, setDevices] = useState([]);
   const [error, setError] = useState('');
 
+  // Generate a pseudo signal strength between 1 and 5 bars
+  const getSignalStrength = () => Math.floor(Math.random() * 5) + 1;
+
   const scan = async () => {
     setError('');
     if (!navigator.bluetooth) {
@@ -14,6 +17,10 @@ const BluetoothApp = () => {
       const device = await navigator.bluetooth.requestDevice({
         acceptAllDevices: true,
       });
+
+      // Augment device with a signal strength for display purposes
+      device.signalStrength = getSignalStrength();
+
       setDevices((prev) => {
         if (prev.find((d) => d.id === device.id)) return prev;
         return [...prev, device];
@@ -27,6 +34,7 @@ const BluetoothApp = () => {
     try {
       if (!device.gatt.connected) {
         await device.gatt.connect();
+        // Preserve signal strength when connection status changes
         setDevices([...devices]);
       }
     } catch (e) {
@@ -59,7 +67,23 @@ const BluetoothApp = () => {
             key={device.id || idx}
             className="mb-2 flex items-center justify-between"
           >
-            <span>{device.name || 'Unnamed device'}</span>
+            <span className="flex items-center">
+              {device.name || 'Unnamed device'}
+              <div className="bluetooth-bars ml-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    // Bar height increases with index
+                    style={{ height: `${(i + 1) * 3}px` }}
+                    key={i}
+                    className={`bluetooth-bar ${
+                      i < (device.signalStrength || 0)
+                        ? 'active'
+                        : ''
+                    }`}
+                  />
+                ))}
+              </div>
+            </span>
             {device.gatt && device.gatt.connected ? (
               <button
                 onClick={() => disconnect(device)}
