@@ -174,9 +174,10 @@ const Simon = () => {
     const colors = mode === 'colorblind'
       ? { base: 'bg-gray-700', active: 'bg-gray-500' }
       : pad.color;
-    return `h-32 w-32 rounded flex items-center justify-center text-3xl ${
-      activePad === idx ? colors.active : colors.base
-    }`;
+    const base =
+      'h-32 w-32 rounded flex items-center justify-center text-3xl relative overflow-hidden';
+    const activeClass = activePad === idx ? `${colors.active} glow-ripple` : colors.base;
+    return `${base} ${activeClass}`;
   };
 
   return (
