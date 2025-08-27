@@ -19,6 +19,8 @@ const INERTIA = 0.99;
 const COLLISION_COOLDOWN = 60; // frames
 const MULTIPLIER_TIMEOUT = 180; // frames
 const MAX_MULTIPLIER = 5;
+const EXHAUST_COLOR = '#ffa500';
+const RADAR_COLORS = { outline: '#0f0', ship: '#fff', asteroid: '#0f0', ufo: '#f00' };
 
 // Simple Quadtree for collision queries
 class Quadtree {
@@ -349,7 +351,7 @@ const Asteroids = () => {
           ship.x - Math.cos(ship.angle) * 12,
           ship.y - Math.sin(ship.angle) * 12,
           3,
-          'orange',
+          EXHAUST_COLOR,
         );
       }
       ship.velX *= INERTIA;
@@ -520,25 +522,27 @@ const Asteroids = () => {
       ctx.restore();
 
       // Radar inset
-      const radarSize = 80;
-      const radarX = canvas.width - radarSize - 10;
-      const radarY = 10;
-      ctx.save();
-      ctx.strokeStyle = '#0f0';
-      ctx.strokeRect(radarX, radarY, radarSize, radarSize);
-      const scaleX = radarSize / canvas.width;
-      const scaleY = radarSize / canvas.height;
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(radarX + ship.x * scaleX - 1, radarY + ship.y * scaleY - 1, 3, 3);
-      ctx.fillStyle = '#0f0';
-      asteroids.forEach((a) => {
-        ctx.fillRect(radarX + a.x * scaleX - 1, radarY + a.y * scaleY - 1, 2, 2);
-      });
-      if (ufo.active) {
-        ctx.fillStyle = 'red';
-        ctx.fillRect(radarX + ufo.x * scaleX - 1, radarY + ufo.y * scaleY - 1, 3, 3);
+      if (!reduceMotion) {
+        const radarSize = 80;
+        const radarX = canvas.width - radarSize - 10;
+        const radarY = 10;
+        ctx.save();
+        ctx.strokeStyle = RADAR_COLORS.outline;
+        ctx.strokeRect(radarX, radarY, radarSize, radarSize);
+        const scaleX = radarSize / canvas.width;
+        const scaleY = radarSize / canvas.height;
+        ctx.fillStyle = RADAR_COLORS.ship;
+        ctx.fillRect(radarX + ship.x * scaleX - 1, radarY + ship.y * scaleY - 1, 3, 3);
+        ctx.fillStyle = RADAR_COLORS.asteroid;
+        asteroids.forEach((a) => {
+          ctx.fillRect(radarX + a.x * scaleX - 1, radarY + a.y * scaleY - 1, 2, 2);
+        });
+        if (ufo.active) {
+          ctx.fillStyle = RADAR_COLORS.ufo;
+          ctx.fillRect(radarX + ufo.x * scaleX - 1, radarY + ufo.y * scaleY - 1, 3, 3);
+        }
+        ctx.restore();
       }
-      ctx.restore();
 
       // HUD
       ctx.fillStyle = 'white';
