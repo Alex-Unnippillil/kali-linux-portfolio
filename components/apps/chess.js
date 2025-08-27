@@ -282,6 +282,7 @@ const ChessGame = () => {
   const sideRef = useRef(WHITE);
   const historyRef = useRef([boardRef.current.slice()]);
   const [selected, setSelected] = useState(null);
+  const [cursor, setCursor] = useState(0);
   const [moves, setMoves] = useState([]);
   const [status, setStatus] = useState('Your move');
   const [paused, setPaused] = useState(false);
@@ -407,6 +408,12 @@ const ChessGame = () => {
             }
           }
 
+          if (cursor === sq) {
+            ctx.strokeStyle = '#ff0';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 2, y + 2, SQ - 4, SQ - 4);
+          }
+
           if (mateSquares.includes(sq)) {
             ctx.beginPath();
             ctx.arc(x + SQ / 2, y + SQ / 2, SQ / 6, 0, Math.PI * 2);
@@ -470,7 +477,7 @@ const ChessGame = () => {
     };
     animRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animRef.current);
-  }, [selected, moves, mateSquares]);
+  }, [selected, moves, mateSquares, cursor]);
 
   const endGame = (result) => {
     // result: 1 win, 0 draw, -1 loss
@@ -531,12 +538,9 @@ const ChessGame = () => {
     }
   };
 
-  const handleClick = (e) => {
+  const handleSquare = (sq) => {
     if (paused) return;
-    const rect = e.target.getBoundingClientRect();
-    const file = Math.floor(((e.clientX - rect.left) / SIZE) * 8);
-    const rank = 7 - Math.floor(((e.clientY - rect.top) / SIZE) * 8);
-    const sq = rank * 16 + file;
+    setCursor(sq);
     const side = sideRef.current;
 
     if (selected !== null) {
@@ -570,18 +574,42 @@ const ChessGame = () => {
       }
       setSelected(null);
       setMoves([]);
-    } else {
-      if (boardRef.current[sq] * side > 0) {
-        setSelected(sq);
-        const legals = chessRef.current
-          .moves({ square: sqToAlg(sq), verbose: true })
-          .map((m) => ({
-            from: algToSq(m.from),
-            to: algToSq(m.to),
-            capture: !!m.captured,
-          }));
-        setMoves(legals);
-      }
+    } else if (boardRef.current[sq] * side > 0) {
+      setSelected(sq);
+      const legals = chessRef.current
+        .moves({ square: sqToAlg(sq), verbose: true })
+        .map((m) => ({
+          from: algToSq(m.from),
+          to: algToSq(m.to),
+          capture: !!m.captured,
+        }));
+      setMoves(legals);
+    }
+  };
+
+  const handleClick = (e) => {
+    const rect = e.target.getBoundingClientRect();
+    const file = Math.floor(((e.clientX - rect.left) / SIZE) * 8);
+    const rank = 7 - Math.floor(((e.clientY - rect.top) / SIZE) * 8);
+    const sq = rank * 16 + file;
+    handleSquare(sq);
+  };
+
+  const handleKey = (e) => {
+    if (paused) return;
+    let next = cursor;
+    if (e.key === 'ArrowUp') next += 16;
+    else if (e.key === 'ArrowDown') next -= 16;
+    else if (e.key === 'ArrowLeft') next -= 1;
+    else if (e.key === 'ArrowRight') next += 1;
+    else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleSquare(cursor);
+      return;
+    }
+    if (next !== cursor && inside(next)) {
+      e.preventDefault();
+      setCursor(next);
     }
   };
 
@@ -591,6 +619,7 @@ const ChessGame = () => {
     sideRef.current = WHITE;
     historyRef.current = [boardRef.current.slice()];
     setSelected(null);
+    setCursor(0);
     setMoves([]);
     trailsRef.current = [];
     particlesRef.current = [];
@@ -629,13 +658,27 @@ const ChessGame = () => {
     setStatus('Your move');
   };
 
+  const copyMoves = () => {
+    navigator.clipboard?.writeText(chessRef.current.pgn());
+  };
+
+  const moveLines = [];
+  for (let i = 0; i < sanLog.length; i += 2) {
+    moveLines.push(
+      `${i / 2 + 1}. ${sanLog[i]}${sanLog[i + 1] ? ' ' + sanLog[i + 1] : ''}`
+    );
+  }
+
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-2 select-none">
+    <div className="h-full w-full max-w-[60ch] mx-auto flex flex-col items-center justify-center bg-ub-cool-grey text-white p-2 select-none">
       <canvas
         ref={canvasRef}
         width={SIZE}
         height={SIZE}
         onClick={handleClick}
+        onKeyDown={handleKey}
+        tabIndex={0}
+        aria-label="Chess board"
         className="border border-gray-600"
       />
       <div className="mt-2 flex gap-2">
@@ -656,7 +699,7 @@ const ChessGame = () => {
         </button>
       </div>
       <div className="mt-2">{status}</div>
-      <div className="mt-2 w-full max-w-xs" aria-label="Evaluation">
+      <div className="mt-2 w-full" aria-label="Evaluation">
         <div
           className="h-4 bg-gray-700"
           role="progressbar"
@@ -674,10 +717,18 @@ const ChessGame = () => {
         </div>
       </div>
       <div className="mt-1">ELO: {elo}</div>
-      <div className="mt-2 w-full max-w-xs h-24 overflow-y-auto bg-gray-800 p-2 text-sm">
-        {sanLog.join(' ')}
-      </div>
-      <div className="mt-1 text-xs w-full max-w-xs break-words">
+      <ol
+        className="mt-2 w-full h-24 overflow-y-auto bg-gray-800 p-2 text-sm font-mono"
+        aria-label="Move history"
+      >
+        {moveLines.map((line, idx) => (
+          <li key={idx}>{line}</li>
+        ))}
+      </ol>
+      <button className="mt-1 px-2 py-1 bg-gray-700" onClick={copyMoves}>
+        Copy Moves
+      </button>
+      <div className="mt-1 text-xs w-full break-words">
         PGN: {chessRef.current.pgn()}
       </div>
     </div>
