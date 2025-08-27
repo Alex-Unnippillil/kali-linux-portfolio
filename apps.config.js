@@ -490,6 +490,7 @@ const gameList = [
 ];
 
 export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+const chromeUrl = 'https://www.google.com/webhp?igu=1';
 
 const apps = [
   {
@@ -499,7 +500,8 @@ const apps = [
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
-    screen: displayChrome,
+    url: chromeUrl,
+    screen: displayChrome({ src: chromeUrl }),
   },
   {
     id: 'calc',
