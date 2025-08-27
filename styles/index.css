@@ -346,3 +346,27 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* QR tool color picker and logo preview */
+.color-picker {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+}
+
+.logo-preview {
+    width: 4rem;
+    height: 4rem;
+    border: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.logo-preview img {
+    max-width: 100%;
+    max-height: 100%;
+}
