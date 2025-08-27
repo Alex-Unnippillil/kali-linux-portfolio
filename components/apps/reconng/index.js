@@ -13,11 +13,44 @@ const modules = [
   'Reverse IP Lookup',
 ];
 
+const moduleFlow = {
+  nodes: modules.map((m) => ({ id: m })),
+  links: [
+    { source: 'DNS Enumeration', target: 'WHOIS Lookup' },
+    { source: 'WHOIS Lookup', target: 'Reverse IP Lookup' },
+  ],
+};
+
+const sampleData = {
+  'DNS Enumeration': [
+    { Record: 'A', Name: 'example.com', Value: '93.184.216.34' },
+    { Record: 'MX', Name: 'mail.example.com', Value: '93.184.216.35' },
+  ],
+  'WHOIS Lookup': [
+    { Field: 'Registrar', Value: 'Example Registrar Inc.' },
+    { Field: 'Creation Date', Value: '2000-01-01' },
+  ],
+  'Reverse IP Lookup': [
+    { IP: '93.184.216.34', Domain: 'example.com' },
+    { IP: '93.184.216.34', Domain: 'example.net' },
+  ],
+};
+
+const recommendations = {
+  'DNS Enumeration':
+    'Monitor DNS records and limit exposure of internal subdomains.',
+  'WHOIS Lookup':
+    'Use privacy protection services to mask registrant details.',
+  'Reverse IP Lookup':
+    'Review hosted domains and ensure unused ones are removed.',
+};
+
 const ReconNG = () => {
   const [selectedModule, setSelectedModule] = useState(modules[0]);
-  const [target, setTarget] = useState('');
+  const [target, setTarget] = useState('example.com');
   const [output, setOutput] = useState('');
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
+  const [currentData, setCurrentData] = useState([]);
   const [view, setView] = useState('run');
   const [marketplace, setMarketplace] = useState([]);
   const [apiKeys, setApiKeys] = usePersistentState('reconng-api-keys', {});
@@ -31,18 +64,40 @@ const ReconNG = () => {
 
   const allModules = [...modules, ...marketplace];
 
+  const formatOutput = (data) =>
+    data.map((row) => Object.values(row).join(' | ')).join('\n');
+
   const runModule = () => {
     if (!target) return;
-    setOutput(`Running ${selectedModule} on ${target}...\nResults will appear here.`);
+    const data = sampleData[selectedModule] || [];
+    setCurrentData(data);
+    setOutput(formatOutput(data));
     setGraphData({
       nodes: [
         { id: selectedModule },
-        { id: target },
+        ...data.map((row, i) => ({ id: Object.values(row).join(': ') })),
       ],
-      links: [
-        { source: selectedModule, target },
-      ],
+      links: data.map((row) => ({
+        source: selectedModule,
+        target: Object.values(row).join(': '),
+      })),
     });
+  };
+
+  const exportCSV = () => {
+    if (!currentData.length) return;
+    const headers = Object.keys(currentData[0]);
+    const rows = currentData.map((row) =>
+      headers.map((h) => `"${row[h]}"`).join(','),
+    );
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedModule.replace(/\s+/g, '_')}_results.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -72,6 +127,9 @@ const ReconNG = () => {
       </div>
       {view === 'run' && (
         <>
+          <div className="bg-black p-2 mb-4" style={{ height: '200px' }}>
+            <ForceGraph2D graphData={moduleFlow} />
+          </div>
           <div className="flex gap-2 mb-2">
             <select
               value={selectedModule}
@@ -98,8 +156,21 @@ const ReconNG = () => {
             >
               Run
             </button>
+            <button
+              type="button"
+              onClick={exportCSV}
+              disabled={!currentData.length}
+              className="bg-green-600 hover:bg-green-500 px-3 py-1 rounded disabled:opacity-50"
+            >
+              Export CSV
+            </button>
           </div>
           <pre className="flex-1 bg-black p-2 overflow-auto whitespace-pre-wrap mb-2">{output}</pre>
+          {currentData.length > 0 && (
+            <div className="mb-2">
+              <strong>Next steps:</strong> {recommendations[selectedModule]}
+            </div>
+          )}
           {graphData.nodes.length > 0 && (
             <div className="bg-black p-2" style={{ height: '300px' }}>
               <ForceGraph2D graphData={graphData} />
