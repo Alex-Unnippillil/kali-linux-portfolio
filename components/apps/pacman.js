@@ -1,5 +1,13 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
+import {
+  TILE_SIZE,
+  isCenter,
+  countPellets,
+  isLevelComplete,
+  ghostEatenScore,
+  applyBufferedTurn,
+} from './pacmanUtils';
 
 /**
  * Small Pacman implementation used inside the portfolio. The goal of this
@@ -18,7 +26,7 @@ const defaultMaze = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 ];
 
-const tileSize = 20;
+const tileSize = TILE_SIZE;
 const WIDTH = defaultMaze[0].length * tileSize;
 const HEIGHT = defaultMaze.length * tileSize;
 const speed = 1; // pixels per frame
@@ -94,9 +102,23 @@ const Pacman = () => {
   const statusRef = useRef('Playing');
   const audioCtxRef = useRef(null);
   const touchStartRef = useRef(null);
+  const pinchRef = useRef(null);
+  const [scale, setScale] = useState(1);
+
+  const vibrate = (ms) => {
+    try {
+      if (navigator.vibrate) navigator.vibrate(ms);
+    } catch {
+      // ignore vibration errors
+    }
+  };
+
+  const touchDistance = (e) => {
+    const [t1, t2] = e.touches;
+    return Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+  };
 
   const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);
-  const isCenter = (pos) => Math.abs((pos % tileSize) - tileSize / 2) < 0.1;
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const isTunnel = useCallback((tx, ty) => {
     const width = mazeRef.current[0].length;
@@ -248,6 +270,18 @@ const Pacman = () => {
     ctx.closePath();
     ctx.fill();
 
+    if (pac.nextDir.x || pac.nextDir.y) {
+      ctx.strokeStyle = 'rgba(255,255,0,0.3)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(pac.x + tileSize / 2, pac.y + tileSize / 2);
+      ctx.lineTo(
+        pac.x + tileSize / 2 + pac.nextDir.x * tileSize,
+        pac.y + tileSize / 2 + pac.nextDir.y * tileSize
+      );
+      ctx.stroke();
+    }
+
     ghostsRef.current.forEach((g) => {
       ctx.fillStyle = frightTimerRef.current > 0 ? 'blue' : g.color;
       ctx.beginPath();
@@ -262,16 +296,7 @@ const Pacman = () => {
     const randomMode = levelIndex < TARGET_MODE_LEVEL;
 
     // handle pacman turning
-    const px = pac.x / tileSize;
-    const py = pac.y / tileSize;
-    if (pac.nextDir.x || pac.nextDir.y) {
-      const nx = Math.floor(px + pac.nextDir.x * 0.5);
-      const ny = Math.floor(py + pac.nextDir.y * 0.5);
-      if (tileAt(nx, ny) !== 1 && isCenter(pac.x) && isCenter(pac.y)) {
-        pac.dir = pac.nextDir;
-        pac.nextDir = { x: 0, y: 0 };
-      }
-    }
+    applyBufferedTurn(pac, tileAt);
 
     const pacTileX = Math.floor((pac.x + tileSize / 2) / tileSize);
     const pacTileY = Math.floor((pac.y + tileSize / 2) / tileSize);
@@ -300,6 +325,10 @@ const Pacman = () => {
         frightTimerRef.current = 6 * 60;
       }
       maze[pty][ptx] = 0;
+      vibrate(20);
+      if (isLevelComplete(maze)) {
+        statusRef.current = 'Level Complete';
+      }
     }
 
     // fruit
@@ -373,11 +402,13 @@ const Pacman = () => {
 
       if (gtx === ptx && gty === pty) {
         if (frightTimerRef.current > 0) {
-          setScore((s) => s + 200);
+          setScore((s) => ghostEatenScore(s));
           g.x = 7 * tileSize;
           g.y = 3 * tileSize;
+          vibrate(100);
         } else {
           pac.lives -= 1;
+          vibrate(200);
           if (pac.lives <= 0) {
             statusRef.current = 'Game Over';
           } else {
@@ -442,11 +473,30 @@ const Pacman = () => {
     };
 
     const handleTouchStart = (e) => {
-      const t = e.touches[0];
-      touchStartRef.current = { x: t.clientX, y: t.clientY };
+      if (e.touches.length === 2) {
+        pinchRef.current = { distance: touchDistance(e), base: scale };
+      } else {
+        const t = e.touches[0];
+        touchStartRef.current = { x: t.clientX, y: t.clientY };
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (e.touches.length === 2 && pinchRef.current) {
+        const dist = touchDistance(e);
+        const newScale = Math.min(
+          2,
+          Math.max(1, (dist / pinchRef.current.distance) * pinchRef.current.base)
+        );
+        setScale(newScale);
+        e.preventDefault();
+      }
     };
 
     const handleTouchEnd = (e) => {
+      if (e.touches.length < 2) {
+        pinchRef.current = null;
+      }
       if (!touchStartRef.current) return;
       const t = e.changedTouches[0];
       const dx = t.clientX - touchStartRef.current.x;
@@ -461,6 +511,7 @@ const Pacman = () => {
 
     window.addEventListener('keydown', handleKey);
     canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     canvas.addEventListener('touchend', handleTouchEnd);
 
     let id;
@@ -488,6 +539,7 @@ const Pacman = () => {
     return () => {
       window.removeEventListener('keydown', handleKey);
       canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
       canvas.removeEventListener('touchend', handleTouchEnd);
       if (id) cancelAnimationFrame(id);
     };
@@ -551,6 +603,7 @@ const Pacman = () => {
         width={WIDTH}
         height={HEIGHT}
         className="bg-black"
+        style={{ transform: `scale(${scale})`, transformOrigin: 'center', touchAction: 'none' }}
       />
 
       <div className="mt-2">Score: {score} | High: {highScore}</div>
