@@ -5,7 +5,7 @@ import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
 
-interface UbuntuProps {}
+type UbuntuProps = Record<string, never>;
 
 interface UbuntuState {
   screen_locked: boolean;
@@ -13,7 +13,7 @@ interface UbuntuState {
   shutDownScreen: boolean;
 }
 
-interface UbuntuContext {}
+type UbuntuContext = Record<string, never>;
 
 export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuContext> {
   context!: UbuntuContext;

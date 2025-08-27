@@ -444,7 +444,7 @@ export class Desktop extends Component {
         var focused_windows = this.state.focused_windows;
         focused_windows[objId] = true;
         for (let key in focused_windows) {
-            if (focused_windows.hasOwnProperty(key)) {
+            if (Object.prototype.hasOwnProperty.call(focused_windows, key)) {
                 if (key !== objId) {
                     focused_windows[key] = false;
                 }

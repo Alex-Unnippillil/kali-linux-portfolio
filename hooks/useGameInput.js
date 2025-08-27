@@ -4,7 +4,9 @@ import { useEffect } from 'react';
 export default function useGameInput({ onInput } = {}) {
   useEffect(() => {
     const handle = (e) => {
-      onInput && onInput(e);
+      if (onInput) {
+        onInput(e);
+      }
     };
     window.addEventListener('keydown', handle);
     window.addEventListener('keyup', handle);

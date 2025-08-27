@@ -19,7 +19,9 @@ const Toast: React.FC<ToastProps> = ({
 
   useEffect(() => {
     timeoutRef.current = setTimeout(() => {
-      onClose && onClose();
+      if (onClose) {
+        onClose();
+      }
     }, duration);
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);

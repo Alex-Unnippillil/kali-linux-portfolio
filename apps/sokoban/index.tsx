@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 import { LEVEL_PACKS, LevelPack, parseLevels } from './levels';
 import {
@@ -49,7 +49,7 @@ const Sokoban: React.FC = () => {
     selectLevel(0, pIdx);
   };
 
-  const handleUndo = () => {
+  const handleUndo = useCallback(() => {
     const st = undoMove(state);
     if (st !== state) {
       setState(st);
@@ -59,16 +59,16 @@ const Sokoban: React.FC = () => {
       setGhost(new Set());
       logEvent({ category: 'sokoban', action: 'undo' });
     }
-  };
+  }, [state]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     const st = resetLevel(currentPack.levels[index]);
     setState(st);
     setReach(reachable(st));
     setHint('');
     setStatus('');
     setGhost(new Set());
-  };
+  }, [currentPack, index]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -93,7 +93,7 @@ const Sokoban: React.FC = () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get('code');
       if (code) {
-        let text = decodeURIComponent(code);
+        const text = decodeURIComponent(code);
         let parsed = parseLevels(text);
         if (!parsed.length) {
           try {
@@ -217,7 +217,7 @@ const Sokoban: React.FC = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [state, index, packIndex, warnDir]);
+  }, [state, index, packIndex, warnDir, handleReset, handleUndo]);
 
   const handleHint = () => {
     setHint('...');
