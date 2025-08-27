@@ -10,6 +10,13 @@ describe('VsCode app', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('has an external link', () => {
+    render(<VsCode />);
+    const link = screen.getByRole('link', { name: /open externally/i });
+    expect(link).toHaveAttribute('href', 'https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
   it('shows banner when cookies are blocked', async () => {
     const original = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
     Object.defineProperty(document, 'cookie', {

@@ -575,6 +575,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayVsCode,
+    defaultWidth: 85,
+    defaultHeight: 85,
   },
   {
     id: 'x',
