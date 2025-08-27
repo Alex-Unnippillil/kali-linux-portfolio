@@ -73,11 +73,14 @@ export default function ReaverApp() {
   const rafRef = useRef();
 
   const steps = [
-    'Initializing',
-    'Associating',
-    'Sending M1',
-    'Receiving M2',
-    'Deriving PIN',
+    'S1: Initializing',
+    'S2: Scanning',
+    'S3: Associating',
+    'S4: Sending M1',
+    'S5: Receiving M2',
+    'S6: Sending M3',
+    'S7: Receiving M4',
+    'S8: Deriving PIN',
   ];
 
   useEffect(() => {
@@ -96,7 +99,7 @@ export default function ReaverApp() {
       (prev) =>
         `${prev}\nHandshake ${result ? 'complete' : 'failed'}${
           result ? ` PIN: ${result}` : ''
-        }`
+        }\nSimulation only – no live Wi-Fi attacks occurred.`
     );
     setRunning(false);
   };
@@ -105,7 +108,10 @@ export default function ReaverApp() {
     setRunning(true);
     setStatus(null);
     setPin('');
-    setLog(`Starting WPS handshake with ${bssid}\n`);
+    setLog(
+      `Starting simulated WPS handshake with ${bssid}\n` +
+        'No live Wi-Fi attacks occur.\n'
+    );
     const start = performance.now();
     const stepDuration = 1000;
     const totalTime = steps.length * stepDuration;
@@ -146,7 +152,10 @@ export default function ReaverApp() {
 
   return (
     <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
-      <h2 className="text-lg mb-4">Reaver WPS PIN Attack</h2>
+      <h2 className="text-lg">Reaver WPS PIN Attack</h2>
+      <p className="text-xs text-gray-300 mb-4">
+        Simulation only—no live Wi-Fi attacks occur.
+      </p>
       <div className="mb-2">
         <label className="block mb-1">Target BSSID</label>
         <input
@@ -163,7 +172,7 @@ export default function ReaverApp() {
         onClick={startAttack}
         disabled={running || !bssid}
       >
-        Start Attack
+        Start Simulation
       </button>
       {running && (
         <div className="mt-4 flex items-center space-x-4">
