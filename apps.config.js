@@ -4,7 +4,7 @@ import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
 import { displayVsCode } from './components/apps/vscode';
 import { displaySettings } from './components/apps/settings';
-import { displayChrome } from './components/apps/chrome';
+import { displayChrome } from './components/apps/Chrome';
 import { displayTrash } from './components/apps/trash';
 import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
