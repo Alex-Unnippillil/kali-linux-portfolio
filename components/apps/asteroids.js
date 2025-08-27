@@ -99,10 +99,12 @@ const Asteroids = () => {
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [restartKey, setRestartKey] = useState(0);
+  const [liveText, setLiveText] = useState('');
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function resize() {
       const { clientWidth, clientHeight } = canvas;
@@ -144,6 +146,7 @@ const Asteroids = () => {
 
     // Particle pooling
     const spawnParticles = (x, y, count, color = 'white') => {
+      if (reduceMotion) return;
       for (let i = 0; i < particles.length && count > 0; i += 1) {
         const p = particles[i];
         if (!p.active) {
@@ -198,6 +201,15 @@ const Asteroids = () => {
 
     startLevel();
     ga.start();
+
+    let lastAnnouncement = '';
+    const announce = () => {
+      const text = `Score ${score} x${multiplier} Lives ${lives}`;
+      if (text !== lastAnnouncement) {
+        lastAnnouncement = text;
+        setLiveText(text);
+      }
+    };
 
     // Gamepad support
     const padState = { turn: 0, thrust: 0, fire: false, hyperspace: false };
@@ -327,7 +339,12 @@ const Asteroids = () => {
       if (thrust > 0) {
         ship.velX += Math.cos(ship.angle) * THRUST * thrust;
         ship.velY += Math.sin(ship.angle) * THRUST * thrust;
-        spawnParticles(ship.x - Math.cos(ship.angle) * 10, ship.y - Math.sin(ship.angle) * 10, 1, 'gray');
+        spawnParticles(
+          ship.x - Math.cos(ship.angle) * 12,
+          ship.y - Math.sin(ship.angle) * 12,
+          3,
+          'orange',
+        );
       }
       ship.velX *= INERTIA;
       ship.velY *= INERTIA;
@@ -487,11 +504,35 @@ const Asteroids = () => {
       });
 
       // Particles
+      ctx.save();
       particles.forEach((p) => {
         if (!p.active) return;
+        ctx.globalAlpha = p.life / 30;
         ctx.fillStyle = p.color;
         ctx.fillRect(p.x, p.y, 2, 2);
       });
+      ctx.restore();
+
+      // Radar inset
+      const radarSize = 80;
+      const radarX = canvas.width - radarSize - 10;
+      const radarY = 10;
+      ctx.save();
+      ctx.strokeStyle = '#0f0';
+      ctx.strokeRect(radarX, radarY, radarSize, radarSize);
+      const scaleX = radarSize / canvas.width;
+      const scaleY = radarSize / canvas.height;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(radarX + ship.x * scaleX - 1, radarY + ship.y * scaleY - 1, 3, 3);
+      ctx.fillStyle = '#0f0';
+      asteroids.forEach((a) => {
+        ctx.fillRect(radarX + a.x * scaleX - 1, radarY + a.y * scaleY - 1, 2, 2);
+      });
+      if (ufo.active) {
+        ctx.fillStyle = 'red';
+        ctx.fillRect(radarX + ufo.x * scaleX - 1, radarY + ufo.y * scaleY - 1, 3, 3);
+      }
+      ctx.restore();
 
       // HUD
       ctx.fillStyle = 'white';
@@ -499,6 +540,7 @@ const Asteroids = () => {
       ctx.fillText(`Score: ${score} x${multiplier}`, 10, 20);
       ctx.fillText(`Lives: ${lives}`, 10, 40);
 
+      announce();
       requestRef.current = requestAnimationFrame(update);
     };
 
@@ -524,6 +566,9 @@ const Asteroids = () => {
   return (
     <GameLayout paused={paused} onPause={togglePause} onRestart={restartGame}>
       <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />
+      <div aria-live="polite" className="sr-only">
+        {liveText}
+      </div>
     </GameLayout>
   );
 };
