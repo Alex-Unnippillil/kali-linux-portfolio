@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import usePersistentState from '../../hooks/usePersistentState';
-import confetti from 'canvas-confetti';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
+import ErrorBoundary from '../util-components/ErrorBoundary';
+
+const confettiModule = dynamic(() => import('canvas-confetti'), { ssr: false });
+const launchConfetti = (opts) => {
+  confettiModule.preload().then((m) => m.default(opts));
+};
 
 const dictionaries = {
   tech: {
@@ -189,7 +195,7 @@ const Hangman = () => {
   useEffect(() => {
     const winner = word && word.split('').every((l) => guessed.includes(l));
     if (winner) {
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      launchConfetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     }
   }, [word, guessed]);
 
@@ -216,11 +222,12 @@ const Hangman = () => {
   }, [theme, difficulty]);
 
   return (
-    <div
-      className={`h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none ${
-        shake ? 'shake' : ''
-      }`}
-    >
+    <ErrorBoundary>
+      <div
+        className={`h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none ${
+          shake ? 'shake' : ''
+        }`}
+      >
       <div className="flex space-x-2 mb-4">
         <select
           value={theme}
@@ -313,7 +320,8 @@ const Hangman = () => {
           Reset
         </button>
       </div>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 };
 
