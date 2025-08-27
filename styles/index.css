@@ -319,6 +319,19 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: shake 0.5s;
 }
 
+/* Terminal output coloring */
+.terminal-success {
+    color: var(--color-ubt-green);
+}
+
+.terminal-warning {
+    color: var(--color-ubt-gedit-orange);
+}
+
+.terminal-error {
+    color: var(--color-ub-orange);
+}
+
 @keyframes keypress {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(0.95); }
