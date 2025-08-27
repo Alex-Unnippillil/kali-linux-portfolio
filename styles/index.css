@@ -346,3 +346,13 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Radare2 graph styling */
+.radare2-graph {
+    --r2-node-color: #4E9A06;
+    --r2-link-color: #E95420;
+}
+
+.radare2-graph canvas {
+    background-color: #000;
+}

@@ -23,6 +23,7 @@ const Radare2 = () => {
   const [snippetName, setSnippetName] = useState('');
   const [snippetCommand, setSnippetCommand] = useState('');
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
+  const [showGraph, setShowGraph] = useState(false);
 
   useEffect(() => {
     setSnippets(loadSnippets());
@@ -30,6 +31,7 @@ const Radare2 = () => {
 
   useEffect(() => {
     setGraphData(parseGraph(analysis));
+    setShowGraph(false);
   }, [analysis]);
 
   const handleSaveSnippet = () => {
@@ -135,15 +137,63 @@ const Radare2 = () => {
         </button>
         {analysis && (
           <>
-            <pre className="whitespace-pre-wrap bg-black p-2 mt-2 rounded">
-              {analysis}
-            </pre>
-            <button
-              onClick={handleExport}
-              className="mt-2 px-4 py-2 bg-purple-600 rounded"
-            >
-              Export Ghidra
-            </button>
+            {!showGraph && (
+              <pre className="whitespace-pre-wrap bg-black p-2 mt-2 rounded">
+                {analysis}
+              </pre>
+            )}
+            {showGraph && (
+              <div className="h-64 bg-black rounded radare2-graph mt-2">
+                <ForceGraph2D
+                  graphData={graphData}
+                  nodeLabel="id"
+                  linkWidth={2}
+                  linkColor={() =>
+                    getComputedStyle(
+                      document.querySelector('.radare2-graph')
+                    )
+                      .getPropertyValue('--r2-link-color')
+                      .trim() || '#E95420'
+                  }
+                  linkDirectionalArrowLength={6}
+                  linkDirectionalArrowRelPos={1}
+                  linkDirectionalArrowColor={() =>
+                    getComputedStyle(
+                      document.querySelector('.radare2-graph')
+                    )
+                      .getPropertyValue('--r2-link-color')
+                      .trim() || '#E95420'
+                  }
+                  nodeCanvasObject={(node, ctx, globalScale) => {
+                    const color =
+                      getComputedStyle(
+                        document.querySelector('.radare2-graph')
+                      )
+                        .getPropertyValue('--r2-node-color')
+                        .trim() || '#4E9A06';
+                    const radius = 5 / globalScale;
+                    ctx.fillStyle = color;
+                    ctx.beginPath();
+                    ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
+                    ctx.fill();
+                  }}
+                />
+              </div>
+            )}
+            <div className="mt-2 flex gap-2">
+              <button
+                onClick={handleExport}
+                className="px-4 py-2 bg-purple-600 rounded"
+              >
+                Export Ghidra
+              </button>
+              <button
+                onClick={() => setShowGraph(!showGraph)}
+                className="px-4 py-2 bg-blue-600 rounded"
+              >
+                {showGraph ? 'Show Text' : 'Show Graph'}
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -185,12 +235,6 @@ const Radare2 = () => {
           ))}
         </ul>
       </div>
-
-      {graphData.nodes.length > 0 && (
-        <div className="h-64 bg-black rounded">
-          <ForceGraph2D graphData={graphData} />
-        </div>
-      )}
 
       {loading && <p>Running...</p>}
       {error && <p className="text-red-500">{error}</p>}
