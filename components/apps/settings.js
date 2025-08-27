@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../../hooks/useTheme';
+import { setWallpaper, resetSettings } from '../../utils/settingsStore';
 
 export function Settings(props) {
     const { theme, setTheme } = useTheme();
@@ -19,7 +20,9 @@ export function Settings(props) {
     };
 
     let changeBackgroundImage = (e) => {
-        props.changeBackgroundImage(e.target.dataset.path);
+        const name = e.target.dataset.path;
+        setWallpaper(name);
+        props.changeBackgroundImage(name);
     }
 
     let hexToRgb = (hex) => {
@@ -122,6 +125,14 @@ export function Settings(props) {
                         );
                     })
                 }
+            </div>
+            <div className="flex justify-center my-4 border-t border-gray-900 pt-4">
+                <button
+                    onClick={() => { resetSettings(); window.location.reload(); }}
+                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                >
+                    Reset Desktop
+                </button>
             </div>
         </div>
     )

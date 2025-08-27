@@ -4,6 +4,7 @@ import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
+import { getWallpaper, setWallpaper } from '../utils/settingsStore';
 
 interface UbuntuProps {}
 
@@ -40,10 +41,8 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
   };
 
   getLocalData = (): void => {
-    const bg_image_name = localStorage.getItem('bg-image');
-    if (bg_image_name !== null && bg_image_name !== undefined) {
-      this.setState({ bg_image_name });
-    }
+    const bg_image_name = getWallpaper();
+    this.setState({ bg_image_name });
 
     const booting_screen = localStorage.getItem('booting_screen');
     if (booting_screen !== null && booting_screen !== undefined) {
@@ -89,7 +88,7 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
 
   changeBackgroundImage = (img_name: string): void => {
     this.setState({ bg_image_name: img_name });
-    localStorage.setItem('bg-image', img_name);
+    setWallpaper(img_name);
   };
 
   shutDown = (): void => {
