@@ -31,7 +31,11 @@ function computePath(start: Position, end: Position): Position[] {
 const SAVE_KEY = 'game:word_search:save';
 const LB_KEY = 'game:word_search:leaderboard';
 
-const WordSearchInner: React.FC = () => {
+interface WordSearchInnerProps {
+  getDailySeed?: () => Promise<string>;
+}
+
+const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const router = useRouter();
   const { seed: seedQuery, words: wordsQuery } = router.query as { seed?: string; words?: string };
   const [seed, setSeed] = useState('');
@@ -83,15 +87,18 @@ const WordSearchInner: React.FC = () => {
 
   useEffect(() => {
     if (seed && words.length) return; // skip if loaded
-    const queryWords =
-      typeof wordsQuery === 'string'
-        ? wordsQuery.split(',').map((w) => w.trim().toUpperCase()).filter(Boolean)
-        : [];
-    const defaultSeed = new Date().toISOString().split('T')[0];
-    const s = typeof seedQuery === 'string' ? seedQuery : defaultSeed;
-    setSeed(s);
-    setWords(queryWords.length ? queryWords : pickWords(s));
-  }, [seedQuery, wordsQuery, seed, words.length]);
+    const init = async () => {
+      const queryWords =
+        typeof wordsQuery === 'string'
+          ? wordsQuery.split(',').map((w) => w.trim().toUpperCase()).filter(Boolean)
+          : [];
+      const defaultSeed = (await getDailySeed?.()) ?? new Date().toISOString().split('T')[0];
+      const s = typeof seedQuery === 'string' ? seedQuery : defaultSeed;
+      setSeed(s);
+      setWords(queryWords.length ? queryWords : pickWords(s));
+    };
+    void init();
+  }, [seedQuery, wordsQuery, seed, words.length, getDailySeed]);
 
   useEffect(() => {
     if (!seed || !words.length) return;
@@ -420,10 +427,14 @@ const WordSearchInner: React.FC = () => {
   );
 };
 
-const WordSearch: React.FC = () => (
+interface WordSearchProps {
+  getDailySeed?: () => Promise<string>;
+}
+
+const WordSearch: React.FC<WordSearchProps> = ({ getDailySeed }) => (
   <SettingsProvider>
     <GameLayout gameId="word_search">
-      <WordSearchInner />
+      <WordSearchInner getDailySeed={getDailySeed} />
     </GameLayout>
   </SettingsProvider>
 );
