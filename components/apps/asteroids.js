@@ -9,8 +9,7 @@ import {
   updatePowerUps,
   POWER_UPS,
 } from './asteroids-utils';
-import useGameControls from './useGameControls';
-import GameLayout from './GameLayout';
+// Game uses a canvas overlay and does not rely on the shared GameLayout
 
 // Arcade-style tuning constants
 const THRUST = 0.1;
@@ -95,10 +94,52 @@ const Asteroids = () => {
   const requestRef = useRef();
   const audioCtx = useRef(null);
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
-  const controlsRef = useRef(useGameControls(canvasRef));
+  const controlsRef = useRef({
+    keys: {},
+    fire: false,
+    hyperspace: false,
+    joystick: { active: false, x: 0, y: 0 },
+  });
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [restartKey, setRestartKey] = useState(0);
+  const [highScore, setHighScore] = useState(0);
+  const highScoreRef = useRef(0);
+  const [sound, setSound] = useState(true);
+  const soundRef = useRef(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hs = localStorage.getItem('asteroids_highscore');
+    if (hs) {
+      const val = parseInt(hs, 10);
+      highScoreRef.current = val;
+      setHighScore(val);
+    }
+    const snd = localStorage.getItem('asteroids_sound');
+    if (snd !== null) {
+      const enabled = snd === '1';
+      soundRef.current = enabled;
+      setSound(enabled);
+    }
+  }, []);
+
+  useEffect(() => {
+    const keyDown = (e) => {
+      if (e.key === ' ') controlsRef.current.fire = true;
+      else if (e.key.toLowerCase() === 'h') controlsRef.current.hyperspace = true;
+      controlsRef.current.keys[e.key] = true;
+    };
+    const keyUp = (e) => {
+      controlsRef.current.keys[e.key] = false;
+    };
+    window.addEventListener('keydown', keyDown);
+    window.addEventListener('keyup', keyUp);
+    return () => {
+      window.removeEventListener('keydown', keyDown);
+      window.removeEventListener('keyup', keyUp);
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -141,6 +182,15 @@ const Asteroids = () => {
     let ufoTimer = 600; // frames until next UFO
     let multiplier = 1;
     let multiplierTimer = 0;
+    const updateHighScore = () => {
+      if (score > highScoreRef.current) {
+        highScoreRef.current = score;
+        setHighScore(score);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('asteroids_highscore', score.toString());
+        }
+      }
+    };
 
     // Particle pooling
     const spawnParticles = (x, y, count, color = 'white') => {
@@ -163,6 +213,7 @@ const Asteroids = () => {
 
     // Audio using WebAudio lazily
     const playSound = (freq) => {
+      if (!soundRef.current) return;
       if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
       const ctxAudio = audioCtx.current;
       const osc = ctxAudio.createOscillator();
@@ -250,6 +301,7 @@ const Asteroids = () => {
       }
       ship.hitCooldown = COLLISION_COOLDOWN;
       if (lives < 0) {
+        updateHighScore();
         lives = 3;
         score = 0;
         level = 1;
@@ -264,6 +316,7 @@ const Asteroids = () => {
       const a = asteroids[index];
       spawnParticles(a.x, a.y, 20, 'white');
       score += 100 * multiplier;
+      updateHighScore();
       multiplier = Math.min(multiplier + 1, MAX_MULTIPLIER);
       multiplierTimer = MULTIPLIER_TIMEOUT;
       ga.split(a.r);
@@ -292,6 +345,7 @@ const Asteroids = () => {
       ufo.active = false;
       playSound(220);
       score += 500 * multiplier;
+      updateHighScore();
       multiplier = Math.min(multiplier + 1, MAX_MULTIPLIER);
       multiplierTimer = MULTIPLIER_TIMEOUT;
     }
@@ -497,7 +551,9 @@ const Asteroids = () => {
       ctx.fillStyle = 'white';
       ctx.font = '16px monospace';
       ctx.fillText(`Score: ${score} x${multiplier}`, 10, 20);
-      ctx.fillText(`Lives: ${lives}`, 10, 40);
+      ctx.fillText(`High: ${highScoreRef.current}`, 10, 40);
+      ctx.fillText(`Lives: ${lives}`, 10, 60);
+      ctx.fillText(`Sound: ${soundRef.current ? 'On' : 'Off'}`, 10, 80);
 
       requestRef.current = requestAnimationFrame(update);
     };
@@ -515,16 +571,47 @@ const Asteroids = () => {
     setPaused(pausedRef.current);
   };
 
-  const restartGame = () => {
+  const reset = () => {
     pausedRef.current = false;
     setPaused(false);
     setRestartKey((k) => k + 1);
   };
 
+  const toggleSound = () => {
+    soundRef.current = !soundRef.current;
+    setSound(soundRef.current);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('asteroids_sound', soundRef.current ? '1' : '0');
+    }
+  };
+
   return (
-    <GameLayout paused={paused} onPause={togglePause} onRestart={restartGame}>
+    <div className="relative w-full h-full text-white">
       <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />
-    </GameLayout>
+      <div className="absolute top-2 right-2 z-10 flex gap-2 text-xs">
+        <button
+          type="button"
+          onClick={togglePause}
+          className="bg-gray-700 px-2 py-1 rounded"
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          type="button"
+          onClick={reset}
+          className="bg-gray-700 px-2 py-1 rounded"
+        >
+          Reset
+        </button>
+        <button
+          type="button"
+          onClick={toggleSound}
+          className="bg-gray-700 px-2 py-1 rounded"
+        >
+          {sound ? 'Mute' : 'Sound'}
+        </button>
+      </div>
+    </div>
   );
 };
 
