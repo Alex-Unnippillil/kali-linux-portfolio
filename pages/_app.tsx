@@ -7,6 +7,7 @@ import '../styles/index.css';
 import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
 import { SettingsProvider } from '../hooks/useSettings';
+import DemoBanner from '../components/DemoBanner';
 
 function MyApp({ Component, pageProps }: AppProps) {
   useEffect(() => {
@@ -22,6 +23,7 @@ function MyApp({ Component, pageProps }: AppProps) {
   }, []);
   return (
     <SettingsProvider>
+      <DemoBanner />
       <Component {...pageProps} />
       <Analytics />
     </SettingsProvider>
