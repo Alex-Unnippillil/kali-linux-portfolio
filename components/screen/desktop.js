@@ -17,6 +17,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowRefs = {};
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -49,10 +50,12 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        document.addEventListener('keydown', this.handleKeyShortcuts);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
+        document.removeEventListener('keydown', this.handleKeyShortcuts);
     }
 
     checkForNewFolders = () => {
@@ -95,6 +98,34 @@ export class Desktop extends Component {
     removeContextListeners = () => {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
+    }
+
+    handleKeyShortcuts = (e) => {
+        if (!e.altKey) return;
+        const focusedId = Object.keys(this.state.focused_windows).find(id => this.state.focused_windows[id]);
+        if (!focusedId) return;
+        const ref = this.windowRefs[focusedId];
+        if (!ref || !ref.current) return;
+        switch (e.key) {
+            case 'ArrowLeft':
+                e.preventDefault();
+                ref.current.snapWindow('left');
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                ref.current.snapWindow('right');
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                ref.current.snapWindow('top');
+                break;
+            case 'ArrowDown':
+                e.preventDefault();
+                ref.current.unsnapWindow();
+                break;
+            default:
+                break;
+        }
     }
 
     checkContextMenu = (e) => {
@@ -305,9 +336,10 @@ export class Desktop extends Component {
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
                 }
-
+                const ref = this.windowRefs[app.id] || React.createRef();
+                this.windowRefs[app.id] = ref;
                 windowsJsx.push(
-                    <Window key={index} {...props} />
+                    <Window key={index} ref={ref} {...props} />
                 )
             }
         });

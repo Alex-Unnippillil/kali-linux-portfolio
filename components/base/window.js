@@ -22,7 +22,9 @@ export class Window extends Component {
             },
             snapPreview: null,
             snapPosition: null,
+            ariaMessage: '',
         }
+        this.prevBounds = null;
     }
 
     componentDidMount() {
@@ -135,9 +137,65 @@ export class Window extends Component {
         this.checkSnapPreview();
     }
 
+    snapWindow = (position) => {
+        const r = document.getElementById(this.id);
+        if (!r) return;
+
+        // store current bounds for unsnapping
+        this.setWinowsPosition();
+        const prevX = r.style.getPropertyValue('--window-transform-x');
+        const prevY = r.style.getPropertyValue('--window-transform-y');
+        this.prevBounds = {
+            x: prevX,
+            y: prevY,
+            width: this.state.width,
+            height: this.state.height,
+        };
+
+        let width = 50, height = 100, x = 0, y = 0;
+        if (position === 'right') {
+            x = window.innerWidth - (window.innerWidth * 0.5);
+        } else if (position === 'top') {
+            width = 100;
+            height = 50;
+        }
+
+        r.style.transform = `translate(${x}px,${y}px)`;
+        this.setState({ width, height, snapPosition: position, snapPreview: null }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
+        this.announce(`Snapped ${position}`);
+    }
+
+    unsnapWindow = () => {
+        const r = document.getElementById(this.id);
+        if (!r || !this.prevBounds) return;
+
+        r.style.transform = `translate(${this.prevBounds.x},${this.prevBounds.y})`;
+        this.setState({
+            width: this.prevBounds.width,
+            height: this.prevBounds.height,
+            snapPosition: null,
+        }, () => {
+            this.resizeBoundries();
+            this.checkOverlap();
+        });
+        this.prevBounds = null;
+        this.announce('Window unsnapped');
+    }
+
     handleStop = () => {
         this.changeCursorToDefault();
-        this.setState({ snapPreview: null, snapPosition: null });
+        if (this.state.snapPreview && this.state.snapPosition) {
+            this.snapWindow(this.state.snapPosition);
+        } else {
+            this.setState({ snapPreview: null, snapPosition: null });
+        }
+    }
+
+    announce = (msg) => {
+        this.setState({ ariaMessage: msg });
     }
 
     focusWindow = () => {
@@ -239,6 +297,7 @@ export class Window extends Component {
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                     >
+                        <div aria-live="polite" className="sr-only">{this.state.ariaMessage}</div>
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar title={this.props.title} />
