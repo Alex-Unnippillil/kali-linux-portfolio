@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-
-const fonts = ['Standard', 'Slant'];
+import { fonts } from './fontLoader';
+import { rasterizeFiglet } from './rasterize';
 
 const FigletApp = () => {
   const [text, setText] = useState('');
@@ -19,6 +19,14 @@ const FigletApp = () => {
       workerRef.current.postMessage({ text, font });
     }
   }, [text, font]);
+
+  const downloadPng = () => {
+    const url = rasterizeFiglet(output);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'figlet.png';
+    link.click();
+  };
 
   return (
     <div className="flex flex-col h-full w-full bg-ub-cool-grey text-white font-mono">
@@ -41,8 +49,15 @@ const FigletApp = () => {
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
+        <button
+          type="button"
+          onClick={downloadPng}
+          className="px-2 bg-gray-700 hover:bg-gray-600 rounded"
+        >
+          PNG
+        </button>
       </div>
-      <pre className="flex-1 overflow-auto p-2 whitespace-pre">{output}</pre>
+      <pre data-testid="figlet-output" className="flex-1 overflow-auto p-2 whitespace-pre">{output}</pre>
     </div>
   );
 };

@@ -1,12 +1,9 @@
 import figlet from 'figlet';
-import standard from 'figlet/importable-fonts/Standard.js';
-import slant from 'figlet/importable-fonts/Slant.js';
+import { loadFont } from './fontLoader';
 
-figlet.parseFont('Standard', standard);
-figlet.parseFont('Slant', slant);
-
-self.onmessage = (e) => {
+self.onmessage = async (e) => {
   const { text, font } = e.data;
+  await loadFont(font);
   const rendered = figlet.textSync(text || '', { font });
   self.postMessage(rendered);
 };
