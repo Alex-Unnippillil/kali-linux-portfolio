@@ -346,3 +346,24 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Credentials table styling */
+.credentials-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.credentials-table th,
+.credentials-table td {
+    padding: 0.5rem;
+    text-align: left;
+}
+
+.credentials-table th {
+    background-color: var(--color-ub-warm-grey);
+    cursor: pointer;
+}
+
+.credentials-table tr:nth-child(even) {
+    background-color: var(--color-ub-cool-grey);
+}
