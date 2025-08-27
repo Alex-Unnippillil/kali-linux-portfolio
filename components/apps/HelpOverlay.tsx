@@ -89,7 +89,7 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   sokoban: {
     objective: 'Push all boxes onto target squares.',
-    controls: 'Use arrow keys to move and push boxes.',
+    controls: 'Use arrow keys or swipe to move and push boxes.',
   },
   solitaire: {
     objective: 'Move all cards to the foundation piles.',

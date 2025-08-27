@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import levelPack from './sokoban_levels.json';
+import usePersistentState from '../../hooks/usePersistentState';
+import useGameControls from './useGameControls';
 
 
 const defaultLevels = levelPack.levels;
@@ -260,17 +262,15 @@ const Sokoban = () => {
     }
   };
 
+  useGameControls(({ x, y }) => move(x, y));
+
   const handleKeyDown = (e) => {
     const dir = {
-      ArrowUp: [0, -1],
       w: [0, -1],
-      ArrowDown: [0, 1],
       s: [0, 1],
-      ArrowLeft: [-1, 0],
       a: [-1, 0],
-      ArrowRight: [1, 0],
       d: [1, 0],
-    }[e.key];
+    }[e.key.toLowerCase()];
     if (dir) {
       e.preventDefault();
       move(dir[0], dir[1]);
@@ -319,14 +319,18 @@ const Sokoban = () => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
+      const text = ev.target.result;
+      let parsed = [];
       try {
-        const data = JSON.parse(ev.target.result);
-        const parsed = parseLevelsFromJson(data);
-        if (parsed.length) {
-          setLevels(parsed);
-          setLevelIndex(0);
-        }
+        parsed = parseLevelsFromJson(JSON.parse(text));
       } catch {
+        parsed = parseLevelsFromText(text);
+      }
+      if (parsed.length) {
+        setLevels(parsed);
+        setLevelIndex(0);
+        setBestMoves({});
+      } else {
         setMessage('Invalid level file');
       }
     };
@@ -454,6 +458,9 @@ const Sokoban = () => {
           row.map((cell, x) => renderCell(cell, `${y}-${x}`))
         )}
       </div>
+      <div className="mt-2 text-sm text-center">
+        Use arrow keys or swipe to move. WASD keys also work.
+      </div>
       <div className="mt-4 flex space-x-2 flex-wrap items-center justify-center">
         <span className="mr-2">Steps: {steps}</span>
         <span className="mr-2">
@@ -489,7 +496,7 @@ const Sokoban = () => {
         >
           Edit
         </button>
-        <input type="file" accept=".json" onChange={handleFile} />
+        <input type="file" accept=".json,.txt,.sok" onChange={handleFile} />
       </div>
       {hint && <div className="mt-2">Hint: {hint}</div>}
       {message && <div className="mt-2">{message}</div>}
