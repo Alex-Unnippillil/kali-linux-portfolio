@@ -55,11 +55,13 @@ const ReconNG = () => {
 
   useEffect(() => {
     if (cyRef.current) {
-      const layout = cyRef.current.layout({
-        name: 'cose-bilkent',
-        animate: !prefersReducedMotion,
+      requestAnimationFrame(() => {
+        const layout = cyRef.current.layout({
+          name: 'cose-bilkent',
+          animate: !prefersReducedMotion,
+        });
+        layout.run();
       });
-      layout.run();
     }
     const nodeCount = graphElements.filter((el) => !el.data?.source).length;
     const edgeCount = graphElements.filter((el) => el.data?.source).length;
@@ -82,7 +84,7 @@ const ReconNG = () => {
       {
         selector: 'node[type="person"]',
         style: {
-          'background-color': '#ff7f0e',
+          'background-color': '#d62728',
           shape: 'ellipse',
           color: '#fff',
           label: 'data(label)',
@@ -91,7 +93,7 @@ const ReconNG = () => {
       {
         selector: 'node[type="asset"]',
         style: {
-          'background-color': '#2ca02c',
+          'background-color': '#006400',
           shape: 'diamond',
           color: '#fff',
           label: 'data(label)',
