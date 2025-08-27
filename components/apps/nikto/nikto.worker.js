@@ -9,7 +9,9 @@ const categories = {
 self.onmessage = (e) => {
   const { text } = e.data;
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  const findings = lines.map((line) => {
+  const clusters = {};
+
+  lines.forEach((line) => {
     let category = 'Other';
     for (const [key, regex] of Object.entries(categories)) {
       if (regex.test(line)) {
@@ -17,11 +19,12 @@ self.onmessage = (e) => {
         break;
       }
     }
-    return { category, line };
+    if (!clusters[category]) {
+      clusters[category] = { count: 0, proofs: [] };
+    }
+    clusters[category].count += 1;
+    clusters[category].proofs.push(line);
   });
-  const clusterCounts = findings.reduce((acc, f) => {
-    acc[f.category] = (acc[f.category] || 0) + 1;
-    return acc;
-  }, {});
-  postMessage({ findings, clusterCounts });
+
+  postMessage({ clusters });
 };

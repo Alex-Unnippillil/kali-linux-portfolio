@@ -49,7 +49,6 @@ const RadarChart = ({ data }) => {
 
 const NiktoApp = () => {
   const [target, setTarget] = useState('');
-  const [findings, setFindings] = useState([]);
   const [clusters, setClusters] = useState({});
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
@@ -60,8 +59,7 @@ const NiktoApp = () => {
   useEffect(() => {
     workerRef.current = new Worker(new URL('./nikto.worker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
-      setClusters(e.data.clusterCounts);
-      setFindings(e.data.findings);
+      setClusters(e.data.clusters);
       setStatus('Scan complete');
     };
     prefersReducedMotion.current = window.matchMedia(
@@ -91,7 +89,6 @@ const NiktoApp = () => {
     if (!target) return;
     setLoading(true);
     setStatus('Running scan');
-    setFindings([]);
     setClusters({});
     try {
       const res = await fetch(`/api/nikto?target=${encodeURIComponent(target)}`);
@@ -105,7 +102,7 @@ const NiktoApp = () => {
   };
 
   const scaledClusters = Object.fromEntries(
-    Object.entries(clusters).map(([k, v]) => [k, v * animProgress])
+    Object.entries(clusters).map(([k, v]) => [k, v.count * animProgress])
   );
 
   return (
@@ -132,7 +129,7 @@ const NiktoApp = () => {
       </div>
       {loading ? (
         <p>Running scan...</p>
-      ) : findings.length > 0 ? (
+      ) : Object.keys(clusters).length > 0 ? (
         <div className="flex flex-col md:flex-row gap-4 flex-1">
           <div className="md:w-1/2 flex justify-center items-center">
             <RadarChart data={scaledClusters} />
@@ -141,10 +138,16 @@ const NiktoApp = () => {
             className="md:w-1/2 list-disc pl-4 text-sm overflow-auto"
             aria-live="polite"
           >
-            {findings.map((f, i) => (
-              <li key={i} className="mb-1">
-                <span className="font-bold">{f.category}:</span>{' '}
-                <span className="text-gray-300">{f.line}</span>
+            {Object.entries(clusters).map(([cat, { proofs }]) => (
+              <li key={cat} className="mb-2">
+                <span className="font-bold text-white">{cat}</span>
+                <ul className="list-disc pl-4 mt-1">
+                  {proofs.map((p, i) => (
+                    <li key={i} className="text-gray-100 mb-1">
+                      {p}
+                    </li>
+                  ))}
+                </ul>
               </li>
             ))}
           </ul>
