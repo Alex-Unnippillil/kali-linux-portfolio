@@ -1,8 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import CredentialArtifactLocator from './CredentialLocator';
+import modulesData from './modules.json';
+
+// Mimikatz simulator: displays sample data only. Uploads and real credential handling are disabled.
+const sampleOutputs = {
+  sekurlsa: 'Sample output: dumped credentials (not real).',
+  lsadump: 'Sample output: LSASS secrets (not real).',
+  misc: 'Sample output: miscellaneous helper command.',
+};
 
 const MimikatzApp = () => {
-  const [modules, setModules] = useState([]);
+  const [modules] = useState(modulesData);
   const [output, setOutput] = useState('');
   const [history, setHistory] = useState([]);
   const [templates, setTemplates] = useState(() => {
@@ -16,12 +24,6 @@ const MimikatzApp = () => {
   const [templateName, setTemplateName] = useState('');
   const [templateScript, setTemplateScript] = useState('');
 
-  useEffect(() => {
-    fetch('/api/mimikatz')
-      .then((res) => res.json())
-      .then((data) => setModules(data.modules || []));
-  }, []);
-
   const addHistory = (command, text) => {
     setHistory((h) => [
       { timestamp: new Date().toISOString(), command, output: text },
@@ -29,19 +31,10 @@ const MimikatzApp = () => {
     ]);
   };
 
-  const runCommand = async (cmd) => {
-    try {
-      const res = await fetch(
-        `/api/mimikatz?command=${encodeURIComponent(cmd)}`
-      );
-      const data = await res.json();
-      setOutput(data.output || '');
-      addHistory(cmd, data.output || '');
-    } catch (err) {
-      const msg = `Error: ${err.message}`;
-      setOutput(msg);
-      addHistory(cmd, msg);
-    }
+  const runCommand = (cmd) => {
+    const text = sampleOutputs[cmd] || 'Unknown command';
+    setOutput(text);
+    addHistory(cmd, text);
   };
 
   const saveTemplate = () => {
@@ -55,21 +48,10 @@ const MimikatzApp = () => {
     setTemplateScript('');
   };
 
-  const runTemplate = async (script) => {
-    try {
-      const res = await fetch('/api/mimikatz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script }),
-      });
-      const data = await res.json();
-      setOutput(data.output || '');
-      addHistory(script, data.output || '');
-    } catch (err) {
-      const msg = `Error: ${err.message}`;
-      setOutput(msg);
-      addHistory(script, msg);
-    }
+  const runTemplate = (script) => {
+    const msg = 'Template execution disabled. Uploads are not permitted.';
+    setOutput(msg);
+    addHistory(script, msg);
   };
 
   return (
@@ -88,6 +70,7 @@ const MimikatzApp = () => {
             </li>
           ))}
         </ul>
+        <p className="text-xs italic mt-2">Sample modules only. No real credentials are processed.</p>
         <h2 className="text-lg mt-4">Templates</h2>
         <ul>
           {templates.map((t, idx) => (
@@ -123,7 +106,8 @@ const MimikatzApp = () => {
         </div>
       </div>
       <div className="flex-1 p-4 bg-ub-cool-grey overflow-auto">
-        <h1 className="text-lg mb-4">Mimikatz</h1>
+        <h1 className="text-lg mb-4">Mimikatz (Sample Simulator)</h1>
+        <p className="text-sm mb-4 italic">All outputs are sample data. Uploads are disabled.</p>
         <pre className="whitespace-pre-wrap mb-4">{output}</pre>
         <CredentialArtifactLocator />
         <h2 className="text-lg mb-2">History</h2>
