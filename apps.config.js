@@ -111,7 +111,7 @@ const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 
 
 const displayTerminal = createDisplay(TerminalApp);
-const displayTerminalCalc = createDisplay(CalcApp);
+const displayCalc = createDisplay(CalcApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
 const displayConnectFour = createDisplay(ConnectFourApp);
@@ -508,7 +508,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayTerminalCalc,
+    screen: displayCalc,
     resizable: false,
     allowMaximize: false,
     defaultWidth: 25,
