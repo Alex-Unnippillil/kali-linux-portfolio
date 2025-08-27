@@ -43,7 +43,7 @@ const VideoGallery: React.FC = () => {
         placeholder="Search videos..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="mb-4 w-full max-w-md px-3 py-2 border rounded"
+        className="mb-4 w-full max-w-md px-4 py-2 border rounded"
       />
       {playing && (
         <div className="mb-4 w-full max-w-2xl aspect-video">
@@ -63,7 +63,7 @@ const VideoGallery: React.FC = () => {
           <button
             key={video.id}
             type="button"
-            className="text-left"
+            className="text-left rounded outline outline-2 outline-offset-2 outline-transparent hover:outline-blue-500 focus-visible:outline-blue-500"
             onClick={() => setPlaying(video.id)}
           >
             <img
@@ -71,7 +71,7 @@ const VideoGallery: React.FC = () => {
               alt={video.title}
               className="w-full"
             />
-            <p className="mt-2 text-sm">{video.title}</p>
+            <p className="mt-2 text-sm" style={{ maxInlineSize: '60ch' }}>{video.title}</p>
           </button>
         ))}
       </div>
