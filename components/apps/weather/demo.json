@@ -1,0 +1,20 @@
+{
+  "city": "Demo City",
+  "coords": { "latitude": 0, "longitude": 0 },
+  "current_weather": { "temperature": 21 },
+  "daily": {
+    "time": ["2023-01-01", "2023-01-02", "2023-01-03"],
+    "temperature_2m_max": [24, 23, 22],
+    "temperature_2m_min": [16, 15, 14],
+    "sunrise": [
+      "2023-01-01T06:00",
+      "2023-01-02T06:00",
+      "2023-01-03T06:00"
+    ],
+    "sunset": [
+      "2023-01-01T18:00",
+      "2023-01-02T18:00",
+      "2023-01-03T18:00"
+    ]
+  }
+}
