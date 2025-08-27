@@ -1,9 +1,17 @@
 import React, { useRef } from 'react'
 import useFocusTrap from '../../hooks/useFocusTrap'
+import useRovingTabIndex from '../../hooks/useRovingTabIndex'
 
 function DefaultMenu(props) {
     const menuRef = useRef(null)
     useFocusTrap(menuRef, props.active)
+    useRovingTabIndex(menuRef, props.active, 'vertical')
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+            props.onClose && props.onClose()
+        }
+    }
 
     return (
         <div
@@ -11,6 +19,7 @@ function DefaultMenu(props) {
             role="menu"
             aria-hidden={!props.active}
             ref={menuRef}
+            onKeyDown={handleKeyDown}
             className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
         >
 

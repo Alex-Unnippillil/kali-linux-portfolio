@@ -61,7 +61,7 @@ describe('YouTubeApp', () => {
     const user = userEvent.setup();
     render(<YouTubeApp initialVideos={mockVideos} />);
     expect(screen.getAllByTestId('video-card')).toHaveLength(3);
-    await user.click(screen.getByRole('button', { name: 'Dev' }));
+    await user.click(screen.getByRole('tab', { name: 'Dev' }));
     expect(screen.getAllByTestId('video-card')).toHaveLength(2);
     expect(screen.queryByText('Cooking with React')).not.toBeInTheDocument();
   });
@@ -80,7 +80,7 @@ describe('YouTubeApp', () => {
     render(<YouTubeApp initialVideos={mockVideos} />);
 
     // Filter to a category with multiple videos then change sort order
-    await user.click(screen.getByRole('button', { name: 'Dev' }));
+    await user.click(screen.getByRole('tab', { name: 'Dev' }));
     const getTitles = () =>
       screen.getAllByRole('link').map((a) => a.textContent);
 
@@ -139,7 +139,7 @@ describe('YouTubeApp', () => {
   it('category buttons include transition-colors class', () => {
     render(<YouTubeApp initialVideos={mockVideos} />);
     screen
-      .getAllByRole('button')
+      .getAllByRole('tab')
       .forEach((btn) => expect(btn).toHaveClass('transition-colors'));
   });
 
