@@ -25,6 +25,7 @@
     "autoprefixer": "^10.4.13",
     "bad-words": "^3.0.4",
     "canvas-confetti": "1.9.3",
+    "chart.js": "^4.4.1",
     "chess.js": "^1.0.0",
     "cytoscape": "^3.33.1",
     "cytoscape-cose-bilkent": "^4.1.0",

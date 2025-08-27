@@ -280,6 +280,7 @@ export class Desktop extends Component {
                     allowMaximize: app.allowMaximize,
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
+                    movable: app.movable,
                 }
 
                 windowsJsx.push(

@@ -99,6 +99,12 @@ if (typeof window !== 'undefined' && !window.localStorage) {
   } as Storage;
 }
 
+// Stub URL.createObjectURL for environments without implementation
+if (typeof URL !== 'undefined' && !URL.createObjectURL) {
+  // @ts-ignore
+  URL.createObjectURL = () => '';
+}
+
 // Minimal Worker mock for tests
 class WorkerMock {
   postMessage() {}
