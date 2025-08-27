@@ -79,21 +79,28 @@ const HitMarker = () => (
   </div>
 );
 
-const MissMarker = () => (
-  <svg
-    className="absolute inset-0 w-full h-full"
-    viewBox="0 0 32 32"
-    stroke="white"
-    strokeWidth="3"
-    fill="none"
-    aria-hidden="true"
-  >
-    <circle cx="16" cy="16" r="0">
-      <animate attributeName="r" from="0" to="10" dur="0.3s" fill="freeze" />
-      <animate attributeName="opacity" from="0" to="1" dur="0.3s" fill="freeze" />
-    </circle>
-  </svg>
-);
+const MissMarker = () => {
+  const prefersReduced = usePrefersReducedMotion();
+  return (
+    <svg
+      className="absolute inset-0 w-full h-full"
+      viewBox="0 0 32 32"
+      stroke="white"
+      strokeWidth="3"
+      fill="none"
+      aria-hidden="true"
+    >
+      {prefersReduced ? (
+        <circle cx="16" cy="16" r="10" opacity="1" />
+      ) : (
+        <circle cx="16" cy="16" r="0">
+          <animate attributeName="r" from="0" to="10" dur="0.3s" fill="freeze" />
+          <animate attributeName="opacity" from="0" to="1" dur="0.3s" fill="freeze" />
+        </circle>
+      )}
+    </svg>
+  );
+};
 
 const Battleship = () => {
   const [phase, setPhase] = useState('placement');
@@ -245,8 +252,8 @@ const Battleship = () => {
         const heatVal = heatArr[idx];
         const color = heatVal
           ? isEnemy
-            ? `rgba(0,150,255,${Math.min(heatVal / 5, 0.5)})`
-            : `rgba(255,0,0,${Math.min(heatVal / 5, 0.6)})`
+            ? `rgba(0,150,255,${Math.min(heatVal / 5, 0.6)})`
+            : `rgba(255,0,0,${Math.min(heatVal / 5, 0.7)})`
           : 'transparent';
         return (
           <div key={idx} className="border border-ub-dark-grey relative" style={{width:CELL,height:CELL}}>
@@ -280,7 +287,7 @@ const Battleship = () => {
         onRestart={() => restart()}
         stats={stats}
       >
-        <div className="mb-2" aria-live="polite">{message}</div>
+        <div className="mb-2" aria-live="polite" role="status">{message}</div>
         {phase==='placement' && (
           <div className="flex space-x-4">
             <div className="relative border border-ub-dark-grey" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL}}>
