@@ -18,6 +18,17 @@ const Nonogram = () => {
   const cols = PUZZLE.cols;
   const height = rows.length;
   const width = cols.length;
+  const solution = PUZZLE.grid;
+
+  // progress tracking
+  const [rowTargets, setRowTargets] = useState(Array(height).fill(0));
+  const [colTargets, setColTargets] = useState(Array(width).fill(0));
+  const rowProgress = useRef(Array(height).fill(0));
+  const colProgress = useRef(Array(width).fill(0));
+  const prevRow = useRef(Array(height).fill(0));
+  const prevCol = useRef(Array(width).fill(0));
+  const [liveMessage, setLiveMessage] = useState('');
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   // grid: 0 empty, 1 filled, -1 marked
   const [grid, setGrid] = useState(
@@ -100,6 +111,53 @@ const Nonogram = () => {
     setPaused(false);
   }, [height, width]);
 
+  // respect reduced motion preference
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = () => setReduceMotion(mq.matches);
+    handler();
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  // update progress targets when grid changes
+  useEffect(() => {
+    const newRowTargets = rows.map((_, i) => {
+      let correct = 0;
+      let total = 0;
+      for (let j = 0; j < width; j++) {
+        if (solution[i][j] === 1) {
+          total += 1;
+          if (grid[i][j] === 1) correct += 1;
+        } else if (grid[i][j] === 1) correct -= 1;
+      }
+      return total ? Math.max(0, Math.min(1, correct / total)) : 1;
+    });
+    const newColTargets = cols.map((_, j) => {
+      let correct = 0;
+      let total = 0;
+      for (let i = 0; i < height; i++) {
+        if (solution[i][j] === 1) {
+          total += 1;
+          if (grid[i][j] === 1) correct += 1;
+        } else if (grid[i][j] === 1) correct -= 1;
+      }
+      return total ? Math.max(0, Math.min(1, correct / total)) : 1;
+    });
+    setRowTargets(newRowTargets);
+    setColTargets(newColTargets);
+    let message = '';
+    newRowTargets.forEach((p, i) => {
+      if (p === 1 && prevRow.current[i] < 1) message = `Row ${i + 1} solved`;
+      prevRow.current[i] = p;
+    });
+    newColTargets.forEach((p, j) => {
+      if (p === 1 && prevCol.current[j] < 1) message = `Column ${j + 1} solved`;
+      prevCol.current[j] = p;
+    });
+    if (message) setLiveMessage(message);
+  }, [grid, rows, cols, height, width, solution]);
+
   // canvas drawing with rAF
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -109,6 +167,31 @@ const Nonogram = () => {
 
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // animate progress toward targets
+      rowProgress.current = rowProgress.current.map((p, i) => {
+        const target = rowTargets[i];
+        return reduceMotion ? target : p + (target - p) * 0.1;
+      });
+      colProgress.current = colProgress.current.map((p, j) => {
+        const target = colTargets[j];
+        return reduceMotion ? target : p + (target - p) * 0.1;
+      });
+
+      // draw progress bars
+      ctx.fillStyle = '#15803d'; // row progress color (green-700)
+      rowProgress.current.forEach((p, i) => {
+        ctx.fillRect(0, CLUE_SPACE + i * CELL_SIZE, CLUE_SPACE * p, CELL_SIZE);
+      });
+      ctx.fillStyle = '#1e40af'; // column progress color (blue-800)
+      colProgress.current.forEach((p, j) => {
+        ctx.fillRect(
+          CLUE_SPACE + j * CELL_SIZE,
+          0,
+          CELL_SIZE,
+          CLUE_SPACE * p
+        );
+      });
+
       ctx.fillStyle = '#000';
       ctx.font = '16px monospace';
 
@@ -191,7 +274,7 @@ const Nonogram = () => {
 
     animationRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationRef.current);
-  }, [rows, cols, paused, height, width]);
+  }, [rows, cols, paused, height, width, rowTargets, colTargets, reduceMotion]);
 
   // mouse interaction
   const painting = useRef(false);
@@ -231,6 +314,29 @@ const Nonogram = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
+      <div className="sr-only" aria-live="polite">{liveMessage}</div>
+      <div className="sr-only">
+        {rowTargets.map((p, i) => (
+          <div
+            key={`r${i}`}
+            role="progressbar"
+            aria-valuenow={Math.round(p * 100)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Row ${i + 1} progress`}
+          />
+        ))}
+        {colTargets.map((p, i) => (
+          <div
+            key={`c${i}`}
+            role="progressbar"
+            aria-valuenow={Math.round(p * 100)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Column ${i + 1} progress`}
+          />
+        ))}
+      </div>
       <div className="mb-2">
         Time: {time}s{highScore !== null && ` | Best: ${highScore}s`}
       </div>
