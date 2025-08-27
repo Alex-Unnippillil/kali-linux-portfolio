@@ -1,0 +1,9 @@
+; Simple tutorial level
+#####
+#@$.#
+#####
+
+; Two box level
+######
+#@ $.#
+######
