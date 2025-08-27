@@ -37,11 +37,8 @@ export const generateWordlist = (pattern) => {
 const Gauge = ({ value }) => (
   <div className="w-48">
     <div className="text-sm mb-1">GPU Usage: {value}%</div>
-    <div className="w-full h-4 bg-gray-700 rounded">
-      <div
-        className="h-4 bg-green-500 rounded"
-        style={{ width: `${value}%` }}
-      />
+    <div className="gpu-bar">
+      <div className="gpu-bar-fill" style={{ width: `${value}%` }} />
     </div>
   </div>
 );
