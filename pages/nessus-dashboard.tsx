@@ -1,33 +1,42 @@
-import React, { useEffect, useState } from 'react';
-import { loadFalsePositives, loadJobDefinitions } from '../components/apps/nessus/index';
+import React, { useMemo } from 'react';
+import data from '../components/apps/nessus/sample-report.json';
 
+const severityColors: Record<string, string> = {
+  Critical: '#b91c1c',
+  High: '#c2410c',
+  Medium: '#b45309',
+  Low: '#1d4ed8',
+};
 const NessusDashboard: React.FC = () => {
-  const [totals, setTotals] = useState({ jobs: 0, falsePositives: 0 });
+  const findings = data as { severity: keyof typeof severityColors }[];
 
-  useEffect(() => {
-    const jobs = loadJobDefinitions();
-    const fps = loadFalsePositives();
-    setTotals({ jobs: jobs.length, falsePositives: fps.length });
-  }, []);
-
-  const max = Math.max(totals.jobs, totals.falsePositives, 1);
+  const counts = useMemo(() => {
+    return findings.reduce<Record<string, number>>((acc, f) => {
+      acc[f.severity] = (acc[f.severity] || 0) + 1;
+      return acc;
+    }, {});
+  }, [findings]);
 
   return (
     <div className="p-4 bg-gray-900 min-h-screen text-white">
       <h1 className="text-2xl mb-4">Nessus Dashboard</h1>
-      <div className="flex items-end space-x-4 h-48">
-        <div
-          className="bg-blue-600 w-24 text-center flex flex-col justify-end"
-          style={{ height: `${(totals.jobs / max) * 100}%` }}
-        >
-          <span className="pb-2 text-sm">Jobs {totals.jobs}</span>
-        </div>
-        <div
-          className="bg-green-600 w-24 text-center flex flex-col justify-end"
-          style={{ height: `${(totals.falsePositives / max) * 100}%` }}
-        >
-          <span className="pb-2 text-sm">False {totals.falsePositives}</span>
-        </div>
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        {Object.entries(counts).map(([sev, count]) => (
+          <div
+            key={sev}
+            className="bg-gray-800 p-4 rounded flex items-center justify-between"
+          >
+            <div className="flex items-center space-x-2">
+              <span
+                aria-hidden="true"
+                className="w-4 h-4 rounded-full ring-2 ring-white"
+                style={{ backgroundColor: severityColors[sev] }}
+              />
+              <span className="text-sm">{sev}</span>
+            </div>
+            <span className="text-xl font-semibold">{count}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
