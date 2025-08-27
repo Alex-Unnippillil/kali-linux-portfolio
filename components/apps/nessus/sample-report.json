@@ -1,0 +1,30 @@
+[
+  {
+    "id": "1",
+    "name": "OpenSSL Heartbeat Information Disclosure",
+    "cvss": 5.0,
+    "severity": "Medium",
+    "description": "OpenSSL 1.0.1 Heartbeat extension allows remote attackers to obtain sensitive information."
+  },
+  {
+    "id": "2",
+    "name": "Apache HTTP Server Privilege Escalation",
+    "cvss": 7.5,
+    "severity": "High",
+    "description": "Apache may allow local users to escalate privileges."
+  },
+  {
+    "id": "3",
+    "name": "Weak SSH Cipher",
+    "cvss": 9.8,
+    "severity": "Critical",
+    "description": "The SSH server is configured to allow weak ciphers."
+  },
+  {
+    "id": "4",
+    "name": "Outdated Software",
+    "cvss": 2.5,
+    "severity": "Low",
+    "description": "Installed software is outdated."
+  }
+]
