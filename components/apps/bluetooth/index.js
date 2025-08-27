@@ -1,131 +1,101 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
+
+const mockData = [
+  {
+    uuid: 'battery_service',
+    characteristics: ['battery_level'],
+  },
+  {
+    uuid: 'device_information',
+    characteristics: ['manufacturer_name_string', 'model_number_string'],
+  },
+];
 
 const BluetoothApp = () => {
-  const canvasRef = useRef(null);
-  const workerRef = useRef(null);
-  const animationRef = useRef(null);
-  const devicesRef = useRef([]);
-  const [devices, setDevices] = useState([]); // used only to redraw in reduced motion
-  const ariaRef = useRef(null);
-  const sweepRef = useRef(0);
-  const prefersReduceRef = useRef(false);
+  const [supported] = useState(typeof navigator !== 'undefined' && 'bluetooth' in navigator);
+  const [useMock, setUseMock] = useState(false);
+  const [services, setServices] = useState([]);
+  const [error, setError] = useState('');
 
-  const drawStatic = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const w = (canvas.width = canvas.offsetWidth);
-    const h = (canvas.height = canvas.offsetHeight);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, w, h);
-    const cx = w / 2;
-    const cy = h / 2;
-    const radius = Math.min(cx, cy);
-    devicesRef.current.forEach((d) => {
-      const r = d.distance * radius;
-      const x = cx + Math.cos(d.angle) * r;
-      const y = cy + Math.sin(d.angle) * r;
-      ctx.strokeStyle = '#39FF14';
-      ctx.beginPath();
-      ctx.arc(x, y, d.strength * 20 + 4, 0, Math.PI * 2);
-      ctx.stroke();
-    });
-  };
-
-  const animate = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const w = (canvas.width = canvas.offsetWidth);
-    const h = (canvas.height = canvas.offsetHeight);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, w, h);
-    const cx = w / 2;
-    const cy = h / 2;
-    const radius = Math.min(cx, cy);
-
-    sweepRef.current += 0.02;
-    ctx.strokeStyle = '#39FF14';
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(
-      cx + Math.cos(sweepRef.current) * radius,
-      cy + Math.sin(sweepRef.current) * radius,
-    );
-    ctx.stroke();
-
-    devicesRef.current.forEach((d) => {
-      const r = d.distance * radius;
-      const x = cx + Math.cos(d.angle) * r;
-      const y = cy + Math.sin(d.angle) * r;
-      ctx.fillStyle = '#39FF14';
-      ctx.beginPath();
-      ctx.arc(x, y, 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = `rgba(57,255,20,${1 - d.ring / (d.strength * radius + 1)})`;
-      ctx.beginPath();
-      ctx.arc(x, y, d.ring, 0, Math.PI * 2);
-      ctx.stroke();
-
-      d.ring += 2;
-      if (d.ring > d.strength * radius) {
-        d.ring = 0;
-      }
-    });
-
-    animationRef.current = requestAnimationFrame(animate);
-  };
-
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handle = () => {
-      prefersReduceRef.current = mq.matches;
-      if (prefersReduceRef.current) {
-        cancelAnimationFrame(animationRef.current);
-        drawStatic();
-      } else {
-        animationRef.current = requestAnimationFrame(animate);
-      }
-    };
-    handle();
-    mq.addEventListener('change', handle);
-    return () => mq.removeEventListener('change', handle);
-  }, []);
-
-  useEffect(() => {
-    workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => {
-      const dev = { ...e.data, ring: 0 };
-      devicesRef.current.push(dev);
-      if (ariaRef.current) {
-        ariaRef.current.textContent = `${dev.name} detected`;
-      }
-      if (prefersReduceRef.current) {
-        setDevices([...devicesRef.current]);
-      }
-    };
-    workerRef.current.postMessage({ command: 'start' });
-    return () => {
-      workerRef.current.postMessage({ command: 'stop' });
-      workerRef.current.terminate();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (prefersReduceRef.current) {
-      drawStatic();
+  const handleConnect = async () => {
+    try {
+      const device = await navigator.bluetooth.requestDevice({
+        filters: [{ services: ['battery_service'] }],
+      });
+      const server = await device.gatt.connect();
+      const primServices = await server.getPrimaryServices();
+      const serviceData = await Promise.all(
+        primServices.map(async (service) => {
+          const chars = await service.getCharacteristics();
+          return {
+            uuid: service.uuid,
+            characteristics: chars.map((c) => c.uuid),
+          };
+        })
+      );
+      setServices(serviceData);
+      setError('');
+    } catch (err) {
+      setError(err.message);
     }
-  }, [devices]);
+  };
 
-  useEffect(() => {
-    return () => cancelAnimationFrame(animationRef.current);
-  }, []);
+  const toggleMock = () => {
+    if (!useMock) {
+      setServices(mockData);
+    } else {
+      setServices([]);
+    }
+    setUseMock(!useMock);
+  };
+
+  if (!supported) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-black p-4 text-center text-white">
+        <p>
+          Your browser does not support Web Bluetooth. See the{' '}
+          <a
+            href="https://developer.mozilla.org/docs/Web/API/Web_Bluetooth_API"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline text-blue-400"
+          >
+            documentation
+          </a>
+          .
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full w-full bg-black text-white relative" aria-label="Bluetooth radar">
-      <canvas ref={canvasRef} className="h-full w-full" />
-      <div ref={ariaRef} aria-live="polite" className="sr-only" />
+    <div className="h-full w-full bg-black p-4 text-white">
+      <div className="mb-4 flex items-center gap-4">
+        <button
+          onClick={handleConnect}
+          disabled={useMock}
+          className="rounded bg-blue-600 px-3 py-1 disabled:opacity-50"
+        >
+          Scan for Device
+        </button>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" checked={useMock} onChange={toggleMock} />
+          Use Mock Data
+        </label>
+      </div>
+      {error && <p className="mb-4 text-red-400">{error}</p>}
+      <ul className="space-y-2 overflow-auto">
+        {services.map((service) => (
+          <li key={service.uuid} className="border-b border-gray-700 pb-2">
+            <p className="font-bold">Service: {service.uuid}</p>
+            <ul className="ml-4 list-disc">
+              {service.characteristics.map((char) => (
+                <li key={char}>Characteristic: {char}</li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
