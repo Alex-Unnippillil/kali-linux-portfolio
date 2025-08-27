@@ -26,6 +26,8 @@ const Checkers = () => {
   const [lastMove, setLastMove] = useState<[number, number][]>([]);
   const [crowned, setCrowned] = useState<[number, number] | null>(null);
   const [ariaMessage, setAriaMessage] = useState('');
+  const [chainPath, setChainPath] = useState<[number, number][]>([]);
+  const [replayPath, setReplayPath] = useState<[number, number][]>([]);
 
   const workerRef = useRef<Worker | null>(null);
   const hintRequest = useRef(false);
@@ -110,6 +112,7 @@ const Checkers = () => {
     if (pathRef.current.length === 0) pathRef.current = [move.from, move.to];
     else pathRef.current.push(move.to);
     const { board: newBoard, capture, king } = applyMove(board, move);
+    if (capture) setChainPath([...pathRef.current]);
     const further = capture
       ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
       : [];
@@ -132,6 +135,7 @@ const Checkers = () => {
       setSelected([move.to[0], move.to[1]]);
       setMoves(further);
       setNoCapture(0);
+      setChainPath([...pathRef.current]);
       return;
     }
     const newHistory = [...history, { board, turn, no: noCapture }];
@@ -156,6 +160,12 @@ const Checkers = () => {
       setDraw(true);
       ReactGA.event({ category: 'Checkers', action: 'game_over', label: 'draw' });
       setLastMove(pathRef.current);
+      setChainPath([]);
+      setReplayPath([]);
+      if (capture)
+        pathRef.current.forEach((p, idx) =>
+          setTimeout(() => setReplayPath((rp) => [...rp, p]), idx * 300)
+        );
       pathRef.current = [];
       return;
     }
@@ -172,6 +182,12 @@ const Checkers = () => {
     setMoves([]);
     setHint(null);
     setLastMove(pathRef.current);
+    setChainPath([]);
+    setReplayPath([]);
+    if (capture)
+      pathRef.current.forEach((p, idx) =>
+        setTimeout(() => setReplayPath((rp) => [...rp, p]), idx * 300)
+      );
     setAriaMessage('');
     pathRef.current = [];
     };
@@ -193,6 +209,8 @@ const Checkers = () => {
     setLastMove([]);
     setCrowned(null);
     setAriaMessage('');
+    setChainPath([]);
+    setReplayPath([]);
     pathRef.current = [];
     localStorage.removeItem('checkersState');
   };
@@ -213,6 +231,8 @@ const Checkers = () => {
     setLastMove([]);
     if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
     setAriaMessage('');
+    setChainPath([]);
+    setReplayPath([]);
     pathRef.current = [];
   };
 
@@ -232,6 +252,8 @@ const Checkers = () => {
     setLastMove([]);
     if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
     setAriaMessage('');
+    setChainPath([]);
+    setReplayPath([]);
     pathRef.current = [];
     if (next.turn === 'black') {
       workerRef.current?.postMessage({ board: next.board, color: 'black', maxDepth: 8 });
@@ -250,7 +272,7 @@ const Checkers = () => {
       </div>
       {winner && <div className="mb-2 text-xl">{winner} wins!</div>}
       {draw && <div className="mb-2 text-xl">Draw!</div>}
-      <div className="grid grid-cols-8 gap-0">
+      <div className={`grid grid-cols-8 gap-0 ${crowned ? 'motion-safe:animate-nudge' : ''}`}>
         {board.map((row, r) =>
           row.map((cell, c) => {
             const isDark = (r + c) % 2 === 1;
@@ -258,15 +280,18 @@ const Checkers = () => {
             const isHint = hint && hint.from[0] === r && hint.from[1] === c;
             const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
             const isSelected = selected && selected[0] === r && selected[1] === c;
-            const isLast = lastMove.some((p) => p[0] === r && p[1] === c);
+            const lastIndex = lastMove.findIndex((p) => p[0] === r && p[1] === c);
+            const isLast = lastIndex >= 0;
             const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
+            const chainIndex = chainPath.findIndex((p) => p[0] === r && p[1] === c);
+            const replayed = replayPath.some((p) => p[0] === r && p[1] === c);
             return (
               <div
                 key={`${r}-${c}`}
                 {...pointerHandlers(() =>
                   selected ? tryMove(r, c) : selectPiece(r, c)
                 )}
-                className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
+                className={`relative w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
                 } ${
                   isMove
@@ -278,8 +303,24 @@ const Checkers = () => {
                     : ''
                 } ${isSelected ? 'ring-2 ring-green-400' : ''} ${
                   isLast ? 'ring-2 ring-red-400' : ''
-                }`}
+                } ${
+                  chainIndex >= 0 ? 'ring-2 ring-indigo-400' : ''
+                } ${
+                  isCrowned
+                    ? 'ring-4 ring-yellow-300 ring-offset-2 ring-offset-black drop-shadow-[0_0_8px_#fbbf24] motion-safe:animate-glow'
+                    : ''
+                } ${replayed ? 'motion-safe:animate-glow' : ''}`}
               >
+                {chainIndex >= 0 && (
+                  <span className="absolute top-0 left-0 text-[10px] text-indigo-300">
+                    {chainIndex + 1}
+                  </span>
+                )}
+                {chainIndex < 0 && lastIndex >= 0 && (
+                  <span className="absolute top-0 left-0 text-[10px] text-red-300">
+                    {lastIndex + 1}
+                  </span>
+                )}
                 {cell && (
                   <div
                     className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center ${
@@ -289,7 +330,13 @@ const Checkers = () => {
                     }`}
                   >
                     {cell.king && (
-                      <span className="text-yellow-300 text-sm font-bold">K</span>
+                      <span
+                        className={`text-yellow-300 text-sm font-bold ${
+                          isCrowned ? 'motion-safe:animate-drop' : ''
+                        }`}
+                      >
+                        K
+                      </span>
                     )}
                   </div>
                 )}
