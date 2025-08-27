@@ -1,5 +1,6 @@
 import React from 'react';
 import Head from 'next/head';
+import Image from 'next/image';
 
 const nowItems = [
   'Building accessible security tooling',
@@ -20,24 +21,32 @@ export default function AboutApp() {
   };
 
   return (
-    <div className="p-4 w-full h-full overflow-y-auto bg-ub-cool-grey text-white">
+    <main className="p-4 w-full h-full overflow-y-auto bg-ub-cool-grey text-white">
       <Head>
+        <title>About</title>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
         />
       </Head>
-      <h1 className="text-2xl font-bold mb-4">About</h1>
-      <section className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">Now</h2>
+      <Image
+        src="/themes/Yaru/status/about.svg"
+        alt="Profile icon"
+        width={64}
+        height={64}
+        className="mb-4"
+      />
+      <h2 id="about-heading" className="text-2xl font-bold mb-4">About</h2>
+      <section aria-labelledby="now-heading" className="mb-6">
+        <h3 id="now-heading" className="text-xl font-semibold mb-2">Now</h3>
         <ul className="list-disc pl-5 space-y-1">
           {nowItems.map((item, i) => (
             <li key={i}>{item}</li>
           ))}
         </ul>
       </section>
-      <section className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">CV Highlights</h2>
+      <section aria-labelledby="cv-heading" className="mb-6">
+        <h3 id="cv-heading" className="text-xl font-semibold mb-2">CV Highlights</h3>
         <ul className="list-disc pl-5 space-y-1">
           {highlights.map((h, i) => (
             <li key={i}>
@@ -53,6 +62,6 @@ export default function AboutApp() {
       >
         Download Resume
       </a>
-    </div>
+    </main>
   );
 }
