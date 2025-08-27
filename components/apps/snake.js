@@ -4,15 +4,15 @@ import useGameControls from './useGameControls';
 
 
 // size of the square play field
-const gridSize = 20;
+export const gridSize = 20;
 
 // speed progression settings
-const SPEED_STEP = 10;
-const MIN_SPEED = 50;
-const SPEED_INTERVAL = 5; // foods per speed increase
+export const SPEED_STEP = 10;
+export const MIN_SPEED = 50;
+export const SPEED_INTERVAL = 5; // foods per speed increase
 
 // helper that finds a random unoccupied cell
-const randomCell = (occupied) => {
+export const randomCell = (occupied) => {
   let cell;
   do {
     cell = {
@@ -23,7 +23,7 @@ const randomCell = (occupied) => {
   return cell;
 };
 
-const createObstacles = (count, occupied = []) => {
+export const createObstacles = (count, occupied = []) => {
   const obs = [];
   while (obs.length < count) {
     obs.push(randomCell([...occupied, ...obs]));
@@ -31,7 +31,28 @@ const createObstacles = (count, occupied = []) => {
   return obs;
 };
 
-const speedLevels = { slow: 200, normal: 150, fast: 100 };
+export const speedLevels = { slow: 200, normal: 150, fast: 100 };
+
+export const moveSnake = (snake, dir, wrap, obstacles = []) => {
+  let head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+  if (wrap) {
+    head.x = (head.x + gridSize) % gridSize;
+    head.y = (head.y + gridSize) % gridSize;
+  }
+  const hitWall = head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize;
+  const hitSelf = snake.some((s) => s.x === head.x && s.y === head.y);
+  const hitObstacle = obstacles.some((o) => o.x === head.x && o.y === head.y);
+  const dead = (!wrap && hitWall) || hitSelf || hitObstacle;
+  const newSnake = dead ? snake : [head, ...snake];
+  return { head, newSnake, dead };
+};
+
+export const calcSpeed = (score, current) => {
+  if (score % SPEED_INTERVAL === 0) {
+    return Math.max(MIN_SPEED, current - SPEED_STEP);
+  }
+  return current;
+};
 
 const Snake = () => {
   // snake state and movement
@@ -136,31 +157,23 @@ const Snake = () => {
         setDirection(dir);
       }
 
-      let head = { x: prev[0].x + dir.x, y: prev[0].y + dir.y };
-      if (wrap) {
-        head.x = (head.x + gridSize) % gridSize;
-        head.y = (head.y + gridSize) % gridSize;
-      }
-
-      const hitWall = head.x < 0 || head.x >= gridSize || head.y < 0 || head.y >= gridSize;
-      const hitSelf = prev.some((s) => s.x === head.x && s.y === head.y);
-      const hitObstacle = obstacles.some((o) => o.x === head.x && o.y === head.y);
-      if ((!wrap && hitWall) || hitSelf || hitObstacle) {
+      const { head, newSnake, dead } = moveSnake(prev, dir, wrap, obstacles);
+      if (dead) {
         setGameOver(true);
         setReplayData(replayRef.current);
         return prev;
       }
 
-      const newSnake = [head, ...prev];
       if (head.x === food.x && head.y === food.y) {
         const occupied = [...newSnake, ...obstacles];
         const newFood = randomCell(occupied);
         setFood(newFood);
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate(100);
+        }
         setScore((s) => {
           const ns = s + 1;
-          if (ns % SPEED_INTERVAL === 0) {
-            setSpeed((sp) => Math.max(MIN_SPEED, sp - SPEED_STEP));
-          }
+          setSpeed((sp) => calcSpeed(ns, sp));
           return ns;
         });
         setGrowCell(head);
@@ -295,26 +308,28 @@ const Snake = () => {
       );
     }
   }
+  const speedLevel =
+    Math.floor((speedLevels[speedSetting] - speed) / SPEED_STEP) + 1;
+  const speedProgress = (score % SPEED_INTERVAL) / SPEED_INTERVAL * 100;
 
   return (
-    <GameLayout instructions="Use arrow keys or swipe to move.">
+    <GameLayout instructions="Use arrow keys, D-pad or swipe to move.">
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
-        <div className="mb-2 flex space-x-2">
+        <div className="mb-2 flex space-x-2 items-center">
           <span>Score: {score}</span>
           <span>| High Score: {highScore}</span>
           <button
             className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
-            onClick={() => setPaused((p) => !p)}
-
+            onClick={reset}
           >
-            Retry
+            Reset
           </button>
           <button
             className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
             onClick={() => setWrap((w) => !w)}
-
+            aria-label="wrap-toggle"
           >
-            Replay
+            {wrap ? 'Wrap: On' : 'Wrap: Off'}
           </button>
           <select
             className="ml-2 px-1 bg-gray-700 rounded"
@@ -326,11 +341,52 @@ const Snake = () => {
             <option value="fast">Fast</option>
           </select>
         </div>
+        <div className="mb-2 flex items-center space-x-2">
+          <span>Speed Lv: {speedLevel}</span>
+          <div className="w-24 h-2 bg-gray-700 rounded overflow-hidden">
+            <div
+              className="bg-green-500 h-full"
+              style={{ width: `${speedProgress}%` }}
+            />
+          </div>
+        </div>
         <div
           className="grid"
           style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
         >
           {cells}
+        </div>
+        <div className="mt-4 flex flex-col items-center space-y-1">
+          <button
+            aria-label="up"
+            className="w-8 h-8 bg-gray-700 rounded"
+            onClick={() => enqueueDir({ x: 0, y: -1 })}
+          >
+            ▲
+          </button>
+          <div className="flex space-x-1">
+            <button
+              aria-label="left"
+              className="w-8 h-8 bg-gray-700 rounded"
+              onClick={() => enqueueDir({ x: -1, y: 0 })}
+            >
+              ◀
+            </button>
+            <button
+              aria-label="right"
+              className="w-8 h-8 bg-gray-700 rounded"
+              onClick={() => enqueueDir({ x: 1, y: 0 })}
+            >
+              ▶
+            </button>
+          </div>
+          <button
+            aria-label="down"
+            className="w-8 h-8 bg-gray-700 rounded"
+            onClick={() => enqueueDir({ x: 0, y: 1 })}
+          >
+            ▼
+          </button>
         </div>
         {gameOver && (
           <div className="mt-2 flex items-center space-x-2">
