@@ -1,5 +1,5 @@
 self.onmessage = async (e) => {
-  const { bitmap, charSet, cellSize, useColor, palette } = e.data;
+  const { bitmap, charSet, cellSize, useColor, palette, contrast = 1 } = e.data;
   const chars = charSet.split('');
   const width = Math.floor(bitmap.width / cellSize);
   const height = Math.floor(bitmap.height / cellSize);
@@ -21,7 +21,9 @@ self.onmessage = async (e) => {
     const r = data[idx];
     const g = data[idx + 1];
     const b = data[idx + 2];
-    gray[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+    let val = 0.299 * r + 0.587 * g + 0.114 * b;
+    val = (val - 128) * contrast + 128;
+    gray[i] = Math.max(0, Math.min(255, val));
   }
   let plain = '';
   let html = '';
