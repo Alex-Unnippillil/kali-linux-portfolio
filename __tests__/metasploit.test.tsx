@@ -1,41 +1,32 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import MetasploitApp from '../components/apps/metasploit';
 
 describe('Metasploit app', () => {
-  beforeEach(() => {
-    // @ts-ignore
-    global.fetch = jest.fn(() =>
-      Promise.resolve({ json: () => Promise.resolve({}) })
+  it('filters modules by search term', () => {
+    render(<MetasploitApp />);
+
+    const search = screen.getByPlaceholderText('Search modules');
+    fireEvent.change(search, { target: { value: 'vsftpd' } });
+
+    expect(
+      screen.getByText('exploit/unix/ftp/vsftpd_234_backdoor')
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('exploit/windows/smb/ms17_010_eternalblue')
+    ).toBeNull();
+  });
+
+  it('shows transcript and config when module selected', () => {
+    render(<MetasploitApp />);
+
+    const item = screen.getByText(
+      'exploit/windows/smb/ms17_010_eternalblue'
     );
-    localStorage.clear();
-  });
+    fireEvent.click(item);
 
-  it('refreshes modules on mount', () => {
-    render(<MetasploitApp />);
-    expect(global.fetch).toHaveBeenCalledWith('/api/metasploit');
-  });
-
-  it('persists command history', async () => {
-    // @ts-ignore
-    (global.fetch as jest.Mock).mockImplementation((url, options) => {
-      if (options && options.method === 'POST') {
-        return Promise.resolve({
-          json: () => Promise.resolve({ output: 'res' }),
-        });
-      }
-      return Promise.resolve({ json: () => Promise.resolve({}) });
-    });
-
-    const { unmount } = render(<MetasploitApp />);
-    const input = screen.getByPlaceholderText('msfconsole command');
-    fireEvent.change(input, { target: { value: 'search test' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    await screen.findByText(/msf6 > search test/);
-    unmount();
-
-    render(<MetasploitApp />);
-    expect(screen.getByText(/msf6 > search test/)).toBeInTheDocument();
+    expect(screen.getByText(/Meterpreter session 1 opened/)).toBeInTheDocument();
+    expect(screen.getByText(/set RHOSTS <target>/)).toBeInTheDocument();
   });
 });
 
