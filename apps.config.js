@@ -7,7 +7,6 @@ import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/chrome';
 import { displayTrash } from './components/apps/trash';
 import { displayGedit } from './components/apps/gedit';
-import { displayAboutAlex } from './components/apps/alex';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
 import { displayWeather } from './components/apps/weather';
@@ -53,6 +52,7 @@ const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
+const AboutApp = createDynamicApp('About', 'About');
 
 const QrToolApp = createDynamicApp('qr_tool', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
@@ -126,6 +126,7 @@ const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayFileExplorer = createDisplay(FileExplorerApp);
 const displayRadare2 = createDisplay(Radare2App);
+const displayAbout = createDisplay(AboutApp);
 
 const displayQrTool = createDisplay(QrToolApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
@@ -612,13 +613,13 @@ const apps = [
     screen: displayBeef,
   },
   {
-    id: 'about-alex',
-    title: 'About Alex',
+    id: 'about',
+    title: 'About',
     icon: './themes/Yaru/system/user-home.png',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
-    screen: displayAboutAlex,
+    screen: displayAbout,
   },
   {
     id: 'settings',

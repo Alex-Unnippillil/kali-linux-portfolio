@@ -7,6 +7,13 @@ global.TextEncoder = TextEncoder;
 // @ts-ignore
 global.TextDecoder = TextDecoder as any;
 
+// Provide TextEncoder/TextDecoder for libraries requiring them
+import { TextEncoder, TextDecoder } from 'util';
+// @ts-ignore
+global.TextEncoder = TextEncoder;
+// @ts-ignore
+global.TextDecoder = TextDecoder;
+
 // jsdom does not provide a global Image constructor which is used by
 // some components (e.g. window borders). A minimal mock is sufficient
 // for our tests because we only rely on the instance existing.
@@ -61,6 +68,24 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
     addListener: () => {},
     removeListener: () => {},
   });
+}
+
+// Simple localStorage mock for environments without it
+if (typeof window !== 'undefined' && !window.localStorage) {
+  const store: Record<string, string> = {};
+  // @ts-ignore
+  window.localStorage = {
+    getItem: (key: string) => (key in store ? store[key] : null),
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    clear: () => {
+      for (const k in store) delete store[k];
+    },
+  } as Storage;
 }
 
 // Minimal Worker mock for tests

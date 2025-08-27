@@ -8,8 +8,10 @@ export default function ProjectGallery() {
   const [projects, setProjects] = useState([]);
   const [display, setDisplay] = useState([]);
   const [filter, setFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [techs, setTechs] = useState([]);
   const [ariaMessage, setAriaMessage] = useState('');
+  const [selected, setSelected] = useState(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -51,14 +53,21 @@ export default function ProjectGallery() {
   }, []);
 
   const updateDisplay = useCallback(
-    (selected) => {
-      const filtered = selected
-        ? projects.filter((p) => p.tech.includes(selected))
+    (selectedFilter, query) => {
+      const byTech = selectedFilter
+        ? projects.filter((p) => p.tech.includes(selectedFilter))
         : projects;
+      const filtered = query
+        ? byTech.filter((p) =>
+            p.title.toLowerCase().includes(query.toLowerCase())
+          )
+        : byTech;
       setAriaMessage(
         `Showing ${filtered.length} project${
           filtered.length === 1 ? '' : 's'
-        }${selected ? ` filtered by ${selected}` : ''}`
+        }${selectedFilter ? ` filtered by ${selectedFilter}` : ''}${
+          query ? ` matching "${query}"` : ''
+        }`
       );
       setDisplay((prev) => {
         const map = new Map(prev.map((p) => [p.id, p]));
@@ -81,8 +90,8 @@ export default function ProjectGallery() {
   );
 
   useEffect(() => {
-    updateDisplay(filter);
-  }, [filter, projects, updateDisplay]);
+    updateDisplay(filter, search);
+  }, [filter, search, projects, updateDisplay]);
 
   useEffect(() => {
     if (prefersReducedMotion) return;
@@ -116,6 +125,14 @@ export default function ProjectGallery() {
         <p className="text-center">Loading projects...</p>
       ) : (
         <>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search projects"
+            className="mb-4 w-full px-2 py-1 rounded text-black"
+            aria-label="Search projects"
+          />
           <div className="mb-4 flex flex-wrap gap-2">
             <button
               onClick={() => setFilter('')}
@@ -188,6 +205,7 @@ export default function ProjectGallery() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         Live Demo
                       </a>
@@ -198,15 +216,71 @@ export default function ProjectGallery() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-3 py-1 text-sm border border-blue-600 rounded text-white hover:bg-blue-600 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        onClick={(e) => e.stopPropagation()}
                       >
                         Repo
                       </a>
                     )}
+                    <button
+                      onClick={() => setSelected(project)}
+                      className="px-3 py-1 text-sm border border-gray-500 rounded text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    >
+                      Details
+                    </button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+          {selected && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
+              role="dialog"
+            >
+              <div className="bg-ub-cool-grey text-white p-4 rounded w-full max-w-md">
+                <button
+                  onClick={() => setSelected(null)}
+                  className="mb-2 px-2 py-1 bg-gray-700 rounded"
+                >
+                  Close
+                </button>
+                <h2 className="text-xl font-semibold mb-2">{selected.title}</h2>
+                <p className="mb-2">{selected.description}</p>
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {selected.tech.map((t, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-0.5 text-xs rounded bg-gray-700 text-white"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  {selected.live && (
+                    <a
+                      href={selected.live}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-500"
+                    >
+                      Live Demo
+                    </a>
+                  )}
+                  {selected.repo && (
+                    <a
+                      href={selected.repo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1 text-sm border border-blue-600 rounded text-white hover:bg-blue-600 hover:text-white"
+                    >
+                      Repo
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
