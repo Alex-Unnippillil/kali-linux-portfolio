@@ -1,0 +1,20 @@
+{
+  "basics": {
+    "name": "Alex Unnippillil",
+    "label": "Cybersecurity Specialist",
+    "email": "alex.unnippillil@hotmail.com",
+    "phone": "123-456-7890"
+  },
+  "work": [
+    {
+      "company": "Cyber Corp",
+      "position": "Security Analyst"
+    }
+  ],
+  "education": [
+    {
+      "institution": "Ontario Tech University",
+      "studyType": "Networking and I.T. Security"
+    }
+  ]
+}
