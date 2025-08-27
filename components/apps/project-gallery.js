@@ -4,6 +4,20 @@ import ReactGA from 'react-ga4';
 
 const GITHUB_USER = 'Alex-Unnippillil';
 
+function FilterChip({ label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+        active ? 'bg-blue-600 text-white' : 'bg-gray-700 text-white'
+      }`}
+      aria-pressed={active}
+    >
+      {label}
+    </button>
+  );
+}
+
 export default function ProjectGallery() {
   const [projects, setProjects] = useState([]);
   const [display, setDisplay] = useState([]);
@@ -12,6 +26,7 @@ export default function ProjectGallery() {
   const [techs, setTechs] = useState([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selected, setSelected] = useState(null);
+  const [hovered, setHovered] = useState(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -134,36 +149,27 @@ export default function ProjectGallery() {
             aria-label="Search projects"
           />
           <div className="mb-4 flex flex-wrap gap-2">
-            <button
+            <FilterChip
+              label="All"
+              active={filter === ''}
               onClick={() => setFilter('')}
-              className={`px-3 py-1 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                filter === ''
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-white'
-              }`}
-              aria-pressed={filter === ''}
-            >
-              All
-            </button>
+            />
             {techs.map((t) => (
-              <button
+              <FilterChip
                 key={t}
+                label={t}
+                active={filter === t}
                 onClick={() => setFilter(t)}
-                className={`px-3 py-1 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                  filter === t
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-white'
-                }`}
-                aria-pressed={filter === t}
-              >
-                {t}
-              </button>
+              />
             ))}
           </div>
           <div className="columns-1 sm:columns-2 lg:columns-3 gap-4">
             {display.map((project) => (
               <div
                 key={project.id}
+                data-testid={`project-card-${project.id}`}
+                onMouseEnter={() => setHovered(project.id)}
+                onMouseLeave={() => setHovered(null)}
                 className={`mb-4 break-inside-avoid rounded-md bg-ub-grey bg-opacity-20 border border-gray-700 overflow-hidden flex flex-col opacity-100 translate-y-0 ${
                   project.status === 'entering'
                     ? 'opacity-0 translate-y-2'
@@ -182,6 +188,16 @@ export default function ProjectGallery() {
                     className="object-cover"
                     sizes="100%"
                   />
+                  {hovered === project.id && (
+                    <div
+                      data-testid={`preview-${project.id}`}
+                      aria-hidden="true"
+                      className="absolute inset-0 bg-black bg-opacity-70 text-white p-3 flex flex-col justify-center"
+                    >
+                      <h4 className="text-base font-semibold">{project.title}</h4>
+                      <p className="mt-1 text-xs">{project.description}</p>
+                    </div>
+                  )}
                 </div>
                 <div className="p-3 flex flex-col flex-grow">
                   <h3 className="text-lg font-semibold">{project.title}</h3>

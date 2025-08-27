@@ -48,4 +48,16 @@ describe('ProjectGallery', () => {
       'Showing 1 project filtered by TS'
     );
   });
+
+  it('shows project preview on hover', async () => {
+    render(<ProjectGallery />);
+    await waitFor(() => screen.getByText('Repo1'));
+    const card = screen.getByTestId('project-card-1');
+    fireEvent.mouseEnter(card);
+    expect(screen.getByTestId('preview-1')).toBeInTheDocument();
+    fireEvent.mouseLeave(card);
+    await waitFor(() =>
+      expect(screen.queryByTestId('preview-1')).not.toBeInTheDocument()
+    );
+  });
 });
