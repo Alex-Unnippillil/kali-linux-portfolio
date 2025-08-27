@@ -10,7 +10,7 @@ const CHIP_COLORS = {
   100: 'bg-blue-900 text-white',
 };
 
-const Card = ({ card, faceDown }) => {
+const Card = ({ card, faceDown, peeking }) => {
   const [flipped, setFlipped] = useState(false);
   const prefersReduced = useRef(false);
 
@@ -32,7 +32,7 @@ const Card = ({ card, faceDown }) => {
 
   return (
     <div
-      className={`h-16 w-12 card ${flipped ? 'flipped' : ''} animate-deal`}
+      className={`h-16 w-12 card ${flipped ? 'flipped' : ''} ${peeking ? 'peek' : ''} animate-deal`}
       aria-label={faceDown ? 'Hidden card' : `${card.value}${card.suit}`}
       role="img"
     >
@@ -151,6 +151,7 @@ const Blackjack = () => {
   const [practiceCard, setPracticeCard] = useState(null);
   const [practiceGuess, setPracticeGuess] = useState('');
   const [streak, setStreak] = useState(0);
+  const [dealerPeeking, setDealerPeeking] = useState(false);
 
   const [_, dispatch] = useReducer(gameReducer, {
     gameRef,
@@ -183,6 +184,10 @@ const Blackjack = () => {
       setMessage('Hit, Stand, Double, Split or Surrender');
       setShowInsurance(gameRef.current.dealerHand[0].value === 'A');
       update();
+      if (['A', '10', 'J', 'Q', 'K'].includes(gameRef.current.dealerHand[0].value)) {
+        setDealerPeeking(true);
+        setTimeout(() => setDealerPeeking(false), 1000);
+      }
     } catch (e) {
       setMessage(e.message);
     }
@@ -277,7 +282,7 @@ const Blackjack = () => {
     return remaining.length ? bustCards / remaining.length : 0;
   };
 
-  const renderHand = (hand, hideFirst, showProb) => (
+  const renderHand = (hand, hideFirst, showProb, peeking = false) => (
     <div
       className="flex space-x-2"
       title={showProb ? `Bust chance: ${(bustProbability(hand) * 100).toFixed(1)}%` : undefined}
@@ -286,7 +291,8 @@ const Blackjack = () => {
         <Card
           key={idx}
           card={card}
-          faceDown={hideFirst && idx === 0 && playerHands.length > 0 && current < playerHands.length}
+          faceDown={hideFirst && idx === 1 && playerHands.length > 0 && current < playerHands.length}
+          peeking={peeking && idx === 1}
         />
       ))}
       <div className="ml-2 self-center">{handValue(hand.cards)}</div>
@@ -383,13 +389,21 @@ const Blackjack = () => {
       ) : (
         <div className="mb-4">
           <div className="mb-2">Dealer</div>
-          {renderHand({ cards: dealerHand }, !message.includes('complete') && current < playerHands.length)}
+          {renderHand(
+            { cards: dealerHand },
+            !message.includes('complete') && current < playerHands.length,
+            false,
+            dealerPeeking,
+          )}
         </div>
       )}
       {playerHands.map((hand, idx) => (
         <div key={idx} className="mb-2">
           <div className="mb-1">{`Player${playerHands.length > 1 ? ` ${idx + 1}` : ''}`}</div>
-          {renderHand(hand, false, true)}
+          <div className="flex items-center space-x-2">
+            <BetChips amount={hand.bet} />
+            {renderHand(hand, false, true)}
+          </div>
           {idx === current && playerHands.length > 0 && (
             <div className="mt-2 flex flex-col items-start">
               <div className="flex space-x-2">
