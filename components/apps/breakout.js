@@ -83,6 +83,7 @@ const BreakoutGame = ({ levels }) => {
   const [level, setLevel] = useState(0);
   const scoreRef = useRef(0);
   const highScoresRef = useRef({});
+  const livesRef = useRef(3);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [soundOn, setSoundOn] = useState(true);
@@ -111,6 +112,8 @@ const BreakoutGame = ({ levels }) => {
 
   const reset = () => {
     scoreRef.current = 0;
+    livesRef.current = 3;
+    setAnnounce("");
     setLevel(0);
     setResetKey((k) => k + 1);
   };
@@ -320,6 +323,17 @@ const BreakoutGame = ({ levels }) => {
         // Ball lost
         if (ball.y > height + ball.r) {
           balls.splice(i, 1);
+          if (balls.length === 0) {
+            livesRef.current -= 1;
+            if (livesRef.current > 0) {
+              balls.push({ x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 });
+              aimTime = 0.3;
+            } else {
+              setAnnounce("Game Over");
+              reset();
+              return;
+            }
+          }
         }
       }
 
@@ -367,12 +381,6 @@ const BreakoutGame = ({ levels }) => {
       }
 
       if (pulse > 0) pulse = Math.max(0, pulse - dt * 5);
-
-      // Ensure at least one ball remains
-      if (balls.length === 0) {
-        balls.push({ x: width / 2, y: height / 2, vx: 150, vy: -150, r: 5 });
-        aimTime = 0.3;
-      }
 
       // Render
       ctx.fillStyle = "black";
@@ -454,6 +462,7 @@ const BreakoutGame = ({ levels }) => {
       ctx.fillText(`Level: ${level + 1}`, 10, 10);
       ctx.fillText(`Score: ${scoreRef.current}`, 10, 26);
       ctx.fillText(`High: ${highScoresRef.current[level] || 0}`, 10, 42);
+      ctx.fillText(`Lives: ${livesRef.current}`, 10, 58);
 
       if (pausedRef.current) {
         ctx.fillStyle = "rgba(0,0,0,0.5)";
