@@ -3,7 +3,9 @@ import React, {
   useState,
   useMemo,
   useCallback,
+  useRef,
 } from 'react';
+import Draggable from 'react-draggable';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
@@ -16,8 +18,23 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('date');
   const [search, setSearch] = useState('');
+  const [activeVideo, setActiveVideo] = useState(null);
+  const [isMini, setIsMini] = useState(false);
+  const containerRef = useRef(null);
+  const playerRef = useRef(null);
 
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !activeVideo) return;
+    const height = playerRef.current?.offsetHeight || 0;
+    const handleScroll = () => {
+      setIsMini(el.scrollTop > height);
+    };
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [activeVideo, containerRef, playerRef]);
 
   // Fetch videos from YouTube when an API key is available and no initial
   // videos are supplied. This mirrors the behaviour of the original app but
@@ -169,14 +186,44 @@ export default function YouTubeApp({ initialVideos = [] }) {
     setSearch(value);
   }, []);
 
+  const handleVideoSelect = useCallback((video, e) => {
+    e.preventDefault();
+    setActiveVideo(video);
+    setIsMini(false);
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, []);
+
   return (
-    <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
+    <div
+      ref={containerRef}
+      className="relative h-full w-full overflow-auto bg-ub-cool-grey text-white"
+    >
       {!apiKey && videos.length === 0 ? (
         <div className="p-2">
           <p>YouTube API key is not configured.</p>
         </div>
       ) : (
         <>
+          {activeVideo && (
+            <Draggable disabled={!isMini}>
+              <div
+                ref={playerRef}
+                className={`youtube-player ${isMini ? 'mini' : ''}`}
+              >
+                <iframe
+                  src={`https://www.youtube.com/embed/${activeVideo.id}`}
+                  title={activeVideo.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              </div>
+            </Draggable>
+          )}
+
           {/* Search + sorting */}
           <div className="p-3 flex flex-wrap items-center gap-2">
             <input
@@ -226,7 +273,13 @@ export default function YouTubeApp({ initialVideos = [] }) {
                 data-testid="video-card"
                 className="bg-gray-800 rounded-lg overflow-hidden shadow flex flex-col hover:shadow-lg transition"
               >
-                <a href={video.url} target="_blank" rel="noreferrer" className="block">
+                <a
+                  href={video.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block"
+                  onClick={(e) => handleVideoSelect(video, e)}
+                >
                   {video.thumbnail && (
                     <img src={video.thumbnail} alt={video.title} className="w-full" />
                   )}
