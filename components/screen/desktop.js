@@ -5,6 +5,7 @@ import apps, { games } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
 import AllApplications from '../screen/all-applications'
+import ShortcutSelector from '../screen/shortcut-selector'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import ReactGA from 'react-ga4';
@@ -30,6 +31,7 @@ export class Desktop extends Component {
                 default: false,
             },
             showNameBar: false,
+            showShortcutSelector: false,
         }
     }
 
@@ -43,6 +45,7 @@ export class Desktop extends Component {
         this.setContextListeners();
         this.setEventListeners();
         this.checkForNewFolders();
+        this.checkForAppShortcuts();
     }
 
     componentWillUnmount() {
@@ -457,6 +460,37 @@ export class Desktop extends Component {
         this.setState({ showNameBar: true });
     }
 
+    openShortcutSelector = () => {
+        this.setState({ showShortcutSelector: true });
+    }
+
+    addShortcutToDesktop = (app_id) => {
+        const appIndex = apps.findIndex(app => app.id === app_id);
+        if (appIndex === -1) return;
+        apps[appIndex].desktop_shortcut = true;
+        let shortcuts = JSON.parse(localStorage.getItem('app_shortcuts') || '[]');
+        if (!shortcuts.includes(app_id)) {
+            shortcuts.push(app_id);
+            localStorage.setItem('app_shortcuts', JSON.stringify(shortcuts));
+        }
+        this.setState({ showShortcutSelector: false }, this.updateAppsData);
+    }
+
+    checkForAppShortcuts = () => {
+        let shortcuts = localStorage.getItem('app_shortcuts');
+        if (shortcuts === null && shortcuts !== undefined) {
+            localStorage.setItem('app_shortcuts', JSON.stringify([]));
+        } else if (shortcuts) {
+            JSON.parse(shortcuts).forEach(id => {
+                const appIndex = apps.findIndex(app => app.id === id);
+                if (appIndex !== -1) {
+                    apps[appIndex].desktop_shortcut = true;
+                }
+            });
+            this.updateAppsData();
+        }
+    }
+
     addToDesktop = (folder_name) => {
         folder_name = folder_name.trim();
         let folder_id = folder_name.replace(/\s+/g, '-').toLowerCase();
@@ -531,7 +565,7 @@ export class Desktop extends Component {
                 {this.renderDesktopApps()}
 
                 {/* Context Menus */}
-                <DesktopMenu active={this.state.context_menus.desktop} openApp={this.openApp} addNewFolder={this.addNewFolder} />
+                <DesktopMenu active={this.state.context_menus.desktop} openApp={this.openApp} addNewFolder={this.addNewFolder} openShortcutSelector={this.openShortcutSelector} />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
 
                 {/* Folder Input Name Bar */}
@@ -547,6 +581,12 @@ export class Desktop extends Component {
                         games={games}
                         recentApps={this.app_stack}
                         openApp={this.openApp} /> : null}
+
+                { this.state.showShortcutSelector ?
+                    <ShortcutSelector apps={apps}
+                        games={games}
+                        onSelect={this.addShortcutToDesktop}
+                        onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
 
             </div>
         )
