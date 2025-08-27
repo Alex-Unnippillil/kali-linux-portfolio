@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
+import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 const parseLines = (text) =>
@@ -30,36 +32,6 @@ const protocolInfo = {
   SSH: 'Secure Shell',
 };
 
-// Example traffic used when simulation mode is enabled
-const exampleUrlsnarf = [
-  {
-    raw: 'HTTP example.com /index.html',
-    protocol: 'HTTP',
-    host: 'example.com',
-    details: '/index.html',
-  },
-  {
-    raw: 'HTTPS test.com /login',
-    protocol: 'HTTPS',
-    host: 'test.com',
-    details: '/login',
-  },
-];
-
-const exampleArpspoof = [
-  {
-    raw: 'ARP reply 192.168.0.1 is-at 00:11:22:33:44:55',
-    protocol: 'ARP',
-    host: '192.168.0.1',
-    details: 'is-at 00:11:22:33:44:55',
-  },
-  {
-    raw: 'ARP reply 192.168.0.2 is-at aa:bb:cc:dd:ee:ff',
-    protocol: 'ARP',
-    host: '192.168.0.2',
-    details: 'is-at aa:bb:cc:dd:ee:ff',
-  },
-];
 
 const LogRow = ({ log, prefersReduced }) => {
   const rowRef = useRef(null);
@@ -99,10 +71,7 @@ const Dsniff = () => {
   const [filters, setFilters] = useState([]); // { field: 'host' | 'protocol', value: string }
   const [newField, setNewField] = useState('host');
   const [newValue, setNewValue] = useState('');
-  const [simulate, setSimulate] = useState(false);
   const [prefersReduced, setPrefersReduced] = useState(false);
-  const simInterval = useRef(null);
-  const simIndex = useRef(0);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -112,52 +81,12 @@ const Dsniff = () => {
     return () => media.removeEventListener('change', handler);
   }, []);
 
-  const fetchOutputs = async () => {
-    try {
-      const [urlsnarfRes, arpspoofRes] = await Promise.all([
-        fetch('/api/dsniff/urlsnarf').then((r) => r.text()).catch(() => ''),
-        fetch('/api/dsniff/arpspoof').then((r) => r.text()).catch(() => ''),
-      ]);
-      if (urlsnarfRes) setUrlsnarfLogs(parseLines(urlsnarfRes));
-      if (arpspoofRes) setArpspoofLogs(parseLines(arpspoofRes));
-    } catch (e) {
-      // ignore errors
-    }
-  };
-
   useEffect(() => {
-    if (!simulate) {
-      fetchOutputs();
-      const interval = setInterval(fetchOutputs, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [simulate]);
-
-  useEffect(() => {
-    if (simulate) {
-      simIndex.current = 0;
-      setUrlsnarfLogs([]);
-      setArpspoofLogs([]);
-      simInterval.current = setInterval(() => {
-        setUrlsnarfLogs((prev) => [
-          ...prev,
-          exampleUrlsnarf[simIndex.current % exampleUrlsnarf.length],
-        ]);
-        setArpspoofLogs((prev) => [
-          ...prev,
-          exampleArpspoof[simIndex.current % exampleArpspoof.length],
-        ]);
-        simIndex.current += 1;
-      }, 1000);
-    } else {
-      setUrlsnarfLogs([]);
-      setArpspoofLogs([]);
-      if (simInterval.current) clearInterval(simInterval.current);
-    }
-    return () => {
-      if (simInterval.current) clearInterval(simInterval.current);
-    };
-  }, [simulate]);
+    const urlsnarfData = parseLines(urlsnarfFixture.join('\n'));
+    const arpspoofData = parseLines(arpspoofFixture.join('\n'));
+    setUrlsnarfLogs(urlsnarfData);
+    setArpspoofLogs(arpspoofData);
+  }, []);
 
   const addFilter = () => {
     if (newValue.trim()) {
@@ -184,6 +113,9 @@ const Dsniff = () => {
   return (
     <div className="h-full w-full bg-ub-cool-grey text-white p-2 overflow-auto">
       <h1 className="text-lg mb-2">dsniff</h1>
+      <div className="mb-2 text-yellow-300 text-sm">
+        For lab use only – simulated traffic
+      </div>
       <div className="mb-2 flex space-x-2 items-center">
         <button
           className={`px-2 ${
@@ -201,14 +133,6 @@ const Dsniff = () => {
         >
           arpspoof
         </button>
-        <label className="ml-auto flex items-center space-x-1">
-          <input
-            type="checkbox"
-            checked={simulate}
-            onChange={() => setSimulate(!simulate)}
-          />
-          <span>Simulation</span>
-        </label>
       </div>
       <div className="mb-2">
         <input
