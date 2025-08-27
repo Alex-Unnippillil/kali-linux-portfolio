@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import dynamic from 'next/dynamic';
 
@@ -9,61 +9,87 @@ const TwitterTimelineEmbed = dynamic(
 );
 
 export default function XApp() {
-  const [text, setText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [input, setInput] = useState('@AUnnippillil');
+  const [target, setTarget] = useState('@AUnnippillil');
   const [timelineKey, setTimelineKey] = useState(0);
+  const [error, setError] = useState(false);
+  const timeoutRef = useRef();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!text.trim()) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch('/api/x', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim() }),
-      });
-      if (res.ok) {
-        setText('');
-        setTimelineKey((k) => k + 1);
-      }
-    } catch (err) {
-      // Silently fail for now
-    } finally {
-      setSubmitting(false);
-    }
+    if (!input.trim()) return;
+    setTarget(input.trim());
+    setTimelineKey((k) => k + 1);
   };
+
+  useEffect(() => {
+    clearTimeout(timeoutRef.current);
+    setError(false);
+    timeoutRef.current = setTimeout(() => setError(true), 8000);
+    return () => clearTimeout(timeoutRef.current);
+  }, [timelineKey]);
+
+  const handleLoad = () => {
+    clearTimeout(timeoutRef.current);
+    setError(false);
+  };
+
+  const isTag = target.startsWith('#');
+  const normalized = target.replace(/^[@#]/, '');
+  const embedProps = isTag
+    ? { sourceType: 'url', url: `https://twitter.com/hashtag/${normalized}` }
+    : { sourceType: 'profile', screenName: normalized };
+
+  const externalUrl = isTag
+    ? `https://x.com/hashtag/${normalized}`
+    : `https://x.com/${normalized}`;
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col">
       <form
         onSubmit={handleSubmit}
-        className="p-2 flex flex-col gap-2 border-b border-gray-600"
+        className="p-2 flex gap-2 border-b border-gray-600"
       >
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="What's happening?"
-          className="w-full p-2 rounded bg-gray-800 text-white"
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="@user or #tag"
+          className="flex-1 p-2 rounded bg-gray-800 text-white"
         />
         <button
           type="submit"
-          disabled={submitting || !text.trim()}
-          className="self-end px-4 py-1 bg-blue-500 text-white rounded disabled:opacity-50"
+          disabled={!input.trim()}
+          className="px-4 py-1 bg-blue-500 text-white rounded disabled:opacity-50"
         >
-          {submitting ? 'Posting...' : 'Post'}
+          Load
         </button>
       </form>
+      <p className="px-2 py-1 text-xs text-gray-400">
+        Timeline is read-only; interactions like posting or liking are disabled. Rate limits may prevent loading.
+      </p>
       <div className="flex-1">
-        <TwitterTimelineEmbed
-          key={timelineKey}
-          sourceType="profile"
-          screenName="AUnnippillil"
-          options={{ chrome: 'noheader noborders' }}
-          className="w-full h-full"
-        />
+        {!error ? (
+          <TwitterTimelineEmbed
+            key={timelineKey}
+            {...embedProps}
+            options={{ chrome: 'noheader noborders' }}
+            onLoad={handleLoad}
+            className="w-full h-full"
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full gap-2 p-4 text-center text-gray-200">
+            <p>Unable to load timeline. Rate limits or embed restrictions may apply.</p>
+            <a
+              href={externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-blue-500 text-white rounded"
+            >
+              Open on X
+            </a>
+          </div>
+        )}
       </div>
-
     </div>
   );
 }
