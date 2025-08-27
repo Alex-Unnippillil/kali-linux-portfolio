@@ -12,6 +12,8 @@ import {
   valueToString,
   GameState,
   Card,
+  createDeck,
+  findHint,
 } from './engine';
 
 type Variant = 'klondike' | 'spider' | 'freecell';
@@ -27,8 +29,10 @@ type Stats = {
 type AnimatedCard = Card & {
   x: number;
   y: number;
-  vx: number;
-  vy: number;
+  angle: number;
+  tx?: number;
+  ty?: number;
+  finalAngle?: number;
 };
 
 const renderCard = (card: Card) => (
@@ -61,11 +65,12 @@ const Solitaire = () => {
   });
   const prefersReducedMotion = usePrefersReducedMotion();
   const [cascade, setCascade] = useState<AnimatedCard[]>([]);
-  const cascadeRef = useRef<number>();
   const [ariaMessage, setAriaMessage] = useState('');
   const timer = useRef<NodeJS.Timeout | null>(null);
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const tableauRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [winnableOnly, setWinnableOnly] = useState(false);
+  const [hint, setHint] = useState<{ source: 'tableau' | 'waste'; pile: number; index: number } | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -84,12 +89,29 @@ const Solitaire = () => {
   }, [variant]);
 
   const start = useCallback(
-    (mode: 1 | 3 = drawMode, v: Variant = variant, daily = false) => {
+    (
+      mode: 1 | 3 = drawMode,
+      v: Variant = variant,
+      daily = false,
+      winnable = winnableOnly,
+    ) => {
       const seed = daily
         ? Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''))
         : undefined;
-      setGame(initializeGame(mode, undefined, seed));
+      let deck: Card[] | undefined;
+      if (winnable && !daily) {
+        for (let attempt = 0; attempt < 1000; attempt += 1) {
+          const d = createDeck();
+          const test = initializeGame(mode, d.slice());
+          if (findHint(test)) {
+            deck = d;
+            break;
+          }
+        }
+      }
+      setGame(initializeGame(mode, deck, seed));
       setWon(false);
+      setCascade([]);
       setTime(0);
       setIsDaily(daily);
       setStats((s) => {
@@ -100,7 +122,7 @@ const Solitaire = () => {
         return ns;
       });
     },
-    [drawMode, variant],
+    [drawMode, variant, winnableOnly],
   );
 
   useEffect(() => {
@@ -158,44 +180,42 @@ const Solitaire = () => {
 
   useEffect(() => {
     if (won && !prefersReducedMotion) {
-      const cards: AnimatedCard[] = [];
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      game.foundations.forEach((pile) => {
-        pile.forEach((card) => {
-          cards.push({
-            ...card,
-            x: Math.random() * w,
-            y: -Math.random() * h,
-            vx: (Math.random() - 0.5) * 4,
-            vy: Math.random() * 2 + 2,
-          });
-        });
+      const foundationCards = game.foundations.flat();
+      const cx = window.innerWidth / 2;
+      const cy = window.innerHeight / 2;
+      const radius = Math.min(cx, cy) * 0.8;
+      const cards: AnimatedCard[] = foundationCards.map((card, i) => {
+        const angle = (i / foundationCards.length) * Math.PI * 2;
+        return {
+          ...card,
+          x: cx,
+          y: cy,
+          angle: 0,
+          tx: cx + radius * Math.cos(angle),
+          ty: cy + radius * Math.sin(angle),
+          finalAngle: (angle * 180) / Math.PI,
+        };
       });
       setCascade(cards);
+      requestAnimationFrame(() => {
+        setCascade((c) =>
+          c.map((card) => ({
+            ...card,
+            x: card.tx!,
+            y: card.ty!,
+            angle: card.finalAngle!,
+          })),
+        );
+      });
     }
   }, [won, prefersReducedMotion, game.foundations]);
 
   useEffect(() => {
-    if (!cascade.length || prefersReducedMotion) return;
-    const animate = () => {
-      setCascade((cards) =>
-        cards
-          .map((c) => ({
-            ...c,
-            x: c.x + c.vx,
-            y: c.y + c.vy,
-            vy: c.vy + 0.3,
-          }))
-          .filter((c) => c.y < window.innerHeight + 100),
-      );
-      cascadeRef.current = requestAnimationFrame(animate);
-    };
-    cascadeRef.current = requestAnimationFrame(animate);
-    return () => {
-      if (cascadeRef.current) cancelAnimationFrame(cascadeRef.current);
-    };
-  }, [cascade.length, prefersReducedMotion]);
+    if (hint) {
+      const id = setTimeout(() => setHint(null), 2000);
+      return () => clearTimeout(id);
+    }
+  }, [hint]);
 
   useEffect(() => {
     setAriaMessage(`Score ${game.score}, time ${time} seconds, redeals ${game.redeals}`);
@@ -211,6 +231,11 @@ const Solitaire = () => {
       if (n !== g) ReactGA.event({ category: 'Solitaire', action: 'move', label: 'manual' });
       return n;
     });
+
+  const showHint = () => {
+    const h = findHint(game);
+    if (h) setHint(h);
+  };
 
   const handleDragStart = (source: 'tableau' | 'waste', pile: number, index: number) => {
     if (source === 'tableau') {
@@ -337,7 +362,14 @@ const Solitaire = () => {
       </div>
       {won && !prefersReducedMotion &&
         cascade.map((c, i) => (
-          <div key={i} className="absolute" style={{ left: c.x, top: c.y }}>
+          <div
+            key={i}
+            className="absolute transition-transform duration-1000 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            style={{
+              transform: `translate(${c.x}px, ${c.y}px) rotate(${c.angle}deg)`,
+              boxShadow: '0 8px 16px rgba(0,0,0,0.3)',
+            }}
+          >
             {renderCard(c)}
           </div>
         ))}
@@ -353,6 +385,7 @@ const Solitaire = () => {
         <div>Score: {game.score}</div>
         <div>Time: {time}s</div>
         <div>Redeals: {game.redeals}</div>
+        <div>Mode: {winnableOnly ? 'Winnable' : 'Random'}</div>
         <div>
           Best: {stats.bestScore ? `${stats.bestScore} (${stats.bestTime}s)` : 'N/A'}
         </div>
@@ -381,6 +414,12 @@ const Solitaire = () => {
         </button>
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={showHint}
+        >
+          Hint
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={() => {
             const mode = drawMode === 1 ? 3 : 1;
             ReactGA.event({
@@ -393,6 +432,14 @@ const Solitaire = () => {
         >
           Draw {drawMode === 1 ? '1' : '3'}
         </button>
+        <label className="flex items-center space-x-1">
+          <input
+            type="checkbox"
+            checked={winnableOnly}
+            onChange={(e) => setWinnableOnly(e.target.checked)}
+          />
+          <span className="select-none">Winnable Only</span>
+        </label>
       </div>
       <div className="flex space-x-4 mb-4">
         <div className="w-16 h-24" onClick={draw}>
@@ -409,7 +456,9 @@ const Solitaire = () => {
                 drag && drag.source === 'waste'
                   ? 'transform -translate-y-2 shadow-lg z-50'
                   : ''
-              } ${!prefersReducedMotion ? 'transition-transform' : ''}`}
+              } ${hint && hint.source === 'waste' ? 'ring-4 ring-yellow-400' : ''} ${
+                !prefersReducedMotion ? 'transition-transform' : ''
+              }`}
             >
               {renderCard(game.waste[game.waste.length - 1])}
             </div>
@@ -455,6 +504,13 @@ const Solitaire = () => {
                   drag.pile === i &&
                   idx >= drag.index
                     ? 'transform -translate-y-2 shadow-lg z-50'
+                    : ''
+                } ${
+                  hint &&
+                  hint.source === 'tableau' &&
+                  hint.pile === i &&
+                  hint.index === idx
+                    ? 'ring-4 ring-yellow-400'
                     : ''
                 }`}
                 style={{ top: idx * 24 }}

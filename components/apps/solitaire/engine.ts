@@ -231,3 +231,43 @@ export const valueToString = (value: number): string => {
   if (value === 13) return 'K';
   return String(value);
 };
+
+export const findHint = (
+  state: GameState,
+): { source: 'waste' | 'tableau'; pile: number; index: number } | null => {
+  if (state.waste.length) {
+    const w = state.waste[state.waste.length - 1];
+    const f = state.foundations[suits.indexOf(w.suit)];
+    if (
+      (f.length === 0 && w.value === 1) ||
+      (f.length > 0 && f[f.length - 1].value + 1 === w.value)
+    ) {
+      return { source: 'waste', pile: -1, index: state.waste.length - 1 };
+    }
+    for (let i = 0; i < state.tableau.length; i += 1) {
+      if (canPlaceOnTableau(w, state.tableau[i])) {
+        return { source: 'waste', pile: -1, index: state.waste.length - 1 };
+      }
+    }
+  }
+  for (let i = 0; i < state.tableau.length; i += 1) {
+    const pile = state.tableau[i];
+    if (!pile.length) continue;
+    const top = pile[pile.length - 1];
+    if (!top.faceUp) continue;
+    const f = state.foundations[suits.indexOf(top.suit)];
+    if (
+      (f.length === 0 && top.value === 1) ||
+      (f.length > 0 && f[f.length - 1].value + 1 === top.value)
+    ) {
+      return { source: 'tableau', pile: i, index: pile.length - 1 };
+    }
+    for (let j = 0; j < state.tableau.length; j += 1) {
+      if (i === j) continue;
+      if (canPlaceOnTableau(top, state.tableau[j])) {
+        return { source: 'tableau', pile: i, index: pile.length - 1 };
+      }
+    }
+  }
+  return null;
+};

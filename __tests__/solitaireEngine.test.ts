@@ -11,6 +11,7 @@ import {
   Card,
   GameState,
   createDeck,
+  findHint,
 } from '../components/apps/solitaire/engine';
 
 const card = (s: any, v: number, faceUp = true): Card => ({
@@ -125,5 +126,12 @@ describe('Solitaire engine', () => {
       state.foundations[i] = Array.from({ length: 13 }, (_, v) => card(s, v + 1, true));
     });
     expect(isWin(state)).toBe(true);
+  });
+
+  test('findHint locates a playable card', () => {
+    const state = emptyState();
+    state.waste = [card('♠', 1, true)];
+    const hint = findHint(state);
+    expect(hint).toEqual({ source: 'waste', pile: -1, index: 0 });
   });
 });
