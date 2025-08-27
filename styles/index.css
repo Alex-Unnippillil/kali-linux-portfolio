@@ -346,3 +346,35 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* John app chart styling */
+.john-chart {
+    width: 100%;
+    height: 150px;
+}
+
+.john-chart svg {
+    width: 100%;
+    height: 100%;
+}
+
+.john-chart-line {
+    fill: none;
+    stroke: #21c5c7;
+    stroke-width: 2;
+}
+
+.john-legend {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: #fff;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.john-legend-color {
+    width: 12px;
+    height: 12px;
+    background-color: #21c5c7;
+}
