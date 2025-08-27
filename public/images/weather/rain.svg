@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <g fill="#ccc">
+    <circle cx="40" cy="40" r="15"/>
+    <circle cx="60" cy="40" r="15"/>
+    <circle cx="50" cy="30" r="15"/>
+  </g>
+  <g stroke="blue" stroke-width="4">
+    <line x1="40" y1="55" x2="40" y2="70">
+      <animate attributeName="y1" values="55;65;55" dur="1s" repeatCount="indefinite"/>
+      <animate attributeName="y2" values="70;80;70" dur="1s" repeatCount="indefinite"/>
+    </line>
+    <line x1="60" y1="55" x2="60" y2="70">
+      <animate attributeName="y1" values="55;65;55" dur="1s" begin="0.3s" repeatCount="indefinite"/>
+      <animate attributeName="y2" values="70;80;70" dur="1s" begin="0.3s" repeatCount="indefinite"/>
+    </line>
+  </g>
+</svg>
