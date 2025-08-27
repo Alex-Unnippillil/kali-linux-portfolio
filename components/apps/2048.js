@@ -1,10 +1,10 @@
 import { useEffect, useCallback, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import GameLayout from './GameLayout';
-import useGameControls from './useGameControls';
 import { findHint } from '../../apps/games/_2048/ai';
 
 const SIZE = 4;
+const TOUCH_THRESHOLD = 20;
 
 // seeded RNG so tests can be deterministic
 let rng = Math.random;
@@ -254,7 +254,9 @@ const Game2048 = () => {
         }
         setBoard(cloneBoard(moved));
         setMoves((m) => m + 1);
-        if (merged) navigator.vibrate?.(50);
+        if (merged && typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate(10);
+        }
         if (mergedCells.length > 1) {
           setCombo((c) => c + 1);
           if (typeof window !== 'undefined') {
@@ -276,7 +278,48 @@ const Game2048 = () => {
     [board, won, lost, hardMode, score, moves, setBoard, setLost, setWon],
   );
 
-  useGameControls(handleDirection, '2048');
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === 'ArrowLeft') handleDirection({ x: -1, y: 0 });
+      else if (e.key === 'ArrowRight') handleDirection({ x: 1, y: 0 });
+      else if (e.key === 'ArrowUp') handleDirection({ x: 0, y: -1 });
+      else if (e.key === 'ArrowDown') handleDirection({ x: 0, y: 1 });
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [handleDirection]);
+
+  useEffect(() => {
+    let startX = 0;
+    let startY = 0;
+    const start = (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      e.preventDefault();
+    };
+    const move = (e) => {
+      e.preventDefault();
+    };
+    const end = (e) => {
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > TOUCH_THRESHOLD) handleDirection({ x: 1, y: 0 });
+        else if (dx < -TOUCH_THRESHOLD) handleDirection({ x: -1, y: 0 });
+      } else {
+        if (dy > TOUCH_THRESHOLD) handleDirection({ x: 0, y: 1 });
+        else if (dy < -TOUCH_THRESHOLD) handleDirection({ x: 0, y: -1 });
+      }
+    };
+    window.addEventListener('touchstart', start, { passive: false });
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend', end);
+    return () => {
+      window.removeEventListener('touchstart', start);
+      window.removeEventListener('touchmove', move);
+      window.removeEventListener('touchend', end);
+    };
+  }, [handleDirection]);
 
   useEffect(() => {
     const stop = () => setDemo(false);
