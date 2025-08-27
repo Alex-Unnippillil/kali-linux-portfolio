@@ -1,4 +1,5 @@
 import React from 'react';
+import PerfOverlay from './Games/common/perf';
 
 const GameLayout = ({ children, stage, lives, score, highScore }) => (
   <div className="h-full w-full relative text-white">
@@ -9,6 +10,7 @@ const GameLayout = ({ children, stage, lives, score, highScore }) => (
       {highScore !== undefined && <div>High: {highScore}</div>}
     </div>
     {children}
+    <PerfOverlay />
 
   </div>
 );
