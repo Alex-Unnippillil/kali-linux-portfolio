@@ -11,6 +11,7 @@ export default function YouTubePlayer({ videoId }) {
   const [chapters, setChapters] = useState([]); // [{title, startTime}]
   const [showChapters, setShowChapters] = useState(false);
   const [showDoc, setShowDoc] = useState(false);
+  const privacy = process.env.NEXT_PUBLIC_PRIVACY_MODE === 'true';
 
   // Load the YouTube IFrame API lazily on user interaction
   const loadPlayer = () => {
@@ -22,7 +23,13 @@ export default function YouTubePlayer({ videoId }) {
       // eslint-disable-next-line no-undef
       playerRef.current = new YT.Player(containerRef.current, {
         videoId,
-        playerVars: { origin: window.location.origin },
+        host: privacy
+          ? 'https://www.youtube-nocookie.com'
+          : 'https://www.youtube.com',
+        playerVars: {
+          enablejsapi: 1,
+          origin: window.location.origin,
+        },
         events: {
           onReady: (e) => {
             const data = e.target.getVideoData();
@@ -36,7 +43,9 @@ export default function YouTubePlayer({ videoId }) {
       // Load the IFrame Player API script only after user interaction
       if (!window.YT) {
         const tag = document.createElement('script');
-        tag.src = 'https://www.youtube.com/iframe_api';
+        tag.src = `${
+          privacy ? 'https://www.youtube-nocookie.com' : 'https://www.youtube.com'
+        }/iframe_api`;
         tag.async = true;
         window.onYouTubeIframeAPIReady = createPlayer;
         document.body.appendChild(tag);
@@ -63,6 +72,17 @@ export default function YouTubePlayer({ videoId }) {
             true
           );
           break;
+        case ' ':
+        case 'k':
+        case 'K': {
+          const state = playerRef.current.getPlayerState();
+          if (state === window.YT.PlayerState.PLAYING) {
+            playerRef.current.pauseVideo();
+          } else {
+            playerRef.current.playVideo();
+          }
+          break;
+        }
         case '>':
         case '.': {
           const rates = playerRef.current.getAvailablePlaybackRates();
@@ -103,7 +123,12 @@ export default function YouTubePlayer({ videoId }) {
   return (
     <>
       <Head>
-        <link rel="preconnect" href="https://www.youtube.com" />
+        <link
+          rel="preconnect"
+          href={`https://${
+            privacy ? 'www.youtube-nocookie.com' : 'www.youtube.com'
+          }`}
+        />
         <link rel="preconnect" href="https://i.ytimg.com" />
       </Head>
       <div className="relative w-full pb-[56.25%]">{/* 16:9 aspect ratio */}
