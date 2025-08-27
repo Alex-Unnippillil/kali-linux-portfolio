@@ -1,0 +1,9 @@
+{
+  "events": [
+    { "type": "hook", "hook": { "id": "demo1", "name": "Demo Client 1", "status": "online" } },
+    { "type": "hook", "hook": { "id": "demo2", "name": "Demo Client 2", "status": "offline" } },
+    { "type": "module", "hook": "demo1", "module": "alert" },
+    { "type": "module", "hook": "demo1", "module": "get-cookie" },
+    { "type": "module", "hook": "demo2", "module": "alert" }
+  ]
+}

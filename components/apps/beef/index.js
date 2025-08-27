@@ -11,11 +11,16 @@ export default function Beef() {
   const [showHelp, setShowHelp] = useState(false);
   const [steps, setSteps] = useState([]);
   const [liveMessage, setLiveMessage] = useState('');
+  const [events, setEvents] = useState([]);
+  const [eventIndex, setEventIndex] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const eventTimer = useRef(null);
   const prevHooks = useRef(0);
   const prevSteps = useRef(0);
 
   const hooksUrl = '/demo-data/beef/hooks.json';
   const modulesUrl = '/demo-data/beef/modules.json';
+  const eventsUrl = '/demo-data/beef/events.json';
 
   const getStatus = (hook) => {
     if (hook.status) return hook.status;
@@ -43,6 +48,16 @@ export default function Beef() {
     }
   }, [modulesUrl]);
 
+  const fetchEvents = useCallback(async () => {
+    try {
+      const res = await fetch(eventsUrl);
+      const data = await res.json();
+      setEvents(data.events || []);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [eventsUrl]);
+
   useEffect(() => {
     fetchHooks();
   }, [fetchHooks]);
@@ -50,6 +65,10 @@ export default function Beef() {
   useEffect(() => {
     fetchModules();
   }, [fetchModules]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -74,6 +93,41 @@ export default function Beef() {
     }
     prevSteps.current = steps.length;
   }, [steps, prevSteps]);
+
+  useEffect(() => {
+    if (!playing) return undefined;
+    if (eventIndex >= events.length) {
+      setPlaying(false);
+      return undefined;
+    }
+    const e = events[eventIndex];
+    eventTimer.current = setTimeout(() => {
+      if (e.type === 'hook' && e.hook) {
+        setHooks((prev) => [...prev, e.hook]);
+      } else if (e.type === 'module') {
+        setSteps((prev) => [
+          ...prev,
+          { id: prev.length + 1, hook: e.hook, module: e.module },
+        ]);
+      }
+      setEventIndex((i) => i + 1);
+    }, 1000);
+    return () => clearTimeout(eventTimer.current);
+  }, [playing, eventIndex, events]);
+
+  const handlePlay = () => {
+    if (eventIndex >= events.length) {
+      setHooks([]);
+      setSteps([]);
+      setEventIndex(0);
+    }
+    setPlaying(true);
+  };
+
+  const handlePause = () => {
+    setPlaying(false);
+    clearTimeout(eventTimer.current);
+  };
 
   const runModule = () => {
     if (!selected || !moduleId) return;
@@ -132,8 +186,27 @@ export default function Beef() {
         </div>
       </div>
       <div className="flex-1 p-4 overflow-y-auto flex flex-col">
-        <div className="h-64 mb-4">
+        <div className="h-64 mb-4 relative">
           <HookGraph hooks={hooks} steps={steps} />
+          <div className="absolute top-2 left-2 flex gap-2">
+            {playing ? (
+              <button
+                type="button"
+                onClick={handlePause}
+                className="px-2 py-1 bg-ub-gray-50 text-black rounded"
+              >
+                Pause
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handlePlay}
+                className="px-2 py-1 bg-ub-gray-50 text-black rounded"
+              >
+                Play
+              </button>
+            )}
+          </div>
         </div>
         {selected ? (
           <>

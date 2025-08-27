@@ -8,7 +8,9 @@ cytoscape.use(coseBilkent);
 export default function HookGraph({ hooks, steps }) {
   const cyRef = useRef(null);
   const workerRef = useRef(null);
+  const containerRef = useRef(null);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [tooltip, setTooltip] = useState(null);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -69,6 +71,26 @@ export default function HookGraph({ hooks, steps }) {
     workerRef.current.postMessage({ hooks: formattedHooks, steps });
   }, [hooks, steps, reduceMotion]);
 
+  useEffect(() => {
+    if (!cyRef.current) return undefined;
+    const cy = cyRef.current;
+    const showTip = (e) => {
+      const pos = e.target.renderedPosition();
+      setTooltip({
+        x: pos.x,
+        y: pos.y,
+        text: e.target.data('label'),
+      });
+    };
+    const hideTip = () => setTooltip(null);
+    cy.on('mouseover', 'node', showTip);
+    cy.on('mouseout', 'node', hideTip);
+    return () => {
+      cy.off('mouseover', 'node', showTip);
+      cy.off('mouseout', 'node', hideTip);
+    };
+  }, [cyRef]);
+
   const stylesheet = [
     {
       selector: 'node[type="hook"]',
@@ -102,14 +124,24 @@ export default function HookGraph({ hooks, steps }) {
   ];
 
   return (
-    <CytoscapeComponent
-      cy={(cy) => {
-        cyRef.current = cy;
-      }}
-      elements={[]}
-      style={{ width: '100%', height: '100%', backgroundColor: '#000' }}
-      stylesheet={stylesheet}
-      wheelSensitivity={0.1}
-    />
+    <div ref={containerRef} className="relative w-full h-full">
+      <CytoscapeComponent
+        cy={(cy) => {
+          cyRef.current = cy;
+        }}
+        elements={[]}
+        style={{ width: '100%', height: '100%', backgroundColor: '#000' }}
+        stylesheet={stylesheet}
+        wheelSensitivity={0.1}
+      />
+      {tooltip && (
+        <div
+          className="absolute bg-black text-white text-xs px-1 py-0.5 rounded pointer-events-none"
+          style={{ left: tooltip.x + 8, top: tooltip.y + 8 }}
+        >
+          {tooltip.text}
+        </div>
+      )}
+    </div>
   );
 }
