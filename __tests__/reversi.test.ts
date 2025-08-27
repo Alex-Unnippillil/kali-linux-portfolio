@@ -15,7 +15,25 @@ describe('Reversi rules', () => {
     expect(newBoard[2][3]).toBe('B');
   });
 
-  test('requires pass when no moves available', () => {
+  test('corner capture flips correctly', () => {
+    const board = Array.from({ length: 8 }, () => Array(8).fill(null));
+    board[0][3] = 'B';
+    board[3][0] = 'B';
+    board[2][2] = 'B';
+    board[0][1] = 'W';
+    board[0][2] = 'W';
+    board[1][0] = 'W';
+    board[2][0] = 'W';
+    board[1][1] = 'W';
+    const moves = computeLegalMoves(board, 'B');
+    expect(moves).toHaveProperty('0-0');
+    const newBoard = applyMove(board, 0, 0, 'B', moves['0-0']);
+    expect(newBoard[0][1]).toBe('B');
+    expect(newBoard[1][0]).toBe('B');
+    expect(newBoard[1][1]).toBe('B');
+  });
+
+  test('pass turn when no moves available', () => {
     const board = Array.from({ length: 8 }, () => Array(8).fill('W'));
     board[0][1] = 'B';
     board[0][2] = null;
