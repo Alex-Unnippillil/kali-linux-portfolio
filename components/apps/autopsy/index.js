@@ -152,6 +152,7 @@ function Autopsy() {
   const [plugins, setPlugins] = useState([]);
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [announcement, setAnnouncement] = useState('');
+  const [filter, setFilter] = useState('');
 
   useEffect(() => {
     fetch('/plugin-marketplace.json')
@@ -159,6 +160,18 @@ function Autopsy() {
       .then(setPlugins)
       .catch(() => setPlugins([]));
   }, []);
+
+  useEffect(() => {
+    if (!currentCase) return;
+    fetch('/autopsy-demo.json')
+      .then((res) => res.json())
+      .then((data) => setArtifacts(data.artifacts || []))
+      .catch(() => setArtifacts([]));
+  }, [currentCase]);
+
+  const filteredArtifacts = artifacts.filter((a) =>
+    a.type.toLowerCase().includes(filter.toLowerCase())
+  );
 
   const createCase = () => {
     const name = caseName.trim();
@@ -270,8 +283,34 @@ function Autopsy() {
       )}
       {artifacts.length > 0 && (
         <div className="space-y-2">
-          <div className="text-sm font-bold">Timeline</div>
-          <Timeline events={artifacts} />
+          <input
+            type="text"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter by type"
+            className="bg-ub-grey text-white px-2 py-1 rounded"
+          />
+          <div className="grid gap-2 md:grid-cols-2">
+            {filteredArtifacts.map((a, idx) => (
+              <div
+                key={`${a.name}-${idx}`}
+                className="p-2 bg-ub-grey rounded text-sm"
+              >
+                <div className="font-bold">{a.name}</div>
+                <div className="text-gray-400">{a.type}</div>
+                <div className="text-xs">
+                  {new Date(a.timestamp).toLocaleString()}
+                </div>
+                <div className="text-xs">{a.description}</div>
+              </div>
+            ))}
+          </div>
+          {filteredArtifacts.length > 0 && (
+            <>
+              <div className="text-sm font-bold">Timeline</div>
+              <Timeline events={filteredArtifacts} />
+            </>
+          )}
           <button
             onClick={downloadReport}
             className="bg-ub-orange px-3 py-1 rounded text-sm text-black"
