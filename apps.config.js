@@ -277,6 +277,7 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayBlackjack,
+    ...gameDefaults,
   },
   {
     id: 'breakout',
