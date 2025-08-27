@@ -1,0 +1,5 @@
+{
+  "tool": "nmap-nse",
+  "example": "Sample output for nmap-nse",
+  "info": "This is representative output for nmap-nse."
+}

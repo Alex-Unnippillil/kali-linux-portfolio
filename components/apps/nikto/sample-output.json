@@ -1,0 +1,5 @@
+{
+  "tool": "nikto",
+  "example": "Sample output for nikto",
+  "info": "This is representative output for nikto."
+}

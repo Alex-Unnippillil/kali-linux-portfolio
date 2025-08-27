@@ -1,0 +1,5 @@
+{
+  "tool": "hashcat",
+  "example": "Sample output for hashcat",
+  "info": "This is representative output for hashcat."
+}
