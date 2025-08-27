@@ -346,3 +346,57 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Todoist drag-and-drop styles */
+.todoist-task-list {
+    list-style: none;
+    padding: 0;
+}
+
+.todoist-task {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    margin-bottom: 4px;
+    background-color: var(--color-ub-window-title);
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.todoist-task.dragging {
+    background-color: var(--color-ubt-blue);
+}
+
+.todoist-handle {
+    cursor: grab;
+    margin-right: 8px;
+}
+
+.todoist-handle:active {
+    cursor: grabbing;
+}
+
+.todoist-task-list.dragging-over {
+    background-color: rgba(233, 84, 32, 0.1);
+}
+
+.todoist-placeholder {
+    background-color: var(--color-ubt-blue);
+    border-radius: 4px;
+    margin-bottom: 4px;
+    animation: placeholder-pulse 1s infinite ease-in-out;
+}
+
+@keyframes placeholder-pulse {
+    0% {
+        opacity: 0.2;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+
+    100% {
+        opacity: 0.2;
+    }
+}
