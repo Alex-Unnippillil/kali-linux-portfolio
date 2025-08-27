@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import InputRemap from './Games/common/input-remap/InputRemap';
 import useInputMapping from './Games/common/input-remap/useInputMapping';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 interface HelpOverlayProps {
   gameId: string;
@@ -158,11 +159,15 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   const info = GAME_INSTRUCTIONS[gameId];
   if (!info) return null;
   const [mapping, setKey] = useInputMapping(gameId, info.actions || {});
+  const ref = useRef<HTMLDivElement>(null);
+  useFocusTrap(ref, true);
   return (
     <div
       className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
       role="dialog"
       aria-modal="true"
+      aria-label={`${gameId} instructions`}
+      ref={ref}
     >
       <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
         <h2 className="text-xl font-bold mb-2">{gameId} Help</h2>
@@ -186,7 +191,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
         )}
         <button
           onClick={onClose}
-          className="mt-4 px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
+          className="mt-4 px-3 py-1 bg-gray-700 rounded focus-visible:outline focus-visible:ring"
           autoFocus
         >
           Close
