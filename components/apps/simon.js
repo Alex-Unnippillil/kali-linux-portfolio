@@ -57,6 +57,15 @@ const Simon = () => {
   const audioCtx = useRef(null);
   const errorSound = useRef(null);
   const [errorFlash, setErrorFlash] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleChange = () => setPrefersReducedMotion(media.matches);
+    handleChange();
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
+  }, []);
 
   const scheduleTone = (freq, startTime, duration) => {
     const ctx =
@@ -75,8 +84,8 @@ const Simon = () => {
   };
 
   const flashPad = (idx, duration) => {
-    setActivePad(idx);
-    if ('vibrate' in navigator) navigator.vibrate(50);
+    window.requestAnimationFrame(() => setActivePad(idx));
+    if ('vibrate' in navigator && !prefersReducedMotion) navigator.vibrate(50);
     setTimeout(() => setActivePad(null), duration * 1000);
   };
 
@@ -161,12 +170,16 @@ const Simon = () => {
       }
       errorSound.current.play();
       setErrorFlash(true);
-      setTimeout(() => setErrorFlash(false), 300);
       const streak = Math.max(sequence.length - 1, 0);
       setLeaderboard((prev) =>
         [...prev, streak].sort((a, b) => b - a).slice(0, 5)
       );
-      restartGame();
+      setIsPlayerTurn(false);
+      setStatus('Wrong pad! Game over.');
+      setTimeout(() => {
+        setErrorFlash(false);
+        restartGame();
+      }, 600);
     }
   };
 
@@ -174,14 +187,17 @@ const Simon = () => {
     const colors = mode === 'colorblind'
       ? { base: 'bg-gray-700', active: 'bg-gray-500' }
       : pad.color;
-    return `h-32 w-32 rounded flex items-center justify-center text-3xl ${
-      activePad === idx ? colors.active : colors.base
+    const isActive = activePad === idx;
+    return `h-32 w-32 rounded flex items-center justify-center text-3xl transition-shadow ${
+      isActive
+        ? `${colors.active} pad-pulse ring-4 ring-white`
+        : `${colors.base} ring-4 ring-transparent`
     }`;
   };
 
   return (
     <GameLayout onRestart={restartGame}>
-      <div className={errorFlash ? 'error-flash' : ''}>
+      <div className={errorFlash ? 'buzz' : ''}>
         <div className="grid grid-cols-2 gap-4 mb-4">
           {padStyles.map((pad, idx) => (
             <button
@@ -194,7 +210,7 @@ const Simon = () => {
             </button>
           ))}
         </div>
-        <div className="mb-4">{status}</div>
+        <div className="mb-4" aria-live="assertive">{status}</div>
         <div className="flex gap-4">
           <select
             className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
