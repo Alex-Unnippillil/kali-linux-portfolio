@@ -18,6 +18,13 @@ import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayNikto } from './components/apps/nikto';
 
+// Domains required for Twitter widgets used in the X app
+export const TWITTER_WIDGET_ORIGINS = [
+  'https://platform.twitter.com',
+  'https://syndication.twitter.com',
+  'https://cdn.syndication.twimg.com',
+];
+
 const createDynamicApp = (path, name) =>
   dynamic(
     () =>
@@ -540,6 +547,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: false,
     screen: displayX,
+    allowScripts: TWITTER_WIDGET_ORIGINS,
   },
   {
     id: 'spotify',
