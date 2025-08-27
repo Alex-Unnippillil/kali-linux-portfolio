@@ -186,6 +186,74 @@ export function isSolved(state: State): boolean {
 
 export const directionKeys = Object.keys(DIRS) as (keyof typeof DIRS)[];
 
+function isEdgeDeadlock(state: State, boxes: Set<string>, pos: Position): boolean {
+  const k = key(pos);
+  if (state.targets.has(k)) return false;
+  const left = isWallOrBoxWith(state, boxes, { x: pos.x - 1, y: pos.y });
+  const right = isWallOrBoxWith(state, boxes, { x: pos.x + 1, y: pos.y });
+  if (left || right) {
+    let hasTarget = false;
+    for (let x = pos.x; x >= 0; x--) {
+      const kk = `${x},${pos.y}`;
+      if (state.walls.has(kk)) break;
+      if (state.targets.has(kk)) {
+        hasTarget = true;
+        break;
+      }
+    }
+    for (let x = pos.x; x < state.width; x++) {
+      const kk = `${x},${pos.y}`;
+      if (state.walls.has(kk)) break;
+      if (state.targets.has(kk)) {
+        hasTarget = true;
+        break;
+      }
+    }
+    if (!hasTarget) return true;
+  }
+  const up = isWallOrBoxWith(state, boxes, { x: pos.x, y: pos.y - 1 });
+  const down = isWallOrBoxWith(state, boxes, { x: pos.x, y: pos.y + 1 });
+  if (up || down) {
+    let hasTarget = false;
+    for (let y = pos.y; y >= 0; y--) {
+      const kk = `${pos.x},${y}`;
+      if (state.walls.has(kk)) break;
+      if (state.targets.has(kk)) {
+        hasTarget = true;
+        break;
+      }
+    }
+    for (let y = pos.y; y < state.height; y++) {
+      const kk = `${pos.x},${y}`;
+      if (state.walls.has(kk)) break;
+      if (state.targets.has(kk)) {
+        hasTarget = true;
+        break;
+      }
+    }
+    if (!hasTarget) return true;
+  }
+  return false;
+}
+
+export function wouldDeadlock(state: State, dirKey: keyof typeof DIRS): boolean {
+  const dir = DIRS[dirKey];
+  if (!dir) return false;
+  const next: Position = { x: state.player.x + dir.x, y: state.player.y + dir.y };
+  const nextKey = key(next);
+  if (!state.boxes.has(nextKey)) return false;
+  const beyond: Position = { x: next.x + dir.x, y: next.y + dir.y };
+  const beyondKey = key(beyond);
+  if (isWallOrBox(state, beyond)) return false;
+  const newBoxes = new Set(state.boxes);
+  newBoxes.delete(nextKey);
+  newBoxes.add(beyondKey);
+  return (
+    isDeadlockWith(state, newBoxes, beyond) ||
+    isEdgeDeadlock(state, newBoxes, beyond)
+  );
+}
+
 // -- Solver utilities -------------------------------------------------------
 
 function isWallOrBoxWith(state: State, boxes: Set<string>, pos: Position): boolean {
