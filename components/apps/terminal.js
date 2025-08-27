@@ -19,7 +19,16 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const commandRef = useRef('');
   const logRef = useRef('');
   const knownCommandsRef = useRef(
-    new Set(['pwd', 'cd', 'simulate', 'history', 'clear', 'help']),
+    new Set([
+      'pwd',
+      'cd',
+      'simulate',
+      'history',
+      'clear',
+      'help',
+      'demo nmap',
+      'demo hashcat',
+    ]),
   );
   const historyRef = useRef([]);
   const historyIndexRef = useRef(0);
@@ -100,6 +109,27 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
           writeLine(msg);
           prompt();
         }
+      } else if (trimmed === 'demo nmap') {
+        termRef.current.writeln('');
+        writeLine('Starting Nmap 7.93 ( https://nmap.org )');
+        writeLine('Nmap scan report for localhost (127.0.0.1)');
+        writeLine('Host is up (0.00023s latency).');
+        writeLine('Not shown: 998 closed ports');
+        writeLine('22/tcp   open  ssh');
+        writeLine('80/tcp   open  http');
+        writeLine('443/tcp  open  https');
+        writeLine('');
+        writeLine('Nmap done: 1 IP address (1 host up) scanned.');
+        prompt();
+      } else if (trimmed === 'demo hashcat') {
+        termRef.current.writeln('');
+        writeLine('hashcat (v6.2.6) starting...');
+        writeLine('* Device #1: NVIDIA GeForce RTX 3090, 24268/24576 MB');
+        writeLine('Benchmarking: MD5');
+        writeLine('Speed.#1.........: 39420.0 MH/s');
+        writeLine('');
+        writeLine('Hashcat finished.');
+        prompt();
       } else if (trimmed === 'clear') {
         termRef.current.clear();
         prompt();
@@ -109,6 +139,10 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
           .sort()
           .join(' ');
         writeLine(`Available commands: ${commands}`);
+        prompt();
+      } else if (trimmed === 'demo') {
+        termRef.current.writeln('');
+        writeLine('Available demos: demo nmap, demo hashcat');
         prompt();
       } else if (trimmed === 'history') {
         termRef.current.writeln('');
