@@ -6,6 +6,8 @@ let data = { cpu: [], memory: [], down: [], up: [] };
 let reduceMotion = false;
 let stressing = false;
 let stressHandle;
+let decimate = 1;
+let sampleCount = 0;
 
 self.onmessage = (e) => {
   const { type } = e.data || {};
@@ -26,6 +28,8 @@ self.onmessage = (e) => {
       stressing = false;
       clearTimeout(stressHandle);
     }
+  } else if (type === 'decimate') {
+    decimate = Math.max(1, e.data.value | 0);
   } else if (type === 'frame') {
     if (!reduceMotion) draw();
   }
@@ -65,12 +69,15 @@ function runStress() {
 }
 
 function push(cpu, memory, down, up) {
+  sampleCount++;
+  if (sampleCount % decimate !== 0) return;
   data.cpu.push(cpu);
   data.memory.push(memory);
   data.down.push(down);
   data.up.push(up);
   Object.keys(data).forEach((k) => {
-    if (data[k].length > MAX_POINTS) data[k].shift();
+    const max = Math.floor(MAX_POINTS / decimate) || 1;
+    if (data[k].length > max) data[k].shift();
   });
 }
 
