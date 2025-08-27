@@ -1,7 +1,39 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 const WIDTH = 400;
 const HEIGHT = 400;
+const BASE_SPAWN_COUNT = 5;
+const ENEMIES_PER_WAVE = 2;
+const SPAWN_INTERVAL = 0.5;
+const INITIAL_LIVES = 10;
+const BASE_ENEMY_SPEED = 40;
+const ENEMY_SPEED_PER_WAVE = 5;
+const BASE_ENEMY_HP = 10;
+const ENEMY_HP_PER_WAVE = 2;
+const TOWER_BASE_RANGE = 60;
+const TOWER_RANGE_PER_LEVEL = 10;
+const PROJECTILE_SPEED = 200;
+const PROJECTILE_DAMAGE = 5;
+const PROJECTILE_COOLDOWN = 0.5;
+const PROJECTILE_TRAIL_LIMIT = 5;
+const PROJECTILE_HIT_DISTANCE = 5;
+const AOE_RADIUS = 30;
+const DECAL_TTL = 0.3;
+const DECAL_RADIUS = 6;
+const DAMAGE_NUMBER_TTL = 1;
+const DAMAGE_NUMBER_VY = -30;
+const DAMAGE_NUMBER_ACCEL = 200;
+const SHOCKWAVE_TTL = 0.3;
+const SHOCKWAVE_GROWTH = 200;
+const TOWER_PLACEMENT_RADIUS = 15;
+const TOWER_MAX_LEVEL = 3;
+const TOWER_RADIUS = 10;
+const PROJECTILE_RADIUS = 3;
+const ENEMY_RADIUS = 8;
+const ENEMY_BAR_WIDTH = 20;
+const ENEMY_BAR_HEIGHT = 3;
+const ENEMY_BAR_OFFSET_X = 10;
+const ENEMY_BAR_OFFSET_Y = 14;
 
 // Simple fixed path
 const PATH = [
@@ -25,6 +57,11 @@ for (let i = 0; i < PATH.length - 1; i += 1) {
   totalLength += len;
 }
 
+/**
+ * Returns the coordinates at a distance `d` along the path.
+ * @param {number} d distance along the path
+ * @returns {{x:number,y:number}}
+ */
 const getPointAt = (d) => {
   let dist = d;
   for (const seg of pathSegments) {
@@ -41,6 +78,12 @@ const getPointAt = (d) => {
   return { x: last.b.x, y: last.b.y };
 };
 
+/**
+ * Checks whether the supplied point lies on or near the path.
+ * @param {number} px
+ * @param {number} py
+ * @returns {boolean}
+ */
 const pointOnPath = (px, py) => {
   const threshold = 15;
   for (const seg of pathSegments) {
@@ -60,6 +103,11 @@ const pointOnPath = (px, py) => {
   return false;
 };
 
+/**
+ * Tower defense game component.
+ * Handles rendering and game state for a simple path-based TD.
+ * @returns {JSX.Element}
+ */
 function TowerDefense() {
   const canvasRef = useRef(null);
   const towersRef = useRef([]);
@@ -71,7 +119,7 @@ function TowerDefense() {
   const spawnRef = useRef({ count: 0, spawned: 0, timer: 0 });
   const [wave, setWave] = useState(1);
   const waveRef = useRef(wave);
-  const [lives, setLives] = useState(10);
+  const [lives, setLives] = useState(INITIAL_LIVES);
   const livesRef = useRef(lives);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
@@ -111,7 +159,7 @@ function TowerDefense() {
     }
   }, []);
 
-  const playSound = () => {
+  const playSound = useCallback(() => {
     if (!sound) return;
     try {
       const Ctor = window.AudioContext || window.webkitAudioContext;
@@ -127,11 +175,15 @@ function TowerDefense() {
     } catch (e) {
       /* ignore */
     }
-  };
+  }, [sound]);
 
-  const startWave = (num) => {
-    spawnRef.current = { count: 5 + num * 2, spawned: 0, timer: 0 };
-  };
+  const startWave = useCallback((num) => {
+    spawnRef.current = {
+      count: BASE_SPAWN_COUNT + num * ENEMIES_PER_WAVE,
+      spawned: 0,
+      timer: 0,
+    };
+  }, []);
 
   useEffect(() => {
     startWave(1);
@@ -139,7 +191,7 @@ function TowerDefense() {
     runningRef.current = false;
   }, []);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     towersRef.current = [];
     enemiesRef.current = [];
     projectilesRef.current = [];
@@ -148,59 +200,64 @@ function TowerDefense() {
     shockwavesRef.current = [];
     setWave(1);
     waveRef.current = 1;
-    setLives(10);
+    setLives(INITIAL_LIVES);
     setScore(0);
     setRunning(false);
     runningRef.current = false;
     setFast(false);
     speedRef.current = 1;
     startWave(1);
-  };
+  }, [startWave]);
 
-  const handleClick = (e) => {
+  const handleClick = useCallback((e) => {
     const rect = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     const existing = towersRef.current.find(
-      (t) => Math.hypot(t.x - x, t.y - y) < 15
+      (t) => Math.hypot(t.x - x, t.y - y) < TOWER_PLACEMENT_RADIUS
     );
     if (existing) {
       if (e.shiftKey) {
         const idx = TARGET_MODES.indexOf(existing.mode || 'first');
         existing.mode = TARGET_MODES[(idx + 1) % TARGET_MODES.length];
-      } else if (existing.level < 3) existing.level += 1;
+      } else if (existing.level < TOWER_MAX_LEVEL) existing.level += 1;
       return;
     }
     if (pointOnPath(x, y)) return;
     towersRef.current.push({ x, y, level: 1, cooldown: 0, mode: 'first' });
-  };
+  }, []);
 
-  const update = (dt) => {
+  const spawnEnemies = (dt) => {
     const spawn = spawnRef.current;
     spawn.timer += dt;
-    if (spawn.spawned < spawn.count && spawn.timer >= 0.5) {
+    if (spawn.spawned < spawn.count && spawn.timer >= SPAWN_INTERVAL) {
+      const hp = BASE_ENEMY_HP + waveRef.current * ENEMY_HP_PER_WAVE;
       enemiesRef.current.push({
         dist: 0,
-        speed: 40 + waveRef.current * 5,
-        hp: 10 + waveRef.current * 2,
-        maxHp: 10 + waveRef.current * 2,
+        speed: BASE_ENEMY_SPEED + waveRef.current * ENEMY_SPEED_PER_WAVE,
+        hp,
+        maxHp: hp,
         x: PATH[0].x,
         y: PATH[0].y,
       });
       spawn.spawned += 1;
       spawn.timer = 0;
     }
+  };
 
+  const moveEnemies = (dt) => {
     enemiesRef.current.forEach((e) => {
       e.dist += e.speed * dt;
       const pos = getPointAt(e.dist);
       e.x = pos.x;
       e.y = pos.y;
     });
+  };
 
+  const updateTowers = (dt) => {
     towersRef.current.forEach((t) => {
       t.cooldown = (t.cooldown || 0) - dt;
-      const range = 60 + t.level * 10;
+      const range = TOWER_BASE_RANGE + t.level * TOWER_RANGE_PER_LEVEL;
       let target = null;
       if (t.mode === 'first') {
         let maxDistPath = -Infinity;
@@ -244,18 +301,20 @@ function TowerDefense() {
           x: t.x,
           y: t.y,
           target,
-          speed: 200,
-          damage: 5 * t.level,
+          speed: PROJECTILE_SPEED,
+          damage: PROJECTILE_DAMAGE * t.level,
           trail: [],
         });
-        t.cooldown = 0.5;
+        t.cooldown = PROJECTILE_COOLDOWN;
       }
     });
+  };
 
+  const updateProjectiles = (dt) => {
     projectilesRef.current.forEach((p) => {
       if (!p.target) return;
       p.trail.push({ x: p.x, y: p.y });
-      if (p.trail.length > 5) p.trail.shift();
+      if (p.trail.length > PROJECTILE_TRAIL_LIMIT) p.trail.shift();
       const dx = p.target.x - p.x;
       const dy = p.target.y - p.y;
       const dist = Math.hypot(dx, dy);
@@ -263,42 +322,43 @@ function TowerDefense() {
       const vy = (dy / dist) * p.speed;
       p.x += vx * dt;
       p.y += vy * dt;
-      if (dist < 5 || p.target.hp <= 0) {
+      if (dist < PROJECTILE_HIT_DISTANCE || p.target.hp <= 0) {
         if (p.target.hp > 0) {
           p.target.hp -= p.damage;
           damageNumbersRef.current.push({
             x: p.target.x,
             y: p.target.y,
             dmg: p.damage,
-            vy: -30,
-            ttl: 1,
+            vy: DAMAGE_NUMBER_VY,
+            ttl: DAMAGE_NUMBER_TTL,
           });
-          const radius = 30;
           enemiesRef.current.forEach((e) => {
             if (e !== p.target) {
               const d = Math.hypot(e.x - p.x, e.y - p.y);
-              if (d < radius) {
+              if (d < AOE_RADIUS) {
                 e.hp -= p.damage;
                 damageNumbersRef.current.push({
                   x: e.x,
                   y: e.y,
                   dmg: p.damage,
-                  vy: -30,
-                  ttl: 1,
+                  vy: DAMAGE_NUMBER_VY,
+                  ttl: DAMAGE_NUMBER_TTL,
                 });
               }
             }
           });
-          shockwavesRef.current.push({ x: p.x, y: p.y, r: 0, ttl: 0.3 });
+          shockwavesRef.current.push({ x: p.x, y: p.y, r: 0, ttl: SHOCKWAVE_TTL });
         }
-        decalsRef.current.push({ x: p.x, y: p.y, ttl: 0.3 });
+        decalsRef.current.push({ x: p.x, y: p.y, ttl: DECAL_TTL });
         p.hit = true;
       }
     });
     projectilesRef.current = projectilesRef.current.filter(
       (p) => !p.hit && p.target.hp > 0
     );
+  };
 
+  const updateEffects = (dt) => {
     decalsRef.current.forEach((d) => {
       d.ttl -= dt;
     });
@@ -306,17 +366,19 @@ function TowerDefense() {
 
     damageNumbersRef.current.forEach((n) => {
       n.ttl -= dt;
-      n.vy += 200 * dt;
+      n.vy += DAMAGE_NUMBER_ACCEL * dt;
       n.y += n.vy * dt;
     });
     damageNumbersRef.current = damageNumbersRef.current.filter((n) => n.ttl > 0);
 
     shockwavesRef.current.forEach((s) => {
       s.ttl -= dt;
-      s.r += 200 * dt;
+      s.r += SHOCKWAVE_GROWTH * dt;
     });
     shockwavesRef.current = shockwavesRef.current.filter((s) => s.ttl > 0);
+  };
 
+  const cleanupEnemies = () => {
     enemiesRef.current = enemiesRef.current.filter((e) => {
       if (e.hp <= 0) {
         setScore((s) => s + 1);
@@ -329,7 +391,10 @@ function TowerDefense() {
       }
       return true;
     });
+  };
 
+  const checkWaveCompletion = () => {
+    const spawn = spawnRef.current;
     if (
       spawn.spawned >= spawn.count &&
       enemiesRef.current.length === 0 &&
@@ -342,6 +407,16 @@ function TowerDefense() {
       setRunning(false);
       runningRef.current = false;
     }
+  };
+
+  const update = (dt) => {
+    spawnEnemies(dt);
+    moveEnemies(dt);
+    updateTowers(dt);
+    updateProjectiles(dt);
+    updateEffects(dt);
+    cleanupEnemies();
+    checkWaveCompletion();
   };
 
   const draw = (ctx) => {
@@ -358,15 +433,15 @@ function TowerDefense() {
     ctx.stroke();
 
     decalsRef.current.forEach((d) => {
-      const alpha = prefersReducedMotion.current ? 1 : d.ttl / 0.3;
+      const alpha = prefersReducedMotion.current ? 1 : d.ttl / DECAL_TTL;
       ctx.fillStyle = `rgba(255,255,0,${alpha})`;
       ctx.beginPath();
-      ctx.arc(d.x, d.y, 6, 0, Math.PI * 2);
+      ctx.arc(d.x, d.y, DECAL_RADIUS, 0, Math.PI * 2);
       ctx.fill();
     });
 
     shockwavesRef.current.forEach((s) => {
-      const alpha = prefersReducedMotion.current ? 1 : s.ttl / 0.3;
+      const alpha = prefersReducedMotion.current ? 1 : s.ttl / SHOCKWAVE_TTL;
       ctx.strokeStyle = `rgba(255,255,0,${alpha})`;
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -383,7 +458,7 @@ function TowerDefense() {
       ctx.stroke();
       ctx.fillStyle = 'blue';
       ctx.beginPath();
-      ctx.arc(t.x, t.y, 10, 0, Math.PI * 2);
+      ctx.arc(t.x, t.y, TOWER_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = 'white';
       ctx.font = '10px sans-serif';
@@ -394,12 +469,22 @@ function TowerDefense() {
     enemiesRef.current.forEach((e) => {
       ctx.fillStyle = '#b00';
       ctx.beginPath();
-      ctx.arc(e.x, e.y, 8, 0, Math.PI * 2);
+      ctx.arc(e.x, e.y, ENEMY_RADIUS, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#222';
-      ctx.fillRect(e.x - 10, e.y - 14, 20, 3);
+      ctx.fillRect(
+        e.x - ENEMY_BAR_OFFSET_X,
+        e.y - ENEMY_BAR_OFFSET_Y,
+        ENEMY_BAR_WIDTH,
+        ENEMY_BAR_HEIGHT
+      );
       ctx.fillStyle = '#0f0';
-      ctx.fillRect(e.x - 10, e.y - 14, (20 * e.hp) / e.maxHp, 3);
+      ctx.fillRect(
+        e.x - ENEMY_BAR_OFFSET_X,
+        e.y - ENEMY_BAR_OFFSET_Y,
+        (ENEMY_BAR_WIDTH * e.hp) / e.maxHp,
+        ENEMY_BAR_HEIGHT
+      );
     });
 
     damageNumbersRef.current.forEach((n) => {
@@ -424,7 +509,7 @@ function TowerDefense() {
       }
       ctx.fillStyle = '#ff0';
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, PROJECTILE_RADIUS, 0, Math.PI * 2);
       ctx.fill();
     });
   };
