@@ -1,358 +1,219 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import ReactGA from 'react-ga4';
+import React, { useState, useRef, useEffect } from 'react';
 import {
+  SIZE,
   createBoard,
   computeLegalMoves,
-  countPieces,
   applyMove,
-  bestMove,
+  countPieces,
 } from './reversiLogic';
 
+const BOARD_SIZE = 400;
+const CELL = BOARD_SIZE / SIZE;
+
 const Reversi = () => {
-  const [board, setBoard] = useState(createBoard);
+  const canvasRef = useRef(null);
+  const boardRef = useRef(createBoard());
+  const legalRef = useRef({});
+  const playerRef = useRef('B');
+  const pausedRef = useRef(false);
+  const animRef = useRef(0);
+  const audioRef = useRef(null);
+
+  const [board, setBoard] = useState(() => createBoard());
   const [player, setPlayer] = useState('B');
-  const [status, setStatus] = useState("Black's turn");
-  const [flipping, setFlipping] = useState([]);
-  const [preview, setPreview] = useState(null);
-  const [aiDepth, setAiDepth] = useState(2);
-  const [mustPass, setMustPass] = useState(false);
-  const [gameOver, setGameOver] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [future, setFuture] = useState([]);
-  const [showSuggestion, setShowSuggestion] = useState(false);
-  const [suggestion, setSuggestion] = useState(null);
-    const workerRef = useRef();
-    const handleMoveRef = useRef((r, c) => {});
+  const [paused, setPaused] = useState(false);
+  const [sound, setSound] = useState(true);
+  const [message, setMessage] = useState('Your turn');
+  const [wins, setWins] = useState({ player: 0, ai: 0 });
 
-  const legalMoves = useMemo(() => computeLegalMoves(board, player), [board, player]);
+  // keep refs in sync
+  useEffect(() => { boardRef.current = board; }, [board]);
+  useEffect(() => { playerRef.current = player; }, [player]);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
 
+  // load wins from storage
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const saved = window.localStorage.getItem('reversiState');
+    const saved = window.localStorage.getItem('reversiWins');
     if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        if (data.board) setBoard(data.board);
-        if (data.player) setPlayer(data.player);
-        if (data.history) setHistory(data.history);
-        if (data.future) setFuture(data.future);
-        if (data.aiDepth) setAiDepth(data.aiDepth);
-        if (data.mustPass) setMustPass(data.mustPass);
-        if (data.gameOver) setGameOver(data.gameOver);
-      } catch (e) {
-        // ignore parse errors
-      }
+      try { setWins(JSON.parse(saved)); } catch { /* ignore */ }
     }
   }, []);
 
+  // persist wins
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const state = {
-      board,
-      player,
-      history,
-      future,
-      aiDepth,
-      mustPass,
-      gameOver,
-    };
-    window.localStorage.setItem('reversiState', JSON.stringify(state));
-  }, [board, player, history, future, aiDepth, mustPass, gameOver]);
+    window.localStorage.setItem('reversiWins', JSON.stringify(wins));
+  }, [wins]);
 
-  useEffect(() => {
-    if (!showSuggestion) {
-      setSuggestion(null);
-      return;
-    }
-    const best = bestMove(board, player, 2);
-    setSuggestion(best);
-  }, [showSuggestion, board, player]);
+  const playSound = () => {
+    if (!sound) return;
+    const ctx =
+      audioRef.current || new (window.AudioContext || window.webkitAudioContext)();
+    audioRef.current = ctx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 500;
+    osc.start();
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    osc.stop(ctx.currentTime + 0.1);
+  };
 
+  // draw loop
   useEffect(() => {
-    workerRef.current = new Worker(new URL('./reversi.worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => {
-      const { move } = e.data;
-        if (move) {
-          const [r, c] = move;
-          handleMoveRef.current(r, c);
-        } else {
-          setPlayer('B');
-        }
-      };
-      return () => workerRef.current.terminate();
-    }, []);
-
-  useEffect(() => {
-    if (Object.keys(legalMoves).length === 0) {
-      const next = player === 'B' ? 'W' : 'B';
-      const nextMoves = computeLegalMoves(board, next);
-      if (Object.keys(nextMoves).length === 0) {
-        const { black, white } = countPieces(board);
-        const winner =
-          black > white
-            ? 'Black wins!'
-            : white > black
-            ? 'White wins!'
-            : "It's a draw";
-        setStatus(winner);
-        setGameOver({ black, white, winner });
-        ReactGA.event({ category: 'reversi', action: 'game_over', label: `${black}-${white}` });
-      } else {
-        setMustPass(true);
-        setStatus(`${player === 'B' ? 'Black' : 'White'} has no moves`);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const draw = () => {
+      ctx.clearRect(0, 0, BOARD_SIZE, BOARD_SIZE);
+      ctx.fillStyle = '#0a7e07';
+      ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
+      ctx.strokeStyle = '#000';
+      for (let i = 0; i <= SIZE; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(0, i * CELL);
+        ctx.lineTo(BOARD_SIZE, i * CELL);
+        ctx.moveTo(i * CELL, 0);
+        ctx.lineTo(i * CELL, BOARD_SIZE);
+        ctx.stroke();
       }
-    } else {
-      setStatus(`${player === 'B' ? 'Black' : 'White'}'s turn`);
-      setMustPass(false);
-    }
-  }, [legalMoves, board, player]);
+      const b = boardRef.current;
+      for (let r = 0; r < SIZE; r += 1) {
+        for (let c = 0; c < SIZE; c += 1) {
+          const cell = b[r][c];
+          if (cell) {
+            ctx.beginPath();
+            ctx.arc(
+              c * CELL + CELL / 2,
+              r * CELL + CELL / 2,
+              CELL / 2 - 4,
+              0,
+              Math.PI * 2,
+            );
+            ctx.fillStyle = cell === 'B' ? '#000' : '#fff';
+            ctx.fill();
+          }
+        }
+      }
+      if (playerRef.current === 'B' && !pausedRef.current) {
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        Object.keys(legalRef.current).forEach((key) => {
+          const [r, c] = key.split('-').map(Number);
+          ctx.beginPath();
+          ctx.arc(c * CELL + CELL / 2, r * CELL + CELL / 2, 4, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+    };
+    const loop = () => {
+      draw();
+      animRef.current = requestAnimationFrame(loop);
+    };
+    animRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animRef.current);
+  }, []);
 
+  // handle turn logic and AI
   useEffect(() => {
-    if (mustPass && player === 'W') {
-      ReactGA.event({ category: 'reversi', action: 'pass', label: 'W' });
-      setPlayer('B');
-      setMustPass(false);
+    const moves = computeLegalMoves(board, player);
+    legalRef.current = moves;
+    if (Object.keys(moves).length === 0) {
+      const opp = player === 'B' ? 'W' : 'B';
+      const oppMoves = computeLegalMoves(board, opp);
+      if (Object.keys(oppMoves).length === 0) {
+        const { black, white } = countPieces(board);
+        if (black > white) {
+          setWins((w) => ({ ...w, player: w.player + 1 }));
+          setMessage('You win!');
+        } else if (white > black) {
+          setWins((w) => ({ ...w, ai: w.ai + 1 }));
+          setMessage('AI wins!');
+        } else {
+          setMessage('Draw!');
+        }
+      } else {
+        setPlayer(opp); // pass turn
+      }
       return;
     }
-    if (player === 'W' && Object.keys(legalMoves).length && workerRef.current) {
-      workerRef.current.postMessage({ board, player, depth: aiDepth });
+    if (player === 'W' && !paused) {
+      const t = setTimeout(() => {
+        const entries = Object.entries(moves);
+        let best = entries[0][0];
+        let max = entries[0][1].length;
+        entries.forEach(([k, f]) => {
+          if (f.length > max) { best = k; max = f.length; }
+        });
+        const [r, c] = best.split('-').map(Number);
+        setBoard((b) => applyMove(b, r, c, 'W', moves[best]));
+        playSound();
+        setPlayer('B');
+      }, 300);
+      return () => clearTimeout(t);
     }
-  }, [player, legalMoves, board, mustPass, aiDepth]);
+    setMessage(player === 'B' ? 'Your turn' : "AI's turn");
+  }, [board, player, paused]);
 
-  const handleMove = (r, c) => {
+  const handleClick = (e) => {
+    if (paused || player !== 'B') return;
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const r = Math.floor(y / CELL);
+    const c = Math.floor(x / CELL);
     const key = `${r}-${c}`;
-    const toFlip = legalMoves[key];
-    if (!toFlip || gameOver) return;
-    setHistory((h) => [...h, { board: board.map((row) => row.slice()), player }]);
-    setFuture([]);
-    const opponent = player === 'B' ? 'W' : 'B';
-    const flipInfo = toFlip.map(([fr, fc]) => ({ key: `${fr}-${fc}`, from: opponent }));
-    setFlipping(flipInfo);
-    setBoard(applyMove(board, r, c, player, toFlip));
-    ReactGA.event({ category: 'reversi', action: 'move', label: `${player}:${r}-${c}` });
-    setTimeout(() => setFlipping([]), 400);
-    setPlayer(opponent);
+    const flips = legalRef.current[key];
+    if (!flips) return;
+    setBoard((b) => applyMove(b, r, c, 'B', flips));
+    playSound();
+    setPlayer('W');
   };
-
-  handleMoveRef.current = handleMove;
-
-  const handlePreview = (r, c) => {
-    const key = `${r}-${c}`;
-    const toFlip = legalMoves[key];
-    if (toFlip) setPreview({ move: [r, c], flips: toFlip });
-  };
-
-  const clearPreview = () => setPreview(null);
-
-  useEffect(() => setPreview(null), [board, player]);
 
   const reset = () => {
-    setBoard(createBoard());
+    const fresh = createBoard();
+    setBoard(fresh);
     setPlayer('B');
-    setStatus("Black's turn");
-    setPreview(null);
-    setMustPass(false);
-    setGameOver(null);
-    setHistory([]);
-    setFuture([]);
-    setSuggestion(null);
-    setShowSuggestion(false);
+    setMessage('Your turn');
+    setPaused(false);
   };
-
-  const { black, white } = useMemo(() => countPieces(board), [board]);
-
-  const changeDepth = (e) => {
-    const depth = parseInt(e.target.value, 10);
-    setAiDepth(depth);
-    ReactGA.event({ category: 'reversi', action: 'ai_level_select', label: depth.toString() });
-  };
-
-  const passTurn = () => {
-    if (!mustPass) return;
-    const next = player === 'B' ? 'W' : 'B';
-    ReactGA.event({ category: 'reversi', action: 'pass', label: player });
-    setPlayer(next);
-    setMustPass(false);
-  };
-
-  const undo = () => {
-    if (!history.length) return;
-    const last = history[history.length - 1];
-    setHistory((h) => h.slice(0, -1));
-    setFuture((f) => [{ board: board.map((row) => row.slice()), player }, ...f]);
-    setBoard(last.board);
-    setPlayer(last.player);
-    setPreview(null);
-    setFlipping([]);
-    setGameOver(null);
-  };
-
-  const redo = () => {
-    if (!future.length) return;
-    const next = future[0];
-    setFuture((f) => f.slice(1));
-    setHistory((h) => [...h, { board: board.map((row) => row.slice()), player }]);
-    setBoard(next.board);
-    setPlayer(next.player);
-    setPreview(null);
-    setFlipping([]);
-    setGameOver(null);
-  };
-
-  const toggleSuggestion = () => setShowSuggestion((s) => !s);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none relative">
-      <div className="mb-2">{status}</div>
-      <div className="mb-2 flex items-center space-x-2">
-        <label htmlFor="aiDepth">AI Level:</label>
-        <select
-          id="aiDepth"
-          value={aiDepth}
-          onChange={changeDepth}
-          className="bg-gray-700 text-white rounded px-2 py-1"
-        >
-          <option value={2}>Easy</option>
-          <option value={4}>Medium</option>
-          <option value={6}>Hard</option>
-        </select>
-      </div>
-      <div className="mb-4">Black: {black} White: {white}</div>
-      <div className="grid grid-cols-8 gap-1 bg-green-700 p-1">
-        {board.map((row, r) =>
-          row.map((cell, c) => {
-            const key = `${r}-${c}`;
-            const move = legalMoves[key];
-            const flipObj = flipping.find((f) => f.key === key);
-            const front = flipObj ? flipObj.from : cell;
-            const back = cell;
-            const isPreview = preview && preview.move[0] === r && preview.move[1] === c;
-            const willFlip =
-              preview && preview.flips.some(([fr, fc]) => fr === r && fc === c);
-            const isSuggestion =
-              suggestion && suggestion[0] === r && suggestion[1] === c;
-            return (
-              <div
-                key={key}
-                onClick={() => handleMove(r, c)}
-                onMouseEnter={() => handlePreview(r, c)}
-                onMouseLeave={clearPreview}
-                className={`relative w-8 h-8 flex items-center justify-center bg-green-600 ${
-                  move ? 'cursor-pointer hover:bg-green-500 hover:ring-2 hover:ring-yellow-300' : ''
-                }`}
-              >
-                {isSuggestion && (
-                  <div className="absolute inset-0 pointer-events-none ring-2 ring-blue-400 rounded-sm" />
-                )}
-                {cell && (
-                  <div className={`piece ${flipObj ? 'flipping' : ''}`}>
-                    <div
-                      className={`disc front ${front === 'B' ? 'bg-black' : 'bg-white'}`}
-                    />
-                    <div
-                      className={`disc back ${back === 'B' ? 'bg-black' : 'bg-white'}`}
-                    />
-                  </div>
-                )}
-                {!cell && move && !isPreview && (
-                  <div className="w-2 h-2 rounded-full bg-white opacity-50" />
-                )}
-                {!cell && isPreview && (
-                  <div
-                    className={`w-6 h-6 rounded-full ${
-                      player === 'B' ? 'bg-black' : 'bg-white'
-                    } opacity-50`}
-                  />
-                )}
-                {willFlip && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div
-                      className={`w-6 h-6 rounded-full ${
-                        player === 'B' ? 'bg-black' : 'bg-white'
-                      } opacity-50`}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          }),
-        )}
-      </div>
+    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
+      <canvas
+        ref={canvasRef}
+        width={BOARD_SIZE}
+        height={BOARD_SIZE}
+        onClick={handleClick}
+        className="bg-green-700"
+      />
+      <div className="mt-2">Wins - You: {wins.player} | AI: {wins.ai}</div>
+      <div className="mt-1">{message}</div>
       <div className="mt-2 flex space-x-2">
-        {mustPass && player === 'B' && (
-          <button
-            onClick={passTurn}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          >
-            Pass
-          </button>
-        )}
         <button
-          onClick={undo}
-          disabled={!history.length}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
-        >
-          Undo
-        </button>
-        <button
-          onClick={redo}
-          disabled={!future.length}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
-        >
-          Redo
-        </button>
-        <button
-          onClick={toggleSuggestion}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-        >
-          {showSuggestion ? 'Hide Hint' : 'Show Hint'}
-        </button>
-        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={reset}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
         >
           Reset
         </button>
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setPaused((p) => !p)}
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setSound((s) => !s)}
+        >
+          {sound ? 'Sound: On' : 'Sound: Off'}
+        </button>
       </div>
-      {gameOver && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-ub-cool-grey p-4 rounded text-center">
-            <div className="mb-2">{gameOver.winner}</div>
-            <div className="mb-2">Black: {gameOver.black} White: {gameOver.white}</div>
-            <button
-              onClick={reset}
-              className="mt-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            >
-              New Game
-            </button>
-          </div>
-        </div>
-      )}
-      <style jsx>{`
-        .piece {
-          position: relative;
-          width: 80%;
-          height: 80%;
-          transform-style: preserve-3d;
-          transition: transform 0.4s;
-        }
-        .flipping {
-          transform: rotateY(180deg);
-        }
-        .disc {
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          border-radius: 9999px;
-          backface-visibility: hidden;
-        }
-        .back {
-          transform: rotateY(180deg);
-        }
-      `}</style>
     </div>
   );
 };
 
 export default Reversi;
-
