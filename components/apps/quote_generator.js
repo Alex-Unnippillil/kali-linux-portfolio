@@ -1,8 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
+import usePersistentState from '../usePersistentState';
 
-import offlineQuotes from './quotes.json';
+// Minimal offline quotes to avoid empty UI
+const offlineQuotes = [
+  {
+    content: 'Be yourself; everyone else is already taken.',
+    author: 'Oscar Wilde',
+    tags: ['life'],
+  },
+  {
+    content: 'Stay hungry, stay foolish.',
+    author: 'Steve Jobs',
+    tags: ['technology', 'inspirational'],
+  },
+  {
+    content: 'To be, or not to be, that is the question.',
+    author: 'William Shakespeare',
+    tags: ['wisdom'],
+  },
+];
 
 const SAFE_CATEGORIES = [
   'inspirational',
@@ -65,6 +83,7 @@ const QuoteGenerator = () => {
   const [search, setSearch] = useState('');
   const [fade, setFade] = useState(false);
   const [prefersReduced, setPrefersReduced] = useState(false);
+  const [favorites, setFavorites] = usePersistentState('quote-favorites', []);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -158,6 +177,17 @@ const QuoteGenerator = () => {
     }
   };
 
+  const shareQuote = () => {
+    if (!current) return;
+    const text = `"${current.content}" - ${current.author}`;
+    if (navigator.share) {
+      navigator.share({ text }).catch(() => {});
+    } else {
+      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    }
+  };
+
   const tweetQuote = () => {
     if (!current) return;
     const text = `"${current.content}" - ${current.author}`;
@@ -174,6 +204,28 @@ const QuoteGenerator = () => {
       link.href = dataUrl;
       link.click();
     });
+  };
+
+  const isFavorite = useMemo(
+    () =>
+      current &&
+      favorites.some(
+        (f) => f.content === current.content && f.author === current.author
+      ),
+    [current, favorites]
+  );
+
+  const toggleFavorite = () => {
+    if (!current) return;
+    if (isFavorite) {
+      setFavorites(
+        favorites.filter(
+          (f) => f.content !== current.content || f.author !== current.author
+        )
+      );
+    } else {
+      setFavorites([...favorites, current]);
+    }
   };
 
   const categories = useMemo(
@@ -211,9 +263,21 @@ const QuoteGenerator = () => {
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={toggleFavorite}
+          >
+            {isFavorite ? 'Unfavorite' : 'Favorite'}
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={copyQuote}
           >
             Copy
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={shareQuote}
+          >
+            Share
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
@@ -248,6 +312,23 @@ const QuoteGenerator = () => {
             ))}
           </select>
         </div>
+        {favorites.length > 0 && (
+          <div className="mt-6 w-full">
+            <h3 className="font-bold mb-2 text-center">Favorites</h3>
+            <ul className="flex flex-col gap-2">
+              {favorites.map((f, idx) => (
+                <li
+                  key={idx}
+                  className="p-2 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 text-center"
+                  onClick={() => setCurrent(f)}
+                >
+                  <p className="text-sm">&quot;{f.content}&quot;</p>
+                  <p className="text-xs text-gray-300">- {f.author}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );
