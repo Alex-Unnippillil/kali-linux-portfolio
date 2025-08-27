@@ -16,13 +16,37 @@ const unitMap = {
     pound: 'lb',
     ounce: 'oz',
   },
+  temperature: {
+    celsius: 'degC',
+    fahrenheit: 'degF',
+    kelvin: 'K',
+  },
 };
 
-export const convertUnit = (category, from, to, amount, precision) => {
-  const fromUnit = unitMap[category][from];
-  const toUnit = unitMap[category][to];
-  const result = math.unit(amount, fromUnit).toNumber(toUnit);
-  return typeof precision === 'number' ? math.round(result, precision) : result;
+export const convertUnit = (domain, from, to, value, precision) => {
+  const category = unitMap[domain];
+  if (!category) {
+    throw new Error(`Invalid domain: ${domain}`);
+  }
+
+  const fromUnit = category[from];
+  const toUnit = category[to];
+
+  if (!fromUnit || !toUnit) {
+    throw new Error(`Invalid unit`);
+  }
+
+  const numericValue =
+    typeof value === 'string' ? Number(value) : value;
+  if (Number.isNaN(numericValue)) {
+    throw new Error('Invalid value');
+  }
+
+  let result = math.unit(numericValue, fromUnit).toNumber(toUnit);
+  if (typeof precision === 'number') {
+    result = math.round(result, precision);
+  }
+  return result;
 };
 
 const UnitConverter = () => {
@@ -70,13 +94,14 @@ const UnitConverter = () => {
         >
           <option value="length">Length</option>
           <option value="weight">Weight</option>
+          <option value="temperature">Temperature</option>
         </select>
       </label>
       <label className="flex flex-col">
         Value
         <input
           className="text-black p-1 rounded"
-          type="number"
+          type="text"
           value={value}
           onChange={(e) => setValue(e.target.value)}
         />
