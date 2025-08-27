@@ -158,24 +158,14 @@ const Memory = () => {
           return (
             <div key={card.id} className="aspect-square" onClick={() => handleFlip(idx)}>
               <div
-                className={`relative w-full h-full transform-gpu ${
+                className={`relative w-full h-full transform-gpu memory-card ${
                   prefersReducedMotion ? '' : 'transition-transform duration-500'
-                }`}
-                style={{
-                  transformStyle: 'preserve-3d',
-                  transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                }}
+                } ${isFlipped ? 'flipped' : ''}`}
               >
-                <div
-                  className="absolute inset-0 bg-gray-700 rounded flex items-center justify-center text-2xl"
-                  style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-                >
+                <div className="memory-card-front absolute inset-0 bg-gray-700 rounded flex items-center justify-center text-2xl">
                   {card.value}
                 </div>
-                <div
-                  className="absolute inset-0 bg-gray-600 rounded"
-                  style={{ backfaceVisibility: 'hidden' }}
-                />
+                <div className="memory-card-back absolute inset-0 bg-gray-600 rounded" />
               </div>
             </div>
           );

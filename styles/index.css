@@ -346,3 +346,21 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Memory game card flipping */
+.memory-card {
+    transform-style: preserve-3d;
+}
+
+.memory-card.flipped {
+    transform: rotateY(180deg);
+}
+
+.memory-card-front,
+.memory-card-back {
+    backface-visibility: hidden;
+}
+
+.memory-card-front {
+    transform: rotateY(180deg);
+}
