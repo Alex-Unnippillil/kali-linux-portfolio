@@ -102,7 +102,7 @@ const VolatilityApp = () => {
       });
       const text = await res.text();
       setOutput(text);
-      workerRef.current?.postMessage({});
+      workerRef.current?.postMessage({ cols: 100, rows: 60 });
     } catch (err) {
       setOutput('Analysis failed');
     } finally {
