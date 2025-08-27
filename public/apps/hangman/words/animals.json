@@ -1,0 +1,5 @@
+{
+  "easy": ["cat", "dog", "cow", "bat", "hen"],
+  "medium": ["giraffe", "monkey", "rabbit", "eagle"],
+  "hard": ["alligator", "chimpanzee", "hippopotamus", "rhinoceros"]
+}
