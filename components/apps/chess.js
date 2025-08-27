@@ -369,3 +369,5 @@ const ChessGame = () => {
 
 export default ChessGame;
 
+
+export const displayChess = (addFolder, openApp) => <ChessGame addFolder={addFolder} openApp={openApp} />;

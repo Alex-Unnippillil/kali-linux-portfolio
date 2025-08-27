@@ -172,3 +172,5 @@ const WiresharkApp = ({ initialPackets = [] }) => {
 };
 
 export default WiresharkApp;
+
+export const displayWireshark = (addFolder, openApp) => <WiresharkApp addFolder={addFolder} openApp={openApp} />;

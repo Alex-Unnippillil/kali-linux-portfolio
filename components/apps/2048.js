@@ -231,3 +231,5 @@ const Game2048 = () => {
 
 export default Game2048;
 
+
+export const display2048 = (addFolder, openApp) => <Game2048 addFolder={addFolder} openApp={openApp} />;

@@ -258,3 +258,5 @@ const Blackjack = () => {
 };
 
 export default Blackjack;
+
+export const displayBlackjack = (addFolder, openApp) => <Blackjack addFolder={addFolder} openApp={openApp} />;

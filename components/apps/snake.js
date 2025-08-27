@@ -356,3 +356,5 @@ const Snake = () => {
 };
 
 export default Snake;
+
+export const displaySnake = (addFolder, openApp) => <Snake addFolder={addFolder} openApp={openApp} />;

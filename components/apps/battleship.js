@@ -256,3 +256,5 @@ const Battleship = () => {
 };
 
 export default Battleship;
+
+export const displayBattleship = (addFolder, openApp) => <Battleship addFolder={addFolder} openApp={openApp} />;

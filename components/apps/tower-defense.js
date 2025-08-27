@@ -458,3 +458,5 @@ const TowerDefense = () => {
 };
 
 export default TowerDefense;
+
+export const displayTowerDefense = (addFolder, openApp) => <TowerDefense addFolder={addFolder} openApp={openApp} />;

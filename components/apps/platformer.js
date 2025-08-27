@@ -47,3 +47,5 @@ const Platformer = () => {
 };
 
 export default Platformer;
+
+export const displayPlatformer = (addFolder, openApp) => <Platformer addFolder={addFolder} openApp={openApp} />;

@@ -422,3 +422,5 @@ const Sudoku = () => {
 
 export default Sudoku;
 
+
+export const displaySudoku = (addFolder, openApp) => <Sudoku addFolder={addFolder} openApp={openApp} />;

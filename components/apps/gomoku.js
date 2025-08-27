@@ -87,3 +87,5 @@ const Gomoku = () => {
 
 export default Gomoku;
 
+
+export const displayGomoku = (addFolder, openApp) => <Gomoku addFolder={addFolder} openApp={openApp} />;

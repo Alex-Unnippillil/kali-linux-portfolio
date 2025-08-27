@@ -308,3 +308,5 @@ const Checkers = () => {
 };
 
 export default Checkers;
+
+export const displayCheckers = (addFolder, openApp) => <Checkers addFolder={addFolder} openApp={openApp} />;

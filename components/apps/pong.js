@@ -513,3 +513,5 @@ const Pong = () => {
 };
 
 export default Pong;
+
+export const displayPong = (addFolder, openApp) => <Pong addFolder={addFolder} openApp={openApp} />;

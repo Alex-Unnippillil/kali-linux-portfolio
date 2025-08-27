@@ -561,3 +561,5 @@ const Pacman = () => {
 };
 
 export default Pacman;
+
+export const displayPacman = (addFolder, openApp) => <Pacman addFolder={addFolder} openApp={openApp} />;

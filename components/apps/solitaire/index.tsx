@@ -271,3 +271,5 @@ const Solitaire = () => {
 };
 
 export default Solitaire;
+
+export const displaySolitaire = (addFolder, openApp) => <Solitaire addFolder={addFolder} openApp={openApp} />;

@@ -289,3 +289,5 @@ export default function TicTacToeApp() {
     </GameLayout>
   );
 }
+
+export const displayTictactoe = (addFolder, openApp) => <TicTacToeApp addFolder={addFolder} openApp={openApp} />;

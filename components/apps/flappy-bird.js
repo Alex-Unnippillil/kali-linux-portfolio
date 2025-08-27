@@ -173,3 +173,5 @@ const FlappyBird = () => {
 };
 
 export default FlappyBird;
+
+export const displayFlappyBird = (addFolder, openApp) => <FlappyBird addFolder={addFolder} openApp={openApp} />;

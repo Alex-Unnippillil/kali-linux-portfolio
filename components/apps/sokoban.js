@@ -531,3 +531,5 @@ const Sokoban = () => {
 
 export default Sokoban;
 
+
+export const displaySokoban = (addFolder, openApp) => <Sokoban addFolder={addFolder} openApp={openApp} />;

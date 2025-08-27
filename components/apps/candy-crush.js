@@ -112,3 +112,5 @@ const CandyCrush = () => {
 };
 
 export default CandyCrush;
+
+export const displayCandyCrush = (addFolder, openApp) => <CandyCrush addFolder={addFolder} openApp={openApp} />;

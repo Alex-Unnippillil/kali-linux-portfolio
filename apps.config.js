@@ -1,178 +1,79 @@
-import React from 'react';
-import dynamic from 'next/dynamic';
-import { logEvent } from './utils/analytics';
-
-import { displayX } from './components/apps/x';
-import { displaySpotify } from './components/apps/spotify';
-import { displayVsCode } from './components/apps/vscode';
-import { displaySettings } from './components/apps/settings';
-import { displayChrome } from './components/apps/chrome';
-import { displayTrash } from './components/apps/trash';
-import { displayGedit } from './components/apps/gedit';
+import { display2048 } from './components/apps/2048';
 import { displayAboutAlex } from './components/apps/alex';
-import { displayTodoist } from './components/apps/todoist';
-import { displayYouTube } from './components/apps/youtube';
-import { displayWeather } from './components/apps/weather';
-import { displayConverter } from './components/apps/converter';
-import { displayQrTool } from './components/apps/qr_tool';
 import { displayAsciiArt } from './components/apps/ascii_art';
+import { displayAsteroids } from './components/apps/asteroids';
+import { displayAutopsy } from './components/apps/autopsy';
+import { displayBattleship } from './components/apps/battleship';
+import { displayBeef } from './components/apps/beef';
+import { displayBlackjack } from './components/apps/blackjack';
+import { displayBluetooth } from './components/apps/bluetooth';
+import { displayBreakout } from './components/apps/breakout';
+import { displayTerminalCalc } from './components/apps/calc';
+import { displayCandyCrush } from './components/apps/candy-crush';
+import { displayCarRacer } from './components/apps/car-racer';
+import { displayCheckers } from './components/apps/checkers';
+import { displayChess } from './components/apps/chess';
+import { displayChrome } from './components/apps/chrome';
+import { displayConnectFour } from './components/apps/connect-four';
+import { displayConverter } from './components/apps/converter';
+import { displayDsniff } from './components/apps/dsniff';
+import { displayEttercap } from './components/apps/ettercap';
 import { displayFiglet } from './components/apps/figlet';
-import { displayResourceMonitor } from './components/apps/resource_monitor';
-import { displayQuoteGenerator } from './components/apps/quote_generator';
-import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayFlappyBird } from './components/apps/flappy-bird';
+import { displayFrogger } from './components/apps/frogger';
+import { displayGame } from './components/apps/game';
+import { displayGedit } from './components/apps/gedit';
+import { displayGhidra } from './components/apps/ghidra';
+import { displayGomoku } from './components/apps/gomoku';
+import { displayHangman } from './components/apps/hangman';
+import { displayHashcat } from './components/apps/hashcat';
+import { displayHydra } from './components/apps/hydra';
+import { displayJohn } from './components/apps/john';
+import { displayKismet } from './components/apps/kismet';
+import { displayMemory } from './components/apps/memory';
+import { displayMetasploit } from './components/apps/metasploit';
+import { displayMimikatz } from './components/apps/mimikatz';
+import { displayMinesweeper } from './components/apps/minesweeper';
+import { displayMsfPost } from './components/apps/msf-post';
+import { displayNessus } from './components/apps/nessus';
 import { displayNikto } from './components/apps/nikto';
-
-const createDynamicApp = (path, name) =>
-  dynamic(
-    () =>
-      import(`./components/apps/${path}`).then((mod) => {
-        logEvent({ category: 'Application', action: `Loaded ${name}` });
-        return mod.default;
-      }),
-    {
-      ssr: false,
-      loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-          {`Loading ${name}...`}
-        </div>
-      ),
-    }
-  );
-
-const createDisplay = (Component) => (addFolder, openApp) => (
-  <Component addFolder={addFolder} openApp={openApp} />
-);
-
-// Dynamic applications and games
-const TerminalApp = createDynamicApp('terminal', 'Terminal');
-const CalcApp = createDynamicApp('calc', 'Calc');
-const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
-const ChessApp = createDynamicApp('chess', 'Chess');
-const ConnectFourApp = createDynamicApp('connect-four', 'Connect Four');
-const HangmanApp = createDynamicApp('hangman', 'Hangman');
-const FroggerApp = createDynamicApp('frogger', 'Frogger');
-const FlappyBirdApp = createDynamicApp('flappy-bird', 'Flappy Bird');
-const Game2048App = createDynamicApp('2048', '2048');
-const SnakeApp = createDynamicApp('snake', 'Snake');
-const MemoryApp = createDynamicApp('memory', 'Memory');
-const MinesweeperApp = createDynamicApp('minesweeper', 'Minesweeper');
-const PongApp = createDynamicApp('pong', 'Pong');
-const PacmanApp = createDynamicApp('pacman', 'Pacman');
-const CarRacerApp = createDynamicApp('car-racer', 'Car Racer');
-const PlatformerApp = createDynamicApp('platformer', 'Platformer');
-const BattleshipApp = createDynamicApp('battleship', 'Battleship');
-const CheckersApp = createDynamicApp('checkers', 'Checkers');
-const ReversiApp = createDynamicApp('reversi', 'Reversi');
-const SimonApp = createDynamicApp('simon', 'Simon');
-const SokobanApp = createDynamicApp('sokoban', 'Sokoban');
-const SolitaireApp = createDynamicApp('solitaire', 'Solitaire');
-const TowerDefenseApp = createDynamicApp('tower-defense', 'Tower Defense');
-const WordSearchApp = createDynamicApp('word-search', 'Word Search');
-const WordleApp = createDynamicApp('wordle', 'Wordle');
-const BlackjackApp = createDynamicApp('blackjack', 'Blackjack');
-const BreakoutApp = createDynamicApp('breakout', 'Breakout');
-const AsteroidsApp = createDynamicApp('asteroids', 'Asteroids');
-const SudokuApp = createDynamicApp('sudoku', 'Sudoku');
-const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
-const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
-const TetrisApp = createDynamicApp('tetris', 'Tetris');
-const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
-const Radare2App = createDynamicApp('radare2', 'Radare2');
-
-const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
-
-
-const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
-const BluetoothApp = createDynamicApp('bluetooth', 'Bluetooth Tools');
-const DsniffApp = createDynamicApp('dsniff', 'dsniff');
-const BeefApp = createDynamicApp('beef', 'BeEF');
-const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
-
-const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
-
-const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
-const PinballApp = createDynamicApp('pinball', 'Pinball');
-const VolatilityApp = createDynamicApp('volatility', 'Volatility');
-
-const KismetApp = createDynamicApp('kismet', 'Kismet');
-
-const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
-const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
-const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
-const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
-const ReaverApp = createDynamicApp('reaver', 'Reaver');
-const HydraApp = createDynamicApp('hydra', 'Hydra');
-const JohnApp = createDynamicApp('john', 'John the Ripper');
-const NessusApp = createDynamicApp('nessus', 'Nessus');
-const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
-const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
-const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
- 
-
-
-const displayTerminal = createDisplay(TerminalApp);
-const displayTerminalCalc = createDisplay(CalcApp);
-const displayTicTacToe = createDisplay(TicTacToeApp);
-const displayChess = createDisplay(ChessApp);
-const displayConnectFour = createDisplay(ConnectFourApp);
-const displayHangman = createDisplay(HangmanApp);
-const displayFrogger = createDisplay(FroggerApp);
-const displayFlappyBird = createDisplay(FlappyBirdApp);
-const display2048 = createDisplay(Game2048App);
-const displaySnake = createDisplay(SnakeApp);
-const displayMemory = createDisplay(MemoryApp);
-const displayMinesweeper = createDisplay(MinesweeperApp);
-const displayPong = createDisplay(PongApp);
-const displayPacman = createDisplay(PacmanApp);
-const displayCarRacer = createDisplay(CarRacerApp);
-const displayPlatformer = createDisplay(PlatformerApp);
-const displayBattleship = createDisplay(BattleshipApp);
-const displayCheckers = createDisplay(CheckersApp);
-const displayReversi = createDisplay(ReversiApp);
-const displaySimon = createDisplay(SimonApp);
-const displaySokoban = createDisplay(SokobanApp);
-const displaySolitaire = createDisplay(SolitaireApp);
-const displayTowerDefense = createDisplay(TowerDefenseApp);
-const displayWordSearch = createDisplay(WordSearchApp);
-const displayWordle = createDisplay(WordleApp);
-const displayBlackjack = createDisplay(BlackjackApp);
-const displayBreakout = createDisplay(BreakoutApp);
-const displayAsteroids = createDisplay(AsteroidsApp);
-const displaySudoku = createDisplay(SudokuApp);
-const displaySpaceInvaders = createDisplay(SpaceInvadersApp);
-const displayNonogram = createDisplay(NonogramApp);
-const displayTetris = createDisplay(TetrisApp);
-const displayCandyCrush = createDisplay(CandyCrushApp);
-const displayRadare2 = createDisplay(Radare2App);
-
-const displayGhidra = createDisplay(GhidraApp);
-
-const displayAutopsy = createDisplay(AutopsyApp);
-
-const displayWireshark = createDisplay(WiresharkApp);
-const displayBluetooth = createDisplay(BluetoothApp);
-const displayBeef = createDisplay(BeefApp);
-const displayMetasploit = createDisplay(MetasploitApp);
-const displayDsniff = createDisplay(DsniffApp);
-const displayGomoku = createDisplay(GomokuApp);
-const displayPinball = createDisplay(PinballApp);
-const displayVolatility = createDisplay(VolatilityApp);
-
-const displayMsfPost = createDisplay(MsfPostApp);
-const displayMimikatz = createDisplay(MimikatzApp);
-const displayEttercap = createDisplay(EttercapApp);
-const displayReaver = createDisplay(ReaverApp);
-const displayHydra = createDisplay(HydraApp);
-const displayJohn = createDisplay(JohnApp);
-const displayNessus = createDisplay(NessusApp);
-const displayNmapNSE = createDisplay(NmapNSEApp);
-const displayOpenVAS = createDisplay(OpenVASApp);
-const displayReconNG = createDisplay(ReconNGApp);
-
-const displayHashcat = createDisplay(HashcatApp);
-
-const displayKismet = createDisplay(KismetApp);
-
+import { displayNmapNSE } from './components/apps/nmap-nse';
+import { displayNonogram } from './components/apps/nonogram';
+import { displayOpenVAS } from './components/apps/openvas';
+import { displayPacman } from './components/apps/pacman';
+import { displayPinball } from './components/apps/pinball';
+import { displayPlatformer } from './components/apps/platformer';
+import { displayPong } from './components/apps/pong';
+import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayQrTool } from './components/apps/qr_tool';
+import { displayQuoteGenerator } from './components/apps/quote_generator';
+import { displayRadare2 } from './components/apps/radare2';
+import { displayReaver } from './components/apps/reaver';
+import { displayReconNG } from './components/apps/reconng';
+import { displayResourceMonitor } from './components/apps/resource_monitor';
+import { displayReversi } from './components/apps/reversi';
+import { displaySettings } from './components/apps/settings';
+import { displaySimon } from './components/apps/simon';
+import { displaySnake } from './components/apps/snake';
+import { displaySokoban } from './components/apps/sokoban';
+import { displaySolitaire } from './components/apps/solitaire';
+import { displaySpaceInvaders } from './components/apps/space-invaders';
+import { displaySpotify } from './components/apps/spotify';
+import { displaySudoku } from './components/apps/sudoku';
+import { displayTerminal } from './components/apps/terminal';
+import { displayTetris } from './components/apps/tetris';
+import { displayTictactoe } from './components/apps/tictactoe';
+import { displayTodoist } from './components/apps/todoist';
+import { displayTowerDefense } from './components/apps/tower-defense';
+import { displayTrash } from './components/apps/trash';
+import { displayVolatility } from './components/apps/volatility';
+import { displayVsCode } from './components/apps/vscode';
+import { displayWeather } from './components/apps/weather';
+import { displayWireshark } from './components/apps/wireshark';
+import { displayWordSearch } from './components/apps/word-search';
+import { displayWordle } from './components/apps/wordle';
+import { displayX } from './components/apps/x';
+import { displayYouTube } from './components/apps/youtube';
 
 // Default window sizing for games to prevent oversized frames
 const gameDefaults = {
