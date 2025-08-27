@@ -1,142 +1,155 @@
 import React, { useState, useEffect } from 'react';
 
 function Autopsy() {
-  const [caseName, setCaseName] = useState('');
-  const [currentCase, setCurrentCase] = useState(null);
-  const [analysis, setAnalysis] = useState('');
-  const [artifacts, setArtifacts] = useState([]);
-  const [plugins, setPlugins] = useState([]);
-  const [selectedPlugin, setSelectedPlugin] = useState('');
+  const [data, setData] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [hashQuery, setHashQuery] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [hashResults, setHashResults] = useState([]);
+  const [keywordResults, setKeywordResults] = useState([]);
 
   useEffect(() => {
-    fetch('/plugin-marketplace.json')
+    fetch('/demo/autopsy/sample-case.json')
       .then((res) => res.json())
-      .then(setPlugins)
-      .catch(() => setPlugins([]));
+      .then(setData)
+      .catch(() => setData(null));
   }, []);
 
-  const createCase = () => {
-    const name = caseName.trim();
-    if (name) {
-      setCurrentCase(name);
-      setAnalysis('');
-    }
+  const buildTree = (files) => {
+    const root = {};
+    files.forEach((f) => {
+      const parts = f.path.split('/');
+      let current = root;
+      parts.forEach((part, idx) => {
+        if (!current[part]) {
+          current[part] = idx === parts.length - 1 ? { __file: f } : {};
+        }
+        current = current[part];
+      });
+    });
+    return root;
   };
 
-  const analyseFile = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const buffer = event.target.result;
-      const bytes = new Uint8Array(buffer).slice(0, 20);
-      const hex = Array.from(bytes)
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join(' ');
-      setAnalysis(`File: ${file.name}\nSize: ${file.size} bytes\nFirst 20 bytes: ${hex}`);
-      setArtifacts((prev) => [
-        ...prev,
-        {
-          name: file.name,
-          size: file.size,
-          hex,
-          plugin: selectedPlugin || 'None',
-          timestamp: new Date().toISOString(),
-        },
-      ]);
-    };
-    reader.readAsArrayBuffer(file);
+  const fileTree = data ? buildTree(data.files) : null;
+
+  const renderTree = (node, path = '') => (
+    <ul className="ml-4">
+      {Object.entries(node).map(([name, value]) =>
+        value.__file ? (
+          <li key={path + name}>
+            <button
+              onClick={() => setSelected(value.__file)}
+              className="text-left hover:underline"
+            >
+              {name}
+            </button>
+          </li>
+        ) : (
+          <li key={path + name}>
+            <div className="font-bold">{name}</div>
+            {renderTree(value, path + name + '/')}
+          </li>
+        )
+      )}
+    </ul>
+  );
+
+  const searchHash = () => {
+    if (!data) return;
+    const query = hashQuery.trim();
+    setHashResults(data.files.filter((f) => f.hash.includes(query)));
   };
 
-  const downloadReport = () => {
-    const lines = artifacts.map(
-      (a) => `${a.timestamp} - ${a.name} (${a.size} bytes) [Plugin: ${a.plugin}]`
+  const searchKeyword = () => {
+    if (!data) return;
+    const term = keyword.trim().toLowerCase();
+    setKeywordResults(
+      data.files.filter(
+        (f) => f.content && f.content.toLowerCase().includes(term)
+      )
     );
-    const report = `Case: ${currentCase}\n` + lines.join('\n');
-    const blob = new Blob([report], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${currentCase || 'case'}-report.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
+
+  const timeline = data
+    ? [...data.files].sort(
+        (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+      )
+    : [];
 
   return (
-    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white p-4 space-y-4">
-      <div className="flex space-x-2">
-        <input
-          type="text"
-          value={caseName}
-          onChange={(e) => setCaseName(e.target.value)}
-          placeholder="Case name"
-          className="flex-grow bg-ub-grey text-white px-2 py-1 rounded"
-        />
-        <button
-          onClick={createCase}
-          className="bg-ub-orange px-3 py-1 rounded"
-        >
-          Create Case
-        </button>
+    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white p-4 space-y-4 text-sm">
+      <div className="text-xs italic">
+        Sample data for demonstration purposes only.
       </div>
-      {currentCase && (
-        <div className="space-y-2">
-          <div className="text-sm">Current case: {currentCase}</div>
-          <div className="flex space-x-2 items-center">
-            <select
-              value={selectedPlugin}
-              onChange={(e) => setSelectedPlugin(e.target.value)}
-              className="bg-ub-grey text-white px-2 py-1 rounded"
-            >
-              <option value="">Select Plugin</option>
-              {plugins.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            <input
-              aria-label="Upload file"
-              type="file"
-              onChange={analyseFile}
-              className="text-sm"
-            />
+      {data && (
+        <>
+          <div className="flex space-x-4">
+            <div className="w-1/2">
+              <div className="font-bold mb-1">File Tree</div>
+              {renderTree(fileTree)}
+            </div>
+            <div className="w-1/2">
+              <div className="font-bold mb-1">Timeline</div>
+              <ul className="text-xs space-y-1">
+                {timeline.map((f, idx) => (
+                  <li key={idx} className="bg-ub-grey p-1 rounded">
+                    <div>{new Date(f.timestamp).toLocaleString()}</div>
+                    <div>{f.path}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-        </div>
-      )}
-      {analysis && (
-        <textarea
-          readOnly
-          value={analysis}
-          className="bg-ub-grey text-xs text-white p-2 rounded resize-none"
-        />
-      )}
-      {artifacts.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-sm font-bold">Timeline</div>
-          <ul className="space-y-1 text-xs">
-            {artifacts.map((a, idx) => (
-              <li key={idx} className="bg-ub-grey p-1 rounded">
-                <div>{new Date(a.timestamp).toLocaleString()}</div>
-                <div>
-                  {a.name} ({a.plugin})
+          <div className="flex space-x-2 items-center">
+            <input
+              value={hashQuery}
+              onChange={(e) => setHashQuery(e.target.value)}
+              placeholder="Hash lookup"
+              className="bg-ub-grey text-white px-2 py-1 rounded text-xs flex-grow"
+            />
+            <button
+              onClick={searchHash}
+              className="bg-ub-orange px-2 py-1 rounded text-xs"
+            >
+              Find
+            </button>
+            <input
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="Keyword search"
+              className="bg-ub-grey text-white px-2 py-1 rounded text-xs flex-grow"
+            />
+            <button
+              onClick={searchKeyword}
+              className="bg-ub-orange px-2 py-1 rounded text-xs"
+            >
+              Search
+            </button>
+          </div>
+          {(hashResults.length > 0 || keywordResults.length > 0) && (
+            <div className="space-y-1 text-xs">
+              {hashResults.map((f, i) => (
+                <div key={'h' + i}>
+                  {f.path} ({f.hash})
                 </div>
-              </li>
-            ))}
-          </ul>
-          <button
-            onClick={downloadReport}
-            className="bg-ub-orange px-3 py-1 rounded text-sm"
-          >
-            Download Report
-          </button>
-        </div>
+              ))}
+              {keywordResults.map((f, i) => (
+                <div key={'k' + i}>{f.path}</div>
+              ))}
+            </div>
+          )}
+          {selected && (
+            <div className="bg-ub-grey p-2 rounded text-xs space-y-1">
+              <div className="font-bold">{selected.path}</div>
+              <div>Hash: {selected.hash}</div>
+              <pre className="whitespace-pre-wrap">{selected.content}</pre>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
 export default Autopsy;
-
 export const displayAutopsy = () => <Autopsy />;
-
