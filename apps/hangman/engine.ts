@@ -4,11 +4,28 @@ export interface HangmanGame {
   wrong: number;
 }
 
-export const createGame = (word: string): HangmanGame => ({
-  word,
-  guessed: [],
-  wrong: 0,
-});
+// A small default word list used when no word is provided. Keeping it here
+// keeps the game logic entirely self‑contained so engine consumers do not
+// need to manage their own dictionaries.
+export const WORDS = [
+  'code',
+  'bug',
+  'linux',
+  'react',
+  'docker',
+  'python',
+  'node',
+];
+
+export const createGame = (word?: string): HangmanGame => {
+  const chosen =
+    word || WORDS[Math.floor(Math.random() * WORDS.length)];
+  return {
+    word: chosen,
+    guessed: [],
+    wrong: 0,
+  };
+};
 
 export const guess = (game: HangmanGame, letter: string): boolean => {
   letter = letter.toLowerCase();
@@ -37,3 +54,6 @@ export const isWinner = (game: HangmanGame): boolean =>
 
 export const isLoser = (game: HangmanGame, maxWrong = 6): boolean =>
   game.wrong >= maxWrong;
+
+export const isGameOver = (game: HangmanGame, maxWrong = 6): boolean =>
+  isWinner(game) || isLoser(game, maxWrong);
