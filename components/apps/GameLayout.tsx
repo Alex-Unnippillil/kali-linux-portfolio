@@ -8,10 +8,25 @@ interface GameLayoutProps {
 
 const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
   const [showHelp, setShowHelp] = useState(false);
+  const [paused, setPaused] = useState(false);
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
 
+  // Show tutorial overlay on first visit
+  useEffect(() => {
+    try {
+      const key = `seen_tutorial_${gameId}`;
+      if (typeof window !== 'undefined' && !window.localStorage.getItem(key)) {
+        setShowHelp(true);
+        window.localStorage.setItem(key, '1');
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [gameId]);
+
+  // Allow closing overlay with Escape
   useEffect(() => {
     if (!showHelp) return;
     const handler = (e: KeyboardEvent) => {
@@ -24,9 +39,38 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
     return () => window.removeEventListener('keydown', handler);
   }, [showHelp]);
 
+  // Auto-pause when page becomes hidden
+  useEffect(() => {
+    const handler = () => {
+      if (document.visibilityState === 'hidden') {
+        setPaused(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, []);
+
+  const resume = useCallback(() => setPaused(false), []);
+
   return (
     <div className="relative h-full w-full">
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
+      {paused && (
+        <div
+          className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            onClick={resume}
+            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            autoFocus
+          >
+            Resume
+          </button>
+        </div>
+      )}
       <button
         type="button"
         aria-label="Help"
@@ -37,7 +81,6 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
         ?
       </button>
       {children}
-
     </div>
   );
 };
