@@ -31,6 +31,26 @@ jest.mock(
   }),
   { virtual: true }
 );
+jest.mock(
+  '@xterm/addon-web-links',
+  () => ({
+    WebLinksAddon: jest.fn().mockImplementation(() => ({
+      activate: jest.fn(),
+      dispose: jest.fn(),
+    })),
+  }),
+  { virtual: true }
+);
+jest.mock(
+  '@xterm/addon-serialize',
+  () => ({
+    SerializeAddon: jest.fn().mockImplementation(() => ({
+      serialize: jest.fn(() => ''),
+      serializeAsHTML: jest.fn(() => ''),
+    })),
+  }),
+  { virtual: true }
+);
 jest.mock('@xterm/xterm/css/xterm.css', () => ({}), { virtual: true });
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 
@@ -66,6 +86,25 @@ jest.mock(
   () => ({
     SearchAddon: class {
       activate() {}
+    },
+  }),
+  { virtual: true },
+);
+jest.mock(
+  'xterm-addon-web-links',
+  () => ({
+    WebLinksAddon: class {
+      activate() {}
+    },
+  }),
+  { virtual: true },
+);
+jest.mock(
+  'xterm-addon-serialize',
+  () => ({
+    SerializeAddon: class {
+      serialize() { return ''; }
+      serializeAsHTML() { return ''; }
     },
   }),
   { virtual: true },

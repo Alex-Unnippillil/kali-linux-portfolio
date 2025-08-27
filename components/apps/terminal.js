@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
-import { Terminal as XTerm } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { SearchAddon } from '@xterm/addon-search';
-import '@xterm/xterm/css/xterm.css';
+import { createXterm } from './terminal/xterm';
 
 
 const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
   const containerRef = useRef(null);
   const termRef = useRef(null);
   const fitAddonRef = useRef(null);
+  const searchRef = useRef(null);
+  const exportTextRef = useRef(null);
+  const exportHtmlRef = useRef(null);
   const workerRef = useRef(null);
   const commandRef = useRef('');
   const logRef = useRef('');
@@ -159,17 +159,49 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     showingSuggestionsRef.current = false;
   }, []);
 
+  const handleData = useCallback(
+    (data) => {
+      if (data === '\r') {
+        runCommand(commandRef.current);
+        commandRef.current = '';
+        suggestionsRef.current = [];
+        showingSuggestionsRef.current = false;
+      } else if (data === '\u0003') {
+        termRef.current.write('^C');
+        prompt();
+        commandRef.current = '';
+        suggestionsRef.current = [];
+        showingSuggestionsRef.current = false;
+      } else if (data === '\u007F') {
+        if (commandRef.current.length > 0) {
+          commandRef.current = commandRef.current.slice(0, -1);
+          termRef.current.write('\b \b');
+        }
+        suggestionsRef.current = [];
+        showingSuggestionsRef.current = false;
+      } else if (data === '\t') {
+        // handled in onKey
+      } else {
+        commandRef.current += data;
+        termRef.current.write(data);
+        suggestionsRef.current = [];
+        showingSuggestionsRef.current = false;
+      }
+    },
+    [runCommand, prompt],
+  );
+
   // Initialise terminal
   useEffect(() => {
-    const term = new XTerm({ cursorBlink: true, convertEol: true });
-    const fitAddon = new FitAddon();
-    const searchAddon = new SearchAddon();
-    term.loadAddon(fitAddon);
-    term.loadAddon(searchAddon);
-    term.open(containerRef.current);
+    const { term, fitAddon, search, exportAsText, exportAsHTML } = createXterm(
+      containerRef.current,
+      handleData,
+    );
     termRef.current = term;
     fitAddonRef.current = fitAddon;
-    fitAddon.fit();
+    searchRef.current = search;
+    exportTextRef.current = exportAsText;
+    exportHtmlRef.current = exportAsHTML;
     term.write('Welcome to the portfolio terminal');
     prompt();
     term.onKey(({ key, domEvent }) => {
@@ -188,35 +220,6 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       } else if (domEvent.key === 'ArrowDown') {
         domEvent.preventDefault();
         handleHistoryNav('down');
-      }
-    });
-
-    term.onData((data) => {
-      if (data === '\r') {
-        runCommand(commandRef.current);
-        commandRef.current = '';
-        suggestionsRef.current = [];
-        showingSuggestionsRef.current = false;
-      } else if (data === '\u0003') { // Ctrl+C
-        term.write('^C');
-        prompt();
-        commandRef.current = '';
-        suggestionsRef.current = [];
-        showingSuggestionsRef.current = false;
-      } else if (data === '\u007F') { // Backspace
-        if (commandRef.current.length > 0) {
-          commandRef.current = commandRef.current.slice(0, -1);
-          term.write('\b \b');
-        }
-        suggestionsRef.current = [];
-        showingSuggestionsRef.current = false;
-      } else if (data === '\t') {
-        // handled in onKey
-      } else {
-        commandRef.current += data;
-        term.write(data);
-        suggestionsRef.current = [];
-        showingSuggestionsRef.current = false;
       }
     });
     if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
@@ -239,13 +242,16 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       workerRef.current?.terminate();
       term.dispose();
     };
-  }, [prompt, runCommand, handleTab, handleSuggestionNav, handleHistoryNav]);
+  }, [prompt, runCommand, handleTab, handleSuggestionNav, handleHistoryNav, handleData]);
 
   useImperativeHandle(ref, () => ({
     runCommand,
     getContent: () => logRef.current,
     getCommand: () => commandRef.current,
     historyNav: handleHistoryNav,
+    search: (regex) => searchRef.current?.(regex) ?? false,
+    exportText: () => exportTextRef.current?.() ?? '',
+    exportHTML: () => exportHtmlRef.current?.() ?? '',
   }));
 
   return <div className="h-full w-full bg-ub-cool-grey" ref={containerRef} data-testid="xterm-container" />;
