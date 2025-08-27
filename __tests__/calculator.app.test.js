@@ -1,9 +1,9 @@
-const { JSDOM } = require('jsdom');
 const { TextEncoder, TextDecoder } = require('util');
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
+const { JSDOM } = require('jsdom');
 
 function setupDom() {
-  global.TextEncoder = TextEncoder;
-  global.TextDecoder = TextDecoder;
   const dom = new JSDOM(
     `<!DOCTYPE html><html><body>
       <input id="display" />

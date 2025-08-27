@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
+import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
@@ -27,6 +28,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const playerRef = useRef(null);
   const containerRef = useRef(null);
+  const tabListRef = useRef(null);
   const progressRaf = useRef();
   const scrollRaf = useRef();
 
@@ -187,6 +189,8 @@ export default function YouTubeApp({ initialVideos = [] }) {
       player?.destroy();
     };
   }, [currentVideo, prefersReducedMotion]);
+
+  useRovingTabIndex(tabListRef, true, 'horizontal');
 
   // Dock the player as a mini version when scrolled out of view
   useEffect(() => {
@@ -362,11 +366,18 @@ export default function YouTubeApp({ initialVideos = [] }) {
           </div>
 
           {/* Category tabs */}
-          <div className="overflow-x-auto px-3 pb-2 flex flex-wrap gap-2">
+          <div
+            className="overflow-x-auto px-3 pb-2 flex flex-wrap gap-2"
+            role="tablist"
+            ref={tabListRef}
+          >
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => handleCategoryClick(cat)}
+                role="tab"
+                aria-selected={activeCategory === cat}
+                tabIndex={activeCategory === cat ? 0 : -1}
                 className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
                   activeCategory === cat
                     ? 'bg-red-600 text-white'
