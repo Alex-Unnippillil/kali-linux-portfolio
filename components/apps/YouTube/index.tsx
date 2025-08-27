@@ -111,7 +111,6 @@ export default function YouTubeApp({ initialVideos = [] as Video[] }) {
               referrerPolicy="no-referrer"
               allowFullScreen
               loading="lazy"
-              referrerPolicy="strict-origin-when-cross-origin"
             />
             <div className="absolute inset-x-0 bottom-0 flex justify-between p-1 bg-black/60 text-xs">
               <button
