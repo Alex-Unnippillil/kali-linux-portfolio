@@ -17,6 +17,7 @@ import { displayConverter } from './components/apps/converter';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayNikto } from './components/apps/nikto';
+import { displayContact } from './components/apps/contact';
 
 const createDynamicApp = (path, name) =>
   dynamic(
@@ -630,6 +631,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'contact',
+    title: 'Contact',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayContact,
   },
   {
     id: 'wireshark',
