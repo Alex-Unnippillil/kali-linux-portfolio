@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 // Simple helper for notifications that falls back to alert()
 const notify = (title, body) => {
@@ -18,6 +18,25 @@ const OpenVASApp = () => {
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [summaryUrl, setSummaryUrl] = useState(null);
+  const [findings, setFindings] = useState([]);
+  const [filter, setFilter] = useState(null);
+  const [announce, setAnnounce] = useState('');
+  const workerRef = useRef(null);
+  const reduceMotion = useRef(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+      reduceMotion.current = media.matches;
+      if (typeof window.Worker === 'function') {
+        workerRef.current = new Worker(new URL('./openvas.worker.js', import.meta.url));
+        workerRef.current.onmessage = (e) => {
+          setFindings(e.data);
+        };
+      }
+    }
+    return () => workerRef.current?.terminate();
+  }, []);
 
   const generateSummary = (data) => {
     const summary = `# OpenVAS Scan Summary\n\n- Target: ${target}\n- Group: ${group}\n\n## Output\n\n${data}`;
@@ -37,6 +56,7 @@ const OpenVASApp = () => {
       if (!res.ok) throw new Error(`Request failed with ${res.status}`);
       const data = await res.text();
       setOutput(data);
+      workerRef.current?.postMessage(data);
       generateSummary(data);
       notify('OpenVAS Scan Complete', `Target ${target} finished`);
     } catch (e) {
@@ -45,6 +65,34 @@ const OpenVASApp = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCellClick = (likelihood, impact) => {
+    const run = () => {
+      setFilter({ likelihood, impact });
+      setAnnounce(`Showing ${likelihood} likelihood and ${impact} impact findings`);
+    };
+    if (reduceMotion.current) run();
+    else requestAnimationFrame(run);
+  };
+
+  const filteredFindings = filter
+    ? findings.filter(
+        (f) => f.likelihood === filter.likelihood && f.impact === filter.impact
+      )
+    : findings;
+
+  const matrix = ['low', 'medium', 'high', 'critical'].map((likelihood) =>
+    ['low', 'medium', 'high', 'critical'].map((impact) =>
+      findings.filter(
+        (f) => f.likelihood === likelihood && f.impact === impact
+      )
+    )
+  );
+
+  const color = (i, j) => {
+    const idx = Math.max(i, j);
+    return ['bg-green-700', 'bg-yellow-700', 'bg-orange-700', 'bg-red-700'][idx];
   };
 
   return (
@@ -71,6 +119,58 @@ const OpenVASApp = () => {
         >
           {loading ? 'Scanning...' : 'Scan'}
         </button>
+      </div>
+      {findings.length > 0 && (
+        <div className="mb-4">
+          <div className="grid grid-cols-5 gap-1 text-center">
+            <div />
+            {['low', 'medium', 'high', 'critical'].map((impact) => (
+              <div key={impact} className="font-bold capitalize">
+                {impact}
+              </div>
+            ))}
+            {['low', 'medium', 'high', 'critical'].map((likelihood, i) => (
+              <React.Fragment key={likelihood}>
+                <div className="font-bold capitalize flex items-center justify-center">
+                  {likelihood}
+                </div>
+                {['low', 'medium', 'high', 'critical'].map((impact, j) => {
+                  const cell = matrix[i][j];
+                  const count = cell.length;
+                  return (
+                    <button
+                      key={`${likelihood}-${impact}`}
+                      type="button"
+                      onClick={() => handleCellClick(likelihood, impact)}
+                      className={`p-2 ${color(i, j)} text-white focus:outline-none w-full ${
+                        reduceMotion.current ? '' : 'transition-transform hover:scale-105'
+                      } ${
+                        filter &&
+                        filter.likelihood === likelihood &&
+                        filter.impact === impact
+                          ? 'ring-2 ring-white'
+                          : ''
+                      }`}
+                      aria-label={`${count} findings with ${likelihood} likelihood and ${impact} impact`}
+                    >
+                      {count}
+                    </button>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      )}
+      {filteredFindings.length > 0 && (
+        <ul className="mb-4 list-disc pl-5">
+          {filteredFindings.map((f, idx) => (
+            <li key={idx}>{f.description}</li>
+          ))}
+        </ul>
+      )}
+      <div aria-live="polite" className="sr-only">
+        {announce}
       </div>
       {output && (
         <pre className="bg-black text-green-400 p-2 rounded whitespace-pre-wrap">
