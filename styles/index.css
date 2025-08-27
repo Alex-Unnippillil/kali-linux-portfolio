@@ -346,3 +346,20 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* Highlighted log entries */
+.credential-highlight,
+.token-highlight {
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+.credential-highlight {
+    background-color: rgba(239, 68, 68, 0.4);
+    color: #fff;
+}
+
+.token-highlight {
+    background-color: rgba(234, 179, 8, 0.4);
+    color: #fff;
+}
