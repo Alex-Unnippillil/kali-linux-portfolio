@@ -94,6 +94,16 @@ const Pacman = () => {
   const statusRef = useRef('Playing');
   const audioCtxRef = useRef(null);
   const touchStartRef = useRef(null);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const soundRef = useRef(true);
+  useEffect(() => {
+    soundRef.current = soundEnabled;
+  }, [soundEnabled]);
 
   const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);
   const isCenter = (pos) => Math.abs((pos % tileSize) - tileSize / 2) < 0.1;
@@ -104,6 +114,7 @@ const Pacman = () => {
   }, []);
 
   const playSound = (freq) => {
+    if (!soundRef.current) return;
     try {
       if (!audioCtxRef.current) {
         audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -153,11 +164,16 @@ const Pacman = () => {
       statusRef.current = 'Playing';
       modeRef.current = { index: 0, timer: modeSchedule[0].duration };
       frightTimerRef.current = 0;
+      setPaused(false);
 
       resetPositions();
     },
     [levels]
   );
+
+  const reset = useCallback(() => {
+    loadLevel(levelIndex);
+  }, [loadLevel, levelIndex]);
 
   const targetFor = (ghost, pac) => {
     if (frightTimerRef.current > 0) return null;
@@ -436,6 +452,18 @@ const Pacman = () => {
         case 'ArrowRight':
           pacRef.current.nextDir = { x: 1, y: 0 };
           break;
+        case 'p':
+        case 'P':
+          setPaused((p) => !p);
+          break;
+        case 'r':
+        case 'R':
+          reset();
+          break;
+        case 'm':
+        case 'M':
+          setSoundEnabled((s) => !s);
+          break;
         default:
           break;
       }
@@ -465,9 +493,8 @@ const Pacman = () => {
 
     let id;
     const loop = () => {
-      if (statusRef.current === 'Playing') {
+      if (statusRef.current === 'Playing' && !pausedRef.current) {
         stepRef.current();
-        draw();
         // simple gamepad polling
         const pads = navigator.getGamepads ? navigator.getGamepads() : [];
         if (pads) {
@@ -478,12 +505,13 @@ const Pacman = () => {
             if (Math.abs(ay) > 0.3) pacRef.current.nextDir = { x: 0, y: ay > 0 ? 1 : -1 };
           }
         }
-        id = requestAnimationFrame(loop);
       }
+      draw();
+      id = requestAnimationFrame(loop);
     };
 
     draw();
-    loop();
+    id = requestAnimationFrame(loop);
 
     return () => {
       window.removeEventListener('keydown', handleKey);
@@ -491,29 +519,8 @@ const Pacman = () => {
       canvas.removeEventListener('touchend', handleTouchEnd);
       if (id) cancelAnimationFrame(id);
     };
-  }, [loading, error, draw]);
+  }, [loading, error, draw, reset, setPaused, setSoundEnabled]);
 
-
-  useEffect(() => {
-    fetch('/pacman-levels.json')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.levels) {
-          setLevels(data.levels);
-          loadLevel(0, data.levels);
-        }
-      })
-      .catch(() => {});
-    const stored = window.localStorage.getItem('pacmanHighScore');
-    if (stored) setHighScore(parseInt(stored, 10));
-  }, [loadLevel]);
-
-  useEffect(() => {
-    if (score > highScore) {
-      setHighScore(score);
-      window.localStorage.setItem('pacmanHighScore', String(score));
-    }
-  }, [score, highScore]);
 
   if (loading) {
     return (
@@ -555,7 +562,29 @@ const Pacman = () => {
 
       <div className="mt-2">Score: {score} | High: {highScore}</div>
       <div className="mt-1">Lives: {pacRef.current.lives}</div>
-      {statusRef.current !== 'Playing' && <div className="mt-2">{statusRef.current}</div>}
+      {(statusRef.current !== 'Playing' || paused) && (
+        <div className="mt-2">{paused ? 'Paused' : statusRef.current}</div>
+      )}
+      <div className="mt-2 space-x-2">
+        <button
+          className="px-2 py-1 bg-ub-grey rounded"
+          onClick={reset}
+        >
+          Reset
+        </button>
+        <button
+          className="px-2 py-1 bg-ub-grey rounded"
+          onClick={() => setPaused((p) => !p)}
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          className="px-2 py-1 bg-ub-grey rounded"
+          onClick={() => setSoundEnabled((s) => !s)}
+        >
+          {soundEnabled ? 'Sound On' : 'Sound Off'}
+        </button>
+      </div>
     </div>
   );
 };
