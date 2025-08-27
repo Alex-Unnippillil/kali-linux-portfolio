@@ -16,6 +16,10 @@ const Memory = () => {
   const [sound, setSound] = useState(true);
   const [best, setBest] = useState({ moves: null, time: null });
   const [announcement, setAnnouncement] = useState('');
+  const [deckType, setDeckType] = useState('emoji');
+  const [streak, setStreak] = useState(0);
+  const [particles, setParticles] = useState([]);
+  const [nudge, setNudge] = useState(false);
 
   const runningRef = useRef(false);
   const startRef = useRef(0);
@@ -55,7 +59,7 @@ const Memory = () => {
   }, [sound]);
 
   const reset = useCallback(() => {
-    setCards(createDeck(SIZE));
+    setCards(createDeck(SIZE, deckType));
     setFlipped([]);
     setMatched([]);
     setHighlight([]);
@@ -66,7 +70,8 @@ const Memory = () => {
     runningRef.current = false;
     startRef.current = 0;
     setAnnouncement('');
-  }, []);
+    setStreak(0);
+  }, [deckType]);
 
   useEffect(() => {
     reset();
@@ -98,6 +103,22 @@ const Memory = () => {
     else setStars(1);
   }, [moves, cards.length]);
 
+  const triggerStreakEffect = useCallback(() => {
+    if (reduceMotion.current) return;
+    setParticles(
+      Array.from({ length: 8 }).map((_, i) => ({
+        id: i,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+      }))
+    );
+    setNudge(true);
+    setPaused(true);
+    setTimeout(() => setParticles([]), 300);
+    setTimeout(() => setNudge(false), 150);
+    setTimeout(() => setPaused(false), 150);
+  }, []);
+
   const handleCardClick = (idx) => {
     if (paused || flipped.includes(idx) || matched.includes(idx)) return;
     if (!runningRef.current) {
@@ -117,12 +138,18 @@ const Memory = () => {
         setMatched([...matched, first, second]);
         setHighlight([first, second]);
         setAnnouncement('Match found');
+        setStreak((s) => {
+          const n = s + 1;
+          if (n > 1) triggerStreakEffect();
+          return n;
+        });
         setTimeout(() => {
           setFlipped([]);
           setHighlight([]);
         }, reduceMotion.current ? 0 : 400);
       } else {
         setAnnouncement('No match');
+        setStreak(0);
         setTimeout(() => setFlipped([]), reduceMotion.current ? 0 : 800);
       }
     }
@@ -143,8 +170,15 @@ const Memory = () => {
     <GameLayout gameId="memory">
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
         <div aria-live="polite" role="status" className="sr-only">{announcement}</div>
-        <div className="relative mb-4" style={{ width: '400px' }}>
-          <div className="grid grid-cols-4 gap-2">
+        <div
+          className="relative mb-4"
+          style={{
+            width: '480px',
+            transform: nudge ? 'translateX(2px)' : 'none',
+            transition: 'transform 150ms',
+          }}
+        >
+          <div className="grid grid-cols-4 gap-4">
             {cards.map((card, i) => {
               const isFlipped = flipped.includes(i) || matched.includes(i);
               const isHighlighted = highlight.includes(i);
@@ -162,15 +196,22 @@ const Memory = () => {
                   >
                     <div className="absolute inset-0 rounded flex items-center justify-center bg-gray-700 text-white [backface-visibility:hidden]" />
                     <div
-                      className={`absolute inset-0 rounded flex items-center justify-center [transform:rotateY(180deg)] [backface-visibility:hidden] ${isHighlighted ? 'bg-green-500 text-black' : 'bg-gray-100 text-gray-900'} ${reduceMotion.current ? '' : 'transition-colors duration-300'}`}
+                      className={`absolute inset-0 rounded flex items-center justify-center [transform:rotateY(180deg)] [backface-visibility:hidden] ${isHighlighted ? 'bg-green-500 text-black' : 'bg-white text-black'} ${reduceMotion.current ? '' : 'transition-colors duration-300'}`}
                     >
-                      <span className="text-2xl">{card.value}</span>
+                      <span className={`text-4xl ${card.color || ''}`}>{card.value}</span>
                     </div>
                   </div>
                 </button>
               );
             })}
           </div>
+          {particles.map((p) => (
+            <span
+              key={p.id}
+              className="pointer-events-none absolute w-2 h-2 bg-yellow-400 rounded-full animate-ping"
+              style={{ left: `${p.x}%`, top: `${p.y}%` }}
+            />
+          ))}
           {paused && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl">Paused</div>
           )}
@@ -188,6 +229,12 @@ const Memory = () => {
           </button>
           <button onClick={() => setSound((s) => !s)} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded">
             Sound: {sound ? 'On' : 'Off'}
+          </button>
+          <button
+            onClick={() => setDeckType((t) => (t === 'emoji' ? 'pattern' : 'emoji'))}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          >
+            Deck: {deckType === 'emoji' ? 'Emoji' : 'Pattern'}
           </button>
         </div>
       </div>

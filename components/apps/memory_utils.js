@@ -19,6 +19,18 @@ export const EMOJIS = [
   '\u{1F345}'  // tomato
 ];
 
+// Accessible pattern deck using distinct shapes and colors
+export const PATTERNS = [
+  { value: '\u25B2', color: 'text-red-600' }, // triangle
+  { value: '\u25A0', color: 'text-blue-600' }, // square
+  { value: '\u25CF', color: 'text-green-600' }, // circle
+  { value: '\u25C6', color: 'text-yellow-600' }, // diamond
+  { value: '\u2605', color: 'text-purple-600' }, // star
+  { value: '\u271A', color: 'text-pink-600' }, // plus
+  { value: '\u25B3', color: 'text-orange-600' }, // outlined triangle
+  { value: '\u25A1', color: 'text-teal-600' }, // outlined square
+];
+
 export function fisherYatesShuffle(array) {
   const arr = array.slice();
   for (let i = arr.length - 1; i > 0; i--) {
@@ -28,9 +40,14 @@ export function fisherYatesShuffle(array) {
   return arr;
 }
 
-export function createDeck(size) {
+export function createDeck(size, type = 'emoji') {
   const pairs = (size * size) / 2;
-  const selected = EMOJIS.slice(0, pairs);
-  const doubled = [...selected, ...selected].map((value, index) => ({ id: index, value }));
+  let selected;
+  if (type === 'pattern') {
+    selected = PATTERNS.slice(0, pairs);
+  } else {
+    selected = EMOJIS.slice(0, pairs).map((value) => ({ value }));
+  }
+  const doubled = [...selected, ...selected].map((card, index) => ({ id: index, ...card }));
   return fisherYatesShuffle(doubled);
 }
