@@ -21,6 +21,7 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
 import { displayNikto } from './components/apps/nikto';
+import { EXTERNAL_FRAME_ALLOWLIST } from './external-allowlist';
 
 const createDynamicApp = (path, name) =>
   dynamic(
@@ -869,4 +870,5 @@ const apps = [
   ...games,
 ];
 
+export { EXTERNAL_FRAME_ALLOWLIST } from './external-allowlist';
 export default apps;
