@@ -118,21 +118,26 @@ const PhaserMatter: React.FC = () => {
         const data = this.cache.json.get('level');
         this.state = new GameState(data.spawn);
 
-        // Parallax background layers
-        data.parallaxLayers?.forEach((l: any) => {
-          const color = Phaser.Display.Color.HexStringToColor(l.color).color;
-          const rect = this.add
-            .rectangle(
-              data.bounds.width / 2,
-              data.bounds.height / 2,
-              data.bounds.width,
-              data.bounds.height,
-              color,
-            )
-            .setScrollFactor(l.scrollFactor)
-            .setDepth(-100);
-          this.parallax.push(rect);
-        });
+        // Parallax background layers (respect reduced motion preference)
+        const reduceMotion = window.matchMedia(
+          '(prefers-reduced-motion: reduce)'
+        ).matches;
+        if (!reduceMotion) {
+          data.parallaxLayers?.forEach((l: any) => {
+            const color = Phaser.Display.Color.HexStringToColor(l.color).color;
+            const rect = this.add
+              .rectangle(
+                data.bounds.width / 2,
+                data.bounds.height / 2,
+                data.bounds.width,
+                data.bounds.height,
+                color,
+              )
+              .setScrollFactor(l.scrollFactor)
+              .setDepth(-100);
+            this.parallax.push(rect);
+          });
+        }
 
         // Platforms
         data.platforms.forEach((p: any) => {
@@ -257,7 +262,29 @@ const PhaserMatter: React.FC = () => {
       scene: LevelScene,
     });
 
+    const resize = () => {
+      const aspect = 800 / 600;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      let height = vh * 0.66;
+      height = Math.max(vh * 0.6, Math.min(height, vh * 0.72));
+      let width = height * aspect;
+      if (width > vw) {
+        width = vw;
+        height = width / aspect;
+      }
+      game.scale.resize(width, height);
+      if (containerRef.current) {
+        containerRef.current.style.width = `${width}px`;
+        containerRef.current.style.height = `${height}px`;
+      }
+    };
+
+    resize();
+    window.addEventListener('resize', resize);
+
     return () => {
+      window.removeEventListener('resize', resize);
       game.destroy(true);
     };
   }, []);

@@ -11,16 +11,32 @@ export default function useCanvasResize(baseWidth: number, baseHeight: number) {
     if (!ctx) return;
 
     const resize = () => {
+      const aspect = baseWidth / baseHeight;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      // Clamp playfield height between 60% and 72% of the viewport
+      let height = vh * 0.66;
+      height = Math.max(vh * 0.6, Math.min(height, vh * 0.72));
+      let width = height * aspect;
+      if (width > vw) {
+        width = vw;
+        height = width / aspect;
+      }
+
+      const scaleX = width / baseWidth;
+      const scaleY = height / baseHeight;
+
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      canvas.width = Math.floor(width);
+      canvas.height = Math.floor(height);
+      ctx.setTransform(scaleX, 0, 0, scaleY, 0, 0);
+
       const parent = canvas.parentElement;
-      if (!parent) return;
-      const { clientWidth, clientHeight } = parent;
-      const scale = Math.min(
-        clientWidth / baseWidth,
-        clientHeight / baseHeight
-      );
-      canvas.width = baseWidth * scale;
-      canvas.height = baseHeight * scale;
-      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      if (parent) {
+        parent.style.height = `${height}px`;
+        parent.style.width = `${width}px`;
+      }
     };
 
     resize();
