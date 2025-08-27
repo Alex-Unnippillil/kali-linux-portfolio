@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
+import usePersistentState from '../usePersistentState';
 
 /**
  * Small Pacman implementation used inside the portfolio. The goal of this
@@ -37,21 +38,73 @@ const SCATTER_CORNERS = {
   clyde: { x: 0, y: 6 },
 };
 
-const modeSchedule = [
-  { mode: 'scatter', duration: 7 * 60 },
-  { mode: 'chase', duration: 20 * 60 },
-  { mode: 'scatter', duration: 7 * 60 },
-  { mode: 'chase', duration: 20 * 60 },
-  { mode: 'scatter', duration: 5 * 60 },
-  { mode: 'chase', duration: 20 * 60 },
-  { mode: 'scatter', duration: 5 * 60 },
-  { mode: 'chase', duration: Infinity },
-];
+const MODE_SCHEDULES = {
+  first: [
+    { mode: 'scatter', duration: 7 * 60 },
+    { mode: 'chase', duration: 20 * 60 },
+    { mode: 'scatter', duration: 7 * 60 },
+    { mode: 'chase', duration: 20 * 60 },
+    { mode: 'scatter', duration: 5 * 60 },
+    { mode: 'chase', duration: 20 * 60 },
+    { mode: 'scatter', duration: 5 * 60 },
+    { mode: 'chase', duration: Infinity },
+  ],
+  early: [
+    { mode: 'scatter', duration: 7 * 60 },
+    { mode: 'chase', duration: 20 * 60 },
+    { mode: 'scatter', duration: 7 * 60 },
+    { mode: 'chase', duration: 20 * 60 },
+    { mode: 'scatter', duration: 5 * 60 },
+    { mode: 'chase', duration: 20 * 60 },
+    { mode: 'scatter', duration: 1 },
+    { mode: 'chase', duration: Infinity },
+  ],
+  late: [
+    { mode: 'scatter', duration: 5 * 60 },
+    { mode: 'chase', duration: 20 * 60 },
+    { mode: 'scatter', duration: 5 * 60 },
+    { mode: 'chase', duration: 20 * 60 },
+    { mode: 'scatter', duration: 5 * 60 },
+    { mode: 'chase', duration: 20 * 60 },
+    { mode: 'scatter', duration: 1 },
+    { mode: 'chase', duration: Infinity },
+  ],
+};
+
+const modeScheduleForLevel = (idx) => {
+  if (idx === 0) return MODE_SCHEDULES.first;
+  if (idx > 0 && idx < 4) return MODE_SCHEDULES.early;
+  return MODE_SCHEDULES.late;
+};
 
 const fruitSpawnDots = [10, 30];
-
-const TARGET_MODE_LEVEL = 2; // level index where ghosts begin targeting
 const TUNNEL_SPEED = 0.5; // multiplier for speed inside tunnels
+
+const FRUITS = [
+  { name: 'cherry', points: 100, color: 'red' },
+  { name: 'strawberry', points: 300, color: 'pink' },
+  { name: 'orange', points: 500, color: 'orange' },
+  { name: 'apple', points: 700, color: 'green' },
+  { name: 'melon', points: 1000, color: 'lime' },
+  { name: 'galaxian', points: 2000, color: 'yellow' },
+  { name: 'bell', points: 3000, color: 'gold' },
+  { name: 'key', points: 5000, color: 'cyan' },
+];
+
+const FRUIT_SEQUENCE = [
+  0,
+  1,
+  2,
+  2,
+  3,
+  3,
+  4,
+  4,
+  5,
+  5,
+  6,
+  7,
+];
 
 const Pacman = () => {
   const { loading, error } = useAssetLoader({
@@ -85,15 +138,20 @@ const Pacman = () => {
     { name: 'clyde', x: 7 * tileSize, y: 3 * tileSize, dir: { x: 0, y: -1 }, color: 'orange' },
   ]);
 
-  const modeRef = useRef({ index: 0, timer: modeSchedule[0].duration });
+  const modeRef = useRef({ index: 0, timer: MODE_SCHEDULES.first[0].duration, schedule: MODE_SCHEDULES.first });
   const frightTimerRef = useRef(0);
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [pellets, setPellets] = useState(0);
-  const fruitRef = useRef({ active: false, x: 7, y: 3, timer: 0 });
+  const fruitRef = useRef({ active: false, x: 7, y: 3, timer: 0, type: 'cherry' });
   const statusRef = useRef('Playing');
   const audioCtxRef = useRef(null);
   const touchStartRef = useRef(null);
+  const [leaderboard, setLeaderboard] = usePersistentState('pacman_leaderboard', []);
+  const runStartRef = useRef(null);
+  const [runTime, setRunTime] = useState(0);
+  const totalPelletsRef = useRef(0);
+  const fruitHistoryRef = useRef([]);
 
   const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);
   const isCenter = (pos) => Math.abs((pos % tileSize) - tileSize / 2) < 0.1;
@@ -143,16 +201,25 @@ const Pacman = () => {
       fruitRef.current.y = lvl.fruit.y;
       fruitRef.current.active = false;
       fruitRef.current.timer = 0;
+      fruitRef.current.type = FRUITS[FRUIT_SEQUENCE[idx]]?.name || 'key';
 
       pacRef.current.lives = 3;
       pacRef.current.extra = false;
-
+      const total = lvl.maze.reduce(
+        (sum, row) => sum + row.filter((c) => c === 2 || c === 3).length,
+        0
+      );
+      totalPelletsRef.current = total;
       setScore(0);
       setPellets(0);
 
       statusRef.current = 'Playing';
-      modeRef.current = { index: 0, timer: modeSchedule[0].duration };
+      const schedule = modeScheduleForLevel(idx);
+      modeRef.current = { index: 0, timer: schedule[0].duration, schedule };
       frightTimerRef.current = 0;
+      runStartRef.current = null;
+      setRunTime(0);
+      fruitHistoryRef.current = [];
 
       resetPositions();
     },
@@ -161,7 +228,7 @@ const Pacman = () => {
 
   const targetFor = (ghost, pac) => {
     if (frightTimerRef.current > 0) return null;
-    if (modeSchedule[modeRef.current.index].mode === 'scatter') {
+    if (modeRef.current.schedule[modeRef.current.index].mode === 'scatter') {
       return SCATTER_CORNERS[ghost.name];
     }
     const px = Math.floor(pac.x / tileSize);
@@ -228,7 +295,8 @@ const Pacman = () => {
     }
 
     if (fruitRef.current.active) {
-      ctx.fillStyle = 'green';
+      const fruit = FRUITS.find((f) => f.name === fruitRef.current.type);
+      ctx.fillStyle = fruit?.color || 'green';
       ctx.fillRect(
         fruitRef.current.x * tileSize + 4,
         fruitRef.current.y * tileSize + 4,
@@ -259,8 +327,6 @@ const Pacman = () => {
   const step = useCallback(() => {
     const pac = pacRef.current;
     const maze = mazeRef.current;
-    const randomMode = levelIndex < TARGET_MODE_LEVEL;
-
     // handle pacman turning
     const px = pac.x / tileSize;
     const py = pac.y / tileSize;
@@ -290,20 +356,36 @@ const Pacman = () => {
     const ptx = Math.floor((pac.x + tileSize / 2) / tileSize);
     const pty = Math.floor((pac.y + tileSize / 2) / tileSize);
 
+    let newPelletCount = pellets;
+
     // pellets and energizers
     if (maze[pty][ptx] === 2 || maze[pty][ptx] === 3) {
       if (maze[pty][ptx] === 2) {
         setScore((s) => s + 10);
-        setPellets((p) => p + 1);
       } else {
         setScore((s) => s + 50);
         frightTimerRef.current = 6 * 60;
+        ghostsRef.current.forEach(
+          (g) => (g.dir = { x: -g.dir.x, y: -g.dir.y })
+        );
       }
       maze[pty][ptx] = 0;
+      newPelletCount = pellets + 1;
+      setPellets(newPelletCount);
+      if (newPelletCount === totalPelletsRef.current) {
+        statusRef.current = 'Cleared';
+        const time = (performance.now() - (runStartRef.current || performance.now())) / 1000;
+        setRunTime(time);
+        setLeaderboard((prev) =>
+          [...prev, { time, fruits: fruitHistoryRef.current.slice() }]
+            .sort((a, b) => a.time - b.time)
+            .slice(0, 5)
+        );
+      }
     }
 
     // fruit
-    if (!fruitRef.current.active && fruitSpawnDots.includes(pellets + 1)) {
+    if (!fruitRef.current.active && fruitSpawnDots.includes(newPelletCount)) {
       fruitRef.current.active = true;
       fruitRef.current.timer = 9 * 60;
       playSound(440);
@@ -311,7 +393,9 @@ const Pacman = () => {
     if (fruitRef.current.active) {
       fruitRef.current.timer--;
       if (ptx === fruitRef.current.x && pty === fruitRef.current.y) {
-        setScore((s) => s + 100);
+        const fruit = FRUITS.find((f) => f.name === fruitRef.current.type);
+        setScore((s) => s + (fruit?.points || 100));
+        fruitHistoryRef.current.push(fruitRef.current.type);
         fruitRef.current.active = false;
         playSound(880);
       } else if (fruitRef.current.timer <= 0) {
@@ -328,11 +412,19 @@ const Pacman = () => {
     // mode switching
     if (frightTimerRef.current > 0) {
       frightTimerRef.current--;
+      if (frightTimerRef.current === 0) {
+        ghostsRef.current.forEach(
+          (g) => (g.dir = { x: -g.dir.x, y: -g.dir.y })
+        );
+      }
     } else {
       modeRef.current.timer--;
-      if (modeRef.current.timer <= 0 && modeRef.current.index < modeSchedule.length - 1) {
+      if (modeRef.current.timer <= 0 && modeRef.current.index < modeRef.current.schedule.length - 1) {
         modeRef.current.index += 1;
-        modeRef.current.timer = modeSchedule[modeRef.current.index].duration;
+        modeRef.current.timer = modeRef.current.schedule[modeRef.current.index].duration;
+        ghostsRef.current.forEach(
+          (g) => (g.dir = { x: -g.dir.x, y: -g.dir.y })
+        );
       }
     }
 
@@ -346,7 +438,7 @@ const Pacman = () => {
 
       if (isCenter(g.x) && isCenter(g.y)) {
         let options = availableDirs(Math.floor(gx), Math.floor(gy), g.dir);
-        if (frightTimerRef.current > 0 || randomMode) {
+        if (frightTimerRef.current > 0) {
           g.dir = options[Math.floor(Math.random() * options.length)] || g.dir;
         } else {
           const target = targetFor(g, pac);
@@ -383,12 +475,16 @@ const Pacman = () => {
           } else {
             resetPositions();
             frightTimerRef.current = 0;
-            modeRef.current = { index: 0, timer: modeSchedule[0].duration };
+            modeRef.current = {
+              index: 0,
+              timer: modeRef.current.schedule[0].duration,
+              schedule: modeRef.current.schedule,
+            };
           }
         }
       }
     });
-  }, [pellets, score, availableDirs, levelIndex, isTunnel]);
+  }, [pellets, score, availableDirs, isTunnel]);
 
   const stepRef = useRef(step);
   useEffect(() => {
@@ -468,6 +564,8 @@ const Pacman = () => {
       if (statusRef.current === 'Playing') {
         stepRef.current();
         draw();
+        if (!runStartRef.current) runStartRef.current = performance.now();
+        setRunTime((performance.now() - runStartRef.current) / 1000);
         // simple gamepad polling
         const pads = navigator.getGamepads ? navigator.getGamepads() : [];
         if (pads) {
@@ -555,6 +653,19 @@ const Pacman = () => {
 
       <div className="mt-2">Score: {score} | High: {highScore}</div>
       <div className="mt-1">Lives: {pacRef.current.lives}</div>
+      <div className="mt-1">Time: {runTime.toFixed(2)}s</div>
+      {leaderboard.length > 0 && (
+        <div className="mt-2 text-xs">
+          <div>Leaderboard:</div>
+          <ol>
+            {leaderboard.map((e, i) => (
+              <li key={i}>
+                {e.time.toFixed(2)}s - {e.fruits.join(', ')}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
       {statusRef.current !== 'Playing' && <div className="mt-2">{statusRef.current}</div>}
     </div>
   );
