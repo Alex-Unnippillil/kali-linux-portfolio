@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import HelpOverlay from './HelpOverlay';
+import TutorialOverlay from './Games/common/tutorial';
 
 interface GameLayoutProps {
   gameId: string;
@@ -13,13 +13,12 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
 
-  // Show tutorial overlay on first visit
+  // Show tutorial overlay until user opts out
   useEffect(() => {
     try {
-      const key = `seen_tutorial_${gameId}`;
+      const key = `hide_tutorial_${gameId}`;
       if (typeof window !== 'undefined' && !window.localStorage.getItem(key)) {
         setShowHelp(true);
-        window.localStorage.setItem(key, '1');
       }
     } catch {
       // ignore storage errors
@@ -54,7 +53,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
 
   return (
     <div className="relative h-full w-full">
-      {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
+      {showHelp && <TutorialOverlay gameId={gameId} onClose={close} />}
       {paused && (
         <div
           className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
