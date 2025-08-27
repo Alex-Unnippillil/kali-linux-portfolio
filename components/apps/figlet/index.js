@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import Toast from '../../ui/Toast';
 
 // Font list must match those parsed in worker.js
 const fonts = ['Standard', 'Slant', 'Big', 'Ghost', 'Small'];
@@ -9,13 +10,22 @@ const FigletApp = () => {
   const [output, setOutput] = useState('');
   const [inverted, setInverted] = useState(false);
   const [announce, setAnnounce] = useState('');
+  const [previews, setPreviews] = useState({});
+  const [toastVisible, setToastVisible] = useState(false);
   const workerRef = useRef(null);
   const frameRef = useRef(null);
   const announceTimer = useRef(null);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => setOutput(e.data);
+    workerRef.current.onmessage = (e) => {
+      const { id, rendered } = e.data;
+      if (id === 'main') setOutput(rendered);
+      else setPreviews((p) => ({ ...p, [id]: rendered }));
+    };
+    fonts.forEach((f) => {
+      workerRef.current?.postMessage({ text: 'Aa', font: f, id: f });
+    });
     return () => {
       workerRef.current?.terminate();
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
@@ -25,7 +35,7 @@ const FigletApp = () => {
 
   const updateFiglet = () => {
     if (workerRef.current) {
-      workerRef.current.postMessage({ text, font });
+      workerRef.current.postMessage({ text, font, id: 'main' });
     }
   };
 
@@ -38,6 +48,7 @@ const FigletApp = () => {
   const copyOutput = () => {
     if (output) {
       navigator.clipboard.writeText(output);
+      setToastVisible(true);
       setAnnounce('Copied to clipboard');
       clearTimeout(announceTimer.current);
       announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
@@ -82,6 +93,20 @@ const FigletApp = () => {
           Invert
         </button>
       </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2 overflow-auto max-h-40 bg-ub-gedit-dark">
+        {fonts.map((f) => (
+          <button
+            key={f}
+            onClick={() => setFont(f)}
+            className={`bg-gray-700 p-2 rounded text-left whitespace-pre ${
+              font === f ? 'ring-2 ring-blue-500' : ''
+            }`}
+            aria-label={`Use ${f} font`}
+          >
+            <pre className="text-xs leading-4">{previews[f] || f}</pre>
+          </button>
+        ))}
+      </div>
       <pre
         aria-live="polite"
         className={`flex-1 overflow-auto p-2 whitespace-pre transition-colors motion-reduce:transition-none ${
@@ -93,6 +118,13 @@ const FigletApp = () => {
       <div aria-live="polite" className="sr-only">
         {announce}
       </div>
+      {toastVisible && (
+        <Toast
+          message="Copied"
+          onClose={() => setToastVisible(false)}
+          duration={1500}
+        />
+      )}
     </div>
   );
 };

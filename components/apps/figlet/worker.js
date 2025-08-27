@@ -12,7 +12,7 @@ figlet.parseFont('Ghost', ghost);
 figlet.parseFont('Small', small);
 
 self.onmessage = (e) => {
-  const { text, font } = e.data;
+  const { text, font, id } = e.data;
   const rendered = figlet.textSync(text || '', { font });
-  self.postMessage(rendered);
+  self.postMessage({ id, rendered });
 };
