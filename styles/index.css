@@ -346,3 +346,42 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+/* X App modal and button styling */
+.x-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.x-modal {
+    background: #15202b;
+    border-radius: 8px;
+    padding: 1rem;
+    width: 90%;
+    max-width: 500px;
+}
+
+.x-button-primary {
+    background: #1d9bf0;
+    color: #ffffff;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+}
+
+.x-button-secondary {
+    background: transparent;
+    color: #1d9bf0;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    border: 1px solid #1d9bf0;
+}
+
+.x-image-preview {
+    max-height: 200px;
+    border-radius: 8px;
+}
