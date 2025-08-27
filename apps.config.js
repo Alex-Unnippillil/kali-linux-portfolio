@@ -20,6 +20,7 @@ import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
+import { displayShowcase } from './components/apps/showcase';
 import { displayNikto } from './components/apps/nikto';
 
 const createDynamicApp = (path, name) =>
@@ -483,7 +484,7 @@ const gameList = [
 
 export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
-const apps = [
+const utilities = [
   {
     id: 'chrome',
     title: 'Google Chrome',
@@ -622,6 +623,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'showcase',
+    title: 'Showcase',
+    icon: './themes/Yaru/apps/showcase.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayShowcase,
   },
   {
     id: 'wireshark',
@@ -865,8 +875,10 @@ const apps = [
     desktop_shortcut: false,
     screen: displayReconNG,
   },
-  // Games are included so they appear alongside apps
-  ...games,
 ];
+
+export { utilities };
+
+const apps = [...utilities, ...games];
 
 export default apps;
