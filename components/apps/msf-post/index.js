@@ -1,5 +1,26 @@
 import React, { useEffect, useState } from 'react';
 
+// Regex patterns to detect potential credentials or tokens in log lines
+const credentialRegex = /(password|passwd|pwd|secret|credential|user|username|login|passphrase)/i;
+const tokenRegex = /(token|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|bearer)/i;
+
+// Convert raw output into React elements with highlighted sensitive info
+const renderHighlightedOutput = (text) =>
+  text.split('\n').map((line, idx) => {
+    let className = '';
+    if (credentialRegex.test(line)) {
+      className = 'credential-highlight';
+    } else if (tokenRegex.test(line)) {
+      className = 'token-highlight';
+    }
+    return (
+      <span key={idx} className={className}>
+        {line}
+        {'\n'}
+      </span>
+    );
+  });
+
 const MsfPostApp = () => {
   const [modules, setModules] = useState([]);
   const [selected, setSelected] = useState('');
@@ -59,7 +80,7 @@ const MsfPostApp = () => {
         </button>
       </div>
       <pre className="flex-1 bg-black p-2 overflow-auto whitespace-pre-wrap">
-        {output}
+        {renderHighlightedOutput(output)}
       </pre>
     </div>
   );
