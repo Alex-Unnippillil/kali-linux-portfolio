@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
+import { share } from '../../utils/share';
 
 const GITHUB_USER = 'Alex-Unnippillil';
 
@@ -90,6 +91,18 @@ export default function ProjectGallery() {
                       Repo
                     </a>
                   )}
+                  <button
+                    onClick={() =>
+                      share({
+                        title: project.title,
+                        text: project.description,
+                        url: project.live || project.repo,
+                      })
+                    }
+                    className="px-3 py-1 text-sm bg-green-600 rounded hover:bg-green-500"
+                  >
+                    Share
+                  </button>
                 </div>
               </div>
             </div>

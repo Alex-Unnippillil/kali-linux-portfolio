@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
+import { share } from '../../utils/share';
 
 export class Gedit extends Component {
 
@@ -79,6 +80,12 @@ export class Gedit extends Component {
                     <span className="font-bold ml-2">Send a Message to Me</span>
                     <div className="flex">
                         <div onClick={this.sendMessage} className="border border-black bg-black bg-opacity-50 px-3 py-0.5 my-1 mx-1 rounded hover:bg-opacity-80">Send</div>
+                        <div
+                            onClick={() => share({ title: 'Contact', text: 'Get in touch with me:', url: window.location.href })}
+                            className="border border-black bg-black bg-opacity-50 px-3 py-0.5 my-1 mx-1 rounded hover:bg-opacity-80"
+                        >
+                            Share
+                        </div>
                     </div>
                 </div>
                 <div className="relative flex-grow flex flex-col bg-ub-gedit-dark font-normal windowMainScreen">
