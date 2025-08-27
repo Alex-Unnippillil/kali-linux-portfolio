@@ -19,6 +19,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const [packets, setPackets] = useState(initialPackets);
   const [socket, setSocket] = useState(null);
   const [tlsKeys, setTlsKeys] = useState('');
+  const [protocolFilter, setProtocolFilter] = useState('');
   const [filter, setFilter] = useState('');
   const [colorRuleText, setColorRuleText] = useState('[]');
   const [colorRules, setColorRules] = useState([]);
@@ -76,7 +77,14 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     }
   };
 
-  const handleTLSKeyChange = (e) => setTlsKeys(e.target.value);
+  const handleTLSKeyUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => setTlsKeys(reader.result);
+      reader.readAsText(file);
+    }
+  };
 
   const handleColorRulesChange = (e) => {
     const text = e.target.value;
@@ -133,9 +141,15 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     setAnnouncement(`Viewing packets starting at index ${idx}`);
   };
 
+  const protocols = Array.from(new Set(packets.map((p) => protocolName(p.protocol))));
+  const filteredPackets = packets
+    .filter((p) => matchesFilter(p, filter))
+    .filter((p) => !protocolFilter || protocolName(p.protocol) === protocolFilter);
+  const hasTlsKeys = !!tlsKeys;
+
   return (
-    <div className="w-full h-full flex flex-col bg-black text-green-400">
-      <div className="p-2 flex space-x-2 bg-gray-900">
+    <div className="w-full h-full flex flex-col bg-black text-green-400 [container-type:inline-size]">
+      <div className="p-2 flex space-x-2 bg-gray-900 flex-wrap">
         <button
           onClick={startCapture}
           disabled={!!socket}
@@ -151,9 +165,10 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           Stop
         </button>
         <input
-          value={tlsKeys}
-          onChange={handleTLSKeyChange}
-          placeholder="TLS keys"
+          type="file"
+          accept=".keys,.txt"
+          onChange={handleTLSKeyUpload}
+          aria-label="TLS key file"
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
         <input
@@ -182,15 +197,38 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           value={viewIndex}
           onChange={handleScrub}
           aria-label="Scrub timeline"
-          className="flex-1"
+          className="flex-1 waterfall-cq"
         />
       </div>
-      <Waterfall
-        packets={timeline}
-        colorRules={colorRules}
-        viewIndex={viewIndex}
-        prefersReducedMotion={prefersReducedMotion.current}
-      />
+      <div className="waterfall-cq">
+        <Waterfall
+          packets={timeline}
+          colorRules={colorRules}
+          viewIndex={viewIndex}
+          prefersReducedMotion={prefersReducedMotion.current}
+        />
+      </div>
+      <div className="p-2 flex space-x-2 bg-gray-900 overflow-x-auto">
+        <button
+          className={`px-2 py-1 rounded border ${
+            protocolFilter === '' ? 'bg-gray-700' : 'bg-gray-800'
+          }`}
+          onClick={() => setProtocolFilter('')}
+        >
+          All
+        </button>
+        {protocols.map((proto) => (
+          <button
+            key={proto}
+            className={`px-2 py-1 rounded border ${
+              protocolFilter === proto ? 'bg-gray-700' : 'bg-gray-800'
+            }`}
+            onClick={() => setProtocolFilter(proto)}
+          >
+            {proto}
+          </button>
+        ))}
+      </div>
       <div className="flex-1 overflow-auto">
         <table className="min-w-full text-xs">
           <thead className="bg-gray-800">
@@ -200,10 +238,13 @@ const WiresharkApp = ({ initialPackets = [] }) => {
               <th className="px-2 py-1 text-left">Destination</th>
               <th className="px-2 py-1 text-left">Protocol</th>
               <th className="px-2 py-1 text-left">Info</th>
+              {hasTlsKeys && (
+                <th className="px-2 py-1 text-left">Decrypted</th>
+              )}
             </tr>
           </thead>
           <tbody>
-            {packets.filter((p) => matchesFilter(p, filter)).map((p, i) => (
+            {filteredPackets.map((p, i) => (
               <tr
                 key={i}
                 className={`${i % 2 ? 'bg-gray-900' : 'bg-gray-800'} ${getRowColor(
@@ -215,7 +256,10 @@ const WiresharkApp = ({ initialPackets = [] }) => {
                 <td className="px-2 py-1 whitespace-nowrap">{p.src}</td>
                 <td className="px-2 py-1 whitespace-nowrap">{p.dest}</td>
                 <td className="px-2 py-1 whitespace-nowrap">{protocolName(p.protocol)}</td>
-                <td className="px-2 py-1">{p.decrypted || p.info}</td>
+                <td className="px-2 py-1">{p.info}</td>
+                {hasTlsKeys && (
+                  <td className="px-2 py-1">{p.decrypted}</td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -224,6 +268,13 @@ const WiresharkApp = ({ initialPackets = [] }) => {
       <div aria-live="polite" className="sr-only">
         {announcement}
       </div>
+      <style jsx>{`
+        @container (max-width: 600px) {
+          .waterfall-cq {
+            display: none;
+          }
+        }
+      `}</style>
     </div>
   );
 };
