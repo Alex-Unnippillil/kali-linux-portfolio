@@ -139,10 +139,13 @@ const Frogger = () => {
   const [sound, setSound] = useState(true);
   const soundRef = useRef(sound);
   const [highScore, setHighScore] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const reduceMotionRef = useRef(reduceMotion);
   const canvasRef = useRef(null);
   const audioCtxRef = useRef(null);
   const nextLife = useRef(500);
   const holdRef = useRef();
+  const rippleRef = useRef(0);
 
   useEffect(() => { frogRef.current = frog; }, [frog]);
   useEffect(() => { carsRef.current = cars; }, [cars]);
@@ -150,6 +153,7 @@ const Frogger = () => {
   useEffect(() => { padsRef.current = pads; }, [pads]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
   useEffect(() => { soundRef.current = sound; }, [sound]);
+  useEffect(() => { reduceMotionRef.current = reduceMotion; }, [reduceMotion]);
 
   useEffect(() => {
     const saved = Number(localStorage.getItem('frogger-highscore') || 0);
@@ -165,6 +169,14 @@ const Frogger = () => {
       }
     }
   }, [score, highScore]);
+
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = () => setReduceMotion(mql.matches);
+    handler();
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
 
   const playTone = (freq, duration = 0.1) => {
     if (!soundRef.current) return;
@@ -308,6 +320,26 @@ const Frogger = () => {
           else if (y >= 4 && y <= 5) ctx.fillStyle = '#374151';
           else ctx.fillStyle = '#1e3a8a';
           ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+          if (y >= 4 && y <= 5) {
+            ctx.fillStyle = '#111827';
+            ctx.fillRect(x * CELL, y * CELL + CELL - 4, CELL, 4);
+          }
+        }
+      }
+      const rippleColor = '#60a5fa';
+      if (reduceMotionRef.current) {
+        ctx.fillStyle = rippleColor;
+        for (let x = 0; x < WIDTH; x += 1) {
+          ctx.fillRect(x * CELL, CELL, CELL, 2);
+          ctx.fillRect(x * CELL, CELL * 3 - 2, CELL, 2);
+        }
+      } else {
+        const phase = rippleRef.current;
+        ctx.fillStyle = rippleColor;
+        for (let x = 0; x < WIDTH; x += 1) {
+          const offset = Math.sin(phase + x) * 2;
+          ctx.fillRect(x * CELL, CELL + offset, CELL, 2);
+          ctx.fillRect(x * CELL, CELL * 3 - 2 + offset, CELL, 2);
         }
       }
       logsRef.current.forEach((lane) => {
@@ -336,6 +368,7 @@ const Frogger = () => {
     const loop = (time) => {
       const dt = (time - last) / 1000;
       last = time;
+      rippleRef.current += dt;
       if (!pausedRef.current) {
         const carResult = updateCars(carsRef.current, frogRef.current, dt);
         carsRef.current = carResult.lanes;
@@ -425,8 +458,12 @@ const Frogger = () => {
         height={HEIGHT * CELL}
         className="border border-gray-700"
       />
-      <div className="mt-4">Score: {score} High: {highScore} Lives: {lives}</div>
-      <div className="mt-1">{status}</div>
+      <div className="mt-4" aria-live="polite">
+        Score: {score} High: {highScore} Lives: {lives}
+      </div>
+      <div className="mt-1" role="status" aria-live="polite">
+        {status}
+      </div>
       <div className="mt-2 flex items-center gap-2">
         <button
           type="button"
