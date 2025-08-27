@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
+const escapeFilename = (str = '') =>
+  str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    // eslint-disable-next-line no-useless-escape
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 function Timeline({ events }) {
   const canvasRef = useRef(null);
   const workerRef = useRef(null);
@@ -153,6 +162,7 @@ function Autopsy() {
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [filter, setFilter] = useState('');
+  const parseWorkerRef = useRef(null);
 
   useEffect(() => {
     fetch('/plugin-marketplace.json')
@@ -162,10 +172,38 @@ function Autopsy() {
   }, []);
 
   useEffect(() => {
+    if (typeof Worker !== 'undefined') {
+      try {
+        parseWorkerRef.current = new Worker(
+          new URL('./jsonWorker.js', import.meta.url)
+        );
+        parseWorkerRef.current.onmessage = (e) =>
+          setArtifacts(e.data || []);
+      } catch {
+        parseWorkerRef.current = null;
+      }
+    }
+    return () => parseWorkerRef.current && parseWorkerRef.current.terminate();
+  }, []);
+
+  useEffect(() => {
     if (!currentCase) return;
     fetch('/autopsy-demo.json')
-      .then((res) => res.json())
-      .then((data) => setArtifacts(data.artifacts || []))
+      .then(async (res) => {
+        const text = res.text
+          ? await res.text()
+          : JSON.stringify(await res.json());
+        if (parseWorkerRef.current) {
+          parseWorkerRef.current.postMessage(text);
+        } else {
+          try {
+            const data = JSON.parse(text);
+            setArtifacts(data.artifacts || []);
+          } catch {
+            setArtifacts([]);
+          }
+        }
+      })
       .catch(() => setArtifacts([]));
   }, [currentCase]);
 
@@ -191,7 +229,10 @@ function Autopsy() {
       const hex = Array.from(bytes)
         .map((b) => b.toString(16).padStart(2, '0'))
         .join(' ');
-      setAnalysis(`File: ${file.name}\nSize: ${file.size} bytes\nFirst 20 bytes: ${hex}`);
+      const safeName = escapeFilename(file.name);
+      setAnalysis(
+        `File: ${safeName}\nSize: ${file.size} bytes\nFirst 20 bytes: ${hex}`
+      );
       setArtifacts((prev) => [
         ...prev,
         {
@@ -224,16 +265,18 @@ function Autopsy() {
     if (artifacts.length > 0) {
       const a = artifacts[artifacts.length - 1];
       setAnnouncement(
-        `${a.name} analyzed at ${new Date(a.timestamp).toLocaleString()}`
+        `${escapeFilename(a.name)} analyzed at ${new Date(a.timestamp).toLocaleString()}`
       );
     }
   }, [artifacts]);
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white p-4 space-y-4">
-      <div aria-live="polite" className="sr-only">
-        {announcement}
-      </div>
+      <div
+        aria-live="polite"
+        className="sr-only"
+        dangerouslySetInnerHTML={{ __html: announcement }}
+      />
       <div className="flex space-x-2">
         <input
           type="text"
@@ -296,7 +339,10 @@ function Autopsy() {
                 key={`${a.name}-${idx}`}
                 className="p-2 bg-ub-grey rounded text-sm"
               >
-                <div className="font-bold">{a.name}</div>
+                <div
+                  className="font-bold"
+                  dangerouslySetInnerHTML={{ __html: escapeFilename(a.name) }}
+                />
                 <div className="text-gray-400">{a.type}</div>
                 <div className="text-xs">
                   {new Date(a.timestamp).toLocaleString()}
