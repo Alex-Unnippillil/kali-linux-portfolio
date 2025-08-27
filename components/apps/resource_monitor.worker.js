@@ -28,7 +28,7 @@ function startSampling() {
     last = now;
     const cpu = Math.min(100, Math.max(0, (delay / 1000) * 100));
 
-    let memory = 0;
+    let memory = null;
     if (performance && performance.memory) {
       const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
       memory = (usedJSHeapSize / totalJSHeapSize) * 100;
@@ -38,7 +38,7 @@ function startSampling() {
     const down = connection.downlink || 0;
     const up = connection.uplink || connection.upload || 0;
 
-    push(cpu, memory, down, up);
+    push(cpu, memory ?? 0, down, up);
     if (reduceMotion) draw();
     self.postMessage({ cpu, memory, down, up });
   }, 1000);
