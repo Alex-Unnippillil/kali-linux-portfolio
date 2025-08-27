@@ -8,6 +8,15 @@ body {
   margin: 0;
 }
 
+.controls {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+}
+
 .weather {
   background: white;
   border-radius: 8px;
