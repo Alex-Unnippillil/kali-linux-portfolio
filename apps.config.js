@@ -47,6 +47,7 @@ const createDisplay = (Component) => (addFolder, openApp) => (
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
 const CalcApp = createDynamicApp('calc', 'Calc');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
+const TicTacToe3DApp = createDynamicApp('tictactoe-3d', 'Tic Tac Toe 3D');
 const ChessApp = createDynamicApp('chess', 'Chess');
 const ConnectFourApp = createDynamicApp('connect-four', 'Connect Four');
 const HangmanApp = createDynamicApp('hangman', 'Hangman');
@@ -113,6 +114,7 @@ const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 const displayTerminal = createDisplay(TerminalApp);
 const displayTerminalCalc = createDisplay(CalcApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
+const displayTicTacToe3D = createDisplay(TicTacToe3DApp);
 const displayChess = createDisplay(ChessApp);
 const displayConnectFour = createDisplay(ConnectFourApp);
 const displayHangman = createDisplay(HangmanApp);
@@ -381,6 +383,15 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTicTacToe,
+  },
+  {
+    id: 'tictactoe-3d',
+    title: 'Tic Tac Toe 3D',
+    icon: './themes/Yaru/apps/tictactoe.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayTicTacToe3D,
   },
   {
     id: 'tetris',

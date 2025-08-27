@@ -70,10 +70,11 @@ const TicTacToe = () => {
   const [player, setPlayer] = useState(null);
   const [ai, setAi] = useState(null);
   const [difficulty, setDifficulty] = useState('hard');
-  const [aiMoves, setAiMoves] = useState(0);
   const [winningLine, setWinningLine] = useState([]);
   const [lastMove, setLastMove] = useState(null);
   const [score, setScore] = useState({ player: 0, ai: 0, draw: 0 });
+  const [evalOverlay, setEvalOverlay] = useState(Array(9).fill(null));
+  const [bestIndex, setBestIndex] = useState(null);
 
   const startGame = (p) => {
     const a = p === 'X' ? 'O' : 'X';
@@ -82,10 +83,11 @@ const TicTacToe = () => {
     setStatus(p === 'X' ? 'Your turn' : "AI's turn");
     ReactGA.event({ category: 'TicTacToe', action: 'start' });
     setBoard(Array(9).fill(null));
-    setAiMoves(0);
     setWinningLine([]);
     setLastMove(null);
     setScore({ player: 0, ai: 0, draw: 0 });
+    setEvalOverlay(Array(9).fill(null));
+    setBestIndex(null);
   };
 
   const handleClick = (idx) => {
@@ -99,6 +101,8 @@ const TicTacToe = () => {
     newBoard[idx] = player;
     setBoard(newBoard);
     setLastMove(idx);
+    setEvalOverlay(Array(9).fill(null));
+    setBestIndex(null);
     ReactGA.event({ category: 'TicTacToe', action: 'move', label: 'player' });
   };
 
@@ -130,34 +134,50 @@ const TicTacToe = () => {
       let index;
       if (difficulty === 'easy') {
         index = available[Math.floor(Math.random() * available.length)];
+        setEvalOverlay(Array(9).fill(null));
+        setBestIndex(null);
       } else if (difficulty === 'medium') {
         index = getMediumMove(board, ai);
-      } else if (aiMoves === 0) {
-        index = available[Math.floor(Math.random() * available.length)];
+        setEvalOverlay(Array(9).fill(null));
+        setBestIndex(null);
       } else {
-        index = minimax(board, ai).index;
+        const scores = board.map((v, i) => {
+          if (v) return null;
+          const test = board.slice();
+          test[i] = ai;
+          return minimax(test, player).score;
+        });
+        index = scores.reduce((best, score, i) => {
+          if (score === null) return best;
+          if (best === null) return i;
+          return ai === 'O' ? (score > scores[best] ? i : best) : (score < scores[best] ? i : best);
+        }, null);
+        setEvalOverlay(scores);
+        setBestIndex(index);
       }
-      if (index !== undefined) {
+      if (index !== undefined && index !== null) {
         const newBoard = board.slice();
         newBoard[index] = ai;
         setTimeout(() => {
           setBoard(newBoard);
           setLastMove(index);
-        }, 200);
-        setAiMoves((m) => m + 1);
+          setEvalOverlay(Array(9).fill(null));
+          setBestIndex(null);
+        }, 500);
         ReactGA.event({ category: 'TicTacToe', action: 'move', label: 'ai' });
       }
     } else {
       setStatus('Your turn');
     }
-  }, [board, player, ai, difficulty, aiMoves]);
+  }, [board, player, ai, difficulty]);
 
   const restart = () => {
     setBoard(Array(9).fill(null));
-    setAiMoves(0);
     setWinningLine([]);
     setLastMove(null);
     setStatus(player === 'X' ? 'Your turn' : "AI's turn");
+    setEvalOverlay(Array(9).fill(null));
+    setBestIndex(null);
   };
 
   const reset = () => {
@@ -165,10 +185,11 @@ const TicTacToe = () => {
     setStatus('Choose X or O');
     setPlayer(null);
     setAi(null);
-    setAiMoves(0);
     setWinningLine([]);
     setLastMove(null);
     setScore({ player: 0, ai: 0, draw: 0 });
+    setEvalOverlay(Array(9).fill(null));
+    setBestIndex(null);
   };
 
   const difficultySlider = (
@@ -234,7 +255,7 @@ const TicTacToe = () => {
         {board.map((cell, idx) => (
           <button
             key={idx}
-            className={`h-20 w-20 text-4xl flex items-center justify-center bg-gray-700 hover:bg-gray-600 ${
+            className={`relative h-20 w-20 text-4xl flex items-center justify-center bg-gray-700 hover:bg-gray-600 ${
               winningLine.includes(idx)
                 ? 'bg-green-600 animate-pulse'
                 : lastMove === idx
@@ -251,6 +272,15 @@ const TicTacToe = () => {
               }
             }}
           >
+            {evalOverlay[idx] !== null && (
+              <span
+                className={`absolute top-1 left-1 text-xs ${
+                  bestIndex === idx ? 'text-green-400' : 'text-gray-400'
+                }`}
+              >
+                {evalOverlay[idx]}
+              </span>
+            )}
             {cell}
           </button>
         ))}
