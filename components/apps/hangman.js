@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import usePersistentState from '../../hooks/usePersistentState';
 import {
@@ -7,125 +7,34 @@ import {
   logGameEnd,
   logGameError,
 } from '../../utils/analytics';
-
-const words = [
-  'code',
-  'bug',
-  'html',
-  'css',
-  'linux',
-  'react',
-  'nextjs',
-  'python',
-  'docker',
-  'node',
-];
-
-const HangmanDrawing = ({ wrong }) => (
-  <svg
-    height="250"
-    width="200"
-    className="stroke-white mx-auto"
-    strokeLinecap="round"
-  >
-    {/* base */}
-    <line x1="10" y1="240" x2="150" y2="240" strokeWidth="4" />
-    <line x1="40" y1="20" x2="40" y2="240" strokeWidth="4" />
-    <line x1="40" y1="20" x2="120" y2="20" strokeWidth="4" />
-    <line x1="120" y1="20" x2="120" y2="40" strokeWidth="4" />
-    {/* head */}
-    {wrong > 0 && (
-      <circle
-        cx="120"
-        cy="60"
-        r="20"
-        strokeWidth="4"
-        fill="transparent"
-        className="hangman-part"
-        pathLength="100"
-      />
-    )}
-    {/* body */}
-    {wrong > 1 && (
-      <line
-        x1="120"
-        y1="80"
-        x2="120"
-        y2="140"
-        strokeWidth="4"
-        className="hangman-part"
-        pathLength="100"
-      />
-    )}
-    {/* arms */}
-    {wrong > 2 && (
-      <line
-        x1="120"
-        y1="100"
-        x2="90"
-        y2="120"
-        strokeWidth="4"
-        className="hangman-part"
-        pathLength="100"
-      />
-    )}
-    {wrong > 3 && (
-      <line
-        x1="120"
-        y1="100"
-        x2="150"
-        y2="120"
-        strokeWidth="4"
-        className="hangman-part"
-        pathLength="100"
-      />
-    )}
-    {/* legs */}
-    {wrong > 4 && (
-      <line
-        x1="120"
-        y1="140"
-        x2="100"
-        y2="170"
-        strokeWidth="4"
-        className="hangman-part"
-        pathLength="100"
-      />
-    )}
-    {wrong > 5 && (
-      <line
-        x1="120"
-        y1="140"
-        x2="140"
-        y2="170"
-        strokeWidth="4"
-        className="hangman-part"
-        pathLength="100"
-      />
-    )}
-  </svg>
-);
+import { DICTIONARIES } from '../../apps/hangman/engine';
 
 const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
+const dictionaryNames = Object.keys(DICTIONARIES);
 
 
-// Helper to draw a line segment based on progress
+// Helper to draw a line segment with a dashed reveal animation
 const drawLine = (ctx, x1, y1, x2, y2, progress) => {
+  ctx.save();
+  ctx.setLineDash([100]);
+  ctx.lineDashOffset = (1 - progress) * 100;
   ctx.beginPath();
   ctx.moveTo(x1, y1);
-  ctx.lineTo(
-    x1 + (x2 - x1) * progress,
-    y1 + (y2 - y1) * progress,
-  );
+  ctx.lineTo(x2, y2);
   ctx.stroke();
+  ctx.restore();
 };
 
 // Individual hangman parts rendered progressively
 const HANGMAN_PARTS = [
   (ctx, p) => {
+    ctx.save();
+    ctx.setLineDash([100]);
+    ctx.lineDashOffset = (1 - p) * 100;
     ctx.beginPath();
-    ctx.arc(120, 60, 20, 0, Math.PI * 2 * p);
+    ctx.arc(120, 60, 20, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.restore();
   },
   (ctx, p) => drawLine(ctx, 120, 80, 120, 140, p),
   (ctx, p) => drawLine(ctx, 120, 100, 90, 120, p),
@@ -134,14 +43,19 @@ const HANGMAN_PARTS = [
   (ctx, p) => drawLine(ctx, 120, 140, 140, 170, p),
 ];
 
+const maxWrong = HANGMAN_PARTS.length;
+
 const Hangman = () => {
   const canvasRef = useRef(null);
   const animationRef = useRef(null);
   const audioCtxRef = useRef(null);
   const partProgressRef = useRef(new Array(maxWrong).fill(0));
   const partStartRef = useRef(new Array(maxWrong).fill(0));
+  const gallowsProgressRef = useRef(0);
+  const gallowsStartRef = useRef(0);
   const reduceMotionRef = useRef(false);
 
+  const [dict, setDict] = useState('family');
   const [word, setWord] = useState('');
   const [guessed, setGuessed] = useState([]);
   const [wrong, setWrong] = useState(0);
@@ -159,6 +73,19 @@ const Hangman = () => {
     (v) => typeof v === 'number',
   );
   const [announcement, setAnnouncement] = useState('');
+
+  const won = word && word.split('').every((l) => guessed.includes(l));
+  const lost = wrong >= maxWrong && !won;
+  const frequencies = useMemo(() => {
+    const counts = Object.fromEntries(letters.map((l) => [l, 0]));
+    (DICTIONARIES[dict] || []).forEach((w) =>
+      w.split('').forEach((c) => {
+        if (counts[c] !== undefined) counts[c] += 1;
+      }),
+    );
+    const max = Math.max(...Object.values(counts));
+    return { counts, max };
+  }, [dict]);
 
   const playTone = (freq) => {
     if (!sound) return;
@@ -183,8 +110,10 @@ const Hangman = () => {
     }
   };
 
-  const pickWord = () =>
-    words[Math.floor(Math.random() * words.length)];
+  const pickWord = () => {
+    const list = DICTIONARIES[dict] || DICTIONARIES.family;
+    return list[Math.floor(Math.random() * list.length)];
+  };
 
   const reset = () => {
     try {
@@ -196,6 +125,8 @@ const Hangman = () => {
       setPaused(false);
       partProgressRef.current = new Array(maxWrong).fill(0);
       partStartRef.current = new Array(maxWrong).fill(0);
+      gallowsProgressRef.current = 0;
+      gallowsStartRef.current = performance.now();
       setAnnouncement('');
       logGameStart('hangman');
     } catch (err) {
@@ -206,7 +137,7 @@ const Hangman = () => {
   useEffect(() => {
     reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [dict]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -220,7 +151,7 @@ const Hangman = () => {
     if (hintUsed || paused) return;
     const remaining = word
       .split('')
-      .filter((l) => !guessed.includes(l));
+      .filter((l) => !guessed.includes(l) && !'aeiou'.includes(l));
     if (!remaining.length) return;
     const letter =
       remaining[Math.floor(Math.random() * remaining.length)];
@@ -277,7 +208,6 @@ const Hangman = () => {
   });
 
   useEffect(() => {
-    const won = word && word.split('').every((l) => guessed.includes(l));
     if (won || wrong >= maxWrong) {
       logGameEnd('hangman', won ? 'win' : 'lose');
       if (won) {
@@ -288,7 +218,7 @@ const Hangman = () => {
       }
       if (score > highscore) setHighscore(score);
     }
-  }, [wrong, guessed, word, score, highscore, setHighscore]);
+  }, [won, wrong, word, score, highscore, setHighscore]);
 
   const draw = React.useCallback(
     (ctx) => {
@@ -312,16 +242,21 @@ const Hangman = () => {
 
     ctx.lineWidth = 4;
     ctx.strokeStyle = '#fff';
-    ctx.beginPath();
-    ctx.moveTo(20, 230);
-    ctx.lineTo(180, 230);
-    ctx.moveTo(40, 20);
-    ctx.lineTo(40, 230);
-    ctx.lineTo(120, 20);
-    ctx.lineTo(120, 40);
-    ctx.stroke();
 
     const now = performance.now();
+    let gProg = gallowsProgressRef.current;
+    if (gProg < 1) {
+      const start = gallowsStartRef.current;
+      gProg = reduceMotionRef.current
+        ? 1
+        : Math.min((now - start) / 500, 1);
+      gallowsProgressRef.current = gProg;
+    }
+
+    drawLine(ctx, 20, 230, 180, 230, gProg);
+    drawLine(ctx, 40, 20, 40, 230, gProg);
+    drawLine(ctx, 40, 20, 120, 20, gProg);
+    drawLine(ctx, 120, 20, 120, 40, gProg);
 
     HANGMAN_PARTS.forEach((seg, i) => {
       let prog = partProgressRef.current[i];
@@ -335,17 +270,15 @@ const Hangman = () => {
       if (prog > 0) seg(ctx, prog);
     });
 
-    const letters = word.split('');
-    letters.forEach((l, i) => {
+    const chars = word.split('');
+    chars.forEach((l, i) => {
       const x = 40 + i * 30;
       ctx.beginPath();
       ctx.moveTo(x, 200);
       ctx.lineTo(x + 20, 200);
       ctx.stroke();
       const char =
-        guessed.includes(l) || wrong >= maxWrong
-          ? l.toUpperCase()
-          : '';
+        guessed.includes(l) || wrong >= maxWrong ? l.toUpperCase() : '';
       ctx.fillText(char, x + 10, 190);
     });
 
@@ -363,13 +296,12 @@ const Hangman = () => {
       ctx.fillText('Paused', ctx.canvas.width / 2, 120);
     }
 
-    const won = word && letters.every((l) => guessed.includes(l));
     if (won) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.fillStyle = '#0f0';
       ctx.fillText('You Won! Press R', ctx.canvas.width / 2, 120);
-    } else if (wrong >= maxWrong) {
+    } else if (lost) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
       ctx.fillStyle = '#f00';
@@ -380,7 +312,7 @@ const Hangman = () => {
       );
       ctx.fillText('Press R', ctx.canvas.width / 2, 150);
     }
-  }, [word, guessed, wrong, paused, score, highscore]);
+  }, [word, guessed, wrong, paused, score, highscore, won, lost]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -395,11 +327,47 @@ const Hangman = () => {
 
   return (
     <>
+      <div className="flex justify-center space-x-2 mb-2">
+        <select
+          className="text-black px-1"
+          value={dict}
+          onChange={(e) => setDict(e.target.value)}
+        >
+          {dictionaryNames.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={hintOnce}
+          disabled={hintUsed || paused}
+          className="px-2 py-1 bg-ub-orange text-black rounded"
+        >
+          Hint
+        </button>
+      </div>
+      <div className="grid grid-cols-13 gap-1 text-xs mb-2">
+        {letters.map((l) => {
+          const intensity =
+            frequencies.max ? frequencies.counts[l] / frequencies.max : 0;
+          const color = `rgba(255,0,0,${intensity})`;
+          return (
+            <span
+              key={l}
+              style={{ backgroundColor: color }}
+              className="px-1 rounded"
+            >
+              {l}
+            </span>
+          );
+        })}
+      </div>
       <canvas
         ref={canvasRef}
         width={400}
         height={250}
-        className="bg-ub-cool-grey w-full h-full"
+        className={`bg-ub-cool-grey w-full h-full ${lost ? 'grayscale' : ''}`}
       />
       <div aria-live="polite" role="status" className="sr-only">
         {announcement}
