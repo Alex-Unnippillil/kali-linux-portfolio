@@ -1,0 +1,33 @@
+{
+  "discovery": [
+    {
+      "name": "http-title",
+      "description": "Fetches page titles from HTTP services.",
+      "example": "# Example: nmap --script http-title -p80 example.com\n80/tcp open  http\n|_http-title: Example Domain"
+    },
+    {
+      "name": "ftp-anon",
+      "description": "Checks for anonymous FTP access.",
+      "example": "# Example: nmap --script ftp-anon -p21 example.com\n21/tcp open  ftp\n|_ftp-anon: Anonymous FTP login allowed"
+    }
+  ],
+  "vuln": [
+    {
+      "name": "ssl-cert",
+      "description": "Retrieves TLS certificate information.",
+      "example": "# Example: nmap --script ssl-cert -p443 example.com\n| ssl-cert: Subject: commonName=example.com"
+    },
+    {
+      "name": "smb-os-discovery",
+      "description": "Discovers remote OS information via SMB.",
+      "example": "# Example: nmap --script smb-os-discovery -p445 example.com\n| smb-os-discovery:\n|   OS: Windows 10"
+    }
+  ],
+  "brute": [
+    {
+      "name": "dns-brute",
+      "description": "Performs DNS subdomain brute force enumeration.",
+      "example": "# Example: nmap --script dns-brute example.com\n| dns-brute:\n|   mail.example.com - 192.0.2.3"
+    }
+  ]
+}
