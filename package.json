@@ -29,7 +29,9 @@
     "figlet": "^1.8.2",
     "howler": "^2.2.4",
     "html-to-image": "^1.11.13",
+    "js-yaml": "^4.1.0",
     "jsqr": "^1.4.0",
+    "marked": "^12.0.2",
     "mathjs": "^14.6.0",
     "next": "^15.0.0",
     "phaser": "3.70.0",
@@ -41,7 +43,6 @@
     "react-dom": "^18.2.0",
     "react-draggable": "^4.4.5",
     "react-force-graph": "^1.45.0",
-
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
     "react-onclickoutside": "^6.12.2",
