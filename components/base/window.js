@@ -23,6 +23,7 @@ export class Window extends Component {
             snapPreview: null,
             snapPosition: null,
         }
+        this.preSnap = null;
     }
 
     componentDidMount() {
@@ -138,6 +139,58 @@ export class Window extends Component {
     handleStop = () => {
         this.changeCursorToDefault();
         this.setState({ snapPreview: null, snapPosition: null });
+    }
+
+    snapWindow = (position) => {
+        this.setWinowsPosition();
+        const r = document.querySelector("#" + this.id);
+        // store previous size for restoration
+        this.preSnap = {
+            width: this.state.width,
+            height: this.state.height,
+            x: r.style.getPropertyValue('--window-transform-x'),
+            y: r.style.getPropertyValue('--window-transform-y')
+        };
+
+        let transformX = '-1pt';
+        let transformY = '-2pt';
+        let width = this.state.width;
+        let height = this.state.height;
+
+        switch (position) {
+            case 'left':
+                width = 50;
+                height = 96.3;
+                transformX = '-1pt';
+                break;
+            case 'right':
+                width = 50;
+                height = 96.3;
+                transformX = `${window.innerWidth / 2}px`;
+                break;
+            case 'top':
+                width = 100.2;
+                height = 50;
+                transformX = '-1pt';
+                break;
+            default:
+                return;
+        }
+
+        r.style.transform = `translate(${transformX},${transformY})`;
+        this.setState({ width, height }, () => this.checkOverlap());
+        this.snapped = position;
+    }
+
+    restoreSnap = () => {
+        if (!this.snapped || !this.preSnap) return;
+        const r = document.querySelector("#" + this.id);
+        const { width, height, x, y } = this.preSnap;
+        this.setState({ width, height }, () => {
+            r.style.transform = `translate(${x},${y})`;
+            this.checkOverlap();
+        });
+        this.snapped = null;
     }
 
     focusWindow = () => {

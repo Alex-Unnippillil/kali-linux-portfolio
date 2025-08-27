@@ -17,6 +17,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.windowRefs = {};
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -35,6 +36,7 @@ export class Desktop extends Component {
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
+            snapAnnouncement: '',
         }
     }
 
@@ -49,10 +51,12 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        window.addEventListener('keydown', this.handleKeySnap);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
+        window.removeEventListener('keydown', this.handleKeySnap);
     }
 
     checkForNewFolders = () => {
@@ -95,6 +99,33 @@ export class Desktop extends Component {
     removeContextListeners = () => {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
+    }
+
+    handleKeySnap = (e) => {
+        if (!e.altKey) return;
+        const focusedId = Object.keys(this.state.focused_windows).find(id => this.state.focused_windows[id]);
+        if (!focusedId) return;
+        const winRef = this.windowRefs[focusedId];
+        if (!winRef || !winRef.current) return;
+        if (e.key === 'ArrowLeft') {
+            winRef.current.snapWindow('left');
+            this.announceSnap(focusedId, 'snapped left');
+        } else if (e.key === 'ArrowRight') {
+            winRef.current.snapWindow('right');
+            this.announceSnap(focusedId, 'snapped right');
+        } else if (e.key === 'ArrowUp') {
+            winRef.current.snapWindow('top');
+            this.announceSnap(focusedId, 'snapped top');
+        } else if (e.key === 'ArrowDown') {
+            winRef.current.restoreSnap();
+            this.announceSnap(focusedId, 'restored');
+        }
+    }
+
+    announceSnap = (id, action) => {
+        const appObj = apps.find(a => a.id === id);
+        const title = appObj ? appObj.title : 'Window';
+        this.setState({ snapAnnouncement: `${title} ${action}` });
     }
 
     checkContextMenu = (e) => {
@@ -288,6 +319,8 @@ export class Desktop extends Component {
         apps.forEach((app, index) => {
             if (this.state.closed_windows[app.id] === false) {
 
+                if (!this.windowRefs[app.id]) this.windowRefs[app.id] = React.createRef();
+
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -304,6 +337,7 @@ export class Desktop extends Component {
                     allowMaximize: app.allowMaximize,
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
+                    ref: this.windowRefs[app.id],
                 }
 
                 windowsJsx.push(
@@ -642,6 +676,7 @@ export class Desktop extends Component {
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
 
+                <div aria-live="polite" className="sr-only">{this.state.snapAnnouncement}</div>
             </div>
         )
     }
