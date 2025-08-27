@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import DiscoveryMap from './DiscoveryMap';
+import SecurityDisclaimer from '../../SecurityDisclaimer';
 
 const scripts = [
   { name: 'http-title', description: 'Fetches page titles from HTTP services.' },
@@ -28,20 +29,7 @@ const NmapNSEApp = () => {
     } catch (e) {
       // ignore
     }
-    (async () => {
-      try {
-        const res = await fetch(
-          'https://raw.githubusercontent.com/nmap/nmap/master/scripts/script.db'
-        );
-        const text = await res.text();
-        const names = Array.from(
-          text.matchAll(/filename\s*=\s*"([^"]+)"/g)
-        ).map((m) => m[1].replace(/\.nse$/, ''));
-        setLibrary(names.map((n) => ({ name: n, description: '' })));
-      } catch (e) {
-        // ignore fetch errors
-      }
-    })();
+    // In demo mode we rely solely on the static script list above.
   }, []);
 
   const allScripts = useMemo(() => [...scripts, ...library], [library]);
@@ -68,23 +56,15 @@ const NmapNSEApp = () => {
     }
   };
 
-  const runScan = async (t = target, s = script) => {
+  const runScan = (t = target, s = script) => {
     if (!t) return;
     setTrigger((v) => v + 1);
-    setOutput('Running scan...');
-    try {
-      const res = await fetch(
-        `https://api.hackertarget.com/nmap/?q=${encodeURIComponent(t)}&script=${encodeURIComponent(s)}`
-      );
-      const text = await res.text();
-      setOutput(text);
-      localStorage.setItem(
-        'lastNmapProfile',
-        JSON.stringify({ target: t, script: s })
-      );
-    } catch (e) {
-      setOutput('Error running scan');
-    }
+    const text = `# Nmap scan report for ${t}\nScript: ${s}\nHost is up (0.00s latency).`;
+    setOutput(text);
+    localStorage.setItem(
+      'lastNmapProfile',
+      JSON.stringify({ target: t, script: s })
+    );
   };
 
   const quickRun = () => {
@@ -99,6 +79,7 @@ const NmapNSEApp = () => {
 
   return (
     <div className="h-full w-full flex flex-col p-4 bg-ub-cool-grey text-white">
+      <SecurityDisclaimer />
       <div className="mb-4">
         <input
           className="w-full p-2 mb-2 rounded text-black"

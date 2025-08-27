@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import SecurityDisclaimer from '../../SecurityDisclaimer';
+import pluginData from '../../../public/plugin-marketplace.json';
 
 function Timeline({ events }) {
   const canvasRef = useRef(null);
@@ -92,16 +94,9 @@ function Autopsy() {
   const [currentCase, setCurrentCase] = useState(null);
   const [analysis, setAnalysis] = useState('');
   const [artifacts, setArtifacts] = useState([]);
-  const [plugins, setPlugins] = useState([]);
+  const [plugins] = useState(pluginData);
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [announcement, setAnnouncement] = useState('');
-
-  useEffect(() => {
-    fetch('/plugin-marketplace.json')
-      .then((res) => res.json())
-      .then(setPlugins)
-      .catch(() => setPlugins([]));
-  }, []);
 
   const createCase = () => {
     const name = caseName.trim();
@@ -161,6 +156,7 @@ function Autopsy() {
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white p-4 space-y-4">
+      <SecurityDisclaimer />
       <div aria-live="polite" className="sr-only">
         {announcement}
       </div>

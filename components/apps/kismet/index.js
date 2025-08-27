@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import SecurityDisclaimer from '../../SecurityDisclaimer';
 
 // Simple helpers to generate demo data
 const demoNetworks = () => [
@@ -119,6 +120,7 @@ const KismetApp = () => {
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
+      <SecurityDisclaimer />
       <div className="px-3 py-1 border-b border-gray-700">
       <span className="font-bold">Kismet</span>
       </div>

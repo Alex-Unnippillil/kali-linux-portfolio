@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
 import usePersistentState from '../../usePersistentState';
+import SecurityDisclaimer from '../../SecurityDisclaimer';
 
 const severities = ['critical', 'high', 'medium', 'low'];
 const severityStyles = {
@@ -32,10 +33,7 @@ const MetasploitApp = () => {
   const moduleRaf = useRef();
   const progressRaf = useRef();
 
-  // Refresh modules list in the background on mount
-  useEffect(() => {
-    fetch('/api/metasploit').catch(() => {});
-  }, []);
+  // No network requests; all data is local.
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -76,23 +74,29 @@ const MetasploitApp = () => {
     return () => cancelAnimationFrame(moduleRaf.current);
   }, [selectedSeverity, reduceMotion]);
 
-  const runCommand = async () => {
+  const runCommand = () => {
     const cmd = command.trim();
     if (!cmd) return;
     setLoading(true);
-    try {
-      const res = await fetch('/api/metasploit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: cmd }),
-      });
-      const data = await res.json();
-      setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`);
-    } catch (e) {
-      setOutput((prev) => `${prev}\nError: ${e.message}`);
-    } finally {
-      setLoading(false);
+    let result = '';
+    if (cmd.startsWith('search ')) {
+      const term = cmd.slice(7).toLowerCase();
+      const matches = modules.filter(
+        (m) =>
+          m.name.toLowerCase().includes(term) ||
+          m.description.toLowerCase().includes(term)
+      );
+      result = matches
+        .map((m) => `${m.name} - ${m.description}`)
+        .join('\n');
+      if (!result) result = 'No matches found';
+    } else if (cmd === 'help') {
+      result = 'Available commands: search <term>, help';
+    } else {
+      result = 'Unknown command';
     }
+    setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n${result}`);
+    setLoading(false);
   };
 
   const startReplay = () => {
@@ -130,6 +134,7 @@ const MetasploitApp = () => {
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white">
+      <SecurityDisclaimer />
       <div className="flex p-2">
         <input
           className="flex-grow bg-ub-grey text-white p-1 rounded"
