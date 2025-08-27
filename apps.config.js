@@ -180,7 +180,7 @@ const displayKismet = createDisplay(KismetApp);
 
 
 // Default window sizing for games to prevent oversized frames
-const gameDefaults = {
+export const gameDefaults = {
   defaultWidth: 50,
   defaultHeight: 60,
 };
