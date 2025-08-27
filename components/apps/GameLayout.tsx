@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import HelpOverlay from './HelpOverlay';
 
 interface GameLayoutProps {
@@ -9,6 +9,9 @@ interface GameLayoutProps {
 const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
@@ -52,6 +55,65 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
 
   const resume = useCallback(() => setPaused(false), []);
 
+  // Record canvas stream and keep last ~20 seconds
+  useEffect(() => {
+    const canvas = document.querySelector('canvas') as HTMLCanvasElement | null;
+    if (!canvas || !canvas.captureStream) return;
+    canvasRef.current = canvas;
+    try {
+      const stream = canvas.captureStream();
+      const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size) {
+          chunksRef.current.push(e.data);
+          if (chunksRef.current.length > 20) chunksRef.current.shift();
+        }
+      };
+      recorder.start(1000);
+      recorderRef.current = recorder;
+      return () => {
+        recorder.stop();
+      };
+    } catch {
+      // ignore recorder errors
+    }
+  }, []);
+
+  const share = useCallback(async () => {
+    const canvas = canvasRef.current;
+    let blob: Blob | null = null;
+    if (chunksRef.current.length) {
+      blob = new Blob(chunksRef.current, { type: 'video/webm' });
+    } else if (canvas) {
+      blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((b) => resolve(b), 'image/png');
+      });
+    }
+    if (!blob) return;
+    const fileName = blob.type.startsWith('video') ? 'clip.webm' : 'screenshot.png';
+    const url = URL.createObjectURL(blob);
+    const file = new File([blob], fileName, { type: blob.type });
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: 'Gameplay' });
+      } else {
+        try {
+          await navigator.clipboard?.writeText(url);
+        } catch {
+          // clipboard may fail
+        }
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }, []);
+
   return (
     <div className="relative h-full w-full">
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
@@ -71,6 +133,14 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
           </button>
         </div>
       )}
+      <button
+        type="button"
+        aria-label="Share"
+        onClick={share}
+        className="absolute top-2 right-12 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+      >
+        ⤴️
+      </button>
       <button
         type="button"
         aria-label="Help"
