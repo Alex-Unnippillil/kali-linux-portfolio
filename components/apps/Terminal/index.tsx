@@ -13,8 +13,11 @@ import '@xterm/xterm/css/xterm.css';
 
 const promptText = 'alex@kali:~$ ';
 
-const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void }>(
-  ({ onSplit, onFocus }, ref) => {
+const TerminalPane = forwardRef<
+  any,
+  { onSplit: () => void; onClose: () => void; onFocus: () => void }
+>(
+  ({ onSplit, onClose, onFocus }, ref) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const termRef = useRef<any>(null);
     const fitAddonRef = useRef<any>(null);
@@ -30,6 +33,7 @@ const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void 
         'clear',
         'help',
         'split',
+        'exit',
         'demo nmap',
         'demo hashcat',
       ]),
@@ -40,6 +44,7 @@ const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void 
     const suggestionIndexRef = useRef(0);
     const showingSuggestionsRef = useRef(false);
     const ariaLiveRef = useRef<HTMLDivElement | null>(null);
+    const suggestionLiveRef = useRef<HTMLDivElement | null>(null);
     const hintRef = useRef('');
     const rafRef = useRef<any>(null);
     const fontSizeRef = useRef(14);
@@ -47,6 +52,17 @@ const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void 
     const updateLive = useCallback((msg: string) => {
       if (ariaLiveRef.current) ariaLiveRef.current.textContent = msg;
     }, []);
+
+    const updateSuggestionsLive = useCallback((msg: string) => {
+      if (suggestionLiveRef.current)
+        suggestionLiveRef.current.textContent = msg;
+    }, []);
+
+    const clearSuggestions = useCallback(() => {
+      suggestionsRef.current = [];
+      showingSuggestionsRef.current = false;
+      updateSuggestionsLive('');
+    }, [updateSuggestionsLive]);
 
     const renderHint = useCallback(() => {
       if (typeof window === 'undefined' || !termRef.current) return;
@@ -74,18 +90,18 @@ const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void 
 
     const renderSuggestions = useCallback(() => {
       termRef.current.writeln('');
-      termRef.current.writeln(
-        suggestionsRef.current
-          .map((cmd, idx) =>
-            idx === suggestionIndexRef.current
-              ? `\u001b[7m${cmd}\u001b[0m`
-              : cmd,
-          )
-          .join(' '),
-      );
+      const rendered = suggestionsRef.current
+        .map((cmd, idx) =>
+          idx === suggestionIndexRef.current
+            ? `\u001b[7m${cmd}\u001b[0m`
+            : cmd,
+        )
+        .join(' ');
+      termRef.current.writeln(rendered);
+      updateSuggestionsLive(suggestionsRef.current.join(' '));
       prompt();
       termRef.current.write(commandRef.current);
-    }, [prompt]);
+    }, [prompt, updateSuggestionsLive]);
 
     const handleTab = useCallback(() => {
       const current = commandRef.current;
@@ -94,8 +110,7 @@ const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void 
         const completion = selection.slice(current.length);
         termRef.current.write(completion);
         commandRef.current = selection;
-        suggestionsRef.current = [];
-        showingSuggestionsRef.current = false;
+        clearSuggestions();
         renderHint();
         return;
       }
@@ -113,8 +128,10 @@ const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void 
         suggestionIndexRef.current = 0;
         showingSuggestionsRef.current = true;
         renderSuggestions();
+      } else {
+        clearSuggestions();
       }
-    }, [renderSuggestions, renderHint]);
+    }, [renderSuggestions, renderHint, clearSuggestions]);
 
     const handleSuggestionNav = useCallback(
       (direction: 'left' | 'right') => {
@@ -146,11 +163,10 @@ const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void 
         termRef.current.write(promptText);
         termRef.current.write(cmd);
         commandRef.current = cmd;
-        suggestionsRef.current = [];
-        showingSuggestionsRef.current = false;
+        clearSuggestions();
         renderHint();
       },
-      [],
+      [clearSuggestions],
     );
 
     const runCommand = useCallback(
@@ -169,6 +185,7 @@ const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void 
           logRef.current += `${text}\n`;
           updateLive(text);
         };
+        clearSuggestions();
         if (trimmed === 'pwd') {
           termRef.current.writeln('');
           writeLine('/home/alex');
@@ -207,6 +224,11 @@ const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void 
           termRef.current.writeln('');
           writeLine('Opened new pane');
           onSplit();
+          prompt();
+        } else if (trimmed === 'exit') {
+          termRef.current.writeln('');
+          writeLine('Closed pane');
+          onClose();
           prompt();
         } else if (trimmed === 'demo nmap') {
           termRef.current.writeln('');
@@ -334,28 +356,24 @@ const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void 
         if (data === '\r') {
           runCommand(commandRef.current);
           commandRef.current = '';
-          suggestionsRef.current = [];
-          showingSuggestionsRef.current = false;
+          clearSuggestions();
         } else if (data === '\u0003') {
           term.write('^C');
           prompt();
           commandRef.current = '';
-          suggestionsRef.current = [];
-          showingSuggestionsRef.current = false;
+          clearSuggestions();
         } else if (data === '\u007F') {
           if (commandRef.current.length > 0) {
             commandRef.current = commandRef.current.slice(0, -1);
             term.write('\b \b');
           }
-          suggestionsRef.current = [];
-          showingSuggestionsRef.current = false;
+          clearSuggestions();
         } else if (data === '\t') {
           // handled in onKey
         } else {
           commandRef.current += data;
           term.write(data);
-          suggestionsRef.current = [];
-          showingSuggestionsRef.current = false;
+          clearSuggestions();
         }
         renderHint();
       });
@@ -379,14 +397,30 @@ const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void 
 
       const handleResize = () => fitAddon.fit();
       window.addEventListener('resize', handleResize);
+      let resizeObserver: ResizeObserver | null = null;
+      if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+        resizeObserver = new ResizeObserver(handleResize);
+        resizeObserver.observe(containerRef.current);
+      }
 
       return () => {
         window.removeEventListener('resize', handleResize);
+        resizeObserver?.disconnect();
         workerRef.current?.terminate();
         if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
         term.dispose();
       };
-    }, [prompt, runCommand, handleTab, handleSuggestionNav, handleHistoryNav, onFocus, updateLive, renderHint]);
+    }, [
+      prompt,
+      runCommand,
+      handleTab,
+      handleSuggestionNav,
+      handleHistoryNav,
+      onFocus,
+      updateLive,
+      renderHint,
+      clearSuggestions,
+    ]);
 
     useImperativeHandle(ref, () => ({
       runCommand,
@@ -404,6 +438,7 @@ const TerminalPane = forwardRef<any, { onSplit: () => void; onFocus: () => void 
           aria-label="Terminal"
         />
         <div ref={ariaLiveRef} aria-live="polite" className="sr-only" />
+        <div ref={suggestionLiveRef} aria-live="polite" className="sr-only" />
       </div>
     );
   },
@@ -419,6 +454,20 @@ const Terminal = forwardRef<any, any>((props, ref) => {
     setPanes((prev) => {
       const next = [...prev, prev.length];
       activePaneRef.current = next.length - 1;
+      return next;
+    });
+  }, []);
+
+  const removePane = useCallback((idx: number) => {
+    setPanes((prev) => {
+      if (prev.length <= 1) return prev;
+      const next = prev.filter((_, i) => i !== idx);
+      paneRefs.current.splice(idx, 1);
+      if (activePaneRef.current >= next.length) {
+        activePaneRef.current = next.length - 1;
+      } else if (activePaneRef.current > idx) {
+        activePaneRef.current -= 1;
+      }
       return next;
     });
   }, []);
@@ -440,6 +489,7 @@ const Terminal = forwardRef<any, any>((props, ref) => {
             paneRefs.current[idx] = el;
           }}
           onSplit={addPane}
+          onClose={() => removePane(idx)}
           onFocus={() => {
             activePaneRef.current = idx;
           }}
