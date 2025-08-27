@@ -1,13 +1,17 @@
-import React, { useEffect, useRef } from 'react';
-import Phaser from 'phaser';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { Game, Types } from 'phaser';
 
 const PhaserMatter: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const gameRef = useRef<Game | null>(null);
+  const [started, setStarted] = useState(false);
 
-  useEffect(() => {
-    if (!containerRef.current) return;
+  const startGame = useCallback(async () => {
+    if (started || !containerRef.current) return;
 
-    const config: Phaser.Types.Core.GameConfig = {
+    const Phaser = (await import('phaser')).default;
+
+    const config: Types.Core.GameConfig = {
       type: Phaser.AUTO,
       width: 800,
       height: 600,
@@ -59,13 +63,36 @@ const PhaserMatter: React.FC = () => {
       },
     };
 
-    const game = new Phaser.Game(config);
+    gameRef.current = new Phaser.Game(config);
+    setStarted(true);
+  }, [started]);
+
+  useEffect(() => {
     return () => {
-      game.destroy(true);
+      gameRef.current?.destroy(true);
     };
   }, []);
 
-  return <div ref={containerRef} />;
+  const preload = useCallback(() => {
+    import('phaser');
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative"
+      onClick={startGame}
+      onMouseEnter={preload}
+      role="button"
+      tabIndex={0}
+    >
+      {!started && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-white">
+          Click to start
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default PhaserMatter;
