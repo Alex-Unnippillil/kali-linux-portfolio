@@ -1,7 +1,10 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
 import useGameHaptics from '../../hooks/useGameHaptics';
 import usePersistentState from '../../hooks/usePersistentState';
+import useCanvasResize from '../../hooks/useCanvasResize';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const GRID_SIZE = 20;
 const CELL_SIZE = 16; // pixels
@@ -23,7 +26,7 @@ const randomFood = (snake) => {
 };
 
 const Snake = () => {
-  const canvasRef = useRef(null);
+  const canvasRef = useCanvasResize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
   const ctxRef = useRef(null);
   const snakeRef = useRef([
     { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2), scale: 1 },
@@ -37,7 +40,7 @@ const Snake = () => {
   const runningRef = useRef(true);
   const audioCtx = useRef(null);
   const haptics = useGameHaptics();
-  const prefersReducedMotion = useRef(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const [running, setRunning] = useState(true);
   const [wrap, setWrap] = useState(false);
@@ -49,6 +52,12 @@ const Snake = () => {
     0,
     (v) => typeof v === 'number',
   );
+
+  useEffect(() => {
+    const handleBlur = () => setRunning(false);
+    window.addEventListener('blur', handleBlur);
+    return () => window.removeEventListener('blur', handleBlur);
+  }, []);
 
   /**
    * Play a short tone if sound is enabled.
@@ -138,14 +147,6 @@ const Snake = () => {
     draw();
   }, [draw]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      prefersReducedMotion.current = window.matchMedia(
-        '(prefers-reduced-motion: reduce)'
-      ).matches;
-    }
-  }, []);
-
   /** Advance the game state by one step. */
   const update = useCallback(() => {
     const snake = snakeRef.current;
@@ -191,7 +192,7 @@ const Snake = () => {
       haptics.score();
       beep(440);
       foodRef.current = randomFood(snake);
-      if (!prefersReducedMotion.current) head.scale = 0;
+      if (!prefersReducedMotion) head.scale = 0;
     } else {
       snake.pop();
     }
@@ -251,67 +252,59 @@ const Snake = () => {
   }, [draw]);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
-      <div className="relative">
-        <canvas
-          ref={canvasRef}
-          width={GRID_SIZE * CELL_SIZE}
-          height={GRID_SIZE * CELL_SIZE}
-          className="bg-gray-800 border border-gray-700"
-          tabIndex={0}
-          aria-label="Snake game board"
-        />
-        <div
-          className="absolute top-2 left-2 text-sm"
-          aria-live="polite"
-          role="status"
-          aria-atomic="true"
-        >
-          Score: {score} | High: {highScore}
+    <GameLayout gameId="snake" score={score} highScore={highScore}>
+      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
+        <div className="relative">
+          <canvas
+            ref={canvasRef}
+            className="bg-gray-800 border border-gray-700 w-full h-full"
+            tabIndex={0}
+            aria-label="Snake game board"
+          />
+          {gameOver && (
+            <div
+              className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
+              role="alert"
+              aria-live="assertive"
+            >
+              Game Over
+            </div>
+          )}
         </div>
-        {gameOver && (
-          <div
-            className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
-            role="alert"
-            aria-live="assertive"
+        <div className="mt-2 space-x-2">
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={reset}
           >
-            Game Over
-          </div>
-        )}
+            Reset
+          </button>
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={() => setRunning((r) => !r)}
+          >
+            {running ? 'Pause' : 'Resume'}
+          </button>
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={() => setWrap((w) => !w)}
+          >
+            {wrap ? 'Wrap' : 'No Wrap'}
+          </button>
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={() => setSound((s) => !s)}
+          >
+            {sound ? 'Sound On' : 'Sound Off'}
+          </button>
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={haptics.toggle}
+          >
+            {haptics.enabled ? 'Haptics On' : 'Haptics Off'}
+          </button>
+        </div>
       </div>
-      <div className="mt-2 space-x-2">
-        <button
-          className="px-2 py-1 bg-gray-700 rounded"
-          onClick={reset}
-        >
-          Reset
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700 rounded"
-          onClick={() => setRunning((r) => !r)}
-        >
-          {running ? 'Pause' : 'Resume'}
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700 rounded"
-          onClick={() => setWrap((w) => !w)}
-        >
-          {wrap ? 'Wrap' : 'No Wrap'}
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700 rounded"
-          onClick={() => setSound((s) => !s)}
-        >
-          {sound ? 'Sound On' : 'Sound Off'}
-        </button>
-        <button
-          className="px-2 py-1 bg-gray-700 rounded"
-          onClick={haptics.toggle}
-        >
-          {haptics.enabled ? 'Haptics On' : 'Haptics Off'}
-        </button>
-      </div>
-    </div>
+    </GameLayout>
   );
 };
 
