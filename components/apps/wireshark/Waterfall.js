@@ -1,11 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import { protocolName, getRowColor } from './utils';
 
+// High-contrast background colours for the protocol bars. The darker
+// shades ensure the 3:1 contrast ratio required for non-text elements on
+// the black background of the waterfall.
 const protocolColors = {
-  TCP: 'bg-blue-400',
-  UDP: 'bg-green-400',
-  ICMP: 'bg-purple-400',
-  default: 'bg-gray-400',
+  TCP: 'bg-blue-600',
+  UDP: 'bg-green-600',
+  ICMP: 'bg-purple-600',
+  default: 'bg-gray-600',
 };
 
 const Waterfall = ({ packets, colorRules, viewIndex, prefersReducedMotion }) => {
