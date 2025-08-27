@@ -1,0 +1,48 @@
+{
+  "vulnerabilities": [
+    {
+      "id": 1,
+      "name": "OpenSSL Heartbeat Information Disclosure (Heartbleed)",
+      "severity": "critical",
+      "cvss": 9.3,
+      "vector": "AV:N/AC:M/Au:N/C:P/I:P/A:P",
+      "remediation": [
+        "Update OpenSSL to version 1.0.1g or later",
+        "Reissue SSL certificates",
+        "Restart services using the old library"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "SMB Signing Not Required",
+      "severity": "high",
+      "cvss": 8.1,
+      "vector": "AV:N/AC:H/Au:N/C:P/I:P/A:P",
+      "remediation": [
+        "Enable SMB signing on the server",
+        "Enforce SMB signing via group policy"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "TLS Version 1.0 Protocol Detection",
+      "severity": "medium",
+      "cvss": 5.0,
+      "vector": "AV:N/AC:L/Au:N/C:P/I:N/A:N",
+      "remediation": [
+        "Disable TLS 1.0 in server configuration",
+        "Enable TLS 1.2 or higher"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "HTTP TRACE Method Enabled",
+      "severity": "low",
+      "cvss": 2.6,
+      "vector": "AV:N/AC:H/Au:N/C:P/I:N/A:N",
+      "remediation": [
+        "Disable TRACE method in web server configuration"
+      ]
+    }
+  ]
+}
