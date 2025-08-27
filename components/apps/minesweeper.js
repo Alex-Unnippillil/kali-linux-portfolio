@@ -181,6 +181,8 @@ const Minesweeper = () => {
   const [paused, setPaused] = useState(false);
   const [pauseStart, setPauseStart] = useState(0);
   const [sound, setSound] = useState(true);
+  const [ariaMessage, setAriaMessage] = useState('');
+  const prefersReducedMotion = useRef(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -197,6 +199,16 @@ const Minesweeper = () => {
       return () => clearInterval(interval);
     }
   }, [status, startTime, paused]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+      prefersReducedMotion.current = media.matches;
+      const handler = (e) => (prefersReducedMotion.current = e.matches);
+      media.addEventListener('change', handler);
+      return () => media.removeEventListener('change', handler);
+    }
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -266,9 +278,70 @@ const Minesweeper = () => {
     osc.stop(ctx.currentTime + 0.15);
   };
 
+  const checkAndHandleWin = (newBoard) => {
+    if (checkWin(newBoard)) {
+      setStatus('won');
+      const time = (Date.now() - startTime) / 1000;
+      setElapsed(time);
+      if (typeof window !== 'undefined') {
+        if (!bestTime || time < bestTime) {
+          setBestTime(time);
+          localStorage.setItem('minesweeper-best-time', time.toString());
+        }
+      }
+    }
+  };
+
+  const revealWave = (newBoard, sx, sy, onComplete) => {
+    const visited = Array.from({ length: BOARD_SIZE }, () =>
+      Array(BOARD_SIZE).fill(false),
+    );
+    const queue = [[sx, sy]];
+    visited[sx][sy] = true;
+    let idx = 0;
+
+    const step = () => {
+      let processed = 0;
+      const limit = 8;
+      while (idx < queue.length && processed < limit) {
+        const [x, y] = queue[idx++];
+        const cell = newBoard[x][y];
+        if (cell.revealed || cell.flagged) continue;
+        cell.revealed = true;
+        if (cell.adjacent === 0) {
+          for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+              if (dx === 0 && dy === 0) continue;
+              const nx = x + dx;
+              const ny = y + dy;
+              if (
+                nx >= 0 &&
+                nx < BOARD_SIZE &&
+                ny >= 0 &&
+                ny < BOARD_SIZE &&
+                !visited[nx][ny]
+              ) {
+                visited[nx][ny] = true;
+                queue.push([nx, ny]);
+              }
+            }
+          }
+        }
+        processed++;
+      }
+      setBoard(cloneBoard(newBoard));
+      if (idx < queue.length) {
+        requestAnimationFrame(step);
+      } else {
+        onComplete?.(queue.length);
+      }
+    };
+
+    requestAnimationFrame(step);
+  };
+
   const startGame = (x, y) => {
     const newBoard = generateBoard(seed, x, y);
-    revealCell(newBoard, x, y);
     setBoard(newBoard);
     setStatus('playing');
     setStartTime(Date.now());
@@ -276,6 +349,18 @@ const Minesweeper = () => {
     setBV(calculateBV(newBoard));
     setFlags(0);
     setPaused(false);
+    const finalize = (count) => {
+      setAriaMessage(`Revealed ${count} cells`);
+      checkAndHandleWin(newBoard);
+    };
+    if (prefersReducedMotion.current) {
+      revealCell(newBoard, x, y);
+      const count = newBoard.flat().filter((c) => c.revealed).length;
+      setBoard(cloneBoard(newBoard));
+      finalize(count);
+    } else {
+      revealWave(newBoard, x, y, finalize);
+    }
   };
 
   const handleClick = (x, y) => {
@@ -326,6 +411,7 @@ const Minesweeper = () => {
                   setBoard(newBoard);
                   setStatus('lost');
                   playSound('boom');
+                  setAriaMessage('Boom! Game over');
                   return;
                 }
               }
@@ -334,28 +420,29 @@ const Minesweeper = () => {
         }
       }
     } else {
-      const hitMine = revealCell(newBoard, x, y);
-      playSound('reveal');
-      if (hitMine) {
+      if (cell.mine) {
+        revealCell(newBoard, x, y);
         setBoard(newBoard);
         setStatus('lost');
         playSound('boom');
+        setAriaMessage('Boom! Game over');
         return;
+      }
+      playSound('reveal');
+      if (cell.adjacent === 0 && !prefersReducedMotion.current) {
+        revealWave(newBoard, x, y, (count) => {
+          setAriaMessage(`Revealed ${count} cells`);
+          checkAndHandleWin(newBoard);
+        });
+        return;
+      } else {
+        revealCell(newBoard, x, y);
+        setAriaMessage(`Revealed cell at row ${x + 1}, column ${y + 1}`);
       }
     }
 
     setBoard(newBoard);
-    if (checkWin(newBoard)) {
-      setStatus('won');
-      const time = (Date.now() - startTime) / 1000;
-      setElapsed(time);
-      if (typeof window !== 'undefined') {
-        if (!bestTime || time < bestTime) {
-          setBestTime(time);
-          localStorage.setItem('minesweeper-best-time', time.toString());
-        }
-      }
-    }
+    checkAndHandleWin(newBoard);
   };
 
   const toggleFlag = (x, y) => {
@@ -366,6 +453,11 @@ const Minesweeper = () => {
     cell.flagged = !cell.flagged;
     setFlags((f) => f + (cell.flagged ? 1 : -1));
     setBoard(newBoard);
+    setAriaMessage(
+      cell.flagged
+        ? `Flagged cell at row ${x + 1}, column ${y + 1}`
+        : `Unflagged cell at row ${x + 1}, column ${y + 1}`,
+    );
     playSound('flag');
   };
 
@@ -395,6 +487,7 @@ const Minesweeper = () => {
     setCodeInput('');
     setFlags(0);
     setPaused(false);
+    setAriaMessage('');
   };
 
   const copyCode = () => {
@@ -422,13 +515,24 @@ const Minesweeper = () => {
       const y = parseInt(parts[2], 10);
       if (!Number.isNaN(x) && !Number.isNaN(y)) {
         const newBoard = generateBoard(newSeed, x, y);
-        revealCell(newBoard, x, y);
         setBoard(newBoard);
         setStatus('playing');
         setStartTime(Date.now());
         setShareCode(codeInput.trim());
         setBV(calculateBV(newBoard));
         setFlags(0);
+        const finalize = (count) => {
+          setAriaMessage(`Revealed ${count} cells`);
+          checkAndHandleWin(newBoard);
+        };
+        if (prefersReducedMotion.current) {
+          revealCell(newBoard, x, y);
+          const count = newBoard.flat().filter((c) => c.revealed).length;
+          setBoard(cloneBoard(newBoard));
+          finalize(count);
+        } else {
+          revealWave(newBoard, x, y, finalize);
+        }
       }
     }
     setCodeInput('');
@@ -517,6 +621,7 @@ const Minesweeper = () => {
           {sound ? 'Sound: On' : 'Sound: Off'}
         </button>
       </div>
+      <div aria-live="polite" className="sr-only">{ariaMessage}</div>
     </div>
   );
 };
