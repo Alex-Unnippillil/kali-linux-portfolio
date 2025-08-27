@@ -125,8 +125,10 @@ const Wordle = () => {
       };
 
   const emojiMap = colorBlind
-    ? { correct: '🟦', present: '🟧', absent: '⬛' }
+    ? { correct: '🟥', present: '🔺', absent: '⚫' }
     : { correct: '🟩', present: '🟨', absent: '⬛' };
+
+  const shapeMap = { correct: '■', present: '▲', absent: '●' };
 
   const getPossibleWords = () =>
     wordList.filter((word) =>
@@ -228,8 +230,14 @@ const Wordle = () => {
     text += guesses
       .map((g) => g.result.map((r) => emojiMap[r]).join(''))
       .join('\n');
-    navigator.clipboard.writeText(text);
-    setMessage('Copied results to clipboard!');
+    if (navigator.share) {
+      navigator.share({ text }).catch(() => {
+        navigator.clipboard.writeText(text);
+      });
+    } else {
+      navigator.clipboard.writeText(text);
+      setMessage('Copied results to clipboard!');
+    }
   };
 
   useEffect(() => {
@@ -262,24 +270,17 @@ const Wordle = () => {
       return;
     }
 
-    let frame;
-    let start;
-    let last = -1;
-    const animate = (ts) => {
-      if (!start) start = ts;
-      const elapsed = ts - start;
-      const col = Math.min(4, Math.floor(elapsed / 200));
-      if (col > last) {
-        setRevealMap((prev) => ({
-          ...prev,
-          [`${rowIndex}-${col}`]: true,
-        }));
-        last = col;
+    let cancelled = false;
+    const reveal = (col = 0) => {
+      setRevealMap((prev) => ({ ...prev, [`${rowIndex}-${col}`]: true }));
+      if (col < 4 && !cancelled) {
+        setTimeout(() => reveal(col + 1), 300);
       }
-      if (last < 4) frame = requestAnimationFrame(animate);
     };
-    frame = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(frame);
+    reveal();
+    return () => {
+      cancelled = true;
+    };
   }, [guesses]);
 
   const renderCell = (row, col) => {
@@ -289,7 +290,7 @@ const Wordle = () => {
     const status = guessRow?.result[col];
     const revealed = revealMap[`${row}-${col}`];
     let classes =
-      'w-10 h-10 md:w-12 md:h-12 flex items-center justify-center border-2 font-bold text-xl';
+      'w-10 h-10 md:w-12 md:h-12 flex items-center justify-center border-2 font-bold text-xl relative';
     if (status && revealed) {
       classes += ` ${colors[status]} text-white tile-flip`;
     } else {
@@ -303,6 +304,11 @@ const Wordle = () => {
         aria-label={status ? `${letter} ${status}` : letter}
       >
         {letter}
+        {colorBlind && status && revealed && (
+          <span className="absolute bottom-0 right-0 text-xs">
+            {shapeMap[status]}
+          </span>
+        )}
       </div>
     );
   };
