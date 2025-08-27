@@ -11,6 +11,7 @@ const FigletApp = () => {
   const [announce, setAnnounce] = useState('');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
+  const announceTimer = useRef(null);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
@@ -18,6 +19,7 @@ const FigletApp = () => {
     return () => {
       workerRef.current?.terminate();
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
+      clearTimeout(announceTimer.current);
     };
   }, []);
 
@@ -37,6 +39,8 @@ const FigletApp = () => {
     if (output) {
       navigator.clipboard.writeText(output);
       setAnnounce('Copied to clipboard');
+      clearTimeout(announceTimer.current);
+      announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
     }
   };
 
