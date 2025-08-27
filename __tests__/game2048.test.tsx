@@ -33,7 +33,7 @@ test('merge triggers animation', () => {
   expect(firstCell?.querySelector('.merge-ripple')).toBeTruthy();
 });
 
-test('undo only restores last move', () => {
+test('tracks moves and allows multiple undos', () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
     [0, 0, 0, 0],
@@ -43,12 +43,14 @@ test('undo only restores last move', () => {
   const { getByText } = render(<Game2048 />);
   const initial = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
+  fireEvent.keyDown(window, { key: 'ArrowRight' });
+  expect(getByText(/Moves: 2/)).toBeTruthy();
   const undoBtn = getByText('Undo');
   fireEvent.click(undoBtn);
-  let board = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
-  expect(board).toEqual(initial);
+  expect(getByText(/Moves: 1/)).toBeTruthy();
   fireEvent.click(undoBtn);
-  board = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
+  expect(getByText(/Moves: 0/)).toBeTruthy();
+  const board = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
   expect(board).toEqual(initial);
 });
 

@@ -178,7 +178,8 @@ const Game2048 = () => {
   const [board, setBoard] = usePersistentState('2048-board', initBoard, validateBoard);
   const [won, setWon] = usePersistentState('2048-won', false, (v) => typeof v === 'boolean');
   const [lost, setLost] = usePersistentState('2048-lost', false, (v) => typeof v === 'boolean');
-  const [history, setHistory] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [moves, setMoves] = useState(0);
   const [hardMode, setHardMode] = usePersistentState('2048-hard', false, (v) => typeof v === 'boolean');
   const [colorBlind, setColorBlind] = usePersistentState('2048-cb', false, (v) => typeof v === 'boolean');
   const [animCells, setAnimCells] = useState(new Set());
@@ -244,7 +245,7 @@ const Game2048 = () => {
       const { board: moved, merged, score: gained, mergedCells } = result;
       if (!boardsEqual(board, moved)) {
         const added = addRandomTile(moved, hardMode, hardMode ? 2 : 1);
-        setHistory({ board: cloneBoard(board), score });
+        setHistory((h) => [...h, { board: cloneBoard(board), score, moves }]);
         setAnimCells(new Set(added));
         setMergeCells(new Set(mergedCells));
         if (gained > 0) {
@@ -252,6 +253,7 @@ const Game2048 = () => {
           setScorePop(true);
         }
         setBoard(cloneBoard(moved));
+        setMoves((m) => m + 1);
         if (merged) navigator.vibrate?.(50);
         if (mergedCells.length > 1) {
           setCombo((c) => c + 1);
@@ -271,7 +273,7 @@ const Game2048 = () => {
         else if (!hasMoves(moved)) setLost(true);
       }
     },
-    [board, won, lost, hardMode, score, setBoard, setLost, setWon],
+    [board, won, lost, hardMode, score, moves, setBoard, setLost, setWon],
   );
 
   useGameControls(handleDirection, '2048');
@@ -313,7 +315,8 @@ const Game2048 = () => {
 
   const reset = () => {
     setBoard(initBoard(hardMode));
-    setHistory(null);
+    setHistory([]);
+    setMoves(0);
     setWon(false);
     setLost(false);
     setAnimCells(new Set());
@@ -326,14 +329,18 @@ const Game2048 = () => {
   };
 
   const undo = () => {
-    if (!history) return;
-    setBoard(cloneBoard(history.board));
-    setScore(history.score);
-    setWon(checkWin(history.board));
-    setLost(!hasMoves(history.board));
-    setAnimCells(new Set());
-    setMergeCells(new Set());
-    setHistory(null);
+    setHistory((h) => {
+      if (!h.length) return h;
+      const prev = h[h.length - 1];
+      setBoard(cloneBoard(prev.board));
+      setScore(prev.score);
+      setMoves(prev.moves);
+      setWon(checkWin(prev.board));
+      setLost(!hasMoves(prev.board));
+      setAnimCells(new Set());
+      setMergeCells(new Set());
+      return h.slice(0, -1);
+    });
   };
 
   return (
@@ -349,7 +356,7 @@ const Game2048 = () => {
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
             onClick={undo}
-            disabled={!history}
+            disabled={history.length === 0}
           >
             Undo
           </button>
@@ -387,6 +394,7 @@ const Game2048 = () => {
           >
             Score: <span className={scorePop ? 'score-pop' : ''}>{score}</span>
           </div>
+          <div className="px-4 py-2 bg-gray-700 rounded">Moves: {moves}</div>
           <div className="px-4 py-2 bg-gray-700 rounded" data-testid="combo-meter">
             Combo: {combo}
           </div>
