@@ -85,3 +85,52 @@ export function updatePowerUps(list) {
     if (p.life <= 0) list.splice(i, 1);
   }
 }
+
+// Simple seeded RNG using Mulberry32 algorithm
+export function createSeededRNG(seed) {
+  let t = seed >>> 0;
+  return function rand() {
+    t += 0x6d2b79f5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Apply basic physics and wrapping for a ship object
+export function updateShipPosition(ship, width, height) {
+  ship.x = wrap(ship.x + ship.velX, width, ship.r);
+  ship.y = wrap(ship.y + ship.velY, height, ship.r);
+}
+
+// Handle collision between a single bullet and list of asteroids
+export function handleBulletAsteroidCollision(asteroids, bullet) {
+  for (let i = asteroids.length - 1; i >= 0; i -= 1) {
+    const a = asteroids[i];
+    const dist = Math.hypot(a.x - bullet.x, a.y - bullet.y);
+    if (dist < a.r + bullet.r) {
+      if (a.r > 20) {
+        const nr = a.r / 2;
+        asteroids.splice(i, 1, {
+          x: a.x,
+          y: a.y,
+          dx: a.dx,
+          dy: a.dy,
+          r: nr,
+        });
+        asteroids.push({
+          x: a.x,
+          y: a.y,
+          dx: -a.dx,
+          dy: -a.dy,
+          r: nr,
+        });
+      } else {
+        asteroids.splice(i, 1);
+      }
+      bullet.active = false;
+      return true;
+    }
+  }
+  return false;
+}
