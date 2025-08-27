@@ -45,10 +45,14 @@ const LaneRunner = () => {
   const [speed, setSpeed] = useState(0);
   const [running, setRunning] = useState(true);
   const [reset, setReset] = useState(0);
+  const [lives, setLives] = useState(3);
   const gammaRef = useRef(0);
 
   const handleCalibrate = () => setTiltOffset(gammaRef.current);
-  const handleRestart = () => setReset((r) => r + 1);
+  const handleRestart = () => {
+    setLives(3);
+    setReset((r) => r + 1);
+  };
 
   useEffect(() => {
     if (control !== 'tilt') return;
@@ -72,11 +76,13 @@ const LaneRunner = () => {
     setScore(0);
     setSpeed(100);
     setRunning(true);
+    setLives(3);
 
     let playerLane = 1;
     let obstacles = [];
     let s = 100;
     let sc = 0;
+    let l = 3;
     let last = performance.now();
     let spawn = 0;
     let alive = true;
@@ -115,8 +121,15 @@ const LaneRunner = () => {
         prevTilt = tilt;
       }
       if (detectCollision(playerLane, obstacles)) {
-        alive = false;
-        setRunning(false);
+        l -= 1;
+        setLives(l);
+        if (l > 0) {
+          obstacles = [];
+          playerLane = 1;
+        } else {
+          alive = false;
+          setRunning(false);
+        }
       }
       sc = updateScore(sc, s, dt);
       setScore(sc);
@@ -130,6 +143,14 @@ const LaneRunner = () => {
         const ox = o.lane * LANE_WIDTH + 10;
         ctx.fillRect(ox, o.y, LANE_WIDTH - 20, OBSTACLE_HEIGHT);
       });
+
+      // lane speed indicators
+      ctx.fillStyle = 'white';
+      ctx.font = '12px sans-serif';
+      for (let i = 0; i < LANES; i += 1) {
+        const tx = i * LANE_WIDTH + LANE_WIDTH / 2 - 10;
+        ctx.fillText(Math.round(s).toString(), tx, 12);
+      }
       if (alive) animId = requestAnimationFrame(loop);
       else {
         ctx.fillStyle = 'white';
@@ -153,6 +174,7 @@ const LaneRunner = () => {
       <div className="absolute top-2 left-2 bg-black/60 p-2 rounded text-xs space-y-1">
         <div>Score: {Math.floor(score)}</div>
         <div>Speed: {Math.round(speed)}</div>
+        <div>Lives: {lives}</div>
         <div className="flex items-center gap-1">
           <label htmlFor="ctrl">Control:</label>
           <select
