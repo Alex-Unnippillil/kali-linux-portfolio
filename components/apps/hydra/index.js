@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Stepper from './Stepper';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -37,6 +38,7 @@ const HydraApp = () => {
   const [output, setOutput] = useState('');
   const [running, setRunning] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [runId, setRunId] = useState(0);
 
   useEffect(() => {
     setUserLists(loadWordlists('hydraUserLists'));
@@ -85,9 +87,15 @@ const HydraApp = () => {
     listsSetter(lists.filter((l) => l.name !== name));
   };
 
+  const selectedUserList = userLists.find((l) => l.name === selectedUser);
+  const selectedPassList = passLists.find((l) => l.name === selectedPass);
+  const totalAttempts =
+    (selectedUserList?.content.split('\n').filter(Boolean).length || 0) *
+    (selectedPassList?.content.split('\n').filter(Boolean).length || 0);
+
   const runHydra = async () => {
-    const user = userLists.find((l) => l.name === selectedUser);
-    const pass = passLists.find((l) => l.name === selectedPass);
+    const user = selectedUserList;
+    const pass = selectedPassList;
     if (!target || !user || !pass) {
       setOutput('Please provide target, user list and password list');
       return;
@@ -95,6 +103,7 @@ const HydraApp = () => {
 
     setRunning(true);
     setPaused(false);
+    setRunId((id) => id + 1);
     setOutput('');
     try {
       const res = await fetch('/api/hydra', {
@@ -259,6 +268,14 @@ const HydraApp = () => {
           </button>
         )}
       </div>
+
+      <Stepper
+        active={running && !paused}
+        totalAttempts={totalAttempts}
+        backoffThreshold={5}
+        lockoutThreshold={10}
+        runId={runId}
+      />
 
       {output && (
         <pre className="mt-4 bg-black p-2 overflow-auto h-64 whitespace-pre-wrap">{output}</pre>
