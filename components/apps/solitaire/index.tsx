@@ -35,7 +35,7 @@ type AnimatedCard = Card & {
 };
 
 const renderCard = (card: Card) => (
-  <div className="w-16 h-24 rounded border border-black bg-white flex items-center justify-center transition-transform duration-300">
+  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black bg-white flex items-center justify-center transition-transform duration-300">
     <span className={card.color === 'red' ? 'text-red-600' : ''}>
       {valueToString(card.value)}{card.suit}
     </span>
@@ -43,7 +43,7 @@ const renderCard = (card: Card) => (
 );
 
 const renderFaceDown = () => (
-  <div className="w-16 h-24 rounded border border-black bg-blue-800" />
+  <div className="w-16 h-24 min-w-[24px] min-h-[24px] rounded border border-black bg-blue-800" />
 );
 
 const Solitaire = () => {
@@ -66,6 +66,8 @@ const Solitaire = () => {
   const [cascade, setCascade] = useState<AnimatedCard[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const timer = useRef<NodeJS.Timeout | null>(null);
+  const [paused, setPaused] = useState(prefersReducedMotion);
+  const [scale, setScale] = useState(1);
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const tableauRefs = useRef<(HTMLDivElement | null)[]>([]);
   const wasteRef = useRef<HTMLDivElement | null>(null);
@@ -90,6 +92,34 @@ const Solitaire = () => {
       ...saved,
     });
   }, [variant]);
+
+  useEffect(() => {
+    const updateScale = () => {
+      const root = rootRef.current;
+      if (!root) return;
+      const width = root.scrollWidth;
+      const s = Math.min(1, window.innerWidth / width);
+      const minScale = 24 / 64;
+      setScale(Math.max(s, minScale));
+    };
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
+
+  useEffect(() => {
+    const handleVis = () => {
+      if (document.visibilityState === 'hidden') setPaused(true);
+    };
+    document.addEventListener('visibilitychange', handleVis);
+    return () => document.removeEventListener('visibilitychange', handleVis);
+  }, []);
+
+  useEffect(() => {
+    if (prefersReducedMotion) setPaused(true);
+  }, [prefersReducedMotion]);
+
+  const resume = useCallback(() => setPaused(false), []);
 
   const start = useCallback(
     (
@@ -168,11 +198,15 @@ const Solitaire = () => {
       });
       return;
     }
+    if (paused) {
+      if (timer.current) clearInterval(timer.current);
+      return;
+    }
     timer.current = setInterval(() => setTime((t) => t + 1), 1000);
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [won, game, time, isDaily, variant, setStats]);
+  }, [won, paused, game, time, isDaily, variant, setStats]);
 
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {
@@ -184,8 +218,8 @@ const Solitaire = () => {
   useEffect(() => {
     if (won && !prefersReducedMotion) {
       const foundationCards = game.foundations.flat();
-      const cx = window.innerWidth / 2;
-      const cy = window.innerHeight / 2;
+      const cx = (window.innerWidth / 2) / scale;
+      const cy = (window.innerHeight / 2) / scale;
       const radius = Math.min(cx, cy) * 0.8;
       const cards: AnimatedCard[] = foundationCards.map((card, i) => {
         const angle = (i / foundationCards.length) * Math.PI * 2;
@@ -211,7 +245,7 @@ const Solitaire = () => {
         );
       });
     }
-  }, [won, prefersReducedMotion, game.foundations]);
+  }, [won, prefersReducedMotion, game.foundations, scale]);
 
   useEffect(() => {
     if (hint) {
@@ -292,6 +326,7 @@ const Solitaire = () => {
         return;
       }
       const rootRect = root.getBoundingClientRect();
+      const scaleFactor = scale;
       let fromX = 0;
       let fromY = 0;
       let card: Card;
@@ -299,21 +334,27 @@ const Solitaire = () => {
         card = fromState.waste[fromState.waste.length - 1];
         const rect = wasteRef.current?.getBoundingClientRect();
         if (rect) {
-          fromX = rect.left - rootRect.left;
-          fromY = rect.top - rootRect.top;
+          fromX = (rect.left - rootRect.left) / scaleFactor;
+          fromY = (rect.top - rootRect.top) / scaleFactor;
         }
       } else {
         card = fromState.tableau[pile!][fromState.tableau[pile!].length - 1];
         const rect = tableauRefs.current[pile!]?.getBoundingClientRect();
         if (rect) {
-          fromX = rect.left - rootRect.left;
-          fromY = rect.top - rootRect.top + (fromState.tableau[pile!].length - 1) * 24;
+          fromX = (rect.left - rootRect.left) / scaleFactor;
+          fromY =
+            (rect.top - rootRect.top) / scaleFactor +
+            (fromState.tableau[pile!].length - 1) * 24;
         }
       }
       const destIndex = suits.indexOf(card.suit);
       const destRect = foundationRefs.current[destIndex]?.getBoundingClientRect();
-      const toX = destRect ? destRect.left - rootRect.left : fromX;
-      const toY = destRect ? destRect.top - rootRect.top : fromY;
+      const toX = destRect
+        ? (destRect.left - rootRect.left) / scaleFactor
+        : fromX;
+      const toY = destRect
+        ? (destRect.top - rootRect.top) / scaleFactor
+        : fromY;
       const tempFoundations = toState.foundations.map((p, i) =>
         i === destIndex ? p.slice(0, -1) : p,
       );
@@ -343,7 +384,7 @@ const Solitaire = () => {
         cb();
       }, 300);
     },
-    [foundationRefs, tableauRefs, wasteRef, rootRef],
+    [foundationRefs, tableauRefs, wasteRef, rootRef, scale],
   );
 
   const dropToTableau = (pileIndex: number) => {
@@ -459,10 +500,27 @@ const Solitaire = () => {
     <div
       ref={rootRef}
       className="h-full w-full bg-green-700 text-white select-none p-2 relative overflow-hidden"
+      style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
     >
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
       </div>
+      {paused && (
+        <div
+          className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            onClick={resume}
+            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            autoFocus
+          >
+            Resume
+          </button>
+        </div>
+      )}
       {flying.map((c, i) => (
         <div
           key={`fly-${i}`}
@@ -554,10 +612,10 @@ const Solitaire = () => {
         </label>
       </div>
       <div className="flex space-x-4 mb-4">
-        <div className="w-16 h-24" onClick={draw}>
+        <div className="w-16 h-24 min-w-[24px] min-h-[24px]" onClick={draw}>
           {game.stock.length ? renderFaceDown() : <div />}
         </div>
-        <div className="w-16 h-24" onDragOver={(e) => e.preventDefault()}>
+        <div className="w-16 h-24 min-w-[24px] min-h-[24px]" onDragOver={(e) => e.preventDefault()}>
           {game.waste.length ? (
             <div
               ref={wasteRef}
@@ -567,7 +625,7 @@ const Solitaire = () => {
               onDragEnd={handleDragEnd}
               className={`${
                 drag && drag.source === 'waste'
-                  ? 'transform -translate-y-2 shadow-lg z-50'
+                  ? 'transform -translate-y-2 scale-105 shadow-lg z-50'
                   : ''
               } ${hint && hint.source === 'waste' ? 'ring-4 ring-yellow-400' : ''} ${
                 !prefersReducedMotion ? 'transition-transform' : ''
@@ -576,13 +634,13 @@ const Solitaire = () => {
               {renderCard(game.waste[game.waste.length - 1])}
             </div>
           ) : (
-            <div className="w-16 h-24" />
+            <div className="w-16 h-24 min-w-[24px] min-h-[24px]" />
           )}
         </div>
         {game.foundations.map((pile, i) => (
           <div
             key={`f-${i}`}
-            className="w-16 h-24"
+            className="w-16 h-24 min-w-[24px] min-h-[24px]"
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToFoundation(i)}
             ref={(el) => {
@@ -590,7 +648,7 @@ const Solitaire = () => {
             }}
           >
             {pile.length ? renderCard(pile[pile.length - 1]) : (
-              <div className="w-16 h-24 border border-dashed border-white rounded" />
+              <div className="w-16 h-24 min-w-[24px] min-h-[24px] border border-dashed border-white rounded" />
             )}
           </div>
         ))}
@@ -599,7 +657,7 @@ const Solitaire = () => {
         {game.tableau.map((pile, i) => (
           <div
             key={`t-${i}`}
-            className="relative w-16 h-96 border border-black"
+            className="relative w-16 h-96 min-w-[24px] border border-black"
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => dropToTableau(i)}
               ref={(el) => {
@@ -616,7 +674,7 @@ const Solitaire = () => {
                   drag.source === 'tableau' &&
                   drag.pile === i &&
                   idx >= drag.index
-                    ? 'transform -translate-y-2 shadow-lg z-50'
+                    ? 'transform -translate-y-2 scale-105 shadow-lg z-50'
                     : ''
                 } ${
                   hint &&
