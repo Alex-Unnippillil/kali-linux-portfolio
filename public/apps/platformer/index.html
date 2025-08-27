@@ -9,6 +9,17 @@
   <canvas id="game" width="640" height="360"></canvas>
   <div id="timer"></div>
   <div id="complete" class="hidden">Level Complete!</div>
+  <div id="ui">
+    <button id="editToggle">Edit</button>
+    <div id="palette" class="hidden">
+      <button data-tile="1">Block</button>
+      <button data-tile="5">Coin</button>
+      <button data-tile="6">Checkpoint</button>
+      <button data-tile="0">Erase</button>
+      <button data-tile="spawn">Spawn</button>
+      <button id="saveLevel">Save</button>
+    </div>
+  </div>
   <div id="controls">
     <button id="btnLeft">◀</button>
     <button id="btnRight">▶</button>
