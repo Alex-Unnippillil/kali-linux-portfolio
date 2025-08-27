@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../usePersistentState';
+import ExternalFrame from '../ExternalFrame';
 
 const Platformer = () => {
   const [levels, setLevels] = useState([]);
@@ -36,13 +37,13 @@ const Platformer = () => {
   }`;
 
   return (
-    <iframe
+    <ExternalFrame
       ref={frameRef}
       src={src}
       title="Platformer"
       className="w-full h-full"
       frameBorder="0"
-    ></iframe>
+    />
   );
 };
 

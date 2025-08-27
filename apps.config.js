@@ -22,6 +22,15 @@ import { displayQuoteGenerator } from './components/apps/quote_generator';
 import { displayProjectGallery } from './components/apps/project-gallery';
 import { displayNikto } from './components/apps/nikto';
 
+export const iframeAllowlist = [
+  'https://ghbtns.com/',
+  'https://open.spotify.com/',
+  'https://todoist.com/',
+  'https://stackblitz.com/',
+  'https://ghidra.app',
+  'https://www.google.com/',
+];
+
 const createDynamicApp = (path, name) =>
   dynamic(
     () =>
