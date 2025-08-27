@@ -5,7 +5,6 @@ import {
   computeLegalMoves,
   countPieces,
   applyMove,
-  bestMove,
 } from './reversiLogic';
 
 const Reversi = () => {
@@ -14,15 +13,17 @@ const Reversi = () => {
   const [status, setStatus] = useState("Black's turn");
   const [flipping, setFlipping] = useState([]);
   const [preview, setPreview] = useState(null);
-  const [aiDepth, setAiDepth] = useState(2);
+  const [aiPlayouts, setAiPlayouts] = useState(500);
   const [mustPass, setMustPass] = useState(false);
   const [gameOver, setGameOver] = useState(null);
   const [history, setHistory] = useState([]);
   const [future, setFuture] = useState([]);
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [suggestion, setSuggestion] = useState(null);
-    const workerRef = useRef();
-    const handleMoveRef = useRef((r, c) => {});
+  const [moveScores, setMoveScores] = useState({});
+  const workerRef = useRef();
+  const hintWorkerRef = useRef();
+  const handleMoveRef = useRef((r, c) => {});
 
   const legalMoves = useMemo(() => computeLegalMoves(board, player), [board, player]);
 
@@ -36,7 +37,8 @@ const Reversi = () => {
         if (data.player) setPlayer(data.player);
         if (data.history) setHistory(data.history);
         if (data.future) setFuture(data.future);
-        if (data.aiDepth) setAiDepth(data.aiDepth);
+        if (data.aiPlayouts) setAiPlayouts(data.aiPlayouts);
+        else if (data.aiDepth) setAiPlayouts(data.aiDepth);
         if (data.mustPass) setMustPass(data.mustPass);
         if (data.gameOver) setGameOver(data.gameOver);
       } catch (e) {
@@ -52,35 +54,49 @@ const Reversi = () => {
       player,
       history,
       future,
-      aiDepth,
+      aiPlayouts,
       mustPass,
       gameOver,
     };
     window.localStorage.setItem('reversiState', JSON.stringify(state));
-  }, [board, player, history, future, aiDepth, mustPass, gameOver]);
+  }, [board, player, history, future, aiPlayouts, mustPass, gameOver]);
 
   useEffect(() => {
     if (!showSuggestion) {
       setSuggestion(null);
+      setMoveScores({});
       return;
     }
-    const best = bestMove(board, player, 2);
-    setSuggestion(best);
-  }, [showSuggestion, board, player]);
+    if (hintWorkerRef.current) {
+      hintWorkerRef.current.postMessage({ board, player, playouts: aiPlayouts });
+    }
+  }, [showSuggestion, board, player, aiPlayouts]);
 
   useEffect(() => {
-    workerRef.current = new Worker(new URL('./reversi.worker.js', import.meta.url));
+    workerRef.current = new Worker(new URL('../../workers/reversiAI.ts', import.meta.url));
     workerRef.current.onmessage = (e) => {
       const { move } = e.data;
-        if (move) {
-          const [r, c] = move;
-          handleMoveRef.current(r, c);
-        } else {
-          setPlayer('B');
-        }
-      };
-      return () => workerRef.current.terminate();
-    }, []);
+      if (move) {
+        const [r, c] = move;
+        handleMoveRef.current(r, c);
+      } else {
+        setPlayer('B');
+      }
+    };
+    return () => workerRef.current.terminate();
+  }, []);
+
+  useEffect(() => {
+    hintWorkerRef.current = new Worker(new URL('../../workers/reversiAI.ts', import.meta.url));
+    hintWorkerRef.current.onmessage = (e) => {
+      const { move, scores } = e.data;
+      if (scores) {
+        setMoveScores(scores);
+        setSuggestion(move);
+      }
+    };
+    return () => hintWorkerRef.current.terminate();
+  }, []);
 
   useEffect(() => {
     if (Object.keys(legalMoves).length === 0) {
@@ -115,9 +131,9 @@ const Reversi = () => {
       return;
     }
     if (player === 'W' && Object.keys(legalMoves).length && workerRef.current) {
-      workerRef.current.postMessage({ board, player, depth: aiDepth });
+      workerRef.current.postMessage({ board, player, playouts: aiPlayouts });
     }
-  }, [player, legalMoves, board, mustPass, aiDepth]);
+  }, [player, legalMoves, board, mustPass, aiPlayouts]);
 
   const handleMove = (r, c) => {
     const key = `${r}-${c}`;
@@ -156,15 +172,16 @@ const Reversi = () => {
     setHistory([]);
     setFuture([]);
     setSuggestion(null);
+    setMoveScores({});
     setShowSuggestion(false);
   };
 
   const { black, white } = useMemo(() => countPieces(board), [board]);
 
   const changeDepth = (e) => {
-    const depth = parseInt(e.target.value, 10);
-    setAiDepth(depth);
-    ReactGA.event({ category: 'reversi', action: 'ai_level_select', label: depth.toString() });
+    const playouts = parseInt(e.target.value, 10);
+    setAiPlayouts(playouts);
+    ReactGA.event({ category: 'reversi', action: 'ai_level_select', label: playouts.toString() });
   };
 
   const passTurn = () => {
@@ -208,13 +225,13 @@ const Reversi = () => {
         <label htmlFor="aiDepth">AI Level:</label>
         <select
           id="aiDepth"
-          value={aiDepth}
+          value={aiPlayouts}
           onChange={changeDepth}
           className="bg-gray-700 text-white rounded px-2 py-1"
         >
-          <option value={2}>Easy</option>
-          <option value={4}>Medium</option>
-          <option value={6}>Hard</option>
+          <option value={200}>Easy</option>
+          <option value={500}>Medium</option>
+          <option value={1500}>Hard</option>
         </select>
       </div>
       <div className="mb-4">Black: {black} White: {white}</div>
@@ -229,6 +246,7 @@ const Reversi = () => {
             const isPreview = preview && preview.move[0] === r && preview.move[1] === c;
             const willFlip =
               preview && preview.flips.some(([fr, fc]) => fr === r && fc === c);
+            const heat = moveScores[key];
             const isSuggestion =
               suggestion && suggestion[0] === r && suggestion[1] === c;
             return (
@@ -241,6 +259,12 @@ const Reversi = () => {
                   move ? 'cursor-pointer hover:bg-green-500 hover:ring-2 hover:ring-yellow-300' : ''
                 }`}
               >
+                {showSuggestion && heat !== undefined && !cell && (
+                  <div
+                    className="absolute inset-0 pointer-events-none bg-blue-500 rounded-sm"
+                    style={{ opacity: heat }}
+                  />
+                )}
                 {isSuggestion && (
                   <div className="absolute inset-0 pointer-events-none ring-2 ring-blue-400 rounded-sm" />
                 )}
