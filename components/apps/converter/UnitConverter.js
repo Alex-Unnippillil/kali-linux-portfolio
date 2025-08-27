@@ -1,22 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { create, all } from 'mathjs';
+import { unitMap } from './units';
 
 const math = create(all);
-
-const unitMap = {
-  length: {
-    meter: 'm',
-    kilometer: 'km',
-    mile: 'mi',
-    foot: 'ft',
-  },
-  weight: {
-    gram: 'g',
-    kilogram: 'kg',
-    pound: 'lb',
-    ounce: 'oz',
-  },
-};
 
 export const convertUnit = (category, from, to, amount, precision) => {
   const fromUnit = unitMap[category][from];
@@ -26,9 +12,10 @@ export const convertUnit = (category, from, to, amount, precision) => {
 };
 
 const UnitConverter = () => {
-  const [category, setCategory] = useState('length');
-  const [fromUnit, setFromUnit] = useState('meter');
-  const [toUnit, setToUnit] = useState('kilometer');
+  const categories = Object.keys(unitMap);
+  const [category, setCategory] = useState(categories[0]);
+  const [fromUnit, setFromUnit] = useState('');
+  const [toUnit, setToUnit] = useState('');
   const [value, setValue] = useState('');
   const [result, setResult] = useState('');
   const [precision, setPrecision] = useState(4);
@@ -68,8 +55,11 @@ const UnitConverter = () => {
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
-          <option value="length">Length</option>
-          <option value="weight">Weight</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c.charAt(0).toUpperCase() + c.slice(1)}
+            </option>
+          ))}
         </select>
       </label>
       <label className="flex flex-col">
@@ -129,4 +119,3 @@ const UnitConverter = () => {
 };
 
 export default UnitConverter;
-
