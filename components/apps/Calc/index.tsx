@@ -128,7 +128,7 @@ const Calc = () => {
         NumpadEnter: 'Enter',
       };
       const key = keyMap[e.code] || e.key;
-      if (/[0-9.+\-*/^()%]/.test(key)) {
+      if (/^[0-9]$/.test(key) || ['+', '-', '*', '/', '.'].includes(key)) {
         setDisplay((prev) => prev + key);
       } else if (key === 'Enter') {
         evaluateAndTape();
@@ -146,7 +146,7 @@ const Calc = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  });
+  }, [evaluateAndTape, handleMemoryAdd, handleMemorySubtract, handleMemoryRecall]);
 
   const buttons = [
     { label: '7' }, { label: '8' }, { label: '9' }, { label: '/', ariaLabel: 'divide' },
@@ -179,7 +179,7 @@ const Calc = () => {
           <button
             aria-label="copy"
             onClick={() => handleCopy(display)}
-            className="ml-2 px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm"
+            className="ml-2 px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
           >
             Copy
           </button>
@@ -188,35 +188,35 @@ const Calc = () => {
           <button
             aria-label="memory add"
             onClick={handleMemoryAdd}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm"
+            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
           >
             M+
           </button>
           <button
             aria-label="memory subtract"
             onClick={handleMemorySubtract}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm"
+            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
           >
             M-
           </button>
           <button
             aria-label="memory recall"
             onClick={handleMemoryRecall}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm"
+            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
           >
             MR
           </button>
           <button
             aria-label="toggle scientific"
             onClick={() => setShowSci((s) => !s)}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm"
+            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
           >
             Sci
           </button>
           <button
             aria-label="toggle date diff"
             onClick={() => setShowDateDiff((s) => !s)}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm"
+            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
           >
             Date
           </button>
@@ -227,7 +227,7 @@ const Calc = () => {
               <button
                 key={idx}
                 aria-label={btn.ariaLabel}
-                className="bg-gray-800 hover:bg-gray-700 rounded text-xl flex items-center justify-center"
+                className="bg-gray-800 hover:bg-gray-700 rounded text-xl flex items-center justify-center min-w-[24px] min-h-[24px]"
                 onClick={btn.onClick}
               >
                 {btn.label}
@@ -240,7 +240,7 @@ const Calc = () => {
             <button
               key={idx}
               aria-label={btn.ariaLabel || btn.label}
-              className={`bg-gray-800 hover:bg-gray-700 rounded text-xl flex items-center justify-center ${
+              className={`bg-gray-800 hover:bg-gray-700 rounded text-xl flex items-center justify-center min-w-[24px] min-h-[24px] ${
                 btn.colSpan ? `col-span-${btn.colSpan}` : ''
               }`}
               onClick={() => handleButton(btn)}
@@ -275,7 +275,7 @@ const Calc = () => {
           <button
             aria-label="clear tape"
             onClick={resetTape}
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm"
+            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-sm min-w-[24px] min-h-[24px]"
           >
             Clear
           </button>
@@ -287,7 +287,7 @@ const Calc = () => {
               <button
                 aria-label={`copy tape ${idx}`}
                 onClick={() => handleCopy(entry)}
-                className="ml-2 px-1 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+                className="ml-2 px-1 bg-gray-700 hover:bg-gray-600 rounded text-xs min-w-[24px] min-h-[24px]"
               >
                 Copy
               </button>

@@ -555,8 +555,8 @@ const apps = [
     screen: displayTerminalCalc,
     resizable: false,
     allowMaximize: false,
-    defaultWidth: 25,
-    defaultHeight: 40,
+    defaultWidth: 28,
+    defaultHeight: 50,
   },
   {
     id: 'terminal',
