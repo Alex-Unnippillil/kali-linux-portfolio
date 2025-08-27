@@ -2,7 +2,6 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { logEvent } from './utils/analytics';
 
-import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
 import { displayVsCode } from './components/apps/vscode';
 import { displaySettings } from './components/apps/settings';
@@ -41,6 +40,7 @@ const createDisplay = (Component) => (addFolder, openApp) => (
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
+const XApp = createDynamicApp('x', 'X');
 const CalcApp = createDynamicApp('calc', 'Calc');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
@@ -112,6 +112,7 @@ const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 
 const displayTerminal = createDisplay(TerminalApp);
 const displayTerminalCalc = createDisplay(CalcApp);
+const displayX = createDisplay(XApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
 const displayConnectFour = createDisplay(ConnectFourApp);
