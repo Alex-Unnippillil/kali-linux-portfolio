@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ratePuzzle, getHint } from '../../workers/sudokuSolver';
+import { ratePuzzle, getHint, solve } from '../../workers/sudokuSolver';
 
 const SIZE = 9;
 const range = (n) => Array.from({ length: n }, (_, i) => i);
@@ -136,11 +136,13 @@ const Sudoku = () => {
       .fill(0)
       .map(() => Array(SIZE).fill(false)),
   );
+  const [solution, setSolution] = useState([]);
 
   const startGame = (seed) => {
-    const { puzzle } = generateSudoku(difficulty, seed);
+    const { puzzle, solution } = generateSudoku(difficulty, seed);
     setPuzzle(puzzle);
     setBoard(puzzle.map((r) => r.slice()));
+    setSolution(solution);
     const emptyNotes =
       Array(SIZE)
         .fill(0)
@@ -196,6 +198,14 @@ const Sudoku = () => {
           );
           setCompleted(data.completed);
           setTime(data.time || 0);
+          if (data.solution) setSolution(data.solution);
+          else
+            try {
+              const { solution } = solve(data.puzzle);
+              setSolution(solution);
+            } catch (e) {
+              setSolution([]);
+            }
           const stored = localStorage.getItem(
             `sudoku-best-${data.difficulty || 'easy'}`,
           );
@@ -227,13 +237,14 @@ const Sudoku = () => {
       board,
       notes,
       manualNotes,
+      solution,
       difficulty,
       useDaily,
       time,
       completed,
     };
     localStorage.setItem('sudoku-progress', JSON.stringify(data));
-  }, [board, notes, manualNotes, time, puzzle, difficulty, useDaily, completed]);
+  }, [board, notes, manualNotes, solution, time, puzzle, difficulty, useDaily, completed]);
 
   useEffect(() => {
     if (!completed || typeof window === 'undefined') return;
@@ -270,6 +281,12 @@ const Sudoku = () => {
     if (!noteMode && !forceNote) {
       if (hasConflict(newBoard, r, c, newBoard[r][c])) {
         setAriaMessage(`Conflict at row ${r + 1}, column ${c + 1}`);
+      } else if (
+        solution.length > 0 &&
+        newBoard[r][c] !== 0 &&
+        newBoard[r][c] !== solution[r][c]
+      ) {
+        setAriaMessage(`Incorrect value at row ${r + 1}, column ${c + 1}`);
       }
       checkSolvedLines(newBoard, r, c);
       if (isBoardComplete(newBoard)) {
@@ -471,6 +488,8 @@ const Sudoku = () => {
               selectedCell &&
               board[selectedCell.r][selectedCell.c] !== 0 &&
               board[selectedCell.r][selectedCell.c] === val;
+            const wrong =
+              !original && solution.length > 0 && val !== 0 && val !== solution[r][c];
             return (
               <div
                 key={`${r}-${c}`}
@@ -479,12 +498,16 @@ const Sudoku = () => {
                 } ${inHighlight ? 'bg-yellow-100' : ''} ${
                   isSelected ? 'bg-yellow-200' : ''
                 } ${sameDigit ? 'match-glow' : ''} ${
-                  conflict ? 'bg-red-700 error-pulse' : ''
+                  conflict
+                    ? 'bg-red-700 error-pulse'
+                    : wrong
+                    ? 'bg-red-200'
+                    : ''
                 } ${shimmer ? 'shimmer' : ''} ${isHint ? 'ring-2 ring-yellow-400' : ''}`}
               >
                 <input
                   className={`w-full h-full text-center outline-none bg-transparent ${
-                    conflict ? 'text-white' : 'text-black'
+                    conflict ? 'text-white' : wrong ? 'text-red-500' : 'text-black'
                   }`}
                   aria-label={`Row ${r + 1} Column ${c + 1}`}
                   value={val === 0 ? '' : val}
@@ -504,9 +527,17 @@ const Sudoku = () => {
                   inputMode="numeric"
                 />
                 {notes[r][c].length > 0 && val === 0 && (
-                  <div className="absolute inset-0 grid grid-cols-3 text-[8px] leading-3 text-gray-700 pointer-events-none">
+                  <div className="absolute inset-0 grid grid-cols-3 text-[8px] leading-3 pointer-events-none">
                     {range(9).map((n) => (
-                      <div key={n} className="flex items-center justify-center">
+                      <div
+                        key={n}
+                        className={`flex items-center justify-center ${
+                          notes[r][c].includes(n + 1) &&
+                          !isValid(board, r, c, n + 1)
+                            ? 'text-red-500'
+                            : 'text-gray-700'
+                        }`}
+                      >
                         {notes[r][c].includes(n + 1) ? n + 1 : ''}
                       </div>
                     ))}
