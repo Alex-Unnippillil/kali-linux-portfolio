@@ -56,6 +56,17 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
   });
 }
 
+// Minimal IntersectionObserver mock so components using it don't fail in tests
+if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
+  class IntersectionObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  // @ts-ignore
+  window.IntersectionObserver = IntersectionObserverMock;
+}
+
 // Minimal Worker mock for tests
 class WorkerMock {
   postMessage() {}

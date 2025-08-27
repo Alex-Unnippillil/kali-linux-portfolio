@@ -1,232 +1,160 @@
-import React, {
-  useEffect,
-  useState,
-  useMemo,
-  useCallback,
-} from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
 
-const CHANNEL_HANDLE = 'Alex-Unnippillil';
+const RESULTS_PER_PAGE = 12;
 
-// Renders a small YouTube browser similar to the YouTube mobile UI.
-// Videos can be fetched from the real API if an API key is provided or
-// injected via the `initialVideos` prop (used in tests).
+// Lightweight YouTube search client that works during static export.
+// All requests are made from the browser using the YouTube Data API v3.
+// Videos can also be injected via the `initialVideos` prop (used in tests).
 export default function YouTubeApp({ initialVideos = [] }) {
-  const [videos, setVideos] = useState(initialVideos);
-  const [playlists, setPlaylists] = useState([]); // [{id,title}]
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('date');
-  const [search, setSearch] = useState('');
-
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
-  // Fetch videos from YouTube when an API key is available and no initial
-  // videos are supplied. This mirrors the behaviour of the original app but
-  // keeps the logic concise.
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [videos, setVideos] = useState(initialVideos);
+  const [nextPage, setNextPage] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Persisted queue of upcoming videos
+  const [queue, setQueue] = usePersistentState('youtube-queue', []);
+
+  // Toggle to open videos on youtube-nocookie.com
+  const [noCookie, setNoCookie] = usePersistentState('youtube-no-cookie', false);
+
+  const sentinelRef = useRef(null);
+
+  // Debounce search input to limit API calls
   useEffect(() => {
-    if (!apiKey || initialVideos.length) return;
+    const id = setTimeout(() => setDebouncedQuery(query), 500);
+    return () => clearTimeout(id);
+  }, [query]);
 
-    async function fetchData() {
+  const formatItems = useCallback((items = []) =>
+    items.map((item) => {
+      const id = item.id.videoId || item.id;
+      const snippet = item.snippet || {};
+      return {
+        id,
+        title: snippet.title,
+        publishedAt: snippet.publishedAt,
+        thumbnail: snippet.thumbnails?.medium?.url,
+      };
+    }),
+  []);
+
+  const fetchResults = useCallback(
+    async (pageToken) => {
+      if (!apiKey || !debouncedQuery) return;
+      setLoading(true);
       try {
-        const channelRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/channels?part=snippet&forHandle=${CHANNEL_HANDLE}&key=${apiKey}`
+        const token = pageToken ? `&pageToken=${pageToken}` : '';
+        const searchUrl =
+          `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${RESULTS_PER_PAGE}` +
+          `&q=${encodeURIComponent(debouncedQuery)}&key=${apiKey}${token}`;
+        const res = await fetch(searchUrl);
+        const data = await res.json();
+        setVideos((prev) =>
+          pageToken ? [...prev, ...formatItems(data.items)] : formatItems(data.items),
         );
-        const channelData = await channelRes.json();
-        const channelId = channelData.items?.[0]?.id;
-        if (!channelId) return;
-
-        const playlistsRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/playlists?part=snippet&channelId=${channelId}&maxResults=50&key=${apiKey}`
-        );
-        const playlistsData = await playlistsRes.json();
-        const list = playlistsData.items?.map((p) => ({
-          id: p.id,
-          title: p.snippet.title,
-        })) || [];
-
-        // Include the automatically generated "Liked videos" playlist
-        const favoritesId = `LL${channelId}`;
-        list.push({ id: favoritesId, title: 'Favorites' });
-        setPlaylists(list);
-
-        // Helper to fetch *all* videos from a playlist by following the
-        // YouTube API's `nextPageToken` pagination.
-        async function fetchPlaylistVideos(pl) {
-          let pageToken;
-          const items = [];
-
-          do {
-            const tokenParam = pageToken ? `&pageToken=${pageToken}` : '';
-            const res = await fetch(
-              `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${pl.id}&maxResults=50&key=${apiKey}${tokenParam}`
-            );
-            const data = await res.json();
-
-            items.push(
-              ...(data.items?.map((item) => {
-                const id = item.snippet.resourceId.videoId;
-                return {
-                  id,
-                  title: item.snippet.title,
-                  playlist: pl.title,
-                  publishedAt: item.snippet.publishedAt,
-                  thumbnail: item.snippet.thumbnails?.medium?.url,
-                  channelTitle: item.snippet.channelTitle,
-                  url: `https://www.youtube.com/watch?v=${id}`,
-                };
-              }) || [])
-            );
-
-            pageToken = data.nextPageToken;
-          } while (pageToken);
-
-          return items;
-        }
-
-        const allVideosData = await Promise.all(
-          list.map((pl) => fetchPlaylistVideos(pl))
-        );
-
-        // Replace the existing feed and deduplicate by video ID to
-        // prevent stale entries from accumulating in the list.
-        const flat = allVideosData.flat();
-        const unique = Array.from(new Map(flat.map((v) => [v.id, v])).values());
-        setVideos(unique);
+        setNextPage(data.nextPageToken || null);
       } catch (err) {
         // eslint-disable-next-line no-console
-        console.error('Failed to load YouTube data', err);
+        console.error('Failed to fetch YouTube data', err);
+      } finally {
+        setLoading(false);
       }
-    }
+    },
+    [apiKey, debouncedQuery, formatItems],
+  );
 
-    fetchData();
-  }, [apiKey, initialVideos.length]);
-
-  // When initial videos are passed in (e.g. during tests), populate playlists
-  // from that data so the category tabs render correctly.
+  // Fetch when the debounced query changes
   useEffect(() => {
-    if (initialVideos.length) {
-      const titles = Array.from(new Set(initialVideos.map((v) => v.playlist)));
-      setPlaylists(titles.map((title) => ({ id: title, title })));
+    if (debouncedQuery) {
+      fetchResults();
+    } else {
+      setVideos(initialVideos);
+      setNextPage(null);
     }
-  }, [initialVideos]);
+  }, [debouncedQuery, fetchResults, initialVideos]);
 
-  const categories = useMemo(
-    () => [
-      'All',
-      ...Array.from(
-        new Set(
-          [
-            ...playlists.map((p) => p.title),
-            ...videos.map((v) => v.playlist),
-          ].filter(Boolean)
-        )
-      ),
-    ],
-    [playlists, videos]
+  // Infinite scroll sentinel
+  const handleIntersect = useCallback(
+    (entries) => {
+      if (entries[0].isIntersecting && nextPage && !loading) {
+        fetchResults(nextPage);
+      }
+    },
+    [nextPage, loading, fetchResults],
   );
 
-  const filtered = useMemo(
-    () =>
-      videos
-        .filter((v) => activeCategory === 'All' || v.playlist === activeCategory)
-        .filter((v) =>
-          (v.title || '').toLowerCase().includes(search.toLowerCase())
-        ),
-    [videos, activeCategory, search]
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return undefined;
+    const observer = new IntersectionObserver(handleIntersect);
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [handleIntersect]);
+
+  const addToQueue = useCallback(
+    (video) => setQueue((q) => [...q, video]),
+    [setQueue],
   );
 
-  const sorted = useMemo(() => {
-    const list = [...filtered];
-    switch (sortBy) {
-      case 'dateAsc':
-        return list.sort((a, b) =>
-          new Date(a.publishedAt || 0) - new Date(b.publishedAt || 0)
-        );
-      case 'title':
-        return list.sort((a, b) =>
-          (a.title || '').localeCompare(b.title || '')
-        );
-      case 'playlist':
-        return list.sort((a, b) =>
-          (a.playlist || '').localeCompare(b.playlist || '')
-        );
-      case 'date':
-      default:
-        return list.sort((a, b) =>
-          new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0)
-        );
-    }
-  }, [filtered, sortBy]);
-
-  const handleCategoryClick = useCallback((cat) => setActiveCategory(cat), []);
-
-  const handleSortChange = useCallback((e) => {
-    const { value } = e.target;
-    setSortBy(value);
-  }, []);
-
-  const handleSearchChange = useCallback((e) => {
-    const { value } = e.target;
-    setSearch(value);
-  }, []);
+  const videoUrl = useCallback(
+    (id) =>
+      noCookie
+        ? `https://www.youtube-nocookie.com/embed/${id}`
+        : `https://www.youtube.com/watch?v=${id}`,
+    [noCookie],
+  );
 
   return (
-    <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
+    <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white p-3">
       {!apiKey && videos.length === 0 ? (
-        <div className="p-2">
-          <p>YouTube API key is not configured.</p>
-        </div>
+        <p>YouTube API key is not configured.</p>
       ) : (
         <>
-          {/* Search + sorting */}
-          <div className="p-3 flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             <input
               placeholder="Search"
               className="flex-1 min-w-[150px] text-black px-3 py-2 rounded"
-              value={search}
-              onChange={handleSearchChange}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
             />
-            <label htmlFor="sort" className="sr-only">
-              Sort by
+            <label className="flex items-center gap-1 text-sm">
+              <input
+                type="checkbox"
+                checked={noCookie}
+                onChange={(e) => setNoCookie(e.target.checked)}
+              />
+              no-cookie
             </label>
-            <select
-              id="sort"
-              className="text-black px-3 py-2 rounded"
-              value={sortBy}
-              onChange={handleSortChange}
-            >
-              <option value="date">Newest First</option>
-              <option value="dateAsc">Oldest First</option>
-              <option value="title">Title (A-Z)</option>
-              <option value="playlist">Playlist</option>
-            </select>
           </div>
 
-          {/* Category tabs */}
-          <div className="overflow-x-auto px-3 pb-2 flex flex-wrap gap-2">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => handleCategoryClick(cat)}
-                className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
-                  activeCategory === cat
-                    ? 'bg-red-600 text-white'
-                    : 'bg-gray-700 hover:bg-gray-600'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+          {queue.length > 0 && (
+            <div className="mb-3">
+              <h2 className="font-bold mb-1 text-sm">Queue</h2>
+              <ul className="flex flex-col gap-1 text-sm" data-testid="queue-list">
+                {queue.map((v) => (
+                  <li key={v.id}>{v.title}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-          {/* Video list */}
-          <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-            {sorted.map((video) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+            {videos.map((video) => (
               <div
                 key={video.id}
                 data-testid="video-card"
-                className="bg-gray-800 rounded-lg overflow-hidden shadow flex flex-col hover:shadow-lg transition"
+                className="bg-gray-800 rounded-lg overflow-hidden shadow flex flex-col"
               >
-                <a href={video.url} target="_blank" rel="noreferrer" className="block">
+                <a
+                  href={videoUrl(video.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block"
+                >
                   {video.thumbnail && (
                     <img src={video.thumbnail} alt={video.title} className="w-full" />
                   )}
@@ -244,11 +172,21 @@ export default function YouTubeApp({ initialVideos = [] }) {
                   </div>
                 </a>
                 <div className="px-2 pb-2 text-xs text-gray-300">
-                  {video.playlist} • {new Date(video.publishedAt).toLocaleDateString()}
+                  {video.publishedAt
+                    ? new Date(video.publishedAt).toLocaleDateString()
+                    : ''}
                 </div>
+                <button
+                  className="mx-2 mb-2 text-xs bg-red-600 hover:bg-red-500 text-white rounded px-2 py-1"
+                  onClick={() => addToQueue(video)}
+                >
+                  Add to Queue
+                </button>
               </div>
             ))}
           </div>
+          <div ref={sentinelRef} />
+          {loading && <p className="mt-2 text-center text-sm">Loading...</p>}
         </>
       )}
     </div>
