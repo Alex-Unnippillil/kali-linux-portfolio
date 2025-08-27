@@ -1,52 +1,96 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 /**
- * Hook to handle keyboard arrow keys and touch swipe gestures.
- * Calls the provided callback with a direction object: {x, y}.
+ * Generic game control hook supporting both keyboard and touch input.
+ *
+ * When used with directional games it can be called with a callback:
+ *   useGameControls((dir) => { ... });
+ *
+ * For more advanced games provide a canvas ref to enable virtual joystick
+ * controls and read the returned control state:
+ *   const controls = useGameControls(canvasRef);
+ *
+ * The returned state contains:
+ *   { keys, joystick: {active, x, y}, fire, hyperspace }
  */
-const useGameControls = (onDirection) => {
-  // keyboard controls
+const useGameControls = (arg1, cb) => {
+  const controls = useRef({
+    keys: {},
+    joystick: { active: false, x: 0, y: 0, sx: 0, sy: 0 },
+    fire: false,
+    hyperspace: false,
+  });
+
+  const canvasRef = arg1 && typeof arg1 === 'object' && 'current' in arg1 ? arg1 : null;
+  const callback = typeof arg1 === 'function' ? arg1 : cb;
+
+  // Keyboard controls
   useEffect(() => {
-    const handleKey = (e) => {
-      if (e.key === 'ArrowUp') onDirection({ x: 0, y: -1 });
-      if (e.key === 'ArrowDown') onDirection({ x: 0, y: 1 });
-      if (e.key === 'ArrowLeft') onDirection({ x: -1, y: 0 });
-      if (e.key === 'ArrowRight') onDirection({ x: 1, y: 0 });
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [onDirection]);
-
-  // touch swipe controls
-  useEffect(() => {
-    let startX = 0;
-    let startY = 0;
-
-    const start = (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    };
-
-    const end = (e) => {
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = e.changedTouches[0].clientY - startY;
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 30) onDirection({ x: 1, y: 0 });
-        else if (dx < -30) onDirection({ x: -1, y: 0 });
-      } else {
-        if (dy > 30) onDirection({ x: 0, y: 1 });
-        else if (dy < -30) onDirection({ x: 0, y: -1 });
+    const handleDown = (e) => {
+      controls.current.keys[e.key] = true;
+      if (e.key === ' ') controls.current.fire = true;
+      if (e.key === 'Shift') controls.current.hyperspace = true;
+      if (callback) {
+        if (e.key === 'ArrowUp') callback({ x: 0, y: -1 });
+        if (e.key === 'ArrowDown') callback({ x: 0, y: 1 });
+        if (e.key === 'ArrowLeft') callback({ x: -1, y: 0 });
+        if (e.key === 'ArrowRight') callback({ x: 1, y: 0 });
       }
     };
-
-    window.addEventListener('touchstart', start);
-    window.addEventListener('touchend', end);
-    return () => {
-      window.removeEventListener('touchstart', start);
-      window.removeEventListener('touchend', end);
+    const handleUp = (e) => {
+      delete controls.current.keys[e.key];
+      if (e.key === ' ') controls.current.fire = false;
+      if (e.key === 'Shift') controls.current.hyperspace = false;
     };
-  }, [onDirection]);
+    window.addEventListener('keydown', handleDown);
+    window.addEventListener('keyup', handleUp);
+    return () => {
+      window.removeEventListener('keydown', handleDown);
+      window.removeEventListener('keyup', handleUp);
+    };
+  }, [callback]);
+
+  // Touch controls / virtual joystick
+  useEffect(() => {
+    const target = canvasRef?.current || window;
+    if (!target) return () => {};
+    const joy = controls.current.joystick;
+    const start = (e) => {
+      if (e.touches.length === 1) {
+        joy.active = true;
+        joy.sx = e.touches[0].clientX;
+        joy.sy = e.touches[0].clientY;
+        joy.x = 0;
+        joy.y = 0;
+      } else if (e.touches.length > 1) {
+        controls.current.fire = true;
+      }
+    };
+    const move = (e) => {
+      if (!joy.active) return;
+      const t = e.touches[0];
+      joy.x = Math.max(-1, Math.min(1, (t.clientX - joy.sx) / 40));
+      joy.y = Math.max(-1, Math.min(1, (t.clientY - joy.sy) / 40));
+      e.preventDefault();
+    };
+    const end = (e) => {
+      if (e.touches.length === 0) {
+        joy.active = false;
+        joy.x = 0;
+        joy.y = 0;
+      }
+    };
+    target.addEventListener('touchstart', start, { passive: false });
+    target.addEventListener('touchmove', move, { passive: false });
+    target.addEventListener('touchend', end);
+    return () => {
+      target.removeEventListener('touchstart', start);
+      target.removeEventListener('touchmove', move);
+      target.removeEventListener('touchend', end);
+    };
+  }, [canvasRef]);
+
+  return controls.current;
 };
 
 export default useGameControls;
-

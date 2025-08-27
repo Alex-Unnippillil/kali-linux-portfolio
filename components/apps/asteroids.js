@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
 import {
-  wrap,
   createBulletPool,
   spawnBullet,
   updateBullets,
@@ -11,11 +10,12 @@ import {
 } from './asteroids-utils';
 import useGameControls from './useGameControls';
 import GameLayout from './GameLayout';
+import usePersistentState from '../usePersistentState';
 
 // Arcade-style tuning constants
 const THRUST = 0.1;
 const INERTIA = 0.99;
-const COLLISION_COOLDOWN = 60; // frames
+const INVULN_TIME = 120; // frames of spawn invulnerability
 const MULTIPLIER_TIMEOUT = 180; // frames
 const MAX_MULTIPLIER = 5;
 
@@ -99,6 +99,7 @@ const Asteroids = () => {
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [restartKey, setRestartKey] = useState(0);
+  const [bestScore, setBestScore] = usePersistentState('asteroids-best-score', 0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -114,6 +115,13 @@ const Asteroids = () => {
     resize();
     window.addEventListener('resize', resize);
 
+    const wrapPosition = (obj) => {
+      if (obj.x < -obj.r) obj.x = canvas.width + obj.r;
+      else if (obj.x > canvas.width + obj.r) obj.x = -obj.r;
+      if (obj.y < -obj.r) obj.y = canvas.height + obj.r;
+      else if (obj.y > canvas.height + obj.r) obj.y = -obj.r;
+    };
+
     // Game state
     const ship = {
       x: canvas.width / 2,
@@ -125,7 +133,7 @@ const Asteroids = () => {
       cooldown: 0,
       shield: 0,
       rapidFire: 0,
-      hitCooldown: 0,
+      hitCooldown: INVULN_TIME,
     };
     let lives = 3;
     let score = 0;
@@ -244,11 +252,11 @@ const Asteroids = () => {
         ship.x = canvas.width / 2;
         ship.y = canvas.height / 2;
         ship.velX = 0;
-        ship.velY = 0;
-        ship.angle = 0;
-        multiplier = 1;
+      ship.velY = 0;
+      ship.angle = 0;
+      multiplier = 1;
       }
-      ship.hitCooldown = COLLISION_COOLDOWN;
+      ship.hitCooldown = INVULN_TIME;
       if (lives < 0) {
         lives = 3;
         score = 0;
@@ -264,6 +272,7 @@ const Asteroids = () => {
       const a = asteroids[index];
       spawnParticles(a.x, a.y, 20, 'white');
       score += 100 * multiplier;
+      setBestScore((s) => (score > s ? score : s));
       multiplier = Math.min(multiplier + 1, MAX_MULTIPLIER);
       multiplierTimer = MULTIPLIER_TIMEOUT;
       ga.split(a.r);
@@ -292,6 +301,7 @@ const Asteroids = () => {
       ufo.active = false;
       playSound(220);
       score += 500 * multiplier;
+      setBestScore((s) => (score > s ? score : s));
       multiplier = Math.min(multiplier + 1, MAX_MULTIPLIER);
       multiplierTimer = MULTIPLIER_TIMEOUT;
     }
@@ -331,8 +341,9 @@ const Asteroids = () => {
       }
       ship.velX *= INERTIA;
       ship.velY *= INERTIA;
-      ship.x = wrap(ship.x + ship.velX, canvas.width, ship.r);
-      ship.y = wrap(ship.y + ship.velY, canvas.height, ship.r);
+      ship.x += ship.velX;
+      ship.y += ship.velY;
+      wrapPosition(ship);
       ship.cooldown = Math.max(0, ship.cooldown - 1);
       ship.rapidFire = Math.max(0, ship.rapidFire - 1);
       ship.shield = Math.max(0, ship.shield - 1);
@@ -345,8 +356,9 @@ const Asteroids = () => {
       updatePowerUps(powerUps);
 
       asteroids.forEach((a) => {
-        a.x = wrap(a.x + a.dx, canvas.width, a.r);
-        a.y = wrap(a.y + a.dy, canvas.height, a.r);
+        a.x += a.dx;
+        a.y += a.dy;
+        wrapPosition(a);
       });
 
       // UFO logic
@@ -433,6 +445,8 @@ const Asteroids = () => {
       ctx.save();
       ctx.translate(ship.x, ship.y);
       ctx.rotate(ship.angle);
+      if (ship.hitCooldown > 0 && Math.floor(ship.hitCooldown / 5) % 2 === 0)
+        ctx.globalAlpha = 0.3;
       ctx.beginPath();
       ctx.moveTo(12, 0);
       ctx.lineTo(-12, 8);
@@ -440,6 +454,7 @@ const Asteroids = () => {
       ctx.closePath();
       ctx.strokeStyle = 'white';
       ctx.stroke();
+      ctx.globalAlpha = 1;
       ctx.restore();
       if (ship.shield > 0) {
         ctx.beginPath();
@@ -498,6 +513,7 @@ const Asteroids = () => {
       ctx.font = '16px monospace';
       ctx.fillText(`Score: ${score} x${multiplier}`, 10, 20);
       ctx.fillText(`Lives: ${lives}`, 10, 40);
+      ctx.fillText(`Best: ${bestScore}`, 10, 60);
 
       requestRef.current = requestAnimationFrame(update);
     };
