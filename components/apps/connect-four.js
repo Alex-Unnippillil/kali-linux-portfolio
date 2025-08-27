@@ -202,6 +202,7 @@ const ConnectFour = () => {
     setWinner(null);
     setWinningCells([]);
     setPlayer('red');
+    setSelectedCol(Math.floor(COLS / 2));
   };
 
   return (
@@ -209,19 +210,17 @@ const ConnectFour = () => {
       <div className="mb-2 flex gap-4 items-center">
         <div>Red: {scores.red}</div>
         <div>Yellow: {scores.yellow}</div>
-        <div>
-          Depth:
-          <select
-            className="ml-1 bg-gray-700"
+        <div className="flex items-center">
+          <span>Depth:</span>
+          <input
+            type="range"
+            min={1}
+            max={6}
             value={depth}
             onChange={(e) => setDepth(parseInt(e.target.value, 10))}
-          >
-            {[1, 2, 3, 4, 5].map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
+            className="ml-1"
+          />
+          <span className="ml-1 w-4 text-center">{depth}</span>
         </div>
       </div>
       {winner && (
@@ -230,7 +229,22 @@ const ConnectFour = () => {
         </div>
       )}
       <div className="relative">
-        <div className="grid grid-cols-7 gap-1">
+        {selectedCol >= 0 && (
+          <div
+            className="absolute left-0 -top-10 transition-transform pointer-events-none"
+            style={{ transform: `translateX(${selectedCol * SLOT}px)` }}
+          >
+            <div
+              className={`h-8 w-8 rounded-full opacity-50 ${
+                player === 'red' ? 'bg-red-500' : 'bg-yellow-400'
+              }`}
+            />
+          </div>
+        )}
+        <div
+          className="grid grid-cols-7 gap-1"
+          onMouseLeave={() => setSelectedCol(-1)}
+        >
           {board.map((row, rIdx) =>
             row.map((cell, cIdx) => {
               const isWin = winningCells.some((p) => p.r === rIdx && p.c === cIdx);
@@ -242,6 +256,11 @@ const ConnectFour = () => {
                   }`}
                   onClick={() => dropDisc(cIdx)}
                   onMouseEnter={() => setSelectedCol(cIdx)}
+                  onTouchStart={() => setSelectedCol(cIdx)}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    dropDisc(cIdx);
+                  }}
                 >
                   {cell && (
                     <div
@@ -281,4 +300,6 @@ const ConnectFour = () => {
 };
 
 export default ConnectFour;
+
+export { createEmptyBoard, checkWinner, minimax };
 
