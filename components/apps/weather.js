@@ -210,29 +210,42 @@ const getCondition = (code) =>
 const Weather = () => {
   const [data, setData] = useState(null);
   const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    const fetchForecast = async (lat, lon) => {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=auto`;
+  const [locationDenied, setLocationDenied] = useState(false);
+  const [city, setCity] = useState('');
+  const [announcement, setAnnouncement] = useState('');
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [points, setPoints] = useState('');
+  const pointsWorkerRef = useRef(null);
+  const chartRef = useRef(null);
+  const timesRef = useRef(null);
+  const fetchForecast = async (lat, lon, cityName) => {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=auto`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch forecast');
+      const json = await res.json();
+      setData(json);
+      setLastUpdated(new Date());
+      setAnnouncement(`Weather updated${cityName ? ' for ' + cityName : ''}`);
+    } catch {
       try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('Failed to fetch forecast');
-        const json = await res.json();
-        setData(json);
-      } catch {
-        try {
-          const cached = await caches.match(url);
-          if (cached) {
-            const json = await cached.json();
-            setData(json);
-          }
-        } catch {
-          // ignore
+        const cached = await caches.match(url);
+        if (cached) {
+          const json = await cached.json();
+          setData(json);
+          setLastUpdated(new Date());
+          setAnnouncement('Weather loaded from cache');
         }
+      } catch {
+        // ignore
       }
-    };
+    }
+  };
 
+  // S1: Geolocation fallback with optional manual city entry
+  useEffect(() => {
     if (!navigator.geolocation) {
+      setLocationDenied(true);
       fetchForecast(defaultLocation.latitude, defaultLocation.longitude);
       return;
     }
@@ -242,11 +255,13 @@ const Weather = () => {
         fetchForecast(latitude, longitude);
       },
       () => {
+        setLocationDenied(true);
         fetchForecast(defaultLocation.latitude, defaultLocation.longitude);
       }
     );
   }, []);
 
+  // S2: Respect reduced motion preference
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const handler = (e) => setReduceMotion(e.matches);
@@ -254,6 +269,71 @@ const Weather = () => {
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
+
+  // S3: Offload polyline generation to worker only when needed
+  useEffect(() => {
+    pointsWorkerRef.current = new Worker(
+      new URL('./weather.worker.js', import.meta.url)
+    );
+    pointsWorkerRef.current.onmessage = (e) => setPoints(e.data);
+    return () => pointsWorkerRef.current.terminate();
+  }, []);
+
+  useEffect(() => {
+    if (!data || !pointsWorkerRef.current) return;
+    pointsWorkerRef.current.postMessage({
+      temps: data.hourly.temperature_2m.slice(0, 24),
+    });
+  }, [data]);
+
+  // S4: Announce updates via hidden live region
+  useEffect(() => {
+    if (lastUpdated) {
+      setAnnouncement(
+        `Weather updated at ${lastUpdated.toLocaleTimeString()}`
+      );
+    }
+  }, [lastUpdated]);
+
+  // S5: Synchronize scrolling between chart and time labels
+  useEffect(() => {
+    const c = chartRef.current;
+    const t = timesRef.current;
+    if (!c || !t) return;
+    const sync = (source, target) => {
+      target.scrollLeft = source.scrollLeft;
+    };
+    const onC = () => sync(c, t);
+    const onT = () => sync(t, c);
+    c.addEventListener('scroll', onC);
+    t.addEventListener('scroll', onT);
+    return () => {
+      c.removeEventListener('scroll', onC);
+      t.removeEventListener('scroll', onT);
+    };
+  }, []);
+
+  const handleCitySubmit = async (e) => {
+    e.preventDefault();
+    if (!city.trim()) return;
+    try {
+      const res = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+          city.trim()
+        )}`
+      );
+      const json = await res.json();
+      const result = json.results && json.results[0];
+      if (result) {
+        const name = result.name;
+        fetchForecast(result.latitude, result.longitude, name);
+      } else {
+        setAnnouncement('City not found');
+      }
+    } catch {
+      setAnnouncement('City lookup failed');
+    }
+  };
 
   if (!data) {
     return (
@@ -273,31 +353,40 @@ const Weather = () => {
   const { gradient, Icon, label } = getCondition(
     data.current_weather.weathercode
   );
-
-  const hourlyTemps = data.hourly.temperature_2m.slice(0, 24);
   const hourlyTimes = data.hourly.time.slice(0, 24);
-  const maxTemp = Math.max(...hourlyTemps);
-  const minTemp = Math.min(...hourlyTemps);
-  const points = hourlyTemps
-    .map((t, i) => {
-      const x = (i / (hourlyTemps.length - 1)) * 100;
-      const y = ((maxTemp - t) / (maxTemp - minTemp || 1)) * 100;
-      return `${x},${y}`;
-    })
-    .join(' ');
 
   return (
     <div
       className={`h-full w-full flex flex-col items-center justify-start text-white p-4 overflow-auto ${gradient}`}
-      aria-live="polite"
-      role="status"
     >
       <Icon still={reduceMotion} />
+      {locationDenied && (
+        <form
+          onSubmit={handleCitySubmit}
+          className="mb-4 w-full max-w-md flex"
+          aria-label="Manual city entry"
+        >
+          <input
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            className="flex-1 p-2 rounded-l text-black"
+            placeholder="Enter city"
+            aria-label="City"
+          />
+          <button type="submit" className="bg-white/20 px-4 rounded-r">
+            Go
+          </button>
+        </form>
+      )}
       <div className="mb-2">{label}</div>
       <div className="text-4xl mb-4">
         {Math.round(data.current_weather.temperature)}°C
       </div>
-      <div className="grid grid-cols-3 gap-2 w-full max-w-md mb-4 text-sm">
+      {/* S7: ARIA-labelled forecast sections */}
+      <div
+        className="grid grid-cols-3 gap-2 w-full max-w-md mb-4 text-sm"
+        aria-label="7-day forecast"
+      >
         {data.daily.time.map((t, i) => {
           const { Icon: DayIcon } = getCondition(
             data.daily.weathercode[i]
@@ -317,20 +406,43 @@ const Weather = () => {
           );
         })}
       </div>
-      <svg viewBox="0 0 100 50" className="w-full max-w-md h-32">
-        <polyline
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          points={points}
-        />
-      </svg>
-      <div className="flex justify-between w-full max-w-md text-xs mt-2">
-        {hourlyTimes.map((t, i) => (
+      {/* S6: Accessible hourly temperature chart */}
+      <div
+        ref={chartRef}
+        className="w-full max-w-md h-32 overflow-x-auto"
+      >
+        <svg
+          viewBox="0 0 100 50"
+          role="img"
+          aria-label="Hourly temperature trend"
+          className="w-full h-full"
+        >
+          <polyline
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            points={points}
+          />
+        </svg>
+      </div>
+      <div
+        ref={timesRef}
+        className="flex justify-between w-full max-w-md text-xs mt-2 overflow-x-auto"
+      >
+        {hourlyTimes.map((t) => (
           <span key={t} className="flex-1 text-center">
             {new Date(t).getHours()}
           </span>
         ))}
+      </div>
+      {lastUpdated && (
+        <div className="text-xs mt-4">
+          Last updated: {lastUpdated.toLocaleTimeString()}
+        </div>
+      )}
+      {/* S8: Hidden live region for assistive tech announcements */}
+      <div aria-live="polite" className="sr-only">
+        {announcement}
       </div>
     </div>
   );
