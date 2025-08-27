@@ -7,6 +7,8 @@ import {
   GOAL,
   TOWER_TYPES,
   getPath,
+  getTowerCost,
+  getSellRefund,
   createProjectilePool,
   fireProjectile,
   createEnemyPool,
@@ -28,6 +30,7 @@ const TowerDefense = () => {
   const [wave, setWave] = useState(1);
   const [speed, setSpeed] = useState(1);
   const [lives, setLives] = useState(20);
+  const [gold, setGold] = useState(100);
   const [towerType, setTowerType] = useState('single');
   const [waves, setWaves] = useState([{ count: 5, baseSpeed: 0.5, health: 5 }]);
   const [waveInput, setWaveInput] = useState(
@@ -49,6 +52,8 @@ const TowerDefense = () => {
   const projectilesRef = useRef(projectiles);
   const wavesRef = useRef(waves);
   const pathCanvasRef = useRef(null);
+  const [previewPath, setPreviewPath] = useState(null);
+  const [hoverCell, setHoverCell] = useState(null);
 
   useEffect(() => {
     towersRef.current = towers;
@@ -80,6 +85,7 @@ const TowerDefense = () => {
     canvas.height = GRID_SIZE * cell;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Draw current path
     ctx.strokeStyle = 'rgba(255,255,255,0.5)';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -90,7 +96,19 @@ const TowerDefense = () => {
       else ctx.lineTo(x, y);
     });
     ctx.stroke();
-  }, [path]);
+    // Draw preview path if available
+    if (previewPath) {
+      ctx.strokeStyle = 'rgba(0,255,0,0.5)';
+      ctx.beginPath();
+      previewPath.forEach((p, i) => {
+        const x = p.x * cell + cell / 2;
+        const y = p.y * cell + cell / 2;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+    }
+  }, [path, previewPath]);
 
   const spawnWave = (waveNum) => {
     ReactGA.event({ category: 'tower-defense', action: 'wave_start', value: waveNum });
@@ -121,12 +139,16 @@ const TowerDefense = () => {
       typeof window !== 'undefined' ? localStorage.getItem('td-state') : null;
     if (saved) {
       try {
-        const { towers: stTowers, wave: stWave, lives: stLives } = JSON.parse(
-          saved
-        );
+        const {
+          towers: stTowers,
+          wave: stWave,
+          lives: stLives,
+          gold: stGold,
+        } = JSON.parse(saved);
         setTowers(stTowers);
         setWave(stWave);
         setLives(stLives);
+        setGold(stGold ?? 100);
         setPath(getPath(stTowers));
         spawnWave(stWave);
         return;
@@ -142,10 +164,10 @@ const TowerDefense = () => {
     if (typeof window !== 'undefined') {
       localStorage.setItem(
         'td-state',
-        JSON.stringify({ towers, wave, lives })
+        JSON.stringify({ towers, wave, lives, gold })
       );
     }
-  }, [towers, wave, lives]);
+  }, [towers, wave, lives, gold]);
 
   useEffect(() => {
     if (speed === 0) return undefined;
@@ -181,25 +203,48 @@ const TowerDefense = () => {
     setEnemies([...enemiesRef.current]);
   }, [path]);
 
+  const handleCellHover = (x, y) => {
+    setHoverCell({ x, y });
+    if (path.some((p) => p.x === x && p.y === y)) {
+      setPreviewPath(null);
+      setHoverCell({ x, y, valid: false });
+      return;
+    }
+    const testPath = getPath([...towers, { x, y }]);
+    setPreviewPath(testPath);
+    setHoverCell({ x, y, valid: !!testPath });
+  };
+
+  const handleCellLeave = () => {
+    setPreviewPath(null);
+    setHoverCell(null);
+  };
+
   const handleCellClick = (x, y) => {
     if (path.some((p) => p.x === x && p.y === y)) return;
     const existing = towers.find((t) => t.x === x && t.y === y);
     if (existing) {
       const maxLevel = TOWER_TYPES[existing.type].length;
       if (existing.level < maxLevel) {
-        setTowers(
-          towers.map((t) =>
-            t.x === x && t.y === y ? { ...t, level: t.level + 1 } : t
-          )
-        );
-        ReactGA.event({ category: 'tower-defense', action: 'upgrade' });
+        const cost = getTowerCost(existing.type, existing.level + 1);
+        if (gold >= cost) {
+          setGold((g) => g - cost);
+          setTowers(
+            towers.map((t) =>
+              t.x === x && t.y === y ? { ...t, level: t.level + 1 } : t
+            )
+          );
+          ReactGA.event({ category: 'tower-defense', action: 'upgrade' });
+        }
       }
       return;
     }
     const newTower = { x, y, level: 1, type: towerType, cooldown: 0 };
     const newTowers = [...towers, newTower];
     const newPath = getPath(newTowers);
-    if (newPath) {
+    const cost = getTowerCost(towerType, 1);
+    if (newPath && gold >= cost) {
+      setGold((g) => g - cost);
       setTowers(newTowers);
       setPath(newPath);
       ReactGA.event({ category: 'tower-defense', action: 'tower_place', label: towerType });
@@ -210,6 +255,7 @@ const TowerDefense = () => {
     e.preventDefault();
     const existing = towers.find((t) => t.x === x && t.y === y);
     if (existing) {
+      setGold((g) => g + getSellRefund(existing.type, existing.level));
       setTowers(towers.filter((t) => !(t.x === x && t.y === y)));
     }
   };
@@ -238,6 +284,7 @@ const TowerDefense = () => {
         if (e.slow.remaining <= 0) e.slow = null;
       }
       if (e.health <= 0) {
+        setGold((g) => g + 1);
         deactivateEnemy(e);
         return;
       }
@@ -355,9 +402,25 @@ const TowerDefense = () => {
     if (tower) bg = 'bg-blue-700';
     if (enemy) bg = 'bg-red-700';
     if (projectile) bg = 'bg-yellow-400';
+    if (
+      hoverCell &&
+      hoverCell.x === x &&
+      hoverCell.y === y &&
+      hoverCell.valid === false
+    )
+      bg = 'bg-red-900';
 
     let content = null;
+    let title = '';
     if (tower) {
+      const stats = TOWER_TYPES[tower.type][tower.level - 1];
+      const next = TOWER_TYPES[tower.type][tower.level];
+      if (next) {
+        const dmg = (next.damage || 0) - (stats.damage || 0);
+        const range = (next.range || 0) - (stats.range || 0);
+        const rate = (next.fireRate || 0) - (stats.fireRate || 0);
+        title = `Next: dmg +${dmg}, range +${range}, rate ${rate > 0 ? '+' : ''}${rate}`;
+      }
       content = (
         <>
           <img src={towerSprite.src} alt="tower" className="w-full h-full" />
@@ -376,6 +439,9 @@ const TowerDefense = () => {
         className={`relative w-8 h-8 border border-gray-900 ${bg}`}
         onClick={() => handleCellClick(x, y)}
         onContextMenu={(e) => handleCellRightClick(x, y, e)}
+        onMouseEnter={() => handleCellHover(x, y)}
+        onMouseLeave={handleCellLeave}
+        title={title}
       >
         {content}
       </div>
@@ -393,6 +459,7 @@ const TowerDefense = () => {
       <div className="mb-2 flex items-center space-x-2">
         <span>Wave: {wave}</span>
         <span>Lives: {lives}</span>
+        <span>Gold: {gold}</span>
         <button
           type="button"
           onClick={() => setSpeed(0)}
