@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
