@@ -28,6 +28,19 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     termRef.current.write(`\r\n${promptText}`);
   }, []);
 
+  // Parse command results and apply syntax colors
+  const writeOutput = useCallback((text) => {
+    const lower = text.toLowerCase();
+    let color = '\x1b[32m';
+    if (lower.includes('error') || lower.includes('not found') || lower.includes('no such')) {
+      color = '\x1b[31m';
+    } else if (lower.includes('not supported') || lower.includes('warning')) {
+      color = '\x1b[33m';
+    }
+    termRef.current.writeln(`${color}${text}\x1b[0m`);
+    logRef.current += `${text}\n`;
+  }, []);
+
   // Handle command execution
   const runCommand = useCallback((command) => {
     const trimmed = command.trim();
@@ -41,26 +54,22 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     historyIndexRef.current = historyRef.current.length;
     if (trimmed === 'pwd') {
       termRef.current.writeln('');
-      termRef.current.writeln('/home/alex');
-      logRef.current += '/home/alex\n';
+      writeOutput('/home/alex');
       prompt();
     } else if (trimmed.startsWith('cd ')) {
       const target = trimmed.slice(3);
       termRef.current.writeln('');
-      termRef.current.writeln(`bash: cd: ${target}: No such file or directory`);
-      logRef.current += `bash: cd: ${target}: No such file or directory\n`;
+      writeOutput(`bash: cd: ${target}: No such file or directory`);
       prompt();
     } else if (trimmed === 'simulate') {
       termRef.current.writeln('');
       if (workerRef.current) {
-        termRef.current.writeln('Running heavy simulation...');
-        logRef.current += 'Running heavy simulation...\n';
+        writeOutput('Running heavy simulation...');
         workerRef.current.postMessage({ command: 'simulate' });
         // prompt will be called when worker responds
       } else {
         const msg = 'Web Workers are not supported in this environment.';
-        termRef.current.writeln(msg);
-        logRef.current += `${msg}\n`;
+        writeOutput(msg);
         prompt();
       }
     } else if (trimmed === 'clear') {
@@ -69,24 +78,21 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     } else if (trimmed === 'help') {
       termRef.current.writeln('');
       const commands = Array.from(knownCommandsRef.current).sort().join(' ');
-      termRef.current.writeln(`Available commands: ${commands}`);
-      logRef.current += `Available commands: ${commands}\n`;
+      writeOutput(`Available commands: ${commands}`);
       prompt();
     } else if (trimmed === 'history') {
       termRef.current.writeln('');
       const history = historyRef.current.join('\n');
-      termRef.current.writeln(history);
-      logRef.current += `${history}\n`;
+      writeOutput(history);
       prompt();
     } else if (trimmed.length === 0) {
       prompt();
     } else {
       termRef.current.writeln('');
-      termRef.current.writeln(`Command '${trimmed}' not found`);
-      logRef.current += `Command '${trimmed}' not found\n`;
+      writeOutput(`Command '${trimmed}' not found`);
       prompt();
     }
-  }, [prompt]);
+  }, [prompt, writeOutput]);
 
   const renderSuggestions = useCallback(() => {
     termRef.current.writeln('');
@@ -223,8 +229,7 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       workerRef.current = new Worker(new URL('./terminal.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
         term.writeln('');
-        term.writeln(String(e.data));
-        logRef.current += `${String(e.data)}\n`;
+        writeOutput(String(e.data));
         prompt();
       };
     } else {
@@ -239,7 +244,7 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
       workerRef.current?.terminate();
       term.dispose();
     };
-  }, [prompt, runCommand, handleTab, handleSuggestionNav, handleHistoryNav]);
+  }, [prompt, runCommand, handleTab, handleSuggestionNav, handleHistoryNav, writeOutput]);
 
   useImperativeHandle(ref, () => ({
     runCommand,
