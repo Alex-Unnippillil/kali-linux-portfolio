@@ -1,5 +1,5 @@
 jest.mock(
-  '@xterm/xterm',
+  'xterm',
   () => ({
     Terminal: jest.fn().mockImplementation(() => ({
       open: jest.fn(),
@@ -15,14 +15,14 @@ jest.mock(
   { virtual: true }
 );
 jest.mock(
-  '@xterm/addon-fit',
+  'xterm-addon-fit',
   () => ({
     FitAddon: jest.fn().mockImplementation(() => ({ fit: jest.fn() })),
   }),
   { virtual: true }
 );
 jest.mock(
-  '@xterm/addon-search',
+  'xterm-addon-search',
   () => ({
     SearchAddon: jest.fn().mockImplementation(() => ({
       activate: jest.fn(),
@@ -31,45 +31,12 @@ jest.mock(
   }),
   { virtual: true }
 );
-jest.mock('@xterm/xterm/css/xterm.css', () => ({}), { virtual: true });
+jest.mock('xterm/css/xterm.css', () => ({}), { virtual: true });
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 
 import React, { createRef, act } from 'react';
 import { render } from '@testing-library/react';
 import Terminal from '../components/apps/terminal';
-
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
-jest.mock(
-  'xterm',
-  () => ({
-    Terminal: class {
-      open() {}
-      write() {}
-      onData() {}
-    },
-  }),
-  { virtual: true },
-
-);
-jest.mock(
-  'xterm-addon-fit',
-  () => ({
-    FitAddon: class {
-      fit() {}
-    },
-  }),
-  { virtual: true },
-
-);
-jest.mock(
-  'xterm-addon-search',
-  () => ({
-    SearchAddon: class {
-      activate() {}
-    },
-  }),
-  { virtual: true },
-);
 
 
 describe.skip('Terminal component', () => {

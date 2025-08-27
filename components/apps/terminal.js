@@ -1,8 +1,10 @@
-import React, { useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
-import { Terminal as XTerm } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { SearchAddon } from '@xterm/addon-search';
-import '@xterm/xterm/css/xterm.css';
+import React, {
+  useEffect,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+  useCallback,
+} from 'react';
 
 
 const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
@@ -159,93 +161,108 @@ const Terminal = forwardRef(({ addFolder, openApp }, ref) => {
     showingSuggestionsRef.current = false;
   }, []);
 
-  // Initialise terminal
+  // Initialise terminal dynamically
   useEffect(() => {
-    const term = new XTerm({ cursorBlink: true, convertEol: true });
-    const fitAddon = new FitAddon();
-    const searchAddon = new SearchAddon();
-    term.loadAddon(fitAddon);
-    term.loadAddon(searchAddon);
-    term.open(containerRef.current);
-    termRef.current = term;
-    fitAddonRef.current = fitAddon;
-    fitAddon.fit();
-    term.write('Welcome to the portfolio terminal');
-    prompt();
-    term.onKey(({ key, domEvent }) => {
-      if (domEvent.key === 'Tab') {
-        domEvent.preventDefault();
-        handleTab();
-      } else if (domEvent.key === 'ArrowLeft') {
-        domEvent.preventDefault();
-        handleSuggestionNav('left');
-      } else if (domEvent.key === 'ArrowRight') {
-        domEvent.preventDefault();
-        handleSuggestionNav('right');
-      } else if (domEvent.key === 'ArrowUp') {
-        domEvent.preventDefault();
-        handleHistoryNav('up');
-      } else if (domEvent.key === 'ArrowDown') {
-        domEvent.preventDefault();
-        handleHistoryNav('down');
-      }
-    });
+    let dispose = () => {};
 
-    term.onData((data) => {
-      if (data === '\r') {
-        runCommand(commandRef.current);
-        commandRef.current = '';
-        suggestionsRef.current = [];
-        showingSuggestionsRef.current = false;
-      } else if (data === '\u0003') { // Ctrl+C
-        term.write('^C');
-        prompt();
-        commandRef.current = '';
-        suggestionsRef.current = [];
-        showingSuggestionsRef.current = false;
-      } else if (data === '\u007F') { // Backspace
-        if (commandRef.current.length > 0) {
-          commandRef.current = commandRef.current.slice(0, -1);
-          term.write('\b \b');
+    const init = async () => {
+      const [{ Terminal: XTerm }, { FitAddon }, { SearchAddon }] = await Promise.all([
+        import('xterm'),
+        import('xterm-addon-fit'),
+        import('xterm-addon-search'),
+      ]);
+      await import('xterm/css/xterm.css');
+
+      const term = new XTerm({ cursorBlink: true, convertEol: true });
+      const fitAddon = new FitAddon();
+      const searchAddon = new SearchAddon();
+      term.loadAddon(fitAddon);
+      term.loadAddon(searchAddon);
+      term.open(containerRef.current);
+      termRef.current = term;
+      fitAddonRef.current = fitAddon;
+      fitAddon.fit();
+      term.write('Welcome to the portfolio terminal');
+      prompt();
+      term.onKey(({ key, domEvent }) => {
+        if (domEvent.key === 'Tab') {
+          domEvent.preventDefault();
+          handleTab();
+        } else if (domEvent.key === 'ArrowLeft') {
+          domEvent.preventDefault();
+          handleSuggestionNav('left');
+        } else if (domEvent.key === 'ArrowRight') {
+          domEvent.preventDefault();
+          handleSuggestionNav('right');
+        } else if (domEvent.key === 'ArrowUp') {
+          domEvent.preventDefault();
+          handleHistoryNav('up');
+        } else if (domEvent.key === 'ArrowDown') {
+          domEvent.preventDefault();
+          handleHistoryNav('down');
         }
-        suggestionsRef.current = [];
-        showingSuggestionsRef.current = false;
-      } else if (data === '\t') {
-        // handled in onKey
+      });
+
+      term.onData((data) => {
+        if (data === '\r') {
+          runCommand(commandRef.current);
+          commandRef.current = '';
+          suggestionsRef.current = [];
+          showingSuggestionsRef.current = false;
+        } else if (data === '\u0003') {
+          // Ctrl+C
+          term.write('^C');
+          prompt();
+          commandRef.current = '';
+          suggestionsRef.current = [];
+          showingSuggestionsRef.current = false;
+        } else if (data === '\u007F') {
+          // Backspace
+          if (commandRef.current.length > 0) {
+            commandRef.current = commandRef.current.slice(0, -1);
+            term.write('\b \b');
+          }
+          suggestionsRef.current = [];
+          showingSuggestionsRef.current = false;
+        } else if (data === '\t') {
+          // handled in onKey
+        } else {
+          commandRef.current += data;
+          term.write(data);
+          suggestionsRef.current = [];
+          showingSuggestionsRef.current = false;
+        }
+      });
+      if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
+        workerRef.current = new Worker(new URL('./terminal.worker.js', import.meta.url));
+        workerRef.current.onmessage = (e) => {
+          term.writeln('');
+          term.writeln(String(e.data));
+          logRef.current += `${String(e.data)}\n`;
+          prompt();
+        };
       } else {
-        commandRef.current += data;
-        term.write(data);
-        suggestionsRef.current = [];
-        showingSuggestionsRef.current = false;
+        workerRef.current = null;
       }
-    });
-    if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
-      workerRef.current = new Worker(new URL('./terminal.worker.js', import.meta.url));
-      workerRef.current.onmessage = (e) => {
-        term.writeln('');
-        term.writeln(String(e.data));
-        logRef.current += `${String(e.data)}\n`;
-        prompt();
+
+      const handleResize = () => fitAddon.fit();
+      window.addEventListener('resize', handleResize);
+
+      dispose = () => {
+        window.removeEventListener('resize', handleResize);
+        workerRef.current?.terminate();
+        term.dispose();
       };
-    } else {
-      workerRef.current = null;
-    }
-
-    const handleResize = () => fitAddon.fit();
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      workerRef.current?.terminate();
-      term.dispose();
     };
+
+    init();
+
+    return () => dispose();
   }, [prompt, runCommand, handleTab, handleSuggestionNav, handleHistoryNav]);
 
   useImperativeHandle(ref, () => ({
     runCommand,
     getContent: () => logRef.current,
-    getCommand: () => commandRef.current,
-    historyNav: handleHistoryNav,
   }));
 
   return <div className="h-full w-full bg-ub-cool-grey" ref={containerRef} data-testid="xterm-container" />;
