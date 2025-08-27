@@ -5,8 +5,14 @@ const preciseToggle = document.getElementById('toggle-precise');
 const scientific = document.getElementById('scientific');
 const historyEl = document.getElementById('history');
 
-let preciseMode = false;
+const HISTORY_KEY = 'calc-history';
+let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+let preciseMode = true;
 let undoStack = [];
+
+math.config({ number: 'BigNumber', precision: 64 });
+preciseToggle.textContent = 'Precise Mode: On';
+preciseToggle.setAttribute('aria-pressed', 'true');
 
 sciToggle.addEventListener('click', () => {
   const isHidden = scientific.classList.toggle('hidden');
@@ -52,25 +58,35 @@ buttons.forEach((btn) => {
 function evaluate(expression) {
   try {
     const result = math.evaluate(expression);
-    return result.toString();
+    return math.format(result, { precision: 14 });
   } catch (e) {
     return 'Error';
   }
 }
 
 function addHistory(expr, result) {
-  const entry = document.createElement('div');
-  entry.className = 'history-entry';
-  const text = document.createElement('span');
-  text.textContent = `${expr} = ${result}`;
-  const copy = document.createElement('button');
-  copy.textContent = 'Copy';
-  copy.addEventListener('click', () => {
-    navigator.clipboard.writeText(`${expr} = ${result}`);
+  history.unshift({ expr, result });
+  history = history.slice(0, 10);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  historyEl.innerHTML = '';
+  history.forEach(({ expr, result }) => {
+    const entry = document.createElement('div');
+    entry.className = 'history-entry';
+    const text = document.createElement('span');
+    text.textContent = `${expr} = ${result}`;
+    const copy = document.createElement('button');
+    copy.textContent = 'Copy';
+    copy.addEventListener('click', () => {
+      navigator.clipboard.writeText(`${expr} = ${result}`);
+    });
+    entry.appendChild(text);
+    entry.appendChild(copy);
+    historyEl.appendChild(entry);
   });
-  entry.appendChild(text);
-  entry.appendChild(copy);
-  historyEl.prepend(entry);
 }
 
 function undo() {
@@ -157,4 +173,6 @@ function handleArrowNavigation(e) {
     }
   }
 }
+
+renderHistory();
 
