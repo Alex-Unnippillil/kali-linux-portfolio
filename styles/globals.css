@@ -1,0 +1,4 @@
+.text-block {
+  max-inline-size: clamp(40ch, 60ch, 70ch);
+  line-height: 1.6;
+}

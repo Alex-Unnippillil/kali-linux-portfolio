@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next';
 import 'tailwindcss/tailwind.css';
 import '../styles/index.css';
 import '../styles/resume-print.css';
+import '../styles/globals.css';
 import '@xterm/xterm/css/xterm.css';
 import { SettingsProvider } from '../hooks/useSettings';
 

@@ -21,7 +21,7 @@ export default function AboutApp() {
   };
 
   return (
-    <main className="p-4 w-full h-full overflow-y-auto bg-ub-cool-grey text-white">
+    <main className="p-4 w-full h-full overflow-y-auto bg-ub-cool-grey text-white text-block">
       <Head>
         <title>About</title>
         <script

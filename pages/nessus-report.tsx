@@ -105,7 +105,7 @@ const NessusReport: React.FC = () => {
           <p className="text-sm mb-2">
             CVSS {selected.cvss} ({selected.severity})
           </p>
-          <p className="mb-4 text-sm whitespace-pre-wrap">
+          <p className="mb-4 text-sm whitespace-pre-wrap text-block">
             {selected.description}
           </p>
           <p className="text-xs text-gray-400">

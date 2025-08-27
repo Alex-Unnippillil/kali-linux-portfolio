@@ -87,7 +87,7 @@ const NiktoReport: React.FC = () => {
           onClick={() => setSelected(null)}
         >
           <div
-            className="bg-gray-800 p-4 rounded max-w-lg w-full"
+            className="bg-gray-800 p-4 rounded w-full text-block"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg mb-2">{selected.path}</h2>
