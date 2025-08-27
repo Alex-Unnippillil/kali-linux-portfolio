@@ -1,19 +1,47 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-// Simple parser that attempts to extract protocol and host from a log line
+// Simple parser that attempts to extract protocol, host and remaining details
 const parseLines = (text) =>
   text
     .split('\n')
     .filter(Boolean)
     .map((line) => {
       const parts = line.trim().split(/\s+/);
-      return { raw: line, protocol: parts[0] || '', host: parts[1] || '' };
+      let protocol = parts[0] || '';
+      let host = parts[1] || '';
+      let rest = parts.slice(2);
+      if (protocol === 'ARP' && parts[1] === 'reply') {
+        host = parts[2] || '';
+        rest = parts.slice(3);
+      }
+      return {
+        raw: line,
+        protocol,
+        host,
+        details: rest.join(' '),
+      };
     });
+
+const protocolInfo = {
+  HTTP: 'Hypertext Transfer Protocol',
+  HTTPS: 'HTTP over TLS/SSL',
+  ARP: 'Address Resolution Protocol',
+};
 
 // Example traffic used when simulation mode is enabled
 const exampleUrlsnarf = [
-  { raw: 'HTTP example.com/index.html', protocol: 'HTTP', host: 'example.com' },
-  { raw: 'HTTPS test.com/login', protocol: 'HTTPS', host: 'test.com' },
+  {
+    raw: 'HTTP example.com /index.html',
+    protocol: 'HTTP',
+    host: 'example.com',
+    details: '/index.html',
+  },
+  {
+    raw: 'HTTPS test.com /login',
+    protocol: 'HTTPS',
+    host: 'test.com',
+    details: '/login',
+  },
 ];
 
 const exampleArpspoof = [
@@ -21,13 +49,44 @@ const exampleArpspoof = [
     raw: 'ARP reply 192.168.0.1 is-at 00:11:22:33:44:55',
     protocol: 'ARP',
     host: '192.168.0.1',
+    details: 'is-at 00:11:22:33:44:55',
   },
   {
     raw: 'ARP reply 192.168.0.2 is-at aa:bb:cc:dd:ee:ff',
     protocol: 'ARP',
     host: '192.168.0.2',
+    details: 'is-at aa:bb:cc:dd:ee:ff',
   },
 ];
+
+const LogRow = ({ log, prefersReduced }) => {
+  const rowRef = useRef(null);
+
+  useEffect(() => {
+    const el = rowRef.current;
+    if (!el || prefersReduced) return;
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.5s ease-in';
+    requestAnimationFrame(() => {
+      el.style.opacity = '1';
+    });
+  }, [prefersReduced]);
+
+  return (
+    <tr ref={rowRef} className="odd:bg-black even:bg-ub-grey">
+      <td className="pr-2 text-green-400">
+        <abbr
+          title={protocolInfo[log.protocol] || log.protocol}
+          className="underline decoration-dotted cursor-help"
+        >
+          {log.protocol}
+        </abbr>
+      </td>
+      <td className="pr-2 text-white">{log.host}</td>
+      <td className="text-green-400">{log.details}</td>
+    </tr>
+  );
+};
 
 const Dsniff = () => {
   const [urlsnarfLogs, setUrlsnarfLogs] = useState([]);
@@ -38,8 +97,17 @@ const Dsniff = () => {
   const [newField, setNewField] = useState('host');
   const [newValue, setNewValue] = useState('');
   const [simulate, setSimulate] = useState(false);
+  const [prefersReduced, setPrefersReduced] = useState(false);
   const simInterval = useRef(null);
   const simIndex = useRef(0);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = () => setPrefersReduced(media.matches);
+    handler();
+    media.addEventListener('change', handler);
+    return () => media.removeEventListener('change', handler);
+  }, []);
 
   const fetchOutputs = async () => {
     try {
@@ -187,11 +255,24 @@ const Dsniff = () => {
           ))}
         </div>
       </div>
-      <div className="bg-black text-green-500 p-2 h-40 overflow-auto whitespace-pre-wrap">
+      <div
+        className="bg-black text-green-400 p-2 h-40 overflow-auto"
+        aria-live="polite"
+      >
         {filteredLogs.length ? (
-          filteredLogs.map((log, i) => <div key={i}>{log.raw}</div>)
+          <table className="w-full text-left text-sm">
+            <tbody>
+              {filteredLogs.map((log, i) => (
+                <LogRow
+                  key={`${log.raw}-${i}`}
+                  log={log}
+                  prefersReduced={prefersReduced}
+                />
+              ))}
+            </tbody>
+          </table>
         ) : (
-          'No data'
+          <div>No data</div>
         )}
       </div>
     </div>
