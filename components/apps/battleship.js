@@ -15,40 +15,21 @@ const CELL = 32; // px
 
 const createBoard = () => Array(BOARD_SIZE * BOARD_SIZE).fill(null);
 
-const HitRipple = () => {
+const Splash = ({ color }) => {
   const prefersReduced = usePrefersReducedMotion();
-  const [radius, setRadius] = useState(prefersReduced ? 12 : 0);
-
-  useEffect(() => {
-    if (prefersReduced) return;
-    let raf;
-    let start;
-    const animate = (time) => {
-      if (!start) start = time;
-      const progress = Math.min((time - start) / 300, 1); // 300ms
-      setRadius(12 * progress);
-      if (progress < 1) raf = requestAnimationFrame(animate);
-    };
-    raf = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(raf);
-  }, [prefersReduced]);
-
+  if (prefersReduced) return null;
   return (
-    <svg
-      className="absolute inset-0 w-full h-full pointer-events-none"
-      viewBox="0 0 32 32"
-      stroke="red"
-      strokeWidth="2"
-      fill="none"
+    <span
+      className={`absolute inset-0 rounded-full pointer-events-none ${color}`}
+      style={{ animation: 'ping 0.6s cubic-bezier(0,0,0.2,1) forwards', opacity: 0.5 }}
       aria-hidden="true"
-    >
-      <circle cx="16" cy="16" r={radius} />
-    </svg>
+    />
   );
 };
 
 const HitMarker = () => (
   <div className="absolute inset-0">
+    <Splash color="bg-red-500" />
     <svg
       className="w-full h-full"
       viewBox="0 0 32 32"
@@ -57,59 +38,40 @@ const HitMarker = () => (
       aria-hidden="true"
     >
       <line x1="4" y1="4" x2="28" y2="28">
-        <animate
-          attributeName="stroke-opacity"
-          from="0"
-          to="1"
-          dur="0.2s"
-          fill="freeze"
-        />
+        <animate attributeName="stroke-opacity" from="0" to="1" dur="0.2s" fill="freeze" />
       </line>
       <line x1="28" y1="4" x2="4" y2="28">
-        <animate
-          attributeName="stroke-opacity"
-          from="0"
-          to="1"
-          dur="0.2s"
-          fill="freeze"
-        />
+        <animate attributeName="stroke-opacity" from="0" to="1" dur="0.2s" fill="freeze" />
       </line>
     </svg>
-    <HitRipple />
   </div>
 );
 
-const MissMarker = () => {
-  const prefersReduced = usePrefersReducedMotion();
-  return (
+const MissMarker = () => (
+  <div className="absolute inset-0">
+    <Splash color="bg-blue-300" />
     <svg
-      className="absolute inset-0 w-full h-full"
+      className="w-full h-full"
       viewBox="0 0 32 32"
       stroke="white"
       strokeWidth="3"
       fill="none"
       aria-hidden="true"
     >
-      {prefersReduced ? (
-        <circle cx="16" cy="16" r="10" opacity="1" />
-      ) : (
-        <circle cx="16" cy="16" r="0">
-          <animate attributeName="r" from="0" to="10" dur="0.3s" fill="freeze" />
-          <animate attributeName="opacity" from="0" to="1" dur="0.3s" fill="freeze" />
-        </circle>
-      )}
+      <circle cx="16" cy="16" r="10" opacity="1" />
     </svg>
-  );
-};
+  </div>
+);
 
 const Battleship = () => {
   const [phase, setPhase] = useState('placement');
   const [playerBoard, setPlayerBoard] = useState(createBoard());
   const [enemyBoard, setEnemyBoard] = useState(createBoard());
   const [ships, setShips] = useState([]); // player's ship objects
-  const [aiHeat, setAiHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-  const [guessHeat, setGuessHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-  const [message, setMessage] = useState('Place your ships');
+    const [aiHeat, setAiHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+    const [guessHeat, setGuessHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+    const [showHeatmap, setShowHeatmap] = useState(false);
+    const [message, setMessage] = useState('Place your ships');
   const [difficulty, setDifficulty] = useState('easy');
   const [ai, setAi] = useState(null);
   const [stats, setStats] = usePersistentState('battleship-stats', {
@@ -248,13 +210,13 @@ const Battleship = () => {
   const renderBoard = (board, isEnemy=false) => (
     <div className="grid" style={{gridTemplateColumns:`repeat(${BOARD_SIZE}, ${CELL}px)`}}>
       {board.map((cell,idx)=>{
-        const heatArr = isEnemy ? guessHeat : aiHeat;
-        const heatVal = heatArr[idx];
-        const color = heatVal
-          ? isEnemy
-            ? `rgba(0,150,255,${Math.min(heatVal / 5, 0.6)})`
-            : `rgba(255,0,0,${Math.min(heatVal / 5, 0.7)})`
-          : 'transparent';
+          const heatArr = isEnemy ? guessHeat : aiHeat;
+          const heatVal = heatArr[idx];
+          const color = showHeatmap && heatVal
+            ? isEnemy
+              ? `rgba(0,150,255,${Math.min(heatVal / 5, 0.6)})`
+              : `rgba(255,0,0,${Math.min(heatVal / 5, 0.7)})`
+            : 'transparent';
         return (
           <div key={idx} className="border border-ub-dark-grey relative" style={{width:CELL,height:CELL}}>
             {isEnemy && phase==='battle' && !['hit','miss'].includes(cell)?(
@@ -278,15 +240,17 @@ const Battleship = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto font-ubuntu">
-      <GameLayout
-        difficulty={difficulty}
-        onDifficultyChange={(d) => {
-          setDifficulty(d);
-          restart(d);
-        }}
-        onRestart={() => restart()}
-        stats={stats}
-      >
+        <GameLayout
+          difficulty={difficulty}
+          onDifficultyChange={(d) => {
+            setDifficulty(d);
+            restart(d);
+          }}
+          onRestart={() => restart()}
+          stats={stats}
+          showHeatmap={showHeatmap}
+          onToggleHeatmap={() => setShowHeatmap((h) => !h)}
+        >
         <div className="mb-2" aria-live="polite" role="status">{message}</div>
         {phase==='placement' && (
           <div className="flex space-x-4">
