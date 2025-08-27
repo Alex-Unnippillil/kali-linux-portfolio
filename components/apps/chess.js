@@ -280,6 +280,7 @@ const ChessGame = () => {
   const boardRef = useRef(createInitialBoard());
   const chessRef = useRef(new Chess());
   const sideRef = useRef(WHITE);
+  const historyRef = useRef([boardRef.current.slice()]);
   const [selected, setSelected] = useState(null);
   const [moves, setMoves] = useState([]);
   const [status, setStatus] = useState('Your move');
@@ -396,9 +397,14 @@ const ChessGame = () => {
           if (selected === sq) {
             ctx.fillStyle = 'rgba(255,255,0,0.4)';
             ctx.fillRect(x, y, SQ, SQ);
-          } else if (moves.some((m) => m.from === selected && m.to === sq)) {
-            ctx.fillStyle = 'rgba(0,255,0,0.3)';
-            ctx.fillRect(x, y, SQ, SQ);
+          } else {
+            const move = moves.find((m) => m.to === sq);
+            if (move) {
+              ctx.fillStyle = move.capture
+                ? 'rgba(255,0,0,0.3)'
+                : 'rgba(0,255,0,0.3)';
+              ctx.fillRect(x, y, SQ, SQ);
+            }
           }
 
           if (mateSquares.includes(sq)) {
@@ -512,6 +518,7 @@ const ChessGame = () => {
       boardRef.current[move.from] = EMPTY;
       addTrail(move.from, move.to);
       if (capture) addCaptureSparks(move.to);
+      historyRef.current.push(boardRef.current.slice());
       setSanLog((l) => [...l, res.san]);
       sideRef.current = -sideRef.current;
       if (sound) playBeep();
@@ -533,7 +540,7 @@ const ChessGame = () => {
     const side = sideRef.current;
 
     if (selected !== null) {
-      const legal = moves.find((m) => m.from === selected && m.to === sq);
+      const legal = moves.find((m) => m.to === sq);
       if (legal) {
         const res = chessRef.current.move({
           from: sqToAlg(legal.from),
@@ -547,6 +554,7 @@ const ChessGame = () => {
           addTrail(legal.from, legal.to);
           if (capture) addCaptureSparks(legal.to);
           if (sound) playBeep();
+          historyRef.current.push(boardRef.current.slice());
           setSanLog((l) => [...l, res.san]);
           sideRef.current = -side;
           setSelected(null);
@@ -567,7 +575,11 @@ const ChessGame = () => {
         setSelected(sq);
         const legals = chessRef.current
           .moves({ square: sqToAlg(sq), verbose: true })
-          .map((m) => ({ from: algToSq(m.from), to: algToSq(m.to) }));
+          .map((m) => ({
+            from: algToSq(m.from),
+            to: algToSq(m.to),
+            capture: !!m.captured,
+          }));
         setMoves(legals);
       }
     }
@@ -577,6 +589,7 @@ const ChessGame = () => {
     boardRef.current = createInitialBoard();
     chessRef.current.reset();
     sideRef.current = WHITE;
+    historyRef.current = [boardRef.current.slice()];
     setSelected(null);
     setMoves([]);
     trailsRef.current = [];
@@ -591,6 +604,30 @@ const ChessGame = () => {
   const togglePause = () => setPaused((p) => !p);
   const toggleSound = () => setSound((s) => !s);
   const toggleHints = () => setShowHints((s) => !s);
+  const undoMove = () => {
+    let undone = 0;
+    if (historyRef.current.length <= 1) return;
+    if (chessRef.current.history().length > 0) {
+      chessRef.current.undo();
+      historyRef.current.pop();
+      undone++;
+    }
+    if (chessRef.current.turn() === 'b' && chessRef.current.history().length > 0) {
+      chessRef.current.undo();
+      historyRef.current.pop();
+      undone++;
+    }
+    boardRef.current = historyRef.current[historyRef.current.length - 1].slice();
+    sideRef.current = chessRef.current.turn() === 'w' ? WHITE : BLACK;
+    trailsRef.current = [];
+    particlesRef.current = [];
+    setSelected(null);
+    setMoves([]);
+    setSanLog((l) => l.slice(0, -undone));
+    updateEval();
+    updateMateHints();
+    setStatus('Your move');
+  };
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-2 select-none">
@@ -604,6 +641,9 @@ const ChessGame = () => {
       <div className="mt-2 flex gap-2">
         <button className="px-2 py-1 bg-gray-700" onClick={reset}>
           Reset
+        </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={undoMove}>
+          Undo
         </button>
         <button className="px-2 py-1 bg-gray-700" onClick={togglePause}>
           {paused ? 'Resume' : 'Pause'}
