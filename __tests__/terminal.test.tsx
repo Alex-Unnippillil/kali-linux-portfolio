@@ -10,6 +10,7 @@ jest.mock(
       onData: jest.fn(),
       onKey: jest.fn(),
       dispose: jest.fn(),
+      clear: jest.fn(),
     })),
   }),
   { virtual: true }
@@ -72,9 +73,21 @@ jest.mock(
 );
 
 
-describe.skip('Terminal component', () => {
+describe('Terminal component', () => {
   const addFolder = jest.fn();
   const openApp = jest.fn();
+
+  it('renders container with data-testid and exposes ref API', () => {
+    const ref = createRef();
+    const { getByTestId } = render(
+      <Terminal ref={ref} addFolder={addFolder} openApp={openApp} />,
+    );
+    expect(getByTestId('xterm-container')).toBeInTheDocument();
+    expect(typeof ref.current.runCommand).toBe('function');
+    expect(typeof ref.current.getContent).toBe('function');
+    expect(typeof ref.current.getCommand).toBe('function');
+    expect(typeof ref.current.historyNav).toBe('function');
+  });
 
   it('runs pwd command successfully', () => {
     const ref = createRef();
@@ -123,6 +136,31 @@ describe.skip('Terminal component', () => {
       ref.current.runCommand('simulate');
     });
     expect(ref.current.getContent()).toContain('Web Workers are not supported');
+    (global as any).Worker = originalWorker;
+  });
+
+  it('sends simulate command to worker when available', () => {
+    const ref = createRef();
+    const originalWorker = (global as any).Worker;
+    let instance;
+    const postMessage = jest.fn();
+    (global as any).Worker = class {
+      constructor() {
+        instance = this;
+        this.postMessage = postMessage;
+        this.terminate = jest.fn();
+        this.onmessage = null;
+      }
+    } as any;
+    render(<Terminal ref={ref} addFolder={addFolder} openApp={openApp} />);
+    act(() => {
+      ref.current.runCommand('simulate');
+    });
+    expect(postMessage).toHaveBeenCalledWith({ command: 'simulate' });
+    act(() => {
+      instance.onmessage({ data: 'Simulation complete' });
+    });
+    expect(ref.current.getContent()).toContain('Simulation complete');
     (global as any).Worker = originalWorker;
   });
 
