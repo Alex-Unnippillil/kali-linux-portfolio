@@ -5,8 +5,8 @@ import useGameControls from './useGameControls';
 // Basic timing constants so the simulation is consistent across refresh rates
 const FRAME_TIME = 1000 / 60; // ideal frame time in ms
 const WIN_POINTS = 5; // points to win a game
-const SPEEDUP_RATE = 50; // px/s increase for progressive speed
 const MAX_BALL_SPEED = 600; // maximum ball speed in px/s
+const HIT_SPEEDUP = 1.05; // speed multiplier when the ball hits a paddle
 
 // Pong component with spin, adjustable AI and experimental WebRTC multiplayer
 const WIDTH = 600;
@@ -27,6 +27,43 @@ const Pong = () => {
   const [offerSDP, setOfferSDP] = useState('');
   const [answerSDP, setAnswerSDP] = useState('');
   const [connected, setConnected] = useState(false);
+  const audioCtxRef = useRef(null);
+  const [sound, setSound] = useState(true);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const [history, setHistory] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return JSON.parse(localStorage.getItem('pongHistory')) || [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  const playSound = (freq) => {
+    if (!sound) return;
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    } catch {
+      // ignore audio errors
+    }
+  };
 
   const controls = useGameControls(canvasRef, (state) => {
     if (mode === 'online' && channelRef.current) {
@@ -136,6 +173,8 @@ const Pong = () => {
       setScores({ player: 0, opponent: 0 });
       setMatch({ player: 0, opponent: 0 });
       setMatchWinner(null);
+      setPaused(false);
+      pausedRef.current = false;
       player.y = height / 2 - paddleHeight / 2;
       opponent.y = height / 2 - paddleHeight / 2;
       player.rot = 0;
@@ -205,21 +244,9 @@ const Pong = () => {
       }
     };
 
-    const cpuHistory = [];
-
     const update = (dt) => {
       frame += 1;
       frameRef.current = frame;
-
-      // progressive speedup with capped delta
-      const cappedDt = Math.min(dt, 0.02);
-      const speed = Math.hypot(ball.vx, ball.vy);
-      if (speed < MAX_BALL_SPEED) {
-        const nextSpeed = Math.min(speed + SPEEDUP_RATE * cappedDt, MAX_BALL_SPEED);
-        const ratio = nextSpeed / (speed || 1);
-        ball.vx *= ratio;
-        ball.vy *= ratio;
-      }
 
       // decay impact scaling and rotation
       const decay = (obj) => {
@@ -235,20 +262,15 @@ const Pong = () => {
 
       // opponent (AI or remote)
       if (mode === 'cpu') {
-        // adjustable difficulty AI using reaction delay and speed
-        cpuHistory.push(ball.y);
-        const diff = difficulty / 10;
-        const reactionMs = 400 - diff * 350;
-        const aiSpeed = 200 + diff * 200;
-        const delayFrames = Math.floor((reactionMs / FRAME_TIME) || 0);
-        if (cpuHistory.length > delayFrames) {
-          const target = cpuHistory.shift();
-          const center = opponent.y + paddleHeight / 2;
-          if (center < target - 10) opponent.y += aiSpeed * dt;
-          else if (center > target + 10) opponent.y -= aiSpeed * dt;
-          opponent.y = Math.max(0, Math.min(height - paddleHeight, opponent.y));
-          opponent.vy = 0; // AI velocity not tracked for spin
-        }
+        const error = ball.y - (opponent.y + paddleHeight / 2);
+        const gain = difficulty * 10;
+        opponent.vy = error * gain;
+        const max = 400;
+        if (opponent.vy > max) opponent.vy = max;
+        if (opponent.vy < -max) opponent.vy = -max;
+        opponent.y += opponent.vy * dt;
+        if (opponent.y < 0) opponent.y = 0;
+        if (opponent.y > height - paddleHeight) opponent.y = height - paddleHeight;
       } else {
         applyInputs(opponent, remoteKeys, dt);
       }
@@ -261,10 +283,12 @@ const Pong = () => {
       if (ball.y < ball.size) {
         ball.y = ball.size;
         ball.vy *= -1;
+        playSound(300);
       }
       if (ball.y > height - ball.size) {
         ball.y = height - ball.size;
         ball.vy *= -1;
+        playSound(300);
       }
 
       const paddleCollision = (pad, dir) => {
@@ -276,6 +300,11 @@ const Pong = () => {
         pad.scale = 1.2;
         pad.rot = relative * 0.3;
         ball.scale = 1.2;
+        const speed = Math.hypot(ball.vx, ball.vy) * HIT_SPEEDUP;
+        const ratio = Math.min(speed, MAX_BALL_SPEED) / Math.hypot(ball.vx, ball.vy);
+        ball.vx *= ratio;
+        ball.vy *= ratio;
+        playSound(440);
       };
 
       if (
@@ -303,10 +332,12 @@ const Pong = () => {
         oppScore += 1;
         setScores({ player: playerScore, opponent: oppScore });
         resetBall(1);
+        playSound(200);
       } else if (ball.x > width) {
         playerScore += 1;
         setScores({ player: playerScore, opponent: oppScore });
         resetBall(-1);
+        playSound(200);
       }
 
       // check game end
@@ -317,7 +348,15 @@ const Pong = () => {
           if (playerWon) next.player += 1;
           else next.opponent += 1;
           if (next.player >= 2 || next.opponent >= 2) {
-            setMatchWinner(playerWon ? 'Player' : 'Opponent');
+            const winner = playerWon ? 'Player' : 'Opponent';
+            setMatchWinner(winner);
+            setHistory((h) => {
+              const newHist = [...h, { player: next.player, opponent: next.opponent, winner }];
+              try {
+                localStorage.setItem('pongHistory', JSON.stringify(newHist));
+              } catch {}
+              return newHist;
+            });
           }
           return next;
         });
@@ -338,7 +377,7 @@ const Pong = () => {
       const now = performance.now();
       const dt = Math.min((now - lastTime) / 1000, 0.1); // clamp big jumps
       lastTime = now;
-      if (!matchWinner) {
+      if (!pausedRef.current && !matchWinner) {
         update(dt);
       }
       draw();
@@ -375,7 +414,7 @@ const Pong = () => {
     };
   }, [difficulty, mode, connected, matchWinner, controls, canvasRef]);
 
-  const resetGame = () => {
+  const reset = () => {
     if (resetRef.current) resetRef.current();
   };
 
@@ -502,12 +541,36 @@ const Pong = () => {
         </div>
       )}
 
-      <button
-        className="mt-2 px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-        onClick={resetGame}
-      >
-        Reset
-      </button>
+      <div className="mt-2 space-x-2">
+        <button
+          className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setPaused((p) => !p)}
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setSound((s) => !s)}
+        >
+          Sound: {sound ? 'On' : 'Off'}
+        </button>
+        <button
+          className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={reset}
+        >
+          Reset
+        </button>
+      </div>
+
+      {history.length > 0 && (
+        <div className="mt-2 max-h-24 overflow-y-auto text-sm">
+          {history.map((h, i) => (
+            <div key={i}>
+              {h.player} - {h.opponent} ({h.winner})
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
