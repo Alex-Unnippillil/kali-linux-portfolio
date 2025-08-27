@@ -176,8 +176,9 @@ const displayKismet = createDisplay(KismetApp);
 
 // Default window sizing for games to prevent oversized frames
 const gameDefaults = {
-  defaultWidth: 50,
-  defaultHeight: 60,
+  // Use smaller default sizes for game windows
+  defaultWidth: 35,
+  defaultHeight: 45,
 };
 
 // Games list used for the "Games" folder on the desktop
@@ -190,8 +191,6 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: display2048,
-    defaultWidth: 35,
-    defaultHeight: 45,
   },
   {
     id: 'asteroids',
