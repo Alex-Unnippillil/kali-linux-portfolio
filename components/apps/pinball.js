@@ -6,6 +6,7 @@ import usePersistentState from '../../hooks/usePersistentState';
 const WIDTH = 400;
 const HEIGHT = 500;
 const DEFAULT_LAYOUT = { bumpers: [] };
+const TRAIL_LENGTH = 8;
 
 const Pinball = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
@@ -16,6 +17,9 @@ const Pinball = () => {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const nudgeTimes = useRef([]);
   const bumpersRef = useRef([]);
+  const ballsRef = useRef([]);
+  const jackpotRef = useRef({ active: false, pos: 0 });
+  const lastGamepadNudge = useRef(0);
   const animRef = useRef();
   const lightsRef = useRef(true);
 
@@ -46,8 +50,17 @@ const Pinball = () => {
     ];
     Composite.add(world, walls);
 
-    const ball = Bodies.circle(WIDTH / 2, 50, 8, { restitution: 0.9 });
-    Composite.add(world, ball);
+    const createBall = (x = WIDTH / 2, y = 50) => {
+      const b = Bodies.circle(x, y, 8, {
+        restitution: 0.9,
+        label: 'ball',
+        render: { fillStyle: '#fff' },
+      });
+      Composite.add(world, b);
+      ballsRef.current.push({ body: b, trail: [] });
+      return b;
+    };
+    createBall();
 
     // flippers
     const flipperLeft = Bodies.rectangle(110, HEIGHT - 40, 80, 20, { friction: 0, density: 1 });
@@ -89,6 +102,13 @@ const Pinball = () => {
           } else {
             bumperData.body.render.fillStyle = bumperData.lit ? '#ffd700' : '#444';
           }
+          if (
+            bumpersRef.current.length &&
+            bumpersRef.current.every((b) => b.lit)
+          ) {
+            jackpotRef.current.active = true;
+            jackpotRef.current.pos = -20;
+          }
         }
       });
     });
@@ -102,6 +122,66 @@ const Pinball = () => {
     const runner = Runner.create();
     Runner.run(runner, engine);
 
+    Events.on(render, 'afterRender', () => {
+      const ctx = render.context;
+      ctx.save();
+      ballsRef.current.forEach((b) => {
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(
+          b.body.position.x + 4,
+          b.body.position.y + 4,
+          b.body.circleRadius,
+          b.body.circleRadius * 0.6,
+          0,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        b.trail.forEach((p, i) => {
+          const alpha = (i + 1) / b.trail.length;
+          ctx.fillStyle = `rgba(255,255,255,${alpha * 0.5})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, b.body.circleRadius, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      });
+      if (jackpotRef.current.active) {
+        const pos = jackpotRef.current.pos;
+        const grad = ctx.createLinearGradient(pos - 20, 0, pos + 20, 0);
+        grad.addColorStop(0, 'rgba(255,215,0,0)');
+        grad.addColorStop(0.5, 'rgba(255,215,0,0.7)');
+        grad.addColorStop(1, 'rgba(255,215,0,0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(pos - 20, 0, 40, HEIGHT);
+      }
+      ctx.restore();
+    });
+
+    const handleNudge = () => {
+      const now = Date.now();
+      nudgeTimes.current = nudgeTimes.current.filter((t) => now - t < 3000);
+      nudgeTimes.current.push(now);
+      ballsRef.current.forEach(({ body }) =>
+        Body.applyForce(body, body.position, { x: 0.01, y: 0 })
+      );
+      if (nudgeTimes.current.length > 3) {
+        setTilt(true);
+      }
+    };
+
+    const checkGamepad = () => {
+      const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+      const gp = gps && gps[0];
+      if (!gp) return;
+      const pressed = gp.buttons[5]?.pressed || gp.axes[1] < -0.8;
+      if (pressed && performance.now() - lastGamepadNudge.current > 300) {
+        handleNudge();
+        lastGamepadNudge.current = performance.now();
+      }
+    };
+
     const animate = (time) => {
       bumpersRef.current.forEach((b) => {
         if (b.flashUntil && time > b.flashUntil) {
@@ -109,6 +189,21 @@ const Pinball = () => {
           b.body.render.fillStyle = b.lit ? '#ffd700' : '#444';
         }
       });
+      ballsRef.current.forEach((b) => {
+        b.trail.push({ x: b.body.position.x, y: b.body.position.y });
+        if (b.trail.length > TRAIL_LENGTH) b.trail.shift();
+      });
+      if (jackpotRef.current.active) {
+        jackpotRef.current.pos += 5;
+        if (jackpotRef.current.pos > WIDTH + 20) {
+          jackpotRef.current.active = false;
+          bumpersRef.current.forEach((b) => {
+            b.lit = false;
+            b.body.render.fillStyle = '#444';
+          });
+        }
+      }
+      checkGamepad();
       animRef.current = requestAnimationFrame(animate);
     };
     animRef.current = requestAnimationFrame(animate);
@@ -117,14 +212,11 @@ const Pinball = () => {
       if (tilt) return;
       if (e.key === 'ArrowLeft') Body.setAngle(flipperLeft, -0.5);
       if (e.key === 'ArrowRight') Body.setAngle(flipperRight, 0.5);
-      if (e.key.toLowerCase() === 'n') {
-        const now = Date.now();
-        nudgeTimes.current = nudgeTimes.current.filter((t) => now - t < 3000);
-        nudgeTimes.current.push(now);
-        Body.applyForce(ball, ball.position, { x: 0.02, y: 0 });
-        if (nudgeTimes.current.length > 3) {
-          setTilt(true);
-        }
+      if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'n') {
+        handleNudge();
+      }
+      if (e.key.toLowerCase() === 'm') {
+        createBall();
       }
     };
     const keyup = (e) => {
@@ -166,7 +258,7 @@ const Pinball = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white">
+    <div className="relative h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white">
       <div className="p-1 space-x-2">
         <button className="px-2 bg-ub-orange text-black" onClick={() => setEditing(!editing)}>
           {editing ? 'Play' : 'Edit'}
@@ -198,8 +290,19 @@ const Pinball = () => {
         width={WIDTH}
         height={HEIGHT}
       />
+      {tilt && (
+        <div
+          className="absolute inset-0 flex items-center justify-center bg-red-900 bg-opacity-70 pointer-events-none animate-pulse"
+          role="alert"
+          aria-live="assertive"
+        >
+          TILT
+        </div>
+      )}
       {editing && <div className="text-xs p-1">Click to add bumpers. Press Play when done.</div>}
-      <div className="text-xs p-1">Press &apos;n&apos; to nudge. Three nudges in 3s causes tilt.</div>
+      <div className="text-xs p-1">
+        Press ArrowUp/N or gamepad RB to nudge. Three nudges in 3s causes tilt.
+      </div>
     </div>
   );
 };
