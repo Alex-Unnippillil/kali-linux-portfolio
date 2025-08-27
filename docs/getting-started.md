@@ -20,3 +20,5 @@ yarn dev
 ```
 
 See the [Architecture](./architecture.md) document for an overview of how the project is organized.
+
+For app contributions, see the [New App Checklist](./new-app-checklist.md).
