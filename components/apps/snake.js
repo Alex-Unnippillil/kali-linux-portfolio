@@ -272,15 +272,22 @@ const Snake = () => {
   const cells = [];
   for (let y = 0; y < gridSize; y += 1) {
     for (let x = 0; x < gridSize; x += 1) {
-      const isSnake = snake.some((s) => s.x === x && s.y === y);
+      const idx = snake.findIndex((s) => s.x === x && s.y === y);
+      const isSnake = idx !== -1;
       const isFood = food.x === x && food.y === y;
       const isObstacle = obstacles.some((o) => o.x === x && o.y === y);
+
+      // create gradient color for snake segments from head to tail
+      const colorPercent = snake.length > 1 ? idx / (snake.length - 1) : 0;
+      const segmentColor = `hsl(${120 - colorPercent * 60}, 70%, 45%)`;
+
       cells.push(
         <div
           key={`${x}-${y}`}
+          style={isSnake ? { '--segment-color': segmentColor } : {}}
           className={`w-4 h-4 border border-gray-700 transform transition-transform ${
             isSnake
-              ? `bg-green-500 ${
+              ? `snake-segment ${
                   growCell && growCell.x === x && growCell.y === y
                     ? 'scale-125'
                     : 'scale-100'
@@ -300,8 +307,7 @@ const Snake = () => {
     <GameLayout instructions="Use arrow keys or swipe to move.">
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
         <div className="mb-2 flex space-x-2">
-          <span>Score: {score}</span>
-          <span>| High Score: {highScore}</span>
+          <span>High Score: {highScore}</span>
           <button
             className="ml-2 px-2 py-0.5 bg-gray-700 rounded"
             onClick={() => setPaused((p) => !p)}
@@ -326,11 +332,14 @@ const Snake = () => {
             <option value="fast">Fast</option>
           </select>
         </div>
-        <div
-          className="grid"
-          style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
-        >
-          {cells}
+        <div className="relative">
+          <div className="score-overlay">Score: {score}</div>
+          <div
+            className="grid"
+            style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
+          >
+            {cells}
+          </div>
         </div>
         {gameOver && (
           <div className="mt-2 flex items-center space-x-2">
