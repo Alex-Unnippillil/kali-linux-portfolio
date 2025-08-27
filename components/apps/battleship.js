@@ -62,6 +62,7 @@ const Battleship = () => {
   const [playerBoard, setPlayerBoard] = useState(createBoard());
   const [enemyBoard, setEnemyBoard] = useState(createBoard());
   const [ships, setShips] = useState([]); // player's ship objects
+  const [enemyShips, setEnemyShips] = useState([]); // enemy ship objects
   const [heat, setHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
   const [message, setMessage] = useState('Place your ships');
   const [difficulty, setDifficulty] = useState('easy');
@@ -81,10 +82,15 @@ const Battleship = () => {
   const restart = useCallback(
     (diff = difficulty) => {
       const layout = randomizePlacement();
-      const newShips = layout.map((s, i) => ({ ...s, id: i }));
+      const newShips = layout.map((s, i) => ({ ...s, id: i, sunk: false }));
       setShips(newShips);
       setPlayerBoard(placeShips(createBoard(), newShips));
-      setEnemyBoard(placeShips(createBoard(), randomizePlacement()));
+
+      const enemyLayout = randomizePlacement();
+      const newEnemyShips = enemyLayout.map((s, i) => ({ ...s, id: i, sunk: false }));
+      setEnemyShips(newEnemyShips);
+      setEnemyBoard(placeShips(createBoard(), newEnemyShips));
+
       setPhase('placement');
       setMessage('Place your ships');
       setHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
@@ -143,6 +149,15 @@ const Battleship = () => {
       const hit = newBoard[idx] === 'ship';
       newBoard[idx] = hit ? 'hit' : 'miss';
       setEnemyBoard(newBoard);
+      if (hit) {
+        setEnemyShips((es) =>
+          es.map((s) =>
+            s.cells.includes(idx)
+              ? { ...s, sunk: s.cells.every((c) => newBoard[c] === 'hit') }
+              : s
+          )
+        );
+      }
       if (!newBoard.includes('ship')) {
         setMessage('You win!');
         setPhase('done');
@@ -161,6 +176,13 @@ const Battleship = () => {
         nh[move]++;
         setHeat(nh);
         ai.record(move, hit2);
+        if (hit2) {
+          setShips((ps) =>
+            ps.map((s) =>
+              s.cells.every((c) => pb[c] === 'hit') ? { ...s, sunk: true } : s
+            )
+          );
+        }
         if (!pb.includes('ship')) {
           setMessage('AI wins!');
           setPhase('done');
@@ -193,27 +215,43 @@ const Battleship = () => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [phase, cursor, fire]);
 
-  const renderBoard = (board, isEnemy=false) => (
-    <div className="grid" style={{gridTemplateColumns:`repeat(${BOARD_SIZE}, ${CELL}px)`}}>
-      {board.map((cell,idx)=>{
-        const heatVal = heat[idx];
-        const color = heatVal? `rgba(255,0,0,${Math.min(heatVal/5,0.5)})` : 'transparent';
-        return (
-          <div key={idx} className="border border-ub-dark-grey relative" style={{width:CELL,height:CELL}}>
-            {isEnemy && phase==='battle' && !['hit','miss'].includes(cell)?(
-              <button className="w-full h-full" onClick={()=>fire(idx)} />
-            ):null}
-            {cell==='hit' && <HitMarker />}
-            {cell==='miss' && <MissMarker />}
-            {!isEnemy && <div className="absolute inset-0" style={{background:color}}/>}
-            {isEnemy && phase==='battle' && idx===cursor && (
-              <div className="absolute inset-0 border-2 border-yellow-300 pointer-events-none" />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
+  const renderBoard = (board, isEnemy = false) => {
+    const sunkSet = new Set(
+      (isEnemy ? enemyShips : ships)
+        .filter((s) => s.sunk)
+        .flatMap((s) => s.cells)
+    );
+    return (
+      <div className="grid" style={{ gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL}px)` }}>
+        {board.map((cell, idx) => {
+          const heatVal = heat[idx];
+          const color = heatVal
+            ? `rgba(255,0,0,${Math.min(heatVal / 5, 0.5)})`
+            : 'transparent';
+          return (
+            <div
+              key={idx}
+              className="border border-ub-dark-grey relative"
+              style={{ width: CELL, height: CELL }}
+            >
+              {isEnemy && phase === 'battle' && !['hit', 'miss'].includes(cell) ? (
+                <button className="w-full h-full" onClick={() => fire(idx)} />
+              ) : null}
+              {cell === 'hit' && <HitMarker />}
+              {cell === 'miss' && <MissMarker />}
+              {cell === 'hit' && sunkSet.has(idx) && (
+                <div className="absolute inset-0 water-ripple" />
+              )}
+              {!isEnemy && <div className="absolute inset-0" style={{ background: color }} />}
+              {isEnemy && phase === 'battle' && idx === cursor && (
+                <div className="absolute inset-0 border-2 border-yellow-300 pointer-events-none" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto font-ubuntu">
