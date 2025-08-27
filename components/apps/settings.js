@@ -10,7 +10,7 @@ export function Settings() {
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
     const changeBackgroundImage = (e) => {
-        const name = e.target.dataset.path;
+        const name = e.currentTarget.dataset.path;
         setWallpaper(name);
     };
 
@@ -105,9 +105,16 @@ export function Settings() {
                             key={index}
                             role="button"
                             aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
+                            aria-pressed={name === wallpaper}
                             tabIndex="0"
                             onClick={changeBackgroundImage}
                             onFocus={changeBackgroundImage}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    changeBackgroundImage(e);
+                                }
+                            }}
                             data-path={name}
                             className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
                             style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
@@ -117,7 +124,7 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4">
                 <button
-                    onClick={() => { resetSettings(); setTheme(defaults.theme); setAccent(defaults.accent); setWallpaper(defaults.wallpaper); }}
+                    onClick={async () => { await resetSettings(); setTheme(defaults.theme); setAccent(defaults.accent); setWallpaper(defaults.wallpaper); }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
                     Reset Desktop

@@ -30,9 +30,17 @@ export const SettingsContext = createContext<SettingsContextValue>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => loadTheme() as Theme);
-  const [accent, setAccent] = useState<string>(() => loadAccent());
-  const [wallpaper, setWallpaper] = useState<string>(() => loadWallpaper());
+  const [theme, setTheme] = useState<Theme>(defaults.theme);
+  const [accent, setAccent] = useState<string>(defaults.accent);
+  const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
+
+  useEffect(() => {
+    (async () => {
+      setTheme((await loadTheme()) as Theme);
+      setAccent(await loadAccent());
+      setWallpaper(await loadWallpaper());
+    })();
+  }, []);
 
   useEffect(() => {
     const applyTheme = () => {
