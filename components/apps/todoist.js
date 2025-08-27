@@ -105,6 +105,11 @@ export default function Todoist() {
   const handleKeyDown = (group, task) => (e) => {
     const names = Object.keys(groups);
     const index = groups[group].findIndex((t) => t.id === task.id);
+    if (e.key === ' ' || (e.ctrlKey && e.key.toLowerCase() === 'd')) {
+      e.preventDefault();
+      toggleDone(group, task.id);
+      return;
+    }
     if (e.key === 'ArrowUp' && index > 0) {
       e.preventDefault();
       const newGroups = { ...groups, [group]: [...groups[group]] };
@@ -147,6 +152,17 @@ export default function Todoist() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const toggleDone = (group, id) => {
+    const newGroups = {
+      ...groups,
+      [group]: groups[group].map((t) =>
+        t.id === id ? { ...t, done: !t.done } : t
+      ),
+    };
+    setGroups(newGroups);
+    set(KEY, newGroups, store).catch(() => {});
+  };
+
   const handleAdd = (e) => {
     e.preventDefault();
     if (!form.title) return;
@@ -164,6 +180,7 @@ export default function Todoist() {
             .map((t, i) => ({ id: i + 1, title: t.trim(), done: false }))
             .filter((t) => t.title)
         : [],
+      done: false,
     };
     const newGroups = {
       ...groups,
@@ -192,6 +209,7 @@ export default function Todoist() {
             name="title"
             value={form.title}
             onChange={handleChange}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd(e)}
             placeholder="Task"
             className="border p-1"
             required
@@ -219,7 +237,7 @@ export default function Todoist() {
           />
           <button
             type="submit"
-            className="px-2 py-1 bg-blue-600 text-white rounded"
+            className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Add
           </button>
@@ -254,32 +272,41 @@ export default function Todoist() {
                 draggable
                 onDragStart={handleDragStart(name, task)}
                 onKeyDown={handleKeyDown(name, task)}
-                className="mb-2 p-2 rounded shadow bg-white text-black"
+                className="mb-2 p-2 rounded shadow bg-white text-black flex items-center min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500"
                 role="listitem"
               >
-                <div className="font-medium">{task.title}</div>
-                {task.due && (
-                  <div className="text-xs text-gray-500">{task.due}</div>
-                )}
-                {task.labels.length > 0 && (
-                  <div className="text-xs mt-1">
-                    {task.labels.map((l) => (
-                      <span
-                        key={l}
-                        className="mr-1 px-1 bg-gray-200 rounded"
-                      >
-                        {l}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {task.subtasks.length > 0 && (
-                  <ul className="mt-1 text-xs list-disc list-inside">
-                    {task.subtasks.map((s) => (
-                      <li key={s.id}>{s.title}</li>
-                    ))}
-                  </ul>
-                )}
+                <input
+                  type="checkbox"
+                  aria-label="Toggle completion"
+                  checked={!!task.done}
+                  onChange={() => toggleDone(name, task.id)}
+                  className="w-6 h-6 mr-2 focus:ring-2 focus:ring-blue-500"
+                />
+                <div className="flex-1">
+                  <div className={`font-medium ${task.done ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
+                  {task.due && (
+                    <div className="text-xs text-gray-500">{task.due}</div>
+                  )}
+                  {task.labels.length > 0 && (
+                    <div className="text-xs mt-1">
+                      {task.labels.map((l) => (
+                        <span
+                          key={l}
+                          className="mr-1 px-1 bg-gray-200 rounded"
+                        >
+                          {l}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {task.subtasks.length > 0 && (
+                    <ul className="mt-1 text-xs list-disc list-inside">
+                      {task.subtasks.map((s) => (
+                        <li key={s.id}>{s.title}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             ))}
           </div>
