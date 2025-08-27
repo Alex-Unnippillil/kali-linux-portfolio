@@ -346,3 +346,14 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     animation: tile-pop 0.15s ease-out;
 
 }
+
+@keyframes hangman-draw {
+    from { stroke-dashoffset: 100; }
+    to { stroke-dashoffset: 0; }
+}
+
+.hangman-part {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: hangman-draw 0.5s ease-out forwards;
+}

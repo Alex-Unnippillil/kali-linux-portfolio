@@ -37,16 +37,74 @@ const HangmanDrawing = ({ wrong }) => (
     <line x1="120" y1="20" x2="120" y2="40" strokeWidth="4" />
     {/* head */}
     {wrong > 0 && (
-      <circle cx="120" cy="60" r="20" strokeWidth="4" fill="transparent" />
+      <circle
+        cx="120"
+        cy="60"
+        r="20"
+        strokeWidth="4"
+        fill="transparent"
+        className="hangman-part"
+        pathLength="100"
+      />
     )}
     {/* body */}
-    {wrong > 1 && <line x1="120" y1="80" x2="120" y2="140" strokeWidth="4" />}
+    {wrong > 1 && (
+      <line
+        x1="120"
+        y1="80"
+        x2="120"
+        y2="140"
+        strokeWidth="4"
+        className="hangman-part"
+        pathLength="100"
+      />
+    )}
     {/* arms */}
-    {wrong > 2 && <line x1="120" y1="100" x2="90" y2="120" strokeWidth="4" />}
-    {wrong > 3 && <line x1="120" y1="100" x2="150" y2="120" strokeWidth="4" />}
+    {wrong > 2 && (
+      <line
+        x1="120"
+        y1="100"
+        x2="90"
+        y2="120"
+        strokeWidth="4"
+        className="hangman-part"
+        pathLength="100"
+      />
+    )}
+    {wrong > 3 && (
+      <line
+        x1="120"
+        y1="100"
+        x2="150"
+        y2="120"
+        strokeWidth="4"
+        className="hangman-part"
+        pathLength="100"
+      />
+    )}
     {/* legs */}
-    {wrong > 4 && <line x1="120" y1="140" x2="100" y2="170" strokeWidth="4" />}
-    {wrong > 5 && <line x1="120" y1="140" x2="140" y2="170" strokeWidth="4" />}
+    {wrong > 4 && (
+      <line
+        x1="120"
+        y1="140"
+        x2="100"
+        y2="170"
+        strokeWidth="4"
+        className="hangman-part"
+        pathLength="100"
+      />
+    )}
+    {wrong > 5 && (
+      <line
+        x1="120"
+        y1="140"
+        x2="140"
+        y2="170"
+        strokeWidth="4"
+        className="hangman-part"
+        pathLength="100"
+      />
+    )}
   </svg>
 );
 
