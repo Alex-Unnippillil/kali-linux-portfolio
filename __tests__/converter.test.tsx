@@ -20,6 +20,16 @@ describe('Unit conversion', () => {
       convertUnit('length', 'meter', 'kilometer', 1234, 2)
     ).toBeCloseTo(1.23, 2);
   });
+
+  it('rounds to the nearest integer when precision is zero', () => {
+    expect(convertUnit('length', 'meter', 'kilometer', 1499, 0)).toBe(1);
+    expect(convertUnit('length', 'meter', 'kilometer', 1500, 0)).toBe(2);
+  });
+
+  it('rounds halves away from zero', () => {
+    expect(convertUnit('length', 'kilometer', 'kilometer', -1.5, 0)).toBe(-2);
+    expect(convertUnit('length', 'kilometer', 'kilometer', 1.5, 0)).toBe(2);
+  });
 });
 
 describe('UnitConverter UI', () => {
