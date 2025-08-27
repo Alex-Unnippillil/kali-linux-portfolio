@@ -7,6 +7,7 @@ const ResourceMonitor = () => {
   const liveRef = useRef(null);
   const workerRef = useRef(null);
   const rafRef = useRef(0);
+  const containerRef = useRef(null);
   const [stress, setStress] = useState(false);
 
   useEffect(() => {
@@ -35,8 +36,14 @@ const ResourceMonitor = () => {
       [cpuCanvas, memCanvas, netCanvas]
     );
 
-    const tick = () => {
-      if (workerRef.current) workerRef.current.postMessage({ type: 'frame' });
+    const fps = 30;
+    const interval = 1000 / fps;
+    let last = 0;
+    const tick = (now) => {
+      if (workerRef.current && now - last >= interval) {
+        last = now;
+        workerRef.current.postMessage({ type: 'frame' });
+      }
       rafRef.current = requestAnimationFrame(tick);
     };
 
@@ -47,6 +54,14 @@ const ResourceMonitor = () => {
 
     if (!reduceMotion && !document.hidden) rafRef.current = requestAnimationFrame(tick);
     document.addEventListener('visibilitychange', handleVisibility);
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      const area = entry.contentRect.width * entry.contentRect.height;
+      const factor = area < 200000 ? 2 : 1;
+      worker.postMessage({ type: 'decimate', value: factor });
+    });
+    if (containerRef.current) observer.observe(containerRef.current);
 
     worker.onmessage = (e) => {
       const { cpu, memory, down, up } = e.data || {};
@@ -60,6 +75,7 @@ const ResourceMonitor = () => {
       worker.terminate();
       cancelAnimationFrame(rafRef.current);
       document.removeEventListener('visibilitychange', handleVisibility);
+      observer.disconnect();
     };
   }, []);
 
@@ -80,7 +96,10 @@ const ResourceMonitor = () => {
           {stress ? 'Stop Stress' : 'Start Stress'}
         </button>
       </div>
-      <div className="flex flex-col sm:flex-row flex-1 items-center justify-evenly gap-4 p-4">
+      <div
+        ref={containerRef}
+        className="flex flex-col lg:flex-row flex-1 items-center justify-evenly gap-4 p-4"
+      >
         <canvas
           ref={cpuRef}
           width={300}
