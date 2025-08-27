@@ -13,19 +13,32 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
 
   useEffect(() => {
-    if (!showHelp) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
-        setShowHelp(false);
+        if (showHelp) {
+          setShowHelp(false);
+        } else {
+          document.getElementById(`close-${gameId}`)?.click();
+        }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [showHelp]);
+  }, [showHelp, gameId]);
 
   return (
-    <div className="relative h-full w-full">
+    <div
+      role="application"
+      aria-labelledby={`${gameId}-label`}
+      className="relative h-full w-full"
+    >
+      <label
+        id={`${gameId}-label`}
+        className="absolute top-2 left-2 bg-gray-700 text-white px-2 py-1 rounded"
+      >
+        {gameId}
+      </label>
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
       <button
         type="button"
@@ -37,7 +50,6 @@ const GameLayout: React.FC<GameLayoutProps> = ({ gameId, children }) => {
         ?
       </button>
       {children}
-
     </div>
   );
 };
