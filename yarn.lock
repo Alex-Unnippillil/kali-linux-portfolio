@@ -1668,6 +1668,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/offscreencanvas@npm:^2019.6.4":
+  version: 2019.7.3
+  resolution: "@types/offscreencanvas@npm:2019.7.3"
+  checksum: 10c0/6d1dfae721d321cd2b5435f347a0e53b09f33b2f9e9333396480f592823bc323847b8169f7d251d2285cb93dbc1ba2e30741ac5cf4b1c003d660fd4c24526963
+  languageName: node
+  linkType: hard
+
 "@types/react@npm:^19.1.10":
   version: 19.1.11
   resolution: "@types/react@npm:19.1.11"
@@ -6612,6 +6619,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"qr-scanner@npm:^1.4.2":
+  version: 1.4.2
+  resolution: "qr-scanner@npm:1.4.2"
+  dependencies:
+    "@types/offscreencanvas": "npm:^2019.6.4"
+  checksum: 10c0/32ac53d6f5c9045e1464d6b110eb19d3f8865f72276d26f00f6cc1e1d239ce34c799824a3082c775236cf887cf4354b2c292c89a08fd25378ab2c68472346970
+  languageName: node
+  linkType: hard
+
 "qrcode@npm:^1.5.4":
   version: 1.5.4
   resolution: "qrcode@npm:1.5.4"
@@ -6669,7 +6685,6 @@ __metadata:
   linkType: hard
 
 "react-force-graph@npm:^1.45.0":
-
   version: 1.48.0
   resolution: "react-force-graph@npm:1.48.0"
   dependencies:
@@ -8037,13 +8052,13 @@ __metadata:
     phaser: "npm:3.70.0"
     postcss: "npm:^8.4.21"
     prop-types: "npm:^15.8.1"
+    qr-scanner: "npm:^1.4.2"
     qrcode: "npm:^1.5.4"
     react: "npm:^18.2.0"
     react-activity-calendar: "npm:^2.7.13"
     react-dom: "npm:^18.2.0"
     react-draggable: "npm:^4.4.5"
     react-force-graph: "npm:^1.45.0"
-
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
     react-onclickoutside: "npm:^6.12.2"
