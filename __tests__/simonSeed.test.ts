@@ -12,5 +12,10 @@ describe('generateSequence', () => {
     const seq2 = generateSequence(5, 'b');
     expect(seq1).not.toEqual(seq2);
   });
+
+  test('generates values between 0 and 3 without seed', () => {
+    const seq = generateSequence(100);
+    expect(seq.every((n) => n >= 0 && n < 4)).toBe(true);
+  });
 });
 
