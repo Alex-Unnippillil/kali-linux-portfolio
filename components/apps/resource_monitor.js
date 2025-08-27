@@ -6,6 +6,7 @@ const ResourceMonitor = () => {
   const networkRef = useRef(null);
   const liveRef = useRef(null);
   const workerRef = useRef(null);
+  const rafRef = useRef(0);
   const [stress, setStress] = useState(false);
 
   useEffect(() => {
@@ -33,6 +34,20 @@ const ResourceMonitor = () => {
       },
       [cpuCanvas, memCanvas, netCanvas]
     );
+
+    const tick = () => {
+      if (workerRef.current) workerRef.current.postMessage({ type: 'frame' });
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) cancelAnimationFrame(rafRef.current);
+      else if (!reduceMotion) rafRef.current = requestAnimationFrame(tick);
+    };
+
+    if (!reduceMotion && !document.hidden) rafRef.current = requestAnimationFrame(tick);
+    document.addEventListener('visibilitychange', handleVisibility);
+
     worker.onmessage = (e) => {
       const { cpu, memory, down, up } = e.data || {};
       if (liveRef.current) {
@@ -40,7 +55,12 @@ const ResourceMonitor = () => {
           `CPU ${cpu.toFixed(1)}%, Memory ${memory.toFixed(1)}%, Download ${down.toFixed(1)} Mbps, Upload ${up.toFixed(1)} Mbps`;
       }
     };
-    return () => worker.terminate();
+
+    return () => {
+      worker.terminate();
+      cancelAnimationFrame(rafRef.current);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   const toggleStress = () => {
