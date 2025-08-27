@@ -10,11 +10,16 @@ const unitMap = {
     mile: 'mi',
     foot: 'ft',
   },
-  weight: {
+  mass: {
     gram: 'g',
     kilogram: 'kg',
     pound: 'lb',
     ounce: 'oz',
+  },
+  temperature: {
+    celsius: 'degC',
+    fahrenheit: 'degF',
+    kelvin: 'K',
   },
 };
 
@@ -170,7 +175,8 @@ const UnitConverter = () => {
           onChange={(e) => setCategory(e.target.value)}
         >
           <option value="length">Length</option>
-          <option value="weight">Weight</option>
+          <option value="mass">Mass</option>
+          <option value="temperature">Temperature</option>
         </select>
       </label>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
