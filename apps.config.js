@@ -173,6 +173,56 @@ const displayHashcat = createDisplay(HashcatApp);
 
 const displayKismet = createDisplay(KismetApp);
 
+// Utilities list used for the "Utilities" folder on the desktop
+const utilityList = [
+  {
+    id: 'qr-tool',
+    title: 'QR Tool',
+    icon: './themes/Yaru/apps/qr.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayQrTool,
+  },
+  {
+    id: 'ascii-art',
+    title: 'ASCII Art',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayAsciiArt,
+  },
+  {
+    id: 'figlet',
+    title: 'Figlet',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayFiglet,
+  },
+  {
+    id: 'quote-generator',
+    title: 'Quote Generator',
+    icon: './themes/Yaru/apps/quote.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayQuoteGenerator,
+  },
+  {
+    id: 'project-gallery',
+    title: 'Project Gallery',
+    icon: './themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayProjectGallery,
+  },
+];
+
+export const utilities = utilityList;
 
 // Default window sizing for games to prevent oversized frames
 const gameDefaults = {
@@ -462,7 +512,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayCandyCrush,
-
+  },
+  {
     id: 'gomoku',
     title: 'Gomoku',
     icon: './themes/Yaru/apps/gomoku.svg',
@@ -470,7 +521,8 @@ const gameList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayGomoku,
-
+  },
+  {
     id: 'pinball',
     title: 'Pinball',
     icon: './themes/Yaru/apps/pinball.svg',
@@ -615,15 +667,6 @@ const apps = [
     screen: displayMetasploit,
   },
   {
-    id: 'project-gallery',
-    title: 'Project Gallery',
-    icon: './themes/Yaru/apps/project-gallery.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayProjectGallery,
-  },
-  {
     id: 'wireshark',
     title: 'Wireshark',
     icon: './themes/Yaru/apps/wireshark.svg',
@@ -687,15 +730,6 @@ const apps = [
     screen: displayNikto,
   },
   {
-    id: 'qr-tool',
-    title: 'QR Tool',
-    icon: './themes/Yaru/apps/qr.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayQrTool,
-  },
-  {
     id: 'autopsy',
     title: 'Autopsy',
     icon: './themes/Yaru/apps/autopsy.svg',
@@ -720,33 +754,6 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayNessus,
-  },
-  {
-    id: 'ascii-art',
-    title: 'ASCII Art',
-    icon: './themes/Yaru/apps/gedit.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayAsciiArt,
-  },
-  {
-    id: 'figlet',
-    title: 'Figlet',
-    icon: './themes/Yaru/apps/gedit.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayFiglet,
-  },
-  {
-    id: 'quote-generator',
-    title: 'Quote Generator',
-    icon: './themes/Yaru/apps/quote.svg',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: false,
-    screen: displayQuoteGenerator,
   },
   {
     id: 'ghidra',
@@ -865,6 +872,8 @@ const apps = [
     desktop_shortcut: false,
     screen: displayReconNG,
   },
+  // Utilities are grouped separately
+  ...utilities,
   // Games are included so they appear alongside apps
   ...games,
 ];
