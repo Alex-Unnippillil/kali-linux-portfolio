@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import {
   initializeGame,
   drawFromStock,
@@ -23,8 +24,15 @@ type Stats = {
   lastDaily: string | null;
 };
 
+type AnimatedCard = Card & {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+};
+
 const renderCard = (card: Card) => (
-  <div className="w-16 h-24 rounded border border-black bg-white flex items-center justify-center transition-transform duration-300" >
+  <div className="w-16 h-24 rounded border border-black bg-white flex items-center justify-center transition-transform duration-300">
     <span className={card.color === 'red' ? 'text-red-600' : ''}>
       {valueToString(card.value)}{card.suit}
     </span>
@@ -51,6 +59,10 @@ const Solitaire = () => {
     dailyStreak: 0,
     lastDaily: null,
   });
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [cascade, setCascade] = useState<AnimatedCard[]>([]);
+  const cascadeRef = useRef<number>();
+  const [ariaMessage, setAriaMessage] = useState('');
   const timer = useRef<NodeJS.Timeout | null>(null);
   const foundationRefs = useRef<(HTMLDivElement | null)[]>([]);
   const tableauRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -143,6 +155,55 @@ const Solitaire = () => {
       ReactGA.event({ category: 'Solitaire', action: 'win' });
     }
   }, [game]);
+
+  useEffect(() => {
+    if (won && !prefersReducedMotion) {
+      const cards: AnimatedCard[] = [];
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      game.foundations.forEach((pile) => {
+        pile.forEach((card) => {
+          cards.push({
+            ...card,
+            x: Math.random() * w,
+            y: -Math.random() * h,
+            vx: (Math.random() - 0.5) * 4,
+            vy: Math.random() * 2 + 2,
+          });
+        });
+      });
+      setCascade(cards);
+    }
+  }, [won, prefersReducedMotion, game.foundations]);
+
+  useEffect(() => {
+    if (!cascade.length || prefersReducedMotion) return;
+    const animate = () => {
+      setCascade((cards) =>
+        cards
+          .map((c) => ({
+            ...c,
+            x: c.x + c.vx,
+            y: c.y + c.vy,
+            vy: c.vy + 0.3,
+          }))
+          .filter((c) => c.y < window.innerHeight + 100),
+      );
+      cascadeRef.current = requestAnimationFrame(animate);
+    };
+    cascadeRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (cascadeRef.current) cancelAnimationFrame(cascadeRef.current);
+    };
+  }, [cascade.length, prefersReducedMotion]);
+
+  useEffect(() => {
+    setAriaMessage(`Score ${game.score}, time ${time} seconds, redeals ${game.redeals}`);
+  }, [game.score, time, game.redeals]);
+
+  useEffect(() => {
+    if (won) setAriaMessage('You win!');
+  }, [won]);
 
   const draw = () =>
     setGame((g) => {
@@ -270,9 +331,21 @@ const Solitaire = () => {
   }
 
   return (
-    <div className="h-full w-full bg-green-700 text-white select-none p-2">
+    <div className="h-full w-full bg-green-700 text-white select-none p-2 relative overflow-hidden">
+      <div aria-live="polite" className="sr-only">
+        {ariaMessage}
+      </div>
+      {won && !prefersReducedMotion &&
+        cascade.map((c, i) => (
+          <div key={i} className="absolute" style={{ left: c.x, top: c.y }}>
+            {renderCard(c)}
+          </div>
+        ))}
       {won && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-2xl">
+        <div
+          className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-2xl"
+          role="alert"
+        >
           You win!
         </div>
       )}
@@ -332,6 +405,11 @@ const Solitaire = () => {
               onDoubleClick={() => handleDoubleClick('waste', 0)}
               onDragStart={() => handleDragStart('waste', -1, game.waste.length - 1)}
               onDragEnd={handleDragEnd}
+              className={`${
+                drag && drag.source === 'waste'
+                  ? 'transform -translate-y-2 shadow-lg z-50'
+                  : ''
+              } ${!prefersReducedMotion ? 'transition-transform' : ''}`}
             >
               {renderCard(game.waste[game.waste.length - 1])}
             </div>
@@ -369,7 +447,16 @@ const Solitaire = () => {
             {pile.map((card, idx) => (
               <div
                 key={idx}
-                className="absolute transition-all duration-300"
+                className={`absolute ${
+                  !prefersReducedMotion ? 'transition-transform duration-300' : ''
+                } ${
+                  drag &&
+                  drag.source === 'tableau' &&
+                  drag.pile === i &&
+                  idx >= drag.index
+                    ? 'transform -translate-y-2 shadow-lg z-50'
+                    : ''
+                }`}
                 style={{ top: idx * 24 }}
                 draggable={card.faceUp}
                 onDoubleClick={() => handleDoubleClick('tableau', i)}
