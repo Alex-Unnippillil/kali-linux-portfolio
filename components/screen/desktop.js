@@ -4,10 +4,12 @@ import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
 import Window from '../base/window';
 import UbuntuApp from '../base/ubuntu_app';
-import AllApplications from '../screen/all-applications'
+import AllApplications from '../screen/all-applications';
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import ReactGA from 'react-ga4';
+import SearchOverlay from '../SearchOverlay';
+import { helpDocs } from '../../utils/helpIndex';
 
 export class Desktop extends Component {
     constructor() {
@@ -30,6 +32,7 @@ export class Desktop extends Component {
                 default: false,
             },
             showNameBar: false,
+            searchVisible: false,
         }
     }
 
@@ -43,10 +46,12 @@ export class Desktop extends Component {
         this.setContextListeners();
         this.setEventListeners();
         this.checkForNewFolders();
+        window.addEventListener('keydown', this.handleGlobalKey);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
+        window.removeEventListener('keydown', this.handleGlobalKey);
     }
 
     checkForNewFolders = () => {
@@ -89,6 +94,17 @@ export class Desktop extends Component {
     removeContextListeners = () => {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
+    }
+
+    handleGlobalKey = (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            this.setState({ searchVisible: true });
+        }
+    }
+
+    closeSearch = () => {
+        this.setState({ searchVisible: false });
     }
 
     checkContextMenu = (e) => {
@@ -504,6 +520,10 @@ export class Desktop extends Component {
     }
 
     render() {
+        const searchItems = [
+            ...apps.map(app => ({ id: app.id, title: app.title, type: app.id === 'settings' ? 'settings' : 'app' })),
+            ...helpDocs.map(doc => ({ id: doc.id, title: doc.title, type: 'help', url: doc.url }))
+        ];
         return (
             <div className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -547,6 +567,13 @@ export class Desktop extends Component {
                         games={games}
                         recentApps={this.app_stack}
                         openApp={this.openApp} /> : null}
+
+                <SearchOverlay
+                    visible={this.state.searchVisible}
+                    items={searchItems}
+                    openApp={this.openApp}
+                    onClose={this.closeSearch}
+                />
 
             </div>
         )
