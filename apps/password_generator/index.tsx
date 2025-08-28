@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import FormField from '../../components/ui/FormField';
 
 const LOWER = 'abcdefghijklmnopqrstuvwxyz';
 const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -12,6 +13,7 @@ interface PasswordGeneratorProps {
 const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) => {
   void getDailySeed;
   const [length, setLength] = useState(12);
+  const [lengthValid, setLengthValid] = useState(true);
   const [useLower, setUseLower] = useState(true);
   const [useUpper, setUseUpper] = useState(true);
   const [useNumbers, setUseNumbers] = useState(true);
@@ -58,20 +60,21 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
 
   const { label, width, color } = strengthInfo();
 
+  const canGenerate =
+    lengthValid && (useLower || useUpper || useNumbers || useSymbols);
+
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
-      <div>
-        <label htmlFor="length" className="mr-2">Length:</label>
-        <input
-          id="length"
-          type="number"
-          min={4}
-          max={64}
-          value={length}
-          onChange={(e) => setLength(parseInt(e.target.value, 10) || 0)}
-          className="text-black px-2"
-        />
-      </div>
+      <FormField
+        id="length"
+        label="Length"
+        type="number"
+        min={4}
+        max={64}
+        value={length}
+        onChange={(v) => setLength(typeof v === 'number' ? v : 0)}
+        onValidChange={setLengthValid}
+      />
       <div className="flex flex-col space-y-1">
         <label><input type="checkbox" checked={useLower} onChange={(e) => setUseLower(e.target.checked)} /> Lowercase</label>
         <label><input type="checkbox" checked={useUpper} onChange={(e) => setUseUpper(e.target.checked)} /> Uppercase</label>
@@ -104,7 +107,8 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
         <button
           type="button"
           onClick={generatePassword}
-          className="w-full px-4 py-2 bg-green-600 rounded"
+          className="w-full px-4 py-2 bg-green-600 rounded disabled:opacity-50"
+          disabled={!canGenerate}
         >
           Generate
         </button>
