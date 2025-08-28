@@ -1,90 +1,106 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
+import { subscribe } from '../../utils/pubsub';
+
+const MAX_POINTS = 50;
 
 const ResourceMonitor = () => {
   const cpuRef = useRef(null);
   const memoryRef = useRef(null);
-  const networkRef = useRef(null);
-  const liveRef = useRef(null);
-  const workerRef = useRef(null);
-  const containerRef = useRef(null);
-  const [stress, setStress] = useState(false);
+  const gpuRef = useRef(null);
+  const dataRef = useRef({ cpu: [], memory: [], gpu: [] });
+  const fpsRef = useRef(0);
+
+  const [paused, setPaused] = usePersistentState('rm_paused', false);
+  const [speed, setSpeed] = usePersistentState('rm_speed', 1);
+  const [layout, setLayout] = usePersistentState('rm_layout', 'row');
 
   useEffect(() => {
-    if (
-      typeof window === 'undefined' ||
-      !window.Worker ||
-      !('OffscreenCanvas' in window) ||
-      !cpuRef.current ||
-      !memoryRef.current ||
-      !networkRef.current
-    ) {
-      return;
-    }
-    const worker = new Worker(new URL('./resource_monitor.worker.js', import.meta.url));
-    workerRef.current = worker;
-    const cpuCanvas = cpuRef.current.transferControlToOffscreen();
-    const memCanvas = memoryRef.current.transferControlToOffscreen();
-    const netCanvas = networkRef.current.transferControlToOffscreen();
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    worker.postMessage(
-      {
-        type: 'init',
-        canvases: { cpu: cpuCanvas, memory: memCanvas, network: netCanvas },
-        reduceMotion,
-      },
-      [cpuCanvas, memCanvas, netCanvas]
-    );
-
-    const handleVisibility = () => {
-      worker.postMessage({ type: 'visibility', hidden: document.hidden });
-    };
-
-    worker.postMessage({ type: 'visibility', hidden: document.hidden });
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      const area = entry.contentRect.width * entry.contentRect.height;
-      const factor = area < 200000 ? 2 : 1;
-      worker.postMessage({ type: 'decimate', value: factor });
+    return subscribe('fps', (fps) => {
+      fpsRef.current = fps;
     });
-    if (containerRef.current) observer.observe(containerRef.current);
-
-    worker.onmessage = (e) => {
-      const { cpu, memory, down, up } = e.data || {};
-      if (liveRef.current) {
-        liveRef.current.textContent =
-          `CPU ${cpu.toFixed(1)}%, Memory ${memory.toFixed(1)}%, Download ${down.toFixed(1)} Mbps, Upload ${up.toFixed(1)} Mbps`;
-      }
-    };
-
-    return () => {
-      worker.terminate();
-      document.removeEventListener('visibilitychange', handleVisibility);
-      observer.disconnect();
-    };
   }, []);
 
-  const toggleStress = () => {
-    const next = !stress;
-    setStress(next);
-    if (workerRef.current) workerRef.current.postMessage({ type: 'stress', value: next });
-  };
+  useEffect(() => {
+    if (paused) return undefined;
+    let last = performance.now();
+    const interval = setInterval(() => {
+      const now = performance.now();
+      const expected = 1000 / speed;
+      const delay = now - last - expected;
+      last = now;
+
+      const cpu = Math.min(100, Math.max(0, (delay / expected) * 100));
+      let memory = 0;
+      if (performance && performance.memory) {
+        const { usedJSHeapSize, totalJSHeapSize } = performance.memory;
+        memory = (usedJSHeapSize / totalJSHeapSize) * 100;
+      }
+      const gpu = fpsRef.current;
+
+      const data = dataRef.current;
+      data.cpu.push(cpu);
+      data.memory.push(memory);
+      data.gpu.push(gpu);
+      Object.keys(data).forEach((k) => {
+        if (data[k].length > MAX_POINTS) data[k].shift();
+      });
+    }, 1000 / speed);
+    return () => clearInterval(interval);
+  }, [paused, speed]);
+
+  useEffect(() => {
+    const cpuCtx = cpuRef.current?.getContext('2d');
+    const memCtx = memoryRef.current?.getContext('2d');
+    const gpuCtx = gpuRef.current?.getContext('2d');
+    let raf;
+    const draw = () => {
+      if (!paused) {
+        drawChart(cpuCtx, dataRef.current.cpu, '#00ff00', 'CPU %', 100);
+        drawChart(memCtx, dataRef.current.memory, '#ffd700', 'Memory %', 100);
+        drawChart(gpuCtx, dataRef.current.gpu, '#00ffff', 'FPS', 120);
+      }
+      raf = requestAnimationFrame(draw);
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [paused]);
+
+  const togglePause = () => setPaused((p) => !p);
+  const changeSpeed = (e) => setSpeed(parseFloat(e.target.value));
+  const toggleLayout = () => setLayout((l) => (l === 'row' ? 'col' : 'row'));
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu">
-      <div className="p-2">
+      <div className="p-2 flex gap-2 items-center">
         <button
-          onClick={toggleStress}
-          aria-pressed={stress}
+          onClick={togglePause}
           className="px-2 py-1 bg-ub-dark-grey rounded"
         >
-          {stress ? 'Stop Stress' : 'Start Stress'}
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <label className="flex items-center gap-1">
+          Speed
+          <select
+            value={speed}
+            onChange={changeSpeed}
+            className="bg-ub-dark-grey rounded px-1 py-0.5"
+          >
+            <option value={0.5}>0.5x</option>
+            <option value={1}>1x</option>
+            <option value={2}>2x</option>
+            <option value={4}>4x</option>
+          </select>
+        </label>
+        <button
+          onClick={toggleLayout}
+          className="px-2 py-1 bg-ub-dark-grey rounded"
+        >
+          Layout
         </button>
       </div>
       <div
-        ref={containerRef}
-        className="flex flex-col lg:flex-row flex-1 items-center justify-evenly gap-4 p-4"
+        className={`flex flex-${layout} flex-1 items-center justify-evenly gap-4 p-4`}
       >
         <canvas
           ref={cpuRef}
@@ -103,21 +119,42 @@ const ResourceMonitor = () => {
           className="bg-ub-dark-grey"
         />
         <canvas
-          ref={networkRef}
+          ref={gpuRef}
           width={300}
           height={100}
           role="img"
-          aria-label="Network usage chart"
+          aria-label="GPU usage chart"
           className="bg-ub-dark-grey"
         />
       </div>
-      <div ref={liveRef} className="sr-only" aria-live="polite" role="status" />
     </div>
   );
 };
+
+function drawChart(ctx, values, color, label, maxVal) {
+  if (!ctx) return;
+  const w = ctx.canvas.width;
+  const h = ctx.canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const x = (i / (values.length - 1 || 1)) * w;
+    const y = h - (v / maxVal) * h;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  const latest = values[values.length - 1] || 0;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '12px sans-serif';
+  ctx.fillText(`${label}: ${latest.toFixed(1)}`, 4, 12);
+}
 
 export default ResourceMonitor;
 
 export const displayResourceMonitor = (addFolder, openApp) => {
   return <ResourceMonitor addFolder={addFolder} openApp={openApp} />;
 };
+
