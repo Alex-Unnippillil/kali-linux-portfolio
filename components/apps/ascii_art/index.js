@@ -50,6 +50,7 @@ export default function AsciiArt() {
   const [imgSrc, setImgSrc] = useState(null);
   const [font, setFont] = useState('monospace');
   const undoStack = useRef([]);
+  const redoStack = useRef([]);
   const [colors, setColors] = useState(null);
   const workerRef = useRef(null);
   const canvasRef = useRef(null);
@@ -212,14 +213,11 @@ export default function AsciiArt() {
         ctx.fillText(ch, x * cellSize, y * cellSize);
       }
     }
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'ascii-art.png';
-      link.click();
-      URL.revokeObjectURL(url);
-    });
+    const dataUrl = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = 'ascii-art.png';
+    link.click();
   }, [plainAscii, colors, cellSize, useColor, font]);
 
   // Typing mode handlers
@@ -230,15 +228,41 @@ export default function AsciiArt() {
 
   const handleEditorChange = (e) => {
     undoStack.current.push(plainAscii);
+    redoStack.current = [];
     setPlainAscii(e.target.value);
     setAsciiHtml(DOMPurify.sanitize(e.target.value.replace(/\n/g, '<br/>')));
   };
 
   const undo = () => {
     if (!undoStack.current.length) return;
+    redoStack.current.push(plainAscii);
     const prev = undoStack.current.pop();
     setPlainAscii(prev);
     setAsciiHtml(DOMPurify.sanitize(prev.replace(/\n/g, '<br/>')));
+  };
+
+  const redo = () => {
+    if (!redoStack.current.length) return;
+    undoStack.current.push(plainAscii);
+    const next = redoStack.current.pop();
+    setPlainAscii(next);
+    setAsciiHtml(DOMPurify.sanitize(next.replace(/\n/g, '<br/>')));
+  };
+
+  const handleEditorKeyDown = (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      } else if (e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    }
   };
 
   const playAltText = () => {
@@ -382,13 +406,22 @@ export default function AsciiArt() {
           {typingMode ? 'Image Mode' : 'Typing Mode'}
         </button>
         {typingMode && (
-          <button
-            type="button"
-            onClick={undo}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          >
-            Undo
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={undo}
+              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            >
+              Undo
+            </button>
+            <button
+              type="button"
+              onClick={redo}
+              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            >
+              Redo
+            </button>
+          </>
         )}
         <button
           type="button"
@@ -410,6 +443,7 @@ export default function AsciiArt() {
           ref={editorRef}
           value={plainAscii}
           onChange={handleEditorChange}
+          onKeyDown={handleEditorKeyDown}
           className="flex-1 font-mono bg-gray-800 text-white resize-none"
           style={{
             lineHeight: `${cellSize}px`,
