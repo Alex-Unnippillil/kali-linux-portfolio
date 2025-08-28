@@ -12,19 +12,33 @@ interface TabData {
   muted?: boolean;
 }
 
+interface TabBarItem {
+  id: number;
+  title: string;
+  url: string;
+  active: boolean;
+}
+
 const STORAGE_KEY = 'chrome-tabs';
+const TABBAR_KEY = 'chrome-tabbar';
 const HOME_URL = 'https://www.google.com/webhp?igu=1';
 
 const formatUrl = (value: string) => {
   let url = value.trim();
   if (!url) return HOME_URL;
+  if (/^javascript:/i.test(url)) return HOME_URL;
   const hasProtocol = /^https?:\/\//i.test(url);
   const hasDot = /\./.test(url);
   const hasSpace = /\s/.test(url);
   if (!hasProtocol && (!hasDot || hasSpace)) {
     return `https://www.google.com/search?q=${encodeURIComponent(url)}`;
   }
-  if (!hasProtocol) url = `https://${url}`;
+  if (!hasProtocol) {
+    if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(url)) {
+      return HOME_URL;
+    }
+    url = `https://${url}`;
+  }
   return encodeURI(url);
 };
 
@@ -38,28 +52,44 @@ const readTabs = (): { tabs: TabData[]; active: number } => {
   }
 };
 
+const readTabBar = (): TabBarItem[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const data = JSON.parse(localStorage.getItem(TABBAR_KEY) || '');
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+};
+
 const saveTabs = (tabs: TabData[], active: number) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ tabs, active }));
 };
 
 const Chrome: React.FC = () => {
   const { tabs: storedTabs, active: storedActive } = readTabs();
-  const [tabs, setTabs] = useState<TabData[]>(
-    storedTabs.length
-      ? storedTabs.map((t) => ({ blocked: false, muted: false, ...t }))
-      : [
-          {
-            id: Date.now(),
-            url: HOME_URL,
-            history: [HOME_URL],
-            historyIndex: 0,
-            scroll: 0,
-            blocked: false,
-            muted: false,
-          },
-        ]
-  );
-  const [activeId, setActiveId] = useState<number>(storedActive || tabs[0].id);
+  const storedBar = readTabBar();
+  const defaultId = Date.now();
+  const initialTabs = storedTabs.length
+    ? storedTabs.map((t) => ({ blocked: false, muted: false, ...t }))
+    : [
+        {
+          id: defaultId,
+          url: HOME_URL,
+          history: [HOME_URL],
+          historyIndex: 0,
+          scroll: 0,
+          blocked: false,
+          muted: false,
+        },
+      ];
+  const initialActive = storedActive || initialTabs[0].id;
+  const initialTabBar = storedBar.length
+    ? storedBar
+    : initialTabs.map((t) => ({ id: t.id, title: t.url, url: t.url, active: t.id === initialActive }));
+  const [tabs, setTabs] = useState<TabData[]>(initialTabs);
+  const [activeId, setActiveId] = useState<number>(initialActive);
+  const [tabBar, setTabBar] = useState<TabBarItem[]>(initialTabBar);
   const [address, setAddress] = useState<string>(tabs.find((t) => t.id === activeId)?.url || HOME_URL);
   const [searchTerm, setSearchTerm] = useState('');
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -67,6 +97,22 @@ const Chrome: React.FC = () => {
 
   useEffect(() => {
     saveTabs(tabs, activeId);
+  }, [tabs, activeId]);
+
+  useEffect(() => {
+    localStorage.setItem(TABBAR_KEY, JSON.stringify(tabBar));
+  }, [tabBar]);
+
+  useEffect(() => {
+    setTabBar((prev) => {
+      const prevMap = new Map(prev.map((t) => [t.id, t]));
+      return tabs.map((t) => ({
+        id: t.id,
+        title: prevMap.get(t.id)?.title || t.url,
+        url: t.url,
+        active: t.id === activeId,
+      }));
+    });
   }, [tabs, activeId]);
 
   const activeTab = tabs.find((t) => t.id === activeId)!;
@@ -81,6 +127,8 @@ const Chrome: React.FC = () => {
       if (parsed) {
         setArticles((prev) => ({ ...prev, [tabId]: parsed.content ?? '' }));
       }
+      const title = doc.querySelector('title')?.textContent || url;
+      setTabBar((prev) => prev.map((t) => (t.id === tabId ? { ...t, title } : t)));
     } catch {
       setArticles((prev) => ({ ...prev, [tabId]: '' }));
     }
@@ -111,6 +159,7 @@ const Chrome: React.FC = () => {
       )
     );
     setAddress(url);
+    setTabBar((prev) => prev.map((t) => (t.id === activeId ? { ...t, url, title: url } : t)));
     fetchArticle(activeId, url);
   }, [activeId, fetchArticle]);
 
@@ -291,16 +340,16 @@ const Chrome: React.FC = () => {
         <button onClick={addTab} aria-label="New Tab" className="px-2">+</button>
       </div>
       <div className="flex space-x-1 bg-gray-700 text-sm overflow-x-auto">
-        {tabs.map((t) => (
+        {tabBar.map((t) => (
           <div
             key={t.id}
-            className={`flex items-center px-2 py-1 cursor-pointer ${t.id === activeId ? 'bg-gray-600' : 'bg-gray-700'} `}
+            className={`flex items-center px-2 py-1 cursor-pointer ${t.active ? 'bg-gray-600' : 'bg-gray-700'} `}
             onClick={() => setActiveId(t.id)}
           >
             <span className="mr-2 truncate" style={{ maxWidth: 100 }}>
-              {t.url.replace(/^https?:\/\/(www\.)?/, '')}
+              {t.title.replace(/^https?:\/\/(www\.)?/, '')}
             </span>
-            {tabs.length > 1 && (
+            {tabBar.length > 1 && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
