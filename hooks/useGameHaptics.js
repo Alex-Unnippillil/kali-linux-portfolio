@@ -1,3 +1,5 @@
+"use client";
+
 import { useCallback } from 'react';
 import usePersistedState from './usePersistedState';
 import {

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 
 // Tracks the device orientation. Useful for games that require landscape mode.

@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from 'react';
 
 // Stores state in localStorage, falling back when unavailable.
