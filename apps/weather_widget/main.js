@@ -8,6 +8,7 @@ const cityPicker = document.getElementById('city-picker');
 const unitToggle = document.getElementById('unit-toggle');
 const apiKeyInput = document.getElementById('api-key-input');
 const saveApiKeyBtn = document.getElementById('save-api-key');
+const errorMessageEl = document.getElementById('error-message');
 
 let apiKey = localStorage.getItem('weatherApiKey') || '';
 if (apiKey) apiKeyInput.value = apiKey;
@@ -69,9 +70,11 @@ async function updateWeather() {
     }
     if (data) {
       renderWeather(data);
+      errorMessageEl.textContent = '';
     }
   } catch (err) {
     console.error(err);
+    errorMessageEl.textContent = 'Unable to fetch weather data. Please try again later.';
   }
 }
 
