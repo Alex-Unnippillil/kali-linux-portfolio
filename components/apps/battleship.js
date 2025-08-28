@@ -9,7 +9,7 @@ import {
 import GameLayout from './battleship/GameLayout';
 import usePersistentState from '../hooks/usePersistentState';
 import useGameControls from './useGameControls';
-import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const CELL = 32; // px
 

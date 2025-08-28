@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
-import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
 import {
   initializeGame,
   drawFromStock,
