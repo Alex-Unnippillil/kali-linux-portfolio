@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
 
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+  prompt(): Promise<void>;
+}
+
 const InstallButton: React.FC = () => {
-  const [prompt, setPrompt] = useState<any>(null);
+  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    const handler = (e: any) => {
+    const handler = (e: BeforeInstallPromptEvent) => {
       e.preventDefault();
       setPrompt(e);
     };
@@ -14,7 +20,7 @@ const InstallButton: React.FC = () => {
 
   const handleInstall = async () => {
     if (!prompt) return;
-    prompt.prompt();
+    await prompt.prompt();
     await prompt.userChoice;
     setPrompt(null);
   };
