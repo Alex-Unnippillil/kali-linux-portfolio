@@ -38,7 +38,7 @@ describe('HashcatApp', () => {
       getByText(`Attempts/sec: ${progressInfo.hashRate[1]}`)
     ).toBeInTheDocument();
     expect(getByText(`ETA: ${progressInfo.eta[1]}`)).toBeInTheDocument();
-    expect(getByText(`Mode: ${progressInfo.mode}`)).toBeInTheDocument();
+    expect(getByText('Mode: MD5')).toBeInTheDocument();
     jest.useRealTimers();
   });
 
@@ -47,7 +47,7 @@ describe('HashcatApp', () => {
     fireEvent.change(getByLabelText('Hash Type:'), { target: { value: '100' } });
     expect(
       getByText(
-        'Example hash: da39a3ee5e6b4b0d3255bfef95601890afd80709'
+        'Example hash: 5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8'
       )
     ).toBeInTheDocument();
   });

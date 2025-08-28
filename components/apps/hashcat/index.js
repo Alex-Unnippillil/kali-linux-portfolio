@@ -6,27 +6,31 @@ const hashTypes = [
     id: '0',
     name: 'MD5',
     regex: /^[a-f0-9]{32}$/i,
-    example: 'd41d8cd98f00b204e9800998ecf8427e',
+    example: '5f4dcc3b5aa765d61d8327deb882cf99',
+    output: 'password',
   },
   {
     id: '100',
     name: 'SHA1',
     regex: /^[a-f0-9]{40}$/i,
-    example: 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+    example: '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8',
+    output: 'password',
   },
   {
     id: '1400',
     name: 'SHA256',
     regex: /^[a-f0-9]{64}$/i,
     example:
-      'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
+    output: 'password',
   },
   {
     id: '3200',
     name: 'bcrypt',
     regex: /^\$2[aby]\$.{56}$/,
     example:
-      '$2y$10$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      '$2b$12$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    output: 'password',
   },
 ];
 
@@ -118,11 +122,14 @@ const ProgressGauge = ({ progress, info, reduceMotion }) => {
 function HashcatApp() {
   const [hashType, setHashType] = useState(hashTypes[0].id);
   const [hashInput, setHashInput] = useState('');
+  const [hashFilter, setHashFilter] = useState('');
   const [gpuUsage, setGpuUsage] = useState(0);
   const [benchmark, setBenchmark] = useState('');
   const [pattern, setPattern] = useState('');
   const [wordlistUrl, setWordlistUrl] = useState('');
+  const [wordlist, setWordlist] = useState('');
   const [progress, setProgress] = useState(0);
+  const [result, setResult] = useState('');
   const [isCracking, setIsCracking] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const workerRef = useRef(null);
@@ -146,8 +153,10 @@ function HashcatApp() {
 
   const startCracking = () => {
     if (isCracking) return;
+    const expected = selected.output;
     setIsCracking(true);
     setProgress(0);
+    setResult('');
     if (typeof window === 'undefined') return;
     if (window.Worker) {
       workerRef.current = new Worker(
@@ -158,6 +167,7 @@ function HashcatApp() {
         const update = () => {
           setProgress(data);
           if (data >= progressInfo.progress) {
+            setResult(expected);
             cancelCracking(false);
           }
         };
@@ -172,6 +182,7 @@ function HashcatApp() {
       const animate = () => {
         setProgress((p) => {
           if (p >= target) {
+            setResult(expected);
             cancelCracking(false);
             return p;
           }
@@ -194,7 +205,10 @@ function HashcatApp() {
       frameRef.current = null;
     }
     setIsCracking(false);
-    if (reset) setProgress(0);
+    if (reset) {
+      setProgress(0);
+      setResult('');
+    }
   };
 
   useEffect(() => {
@@ -202,7 +216,13 @@ function HashcatApp() {
   }, []);
 
   const selected = hashTypes.find((h) => h.id === hashType) || hashTypes[0];
+  const filteredHashTypes = hashTypes.filter(
+    (h) =>
+      h.id.includes(hashFilter) ||
+      h.name.toLowerCase().includes(hashFilter.toLowerCase())
+  );
   const selectedHash = selected.name;
+  const info = { ...progressInfo, mode: selected.name };
 
   const handleHashChange = (e) => {
     const value = e.target.value.trim();
@@ -239,6 +259,17 @@ function HashcatApp() {
         />
       </div>
       <div>
+        <label className="mr-2" htmlFor="hash-filter">
+          Filter Modes:
+        </label>
+        <input
+          id="hash-filter"
+          className="text-black px-2 py-1"
+          value={hashFilter}
+          onChange={(e) => setHashFilter(e.target.value)}
+        />
+      </div>
+      <div>
         <label className="mr-2" htmlFor="hash-type">
           Hash Type:
         </label>
@@ -248,19 +279,51 @@ function HashcatApp() {
           value={hashType}
           onChange={(e) => setHashType(e.target.value)}
         >
-          {hashTypes.map((h) => (
-            <option key={h.id} value={h.id}>
-              {h.id} - {h.name}
-            </option>
-          ))}
+          {filteredHashTypes.length ? (
+            filteredHashTypes.map((h) => (
+              <option key={h.id} value={h.id}>
+                {h.id} - {h.name}
+              </option>
+            ))
+          ) : (
+            <option disabled>No modes</option>
+          )}
         </select>
       </div>
       <div>Detected: {selectedHash}</div>
       <div>Example hash: {selected.example}</div>
+      <div>Expected output: {selected.output}</div>
       <button onClick={runBenchmark}>Run Benchmark</button>
       {benchmark && (
         <div data-testid="benchmark-output">{benchmark}</div>
       )}
+      <div>
+        <label className="mr-2" htmlFor="wordlist-select">
+          Wordlist:
+        </label>
+        <select
+          id="wordlist-select"
+          className="text-black px-2 py-1"
+          value={wordlist}
+          onChange={(e) => setWordlist(e.target.value)}
+        >
+          <option value="">Select wordlist (demo)</option>
+          <option value="rockyou">rockyou.txt</option>
+          <option value="top100">top-100.txt</option>
+        </select>
+        <div className="text-xs mt-1">
+          Wordlist selection is simulated. Learn more at{' '}
+          <a
+            className="underline"
+            href="https://hashcat.net/wiki/doku.php?id=wordlists"
+            target="_blank"
+            rel="noreferrer"
+          >
+            hashcat.net
+          </a>
+          .
+        </div>
+      </div>
       <div>
         <label className="mr-2" htmlFor="word-pattern">
           Wordlist Pattern:
@@ -293,9 +356,13 @@ function HashcatApp() {
       )}
       <ProgressGauge
         progress={progress}
-        info={progressInfo}
+        info={info}
         reduceMotion={prefersReducedMotion}
       />
+      {result && <div>Result: {result}</div>}
+      <div className="text-xs mt-4">
+        This tool simulates hash cracking for educational purposes only.
+      </div>
     </div>
   );
 }
