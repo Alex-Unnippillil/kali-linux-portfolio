@@ -14,9 +14,9 @@ import { displayConverter } from './components/apps/converter';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayNikto } from './components/apps/nikto';
+import { displayTerminal } from './components/apps/terminal';
 
 // Dynamic applications and games
-const TerminalApp = createDynamicApp('terminal', 'Terminal');
 const CalcApp = createDynamicApp('calc', 'Calc');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
@@ -87,10 +87,9 @@ const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
- 
 
 
-const displayTerminal = createDisplay(TerminalApp);
+
 const displayTerminalCalc = createDisplay(CalcApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
