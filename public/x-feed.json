@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "user": { "name": "Alice", "handle": "alice" },
+    "text": "Learning #kali #security is fun!",
+    "hashtags": ["kali", "security"]
+  },
+  {
+    "id": 2,
+    "user": { "name": "Bob", "handle": "bob" },
+    "text": "Check out #kali Linux tips.",
+    "hashtags": ["kali"]
+  },
+  {
+    "id": 3,
+    "user": { "name": "Charlie", "handle": "charlie" },
+    "text": "Exploring #hacking and #security!",
+    "hashtags": ["hacking", "security"]
+  }
+]
