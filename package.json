@@ -4,6 +4,8 @@
   "private": true,
   "homepage": "https://unnippillil.com/",
   "scripts": {
+    "build:gamepad": "tsc -p tsconfig.gamepad.json",
+    "prebuild": "npm run build:gamepad",
     "dev": "next dev",
     "prebuild": "tsc -p tsconfig.gamepad.json",
     "build": "next build",
