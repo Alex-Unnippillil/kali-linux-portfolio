@@ -1,19 +1,20 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
-import { displayX } from './components/apps/x';
-import { displaySpotify } from './components/apps/spotify';
-import { displayVsCode } from './components/apps/vscode';
-import { displaySettings } from './components/apps/settings';
-import { displayChrome } from './components/apps/Chrome';
-import { displayTrash } from './components/apps/trash';
-import { displayGedit } from './components/apps/gedit';
-import { displayTodoist } from './components/apps/todoist';
-import { displayYouTube } from './components/apps/youtube';
-import { displayWeather } from './components/apps/weather';
-import { displayConverter } from './components/apps/converter';
-import { displayFiglet } from './components/apps/figlet';
-import { displayResourceMonitor } from './components/apps/resource_monitor';
-import { displayNikto } from './components/apps/nikto';
+// Lazy-loaded applications not required at startup
+const XApp = createDynamicApp('x', 'X');
+const SpotifyApp = createDynamicApp('spotify', 'Spotify');
+const VsCodeApp = createDynamicApp('vscode', 'VS Code');
+const SettingsApp = createDynamicApp('settings', 'Settings');
+const ChromeApp = createDynamicApp('Chrome', 'Chrome');
+const TrashApp = createDynamicApp('trash', 'Trash');
+const GeditApp = createDynamicApp('gedit', 'Contact Me');
+const TodoistApp = createDynamicApp('todoist', 'Todoist');
+const YouTubeApp = createDynamicApp('youtube', 'YouTube');
+const WeatherApp = createDynamicApp('weather', 'Weather');
+const ConverterApp = createDynamicApp('converter', 'Converter');
+const FigletApp = createDynamicApp('figlet', 'Figlet');
+const ResourceMonitorApp = createDynamicApp('resource_monitor', 'Resource Monitor');
+const NiktoApp = createDynamicApp('nikto', 'Nikto');
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
@@ -93,7 +94,20 @@ const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 
-
+const displayX = createDisplay(XApp);
+const displaySpotify = createDisplay(SpotifyApp);
+const displayVsCode = createDisplay(VsCodeApp);
+const displaySettings = createDisplay(SettingsApp);
+const displayChrome = createDisplay(ChromeApp);
+const displayTrash = createDisplay(TrashApp);
+const displayGedit = createDisplay(GeditApp);
+const displayTodoist = createDisplay(TodoistApp);
+const displayYouTube = createDisplay(YouTubeApp);
+const displayWeather = createDisplay(WeatherApp);
+const displayConverter = createDisplay(ConverterApp);
+const displayFiglet = createDisplay(FigletApp);
+const displayResourceMonitor = createDisplay(ResourceMonitorApp);
+const displayNikto = createDisplay(NiktoApp);
 
 const displayTerminal = createDisplay(TerminalApp);
 const displayCalculator = createDisplay(CalculatorApp);
