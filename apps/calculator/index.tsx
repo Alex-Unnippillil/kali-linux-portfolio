@@ -1,8 +1,11 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import FormField from '../../components/ui/FormField';
 import './styles.css';
 
 export default function Calculator() {
+  const [error, setError] = useState('');
+
   useEffect(() => {
     const load = async () => {
       if (typeof window !== 'undefined' && !(window as any).math) {
@@ -13,14 +16,17 @@ export default function Calculator() {
           document.body.appendChild(script);
         });
       }
-      await import('./main');
+      const mod = await import('./main');
+      if (mod.initCalculator) mod.initCalculator(setError);
     };
     load();
   }, []);
 
   return (
     <div className="calculator">
-      <input id="display" className="display" />
+      <FormField error={error}>
+        <input id="display" className="display" />
+      </FormField>
       <button id="toggle-precise" className="toggle" aria-pressed="false">Precise Mode: Off</button>
       <button id="toggle-scientific" className="toggle" aria-pressed="false">Scientific</button>
       <button id="toggle-programmer" className="toggle" aria-pressed="false">Programmer</button>

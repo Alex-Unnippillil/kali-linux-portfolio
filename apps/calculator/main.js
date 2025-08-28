@@ -10,6 +10,9 @@ const baseSelect = document.getElementById('base-select');
 const historyEl = document.getElementById('history');
 const parenIndicator = document.getElementById('paren-indicator');
 const printBtn = document.getElementById('print-tape');
+let setCalcError = () => {};
+let prevValue = display.value;
+let prevPos = display.selectionStart || 0;
 
 let preciseMode = false;
 let programmerMode = false;
@@ -52,7 +55,36 @@ baseSelect.addEventListener('change', () => {
 
 printBtn.addEventListener('click', printTape);
 
-display.addEventListener('input', updateParenBalance);
+function isOperator(t) {
+  return /^[+\-*/&|^~<>]{1,2}$/.test(t);
+}
+
+function validateTokens() {
+  const value = display.value;
+  const tokens = value.match(/(?:[0-9A-F]+|\.|<<|>>|[+\-*/()&|^~<>])/gi);
+  if (!tokens || tokens.join('') !== value) {
+    setCalcError('Invalid input');
+    display.value = prevValue;
+    display.selectionStart = display.selectionEnd = prevPos;
+    return false;
+  }
+  for (let i = 1; i < tokens.length; i++) {
+    if (isOperator(tokens[i]) && isOperator(tokens[i - 1])) {
+      setCalcError('Consecutive operators');
+      display.value = prevValue;
+      display.selectionStart = display.selectionEnd = prevPos;
+      return false;
+    }
+  }
+  setCalcError('');
+  prevValue = value;
+  prevPos = display.selectionStart ?? value.length;
+  return true;
+}
+
+display.addEventListener('input', () => {
+  if (validateTokens()) updateParenBalance();
+});
 
 function updateParenBalance() {
   const open = (display.value.match(/\(/g) || []).length;
@@ -69,6 +101,7 @@ function insertAtCursor(text) {
   display.value = before + text + after;
   const pos = start + text.length;
   display.selectionStart = display.selectionEnd = pos;
+  validateTokens();
 }
 
 buttons.forEach((btn) => {
@@ -79,6 +112,9 @@ buttons.forEach((btn) => {
     if (action === 'clear') {
       undoStack.push(display.value);
       display.value = '';
+      prevValue = '';
+      prevPos = 0;
+      setCalcError('');
       return;
     }
 
@@ -89,6 +125,7 @@ buttons.forEach((btn) => {
       undoStack.push(expr);
       display.value = result;
       lastResult = result;
+      validateTokens();
       return;
     }
 
@@ -127,12 +164,15 @@ function evaluate(expression) {
       );
       const result = math.evaluate(decimalExpr, { Ans: lastResult });
       lastResult = result;
+      setCalcError('');
       return formatBase(result);
     }
     const result = math.evaluate(expression, { Ans: lastResult });
     lastResult = result;
+    setCalcError('');
     return result.toString();
   } catch (e) {
+    setCalcError('Invalid expression');
     return 'Error';
   }
 }
@@ -176,6 +216,7 @@ function printTape() {
 function undo() {
   if (undoStack.length) {
     display.value = undoStack.pop();
+    validateTokens();
   }
 }
 
@@ -201,6 +242,7 @@ document.addEventListener('keydown', (e) => {
       undoStack.push(display.value);
       display.value = display.value.slice(0, -1);
       display.selectionStart = display.selectionEnd = display.value.length;
+      validateTokens();
       return;
     }
     if (e.key === 'Enter' || e.key === '=') {
@@ -210,6 +252,7 @@ document.addEventListener('keydown', (e) => {
       addHistory(expr, result);
       undoStack.push(expr);
       display.value = result;
+      validateTokens();
       return;
     }
   } else {
@@ -220,6 +263,7 @@ document.addEventListener('keydown', (e) => {
       addHistory(expr, result);
       undoStack.push(expr);
       display.value = result;
+      validateTokens();
       return;
     }
   }
@@ -227,6 +271,9 @@ document.addEventListener('keydown', (e) => {
 
 display.focus();
 loadHistory();
+export function initCalculator(setError) {
+  setCalcError = setError;
+}
 
 if (typeof module !== 'undefined') {
   module.exports = {
@@ -237,6 +284,7 @@ if (typeof module !== 'undefined') {
     setPreciseMode,
     setProgrammerMode,
     convertBase,
+    initCalculator,
   };
 }
 
