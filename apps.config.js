@@ -52,7 +52,7 @@ const TetrisApp = createDynamicApp('tetris', 'Tetris');
 const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
 const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
-const AboutApp = createDynamicApp('About', 'About');
+const AboutAlexApp = createDynamicApp('alex', 'About Alex');
 
 const QrToolApp = createDynamicApp('qr_tool', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
@@ -126,7 +126,7 @@ const displayTetris = createDisplay(TetrisApp);
 const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayFileExplorer = createDisplay(FileExplorerApp);
 const displayRadare2 = createDisplay(Radare2App);
-const displayAbout = createDisplay(AboutApp);
+const displayAboutAlex = createDisplay(AboutAlexApp);
 
 const displayQrTool = createDisplay(QrToolApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
@@ -616,12 +616,12 @@ const apps = [
   },
   {
     id: 'about',
-    title: 'About',
+    title: 'About Alex',
     icon: './themes/Yaru/system/user-home.png',
     disabled: false,
     favourite: true,
     desktop_shortcut: true,
-    screen: displayAbout,
+    screen: displayAboutAlex,
   },
   {
     id: 'settings',
