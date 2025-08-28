@@ -49,10 +49,12 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        document.addEventListener('keydown', this.handleGlobalShortcut);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
+        document.removeEventListener('keydown', this.handleGlobalShortcut);
     }
 
     checkForNewFolders = () => {
@@ -95,6 +97,13 @@ export class Desktop extends Component {
     removeContextListeners = () => {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
+    }
+
+    handleGlobalShortcut = (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+            e.preventDefault();
+            this.openApp('clipboard-manager');
+        }
     }
 
     checkContextMenu = (e) => {
