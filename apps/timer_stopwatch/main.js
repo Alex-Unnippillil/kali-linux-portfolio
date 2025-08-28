@@ -1,8 +1,10 @@
 let mode = 'timer';
-let timerInterval = null;
+let timerWorker = null;
 let timerRemaining = 30;
-let stopwatchInterval = null;
+let timerEndTime = 0;
+let stopwatchWorker = null;
 let stopwatchElapsed = 0;
+let stopwatchStartTime = 0;
 let lapNumber = 1;
 
 const timerDisplay = document.getElementById('timerDisplay');
@@ -40,25 +42,30 @@ function updateTimerDisplay() {
 }
 
 function startTimer() {
-  if (timerInterval) return;
+  if (timerWorker) return;
   const mins = parseInt(minutesInput.value, 10) || 0;
   const secs = parseInt(secondsInput.value, 10) || 0;
   timerRemaining = mins * 60 + secs;
+  timerEndTime = Date.now() + timerRemaining * 1000;
   updateTimerDisplay();
-  timerInterval = setInterval(() => {
-    timerRemaining--;
+  timerWorker = new Worker(new URL('../../workers/timer.worker.js', import.meta.url));
+  timerWorker.onmessage = () => {
+    timerRemaining = Math.max(0, Math.ceil((timerEndTime - Date.now()) / 1000));
     updateTimerDisplay();
     if (timerRemaining <= 0) {
-      clearInterval(timerInterval);
-      timerInterval = null;
+      stopTimer();
       playSound();
     }
-  }, 1000);
+  };
+  timerWorker.postMessage({ action: 'start', interval: 1000 });
 }
 
 function stopTimer() {
-  clearInterval(timerInterval);
-  timerInterval = null;
+  if (timerWorker) {
+    timerWorker.postMessage({ action: 'stop' });
+    timerWorker.terminate();
+    timerWorker = null;
+  }
 }
 
 function resetTimer() {
@@ -74,16 +81,22 @@ function updateStopwatchDisplay() {
 }
 
 function startWatch() {
-  if (stopwatchInterval) return;
-  stopwatchInterval = setInterval(() => {
-    stopwatchElapsed++;
+  if (stopwatchWorker) return;
+  stopwatchStartTime = Date.now() - stopwatchElapsed * 1000;
+  stopwatchWorker = new Worker(new URL('../../workers/timer.worker.js', import.meta.url));
+  stopwatchWorker.onmessage = () => {
+    stopwatchElapsed = Math.floor((Date.now() - stopwatchStartTime) / 1000);
     updateStopwatchDisplay();
-  }, 1000);
+  };
+  stopwatchWorker.postMessage({ action: 'start', interval: 1000 });
 }
 
 function stopWatch() {
-  clearInterval(stopwatchInterval);
-  stopwatchInterval = null;
+  if (stopwatchWorker) {
+    stopwatchWorker.postMessage({ action: 'stop' });
+    stopwatchWorker.terminate();
+    stopwatchWorker = null;
+  }
 }
 
 function resetWatch() {

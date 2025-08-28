@@ -12,13 +12,25 @@ export default class Clock extends Component {
     }
 
     componentDidMount() {
-        this.update_time = setInterval(() => {
-            this.setState({ current_time: new Date() });
-        }, 10 * 1000);
+        if (typeof window !== 'undefined' && window.Worker) {
+            this.worker = new Worker(new URL('../../workers/timer.worker.js', import.meta.url));
+            this.worker.onmessage = () => {
+                this.setState({ current_time: new Date() });
+            };
+            this.worker.postMessage({ action: 'start', interval: 10 * 1000 });
+        } else {
+            this.update_time = setInterval(() => {
+                this.setState({ current_time: new Date() });
+            }, 10 * 1000);
+        }
     }
 
     componentWillUnmount() {
-        clearInterval(this.update_time);
+        if (this.worker) {
+            this.worker.postMessage({ action: 'stop' });
+            this.worker.terminate();
+        }
+        if (this.update_time) clearInterval(this.update_time);
     }
 
     render() {
