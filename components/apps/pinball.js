@@ -7,6 +7,10 @@ const WIDTH = 400;
 const HEIGHT = 500;
 const DEFAULT_LAYOUT = { bumpers: [] };
 const TRAIL_LENGTH = 8;
+const BASE_POINTS = 10;
+const MULTIPLIER_DURATION = 5000;
+const FLIPPER_MAX = 0.5;
+const FLIPPER_SPEED = 0.25;
 
 const Pinball = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
@@ -15,6 +19,9 @@ const Pinball = () => {
   const [tilt, setTilt] = useState(false);
   const [lightsEnabled, setLightsEnabled] = useState(true);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = usePersistentState('pinball-highscore', 0);
+  const [multiplier, setMultiplier] = useState(1);
   const nudgeTimes = useRef([]);
   const bumpersRef = useRef([]);
   const ballsRef = useRef([]);
@@ -22,6 +29,13 @@ const Pinball = () => {
   const lastGamepadNudge = useRef(0);
   const animRef = useRef();
   const lightsRef = useRef(true);
+  const multiplierRef = useRef(1);
+  const multiplierTimeout = useRef();
+  const highScoreRef = useRef(0);
+
+  useEffect(() => {
+    highScoreRef.current = highScore;
+  }, [highScore]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -71,6 +85,29 @@ const Pinball = () => {
     const pivotRight = Constraint.create({ bodyA: flipperRight, pointB: { x: WIDTH - 70, y: HEIGHT - 40 }, length: 0, stiffness: 1 });
     Composite.add(world, [flipperLeft, flipperRight, pivotLeft, pivotRight]);
 
+    // lane targets for score multipliers
+    const lanes = [
+      Bodies.rectangle(WIDTH / 4, 80, 60, 10, {
+        isStatic: true,
+        isSensor: true,
+        label: 'lane',
+        render: { fillStyle: '#222' },
+      }),
+      Bodies.rectangle(WIDTH / 2, 80, 60, 10, {
+        isStatic: true,
+        isSensor: true,
+        label: 'lane',
+        render: { fillStyle: '#222' },
+      }),
+      Bodies.rectangle((3 * WIDTH) / 4, 80, 60, 10, {
+        isStatic: true,
+        isSensor: true,
+        label: 'lane',
+        render: { fillStyle: '#222' },
+      }),
+    ];
+    Composite.add(world, lanes);
+
     // bumpers with lights
     const bumpers = layout.bumpers.map((b, i) => {
       const bumper = Bodies.circle(b.x, b.y, b.r, {
@@ -80,7 +117,7 @@ const Pinball = () => {
       });
       bumper.plugin = { index: i };
       Composite.add(world, bumper);
-      return { body: bumper, lit: false, flashUntil: 0 };
+      return { body: bumper, lit: false, flashUntil: 0, flashState: false };
     });
     bumpersRef.current = bumpers;
 
@@ -97,11 +134,17 @@ const Pinball = () => {
         if (bumperData && lightsRef.current) {
           bumperData.lit = !bumperData.lit;
           if (!prefersReducedMotion) {
-            bumperData.flashUntil = performance.now() + 100;
-            bumperData.body.render.fillStyle = '#fff';
+            bumperData.flashUntil = performance.now() + 300;
+            bumperData.flashState = true;
           } else {
             bumperData.body.render.fillStyle = bumperData.lit ? '#ffd700' : '#444';
           }
+          const points = BASE_POINTS * multiplierRef.current;
+          setScore((s) => {
+            const next = s + points;
+            if (next > highScoreRef.current) setHighScore(next);
+            return next;
+          });
           if (
             bumpersRef.current.length &&
             bumpersRef.current.every((b) => b.lit)
@@ -110,7 +153,33 @@ const Pinball = () => {
             jackpotRef.current.pos = -20;
           }
         }
+        if (bodyA.label === 'lane' || bodyB.label === 'lane') {
+          multiplierRef.current = Math.min(multiplierRef.current + 1, 5);
+          setMultiplier(multiplierRef.current);
+          clearTimeout(multiplierTimeout.current);
+          multiplierTimeout.current = setTimeout(() => {
+            multiplierRef.current = 1;
+            setMultiplier(1);
+          }, MULTIPLIER_DURATION);
+        }
       });
+    });
+
+    Events.on(engine, 'beforeUpdate', () => {
+      if (flipperLeft.angle < -FLIPPER_MAX) {
+        Body.setAngularVelocity(flipperLeft, 0);
+        Body.setAngle(flipperLeft, -FLIPPER_MAX);
+      } else if (flipperLeft.angle > 0) {
+        Body.setAngularVelocity(flipperLeft, 0);
+        Body.setAngle(flipperLeft, 0);
+      }
+      if (flipperRight.angle > FLIPPER_MAX) {
+        Body.setAngularVelocity(flipperRight, 0);
+        Body.setAngle(flipperRight, FLIPPER_MAX);
+      } else if (flipperRight.angle < 0) {
+        Body.setAngularVelocity(flipperRight, 0);
+        Body.setAngle(flipperRight, 0);
+      }
     });
 
     const render = Render.create({
@@ -184,7 +253,10 @@ const Pinball = () => {
 
     const animate = (time) => {
       bumpersRef.current.forEach((b) => {
-        if (b.flashUntil && time > b.flashUntil) {
+        if (b.flashUntil && time < b.flashUntil) {
+          b.body.render.fillStyle = b.flashState ? '#fff' : '#ffd700';
+          b.flashState = !b.flashState;
+        } else if (b.flashUntil && time >= b.flashUntil) {
           b.flashUntil = 0;
           b.body.render.fillStyle = b.lit ? '#ffd700' : '#444';
         }
@@ -210,8 +282,8 @@ const Pinball = () => {
 
     const keydown = (e) => {
       if (tilt) return;
-      if (e.key === 'ArrowLeft') Body.setAngle(flipperLeft, -0.5);
-      if (e.key === 'ArrowRight') Body.setAngle(flipperRight, 0.5);
+      if (e.key === 'ArrowLeft') Body.setAngularVelocity(flipperLeft, -FLIPPER_SPEED);
+      if (e.key === 'ArrowRight') Body.setAngularVelocity(flipperRight, FLIPPER_SPEED);
       if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'n') {
         handleNudge();
       }
@@ -220,8 +292,8 @@ const Pinball = () => {
       }
     };
     const keyup = (e) => {
-      if (e.key === 'ArrowLeft') Body.setAngle(flipperLeft, 0);
-      if (e.key === 'ArrowRight') Body.setAngle(flipperRight, 0);
+      if (e.key === 'ArrowLeft') Body.setAngularVelocity(flipperLeft, FLIPPER_SPEED);
+      if (e.key === 'ArrowRight') Body.setAngularVelocity(flipperRight, -FLIPPER_SPEED);
     };
     window.addEventListener('keydown', keydown);
     window.addEventListener('keyup', keyup);
@@ -233,6 +305,7 @@ const Pinball = () => {
       Runner.stop(runner);
       Engine.clear(engine);
       cancelAnimationFrame(animRef.current);
+      clearTimeout(multiplierTimeout.current);
     };
   }, [canvasRef, layout, editing, tilt, prefersReducedMotion]);
 
@@ -282,6 +355,9 @@ const Pinball = () => {
             TILT <button onClick={resetTilt}>Reset</button>
           </span>
         )}
+      </div>
+      <div className="p-1 text-xs">
+        Score: {score} {multiplier > 1 && `x${multiplier}`} | High: {highScore}
       </div>
       <canvas
         ref={canvasRef}
