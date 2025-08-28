@@ -16,7 +16,11 @@ class MyDocument extends Document {
         <Head>
           <link rel="manifest" href="/manifest.webmanifest" />
           <meta name="theme-color" content="#0f1317" />
-          <Script src="/theme.js" strategy="beforeInteractive" />
+          <Script
+            src="/theme.js"
+            strategy="afterInteractive"
+            // Apply theme once the page is interactive to avoid blocking initial paint
+          />
         </Head>
         <body>
           <Main />
