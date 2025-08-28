@@ -47,8 +47,17 @@ export default function Meta() {
             <link rel="canonical" href="https://unnippillil.com/" />
             <link rel="icon" href="images/logos/fevicon.svg" />
             <link rel="apple-touch-icon" href="images/logos/logo.png" />
-            <link rel="preload" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" as="style" />
-            <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet"></link>
+            <link
+                rel="preload"
+                href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap"
+                as="style"
+                crossOrigin="anonymous"
+            />
+            <link
+                href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap"
+                rel="stylesheet"
+                crossOrigin="anonymous"
+            />
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{
