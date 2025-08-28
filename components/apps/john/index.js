@@ -5,6 +5,7 @@ import {
   identifyHashType,
 } from './utils';
 import FormError from '../../ui/FormError';
+import { CSRF_TOKEN, CSRF_HEADER } from '../../../utils/csrf';
 
 // Enhanced John the Ripper interface that supports rule uploads,
 // basic hash analysis and mock distribution of cracking tasks.
@@ -45,6 +46,7 @@ const JohnApp = () => {
   }, [prefersReducedMotion]);
 
   useEffect(() => () => workerRef.current?.terminate(), []);
+  useEffect(() => () => controllerRef.current?.abort(), []);
 
   const startProgress = (total) => {
     if (workerRef.current) workerRef.current.terminate();
@@ -113,7 +115,10 @@ const JohnApp = () => {
           incrementProgress('wordlist');
           const res = await fetch('/api/john', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              [CSRF_HEADER]: CSRF_TOKEN,
+            },
             body: JSON.stringify({ hash: h, rules }),
             signal,
           });

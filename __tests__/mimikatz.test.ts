@@ -1,4 +1,5 @@
-import handler from '../pages/api/mimikatz';
+process.env.NEXT_PUBLIC_CSRF_TOKEN = 'testtoken';
+const handler = require('../pages/api/mimikatz').default;
 
 type Res = ReturnType<typeof mockRes>;
 
@@ -23,11 +24,15 @@ describe('mimikatz api', () => {
   });
 
   test('executes script template', async () => {
-    const req: any = { method: 'POST', body: { script: 'test' } };
+    const req: any = {
+      method: 'POST',
+      headers: { 'x-csrf-token': 'testtoken' },
+      body: { script: 'test' },
+    };
     const res: Res = mockRes();
     await handler(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     const data = res.json.mock.calls[0][0];
-    expect(data.output).toMatch(/Executed script/);
+    expect(data.output).toMatch(/Mimikatz simulation/);
   });
 });

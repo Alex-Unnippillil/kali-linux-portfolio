@@ -1,39 +1,30 @@
-const randomUUIDMock = jest
-  .fn()
-  .mockReturnValueOnce('u')
-  .mockReturnValueOnce('p');
-
-jest.mock('crypto', () => ({
-  randomUUID: randomUUIDMock,
-}));
-
-jest.mock('child_process', () => ({
-  execFile: (cmd, args, options, callback) => {
-    if (typeof options === 'function') {
-      callback = options;
-    }
-    callback(null, 'done', '');
-  },
-}));
-
+process.env.NEXT_PUBLIC_CSRF_TOKEN = 'testtoken';
 const handler = require('../pages/api/hydra').default;
-const fs = require('fs').promises;
 
-test('removes temp files after hydra execution', async () => {
+const makeRes = () => ({
+  status: jest.fn().mockReturnThis(),
+  json: jest.fn(),
+});
+
+test('returns canned output with valid token', async () => {
   const req = {
     method: 'POST',
-    body: { target: 'target', service: 'ssh', userList: 'u', passList: 'p' },
+    headers: { 'x-csrf-token': 'testtoken' },
+    body: { target: 'example.com', service: 'ssh', userList: 'u', passList: 'p' },
   };
-  const res = {
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn(),
-  };
-
-  const userPath = '/tmp/hydra-users-u.txt';
-  const passPath = '/tmp/hydra-pass-p.txt';
-
+  const res = makeRes();
   await handler(req, res);
+  expect(res.status).toHaveBeenCalledWith(200);
+  expect(res.json.mock.calls[0][0].output).toMatch(/Hydra simulation/);
+});
 
-  await expect(fs.access(userPath)).rejects.toBeTruthy();
-  await expect(fs.access(passPath)).rejects.toBeTruthy();
+test('rejects missing csrf token', async () => {
+  const req = {
+    method: 'POST',
+    headers: {},
+    body: { target: 'example.com', service: 'ssh', userList: 'u', passList: 'p' },
+  };
+  const res = makeRes();
+  await handler(req, res);
+  expect(res.status).toHaveBeenCalledWith(403);
 });

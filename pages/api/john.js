@@ -1,40 +1,25 @@
-import { exec } from 'child_process';
-import { promises as fs } from 'fs';
-import { tmpdir } from 'os';
-import path from 'path';
-import { promisify } from 'util';
+import { verifyCsrf } from '../../utils/csrf';
 
-const execAsync = promisify(exec);
-
-export default async function handler(req, res) {
-  // John the Ripper is optional; environments without the binary can stub
-  // this handler to return canned responses for demonstration.
+export default function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
-  const { hash } = req.body || {};
-  if (!hash) {
-    res.status(400).json({ error: 'No hash provided' });
-    return;
-  }
-  try {
-    await execAsync('which john');
-  } catch {
-    return res.status(500).json({ error: 'John the Ripper not installed' });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const file = path.join(tmpdir(), `john-${Date.now()}.txt`);
-  try {
-    await fs.writeFile(file, `${hash}\n`);
-    const { stdout, stderr } = await execAsync(`john ${file}`, {
-      timeout: 1000 * 60,
-    });
-    await fs.unlink(file).catch(() => {});
-    res.status(200).json({ output: stdout || stderr });
-  } catch (e) {
-    await fs.unlink(file).catch(() => {});
-    res.status(500).json({ error: e.stderr || e.message });
+  if (!verifyCsrf(req)) {
+    return res.status(403).json({ error: 'Invalid CSRF token' });
   }
+
+  const { hash = '' } = req.body || {};
+  const trimmed = String(hash).trim();
+  if (!trimmed || trimmed.length > 1000) {
+    return res.status(400).json({ error: 'Invalid input' });
+  }
+
+  const output =
+    'John the Ripper simulation. No real cracking performed.\n' +
+    'Docs: https://www.openwall.com/john/\n' +
+    'Ethics: https://www.kali.org/docs/policy/ethical-hacking/';
+
+  return res.status(200).json({ output });
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
 import usePersistentState from '../../usePersistentState';
+import { CSRF_TOKEN, CSRF_HEADER } from '../../../utils/csrf';
 
 const severities = ['critical', 'high', 'medium', 'low'];
 const severityStyles = {
@@ -41,6 +42,8 @@ const MetasploitApp = ({
       fetch('/api/metasploit').catch(() => {});
     }
   }, [demoMode]);
+
+  useEffect(() => () => workerRef.current?.terminate(), []);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -96,7 +99,10 @@ const MetasploitApp = ({
       } else {
         const res = await fetch('/api/metasploit', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            [CSRF_HEADER]: CSRF_TOKEN,
+          },
           body: JSON.stringify({ command: cmd }),
         });
         const data = await res.json();
@@ -160,6 +166,8 @@ const MetasploitApp = ({
       </div>
       <div className="flex p-2">
         <input
+          id="msf-command"
+          aria-label="msfconsole command"
           className="flex-grow bg-ub-grey text-white p-1 rounded"
           value={command}
           onChange={(e) => setCommand(e.target.value)}
@@ -184,6 +192,8 @@ const MetasploitApp = ({
       </div>
       <div className="p-2">
         <input
+          id="msf-search"
+          aria-label="Search modules"
           className="w-full bg-ub-grey text-white p-1 rounded"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
