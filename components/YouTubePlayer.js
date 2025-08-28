@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import Head from 'next/head';
-import usePrefersReducedMotion from './hooks/usePrefersReducedMotion';
+import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,
 // chapter drawer and Picture-in-Picture helpers. The Doc-PiP window is a
