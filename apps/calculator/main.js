@@ -177,9 +177,22 @@ function renderHistory() {
   history.forEach(({ expr, result }) => {
     const entry = document.createElement('div');
     entry.className = 'history-entry';
+    entry.addEventListener('click', () => {
+      display.value = expr;
+      updateParenBalance();
+      validateBaseInput();
+      display.focus();
+    });
     const text = document.createElement('span');
     text.textContent = `${expr} = ${result}`;
     entry.appendChild(text);
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = 'Copy';
+    copyBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      navigator.clipboard?.writeText(`${expr} = ${result}`);
+    });
+    entry.appendChild(copyBtn);
     historyEl.appendChild(entry);
   });
 }
