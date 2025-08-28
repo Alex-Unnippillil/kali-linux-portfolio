@@ -7,6 +7,8 @@ import '../styles/index.css';
 import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
 import { SettingsProvider } from '../hooks/useSettings';
+import { CommandsProvider } from '../hooks/useCommands';
+import CommandPalette from '../components/common/CommandPalette';
 
 /**
  * @param {import('next/app').AppProps} props
@@ -41,7 +43,10 @@ function MyApp({ Component, pageProps }) {
   }, []);
   return (
     <SettingsProvider>
-      <Component {...pageProps} />
+      <CommandsProvider>
+        <Component {...pageProps} />
+        <CommandPalette />
+      </CommandsProvider>
       <Analytics />
     </SettingsProvider>
   );
