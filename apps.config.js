@@ -90,7 +90,9 @@ const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
 const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
 const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
- 
+const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
+const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -162,6 +164,8 @@ const displayNmapNSE = createDisplay(NmapNSEApp);
 const displayOpenVAS = createDisplay(OpenVASApp);
 const displayReconNG = createDisplay(ReconNGApp);
 const displaySecurityTools = createDisplay(SecurityToolsApp);
+const displaySSH = createDisplay(SSHApp);
+const displayHTTP = createDisplay(HTTPApp);
 
 const displayHashcat = createDisplay(HashcatApp);
 
@@ -797,6 +801,24 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayMimikatz,
+  },
+  {
+    id: 'ssh',
+    title: 'SSH Builder',
+    icon: './themes/Yaru/apps/ssh.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySSH,
+  },
+  {
+    id: 'http',
+    title: 'HTTP Builder',
+    icon: './themes/Yaru/apps/http.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHTTP,
   },
   {
     id: 'hydra',
