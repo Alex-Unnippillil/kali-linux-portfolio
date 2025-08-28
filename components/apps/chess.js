@@ -31,6 +31,16 @@ const pieceUnicode = {
   [KING]: { [WHITE]: '♔', [BLACK]: '♚' },
 };
 
+// sprite images for consistent piece rendering
+const spritePaths = {
+  [PAWN]: { [WHITE]: '/pieces/wP.svg', [BLACK]: '/pieces/bP.svg' },
+  [KNIGHT]: { [WHITE]: '/pieces/wN.svg', [BLACK]: '/pieces/bN.svg' },
+  [BISHOP]: { [WHITE]: '/pieces/wB.svg', [BLACK]: '/pieces/bB.svg' },
+  [ROOK]: { [WHITE]: '/pieces/wR.svg', [BLACK]: '/pieces/bR.svg' },
+  [QUEEN]: { [WHITE]: '/pieces/wQ.svg', [BLACK]: '/pieces/bQ.svg' },
+  [KING]: { [WHITE]: '/pieces/wK.svg', [BLACK]: '/pieces/bK.svg' },
+};
+
 const SIZE = 320; // canvas size
 const SQ = SIZE / 8;
 
@@ -301,6 +311,8 @@ const ChessGame = () => {
   const [evalScore, setEvalScore] = useState(0);
   const [displayEval, setDisplayEval] = useState(0);
   const reduceMotionRef = useRef(false);
+  const spritesRef = useRef({});
+  const [spritesReady, setSpritesReady] = useState(false);
   const evalPercent =
     (1 / (1 + Math.exp(-displayEval / 200))) * 100;
 
@@ -311,6 +323,25 @@ const ChessGame = () => {
     const handler = () => (reduceMotionRef.current = mq.matches);
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  useEffect(() => {
+    const imgs = {};
+    let loaded = 0;
+    const total = 12;
+    for (const type of [PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING]) {
+      imgs[type] = {};
+      for (const side of [WHITE, BLACK]) {
+        const img = new Image();
+        img.src = spritePaths[type][side];
+        img.onload = () => {
+          loaded++;
+          if (loaded === total) setSpritesReady(true);
+        };
+        imgs[type][side] = img;
+      }
+    }
+    spritesRef.current = imgs;
   }, []);
 
   const updateEval = () => setEvalScore(evaluate(boardRef.current));
@@ -423,15 +454,23 @@ const ChessGame = () => {
 
           const piece = boardRef.current[sq];
           if (piece) {
-            ctx.font = `${SQ - 10}px serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = piece > 0 ? '#000' : '#fff';
-            ctx.fillText(
-              pieceUnicode[Math.abs(piece)][piece > 0 ? WHITE : BLACK],
-              x + SQ / 2,
-              y + SQ / 2
-            );
+            const img =
+              spritesRef.current[Math.abs(piece)]?.[
+                piece > 0 ? WHITE : BLACK
+              ];
+            if (img && spritesReady) {
+              ctx.drawImage(img, x + 2, y + 2, SQ - 4, SQ - 4);
+            } else {
+              ctx.font = `${SQ - 10}px serif`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillStyle = piece > 0 ? '#000' : '#fff';
+              ctx.fillText(
+                pieceUnicode[Math.abs(piece)][piece > 0 ? WHITE : BLACK],
+                x + SQ / 2,
+                y + SQ / 2
+              );
+            }
           }
         }
       }
@@ -491,22 +530,27 @@ const ChessGame = () => {
       localStorage.setItem('chessElo', String(newElo));
   };
 
-  const checkGameState = () => {
+  const checkGameState = (defaultStatus, skipElo = false) => {
     const game = chessRef.current;
-    if (game.isGameOver()) {
-      if (game.isCheckmate()) {
-        if (game.turn() === 'w') {
-          setStatus('Checkmate! You lose');
-          endGame(-1);
-        } else {
-          setStatus('Checkmate! You win');
-          endGame(1);
-        }
+    if (game.isCheckmate()) {
+      if (game.turn() === 'w') {
+        setStatus('Checkmate! You lose');
+        if (!skipElo) endGame(-1);
       } else {
-        setStatus('Draw');
-        endGame(0);
+        setStatus('Checkmate! You win');
+        if (!skipElo) endGame(1);
       }
       return true;
+    }
+    if (game.isDraw()) {
+      setStatus('Draw');
+      if (!skipElo) endGame(0);
+      return true;
+    }
+    if (game.isCheck()) {
+      setStatus('Check!');
+    } else if (defaultStatus) {
+      setStatus(defaultStatus);
     }
     return false;
   };
@@ -533,8 +577,7 @@ const ChessGame = () => {
       setMoves([]);
       updateEval();
       updateMateHints();
-      checkGameState();
-      setStatus('Your move');
+      checkGameState('Your move');
     }
   };
 
@@ -565,8 +608,7 @@ const ChessGame = () => {
           setMoves([]);
           updateEval();
           updateMateHints();
-          if (!checkGameState()) {
-            setStatus('AI thinking...');
+          if (!checkGameState('AI thinking...')) {
             setTimeout(aiMove, 200);
           }
           return;
@@ -662,6 +704,51 @@ const ChessGame = () => {
     navigator.clipboard?.writeText(chessRef.current.pgn());
   };
 
+  const loadPGN = () => {
+    const pgn = prompt('Paste PGN');
+    if (!pgn) return;
+    reset();
+    if (!chessRef.current.load_pgn(pgn)) {
+      alert('Invalid PGN');
+      reset();
+      return;
+    }
+    const moves = chessRef.current.history({ verbose: true });
+    chessRef.current.reset();
+    boardRef.current = createInitialBoard();
+    historyRef.current = [boardRef.current.slice()];
+    setSanLog([]);
+    sideRef.current = WHITE;
+    setPaused(true);
+    setStatus('Replaying PGN...');
+    let i = 0;
+    const playNext = () => {
+      if (i >= moves.length) {
+        setPaused(false);
+        checkGameState('Your move', true);
+        return;
+      }
+      const m = moves[i++];
+      const res = chessRef.current.move(m);
+      const from = algToSq(m.from);
+      const to = algToSq(m.to);
+      const capture = boardRef.current[to] !== EMPTY;
+      boardRef.current[to] = boardRef.current[from];
+      boardRef.current[from] = EMPTY;
+      addTrail(from, to);
+      if (capture) addCaptureSparks(to);
+      historyRef.current.push(boardRef.current.slice());
+      setSanLog((l) => [...l, res.san]);
+      sideRef.current = chessRef.current.turn() === 'w' ? WHITE : BLACK;
+      updateEval();
+      updateMateHints();
+      if (sound) playBeep();
+      checkGameState(undefined, true);
+      setTimeout(playNext, 500);
+    };
+    playNext();
+  };
+
   const moveLines = [];
   for (let i = 0; i < sanLog.length; i += 2) {
     moveLines.push(
@@ -696,6 +783,9 @@ const ChessGame = () => {
         </button>
         <button className="px-2 py-1 bg-gray-700" onClick={toggleHints}>
           {showHints ? 'Hide Hints' : 'Mate in 1'}
+        </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={loadPGN}>
+          Load PGN
         </button>
       </div>
       <div className="mt-2">{status}</div>
