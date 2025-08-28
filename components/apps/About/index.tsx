@@ -280,13 +280,46 @@ function WorkerStatus() {
 
 function Timeline() {
   const events = [
-    { date: '2012', description: 'Began Nuclear Engineering at Ontario Tech.' },
-    { date: '2016', description: 'Graduated with B. Eng.' },
-    { date: '2020', description: 'Started Networking and I.T. Security program.' },
-    { date: '2024', description: 'Graduated with BIT in Networking and I.T. Security.' },
+    {
+      date: '2012',
+      description: 'Began Nuclear Engineering at Ontario Tech.',
+      icon: '🎓',
+    },
+    { date: '2016', description: 'Graduated with B. Eng.', icon: '🏅' },
+    {
+      date: '2020',
+      description: 'Started Networking and I.T. Security program.',
+      icon: '💻',
+    },
+    {
+      date: '2024',
+      description: 'Graduated with BIT in Networking and I.T. Security.',
+      icon: '🎓',
+    },
   ];
 
   const [liveMessage, setLiveMessage] = React.useState('');
+  const itemRefs = React.useRef<Array<HTMLLIElement | null>>([]);
+  const [activeIndex, setActiveIndex] = React.useState(0);
+
+  const moveFocus = (index: number) => {
+    itemRefs.current[index]?.focus();
+    setActiveIndex(index);
+    setLiveMessage(`${events[index].date}: ${events[index].description}`);
+  };
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLLIElement>,
+    index: number,
+  ) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      moveFocus((index + 1) % events.length);
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      moveFocus((index - 1 + events.length) % events.length);
+    }
+  };
 
   return (
     <>
@@ -294,11 +327,26 @@ function Timeline() {
         <h3 id="timeline-heading" className="sr-only">
           Timeline
         </h3>
-        <ol className="border-l-2 border-gray-400">
-          {events.map((event) => (
-            <li key={event.date} className="mb-4 ml-4">
+        <ol className="border-l-2 border-gray-400 timeline">
+          {events.map((event, i) => (
+            <li
+              key={event.date}
+              className="mb-4 ml-4 timeline-item focus:outline-none"
+              tabIndex={activeIndex === i ? 0 : -1}
+              ref={(el) => (itemRefs.current[i] = el)}
+              onKeyDown={(e) => handleKeyDown(e, i)}
+              onFocus={() => {
+                setActiveIndex(i);
+                setLiveMessage(`${event.date}: ${event.description}`);
+              }}
+            >
               <div className="flex items-center">
-                <div className="w-4 h-4 bg-ubt-blue rounded-full -ml-2" aria-hidden="true" />
+                <span
+                  className="w-6 h-6 flex items-center justify-center bg-ubt-blue text-white rounded-full -ml-3"
+                  aria-hidden="true"
+                >
+                  {event.icon}
+                </span>
                 <time className="ml-2 text-sm">{event.date}</time>
               </div>
               <p className="ml-2 mt-1 text-sm" aria-label={event.description}>
@@ -307,6 +355,15 @@ function Timeline() {
             </li>
           ))}
         </ol>
+        <div className="no-print mt-4 text-right">
+          <a
+            href="/assets/timeline.pdf"
+            download
+            className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
+          >
+            Download Timeline PDF
+          </a>
+        </div>
       </div>
       <div className="sr-only" aria-live="polite">
         {liveMessage}
