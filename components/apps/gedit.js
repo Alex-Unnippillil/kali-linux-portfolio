@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
+import ProgressBar from '../ui/ProgressBar';
 
 export class Gedit extends Component {
 
@@ -9,6 +10,8 @@ export class Gedit extends Component {
         super();
         this.state = {
             sending: false,
+            showProgress: false,
+            progress: 0,
             name: '',
             subject: '',
             message: '',
@@ -20,6 +23,8 @@ export class Gedit extends Component {
             timezone: '',
             localTime: '',
         }
+        this.progressTimer = null;
+        this.progressInterval = null;
     }
 
     componentDidMount() {
@@ -29,6 +34,8 @@ export class Gedit extends Component {
 
     componentWillUnmount() {
         if (this.timeFrame) cancelAnimationFrame(this.timeFrame);
+        if (this.progressTimer) clearTimeout(this.progressTimer);
+        if (this.progressInterval) clearInterval(this.progressInterval);
     }
 
     fetchLocation = () => {
@@ -93,7 +100,14 @@ export class Gedit extends Component {
         }
         if (error) return;
 
-        this.setState({ sending: true });
+        this.setState({ sending: true, showProgress: false, progress: 0 });
+
+        this.progressTimer = setTimeout(() => {
+            this.setState({ showProgress: true });
+            this.progressInterval = setInterval(() => {
+                this.setState((prev) => ({ progress: Math.min(prev.progress + 5, 95) }));
+            }, 500);
+        }, 10000);
 
         const serviceID = process.env.NEXT_PUBLIC_SERVICE_ID;
         const templateID = process.env.NEXT_PUBLIC_TEMPLATE_ID;
@@ -103,20 +117,22 @@ export class Gedit extends Component {
             'message': message,
         }
 
-        emailjs.send(serviceID, templateID, templateParams)
-            .then(() => {
-                this.setState({ sending: false, name: '', subject: '', message: '' });
-                document.getElementById('close-gedit')?.click();
-
-                ReactGA.event({
-                    category: "contact",
-                    action: "submit_success",
-                });
-            })
-            .catch(() => {
-                this.setState({ sending: false });
-                document.getElementById('close-gedit')?.click();
+        try {
+            await emailjs.send(serviceID, templateID, templateParams);
+            this.setState({ name: '', subject: '', message: '' });
+            ReactGA.event({
+                category: "contact",
+                action: "submit_success",
             });
+        } catch {
+            // ignore errors
+        } finally {
+            if (this.progressTimer) clearTimeout(this.progressTimer);
+            if (this.progressInterval) clearInterval(this.progressInterval);
+            this.setState({ progress: 100 });
+            document.getElementById('close-gedit')?.click();
+            setTimeout(() => this.setState({ sending: false, showProgress: false, progress: 0 }), 300);
+        }
 
     }
 
@@ -170,20 +186,22 @@ export class Gedit extends Component {
                     </div>
                 }
                 {
-                    (this.state.sending
-                        ?
-                        <div className="flex justify-center items-center motion-safe:animate-pulse h-full w-full bg-gray-400 bg-opacity-30 absolute top-0 left-0">
-                            <Image
-                                className=" w-8 absolute motion-safe:animate-spin"
-                                src="/themes/Yaru/status/process-working-symbolic.svg"
-                                alt="Ubuntu Process Symbol"
-                                width={32}
-                                height={32}
-                                sizes="32px"
-                                priority
-                            />
+                    this.state.sending && (
+                        <div className="flex justify-center items-center h-full w-full bg-gray-400 bg-opacity-30 absolute top-0 left-0">
+                            {this.state.showProgress ? (
+                                <ProgressBar progress={this.state.progress} />
+                            ) : (
+                                <Image
+                                    className="w-8 motion-safe:animate-spin"
+                                    src="/themes/Yaru/status/process-working-symbolic.svg"
+                                    alt="Ubuntu Process Symbol"
+                                    width={32}
+                                    height={32}
+                                    sizes="32px"
+                                    priority
+                                />
+                            )}
                         </div>
-                        : null
                     )
                 }
             </div>
