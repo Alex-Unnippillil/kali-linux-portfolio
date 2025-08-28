@@ -46,6 +46,9 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        if (this.props.announce) {
+            this.props.announce(`${this.props.title} window opened`);
+        }
     }
 
     componentWillUnmount() {
@@ -299,6 +302,12 @@ export class Window extends Component {
         else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+        if (this.props.announce) {
+            const rect = document.getElementById(this.id)?.getBoundingClientRect();
+            const x = rect ? Math.round(rect.left) : 0;
+            const y = rect ? Math.round(rect.top) : 0;
+            this.props.announce(`${this.props.title} window moved to ${x}, ${y}`);
+        }
     }
 
     focusWindow = () => {
@@ -394,6 +403,9 @@ export class Window extends Component {
 
     closeWindow = () => {
         this.setWinowsPosition();
+        if (this.props.announce) {
+            this.props.announce(`${this.props.title} window closed`);
+        }
         this.setState({ closed: true }, () => {
             this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
