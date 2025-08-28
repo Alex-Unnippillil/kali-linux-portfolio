@@ -29,6 +29,38 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
 
+  const fallbackCopy = useCallback((text: string) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).catch(() => {
+        /* ignore clipboard errors */
+      });
+    }
+  }, []);
+
+  const shareApp = useCallback(() => {
+    const url = window.location.href;
+    if (navigator.share) {
+      navigator.share({ url }).catch(() => {
+        fallbackCopy(url);
+      });
+    } else {
+      fallbackCopy(url);
+    }
+  }, [fallbackCopy]);
+
+  const shareScore = useCallback(() => {
+    if (highScore === undefined) return;
+    const url = window.location.href;
+    const text = `I scored ${highScore} in ${gameId}!`;
+    if (navigator.share) {
+      navigator
+        .share({ text, url })
+        .catch(() => fallbackCopy(`${text} ${url}`));
+    } else {
+      fallbackCopy(`${text} ${url}`);
+    }
+  }, [fallbackCopy, highScore, gameId]);
+
   // Keyboard shortcut to toggle help overlay
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -110,15 +142,33 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           </button>
         </div>
       )}
-      <button
-        type="button"
-        aria-label="Help"
-        aria-expanded={showHelp}
-        onClick={toggle}
-        className="absolute top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
-      >
-        ?
-      </button>
+      <div className="absolute top-2 right-2 z-40 flex space-x-2">
+        <button
+          type="button"
+          onClick={shareApp}
+          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+        >
+          Share
+        </button>
+        {highScore !== undefined && (
+          <button
+            type="button"
+            onClick={shareScore}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            Share Score
+          </button>
+        )}
+        <button
+          type="button"
+          aria-label="Help"
+          aria-expanded={showHelp}
+          onClick={toggle}
+          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+        >
+          ?
+        </button>
+      </div>
       {children}
       <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
         {stage !== undefined && <div>Stage: {stage}</div>}
