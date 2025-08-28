@@ -97,17 +97,20 @@ const CarRacer = () => {
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (
-      !canvas ||
-      typeof window === 'undefined' ||
-      !window.Worker ||
-      !('OffscreenCanvas' in window)
-    )
-      return;
-    const worker = new Worker(new URL('./car-racer.renderer.js', import.meta.url));
-    workerRef.current = worker;
-    const offscreen = canvas.transferControlToOffscreen();
-    worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
+    if (!canvas || typeof window === 'undefined') return;
+
+    const supportsWorker = window.Worker && 'OffscreenCanvas' in window;
+    let worker;
+    let ctx;
+    if (supportsWorker) {
+      worker = new Worker(new URL('./car-racer.renderer.js', import.meta.url));
+      workerRef.current = worker;
+      const offscreen = canvas.transferControlToOffscreen();
+      worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
+    } else {
+      ctx = canvas.getContext('2d');
+    }
+
     let last = performance.now();
     let spawnTimer = 0;
     let lineOffset = 0;
@@ -115,6 +118,59 @@ const CarRacer = () => {
     let farTimer = 0;
     let bgNearTimer = 0;
     let bgFarTimer = 0;
+
+    const drawFallback = (state) => {
+      if (!ctx) return;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      if (state.background) {
+        ctx.fillStyle = '#111';
+        state.background.far.forEach(({ x, y }) => {
+          ctx.fillRect(x, y, 2, 2);
+        });
+        ctx.fillStyle = '#555';
+        state.background.near.forEach(({ x, y }) => {
+          ctx.fillRect(x, y, 3, 3);
+        });
+      }
+
+      if (state.roadside) {
+        ctx.fillStyle = '#999';
+        state.roadside.far.forEach((y) => {
+          ctx.fillRect(2, y, 6, 20);
+          ctx.fillRect(WIDTH - 8, y, 6, 20);
+        });
+        ctx.fillStyle = '#ccc';
+        state.roadside.near.forEach((y) => {
+          ctx.fillRect(0, y, 10, 30);
+          ctx.fillRect(WIDTH - 10, y, 10, 30);
+        });
+      }
+
+      ctx.strokeStyle = '#fff';
+      ctx.setLineDash([20, 20]);
+      ctx.lineWidth = 2;
+      ctx.lineDashOffset = -(state.lineOffset || 0);
+      for (let i = 1; i < LANES; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(i * LANE_WIDTH, 0);
+        ctx.lineTo(i * LANE_WIDTH, HEIGHT);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      const carX = state.car.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
+      ctx.fillStyle = 'red';
+      ctx.fillRect(carX, state.car.y, CAR_WIDTH, CAR_HEIGHT);
+
+      ctx.fillStyle = 'blue';
+      state.obstacles.forEach((o) => {
+        const ox = o.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
+        ctx.fillRect(ox, o.y, CAR_WIDTH, OBSTACLE_HEIGHT);
+      });
+    };
+
     const postState = () => {
       const state = {
         car: { lane: car.current.lane, y: car.current.y },
@@ -133,16 +189,20 @@ const CarRacer = () => {
             },
         lineOffset,
       };
-      const diff = {};
-      const lastState = lastRenderRef.current;
-      Object.keys(state).forEach((k) => {
-        if (JSON.stringify(state[k]) !== JSON.stringify(lastState[k])) {
-          diff[k] = state[k];
+      if (supportsWorker) {
+        const diff = {};
+        const lastState = lastRenderRef.current;
+        Object.keys(state).forEach((k) => {
+          if (JSON.stringify(state[k]) !== JSON.stringify(lastState[k])) {
+            diff[k] = state[k];
+          }
+        });
+        if (Object.keys(diff).length) {
+          worker.postMessage({ type: 'state', diff });
+          lastRenderRef.current = { ...lastState, ...diff };
         }
-      });
-      if (Object.keys(diff).length) {
-        worker.postMessage({ type: 'state', diff });
-        lastRenderRef.current = { ...lastState, ...diff };
+      } else {
+        drawFallback(state);
       }
     };
 
@@ -253,7 +313,7 @@ const CarRacer = () => {
     const req = requestAnimationFrame(step);
     return () => {
       cancelAnimationFrame(req);
-      worker.terminate();
+      if (worker) worker.terminate();
     };
   }, [canvasRef, highScore]);
 
