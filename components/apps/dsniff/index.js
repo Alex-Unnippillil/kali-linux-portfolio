@@ -291,6 +291,7 @@ const Dsniff = () => {
         <input
           className="w-full text-black p-1"
           placeholder="Search logs"
+          aria-label="Search logs"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />

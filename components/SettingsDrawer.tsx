@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { getTheme, setTheme, getUnlockedThemes } from '../utils/theme';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 interface Props {
   highScore?: number;
@@ -9,6 +10,9 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const [theme, setThemeState] = useState(getTheme());
   const unlocked = getUnlockedThemes(highScore);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(dialogRef, open);
 
   const changeTheme = (t: string) => {
     setThemeState(t);
@@ -21,7 +25,7 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
         Settings
       </button>
       {open && (
-        <div role="dialog">
+        <div ref={dialogRef} role="dialog" aria-modal="true">
           <label>
             Theme
             <select

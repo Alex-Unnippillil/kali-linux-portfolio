@@ -87,7 +87,11 @@ export default function YouTubeApp({ initialVideos = [] }) {
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white p-4">
       <div className="mb-4">
+        <label htmlFor="yt-index-search" className="sr-only">
+          Search videos
+        </label>
         <input
+          id="yt-index-search"
           type="text"
           placeholder="Search"
           value={search}

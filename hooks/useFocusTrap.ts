@@ -16,6 +16,9 @@ export default function useFocusTrap(ref: React.RefObject<HTMLElement>, active: 
   useEffect(() => {
     const node = ref.current;
     if (!node || !active) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusable = getFocusableElements(node);
+    (focusable[0] || node).focus();
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return;
@@ -50,6 +53,7 @@ export default function useFocusTrap(ref: React.RefObject<HTMLElement>, active: 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('focusin', handleFocus);
+      previouslyFocused?.focus();
     };
   }, [ref, active]);
 }

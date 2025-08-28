@@ -154,6 +154,7 @@ export default function SecurityTools() {
         value={query}
         onChange={e => setQuery(e.target.value)}
         placeholder="Search all tools"
+        aria-label="Search all tools"
         className="w-full mb-2 p-1 text-black text-xs"
       />
       {query ? (

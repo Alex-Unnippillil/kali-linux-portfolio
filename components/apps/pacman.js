@@ -666,6 +666,7 @@ const Pacman = () => {
         <input
           type="text"
           placeholder="Search level..."
+          aria-label="Search level"
           className="w-full px-2 py-1 text-black"
           value={search}
           onChange={(e) => {

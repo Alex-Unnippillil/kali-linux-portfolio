@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import data from '../components/apps/nessus/sample-report.json';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const severityColors: Record<string, string> = {
   Critical: '#991b1b',
@@ -27,6 +28,9 @@ const NessusReport: React.FC = () => {
   const [host, setHost] = useState<string>('All');
   const [family, setFamily] = useState<string>('All');
   const [findings, setFindings] = useState<Finding[]>(data as Finding[]);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useFocusTrap(dialogRef, Boolean(selected));
 
   const hosts = useMemo(
     () => Array.from(new Set(findings.map((f) => f.host))).sort(),
@@ -246,7 +250,9 @@ const NessusReport: React.FC = () => {
       </table>
       {selected && (
         <div
+          ref={dialogRef}
           role="dialog"
+          aria-modal="true"
           className="fixed top-0 right-0 h-full w-80 bg-gray-800 p-4 overflow-auto shadow-lg"
         >
           <button
