@@ -5,7 +5,12 @@ const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const NUMS = '0123456789';
 const SYMBOLS = '!@#$%^&*()_+~`|}{[]:;?><,./-=';
 
-const PasswordGenerator: React.FC = () => {
+interface PasswordGeneratorProps {
+  getDailySeed?: () => Promise<string>;
+}
+
+const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) => {
+  void getDailySeed;
   const [length, setLength] = useState(12);
   const [useLower, setUseLower] = useState(true);
   const [useUpper, setUseUpper] = useState(true);

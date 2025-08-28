@@ -112,7 +112,7 @@ const Page2048 = () => {
   });
   const [hard, setHard] = useState(false);
   const [timer, setTimer] = useState(3);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [moves, setMoves] = useState<string[]>([]);
   const [highest, setHighest] = useState(0);
   const [boardType, setBoardType] = useState<'classic' | 'hex'>('classic');
@@ -126,11 +126,11 @@ const Page2048 = () => {
 
   useEffect(() => {
     if (!hard) return;
-    timerRef.current && clearInterval(timerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setTimer((t) => {
         if (t <= 1) {
-          clearInterval(timerRef.current);
+          if (timerRef.current) clearInterval(timerRef.current);
           setLost(true);
           saveReplay({ date: new Date().toISOString(), moves, boardType, hard });
           return 0;
