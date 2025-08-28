@@ -37,6 +37,7 @@ export default function TimerStopwatch() {
         role="tabpanel"
         className="tab-panel"
         hidden={mode !== 'timer'}
+        style={{ contentVisibility: 'auto' }}
       >
         <div>
           <input type="number" id="minutes" min="0" defaultValue="0" /> :
@@ -54,6 +55,7 @@ export default function TimerStopwatch() {
         role="tabpanel"
         className="tab-panel"
         hidden={mode !== 'stopwatch'}
+        style={{ contentVisibility: 'auto' }}
       >
         <div className="display" id="stopwatchDisplay">00:00</div>
         <div>

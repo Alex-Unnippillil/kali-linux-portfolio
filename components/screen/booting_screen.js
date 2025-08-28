@@ -4,7 +4,12 @@ import Image from 'next/image'
 function BootingScreen(props) {
 
     return (
-        <div style={(props.visible || props.isShutDown ? { zIndex: "100" } : { zIndex: "-20" })} className={(props.visible || props.isShutDown ? " visible opacity-100" : " invisible opacity-0 ") + " absolute duration-500 select-none flex flex-col justify-around items-center top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen bg-black"}>
+        <div
+            style={{
+                ...(props.visible || props.isShutDown ? { zIndex: "100" } : { zIndex: "-20" }),
+                contentVisibility: 'auto',
+            }}
+            className={(props.visible || props.isShutDown ? " visible opacity-100" : " invisible opacity-0 ") + " absolute duration-500 select-none flex flex-col justify-around items-center top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen bg-black"}>
             <Image
                 width={400}
                 height={400}
