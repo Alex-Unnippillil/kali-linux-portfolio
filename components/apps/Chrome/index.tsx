@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { toPng } from 'html-to-image';
 import { Readability } from '@mozilla/readability';
+import DOMPurify from 'dompurify';
 
 interface TabData {
   id: number;
@@ -332,20 +333,20 @@ const Chrome: React.FC = () => {
           📷
         </button>
       </div>
-      <div className="flex-grow bg-white relative overflow-auto">
-        {articles[activeId] ? (
-          <main
-            style={{ maxInlineSize: '60ch', margin: 'auto' }}
-            dangerouslySetInnerHTML={{ __html: articles[activeId] }}
-          />
-        ) : activeTab.blocked ? (
-          blockedView
-        ) : (
-          <iframe
-            ref={iframeRef}
-            src={activeTab.url}
-            title={activeTab.url}
-            className="w-full h-full"
+        <div className="flex-grow bg-white relative overflow-auto">
+          {articles[activeId] ? (
+            <main
+              style={{ maxInlineSize: '60ch', margin: 'auto' }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(articles[activeId] ?? '') }}
+            />
+          ) : activeTab.blocked ? (
+            blockedView
+          ) : (
+            <iframe
+              ref={iframeRef}
+              src={activeTab.url}
+              title={activeTab.url}
+              className="w-full h-full"
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
             referrerPolicy="no-referrer"
