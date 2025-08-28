@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import useRovingTabIndex from '../../../hooks/useRovingTabIndex';
 import * as pdfjsLib from 'pdfjs-dist';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
@@ -16,6 +17,9 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
   const [thumbs, setThumbs] = useState<HTMLCanvasElement[]>([]);
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<number[]>([]);
+  const thumbListRef = useRef<HTMLDivElement | null>(null);
+
+  useRovingTabIndex(thumbListRef, thumbs.length > 0, 'horizontal');
 
   useEffect(() => {
     const loadPdf = async () => {
@@ -86,12 +90,21 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
         <button onClick={search}>Search</button>
       </div>
       <canvas ref={canvasRef} data-testid="pdf-canvas" />
-      <div className="flex gap-2 overflow-x-auto mt-2">
+      <div
+        className="flex gap-2 overflow-x-auto mt-2"
+        role="listbox"
+        aria-orientation="horizontal"
+        ref={thumbListRef}
+      >
         {thumbs.map((t, i) => (
           <canvas
             key={i + 1}
+            role="option"
+            tabIndex={page === i + 1 ? 0 : -1}
+            aria-selected={page === i + 1}
             data-testid={`thumb-${i + 1}`}
             onClick={() => setPage(i + 1)}
+            onFocus={() => setPage(i + 1)}
             ref={(el) => {
               if (el) el.getContext('2d')?.drawImage(t, 0, 0);
             }}

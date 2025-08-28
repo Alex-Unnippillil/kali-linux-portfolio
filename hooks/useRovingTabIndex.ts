@@ -2,8 +2,9 @@ import { useEffect } from 'react';
 
 /**
  * Enables roving tab index and arrow key navigation within a container.
- * Elements inside the container that have role="tab" or role="menuitem"
- * will participate in the roving behaviour.
+ * Elements inside the container that have role="tab", role="menuitem",
+ * or role="option" will participate in the roving behaviour. This covers
+ * common patterns such as tabs, menus and listboxes.
  */
 export default function useRovingTabIndex(
   ref: React.RefObject<HTMLElement>,
@@ -15,7 +16,9 @@ export default function useRovingTabIndex(
     if (!node || !active) return;
 
     const items = Array.from(
-      node.querySelectorAll<HTMLElement>('[role="tab"], [role="menuitem"]')
+      node.querySelectorAll<HTMLElement>(
+        '[role="tab"], [role="menuitem"], [role="option"]'
+      )
     );
     if (items.length === 0) return;
 
