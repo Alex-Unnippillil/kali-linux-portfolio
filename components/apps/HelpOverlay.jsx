@@ -2,18 +2,7 @@ import React from 'react';
 import InputRemap from './Games/common/input-remap/InputRemap';
 import useInputMapping from './Games/common/input-remap/useInputMapping';
 
-interface HelpOverlayProps {
-  gameId: string;
-  onClose: () => void;
-}
-
-interface Instruction {
-  objective: string;
-  controls: string;
-  actions?: Record<string, string>;
-}
-
-export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
+export const GAME_INSTRUCTIONS = {
   '2048': {
     objective: 'Reach the 2048 tile by merging numbers.',
     controls: 'Use the arrow keys to slide and combine tiles.',
@@ -154,11 +143,11 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
 };
 
-const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
+const HelpOverlay = ({ gameId, onClose }) => {
   const info = GAME_INSTRUCTIONS[gameId];
-  if (!info) return null;
-  const [mapping, setKey] = useInputMapping(gameId, info.actions || {});
-  return (
+  const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
+
+  return info ? (
     <div
       className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
       role="dialog"
@@ -193,7 +182,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
         </button>
       </div>
     </div>
-  );
+  ) : null;
 };
 
 export default HelpOverlay;
