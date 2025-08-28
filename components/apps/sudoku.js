@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ratePuzzle, getHint, solve } from '../../workers/sudokuSolver';
+import { ratePuzzle, getHint, solveDLX, validateDLX } from '../../workers/sudokuSolver';
 
 // Interactive Sudoku game with puzzle generation and solving utilities.
 const SIZE = 9;
@@ -116,6 +116,9 @@ const generateSudoku = (difficulty = 'easy', seed = Date.now()) => {
       holes--;
     }
   }
+  if (!validateDLX(puzzle)) {
+    return generateSudoku(difficulty, seed + 1);
+  }
   return { puzzle, solution };
 };
 
@@ -212,7 +215,7 @@ const Sudoku = () => {
           if (data.solution) setSolution(data.solution);
           else
             try {
-              const { solution } = solve(data.puzzle);
+              const solution = solveDLX(data.puzzle);
               setSolution(solution);
             } catch (e) {
               setSolution([]);
@@ -372,6 +375,19 @@ const Sudoku = () => {
     }
   };
 
+  const handleSolve = () => {
+    try {
+      const solved = solveDLX(board);
+      setBoard(solved.map((r) => r.slice()));
+      setCompleted(true);
+      setHint('');
+      setHintCells([]);
+      setAriaMessage('Puzzle solved');
+    } catch (e) {
+      setAriaMessage('No solution found');
+    }
+  };
+
   const handleCheck = () => {
     let errors = 0;
     for (let r = 0; r < SIZE; r += 1) {
@@ -499,6 +515,9 @@ const Sudoku = () => {
         </button>
         <button className="px-2 py-1 bg-gray-700 rounded" onClick={getHintHandler}>
           Hint
+        </button>
+        <button className="px-2 py-1 bg-gray-700 rounded" onClick={handleSolve}>
+          Solve
         </button>
         <button
           className="px-2 py-1 bg-gray-700 rounded"
