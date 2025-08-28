@@ -1,154 +1,154 @@
-import React, { useEffect, useState } from 'react';
-import FormError from '../../ui/FormError';
+import React, { useState } from "react";
+import FormError from "../../ui/FormError";
 
-interface ServiceInfo {
-  uuid: string;
-  characteristics: string[];
+interface DeviceInfo {
+  address: string;
+  name: string;
+  rssi: number;
+  class: string;
 }
 
-const mockData: ServiceInfo[] = [
-  {
-    uuid: 'battery_service',
-    characteristics: ['battery_level'],
-  },
-  {
-    uuid: 'device_information',
-    characteristics: ['manufacturer_name_string', 'model_number_string'],
-  },
-];
-
 const BluetoothApp: React.FC = () => {
-  const supported = typeof navigator !== 'undefined' && 'bluetooth' in navigator;
-  const [useMock, setUseMock] = useState(!supported);
-  const [services, setServices] = useState<ServiceInfo[]>(!supported ? mockData : []);
-  const [error, setError] = useState('');
-  const [filter, setFilter] = useState('');
-  const [showHelp, setShowHelp] = useState(false);
+  const [devices, setDevices] = useState<DeviceInfo[]>([]);
+  const [error, setError] = useState("");
+  const [rssiFilter, setRssiFilter] = useState("");
+  const [classFilter, setClassFilter] = useState("");
+  const [nameFilter, setNameFilter] = useState("");
+  const [permissionGranted, setPermissionGranted] = useState(false);
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [pairingDevice, setPairingDevice] = useState<DeviceInfo | null>(null);
+  const [pairedDevice, setPairedDevice] = useState("");
 
-  useEffect(() => {
-    if (!supported) {
-      setServices(mockData);
-    }
-  }, [supported]);
-
-  const parseFilters = (): BluetoothLEScanFilter[] | null => {
-    const services = filter
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    return services.length ? [{ services: services as BluetoothServiceUUID[] }] : null;
-  };
-
-  const handleConnect = async () => {
-    if (!supported) return;
-    const filters = parseFilters();
-    if (!filters) {
-      setError('Please enter at least one service UUID.');
-      return;
-    }
+  const loadData = async () => {
     try {
-      const device = await navigator.bluetooth.requestDevice({ filters });
-      device.addEventListener('gattserverdisconnected', () => {
-        setError('Device disconnected.');
-      });
-      const server = await device.gatt!.connect();
-      const primServices = await server.getPrimaryServices();
-      const serviceData = await Promise.all(
-        primServices.map(async (service) => {
-          const chars = await service.getCharacteristics();
-          return {
-            uuid: service.uuid,
-            characteristics: chars.map((c) => c.uuid),
-          } as ServiceInfo;
-        })
-      );
-      setServices(serviceData);
-      setError('');
-    } catch (err) {
-      const e = err as DOMException;
-      if (e.name === 'NotFoundError') {
-        setError('No devices found matching the filters.');
-      } else if (e.name === 'NotAllowedError') {
-        setError('Permission to access Bluetooth was denied.');
-      } else {
-        setError(e.message || 'An unknown error occurred.');
-      }
+      const res = await fetch("/demo-data/bluetooth/scan.json");
+      const data: DeviceInfo[] = await res.json();
+      setDevices(data);
+      setError("");
+    } catch {
+      setError("Failed to load scan data.");
     }
   };
 
-  const toggleMock = () => {
-    if (!useMock) {
-      setServices(mockData);
+  const handleScan = () => {
+    if (!permissionGranted) {
+      setShowPermissionModal(true);
     } else {
-      setServices([]);
+      loadData();
     }
-    setUseMock(!useMock);
   };
+
+  const filtered = devices.filter((d) => {
+    const rssiOk = !rssiFilter || d.rssi >= Number(rssiFilter);
+    const classOk =
+      !classFilter || d.class.toLowerCase().includes(classFilter.toLowerCase());
+    const nameOk =
+      !nameFilter || d.name.toLowerCase().includes(nameFilter.toLowerCase());
+    return rssiOk && classOk && nameOk;
+  });
 
   return (
     <div className="relative h-full w-full bg-black p-4 text-white">
       <div className="mb-4 flex items-center gap-4">
-        <button
-          onClick={handleConnect}
-          disabled={useMock || !supported}
-          className="rounded bg-blue-600 px-3 py-1 disabled:opacity-50"
-        >
-          Scan for Device
+        <button onClick={handleScan} className="rounded bg-blue-600 px-3 py-1">
+          Scan for Devices
         </button>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={useMock}
-            onChange={toggleMock}
-            disabled={!supported}
-          />
-          Use Mock Data
-        </label>
-        <button
-          onClick={() => setShowHelp((v) => !v)}
-          className="rounded bg-gray-700 px-2 py-1 text-sm"
-          aria-label="Help"
-        >
-          ?
-        </button>
-        {showHelp && (
-          <div className="absolute left-0 top-12 z-10 w-64 rounded bg-gray-700 p-2 text-sm">
-            <p className="mb-2">
-              Grant Bluetooth permission when prompted. Only central-role BLE devices are
-              supported.
-            </p>
-            <p>Some browsers may not support Web Bluetooth.</p>
-          </div>
-        )}
       </div>
-      {!supported && (
-        <p className="mb-4 text-sm text-yellow-400">
-          Web Bluetooth is not supported. Using demo devices.
-        </p>
-      )}
-      <div className="mb-4">
+      <div className="mb-4 flex gap-2">
+        <input
+          type="number"
+          placeholder="Min RSSI"
+          value={rssiFilter}
+          onChange={(e) => setRssiFilter(e.target.value)}
+          className="w-1/3 rounded bg-gray-800 p-2 text-white"
+        />
         <input
           type="text"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Service UUIDs (comma-separated)"
-          disabled={useMock}
-          className="w-full rounded bg-gray-800 p-2 text-white disabled:opacity-50"
+          placeholder="Device Class"
+          value={classFilter}
+          onChange={(e) => setClassFilter(e.target.value)}
+          className="w-1/3 rounded bg-gray-800 p-2 text-white"
+        />
+        <input
+          type="text"
+          placeholder="Name"
+          value={nameFilter}
+          onChange={(e) => setNameFilter(e.target.value)}
+          className="w-1/3 rounded bg-gray-800 p-2 text-white"
         />
       </div>
       {error && <FormError className="mb-4 mt-0">{error}</FormError>}
+      {pairedDevice && <p className="mb-2">Paired with: {pairedDevice}</p>}
       <ul className="space-y-2 overflow-auto">
-        {services.map((service) => (
-          <li key={service.uuid} className="border-b border-gray-700 pb-2">
-            <p className="font-bold">Service: {service.uuid}</p>
-            <ul className="ml-4 list-disc">
-              {service.characteristics.map((char) => (
-                <li key={char}>Characteristic: {char}</li>
-              ))}
-            </ul>
+        {filtered.map((d) => (
+          <li key={d.address} className="border-b border-gray-700 pb-2">
+            <p className="font-bold">{d.name || d.address}</p>
+            <p className="text-sm">
+              RSSI: {d.rssi} | Class: {d.class}
+            </p>
+            <button
+              onClick={() => setPairingDevice(d)}
+              className="mt-2 rounded bg-gray-700 px-2 py-1 text-sm"
+            >
+              Pair
+            </button>
           </li>
         ))}
       </ul>
+      {showPermissionModal && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+          <div className="w-64 rounded bg-gray-800 p-4 text-center">
+            <p className="mb-4">Allow access to Bluetooth devices?</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowPermissionModal(false);
+                  setError("Permission denied.");
+                }}
+                className="rounded bg-gray-600 px-2 py-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setPermissionGranted(true);
+                  setShowPermissionModal(false);
+                  loadData();
+                }}
+                className="rounded bg-blue-600 px-2 py-1"
+              >
+                Allow
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {pairingDevice && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+          <div className="w-64 rounded bg-gray-800 p-4 text-center">
+            <p className="mb-4">
+              Pair with {pairingDevice.name || pairingDevice.address}?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setPairingDevice(null)}
+                className="rounded bg-gray-600 px-2 py-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setPairedDevice(pairingDevice.name || pairingDevice.address);
+                  setPairingDevice(null);
+                }}
+                className="rounded bg-blue-600 px-2 py-1"
+              >
+                Pair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,0 +1,32 @@
+[
+  {
+    "address": "AA:BB:CC:DD:EE:01",
+    "name": "Keyboard",
+    "rssi": -40,
+    "class": "Peripheral"
+  },
+  {
+    "address": "AA:BB:CC:DD:EE:02",
+    "name": "Headphones",
+    "rssi": -65,
+    "class": "Audio"
+  },
+  {
+    "address": "AA:BB:CC:DD:EE:03",
+    "name": "Smartphone",
+    "rssi": -55,
+    "class": "Phone"
+  },
+  {
+    "address": "AA:BB:CC:DD:EE:04",
+    "name": "Fitness Tracker",
+    "rssi": -70,
+    "class": "Wearable"
+  },
+  {
+    "address": "AA:BB:CC:DD:EE:05",
+    "name": "Laptop",
+    "rssi": -45,
+    "class": "Computer"
+  }
+]
