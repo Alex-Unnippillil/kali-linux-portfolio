@@ -137,7 +137,7 @@ function playBeep(freq = 440) {
     osc.type = 'square';
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
     osc.start();
     osc.stop(audioCtx.currentTime + 0.2);

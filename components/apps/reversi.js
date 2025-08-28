@@ -93,7 +93,7 @@ const Reversi = () => {
     gain.connect(ctx.destination);
     osc.frequency.value = 500;
     osc.start();
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
     osc.stop(ctx.currentTime + 0.1);
   };

@@ -88,6 +88,7 @@ function playCoinSound() {
     osc.frequency.value = 800;
     osc.connect(gain);
     gain.connect(ac.destination);
+    gain.gain.value = 0.5;
     osc.start();
     gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.2);
     osc.stop(ac.currentTime + 0.2);

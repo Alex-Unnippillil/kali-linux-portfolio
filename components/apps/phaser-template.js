@@ -70,7 +70,7 @@ class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', () => this.handleAction());
 
     // Howler audio example
-    this.jumpSound = new Howl({ src: ['jump.mp3'], volume: 0.5 });
+    this.jumpSound = new Howl({ src: ['jump.mp3'], volume: 0.25 });
   }
 
   togglePause() {

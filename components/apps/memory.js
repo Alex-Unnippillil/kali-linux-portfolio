@@ -45,9 +45,12 @@ const Memory = () => {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.value = 600;
-      osc.connect(ctx.destination);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.value = 0.5;
       osc.start();
       setTimeout(() => {
         osc.stop();

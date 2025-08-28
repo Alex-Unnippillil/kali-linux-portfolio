@@ -25,8 +25,11 @@ export default function SpotifyApp() {
     analyser.fftSize = 256;
 
     const source = audioCtx.createMediaElementSource(audioEl);
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.5;
     source.connect(analyser);
-    analyser.connect(audioCtx.destination);
+    analyser.connect(gain);
+    gain.connect(audioCtx.destination);
 
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);

@@ -204,7 +204,7 @@ const Asteroids = () => {
       osc.connect(gain);
       gain.connect(ctxAudio.destination);
       osc.start();
-      gain.gain.setValueAtTime(0.2, ctxAudio.currentTime);
+      gain.gain.setValueAtTime(0.1, ctxAudio.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.0001, ctxAudio.currentTime + 0.3);
       osc.stop(ctxAudio.currentTime + 0.3);
     };

@@ -70,7 +70,7 @@ const CarRacer = () => {
     const gain = ctx.createGain();
     osc.connect(gain);
     gain.connect(ctx.destination);
-    gain.gain.value = 0.1;
+    gain.gain.value = 0.05;
     osc.frequency.value = 440;
     osc.start();
     osc.stop(ctx.currentTime + 0.1);

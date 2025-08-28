@@ -343,6 +343,7 @@ const Minesweeper = () => {
       type === 'boom' ? 120 : type === 'flag' ? 330 : 440;
     osc.connect(gain);
     gain.connect(ctx.destination);
+    gain.gain.value = 0.5;
     osc.start();
     osc.stop(ctx.currentTime + 0.15);
   };

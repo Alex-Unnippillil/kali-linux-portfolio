@@ -71,6 +71,7 @@ const Pong = () => {
           osc.frequency.value = freq;
           osc.connect(gain);
           gain.connect(ctx.destination);
+          gain.gain.value = 0.5;
           osc.start();
           osc.stop(ctx.currentTime + 0.1);
         } catch {

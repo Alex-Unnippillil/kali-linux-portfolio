@@ -106,6 +106,7 @@ const Hangman = () => {
         osc.frequency.value = freq;
         osc.connect(gain);
         gain.connect(ctx.destination);
+        gain.gain.value = 0.5;
         osc.start();
         gain.gain.exponentialRampToValueAtTime(
           0.0001,

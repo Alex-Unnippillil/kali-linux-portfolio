@@ -88,7 +88,7 @@ const ConnectFour = () => {
       osc.connect(gain);
       gain.connect(ac.destination);
       osc.start();
-      gain.gain.setValueAtTime(0.2, ac.currentTime);
+      gain.gain.setValueAtTime(0.1, ac.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.1);
       osc.stop(ac.currentTime + 0.1);
     } catch (e) {

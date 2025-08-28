@@ -68,7 +68,7 @@ const SpaceInvaders = () => {
     osc.frequency.value = freq;
     osc.connect(gain);
     gain.connect(audioCtx.current.destination);
-    gain.gain.value = 0.1;
+    gain.gain.value = 0.05;
     osc.start();
     osc.stop(audioCtx.current.currentTime + 0.1);
   };
@@ -84,7 +84,7 @@ const SpaceInvaders = () => {
       end,
       audioCtx.current.currentTime + duration
     );
-    gain.gain.setValueAtTime(0.1, audioCtx.current.currentTime);
+    gain.gain.setValueAtTime(0.05, audioCtx.current.currentTime);
     gain.gain.linearRampToValueAtTime(
       0,
       audioCtx.current.currentTime + duration

@@ -168,7 +168,7 @@ function TowerDefense() {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.frequency.value = 440;
-      gain.gain.value = 0.05;
+      gain.gain.value = 0.025;
       osc.connect(gain).connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.1);
