@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
 
 /**
@@ -67,6 +67,20 @@ const Pacman = () => {
     { name: 'Default', maze: defaultMaze, fruit: { x: 7, y: 3 } },
   ]);
   const [levelIndex, setLevelIndex] = useState(0);
+  const [search, setSearch] = useState('');
+  const [highlight, setHighlight] = useState(0);
+  const filteredLevels = useMemo(
+    () => {
+      const q = search.toLowerCase();
+      return levels
+        .map((lvl, i) => ({ ...lvl, index: i }))
+        .filter(({ name, index }) => {
+          const label = name || `Level ${index + 1}`;
+          return label.toLowerCase().includes(q);
+        });
+    },
+    [levels, search]
+  );
 
   const mazeRef = useRef(defaultMaze.map((row) => row.slice()));
 
@@ -522,6 +536,8 @@ const Pacman = () => {
       .then((data) => {
         if (data.levels) {
           setLevels(data.levels);
+          setSearch('');
+          setHighlight(0);
           loadLevel(0, data.levels);
         }
       })
@@ -646,17 +662,45 @@ const Pacman = () => {
     return (
 
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <select
-        className="mb-2 text-black"
-        value={levelIndex}
-        onChange={(e) => loadLevel(Number(e.target.value))}
-      >
-        {levels.map((lvl, i) => (
-          <option key={i} value={i}>
-            {lvl.name || `Level ${i + 1}`}
-          </option>
-        ))}
-      </select>
+      <div className="mb-2 w-full max-w-xs">
+        <input
+          type="text"
+          placeholder="Search level..."
+          className="w-full px-2 py-1 text-black"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setHighlight(0);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              setHighlight((h) => Math.min(h + 1, filteredLevels.length - 1));
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              setHighlight((h) => Math.max(h - 1, 0));
+            } else if (e.key === 'Enter') {
+              const sel = filteredLevels[highlight];
+              if (sel) loadLevel(sel.index);
+            }
+          }}
+        />
+        <ul className="max-h-40 overflow-y-auto bg-white text-black border border-gray-300">
+          {filteredLevels.length === 0 && (
+            <li className="px-2 py-1">No levels found</li>
+          )}
+          {filteredLevels.map((lvl, i) => (
+            <li
+              key={lvl.index}
+              className={`${i === highlight ? 'bg-blue-500 text-white' : ''} px-2 py-1 cursor-pointer`}
+              onMouseEnter={() => setHighlight(i)}
+              onClick={() => loadLevel(lvl.index)}
+            >
+              {lvl.name || `Level ${lvl.index + 1}`}
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <canvas
         ref={canvasRef}
