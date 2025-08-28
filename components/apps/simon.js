@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Howl } from 'howler';
 import seedrandom from 'seedrandom';
-import GameLayout from './GameLayout';
+import GameLayout from './GameLayout.js';
 import usePersistentState from '../usePersistentState';
 
 const padStyles = [
