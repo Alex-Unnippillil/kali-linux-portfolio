@@ -32,6 +32,15 @@ This project supports static export. Serverless API routes will not be available
 yarn export        # outputs to ./out
 ```
 
+### Install as PWA for Sharing
+
+To send text or links directly into the Sticky Notes app:
+
+1. Open the site in a supported browser (Chrome, Edge, etc.).
+2. Use the browser's **Install** or **Add to Home screen** option.
+3. After installation, use the system **Share** action and select "Kali Linux Portfolio".
+4. The shared content will appear as a new note.
+
 ---
 
 ## Tech Stack
