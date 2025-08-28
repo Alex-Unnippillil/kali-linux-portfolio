@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
+const allowed = new Set(['http', 'https', 'ssh', 'ftp', 'smtp']);
 
 export default async function handler(req, res) {
   // Hydra is an optional external dependency. Environments without the
@@ -16,6 +17,10 @@ export default async function handler(req, res) {
   const { target, service, userList, passList } = req.body || {};
   if (!target || !service || !userList || !passList) {
     res.status(400).json({ error: 'Missing parameters' });
+    return;
+  }
+  if (!allowed.has(service)) {
+    res.status(400).json({ error: 'Unsupported service' });
     return;
   }
 
