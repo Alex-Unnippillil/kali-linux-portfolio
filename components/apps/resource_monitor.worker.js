@@ -8,6 +8,8 @@ let stressing = false;
 let stressHandle;
 let decimate = 1;
 let sampleCount = 0;
+let hidden = false;
+let drawHandle = null;
 
 self.onmessage = (e) => {
   const { type } = e.data || {};
@@ -20,6 +22,7 @@ self.onmessage = (e) => {
     }
     reduceMotion = !!e.data.reduceMotion;
     startSampling();
+    if (!reduceMotion && !hidden) startDrawing();
   } else if (type === 'stress') {
     if (e.data.value && !stressing) {
       stressing = true;
@@ -30,8 +33,10 @@ self.onmessage = (e) => {
     }
   } else if (type === 'decimate') {
     decimate = Math.max(1, e.data.value | 0);
-  } else if (type === 'frame') {
-    if (!reduceMotion) draw();
+  } else if (type === 'visibility') {
+    hidden = !!e.data.hidden;
+    if (hidden || reduceMotion) stopDrawing();
+    else startDrawing();
   }
 };
 
@@ -54,7 +59,7 @@ function startSampling() {
     const up = connection.uplink || connection.upload || 0;
 
     push(cpu, memory, down, up);
-    if (reduceMotion) draw();
+    if (reduceMotion && !hidden) draw();
     self.postMessage({ cpu, memory, down, up });
   }, 1000);
 }
@@ -85,6 +90,20 @@ function draw() {
   drawChart(ctx.cpu, data.cpu, '#00ff00', 'CPU %', 100);
   drawChart(ctx.memory, data.memory, '#ffd700', 'Memory %', 100);
   drawNetwork(ctx.network);
+}
+
+function startDrawing() {
+  if (drawHandle) return;
+  drawHandle = setInterval(() => {
+    draw();
+  }, 1000 / 30);
+}
+
+function stopDrawing() {
+  if (drawHandle) {
+    clearInterval(drawHandle);
+    drawHandle = null;
+  }
 }
 
 function drawChart(ctx2d, values, color, label, maxVal) {
