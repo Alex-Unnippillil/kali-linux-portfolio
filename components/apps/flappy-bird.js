@@ -25,19 +25,30 @@ const FlappyBird = () => {
     let practiceMode = localStorage.getItem('flappy-practice') === '1';
     let easyGravity = localStorage.getItem('flappy-easy-gravity') === '1';
 
+    // skins
+    const birdSkins = ['yellow', 'red', 'blue'];
+    const pipeSkins = [
+      [[34, 139, 34], [144, 238, 144]],
+      [[139, 69, 19], [222, 184, 135]],
+      [[70, 130, 180], [176, 196, 222]],
+    ];
+    let birdSkin = parseInt(localStorage.getItem('flappy-bird-skin') || '0', 10);
+    let pipeSkin = parseInt(localStorage.getItem('flappy-pipe-skin') || '0', 10);
+
     // physics constants
     let bird = { x: 50, y: height / 2, vy: 0 };
-    const baseGravity = 0.5;
-    const easyGravityVal = 0.25;
+    const baseGravity = 0.4;
+    const easyGravityVal = 0.2;
     let gravity = easyGravity ? easyGravityVal : baseGravity;
-    const jump = -8;
+    const jump = -7;
 
     const pipeWidth = 40;
     const baseGap = 80;
     const practiceGap = 120;
     let gap = practiceMode ? practiceGap : baseGap;
-    const pipeInterval = 100;
+    let pipeInterval = 100;
     const pipeSpeed = 2;
+    let nextPipeFrame = pipeInterval;
 
     // game state
     let pipes = [];
@@ -172,22 +183,28 @@ const FlappyBird = () => {
     }
 
     // medals
-    const medalThresholds = [
-      { name: 'bronze', distance: 10 },
-      { name: 'silver', distance: 20 },
-      { name: 'gold', distance: 30 },
-    ];
-    let medals = {};
-    try {
-      medals = JSON.parse(localStorage.getItem('flappy-medals') || '{}');
-    } catch {
-      medals = {};
-    }
-    function getMedal(dist) {
-      let m = null;
-      for (const { name, distance } of medalThresholds) {
-        if (dist >= distance) m = name;
+      const medalThresholds = [
+        { name: 'bronze', distance: 10 },
+        { name: 'silver', distance: 20 },
+        { name: 'gold', distance: 30 },
+      ];
+      let medals = {};
+      try {
+        medals = JSON.parse(localStorage.getItem('flappy-medals') || '{}');
+      } catch {
+        medals = {};
       }
+      let best = 0;
+      try {
+        best = parseInt(localStorage.getItem('flappy-best') || '0', 10);
+      } catch {
+        best = 0;
+      }
+      function getMedal(dist) {
+        let m = null;
+        for (const { name, distance } of medalThresholds) {
+          if (dist >= distance) m = name;
+        }
       return m;
     }
     function saveMedal(dist) {
@@ -215,17 +232,19 @@ const FlappyBird = () => {
       rand = createRandom(seed);
       bird = { x: 50, y: height / 2, vy: 0 };
       pipes = [];
-      frame = 0;
-      score = 0;
-      running = true;
-      flapFrames = [];
-      gravity = easyGravity ? easyGravityVal : baseGravity;
-      gap = practiceMode ? practiceGap : baseGap;
-      initClouds();
-      initFoliage();
-      gust = 0;
-      gustTimer = 0;
-    }
+        frame = 0;
+        score = 0;
+        running = true;
+        flapFrames = [];
+        gravity = easyGravity ? easyGravityVal : baseGravity;
+        gap = practiceMode ? practiceGap : baseGap;
+        pipeInterval = 100;
+        nextPipeFrame = pipeInterval;
+        initClouds();
+        initFoliage();
+        gust = 0;
+        gustTimer = 0;
+      }
 
     function startGame(newSeed = Date.now()) {
       reset(newSeed);
@@ -245,7 +264,8 @@ const FlappyBird = () => {
       drawFoliage();
 
       // pipes / practice gates
-      ctx.fillStyle = mixColor([34, 139, 34], [144, 238, 144], skyProgress);
+      const [pipeC1, pipeC2] = pipeSkins[pipeSkin % pipeSkins.length];
+      ctx.fillStyle = mixColor(pipeC1, pipeC2, skyProgress);
       for (const pipe of pipes) {
         if (practiceMode) ctx.globalAlpha = 0.4;
         ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
@@ -254,7 +274,7 @@ const FlappyBird = () => {
       }
 
       // bird
-      ctx.fillStyle = 'yellow';
+      ctx.fillStyle = birdSkins[birdSkin % birdSkins.length];
       ctx.beginPath();
       ctx.arc(bird.x, bird.y, 10, 0, Math.PI * 2);
       ctx.fill();
@@ -271,6 +291,7 @@ const FlappyBird = () => {
         hudY += 20;
       };
       hudLine(`Score: ${score}`);
+      hudLine(`Best: ${best}`);
       hudLine(`Seed: ${seed}`);
       const medal = getMedal(score);
       if (medal) hudLine(`Medal: ${medal}`);
@@ -300,7 +321,11 @@ const FlappyBird = () => {
       updateWind();
       updateClouds();
 
-      if (frame % pipeInterval === 0) addPipe();
+      if (frame >= nextPipeFrame) {
+        addPipe();
+        pipeInterval = Math.max(60, 100 - Math.floor(score / 5) * 5);
+        nextPipeFrame = frame + pipeInterval;
+      }
 
       if (isReplaying && replayIndex < replayFlaps.length && frame === replayFlaps[replayIndex]) {
         flap(false);
@@ -345,14 +370,18 @@ const FlappyBird = () => {
       draw();
 
       if (!running) {
-        if (!isReplaying) {
-          saveMedal(score);
-          lastRun = { seed, flaps: flapFrames };
+          if (!isReplaying) {
+            saveMedal(score);
+            if (score > best) {
+              best = score;
+              localStorage.setItem('flappy-best', String(best));
+            }
+            lastRun = { seed, flaps: flapFrames };
+          }
+          isReplaying = false;
+          stopLoop();
+          if (liveRef.current) liveRef.current.textContent = `Game over. Final score: ${score}`;
         }
-        isReplaying = false;
-        stopLoop();
-        if (liveRef.current) liveRef.current.textContent = `Game over. Final score: ${score}`;
-      }
     }
 
     function startLoop() {
@@ -409,6 +438,16 @@ const FlappyBird = () => {
         if (liveRef.current)
           liveRef.current.textContent = easyGravity ? 'Easy gravity on' : 'Easy gravity off';
         startGame();
+      } else if (e.code === 'KeyB') {
+        birdSkin = (birdSkin + 1) % birdSkins.length;
+        localStorage.setItem('flappy-bird-skin', String(birdSkin));
+        if (liveRef.current)
+          liveRef.current.textContent = `Bird skin ${birdSkin + 1}`;
+      } else if (e.code === 'KeyO') {
+        pipeSkin = (pipeSkin + 1) % pipeSkins.length;
+        localStorage.setItem('flappy-pipe-skin', String(pipeSkin));
+        if (liveRef.current)
+          liveRef.current.textContent = `Pipe skin ${pipeSkin + 1}`;
       }
     }
 
