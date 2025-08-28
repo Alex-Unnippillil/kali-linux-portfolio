@@ -507,7 +507,7 @@ const Solitaire = () => {
       </div>
       {paused && (
         <div
-          className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+          className="absolute inset-0 overlay-bg z-50 flex items-center justify-center"
           role="dialog"
           aria-modal="true"
         >
@@ -545,7 +545,7 @@ const Solitaire = () => {
         ))}
       {won && (
         <div
-          className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 text-2xl"
+          className="absolute inset-0 flex items-center justify-center overlay-bg text-2xl"
           role="alert"
         >
           You win!

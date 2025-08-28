@@ -7,7 +7,7 @@ interface LegalInterstitialProps {
 }
 
 const LegalInterstitial: React.FC<LegalInterstitialProps> = ({ onAccept }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 text-white">
+  <div className="fixed inset-0 z-50 flex items-center justify-center overlay-bg text-white">
     <div className="max-w-md rounded bg-gray-900 p-6 text-center">
       <h2 className="mb-4 text-xl font-bold">Legal Use Only</h2>
       <p className="mb-6 text-sm">

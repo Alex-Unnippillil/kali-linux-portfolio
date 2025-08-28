@@ -369,7 +369,7 @@ const CarRacer = () => {
       </div>
       {!runningRef.current && (
         <div
-          className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center z-20"
+          className="absolute inset-0 overlay-bg flex items-center justify-center z-20"
           role="alert"
         >
           <div className="text-center">

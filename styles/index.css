@@ -361,7 +361,26 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 /* Context Menu */
 .context-menu-bg {
-    background-color: rgb(43, 43, 43);
+    background-color: rgba(43, 43, 43, 0.9);
+}
+
+@supports (backdrop-filter: blur(8px)) {
+    .context-menu-bg {
+        background-color: rgba(43, 43, 43, 0.5);
+        backdrop-filter: blur(8px);
+    }
+}
+
+/* Overlay */
+.overlay-bg {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+@supports (backdrop-filter: blur(8px)) {
+    .overlay-bg {
+        background-color: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(8px);
+    }
 }
 
 .emoji-list>li {

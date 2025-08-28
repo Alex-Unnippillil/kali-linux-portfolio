@@ -293,7 +293,7 @@ export default function ProjectGallery() {
           </div>
           {selected && (
             <div
-              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
+              className="fixed inset-0 overlay-bg flex items-center justify-center p-4"
               role="dialog"
             >
               <div className="bg-ub-cool-grey text-white p-4 rounded w-full max-w-md">

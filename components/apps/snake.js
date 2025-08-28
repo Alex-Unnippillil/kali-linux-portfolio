@@ -263,7 +263,7 @@ const Snake = () => {
           />
           {gameOver && (
             <div
-              className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
+              className="absolute inset-0 flex items-center justify-center overlay-bg"
               role="alert"
               aria-live="assertive"
             >

@@ -45,7 +45,7 @@ export default function GuideOverlay({ onClose }) {
   return (
     <div
       ref={containerRef}
-      className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
+      className="absolute inset-0 overlay-bg text-white flex items-center justify-center z-50"
       role="dialog"
       aria-modal="true"
       tabIndex={-1}

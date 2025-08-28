@@ -320,7 +320,7 @@ const SkillSection = ({ title, badges }) => {
       </div>
       {selected && (
         <div
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+          className="fixed inset-0 flex items-center justify-center overlay-bg z-50"
           onClick={() => setSelected(null)}
         >
           <div

@@ -348,7 +348,7 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
         ))}
       </div>
       {selected && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" onClick={() => setSelected(null)}>
+        <div className="fixed inset-0 flex items-center justify-center overlay-bg z-50" onClick={() => setSelected(null)}>
           <div className="bg-ub-cool-grey p-4 rounded max-w-xs" onClick={(e) => e.stopPropagation()}>
             <div className="font-bold mb-2 text-center">{selected.alt}</div>
             <p className="text-sm text-center">{selected.description}</p>

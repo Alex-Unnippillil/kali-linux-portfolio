@@ -199,7 +199,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   return (
     <div
       ref={overlayRef}
-      className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
+      className="absolute inset-0 overlay-bg text-white flex items-center justify-center z-50"
       role="dialog"
       aria-modal="true"
     >

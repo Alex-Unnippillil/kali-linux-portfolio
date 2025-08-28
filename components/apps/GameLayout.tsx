@@ -96,7 +96,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
       {paused && (
         <div
-          className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+          className="absolute inset-0 overlay-bg z-50 flex items-center justify-center"
           role="dialog"
           aria-modal="true"
         >

@@ -570,7 +570,7 @@ const Tetris = () => {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-4xl">Paused</div>
       )}
       {showSettings && (
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div className="absolute inset-0 overlay-bg flex items-center justify-center">
           <div className="bg-gray-800 p-4 rounded">
             <h2 className="mb-2 text-center">Settings</h2>
             <div className="mb-2 flex items-center">

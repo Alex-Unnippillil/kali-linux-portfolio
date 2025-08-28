@@ -328,7 +328,7 @@ export class Trash extends Component {
                     {this.state.empty ? this.emptyScreen() : this.showTrashItems()}
                 </div>
                 {showEmptyModal && (
-                    <div className="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4">
+                    <div className="absolute inset-0 overlay-bg flex flex-col items-center justify-center p-4">
                         <div
                             ref={this.modalRef}
                             role="dialog"
@@ -345,7 +345,7 @@ export class Trash extends Component {
                     </div>
                 )}
                 {confirmDelete && (
-                    <div className="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4">
+                    <div className="absolute inset-0 overlay-bg flex flex-col items-center justify-center p-4">
                         <div className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full">
                             <p className="mb-2">Delete {this.state.fileHandle?.name}?</p>
                             {this.state.filePreview?.type === 'image' ? (
