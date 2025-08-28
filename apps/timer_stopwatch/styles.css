@@ -17,6 +17,15 @@ button {
   padding: 10px 20px;
   font-size: 1rem;
 }
+/* Tab styles */
+.tabs .tab[aria-selected='true'] {
+  background: #ddd;
+  font-weight: bold;
+}
+
+.tab-panel[hidden] {
+  display: none;
+}
 input {
   width: 60px;
   text-align: center;
