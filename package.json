@@ -7,14 +7,15 @@
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
     "prebuild": "tsc -p tsconfig.gamepad.json",
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && yarn build:sw",
     "start": "next start",
     "export": "next export",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "next lint",
     "a11y": "node scripts/a11y.mjs",
-    "smoke": "node scripts/smoke-all-apps.mjs"
+    "smoke": "node scripts/smoke-all-apps.mjs",
+    "build:sw": "node scripts/generate-sw.mjs"
   },
   "engines": {
     "node": "20.x"
@@ -64,6 +65,7 @@
     "tailwindcss": "^3.2.4",
     "three": "^0.179.1",
     "turndown": "^7.2.1",
+    "workbox-window": "^7.3.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -90,7 +92,8 @@
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
     "typescript": "^5.9.2",
-    "wait-on": "^8.0.4"
+    "wait-on": "^8.0.4",
+    "workbox-build": "^7.3.0"
   },
   "resolutions": {
     "test-exclude": "^7.0.1"
