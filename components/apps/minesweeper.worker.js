@@ -1,15 +1,25 @@
 self.onmessage = (e) => {
-  const { board, sx, sy } = e.data || {};
+  const { board, cells: starts } = e.data || {};
   const size = board.length;
   const visited = Array.from({ length: size }, () => Array(size).fill(false));
-  const queue = [[sx, sy]];
-  visited[sx][sy] = true;
-  const order = [];
+  const queue = [];
+  (starts || []).forEach(([sx, sy]) => {
+    if (sx >= 0 && sx < size && sy >= 0 && sy < size && !visited[sx][sy]) {
+      visited[sx][sy] = true;
+      queue.push([sx, sy]);
+    }
+  });
+  const revealed = [];
+  let hit = false;
   while (queue.length) {
     const [x, y] = queue.shift();
     const cell = board[x][y];
     if (cell.revealed || cell.flagged) continue;
-    order.push([x, y]);
+    revealed.push([x, y]);
+    if (cell.mine) {
+      hit = true;
+      continue;
+    }
     if (cell.adjacent === 0) {
       for (let dx = -1; dx <= 1; dx++) {
         for (let dy = -1; dy <= 1; dy++) {
@@ -23,15 +33,12 @@ self.onmessage = (e) => {
             ny < size &&
             !visited[nx][ny]
           ) {
-            const next = board[nx][ny];
-            if (!next.mine && !next.flagged && !next.revealed) {
-              visited[nx][ny] = true;
-              queue.push([nx, ny]);
-            }
+            visited[nx][ny] = true;
+            queue.push([nx, ny]);
           }
         }
       }
     }
   }
-  self.postMessage({ order });
+  self.postMessage({ cells: revealed, hit });
 };

@@ -97,26 +97,6 @@ const generateBoard = (seed, sx, sy) => {
   return board;
 };
 
-const revealCell = (board, x, y) => {
-  const cell = board[x][y];
-  if (cell.revealed || cell.flagged) return false;
-  cell.revealed = true;
-  if (cell.mine) return true;
-  if (cell.adjacent === 0) {
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        if (dx === 0 && dy === 0) continue;
-        const nx = x + dx;
-        const ny = y + dy;
-        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
-          revealCell(board, nx, ny);
-        }
-      }
-    }
-  }
-  return false;
-};
-
 const calculateBV = (board) => {
   const visited = board.map((row) => row.map(() => false));
   let bv = 0;
@@ -218,6 +198,15 @@ const Minesweeper = () => {
   const canvasRef = useRef(null);
   const audioRef = useRef(null);
   const workerRef = useRef(null);
+  const initWorker = () => {
+    if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
+      workerRef.current = new Worker(
+        new URL('./minesweeper.worker.js', import.meta.url),
+      );
+    } else {
+      workerRef.current = null;
+    }
+  };
   const [board, setBoard] = useState(null);
   const [status, setStatus] = useState('ready');
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 2 ** 31));
@@ -238,11 +227,7 @@ const Minesweeper = () => {
   const rightDown = useRef(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
-      workerRef.current = new Worker(
-        new URL('./minesweeper.worker.js', import.meta.url),
-      );
-    }
+    initWorker();
     return () => workerRef.current?.terminate();
   }, []);
 
@@ -361,7 +346,60 @@ const Minesweeper = () => {
     }
   };
 
-  const revealWave = (newBoard, sx, sy, onComplete) => {
+  const computeRevealed = (board, starts) => {
+    if (workerRef.current) {
+      return new Promise((resolve) => {
+        workerRef.current.onmessage = (e) => resolve(e.data);
+        workerRef.current.postMessage({ board, cells: starts });
+      });
+    }
+    const size = board.length;
+    const visited = Array.from({ length: size }, () =>
+      Array(size).fill(false),
+    );
+    const queue = [];
+    starts.forEach(([sx, sy]) => {
+      if (sx >= 0 && sx < size && sy >= 0 && sy < size && !visited[sx][sy]) {
+        visited[sx][sy] = true;
+        queue.push([sx, sy]);
+      }
+    });
+    const cells = [];
+    let hit = false;
+    while (queue.length) {
+      const [x, y] = queue.shift();
+      const cell = board[x][y];
+      if (cell.revealed || cell.flagged) continue;
+      cells.push([x, y]);
+      if (cell.mine) {
+        hit = true;
+        continue;
+      }
+      if (cell.adjacent === 0) {
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = x + dx;
+            const ny = y + dy;
+            if (
+              nx >= 0 &&
+              nx < size &&
+              ny >= 0 &&
+              ny < size &&
+              !visited[nx][ny]
+            ) {
+              visited[nx][ny] = true;
+              queue.push([nx, ny]);
+            }
+          }
+        }
+      }
+    }
+    return Promise.resolve({ cells, hit });
+  };
+
+  const revealWave = async (newBoard, sx, sy, onComplete) => {
+    const { cells } = await computeRevealed(newBoard, [[sx, sy]]);
     const animate = (order) => {
       let idx = 0;
       const step = () => {
@@ -384,56 +422,10 @@ const Minesweeper = () => {
       requestAnimationFrame(step);
     };
 
-    const computeOrder = () => {
-      if (workerRef.current) {
-        workerRef.current.onmessage = (e) => {
-          const { order } = e.data || {};
-          animate(order || []);
-        };
-        workerRef.current.postMessage({ board: newBoard, sx, sy });
-      } else {
-        const visited = Array.from({ length: BOARD_SIZE }, () =>
-          Array(BOARD_SIZE).fill(false),
-        );
-        const queue = [[sx, sy]];
-        visited[sx][sy] = true;
-        const order = [];
-        while (queue.length) {
-          const [x, y] = queue.shift();
-          const cell = newBoard[x][y];
-          if (cell.revealed || cell.flagged) continue;
-          order.push([x, y]);
-          if (cell.adjacent === 0) {
-            for (let dx = -1; dx <= 1; dx++) {
-              for (let dy = -1; dy <= 1; dy++) {
-                if (dx === 0 && dy === 0) continue;
-                const nx = x + dx;
-                const ny = y + dy;
-                if (
-                  nx >= 0 &&
-                  nx < BOARD_SIZE &&
-                  ny >= 0 &&
-                  ny < BOARD_SIZE &&
-                  !visited[nx][ny]
-                ) {
-                  const next = newBoard[nx][ny];
-                  if (!next.mine && !next.flagged && !next.revealed) {
-                    visited[nx][ny] = true;
-                    queue.push([nx, ny]);
-                  }
-                }
-              }
-            }
-          }
-        }
-        animate(order);
-      }
-    };
-
-    computeOrder();
+    animate(cells);
   };
 
-  const startGame = (x, y) => {
+  const startGame = async (x, y) => {
     const newBoard = generateBoard(seed, x, y);
     setBoard(newBoard);
     setStatus('playing');
@@ -447,19 +439,21 @@ const Minesweeper = () => {
       checkAndHandleWin(newBoard);
     };
     if (prefersReducedMotion.current) {
-      revealCell(newBoard, x, y);
-      const count = newBoard.flat().filter((c) => c.revealed).length;
+      const { cells } = await computeRevealed(newBoard, [[x, y]]);
+      cells.forEach(([cx, cy]) => {
+        newBoard[cx][cy].revealed = true;
+      });
       setBoard(cloneBoard(newBoard));
-      finalize(count);
+      finalize(cells.length);
     } else {
       revealWave(newBoard, x, y, finalize);
     }
   };
 
-  const handleClick = (x, y) => {
+  const handleClick = async (x, y) => {
     if (status === 'lost' || status === 'won' || paused) return;
     if (!board) {
-      startGame(x, y);
+      await startGame(x, y);
       playSound('reveal');
       return;
     }
@@ -499,7 +493,13 @@ const Minesweeper = () => {
                 ny < BOARD_SIZE &&
                 !newBoard[nx][ny].flagged
               ) {
-                const hit = revealCell(newBoard, nx, ny);
+                const { hit, cells: revealed } = await computeRevealed(
+                  newBoard,
+                  [[nx, ny]],
+                );
+                revealed.forEach(([cx, cy]) => {
+                  newBoard[cx][cy].revealed = true;
+                });
                 if (hit) {
                   setBoard(newBoard);
                   setStatus('lost');
@@ -514,7 +514,10 @@ const Minesweeper = () => {
       }
     } else {
       if (cell.mine) {
-        revealCell(newBoard, x, y);
+        const { cells: revealed } = await computeRevealed(newBoard, [[x, y]]);
+        revealed.forEach(([cx, cy]) => {
+          newBoard[cx][cy].revealed = true;
+        });
         setBoard(newBoard);
         setStatus('lost');
         playSound('boom');
@@ -529,7 +532,10 @@ const Minesweeper = () => {
         });
         return;
       } else {
-        revealCell(newBoard, x, y);
+        const { cells: revealed } = await computeRevealed(newBoard, [[x, y]]);
+        revealed.forEach(([cx, cy]) => {
+          newBoard[cx][cy].revealed = true;
+        });
         setAriaMessage(`Revealed cell at row ${x + 1}, column ${y + 1}`);
       }
     }
@@ -554,7 +560,7 @@ const Minesweeper = () => {
     playSound('flag');
   };
 
-  const handleChord = (x, y) => {
+  const handleChord = async (x, y) => {
     if (status !== 'playing' || paused || !board) return;
     const newBoard = cloneBoard(board);
     const cell = newBoard[x][y];
@@ -589,7 +595,13 @@ const Minesweeper = () => {
           ny < BOARD_SIZE &&
           !newBoard[nx][ny].flagged
         ) {
-          const hit = revealCell(newBoard, nx, ny);
+          const { hit, cells: revealed } = await computeRevealed(
+            newBoard,
+            [[nx, ny]],
+          );
+          revealed.forEach(([cx, cy]) => {
+            newBoard[cx][cy].revealed = true;
+          });
           if (hit) {
             setBoard(newBoard);
             setStatus('lost');
@@ -647,6 +659,8 @@ const Minesweeper = () => {
   };
 
   const reset = () => {
+    workerRef.current?.terminate();
+    initWorker();
     setBoard(null);
     setStatus('ready');
     setSeed(Math.floor(Math.random() * 2 ** 31));
@@ -666,11 +680,13 @@ const Minesweeper = () => {
     }
   };
 
-  const loadFromCode = () => {
+  const loadFromCode = async () => {
     if (!codeInput) return;
     const parts = codeInput.trim().split('-');
     const newSeed = parseInt(parts[0], 36);
     if (Number.isNaN(newSeed)) return;
+    workerRef.current?.terminate();
+    initWorker();
     setSeed(newSeed);
     setShareCode('');
     setBoard(null);
@@ -696,10 +712,12 @@ const Minesweeper = () => {
           checkAndHandleWin(newBoard);
         };
         if (prefersReducedMotion.current) {
-          revealCell(newBoard, x, y);
-          const count = newBoard.flat().filter((c) => c.revealed).length;
+          const { cells } = await computeRevealed(newBoard, [[x, y]]);
+          cells.forEach(([cx, cy]) => {
+            newBoard[cx][cy].revealed = true;
+          });
           setBoard(cloneBoard(newBoard));
-          finalize(count);
+          finalize(cells.length);
         } else {
           revealWave(newBoard, x, y, finalize);
         }
