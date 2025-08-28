@@ -1,22 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import LegalInterstitial from '../../components/ui/LegalInterstitial';
+import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 
-const SSHPreview: React.FC = () => {
-  const [accepted, setAccepted] = useState(false);
+const SSHBuilder: React.FC = () => {
   const [user, setUser] = useState('');
   const [host, setHost] = useState('');
   const [port, setPort] = useState('');
-
   const command = `ssh ${user ? `${user}@` : ''}${host}${port ? ` -p ${port}` : ''}`.trim();
 
-  if (!accepted) {
-    return <LegalInterstitial onAccept={() => setAccepted(true)} />;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-900 p-4 text-white">
+    <div className="h-full bg-gray-900 p-4 text-white overflow-auto">
       <h1 className="mb-4 text-2xl">SSH Command Builder</h1>
       <p className="mb-4 text-sm text-yellow-300">
         Generate an SSH command without executing it. Learn more at{' '}
@@ -75,6 +70,28 @@ const SSHPreview: React.FC = () => {
         </pre>
       </div>
     </div>
+  );
+};
+
+const SSHPreview: React.FC = () => {
+  const [accepted, setAccepted] = useState(false);
+  const countRef = useRef(1);
+
+  if (!accepted) {
+    return <LegalInterstitial onAccept={() => setAccepted(true)} />;
+  }
+
+  const createTab = (): TabDefinition => {
+    const id = Date.now().toString();
+    return { id, title: `Session ${countRef.current++}`, content: <SSHBuilder /> };
+  };
+
+  return (
+    <TabbedWindow
+      className="min-h-screen bg-gray-900 text-white"
+      initialTabs={[createTab()]}
+      onNewTab={createTab}
+    />
   );
 };
 
