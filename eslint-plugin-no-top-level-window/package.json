@@ -1,0 +1,5 @@
+{
+  "name": "eslint-plugin-no-top-level-window",
+  "version": "1.0.0",
+  "main": "index.js"
+}
