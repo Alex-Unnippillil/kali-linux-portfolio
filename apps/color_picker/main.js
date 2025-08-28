@@ -1,6 +1,8 @@
 const colors = [];
 const input = document.getElementById('color-input');
 const swatches = document.getElementById('swatches');
+const hexOutput = document.getElementById('hex-output');
+hexOutput.textContent = input.value;
 
 function addColor(color) {
   if (!color) return;
@@ -13,6 +15,7 @@ function addColor(color) {
     colors.pop();
   }
   renderSwatches();
+  hexOutput.textContent = color;
 }
 
 function renderSwatches() {
@@ -24,6 +27,7 @@ function renderSwatches() {
     swatch.title = color;
     swatch.addEventListener('click', () => {
       navigator.clipboard.writeText(color);
+      hexOutput.textContent = color;
     });
     swatches.appendChild(swatch);
   });
