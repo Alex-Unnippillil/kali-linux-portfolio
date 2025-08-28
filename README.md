@@ -189,6 +189,7 @@ Jest is configured via `jest.config.js` with a **jsdom** environment and helpers
 Commands:
 ```bash
 yarn test
+yarn smoke
 yarn test:watch
 yarn lint
 ```
@@ -353,19 +354,13 @@ See [`LICENSE`](./LICENSE).
 - `test` → `jest`
 - `test:watch` → `jest --watch`
 - `lint` → `next lint`
-- `smoke` → `node scripts/smoke-all-apps.mjs`
+- `smoke` → `jest __tests__/apps.smoke.test.tsx`
 
 ### Smoke Tests
 
-Start the development server in one terminal:
+Run the Jest smoke tests which attempt to render each app component:
 
 ```bash
-npm run dev
-```
-
-In another terminal, run the Playwright smoke test which visits every `/apps/*` route and fails on console errors:
-
-```bash
-npm run smoke
+yarn smoke
 ```
 
