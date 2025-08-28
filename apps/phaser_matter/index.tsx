@@ -196,6 +196,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
       update(time: number, delta: number) {
         const ctrl = controls.current;
         const speed = 5;
+        const fixedDelta = Math.min(delta, 1000 / 60);
 
         // Poll gamepad for input
         const gamepad = this.input.gamepad;
@@ -235,7 +236,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           }
         }
 
-        if (this.jumpBufferTimer > 0) this.jumpBufferTimer -= delta;
+        if (this.jumpBufferTimer > 0) this.jumpBufferTimer -= fixedDelta;
 
         const canJump = onGround || time - this.lastGrounded < this.coyoteTime;
         if (canJump && this.jumpBufferTimer > 0) {
@@ -263,7 +264,15 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
       width: 800,
       height: 600,
       parent: containerRef.current,
-      physics: { default: 'matter', matter: { gravity: { y: 1 } } },
+      physics: {
+        default: 'matter',
+        matter: {
+          gravity: { y: 1 },
+          positionIterations: 4,
+          velocityIterations: 3,
+          constraintIterations: 2,
+        },
+      },
       scene: LevelScene,
     });
 
