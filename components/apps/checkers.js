@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import GameLayout from './GameLayout';
+import usePersistedState from '../../hooks/usePersistedState';
 import {
   createBoard,
   getPieceMoves,
@@ -13,17 +14,17 @@ const TILE = 50;
 const BOARD_PIXELS = TILE * 8;
 
 // simple minimax returning best move for given color
-const minimax = (board, color, depth) => {
-  if (depth === 0 || !hasMoves(board, color)) {
+const minimax = (board, color, depth, enforceCapture) => {
+  if (depth === 0 || !hasMoves(board, color, enforceCapture)) {
     return { score: evaluateBoard(board) };
   }
-  const moves = getAllMoves(board, color);
+  const moves = getAllMoves(board, color, enforceCapture);
   if (color === 'red') {
     let max = -Infinity;
     let best = null;
     for (const m of moves) {
       const { board: nb } = applyMove(board, m);
-      const { score } = minimax(nb, 'black', depth - 1);
+      const { score } = minimax(nb, 'black', depth - 1, enforceCapture);
       if (score > max) {
         max = score;
         best = m;
@@ -35,7 +36,7 @@ const minimax = (board, color, depth) => {
   let best = null;
   for (const m of moves) {
     const { board: nb } = applyMove(board, m);
-    const { score } = minimax(nb, 'red', depth - 1);
+    const { score } = minimax(nb, 'red', depth - 1, enforceCapture);
     if (score < min) {
       min = score;
       best = m;
@@ -76,6 +77,10 @@ const Checkers = () => {
   const [difficulty, setDifficulty] = useState('hard');
   const [wins, setWins] = useState({ player: 0, ai: 0 });
   const [winner, setWinner] = useState(null);
+  const [requireCapture, setRequireCapture] = usePersistedState(
+    'checkersRequireCapture',
+    true,
+  );
 
   // load wins
   useEffect(() => {
@@ -196,32 +201,32 @@ const Checkers = () => {
       setTurn(next);
       setSelected(null);
       setMoves([]);
-      if (!hasMoves(nb, next)) {
+      if (!hasMoves(nb, next, requireCapture)) {
         setWinner(turnRef.current);
         if (turnRef.current === 'red')
           setWins((w) => ({ ...w, player: w.player + 1 }));
         else setWins((w) => ({ ...w, ai: w.ai + 1 }));
       }
     },
-    [playBeep]
+    [playBeep, requireCapture]
   );
 
   const aiMove = useCallback(() => {
     let move;
     if (difficulty === 'easy') {
-      const moves = getAllMoves(boardRef.current, 'black');
+      const moves = getAllMoves(boardRef.current, 'black', requireCapture);
       move = moves[Math.floor(Math.random() * moves.length)];
     } else if (difficulty === 'medium') {
-      ({ move } = minimax(boardRef.current, 'black', 2));
+      ({ move } = minimax(boardRef.current, 'black', 2, requireCapture));
     } else {
-      ({ move } = minimax(boardRef.current, 'black', 3));
+      ({ move } = minimax(boardRef.current, 'black', 3, requireCapture));
     }
     if (move) makeMove(move);
     else {
       setWinner('red');
       setWins((w) => ({ ...w, player: w.player + 1 }));
     }
-  }, [makeMove, difficulty]);
+  }, [makeMove, difficulty, requireCapture]);
 
   useEffect(() => {
     if (turn === 'black' && !winner && !paused) {
@@ -247,9 +252,9 @@ const Checkers = () => {
       }
     }
     if (piece && piece.color === 'red') {
-      const all = getAllMoves(boardRef.current, 'red');
-      const pieceMoves = getPieceMoves(boardRef.current, r, c);
-      const mustCapture = all.some((m) => m.captured);
+      const all = getAllMoves(boardRef.current, 'red', false);
+      const pieceMoves = getPieceMoves(boardRef.current, r, c, false);
+      const mustCapture = requireCapture && all.some((m) => m.captured);
       const filtered = mustCapture
         ? pieceMoves.filter((m) => m.captured)
         : pieceMoves;
@@ -297,6 +302,15 @@ const Checkers = () => {
         onClick={handleClick}
         className="mb-2"
       />
+      <label className="mb-2 text-sm">
+        <input
+          type="checkbox"
+          checked={requireCapture}
+          onChange={(e) => setRequireCapture(e.target.checked)}
+          className="mr-1"
+        />
+        Require capture
+      </label>
       <div className="space-x-2 mb-2">
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"

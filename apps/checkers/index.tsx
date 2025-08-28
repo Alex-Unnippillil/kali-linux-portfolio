@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { pointerHandlers } from '../../utils/pointer';
+import usePersistentState from '../../hooks/usePersistentState';
 import {
   Board,
   Move,
@@ -19,7 +20,7 @@ const getAllMovesNoForce = (board: Board, color: 'red' | 'black'): Move[] => {
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       if (board[r][c]?.color === color) {
-        const moves = getPieceMoves(board, r, c);
+        const moves = getPieceMoves(board, r, c, false);
         if (moves.length) result = result.concat(moves);
       }
     }
@@ -32,7 +33,7 @@ export default function CheckersPage() {
   const [turn, setTurn] = useState<'red' | 'black'>('red');
   const [selected, setSelected] = useState<[number, number] | null>(null);
   const [moves, setMoves] = useState<Move[]>([]);
-  const [rule, setRule] = useState<'forced' | 'relaxed'>('forced');
+  const [rule, setRule] = usePersistentState<'forced' | 'relaxed'>('checkersRule', 'forced');
   const [algorithm, setAlgorithm] = useState<'alphabeta' | 'mcts'>('alphabeta');
   const [difficulty, setDifficulty] = useState(3);
   const [winner, setWinner] = useState<string | null>(null);
@@ -103,7 +104,7 @@ export default function CheckersPage() {
   const selectPiece = (r: number, c: number) => {
     const piece = board[r][c];
     if (winner || !piece || piece.color !== turn) return;
-    const pieceMoves = getPieceMoves(board, r, c);
+    const pieceMoves = getPieceMoves(board, r, c, rule === 'forced');
     const mustCapture = rule === 'forced' && allMoves.some((m) => m.captured);
     const filtered = mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
     if (filtered.length) {

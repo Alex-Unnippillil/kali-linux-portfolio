@@ -41,7 +41,12 @@ export interface Move {
 export const cloneBoard = (board: Board): Board =>
   board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
 
-export const getPieceMoves = (board: Board, r: number, c: number): Move[] => {
+export const getPieceMoves = (
+  board: Board,
+  r: number,
+  c: number,
+  enforceCapture = true,
+): Move[] => {
   const piece = board[r][c];
   if (!piece) return [];
   const dirs = [...directions[piece.color]];
@@ -65,25 +70,32 @@ export const getPieceMoves = (board: Board, r: number, c: number): Move[] => {
       }
     }
   }
-  return captures.length ? captures : moves;
+  return enforceCapture && captures.length ? captures : [...captures, ...moves];
 };
 
-export const getAllMoves = (board: Board, color: Color): Move[] => {
+export const getAllMoves = (
+  board: Board,
+  color: Color,
+  enforceCapture = true,
+): Move[] => {
   let result: Move[] = [];
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       if (board[r][c]?.color === color) {
-        const moves = getPieceMoves(board, r, c);
+        const moves = getPieceMoves(board, r, c, enforceCapture);
         if (moves.length) result = result.concat(moves);
       }
     }
   }
   const anyCapture = result.some((m) => m.captured);
-  return anyCapture ? result.filter((m) => m.captured) : result;
+  return enforceCapture && anyCapture ? result.filter((m) => m.captured) : result;
 };
 
-export const hasMoves = (board: Board, color: Color): boolean =>
-  getAllMoves(board, color).length > 0;
+export const hasMoves = (
+  board: Board,
+  color: Color,
+  enforceCapture = true,
+): boolean => getAllMoves(board, color, enforceCapture).length > 0;
 
 export const applyMove = (
   board: Board,
