@@ -1,0 +1,17 @@
+[
+  {
+    "name": "List processes",
+    "command": "ps aux",
+    "description": "Shows running processes."
+  },
+  {
+    "name": "Network connections",
+    "command": "netstat -tulpn",
+    "description": "Displays active network connections."
+  },
+  {
+    "name": "System info",
+    "command": "uname -a",
+    "description": "Prints system information."
+  }
+]
