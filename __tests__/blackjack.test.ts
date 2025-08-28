@@ -44,6 +44,31 @@ describe('Game actions', () => {
     expect(game.stats.wins).toBe(2);
   });
 
+  test('split hands play sequentially', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [
+      card('8'),
+      card('8'),
+      card('6'),
+      card('10'),
+      card('2'),
+      card('3'),
+      card('4'),
+      card('5'),
+      card('9'),
+    ];
+    game.startRound(100, deck);
+    game.split();
+    game.hit();
+    game.stand();
+    expect(game.current).toBe(1);
+    game.hit();
+    game.stand();
+    expect(game.playerHands[0].cards.map((c) => c.value)).toEqual(['8', '3', '4']);
+    expect(game.playerHands[1].cards.map((c) => c.value)).toEqual(['8', '2', '5']);
+    expect(game.bankroll).toBe(1200);
+  });
+
   test('surrender returns half bet', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
     const deck = [card('10'), card('6'), card('10'), card('5')];
@@ -112,6 +137,17 @@ describe('Split rules', () => {
     const deck = [card('8'), card('9'), card('5'), card('7')];
     game.startRound(100, deck);
     expect(() => game.split()).toThrow('Cannot split');
+  });
+});
+
+describe('Hand history', () => {
+  test('records hands after each round', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('10'), card('9'), card('7'), card('8'), card('6')];
+    game.startRound(100, deck);
+    game.stand();
+    expect(game.history.length).toBe(1);
+    expect(game.history[0].dealer.map((c) => c.value)).toEqual(['7', '8', '6']);
   });
 });
 

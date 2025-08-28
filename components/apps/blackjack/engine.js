@@ -144,6 +144,7 @@ export class BlackjackGame {
     this.bankroll = bankroll; // in chips (integers)
     this.stats = { wins: 0, losses: 0, pushes: 0, hands: 0 };
     this.hitSoft17 = hitSoft17;
+    this.history = [];
     this.resetRound();
   }
 
@@ -289,6 +290,15 @@ export class BlackjackGame {
         hand.result = 'lose';
       }
       this.stats.hands += 1;
+    });
+
+    this.history.push({
+      dealer: [...this.dealerHand],
+      playerHands: this.playerHands.map((h) => ({
+        cards: [...h.cards],
+        bet: h.bet,
+        result: h.result,
+      })),
     });
   }
 }
