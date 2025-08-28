@@ -3,11 +3,16 @@ import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
+import DemoBanner from '../ui/DemoBanner';
 
 export class Gedit extends Component {
 
     constructor() {
         super();
+        this.demoMode =
+            !process.env.NEXT_PUBLIC_USER_ID ||
+            !process.env.NEXT_PUBLIC_SERVICE_ID ||
+            !process.env.NEXT_PUBLIC_TEMPLATE_ID;
         this.state = {
             sending: false,
             showProgress: false,
@@ -28,7 +33,9 @@ export class Gedit extends Component {
     }
 
     componentDidMount() {
-        emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
+        if (!this.demoMode) {
+            emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
+        }
         this.fetchLocation();
     }
 
@@ -81,6 +88,7 @@ export class Gedit extends Component {
     }
 
     sendMessage = async () => {
+        if (this.demoMode) return;
         let { name, subject, message } = this.state;
 
         name = name.trim();
@@ -146,10 +154,17 @@ export class Gedit extends Component {
                 <div className="flex items-center justify-between w-full bg-ub-gedit-light bg-opacity-60 border-b border-t border-blue-400 text-sm">
                     <span className="font-bold ml-2">Send a Message to Me</span>
                     <div className="flex">
-                        <div onClick={this.sendMessage} className="border border-black bg-black bg-opacity-50 px-3 py-0.5 my-1 mx-1 rounded hover:bg-opacity-80">Send</div>
+                        <div
+                            onClick={this.demoMode ? undefined : this.sendMessage}
+                            aria-disabled={this.demoMode}
+                            className={`border border-black bg-black bg-opacity-50 px-3 py-0.5 my-1 mx-1 rounded ${this.demoMode ? 'opacity-50 cursor-not-allowed' : 'hover:bg-opacity-80'}`}
+                        >
+                            Send
+                        </div>
                     </div>
                 </div>
                 <div className="relative flex-grow flex flex-col bg-ub-gedit-dark font-normal windowMainScreen">
+                    {this.demoMode && <DemoBanner>Demo mode: form disabled</DemoBanner>}
                     <div className="absolute left-0 top-0 h-full px-2 bg-ub-gedit-darker"></div>
                     <div className="relative">
                         <input id="sender-name" value={this.state.name} onChange={this.handleChange('name')} onBlur={this.handleBlur('name')} aria-invalid={nameInvalid} aria-describedby="name-status" className={`w-full text-ubt-gedit-orange focus:bg-ub-gedit-light outline-none font-medium text-sm pl-6 py-0.5 bg-transparent ${nameInvalid ? 'border border-red-500' : nameValid ? 'border border-emerald-500' : ''}`} placeholder="Your Email / Name :" spellCheck="false" autoComplete="off" type="text" />

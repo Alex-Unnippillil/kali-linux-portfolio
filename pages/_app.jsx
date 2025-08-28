@@ -8,6 +8,7 @@ import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
+import DemoBanner from '../components/ui/DemoBanner';
 
 /**
  * @param {import('next/app').AppProps} props
@@ -109,6 +110,9 @@ function MyApp({ Component, pageProps }) {
   return (
     <SettingsProvider>
       <div aria-live="polite" id="live-region" />
+      {!process.env.NEXT_PUBLIC_TRACKING_ID && (
+        <DemoBanner>Demo mode: analytics disabled</DemoBanner>
+      )}
       <Component {...pageProps} />
       <ShortcutOverlay />
       <Analytics />
