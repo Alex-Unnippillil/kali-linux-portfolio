@@ -10,6 +10,7 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import ReactGA from 'react-ga4';
+import WorkspaceSwitcher from './workspace-switcher';
 
 export class Desktop extends Component {
     constructor() {
@@ -35,6 +36,10 @@ export class Desktop extends Component {
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
+            workspace_groups: [[], []],
+            current_workspace: 0,
+            showWorkspaceSwitcher: false,
+            switcherIndex: 0,
         }
     }
 
@@ -49,10 +54,12 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        document.addEventListener('keydown', this.handleGlobalKeys);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
+        document.removeEventListener('keydown', this.handleGlobalKeys);
     }
 
     checkForNewFolders = () => {
@@ -95,6 +102,61 @@ export class Desktop extends Component {
     removeContextListeners = () => {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
+    }
+
+    handleGlobalKeys = (e) => {
+        if (e.ctrlKey && e.code === 'Space') {
+            e.preventDefault();
+            this.openWorkspaceSwitcher();
+        }
+    }
+
+    openWorkspaceSwitcher = () => {
+        this.setState({ showWorkspaceSwitcher: true, switcherIndex: this.state.current_workspace });
+        document.addEventListener('keydown', this.workspaceSwitcherNav);
+    }
+
+    closeWorkspaceSwitcher = () => {
+        this.setState({ showWorkspaceSwitcher: false });
+        document.removeEventListener('keydown', this.workspaceSwitcherNav);
+    }
+
+    workspaceSwitcherNav = (e) => {
+        const total = this.state.workspace_groups.length;
+        let { switcherIndex } = this.state;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            switcherIndex = (switcherIndex + 1) % total;
+            this.setState({ switcherIndex });
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            switcherIndex = (switcherIndex - 1 + total) % total;
+            this.setState({ switcherIndex });
+        } else if (e.key === 'Enter') {
+            this.switchWorkspace(switcherIndex);
+        } else if (e.key === 'Escape') {
+            this.closeWorkspaceSwitcher();
+        }
+    }
+
+    switchWorkspace = (index) => {
+        this.setState(prevState => {
+            const groups = [...prevState.workspace_groups];
+            groups[prevState.current_workspace] = this.app_stack.slice();
+            const next_stack = groups[index] || [];
+            let closed_windows = { ...prevState.closed_windows };
+            Object.keys(closed_windows).forEach(id => {
+                closed_windows[id] = !next_stack.includes(id);
+            });
+            this.app_stack = next_stack.slice();
+            return {
+                workspace_groups: groups,
+                current_workspace: index,
+                closed_windows,
+                switcherIndex: index
+            };
+        }, () => {
+            if (this.app_stack.length) this.focus(this.app_stack[this.app_stack.length - 1]);
+            this.closeWorkspaceSwitcher();
+        });
     }
 
     checkContextMenu = (e) => {
@@ -437,8 +499,12 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, this.focus(objId));
-                this.app_stack.push(objId);
+                const workspace_groups = [...this.state.workspace_groups];
+                const wsIndex = this.state.current_workspace;
+                if (!workspace_groups[wsIndex]) workspace_groups[wsIndex] = [];
+                if (!workspace_groups[wsIndex].includes(objId)) workspace_groups[wsIndex].push(objId);
+                this.setState({ closed_windows, favourite_apps, workspace_groups, allAppsView: false }, () => this.focus(objId));
+                this.app_stack = workspace_groups[wsIndex].slice();
             }, 200);
         }
     }
@@ -446,7 +512,10 @@ export class Desktop extends Component {
     closeApp = (objId) => {
 
         // remove app from the app stack
-        this.app_stack.splice(this.app_stack.indexOf(objId), 1);
+        const wsIndex = this.state.current_workspace;
+        const workspace_groups = [...this.state.workspace_groups];
+        workspace_groups[wsIndex] = workspace_groups[wsIndex].filter(id => id !== objId);
+        this.app_stack = workspace_groups[wsIndex].slice();
 
         this.giveFocusToLastApp();
 
@@ -459,7 +528,7 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps });
+        this.setState({ closed_windows, favourite_apps, workspace_groups });
     }
 
     pinApp = (id) => {
@@ -641,6 +710,14 @@ export class Desktop extends Component {
                         games={games}
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+
+                { this.state.showWorkspaceSwitcher ?
+                    <WorkspaceSwitcher
+                        workspaces={this.state.workspace_groups}
+                        activeIndex={this.state.current_workspace}
+                        switcherIndex={this.state.switcherIndex}
+                        onSelect={this.switchWorkspace}
+                    /> : null }
 
             </div>
         )
