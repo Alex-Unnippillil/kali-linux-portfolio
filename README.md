@@ -41,6 +41,12 @@ To send text or links directly into the Sticky Notes app:
 3. After installation, use the system **Share** action and select "Kali Linux Portfolio".
 4. The shared content will appear as a new note.
 
+### Service Worker (SW)
+
+- Only assets under `public/` are precached.
+- Dynamic routes or API responses are not cached.
+- Future work may use `injectManifest` for finer control.
+
 ---
 
 ## Tech Stack
