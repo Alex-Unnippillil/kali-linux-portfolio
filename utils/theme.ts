@@ -11,7 +11,12 @@ export const THEME_UNLOCKS: Record<string, number> = {
 export const getTheme = (): string => {
   if (typeof window === 'undefined') return 'default';
   try {
-    return window.localStorage.getItem(THEME_KEY) || 'default';
+    const stored = window.localStorage.getItem(THEME_KEY);
+    if (stored) return stored;
+    const prefersDark = window.matchMedia?.(
+      '(prefers-color-scheme: dark)'
+    ).matches;
+    return prefersDark ? 'dark' : 'default';
   } catch {
     return 'default';
   }
@@ -21,6 +26,7 @@ export const setTheme = (theme: string): void => {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(THEME_KEY, theme);
+    document.documentElement.dataset.theme = theme;
   } catch {
     /* ignore storage errors */
   }
