@@ -29,20 +29,23 @@ const HostBubbleChart = ({ hosts = sampleHosts }) => {
   );
 
   useEffect(() => {
-    workerRef.current = new Worker(
-      new URL('./filter.worker.js', import.meta.url)
-    );
-    const worker = workerRef.current;
-    worker.onmessage = (e) => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      const data = e.data || [];
-      rafRef.current = requestAnimationFrame(() => setDisplayData(data));
-    };
-    worker.postMessage({ hosts, filter });
-    return () => {
-      worker.terminate();
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      workerRef.current = new Worker(
+        new URL('./filter.worker.js', import.meta.url)
+      );
+      const worker = workerRef.current;
+      worker.onmessage = (e) => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        const data = e.data || [];
+        rafRef.current = requestAnimationFrame(() => setDisplayData(data));
+      };
+      worker.postMessage({ hosts, filter });
+      return () => {
+        worker.terminate();
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      };
+    }
+    return undefined;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

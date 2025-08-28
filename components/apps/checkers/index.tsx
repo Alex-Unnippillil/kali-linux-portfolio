@@ -85,18 +85,21 @@ const Checkers = () => {
   };
 
   useEffect(() => {
-    workerRef.current = new Worker('/checkers-worker.js');
-    workerRef.current.onmessage = (e: MessageEvent<Move>) => {
-      const move = e.data;
-      if (hintRequest.current) {
-        setHint(move);
-        hintRequest.current = false;
-        setTimeout(() => setHint(null), 1000);
-      } else if (move) {
-        makeMoveRef.current?.(move);
-      }
-    };
-    return () => workerRef.current?.terminate();
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      workerRef.current = new Worker('/checkers-worker.js');
+      workerRef.current.onmessage = (e: MessageEvent<Move>) => {
+        const move = e.data;
+        if (hintRequest.current) {
+          setHint(move);
+          hintRequest.current = false;
+          setTimeout(() => setHint(null), 1000);
+        } else if (move) {
+          makeMoveRef.current?.(move);
+        }
+      };
+      return () => workerRef.current?.terminate();
+    }
+    return undefined;
   }, []);
 
   useEffect(() => {

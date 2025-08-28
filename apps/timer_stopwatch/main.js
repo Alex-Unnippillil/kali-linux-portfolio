@@ -42,7 +42,7 @@ function updateTimerDisplay() {
 }
 
 function startTimer() {
-  if (timerWorker) return;
+  if (timerWorker || typeof Worker !== 'function') return;
   const mins = parseInt(minutesInput.value, 10) || 0;
   const secs = parseInt(secondsInput.value, 10) || 0;
   timerRemaining = mins * 60 + secs;
@@ -81,7 +81,7 @@ function updateStopwatchDisplay() {
 }
 
 function startWatch() {
-  if (stopwatchWorker) return;
+  if (stopwatchWorker || typeof Worker !== 'function') return;
   stopwatchStartTime = Date.now() - stopwatchElapsed * 1000;
   stopwatchWorker = new Worker(new URL('../../workers/timer.worker.js', import.meta.url));
   stopwatchWorker.onmessage = () => {

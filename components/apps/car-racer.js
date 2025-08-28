@@ -99,7 +99,8 @@ const CarRacer = () => {
     const canvas = canvasRef.current;
     if (!canvas || typeof window === 'undefined') return;
 
-    const supportsWorker = window.Worker && 'OffscreenCanvas' in window;
+    const supportsWorker =
+      typeof Worker === 'function' && 'OffscreenCanvas' in window;
     let worker;
     let ctx;
     if (supportsWorker) {

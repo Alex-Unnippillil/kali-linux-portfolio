@@ -129,17 +129,19 @@ const MetasploitApp = ({
     setTimeline([]);
     setProgress(0);
     setReplaying(true);
-    const worker = new Worker(new URL('./exploit.worker.js', import.meta.url));
-    worker.onmessage = (e) => {
-      if (e.data.step) {
-        setTimeline((t) => [...t, e.data.step]);
-      } else if (e.data.done) {
-        setReplaying(false);
-        worker.terminate();
-      }
-    };
-    worker.postMessage('start');
-    workerRef.current = worker;
+    if (typeof Worker === 'function') {
+      const worker = new Worker(new URL('./exploit.worker.js', import.meta.url));
+      worker.onmessage = (e) => {
+        if (e.data.step) {
+          setTimeline((t) => [...t, e.data.step]);
+        } else if (e.data.done) {
+          setReplaying(false);
+          worker.terminate();
+        }
+      };
+      worker.postMessage('start');
+      workerRef.current = worker;
+    }
   };
 
   useEffect(() => {

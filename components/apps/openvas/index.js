@@ -113,7 +113,7 @@ const OpenVASApp = () => {
     if (typeof window !== 'undefined') {
       const media = window.matchMedia('(prefers-reduced-motion: reduce)');
       reduceMotion.current = media.matches;
-      if (typeof window.Worker === 'function') {
+      if (typeof Worker === 'function') {
         workerRef.current = new Worker(new URL('./openvas.worker.js', import.meta.url));
         workerRef.current.onmessage = (e) => {
           const { type, data } = e.data || {};

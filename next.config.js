@@ -65,6 +65,9 @@ module.exports = {
       'i.scdn.co',
     ],
   },
+  experimental: {
+    turbo: false,
+  },
   async headers() {
     return [
       {
