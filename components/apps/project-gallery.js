@@ -66,6 +66,14 @@ export default function ProjectGallery() {
     fetchRepos();
   }, []);
 
+  useEffect(() => {
+    const handleSkill = (e) => {
+      setFilter(e.detail || '');
+    };
+    window.addEventListener('skill-filter', handleSkill);
+    return () => window.removeEventListener('skill-filter', handleSkill);
+  }, []);
+
   const updateDisplay = useCallback(
     (selectedFilter, query) => {
       const byTech = selectedFilter

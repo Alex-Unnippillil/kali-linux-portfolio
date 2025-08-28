@@ -6,6 +6,7 @@ import LazyGitHubButton from '../../LazyGitHubButton';
 import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
+import Timeline from '../../Timeline';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -153,6 +154,33 @@ export default function AboutApp() {
 export { default as SafetyNote } from './SafetyNote';
 
 function About() {
+  const timelineEvents = [
+    {
+      date: '2018',
+      title: 'Learned Python',
+      description: 'Wrote first scripts',
+      skills: ['Python'],
+    },
+    {
+      date: '2020',
+      title: 'Discovered JavaScript',
+      description: 'Started web development',
+      skills: ['JavaScript'],
+    },
+    {
+      date: '2021',
+      title: 'Built with React',
+      description: 'Created SPAs',
+      skills: ['React'],
+    },
+    {
+      date: '2022',
+      title: 'Adopted TypeScript',
+      description: 'Typed JavaScript projects',
+      skills: ['TypeScript'],
+    },
+  ];
+
   return (
     <>
       <div className="w-20 md:w-28 my-4 full">
@@ -233,7 +261,7 @@ function About() {
       </ul>
       <WorkerStatus />
       <SafetyNote />
-      <Timeline />
+      <Timeline events={timelineEvents} />
     </>
   );
 }
@@ -275,43 +303,6 @@ function WorkerStatus() {
         ))}
       </ul>
     </section>
-  );
-}
-
-function Timeline() {
-  const events = [
-    { date: '2012', description: 'Began Nuclear Engineering at Ontario Tech.' },
-    { date: '2016', description: 'Graduated with B. Eng.' },
-    { date: '2020', description: 'Started Networking and I.T. Security program.' },
-    { date: '2024', description: 'Graduated with BIT in Networking and I.T. Security.' },
-  ];
-
-  const [liveMessage, setLiveMessage] = React.useState('');
-
-  return (
-    <>
-      <div className="w-5/6 md:w-1/2 mt-8" aria-labelledby="timeline-heading">
-        <h3 id="timeline-heading" className="sr-only">
-          Timeline
-        </h3>
-        <ol className="border-l-2 border-gray-400">
-          {events.map((event) => (
-            <li key={event.date} className="mb-4 ml-4">
-              <div className="flex items-center">
-                <div className="w-4 h-4 bg-ubt-blue rounded-full -ml-2" aria-hidden="true" />
-                <time className="ml-2 text-sm">{event.date}</time>
-              </div>
-              <p className="ml-2 mt-1 text-sm" aria-label={event.description}>
-                {event.description}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </div>
-      <div className="sr-only" aria-live="polite">
-        {liveMessage}
-      </div>
-    </>
   );
 }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import ProjectGallery from '../components/apps/project-gallery';
 
 jest.mock('react-ga4', () => ({ event: jest.fn() }));
@@ -46,6 +46,17 @@ describe('ProjectGallery', () => {
     );
     expect(screen.getByText(/Showing/)).toHaveTextContent(
       'Showing 1 project filtered by TS'
+    );
+  });
+
+  it('responds to skill-filter events', async () => {
+    render(<ProjectGallery />);
+    await waitFor(() => screen.getByText('Repo1'));
+    act(() => {
+      window.dispatchEvent(new CustomEvent('skill-filter', { detail: 'JS' }));
+    });
+    await waitFor(() =>
+      expect(screen.queryByText('Repo2')).not.toBeInTheDocument()
     );
   });
 });
