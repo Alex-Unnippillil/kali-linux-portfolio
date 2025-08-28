@@ -13,6 +13,8 @@ interface Finding {
   name: string;
   cvss: number;
   severity: keyof typeof severityColors;
+  host: string;
+  pluginFamily: string;
   description: string;
 }
 
@@ -22,7 +24,18 @@ const circumference = 2 * Math.PI * radius;
 const NessusReport: React.FC = () => {
   const [selected, setSelected] = useState<Finding | null>(null);
   const [severity, setSeverity] = useState<string>('All');
-  const findings = data as Finding[];
+  const [host, setHost] = useState<string>('All');
+  const [family, setFamily] = useState<string>('All');
+  const [findings, setFindings] = useState<Finding[]>(data as Finding[]);
+
+  const hosts = useMemo(
+    () => Array.from(new Set(findings.map((f) => f.host))).sort(),
+    [findings]
+  );
+  const families = useMemo(
+    () => Array.from(new Set(findings.map((f) => f.pluginFamily))).sort(),
+    [findings]
+  );
 
   const counts = useMemo(() => {
     return findings.reduce<Record<string, number>>((acc, f) => {
@@ -34,14 +47,52 @@ const NessusReport: React.FC = () => {
   const filtered = useMemo(
     () =>
       findings.filter(
-        (f) => severity === 'All' || f.severity === severity
+        (f) =>
+          (severity === 'All' || f.severity === severity) &&
+          (host === 'All' || f.host === host) &&
+          (family === 'All' || f.pluginFamily === family)
       ),
-    [findings, severity]
+    [findings, severity, host, family]
   );
 
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.name !== 'sample-report.json') {
+      alert('Only sample-report.json is supported in this demo.');
+      return;
+    }
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      setFindings(json);
+      setSeverity('All');
+      setHost('All');
+      setFamily('All');
+    } catch {
+      alert('Invalid JSON file.');
+    }
+  };
+
   const exportCSV = () => {
-    const rows = filtered.map((f) => [f.id, f.name, f.cvss, f.severity, f.description]);
-    const header = ['ID', 'Finding', 'CVSS', 'Severity', 'Description'];
+    const rows = filtered.map((f) => [
+      f.id,
+      f.name,
+      f.cvss,
+      f.severity,
+      f.host,
+      f.pluginFamily,
+      f.description,
+    ]);
+    const header = [
+      'ID',
+      'Finding',
+      'CVSS',
+      'Severity',
+      'Host',
+      'Plugin Family',
+      'Description',
+    ];
     const csv = [header, ...rows]
       .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
       .join('\n');
@@ -83,7 +134,17 @@ const NessusReport: React.FC = () => {
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen">
       <h1 className="text-2xl mb-4">Sample Nessus Report</h1>
-      <div className="flex items-center space-x-2 mb-4">
+      <div className="flex items-center space-x-2 mb-4 flex-wrap">
+        <label htmlFor="report-file" className="text-sm">
+          Import report
+        </label>
+        <input
+          id="report-file"
+          type="file"
+          accept=".json"
+          className="text-black p-1 rounded"
+          onChange={handleFile}
+        />
         <label htmlFor="severity-filter" className="text-sm">
           Filter severity
         </label>
@@ -99,6 +160,36 @@ const NessusReport: React.FC = () => {
             </option>
           ))}
         </select>
+        <label htmlFor="host-filter" className="text-sm">
+          Filter host
+        </label>
+        <select
+          id="host-filter"
+          className="text-black p-1 rounded"
+          value={host}
+          onChange={(e) => setHost(e.target.value)}
+        >
+          {['All', ...hosts].map((h) => (
+            <option key={h} value={h}>
+              {h}
+            </option>
+          ))}
+        </select>
+        <label htmlFor="family-filter" className="text-sm">
+          Filter family
+        </label>
+        <select
+          id="family-filter"
+          className="text-black p-1 rounded"
+          value={family}
+          onChange={(e) => setFamily(e.target.value)}
+        >
+          {['All', ...families].map((f) => (
+            <option key={f} value={f}>
+              {f}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           onClick={exportCSV}
@@ -107,6 +198,9 @@ const NessusReport: React.FC = () => {
           Export CSV
         </button>
       </div>
+      <p className="text-xs text-gray-400 mb-2">
+        Only the bundled sample-report.json is supported. Files are processed locally and never uploaded.
+      </p>
       <svg
         width={(radius + 20) * 2}
         height={(radius + 20) * 2}
@@ -122,6 +216,8 @@ const NessusReport: React.FC = () => {
             <th className="py-1" scope="col">Finding</th>
             <th className="py-1" scope="col">CVSS</th>
             <th className="py-1" scope="col">Severity</th>
+            <th className="py-1" scope="col">Host</th>
+            <th className="py-1" scope="col">Plugin Family</th>
           </tr>
         </thead>
         <tbody>
@@ -142,6 +238,8 @@ const NessusReport: React.FC = () => {
                   {f.severity}
                 </span>
               </td>
+              <td className="py-1">{f.host}</td>
+              <td className="py-1">{f.pluginFamily}</td>
             </tr>
           ))}
         </tbody>

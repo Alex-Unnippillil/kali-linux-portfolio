@@ -4,6 +4,8 @@
     "name": "OpenSSL Heartbeat Information Disclosure",
     "cvss": 5.0,
     "severity": "Medium",
+    "host": "server1.example.com",
+    "pluginFamily": "SSL",
     "description": "OpenSSL 1.0.1 Heartbeat extension allows remote attackers to obtain sensitive information."
   },
   {
@@ -11,6 +13,8 @@
     "name": "Apache HTTP Server Privilege Escalation",
     "cvss": 7.5,
     "severity": "High",
+    "host": "server1.example.com",
+    "pluginFamily": "Web Servers",
     "description": "Apache may allow local users to escalate privileges."
   },
   {
@@ -18,6 +22,8 @@
     "name": "Weak SSH Cipher",
     "cvss": 9.8,
     "severity": "Critical",
+    "host": "server2.example.com",
+    "pluginFamily": "SSH",
     "description": "The SSH server is configured to allow weak ciphers."
   },
   {
@@ -25,6 +31,8 @@
     "name": "Outdated Software",
     "cvss": 2.5,
     "severity": "Low",
+    "host": "server3.example.com",
+    "pluginFamily": "General",
     "description": "Installed software is outdated."
   }
 ]
