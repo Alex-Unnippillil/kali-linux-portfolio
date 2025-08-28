@@ -1,6 +1,7 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import { logEvent } from './analytics';
+import AppLoader from '../components/AppLoader';
 
 export const createDynamicApp = (path, name) =>
   dynamic(
@@ -11,11 +12,7 @@ export const createDynamicApp = (path, name) =>
       }),
     {
       ssr: false,
-      loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-          {`Loading ${name}...`}
-        </div>
-      ),
+      loading: () => <AppLoader />,
     }
   );
 

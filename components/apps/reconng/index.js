@@ -6,6 +6,7 @@ import React, {
 } from 'react';
 import dynamic from 'next/dynamic';
 import usePersistentState from '../../hooks/usePersistentState';
+import AppLoader from '../../AppLoader';
 
 const CytoscapeComponent = dynamic(
   async () => {
@@ -14,7 +15,7 @@ const CytoscapeComponent = dynamic(
     cytoscape.use(coseBilkent);
     return (await import('react-cytoscapejs')).default;
   },
-  { ssr: false },
+  { ssr: false, loading: () => <AppLoader /> },
 );
 
 const modules = [

@@ -3,10 +3,11 @@ import dynamic from 'next/dynamic';
 import HexEditor from './HexEditor';
 import { saveSnippet, loadSnippets } from './utils';
 import FormError from '../../ui/FormError';
+import AppLoader from '../../AppLoader';
 
 const ForceGraph2D = dynamic(
   () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
-  { ssr: false }
+  { ssr: false, loading: () => <AppLoader /> }
 );
 
 const Radare2 = () => {
