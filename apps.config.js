@@ -60,6 +60,8 @@ const QuoteGeneratorApp = createDynamicApp('quote_generator', 'Quote Generator')
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
+const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
+
 
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
 const BluetoothApp = createDynamicApp('bluetooth', 'Bluetooth Tools');
@@ -132,6 +134,7 @@ const displayQrTool = createDisplay(QrToolApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuoteGenerator = createDisplay(QuoteGeneratorApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
+const displayStickyNotes = createDisplay(StickyNotesApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -694,6 +697,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayTodoist,
+  },
+  {
+    id: 'sticky_notes',
+    title: 'Sticky Notes',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayStickyNotes,
   },
   {
     id: 'trash',
