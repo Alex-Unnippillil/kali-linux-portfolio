@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Readability } from '@mozilla/readability';
 import TurndownService from 'turndown';
+import DOMPurify from 'dompurify';
 import { useReadLater } from './ReadLaterList';
 
 interface ReaderProps {
@@ -32,9 +33,10 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
         const reader = new Readability(doc);
         const parsed = reader.parse();
         if (parsed) {
+          const sanitizedContent = DOMPurify.sanitize(parsed.content ?? '');
           setArticle({
             title: parsed.title ?? '',
-            content: parsed.content ?? '',
+            content: sanitizedContent,
             excerpt: parsed.excerpt ?? '',
           });
         } else {

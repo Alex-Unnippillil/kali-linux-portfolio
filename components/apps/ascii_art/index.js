@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 
 // Preset character sets and color palettes
 const presetCharSets = {
@@ -85,13 +86,13 @@ export default function AsciiArt() {
     workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
       const { plain, html, ansi, colors: colorArr, width, height } = e.data;
-      const update = () => {
-        setPlainAscii(plain);
-        setAsciiHtml(html);
-        setAnsiAscii(ansi);
-        setColors({ data: colorArr, width, height });
-        setAltText(`ASCII art ${width}x${height}`);
-      };
+        const update = () => {
+          setPlainAscii(plain);
+          setAsciiHtml(DOMPurify.sanitize(html));
+          setAnsiAscii(ansi);
+          setColors({ data: colorArr, width, height });
+          setAltText(`ASCII art ${width}x${height}`);
+        };
       if (prefersReducedMotion.current) {
         update();
       } else {
@@ -168,7 +169,7 @@ export default function AsciiArt() {
           html += `${htmlRow}<br/>`;
         }
         setPlainAscii(plain);
-        setAsciiHtml(html);
+        setAsciiHtml(DOMPurify.sanitize(html));
         setAnsiAscii(plain);
         setColors({ data: colorArr, width, height });
         setAltText(`ASCII art ${width}x${height}`);
@@ -252,14 +253,14 @@ export default function AsciiArt() {
   const handleEditorChange = (e) => {
     undoStack.current.push(plainAscii);
     setPlainAscii(e.target.value);
-    setAsciiHtml(e.target.value.replace(/\n/g, '<br/>'));
+    setAsciiHtml(DOMPurify.sanitize(e.target.value.replace(/\n/g, '<br/>')));
   };
 
   const undo = () => {
     if (!undoStack.current.length) return;
     const prev = undoStack.current.pop();
     setPlainAscii(prev);
-    setAsciiHtml(prev.replace(/\n/g, '<br/>'));
+    setAsciiHtml(DOMPurify.sanitize(prev.replace(/\n/g, '<br/>')));
   };
 
   const playAltText = () => {

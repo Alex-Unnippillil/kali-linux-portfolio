@@ -320,38 +320,21 @@ const Chrome: React.FC = () => {
           </div>
         ))}
       </div>
-      <div className="flex items-center bg-gray-800 text-sm p-1 space-x-1">
-        <input
-          placeholder="Find in page"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && doFind()}
-          className="px-2 py-0.5 text-black rounded flex-grow"
-        />
-        <button onClick={doFind} className="px-2">
-          Find
-        </button>
-        <button onClick={toggleMute} className="px-2" aria-label="Mute">
-          {activeTab.muted ? 'Unmute' : 'Mute'}
-        </button>
-        <button onClick={screenshot} className="px-2" aria-label="Screenshot">
-          📷
-        </button>
-      </div>
-      <div className="flex-grow bg-white relative overflow-auto">
-        {sanitizedArticle ? (
-          <main
-            style={{ maxInlineSize: '60ch', margin: 'auto' }}
-            dangerouslySetInnerHTML={{ __html: sanitizedArticle }}
-          />
-        ) : activeTab.blocked ? (
-          blockedView
-        ) : (
-          <iframe
-            ref={iframeRef}
-            src={activeTab.url}
-            title={activeTab.url}
-            className="w-full h-full"
+        <div className="flex-grow bg-white relative overflow-auto">
+          {articles[activeId] ? (
+            <main
+              style={{ maxInlineSize: '60ch', margin: 'auto' }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(articles[activeId] ?? '') }}
+            />
+          ) : activeTab.blocked ? (
+            blockedView
+          ) : (
+            <iframe
+              ref={iframeRef}
+              src={activeTab.url}
+              title={activeTab.url}
+              className="w-full h-full"
+
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
             referrerPolicy="no-referrer"
