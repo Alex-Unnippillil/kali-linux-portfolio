@@ -25,9 +25,6 @@ self.onmessage = async (e) => {
     val = (val - 128) * contrast + 128;
     gray[i] = Math.max(0, Math.min(255, val));
   }
-  let plain = '';
-  let html = '';
-  let ansi = '';
   const paletteArr = palette || [];
   const mapToPalette = (r, g, b) => {
     if (!paletteArr.length) return [r, g, b];
@@ -82,9 +79,12 @@ self.onmessage = async (e) => {
         ansiRow += ch;
       }
     }
-    plain += `${plainRow}\n`;
-    html += `${htmlRow}<br/>`;
-    ansi += `${ansiRow}\u001b[0m\n`;
+    self.postMessage({
+      type: 'chunk',
+      plain: `${plainRow}\n`,
+      html: `${htmlRow}<br/>`,
+      ansi: `${ansiRow}\u001b[0m\n`,
+    });
   }
-  self.postMessage({ plain, html, ansi, width, height, colors }, [colors.buffer]);
+  self.postMessage({ type: 'done', width, height, colors }, [colors.buffer]);
 };

@@ -48,6 +48,7 @@ export default function AsciiArt() {
   const [contrast, setContrast] = useState(1);
   const [density, setDensity] = useState(presetCharSets.standard.length);
   const [imgSrc, setImgSrc] = useState(null);
+  const [font, setFont] = useState('monospace');
   const undoStack = useRef([]);
   const [colors, setColors] = useState(null);
   const workerRef = useRef(null);
@@ -55,6 +56,7 @@ export default function AsciiArt() {
   const editorRef = useRef(null);
   const fileRef = useRef(null);
   const prefersReducedMotion = useRef(false);
+  const fonts = ['monospace', 'Courier New', 'Fira Code'];
 
   // Load saved preferences
   useEffect(() => {
@@ -81,33 +83,51 @@ export default function AsciiArt() {
     setDensity((d) => Math.min(d, charSet.length));
   }, [charSet]);
 
+  // Preload default font
+  useEffect(() => {
+    if (document?.fonts) document.fonts.load('10px monospace');
+  }, []);
+
+  useEffect(() => {
+    if (font !== 'monospace' && document?.fonts) {
+      document.fonts.load(`10px ${font}`);
+    }
+  }, [font]);
+
   // Setup worker
   useEffect(() => {
-    workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
+    workerRef.current = new Worker(new URL('./ascii.worker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
-      const { plain, html, ansi, colors: colorArr, width, height } = e.data;
+      const { type } = e.data;
+      if (type === 'chunk') {
+        const { plain, html, ansi } = e.data;
+        setPlainAscii((p) => p + plain);
+        setAsciiHtml((h) => h + DOMPurify.sanitize(html));
+        setAnsiAscii((a) => a + ansi);
+      } else if (type === 'done') {
+        const { colors: colorArr, width, height } = e.data;
         const update = () => {
-          setPlainAscii(plain);
-          setAsciiHtml(DOMPurify.sanitize(html));
-          setAnsiAscii(ansi);
           setColors({ data: colorArr, width, height });
           setAltText(`ASCII art ${width}x${height}`);
         };
-      if (prefersReducedMotion.current) {
-        update();
-      } else {
-        requestAnimationFrame(update);
+        if (prefersReducedMotion.current) {
+          update();
+        } else {
+          requestAnimationFrame(update);
+        }
       }
     };
     return () => {
-      workerRef.current.terminate();
+      workerRef.current?.terminate();
     };
   }, []);
 
   const processFile = useCallback(async () => {
     if (!fileRef.current) return;
     const file = fileRef.current;
+    if (file.size > 2 * 1024 * 1024) return; // limit 2MB
     const bitmap = await createImageBitmap(file);
+    if (bitmap.width * bitmap.height > 4_000_000) return; // size limit
     const effectiveCharSet = (() => {
       const chars = charSet.split('');
       const step = chars.length / density;
@@ -117,71 +137,26 @@ export default function AsciiArt() {
       }
       return result;
     })();
-    if (workerRef.current && typeof OffscreenCanvas !== 'undefined') {
-      workerRef.current.postMessage(
-        {
-          bitmap,
-          charSet: effectiveCharSet,
-          cellSize,
-          useColor,
-          palette: palettes[paletteName],
-          contrast,
-        },
-        [bitmap]
-      );
-    } else {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const width = Math.floor(img.width / cellSize);
-        const height = Math.floor(img.height / cellSize);
-        canvas.width = width;
-        canvas.height = height;
-        ctx.drawImage(img, 0, 0, width, height);
-        const { data } = ctx.getImageData(0, 0, width, height);
-        let plain = '';
-        let html = '';
-        const chars = effectiveCharSet.split('');
-        const colorArr = new Uint8ClampedArray(width * height * 3);
-        for (let y = 0; y < height; y += 1) {
-          let row = '';
-          let htmlRow = '';
-          for (let x = 0; x < width; x += 1) {
-            const idx = (y * width + x) * 4;
-            const r = data[idx];
-            const g = data[idx + 1];
-            const b = data[idx + 2];
-            const avg = ((r + g + b) / 3 - 128) * contrast + 128;
-            const clamped = Math.max(0, Math.min(255, avg));
-            const charIndex = Math.floor((clamped / 255) * (chars.length - 1));
-            const ch = chars[chars.length - 1 - charIndex];
-            row += ch;
-            htmlRow += useColor
-              ? `<span style="color: rgb(${r},${g},${b})">${ch}</span>`
-              : ch;
-            const cIdx = (y * width + x) * 3;
-            colorArr[cIdx] = r;
-            colorArr[cIdx + 1] = g;
-            colorArr[cIdx + 2] = b;
-          }
-          plain += `${row}\n`;
-          html += `${htmlRow}<br/>`;
-        }
-        setPlainAscii(plain);
-        setAsciiHtml(DOMPurify.sanitize(html));
-        setAnsiAscii(plain);
-        setColors({ data: colorArr, width, height });
-        setAltText(`ASCII art ${width}x${height}`);
-      };
-      img.src = URL.createObjectURL(file);
-    }
+    setPlainAscii('');
+    setAsciiHtml('');
+    setAnsiAscii('');
+    workerRef.current?.postMessage(
+      {
+        bitmap,
+        charSet: effectiveCharSet,
+        cellSize,
+        useColor,
+        palette: palettes[paletteName],
+        contrast,
+      },
+      [bitmap]
+    );
   }, [charSet, density, cellSize, paletteName, useColor, contrast]);
 
   const handleFile = useCallback(
     (e) => {
       const file = e.target.files[0];
-      if (!file) return;
+      if (!file || !file.type.startsWith('image/')) return;
       fileRef.current = file;
       setImgSrc(URL.createObjectURL(file));
       processFile();
@@ -210,7 +185,7 @@ export default function AsciiArt() {
     URL.revokeObjectURL(url);
   }, [useColor, ansiAscii, plainAscii]);
 
-  const downloadPng = useCallback(() => {
+  const downloadPng = useCallback(async () => {
     if (!plainAscii || !colors) return;
     const lines = plainAscii.trimEnd().split('\n');
     const width = colors.width;
@@ -221,7 +196,10 @@ export default function AsciiArt() {
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.font = `${cellSize}px monospace`;
+    if (document?.fonts) {
+      await document.fonts.load(`${cellSize}px ${font}`);
+    }
+    ctx.font = `${cellSize}px ${font}`;
     ctx.textBaseline = 'top';
     for (let y = 0; y < height; y += 1) {
       for (let x = 0; x < width; x += 1) {
@@ -242,7 +220,7 @@ export default function AsciiArt() {
       link.click();
       URL.revokeObjectURL(url);
     });
-  }, [plainAscii, colors, cellSize, useColor]);
+  }, [plainAscii, colors, cellSize, useColor, font]);
 
   // Typing mode handlers
   const toggleTypingMode = () => {
@@ -283,7 +261,9 @@ export default function AsciiArt() {
           <input
             type="text"
             value={charSet}
-            onChange={(e) => setCharSet(e.target.value)}
+            onChange={(e) =>
+              setCharSet(DOMPurify.sanitize(e.target.value).slice(0, 256))
+            }
             className="px-1 bg-gray-700"
           />
         </label>
@@ -352,6 +332,20 @@ export default function AsciiArt() {
           </select>
         </label>
         <label className="flex items-center gap-2">
+          Font:
+          <select
+            value={font}
+            onChange={(e) => setFont(e.target.value)}
+            className="bg-gray-700"
+          >
+            {fonts.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-2">
           Color
           <input
             type="checkbox"
@@ -364,7 +358,7 @@ export default function AsciiArt() {
           onClick={copyAscii}
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
         >
-          Copy
+          Copy Text
         </button>
         <button
           type="button"
@@ -378,7 +372,7 @@ export default function AsciiArt() {
           onClick={downloadPng}
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
         >
-          PNG
+          Export PNG
         </button>
         <button
           type="button"
