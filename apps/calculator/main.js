@@ -13,11 +13,14 @@ const printBtn = document.getElementById('print-tape');
 
 let preciseMode = false;
 let programmerMode = false;
+let scientificMode = false;
 let currentBase = 10;
 let lastResult = 0;
 let undoStack = [];
 let history = [];
+let memory = 0;
 const HISTORY_KEY = 'calc-history';
+const MODE_KEY = 'calc-mode';
 
 function setPreciseMode(on) {
   preciseMode = on;
@@ -26,19 +29,23 @@ function setPreciseMode(on) {
     preciseToggle.setAttribute('aria-pressed', preciseMode.toString());
   }
   math.config(preciseMode ? { number: 'Fraction' } : { number: 'number' });
+  saveMode();
 }
 
 preciseToggle?.addEventListener('click', () => setPreciseMode(!preciseMode));
 
 sciToggle?.addEventListener('click', () => {
   const isHidden = scientific.classList.toggle('hidden');
-  sciToggle?.setAttribute('aria-pressed', (!isHidden).toString());
+  scientificMode = !isHidden;
+  sciToggle?.setAttribute('aria-pressed', scientificMode.toString());
+  saveMode();
 });
 
 function setProgrammerMode(on) {
   programmerMode = on;
   programmer?.classList.toggle('hidden', !programmerMode);
   progToggle?.setAttribute('aria-pressed', programmerMode.toString());
+  saveMode();
 }
 
 progToggle?.addEventListener('click', () => setProgrammerMode(!programmerMode));
@@ -51,6 +58,7 @@ historyToggle?.addEventListener('click', () => {
 baseSelect?.addEventListener('change', () => {
   currentBase = parseInt(baseSelect.value, 10);
   validateBaseInput();
+  saveMode();
 });
 
 printBtn?.addEventListener('click', printTape);
@@ -144,6 +152,21 @@ buttons.forEach((btn) => {
       return;
     }
 
+    if (action === 'mplus') {
+      memoryAdd();
+      return;
+    }
+
+    if (action === 'mminus') {
+      memorySubtract();
+      return;
+    }
+
+    if (action === 'mr') {
+      memoryRecall();
+      return;
+    }
+
     undoStack.push(display.value);
     insertAtCursor(value);
     updateParenBalance();
@@ -185,9 +208,43 @@ function evaluate(expression) {
   }
 }
 
+function memoryAdd() {
+  const val = evaluate(display.value);
+  if (val === null || val === 'Error') return;
+  const num = programmerMode ? parseInt(val, currentBase) : parseFloat(val);
+  memory += num;
+}
+
+function memorySubtract() {
+  const val = evaluate(display.value);
+  if (val === null || val === 'Error') return;
+  const num = programmerMode ? parseInt(val, currentBase) : parseFloat(val);
+  memory -= num;
+}
+
+function memoryRecall() {
+  display.value = formatBase(memory);
+  updateParenBalance();
+  validateBaseInput();
+  display.focus();
+}
+
 function renderHistory() {
   if (!historyEl) return;
   historyEl.innerHTML = '';
+  const header = document.createElement('div');
+  header.className = 'history-header';
+  const clearBtn = document.createElement('button');
+  clearBtn.textContent = 'Clear';
+  clearBtn.addEventListener('click', () => {
+    history = [];
+    saveHistory();
+    renderHistory();
+  });
+  header.appendChild(clearBtn);
+  historyEl.appendChild(header);
+  const list = document.createElement('div');
+  list.id = 'history-list';
   history.forEach(({ expr, result }) => {
     const entry = document.createElement('div');
     entry.className = 'history-entry';
@@ -207,12 +264,20 @@ function renderHistory() {
       navigator.clipboard?.writeText(`${expr} = ${result}`);
     });
     entry.appendChild(copyBtn);
-    historyEl.appendChild(entry);
+    list.appendChild(entry);
   });
+  historyEl.appendChild(list);
 }
 
 function saveHistory() {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+}
+
+function saveMode() {
+  localStorage.setItem(
+    MODE_KEY,
+    JSON.stringify({ preciseMode, programmerMode, scientificMode, currentBase })
+  );
 }
 
 function addHistory(expr, result) {
@@ -227,6 +292,17 @@ function loadHistory() {
   history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
   history = history.slice(0, 10);
   renderHistory();
+}
+
+function loadMode() {
+  const saved = JSON.parse(localStorage.getItem(MODE_KEY) || '{}');
+  setPreciseMode(!!saved.preciseMode);
+  setProgrammerMode(!!saved.programmerMode);
+  scientificMode = !!saved.scientificMode;
+  scientific?.classList.toggle('hidden', !scientificMode);
+  sciToggle?.setAttribute('aria-pressed', scientificMode.toString());
+  currentBase = saved.currentBase || 10;
+  if (baseSelect) baseSelect.value = currentBase.toString();
 }
 
 function printTape() {
@@ -264,6 +340,22 @@ function findButtonForKey(key) {
 }
 
 document.addEventListener('keydown', (e) => {
+  if (e.key.toLowerCase() === 'm') {
+    e.preventDefault();
+    if (e.ctrlKey && e.shiftKey) {
+      memorySubtract();
+      flashButton(document.querySelector('.btn[data-action="mminus"]'));
+    } else if (e.ctrlKey) {
+      memoryAdd();
+      flashButton(document.querySelector('.btn[data-action="mplus"]'));
+    } else {
+      memoryRecall();
+      flashButton(document.querySelector('.btn[data-action="mr"]'));
+    }
+    display.focus();
+    return;
+  }
+
   if (e.ctrlKey || e.metaKey) {
     if (e.key.toLowerCase() === 'z') {
       e.preventDefault();
@@ -292,6 +384,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 display?.focus();
+loadMode();
 loadHistory();
 
 if (typeof module !== 'undefined') {
