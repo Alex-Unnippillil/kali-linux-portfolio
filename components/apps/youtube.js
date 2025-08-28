@@ -33,7 +33,6 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const scrollRaf = useRef();
 
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-  const privacy = process.env.NEXT_PUBLIC_PRIVACY_MODE === 'true';
 
   // Fetch videos from YouTube when an API key is available and no initial
   // videos are supplied. This mirrors the behaviour of the original app but
@@ -163,9 +162,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
     const createPlayer = () => {
       player = new window.YT.Player(playerRef.current, {
         videoId: currentVideo.id,
-        host: privacy
-          ? 'https://www.youtube-nocookie.com'
-          : 'https://www.youtube.com',
+        host: 'https://www.youtube-nocookie.com',
         events: {
           onReady,
           onStateChange,
@@ -179,9 +176,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
 
     if (!window.YT) {
       const tag = document.createElement('script');
-      tag.src = `${
-        privacy ? 'https://www.youtube-nocookie.com' : 'https://www.youtube.com'
-      }/iframe_api`;
+      tag.src = 'https://www.youtube-nocookie.com/iframe_api';
       tag.async = true;
       window.onYouTubeIframeAPIReady = createPlayer;
       document.body.appendChild(tag);
@@ -197,7 +192,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
       }
       player?.destroy();
     };
-  }, [currentVideo, prefersReducedMotion, privacy]);
+  }, [currentVideo, prefersReducedMotion]);
 
   useEffect(() => {
     if (!currentVideo) return;

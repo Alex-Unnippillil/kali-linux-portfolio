@@ -13,7 +13,6 @@ export default function YouTubePlayer({ videoId }) {
   const [chapters, setChapters] = useState([]); // [{title, startTime}]
   const [showChapters, setShowChapters] = useState(false);
   const [showDoc, setShowDoc] = useState(false);
-  const privacy = process.env.NEXT_PUBLIC_PRIVACY_MODE === 'true';
   const prefersReducedMotion = usePrefersReducedMotion();
 
   // Load the YouTube IFrame API lazily on user interaction
@@ -26,9 +25,7 @@ export default function YouTubePlayer({ videoId }) {
       // eslint-disable-next-line no-undef
       playerRef.current = new YT.Player(containerRef.current, {
         videoId,
-        host: privacy
-          ? 'https://www.youtube-nocookie.com'
-          : 'https://www.youtube.com',
+        host: 'https://www.youtube-nocookie.com',
         playerVars: {
           enablejsapi: 1,
           origin: window.location.origin,
@@ -61,9 +58,7 @@ export default function YouTubePlayer({ videoId }) {
       // Load the IFrame Player API script only after user interaction
       if (!window.YT) {
         const tag = document.createElement('script');
-        tag.src = `${
-          privacy ? 'https://www.youtube-nocookie.com' : 'https://www.youtube.com'
-        }/iframe_api`;
+        tag.src = 'https://www.youtube-nocookie.com/iframe_api';
         tag.async = true;
         window.onYouTubeIframeAPIReady = createPlayer;
         document.body.appendChild(tag);
@@ -146,9 +141,7 @@ export default function YouTubePlayer({ videoId }) {
       <Head>
         <link
           rel="preconnect"
-          href={`https://${
-            privacy ? 'www.youtube-nocookie.com' : 'www.youtube.com'
-          }`}
+          href="https://www.youtube-nocookie.com"
         />
         <link rel="preconnect" href="https://i.ytimg.com" />
       </Head>
