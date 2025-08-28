@@ -10,8 +10,11 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import ReactGA from 'react-ga4';
+import VirtualDesktopSwitcher from '../ui/VirtualDesktopSwitcher';
+import { VirtualDesktopContext } from '../../hooks/useVirtualDesktops';
 
 export class Desktop extends Component {
+    static contextType = VirtualDesktopContext;
     constructor() {
         super();
         this.app_stack = [];
@@ -294,8 +297,10 @@ export class Desktop extends Component {
 
     renderWindows = () => {
         let windowsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.closed_windows[app.id] === false) {
+        const { activeDesktop, assignments } = this.context;
+        apps.forEach((app) => {
+            const desktopIndex = assignments[app.id] ?? 0;
+            if (this.state.closed_windows[app.id] === false && desktopIndex === activeDesktop) {
 
                 const props = {
                     title: app.title,
@@ -446,6 +451,7 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
+                this.context.assignWindow(objId, this.context.activeDesktop);
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, this.focus(objId));
                 this.app_stack.push(objId);
             }, 200);
@@ -467,6 +473,7 @@ export class Desktop extends Component {
 
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
+        this.context.removeWindow(objId);
 
         this.setState({ closed_windows, favourite_apps });
     }
@@ -650,6 +657,8 @@ export class Desktop extends Component {
                         games={games}
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+
+                <VirtualDesktopSwitcher />
 
             </div>
         )
