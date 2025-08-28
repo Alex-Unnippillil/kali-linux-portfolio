@@ -66,223 +66,102 @@ function applyCurve(v, type) {
 // --- setup params ---
 const params = new URLSearchParams(location.search);
 let seed = params.get('seed');
+const menu = document.getElementById('menu');
 if (!seed) {
-  seed = Math.random().toString(36).slice(2, 8);
-  params.set('seed', seed);
-  history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
-}
+  const tracks = [
+    { name: 'Layout A', seed: 'trackA' },
+    { name: 'Layout B', seed: 'trackB' },
+    { name: 'Layout C', seed: 'trackC' },
+  ];
+  menu.style.display = 'flex';
+  tracks.forEach((t) => {
+    const btn = document.createElement('button');
+    const best = JSON.parse(localStorage.getItem(`car-racer-best-${t.seed}`) || 'null');
+    btn.textContent = best ? `${t.name} (Best: ${best.time.toFixed(2)}s)` : t.name;
+    btn.addEventListener('click', () => {
+      params.set('seed', t.seed);
+      location.search = `${location.pathname}?${params.toString()}`;
+    });
+    menu.appendChild(btn);
+  });
+} else {
+  menu.style.display = 'none';
+  document.getElementById('seedDisp').textContent = seed;
 
-document.getElementById('seedDisp').textContent = seed;
-
-let curveType = params.get('curve') || 'linear';
-const curveSel = document.getElementById('curve');
-curveSel.value = curveType;
-curveSel.addEventListener('change', () => {
-  curveType = curveSel.value;
-  params.set('curve', curveType);
-  history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
-});
-
-let tractionAssist = params.get('assist') === '1';
-const assistChk = document.getElementById('assist');
-if (assistChk) {
-  assistChk.checked = tractionAssist;
-  assistChk.addEventListener('change', () => {
-    tractionAssist = assistChk.checked;
-    params.set('assist', tractionAssist ? '1' : '0');
+  let curveType = params.get('curve') || 'linear';
+  const curveSel = document.getElementById('curve');
+  curveSel.value = curveType;
+  curveSel.addEventListener('change', () => {
+    curveType = curveSel.value;
+    params.set('curve', curveType);
     history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
   });
-}
 
-// --- canvas ---
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+  let tractionAssist = params.get('assist') === '1';
+  const assistChk = document.getElementById('assist');
+  if (assistChk) {
+    assistChk.checked = tractionAssist;
+    assistChk.addEventListener('change', () => {
+      tractionAssist = assistChk.checked;
+      params.set('assist', tractionAssist ? '1' : '0');
+      history.replaceState(null, '', `${location.pathname}?${params.toString()}`);
+    });
+  }
 
-const track = generateTrack(strToSeed(seed));
+  // --- canvas ---
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
 
-let worldTime = 0;
-const rainDrops = Array.from({ length: 80 }, () => ({
-  x: Math.random() * WIDTH,
-  y: Math.random() * HEIGHT,
-}));
+  const track = generateTrack(strToSeed(seed));
 
-function drawTrack(day) {
-  ctx.strokeStyle = lerpColor('#333', '#777', day);
-  ctx.lineWidth = 80;
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(track[0].x, track[0].y);
-  for (let i = 1; i < track.length; i++) ctx.lineTo(track[i].x, track[i].y);
-  ctx.closePath();
-  ctx.stroke();
-  // start line
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 4;
-  ctx.beginPath();
-  ctx.moveTo(track[0].x, track[0].y);
-  ctx.lineTo(track[1].x, track[1].y);
-  ctx.stroke();
-}
+  let worldTime = 0;
+  const rainDrops = Array.from({ length: 80 }, () => ({
+    x: Math.random() * WIDTH,
+    y: Math.random() * HEIGHT,
+  }));
 
-// draw a small minimap with car and ghost positions
-function renderMiniMap(g) {
-  const scale = 0.2;
-  const size = WIDTH * scale;
-  const pad = 10;
-  const x = WIDTH - size - pad;
-  const y = pad;
+  function drawTrack(day) {
+    ctx.strokeStyle = lerpColor('#333', '#777', day);
+    ctx.lineWidth = 80;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(track[0].x, track[0].y);
+    for (let i = 1; i < track.length; i++) ctx.lineTo(track[i].x, track[i].y);
+    ctx.closePath();
+    ctx.stroke();
+    // start line
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(track[0].x, track[0].y);
+    ctx.lineTo(track[1].x, track[1].y);
+    ctx.stroke();
+  }
 
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(scale, scale);
+  // draw a small minimap with car and ghost positions
+  function renderMiniMap(g) {
+    const scale = 0.2;
+    const size = WIDTH * scale;
+    const pad = 10;
+    const x = WIDTH - size - pad;
+    const y = pad;
 
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-  ctx.strokeStyle = '#777';
-  ctx.lineWidth = 80;
-  ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(track[0].x, track[0].y);
-  for (let i = 1; i < track.length; i++) ctx.lineTo(track[i].x, track[i].y);
-  ctx.closePath();
-  ctx.stroke();
-
-  if (g) {
     ctx.save();
-    ctx.globalAlpha = 0.5;
-    ctx.translate(g.x, g.y);
-    ctx.rotate(g.angle);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(-10, -5, 20, 10);
-    ctx.restore();
-  }
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
 
-  ctx.save();
-  ctx.translate(car.x, car.y);
-  ctx.rotate(car.angle);
-  ctx.fillStyle = 'red';
-  ctx.fillRect(-10, -5, 20, 10);
-  ctx.restore();
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-  ctx.restore();
-}
+    ctx.strokeStyle = '#777';
+    ctx.lineWidth = 80;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(track[0].x, track[0].y);
+    for (let i = 1; i < track.length; i++) ctx.lineTo(track[i].x, track[i].y);
+    ctx.closePath();
+    ctx.stroke();
 
-// line side helper for lap detection
-const startLine = { x1: track[0].x, y1: track[0].y, x2: track[1].x, y2: track[1].y };
-function lineSide(p) {
-  return (startLine.x2 - startLine.x1) * (p.y - startLine.y1) - (startLine.y2 - startLine.y1) * (p.x - startLine.x1);
-}
-
-// --- car setup ---
-const car = {
-  x: track[0].x,
-  y: track[0].y,
-  angle: Math.atan2(track[1].y - track[0].y, track[1].x - track[0].x),
-  speed: 0,
-};
-
-const keys = {};
-window.addEventListener('keydown', (e) => (keys[e.key] = true));
-window.addEventListener('keyup', (e) => (keys[e.key] = false));
-
-// ghost storage
-let bestReplay = null;
-try {
-  bestReplay = JSON.parse(localStorage.getItem('car-racer-best'));
-} catch (e) {}
-let bestLapTrace = bestReplay ? bestReplay.trace : null;
-let bestLapTime = bestReplay ? bestReplay.time : null;
-if (bestLapTime) document.getElementById('bestTime').textContent = bestLapTime.toFixed(2);
-
-let currentLapTrace = [];
-let lapLineCrossed = false;
-let lapStart = performance.now();
-let prevSide = lineSide(car);
-let ghostIndex = 0;
-
-function saveBest() {
-  if (bestLapTrace)
-    localStorage.setItem('car-racer-best', JSON.stringify({ time: bestLapTime, trace: bestLapTrace }));
-}
-
-function update(dt) {
-  // controls
-  let steer = 0;
-  if (keys['ArrowLeft']) steer -= 1;
-  if (keys['ArrowRight']) steer += 1;
-  steer = applyCurve(steer, curveType);
-  let accel = 0;
-  if (keys['ArrowUp']) accel += 1;
-  if (keys['ArrowDown']) accel -= 1;
-
-  if (car.speed < 50) {
-    const cx = WIDTH / 2;
-    const cy = HEIGHT / 2;
-    const desired = Math.atan2(cy - car.y, cx - car.x);
-    let diff = desired - car.angle;
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-    steer += diff * 0.5;
-  }
-
-  // physics
-  const ACCEL = 200;
-  const FRICTION = 50;
-  car.speed += accel * ACCEL * dt;
-  car.speed -= FRICTION * dt;
-  if (car.speed < 0) car.speed = 0;
-  let turn = steer * car.speed * 0.002;
-  if (tractionAssist) {
-    const maxLat = 300;
-    const lat = Math.abs(car.speed * turn);
-    if (lat > maxLat) turn = Math.sign(turn) * maxLat / car.speed;
-  }
-  car.angle += turn;
-  car.x += Math.cos(car.angle) * car.speed * dt;
-  car.y += Math.sin(car.angle) * car.speed * dt;
-
-  worldTime += dt;
-  for (const drop of rainDrops) {
-    drop.y += 400 * dt;
-    if (drop.y > HEIGHT) {
-      drop.y = -20;
-      drop.x = Math.random() * WIDTH;
-    }
-  }
-
-  // lap logic
-  const side = lineSide(car);
-  if (prevSide < 0 && side >= 0) {
-    if (lapLineCrossed) {
-      const t = (performance.now() - lapStart) / 1000;
-      if (!bestLapTime || t < bestLapTime) {
-        bestLapTime = t;
-        bestLapTrace = currentLapTrace.slice();
-        document.getElementById('bestTime').textContent = t.toFixed(2);
-        saveBest();
-      }
-    }
-    lapStart = performance.now();
-    currentLapTrace = [];
-    ghostIndex = 0;
-    lapLineCrossed = true;
-  } else if (prevSide >= 0 && side < 0) {
-    lapLineCrossed = false;
-  }
-  prevSide = side;
-
-  if (lapLineCrossed) currentLapTrace.push({ x: car.x, y: car.y, angle: car.angle });
-  document.getElementById('lapTime').textContent = ((performance.now() - lapStart) / 1000).toFixed(2);
-}
-
-function render() {
-  const day = (Math.sin(worldTime * 0.05) + 1) / 2;
-  ctx.fillStyle = lerpColor('#001a33', '#87CEEB', day);
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-  drawTrack(day);
-  let g = null;
-  if (bestLapTrace && bestLapTrace.length) {
-    g = bestLapTrace[ghostIndex];
     if (g) {
       ctx.save();
       ctx.globalAlpha = 0.5;
@@ -292,56 +171,217 @@ function render() {
       ctx.fillRect(-10, -5, 20, 10);
       ctx.restore();
     }
-  }
-  // car reflection
-  ctx.save();
-  ctx.translate(car.x, car.y);
-  ctx.rotate(car.angle);
-  ctx.scale(1, -1);
-  ctx.globalAlpha = 0.3;
-  ctx.fillStyle = 'red';
-  ctx.fillRect(-10, -5, 20, 10);
-  ctx.restore();
 
-  // player car
-  ctx.save();
-  ctx.translate(car.x, car.y);
-  ctx.rotate(car.angle);
-  ctx.fillStyle = 'red';
-  ctx.fillRect(-10, -5, 20, 10);
-  ctx.restore();
-
-  if (day < 0.3) {
     ctx.save();
     ctx.translate(car.x, car.y);
     ctx.rotate(car.angle);
-    ctx.fillStyle = 'rgba(255,255,200,0.3)';
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(400, -100);
-    ctx.lineTo(400, 100);
-    ctx.closePath();
-    ctx.fill();
+    ctx.fillStyle = 'red';
+    ctx.fillRect(-10, -5, 20, 10);
+    ctx.restore();
+
     ctx.restore();
   }
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-  for (const drop of rainDrops) {
-    ctx.beginPath();
-    ctx.moveTo(drop.x, drop.y);
-    ctx.lineTo(drop.x + 2, drop.y + 10);
-    ctx.stroke();
+  // line side helper for lap detection
+  let startLine = { x1: track[0].x, y1: track[0].y, x2: track[1].x, y2: track[1].y };
+  function lineSide(p) {
+    return (startLine.x2 - startLine.x1) * (p.y - startLine.y1) - (startLine.y2 - startLine.y1) * (p.x - startLine.x1);
   }
-  renderMiniMap(g);
-  if (g) ghostIndex = (ghostIndex + 1) % bestLapTrace.length;
-}
 
-let last = performance.now();
-function loop(ts) {
-  const dt = (ts - last) / 1000;
-  last = ts;
-  update(dt);
-  render();
+  // --- car setup ---
+  const car = {
+    x: track[0].x,
+    y: track[0].y,
+    angle: Math.atan2(track[1].y - track[0].y, track[1].x - track[0].x),
+    speed: 0,
+  };
+
+  const keys = {};
+  window.addEventListener('keydown', (e) => (keys[e.key] = true));
+  window.addEventListener('keyup', (e) => (keys[e.key] = false));
+
+  // tilt controls
+  let tiltSteer = 0;
+  let tiltActive = false;
+  window.addEventListener('deviceorientation', (e) => {
+    if (e.gamma != null) {
+      tiltActive = true;
+      tiltSteer = Math.max(-1, Math.min(1, e.gamma / 30));
+    }
+  });
+
+  // ghost storage
+  let bestReplay = null;
+  try {
+    bestReplay = JSON.parse(localStorage.getItem(`car-racer-best-${seed}`));
+  } catch (e) {}
+  let bestLapTrace = bestReplay ? bestReplay.trace : null;
+  let bestLapTime = bestReplay ? bestReplay.time : null;
+  if (bestLapTime) document.getElementById('bestTime').textContent = bestLapTime.toFixed(2);
+
+  let lapHistory = [];
+  try {
+    lapHistory = JSON.parse(localStorage.getItem(`car-racer-laps-${seed}`)) || [];
+  } catch (e) {}
+
+  let currentLapTrace = [];
+  let lapLineCrossed = false;
+  let lapStart = performance.now();
+  let prevSide = lineSide(car);
+  let ghostIndex = 0;
+
+  function saveBest() {
+    if (bestLapTrace)
+      localStorage.setItem(
+        `car-racer-best-${seed}`,
+        JSON.stringify({ time: bestLapTime, trace: bestLapTrace }),
+      );
+  }
+
+  function saveLaps() {
+    localStorage.setItem(`car-racer-laps-${seed}`, JSON.stringify(lapHistory));
+  }
+
+  function update(dt) {
+    // controls
+    let steer = tiltActive ? tiltSteer : 0;
+    if (keys['ArrowLeft']) steer -= 1;
+    if (keys['ArrowRight']) steer += 1;
+    steer = applyCurve(steer, curveType);
+    let accel = tiltActive ? 1 : 0;
+    if (keys['ArrowUp']) accel += 1;
+    if (keys['ArrowDown']) accel -= 1;
+
+    if (car.speed < 50) {
+      const cx = WIDTH / 2;
+      const cy = HEIGHT / 2;
+      const desired = Math.atan2(cy - car.y, cx - car.x);
+      let diff = desired - car.angle;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      steer += diff * 0.5;
+    }
+
+    // physics
+    const ACCEL = 200;
+    const FRICTION = 50;
+    car.speed += accel * ACCEL * dt;
+    car.speed -= FRICTION * dt;
+    if (car.speed < 0) car.speed = 0;
+    let turn = steer * car.speed * 0.002;
+    if (tractionAssist) {
+      const maxLat = 300;
+      const lat = Math.abs(car.speed * turn);
+      if (lat > maxLat) turn = (Math.sign(turn) * maxLat) / car.speed;
+    }
+    car.angle += turn;
+    car.x += Math.cos(car.angle) * car.speed * dt;
+    car.y += Math.sin(car.angle) * car.speed * dt;
+
+    worldTime += dt;
+    for (const drop of rainDrops) {
+      drop.y += 400 * dt;
+      if (drop.y > HEIGHT) {
+        drop.y = -20;
+        drop.x = Math.random() * WIDTH;
+      }
+    }
+
+    // lap logic
+    const side = lineSide(car);
+    if (prevSide < 0 && side >= 0) {
+      if (lapLineCrossed) {
+        const t = (performance.now() - lapStart) / 1000;
+        lapHistory.push(t);
+        saveLaps();
+        if (!bestLapTime || t < bestLapTime) {
+          bestLapTime = t;
+          bestLapTrace = currentLapTrace.slice();
+          document.getElementById('bestTime').textContent = t.toFixed(2);
+          saveBest();
+        }
+      }
+      lapStart = performance.now();
+      currentLapTrace = [];
+      ghostIndex = 0;
+      lapLineCrossed = true;
+    } else if (prevSide >= 0 && side < 0) {
+      lapLineCrossed = false;
+    }
+    prevSide = side;
+
+    if (lapLineCrossed) currentLapTrace.push({ x: car.x, y: car.y, angle: car.angle });
+    document.getElementById('lapTime').textContent = ((performance.now() - lapStart) / 1000).toFixed(2);
+  }
+
+  function render() {
+    const day = (Math.sin(worldTime * 0.05) + 1) / 2;
+    ctx.fillStyle = lerpColor('#001a33', '#87CEEB', day);
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    drawTrack(day);
+    let g = null;
+    if (bestLapTrace && bestLapTrace.length) {
+      g = bestLapTrace[ghostIndex];
+      if (g) {
+        ctx.save();
+        ctx.globalAlpha = 0.5;
+        ctx.translate(g.x, g.y);
+        ctx.rotate(g.angle);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-10, -5, 20, 10);
+        ctx.restore();
+      }
+    }
+    // car reflection
+    ctx.save();
+    ctx.translate(car.x, car.y);
+    ctx.rotate(car.angle);
+    ctx.scale(1, -1);
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = 'red';
+    ctx.fillRect(-10, -5, 20, 10);
+    ctx.restore();
+
+    // player car
+    ctx.save();
+    ctx.translate(car.x, car.y);
+    ctx.rotate(car.angle);
+    ctx.fillStyle = 'red';
+    ctx.fillRect(-10, -5, 20, 10);
+    ctx.restore();
+
+    if (day < 0.3) {
+      ctx.save();
+      ctx.translate(car.x, car.y);
+      ctx.rotate(car.angle);
+      ctx.fillStyle = 'rgba(255,255,200,0.3)';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(400, -100);
+      ctx.lineTo(400, 100);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    for (const drop of rainDrops) {
+      ctx.beginPath();
+      ctx.moveTo(drop.x, drop.y);
+      ctx.lineTo(drop.x + 2, drop.y + 10);
+      ctx.stroke();
+    }
+    renderMiniMap(g);
+    if (g) ghostIndex = (ghostIndex + 1) % bestLapTrace.length;
+  }
+
+  let last = performance.now();
+  function loop(ts) {
+    const dt = (ts - last) / 1000;
+    last = ts;
+    update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
   requestAnimationFrame(loop);
 }
-requestAnimationFrame(loop);
+
