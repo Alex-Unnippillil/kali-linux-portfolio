@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import GameLayout from './GameLayout';
+import GameLayout from './GameLayout.js';
 import { createDeck } from './memory_utils';
 
 const SIZE = 4;

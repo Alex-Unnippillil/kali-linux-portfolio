@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import GameLayout from './GameLayout';
+import GameLayout from './GameLayout.js';
 import useAssetLoader from '../../hooks/useAssetLoader';
 
 const EXTRA_LIFE_THRESHOLDS = [1000, 5000, 10000];

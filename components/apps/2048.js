@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
-import GameLayout from './GameLayout';
+import GameLayout from './GameLayout.js';
 import useGameControls from './useGameControls';
 import { findHint } from '../../apps/games/_2048/ai';
 
