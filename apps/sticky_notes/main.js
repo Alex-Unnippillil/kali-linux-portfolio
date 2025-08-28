@@ -1,9 +1,40 @@
+import { openDB } from 'idb';
+
 const notesContainer = document.getElementById('notes');
 const addNoteBtn = document.getElementById('add-note');
-let notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]');
 
-function saveNotes() {
-  localStorage.setItem('stickyNotes', JSON.stringify(notes));
+const DB_NAME = 'stickyNotes';
+const STORE_NAME = 'notes';
+const DB_VERSION = 1;
+
+const dbPromise = openDB(DB_NAME, DB_VERSION, {
+  upgrade(db, oldVersion) {
+    if (oldVersion < 1) {
+      db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+    }
+  },
+  blocked() {
+    console.error('Sticky notes DB upgrade blocked');
+  },
+  blocking() {
+    console.warn('Waiting for other tabs to close the Sticky notes DB');
+  },
+});
+
+let notes = [];
+
+async function saveNotes() {
+  try {
+    const db = await dbPromise;
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    await tx.store.clear();
+    for (const note of notes) {
+      await tx.store.put(note);
+    }
+    await tx.done;
+  } catch (err) {
+    console.error('Failed to save notes', err);
+  }
 }
 
 function createNoteElement(note) {
@@ -23,7 +54,7 @@ function createNoteElement(note) {
   colorInput.addEventListener('input', (e) => {
     note.color = e.target.value;
     el.style.backgroundColor = note.color;
-    saveNotes();
+    void saveNotes();
   });
 
   const deleteBtn = document.createElement('button');
@@ -32,7 +63,7 @@ function createNoteElement(note) {
   deleteBtn.addEventListener('click', () => {
     notes = notes.filter((n) => n.id !== note.id);
     el.remove();
-    saveNotes();
+    void saveNotes();
   });
 
   controls.appendChild(colorInput);
@@ -43,7 +74,7 @@ function createNoteElement(note) {
   textarea.value = note.content;
   textarea.addEventListener('input', (e) => {
     note.content = e.target.value;
-    saveNotes();
+    void saveNotes();
   });
   el.appendChild(textarea);
 
@@ -61,7 +92,7 @@ function addNote() {
   };
   notes.push(note);
   createNoteElement(note);
-  saveNotes();
+  void saveNotes();
 }
 
 function enableDrag(el, note) {
@@ -82,10 +113,37 @@ function enableDrag(el, note) {
   function onMouseUp() {
     document.removeEventListener('mousemove', onMouseMove);
     document.removeEventListener('mouseup', onMouseUp);
-    saveNotes();
+    void saveNotes();
   }
   el.addEventListener('mousedown', onMouseDown);
 }
+async function init() {
+  try {
+    const db = await dbPromise;
+    notes = await db.getAll(STORE_NAME);
+
+    if (notes.length === 0) {
+      const legacyNotes = JSON.parse(
+        localStorage.getItem('stickyNotes') || '[]',
+      );
+      if (legacyNotes.length) {
+        notes = legacyNotes;
+        await saveNotes();
+        localStorage.removeItem('stickyNotes');
+      }
+    }
+
+    notes.forEach(createNoteElement);
+  } catch (err) {
+    console.error('Failed to load notes', err);
+    try {
+      notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]');
+      notes.forEach(createNoteElement);
+    } catch (e) {
+      console.error('Failed to load legacy notes', e);
+    }
+  }
+}
 
 addNoteBtn.addEventListener('click', addNote);
-notes.forEach(createNoteElement);
+void init();
