@@ -16,20 +16,36 @@ export const EMOJIS = [
   '\u{1F965}', // coconut
   '\u{1FAD0}', // blueberry
   '\u{1F96D}', // mango
-  '\u{1F345}'  // tomato
+  '\u{1F345}', // tomato
 ];
 
-// Accessible pattern deck using distinct shapes and colors
-export const PATTERNS = [
-  { value: '\u25B2', color: 'text-red-600' }, // triangle
-  { value: '\u25A0', color: 'text-blue-600' }, // square
-  { value: '\u25CF', color: 'text-green-600' }, // circle
-  { value: '\u25C6', color: 'text-yellow-600' }, // diamond
-  { value: '\u2605', color: 'text-purple-600' }, // star
-  { value: '\u271A', color: 'text-pink-600' }, // plus
-  { value: '\u25B3', color: 'text-orange-600' }, // outlined triangle
-  { value: '\u25A1', color: 'text-teal-600' }, // outlined square
+// Build a large enough pattern deck using distinct shapes and colors
+const SHAPES = ['\u25B2', '\u25A0', '\u25CF', '\u25C6', '\u2605', '\u271A', '\u25B3', '\u25A1'];
+const COLORS = [
+  'text-red-600',
+  'text-blue-600',
+  'text-green-600',
+  'text-yellow-600',
+  'text-purple-600',
+  'text-pink-600',
+  'text-orange-600',
+  'text-teal-600',
+  'text-lime-600',
+  'text-indigo-600',
+  'text-amber-600',
+  'text-rose-600',
+  'text-sky-600',
+  'text-fuchsia-600',
+  'text-violet-600',
+  'text-cyan-600',
+  'text-emerald-600',
+  'text-gray-600',
 ];
+
+export const PATTERNS = COLORS.map((color, i) => ({ value: SHAPES[i % SHAPES.length], color }));
+
+// Simple letter deck
+export const LETTERS = Array.from({ length: 26 }, (_, i) => ({ value: String.fromCharCode(65 + i) }));
 
 export function fisherYatesShuffle(array) {
   const arr = array.slice();
@@ -45,6 +61,8 @@ export function createDeck(size, type = 'emoji') {
   let selected;
   if (type === 'pattern') {
     selected = PATTERNS.slice(0, pairs);
+  } else if (type === 'letters') {
+    selected = LETTERS.slice(0, pairs);
   } else {
     selected = EMOJIS.slice(0, pairs).map((value) => ({ value }));
   }
