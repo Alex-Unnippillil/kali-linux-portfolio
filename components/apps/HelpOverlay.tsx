@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import InputRemap from './Games/common/input-remap/InputRemap';
 import useInputMapping from './Games/common/input-remap/useInputMapping';
 
@@ -157,9 +157,48 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   const info = GAME_INSTRUCTIONS[gameId];
   const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const prevFocus = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!overlayRef.current) return;
+    prevFocus.current = document.activeElement as HTMLElement | null;
+    const selectors =
+      'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])';
+    const focusables = Array.from(
+      overlayRef.current.querySelectorAll<HTMLElement>(selectors)
+    );
+    focusables[0]?.focus();
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Tab' && focusables.length > 0) {
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    const node = overlayRef.current;
+    node.addEventListener('keydown', handleKey);
+    return () => {
+      node.removeEventListener('keydown', handleKey);
+      prevFocus.current?.focus();
+    };
+  }, [onClose]);
+
   if (!info) return null;
   return (
     <div
+      ref={overlayRef}
       className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
       role="dialog"
       aria-modal="true"
@@ -187,7 +226,6 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
         <button
           onClick={onClose}
           className="mt-4 px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
-          autoFocus
         >
           Close
         </button>
