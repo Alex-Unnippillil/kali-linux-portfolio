@@ -1,5 +1,5 @@
 export const COYOTE_TIME = 0.1; // 100ms
-export const JUMP_BUFFER_TIME = 0.1; // 100ms
+export const JUMP_BUFFER_TIME = 0.1; // 100ms default
 export const GRAVITY = 2000;
 export const ACCEL = 1200;
 export const FRICTION = 800;
@@ -20,7 +20,7 @@ export class Player {
   }
 }
 
-export function updatePhysics(player, input, dt) {
+export function updatePhysics(player, input, dt, opts = {}) {
   // horizontal acceleration and friction
   if (input.right) {
     player.vx += ACCEL * dt;
@@ -38,7 +38,8 @@ export function updatePhysics(player, input, dt) {
   if (player.onGround) player.coyoteTimer = COYOTE_TIME;
   else player.coyoteTimer -= dt;
 
-  if (input.jump) player.jumpBufferTimer = JUMP_BUFFER_TIME;
+  const jumpBuffer = opts.jumpBuffer ?? JUMP_BUFFER_TIME;
+  if (input.jump) player.jumpBufferTimer = jumpBuffer;
   else player.jumpBufferTimer -= dt;
 
   // jump

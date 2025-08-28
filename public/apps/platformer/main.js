@@ -43,6 +43,54 @@ const effects = [];
 const timerEl = document.getElementById('timer');
 const completeEl = document.getElementById('complete');
 
+// Settings UI and persistence
+const bufferSlider = document.getElementById('bufferSlider');
+const bufferLabel = document.getElementById('bufferLabel');
+let jumpBufferMs = Number(localStorage.getItem('pf-buffer') || '100');
+bufferSlider.value = String(jumpBufferMs);
+bufferLabel.textContent = String(jumpBufferMs);
+bufferSlider.addEventListener('input', () => {
+  jumpBufferMs = Number(bufferSlider.value);
+  bufferLabel.textContent = String(jumpBufferMs);
+  localStorage.setItem('pf-buffer', String(jumpBufferMs));
+});
+
+const padButtons = {
+  left: document.getElementById('padLeft'),
+  right: document.getElementById('padRight'),
+  jump: document.getElementById('padJump')
+};
+const padMap = JSON.parse(localStorage.getItem('pf-pad') || '{"left":14,"right":15,"jump":0}');
+Object.keys(padButtons).forEach(a => {
+  padButtons[a].textContent = padMap[a];
+});
+
+let waitingPad = null;
+function pollRemap() {
+  if (!waitingPad) return;
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  for (const gp of pads) {
+    if (!gp) continue;
+    for (let i = 0; i < gp.buttons.length; i++) {
+      if (gp.buttons[i].pressed) {
+        padMap[waitingPad] = i;
+        padButtons[waitingPad].textContent = i;
+        localStorage.setItem('pf-pad', JSON.stringify(padMap));
+        waitingPad = null;
+        return;
+      }
+    }
+  }
+  requestAnimationFrame(pollRemap);
+}
+Object.keys(padButtons).forEach(a => {
+  padButtons[a].addEventListener('click', () => {
+    waitingPad = a;
+    padButtons[a].textContent = '...';
+    requestAnimationFrame(pollRemap);
+  });
+});
+
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
 });
@@ -133,8 +181,14 @@ function update(dt) {
     right: keys['ArrowRight'],
     jump: keys['Space']
   };
+  const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
+  if (gp) {
+    input.left = input.left || gp.buttons[padMap.left]?.pressed;
+    input.right = input.right || gp.buttons[padMap.right]?.pressed;
+    input.jump = input.jump || gp.buttons[padMap.jump]?.pressed;
+  }
   const wasOnGround = player.onGround;
-  updatePhysics(player, input, dt);
+  updatePhysics(player, input, dt, { jumpBuffer: jumpBufferMs / 1000 });
   movePlayer(player, tiles, tileSize, dt);
   if (!reduceMotion && !wasOnGround && player.onGround) {
     spawnDust(player.x + player.w / 2, player.y + player.h);

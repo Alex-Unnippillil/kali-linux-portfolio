@@ -14,6 +14,22 @@
     <button id="btnRight">▶</button>
     <button id="btnJump">⮝</button>
   </div>
+  <div id="settings">
+    <div>
+      Buffer:
+      <input id="bufferSlider" type="range" min="0" max="300" />
+      <span id="bufferLabel"></span>ms
+    </div>
+    <div>
+      Pad Left: <button id="padLeft"></button>
+    </div>
+    <div>
+      Pad Right: <button id="padRight"></button>
+    </div>
+    <div>
+      Pad Jump: <button id="padJump"></button>
+    </div>
+  </div>
   <div id="announcer" class="sr-only" aria-live="polite"></div>
   <script type="module" src="main.js"></script>
 </body>
