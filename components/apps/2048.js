@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useState } from 'react';
+import { useSettings } from '../../hooks/useSettings';
 import usePersistentState from '../../hooks/usePersistentState';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
@@ -167,6 +168,20 @@ const colorBlindColors = {
   2048: 'bg-yellow-600 text-white',
 };
 
+const highContrastColors = {
+  2: 'bg-gray-100 text-black',
+  4: 'bg-gray-200 text-black',
+  8: 'bg-gray-300 text-black',
+  16: 'bg-gray-500 text-white',
+  32: 'bg-gray-700 text-white',
+  64: 'bg-gray-800 text-white',
+  128: 'bg-gray-900 text-white',
+  256: 'bg-black text-white',
+  512: 'bg-yellow-500 text-black',
+  1024: 'bg-yellow-600 text-black',
+  2048: 'bg-yellow-700 text-black',
+};
+
 const validateBoard = (b) =>
   Array.isArray(b) &&
   b.length === SIZE &&
@@ -189,6 +204,7 @@ const Game2048 = () => {
   const [combo, setCombo] = useState(0);
   const [hint, setHint] = useState(null);
   const [demo, setDemo] = useState(false);
+  const { highContrast, setHighContrast } = useSettings();
 
   useEffect(() => {
     if (animCells.size > 0) {
@@ -376,6 +392,14 @@ const Game2048 = () => {
             />
             <span>Colorblind</span>
           </label>
+          <label className="flex items-center space-x-1 px-2">
+            <input
+              type="checkbox"
+              checked={highContrast}
+              onChange={() => setHighContrast(!highContrast)}
+            />
+            <span>High Contrast</span>
+          </label>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={() => setDemo((d) => !d)}
@@ -406,7 +430,11 @@ const Game2048 = () => {
           {board.map((row, rIdx) =>
             row.map((cell, cIdx) => {
               const key = `${rIdx}-${cIdx}`;
-              const colors = colorBlind ? colorBlindColors : tileColors;
+              const colors = highContrast
+                ? highContrastColors
+                : colorBlind
+                ? colorBlindColors
+                : tileColors;
               return (
                 <div
                   key={key}
