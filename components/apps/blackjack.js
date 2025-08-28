@@ -22,6 +22,8 @@ const Blackjack = () => {
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = useState(true);
   const [options, setOptions] = useState({ decks: 6, hitSoft17: true });
+  const [showHints, setShowHints] = useState(false);
+  const [history, setHistory] = useState([]);
 
   const initGame = useCallback(
     (br = bankroll) => {
@@ -77,6 +79,7 @@ const Blackjack = () => {
   useEffect(() => {
     if (gameRef.current && gameRef.current.playerHands.length === 0) {
       initGame(bankroll);
+      setHistory([]);
     }
   }, [options, bankroll, initGame]);
 
@@ -134,6 +137,7 @@ const Blackjack = () => {
   const finishRound = () => {
     const dealer = [...gameRef.current.dealerHand];
     const extra = dealer.slice(2);
+    setHistory([...gameRef.current.history]);
     let delay = 0;
 
     extra.forEach((_, i) => {
@@ -187,6 +191,7 @@ const Blackjack = () => {
     setBankroll(br);
     setBet(0);
     setMessage('Place your bet');
+    setHistory([]);
   };
 
   // drawing
@@ -279,21 +284,23 @@ const Blackjack = () => {
             ctx.font = '16px sans-serif';
             ctx.fillText(hand.bet.toString(), baseX, HEIGHT - 70);
 
-            const hint = basicStrategy(hand.cards, dealer[0], {
-              canDouble: game.bankroll >= hand.bet && hand.cards.length === 2,
-              canSplit:
-                hand.cards.length === 2 && cardValue(hand.cards[0]) === cardValue(hand.cards[1]) && game.bankroll >= hand.bet,
-              canSurrender: hand.cards.length === 2,
-            });
-            const badgeX = baseX + hand.cards.length * CARD_W * 0.7 + 10;
-            const badgeY = HEIGHT - CARD_H - 50;
-            ctx.fillStyle = 'gold';
-            ctx.beginPath();
-            ctx.arc(badgeX, badgeY, 12, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.fillStyle = '#000';
-            ctx.font = '12px sans-serif';
-            ctx.fillText(hint[0].toUpperCase(), badgeX - 4, badgeY + 4);
+            if (showHints) {
+              const hint = basicStrategy(hand.cards, dealer[0], {
+                canDouble: game.bankroll >= hand.bet && hand.cards.length === 2,
+                canSplit:
+                  hand.cards.length === 2 && cardValue(hand.cards[0]) === cardValue(hand.cards[1]) && game.bankroll >= hand.bet,
+                canSurrender: hand.cards.length === 2,
+              });
+              const badgeX = baseX + hand.cards.length * CARD_W * 0.7 + 10;
+              const badgeY = HEIGHT - CARD_H - 50;
+              ctx.fillStyle = 'gold';
+              ctx.beginPath();
+              ctx.arc(badgeX, badgeY, 12, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.fillStyle = '#000';
+              ctx.font = '12px sans-serif';
+              ctx.fillText(hint[0].toUpperCase(), badgeX - 4, badgeY + 4);
+            }
           });
         }
       }
@@ -302,7 +309,7 @@ const Blackjack = () => {
 
     animRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animRef.current);
-  }, [paused, canvasRef]);
+  }, [paused, canvasRef, showHints]);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
@@ -345,6 +352,14 @@ const Blackjack = () => {
           />
           <span>Dealer hits soft 17</span>
         </label>
+        <label className="flex items-center space-x-1">
+          <input
+            type="checkbox"
+            checked={showHints}
+            onChange={(e) => setShowHints(e.target.checked)}
+          />
+          <span>Show hints</span>
+        </label>
       </div>
       {gameRef.current && gameRef.current.playerHands.length === 0 ? (
         <div className="mt-2">
@@ -386,6 +401,23 @@ const Blackjack = () => {
         </div>
       )}
       <div className="mt-2 text-sm" aria-live="polite" aria-atomic="true">{message}</div>
+      {history.length > 0 && (
+        <div className="mt-2 text-xs max-h-32 overflow-auto w-full px-4">
+          {history.map((h, i) => (
+            <div key={i}>
+              Round {i + 1}: Dealer {h.dealer.map((c) => c.value).join(' ')} |
+              {h.playerHands
+                .map(
+                  (ph, j) =>
+                    ` Hand ${j + 1} ${ph.cards
+                      .map((c) => c.value)
+                      .join(' ')} ${ph.result}`,
+                )
+                .join(' | ')}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
