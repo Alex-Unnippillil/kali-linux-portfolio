@@ -8,6 +8,16 @@ global.TextEncoder = TextEncoder;
 // @ts-ignore
 global.TextDecoder = TextDecoder as any;
 
+// Ensure a global `fetch` exists for tests. Jest's jsdom environment
+// doesn't provide one on the Node `global` object, which causes
+// `jest.spyOn(global, 'fetch')` to fail. Providing a simple stub allows
+// tests to spy on and mock `fetch` as needed.
+// @ts-ignore
+if (!global.fetch) {
+  // @ts-ignore
+  global.fetch = () => Promise.reject(new Error('fetch not implemented'));
+}
+
 // jsdom does not provide a global Image constructor which is used by
 // some components (e.g. window borders). A minimal mock is sufficient
 // for our tests because we only rely on the instance existing.
