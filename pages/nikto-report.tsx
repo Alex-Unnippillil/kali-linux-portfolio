@@ -68,9 +68,9 @@ const NiktoReport: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {filtered.map((f, idx) => (
+          {filtered.map((f) => (
             <tr
-              key={idx}
+              key={f.path}
               className="odd:bg-gray-800 cursor-pointer hover:bg-gray-700"
               onClick={() => setSelected(f)}
             >

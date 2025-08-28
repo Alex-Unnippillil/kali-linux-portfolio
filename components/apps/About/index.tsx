@@ -222,8 +222,8 @@ function Timeline() {
           Timeline
         </h3>
         <ol className="border-l-2 border-gray-400">
-          {events.map((event, i) => (
-            <li key={i} className="mb-4 ml-4">
+          {events.map((event) => (
+            <li key={event.date} className="mb-4 ml-4">
               <div className="flex items-center">
                 <div className="w-4 h-4 bg-ubt-blue rounded-full -ml-2" aria-hidden="true" />
                 <time className="ml-2 text-sm">{event.date}</time>
@@ -375,11 +375,11 @@ function Projects({ projects }: { projects: any[] }) {
           <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full" />
         </div>
       </div>
-      {projects.map((project, index) => {
+      {projects.map((project) => {
         const projectNameFromLink = project.link.split('/');
         const projectName = projectNameFromLink[projectNameFromLink.length - 1];
         return (
-          <div key={index} className="flex w-full flex-col px-4">
+          <div key={project.link} className="flex w-full flex-col px-4">
             <div className="w-full py-1 px-2 my-2 border border-gray-50 border-opacity-10 rounded hover:bg-gray-50 hover:bg-opacity-5">
               <div className="flex flex-wrap justify-between items-center">
                 <div className="flex justify-center items-center">
@@ -391,20 +391,20 @@ function Projects({ projects }: { projects: any[] }) {
                 <div className="text-gray-300 font-light text-sm">{project.date}</div>
               </div>
               <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-1">
-                {project.description.map((desc: string, idx: number) => (
-                  <li key={idx} className="list-disc mt-1 text-gray-100">
+                {project.description.map((desc: string) => (
+                  <li key={desc} className="list-disc mt-1 text-gray-100">
                     {desc}
                   </li>
                 ))}
               </ul>
               <div className="flex flex-wrap items-start justify-start text-xs py-2">
                 {project.domains
-                  ? project.domains.map((domain: string, idx: number) => {
+                  ? project.domains.map((domain: string) => {
                       const borderColorClass = `border-${tag_colors[domain]}`;
                       const textColorClass = `text-${tag_colors[domain]}`;
                       return (
                         <a
-                          key={idx}
+                          key={domain}
                           href={project.link}
                           target="_blank"
                           rel="noopener noreferrer"
