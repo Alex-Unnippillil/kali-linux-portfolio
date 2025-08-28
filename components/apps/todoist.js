@@ -16,11 +16,12 @@ const WIP_LIMITS = {
 export default function Todoist() {
   const [groups, setGroups] = useState(initialGroups);
   const [animating, setAnimating] = useState('');
-  const [form, setForm] = useState({ title: '', due: '', labels: '', subtasks: '' });
+  const [form, setForm] = useState({ title: '', due: '', tags: '', subtasks: '' });
   const [search, setSearch] = useState('');
   const dragged = useRef({ group: '', id: null, title: '' });
   const liveRef = useRef(null);
   const workerRef = useRef(null);
+  const scheduledRef = useRef({});
   const prefersReducedMotion = useRef(
     typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -32,7 +33,13 @@ export default function Todoist() {
   useEffect(() => {
     get(KEY, store).then((data) => {
       if (data) {
-        setGroups({ ...initialGroups, ...data });
+        const migrated = Object.fromEntries(
+          Object.entries({ ...initialGroups, ...data }).map(([g, tasks]) => [
+            g,
+            tasks.map((t) => ({ ...t, tags: t.tags || t.labels || [] })),
+          ])
+        );
+        setGroups(migrated);
       }
     });
   }, []);
@@ -49,6 +56,40 @@ export default function Todoist() {
     }
     return () => workerRef.current?.terminate();
   }, []);
+
+  const scheduleReminder = (task) => {
+    if (
+      typeof window === 'undefined' ||
+      !('Notification' in window) ||
+      !task.due ||
+      task.done ||
+      scheduledRef.current[task.id]
+    ) {
+      return;
+    }
+    const time = new Date(task.due).getTime();
+    const delay = time - Date.now();
+    if (isNaN(time) || delay <= 0) return;
+    const notify = () => new Notification(task.title, { body: 'Task due' });
+    const trigger = () => setTimeout(notify, delay);
+    const mark = () => {
+      scheduledRef.current[task.id] = true;
+      trigger();
+    };
+    if (Notification.permission === 'granted') {
+      mark();
+    } else if (Notification.permission === 'default') {
+      Notification.requestPermission().then((perm) => {
+        if (perm === 'granted') {
+          mark();
+        }
+      });
+    }
+  };
+
+  useEffect(() => {
+    Object.values(groups).forEach((tasks) => tasks.forEach(scheduleReminder));
+  }, [groups]);
 
   const announce = (task, group) => {
     if (liveRef.current) {
@@ -171,8 +212,8 @@ export default function Todoist() {
       id: Date.now(),
       title: form.title,
       due: form.due || undefined,
-      labels: form.labels
-        ? form.labels.split(',').map((l) => l.trim()).filter(Boolean)
+      tags: form.tags
+        ? form.tags.split(',').map((l) => l.trim()).filter(Boolean)
         : [],
       subtasks: form.subtasks
         ? form.subtasks
@@ -187,7 +228,7 @@ export default function Todoist() {
       Today: [...groups.Today, newTask],
     };
     finalizeMove(newGroups, form.title, 'Today');
-    setForm({ title: '', due: '', labels: '', subtasks: '' });
+    setForm({ title: '', due: '', tags: '', subtasks: '' });
   };
 
   const matchesSearch = (task) => {
@@ -195,7 +236,7 @@ export default function Todoist() {
     const q = search.toLowerCase();
     return (
       task.title.toLowerCase().includes(q) ||
-      task.labels.some((l) => l.toLowerCase().includes(q)) ||
+      task.tags.some((l) => l.toLowerCase().includes(q)) ||
       task.subtasks.some((s) => s.title.toLowerCase().includes(q))
     );
   };
@@ -215,17 +256,17 @@ export default function Todoist() {
             required
           />
           <input
-            type="date"
+            type="datetime-local"
             name="due"
             value={form.due}
             onChange={handleChange}
             className="border p-1"
           />
           <input
-            name="labels"
-            value={form.labels}
+            name="tags"
+            value={form.tags}
             onChange={handleChange}
-            placeholder="labels"
+            placeholder="tags"
             className="border p-1"
           />
           <textarea
@@ -285,11 +326,13 @@ export default function Todoist() {
                 <div className="flex-1">
                   <div className={`font-medium ${task.done ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
                   {task.due && (
-                    <div className="text-xs text-gray-500">{task.due}</div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(task.due).toLocaleString()}
+                    </div>
                   )}
-                  {task.labels.length > 0 && (
+                  {task.tags.length > 0 && (
                     <div className="text-xs mt-1">
-                      {task.labels.map((l) => (
+                      {task.tags.map((l) => (
                         <span
                           key={l}
                           className="mr-1 px-1 bg-gray-200 rounded"
