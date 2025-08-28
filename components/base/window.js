@@ -296,24 +296,65 @@ export class Window extends Component {
         var r = document.querySelector("#sidebar-" + this.id);
         var sidebBarApp = r.getBoundingClientRect();
 
-        r = document.querySelector("#" + this.id);
-        // translate window to that position
-        r.style.transform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
-        this.props.hasMinimised(this.id);
+        const node = document.querySelector("#" + this.id);
+        const endTransform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
+        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (prefersReducedMotion) {
+            node.style.transform = endTransform;
+            this.props.hasMinimised(this.id);
+            return;
+        }
+
+        const startTransform = node.style.transform;
+        this._dockAnimation = node.animate(
+            [{ transform: startTransform }, { transform: endTransform }],
+            { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
+        );
+        this._dockAnimation.onfinish = () => {
+            node.style.transform = endTransform;
+            this.props.hasMinimised(this.id);
+            this._dockAnimation.onfinish = null;
+        };
     }
 
     restoreWindow = () => {
-        var r = document.querySelector("#" + this.id);
+        const node = document.querySelector("#" + this.id);
         this.setDefaultWindowDimenstion();
         // get previous position
-        let posx = r.style.getPropertyValue("--window-transform-x");
-        let posy = r.style.getPropertyValue("--window-transform-y");
+        let posx = node.style.getPropertyValue("--window-transform-x");
+        let posy = node.style.getPropertyValue("--window-transform-y");
+        const startTransform = node.style.transform;
+        const endTransform = `translate(${posx},${posy})`;
+        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        r.style.transform = `translate(${posx},${posy})`;
-        setTimeout(() => {
+        if (prefersReducedMotion) {
+            node.style.transform = endTransform;
             this.setState({ maximized: false });
             this.checkOverlap();
-        }, 300);
+            return;
+        }
+
+        if (this._dockAnimation) {
+            this._dockAnimation.onfinish = () => {
+                node.style.transform = endTransform;
+                this.setState({ maximized: false });
+                this.checkOverlap();
+                this._dockAnimation.onfinish = null;
+            };
+            this._dockAnimation.reverse();
+        } else {
+            this._dockAnimation = node.animate(
+                [{ transform: startTransform }, { transform: endTransform }],
+                { duration: 300, easing: 'ease-in-out', fill: 'forwards' }
+            );
+            this._dockAnimation.onfinish = () => {
+                node.style.transform = endTransform;
+                this.setState({ maximized: false });
+                this.checkOverlap();
+                this._dockAnimation.onfinish = null;
+            };
+        }
     }
 
     maximizeWindow = () => {
