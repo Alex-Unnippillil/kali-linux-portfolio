@@ -39,7 +39,7 @@ const Checkers = () => {
   const pathRef = useRef<[number, number][]>([]);
   const makeMoveRef = useRef<((move: Move) => void) | null>(null);
   const crownFrame = useRef<number>(0);
-  const cellRefs = useRef<HTMLDivElement[][]>([]);
+  const cellRefs = useRef<(HTMLDivElement | null)[][]>([]);
 
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLDivElement>,

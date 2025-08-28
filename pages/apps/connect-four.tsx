@@ -219,8 +219,10 @@ const ConnectFour = () => {
     [winner, animDisc, player, board]
   );
 
-  const useControls = useGameControls as (cols: number, onDrop: (col: number) => void) => GameControls;
-  const [selectedCol, setSelectedCol] = useControls(COLS, dropDisc);
+  const [selectedCol, setSelectedCol] = (useGameControls as any)(
+    COLS,
+    dropDisc
+  ) as GameControls;
 
   const [aiDepth, setAiDepth] = useState(4);
   const [winColumn, setWinColumn] = useState<number | null>(null);

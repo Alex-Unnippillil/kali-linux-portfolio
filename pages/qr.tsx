@@ -39,7 +39,7 @@ const QRPage: React.FC = () => {
         const codeReader = new BrowserQRCodeReader();
         codeReaderRef.current = codeReader;
         codeReader.decodeFromVideoDevice(
-          undefined,
+          null,
           videoRef.current!,
           (result, err) => {
             if (result) {
