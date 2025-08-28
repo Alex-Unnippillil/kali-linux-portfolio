@@ -40,3 +40,8 @@ yarn-error.log*
 .vercel
 # npm lockfile
 package-lock.json
+
+# compiled utilities
+utils/gamepad.js
+tsconfig.gamepad.tsbuildinfo
+tsconfig.tsbuildinfo

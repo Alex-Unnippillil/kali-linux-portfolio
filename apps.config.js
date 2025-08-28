@@ -17,7 +17,7 @@ import { displayNikto } from './components/apps/nikto';
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
-const CalcApp = createDynamicApp('calc', 'Calc');
+const CalculatorApp = createDynamicApp('calculator', 'Calculator');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
 const ConnectFourApp = createDynamicApp('connect-four', 'Connect Four');
@@ -58,6 +58,7 @@ const QrToolApp = createDynamicApp('qr_tool', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
 const QuoteGeneratorApp = createDynamicApp('quote_generator', 'Quote Generator');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
+const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 
@@ -91,7 +92,7 @@ const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
 
 
 const displayTerminal = createDisplay(TerminalApp);
-const displayTerminalCalc = createDisplay(CalcApp);
+const displayCalculator = createDisplay(CalculatorApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
 const displayConnectFour = createDisplay(ConnectFourApp);
@@ -132,6 +133,7 @@ const displayQrTool = createDisplay(QrToolApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuoteGenerator = createDisplay(QuoteGeneratorApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
+const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -546,13 +548,13 @@ const apps = [
     screen: displayChrome,
   },
   {
-    id: 'calc',
-    title: 'Calc',
+    id: 'calculator',
+    title: 'Calculator',
     icon: './themes/Yaru/apps/calc.png',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayTerminalCalc,
+    screen: displayCalculator,
     resizable: false,
     allowMaximize: false,
     defaultWidth: 28,
@@ -810,6 +812,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'weather-widget',
+    title: 'Weather Widget',
+    icon: './themes/Yaru/apps/weather.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWeatherWidget,
   },
   {
     id: 'radare2',

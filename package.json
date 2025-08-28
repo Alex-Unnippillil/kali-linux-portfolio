@@ -7,6 +7,7 @@
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
     "prebuild": "npm run build:gamepad",
     "dev": "next dev",
+    "prebuild": "tsc -p tsconfig.gamepad.json",
     "build": "next build",
     "start": "next start",
     "export": "next export",
