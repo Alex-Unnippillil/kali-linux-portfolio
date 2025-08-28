@@ -8,6 +8,8 @@ import {
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
   setReducedMotion as saveReducedMotion,
+  getFontScale as loadFontScale,
+  setFontScale as saveFontScale,
   defaults,
 } from '../utils/settingsStore';
 type Density = 'regular' | 'compact';
@@ -17,10 +19,12 @@ interface SettingsContextValue {
   wallpaper: string;
   density: Density;
   reducedMotion: boolean;
+  fontScale: number;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
+  setFontScale: (value: number) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -28,10 +32,12 @@ export const SettingsContext = createContext<SettingsContextValue>({
   wallpaper: defaults.wallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
+  fontScale: defaults.fontScale,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
+  setFontScale: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -39,6 +45,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+  const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
 
   useEffect(() => {
     (async () => {
@@ -46,6 +53,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
+      setFontScale(await loadFontScale());
     })();
   }, []);
 
@@ -89,8 +97,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
 
+  useEffect(() => {
+    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
+    saveFontScale(fontScale);
+  }, [fontScale]);
+
   return (
-    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, setAccent, setWallpaper, setDensity, setReducedMotion }}>
+    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, fontScale, setAccent, setWallpaper, setDensity, setReducedMotion, setFontScale }}>
       {children}
     </SettingsContext.Provider>
   );
