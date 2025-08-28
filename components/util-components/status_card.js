@@ -27,7 +27,8 @@ export class StatusCard extends Component {
                 this.wrapperRef = React.createRef();
                 this.state = {
                         sound_level: 75, // better of setting default values from localStorage
-                        brightness_level: 100 // setting default value to 100 so that by default its always full.
+                        brightness_level: 100, // setting default value to 100 so that by default its always full.
+                        color_scheme: 'system'
                 };
         }
         handleClickOutside = () => {
@@ -36,10 +37,12 @@ export class StatusCard extends Component {
         componentDidMount() {
                 this.setState({
                         sound_level: localStorage.getItem('sound-level') || 75,
-                        brightness_level: localStorage.getItem('brightness-level') || 100
+                        brightness_level: localStorage.getItem('brightness-level') || 100,
+                        color_scheme: localStorage.getItem('color-scheme') || 'system'
                 }, () => {
                         document.getElementById('monitor-screen').style.filter = `brightness(${3 / 400 * this.state.brightness_level +
                                 0.25})`;
+                        this.applyScheme(this.state.color_scheme);
                 })
         }
 
@@ -55,9 +58,23 @@ export class StatusCard extends Component {
                 localStorage.setItem('sound-level', e.target.value);
         };
 
-        // theme toggling removed for Kali theme
+        applyScheme = (scheme) => {
+                if (scheme === 'system') {
+                        document.documentElement.removeAttribute('data-color-scheme');
+                        localStorage.removeItem('color-scheme');
+                } else {
+                        document.documentElement.dataset.colorScheme = scheme;
+                        localStorage.setItem('color-scheme', scheme);
+                }
+        };
 
-	render() {
+        handleScheme = (e) => {
+                const scheme = e.target.value;
+                this.setState({ color_scheme: scheme });
+                this.applyScheme(scheme);
+        };
+
+        render() {
 		return (
 			<div
 				ref={this.wrapperRef}
@@ -96,7 +113,7 @@ export class StatusCard extends Component {
                                                         alt="ubuntu brightness"
                                                         sizes="16px"
                                                 />
-					</div>
+                                        </div>
                                         <Slider
                                                 onChange={this.handleBrightness}
                                                 className="ubuntu-slider w-2/3"
@@ -105,7 +122,27 @@ export class StatusCard extends Component {
                                                 aria-label="Screen brightness"
                                         />
                                 </div>
-                                {/* Theme toggle removed for fixed Kali theme */}
+                                <div className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20">
+                                        <div className="w-8">
+                                                <Image
+                                                        width={16}
+                                                        height={16}
+                                                        src="/themes/Yaru/status/weather-clear-night-symbolic.svg"
+                                                        alt="color scheme"
+                                                        sizes="16px"
+                                                />
+                                        </div>
+                                        <select
+                                                onChange={this.handleScheme}
+                                                value={this.state.color_scheme}
+                                                className="bg-ub-cool-grey text-gray-400 w-2/3 border border-ubt-cool-grey rounded"
+                                                aria-label="Color scheme"
+                                        >
+                                                <option value="system">System</option>
+                                                <option value="light">Light</option>
+                                                <option value="dark">Dark</option>
+                                        </select>
+                                </div>
                                 <div className="w-64 flex content-center justify-center">
                                         <div className="w-2/4 border-black border-opacity-50 border-b my-2 border-solid" />
                                 </div>
