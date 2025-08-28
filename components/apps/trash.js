@@ -136,15 +136,28 @@ export class Trash extends Component {
 
     confirmEmptyTrash = () => {
         const prevItems = this.state.items;
-        this.setState({ items: [], selected: [], empty: true, showEmptyModal: false }, () => {
-            localStorage.setItem('trash-empty', true);
-            this.showUndoToast(() => {
-                this.setState({ items: prevItems, empty: false });
-                localStorage.setItem('trash-empty', false);
-            }, 'Trash emptied');
-        });
-        document.removeEventListener('keydown', this.handleModalKey);
-        this.lastFocused && this.lastFocused.focus();
+        const nodes = this.contentRef.current?.querySelectorAll('.trash-item');
+        const finalize = () => {
+            this.setState({ items: [], selected: [], empty: true, showEmptyModal: false }, () => {
+                localStorage.setItem('trash-empty', true);
+                this.showUndoToast(() => {
+                    this.setState({ items: prevItems, empty: false });
+                    localStorage.setItem('trash-empty', false);
+                }, 'Trash emptied');
+            });
+            document.removeEventListener('keydown', this.handleModalKey);
+            this.lastFocused && this.lastFocused.focus();
+        };
+        if (!nodes || nodes.length === 0) {
+            finalize();
+        } else {
+            let remaining = nodes.length;
+            nodes.forEach(node =>
+                this.animateFall(node, () => {
+                    if (--remaining === 0) finalize();
+                })
+            );
+        }
     };
 
     cancelEmptyTrash = () => {
@@ -157,18 +170,45 @@ export class Trash extends Component {
     restoreSelected = () => {
         const { items, selected } = this.state;
         if (selected.length === 0) return;
-        const remaining = items.filter((_, i) => !selected.includes(i));
-        this.setState({ items: remaining, selected: [], empty: remaining.length === 0 }, () => {
-            localStorage.setItem('trash-empty', remaining.length === 0);
-        });
+        const nodes = this.contentRef.current?.querySelectorAll('.trash-item') || [];
+        const targets = Array.from(nodes).filter((_, i) => selected.includes(i));
+        const finalize = () => {
+            const remaining = items.filter((_, i) => !selected.includes(i));
+            this.setState({ items: remaining, selected: [], empty: remaining.length === 0 }, () => {
+                localStorage.setItem('trash-empty', remaining.length === 0);
+            });
+        };
+        if (targets.length === 0) {
+            finalize();
+        } else {
+            let remainingNodes = targets.length;
+            targets.forEach(node =>
+                this.animateFall(node, () => {
+                    if (--remainingNodes === 0) finalize();
+                })
+            );
+        }
     }
 
     restoreAll = () => {
         const { items } = this.state;
         if (items.length === 0) return;
-        this.setState({ items: [], selected: [], empty: true }, () => {
-            localStorage.setItem('trash-empty', true);
-        });
+        const nodes = this.contentRef.current?.querySelectorAll('.trash-item');
+        const finalize = () => {
+            this.setState({ items: [], selected: [], empty: true }, () => {
+                localStorage.setItem('trash-empty', true);
+            });
+        };
+        if (!nodes || nodes.length === 0) {
+            finalize();
+        } else {
+            let remainingNodes = nodes.length;
+            nodes.forEach(node =>
+                this.animateFall(node, () => {
+                    if (--remainingNodes === 0) finalize();
+                })
+            );
+        }
     }
 
     emptyScreen = () => {
