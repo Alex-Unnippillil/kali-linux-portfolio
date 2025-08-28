@@ -21,44 +21,69 @@ const HISTORY_KEY = 'calc-history';
 
 function setPreciseMode(on) {
   preciseMode = on;
-  preciseToggle.textContent = `Precise Mode: ${preciseMode ? 'On' : 'Off'}`;
-  preciseToggle.setAttribute('aria-pressed', preciseMode.toString());
+  if (preciseToggle) {
+    preciseToggle.textContent = `Precise Mode: ${preciseMode ? 'On' : 'Off'}`;
+    preciseToggle.setAttribute('aria-pressed', preciseMode.toString());
+  }
   math.config(preciseMode ? { number: 'Fraction' } : { number: 'number' });
 }
 
-preciseToggle.addEventListener('click', () => setPreciseMode(!preciseMode));
+preciseToggle?.addEventListener('click', () => setPreciseMode(!preciseMode));
 
-sciToggle.addEventListener('click', () => {
+sciToggle?.addEventListener('click', () => {
   const isHidden = scientific.classList.toggle('hidden');
-  sciToggle.setAttribute('aria-pressed', (!isHidden).toString());
+  sciToggle?.setAttribute('aria-pressed', (!isHidden).toString());
 });
 
 function setProgrammerMode(on) {
   programmerMode = on;
-  programmer.classList.toggle('hidden', !programmerMode);
-  progToggle.setAttribute('aria-pressed', programmerMode.toString());
+  programmer?.classList.toggle('hidden', !programmerMode);
+  progToggle?.setAttribute('aria-pressed', programmerMode.toString());
 }
 
-progToggle.addEventListener('click', () => setProgrammerMode(!programmerMode));
+progToggle?.addEventListener('click', () => setProgrammerMode(!programmerMode));
 
-historyToggle.addEventListener('click', () => {
+historyToggle?.addEventListener('click', () => {
   const isHidden = historyEl.classList.toggle('hidden');
-  historyToggle.setAttribute('aria-pressed', (!isHidden).toString());
+  historyToggle?.setAttribute('aria-pressed', (!isHidden).toString());
 });
 
-baseSelect.addEventListener('change', () => {
+baseSelect?.addEventListener('change', () => {
   currentBase = parseInt(baseSelect.value, 10);
+  validateBaseInput();
 });
 
-printBtn.addEventListener('click', printTape);
+printBtn?.addEventListener('click', printTape);
 
-display.addEventListener('input', updateParenBalance);
+display?.addEventListener('input', () => {
+  updateParenBalance();
+  validateBaseInput();
+});
 
 function updateParenBalance() {
   const open = (display.value.match(/\(/g) || []).length;
   const close = (display.value.match(/\)/g) || []).length;
   const diff = open - close;
   parenIndicator.textContent = diff === 0 ? '' : diff > 0 ? `(${diff})` : 'Unbalanced';
+}
+
+function validateBaseInput(expr = display.value) {
+  if (!programmerMode) {
+    display.setCustomValidity('');
+    return true;
+  }
+  const numbers = expr.match(/-?[0-9A-F]+/gi) || [];
+  const validChars = '0123456789ABCDEF'.slice(0, currentBase);
+  for (const num of numbers) {
+    const clean = num.replace(/^-/, '').toUpperCase();
+    if (![...clean].every((ch) => validChars.includes(ch))) {
+      const msg = `Invalid digit for base ${currentBase}`;
+      display.setCustomValidity(msg);
+      return false;
+    }
+  }
+  display.setCustomValidity('');
+  return true;
 }
 
 function insertAtCursor(text) {
@@ -79,12 +104,15 @@ buttons.forEach((btn) => {
     if (action === 'clear') {
       undoStack.push(display.value);
       display.value = '';
+      updateParenBalance();
+      validateBaseInput();
       return;
     }
 
     if (action === 'equals') {
       const expr = display.value;
       const result = evaluate(expr);
+      if (result === null) return;
       addHistory(expr, result);
       undoStack.push(expr);
       display.value = result;
@@ -104,6 +132,8 @@ buttons.forEach((btn) => {
 
     undoStack.push(display.value);
     insertAtCursor(value);
+    updateParenBalance();
+    validateBaseInput();
     display.focus();
   });
 });
@@ -122,6 +152,10 @@ function formatBase(value, base = currentBase) {
 function evaluate(expression) {
   try {
     if (programmerMode) {
+      if (!validateBaseInput(expression)) {
+        display.reportValidity?.();
+        return null;
+      }
       const decimalExpr = expression.replace(/\b[0-9A-F]+\b/gi, (m) =>
         parseInt(m, currentBase)
       );
@@ -138,6 +172,7 @@ function evaluate(expression) {
 }
 
 function renderHistory() {
+  if (!historyEl) return;
   historyEl.innerHTML = '';
   history.forEach(({ expr, result }) => {
     const entry = document.createElement('div');
@@ -161,6 +196,7 @@ function addHistory(expr, result) {
 }
 
 function loadHistory() {
+  if (!historyEl) return;
   history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
   history = history.slice(0, 10);
   renderHistory();
@@ -176,6 +212,8 @@ function printTape() {
 function undo() {
   if (undoStack.length) {
     display.value = undoStack.pop();
+    updateParenBalance();
+    validateBaseInput();
   }
 }
 
@@ -193,6 +231,8 @@ document.addEventListener('keydown', (e) => {
       e.preventDefault();
       undoStack.push(display.value);
       insertAtCursor(e.key);
+      updateParenBalance();
+      validateBaseInput();
       display.focus();
       return;
     }
@@ -201,12 +241,15 @@ document.addEventListener('keydown', (e) => {
       undoStack.push(display.value);
       display.value = display.value.slice(0, -1);
       display.selectionStart = display.selectionEnd = display.value.length;
+      updateParenBalance();
+      validateBaseInput();
       return;
     }
     if (e.key === 'Enter' || e.key === '=') {
       e.preventDefault();
       const expr = display.value;
       const result = evaluate(expr);
+      if (result === null) return;
       addHistory(expr, result);
       undoStack.push(expr);
       display.value = result;
@@ -217,6 +260,7 @@ document.addEventListener('keydown', (e) => {
       e.preventDefault();
       const expr = display.value;
       const result = evaluate(expr);
+      if (result === null) return;
       addHistory(expr, result);
       undoStack.push(expr);
       display.value = result;
@@ -225,7 +269,7 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-display.focus();
+display?.focus();
 loadHistory();
 
 if (typeof module !== 'undefined') {
