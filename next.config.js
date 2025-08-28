@@ -22,7 +22,7 @@ const ContentSecurityPolicy = [
   // Allow outbound connections for embeds and the in-browser Chrome app
   "connect-src 'self' https://* http://* ws://* wss://* https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
   // Allow iframes from any website and specific providers so the Chrome and StackBlitz apps can load arbitrary content
-  "frame-src 'self' https://* http://* https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com",
+  "frame-src 'self' https://* http://* https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
   // Enforce HTTPS for all requests
