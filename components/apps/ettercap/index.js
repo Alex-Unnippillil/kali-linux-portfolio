@@ -107,30 +107,30 @@ const EttercapApp = () => {
     };
   }, [running, target1, target2]);
 
-  const startSpoof = () => {
-    if (!target1 || !target2) return;
-    setMac1(randomMac());
-    setMac2(randomMac());
-    setStatus(`Sending spoofed ARP replies to ${target1} and ${target2}`);
-    setLogs([]);
-    setRunning(true);
-    logIntervalRef.current = setInterval(() => {
-      setLogs((prev) => {
-        const entries = [
-          `ARP reply ${target1} is-at ${attackerMac}`,
-          `ARP reply ${target2} is-at ${attackerMac}`,
-        ];
-        return [...prev, ...entries].slice(-50);
-      });
-    }, 1000);
-  };
+const startSpoof = () => {
+  if (!target1 || !target2) return;
+  setMac1(randomMac());
+  setMac2(randomMac());
+  setStatus(`Simulating spoofed ARP replies to ${target1} and ${target2}`);
+  setLogs([]);
+  setRunning(true);
+  logIntervalRef.current = setInterval(() => {
+    setLogs((prev) => {
+      const entries = [
+        `Simulated ARP reply ${target1} is-at ${attackerMac}`,
+        `Simulated ARP reply ${target2} is-at ${attackerMac}`,
+      ];
+      return [...prev, ...entries].slice(-50);
+    });
+  }, 1000);
+};
 
-  const stopSpoof = () => {
-    cancelAnimationFrame(animationRef.current);
-    clearInterval(logIntervalRef.current);
-    setRunning(false);
-    setStatus('ARP spoofing stopped');
-  };
+const stopSpoof = () => {
+  cancelAnimationFrame(animationRef.current);
+  clearInterval(logIntervalRef.current);
+  setRunning(false);
+  setStatus('ARP spoofing simulation stopped');
+};
 
   return (
     <div
@@ -156,15 +156,15 @@ const EttercapApp = () => {
           <button
             className="px-4 py-2 bg-green-600 rounded"
             onClick={startSpoof}
-            aria-label="start arp spoofing"
+            aria-label="start arp spoofing simulation"
           >
-            Spoof
+            Simulate
           </button>
         ) : (
           <button
             className="px-4 py-2 bg-red-600 rounded"
             onClick={stopSpoof}
-            aria-label="stop arp spoofing"
+            aria-label="stop arp spoofing simulation"
           >
             Stop
           </button>
@@ -307,12 +307,115 @@ const EttercapApp = () => {
           </tbody>
         </table>
       </div>
+      <div className="mt-4">
+        <h2 className="font-semibold">ARP Poisoning Flow</h2>
+        <div className="flex flex-col md:flex-row md:space-x-8 mt-2">
+          <div className="flex flex-col items-center">
+            <h3 className="mb-2">Before</h3>
+            <svg width="160" height="80" aria-hidden="true">
+              <defs>
+                <marker
+                  id="arrowhead-static-before"
+                  markerWidth="10"
+                  markerHeight="7"
+                  refX="10"
+                  refY="3.5"
+                  orient="auto"
+                >
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24" />
+                </marker>
+              </defs>
+              <rect x="10" y="30" width="60" height="20" fill="#1f2937" stroke="white" />
+              <text x="40" y="44" fill="white" textAnchor="middle" fontSize="10">
+                Victim
+              </text>
+              <rect x="90" y="30" width="60" height="20" fill="#1f2937" stroke="white" />
+              <text x="120" y="44" fill="white" textAnchor="middle" fontSize="10">
+                Gateway
+              </text>
+              <line
+                x1="70"
+                y1="40"
+                x2="90"
+                y2="40"
+                stroke="#fbbf24"
+                strokeWidth="2"
+                markerEnd="url(#arrowhead-static-before)"
+              />
+            </svg>
+          </div>
+          <div className="flex flex-col items-center mt-4 md:mt-0">
+            <h3 className="mb-2">After</h3>
+            <svg width="220" height="80" aria-hidden="true">
+              <defs>
+                <marker
+                  id="arrowhead-static-after"
+                  markerWidth="10"
+                  markerHeight="7"
+                  refX="10"
+                  refY="3.5"
+                  orient="auto"
+                >
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24" />
+                </marker>
+              </defs>
+              <rect x="10" y="30" width="60" height="20" fill="#1f2937" stroke="white" />
+              <text x="40" y="44" fill="white" textAnchor="middle" fontSize="10">
+                Victim
+              </text>
+              <rect x="85" y="30" width="60" height="20" fill="#1f2937" stroke="white" />
+              <text x="115" y="44" fill="white" textAnchor="middle" fontSize="10">
+                Attacker
+              </text>
+              <rect x="160" y="30" width="60" height="20" fill="#1f2937" stroke="white" />
+              <text x="190" y="44" fill="white" textAnchor="middle" fontSize="10">
+                Gateway
+              </text>
+              <line
+                x1="70"
+                y1="40"
+                x2="85"
+                y2="40"
+                stroke="#fbbf24"
+                strokeWidth="2"
+                markerEnd="url(#arrowhead-static-after)"
+              />
+              <line
+                x1="145"
+                y1="40"
+                x2="160"
+                y2="40"
+                stroke="#fbbf24"
+                strokeWidth="2"
+                markerEnd="url(#arrowhead-static-after)"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
       <div className="mt-4 text-xs bg-gray-800 p-2 rounded">
         <p>
           ARP poisoning works by sending forged Address Resolution Protocol
           replies to the victim and gateway so they associate the attacker&rsquo;s MAC
           address with each other&rsquo;s IP. This lets the attacker intercept the
           traffic between them.
+        </p>
+        <p className="mt-2">
+          Learn more at{' '}
+          <a
+            href="https://www.ettercap-project.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 underline"
+          >
+            the official Ettercap site
+          </a>
+          , which supports a plugin model so extensions can inspect or modify
+          captured packets without altering the core application.
+        </p>
+        <p className="mt-2">
+          This interface is a simulation only and does not execute real network
+          attacks.
         </p>
         <p className="mt-2 text-yellow-400">
           Disclaimer: for educational use only. Do not perform ARP spoofing on
