@@ -18,6 +18,7 @@ export default function TimerStopwatch() {
           role="tab"
           className="tab"
           aria-selected={mode === 'timer'}
+          aria-controls="timerControls"
           onClick={() => setMode('timer')}
         >
           Timer
@@ -27,6 +28,7 @@ export default function TimerStopwatch() {
           role="tab"
           className="tab"
           aria-selected={mode === 'stopwatch'}
+          aria-controls="stopwatchControls"
           onClick={() => setMode('stopwatch')}
         >
           Stopwatch
@@ -35,6 +37,7 @@ export default function TimerStopwatch() {
       <div
         id="timerControls"
         role="tabpanel"
+        aria-labelledby="modeTimer"
         className="tab-panel"
         hidden={mode !== 'timer'}
       >
@@ -52,6 +55,7 @@ export default function TimerStopwatch() {
       <div
         id="stopwatchControls"
         role="tabpanel"
+        aria-labelledby="modeStopwatch"
         className="tab-panel"
         hidden={mode !== 'stopwatch'}
       >

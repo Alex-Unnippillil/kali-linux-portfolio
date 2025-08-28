@@ -23,6 +23,11 @@ button {
   font-weight: bold;
 }
 
+.tabs .tab:focus {
+  outline: 2px solid #000;
+  outline-offset: 2px;
+}
+
 .tab-panel[hidden] {
   display: none;
 }
