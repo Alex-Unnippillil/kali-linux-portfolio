@@ -505,3 +505,12 @@ textarea:focus-visible {
     outline: 2px solid #3B82F6;
     outline-offset: 2px;
 }
+
+/* Enable scroll snapping for gallery containers */
+.gallery-container {
+    scroll-snap-type: x mandatory;
+}
+
+.gallery-container > * {
+    scroll-snap-align: start;
+}
