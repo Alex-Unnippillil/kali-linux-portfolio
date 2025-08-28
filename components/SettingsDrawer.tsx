@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { getTheme, setTheme, getUnlockedThemes } from '../utils/theme';
 
 interface Props {
@@ -7,12 +7,8 @@ interface Props {
 
 const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
-  const [theme, setThemeState] = useState('default');
+  const [theme, setThemeState] = useState(getTheme());
   const unlocked = getUnlockedThemes(highScore);
-
-  useEffect(() => {
-    setThemeState(getTheme());
-  }, []);
 
   const changeTheme = (t: string) => {
     setThemeState(t);
