@@ -5552,6 +5552,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"eslint-plugin-no-top-level-window@file:eslint-plugin-no-top-level-window::locator=unnippillil%40workspace%3A.":
+  version: 1.0.0
+  resolution: "eslint-plugin-no-top-level-window@file:eslint-plugin-no-top-level-window#eslint-plugin-no-top-level-window::hash=00c4b4&locator=unnippillil%40workspace%3A."
+  checksum: 10c0/13826bad4eabfc63963b90fb53629f7509e9547359747965f4f9873f2b883d80ad6a1add4d736110f2b9105aed9af81e5950de33bb039fc0d54c2545f26ff4cc
+  languageName: node
+  linkType: hard
+
 "eslint-plugin-react-hooks@npm:^5.0.0":
   version: 5.2.0
   resolution: "eslint-plugin-react-hooks@npm:5.2.0"
@@ -11241,6 +11248,7 @@ __metadata:
     dompurify: "npm:^3.2.6"
     eslint: "npm:^9.13.0"
     eslint-config-next: "npm:^15.0.0"
+    eslint-plugin-no-top-level-window: "file:eslint-plugin-no-top-level-window"
     fake-indexeddb: "npm:^6.1.0"
     figlet: "npm:^1.8.2"
     howler: "npm:^2.2.4"
