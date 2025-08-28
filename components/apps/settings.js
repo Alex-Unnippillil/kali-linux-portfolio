@@ -1,16 +1,20 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import Image from 'next/image';
 import { useSettings } from '../../hooks/useSettings';
 import { resetSettings, defaults } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, shuffle, setShuffle } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
+    const [wallpapers, setWallpapers] = useState([]);
 
-    const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+    useEffect(() => {
+        fetch('/api/wallpapers').then(res => res.json()).then(setWallpapers).catch(() => setWallpapers([]));
+    }, []);
 
     const changeBackgroundImage = (e) => {
-        const name = e.currentTarget.dataset.path;
+        const name = e.currentTarget.dataset.name;
         setWallpaper(name);
     };
 
@@ -56,7 +60,8 @@ export function Settings() {
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
-            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
+            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4 relative">
+                <Image src={`/wallpapers/${wallpaper}.webp`} alt="Selected wallpaper" fill className="object-cover" />
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
@@ -78,6 +83,17 @@ export function Settings() {
                     <option value="regular">Regular</option>
                     <option value="compact">Compact</option>
                 </select>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={shuffle}
+                        onChange={(e) => setShuffle(e.target.checked)}
+                        className="mr-2"
+                    />
+                    Daily Shuffle
+                </label>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
@@ -109,28 +125,27 @@ export function Settings() {
                 </div>
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
-                {
-                    wallpapers.map((name, index) => (
-                        <div
-                            key={index}
-                            role="button"
-                            aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
-                            aria-pressed={name === wallpaper}
-                            tabIndex="0"
-                            onClick={changeBackgroundImage}
-                            onFocus={changeBackgroundImage}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    changeBackgroundImage(e);
-                                }
-                            }}
-                            data-path={name}
-                            className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
-                            style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
-                        ></div>
-                    ))
-                }
+                {wallpapers.map((name, index) => (
+                    <div
+                        key={index}
+                        role="button"
+                        aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
+                        aria-pressed={name === wallpaper}
+                        tabIndex="0"
+                        onClick={changeBackgroundImage}
+                        onFocus={changeBackgroundImage}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                changeBackgroundImage(e);
+                            }
+                        }}
+                        data-name={name}
+                        className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:w-56 md:h-40 md:m-4 m-2 w-28 h-20 outline-none border-4 border-opacity-80 relative"}
+                    >
+                        <Image src={`/wallpapers/${name}.webp`} alt={`Select ${name.replace('wall-', 'wallpaper ')}`} fill className="object-cover" />
+                    </div>
+                ))}
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4">
                 <button

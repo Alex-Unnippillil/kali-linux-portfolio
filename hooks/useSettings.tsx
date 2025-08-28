@@ -8,6 +8,10 @@ import {
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
   setReducedMotion as saveReducedMotion,
+  getShuffle as loadShuffle,
+  setShuffle as saveShuffle,
+  getLastShuffle as loadLastShuffle,
+  setLastShuffle as saveLastShuffle,
   defaults,
 } from '../utils/settingsStore';
 type Density = 'regular' | 'compact';
@@ -17,10 +21,12 @@ interface SettingsContextValue {
   wallpaper: string;
   density: Density;
   reducedMotion: boolean;
+  shuffle: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
+  setShuffle: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -28,10 +34,12 @@ export const SettingsContext = createContext<SettingsContextValue>({
   wallpaper: defaults.wallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
+  shuffle: defaults.shuffle,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
+  setShuffle: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -39,6 +47,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+  const [shuffle, setShuffle] = useState<boolean>(defaults.shuffle);
 
   useEffect(() => {
     (async () => {
@@ -46,6 +55,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
+      setShuffle(await loadShuffle());
     })();
   }, []);
 
@@ -89,8 +99,32 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
 
+  useEffect(() => {
+    saveShuffle(shuffle);
+  }, [shuffle]);
+
+  useEffect(() => {
+    if (!shuffle) return;
+    (async () => {
+      const today = new Date().toISOString().split('T')[0];
+      const last = await loadLastShuffle();
+      if (last === today) return;
+      try {
+        const res = await fetch('/api/wallpapers');
+        const list: string[] = await res.json();
+        if (list.length) {
+          const next = list[Math.floor(Math.random() * list.length)];
+          setWallpaper(next);
+          saveLastShuffle(today);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, [shuffle]);
+
   return (
-    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, setAccent, setWallpaper, setDensity, setReducedMotion }}>
+    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, shuffle, setAccent, setWallpaper, setDensity, setReducedMotion, setShuffle }}>
       {children}
     </SettingsContext.Provider>
   );

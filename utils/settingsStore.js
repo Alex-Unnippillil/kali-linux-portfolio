@@ -5,6 +5,7 @@ const DEFAULT_SETTINGS = {
   wallpaper: 'wall-2',
   density: 'regular',
   reducedMotion: false,
+  shuffle: false,
 };
 
 export async function getAccent() {
@@ -47,6 +48,26 @@ export async function setReducedMotion(value) {
   window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
 }
 
+export async function getShuffle() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.shuffle;
+  return window.localStorage.getItem('wallpaper-shuffle') === 'true';
+}
+
+export async function setShuffle(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('wallpaper-shuffle', value ? 'true' : 'false');
+}
+
+export async function getLastShuffle() {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem('wallpaper-last-shuffle');
+}
+
+export async function setLastShuffle(date) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('wallpaper-last-shuffle', date);
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -55,6 +76,8 @@ export async function resetSettings() {
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
+  window.localStorage.removeItem('wallpaper-shuffle');
+  window.localStorage.removeItem('wallpaper-last-shuffle');
 }
 
 export const defaults = DEFAULT_SETTINGS;
