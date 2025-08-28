@@ -20,5 +20,15 @@ describe('Dsniff component', () => {
     expect(screen.getAllByText(/example.com/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/test.com/)).toBeNull();
   });
+
+  it('displays pcap summary and remediation', async () => {
+    render(<Dsniff />);
+    expect(
+      await screen.findByText('PCAP credential leakage demo')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/HTTPS\/TLS to encrypt credentials/i)
+    ).toBeInTheDocument();
+  });
 });
 
