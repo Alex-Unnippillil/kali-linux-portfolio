@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
-import StatusCard from '../util-components/status_card';
+import QuickSettings from '../ui/QuickSettings';
 
 export default class Navbar extends Component {
 	constructor() {
@@ -39,16 +39,8 @@ export default class Navbar extends Component {
                                                 'relative pr-3 pl-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent focus:border-ubb-orange py-1 '
                                         }
                                 >
-					<Status />
-					<StatusCard
-						shutDown={this.props.shutDown}
-						lockScreen={this.props.lockScreen}
-						visible={this.state.status_card}
-						toggleVisible={() => {
-							// this prop is used in statusCard component in handleClickOutside callback using react-onclickoutside
-							this.setState({ status_card: false });
-						}}
-					/>
+                                        <Status />
+                                        <QuickSettings open={this.state.status_card} />
                                 </button>
 			</div>
 		);
