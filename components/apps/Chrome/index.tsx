@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { toPng } from 'html-to-image';
 import { Readability } from '@mozilla/readability';
+import DOMPurify from 'dompurify';
 
 interface TabData {
   id: number;
@@ -64,6 +65,11 @@ const Chrome: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [articles, setArticles] = useState<Record<number, string>>({});
+  const sanitizedArticle = useMemo(
+    () =>
+      articles[activeId] ? DOMPurify.sanitize(articles[activeId]) : '',
+    [articles, activeId],
+  );
 
   useEffect(() => {
     saveTabs(tabs, activeId);
@@ -333,10 +339,10 @@ const Chrome: React.FC = () => {
         </button>
       </div>
       <div className="flex-grow bg-white relative overflow-auto">
-        {articles[activeId] ? (
+        {sanitizedArticle ? (
           <main
             style={{ maxInlineSize: '60ch', margin: 'auto' }}
-            dangerouslySetInnerHTML={{ __html: articles[activeId] }}
+            dangerouslySetInnerHTML={{ __html: sanitizedArticle }}
           />
         ) : activeTab.blocked ? (
           blockedView
