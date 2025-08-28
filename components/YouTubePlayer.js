@@ -223,9 +223,9 @@ export default function YouTubePlayer({ videoId }) {
         {/* Chapter drawer */}
         {showChapters && chapters.length > 0 && (
           <div className="absolute bottom-0 left-0 bg-black/80 text-white text-sm max-h-1/2 overflow-auto w-48 z-40">
-            {chapters.map((ch, i) => (
+            {chapters.map((ch) => (
               <button
-                key={i}
+                key={ch.startTime}
                 type="button"
                 className="block w-full text-left px-3 py-2 hover:bg-black/60"
                 onClick={() => {

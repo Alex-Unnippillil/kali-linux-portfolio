@@ -22,9 +22,9 @@ const BadgeList = ({ badges, className = '' }) => {
         onChange={(e) => setFilter(e.target.value)}
       />
       <div className="flex flex-wrap justify-center items-start w-full">
-        {filteredBadges.map((badge, idx) => (
+        {filteredBadges.map((badge) => (
           <button
-            key={idx}
+            key={badge.label}
             type="button"
             className="m-1 hover:scale-110 transition-transform cursor-pointer"
             onClick={() => setSelected(badge)}

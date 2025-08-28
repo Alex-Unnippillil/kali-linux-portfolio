@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { toPng } from 'html-to-image';
 import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
@@ -65,6 +65,11 @@ const Chrome: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [articles, setArticles] = useState<Record<number, string>>({});
+  const sanitizedArticle = useMemo(
+    () =>
+      articles[activeId] ? DOMPurify.sanitize(articles[activeId]) : '',
+    [articles, activeId],
+  );
 
   useEffect(() => {
     saveTabs(tabs, activeId);
@@ -315,24 +320,6 @@ const Chrome: React.FC = () => {
           </div>
         ))}
       </div>
-      <div className="flex items-center bg-gray-800 text-sm p-1 space-x-1">
-        <input
-          placeholder="Find in page"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && doFind()}
-          className="px-2 py-0.5 text-black rounded flex-grow"
-        />
-        <button onClick={doFind} className="px-2">
-          Find
-        </button>
-        <button onClick={toggleMute} className="px-2" aria-label="Mute">
-          {activeTab.muted ? 'Unmute' : 'Mute'}
-        </button>
-        <button onClick={screenshot} className="px-2" aria-label="Screenshot">
-          📷
-        </button>
-      </div>
         <div className="flex-grow bg-white relative overflow-auto">
           {articles[activeId] ? (
             <main
@@ -347,6 +334,7 @@ const Chrome: React.FC = () => {
               src={activeTab.url}
               title={activeTab.url}
               className="w-full h-full"
+
             sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
             referrerPolicy="no-referrer"

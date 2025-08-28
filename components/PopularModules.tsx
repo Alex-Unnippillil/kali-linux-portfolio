@@ -110,8 +110,8 @@ const PopularModules: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {selected.results.map((r, i) => (
-                <tr key={i}>
+              {selected.results.map((r) => (
+                <tr key={r.target}>
                   <td className="border px-2 py-1">{r.target}</td>
                   <td className="border px-2 py-1">{r.status}</td>
                 </tr>
