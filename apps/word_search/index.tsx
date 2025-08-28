@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { z } from 'zod';
 import { useRouter } from 'next/router';
 import { generateGrid, createRNG } from './generator';
 import type { Position, WordPlacement } from './types';
@@ -50,6 +51,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const [selecting, setSelecting] = useState(false);
   const [start, setStart] = useState<Position | null>(null);
   const [selection, setSelection] = useState<Position[]>([]);
+  const [error, setError] = useState('');
   const startRef = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const { quality, setQuality, highContrast, setHighContrast } = useSettings();
@@ -88,10 +90,30 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   useEffect(() => {
     if (seed && words.length) return; // skip if loaded
     const init = async () => {
-      const queryWords =
-        typeof wordsQuery === 'string'
-          ? wordsQuery.split(',').map((w) => w.trim().toUpperCase()).filter(Boolean)
-          : [];
+      let queryWords: string[] = [];
+      if (typeof wordsQuery === 'string') {
+        const raw = wordsQuery.split(/[,\n]/).map((w) => w.trim()).filter(Boolean);
+        if (raw.length) {
+          const wordSchema = z.string().regex(/^[A-Za-z]+$/, {
+            message: 'Words must contain only letters',
+          });
+          const listSchema = z.array(wordSchema).min(1, {
+            message: 'Please enter at least one word',
+          });
+          const parsed = listSchema.safeParse(raw);
+          if (!parsed.success) {
+            const invalid = raw.filter((w) => !/^[A-Za-z]+$/.test(w));
+            setError(
+              invalid.length
+                ? `Invalid words: ${invalid.join(', ')}`
+                : parsed.error.issues[0].message,
+            );
+            return;
+          }
+          setError('');
+          queryWords = parsed.data.map((w) => w.toUpperCase());
+        }
+      }
       const defaultSeed = (await getDailySeed?.()) ?? new Date().toISOString().split('T')[0];
       const s = typeof seedQuery === 'string' ? seedQuery : defaultSeed;
       setSeed(s);
@@ -291,6 +313,14 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const progress = words.length ? found.size / words.length : 0;
   const radius = 16;
   const circumference = 2 * Math.PI * radius;
+
+  if (error) {
+    return (
+      <div className="p-4 text-red-600" role="alert">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 select-none">
