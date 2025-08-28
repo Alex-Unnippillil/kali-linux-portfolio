@@ -50,10 +50,12 @@ const NmapNSEApp = () => {
   const command = current.command.replace('<target>', target);
 
   const copyCommand = async () => {
-    try {
-      await navigator.clipboard.writeText(command);
-    } catch (e) {
-      // ignore
+    if (typeof window !== 'undefined') {
+      try {
+        await navigator.clipboard.writeText(command);
+      } catch (e) {
+        // ignore
+      }
     }
   };
 
