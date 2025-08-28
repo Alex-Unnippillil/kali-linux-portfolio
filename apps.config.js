@@ -58,6 +58,7 @@ const QrToolApp = createDynamicApp('qr_tool', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
 const QuoteGeneratorApp = createDynamicApp('quote_generator', 'Quote Generator');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
+const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 
@@ -132,6 +133,7 @@ const displayQrTool = createDisplay(QrToolApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuoteGenerator = createDisplay(QuoteGeneratorApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
+const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -810,6 +812,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeather,
+  },
+  {
+    id: 'weather-widget',
+    title: 'Weather Widget',
+    icon: './themes/Yaru/apps/weather.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayWeatherWidget,
   },
   {
     id: 'radare2',
