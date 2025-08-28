@@ -7,7 +7,6 @@ import '../styles/index.css';
 import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
 import { SettingsProvider } from '../hooks/useSettings';
-import DemoBanner from '../components/DemoBanner';
 
 /**
  * @param {import('next/app').AppProps} props
@@ -26,7 +25,6 @@ function MyApp({ Component, pageProps }) {
   }, []);
   return (
     <SettingsProvider>
-      <DemoBanner />
       <Component {...pageProps} />
       <Analytics />
     </SettingsProvider>
