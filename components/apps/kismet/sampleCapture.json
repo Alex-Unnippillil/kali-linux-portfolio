@@ -1,0 +1,8 @@
+[
+  {"ssid":"CoffeeShopWiFi","channel":1,"signal":-45},
+  {"ssid":"FreeAirport","channel":6,"signal":-70},
+  {"ssid":"HomeWiFi","channel":11,"signal":-30},
+  {"ssid":"CoffeeShopWiFi","channel":1,"signal":-47},
+  {"ssid":"FreeAirport","channel":6,"signal":-72},
+  {"ssid":"NewCafe","channel":3,"signal":-80}
+]
