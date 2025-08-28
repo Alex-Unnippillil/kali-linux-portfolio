@@ -622,10 +622,15 @@ export class Desktop extends Component {
 
     render() {
         return (
-            <div className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
+            <main id="desktop" role="main" className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
                 {/* Window Area */}
-                <div className="absolute h-full w-full bg-transparent" data-context="desktop-area">
+                <div
+                    id="window-area"
+                    role="main"
+                    className="absolute h-full w-full bg-transparent"
+                    data-context="desktop-area"
+                >
                     {this.renderWindows()}
                 </div>
 
@@ -678,7 +683,7 @@ export class Desktop extends Component {
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
 
-            </div>
+            </main>
         )
     }
 }

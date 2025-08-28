@@ -7,6 +7,9 @@ import InstallButton from '../components/InstallButton';
  */
 const App = () => (
   <>
+    <a href="#window-area" className="sr-only focus:not-sr-only">
+      Skip to content
+    </a>
     <Meta />
     <Ubuntu />
     <InstallButton />
