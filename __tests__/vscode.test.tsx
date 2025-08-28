@@ -1,37 +1,35 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import VsCode from '../components/apps/vscode';
 
+jest.mock('@monaco-editor/react');
+
 describe('VsCode app', () => {
-  it('renders external frame', () => {
+  it('renders file tree and opens tab', () => {
     render(<VsCode />);
-    const frame = screen.getByTitle('VsCode');
-    expect(frame.tagName).toBe('IFRAME');
-    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.click(screen.getByText('README.md'));
+    const tab = screen.getAllByText('README.md')[0];
+    expect(tab).toBeInTheDocument();
   });
 
-  it('has an external link', () => {
+  it('marks tab dirty after edit', () => {
     render(<VsCode />);
-    const link = screen.getByRole('link', { name: /open externally/i });
-    expect(link).toHaveAttribute('href', 'https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md');
-    expect(link).toHaveAttribute('target', '_blank');
+    fireEvent.click(screen.getByText('README.md'));
+    const editor = screen.getByRole('textbox');
+    fireEvent.change(editor, { target: { value: 'changed' } });
+    const tab = screen.getByText(/^README\.md\*$/);
+    expect(tab).toBeInTheDocument();
   });
 
-  it('shows banner when cookies are blocked', async () => {
-    const original = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
-    Object.defineProperty(document, 'cookie', {
-      configurable: true,
-      get: () => '',
-      set: () => {},
-    });
-
+  it('opens action palette with Ctrl+K', () => {
     render(<VsCode />);
-    const alert = await screen.findByRole('alert');
-    expect(alert).toBeInTheDocument();
+    fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
+    expect(screen.getByText(/Action Palette/)).toBeInTheDocument();
+  });
 
-    if (original) {
-      Object.defineProperty(document, 'cookie', original);
-    }
+  it('persists theme selection', () => {
+    render(<VsCode />);
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'light' } });
+    expect(window.localStorage.getItem('vscode-theme')).toBe('light');
   });
 });
-
