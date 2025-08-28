@@ -118,6 +118,70 @@ describe('Window snapping preview', () => {
   });
 });
 
+describe('Window announcements', () => {
+  it('announces open and close actions', () => {
+    const announce = jest.fn();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        announce={announce}
+      />
+    );
+
+    expect(announce).toHaveBeenCalledWith('Test window opened');
+
+    const closeButton = screen.getByRole('button', { name: /window close/i });
+    fireEvent.click(closeButton);
+    expect(announce).toHaveBeenLastCalledWith('Test window closed');
+  });
+
+  it('announces window movement', () => {
+    const announce = jest.fn();
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        announce={announce}
+        ref={ref}
+      />
+    );
+
+    announce.mockClear();
+    const winEl = document.getElementById('test-window')!;
+    winEl.getBoundingClientRect = () => ({
+      left: 50,
+      top: 60,
+      right: 150,
+      bottom: 160,
+      width: 100,
+      height: 100,
+      x: 50,
+      y: 60,
+      toJSON: () => {}
+    });
+
+    act(() => {
+      ref.current!.handleStop();
+    });
+
+    expect(announce).toHaveBeenCalledWith('Test window moved to 50, 60');
+  });
+});
+
 describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near left edge', () => {
     const ref = React.createRef<Window>();
