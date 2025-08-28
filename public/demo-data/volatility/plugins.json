@@ -1,17 +1,23 @@
 [
   {
     "name": "pslist",
+    "category": "Processes",
     "description": "List running processes.",
-    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/pslist.html"
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/pslist.html",
+    "output": "PID   PPID   Name\n4     0      System\n248   4      smss.exe\n612   248    csrss.exe"
   },
   {
     "name": "netscan",
+    "category": "Network",
     "description": "Scan for network connections.",
-    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/netscan.html"
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/netscan.html",
+    "output": "Proto LocalAddr           ForeignAddr         State\nTCP   0.0.0.0:80          0.0.0.0:0           LISTENING\nUDP   127.0.0.1:53        0.0.0.0:0           NONE"
   },
   {
     "name": "malfind",
+    "category": "Malware",
     "description": "Find hidden or injected code sections.",
-    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/malfind.html"
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/malfind.html",
+    "output": "PID   Address     Protection Description\n612   0x7f12a000  RWX        Injected Code\n700   0x401000    RWX        Suspicious Section"
   }
 ]
