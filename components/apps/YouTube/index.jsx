@@ -66,10 +66,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
 
   const current = queue[0] || null;
 
-  const privacy = process.env.NEXT_PUBLIC_PRIVACY_MODE === 'true';
-  const origin =
-    typeof window !== 'undefined' ? window.location.origin : '';
-  const embedBase = `https://${privacy ? 'www.youtube-nocookie.com' : 'www.youtube.com'}`;
+  const embedBase = 'https://www.youtube-nocookie.com';
 
   const playVideo = useCallback((video) => {
     setQueue((q) => {
@@ -86,6 +83,30 @@ export default function YouTubeApp({ initialVideos = [] }) {
     setQueue((q) => q.slice(1));
   }, []);
 
+  const handlePaste = useCallback(
+    async (e) => {
+      const text = e.clipboardData.getData('text');
+      if (!/(youtube\.com|youtu\.be)/.test(text)) return;
+      e.preventDefault();
+      const httpsUrl = text.replace(/^http:\/\//i, 'https://');
+      const match = httpsUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})(?:[?&]|$)/);
+      if (!match) return;
+      const id = match[1];
+      try {
+        const res = await fetch(
+          `https://www.youtube.com/oembed?url=${encodeURIComponent(httpsUrl)}&format=json`
+        );
+        const data = await res.json();
+        const video = { id, title: data.title };
+        setVideos((v) => [video, ...v.filter((vv) => vv.id !== id)]);
+        playVideo(video);
+      } catch {
+        playVideo({ id, title: '' });
+      }
+    },
+    [playVideo]
+  );
+
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white p-4">
       <div className="mb-4">
@@ -94,6 +115,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
           placeholder="Search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onPaste={handlePaste}
           className="text-black px-3 py-2 rounded w-full max-w-sm"
         />
       </div>
@@ -101,12 +123,10 @@ export default function YouTubeApp({ initialVideos = [] }) {
         {filtered.map((video) => (
           <div key={video.id} className="relative pb-[56.25%]">
             <iframe
-              src={`${embedBase}/embed/${video.id}?enablejsapi=1&origin=${encodeURIComponent(origin)}`}
+              src={`${embedBase}/embed/${video.id}?rel=0`}
               title={video.title}
               className="absolute inset-0 w-full h-full"
-              sandbox="allow-same-origin allow-scripts allow-popups"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              referrerPolicy="no-referrer"
               allowFullScreen
               loading="lazy"
             />
