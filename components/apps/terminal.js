@@ -1,8 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import Terminal from './archive/Terminal';
 
-function TerminalApp(props) {
+const TerminalApp = forwardRef((props, ref) => {
   const canvasRef = useRef(null);
+  const termRef = useRef(null);
+  useImperativeHandle(ref, () => termRef.current);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -56,10 +58,12 @@ function TerminalApp(props) {
   return (
     <div className="h-full w-full flex flex-col">
       <canvas ref={canvasRef} className="w-full h-24" />
-      <Terminal {...props} />
+      <Terminal ref={termRef} {...props} />
     </div>
   );
-}
+});
+
+TerminalApp.displayName = 'TerminalApp';
 
 export default TerminalApp;
 
