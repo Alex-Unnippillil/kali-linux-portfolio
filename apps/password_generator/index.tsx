@@ -45,18 +45,23 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
     }
   };
 
+  const poolSize =
+    (useLower ? LOWER.length : 0) +
+    (useUpper ? UPPER.length : 0) +
+    (useNumbers ? NUMS.length : 0) +
+    (useSymbols ? SYMBOLS.length : 0);
+
+  const entropy = poolSize ? length * Math.log2(poolSize) : 0;
+
   const strengthInfo = () => {
-    const types = [useLower, useUpper, useNumbers, useSymbols].filter(Boolean).length;
-    let score = 0;
-    if (length >= 8) score += 1;
-    if (length >= 12) score += 1;
-    score += types - 1; // 0-3
-    if (score <= 1) return { label: 'Weak', width: '33%', color: 'bg-red-500' };
-    if (score === 2) return { label: 'Medium', width: '66%', color: 'bg-yellow-500' };
-    return { label: 'Strong', width: '100%', color: 'bg-green-500' };
+    if (!entropy) return { label: 'None', color: 'bg-gray-500' };
+    if (entropy < 40) return { label: 'Weak', color: 'bg-red-500' };
+    if (entropy < 80) return { label: 'Medium', color: 'bg-yellow-500' };
+    return { label: 'Strong', color: 'bg-green-500' };
   };
 
-  const { label, width, color } = strengthInfo();
+  const { label, color } = strengthInfo();
+  const width = `${entropy ? Math.min(entropy, 128) / 128 * 100 : 0}%`;
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
@@ -98,7 +103,9 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
         <div className="h-2 w-full bg-gray-700 rounded">
           <div className={`h-full ${color} rounded`} style={{ width }} />
         </div>
-        <div className="text-sm mt-1">Strength: {label}</div>
+        <div className="text-sm mt-1">
+          Entropy: {entropy.toFixed(1)} bits {label && `(${label})`}
+        </div>
       </div>
       <div className="mt-auto">
         <button
