@@ -50,6 +50,8 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const [selecting, setSelecting] = useState(false);
   const [start, setStart] = useState<Position | null>(null);
   const [selection, setSelection] = useState<Position[]>([]);
+  const [loading, setLoading] = useState(false);
+  const workerRef = useRef<Worker | null>(null);
   const startRef = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const { quality, setQuality, highContrast, setHighContrast } = useSettings();
@@ -101,17 +103,42 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   }, [seedQuery, wordsQuery, seed, words.length, getDailySeed]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    workerRef.current = new Worker(new URL('./worker.ts', import.meta.url));
+    workerRef.current.onmessage = (e: MessageEvent<{ grid: string[][]; placements: WordPlacement[] }>) => {
+      const { grid: g, placements: p } = e.data;
+      setGrid(g);
+      setPlacements(p);
+      setFound(new Set());
+      setFoundCells(new Set());
+      setHintCells(new Set());
+      setFirstHints(3);
+      setLastHints(3);
+      startRef.current = Date.now();
+      setLoading(false);
+      logGameStart('word_search');
+    };
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  useEffect(() => {
     if (!seed || !words.length) return;
-    const { grid: g, placements: p } = generateGrid(words, GRID_SIZE, seed);
-    setGrid(g);
-    setPlacements(p);
-    setFound(new Set());
-    setFoundCells(new Set());
-    setHintCells(new Set());
-    setFirstHints(3);
-    setLastHints(3);
-    startRef.current = Date.now();
-    logGameStart('word_search');
+    if (workerRef.current) {
+      setLoading(true);
+      workerRef.current.postMessage({ words, size: GRID_SIZE, seed });
+    } else {
+      const { grid: g, placements: p } = generateGrid(words, GRID_SIZE, seed);
+      setGrid(g);
+      setPlacements(p);
+      setFound(new Set());
+      setFoundCells(new Set());
+      setHintCells(new Set());
+      setFirstHints(3);
+      setLastHints(3);
+      startRef.current = Date.now();
+      logGameStart('word_search');
+      setLoading(false);
+    }
   }, [seed, words]);
 
   // auto-save progress every 5 seconds
@@ -291,6 +318,12 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const progress = words.length ? found.size / words.length : 0;
   const radius = 16;
   const circumference = 2 * Math.PI * radius;
+
+  if (loading) {
+    return (
+      <div className="p-4 select-none">Generating...</div>
+    );
+  }
 
   return (
     <div className="p-4 select-none">
