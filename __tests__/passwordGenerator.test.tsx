@@ -23,4 +23,12 @@ describe('PasswordGenerator', () => {
       expect(writeText).toHaveBeenCalledWith(value);
     });
   });
+
+  it('updates entropy when options change', () => {
+    const { getByLabelText, getByText } = render(<PasswordGenerator />);
+    const initial = getByText(/Entropy/i).textContent;
+    fireEvent.change(getByLabelText(/Length/i), { target: { value: '20' } });
+    const updated = getByText(/Entropy/i).textContent;
+    expect(updated).not.toBe(initial);
+  });
 });
