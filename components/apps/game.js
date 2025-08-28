@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import GameLayout from './GameLayout';
+import GameLayout from './GameLayout.js';
 
 const lines = [
   [0, 1, 2],

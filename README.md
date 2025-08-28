@@ -280,7 +280,7 @@ yarn lint
 - **`components/base/window.js`** - draggable, focusable window with header controls; integrates with desktop z-index.
 - **`components/screen/*`** - lock screen, boot splash, navbar, app grid.
 - **`hooks/usePersistentState.ts`** - localStorage-backed state with validation + reset helper.
-- **`components/apps/GameLayout.tsx`** - standardized layout and help toggle for games.
+- **`components/apps/GameLayout.js`** - standardized layout and help toggle for games.
 - **`components/PipPortal.tsx`** - renders arbitrary UI inside a Document Picture-in-Picture window. See [`docs/pip-portal.md`](./docs/pip-portal.md).
 
 ---

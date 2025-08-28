@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import GameLayout from './GameLayout';
+import GameLayout from './GameLayout.js';
 import {
   createBoard,
   getPieceMoves,

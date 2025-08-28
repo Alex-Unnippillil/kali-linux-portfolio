@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import GameLayout from './GameLayout';
+import GameLayout from './GameLayout.js';
 import useGameControls from './useGameControls';
 import levelPack from './sokoban_levels.json';
 

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import GameLayout from './GameLayout';
+import GameLayout from './GameLayout.js';
 import useGameControls from './useGameControls';
 import useGameHaptics from '../../hooks/useGameHaptics';
 import usePersistentState from '../../hooks/usePersistentState';
