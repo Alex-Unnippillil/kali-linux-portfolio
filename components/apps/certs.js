@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 const Certs = () => {
   const certBadges = [
@@ -42,11 +43,24 @@ const Certs = () => {
       </ul>
       <div className="w-full md:w-10/12 flex flex-wrap justify-center items-center mt-4">
         <a href="https://data.typeracer.com/pit/profile?user=ulexa&ref=badge" target="_blank" rel="noopener noreferrer" className="m-2">
-          <img src="https://data.typeracer.com/misc/badge?user=ulexa" alt="TypeRacer.com scorecard for user ulexa" />
+          <Image
+            src="https://data.typeracer.com/misc/badge?user=ulexa"
+            alt="TypeRacer.com scorecard for user ulexa"
+            width={120}
+            height={240}
+            sizes="120px"
+          />
         </a>
         {certBadges.map((badge) => (
           <a key={badge.href} href={badge.href} target="_blank" rel="noopener noreferrer" className="m-2">
-            <img src={badge.src} alt={badge.alt} className="w-24 h-24 md:w-28 md:h-28" />
+            <Image
+              src={badge.src}
+              alt={badge.alt}
+              className="w-24 h-24 md:w-28 md:h-28"
+              width={112}
+              height={112}
+              sizes="(max-width: 768px) 96px, 112px"
+            />
           </a>
         ))}
       </div>
