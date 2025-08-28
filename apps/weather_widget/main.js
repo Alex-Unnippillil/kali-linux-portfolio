@@ -8,11 +8,21 @@ const cityPicker = document.getElementById('city-picker');
 const unitToggle = document.getElementById('unit-toggle');
 const apiKeyInput = document.getElementById('api-key-input');
 const saveApiKeyBtn = document.getElementById('save-api-key');
+const demoMessage = document.getElementById('demo-message');
 
 let apiKey = localStorage.getItem('weatherApiKey') || '';
 if (apiKey) apiKeyInput.value = apiKey;
+updateDemoMessage();
 
 let unit = unitToggle.value;
+
+function updateDemoMessage() {
+  if (apiKey) {
+    demoMessage.style.display = 'none';
+  } else {
+    demoMessage.style.display = 'block';
+  }
+}
 
 function loadCities() {
   cityPicker.innerHTML = cities
@@ -90,6 +100,7 @@ saveApiKeyBtn.addEventListener('click', () => {
     localStorage.removeItem('weatherApiKey');
   }
   updateWeather();
+  updateDemoMessage();
 });
 
 loadCities();

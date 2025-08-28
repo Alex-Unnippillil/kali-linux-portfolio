@@ -41,6 +41,18 @@ body {
   text-transform: capitalize;
 }
 
+.api-note,
+.demo-message {
+  display: block;
+  text-align: center;
+  font-size: 0.8rem;
+  margin-top: 10px;
+}
+
+.demo-message {
+  color: #555;
+}
+
 .fade-in {
   animation: fadeIn 0.5s forwards;
 }
