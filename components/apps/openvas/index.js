@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import chartData from './chart-data.json';
 import TaskOverview from './task-overview';
+import PolicySettings from './policy-settings';
 
 // Simple helper for notifications that falls back to alert()
 const notify = (title, body) => {
@@ -69,17 +70,42 @@ const severityColors = {
   critical: 'bg-red-700',
 };
 
+const remediationMap = {
+  low: 'Review configuration and apply best practices.',
+  medium: 'Update affected software to the latest version.',
+  high: 'Apply vendor patches and restrict network access.',
+  critical: 'Isolate system and patch immediately.',
+};
+
+const sampleFindings = [
+  {
+    severity: 'low',
+    impact: 'low',
+    likelihood: 'low',
+    description: 'Outdated banner exposes software version',
+    remediation: remediationMap.low,
+  },
+  {
+    severity: 'high',
+    impact: 'high',
+    likelihood: 'medium',
+    description: 'Remote code execution vulnerability detected',
+    remediation: remediationMap.high,
+  },
+];
+
 const OpenVASApp = () => {
   const [target, setTarget] = useState('');
   const [group, setGroup] = useState('');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [summaryUrl, setSummaryUrl] = useState(null);
-  const [findings, setFindings] = useState([]);
+  const [findings, setFindings] = useState(sampleFindings);
   const [filter, setFilter] = useState(null);
   const [severity, setSeverity] = useState('All');
   const [announce, setAnnounce] = useState('');
   const [progress, setProgress] = useState(0);
+  const [selected, setSelected] = useState(null);
   const workerRef = useRef(null);
   const reduceMotion = useRef(false);
 
@@ -92,7 +118,8 @@ const OpenVASApp = () => {
         workerRef.current.onmessage = (e) => {
           const { type, data } = e.data || {};
           if (type === 'progress') setProgress(data);
-          if (type === 'result') setFindings(data);
+          if (type === 'result')
+            setFindings(data.map((f) => ({ ...f, remediation: remediationMap[f.severity] })));
         };
       }
     }
@@ -185,6 +212,7 @@ const OpenVASApp = () => {
   return (
     <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
       <TaskOverview />
+      <PolicySettings />
       <h2 className="text-lg mb-2">OpenVAS Scanner</h2>
       <div className="flex mb-4 space-x-2">
         <input
@@ -297,15 +325,48 @@ const OpenVASApp = () => {
           {displayFindings.map((f, idx) => (
             <li
               key={idx}
-              role="alert"
+              role="listitem"
               className={`p-2 rounded ${severityColors[f.severity]} text-white`}
             >
-              <span
-                dangerouslySetInnerHTML={{ __html: escapeHtml(f.description) }}
-              />
+              <button
+                type="button"
+                onClick={() => setSelected(f)}
+                className="w-full text-left focus:outline-none"
+              >
+                <span
+                  dangerouslySetInnerHTML={{ __html: escapeHtml(f.description) }}
+                />
+              </button>
             </li>
           ))}
         </ul>
+      )}
+      {selected && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 bg-black/70 flex items-center justify-center p-4"
+        >
+          <div className="bg-gray-800 p-4 rounded max-w-md w-full">
+            <h3 className="text-lg mb-2">Issue Detail</h3>
+            <p
+              className="mb-2"
+              dangerouslySetInnerHTML={{ __html: escapeHtml(selected.description) }}
+            />
+            {selected.remediation && (
+              <p className="text-sm mb-4">
+                <span className="font-bold">Remediation:</span> {selected.remediation}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              className="px-3 py-1 bg-blue-600 rounded"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
       <div aria-live="polite" className="sr-only">
         {announce}
