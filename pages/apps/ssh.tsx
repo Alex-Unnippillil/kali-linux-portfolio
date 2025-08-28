@@ -1,6 +1,9 @@
 import dynamic from 'next/dynamic';
 
-const SSHPreview = dynamic(() => import('../../apps/ssh'), { ssr: false });
+const SSHPreview = dynamic(() => import('../../apps/ssh'), {
+  ssr: false,
+  loading: () => <p>Loading...</p>,
+});
 
 export default function SSHPage() {
   return <SSHPreview />;
