@@ -9,12 +9,30 @@ import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
+const PlayIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const PauseIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+    <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
+  </svg>
+);
+
+const NextIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" {...props}>
+    <path d="M7 6v12l8-6zm9 0h2v12h-2z" />
+  </svg>
+);
+
 // Renders a small YouTube browser similar to the YouTube mobile UI.
 // Videos can be fetched from the real API if an API key is provided or
 // injected via the `initialVideos` prop (used in tests).
 export default function YouTubeApp({ initialVideos = [] }) {
   const [videos, setVideos] = useState(initialVideos);
-  const [playlists, setPlaylists] = useState([]); // [{id,title}]
+  const [playlists, setPlaylists] = useState([]); // [{id,title,description,thumbnail}]
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('date');
   const [search, setSearch] = useState('');
@@ -24,6 +42,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [chapters, setChapters] = useState([]);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [isMini, setIsMini] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const playerRef = useRef(null);
@@ -53,14 +72,21 @@ export default function YouTubeApp({ initialVideos = [] }) {
           `https://www.googleapis.com/youtube/v3/playlists?part=snippet&channelId=${channelId}&maxResults=50&key=${apiKey}`
         );
         const playlistsData = await playlistsRes.json();
-        const list = playlistsData.items?.map((p) => ({
-          id: p.id,
-          title: p.snippet.title,
-        })) || [];
+        const list =
+          playlistsData.items?.map((p) => ({
+            id: p.id,
+            title: p.snippet.title,
+            description: p.snippet.description,
+            thumbnail: p.snippet.thumbnails?.medium?.url,
+          })) || [];
 
         // Include the automatically generated "Liked videos" playlist
         const favoritesId = `LL${channelId}`;
-        list.push({ id: favoritesId, title: 'Favorites' });
+        list.push({
+          id: favoritesId,
+          title: 'Favorites',
+          description: 'Your liked videos',
+        });
         setPlaylists(list);
 
         // Helper to fetch *all* videos from a playlist by following the
@@ -139,6 +165,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
 
     const onStateChange = (e) => {
       if (e.data === window.YT.PlayerState.PLAYING) {
+        setIsPlaying(true);
         const update = () => {
           const d = player.getDuration();
           const t = player.getCurrentTime();
@@ -151,6 +178,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
         };
         update();
       } else {
+        setIsPlaying(false);
         if (prefersReducedMotion) {
           clearTimeout(progressRaf.current);
         } else {
@@ -191,26 +219,9 @@ export default function YouTubeApp({ initialVideos = [] }) {
         cancelAnimationFrame(progressRaf.current);
       }
       player?.destroy();
+      setIsPlaying(false);
     };
   }, [currentVideo, prefersReducedMotion]);
-
-  useEffect(() => {
-    if (!currentVideo) return;
-    const handleKey = (e) => {
-      if (!playerRef.current) return;
-      if (e.key === ' ' || e.key === 'k' || e.key === 'K') {
-        e.preventDefault();
-        const state = playerRef.current.getPlayerState();
-        if (state === window.YT.PlayerState.PLAYING) {
-          playerRef.current.pauseVideo();
-        } else {
-          playerRef.current.playVideo();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [currentVideo]);
 
   useRovingTabIndex(tabListRef, true, 'horizontal');
 
@@ -303,6 +314,38 @@ export default function YouTubeApp({ initialVideos = [] }) {
     setSearch(value);
   }, []);
 
+  const togglePlay = useCallback(() => {
+    if (!playerRef.current) return;
+    const state = playerRef.current.getPlayerState();
+    if (state === window.YT.PlayerState.PLAYING) {
+      playerRef.current.pauseVideo();
+    } else {
+      playerRef.current.playVideo();
+    }
+  }, []);
+
+    const handleNext = useCallback(() => {
+      if (!currentVideo || !sorted.length) return;
+      const idx = sorted.findIndex((v) => v.id === currentVideo.id);
+      const next = sorted[(idx + 1) % sorted.length];
+      if (next) setCurrentVideo(next);
+    }, [currentVideo, sorted]);
+
+    useEffect(() => {
+      if (!currentVideo) return;
+      const handleKey = (e) => {
+        if (e.key === ' ' || e.key === 'k' || e.key === 'K') {
+          e.preventDefault();
+          togglePlay();
+        } else if (e.key === 'n' || e.key === 'N') {
+          e.preventDefault();
+          handleNext();
+        }
+      };
+      window.addEventListener('keydown', handleKey);
+      return () => window.removeEventListener('keydown', handleKey);
+    }, [currentVideo, togglePlay, handleNext]);
+
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
       {currentVideo && (
@@ -355,6 +398,28 @@ export default function YouTubeApp({ initialVideos = [] }) {
           <div className="sr-only" aria-live="polite">
             {`Progress ${Math.round(progress * 100)} percent`}
           </div>
+          <div className="flex items-center gap-2 p-2 bg-gray-900" role="group" aria-label="Playback controls">
+            <button
+              onClick={togglePlay}
+              aria-label={isPlaying ? 'Pause (k or space)' : 'Play (k or space)'}
+              title={isPlaying ? 'Pause (K or Space)' : 'Play (K or Space)'}
+              className="p-1 rounded hover:bg-gray-700"
+            >
+              {isPlaying ? (
+                <PauseIcon className="w-4 h-4" />
+              ) : (
+                <PlayIcon className="w-4 h-4" />
+              )}
+            </button>
+            <button
+              onClick={handleNext}
+              aria-label="Next (n)"
+              title="Next (N)"
+              className="p-1 rounded hover:bg-gray-700"
+            >
+              <NextIcon className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
       {!apiKey && videos.length === 0 ? (
@@ -386,6 +451,53 @@ export default function YouTubeApp({ initialVideos = [] }) {
               <option value="playlist">Playlist</option>
             </select>
           </div>
+
+          {playlists.length > 0 && (
+            <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+              {playlists.map((pl) => (
+                <button
+                  key={pl.id}
+                  data-testid="playlist-card"
+                  className="bg-gray-800 rounded-lg overflow-hidden shadow flex flex-col hover:shadow-lg transition text-left"
+                  onClick={() => handleCategoryClick(pl.title)}
+                >
+                  {pl.thumbnail && (
+                    <img
+                      src={pl.thumbnail}
+                      alt={pl.title}
+                      className="w-full"
+                      loading="lazy"
+                    />
+                  )}
+                  <div
+                    className="p-2 font-semibold text-sm"
+                    title={pl.title}
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {pl.title}
+                  </div>
+                  {pl.description && (
+                    <div
+                      className="px-2 pb-2 text-xs text-gray-300"
+                      style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {pl.description}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Category tabs */}
           <div
