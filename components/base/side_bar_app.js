@@ -8,11 +8,39 @@ export class SideBarApp extends Component {
         this.state = {
             showTitle: false,
             scaleImage: false,
+            attention: false,
+            badgeCount: 0,
         };
     }
 
     componentDidMount() {
         this.id = this.props.id;
+        window.addEventListener('app-attention', this.handleAttention);
+    }
+
+    componentWillUnmount() {
+        window.removeEventListener('app-attention', this.handleAttention);
+    }
+
+    handleAttention = (e) => {
+        if (!e.detail) return;
+        const { appId, badge = 0 } = e.detail;
+        if (!window.__appBadges) window.__appBadges = {};
+        window.__appBadges[appId] = badge;
+        this.updateGlobalBadge();
+        if (appId !== this.id) return;
+        this.setState({ attention: badge > 0, badgeCount: badge });
+    }
+
+    updateGlobalBadge = () => {
+        if (!('setAppBadge' in navigator)) return;
+        const badges = window.__appBadges || {};
+        const total = Object.values(badges).reduce((a, b) => a + b, 0);
+        if (total > 0) {
+            navigator.setAppBadge(total).catch(() => { });
+        } else if ('clearAppBadge' in navigator) {
+            navigator.clearAppBadge().catch(() => { });
+        }
     }
 
     scaleImage = () => {
@@ -27,7 +55,10 @@ export class SideBarApp extends Component {
             this.scaleImage();
         }
         this.props.openApp(this.id);
-        this.setState({ showTitle: false });
+        if (window.__appBadges) {
+            window.__appBadges[this.id] = 0;
+        }
+        this.setState({ showTitle: false, attention: false, badgeCount: 0 }, this.updateGlobalBadge);
     };
 
     render() {
@@ -44,13 +75,13 @@ export class SideBarApp extends Component {
                 onMouseLeave={() => {
                     this.setState({ showTitle: false });
                 }}
-                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") + " w-auto p-2 outline-none relative transition hover:bg-white hover:bg-opacity-10 rounded m-1"}
+                className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") + (this.state.attention ? " animate-bounce " : "") + " w-auto p-2 outline-none relative transition hover:bg-white hover:bg-opacity-10 rounded m-1"}
                 id={"sidebar-" + this.props.id}
             >
                 <Image
                     width={28}
                     height={28}
-                    className="w-7"
+                    className={(this.state.attention ? " animate-pulse " : "") + " w-7"}
                     src={this.props.icon.replace('./', '/')}
                     alt="Ubuntu App Icon"
                     sizes="28px"
@@ -78,6 +109,13 @@ export class SideBarApp extends Component {
                 >
                     {this.props.title}
                 </div>
+                {
+                    this.state.badgeCount > 0 ? (
+                        <div className="absolute -top-0 -right-0 h-4 w-4 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
+                            {this.state.badgeCount}
+                        </div>
+                    ) : null
+                }
             </button>
         );
     }
