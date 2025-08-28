@@ -1,0 +1,17 @@
+{
+  "README.md": {
+    "language": "markdown",
+    "value": "# Sample VSCode\nThis is a sample file tree.\n",
+    "readOnly": false
+  },
+  "src/main.ts": {
+    "language": "typescript",
+    "value": "export const greet = (name: string): string => `Hello, ${name}`;\n",
+    "readOnly": false
+  },
+  "src/types.d.ts": {
+    "language": "typescript",
+    "value": "declare interface User { name: string; }\n",
+    "readOnly": true
+  }
+}
