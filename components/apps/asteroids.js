@@ -12,6 +12,7 @@ import {
 } from './asteroids-utils';
 import useGameControls from './useGameControls';
 import GameLayout from './GameLayout';
+import { vibrate } from './Games/common/haptics';
 
 // Arcade-style tuning constants
 const THRUST = 0.1;
@@ -275,7 +276,7 @@ const Asteroids = () => {
       );
       ship.cooldown = ship.rapidFire > 0 ? 5 : 15;
       playSound(880);
-      if ('vibrate' in navigator) navigator.vibrate(10);
+      vibrate(10);
     }
 
     function destroyShip() {
@@ -288,7 +289,7 @@ const Asteroids = () => {
         lives -= 1;
         ga.death();
         playSound(110);
-        if ('vibrate' in navigator) navigator.vibrate(200);
+        vibrate(200);
         ship.x = canvas.width / 2;
         ship.y = canvas.height / 2;
         ship.velX = 0;
@@ -323,7 +324,7 @@ const Asteroids = () => {
       }
       asteroids.splice(index, 1);
       playSound(440);
-      if ('vibrate' in navigator) navigator.vibrate(50);
+      vibrate(50);
       if (rand() < 0.1) spawnPowerUp(powerUps, a.x, a.y);
       if (score >= extraLifeScore) {
         lives += 1;

@@ -3,6 +3,7 @@ import { Howl } from 'howler';
 import seedrandom from 'seedrandom';
 import GameLayout from './GameLayout';
 import usePersistentState from '../usePersistentState';
+import { vibrate } from './Games/common/haptics';
 
 const padStyles = [
   {
@@ -145,7 +146,7 @@ const Simon = () => {
 
   const flashPad = useCallback(
     (idx, duration) => {
-      if ('vibrate' in navigator && !prefersReducedMotion) navigator.vibrate(50);
+      if (!prefersReducedMotion) vibrate(50);
       if (audioOnly) return;
       window.requestAnimationFrame(() => setActivePad(idx));
       setTimeout(
