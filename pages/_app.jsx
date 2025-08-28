@@ -17,25 +17,26 @@ function MyApp({ Component, pageProps }) {
     if (trackingId) {
       ReactGA.initialize(trackingId);
     }
-    if (
-      process.env.NODE_ENV === 'production' &&
-      'serviceWorker' in navigator
-    ) {
-      fetch('/service-worker.js', { method: 'HEAD' })
-        .then((res) => {
-          if (res.ok) {
-            navigator.serviceWorker
-              .register('/service-worker.js')
-              .catch((err) => {
-                console.error('Service worker registration failed', err);
-              });
-          } else {
-            console.warn('Service worker file not found');
-          }
-        })
-        .catch((err) => {
-          console.error('Service worker check failed', err);
+    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+      const register = async () => {
+        const { Workbox } = await import('workbox-window');
+        const wb = new Workbox('/service-worker.js');
+
+        const promptRefresh = () => {
+          wb.addEventListener('controlling', () => {
+            window.location.reload();
+          });
+          wb.messageSkipWaiting();
+        };
+
+        wb.addEventListener('waiting', promptRefresh);
+        wb.register().catch((err) => {
+          console.error('Service worker registration failed', err);
         });
+      };
+      register().catch((err) => {
+        console.error('Service worker setup failed', err);
+      });
     }
   }, []);
   return (
