@@ -3,6 +3,7 @@ import dynamic from 'next/dynamic';
 import HexEditor from './HexEditor';
 import { saveSnippet, loadSnippets } from './utils';
 import FormError from '../../ui/FormError';
+import { CSRF_TOKEN, CSRF_HEADER } from '../../../utils/csrf';
 
 const ForceGraph2D = dynamic(
   () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
@@ -93,7 +94,10 @@ const Radare2 = () => {
     try {
       const res = await fetch('/api/radare2', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          [CSRF_HEADER]: CSRF_TOKEN,
+        },
         body: JSON.stringify({ action: 'disasm', hex }),
       });
       const data = await res.json();
@@ -117,7 +121,10 @@ const Radare2 = () => {
       try {
         const res = await fetch('/api/radare2', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            [CSRF_HEADER]: CSRF_TOKEN,
+          },
           body: JSON.stringify({ action: 'analyze', file: base64 }),
         });
         const data = await res.json();
@@ -139,6 +146,7 @@ const Radare2 = () => {
       <div className="mb-6">
         <h2 className="text-lg mb-2">Disassemble Hex</h2>
         <textarea
+          aria-label="hex bytes"
           className="w-full p-2 rounded text-black mb-2"
           rows={3}
           value={hex}
@@ -160,6 +168,7 @@ const Radare2 = () => {
         <h2 className="text-lg mb-2">Analyze Binary</h2>
         <input
           type="file"
+          aria-label="binary file"
           onChange={(e) => setFile(e.target.files[0])}
           className="mb-2"
         />
@@ -186,6 +195,7 @@ const Radare2 = () => {
         <div className="flex flex-col sm:flex-row gap-2 mb-2">
           <input
             type="text"
+            aria-label="Snippet name"
             value={snippetName}
             onChange={(e) => setSnippetName(e.target.value)}
             placeholder="Name"
@@ -193,6 +203,7 @@ const Radare2 = () => {
           />
           <input
             type="text"
+            aria-label="Snippet command"
             value={snippetCommand}
             onChange={(e) => setSnippetCommand(e.target.value)}
             placeholder="Command"

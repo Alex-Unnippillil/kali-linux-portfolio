@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Stepper from './Stepper';
+import { CSRF_TOKEN, CSRF_HEADER } from '../../../utils/csrf';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -41,6 +42,8 @@ const HydraApp = () => {
   const [runId, setRunId] = useState(0);
   const [announce, setAnnounce] = useState('');
   const announceRef = useRef(0);
+  const controllerRef = useRef(null);
+  const timeoutRef = useRef(null);
 
   const LOCKOUT_THRESHOLD = 10;
 
@@ -77,6 +80,11 @@ const HydraApp = () => {
       window.removeEventListener('hydra-protocols-changed', update);
   }, []);
 
+  useEffect(() => () => {
+    controllerRef.current?.abort();
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  }, []);
+
   const addWordList = (file, listsSetter, lists) => {
     if (!file) return;
     const reader = new FileReader();
@@ -109,10 +117,23 @@ const HydraApp = () => {
   const runHydra = async () => {
     const user = selectedUserList;
     const pass = selectedPassList;
-    if (!target || !user || !pass) {
-      setOutput('Please provide target, user list and password list');
+    if (!/^([a-zA-Z0-9.-]{1,255})$/.test(target.trim())) {
+      setOutput('Invalid target');
       return;
     }
+    if (!availableServices.includes(service) || !user || !pass) {
+      setOutput('Please provide valid target, service and lists');
+      return;
+    }
+    if (user.content.length > 10000 || pass.content.length > 10000) {
+      setOutput('Wordlists too large');
+      return;
+    }
+
+    controllerRef.current?.abort();
+    controllerRef.current = new AbortController();
+    timeoutRef.current = setTimeout(() => controllerRef.current?.abort(), 60000);
+    const { signal } = controllerRef.current;
 
     setRunning(true);
     setPaused(false);
@@ -123,22 +144,31 @@ const HydraApp = () => {
     try {
       const res = await fetch('/api/hydra', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          [CSRF_HEADER]: CSRF_TOKEN,
+        },
         body: JSON.stringify({
           target,
           service,
           userList: user.content,
           passList: pass.content,
         }),
+        signal,
       });
       const data = await res.json();
       setOutput(data.output || data.error || 'No output');
       setAnnounce('Hydra finished');
     } catch (err) {
-      setOutput(err.message);
+      if (err.name === 'AbortError') {
+        setOutput('Request cancelled');
+      } else {
+        setOutput(err.message);
+      }
       setAnnounce('Hydra failed');
     } finally {
       setRunning(false);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     }
   };
 
@@ -147,7 +177,7 @@ const HydraApp = () => {
     setAnnounce('Hydra paused');
     await fetch('/api/hydra', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', [CSRF_HEADER]: CSRF_TOKEN },
       body: JSON.stringify({ action: 'pause' }),
     });
   };
@@ -157,7 +187,7 @@ const HydraApp = () => {
     setAnnounce('Hydra resumed');
     await fetch('/api/hydra', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', [CSRF_HEADER]: CSRF_TOKEN },
       body: JSON.stringify({ action: 'resume' }),
     });
   };
@@ -167,9 +197,11 @@ const HydraApp = () => {
     setPaused(false);
     setRunId((id) => id + 1);
     setOutput('');
+    controllerRef.current?.abort();
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     await fetch('/api/hydra', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', [CSRF_HEADER]: CSRF_TOKEN },
       body: JSON.stringify({ action: 'cancel' }),
     });
     setAnnounce('Hydra cancelled');
@@ -179,8 +211,9 @@ const HydraApp = () => {
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
       <div className="space-y-2">
         <div>
-          <label className="block mb-1">Target</label>
+          <label htmlFor="hydra-target" className="block mb-1">Target</label>
           <input
+            id="hydra-target"
             type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
@@ -189,8 +222,9 @@ const HydraApp = () => {
           />
         </div>
         <div>
-          <label className="block mb-1">Service</label>
+          <label htmlFor="hydra-service" className="block mb-1">Service</label>
           <select
+            id="hydra-service"
             value={service}
             onChange={(e) => setService(e.target.value)}
             className="w-full p-2 rounded text-black"
@@ -203,8 +237,9 @@ const HydraApp = () => {
           </select>
         </div>
         <div>
-          <label className="block mb-1">User List</label>
+          <label htmlFor="hydra-userlist" className="block mb-1">User List</label>
           <select
+            id="hydra-userlist"
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
@@ -219,6 +254,7 @@ const HydraApp = () => {
             data-testid="user-file-input"
             type="file"
             accept="text/plain"
+            aria-label="Upload user list"
             onChange={(e) =>
               addWordList(e.target.files[0], setUserLists, userLists)
             }
@@ -239,8 +275,9 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Password List</label>
+          <label htmlFor="hydra-passlist" className="block mb-1">Password List</label>
           <select
+            id="hydra-passlist"
             value={selectedPass}
             onChange={(e) => setSelectedPass(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
@@ -255,6 +292,7 @@ const HydraApp = () => {
             data-testid="pass-file-input"
             type="file"
             accept="text/plain"
+            aria-label="Upload password list"
             onChange={(e) =>
               addWordList(e.target.files[0], setPassLists, passLists)
             }
@@ -281,6 +319,9 @@ const HydraApp = () => {
         >
           {running ? 'Running...' : 'Run Hydra'}
         </button>
+        {running && (
+          <progress className="w-full h-1" aria-label="Hydra progress" />
+        )}
         {running && !paused && (
           <button
             data-testid="pause-button"

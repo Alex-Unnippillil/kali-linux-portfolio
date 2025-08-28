@@ -1,71 +1,16 @@
 // @jest-environment node
-import { promises as fs } from 'fs';
+process.env.NEXT_PUBLIC_CSRF_TOKEN = 'testtoken';
 
-const USER_PATH = '/tmp/hydra-users-test-uuid.txt';
-const PASS_PATH = '/tmp/hydra-pass-test-uuid.txt';
-
-async function cleanup() {
-  await fs.unlink(USER_PATH).catch(() => {});
-  await fs.unlink(PASS_PATH).catch(() => {});
-}
-
-describe('Hydra API temp file cleanup', () => {
-  afterEach(async () => {
-    jest.resetModules();
-    jest.dontMock('child_process');
-    jest.dontMock('crypto');
-    await cleanup();
-  });
-
-  it('removes temp files after successful run', async () => {
-    jest.doMock('crypto', () => ({ randomUUID: () => 'test-uuid' }));
-    const execFileMock = jest.fn((cmd: string, args: any, options: any, cb: any) => {
-      if (typeof options === 'function') {
-        cb = options;
-      }
-      cb(null, '', '');
-    });
-    jest.doMock('child_process', () => ({ execFile: execFileMock }));
-
+describe('Hydra API validation', () => {
+  it('rejects invalid service', async () => {
     const handler = (await import('../pages/api/hydra')).default;
-
     const req: any = {
       method: 'POST',
-      body: { target: 'host', service: 'ssh', userList: 'u', passList: 'p' },
+      headers: { 'x-csrf-token': 'testtoken' },
+      body: { target: 'host', service: 'bad', userList: 'u', passList: 'p' },
     };
     const res: any = { status: jest.fn().mockReturnThis(), json: jest.fn() };
-
     await handler(req, res);
-
-    await expect(fs.access(USER_PATH)).rejects.toThrow();
-    await expect(fs.access(PASS_PATH)).rejects.toThrow();
-  });
-
-  it('removes temp files if hydra missing', async () => {
-    jest.doMock('crypto', () => ({ randomUUID: () => 'test-uuid' }));
-    const execFileMock = jest.fn((cmd: string, args: any, options: any, cb: any) => {
-      if (typeof options === 'function') {
-        cb = options;
-      }
-      if (cmd === 'which') {
-        cb(new Error('missing'), '', '');
-      } else {
-        cb(null, '', '');
-      }
-    });
-    jest.doMock('child_process', () => ({ execFile: execFileMock }));
-
-    const handler = (await import('../pages/api/hydra')).default;
-
-    const req: any = {
-      method: 'POST',
-      body: { target: 'host', service: 'ssh', userList: 'u', passList: 'p' },
-    };
-    const res: any = { status: jest.fn().mockReturnThis(), json: jest.fn() };
-
-    await handler(req, res);
-
-    await expect(fs.access(USER_PATH)).rejects.toThrow();
-    await expect(fs.access(PASS_PATH)).rejects.toThrow();
+    expect(res.status).toHaveBeenCalledWith(400);
   });
 });

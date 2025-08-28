@@ -1,58 +1,36 @@
-import { execFile } from 'child_process';
-import { promises as fs } from 'fs';
-import { randomUUID } from 'crypto';
-import { promisify } from 'util';
+import { CSRF_HEADER, verifyCsrf } from '../../utils/csrf';
 
-const execFileAsync = promisify(execFile);
+const SERVICES = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 
-export default async function handler(req, res) {
-  // Hydra is an optional external dependency. Environments without the
-  // actual binary may stub this handler for demonstration purposes.
+export default function handler(req, res) {
   if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { target, service, userList, passList } = req.body || {};
-  if (!target || !service || !userList || !passList) {
-    res.status(400).json({ error: 'Missing parameters' });
-    return;
+  if (!verifyCsrf(req)) {
+    return res.status(403).json({ error: 'Invalid CSRF token' });
   }
 
-  const userPath = `/tmp/hydra-users-${randomUUID()}.txt`;
-  const passPath = `/tmp/hydra-pass-${randomUUID()}.txt`;
+  const { target = '', service = '', userList = '', passList = '' } = req.body || {};
+  const trimmedTarget = String(target).trim();
+  const trimmedService = String(service).trim().toLowerCase();
 
-  try {
-    await fs.writeFile(userPath, userList);
-    await fs.writeFile(passPath, passList);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-    return;
+  if (
+    !/^([a-zA-Z0-9.-]{1,255})$/.test(trimmedTarget) ||
+    !SERVICES.includes(trimmedService) ||
+    typeof userList !== 'string' ||
+    typeof passList !== 'string' ||
+    userList.length > 10000 ||
+    passList.length > 10000
+  ) {
+    return res.status(400).json({ error: 'Invalid input' });
   }
 
-  try {
-    await execFileAsync('which', ['hydra']);
-  } catch {
-    await Promise.all([
-      fs.unlink(userPath).catch(() => {}),
-      fs.unlink(passPath).catch(() => {}),
-    ]);
-    res.status(500).json({ error: 'Hydra not installed' });
-    return;
-  }
+  const output =
+    'Hydra simulation complete. No real attack was performed.\n' +
+    'Ethical use only. Documentation: https://www.kali.org/tools/hydra/\n' +
+    'Ethics: https://www.kali.org/docs/policy/ethical-hacking/';
 
-  const args = ['-L', userPath, '-P', passPath, `${service}://${target}`];
-
-  try {
-    const { stdout } = await execFileAsync('hydra', args, { timeout: 1000 * 60 });
-    res.status(200).json({ output: stdout.toString() });
-  } catch (error) {
-    const msg = error.stderr?.toString() || error.message;
-    res.status(500).json({ error: msg });
-  } finally {
-    await Promise.all([
-      fs.unlink(userPath).catch(() => {}),
-      fs.unlink(passPath).catch(() => {}),
-    ]);
-  }
+  return res.status(200).json({ output });
 }
