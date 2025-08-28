@@ -35,6 +35,16 @@ const WORD_LISTS = {
     'PEACH',
     'CHERRY',
   ],
+  colors: [
+    'RED',
+    'BLUE',
+    'GREEN',
+    'YELLOW',
+    'PURPLE',
+    'ORANGE',
+    'BLACK',
+    'WHITE',
+  ],
 };
 
 const DIFFICULTIES = {
@@ -81,6 +91,17 @@ const pickWords = (count, theme) => {
 };
 const randomLetter = () => String.fromCharCode(65 + Math.floor(Math.random() * 26));
 
+const DIRECTIONS = [
+  { dx: 1, dy: 0 },
+  { dx: -1, dy: 0 },
+  { dx: 0, dy: 1 },
+  { dx: 0, dy: -1 },
+  { dx: 1, dy: 1 },
+  { dx: -1, dy: -1 },
+  { dx: 1, dy: -1 },
+  { dx: -1, dy: 1 },
+];
+
 const generatePuzzle = (size, words) => {
   const grid = Array.from({ length: size }, () => Array(size).fill(''));
   const placements = {};
@@ -88,16 +109,16 @@ const generatePuzzle = (size, words) => {
   words.forEach((word) => {
     let placed = false;
     for (let attempt = 0; attempt < 100 && !placed; attempt++) {
-      const horizontal = Math.random() < 0.5;
-      const maxRow = horizontal ? size : size - word.length;
-      const maxCol = horizontal ? size - word.length : size;
-      const row = Math.floor(Math.random() * maxRow);
-      const col = Math.floor(Math.random() * maxCol);
+      const dir = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
+      const maxRow = dir.dy > 0 ? size - word.length : dir.dy < 0 ? word.length - 1 : size - 1;
+      const maxCol = dir.dx > 0 ? size - word.length : dir.dx < 0 ? word.length - 1 : size - 1;
+      const row = Math.floor(Math.random() * (maxRow + 1));
+      const col = Math.floor(Math.random() * (maxCol + 1));
 
       let fits = true;
       for (let i = 0; i < word.length; i++) {
-        const r = row + (horizontal ? 0 : i);
-        const c = col + (horizontal ? i : 0);
+        const r = row + dir.dy * i;
+        const c = col + dir.dx * i;
         if (grid[r][c] && grid[r][c] !== word[i]) {
           fits = false;
           break;
@@ -106,11 +127,11 @@ const generatePuzzle = (size, words) => {
 
       if (fits) {
         for (let i = 0; i < word.length; i++) {
-          const r = row + (horizontal ? 0 : i);
-          const c = col + (horizontal ? i : 0);
+          const r = row + dir.dy * i;
+          const c = col + dir.dx * i;
           grid[r][c] = word[i];
         }
-        placements[word] = { row, col, horizontal };
+        placements[word] = { row, col, dx: dir.dx, dy: dir.dy };
         placed = true;
       }
     }
@@ -129,13 +150,13 @@ const getPath = (start, end) => {
   if (!start || !end) return [];
   const [sr, sc] = start;
   const [er, ec] = end;
+  const dx = Math.sign(ec - sc);
+  const dy = Math.sign(er - sr);
+  const len = Math.max(Math.abs(ec - sc), Math.abs(er - sr));
+  if (dx !== 0 && dy !== 0 && Math.abs(ec - sc) !== Math.abs(er - sr)) return [];
   const path = [];
-  if (sr === er) {
-    const step = ec > sc ? 1 : -1;
-    for (let c = sc; c !== ec + step; c += step) path.push([sr, c]);
-  } else if (sc === ec) {
-    const step = er > sr ? 1 : -1;
-    for (let r = sr; r !== er + step; r += step) path.push([r, sc]);
+  for (let i = 0; i <= len; i++) {
+    path.push([sr + dy * i, sc + dx * i]);
   }
   return path;
 };
@@ -152,6 +173,15 @@ const WordSearch = () => {
     {},
   );
   const [sound, setSound] = usePersistentState('wordsearch-sound', true);
+  const [challenge, setChallenge] = usePersistentState(
+    'wordsearch-challenge',
+    false,
+  );
+  const [timeLimit, setTimeLimit] = usePersistentState(
+    'wordsearch-time-limit',
+    120,
+  );
+  const [streak, setStreak] = usePersistentState('wordsearch-streak', 0);
 
   const [puzzle, setPuzzle] = useState(() =>
     generatePuzzle(SIZE, pickWords(WORD_COUNT, theme === 'random' ? undefined : theme)),
@@ -160,7 +190,7 @@ const WordSearch = () => {
   const GRID_PIXELS = SIZE * (CELL_SIZE + GAP_SIZE) - GAP_SIZE;
   const [foundWords, setFoundWords] = useState([]);
   const [foundCells, setFoundCells] = useState([]);
-  const [time, setTime] = useState(0);
+  const [time, setTime] = useState(challenge ? timeLimit : 0);
   const [paused, setPaused] = useState(false);
   const [start, setStart] = useState(null);
   const [end, setEnd] = useState(null);
@@ -202,12 +232,23 @@ const WordSearch = () => {
 
   useEffect(() => {
     if (!paused) {
-      timerRef.current = setInterval(() => setTime((t) => t + 1), 1000);
+      timerRef.current = setInterval(
+        () => setTime((t) => (challenge ? t - 1 : t + 1)),
+        1000,
+      );
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [paused]);
+  }, [paused, challenge]);
+
+  useEffect(() => {
+    if (challenge && time <= 0) {
+      setStreak(0);
+      reset(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [challenge, time]);
 
   useEffect(() => {
     if (words.length && foundWords.length === words.length) {
@@ -219,7 +260,10 @@ const WordSearch = () => {
         }
         return bt;
       });
+      setStreak((s) => s + 1);
+      setTimeout(() => reset(false), 500);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [foundWords, words, time, difficulty, setBestTimes]);
 
   useEffect(() => {
@@ -247,9 +291,9 @@ const WordSearch = () => {
   }, [lassos]);
 
   useEffect(() => {
-    reset();
+    reset(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [difficulty, theme]);
+  }, [difficulty, theme, challenge, timeLimit]);
 
   const handleMouseDown = (r, c) => {
     if (paused) return;
@@ -323,18 +367,18 @@ const WordSearch = () => {
     const remaining = words.filter((w) => !foundWords.includes(w));
     if (!remaining.length) return;
     const word = remaining[Math.floor(Math.random() * remaining.length)];
-    const { row, col, horizontal } = placements[word];
+    const { row, col, dx, dy } = placements[word];
     const cells = [];
     for (let i = 0; i < word.length; i++) {
-      const r = row + (horizontal ? 0 : i);
-      const c = col + (horizontal ? i : 0);
+      const r = row + dy * i;
+      const c = col + dx * i;
       cells.push([r, c]);
     }
     setHintCells(cells);
     setTimeout(() => setHintCells([]), 1000);
   };
 
-  function reset() {
+  function reset(failed = true) {
     setPuzzle(
       generatePuzzle(
         SIZE,
@@ -343,7 +387,7 @@ const WordSearch = () => {
     );
     setFoundWords([]);
     setFoundCells([]);
-    setTime(0);
+    setTime(challenge ? timeLimit : 0);
     setHintCells([]);
     setStart(null);
     setEnd(null);
@@ -352,6 +396,7 @@ const WordSearch = () => {
     polyRefs.current = [];
     setAnnouncement('');
     setPaused(false);
+    if (failed) setStreak(0);
   }
 
   return (
@@ -435,6 +480,7 @@ const WordSearch = () => {
             <div>
               Found: {foundWords.length}/{words.length}
             </div>
+            <div>Streak: {streak}</div>
           </div>
           <div className="flex-1 overflow-auto border border-gray-600 p-2 mb-2">
             {words.map((w) => (
@@ -455,7 +501,7 @@ const WordSearch = () => {
             </button>
             <button
               className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
-              onClick={reset}
+              onClick={() => reset(true)}
             >
               Reset
             </button>
@@ -471,6 +517,25 @@ const WordSearch = () => {
             >
               {sound ? 'Sound Off' : 'Sound On'}
             </button>
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={challenge}
+                onChange={(e) => setChallenge(e.target.checked)}
+              />
+              <span>Timed Mode</span>
+            </label>
+            {challenge && (
+              <select
+                className="px-2 py-1 text-black"
+                value={timeLimit}
+                onChange={(e) => setTimeLimit(Number(e.target.value))}
+              >
+                <option value={60}>60s</option>
+                <option value={120}>120s</option>
+                <option value={180}>180s</option>
+              </select>
+            )}
             <select
               className="px-2 py-1 text-black"
               value={theme}
