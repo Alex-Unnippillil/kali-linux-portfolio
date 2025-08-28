@@ -4,7 +4,87 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
-import { validateSolution, puzzles } from './nonogramUtils';
+import {
+  validateSolution,
+  puzzles,
+  findForcedCellsInLine,
+  getPossibleLineSolutions,
+} from './nonogramUtils';
+
+// basic logical line solver used for tests and hinting
+export const solveLines = (rows, cols, inputGrid) => {
+  const height = rows.length;
+  const width = cols.length;
+  const grid = inputGrid
+    ? inputGrid.map((r) => r.slice())
+    : Array(height)
+        .fill(0)
+        .map(() => Array(width).fill(0));
+  const contradictions = {
+    rows: Array(height).fill(false),
+    cols: Array(width).fill(false),
+  };
+  let changed = true;
+  while (changed) {
+    changed = false;
+    rows.forEach((clue, i) => {
+      const line = grid[i];
+      const poss = getPossibleLineSolutions(clue, line);
+      contradictions.rows[i] = poss.length === 0;
+      if (poss.length === 0) return;
+      const forced = findForcedCellsInLine(clue, line);
+      forced.forEach(({ index, value }) => {
+        if (grid[i][index] !== value) {
+          grid[i][index] = value;
+          changed = true;
+        }
+      });
+    });
+    cols.forEach((clue, j) => {
+      const col = grid.map((row) => row[j]);
+      const poss = getPossibleLineSolutions(clue, col);
+      contradictions.cols[j] = poss.length === 0;
+      if (poss.length === 0) return;
+      const forced = findForcedCellsInLine(clue, col);
+      forced.forEach(({ index, value }) => {
+        if (grid[index][j] !== value) {
+          grid[index][j] = value;
+          changed = true;
+        }
+      });
+    });
+  }
+  return { grid, contradictions };
+};
+
+export const solveNonogram = (rows, cols) => {
+  const height = rows.length;
+  const width = cols.length;
+  const attempt = (g, guessed) => {
+    const { grid, contradictions } = solveLines(rows, cols, g);
+    if (contradictions.rows.some(Boolean) || contradictions.cols.some(Boolean)) {
+      return null;
+    }
+    if (validateSolution(grid, rows, cols)) {
+      return { grid, usedGuess: guessed };
+    }
+    for (let i = 0; i < height; i++) {
+      for (let j = 0; j < width; j++) {
+        if (grid[i][j] === 0) {
+          const g1 = grid.map((r) => r.slice());
+          g1[i][j] = 1;
+          const r1 = attempt(g1, true);
+          if (r1) return r1;
+          const g2 = grid.map((r) => r.slice());
+          g2[i][j] = -1;
+          return attempt(g2, true);
+        }
+      }
+    }
+    return null;
+  };
+  return attempt(null, false);
+};
 
 // visual settings
 const CELL_SIZE = 30;
@@ -133,7 +213,7 @@ const Nonogram = () => {
 
   // update progress targets when grid changes
   useEffect(() => {
-    const newRowTargets = rows.map((_, i) => {
+    const newRowTargets = rows.map((clue, i) => {
       let correct = 0;
       let total = 0;
       let error = false;
@@ -146,9 +226,10 @@ const Nonogram = () => {
           error = true;
         }
       }
+      if (getPossibleLineSolutions(clue, grid[i]).length === 0) error = true;
       return { target: total ? Math.max(0, Math.min(1, correct / total)) : 1, error };
     });
-    const newColTargets = cols.map((_, j) => {
+    const newColTargets = cols.map((clue, j) => {
       let correct = 0;
       let total = 0;
       let error = false;
@@ -161,6 +242,8 @@ const Nonogram = () => {
           error = true;
         }
       }
+      const col = grid.map((row) => row[j]);
+      if (getPossibleLineSolutions(clue, col).length === 0) error = true;
       return { target: total ? Math.max(0, Math.min(1, correct / total)) : 1, error };
     });
     setRowTargets(newRowTargets.map((r) => r.target));
