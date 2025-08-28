@@ -106,17 +106,24 @@ const Checkers = () => {
     makeMove(move);
   };
 
-    const makeMove = (move: Move) => {
+  const makeMove = (move: Move) => {
     if (pathRef.current.length === 0) pathRef.current = [move.from, move.to];
     else pathRef.current.push(move.to);
     const { board: newBoard, capture, king } = applyMove(board, move);
+    const fromRow = move.from[0] + 1;
+    const fromCol = move.from[1] + 1;
+    const toRow = move.to[0] + 1;
+    const toCol = move.to[1] + 1;
+    setAriaMessage(
+      `${turn} moved from row ${fromRow}, column ${fromCol} to row ${toRow}, column ${toCol}${capture ? ', capturing a piece' : ''}`
+    );
     const further = capture
       ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
       : [];
     setBoard(newBoard);
     if (king) {
       setCrowned([move.to[0], move.to[1]]);
-      setAriaMessage(`Piece crowned at row ${move.to[0] + 1}, column ${move.to[1] + 1}`);
+      setAriaMessage(`Piece crowned at row ${toRow}, column ${toCol}`);
       if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
       const start = performance.now();
       const step = (now: number) => {
@@ -172,11 +179,10 @@ const Checkers = () => {
     setMoves([]);
     setHint(null);
     setLastMove(pathRef.current);
-    setAriaMessage('');
     pathRef.current = [];
-    };
+  };
 
-    makeMoveRef.current = makeMove;
+  makeMoveRef.current = makeMove;
 
   const reset = () => {
     if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
@@ -254,37 +260,45 @@ const Checkers = () => {
         {board.map((row, r) =>
           row.map((cell, c) => {
             const isDark = (r + c) % 2 === 1;
-            const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
+            const move = moves.find((m) => m.to[0] === r && m.to[1] === c);
+            const isMove = !!move;
             const isHint = hint && hint.from[0] === r && hint.from[1] === c;
             const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
             const isSelected = selected && selected[0] === r && selected[1] === c;
             const isLast = lastMove.some((p) => p[0] === r && p[1] === c);
             const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
+            const moveClasses = isMove
+              ? `ring-4 ${move?.captured ? 'ring-red-500' : 'ring-blue-500'} ring-offset-2 ring-offset-black`
+              : '';
             return (
               <div
                 key={`${r}-${c}`}
                 {...pointerHandlers(() =>
                   selected ? tryMove(r, c) : selectPiece(r, c)
                 )}
-                className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
-                  isDark ? 'bg-gray-700' : 'bg-gray-400'
-                } ${
-                  isMove
-                    ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-black drop-shadow-[0_0_8px_#fbbf24] motion-safe:animate-glow'
-                    : ''
-                } ${
+                className={`relative w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
+                  isDark ? 'bg-gray-800' : 'bg-gray-100'
+                } ${moveClasses} ${
                   isHint || isHintDest
-                    ? 'ring-2 ring-blue-400 motion-safe:animate-pulse'
+                    ? 'ring-2 ring-blue-500 motion-safe:animate-pulse'
                     : ''
-                } ${isSelected ? 'ring-2 ring-green-400' : ''} ${
-                  isLast ? 'ring-2 ring-red-400' : ''
+                } ${isSelected ? 'ring-2 ring-green-500' : ''} ${
+                  isLast ? 'ring-2 ring-red-500' : ''
                 }`}
               >
+                {!cell && isMove && (
+                  <div
+                    aria-hidden="true"
+                    className={`w-3 h-3 rounded-full ${
+                      move?.captured ? 'bg-red-500' : 'bg-blue-500'
+                    }`}
+                  />
+                )}
                 {cell && (
                   <div
                     className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center ${
-                      cell.color === 'red' ? 'bg-red-500' : 'bg-black'
-                    } ${cell.king ? 'border-4 border-yellow-300' : ''} ${
+                      cell.color === 'red' ? 'bg-red-600' : 'bg-gray-900'
+                    } ${cell.king ? 'border-4 border-yellow-400' : ''} ${
                       isCrowned ? 'motion-safe:animate-flourish' : ''
                     }`}
                   >
