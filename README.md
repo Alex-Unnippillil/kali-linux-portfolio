@@ -6,6 +6,19 @@ A desktop-style portfolio built with Next.js and Tailwind that emulates a Kali/U
 
 ---
 
+## ⚠️ Disclaimer & Risk Overview
+
+This repository showcases **static, non-operational simulations** of security tools for educational purposes only. Running real offensive commands against systems without explicit authorization is illegal and can cause damage or service disruption.
+
+**Potential Risks**
+- Network scans may trigger intrusion detection and block your IP.
+- Brute-force attempts can lock accounts or corrupt data.
+- Sample outputs are canned and not from live targets.
+
+Always test inside controlled labs and obtain written permission before performing any security assessment.
+
+---
+
 ## Quick Start
 
 ### Requirements
