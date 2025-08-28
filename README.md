@@ -362,7 +362,7 @@ See [`LICENSE`](./LICENSE).
 - `export` → `next export`
 - `test` → `jest`
 - `test:watch` → `jest --watch`
-- `lint` → `next lint`
+- `lint` → `eslint --max-warnings=0 .`
 - `smoke` → `node scripts/smoke-all-apps.mjs`
 
 ### Smoke Tests
