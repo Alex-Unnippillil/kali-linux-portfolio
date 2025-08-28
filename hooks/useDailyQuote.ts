@@ -37,7 +37,8 @@ const processQuotes = (data: any[]) =>
     .map((q) => {
       const content = q.content || q.quote || '';
       const author = q.author || 'Unknown';
-      let tags = Array.isArray(q.tags) ? (q.tags as string[]).map((t: string) => t.toLowerCase()) : [];
+      let tags = Array.isArray(q.tags) ? q.tags.map((t: string) => t.toLowerCase()) : [];
+
       if (!tags.length) {
         const lower = content.toLowerCase();
         Object.entries(CATEGORY_KEYWORDS).forEach(([cat, keywords]) => {
