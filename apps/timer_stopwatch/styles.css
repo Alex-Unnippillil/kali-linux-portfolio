@@ -37,3 +37,8 @@ li {
   border-radius: 4px;
   font-family: 'Courier New', monospace;
 }
+
+.error {
+  color: red;
+  margin-top: 5px;
+}
