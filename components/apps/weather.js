@@ -218,6 +218,7 @@ const Weather = () => {
   const pointsWorkerRef = useRef(null);
   const chartRef = useRef(null);
   const timesRef = useRef(null);
+  const [error, setError] = useState('');
   const fetchForecast = async (lat, lon, cityName) => {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=auto`;
     try {
@@ -242,24 +243,30 @@ const Weather = () => {
     }
   };
 
-  // S1: Geolocation fallback with optional manual city entry
+  // S1: Load default forecast; geolocation available via button
   useEffect(() => {
+    fetchForecast(defaultLocation.latitude, defaultLocation.longitude);
+  }, []);
+
+  const requestLocation = () => {
     if (!navigator.geolocation) {
       setLocationDenied(true);
-      fetchForecast(defaultLocation.latitude, defaultLocation.longitude);
+      setError('Geolocation is not supported by your browser.');
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         fetchForecast(latitude, longitude);
+        setLocationDenied(false);
+        setError('');
       },
       () => {
         setLocationDenied(true);
-        fetchForecast(defaultLocation.latitude, defaultLocation.longitude);
+        setError('Permission denied. Please enter your city manually.');
       }
     );
-  }, []);
+  };
 
   // S2: Respect reduced motion preference
   useEffect(() => {
@@ -360,6 +367,14 @@ const Weather = () => {
       className={`h-full w-full flex flex-col items-center justify-start text-white p-4 overflow-auto ${gradient}`}
     >
       <Icon still={reduceMotion} />
+      <button
+        onClick={requestLocation}
+        className="mb-4 bg-white/20 px-4 py-2 rounded"
+        aria-label="Use my location"
+      >
+        Use My Location
+      </button>
+      {error && <div className="mb-4 text-red-500">{error}</div>}
       {locationDenied && (
         <form
           onSubmit={handleCitySubmit}
