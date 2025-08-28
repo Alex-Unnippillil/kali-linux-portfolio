@@ -55,7 +55,19 @@ const securityHeaders = [
 
 module.exports = {
   images: {
-    domains: ['opengraph.githubassets.com', 'raw.githubusercontent.com', 'avatars.githubusercontent.com'],
+    domains: [
+      'opengraph.githubassets.com',
+      'raw.githubusercontent.com',
+      'avatars.githubusercontent.com',
+      'openweathermap.org',
+      'img.youtube.com',
+      'ghchart.rshah.org',
+      'img.shields.io',
+      'i.ytimg.com',
+      'staticmap.openstreetmap.de',
+      'images.credly.com',
+      'data.typeracer.com',
+    ],
   },
   async headers() {
     return [

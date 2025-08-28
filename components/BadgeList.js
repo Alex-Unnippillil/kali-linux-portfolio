@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 
 const BadgeList = ({ badges, className = '' }) => {
   const [filter, setFilter] = useState('');
@@ -69,10 +70,12 @@ const BadgeList = ({ badges, className = '' }) => {
             }}
             aria-label={badge.label}
           >
-            <img
+            <Image
               src={badge.src}
               alt={badge.alt}
               title={badge.description || badge.label}
+              width={120}
+              height={40}
             />
           </button>
         ))}

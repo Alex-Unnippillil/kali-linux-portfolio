@@ -1,5 +1,6 @@
 'use client';
 import { useEffect } from 'react';
+import Image from 'next/image';
 import './styles.css';
 
 export default function WeatherWidget() {
@@ -23,7 +24,7 @@ export default function WeatherWidget() {
       <div id="error-message"></div>
       <div id="weather" className="weather">
         <div className="temp">--°C</div>
-        <img className="icon" src="" alt="Weather icon" />
+        <Image className="icon" src="" alt="Weather icon" width={100} height={100} />
         <div className="forecast">Loading...</div>
       </div>
     </div>
