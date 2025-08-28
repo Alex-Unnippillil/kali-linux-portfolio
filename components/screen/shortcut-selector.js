@@ -47,6 +47,7 @@ class ShortcutSelector extends React.Component {
                 id={app.id}
                 icon={app.icon}
                 openApp={() => this.selectApp(app.id)}
+                disabled={app.disabled}
             />
         ));
     };
