@@ -50,8 +50,8 @@ const VideoGallery: React.FC = () => {
           <iframe
             title="Selected video"
             className="w-full h-full"
-            src={`https://www.youtube.com/embed/${playing}`}
-            sandbox="allow-same-origin allow-scripts allow-popups"
+            src={`https://www.youtube-nocookie.com/embed/${playing}`}
+            sandbox="allow-scripts allow-popups"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             referrerPolicy="no-referrer"
             allowFullScreen

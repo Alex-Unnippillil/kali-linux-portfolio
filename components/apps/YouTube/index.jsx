@@ -66,10 +66,8 @@ export default function YouTubeApp({ initialVideos = [] }) {
 
   const current = queue[0] || null;
 
-  const privacy = process.env.NEXT_PUBLIC_PRIVACY_MODE === 'true';
-  const origin =
-    typeof window !== 'undefined' ? window.location.origin : '';
-  const embedBase = `https://${privacy ? 'www.youtube-nocookie.com' : 'www.youtube.com'}`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const embedBase = 'https://www.youtube-nocookie.com';
 
   const playVideo = useCallback((video) => {
     setQueue((q) => {
@@ -104,7 +102,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
               src={`${embedBase}/embed/${video.id}?enablejsapi=1&origin=${encodeURIComponent(origin)}`}
               title={video.title}
               className="absolute inset-0 w-full h-full"
-              sandbox="allow-same-origin allow-scripts allow-popups"
+              sandbox="allow-scripts allow-popups"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               referrerPolicy="no-referrer"
               allowFullScreen

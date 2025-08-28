@@ -15,6 +15,8 @@ interface TabData {
 
 const STORAGE_KEY = 'chrome-tabs';
 const HOME_URL = 'https://www.google.com/webhp?igu=1';
+const SANDBOX_FLAGS = ['allow-scripts', 'allow-forms', 'allow-popups'] as const;
+const CSP = "default-src 'self'; script-src 'none'; connect-src 'none';";
 
 const formatUrl = (value: string) => {
   let url = value.trim();
@@ -64,6 +66,7 @@ const Chrome: React.FC = () => {
   const [address, setAddress] = useState<string>(tabs.find((t) => t.id === activeId)?.url || HOME_URL);
   const [searchTerm, setSearchTerm] = useState('');
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [showFlags, setShowFlags] = useState(false);
   const setIframeMuted = useCallback((mute: boolean) => {
     try {
       const doc = iframeRef.current?.contentDocument;
@@ -280,7 +283,8 @@ const Chrome: React.FC = () => {
 
   const blockedView = (
     <div className="flex flex-col items-center justify-center w-full h-full text-center p-4">
-      <p className="mb-2">This site refused to connect.</p>
+      <p className="mb-2">This site refused to connect in the sandbox.</p>
+      <p className="mb-4 text-sm">Open it in a regular tab for full functionality.</p>
       <a
         href={activeTab.url}
         target="_blank"
@@ -305,6 +309,21 @@ const Chrome: React.FC = () => {
           className="px-2"
         >
           {activeTab.muted ? '🔇' : '🔊'}
+        </button>
+        <button
+          onClick={() => window.open(activeTab.url, '_blank', 'noopener,noreferrer')}
+          aria-label="Open externally"
+          title="Sandbox restrictions may block features"
+          className="px-2"
+        >
+          ↗
+        </button>
+        <button
+          onClick={() => setShowFlags((s) => !s)}
+          aria-label="Show sandbox flags"
+          className="px-2"
+        >
+          ⚑
         </button>
         <input
           className="flex-grow px-2 py-0.5 text-black rounded"
@@ -354,13 +373,20 @@ const Chrome: React.FC = () => {
               src={activeTab.url}
               title={activeTab.url}
               className="w-full h-full"
-
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
-            referrerPolicy="no-referrer"
-            allowFullScreen
-          />
-        )}
+              sandbox={SANDBOX_FLAGS.join(' ')}
+              csp={CSP}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
+              referrerPolicy="no-referrer"
+              allowFullScreen
+            />
+          )}
+          {showFlags && (
+            <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 space-y-1">
+              <p>Active sandbox flags: {SANDBOX_FLAGS.join(', ') || '(none)'}</p>
+              <p>Note: combining <code>allow-scripts</code> with <code>allow-same-origin</code> defeats isolation.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
