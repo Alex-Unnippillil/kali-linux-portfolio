@@ -4,14 +4,15 @@ import userEvent from '@testing-library/user-event';
 import PdfViewer from '../components/common/PdfViewer';
 
 jest.mock('pdfjs-dist', () => {
+  const getPage = jest.fn(async () => ({
+    getViewport: () => ({ width: 100, height: 100, scale: 1 }),
+    render: () => ({ promise: Promise.resolve() }),
+    getTextContent: async () => ({ items: [{ str: 'hello world' }] }),
+  }));
   const getDocument = jest.fn(() => ({
     promise: Promise.resolve({
-      numPages: 1,
-      getPage: jest.fn(async () => ({
-        getViewport: () => ({ width: 100, height: 100, scale: 1 }),
-        render: () => ({ promise: Promise.resolve() }),
-        getTextContent: async () => ({ items: [{ str: 'hello world' }] }),
-      })),
+      numPages: 3,
+      getPage,
     }),
   }));
   return { getDocument, GlobalWorkerOptions: { workerSrc: '' } };
@@ -26,5 +27,16 @@ describe('PdfViewer', () => {
     await user.type(screen.getByPlaceholderText(/search/i), 'hello');
     await user.click(screen.getByText('Search'));
     expect(await screen.findByText('Page 1')).toBeInTheDocument();
+  });
+
+  it('supports keyboard navigation through thumbnails', async () => {
+    const user = userEvent.setup();
+    render(<PdfViewer url="/sample.pdf" />);
+    const options = await screen.findAllByRole('option');
+    options[0].focus();
+    await user.keyboard('{ArrowRight}');
+    const updated = await screen.findAllByRole('option');
+    expect(updated[1]).toHaveFocus();
+    expect(updated[1]).toHaveAttribute('aria-selected', 'true');
   });
 });

@@ -54,7 +54,9 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
         <div
           key={section.id}
           id={section.id}
-          tabIndex={0}
+          role="tab"
+          aria-selected={this.state.active_screen === section.id}
+          tabIndex={this.state.active_screen === section.id ? 0 : -1}
           onFocus={this.changeScreen}
           className={
             (this.state.active_screen === section.id
@@ -77,6 +79,24 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
     </>
   );
 
+  handleNavKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const tabs = Array.from(
+      e.currentTarget.querySelectorAll<HTMLElement>('[role="tab"]')
+    );
+    let index = tabs.indexOf(document.activeElement as HTMLElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      index = (index + 1) % tabs.length;
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      index = (index - 1 + tabs.length) % tabs.length;
+    } else {
+      return;
+    }
+    tabs.forEach((tab, i) => (tab.tabIndex = i === index ? 0 : -1));
+    tabs[index].focus();
+  };
+
   render() {
     const structured = {
       '@context': 'https://schema.org',
@@ -91,7 +111,12 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           <title>About</title>
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }} />
         </Head>
-        <div className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black">
+        <div
+          className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
+          role="tablist"
+          aria-orientation="vertical"
+          onKeyDown={this.handleNavKeyDown}
+        >
           {this.renderNavLinks()}
         </div>
         <div
@@ -106,6 +131,9 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
               (this.state.navbar ? ' visible animateShow z-30 ' : ' invisible ') +
               ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
             }
+            role="tablist"
+            aria-orientation="vertical"
+            onKeyDown={this.handleNavKeyDown}
           >
             {this.renderNavLinks()}
           </div>
