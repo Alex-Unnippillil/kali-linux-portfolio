@@ -200,17 +200,42 @@ export class Window extends Component {
         var rect = r.getBoundingClientRect();
         const threshold = 30;
         let snap = null;
-        if (rect.left <= threshold) {
+        const nearLeft = rect.left <= threshold;
+        const nearRight = rect.right >= window.innerWidth - threshold;
+        const nearTop = rect.top <= threshold;
+        const nearBottom = rect.bottom >= window.innerHeight - threshold;
+
+        if (nearLeft && nearTop) {
+            snap = { left: '0', top: '0', width: '50%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'top-left' });
+        }
+        else if (nearRight && nearTop) {
+            snap = { left: '50%', top: '0', width: '50%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'top-right' });
+        }
+        else if (nearLeft && nearBottom) {
+            snap = { left: '0', top: '50%', width: '50%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom-left' });
+        }
+        else if (nearRight && nearBottom) {
+            snap = { left: '50%', top: '50%', width: '50%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom-right' });
+        }
+        else if (nearLeft) {
             snap = { left: '0', top: '0', width: '50%', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'left' });
         }
-        else if (rect.right >= window.innerWidth - threshold) {
+        else if (nearRight) {
             snap = { left: '50%', top: '0', width: '50%', height: '100%' };
             this.setState({ snapPreview: snap, snapPosition: 'right' });
         }
-        else if (rect.top <= threshold) {
+        else if (nearTop) {
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
+        }
+        else if (nearBottom) {
+            snap = { left: '0', top: '50%', width: '100%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom' });
         }
         else {
             if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
@@ -243,6 +268,26 @@ export class Window extends Component {
                 newWidth = 100.2;
                 newHeight = 50;
                 transform = 'translate(-1pt,-2pt)';
+            } else if (snapPos === 'bottom') {
+                newWidth = 100.2;
+                newHeight = 50;
+                transform = `translate(-1pt,${window.innerHeight / 2}px)`;
+            } else if (snapPos === 'top-left') {
+                newWidth = 50;
+                newHeight = 50;
+                transform = 'translate(-1pt,-2pt)';
+            } else if (snapPos === 'top-right') {
+                newWidth = 50;
+                newHeight = 50;
+                transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+            } else if (snapPos === 'bottom-left') {
+                newWidth = 50;
+                newHeight = 50;
+                transform = `translate(-1pt,${window.innerHeight / 2}px)`;
+            } else if (snapPos === 'bottom-right') {
+                newWidth = 50;
+                newHeight = 50;
+                transform = `translate(${window.innerWidth / 2}px,${window.innerHeight / 2}px)`;
             }
             var r = document.querySelector("#" + this.id);
             if (r && transform) {
