@@ -8,8 +8,8 @@ export class Window extends Component {
     constructor(props) {
         super(props);
         this.id = null;
-        this.startX = 60;
-        this.startY = 10;
+        this.startX = props.initialX ?? 60;
+        this.startY = props.initialY ?? 10;
         this.state = {
             cursorType: "cursor-default",
             width: props.defaultWidth || 60,
@@ -182,9 +182,15 @@ export class Window extends Component {
 
     setWinowsPosition = () => {
         var r = document.querySelector("#" + this.id);
+        if (!r) return;
         var rect = r.getBoundingClientRect();
-        r.style.setProperty('--window-transform-x', rect.x.toFixed(1).toString() + "px");
-        r.style.setProperty('--window-transform-y', (rect.y.toFixed(1) - 32).toString() + "px");
+        const x = rect.x;
+        const y = rect.y - 32;
+        r.style.setProperty('--window-transform-x', x.toFixed(1).toString() + "px");
+        r.style.setProperty('--window-transform-y', y.toFixed(1).toString() + "px");
+        if (this.props.onPositionChange) {
+            this.props.onPositionChange(x, y);
+        }
     }
 
     unsnapWindow = () => {
