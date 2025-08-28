@@ -1,10 +1,12 @@
-import cities from './cities.json';
+import demoCity from './demoCity.json';
 
 const widget = document.getElementById('weather');
 const tempEl = widget.querySelector('.temp');
 const iconEl = widget.querySelector('.icon');
 const forecastEl = widget.querySelector('.forecast');
-const cityPicker = document.getElementById('city-picker');
+const sunriseEl = widget.querySelector('.sunrise');
+const sunsetEl = widget.querySelector('.sunset');
+const citySearch = document.getElementById('city-search');
 const unitToggle = document.getElementById('unit-toggle');
 const apiKeyInput = document.getElementById('api-key-input');
 const saveApiKeyBtn = document.getElementById('save-api-key');
@@ -15,14 +17,15 @@ if (apiKey) apiKeyInput.value = apiKey;
 
 let unit = unitToggle.value;
 
-function loadCities() {
-  cityPicker.innerHTML = cities
-    .map((c) => `<option value="${c.name}">${c.name}</option>`)
-    .join('');
-}
-
 function convertTemp(celsius) {
   return unit === 'metric' ? celsius : (celsius * 9) / 5 + 32;
+}
+
+function formatTime(timestamp) {
+  return new Date(timestamp * 1000).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function renderWeather(data) {
@@ -39,6 +42,8 @@ function renderWeather(data) {
         iconEl.alt = data.condition;
       }
       forecastEl.textContent = data.condition;
+      sunriseEl.textContent = `Sunrise: ${formatTime(data.sunrise)}`;
+      sunsetEl.textContent = `Sunset: ${formatTime(data.sunset)}`;
       widget.classList.add('fade-in');
       widget.removeEventListener('animationend', handler);
     },
@@ -48,7 +53,9 @@ function renderWeather(data) {
 
 async function fetchLiveWeather(city) {
   const response = await fetch(
-    `https://api.openweathermap.org/data/2.5/weather?q=${city}&units=metric&appid=${apiKey}`
+    `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
+      city
+    )}&units=metric&appid=${apiKey}`
   );
   if (!response.ok) throw new Error('Failed to fetch weather');
   const data = await response.json();
@@ -56,29 +63,41 @@ async function fetchLiveWeather(city) {
     tempC: data.main.temp,
     condition: data.weather[0].description,
     icon: data.weather[0].icon,
+    sunrise: data.sys.sunrise,
+    sunset: data.sys.sunset,
   };
 }
 
 async function updateWeather() {
-  const city = cityPicker.value;
+  const city = citySearch.value.trim();
   try {
     let data;
-    if (apiKey) {
+    if (apiKey && city) {
       data = await fetchLiveWeather(city);
+      localStorage.setItem('lastCity', city);
     } else {
-      data = cities.find((c) => c.name === city);
+      data = demoCity;
+      citySearch.value = demoCity.name;
+      localStorage.setItem('lastCity', demoCity.name);
     }
-    if (data) {
-      renderWeather(data);
-      errorMessageEl.textContent = '';
-    }
+    renderWeather(data);
+    errorMessageEl.textContent = '';
   } catch (err) {
     console.error(err);
     errorMessageEl.textContent = 'Unable to fetch weather data. Please try again later.';
   }
 }
 
-cityPicker.addEventListener('change', updateWeather);
+function debounce(fn, delay) {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), delay);
+  };
+}
+
+const debouncedUpdateWeather = debounce(updateWeather, 500);
+citySearch.addEventListener('input', debouncedUpdateWeather);
 
 unitToggle.addEventListener('change', () => {
   unit = unitToggle.value;
@@ -95,10 +114,11 @@ saveApiKeyBtn.addEventListener('click', () => {
   updateWeather();
 });
 
-loadCities();
-if (cities.length) {
-  cityPicker.value = cities[0].name;
-  updateWeather();
+const lastCity = localStorage.getItem('lastCity');
+if (lastCity) {
+  citySearch.value = lastCity;
 }
+
+updateWeather();
 
 setInterval(updateWeather, 10 * 60 * 1000);
