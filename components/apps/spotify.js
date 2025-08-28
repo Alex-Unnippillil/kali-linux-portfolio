@@ -129,7 +129,7 @@ export default function SpotifyApp() {
       audioCtx.close();
       workerRef.current?.terminate();
     };
-    }, [started]);
+    }, [started, playing]);
 
     const togglePlayback = () => {
       if (!started) {

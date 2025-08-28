@@ -257,7 +257,7 @@ const Platformer = () => {
       window.removeEventListener('keydown', handleDown);
       window.removeEventListener('keyup', handleUp);
     };
-  }, [levelData, paused, sound, setProgress]);
+  }, [levelData, paused, sound, setProgress, progress.checkpoint, progress.highscore]);
 
   const levelPath = levels[progress.level];
   if (!levelPath)

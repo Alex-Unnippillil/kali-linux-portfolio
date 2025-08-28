@@ -145,7 +145,7 @@ const Snake = () => {
     const ctx = canvasRef.current?.getContext('2d');
     ctxRef.current = ctx;
     draw();
-  }, [draw]);
+  }, [draw, canvasRef]);
 
   /** Advance the game state by one step. */
   const update = useCallback(() => {
@@ -196,7 +196,7 @@ const Snake = () => {
     } else {
       snake.pop();
     }
-  }, [wrap, beep]);
+  }, [wrap, beep, haptics, prefersReducedMotion]);
 
   /** Main animation loop driven by requestAnimationFrame. */
   const loop = useCallback(

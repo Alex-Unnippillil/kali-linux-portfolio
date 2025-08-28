@@ -213,7 +213,7 @@ const TicTacToe = () => {
     } else {
       setStatus('Your turn');
     }
-  }, [board, player, ai, difficulty, aiMoves, paused, sound]);
+  }, [board, player, ai, difficulty, aiMoves, paused, sound, seriesLength]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

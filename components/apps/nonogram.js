@@ -62,7 +62,7 @@ const Nonogram = () => {
     const hs = localStorage.getItem('nonogramHighScore');
     if (hs) setHighScore(parseInt(hs, 10));
     reset();
-  }, []);
+  }, [reset]);
 
   const playSound = useCallback(() => {
     if (!sound) return;
@@ -351,7 +351,7 @@ const Nonogram = () => {
 
     animationRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationRef.current);
-  }, [rows, cols, paused, height, width, rowTargets, colTargets, rowErrors, colErrors, reduceMotion]);
+  }, [rows, cols, paused, height, width, rowTargets, colTargets, rowErrors, colErrors, reduceMotion, solution]);
 
   // mouse interaction
   const painting = useRef(false);

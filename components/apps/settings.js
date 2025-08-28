@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings } from '../../hooks/useSettings';
 import { resetSettings, defaults } from '../../utils/settingsStore';
 
@@ -32,15 +32,15 @@ export function Settings() {
         return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
     };
 
-    let contrastRatio = (hex1, hex2) => {
+    const contrastRatio = useCallback((hex1, hex2) => {
         let l1 = luminance(hexToRgb(hex1)) + 0.05;
         let l2 = luminance(hexToRgb(hex2)) + 0.05;
         return l1 > l2 ? l1 / l2 : l2 / l1;
-    };
+    }, []);
 
-    let accentText = () => {
+    const accentText = useCallback(() => {
         return contrastRatio(accent, '#000000') > contrastRatio(accent, '#ffffff') ? '#000000' : '#ffffff';
-    };
+    }, [accent, contrastRatio]);
 
     useEffect(() => {
         let raf = requestAnimationFrame(() => {
@@ -52,7 +52,7 @@ export function Settings() {
             }
         });
         return () => cancelAnimationFrame(raf);
-    }, [accent, theme]);
+    }, [accent, theme, accentText, contrastRatio]);
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>

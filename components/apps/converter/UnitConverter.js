@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { unitMap, categories, convertUnit, math } from './unitData';
 
 // A slider that displays a rounding preview bubble while dragging.
@@ -81,39 +81,45 @@ const UnitConverter = () => {
 
   const units = Object.keys(unitMap[category]);
 
-  const convertLeftToRight = (val, prec = precision) => {
-    if (val === '' || isNaN(parseFloat(val))) {
-      setRightVal('');
-      return;
-    }
-    const converted = convertUnit(
-      category,
-      fromUnit,
-      toUnit,
-      parseFloat(val),
-      prec
-    );
-    setRightVal(
-      math.format(converted, { notation: 'fixed', precision: prec })
-    );
-  };
+  const convertLeftToRight = useCallback(
+    (val, prec = precision) => {
+      if (val === '' || isNaN(parseFloat(val))) {
+        setRightVal('');
+        return;
+      }
+      const converted = convertUnit(
+        category,
+        fromUnit,
+        toUnit,
+        parseFloat(val),
+        prec
+      );
+      setRightVal(
+        math.format(converted, { notation: 'fixed', precision: prec })
+      );
+    },
+    [category, fromUnit, toUnit, precision],
+  );
 
-  const convertRightToLeft = (val, prec = precision) => {
-    if (val === '' || isNaN(parseFloat(val))) {
-      setLeftVal('');
-      return;
-    }
-    const converted = convertUnit(
-      category,
-      toUnit,
-      fromUnit,
-      parseFloat(val),
-      prec
-    );
-    setLeftVal(
-      math.format(converted, { notation: 'fixed', precision: prec })
-    );
-  };
+  const convertRightToLeft = useCallback(
+    (val, prec = precision) => {
+      if (val === '' || isNaN(parseFloat(val))) {
+        setLeftVal('');
+        return;
+      }
+      const converted = convertUnit(
+        category,
+        toUnit,
+        fromUnit,
+        parseFloat(val),
+        prec
+      );
+      setLeftVal(
+        math.format(converted, { notation: 'fixed', precision: prec })
+      );
+    },
+    [category, fromUnit, toUnit, precision],
+  );
 
   const handleLeftChange = (e) => {
     const val = e.target.value;
@@ -133,7 +139,7 @@ const UnitConverter = () => {
     } else if (rightVal !== '') {
       convertRightToLeft(rightVal, precision);
     }
-  }, [precision, fromUnit, toUnit]);
+  }, [precision, fromUnit, toUnit, leftVal, rightVal, convertLeftToRight, convertRightToLeft]);
 
   return (
     <div className="bg-gray-700 text-white p-4 rounded flex flex-col gap-2">
