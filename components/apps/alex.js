@@ -308,12 +308,14 @@ const SkillSection = ({ title, badges }) => {
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map(badge => (
-          <img
+          <Image
             key={badge.alt}
             className="m-1 cursor-pointer"
             src={badge.src}
             alt={badge.alt}
             title={badge.description}
+            width={120}
+            height={40}
             onClick={() => setSelected(badge)}
           />
         ))}
@@ -371,10 +373,12 @@ function Skills({ skills }) {
       <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
         <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
         <div className="bg-ub-gedit-light bg-opacity-20 p-1 md:p-2 rounded-md shadow-md">
-          <img
+          <Image
             src="https://ghchart.rshah.org/Alex-Unnippillil"
             alt="Alex Unnippillil's GitHub contribution graph"
             className="w-full rounded"
+            width={720}
+            height={144}
           />
         </div>
       </div>

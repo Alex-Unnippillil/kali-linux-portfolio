@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useRef,
 } from 'react';
+import Image from 'next/image';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
@@ -430,11 +431,13 @@ export default function YouTubeApp({ initialVideos = [] }) {
                   }}
                 >
                   {video.thumbnail && (
-                    <img
+                    <Image
                       src={video.thumbnail}
                       alt={video.title}
                       className="w-full"
                       loading="lazy"
+                      width={320}
+                      height={180}
                     />
                   )}
                   <div

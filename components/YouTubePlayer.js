@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import Head from 'next/head';
+import Image from 'next/image';
 import usePrefersReducedMotion from './hooks/usePrefersReducedMotion';
 
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,
@@ -159,11 +160,13 @@ export default function YouTubePlayer({ videoId }) {
               onClick={loadPlayer}
               className="relative w-full h-full flex items-center justify-center"
             >
-              <img
+              <Image
                 src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
                 alt=""
                 loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover"
+                width={480}
+                height={360}
               />
               <svg
                 xmlns="http://www.w3.org/2000/svg"
