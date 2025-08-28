@@ -1,23 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-interface Script {
-  name: string;
-  description: string;
-  example: string;
-}
+const NmapNSEPage = () => {
+  const [data, setData] = useState({});
 
-type ScriptData = Record<string, Script[]>;
-
-const NmapNSEPage: React.FC = () => {
-  const [data, setData] = useState<ScriptData>({});
-  const copyExample = useCallback((text: string) => {
+  const copyExample = useCallback((text) => {
     try {
       navigator.clipboard?.writeText(text);
     } catch (e) {
       // ignore copy errors
     }
   }, []);
-  const openScriptDoc = useCallback((name: string) => {
+
+  const openScriptDoc = useCallback((name) => {
     if (typeof window !== 'undefined') {
       window.open(
         `https://nmap.org/nsedoc/scripts/${name}.html`,
