@@ -293,7 +293,7 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 - **`components/screen/*`** - lock screen, boot splash, navbar, app grid.
 - **`hooks/usePersistentState.ts`** - localStorage-backed state with validation + reset helper.
 - **`components/apps/GameLayout.tsx`** - standardized layout and help toggle for games.
-- **`components/PipPortal.tsx`** - renders arbitrary UI inside a Document Picture-in-Picture window. See [`docs/pip-portal.md`](./docs/pip-portal.md).
+- **`components/common/PipPortal.tsx`** - renders arbitrary UI inside a Document Picture-in-Picture window. See [`docs/pip-portal.md`](./docs/pip-portal.md).
 
 ---
 

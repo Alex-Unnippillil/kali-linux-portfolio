@@ -9,7 +9,7 @@ Wrap your application with `PipPortalProvider` and use the `usePipPortal`
 hook to open or close the PiP window.
 
 ```tsx
-import PipPortalProvider, { usePipPortal } from '../components/PipPortal';
+import PipPortalProvider, { usePipPortal } from '../components/common/PipPortal';
 
 function HudButton() {
   const { open, close } = usePipPortal();
