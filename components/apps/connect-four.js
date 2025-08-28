@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 const ROWS = 6;
 const COLS = 7;
@@ -15,6 +15,7 @@ const ConnectFour = () => {
   const hoverRef = useRef({ col: null, row: null });
   const reduceRef = useRef(false);
   const winLineRef = useRef(null);
+  const animRef = useRef(null);
 
   const [, setBoardState] = useState(boardRef.current);
   const [current, setCurrent] = useState(1); // 1 red, 2 yellow
@@ -65,7 +66,15 @@ const ConnectFour = () => {
     }
   }, [current, winner]);
 
+  const cancelAnim = useCallback(() => {
+    if (animRef.current !== null) {
+      cancelAnimationFrame(animRef.current);
+      animRef.current = null;
+    }
+  }, []);
+
   const reset = () => {
+    cancelAnim();
     boardRef.current = createBoard();
     setBoardState(boardRef.current);
     setWinner(null);
@@ -170,7 +179,6 @@ const ConnectFour = () => {
     canvas.width = COLS * SIZE;
     canvas.height = ROWS * SIZE;
 
-    let animId;
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#1e3a8a';
@@ -272,11 +280,11 @@ const ConnectFour = () => {
         ctx.restore();
       }
 
-      animId = requestAnimationFrame(render);
+      animRef.current = requestAnimationFrame(render);
     };
-    animId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animId);
-  }, [current, winner]);
+    animRef.current = requestAnimationFrame(render);
+    return cancelAnim;
+  }, [current, winner, cancelAnim]);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
