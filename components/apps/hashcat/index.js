@@ -9,6 +9,7 @@ const hashTypes = [
     regex: /^[a-f0-9]{32}$/i,
     example: '5f4dcc3b5aa765d61d8327deb882cf99',
     output: 'password',
+    description: 'Fast, legacy 32-character hash',
   },
   {
     id: '100',
@@ -17,6 +18,7 @@ const hashTypes = [
     regex: /^[a-f0-9]{40}$/i,
     example: '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8',
     output: 'password',
+    description: '160-bit secure hash algorithm',
   },
   {
     id: '1400',
@@ -26,6 +28,7 @@ const hashTypes = [
     example:
       '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
     output: 'password',
+    description: '256-bit SHA2 hash',
   },
   {
     id: '3200',
@@ -35,6 +38,7 @@ const hashTypes = [
     example:
       '$2b$12$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     output: 'password',
+    description: 'Adaptive hash with salt and cost factor',
   },
 ];
 
@@ -310,6 +314,7 @@ function HashcatApp() {
       <div>Description: {selected.description}</div>
       <div>Example hash: {selected.example}</div>
       <div>Expected output: {selected.output}</div>
+      <div>Description: {selected.description}</div>
       <button onClick={runBenchmark}>Run Benchmark</button>
       {benchmark && (
         <div data-testid="benchmark-output">{benchmark}</div>
@@ -342,6 +347,10 @@ function HashcatApp() {
           </a>
           .
         </div>
+        <div className="text-xs mt-1">
+          Sample entries: <code>password123</code>, <code>qwerty</code>,{' '}
+          <code>letmein</code>
+        </div>
       </div>
       <div>
         <label className="mr-2" htmlFor="word-pattern">
@@ -366,6 +375,43 @@ function HashcatApp() {
           </a>
         )}
         <div className="text-xs mt-1">Uploading wordlists is disabled.</div>
+      </div>
+      <div className="mt-2">
+        <div className="text-sm">Demo Command:</div>
+        <div className="flex items-center">
+          <code
+            className="bg-black px-2 py-1 text-xs"
+            data-testid="demo-command"
+          >
+            {`hashcat -m ${hashType} ${hashInput || 'hash.txt'} ${
+              wordlist ? `${wordlist}.txt` : 'wordlist.txt'
+            }`}
+          </code>
+          <button
+            className="ml-2"
+            onClick={() => {
+              if (navigator?.clipboard?.writeText) {
+                navigator.clipboard.writeText(
+                  `hashcat -m ${hashType} ${hashInput || 'hash.txt'} ${
+                    wordlist ? `${wordlist}.txt` : 'wordlist.txt'
+                  }`
+                );
+              }
+            }}
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+      <div className="mt-4 w-full max-w-md">
+        <div className="text-sm">Sample Output:</div>
+        <pre className="bg-black p-2 text-xs overflow-auto">
+          hashcat (demo) starting
+
+          5f4dcc3b5aa765d61d8327deb882cf99:password
+
+          Session completed.
+        </pre>
       </div>
       <Gauge value={gpuUsage} />
       <div className="text-xs">Note: real hashcat requires a compatible GPU.</div>
