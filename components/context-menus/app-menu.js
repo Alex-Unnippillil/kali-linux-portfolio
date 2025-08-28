@@ -13,6 +13,11 @@ function AppMenu(props) {
         }
     }
 
+    const handleOpen = () => {
+        props.openApp && props.openApp()
+        props.onClose && props.onClose()
+    }
+
     const handlePin = () => {
         if (props.pinned) {
             props.unpinApp && props.unpinApp()
@@ -21,10 +26,16 @@ function AppMenu(props) {
         }
     }
 
+    const handleAbout = () => {
+        props.aboutApp && props.aboutApp()
+        props.onClose && props.onClose()
+    }
+
     return (
         <div
             id="app-menu"
             role="menu"
+            aria-label="Application context menu"
             aria-hidden={!props.active}
             ref={menuRef}
             onKeyDown={handleKeyDown}
@@ -32,15 +43,43 @@ function AppMenu(props) {
         >
             <button
                 type="button"
-                onClick={handlePin}
+                onClick={handleOpen}
                 role="menuitem"
-                aria-label={props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}
+                aria-label="Open"
                 className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
             >
-                <span className="ml-5">{props.pinned ? 'Unpin from Favorites' : 'Pin to Favorites'}</span>
+                <span className="ml-5">Open</span>
+            </button>
+            <button
+                type="button"
+                onClick={handlePin}
+                role="menuitem"
+                aria-label={props.pinned ? 'Unpin from Dock' : 'Pin to Dock'}
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">{props.pinned ? 'Unpin from Dock' : 'Pin to Dock'}</span>
+            </button>
+            <Devider />
+            <button
+                type="button"
+                onClick={handleAbout}
+                role="menuitem"
+                aria-label="About"
+                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+            >
+                <span className="ml-5">About</span>
             </button>
         </div>
     )
 }
 
+function Devider() {
+    return (
+        <div className="flex justify-center w-full">
+            <div className=" border-t border-gray-900 py-1 w-2/5"></div>
+        </div>
+    );
+}
+
 export default AppMenu
+
