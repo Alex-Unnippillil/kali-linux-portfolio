@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
+import { detectSwipe } from '../games/_2048/swipe';
 
 const SIZE = 4;
 
@@ -186,6 +187,30 @@ const Page2048 = () => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  }, [handleMove]);
+
+  useEffect(() => {
+    let startX = 0;
+    let startY = 0;
+    const onStart = (e: TouchEvent) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    };
+    const onEnd = (e: TouchEvent) => {
+      const dir = detectSwipe(
+        startX,
+        startY,
+        e.changedTouches[0].clientX,
+        e.changedTouches[0].clientY
+      );
+      if (dir) handleMove(dir);
+    };
+    window.addEventListener('touchstart', onStart);
+    window.addEventListener('touchend', onEnd);
+    return () => {
+      window.removeEventListener('touchstart', onStart);
+      window.removeEventListener('touchend', onEnd);
+    };
   }, [handleMove]);
 
   const reset = () => {
