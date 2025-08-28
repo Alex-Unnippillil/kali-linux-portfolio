@@ -11,6 +11,18 @@ const BOARD_HEIGHT = ROWS * SLOT - GAP;
 type Cell = 'red' | 'yellow' | null;
 type Board = Cell[][];
 
+interface AnimatedDisc {
+  col: number;
+  row: number;
+  color: Exclude<Cell, null>;
+  y: number;
+  vy: number;
+  target: number;
+}
+
+type GameControls = [number | null, React.Dispatch<React.SetStateAction<number | null>>];
+type Winner = Exclude<Cell, null> | 'draw' | null;
+
 const createEmptyBoard = (): Board => Array.from({ length: ROWS }, () => Array<Cell>(COLS).fill(null));
 
 const getValidRow = (board: Board, col: number) => {
@@ -192,12 +204,24 @@ const getImmediateLines = (board: Board, player: Exclude<Cell, null>) => {
 const ConnectFour = () => {
   const [board, setBoard] = useState<Board>(createEmptyBoard());
   const [player, setPlayer] = useState<'red' | 'yellow'>('red');
-  const [winner, setWinner] = useState<Cell>(null);
+  const [winner, setWinner] = useState<Winner>(null);
   const [winningCells, setWinningCells] = useState<{ r: number; c: number }[]>([]);
-  const [animDisc, setAnimDisc] = useState<any>(null);
-  const gameControls: any = useGameControls(COLS as any, ((col: number) => dropDisc(col)) as any);
-  const selectedCol = gameControls[0];
-  const setSelectedCol = gameControls[1];
+  const [animDisc, setAnimDisc] = useState<AnimatedDisc | null>(null);
+
+  const dropDisc = React.useCallback(
+    (col: number, color: Exclude<Cell, null> = player) => {
+      if (winner || animDisc) return;
+      if (color !== player) return;
+      const row = getValidRow(board, col);
+      if (row === -1) return;
+      setAnimDisc({ col, row, color, y: -SLOT, vy: 0, target: row * SLOT });
+    },
+    [winner, animDisc, player, board]
+  );
+
+  const useControls = useGameControls as (cols: number, onDrop: (col: number) => void) => GameControls;
+  const [selectedCol, setSelectedCol] = useControls(COLS, dropDisc);
+
   const [aiDepth, setAiDepth] = useState(4);
   const [winColumn, setWinColumn] = useState<number | null>(null);
   const [teaching, setTeaching] = useState<{ wins: { r: number; c: number }[][]; threats: { r: number; c: number }[][] }>({ wins: [], threats: [] });
@@ -215,7 +239,7 @@ const ConnectFour = () => {
         setWinningCells(winCells);
         setWinColumn(col);
       } else if (isBoardFull(newBoard)) {
-        setWinner('draw' as any);
+        setWinner('draw');
       } else {
         const next = color === 'red' ? 'yellow' : 'red';
         setPlayer(next);
@@ -224,22 +248,11 @@ const ConnectFour = () => {
     []
   );
 
-  const dropDisc = React.useCallback(
-    (col: number, color: Exclude<Cell, null> = player) => {
-      if (winner || animDisc) return;
-      if (color !== player) return;
-      const row = getValidRow(board, col);
-      if (row === -1) return;
-      setAnimDisc({ col, row, color, y: -SLOT, vy: 0, target: row * SLOT });
-    },
-    [winner, animDisc, player, board]
-  );
-
   useEffect(() => {
     if (!animDisc) return;
     let raf: number;
     const animate = () => {
-      setAnimDisc((d: any) => {
+      setAnimDisc((d) => {
         if (!d) return d;
         let { y, vy, target } = d;
         vy += 1.5;
@@ -295,7 +308,7 @@ const ConnectFour = () => {
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       {winner && (
         <div className="mb-2 capitalize">
-          {(winner as any) === 'draw' ? 'Draw!' : `${winner} wins!`}
+          {winner === 'draw' ? 'Draw!' : `${winner} wins!`}
         </div>
       )}
       <div className="relative" onMouseLeave={() => setSelectedCol(null)}>
