@@ -11,6 +11,7 @@ import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
 import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
+import { displayClipboardManager } from './components/apps/ClipboardManager';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayNikto } from './components/apps/nikto';
@@ -190,6 +191,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayAsciiArt,
+  },
+  {
+    id: 'clipboard-manager',
+    title: 'Clipboard Manager',
+    icon: './themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayClipboardManager,
   },
   {
     id: 'figlet',
