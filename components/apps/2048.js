@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
@@ -189,6 +189,7 @@ const Game2048 = () => {
   const [combo, setCombo] = useState(0);
   const [hint, setHint] = useState(null);
   const [demo, setDemo] = useState(false);
+  const moveLock = useRef(false);
 
   useEffect(() => {
     if (animCells.size > 0) {
@@ -235,7 +236,7 @@ const Game2048 = () => {
 
   const handleDirection = useCallback(
     ({ x, y }) => {
-      if (won || lost) return;
+      if (won || lost || moveLock.current) return;
       let result;
       if (x === -1) result = moveLeft(board);
       else if (x === 1) result = moveRight(board);
@@ -244,6 +245,7 @@ const Game2048 = () => {
       else return;
       const { board: moved, merged, score: gained, mergedCells } = result;
       if (!boardsEqual(board, moved)) {
+        moveLock.current = true;
         const added = addRandomTile(moved, hardMode, hardMode ? 2 : 1);
         setHistory((h) => [...h, { board: cloneBoard(board), score, moves }]);
         setAnimCells(new Set(added));
@@ -271,6 +273,9 @@ const Game2048 = () => {
         }
         if (checkWin(moved)) setWon(true);
         else if (!hasMoves(moved)) setLost(true);
+        setTimeout(() => {
+          moveLock.current = false;
+        }, 200);
       }
     },
     [board, won, lost, hardMode, score, moves, setBoard, setLost, setWon],

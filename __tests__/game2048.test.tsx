@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, act } from '@testing-library/react';
 import Game2048, { setSeed } from '../components/apps/2048';
 
 beforeEach(() => {
@@ -33,7 +33,7 @@ test('merge triggers animation', () => {
   expect(firstCell?.querySelector('.merge-ripple')).toBeTruthy();
 });
 
-test('tracks moves and allows multiple undos', () => {
+test('tracks moves and allows multiple undos', async () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
     [0, 0, 0, 0],
@@ -43,6 +43,9 @@ test('tracks moves and allows multiple undos', () => {
   const { getByText } = render(<Game2048 />);
   const initial = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 250));
+  });
   fireEvent.keyDown(window, { key: 'ArrowRight' });
   expect(getByText(/Moves: 2/)).toBeTruthy();
   const undoBtn = getByText('Undo');
@@ -68,4 +71,22 @@ test('colorblind palette toggle changes tile class', () => {
   fireEvent.click(toggle);
   const updated = container.querySelector('.grid div');
   expect(updated?.className).not.toContain('bg-gray-300');
+});
+
+test('ignores key repeats while a move is in progress', async () => {
+  window.localStorage.setItem('2048-board', JSON.stringify([
+    [2, 2, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+  ]));
+  const { getByText } = render(<Game2048 />);
+  fireEvent.keyDown(window, { key: 'ArrowLeft' });
+  fireEvent.keyDown(window, { key: 'ArrowLeft' });
+  expect(getByText(/Moves: 1/)).toBeTruthy();
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 250));
+  });
+  fireEvent.keyDown(window, { key: 'ArrowLeft' });
+  expect(getByText(/Moves: 2/)).toBeTruthy();
 });
