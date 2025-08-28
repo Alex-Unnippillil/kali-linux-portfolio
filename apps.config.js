@@ -59,6 +59,7 @@ const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
 const QuoteGeneratorApp = createDynamicApp('quote_generator', 'Quote Generator');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
+const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
@@ -139,6 +140,7 @@ const displayQuoteGenerator = createDisplay(QuoteGeneratorApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
+const displayInputLab = createDisplay(InputLabApp);
 
 const displayGhidra = createDisplay(GhidraApp);
 
@@ -217,6 +219,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'input-lab',
+    title: 'Input Lab',
+    icon: './themes/Yaru/apps/input-lab.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayInputLab,
   },
 ];
 
