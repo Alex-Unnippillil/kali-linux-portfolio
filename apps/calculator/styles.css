@@ -15,6 +15,7 @@ body {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   width: 100%;
   max-width: 240px;
+  container-type: inline-size;
 }
 
 .display {
@@ -46,7 +47,7 @@ body {
   gap: 0.5rem;
 }
 
-@media (max-width: 480px) {
+@container (max-width: 200px) {
   .button-grid {
     grid-template-columns: repeat(2, 1fr);
   }
