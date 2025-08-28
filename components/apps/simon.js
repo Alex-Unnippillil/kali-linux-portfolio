@@ -105,6 +105,7 @@ const Simon = () => {
   const [audioOnly, setAudioOnly] = useState(false);
   const [seed, setSeed] = useState('');
   const [strictMode, setStrictMode] = useState(true);
+  const [difficulty, setDifficulty] = useState('normal');
   const [leaderboard, setLeaderboard] = usePersistentState(
     'simon_leaderboard',
     []
@@ -154,11 +155,13 @@ const Simon = () => {
 
   const stepDuration = useCallback(() => {
     const base = 60 / bpm;
+    const difficultyScale = { easy: 1.2, normal: 1, hard: 0.8 };
+    const scale = difficultyScale[difficulty] || 1;
     if (mode === 'speed') {
-      return Math.max(base - sequence.length * 0.02, 0.2);
+      return Math.max(base - sequence.length * 0.02, 0.2) * scale;
     }
-    return base;
-  }, [bpm, mode, sequence.length]);
+    return base * scale;
+  }, [bpm, mode, sequence.length, difficulty]);
 
   const playSequence = useCallback(() => {
     const ctx =
@@ -179,10 +182,13 @@ const Simon = () => {
     let finalDelta = baseDelta;
     schedule.forEach((time, i) => {
       const idx = sequence[i];
-      scheduleTone(tones[idx], time, currentDelta);
+      const toneDuration = currentDelta;
       const delay = (time - ctx.currentTime) * 1000;
-      setTimeout(() => flashPad(idx, currentDelta), delay);
-      finalDelta = currentDelta;
+      setTimeout(() => {
+        flashPad(idx, toneDuration);
+        scheduleTone(tones[idx], ctx.currentTime, toneDuration);
+      }, delay);
+      finalDelta = toneDuration;
       currentDelta *= ramp;
     });
     const totalDelay =
@@ -226,15 +232,24 @@ const Simon = () => {
         }
         errorSound.current.play();
         setErrorFlash(true);
-        const streak = Math.max(sequence.length - 1, 0);
-        setLeaderboard((prev) =>
-          [...prev, streak].sort((a, b) => b - a).slice(0, 5)
-        );
         setIsPlayerTurn(false);
-        setStatus('Wrong pad! Game over.');
+        if (strictMode) {
+          const streak = Math.max(sequence.length - 1, 0);
+          setLeaderboard((prev) =>
+            [...prev, streak].sort((a, b) => b - a).slice(0, 5)
+          );
+          setStatus('Wrong pad! Game over.');
+        } else {
+          setStatus('Wrong pad! Try again.');
+          setStep(0);
+        }
         setTimeout(() => {
           setErrorFlash(false);
-          restartGame();
+          if (strictMode) {
+            restartGame();
+          } else {
+            playSequence();
+          }
         }, 600);
         return;
       }
@@ -251,10 +266,12 @@ const Simon = () => {
     [
       flashPad,
       isPlayerTurn,
+      playSequence,
       restartGame,
       sequence,
       step,
       stepDuration,
+      strictMode,
       setLeaderboard,
     ]
   );
@@ -317,6 +334,15 @@ const Simon = () => {
             />
             <span>{bpm} BPM</span>
           </div>
+          <select
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+          >
+            <option value="easy">Easy</option>
+            <option value="normal">Normal</option>
+            <option value="hard">Hard</option>
+          </select>
           <input
             className="px-2 py-1 w-24 bg-gray-700 hover:bg-gray-600 rounded"
             placeholder="Seed"
