@@ -6,7 +6,6 @@ const ResourceMonitor = () => {
   const networkRef = useRef(null);
   const liveRef = useRef(null);
   const workerRef = useRef(null);
-  const rafRef = useRef(0);
   const containerRef = useRef(null);
   const [stress, setStress] = useState(false);
 
@@ -36,23 +35,11 @@ const ResourceMonitor = () => {
       [cpuCanvas, memCanvas, netCanvas]
     );
 
-    const fps = 30;
-    const interval = 1000 / fps;
-    let last = 0;
-    const tick = (now) => {
-      if (workerRef.current && now - last >= interval) {
-        last = now;
-        workerRef.current.postMessage({ type: 'frame' });
-      }
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
     const handleVisibility = () => {
-      if (document.hidden) cancelAnimationFrame(rafRef.current);
-      else if (!reduceMotion) rafRef.current = requestAnimationFrame(tick);
+      worker.postMessage({ type: 'visibility', hidden: document.hidden });
     };
 
-    if (!reduceMotion && !document.hidden) rafRef.current = requestAnimationFrame(tick);
+    worker.postMessage({ type: 'visibility', hidden: document.hidden });
     document.addEventListener('visibilitychange', handleVisibility);
 
     const observer = new ResizeObserver((entries) => {
@@ -73,7 +60,6 @@ const ResourceMonitor = () => {
 
     return () => {
       worker.terminate();
-      cancelAnimationFrame(rafRef.current);
       document.removeEventListener('visibilitychange', handleVisibility);
       observer.disconnect();
     };
