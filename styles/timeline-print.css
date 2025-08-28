@@ -1,0 +1,21 @@
+@media print {
+  .timeline {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .timeline-item {
+    border-left: 2px solid #000;
+    margin-left: 1rem;
+    padding-left: 1rem;
+    page-break-inside: avoid;
+  }
+  .timeline-date {
+    font-weight: bold;
+  }
+  .skill-button {
+    border: 1px solid #000;
+    background: #fff;
+    color: #000;
+  }
+}
