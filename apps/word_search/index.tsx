@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { generateGrid, createRNG } from './generator';
+import { createRNG } from './generator';
+import type { GenerateResult } from './generator';
 import type { Position, WordPlacement } from './types';
 import wordList from '../../components/apps/wordle_words.json';
 import { logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
@@ -50,6 +51,8 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const [selecting, setSelecting] = useState(false);
   const [start, setStart] = useState<Position | null>(null);
   const [selection, setSelection] = useState<Position[]>([]);
+  const [loading, setLoading] = useState(false);
+  const workerRef = useRef<Worker | null>(null);
   const startRef = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const { quality, setQuality, highContrast, setHighContrast } = useSettings();
@@ -102,16 +105,28 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
 
   useEffect(() => {
     if (!seed || !words.length) return;
-    const { grid: g, placements: p } = generateGrid(words, GRID_SIZE, seed);
-    setGrid(g);
-    setPlacements(p);
-    setFound(new Set());
-    setFoundCells(new Set());
-    setHintCells(new Set());
-    setFirstHints(3);
-    setLastHints(3);
-    startRef.current = Date.now();
-    logGameStart('word_search');
+    setLoading(true);
+    workerRef.current = new Worker(new URL('./grid.worker.ts', import.meta.url));
+    workerRef.current.onmessage = (e: MessageEvent<GenerateResult>) => {
+      const { grid: g, placements: p } = e.data;
+      setGrid(g);
+      setPlacements(p);
+      setFound(new Set());
+      setFoundCells(new Set());
+      setHintCells(new Set());
+      setFirstHints(3);
+      setLastHints(3);
+      startRef.current = Date.now();
+      logGameStart('word_search');
+      setLoading(false);
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
+    workerRef.current.postMessage({ words, size: GRID_SIZE, seed });
+    return () => {
+      workerRef.current?.terminate();
+      workerRef.current = null;
+    };
   }, [seed, words]);
 
   // auto-save progress every 5 seconds
@@ -288,6 +303,9 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     setHintCells(newHints);
     setLastHints(lastHints - 1);
   };
+  if (loading) {
+    return <div className="p-4 select-none">Generating...</div>;
+  }
   const progress = words.length ? found.size / words.length : 0;
   const radius = 16;
   const circumference = 2 * Math.PI * radius;
