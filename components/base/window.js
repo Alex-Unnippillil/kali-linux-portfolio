@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import NextImage from 'next/image';
-import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 
@@ -10,6 +9,8 @@ export class Window extends Component {
         this.id = null;
         this.startX = 60;
         this.startY = 10;
+        this.posX = this.startX;
+        this.posY = this.startY;
         this.state = {
             cursorType: "cursor-default",
             width: props.defaultWidth || 60,
@@ -28,11 +29,18 @@ export class Window extends Component {
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
+        this.winRef = React.createRef();
+        this._resizeObserver = null;
+        this.dragStartX = 0;
+        this.dragStartY = 0;
+        this.dragOffsetX = 0;
+        this.dragOffsetY = 0;
     }
 
     componentDidMount() {
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
+        this.observeSize();
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -50,6 +58,9 @@ export class Window extends Component {
         window.removeEventListener('resize', this.resizeBoundries);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
+        }
+        if (this._resizeObserver) {
+            this._resizeObserver.disconnect();
         }
     }
 
@@ -107,6 +118,23 @@ export class Window extends Component {
         }, 200);
     }
 
+    observeSize = () => {
+        if (typeof ResizeObserver === 'undefined') return;
+        const node = this.winRef.current;
+        if (!node) return;
+        this._resizeObserver = new ResizeObserver((entries) => {
+            const entry = entries[0];
+            const w = (entry.contentRect.width / window.innerWidth) * 100;
+            const h = (entry.contentRect.height / window.innerHeight) * 100;
+            const width = parseFloat(w.toFixed(1));
+            const height = parseFloat(h.toFixed(1));
+            if (width !== this.state.width || height !== this.state.height) {
+                this.setState({ width, height }, this.resizeBoundries);
+            }
+        });
+        this._resizeObserver.observe(node);
+    }
+
     optimizeWindow = () => {
         const root = document.getElementById(this.id);
         if (!root) return;
@@ -128,6 +156,49 @@ export class Window extends Component {
             });
         };
         shrink();
+    }
+
+    startDrag = (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        const node = this.winRef.current;
+        if (!node) return;
+        this.changeCursorToMove();
+        this.dragStartX = e.clientX;
+        this.dragStartY = e.clientY;
+        this.dragOffsetX = this.posX;
+        this.dragOffsetY = this.posY;
+        node.setPointerCapture(e.pointerId);
+        node.addEventListener('pointermove', this.onPointerMove);
+        node.addEventListener('pointerup', this.onPointerUp);
+    }
+
+    onPointerMove = (e) => {
+        e.preventDefault();
+        const dx = e.clientX - this.dragStartX;
+        const dy = e.clientY - this.dragStartY;
+        let x = this.dragOffsetX + dx;
+        let y = this.dragOffsetY + dy;
+        x = Math.min(Math.max(0, x), this.state.parentSize.width);
+        y = Math.min(Math.max(0, y), this.state.parentSize.height);
+        this.posX = x;
+        this.posY = y;
+        const node = this.winRef.current;
+        if (node) {
+            node.style.transform = `translate(${x}px, ${y}px)`;
+        }
+        this.handleDrag();
+    }
+
+    onPointerUp = (e) => {
+        e.preventDefault();
+        const node = this.winRef.current;
+        if (node) {
+            node.releasePointerCapture(e.pointerId);
+            node.removeEventListener('pointermove', this.onPointerMove);
+            node.removeEventListener('pointerup', this.onPointerUp);
+        }
+        this.handleStop();
     }
 
     changeCursorToMove = () => {
@@ -170,6 +241,8 @@ export class Window extends Component {
             const y = r.style.getPropertyValue('--window-transform-y');
             if (x && y) {
                 r.style.transform = `translate(${x},${y})`;
+                this.posX = parseFloat(x);
+                this.posY = parseFloat(y);
             }
         }
         if (this.state.lastSize) {
@@ -234,16 +307,20 @@ export class Window extends Component {
             if (snapPos === 'left') {
                 newWidth = 50;
                 newHeight = 96.3;
-                transform = 'translate(-1pt,-2pt)';
+                this.posX = -1;
+                this.posY = -2;
             } else if (snapPos === 'right') {
                 newWidth = 50;
                 newHeight = 96.3;
-                transform = `translate(${window.innerWidth / 2}px,-2pt)`;
+                this.posX = window.innerWidth / 2;
+                this.posY = -2;
             } else if (snapPos === 'top') {
                 newWidth = 100.2;
                 newHeight = 50;
-                transform = 'translate(-1pt,-2pt)';
+                this.posX = -1;
+                this.posY = -2;
             }
+            transform = `translate(${this.posX}px,${this.posY}px)`;
             var r = document.querySelector("#" + this.id);
             if (r && transform) {
                 r.style.transform = transform;
@@ -259,6 +336,7 @@ export class Window extends Component {
         }
         else {
             this.setState({ snapPreview: null, snapPosition: null });
+            this.setWinowsPosition();
         }
     }
 
@@ -290,6 +368,8 @@ export class Window extends Component {
         let posy = r.style.getPropertyValue("--window-transform-y");
 
         r.style.transform = `translate(${posx},${posy})`;
+        this.posX = parseFloat(posx);
+        this.posY = parseFloat(posy);
         setTimeout(() => {
             this.setState({ maximized: false });
             this.checkOverlap();
@@ -307,6 +387,8 @@ export class Window extends Component {
             this.setWinowsPosition();
             // translate window to maximize position
             r.style.transform = `translate(-1pt,-2pt)`;
+            this.posX = -1;
+            this.posY = -2;
             this.setState({ maximized: true, height: 96.3, width: 100.2 });
             this.props.hideSideBar(this.id, true);
         }
@@ -349,6 +431,8 @@ export class Window extends Component {
                     x += dx;
                     y += dy;
                     node.style.transform = `translate(${x}px, ${y}px)`;
+                    this.posX = x;
+                    this.posY = y;
                     this.checkOverlap();
                     this.checkSnapPreview();
                     this.setWinowsPosition();
@@ -383,43 +467,32 @@ export class Window extends Component {
                         style={{ left: this.state.snapPreview.left, top: this.state.snapPreview.top, width: this.state.snapPreview.width, height: this.state.snapPreview.height }}
                     />
                 )}
-                <Draggable
-                    axis="both"
-                    handle=".bg-ub-window-title"
-                    grid={[1, 1]}
-                    scale={1}
-                    onStart={this.changeCursorToMove}
-                    onStop={this.handleStop}
-                    onDrag={this.handleDrag}
-                    allowAnyClick={false}
-                    defaultPosition={{ x: this.startX, y: this.startY }}
-                    bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
+                <div
+                    ref={this.winRef}
+                    style={{ width: `${this.state.width}%`, height: `${this.state.height}%`, transform: `translate(${this.posX}px, ${this.posY}px)` }}
+                    className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                    id={this.id}
+                    role="dialog"
+                    aria-label={this.props.title}
+                    tabIndex={0}
+                    onKeyDown={this.handleKeyDown}
                 >
-                    <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
-                        id={this.id}
-                        role="dialog"
-                        aria-label={this.props.title}
-                        tabIndex={0}
-                        onKeyDown={this.handleKeyDown}
-                    >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                        <WindowTopBar
-                            title={this.props.title}
-                            onKeyDown={this.handleTitleBarKeyDown}
-                            onBlur={this.releaseGrab}
-                            grabbed={this.state.grabbed}
-                        />
-                        <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp} />)}
-                    </div>
-                </Draggable >
+                    {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
+                    {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
+                    <WindowTopBar
+                        title={this.props.title}
+                        onKeyDown={this.handleTitleBarKeyDown}
+                        onBlur={this.releaseGrab}
+                        grabbed={this.state.grabbed}
+                        onPointerDown={this.startDrag}
+                    />
+                    <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
+                    {(this.id === "settings"
+                        ? <Settings />
+                        : <WindowMainScreen screen={this.props.screen} title={this.props.title}
+                            addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                            openApp={this.props.openApp} />)}
+                </div>
             </>
         )
     }
@@ -428,7 +501,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown }) {
     return (
         <div
             className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}
@@ -437,6 +510,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
+            onPointerDown={onPointerDown}
         >
             <div className="flex justify-center text-sm font-bold">{title}</div>
         </div>
