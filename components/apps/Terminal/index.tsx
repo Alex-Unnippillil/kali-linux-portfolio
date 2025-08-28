@@ -422,12 +422,16 @@ const TerminalPane = forwardRef<
       clearSuggestions,
     ]);
 
-    useImperativeHandle(ref, () => ({
-      runCommand,
-      getContent: () => logRef.current,
-      getCommand: () => commandRef.current,
-      historyNav: handleHistoryNav,
-    }));
+    useImperativeHandle(
+      ref,
+      () => ({
+        runCommand,
+        getContent: () => logRef.current,
+        getCommand: () => commandRef.current,
+        historyNav: handleHistoryNav,
+      }),
+      [runCommand, handleHistoryNav],
+    );
 
     return (
       <div className="flex-1 w-full h-full relative" onClick={onFocus}>
@@ -472,13 +476,18 @@ const Terminal = forwardRef<any, any>((props, ref) => {
     });
   }, []);
 
-  useImperativeHandle(ref, () => ({
-    runCommand: (cmd: string) => paneRefs.current[activePaneRef.current]?.runCommand(cmd),
-    getContent: () => paneRefs.current[activePaneRef.current]?.getContent(),
-    getCommand: () => paneRefs.current[activePaneRef.current]?.getCommand(),
-    historyNav: (dir: 'up' | 'down') =>
-      paneRefs.current[activePaneRef.current]?.historyNav(dir),
-  }));
+  useImperativeHandle(
+    ref,
+    () => ({
+      runCommand: (cmd: string) =>
+        paneRefs.current[activePaneRef.current]?.runCommand(cmd),
+      getContent: () => paneRefs.current[activePaneRef.current]?.getContent(),
+      getCommand: () => paneRefs.current[activePaneRef.current]?.getCommand(),
+      historyNav: (dir: 'up' | 'down') =>
+        paneRefs.current[activePaneRef.current]?.historyNav(dir),
+    }),
+    [],
+  );
 
   return (
     <div className="h-full w-full flex flex-col">
