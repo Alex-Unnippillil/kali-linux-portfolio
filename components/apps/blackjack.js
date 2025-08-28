@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
-import { BlackjackGame, basicStrategy, cardValue } from './blackjack/engine';
+import { BlackjackGame, basicStrategy, cardValue, handValue } from './blackjack/engine';
 
 const WIDTH = 600;
 const HEIGHT = 400;
@@ -132,9 +132,30 @@ const Blackjack = () => {
   };
 
   const finishRound = () => {
-    setBankroll(gameRef.current.bankroll);
-    gameRef.current.resetRound();
-    setMessage('Place your bet');
+    const dealer = [...gameRef.current.dealerHand];
+    const extra = dealer.slice(2);
+    let delay = 0;
+
+    extra.forEach((_, i) => {
+      const total = handValue(dealer.slice(0, 2 + i + 1));
+      setTimeout(() => setMessage(`Dealer hits to ${total}`), delay);
+      delay += 1000;
+    });
+
+    const finalTotal = handValue(dealer);
+    const finalAction = finalTotal > 21 ? `Dealer busts with ${finalTotal}` : `Dealer stands on ${finalTotal}`;
+    const results = gameRef.current.playerHands.map((h, i) => `Hand ${i + 1} ${h.result}`).join(', ');
+
+    setTimeout(() => {
+      setMessage(`${finalAction}. ${results}`);
+      setBankroll(gameRef.current.bankroll);
+    }, delay);
+    delay += 1000;
+
+    setTimeout(() => {
+      gameRef.current.resetRound();
+      setMessage('Place your bet');
+    }, delay);
   };
 
   const act = (type) => {
@@ -364,7 +385,7 @@ const Blackjack = () => {
           </div>
         </div>
       )}
-      <div className="mt-2 text-sm">{message}</div>
+      <div className="mt-2 text-sm" aria-live="polite" aria-atomic="true">{message}</div>
     </div>
   );
 };
