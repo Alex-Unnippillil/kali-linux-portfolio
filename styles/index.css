@@ -477,6 +477,11 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     display: inline-block;
 }
 
+/* Highlight currently selected cells in word search */
+.selection {
+    background-color: #fde68a;
+}
+
 /* Ensure monospace layout for app outputs */
 textarea,
 pre {

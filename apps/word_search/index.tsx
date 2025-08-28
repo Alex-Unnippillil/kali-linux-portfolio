@@ -404,7 +404,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
                 onMouseDown={() => handleMouseDown(r, c)}
                 onMouseEnter={() => handleMouseEnter(r, c)}
                 onMouseUp={handleMouseUp}
-                className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none ${isFound ? 'bg-green-300' : isSelected ? 'bg-yellow-300' : isHint ? 'bg-blue-200' : 'bg-white'}`}
+                className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none ${isFound ? 'bg-green-300' : isSelected ? 'selection' : isHint ? 'bg-blue-200' : 'bg-white'}`}
                 aria-label={`row ${r + 1} column ${c + 1} letter ${letter}`}
               >
                 {letter}
@@ -415,11 +415,8 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
       </div>
       <ul className="mt-4 columns-2 md:columns-3">
         {words.map((w) => (
-          <li
-            key={w}
-            className={`relative overflow-hidden w-fit ${found.has(w) ? 'line-through text-gray-500' : ''}`}
-          >
-            <span className={found.has(w) ? 'word-found' : ''}>{w}</span>
+          <li key={w} className="relative overflow-hidden w-fit">
+            <span className={found.has(w) ? 'line-through text-gray-500 word-found' : ''}>{w}</span>
           </li>
         ))}
       </ul>
