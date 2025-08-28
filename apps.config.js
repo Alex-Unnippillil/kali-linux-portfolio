@@ -1,4 +1,6 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
+import dynamic from 'next/dynamic';
+import { logEvent } from './utils/analytics';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
@@ -17,7 +19,21 @@ import { displayNikto } from './components/apps/nikto';
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
-const CalcApp = createDynamicApp('calc', 'Calc');
+const CalcApp = dynamic(
+  () =>
+    import('./components/apps/calc').then((mod) => {
+      logEvent({ category: 'Application', action: 'Loaded Calc' });
+      return mod.default;
+    }),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
+        Loading Calc...
+      </div>
+    ),
+  }
+);
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
 const ConnectFourApp = createDynamicApp('connect-four', 'Connect Four');
