@@ -20,15 +20,15 @@ button:focus-visible {
 /* Top NavBar styling */
 
 .top-arrow-up {
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-bottom: 5px solid var(--color-muted);
+    border-inline-start: 5px solid transparent;
+    border-inline-end: 5px solid transparent;
+    border-block-end: 5px solid var(--color-muted);
 }
 
 .arrow-custom {
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-bottom: 5px solid var(--color-text);
+    border-inline-start: 5px solid transparent;
+    border-inline-end: 5px solid transparent;
+    border-block-end: 5px solid var(--color-text);
 }
 
 .animateShow {
@@ -75,30 +75,30 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 /* Window's styling */
 .arrow-custom-up {
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-bottom: 5px solid var(--color-text);
+    border-inline-start: 5px solid transparent;
+    border-inline-end: 5px solid transparent;
+    border-block-end: 5px solid var(--color-text);
     width: 0;
 }
 
 .arrow-custom-down {
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-top: 5px solid var(--color-text);
+    border-inline-start: 5px solid transparent;
+    border-inline-end: 5px solid transparent;
+    border-block-start: 5px solid var(--color-text);
     width: 0;
 }
 
 .arrow-custom-left {
-    border-bottom: 5px solid transparent;
-    border-top: 5px solid transparent;
-    border-right: 5px solid var(--color-text);
+    border-block-end: 5px solid transparent;
+    border-block-start: 5px solid transparent;
+    border-inline-end: 5px solid var(--color-text);
     width: 0;
 }
 
 .arrow-custom-right {
-    border-top: 5px solid transparent;
-    border-bottom: 5px solid transparent;
-    border-left: 5px solid var(--color-text);
+    border-block-start: 5px solid transparent;
+    border-block-end: 5px solid transparent;
+    border-inline-start: 5px solid var(--color-text);
     width: 0;
 }
 
@@ -324,7 +324,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     justify-content: center;
     border: 2px solid var(--color-inverse);
     position: absolute;
-    left: 0;
+    inset-inline-start: 0;
     transition: transform 0.3s;
 }
 
@@ -383,7 +383,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .emoji-list>li {
-    padding-left: 10px;
+    padding-inline-start: 10px;
 }
 
 .list-pc {
