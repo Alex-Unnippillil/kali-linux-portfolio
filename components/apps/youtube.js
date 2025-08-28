@@ -6,6 +6,7 @@ import React, {
   useRef,
 } from 'react';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
+import trending from '../../lib/youtubeTrending.json';
 
 const CHANNEL_HANDLE = 'Alex-Unnippillil';
 
@@ -13,7 +14,10 @@ const CHANNEL_HANDLE = 'Alex-Unnippillil';
 // Videos can be fetched from the real API if an API key is provided or
 // injected via the `initialVideos` prop (used in tests).
 export default function YouTubeApp({ initialVideos = [] }) {
-  const [videos, setVideos] = useState(initialVideos);
+  const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+  const [videos, setVideos] = useState(() =>
+    initialVideos.length ? initialVideos : !apiKey ? trending : []
+  );
   const [playlists, setPlaylists] = useState([]); // [{id,title}]
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('date');
@@ -32,13 +36,16 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const progressRaf = useRef();
   const scrollRaf = useRef();
 
-  const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-
   // Fetch videos from YouTube when an API key is available and no initial
-  // videos are supplied. This mirrors the behaviour of the original app but
-  // keeps the logic concise.
+  // videos are supplied. Otherwise fall back to preloaded trending data.
   useEffect(() => {
-    if (!apiKey || initialVideos.length) return;
+    if (initialVideos.length) return;
+
+    if (!apiKey) {
+      setVideos(trending);
+      setPlaylists([{ id: 'trending', title: 'Trending' }]);
+      return;
+    }
 
     async function fetchData() {
       try {
@@ -53,10 +60,11 @@ export default function YouTubeApp({ initialVideos = [] }) {
           `https://www.googleapis.com/youtube/v3/playlists?part=snippet&channelId=${channelId}&maxResults=50&key=${apiKey}`
         );
         const playlistsData = await playlistsRes.json();
-        const list = playlistsData.items?.map((p) => ({
-          id: p.id,
-          title: p.snippet.title,
-        })) || [];
+        const list =
+          playlistsData.items?.map((p) => ({
+            id: p.id,
+            title: p.snippet.title,
+          })) || [];
 
         // Include the automatically generated "Liked videos" playlist
         const favoritesId = `LL${channelId}`;
@@ -83,6 +91,7 @@ export default function YouTubeApp({ initialVideos = [] }) {
                   id,
                   title: item.snippet.title,
                   playlist: pl.title,
+                  playlistId: pl.id,
                   publishedAt: item.snippet.publishedAt,
                   thumbnail: item.snippet.thumbnails?.medium?.url,
                   channelTitle: item.snippet.channelTitle,
@@ -109,6 +118,8 @@ export default function YouTubeApp({ initialVideos = [] }) {
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Failed to load YouTube data', err);
+        setVideos(trending);
+        setPlaylists([{ id: 'trending', title: 'Trending' }]);
       }
     }
 
@@ -198,14 +209,27 @@ export default function YouTubeApp({ initialVideos = [] }) {
     if (!currentVideo) return;
     const handleKey = (e) => {
       if (!playerRef.current) return;
+      const player = playerRef.current;
       if (e.key === ' ' || e.key === 'k' || e.key === 'K') {
         e.preventDefault();
-        const state = playerRef.current.getPlayerState();
+        const state = player.getPlayerState();
         if (state === window.YT.PlayerState.PLAYING) {
-          playerRef.current.pauseVideo();
+          player.pauseVideo();
         } else {
-          playerRef.current.playVideo();
+          player.playVideo();
         }
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        player.seekTo(Math.max(player.getCurrentTime() - 5, 0), true);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        player.seekTo(player.getCurrentTime() + 5, true);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        player.setVolume(Math.min(player.getVolume() + 5, 100));
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        player.setVolume(Math.max(player.getVolume() - 5, 0));
       }
     };
     window.addEventListener('keydown', handleKey);
@@ -238,10 +262,23 @@ export default function YouTubeApp({ initialVideos = [] }) {
   // from that data so the category tabs render correctly.
   useEffect(() => {
     if (initialVideos.length) {
-      const titles = Array.from(new Set(initialVideos.map((v) => v.playlist)));
-      setPlaylists(titles.map((title) => ({ id: title, title })));
+      const map = new Map();
+      initialVideos.forEach((v) => {
+        if (v.playlistId) map.set(v.playlistId, v.playlist || v.playlistId);
+      });
+      setPlaylists(
+        Array.from(map.entries()).map(([id, title]) => ({ id, title }))
+      );
     }
   }, [initialVideos]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const last = localStorage.getItem('ytLastPlaylist');
+    if (!last) return;
+    const pl = playlists.find((p) => p.id === last);
+    if (pl) setActiveCategory(pl.title);
+  }, [playlists]);
 
   const categories = useMemo(
     () => [
@@ -427,6 +464,9 @@ export default function YouTubeApp({ initialVideos = [] }) {
                   onClick={(e) => {
                     e.preventDefault();
                     setCurrentVideo(video);
+                    if (typeof window !== 'undefined' && video.playlistId) {
+                      localStorage.setItem('ytLastPlaylist', video.playlistId);
+                    }
                   }}
                 >
                   {video.thumbnail && (

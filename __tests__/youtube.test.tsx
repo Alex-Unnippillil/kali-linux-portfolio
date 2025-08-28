@@ -2,12 +2,14 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import YouTubeApp from '../components/apps/youtube';
+import trending from '../lib/youtubeTrending.json';
 
 const mockVideos = [
   {
     id: '1',
     title: 'React Tutorial',
     playlist: 'Dev',
+    playlistId: 'dev',
     publishedAt: '2022-01-01T00:00:00Z',
     thumbnail: 'thumb1.jpg',
     url: 'https://youtu.be/1',
@@ -16,6 +18,7 @@ const mockVideos = [
     id: '2',
     title: 'Cooking with React',
     playlist: 'Cook',
+    playlistId: 'cook',
     publishedAt: '2022-02-01T00:00:00Z',
     thumbnail: 'thumb2.jpg',
     url: 'https://youtu.be/2',
@@ -24,6 +27,7 @@ const mockVideos = [
     id: '3',
     title: 'Advanced React',
     playlist: 'Dev',
+    playlistId: 'dev',
     publishedAt: '2021-06-01T00:00:00Z',
     thumbnail: 'thumb3.jpg',
     url: 'https://youtu.be/3',
@@ -33,13 +37,14 @@ const mockVideos = [
 describe('YouTubeApp', () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_YOUTUBE_API_KEY = 'test';
+    window.localStorage.clear();
   });
 
-  it('shows message when API key is missing', () => {
+  it('falls back to trending data when API key is missing', async () => {
     delete process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
     render(<YouTubeApp />);
     expect(
-      screen.getByText(/YouTube API key is not configured/i)
+      await screen.findByText(trending[0].title)
     ).toBeInTheDocument();
   });
 
@@ -148,6 +153,13 @@ describe('YouTubeApp', () => {
     screen
       .getAllByTestId('video-card')
       .forEach((card) => expect(card).toHaveClass('transition'));
+  });
+
+  it('stores last playlist ID in localStorage', async () => {
+    const user = userEvent.setup();
+    render(<YouTubeApp initialVideos={mockVideos} />);
+    await user.click(screen.getByText('React Tutorial'));
+    expect(window.localStorage.getItem('ytLastPlaylist')).toBe('dev');
   });
 
   it('memoizes categories and sorted lists between renders', async () => {

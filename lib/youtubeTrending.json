@@ -1,0 +1,20 @@
+[
+  {
+    "id": "tr1",
+    "title": "Trending Video One",
+    "playlist": "Trending",
+    "playlistId": "trending",
+    "publishedAt": "2024-01-01T00:00:00Z",
+    "thumbnail": "https://i.ytimg.com/vi/tr1/mqdefault.jpg",
+    "url": "https://www.youtube.com/watch?v=tr1"
+  },
+  {
+    "id": "tr2",
+    "title": "Trending Video Two",
+    "playlist": "Trending",
+    "playlistId": "trending",
+    "publishedAt": "2024-02-01T00:00:00Z",
+    "thumbnail": "https://i.ytimg.com/vi/tr2/mqdefault.jpg",
+    "url": "https://www.youtube.com/watch?v=tr2"
+  }
+]
