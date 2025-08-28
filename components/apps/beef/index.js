@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import GuideOverlay from './GuideOverlay';
 import HookGraph from './HookGraph';
 
@@ -118,10 +119,13 @@ export default function Beef() {
                   selected === id ? 'bg-ub-gray-50 text-black' : ''
                 }`}
               >
-                <img
+                <Image
                   src={`/themes/Yaru/apps/beef-${status}.svg`}
                   alt={status}
                   className="w-12 h-12 mb-1"
+                  width={48}
+                  height={48}
+                  sizes="48px"
                 />
                 <span className="text-xs text-center truncate w-full">
                   {hook.name || id}
