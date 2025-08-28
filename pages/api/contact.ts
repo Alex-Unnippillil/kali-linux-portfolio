@@ -1,8 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-const RATE_LIMIT_WINDOW_MS = 60_000;
+export const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
-const rateLimit = new Map<string, { count: number; start: number }>();
+// In-memory rate limiter map; not shared across server instances.
+export const rateLimit = new Map<string, { count: number; start: number }>();
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -20,6 +21,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   }
   entry.count += 1;
   rateLimit.set(ip, entry);
+  for (const [key, value] of rateLimit) {
+    if (now - value.start > RATE_LIMIT_WINDOW_MS) {
+      rateLimit.delete(key);
+    }
+  }
   if (entry.count > RATE_LIMIT_MAX) {
     res.status(429).json({ ok: false, error: 'Too many requests' });
     return;
