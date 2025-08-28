@@ -17,6 +17,7 @@ export class Desktop extends Component {
         this.app_stack = [];
         this.initFavourite = {};
         this.allWindowClosed = false;
+        this.gridRef = React.createRef();
         this.state = {
             focused_windows: {},
             closed_windows: {},
@@ -35,6 +36,8 @@ export class Desktop extends Component {
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
+            iconPositions: {},
+            dragging: null,
         }
     }
 
@@ -49,6 +52,10 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        const storedPositions = localStorage.getItem('desktop_positions');
+        if (storedPositions) {
+            this.setState({ iconPositions: JSON.parse(storedPositions) });
+        }
     }
 
     componentWillUnmount() {
@@ -262,25 +269,64 @@ export class Desktop extends Component {
         this.initFavourite = { ...favourite_apps };
     }
 
-    renderDesktopApps = () => {
-        if (Object.keys(this.state.closed_windows).length === 0) return;
-        let appsJsx = [];
-        apps.forEach((app, index) => {
-            if (this.state.desktop_apps.includes(app.id)) {
+    handleIconDragStart = (id) => {
+        this.setState({ dragging: id });
+    }
 
+    handleIconDragEnd = (e) => {
+        const { dragging } = this.state;
+        if (!dragging) return;
+        const grid = this.gridRef.current;
+        if (!grid) return;
+        const rect = grid.getBoundingClientRect();
+        const cellWidth = e.currentTarget.offsetWidth;
+        const cellHeight = e.currentTarget.offsetHeight;
+        let x = e.clientX - rect.left;
+        let y = e.clientY - rect.top;
+        let col = Math.max(1, Math.round(x / cellWidth));
+        let row = Math.max(1, Math.round(y / cellHeight));
+        const iconPositions = { ...this.state.iconPositions, [dragging]: { row, col } };
+        this.setState({ iconPositions, dragging: null }, () => {
+            localStorage.setItem('desktop_positions', JSON.stringify(this.state.iconPositions));
+        });
+    }
+
+    renderDesktopApps = () => {
+        if (Object.keys(this.state.closed_windows).length === 0) return null;
+        let appsJsx = [];
+        apps.forEach((app) => {
+            if (this.state.desktop_apps.includes(app.id)) {
                 const props = {
                     name: app.title,
                     id: app.id,
                     icon: app.icon,
                     openApp: this.openApp
-                }
-
+                };
+                const position = this.state.iconPositions[app.id];
+                const style = position ? { gridColumn: position.col, gridRow: position.row } : {};
                 appsJsx.push(
-                    <UbuntuApp key={app.id} {...props} />
+                    <div
+                        key={app.id}
+                        draggable
+                        onDragStart={() => this.handleIconDragStart(app.id)}
+                        onDragEnd={this.handleIconDragEnd}
+                        style={style}
+                    >
+                        <UbuntuApp {...props} />
+                    </div>
                 );
             }
         });
-        return appsJsx;
+        return (
+            <div
+                ref={this.gridRef}
+                className="absolute inset-0 grid"
+                data-context="desktop-area"
+                style={{ gridTemplateColumns: 'repeat(auto-fill, 6rem)', gridAutoRows: '5rem' }}
+            >
+                {appsJsx}
+            </div>
+        );
     }
 
     renderWindows = () => {
