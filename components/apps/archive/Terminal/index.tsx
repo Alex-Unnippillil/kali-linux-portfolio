@@ -24,18 +24,23 @@ const TerminalPane = forwardRef<
     const workerRef = useRef<any>(null);
     const commandRef = useRef('');
     const logRef = useRef('');
-    const knownCommandsRef = useRef(
-      new Set([
-        'pwd',
-        'cd',
-        'simulate',
-        'history',
-        'clear',
-        'help',
-        'split',
-        'exit',
-        'demo nmap',
-        'demo hashcat',
+    const commandRegistryRef = useRef(
+      new Map<string, string>([
+        ['pwd', 'Print working directory'],
+        ['cd', 'Change directory'],
+        ['simulate', 'Run web worker simulation'],
+        ['history', 'Show command history'],
+        ['clear', 'Clear terminal'],
+        ['help', 'List available commands'],
+        ['split', 'Split pane'],
+        ['exit', 'Close pane'],
+        ['demo nmap', 'Display mock nmap output'],
+        ['demo hashcat', 'Display mock hashcat benchmark'],
+        ['record start', 'Begin recording session'],
+        ['record stop', 'Stop recording session'],
+        ['record save', 'Save recorded session to JSON'],
+        ['playback start', 'Replay last recorded session'],
+        ['playback stop', 'Stop playback'],
       ]),
     );
     const historyRef = useRef<string[]>([]);
@@ -48,9 +53,21 @@ const TerminalPane = forwardRef<
     const hintRef = useRef('');
     const rafRef = useRef<any>(null);
     const fontSizeRef = useRef(14);
+    const searchModeRef = useRef(false);
+    const searchTermRef = useRef('');
+    const searchIndexRef = useRef(-1);
+    const recordingRef = useRef(false);
+    const recordStartRef = useRef(0);
+    const sessionRef = useRef<any[]>([]);
+    const playbackTimeoutsRef = useRef<number[]>([]);
 
     const updateLive = useCallback((msg: string) => {
       if (ariaLiveRef.current) ariaLiveRef.current.textContent = msg;
+    }, []);
+
+    const logEvent = useCallback((type: string, data: string) => {
+      if (recordingRef.current)
+        sessionRef.current.push({ type, data, t: Date.now() - recordStartRef.current });
     }, []);
 
     const updateSuggestionsLive = useCallback((msg: string) => {
@@ -69,10 +86,15 @@ const TerminalPane = forwardRef<
       if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
       rafRef.current = window.requestAnimationFrame(() => {
         const current = commandRef.current;
-        const match = Array.from(knownCommandsRef.current).find(
+        const commands = Array.from(commandRegistryRef.current.keys());
+        const match = commands.find(
           (cmd) => cmd.startsWith(current) && cmd !== current,
         );
-        const hint = match ? match.slice(current.length) : '';
+        const completion = match ? match.slice(current.length) : '';
+        const help = commandRegistryRef.current.has(current)
+          ? ` - ${commandRegistryRef.current.get(current)}`
+          : '';
+        const hint = `${completion}${help}`;
         if (hintRef.current === hint) return;
         hintRef.current = hint;
         termRef.current.write('\u001b[s\u001b[0K');
@@ -115,7 +137,7 @@ const TerminalPane = forwardRef<
         return;
       }
       if (!current) return;
-      const matches = Array.from(knownCommandsRef.current)
+      const matches = Array.from(commandRegistryRef.current.keys())
         .filter((cmd) => cmd.startsWith(current))
         .sort();
       if (matches.length === 1) {
@@ -172,18 +194,16 @@ const TerminalPane = forwardRef<
     const runCommand = useCallback(
       (command: string) => {
         const trimmed = command.trim();
-        const first = trimmed.split(' ')[0];
-        if (first) {
-          knownCommandsRef.current.add(first);
-        }
         if (trimmed) {
           historyRef.current.push(trimmed);
         }
         historyIndexRef.current = historyRef.current.length;
+        logEvent('command', trimmed);
         const writeLine = (text: string) => {
           termRef.current.writeln(text);
           logRef.current += `${text}\n`;
           updateLive(text);
+          logEvent('output', text);
         };
         clearSuggestions();
         if (trimmed === 'pwd') {
@@ -210,10 +230,10 @@ const TerminalPane = forwardRef<
           prompt();
         } else if (trimmed === 'help') {
           termRef.current.writeln('');
-          const commands = Array.from(knownCommandsRef.current)
-            .sort()
-            .join(' ');
-          writeLine(`Available commands: ${commands}`);
+          writeLine('Available commands:');
+          Array.from(commandRegistryRef.current.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .forEach(([cmd, help]) => writeLine(`${cmd} - ${help}`));
           prompt();
         } else if (trimmed === 'history') {
           termRef.current.writeln('');
@@ -259,6 +279,54 @@ const TerminalPane = forwardRef<
             'Stopped: Fri Mar 15 12:00:01 2024',
           ].forEach(writeLine);
           prompt();
+        } else if (trimmed === 'record start') {
+          termRef.current.writeln('');
+          recordingRef.current = true;
+          recordStartRef.current = Date.now();
+          sessionRef.current = [];
+          writeLine('Recording started');
+          prompt();
+        } else if (trimmed === 'record stop') {
+          termRef.current.writeln('');
+          recordingRef.current = false;
+          writeLine('Recording stopped');
+          prompt();
+        } else if (trimmed === 'record save') {
+          termRef.current.writeln('');
+          const blob = new Blob([
+            JSON.stringify(sessionRef.current, null, 2),
+          ], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'session.json';
+          a.click();
+          URL.revokeObjectURL(url);
+          writeLine('Recording saved');
+          prompt();
+        } else if (trimmed === 'playback start') {
+          termRef.current.writeln('');
+          playbackTimeoutsRef.current.forEach((t) => clearTimeout(t));
+          playbackTimeoutsRef.current = [];
+          sessionRef.current.forEach((entry) => {
+            const timeout = window.setTimeout(() => {
+              if (entry.type === 'command') {
+                termRef.current.writeln('');
+                termRef.current.write(`${promptText}${entry.data}`);
+              } else if (entry.type === 'output') {
+                termRef.current.writeln(entry.data);
+              }
+            }, entry.t);
+            playbackTimeoutsRef.current.push(timeout);
+          });
+          writeLine('Playback started');
+          prompt();
+        } else if (trimmed === 'playback stop') {
+          termRef.current.writeln('');
+          playbackTimeoutsRef.current.forEach((t) => clearTimeout(t));
+          playbackTimeoutsRef.current = [];
+          writeLine('Playback stopped');
+          prompt();
         } else if (trimmed.length === 0) {
           prompt();
         } else {
@@ -268,7 +336,15 @@ const TerminalPane = forwardRef<
         }
         renderHint();
       },
-      [prompt, updateLive, onSplit, onClose, renderHint, clearSuggestions],
+      [
+        prompt,
+        updateLive,
+        onSplit,
+        onClose,
+        renderHint,
+        clearSuggestions,
+        logEvent,
+      ],
     );
 
     useEffect(() => {
@@ -297,6 +373,13 @@ const TerminalPane = forwardRef<
 
       term.onKey(({ key, domEvent }: any) => {
         onFocus();
+        if (domEvent.ctrlKey && domEvent.key === 'c' && term.hasSelection()) {
+          domEvent.preventDefault();
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(term.getSelection());
+          }
+          return;
+        }
         if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'D') {
           domEvent.preventDefault();
           runCommand('split');
@@ -317,6 +400,16 @@ const TerminalPane = forwardRef<
               commandRef.current += text;
               renderHint();
             });
+          }
+          return;
+        }
+        if (domEvent.ctrlKey && domEvent.key === 'r') {
+          domEvent.preventDefault();
+          if (!searchModeRef.current) {
+            searchModeRef.current = true;
+            searchTermRef.current = '';
+            searchIndexRef.current = historyRef.current.length;
+            term.write('\r\nsearch: ');
           }
           return;
         }
@@ -353,6 +446,37 @@ const TerminalPane = forwardRef<
       });
 
       term.onData((data: string) => {
+        if (searchModeRef.current) {
+          if (data === '\r') {
+            const match = [...historyRef.current]
+              .reverse()
+              .find((cmd) => cmd.includes(searchTermRef.current));
+            term.writeln('');
+            const cmd = match || '';
+            term.write(`${promptText}${cmd}`);
+            commandRef.current = cmd;
+            searchModeRef.current = false;
+            renderHint();
+            return;
+          } else if (data === '\u0003' || data === '\u001b') {
+            term.writeln('');
+            prompt();
+            commandRef.current = '';
+            searchModeRef.current = false;
+            renderHint();
+            return;
+          } else if (data === '\u007F') {
+            if (searchTermRef.current.length > 0) {
+              searchTermRef.current = searchTermRef.current.slice(0, -1);
+              term.write('\b \b');
+            }
+            return;
+          } else {
+            searchTermRef.current += data;
+            term.write(data);
+            return;
+          }
+        }
         if (data === '\r') {
           runCommand(commandRef.current);
           commandRef.current = '';
@@ -388,6 +512,7 @@ const TerminalPane = forwardRef<
           term.writeln(msg);
           logRef.current += `${msg}\n`;
           updateLive(msg);
+          logEvent('output', msg);
           prompt();
           renderHint();
         };

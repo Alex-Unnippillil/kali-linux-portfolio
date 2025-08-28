@@ -11,6 +11,8 @@ jest.mock(
       onKey: jest.fn(),
       dispose: jest.fn(),
       clear: jest.fn(),
+      getSelection: jest.fn(() => ''),
+      hasSelection: jest.fn(() => false),
     })),
   }),
   { virtual: true }
@@ -90,8 +92,8 @@ import Terminal from '../components/apps/terminal';
       ref.current.runCommand('help');
     });
     expect(ref.current.getContent()).toContain('Available commands:');
-    expect(ref.current.getContent()).toContain('clear');
-    expect(ref.current.getContent()).toContain('help');
+    expect(ref.current.getContent()).toContain('clear - Clear terminal');
+    expect(ref.current.getContent()).toContain('help - List available commands');
   });
 
   it('handles missing Worker gracefully', () => {
