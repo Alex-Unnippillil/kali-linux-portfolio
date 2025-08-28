@@ -1,14 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 
-interface PerfSample {
-  t: number;
-  dt: number;
-}
-
 const MAX_SAMPLES = 120;
 const MAX_MS = 50; // cap graph at 50ms (20 FPS)
 
-export const exportPerfReport = (samples: PerfSample[]) => {
+export const exportPerfReport = (samples) => {
   if (!samples.length || typeof document === 'undefined') return;
   const avgDt = samples.reduce((a, s) => a + s.dt, 0) / samples.length;
   const avgFps = 1000 / avgDt;
@@ -26,18 +21,18 @@ export const exportPerfReport = (samples: PerfSample[]) => {
   URL.revokeObjectURL(url);
 };
 
-const PerfOverlay: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const samplesRef = useRef<PerfSample[]>([]);
-  const lastRef = useRef<number>(0);
-  const rafRef = useRef<number>(0);
+const PerfOverlay = () => {
+  const canvasRef = useRef(null);
+  const samplesRef = useRef([]);
+  const lastRef = useRef(0);
+  const rafRef = useRef(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     let mounted = true;
 
-    const loop = (now: number) => {
+    const loop = (now) => {
       if (!mounted) return;
       if (lastRef.current) {
         const dt = now - lastRef.current;

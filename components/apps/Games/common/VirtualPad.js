@@ -1,17 +1,12 @@
 import React from 'react';
 
-interface PadProps {
-  onDirection?: (dir: { x: number; y: number }) => void;
-  onButton?: (button: string) => void;
-}
-
 /**
  * Simple on screen D-pad and two action buttons (A/B).
  * Designed primarily for touch devices but clickable with a mouse.
  */
-export default function VirtualPad({ onDirection, onButton }: PadProps) {
-  const handleDir = (x: number, y: number) => () => onDirection?.({ x, y });
-  const handleBtn = (b: string) => () => onButton?.(b);
+export default function VirtualPad({ onDirection, onButton }) {
+  const handleDir = (x, y) => () => onDirection?.({ x, y });
+  const handleBtn = (b) => () => onButton?.(b);
 
   return (
     <div className="virtual-pad">

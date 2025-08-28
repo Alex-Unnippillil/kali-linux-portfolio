@@ -1,19 +1,13 @@
 import React, { useState } from 'react';
 
-interface Props {
-  mapping: Record<string, string>;
-  setKey: (action: string, key: string) => string | null;
-  actions: Record<string, string>;
-}
+const InputRemap = ({ mapping, setKey, actions }) => {
+  const [waiting, setWaiting] = useState(null);
+  const [message, setMessage] = useState(null);
 
-const InputRemap: React.FC<Props> = ({ mapping, setKey, actions }) => {
-  const [waiting, setWaiting] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const capture = (action: string) => {
+  const capture = (action) => {
     setWaiting(action);
     setMessage(null);
-    const handler = (e: KeyboardEvent) => {
+    const handler = (e) => {
       e.preventDefault();
       const conflict = setKey(action, e.key);
       if (conflict) setMessage(`Replaced ${conflict}`);

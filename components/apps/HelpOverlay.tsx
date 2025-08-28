@@ -1,5 +1,5 @@
 import React from 'react';
-import InputRemap from './Games/common/input-remap/InputRemap';
+import InputRemap from './Games/common/input-remap/InputRemap.js';
 import useInputMapping from './Games/common/input-remap/useInputMapping';
 
 interface HelpOverlayProps {
