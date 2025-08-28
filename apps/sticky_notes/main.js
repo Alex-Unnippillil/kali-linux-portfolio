@@ -12,6 +12,8 @@ function createNoteElement(note) {
   el.style.left = note.x + 'px';
   el.style.top = note.y + 'px';
   el.style.backgroundColor = note.color;
+  el.style.width = (note.width || 200) + 'px';
+  el.style.height = (note.height || 200) + 'px';
   el.dataset.id = note.id;
 
   const controls = document.createElement('div');
@@ -46,6 +48,11 @@ function createNoteElement(note) {
     saveNotes();
   });
   el.appendChild(textarea);
+  el.addEventListener('mouseup', () => {
+    note.width = el.offsetWidth;
+    note.height = el.offsetHeight;
+    saveNotes();
+  });
 
   enableDrag(el, note);
   notesContainer.appendChild(el);
@@ -58,6 +65,8 @@ function addNote() {
     x: 50,
     y: 50,
     color: '#fffa65',
+    width: 200,
+    height: 200,
   };
   notes.push(note);
   createNoteElement(note);
