@@ -192,6 +192,7 @@ const MetasploitApp = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search modules"
+            aria-label="Search modules"
             spellCheck={false}
           />
           <select

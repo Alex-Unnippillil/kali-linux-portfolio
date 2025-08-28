@@ -78,7 +78,11 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
   return (
     <div>
       <div className="flex gap-2 mb-2">
+        <label htmlFor="pdf-search" className="sr-only">
+          Search document
+        </label>
         <input
+          id="pdf-search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search"

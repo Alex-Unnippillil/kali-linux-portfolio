@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import {
   initializeGame,
   drawFromStock,
@@ -72,6 +73,8 @@ const Solitaire = () => {
   const tableauRefs = useRef<(HTMLDivElement | null)[]>([]);
   const wasteRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const pauseRef = useRef<HTMLDivElement | null>(null);
+  useFocusTrap(pauseRef, paused);
   const [flying, setFlying] = useState<AnimatedCard[]>([]);
   const [autoCompleting, setAutoCompleting] = useState(false);
   const [winnableOnly, setWinnableOnly] = useState(false);
@@ -507,6 +510,7 @@ const Solitaire = () => {
       </div>
       {paused && (
         <div
+          ref={pauseRef}
           className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
           role="dialog"
           aria-modal="true"

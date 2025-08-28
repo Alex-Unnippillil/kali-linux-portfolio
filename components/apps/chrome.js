@@ -6,6 +6,8 @@ export class Chrome extends Component {
         super();
         this.home_url = 'https://www.google.com/webhp?igu=1';
         this.thumbRefs = [];
+        this.gridRef = createRef();
+        this.lastFocused = null;
         this.state = {
             url: this.home_url,
             display_url: this.home_url,
@@ -65,7 +67,16 @@ export class Chrome extends Component {
     }
 
     openGrid = () => {
-        this.setState({ showGrid: true });
+        this.lastFocused = document.activeElement;
+        this.setState({ showGrid: true }, () => {
+            this.thumbRefs[0]?.current?.focus();
+        });
+    }
+
+    closeGrid = () => {
+        this.setState({ showGrid: false }, () => {
+            this.lastFocused && this.lastFocused.focus();
+        });
     }
 
     announceTab = (index) => {
@@ -77,7 +88,10 @@ export class Chrome extends Component {
     selectTab = (index) => {
         const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const activate = () => {
-            this.setState({ activeIndex: index, url: this.state.tabs[index].url, showGrid: false }, () => this.announceTab(index));
+            this.setState({ activeIndex: index, url: this.state.tabs[index].url }, () => {
+                this.closeGrid();
+                this.announceTab(index);
+            });
         }
         if (prefersReduced) {
             activate();
@@ -110,7 +124,15 @@ export class Chrome extends Component {
 
     renderGrid = () => {
         return (
-            <div id="chrome-grid" className="absolute inset-0 bg-gray-900 bg-opacity-90 text-white grid grid-cols-2 gap-4 p-4 overflow-auto" role="dialog" aria-label="Tab selection">
+            <div
+                id="chrome-grid"
+                ref={this.gridRef}
+                className="absolute inset-0 bg-gray-900 bg-opacity-90 text-white grid grid-cols-2 gap-4 p-4 overflow-auto"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Tab selection"
+                onKeyDown={this.handleGridKey}
+            >
                 {this.state.tabs.map((tab, idx) => {
                     if (!this.thumbRefs[idx]) this.thumbRefs[idx] = createRef();
                     return (
@@ -128,6 +150,13 @@ export class Chrome extends Component {
                 })}
             </div>
         );
+    }
+
+    handleGridKey = (e) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            this.closeGrid();
+        }
     }
 
     displayUrlBar = () => {

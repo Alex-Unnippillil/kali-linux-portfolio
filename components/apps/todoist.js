@@ -249,6 +249,7 @@ export default function Todoist() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search"
+          aria-label="Search tasks"
           className="border p-1"
         />
       </div>

@@ -38,7 +38,11 @@ const VideoGallery: React.FC = () => {
 
   return (
     <main className="p-4">
+      <label htmlFor="video-gallery-search" className="sr-only">
+        Search videos
+      </label>
       <input
+        id="video-gallery-search"
         type="text"
         placeholder="Search videos..."
         value={query}

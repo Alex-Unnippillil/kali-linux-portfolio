@@ -49,6 +49,7 @@ export class Trash extends Component {
         };
 
         this.modalRef = createRef();
+        this.confirmRef = createRef();
         this.contentRef = createRef();
         this.lastFocused = null;
     }
@@ -246,7 +247,12 @@ export class Trash extends Component {
                 const text = await file.text();
                 preview = { type: 'text', text: text.slice(0, 100) };
             }
-            this.setState({ fileHandle: handle, filePreview: preview, confirmDelete: true });
+            this.lastFocused = document.activeElement;
+            this.setState({ fileHandle: handle, filePreview: preview, confirmDelete: true }, () => {
+                const first = this.confirmRef.current?.querySelector('button');
+                first && first.focus();
+                document.addEventListener('keydown', this.handleConfirmKey);
+            });
         } catch (err) {
             console.error(err);
         }
@@ -268,6 +274,8 @@ export class Trash extends Component {
             confirmDelete: false,
             empty: false,
         }, () => {
+            document.removeEventListener('keydown', this.handleConfirmKey);
+            this.lastFocused && this.lastFocused.focus();
             localStorage.setItem('trash-empty', false);
             this.showUndoToast(() => {
                 this.setState(prev => {
@@ -283,7 +291,28 @@ export class Trash extends Component {
     cancelDelete = () => {
         const { filePreview } = this.state;
         if (filePreview?.url) URL.revokeObjectURL(filePreview.url);
-        this.setState({ fileHandle: null, filePreview: null, confirmDelete: false });
+        document.removeEventListener('keydown', this.handleConfirmKey);
+        this.setState({ fileHandle: null, filePreview: null, confirmDelete: false }, () => {
+            this.lastFocused && this.lastFocused.focus();
+        });
+    }
+
+    handleConfirmKey = (e) => {
+        if (!this.state.confirmDelete) return;
+        const focusable = this.confirmRef.current?.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusable || focusable.length === 0) return;
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            this.cancelDelete();
+        } else if (e.key === 'Tab') {
+            e.preventDefault();
+            const elements = Array.from(focusable);
+            const index = elements.indexOf(document.activeElement);
+            const next = (index + (e.shiftKey ? -1 : 1) + elements.length) % elements.length;
+            elements[next].focus();
+        }
     }
 
     render() {
@@ -346,7 +375,12 @@ export class Trash extends Component {
                 )}
                 {confirmDelete && (
                     <div className="absolute inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4">
-                        <div className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full">
+                        <div
+                            ref={this.confirmRef}
+                            className="bg-ub-warm-grey p-4 rounded shadow-md max-w-full"
+                            role="dialog"
+                            aria-modal="true"
+                        >
                             <p className="mb-2">Delete {this.state.fileHandle?.name}?</p>
                             {this.state.filePreview?.type === 'image' ? (
                                 <img src={this.state.filePreview.url} alt="Preview" className="max-w-xs max-h-64 mb-2" />

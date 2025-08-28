@@ -365,7 +365,11 @@ export default function YouTubeApp({ initialVideos = [] }) {
         <>
           {/* Search + sorting */}
           <div className="p-3 flex flex-wrap items-center gap-2">
+            <label htmlFor="yt-search" className="sr-only">
+              Search
+            </label>
             <input
+              id="yt-search"
               placeholder="Search"
               className="flex-1 min-w-[150px] text-black px-3 py-2 rounded"
               value={search}

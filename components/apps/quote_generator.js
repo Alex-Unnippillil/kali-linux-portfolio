@@ -305,6 +305,7 @@ const QuoteGenerator = () => {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
+            aria-label="Search quotes"
             className="px-2 py-1 rounded text-black"
           />
           <select

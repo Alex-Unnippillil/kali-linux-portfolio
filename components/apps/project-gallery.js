@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import ReactGA from 'react-ga4';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 const GITHUB_USER = 'Alex-Unnippillil';
 
@@ -16,6 +17,8 @@ export default function ProjectGallery() {
   const [columns, setColumns] = useState(1);
   const itemRefs = useRef([]);
   itemRefs.current = [];
+  const modalRef = useRef(null);
+  useFocusTrap(modalRef, Boolean(selected));
 
   useEffect(() => {
     ReactGA.event({ category: 'Application', action: 'Loaded Project Gallery' });
@@ -293,8 +296,10 @@ export default function ProjectGallery() {
           </div>
           {selected && (
             <div
+              ref={modalRef}
               className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
               role="dialog"
+              aria-modal="true"
             >
               <div className="bg-ub-cool-grey text-white p-4 rounded w-full max-w-md">
                 <button

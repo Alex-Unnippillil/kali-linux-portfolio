@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import useFocusTrap from '../../../hooks/useFocusTrap';
 
 const STORAGE_KEY = 'beefHelpDismissed';
 
@@ -21,6 +22,8 @@ export default function GuideOverlay({ onClose }) {
   useEffect(() => {
     containerRef.current?.focus();
   }, []);
+
+  useFocusTrap(containerRef, true);
 
   const handleClose = () => {
     if (dontShow) {

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -28,6 +29,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
+  const pauseRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(pauseRef, paused);
 
   // Keyboard shortcut to toggle help overlay
   useEffect(() => {
@@ -96,6 +99,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
       {paused && (
         <div
+          ref={pauseRef}
           className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
           role="dialog"
           aria-modal="true"
