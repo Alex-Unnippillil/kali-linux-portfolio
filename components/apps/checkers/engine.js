@@ -1,25 +1,20 @@
-export type Color = 'red' | 'black';
-export interface Piece { color: Color; king: boolean; }
-export type Board = (Piece | null)[][];
-
-export const createBoard = (): Board => {
-  const board: Board = Array(8)
+export const createBoard = () => {
+  const board = Array(8)
     .fill(null)
     .map(() => Array(8).fill(null));
   for (let r = 0; r < 3; r++) {
     for (let c = 0; c < 8; c++) {
-      if ((r + c) % 2 === 1) board[r][c] = { color: 'black', king: false };
+      if ((r + c) % 2 === 1) board[r][c] = { color: "black", king: false };
     }
   }
   for (let r = 5; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
-      if ((r + c) % 2 === 1) board[r][c] = { color: 'red', king: false };
+      if ((r + c) % 2 === 1) board[r][c] = { color: "red", king: false };
     }
   }
   return board;
 };
-
-const directions: Record<Color, number[][]> = {
+const directions = {
   red: [
     [-1, -1],
     [-1, 1],
@@ -29,27 +24,18 @@ const directions: Record<Color, number[][]> = {
     [1, 1],
   ],
 };
-
-export const inBounds = (r: number, c: number) => r >= 0 && r < 8 && c >= 0 && c < 8;
-
-export interface Move {
-  from: [number, number];
-  to: [number, number];
-  captured?: [number, number];
-}
-
-export const cloneBoard = (board: Board): Board =>
+export const inBounds = (r, c) => r >= 0 && r < 8 && c >= 0 && c < 8;
+export const cloneBoard = (board) =>
   board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
-
-export const getPieceMoves = (board: Board, r: number, c: number): Move[] => {
+export const getPieceMoves = (board, r, c) => {
   const piece = board[r][c];
   if (!piece) return [];
   const dirs = [...directions[piece.color]];
   if (piece.king) {
-    dirs.push(...directions[piece.color === 'red' ? 'black' : 'red']);
+    dirs.push(...directions[piece.color === "red" ? "black" : "red"]);
   }
-  const moves: Move[] = [];
-  const captures: Move[] = [];
+  const moves = [];
+  const captures = [];
   for (const [dr, dc] of dirs) {
     const r1 = r + dr;
     const c1 = c + dc;
@@ -67,9 +53,8 @@ export const getPieceMoves = (board: Board, r: number, c: number): Move[] => {
   }
   return captures.length ? captures : moves;
 };
-
-export const getAllMoves = (board: Board, color: Color): Move[] => {
-  let result: Move[] = [];
+export const getAllMoves = (board, color) => {
+  let result = [];
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       if (board[r][c]?.color === color) {
@@ -81,16 +66,10 @@ export const getAllMoves = (board: Board, color: Color): Move[] => {
   const anyCapture = result.some((m) => m.captured);
   return anyCapture ? result.filter((m) => m.captured) : result;
 };
-
-export const hasMoves = (board: Board, color: Color): boolean =>
-  getAllMoves(board, color).length > 0;
-
-export const applyMove = (
-  board: Board,
-  move: Move
-): { board: Board; capture: boolean; king: boolean } => {
+export const hasMoves = (board, color) => getAllMoves(board, color).length > 0;
+export const applyMove = (board, move) => {
   const newBoard = cloneBoard(board);
-  const piece = newBoard[move.from[0]][move.from[1]]!;
+  const piece = newBoard[move.from[0]][move.from[1]];
   newBoard[move.from[0]][move.from[1]] = null;
   newBoard[move.to[0]][move.to[1]] = piece;
   let capture = false;
@@ -102,16 +81,15 @@ export const applyMove = (
   let king = false;
   if (
     !piece.king &&
-    ((piece.color === 'red' && move.to[0] === 0) ||
-      (piece.color === 'black' && move.to[0] === 7))
+    ((piece.color === "red" && move.to[0] === 0) ||
+      (piece.color === "black" && move.to[0] === 7))
   ) {
     piece.king = true;
     king = true;
   }
   return { board: newBoard, capture, king };
 };
-
-export const boardToBitboards = (board: Board) => {
+export const boardToBitboards = (board) => {
   let red = 0n;
   let black = 0n;
   let kings = 0n;
@@ -120,15 +98,14 @@ export const boardToBitboards = (board: Board) => {
       const piece = board[r][c];
       if (!piece) continue;
       const bit = 1n << BigInt((7 - r) * 8 + c);
-      if (piece.color === 'red') red |= bit;
+      if (piece.color === "red") red |= bit;
       else black |= bit;
       if (piece.king) kings |= bit;
     }
   }
   return { red, black, kings };
 };
-
-export const bitCount = (n: bigint) => {
+export const bitCount = (n) => {
   let count = 0;
   while (n) {
     n &= n - 1n;
@@ -136,20 +113,19 @@ export const bitCount = (n: bigint) => {
   }
   return count;
 };
-
-export const evaluateBoard = (board: Board): number => {
+export const evaluateBoard = (board) => {
   const { red, black, kings } = boardToBitboards(board);
   const redKings = red & kings;
   const blackKings = black & kings;
   const redMen = bitCount(red) - bitCount(redKings);
   const blackMen = bitCount(black) - bitCount(blackKings);
   const mobility =
-    getAllMoves(board, 'red').length - getAllMoves(board, 'black').length;
+    getAllMoves(board, "red").length - getAllMoves(board, "black").length;
   return (
-    redMen - blackMen +
+    redMen -
+    blackMen +
     1.5 * (bitCount(redKings) - bitCount(blackKings)) +
     0.1 * mobility
   );
 };
-
-export const isDraw = (noCaptureMoves: number) => noCaptureMoves >= 40;
+export const isDraw = (noCaptureMoves) => noCaptureMoves >= 40;
