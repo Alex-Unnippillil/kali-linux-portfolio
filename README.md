@@ -273,6 +273,7 @@ yarn lint
 | Wireshark | /apps/wireshark | Security Tool (simulated) |
 
 > All security apps are **non-operational simulations** intended for education/demos. They **do not** execute exploits and should not be used for any unauthorized activity.
+> All reports and feed data are canned examples and not generated from live systems.
 
 ---
 
