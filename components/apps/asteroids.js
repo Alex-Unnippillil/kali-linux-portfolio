@@ -13,6 +13,7 @@ import {
 import useGameControls from './useGameControls';
 import GameLayout from './GameLayout';
 import { vibrate } from './Games/common/haptics';
+import { getMapping } from './Games/common/input-remap/useInputMapping';
 
 // Arcade-style tuning constants
 const THRUST = 0.1;
@@ -23,6 +24,13 @@ const MAX_MULTIPLIER = 5;
 const EXHAUST_COLOR = '#ffa500';
 const SHIELD_DURATION = 600; // frames
 const RADAR_COLORS = { outline: '#0f0', ship: '#fff', asteroid: '#0f0', ufo: '#f00' };
+const DEFAULT_MAP = {
+  up: 'ArrowUp',
+  left: 'ArrowLeft',
+  right: 'ArrowRight',
+  fire: ' ',
+  hyperspace: 'h',
+};
 
 // Simple Quadtree for collision queries
 class Quadtree {
@@ -105,6 +113,23 @@ const Asteroids = () => {
   const pausedRef = useRef(false);
   const [restartKey, setRestartKey] = useState(0);
   const [liveText, setLiveText] = useState('');
+  const HIGH_KEY = 'asteroids-highscore';
+  const LAST_KEY = 'asteroids-lastscore';
+  const [highScore, setHighScore] = useState(0);
+  const [lastScore, setLastScore] = useState(0);
+  const highScoreRef = useRef(0);
+  const lastScoreRef = useRef(0);
+
+  useEffect(() => {
+    const hs = Number(localStorage.getItem(HIGH_KEY) || 0);
+    const ls = Number(localStorage.getItem(LAST_KEY) || 0);
+    setHighScore(hs);
+    setLastScore(ls);
+    highScoreRef.current = hs;
+    lastScoreRef.current = ls;
+  }, []);
+  useEffect(() => { highScoreRef.current = highScore; }, [highScore]);
+  useEffect(() => { lastScoreRef.current = lastScore; }, [lastScore]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -120,6 +145,11 @@ const Asteroids = () => {
 
     resize();
     window.addEventListener('resize', resize);
+    let showDebug = false;
+    const handleDebugToggle = (e) => {
+      if (e.key === 'c' || e.key === 'C') showDebug = !showDebug;
+    };
+    window.addEventListener('keydown', handleDebugToggle);
 
     // Game state
     const ship = {
@@ -299,6 +329,14 @@ const Asteroids = () => {
       }
       ship.hitCooldown = COLLISION_COOLDOWN;
       if (lives < 0) {
+        if (score > highScoreRef.current) {
+          setHighScore(score);
+          highScoreRef.current = score;
+          try { localStorage.setItem(HIGH_KEY, String(score)); } catch {}
+        }
+        setLastScore(score);
+        lastScoreRef.current = score;
+        try { localStorage.setItem(LAST_KEY, String(score)); } catch {}
         lives = 3;
         score = 0;
         level = 1;
@@ -353,13 +391,14 @@ const Asteroids = () => {
       }
       pollGamepad();
       const { keys, joystick, fire, hyperspace: hyper } = controlsRef.current;
+      const map = getMapping('asteroids', DEFAULT_MAP);
       const turn =
-        (keys.ArrowLeft ? -1 : 0) +
-        (keys.ArrowRight ? 1 : 0) +
+        (keys[map.left] ? -1 : 0) +
+        (keys[map.right] ? 1 : 0) +
         padState.turn +
         (joystick.active ? joystick.x : 0);
       const thrust =
-        (keys.ArrowUp ? 1 : 0) +
+        (keys[map.up] ? 1 : 0) +
         padState.thrust +
         (joystick.active ? -joystick.y : 0);
       if (fire) {
@@ -556,6 +595,25 @@ const Asteroids = () => {
         ctx.fill();
       });
 
+      if (showDebug) {
+        ctx.save();
+        const drawQt = (node) => {
+          ctx.strokeStyle = 'rgba(0,255,0,0.3)';
+          ctx.strokeRect(node.bounds.x, node.bounds.y, node.bounds.w, node.bounds.h);
+          node.objects.forEach((o) => {
+            ctx.beginPath();
+            ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+            ctx.stroke();
+          });
+          node.nodes.forEach(drawQt);
+        };
+        drawQt(qt);
+        ctx.beginPath();
+        ctx.arc(ship.x, ship.y, ship.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       // Particles
       ctx.save();
       particles.forEach((p) => {
@@ -611,6 +669,7 @@ const Asteroids = () => {
       ctx.font = '16px monospace';
       ctx.fillText(`Score: ${score} x${multiplier}`, 10, 20);
       ctx.fillText(`Lives: ${lives}`, 10, 40);
+      ctx.fillText(`High: ${highScoreRef.current} Last: ${lastScoreRef.current}`, 10, 60);
 
       if (waveBannerTimer > 0) {
         ctx.save();
@@ -629,6 +688,7 @@ const Asteroids = () => {
     function cleanup() {
       cancelAnimationFrame(requestRef.current);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('keydown', handleDebugToggle);
     }
 
     requestRef.current = requestAnimationFrame(update);
