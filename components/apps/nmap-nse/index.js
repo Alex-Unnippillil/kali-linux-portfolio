@@ -1,114 +1,147 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { z } from 'zod';
 
-// Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
-const scripts = [
-  {
-    name: 'http-title',
-    description: 'Fetches page titles from HTTP services.',
-    command: 'nmap -sV --script http-title <target>'
-  },
-  {
-    name: 'ssl-cert',
-    description: 'Retrieves TLS certificate information.',
-    command: 'nmap -p 443 --script ssl-cert <target>'
-  },
-  {
-    name: 'smb-os-discovery',
-    description: 'Discovers remote OS information via SMB.',
-    command: 'nmap -p 445 --script smb-os-discovery <target>'
-  },
-  {
-    name: 'ftp-anon',
-    description: 'Checks for anonymous FTP access.',
-    command: 'nmap -p 21 --script ftp-anon <target>'
-  },
-  {
-    name: 'http-enum',
-    description: 'Enumerates directories on web servers.',
-    command: 'nmap -p 80 --script http-enum <target>'
-  },
-  {
-    name: 'dns-brute',
-    description: 'Performs DNS subdomain brute force enumeration.',
-    command: 'nmap --script dns-brute <target>'
-  }
-];
+const scriptSchema = z.object({
+  host: z.string(),
+  port: z.number(),
+  id: z.string(),
+  severity: z.string(),
+  output: z.string(),
+  cve: z.array(z.string()).optional(),
+  cpe: z.array(z.string()).optional(),
+});
+
+const dataSchema = z.object({
+  scripts: z.array(scriptSchema),
+});
 
 const NmapNSEApp = () => {
-  const [target, setTarget] = useState('example.com');
-  const [script, setScript] = useState(scripts[0].name);
-  const [examples, setExamples] = useState({});
+  const [scripts, setScripts] = useState([]);
+  const [error, setError] = useState('');
+  const [cveFilter, setCveFilter] = useState('');
+  const [cpeFilter, setCpeFilter] = useState('');
 
   useEffect(() => {
     fetch('/demo/nmap-nse.json')
       .then((r) => r.json())
-      .then(setExamples)
-      .catch(() => setExamples({}));
+      .then((data) => {
+        try {
+          const parsed = dataSchema.parse(data);
+          setScripts(parsed.scripts);
+        } catch {
+          setError('Invalid demo data');
+        }
+      })
+      .catch(() => setError('Failed to load demo data'));
   }, []);
 
-  const current = scripts.find((s) => s.name === script);
-  const command = current.command.replace('<target>', target);
-
-  const copyCommand = async () => {
-    try {
-      await navigator.clipboard.writeText(command);
-    } catch (e) {
-      // ignore
-    }
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = dataSchema.parse(JSON.parse(ev.target.result));
+        setScripts(parsed.scripts);
+        setError('');
+      } catch {
+        setError('Invalid file');
+      }
+    };
+    reader.readAsText(file);
   };
+
+  const filtered = useMemo(
+    () =>
+      scripts.filter((s) => {
+        const cveMatch = cveFilter
+          ? s.cve?.some((cv) => cv.toLowerCase().includes(cveFilter.toLowerCase()))
+          : true;
+        const cpeMatch = cpeFilter
+          ? s.cpe?.some((cp) => cp.toLowerCase().includes(cpeFilter.toLowerCase()))
+          : true;
+        return cveMatch && cpeMatch;
+      }),
+    [scripts, cveFilter, cpeFilter]
+  );
+
+  const grouped = useMemo(() => {
+    const res = {};
+    filtered.forEach((s) => {
+      const sev = s.severity.toLowerCase();
+      if (!res[s.host]) res[s.host] = {};
+      if (!res[s.host][s.port]) res[s.host][s.port] = {};
+      if (!res[s.host][s.port][sev]) res[s.host][s.port][sev] = [];
+      res[s.host][s.port][sev].push(s);
+    });
+    return res;
+  }, [filtered]);
 
   return (
     <div className="flex flex-col md:flex-row h-full w-full text-white">
-      <div className="md:w-1/2 p-4 bg-ub-dark overflow-y-auto">
-        <h1 className="text-lg mb-4">Nmap NSE Demo</h1>
+      <div className="md:w-1/3 p-4 bg-ub-dark overflow-y-auto">
+        <h1 className="text-lg mb-4">Nmap NSE Explorer</h1>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="target">Target</label>
+          <label className="block text-sm mb-1" htmlFor="file">Load JSON</label>
           <input
-            id="target"
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
+            id="file"
+            type="file"
+            accept="application/json"
+            onChange={handleFile}
             className="w-full p-2 text-black"
           />
         </div>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="script">Script</label>
-          <select
-            id="script"
-            value={script}
-            onChange={(e) => setScript(e.target.value)}
+          <label className="block text-sm mb-1" htmlFor="cve">Filter CVE</label>
+          <input
+            id="cve"
+            value={cveFilter}
+            onChange={(e) => setCveFilter(e.target.value)}
             className="w-full p-2 text-black"
-          >
-            {scripts.map((s) => (
-              <option key={s.name} value={s.name}>
-                {s.name}
-              </option>
-            ))}
-          </select>
+          />
         </div>
-        <p className="mb-4 text-sm">{current.description}</p>
-        <div className="flex items-center mb-4">
-          <pre className="flex-1 bg-black text-green-400 p-2 rounded overflow-auto">
-            {command}
-          </pre>
-          <button
-            type="button"
-            onClick={copyCommand}
-            className="ml-2 px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
-          >
-            Copy
-          </button>
+        <div className="mb-4">
+          <label className="block text-sm mb-1" htmlFor="cpe">Filter CPE</label>
+          <input
+            id="cpe"
+            value={cpeFilter}
+            onChange={(e) => setCpeFilter(e.target.value)}
+            className="w-full p-2 text-black"
+          />
         </div>
+        {error && <p className="text-red-400">{error}</p>}
       </div>
-      <div className="md:w-1/2 p-4 bg-black overflow-y-auto">
-        <h2 className="text-lg mb-2">Example output</h2>
-        <pre className="whitespace-pre-wrap text-green-400">
-          {examples[script] || 'Select a script to view sample output.'}
-        </pre>
+      <div className="md:flex-1 p-4 bg-black overflow-y-auto">
+        <h2 className="text-lg mb-2">Results</h2>
+        {!Object.keys(grouped).length && <p>No data loaded.</p>}
+        {Object.entries(grouped).map(([host, ports]) => (
+          <div key={host} className="mb-4">
+            <h3 className="font-bold">{host}</h3>
+            {Object.entries(ports).map(([port, severities]) => (
+              <div key={port} className="ml-4 mb-2">
+                <h4 className="font-semibold">Port {port}</h4>
+                {Object.entries(severities).map(([severity, items]) => (
+                  <div key={severity} className="ml-4 mb-1">
+                    <h5 className="capitalize">{severity}</h5>
+                    <ul className="list-disc ml-4">
+                      {items.map((item, idx) => (
+                        <li key={idx}>
+                          <span className="font-mono">{item.id}</span>
+                          {item.cve?.length ? ` CVE: ${item.cve.join(', ')}` : ''}
+                          {item.cpe?.length ? ` CPE: ${item.cpe.join(', ')}` : ''}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
 export default NmapNSEApp;
-
 export const displayNmapNSE = () => <NmapNSEApp />;

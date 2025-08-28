@@ -1,8 +1,47 @@
 {
-  "http-title": "PORT   STATE SERVICE VERSION\n80/tcp open  http\n| http-title: Example Domain\n|_Requested resource was /\n",
-  "ssl-cert": "PORT    STATE SERVICE\n443/tcp open  https\n| ssl-cert: Subject: commonName=example.com\n| Not valid before: 2020-06-01T00:00:00\n|_Not valid after: 2022-06-01T12:00:00\n",
-  "smb-os-discovery": "PORT    STATE SERVICE\n445/tcp open  microsoft-ds\n| smb-os-discovery:\n|   OS: Windows 10 Pro 19041\n|   Computer name: HOST\n|_  Workgroup: WORKGROUP\n",
-  "ftp-anon": "PORT   STATE SERVICE\n21/tcp open  ftp\n| ftp-anon: Anonymous FTP login allowed (FTP code 230)\n|_-rw-r--r--    1 ftp  ftp           73 Feb 02 00:15 welcome.msg\n",
-  "http-enum": "PORT   STATE SERVICE\n80/tcp open  http\n| http-enum:\n|   /admin/: Potential admin interface\n|_  /images/: Potentially interesting directory w/ listing\n",
-  "dns-brute": "Host scripts results:\n| dns-brute:\n|   mail.example.com - 192.0.2.10\n|   dev.example.com - 192.0.2.20\n|_  shop.example.com - 192.0.2.30\n"
+  "scripts": [
+    {
+      "host": "192.0.2.1",
+      "port": 80,
+      "severity": "low",
+      "id": "http-title",
+      "output": "Example Domain",
+      "cpe": ["cpe:/a:example:http_server:1.0"]
+    },
+    {
+      "host": "192.0.2.1",
+      "port": 443,
+      "severity": "medium",
+      "id": "ssl-cert",
+      "output": "TLS certificate info",
+      "cve": ["CVE-2023-1234"],
+      "cpe": ["cpe:/a:openssl:openssl:1.1.1"]
+    },
+    {
+      "host": "192.0.2.2",
+      "port": 445,
+      "severity": "high",
+      "id": "smb-vuln-ms17-010",
+      "output": "Vulnerable to MS17-010",
+      "cve": ["CVE-2017-0144"],
+      "cpe": ["cpe:/o:microsoft:windows_7"]
+    },
+    {
+      "host": "192.0.2.2",
+      "port": 80,
+      "severity": "medium",
+      "id": "http-vuln-cve2021-41773",
+      "output": "Apache path traversal vulnerability",
+      "cve": ["CVE-2021-41773"],
+      "cpe": ["cpe:/a:apache:http_server:2.4.49"]
+    },
+    {
+      "host": "192.0.2.3",
+      "port": 22,
+      "severity": "low",
+      "id": "ssh-hostkey",
+      "output": "SSH hostkey",
+      "cpe": ["cpe:/a:openssh:openssh:7.4"]
+    }
+  ]
 }
