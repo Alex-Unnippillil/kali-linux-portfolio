@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import InputRemap from './Games/common/input-remap/InputRemap';
 import useInputMapping from './Games/common/input-remap/useInputMapping';
+import useFocusTrap from '../../hooks/useFocusTrap';
 
 interface HelpOverlayProps {
   gameId: string;
@@ -159,35 +160,24 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
   const overlayRef = useRef<HTMLDivElement>(null);
   const prevFocus = useRef<HTMLElement | null>(null);
+  useFocusTrap(overlayRef, true);
 
   useEffect(() => {
-    if (!overlayRef.current) return;
+    const node = overlayRef.current;
+    if (!node) return;
     prevFocus.current = document.activeElement as HTMLElement | null;
     const selectors =
       'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])';
     const focusables = Array.from(
-      overlayRef.current.querySelectorAll<HTMLElement>(selectors)
+      node.querySelectorAll<HTMLElement>(selectors)
     );
     focusables[0]?.focus();
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Tab' && focusables.length > 0) {
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      } else if (e.key === 'Escape') {
+      if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
       }
     };
-    const node = overlayRef.current;
     node.addEventListener('keydown', handleKey);
     return () => {
       node.removeEventListener('keydown', handleKey);

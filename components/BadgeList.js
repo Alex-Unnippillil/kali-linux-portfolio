@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 const BadgeList = ({ badges, className = '' }) => {
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState(null);
   const triggerRef = useRef(null);
   const modalRef = useRef(null);
+  useFocusTrap(modalRef, selected !== null);
 
   const closeModal = () => {
     setSelected(null);
@@ -16,21 +18,15 @@ const BadgeList = ({ badges, className = '' }) => {
 
     const focusableSelectors =
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-    const focusable = modalRef.current?.querySelectorAll(focusableSelectors);
-    const elements = Array.from(focusable ?? []);
-
+    const elements = Array.from(
+      modalRef.current?.querySelectorAll(focusableSelectors) ?? []
+    );
     elements[0]?.focus();
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         closeModal();
-      } else if (e.key === 'Tab' && elements.length > 0) {
-        e.preventDefault();
-        const index = elements.indexOf(document.activeElement);
-        const next =
-          (index + (e.shiftKey ? -1 : 1) + elements.length) % elements.length;
-        elements[next].focus();
       }
     };
 
