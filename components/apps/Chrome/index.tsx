@@ -79,7 +79,7 @@ const Chrome: React.FC = () => {
       const reader = new Readability(doc);
       const parsed = reader.parse();
       if (parsed) {
-        setArticles((prev) => ({ ...prev, [tabId]: parsed.content }));
+        setArticles((prev) => ({ ...prev, [tabId]: parsed.content ?? '' }));
       }
     } catch {
       setArticles((prev) => ({ ...prev, [tabId]: '' }));
@@ -229,7 +229,7 @@ const Chrome: React.FC = () => {
 
   const doFind = useCallback(() => {
     try {
-      iframeRef.current?.contentWindow?.find(searchTerm);
+      (iframeRef.current?.contentWindow as any)?.find(searchTerm);
     } catch {
       /* ignore */
     }

@@ -23,7 +23,14 @@ export const evaluateExpression = (expression: string) => {
   }
 };
 
-const Calc = () => {
+interface CalcProps {
+  addFolder?: any;
+  openApp?: any;
+}
+
+const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
+  void addFolder;
+  void openApp;
   const [display, setDisplay] = useState('');
   const [tape, setTape, resetTape] = usePersistentState(
     'calc-tape',
