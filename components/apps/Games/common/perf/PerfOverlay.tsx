@@ -30,7 +30,7 @@ const PerfOverlay: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const samplesRef = useRef<PerfSample[]>([]);
   const lastRef = useRef<number>(0);
-  const rafRef = useRef<number>();
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;

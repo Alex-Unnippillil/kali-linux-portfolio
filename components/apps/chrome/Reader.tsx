@@ -33,9 +33,9 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
         const parsed = reader.parse();
         if (parsed) {
           setArticle({
-            title: parsed.title,
-            content: parsed.content,
-            excerpt: parsed.excerpt,
+            title: parsed.title ?? '',
+            content: parsed.content ?? '',
+            excerpt: parsed.excerpt ?? '',
           });
         } else {
           setError('Unable to parse article.');

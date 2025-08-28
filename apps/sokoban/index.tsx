@@ -18,7 +18,12 @@ import {
 
 const CELL = 32;
 
-const Sokoban: React.FC = () => {
+interface SokobanProps {
+  getDailySeed?: () => Promise<string>;
+}
+
+const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
+  void getDailySeed;
   const [packs, setPacks] = useState<LevelPack[]>(LEVEL_PACKS);
   const [packIndex, setPackIndex] = useState(0);
   const [index, setIndex] = useState(0);

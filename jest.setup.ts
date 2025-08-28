@@ -8,24 +8,6 @@ global.TextEncoder = TextEncoder;
 // @ts-ignore
 global.TextDecoder = TextDecoder as any;
 
-// Provide TextEncoder/TextDecoder for libraries requiring them
-import { TextEncoder, TextDecoder } from 'util';
-// @ts-ignore
-global.TextEncoder = TextEncoder;
-// @ts-ignore
-global.TextDecoder = TextDecoder;
-
-// Provide global TextEncoder/Decoder for libraries like jsdom
-import { TextEncoder, TextDecoder } from 'util';
-if (typeof global.TextEncoder === 'undefined') {
-  // @ts-ignore
-  global.TextEncoder = TextEncoder;
-}
-if (typeof global.TextDecoder === 'undefined') {
-  // @ts-ignore
-  global.TextDecoder = TextDecoder;
-}
-
 // jsdom does not provide a global Image constructor which is used by
 // some components (e.g. window borders). A minimal mock is sufficient
 // for our tests because we only rely on the instance existing.

@@ -195,7 +195,9 @@ const ConnectFour = () => {
   const [winner, setWinner] = useState<Cell>(null);
   const [winningCells, setWinningCells] = useState<{ r: number; c: number }[]>([]);
   const [animDisc, setAnimDisc] = useState<any>(null);
-  const [selectedCol, setSelectedCol] = useGameControls(COLS, (col) => dropDisc(col));
+  const gameControls: any = useGameControls(COLS as any, ((col: number) => dropDisc(col)) as any);
+  const selectedCol = gameControls[0];
+  const setSelectedCol = gameControls[1];
   const [aiDepth, setAiDepth] = useState(4);
   const [winColumn, setWinColumn] = useState<number | null>(null);
   const [teaching, setTeaching] = useState<{ wins: { r: number; c: number }[][]; threats: { r: number; c: number }[][] }>({ wins: [], threats: [] });
@@ -293,7 +295,7 @@ const ConnectFour = () => {
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       {winner && (
         <div className="mb-2 capitalize">
-          {winner === 'draw' ? 'Draw!' : `${winner} wins!`}
+          {(winner as any) === 'draw' ? 'Draw!' : `${winner} wins!`}
         </div>
       )}
       <div className="relative" onMouseLeave={() => setSelectedCol(null)}>

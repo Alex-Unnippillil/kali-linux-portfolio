@@ -30,10 +30,10 @@ interface SettingsContextValue {
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
-  theme: defaults.theme,
+  theme: defaults.theme as Theme,
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
-  density: defaults.density,
+  density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
   setTheme: () => {},
   setAccent: () => {},
@@ -43,10 +43,10 @@ export const SettingsContext = createContext<SettingsContextValue>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(defaults.theme);
+  const [theme, setTheme] = useState<Theme>(defaults.theme as Theme);
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
-  const [density, setDensity] = useState<Density>(defaults.density);
+  const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
 
   useEffect(() => {

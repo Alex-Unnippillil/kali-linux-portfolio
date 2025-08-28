@@ -5,7 +5,12 @@ import usePersistedState from '../../hooks/usePersistedState';
 
 type Action = 'left' | 'right' | 'jump';
 
-const PhaserMatter: React.FC = () => {
+interface PhaserMatterProps {
+  getDailySeed?: () => Promise<string>;
+}
+
+const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
+  void getDailySeed;
   const containerRef = useRef<HTMLDivElement>(null);
   const controls = useRef({
     left: false,
@@ -112,6 +117,7 @@ const PhaserMatter: React.FC = () => {
 
       preload() {
         this.load.json('level', 'apps/phaser_matter/level1.json');
+        this.load.image('player', 'apps/phaser_matter/player.svg');
       }
 
       create() {
@@ -160,7 +166,7 @@ const PhaserMatter: React.FC = () => {
           this.checkpointFlags.push({ body, flag });
         });
 
-        this.player = this.matter.add.image(data.spawn.x, data.spawn.y, undefined, undefined, {
+        this.player = this.matter.add.image(data.spawn.x, data.spawn.y, 'player', undefined, {
           shape: { type: 'rectangle', width: 32, height: 32 },
         });
 
@@ -191,8 +197,9 @@ const PhaserMatter: React.FC = () => {
         const speed = 5;
 
         // Poll gamepad for input
-        if (this.input.gamepad.total > 0) {
-          const pad = this.input.gamepad.getPad(0);
+        const gamepad = this.input.gamepad;
+        if (gamepad && gamepad.total > 0) {
+          const pad = gamepad.getPad(0);
           const pm = padMapRef.current;
           ctrl.left = pad.buttons[pm.left]?.pressed;
           ctrl.right = pad.buttons[pm.right]?.pressed;
@@ -210,7 +217,8 @@ const PhaserMatter: React.FC = () => {
         else if (ctrl.right) this.player.setVelocityX(speed);
         else this.player.setVelocityX(0);
 
-        const onGround = Math.abs(this.player.body.velocity.y) < 0.01;
+        const body = this.player.body as MatterJS.BodyType;
+        const onGround = Math.abs(body.velocity.y) < 0.01;
         if (onGround) this.lastGrounded = time;
 
         if (ctrl.jumpPressed) {
