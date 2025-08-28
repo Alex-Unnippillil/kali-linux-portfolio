@@ -19,6 +19,13 @@ export default function XApp() {
   const panelRef = useRef(null);
   const [shouldLoadTimeline, setShouldLoadTimeline] = useState(false);
 
+  const [feed, setFeed] = useState([]);
+  const [loadingFeed, setLoadingFeed] = useState(false);
+  const [filterTag, setFilterTag] = useState('');
+  const [savedHashtags, setSavedHashtags] = useState([]);
+  const [savedProfiles, setSavedProfiles] = useState([]);
+  const [useLocalFeed, setUseLocalFeed] = useState(false);
+
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -129,6 +136,66 @@ export default function XApp() {
     };
   }, [timelineKey, shouldLoadTimeline]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const tags = JSON.parse(localStorage.getItem('xSavedHashtags') || '[]');
+    const profiles = JSON.parse(localStorage.getItem('xSavedProfiles') || '[]');
+    setSavedHashtags(tags);
+    setSavedProfiles(profiles);
+    if (!navigator.onLine) {
+      setUseLocalFeed(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (useLocalFeed && feed.length === 0) {
+      (async () => {
+        setLoadingFeed(true);
+        try {
+          const res = await fetch('/x-feed.json');
+          const data = await res.json();
+          setFeed(data);
+        } catch (err) {
+          // ignore
+        } finally {
+          setLoadingFeed(false);
+        }
+      })();
+    }
+  }, [useLocalFeed, feed.length]);
+
+  const persistTags = (tags) =>
+    typeof window !== 'undefined' &&
+    localStorage.setItem('xSavedHashtags', JSON.stringify(tags));
+  const persistProfiles = (profiles) =>
+    typeof window !== 'undefined' &&
+    localStorage.setItem('xSavedProfiles', JSON.stringify(profiles));
+
+  const addSavedHashtag = (tag) => {
+    setSavedHashtags((prev) => {
+      if (prev.includes(tag)) return prev;
+      const updated = [...prev, tag];
+      persistTags(updated);
+      return updated;
+    });
+  };
+
+  const addSavedProfile = (handle) => {
+    setSavedProfiles((prev) => {
+      if (prev.includes(handle)) return prev;
+      const updated = [...prev, handle];
+      persistProfiles(updated);
+      return updated;
+    });
+  };
+
+  const availableHashtags = Array.from(
+    new Set(feed.flatMap((p) => p.hashtags || []))
+  );
+  const filteredFeed = filterTag
+    ? feed.filter((p) => p.hashtags.includes(filterTag))
+    : feed;
+
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col tweet-container">
       <form
@@ -224,41 +291,162 @@ export default function XApp() {
           {status}
         </div>
       </form>
-      <div ref={panelRef} className="flex-1 relative">
-        {!timelineLoaded && !scriptError && (
-          <ul className="p-4 space-y-4 tweet-feed" aria-hidden="true">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <li
-                key={i}
-                className="flex gap-4 border-b border-gray-700 pb-4 last:border-b-0"
+      {savedHashtags.length > 0 && (
+        <section className="p-2">
+          <h2 className="text-sm mb-2">Saved Hashtags</h2>
+          <div className="grid grid-cols-2 gap-2">
+            {savedHashtags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => setFilterTag(tag)}
+                className="p-2 bg-gray-800 rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <div className="w-12 h-12 rounded-full bg-gray-700 motion-safe:animate-pulse" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-700 rounded w-3/4 motion-safe:animate-pulse" />
-                  <div className="h-4 bg-gray-700 rounded w-1/2 motion-safe:animate-pulse" />
-                  <div className="h-4 bg-gray-700 rounded w-full motion-safe:animate-pulse" />
-                </div>
-              </li>
+                #{tag}
+              </button>
             ))}
-          </ul>
-        )}
-        <div
-          ref={timelineRef}
-          className={`${timelineLoaded ? 'block h-full' : 'hidden'} tweet-feed`}
-        />
-        {scriptError && (
-          <div className="p-4 text-center">
-            <a
-              href="https://x.com/AUnnippillil"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline text-blue-500"
-            >
-              Open on x.com
-            </a>
           </div>
-        )}
-      </div>
+        </section>
+      )}
+      {savedProfiles.length > 0 && (
+        <section className="p-2">
+          <h2 className="text-sm mb-2">Saved Profiles</h2>
+          <div className="grid grid-cols-2 gap-2">
+            {savedProfiles.map((handle) => (
+              <button
+                key={handle}
+                onClick={() =>
+                  window.open(`https://x.com/${handle}`, '_blank')
+                }
+                className="p-2 bg-gray-800 rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-left"
+              >
+                @{handle}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+      {useLocalFeed ? (
+        <div className="flex-1 overflow-auto">
+          {availableHashtags.length > 0 && (
+            <div className="flex flex-wrap gap-2 p-2">
+              {availableHashtags.map((tag) => (
+                <div key={tag} className="flex items-center gap-1">
+                  <button
+                    onClick={() => setFilterTag(tag === filterTag ? '' : tag)}
+                    className={`px-2 py-1 rounded-full text-sm ${
+                      filterTag === tag
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-700 text-gray-200'
+                    }`}
+                  >
+                    #{tag}
+                  </button>
+                  <button
+                    aria-label={`Save ${tag}`}
+                    onClick={() => addSavedHashtag(tag)}
+                    className="text-yellow-400"
+                  >
+                    ★
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {loadingFeed ? (
+            <ul className="p-4 space-y-4" aria-hidden="true">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <li
+                  key={i}
+                  className="flex gap-4 border-b border-gray-700 pb-4 last:border-b-0"
+                >
+                  <div className="w-12 h-12 rounded-full bg-gray-700 motion-safe:animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-700 rounded w-3/4 motion-safe:animate-pulse" />
+                    <div className="h-4 bg-gray-700 rounded w-1/2 motion-safe:animate-pulse" />
+                    <div className="h-4 bg-gray-700 rounded w-full motion-safe:animate-pulse" />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <ul className="p-4 space-y-4">
+              {filteredFeed.map((post) => (
+                <li
+                  key={post.id}
+                  className="border-b border-gray-700 pb-4 last:border-b-0"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold">{post.user.name}</span>
+                    <span className="text-gray-400">@{post.user.handle}</span>
+                    <button
+                      onClick={() => addSavedProfile(post.user.handle)}
+                      className="ml-auto text-yellow-400"
+                      aria-label={`Save profile ${post.user.handle}`}
+                    >
+                      ★
+                    </button>
+                  </div>
+                  <p className="mb-2">{post.text}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {post.hashtags.map((tag) => (
+                      <div key={tag} className="flex items-center gap-1">
+                        <button
+                          onClick={() => setFilterTag(tag)}
+                          className="px-2 py-0.5 bg-gray-700 rounded-full text-sm"
+                        >
+                          #{tag}
+                        </button>
+                        <button
+                          aria-label={`Save ${tag}`}
+                          onClick={() => addSavedHashtag(tag)}
+                          className="text-yellow-400"
+                        >
+                          ★
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : (
+        <div ref={panelRef} className="flex-1 relative">
+          {!timelineLoaded && !scriptError && (
+            <ul className="p-4 space-y-4 tweet-feed" aria-hidden="true">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <li
+                  key={i}
+                  className="flex gap-4 border-b border-gray-700 pb-4 last:border-b-0"
+                >
+                  <div className="w-12 h-12 rounded-full bg-gray-700 motion-safe:animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-700 rounded w-3/4 motion-safe:animate-pulse" />
+                    <div className="h-4 bg-gray-700 rounded w-1/2 motion-safe:animate-pulse" />
+                    <div className="h-4 bg-gray-700 rounded w-full motion-safe:animate-pulse" />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div
+            ref={timelineRef}
+            className={`${timelineLoaded ? 'block h-full' : 'hidden'} tweet-feed`}
+          />
+          {(scriptError ||
+            (typeof navigator !== 'undefined' && !navigator.onLine)) && (
+            <div className="p-4 text-center">
+              <button
+                onClick={() => setUseLocalFeed(true)}
+                className="underline text-blue-500"
+              >
+                Load local feed
+              </button>
+            </div>
+          )}
+        </div>
+      )}
       <style jsx>{`
         .tweet-container {
           container-type: inline-size;
