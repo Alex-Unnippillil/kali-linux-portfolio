@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomBytes } from 'crypto';
 import { contactSchema } from '../../utils/contactSchema';
+import { validateServerEnv } from '../../lib/validate';
 
 // Simple in-memory rate limiter. Not suitable for distributed environments.
 export const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -9,6 +10,12 @@ const RATE_LIMIT_MAX = 5;
 export const rateLimit = new Map<string, { count: number; start: number }>();
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    validateServerEnv(process.env);
+  } catch {
+    res.status(500).json({ ok: false });
+    return;
+  }
   if (req.method === 'GET') {
     const token = randomBytes(32).toString('hex');
     res.setHeader(
@@ -55,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { recaptchaToken = '', ...rest } = req.body || {};
   const secret = process.env.RECAPTCHA_SECRET_KEY;
-  if (!recaptchaToken || !secret) {
+  if (!recaptchaToken) {
     console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
     res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
     return;

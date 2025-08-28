@@ -223,6 +223,7 @@ const ConnectFour = () => {
     useGameControls as unknown as (cols: number, onDrop: (col: number) => void) => GameControls;
   const [selectedCol, setSelectedCol] = useControls(COLS, dropDisc);
 
+
   const [aiDepth, setAiDepth] = useState(4);
   const [winColumn, setWinColumn] = useState<number | null>(null);
   const [teaching, setTeaching] = useState<{ wins: { r: number; c: number }[][]; threats: { r: number; c: number }[][] }>({ wins: [], threats: [] });

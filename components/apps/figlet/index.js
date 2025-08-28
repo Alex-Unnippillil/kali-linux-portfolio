@@ -17,26 +17,29 @@ const FigletApp = () => {
   const preRef = useRef(null);
 
   useEffect(() => {
-    workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => {
-      if (e.data?.type === 'font') {
-        setFonts((prev) => {
-          const next = [...prev, { name: e.data.font, preview: e.data.preview, mono: e.data.mono }];
-          if (next.length === 1) setFont(e.data.font);
-          return next;
-        });
-      } else if (e.data?.type === 'render') {
-        setOutput(e.data.output);
-        setAnnounce('Preview updated');
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
+      workerRef.current.onmessage = (e) => {
+        if (e.data?.type === 'font') {
+          setFonts((prev) => {
+            const next = [...prev, { name: e.data.font, preview: e.data.preview, mono: e.data.mono }];
+            if (next.length === 1) setFont(e.data.font);
+            return next;
+          });
+        } else if (e.data?.type === 'render') {
+          setOutput(e.data.output);
+          setAnnounce('Preview updated');
+          clearTimeout(announceTimer.current);
+          announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
+        }
+      };
+      return () => {
+        workerRef.current?.terminate();
+        if (frameRef.current) cancelAnimationFrame(frameRef.current);
         clearTimeout(announceTimer.current);
-        announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
-      }
-    };
-    return () => {
-      workerRef.current?.terminate();
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
-      clearTimeout(announceTimer.current);
-    };
+      };
+    }
+    return undefined;
   }, []);
 
   const updateFiglet = useCallback(() => {

@@ -14,8 +14,8 @@ const InstallButton: React.FC = () => {
       e.preventDefault();
       setPrompt(e);
     };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    (window as any).addEventListener('beforeinstallprompt', handler);
+    return () => (window as any).removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   const handleInstall = async () => {

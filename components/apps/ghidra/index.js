@@ -117,11 +117,14 @@ export default function GhidraApp() {
 
   // S3: Offload hex generation to worker only when needed
   useEffect(() => {
-    hexWorkerRef.current = new Worker(new URL('./hexWorker.js', import.meta.url));
-    hexWorkerRef.current.onmessage = (e) => {
-      setHexMap((m) => ({ ...m, [e.data.id]: e.data.hex }));
-    };
-    return () => hexWorkerRef.current.terminate();
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      hexWorkerRef.current = new Worker(new URL('./hexWorker.js', import.meta.url));
+      hexWorkerRef.current.onmessage = (e) => {
+        setHexMap((m) => ({ ...m, [e.data.id]: e.data.hex }));
+      };
+      return () => hexWorkerRef.current?.terminate();
+    }
+    return undefined;
   }, []);
 
   useEffect(() => {

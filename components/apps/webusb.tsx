@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import FormError from '../ui/FormError';
 
+type USBDevice = any;
+
 const WebUSBApp: React.FC = () => {
   const supported = typeof navigator !== 'undefined' && 'usb' in navigator;
   const [useMock, setUseMock] = useState(!supported);
@@ -19,15 +21,15 @@ const WebUSBApp: React.FC = () => {
       return;
     }
     try {
-      const d = await navigator.usb.requestDevice({ filters: [] });
+      const d = await (navigator as any).usb.requestDevice({ filters: [] });
       await d.open();
       if (d.configuration === null) {
         await d.selectConfiguration(1);
       }
       await d.claimInterface(0);
       const alt = d.configuration?.interfaces[0].alternates[0];
-      const epIn = alt?.endpoints.find((e) => e.direction === 'in');
-      const epOut = alt?.endpoints.find((e) => e.direction === 'out');
+      const epIn = alt?.endpoints.find((e: any) => e.direction === 'in');
+      const epOut = alt?.endpoints.find((e: any) => e.direction === 'out');
       setInEndpoint(epIn?.endpointNumber ?? null);
       setOutEndpoint(epOut?.endpointNumber ?? null);
       d.addEventListener('disconnect', () => {

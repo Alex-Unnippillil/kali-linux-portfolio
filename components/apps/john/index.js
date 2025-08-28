@@ -48,13 +48,15 @@ const JohnApp = () => {
 
   const startProgress = (total) => {
     if (workerRef.current) workerRef.current.terminate();
-    workerRef.current = new Worker(new URL('./progress.worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => {
-      const { percent, phase: p } = e.data;
-      setProgress(percent);
-      setPhase(p);
-    };
-    workerRef.current.postMessage({ type: 'init', total });
+    if (typeof Worker === 'function') {
+      workerRef.current = new Worker(new URL('./progress.worker.js', import.meta.url));
+      workerRef.current.onmessage = (e) => {
+        const { percent, phase: p } = e.data;
+        setProgress(percent);
+        setPhase(p);
+      };
+      workerRef.current.postMessage({ type: 'init', total });
+    }
   };
 
   const incrementProgress = (p) => {

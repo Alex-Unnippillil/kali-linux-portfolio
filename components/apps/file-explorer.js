@@ -217,18 +217,22 @@ export default function FileExplorer() {
     if (!dirHandle || !hasWorker) return;
     setResults([]);
     if (workerRef.current) workerRef.current.terminate();
-    workerRef.current = new Worker(new URL('./find.worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => {
-      const { file, line, text, done } = e.data;
-      if (done) {
-        workerRef.current.terminate();
-        workerRef.current = null;
-      } else {
-        setResults((r) => [...r, { file, line, text }]);
-      }
-    };
-    workerRef.current.postMessage({ directoryHandle: dirHandle, query });
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      workerRef.current = new Worker(new URL('./find.worker.js', import.meta.url));
+      workerRef.current.onmessage = (e) => {
+        const { file, line, text, done } = e.data;
+        if (done) {
+          workerRef.current?.terminate();
+          workerRef.current = null;
+        } else {
+          setResults((r) => [...r, { file, line, text }]);
+        }
+      };
+      workerRef.current.postMessage({ directoryHandle: dirHandle, query });
+    }
   };
+
+  useEffect(() => () => workerRef.current?.terminate(), []);
 
   if (!supported) {
     return (

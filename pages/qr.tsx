@@ -42,6 +42,7 @@ const QRPage: React.FC = () => {
             null,
             videoRef.current!,
             (result, err) => {
+
             if (result) {
               setScanResult(result.getText());
             }

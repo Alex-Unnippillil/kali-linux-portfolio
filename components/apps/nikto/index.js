@@ -15,23 +15,26 @@ const NiktoApp = () => {
   const workerRef = useRef(null);
 
   useEffect(() => {
-    workerRef.current = new Worker(
-      new URL("./nikto.worker.js", import.meta.url),
-    );
-    workerRef.current.onmessage = (e) => {
-      const { clusters, error } = e.data || {};
-      if (error) {
-        setStatus(error);
-        setResults({});
-      } else if (clusters) {
-        setResults(clusters);
-        setStatus("Scan complete");
-      }
-    };
-    workerRef.current.onerror = () => {
-      setStatus("Worker error");
-    };
-    return () => workerRef.current?.terminate();
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      workerRef.current = new Worker(
+        new URL("./nikto.worker.js", import.meta.url),
+      );
+      workerRef.current.onmessage = (e) => {
+        const { clusters, error } = e.data || {};
+        if (error) {
+          setStatus(error);
+          setResults({});
+        } else if (clusters) {
+          setResults(clusters);
+          setStatus("Scan complete");
+        }
+      };
+      workerRef.current.onerror = () => {
+        setStatus("Worker error");
+      };
+      return () => workerRef.current?.terminate();
+    }
+    return undefined;
   }, []);
 
   const runDemo = async () => {

@@ -48,6 +48,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
       await pg
         .render({ canvasContext: canvas.getContext('2d')!, viewport, canvas })
         .promise;
+
+
     };
     render();
   }, [pdf, page]);
@@ -65,6 +67,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
         await pg
           .render({ canvasContext: canvas.getContext('2d')!, viewport, canvas })
           .promise;
+
         arr.push(canvas);
       }
       setThumbs(arr);
