@@ -1,6 +1,6 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { getDailySeed } from '../../utils/dailySeed';
+import GameLayout from '../../components/apps/GameLayout';
 
 const Sokoban = dynamic(() => import('../../apps/sokoban'), {
   ssr: false,
@@ -8,7 +8,9 @@ const Sokoban = dynamic(() => import('../../apps/sokoban'), {
 });
 
 const SokobanPage: React.FC = () => (
-  <Sokoban getDailySeed={() => getDailySeed('sokoban')} />
+  <GameLayout gameId="sokoban">
+    <Sokoban />
+  </GameLayout>
 );
 
 export default SokobanPage;

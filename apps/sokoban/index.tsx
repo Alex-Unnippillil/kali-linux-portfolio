@@ -33,7 +33,6 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   const [best, setBest] = useState<number | null>(null);
   const [hint, setHint] = useState<string>('');
   const [status, setStatus] = useState<string>('');
-  const [warnDir, setWarnDir] = useState<DirectionKey | null>(null);
   const [ghost, setGhost] = useState<Set<string>>(new Set());
   const [puffs, setPuffs] = useState<{ id: number; x: number; y: number }[]>([]);
   const puffId = React.useRef(0);
@@ -158,48 +157,8 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       if (!directionKeys.includes(e.key as DirectionKey)) return;
       e.preventDefault();
       const dir = e.key as DirectionKey;
-      if (warnDir) {
-        if (warnDir === dir) {
-          const newState = move(state, dir);
-          if (newState !== state) {
-            setState(newState);
-            setReach(reachable(newState));
-            setHint('');
-            setStatus(newState.deadlocks.size ? 'Deadlock!' : '');
-            setGhost(new Set());
-            if (newState.pushes > state.pushes) {
-              const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
-              if (from) {
-                const [fx, fy] = from.split(',').map(Number);
-                const id = puffId.current++;
-                setPuffs((p) => [...p, { id, x: fx, y: fy }]);
-                setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
-              }
-              logEvent({ category: 'sokoban', action: 'push' });
-            }
-            if (isSolved(newState)) {
-              logGameEnd('sokoban', `level_complete`);
-              logEvent({
-                category: 'sokoban',
-                action: 'level_complete',
-                value: newState.pushes,
-              });
-              const bestKey = `sokoban-best-${packIndex}-${index}`;
-              const prevBest = localStorage.getItem(bestKey);
-              if (!prevBest || newState.pushes < Number(prevBest)) {
-                localStorage.setItem(bestKey, String(newState.pushes));
-                setBest(newState.pushes);
-              }
-            }
-          }
-          setWarnDir(null);
-          return;
-        }
-        setWarnDir(null);
-      }
       if (wouldDeadlock(state, dir)) {
-        setStatus('Deadlock ahead! Press again to confirm.');
-        setWarnDir(dir);
+        setStatus('Deadlock!');
         return;
       }
       const newState = move(state, dir);
@@ -236,7 +195,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [state, index, packIndex, warnDir, handleReset, handleUndo]);
+  }, [state, index, packIndex, handleReset, handleUndo]);
 
   const handleHint = useCallback(() => {
     setHint('...');
@@ -321,7 +280,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             <option key={i} value={i}>{`Level ${i + 1}`}</option>
           ))}
         </select>
-        <input type="file" accept=".txt,.sas" onChange={handleFile} />
+        <input type="file" accept=".txt,.sas,.xsb" onChange={handleFile} />
         <button type="button" onClick={handleUndo} className="px-2 py-1 bg-gray-300 rounded">
           Undo
         </button>
