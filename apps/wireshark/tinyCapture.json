@@ -1,0 +1,5 @@
+[
+  {"timestamp":"1000","src":"10.0.0.1","dest":"10.0.0.2","protocol":6,"info":"TCP handshake"},
+  {"timestamp":"1500","src":"10.0.0.2","dest":"10.0.0.1","protocol":6,"info":"TCP response"},
+  {"timestamp":"3000","src":"10.0.0.1","dest":"10.0.0.2","protocol":17,"info":"UDP packet"}
+]
