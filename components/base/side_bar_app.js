@@ -37,6 +37,10 @@ export class SideBarApp extends Component {
                 aria-label={this.props.title}
                 data-context="app"
                 data-app-id={this.props.id}
+                draggable={this.props.draggable}
+                onDragStart={this.props.onDragStart}
+                onDragOver={this.props.onDragOver}
+                onDrop={this.props.onDrop}
                 onClick={this.openApp}
                 onMouseEnter={() => {
                     this.setState({ showTitle: true });

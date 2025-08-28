@@ -10,6 +10,7 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import ReactGA from 'react-ga4';
+import usePersistentState from '../../hooks/usePersistentState';
 
 export class Desktop extends Component {
     constructor() {
@@ -174,14 +175,8 @@ export class Desktop extends Component {
     }
 
     fetchAppsData = (callback) => {
-        let pinnedApps = localStorage.getItem('pinnedApps')
-        if (pinnedApps) {
-            pinnedApps = JSON.parse(pinnedApps)
-            apps.forEach(app => { app.favourite = pinnedApps.includes(app.id) })
-        } else {
-            pinnedApps = apps.filter(app => app.favourite).map(app => app.id)
-            localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        }
+        const pinnedApps = this.props.pinned;
+        apps.forEach(app => { app.favourite = pinnedApps.includes(app.id) });
         let focused_windows = {}, closed_windows = {}, disabled_apps = {}, favourite_apps = {}, overlapped_windows = {}, minimized_windows = {};
         let desktop_apps = [];
         apps.forEach((app) => {
@@ -468,9 +463,8 @@ export class Desktop extends Component {
         this.initFavourite[id] = true
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = true
-        let pinnedApps = JSON.parse(localStorage.getItem('pinnedApps')) || []
-        if (!pinnedApps.includes(id)) pinnedApps.push(id)
-        localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const pinnedApps = this.props.pinned.includes(id) ? this.props.pinned : [...this.props.pinned, id]
+        this.props.setPinned(pinnedApps)
         this.setState({ favourite_apps })
         this.hideAllContextMenu()
     }
@@ -481,9 +475,8 @@ export class Desktop extends Component {
         this.initFavourite[id] = false
         const app = apps.find(a => a.id === id)
         if (app) app.favourite = false
-        let pinnedApps = JSON.parse(localStorage.getItem('pinnedApps')) || []
-        pinnedApps = pinnedApps.filter(appId => appId !== id)
-        localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))
+        const pinnedApps = this.props.pinned.filter(appId => appId !== id)
+        this.props.setPinned(pinnedApps)
         this.setState({ favourite_apps })
         this.hideAllContextMenu()
     }
@@ -606,7 +599,10 @@ export class Desktop extends Component {
                     closed_windows={this.state.closed_windows}
                     focused_windows={this.state.focused_windows}
                     isMinimized={this.state.minimized_windows}
-                    openAppByAppId={this.openApp} />
+                    openAppByAppId={this.openApp}
+                    pinnedOrder={this.props.pinned}
+                    setPinnedOrder={this.props.setPinned}
+                />
 
                 {/* Desktop Apps */}
                 {this.renderDesktopApps()}
@@ -647,4 +643,8 @@ export class Desktop extends Component {
     }
 }
 
-export default Desktop
+export default function DesktopWithPersistence(props) {
+    const defaultPinned = apps.filter(app => app.favourite).map(app => app.id);
+    const [pinned, setPinned] = usePersistentState('pinnedApps', defaultPinned, Array.isArray);
+    return <Desktop {...props} pinned={pinned} setPinned={setPinned} />;
+}
