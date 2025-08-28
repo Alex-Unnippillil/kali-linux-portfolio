@@ -3,10 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import Window from '../components/base/window';
 
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
-jest.mock('react-draggable', () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-}));
 jest.mock('../components/apps/terminal', () => ({ displayTerminal: jest.fn() }));
 
 describe('Window lifecycle', () => {
@@ -276,7 +272,7 @@ describe('Window keyboard dragging', () => {
     fireEvent.keyDown(handle, { key: 'ArrowRight' });
 
     const winEl = document.getElementById('test-window')!;
-    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+    expect(winEl.style.transform).toBe('translate(70px, 10px)');
     expect(handle).toHaveAttribute('aria-grabbed', 'true');
 
     fireEvent.keyDown(handle, { key: ' ', code: 'Space' });

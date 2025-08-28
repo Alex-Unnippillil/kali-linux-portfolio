@@ -18,6 +18,16 @@ if (!global.fetch) {
   global.fetch = () => Promise.reject(new Error('fetch not implemented'));
 }
 
+// Minimal ResizeObserver mock for components using it
+if (typeof window !== 'undefined' && !('ResizeObserver' in window)) {
+  // @ts-ignore
+  window.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 // jsdom does not provide a global Image constructor which is used by
 // some components (e.g. window borders). A minimal mock is sufficient
 // for our tests because we only rely on the instance existing.
