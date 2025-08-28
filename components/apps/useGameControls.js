@@ -136,8 +136,10 @@ const useGameControls = (arg, gameId = 'default') => {
         stateRef.current.joystick.active = true;
         stateRef.current.joystick.startX = touch.clientX;
         stateRef.current.joystick.startY = touch.clientY;
-      } else {
+      } else if (touch.clientY - r.top < r.height / 2) {
         stateRef.current.fire = true;
+      } else {
+        stateRef.current.hyperspace = true;
       }
     };
 
@@ -155,6 +157,7 @@ const useGameControls = (arg, gameId = 'default') => {
       stateRef.current.joystick.x = 0;
       stateRef.current.joystick.y = 0;
       stateRef.current.fire = false;
+      stateRef.current.hyperspace = false;
     };
 
     canvas.addEventListener('touchstart', start);

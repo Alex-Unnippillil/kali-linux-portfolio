@@ -27,6 +27,13 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   asteroids: {
     objective: 'Destroy asteroids without crashing your ship.',
     controls: 'Arrow keys to rotate and thrust, space to fire.',
+    actions: {
+      left: 'ArrowLeft',
+      right: 'ArrowRight',
+      thrust: 'ArrowUp',
+      fire: ' ',
+      hyperspace: 'h',
+    },
   },
   battleship: {
     objective: 'Sink all enemy ships before they sink yours.',
