@@ -119,32 +119,51 @@ const Hangman = () => {
     [sound],
   );
 
-  const pickWord = useCallback(() => {
-    const list = DICTIONARIES[dict] || DICTIONARIES.family;
-    return list[Math.floor(Math.random() * list.length)];
-  }, [dict]);
-
-  const reset = useCallback(() => {
-    try {
-      setWord(pickWord());
-      setGuessed([]);
-      setWrong(0);
-      setHintUsed(false);
-      setScore(0);
-      setPaused(false);
-      partProgressRef.current = new Array(maxWrong).fill(0);
-      partStartRef.current = new Array(maxWrong).fill(0);
-      gallowsProgressRef.current = 0;
-      gallowsStartRef.current = performance.now();
-      setAnnouncement('');
-      logGameStart('hangman');
-    } catch (err) {
-      logGameError('hangman', err?.message || String(err));
-    }
-  }, [pickWord]);
+  const reset = useCallback(
+    (forcedWord, forcedDict) => {
+      try {
+        const dictToUse = forcedDict || dict;
+        const list = DICTIONARIES[dictToUse] || DICTIONARIES.family;
+        const chosen =
+          forcedWord && list.includes(forcedWord)
+            ? forcedWord
+            : list[Math.floor(Math.random() * list.length)];
+        setDict(dictToUse);
+        setWord(chosen);
+        setGuessed([]);
+        setWrong(0);
+        setHintUsed(false);
+        setScore(0);
+        setPaused(false);
+        partProgressRef.current = new Array(maxWrong).fill(0);
+        partStartRef.current = new Array(maxWrong).fill(0);
+        gallowsProgressRef.current = 0;
+        gallowsStartRef.current = performance.now();
+        setAnnouncement('');
+        logGameStart('hangman');
+      } catch (err) {
+        logGameError('hangman', err?.message || String(err));
+      }
+    },
+    [dict],
+  );
 
   useEffect(() => {
-    reset();
+    const params = new URLSearchParams(window.location.search);
+    const paramDict = params.get('dict') || undefined;
+    const paramWord = params.get('word') || undefined;
+    const paramGuessed = params.get('guessed') || '';
+    const paramWrong = parseInt(params.get('wrong') || '0', 10);
+    const validDict =
+      paramDict && DICTIONARIES[paramDict] ? paramDict : undefined;
+
+    if (paramWord) {
+      reset(paramWord.toLowerCase(), validDict);
+      setGuessed(paramGuessed.split(''));
+      setWrong(Number.isNaN(paramWrong) ? 0 : paramWrong);
+    } else {
+      reset(undefined, validDict);
+    }
   }, [reset]);
 
   useEffect(() => {
@@ -203,6 +222,39 @@ const Hangman = () => {
 
   const togglePause = useCallback(() => setPaused((p) => !p), []);
   const toggleSound = useCallback(() => setSound((s) => !s), [setSound]);
+
+  const shareLink = useCallback(() => {
+    try {
+      const params = new URLSearchParams({ dict, word });
+      if (guessed.length) params.set('guessed', guessed.join(''));
+      if (wrong) params.set('wrong', String(wrong));
+      const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+      navigator.clipboard?.writeText(url);
+      setAnnouncement('Link copied to clipboard');
+    } catch (err) {
+      logGameError('hangman', err?.message || String(err));
+    }
+  }, [dict, word, guessed, wrong]);
+
+  const shareImage = useCallback(() => {
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        try {
+          await navigator.clipboard?.write([
+            new window.ClipboardItem({ 'image/png': blob }),
+          ]);
+          setAnnouncement('Image copied to clipboard');
+        } catch (err) {
+          logGameError('hangman', err?.message || String(err));
+        }
+      });
+    } catch (err) {
+      logGameError('hangman', err?.message || String(err));
+    }
+  }, []);
 
   const keyHandler = useCallback(
     (e) => {
@@ -359,6 +411,18 @@ const Hangman = () => {
           className="px-2 py-1 bg-ub-orange text-black rounded"
         >
           Hint
+        </button>
+        <button
+          onClick={shareLink}
+          className="px-2 py-1 bg-ubt-green text-black rounded"
+        >
+          Share Link
+        </button>
+        <button
+          onClick={shareImage}
+          className="px-2 py-1 bg-ubt-blue text-black rounded"
+        >
+          Share Image
         </button>
       </div>
         <div className="flex flex-wrap justify-center gap-1 text-xs mb-2">
