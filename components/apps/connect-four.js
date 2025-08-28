@@ -105,6 +105,13 @@ const ConnectFour = () => {
     }
   };
 
+  const getAvailableRow = (col) => {
+    for (let r = ROWS - 1; r >= 0; r--) {
+      if (boardRef.current[r][col] === 0) return r;
+    }
+    return null;
+  };
+
   const handleClick = (e) => {
     if (winner || dropRef.current || pausedRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
@@ -119,6 +126,9 @@ const ConnectFour = () => {
           color: current,
           vel: 0,
         };
+        setAnnouncement(
+          `${current === 1 ? 'Red' : 'Yellow'} disc dropped in column ${col + 1}, row ${r + 1}`
+        );
         break;
       }
     }
@@ -132,18 +142,46 @@ const ConnectFour = () => {
       hoverRef.current = { col: null, row: null };
       return;
     }
-    let row = null;
-    for (let r = ROWS - 1; r >= 0; r--) {
-      if (boardRef.current[r][col] === 0) {
-        row = r;
-        break;
-      }
+    const row = getAvailableRow(col);
+    if (hoverRef.current.col !== col) {
+      setAnnouncement(`Column ${col + 1}`);
     }
     hoverRef.current = { col, row };
   };
 
   const handleLeave = () => {
     hoverRef.current = { col: null, row: null };
+  };
+
+  const handleKeyDown = (e) => {
+    if (winner || dropRef.current || pausedRef.current) return;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      let col = hoverRef.current.col;
+      if (col === null) col = 0;
+      else
+        col =
+          (col + (e.key === 'ArrowRight' ? 1 : -1) + COLS) % COLS;
+      const row = getAvailableRow(col);
+      hoverRef.current = { col, row };
+      setAnnouncement(`Column ${col + 1}`);
+    } else if (e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      const col = hoverRef.current.col;
+      if (col === null) return;
+      const row = getAvailableRow(col);
+      if (row === null) return;
+      dropRef.current = {
+        col,
+        row,
+        y: reduceRef.current ? row * SIZE : -SIZE,
+        color: current,
+        vel: 0,
+      };
+      setAnnouncement(
+        `${current === 1 ? 'Red' : 'Yellow'} disc dropped in column ${col + 1}, row ${row + 1}`
+      );
+    }
   };
 
   const checkWin = (board, row, col, color) => {
@@ -228,6 +266,9 @@ const ConnectFour = () => {
           p.y = target;
           boardRef.current[p.row][p.col] = p.color;
           setBoardState(boardRef.current.map((row) => row.slice()));
+          const nextRow = getAvailableRow(p.col);
+          hoverRef.current =
+            nextRow === null ? { col: null, row: null } : { col: p.col, row: nextRow };
           dropRef.current = null;
           if (soundRef.current) beep();
           const winLine = checkWin(boardRef.current, p.row, p.col, p.color);
@@ -304,6 +345,9 @@ const ConnectFour = () => {
         onClick={handleClick}
         onMouseMove={handleMove}
         onMouseLeave={handleLeave}
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        aria-label="Connect Four board"
       />
       <div aria-live="polite" className="sr-only">
         {announcement}
