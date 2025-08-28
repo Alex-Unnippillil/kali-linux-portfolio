@@ -46,8 +46,16 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     null | { device: 'key' | 'pad'; action: Action }
   >(null);
 
+  useEffect(() => {
+    // ensure container receives keyboard focus
+    containerRef.current?.focus();
+  }, []);
+
   // Keyboard input and remapping
   useEffect(() => {
+    if (!containerRef.current) return;
+    // scope listener to the game container to avoid global key events
+    const target = containerRef.current;
     const handle = (e: KeyboardEvent) => {
       if (waiting?.device === 'key' && e.type === 'keydown') {
         setKeyMap((prev) => ({ ...prev, [waiting.action]: e.code }));
@@ -67,19 +75,19 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         }
       }
     };
-    window.addEventListener('keydown', handle);
-    window.addEventListener('keyup', handle);
+    target.addEventListener('keydown', handle);
+    target.addEventListener('keyup', handle);
     return () => {
-      window.removeEventListener('keydown', handle);
-      window.removeEventListener('keyup', handle);
+      target.removeEventListener('keydown', handle);
+      target.removeEventListener('keyup', handle);
     };
   }, [waiting, setKeyMap]);
 
   // Gamepad remapping polling when waiting
   useEffect(() => {
     if (!waiting || waiting.device !== 'pad') return;
-    let raf: number;
-    const poll = () => {
+    // poll at 100ms intervals instead of every frame to reduce CPU
+    const interval = setInterval(() => {
       const pads = navigator.getGamepads ? navigator.getGamepads() : [];
       for (const gp of pads) {
         if (!gp) continue;
@@ -91,10 +99,8 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           }
         }
       }
-      raf = requestAnimationFrame(poll);
-    };
-    raf = requestAnimationFrame(poll);
-    return () => cancelAnimationFrame(raf);
+    }, 100);
+    return () => clearInterval(interval);
   }, [waiting, setPadMap]);
 
   useEffect(() => {
@@ -176,7 +182,8 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         this.cameras.main.setDeadzone(data.bounds.deadZoneWidth, data.bounds.deadZoneHeight);
         this.cameras.main.startFollow(this.player);
 
-        // Collision events
+        // Collision events (essential for checkpoint/hazard handling)
+        // TODO: evaluate performance if collision complexity increases
         this.matter.world.on('collisionstart', (_: any, bodyA: MatterJS.BodyType, bodyB: MatterJS.BodyType) => {
           [bodyA, bodyB].forEach((body) => {
             if (body.label === 'checkpoint') {
@@ -303,7 +310,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         };
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative" tabIndex={0}>
       <button className="absolute left-4 bottom-4" {...bind('left')}>
         ◀
       </button>
