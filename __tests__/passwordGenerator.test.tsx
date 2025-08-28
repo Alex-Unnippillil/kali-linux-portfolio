@@ -3,12 +3,14 @@ import { render, fireEvent, waitFor } from '@testing-library/react';
 import PasswordGenerator from '../apps/password_generator';
 
 describe('PasswordGenerator', () => {
-  it('generates password of specified length', () => {
-    const { getByText, getByLabelText, getByTestId } = render(<PasswordGenerator />);
-    fireEvent.change(getByLabelText(/Length/i), { target: { value: '8' } });
-    fireEvent.click(getByText('Generate'));
+  it('generates password of specified length', async () => {
+    const { getByText, getByTestId } = render(<PasswordGenerator />);
+    await waitFor(() => expect(getByText('Generate')).not.toBeDisabled());
+    const form = getByText('Generate').closest('form')!;
+    fireEvent.submit(form);
+    await waitFor(() => expect((getByTestId('password-display') as HTMLInputElement).value).not.toBe(''));
     const value = (getByTestId('password-display') as HTMLInputElement).value;
-    expect(value).toHaveLength(8);
+    expect(value).toHaveLength(12);
   });
 
   it('copies password to clipboard', async () => {
@@ -16,11 +18,26 @@ describe('PasswordGenerator', () => {
     // @ts-ignore
     Object.assign(navigator, { clipboard: { writeText } });
     const { getByText, getByTestId } = render(<PasswordGenerator />);
-    fireEvent.click(getByText('Generate'));
+    await waitFor(() => expect(getByText('Generate')).not.toBeDisabled());
+    const form = getByText('Generate').closest('form')!;
+    fireEvent.submit(form);
+    await waitFor(() => expect((getByTestId('password-display') as HTMLInputElement).value).not.toBe(''));
     const value = (getByTestId('password-display') as HTMLInputElement).value;
     fireEvent.click(getByText('Copy'));
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledWith(value);
     });
+  });
+
+  it('requires at least one character type', async () => {
+    const { getByLabelText, getByText } = render(<PasswordGenerator />);
+    await waitFor(() => expect(getByText('Generate')).not.toBeDisabled());
+    fireEvent.click(getByLabelText(/Lowercase/i));
+    fireEvent.click(getByLabelText(/Uppercase/i));
+    fireEvent.click(getByLabelText(/Numbers/i));
+    const form = getByText('Generate').closest('form')!;
+    fireEvent.submit(form);
+    await waitFor(() => expect(getByText('Generate')).toBeDisabled());
+    expect(getByText('Select at least one character type')).toBeInTheDocument();
   });
 });
