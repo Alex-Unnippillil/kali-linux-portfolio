@@ -15,7 +15,8 @@
     "test:watch": "jest --watch",
     "lint": "next lint",
     "a11y": "node scripts/a11y.mjs",
-    "smoke": "node scripts/smoke-all-apps.mjs"
+    "smoke": "node scripts/smoke-all-apps.mjs",
+    "test:playwright": "playwright test"
   },
   "engines": {
     "node": "20.x"
