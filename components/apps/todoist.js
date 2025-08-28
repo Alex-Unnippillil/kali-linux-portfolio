@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { get, set, createStore } from 'idb-keyval';
 
 const initialGroups = {
@@ -35,7 +35,7 @@ export default function Todoist() {
         setGroups({ ...initialGroups, ...data });
       }
     });
-  }, []);
+  }, [store]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
@@ -48,25 +48,28 @@ export default function Todoist() {
       };
     }
     return () => workerRef.current?.terminate();
-  }, []);
+  }, [finalizeMove]);
 
-  const announce = (task, group) => {
+  const announce = useCallback((task, group) => {
     if (liveRef.current) {
       liveRef.current.textContent = `Moved ${task} to ${group}`;
     }
-  };
+  }, []);
 
-  const finalizeMove = (newGroups, taskTitle, to) => {
-    setGroups(newGroups);
-    set(KEY, newGroups, store).catch(() => {});
-    announce(taskTitle, to);
-    if (!prefersReducedMotion.current) {
-      requestAnimationFrame(() => {
-        setAnimating(to);
-        setTimeout(() => setAnimating(''), 500);
-      });
-    }
-  };
+  const finalizeMove = useCallback(
+    (newGroups, taskTitle, to) => {
+      setGroups(newGroups);
+      set(KEY, newGroups, store).catch(() => {});
+      announce(taskTitle, to);
+      if (!prefersReducedMotion.current) {
+        requestAnimationFrame(() => {
+          setAnimating(to);
+          setTimeout(() => setAnimating(''), 500);
+        });
+      }
+    },
+    [store, announce],
+  );
 
   const handleDragStart = (group, task) => (e) => {
     dragged.current = { group, id: task.id, title: task.title };

@@ -68,7 +68,7 @@ const Stepper = ({
         timerRef.current = null;
       }
     };
-  }, [active, backoffThreshold, lockoutThreshold, totalAttempts, runId, locked]);
+  }, [active, backoffThreshold, lockoutThreshold, totalAttempts, runId, locked, onAttemptChange]);
 
   return (
     <div className="mt-4">

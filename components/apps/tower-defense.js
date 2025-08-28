@@ -189,7 +189,7 @@ function TowerDefense() {
     startWave(1);
     setRunning(false);
     runningRef.current = false;
-  }, []);
+  }, [startWave]);
 
   const reset = useCallback(() => {
     towersRef.current = [];
@@ -528,7 +528,7 @@ function TowerDefense() {
     };
     frameId = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(frameId);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (lives <= 0) setRunning(false);

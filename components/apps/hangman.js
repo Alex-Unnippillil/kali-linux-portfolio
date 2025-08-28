@@ -198,11 +198,11 @@ const Hangman = () => {
         );
       }
     },
-    [paused, guessed, wrong, maxWrong, word, playTone, logEvent],
+    [paused, guessed, wrong, word, playTone],
   );
 
   const togglePause = useCallback(() => setPaused((p) => !p), []);
-  const toggleSound = useCallback(() => setSound((s) => !s), []);
+  const toggleSound = useCallback(() => setSound((s) => !s), [setSound]);
 
   const keyHandler = useCallback(
     (e) => {

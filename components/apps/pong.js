@@ -58,24 +58,27 @@ const Pong = () => {
     speedRef.current = speedMultiplier;
   }, [speedMultiplier]);
 
-  const playSound = (freq) => {
-    if (!sound) return;
-    try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      const ctx = audioCtxRef.current;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = freq;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.1);
-    } catch {
-      // ignore audio errors
-    }
-  };
+    const playSound = useCallback(
+      (freq) => {
+        if (!sound) return;
+        try {
+          if (!audioCtxRef.current) {
+            audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+          }
+          const ctx = audioCtxRef.current;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.frequency.value = freq;
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.1);
+        } catch {
+          // ignore audio errors
+        }
+      },
+      [sound],
+    );
 
   const controls = useGameControls(canvasRef, (state) => {
     if (mode === 'online' && channelRef.current) {
@@ -512,7 +515,7 @@ const Pong = () => {
         motionQuery.removeListener(handleMotionChange);
       }
     };
-  }, [difficulty, mode, connected, matchWinner, controls, canvasRef]);
+    }, [difficulty, mode, connected, matchWinner, controls, canvasRef, playSound]);
 
   const reset = useCallback(() => {
     if (resetRef.current) resetRef.current();

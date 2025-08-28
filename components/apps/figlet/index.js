@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 const FigletApp = () => {
   const [text, setText] = useState('');
@@ -31,17 +31,17 @@ const FigletApp = () => {
     };
   }, []);
 
-  const updateFiglet = () => {
+  const updateFiglet = useCallback(() => {
     if (workerRef.current) {
       workerRef.current.postMessage({ text, font });
     }
-  };
+  }, [text, font]);
 
   useEffect(() => {
     if (frameRef.current) cancelAnimationFrame(frameRef.current);
     frameRef.current = requestAnimationFrame(updateFiglet);
     return () => cancelAnimationFrame(frameRef.current);
-  }, [text, font]);
+  }, [updateFiglet]);
 
   const copyOutput = () => {
     if (output) {
