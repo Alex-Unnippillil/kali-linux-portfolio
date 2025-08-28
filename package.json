@@ -12,7 +12,7 @@
     "export": "next export",
     "test": "jest",
     "test:watch": "jest --watch",
-    "lint": "next lint",
+    "lint": "eslint --max-warnings=0 .",
     "a11y": "node scripts/a11y.mjs",
     "smoke": "node scripts/smoke-all-apps.mjs",
     "build:sw": "node scripts/generate-sw.mjs"
