@@ -1,9 +1,38 @@
 const notesContainer = document.getElementById('notes');
 const addNoteBtn = document.getElementById('add-note');
-let notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]');
+const exportBtn = document.getElementById('export-notes');
+const importBtn = document.getElementById('import-notes-btn');
+const importInput = document.getElementById('import-notes');
+
+function isValidNotes(data) {
+  return (
+    Array.isArray(data) &&
+    data.every(
+      (n) =>
+        typeof n.id === 'number' &&
+        typeof n.content === 'string' &&
+        typeof n.x === 'number' &&
+        typeof n.y === 'number' &&
+        typeof n.color === 'string'
+    )
+  );
+}
+
+let notes = [];
+
+try {
+  const saved = JSON.parse(localStorage.getItem('stickyNotes') || '[]');
+  if (isValidNotes(saved)) {
+    notes = saved;
+  }
+} catch {
+  // ignore invalid saved notes
+}
 
 function saveNotes() {
-  localStorage.setItem('stickyNotes', JSON.stringify(notes));
+  if (isValidNotes(notes)) {
+    localStorage.setItem('stickyNotes', JSON.stringify(notes));
+  }
 }
 
 function createNoteElement(note) {
@@ -88,4 +117,41 @@ function enableDrag(el, note) {
 }
 
 addNoteBtn.addEventListener('click', addNote);
+exportBtn.addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(notes, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'sticky-notes.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+importBtn.addEventListener('click', () => importInput.click());
+
+importInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (isValidNotes(data)) {
+        notes = data;
+        notesContainer.innerHTML = '';
+        notes.forEach(createNoteElement);
+        saveNotes();
+      } else {
+        alert('Invalid notes file.');
+      }
+    } catch {
+      alert('Invalid JSON file.');
+    }
+  };
+  reader.readAsText(file);
+  importInput.value = '';
+});
+
 notes.forEach(createNoteElement);
