@@ -1,58 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { unitMap, categories, convertUnit, math } from './unitData';
-
-// A slider that displays a rounding preview bubble while dragging.
-const RoundingSlider = ({ value, precision, onChange, prefersReducedMotion }) => {
-  const [showBubble, setShowBubble] = useState(false);
-  const rafRef = useRef(0);
-
-  const raf =
-    typeof window !== 'undefined' && window.requestAnimationFrame
-      ? window.requestAnimationFrame
-      : (cb) => setTimeout(cb, 0);
-  const cancelRaf =
-    typeof window !== 'undefined' && window.cancelAnimationFrame
-      ? window.cancelAnimationFrame
-      : clearTimeout;
-
-  const handleChange = (e) => {
-    const v = Number(e.target.value);
-    cancelRaf(rafRef.current);
-    rafRef.current = raf(() => onChange(v));
-  };
-
-  const rounded = math.format(
-    math.round(parseFloat(value || 0), precision),
-    { notation: 'fixed', precision }
-  );
-
-  return (
-    <div className="relative mt-2">
-      <input
-        type="range"
-        min="0"
-        max="6"
-        value={precision}
-        onChange={handleChange}
-        onMouseDown={() => setShowBubble(true)}
-        onMouseUp={() => setShowBubble(false)}
-        onTouchStart={() => setShowBubble(true)}
-        onTouchEnd={() => setShowBubble(false)}
-        aria-label="Rounding precision"
-        className="w-full"
-      />
-      {showBubble && (
-        <div
-          className={`absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 text-xs rounded bg-gray-900 text-white ${
-            prefersReducedMotion ? '' : 'transition-transform'
-          }`}
-        >
-          {rounded}
-        </div>
-      )}
-    </div>
-  );
-};
+import React, { useState, useEffect, useCallback } from 'react';
+import { unitMap, unitDetails, categories, convertUnit } from './unitData';
 
 const UnitConverter = () => {
   const [category, setCategory] = useState(categories[0].value);
@@ -60,8 +7,7 @@ const UnitConverter = () => {
   const [toUnit, setToUnit] = useState('kilometer');
   const [leftVal, setLeftVal] = useState('');
   const [rightVal, setRightVal] = useState('');
-  const [precision, setPrecision] = useState(2);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const units = Object.keys(unitMap[category]);
@@ -69,56 +15,58 @@ const UnitConverter = () => {
     setToUnit(units[1] || units[0]);
     setLeftVal('');
     setRightVal('');
+    setError('');
   }, [category]);
-
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handler = () => setPrefersReducedMotion(media.matches);
-    handler();
-    media.addEventListener('change', handler);
-    return () => media.removeEventListener('change', handler);
-  }, []);
 
   const units = Object.keys(unitMap[category]);
 
+  const withinRange = (cat, unit, val) => {
+    const { min, max } = unitDetails[cat][unit];
+    return val >= min && val <= max;
+  };
+
   const convertLeftToRight = useCallback(
-    (val, prec = precision) => {
+    (val) => {
       if (val === '' || isNaN(parseFloat(val))) {
+        setRightVal('');
+        setError('');
+        return;
+      }
+      const num = parseFloat(val);
+      if (!withinRange(category, fromUnit, num)) {
+        setError(`Value out of range for ${fromUnit}`);
         setRightVal('');
         return;
       }
-      const converted = convertUnit(
-        category,
-        fromUnit,
-        toUnit,
-        parseFloat(val),
-        prec
-      );
-      setRightVal(
-        math.format(converted, { notation: 'fixed', precision: prec })
-      );
+      const converted = convertUnit(category, fromUnit, toUnit, num);
+      const precision = unitDetails[category][toUnit].precision;
+      const rounded = Number(converted.toFixed(precision));
+      setRightVal(rounded.toString());
+      setError('');
     },
-    [category, fromUnit, toUnit, precision],
+    [category, fromUnit, toUnit],
   );
 
   const convertRightToLeft = useCallback(
-    (val, prec = precision) => {
+    (val) => {
       if (val === '' || isNaN(parseFloat(val))) {
+        setLeftVal('');
+        setError('');
+        return;
+      }
+      const num = parseFloat(val);
+      if (!withinRange(category, toUnit, num)) {
+        setError(`Value out of range for ${toUnit}`);
         setLeftVal('');
         return;
       }
-      const converted = convertUnit(
-        category,
-        toUnit,
-        fromUnit,
-        parseFloat(val),
-        prec
-      );
-      setLeftVal(
-        math.format(converted, { notation: 'fixed', precision: prec })
-      );
+      const converted = convertUnit(category, toUnit, fromUnit, num);
+      const precision = unitDetails[category][fromUnit].precision;
+      const rounded = Number(converted.toFixed(precision));
+      setLeftVal(rounded.toString());
+      setError('');
     },
-    [category, fromUnit, toUnit, precision],
+    [category, fromUnit, toUnit],
   );
 
   const handleLeftChange = (e) => {
@@ -135,11 +83,26 @@ const UnitConverter = () => {
 
   useEffect(() => {
     if (leftVal !== '') {
-      convertLeftToRight(leftVal, precision);
+      convertLeftToRight(leftVal);
     } else if (rightVal !== '') {
-      convertRightToLeft(rightVal, precision);
+      convertRightToLeft(rightVal);
     }
-  }, [precision, fromUnit, toUnit, leftVal, rightVal, convertLeftToRight, convertRightToLeft]);
+  }, [fromUnit, toUnit, category, leftVal, rightVal, convertLeftToRight, convertRightToLeft]);
+
+  const swapUnits = () => {
+    setFromUnit(toUnit);
+    setToUnit(fromUnit);
+    setLeftVal(rightVal);
+    setRightVal(leftVal);
+    setError('');
+  };
+
+  const format = (value, unit) =>
+    new Intl.NumberFormat(undefined, {
+      style: 'unit',
+      unit,
+      maximumFractionDigits: unitDetails[category][unit].precision,
+    }).format(Number(value));
 
   return (
     <div className="bg-gray-700 text-white p-4 rounded flex flex-col gap-2">
@@ -170,12 +133,6 @@ const UnitConverter = () => {
               aria-label={`Value in ${fromUnit}`}
             />
           </label>
-          <RoundingSlider
-            value={leftVal}
-            precision={precision}
-            onChange={setPrecision}
-            prefersReducedMotion={prefersReducedMotion}
-          />
           <label className="flex flex-col mt-2">
             From
             <select
@@ -206,12 +163,6 @@ const UnitConverter = () => {
               aria-label={`Value in ${toUnit}`}
             />
           </label>
-          <RoundingSlider
-            value={rightVal}
-            precision={precision}
-            onChange={setPrecision}
-            prefersReducedMotion={prefersReducedMotion}
-          />
           <label className="flex flex-col mt-2">
             To
             <select
@@ -232,14 +183,25 @@ const UnitConverter = () => {
           </label>
         </div>
       </div>
-      <div
-        data-testid="unit-result"
-        className="mt-2"
-      >
-        {leftVal && rightVal && `${leftVal} ${fromUnit} = ${rightVal} ${toUnit}`}
+      <div className="flex justify-center mt-2">
+        <button
+          onClick={swapUnits}
+          aria-label="Swap units"
+          className="bg-gray-600 px-2 py-1 rounded"
+        >
+          Swap Units
+        </button>
+      </div>
+      {error && (
+        <div className="text-red-400" role="alert">
+          {error}
+        </div>
+      )}
+      <div data-testid="unit-result" className="mt-2">
+        {leftVal && rightVal && `${format(leftVal, fromUnit)} = ${format(rightVal, toUnit)}`}
       </div>
       <div className="sr-only" aria-live="polite">
-        {leftVal && rightVal && `${leftVal} ${fromUnit} equals ${rightVal} ${toUnit}`}
+        {leftVal && rightVal && `${format(leftVal, fromUnit)} equals ${format(rightVal, toUnit)}`}
       </div>
     </div>
   );
