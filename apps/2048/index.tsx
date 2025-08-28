@@ -243,16 +243,20 @@ const Page2048 = () => {
         </button>
         {hard && <div className="ml-2">{timer}</div>}
       </div>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid w-full max-w-sm grid-cols-4 gap-2">
         {board.map((row, rIdx) =>
           row.map((cell, cIdx) => (
             <div
               key={`${rIdx}-${cIdx}`}
-              className={`h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
-                cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
-              }`}
+              className="w-full aspect-square transition-transform transition-opacity"
             >
-              {displayCell(cell)}
+              <div
+                className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
+                  cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
+                }`}
+              >
+                {displayCell(cell)}
+              </div>
             </div>
           ))
         )}
