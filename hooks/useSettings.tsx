@@ -12,6 +12,22 @@ import {
 } from '../utils/settingsStore';
 type Density = 'regular' | 'compact';
 
+// Utility to lighten or darken a hex color by a percentage
+const shadeColor = (color: string, percent: number): string => {
+  const f = parseInt(color.slice(1), 16);
+  const t = percent < 0 ? 0 : 255;
+  const p = Math.abs(percent);
+  const R = f >> 16;
+  const G = (f >> 8) & 0x00ff;
+  const B = f & 0x0000ff;
+  const newR = Math.round((t - R) * p) + R;
+  const newG = Math.round((t - G) * p) + G;
+  const newB = Math.round((t - B) * p) + B;
+  return `#${(0x1000000 + newR * 0x10000 + newG * 0x100 + newB)
+    .toString(16)
+    .slice(1)}`;
+};
+
 interface SettingsContextValue {
   accent: string;
   wallpaper: string;
@@ -50,7 +66,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--color-ub-orange', accent);
+    const border = shadeColor(accent, -0.2);
+    const vars: Record<string, string> = {
+      '--color-ub-orange': accent,
+      '--color-ub-border-orange': border,
+      '--color-primary': accent,
+      '--color-accent': accent,
+    };
+    Object.entries(vars).forEach(([key, value]) => {
+      document.documentElement.style.setProperty(key, value);
+    });
     saveAccent(accent);
   }, [accent]);
 
