@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import FormError from '../components/ui/FormError';
+
+const STORAGE_KEY = 'dummy-form-draft';
 
 const DummyForm: React.FC = () => {
   const [name, setName] = useState('');
@@ -7,6 +9,49 @@ const DummyForm: React.FC = () => {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [recovered, setRecovered] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const stored = JSON.parse(raw) as {
+          name?: string;
+          email?: string;
+          message?: string;
+        };
+        if (stored.name || stored.email || stored.message) {
+          setName(stored.name || '');
+          setEmail(stored.email || '');
+          setMessage(stored.message || '');
+          setRecovered(true);
+        }
+      }
+    } catch {
+      // ignore parsing errors
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handle = setTimeout(() => {
+      const hasContent = name || email || message;
+      try {
+        if (hasContent) {
+          window.localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({ name, email, message }),
+          );
+        } else {
+          window.localStorage.removeItem(STORAGE_KEY);
+        }
+      } catch {
+        // ignore write errors
+      }
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [name, email, message]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,15 +74,18 @@ const DummyForm: React.FC = () => {
       body: JSON.stringify({ name, email, message }),
     });
     setSuccess(true);
+    window.localStorage.removeItem(STORAGE_KEY);
     setName('');
     setEmail('');
     setMessage('');
+    setRecovered(false);
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <form onSubmit={handleSubmit} className="w-full max-w-md rounded bg-white p-6 shadow-md">
         <h1 className="mb-4 text-xl font-bold">Contact Us</h1>
+        {recovered && <p className="mb-4 text-sm text-blue-600">Recovered draft</p>}
         {error && <FormError className="mb-4 mt-0">{error}</FormError>}
         {success && <p className="mb-4 text-sm text-green-600">Form submitted successfully!</p>}
         <label className="mb-2 block text-sm font-medium" htmlFor="name">Name</label>
