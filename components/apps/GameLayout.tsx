@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import GameSettingsWindow from './GameSettingsWindow';
+import SettingsContext from './GameSettingsContext';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -21,11 +23,14 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   highScore,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [paused, setPaused] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const settingsAvailable = useContext(SettingsContext);
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
+  const toggleSettings = useCallback(() => setShowSettings((s) => !s), []);
 
   // Show tutorial overlay on first visit
   useEffect(() => {
@@ -74,6 +79,9 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   return (
     <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
       {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
+      {showSettings && settingsAvailable && (
+        <GameSettingsWindow onClose={() => setShowSettings(false)} />
+      )}
       {paused && (
         <div
           className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
@@ -90,6 +98,15 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           </button>
         </div>
       )}
+      <button
+        type="button"
+        aria-label="Settings"
+        aria-expanded={showSettings}
+        onClick={toggleSettings}
+        className="absolute top-2 right-12 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+      >
+        ⚙
+      </button>
       <button
         type="button"
         aria-label="Help"

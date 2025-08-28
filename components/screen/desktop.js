@@ -47,12 +47,14 @@ export class Desktop extends Component {
         });
         this.setContextListeners();
         this.setEventListeners();
+        this.setKeyListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
+        this.removeKeyListeners();
     }
 
     checkForNewFolders = () => {
@@ -84,6 +86,27 @@ export class Desktop extends Component {
                 this.openApp("settings");
             });
         }
+    }
+
+    setKeyListeners = () => {
+        this.keyHandler = (e) => {
+            if ((e.key === 'c' || e.key === 'C') && this.isDesktopFocused()) {
+                e.preventDefault();
+                this.openApp('gedit');
+            }
+        };
+        window.addEventListener('keydown', this.keyHandler);
+    }
+
+    removeKeyListeners = () => {
+        if (this.keyHandler) window.removeEventListener('keydown', this.keyHandler);
+    }
+
+    isDesktopFocused = () => {
+        const { focused_windows } = this.state;
+        const noWindowFocused = Object.values(focused_windows).every(v => !v);
+        const active = document.activeElement;
+        return noWindowFocused && (active === document.body || active === null);
     }
 
     setContextListeners = () => {
