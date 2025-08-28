@@ -63,11 +63,14 @@ function Timeline({ events, onSelect }) {
   const [zoomAnnouncement, setZoomAnnouncement] = useState('');
 
   useEffect(() => {
-    workerRef.current = new Worker(
-      new URL('./timelineWorker.js', import.meta.url)
-    );
-    workerRef.current.onmessage = (e) => setSorted(e.data);
-    return () => workerRef.current.terminate();
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      workerRef.current = new Worker(
+        new URL('./timelineWorker.js', import.meta.url)
+      );
+      workerRef.current.onmessage = (e) => setSorted(e.data);
+      return () => workerRef.current?.terminate();
+    }
+    return undefined;
   }, []);
 
   useEffect(() => {
@@ -232,7 +235,7 @@ function Autopsy() {
   }, []);
 
   useEffect(() => {
-    if (typeof Worker !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       try {
         parseWorkerRef.current = new Worker(
           new URL('./jsonWorker.js', import.meta.url)
@@ -243,7 +246,7 @@ function Autopsy() {
         parseWorkerRef.current = null;
       }
     }
-    return () => parseWorkerRef.current && parseWorkerRef.current.terminate();
+    return () => parseWorkerRef.current?.terminate();
   }, []);
 
   useEffect(() => {

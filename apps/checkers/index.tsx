@@ -103,12 +103,15 @@ export default function CheckersPage() {
   );
 
   useEffect(() => {
-    workerRef.current = new Worker('/checkers-worker.js');
-    workerRef.current.onmessage = (e: MessageEvent<Move>) => {
-      const move = e.data;
-      if (move) makeMove(move);
-    };
-    return () => workerRef.current?.terminate();
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      workerRef.current = new Worker('/checkers-worker.js');
+      workerRef.current.onmessage = (e: MessageEvent<Move>) => {
+        const move = e.data;
+        if (move) makeMove(move);
+      };
+      return () => workerRef.current?.terminate();
+    }
+    return undefined;
   }, [makeMove]);
 
   useEffect(() => {

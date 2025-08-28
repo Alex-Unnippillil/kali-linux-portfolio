@@ -45,7 +45,7 @@ export default function Todoist() {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./todoist.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
         const { groups: newGroups, taskTitle, to } = e.data || {};

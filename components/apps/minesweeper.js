@@ -199,7 +199,7 @@ const Minesweeper = () => {
   const audioRef = useRef(null);
   const workerRef = useRef(null);
   const initWorker = () => {
-    if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./minesweeper.worker.js', import.meta.url),
       );

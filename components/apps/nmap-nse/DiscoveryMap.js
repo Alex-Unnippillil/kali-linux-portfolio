@@ -10,7 +10,7 @@ const DiscoveryMap = ({ trigger }) => {
 
     const supportsWorker =
       typeof window !== 'undefined' &&
-      window.Worker &&
+      typeof Worker === 'function' &&
       'OffscreenCanvas' in window;
     let worker;
     let animationFrame;
