@@ -6,6 +6,7 @@ import usePersistentState from '../usePersistentState';
 
 const padStyles = [
   {
+    id: 'green',
     color: { base: 'bg-green-700', active: 'bg-green-500' },
     symbol: '▲',
     label: 'green',
@@ -13,6 +14,7 @@ const padStyles = [
       'repeating-linear-gradient(45deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)',
   },
   {
+    id: 'red',
     color: { base: 'bg-red-700', active: 'bg-red-500' },
     symbol: '■',
     label: 'red',
@@ -20,6 +22,7 @@ const padStyles = [
       'repeating-linear-gradient(-45deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)',
   },
   {
+    id: 'yellow',
     color: { base: 'bg-yellow-500', active: 'bg-yellow-300' },
     symbol: '●',
     label: 'yellow',
@@ -27,6 +30,7 @@ const padStyles = [
       'repeating-linear-gradient(0deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)',
   },
   {
+    id: 'blue',
     color: { base: 'bg-blue-700', active: 'bg-blue-500' },
     symbol: '◆',
     label: 'blue',
@@ -283,8 +287,7 @@ const Simon = () => {
         <div className="grid grid-cols-2 gap-4 mb-4">
           {padStyles.map((pad, idx) => (
             <button
-              // eslint-disable-next-line react/no-array-index-key
-              key={idx}
+              key={pad.id}
               className={padClass(pad, idx)}
               style={striped ? { backgroundImage: pad.pattern } : undefined}
               onPointerDown={handlePadClick(idx)}
