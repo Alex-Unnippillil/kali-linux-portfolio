@@ -7,6 +7,9 @@ interface Module {
   tags: string[];
   log: string;
   results: { target: string; status: string }[];
+  data: string;
+  inputs: string[];
+  lab: string;
 }
 
 const modules: Module[] = [
@@ -20,6 +23,9 @@ const modules: Module[] = [
       { target: '192.168.0.1', status: 'Ports 22,80 open' },
       { target: '192.168.0.2', status: 'No open ports' },
     ],
+    data: 'Open ports discovered on the target host',
+    inputs: ['Target IP or range'],
+    lab: 'https://tryhackme.com/room/rpnmap',
   },
   {
     id: 'bruteforce',
@@ -31,6 +37,9 @@ const modules: Module[] = [
       { target: 'admin@example.com', status: 'Login failed' },
       { target: 'root@example.com', status: 'Login failed' },
     ],
+    data: 'Accounts that accept guessed credentials',
+    inputs: ['Target service or account', 'Password list'],
+    lab: 'https://tryhackme.com/room/hydra',
   },
   {
     id: 'vuln-check',
@@ -42,6 +51,9 @@ const modules: Module[] = [
       { target: 'host1', status: 'CVE-2024-1234' },
       { target: 'host2', status: 'No issues' },
     ],
+    data: 'Known vulnerabilities present on a host',
+    inputs: ['Target host'],
+    lab: 'https://tryhackme.com/room/vulnversity',
   },
 ];
 
@@ -54,6 +66,7 @@ const PopularModules: React.FC = () => {
 
   return (
     <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
+      <p className="text-sm">All modules are simulated; no network activity occurs.</p>
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('')}
@@ -118,6 +131,24 @@ const PopularModules: React.FC = () => {
               ))}
             </tbody>
           </table>
+          <div className="text-sm">
+            <h4 className="font-semibold mt-2">Data Retrieved</h4>
+            <p>{selected.data}</p>
+            <h4 className="font-semibold mt-2">Required Inputs</h4>
+            <ul className="list-disc list-inside">
+              {selected.inputs.map((i) => (
+                <li key={i}>{i}</li>
+              ))}
+            </ul>
+            <a
+              href={selected.lab}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-blue-300"
+            >
+              Practice Lab
+            </a>
+          </div>
         </div>
       ) : (
         <p>Select a module to view logs and results.</p>

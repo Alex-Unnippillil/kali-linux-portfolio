@@ -11,6 +11,14 @@ describe('PopularModules', () => {
     fireEvent.click(screen.getByRole('button', { name: /Port Scanner/i }));
     expect(screen.getByRole('log')).toHaveTextContent('Starting port scan');
     expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(
+      screen.getByText('Open ports discovered on the target host')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Target IP or range')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Practice Lab/i })).toHaveAttribute(
+      'href',
+      expect.stringContaining('tryhackme.com/room/rpnmap')
+    );
   });
 });
 
