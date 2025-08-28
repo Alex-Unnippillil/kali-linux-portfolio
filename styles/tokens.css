@@ -45,6 +45,11 @@
   --motion-medium: 300ms;
   --motion-slow: 500ms;
 
+  /* Global transition tokens */
+  --transition-fast: 160ms;
+  --transition-medium: 240ms;
+  --transition-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
 }
