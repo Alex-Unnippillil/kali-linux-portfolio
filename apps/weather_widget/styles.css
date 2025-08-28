@@ -65,6 +65,12 @@ body {
   text-transform: capitalize;
 }
 
+.sunrise,
+.sunset {
+  font-size: 0.9rem;
+  margin-top: 5px;
+}
+
 .fade-in {
   animation: fadeIn 0.5s forwards;
 }

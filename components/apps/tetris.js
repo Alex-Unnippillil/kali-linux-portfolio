@@ -83,7 +83,7 @@ const Tetris = () => {
   const [board, setBoard] = useState(createBoard);
   const [piece, setPiece] = useState(getPiece);
   const [pos, setPos] = useState({ x: Math.floor(WIDTH/2) - 2, y: 0 });
-  const [next, setNext] = useState(getPiece);
+  const [next, setNext] = useState(() => [getPiece(), getPiece(), getPiece()]);
   const [hold, setHold] = useState(null);
   const [canHold, setCanHold] = useState(true);
   const [score, setScore] = useState(0);
@@ -185,7 +185,7 @@ const Tetris = () => {
     setBoard(createBoard());
     bagRef.current = [];
     setPiece(getPiece());
-    setNext(getPiece());
+    setNext([getPiece(), getPiece(), getPiece()]);
     setPos({ x: Math.floor(WIDTH/2) - 2, y: 0 });
     setScore(0);
     setLevel(1);
@@ -238,8 +238,8 @@ const Tetris = () => {
       tSpinScore = 400;
       setTimeout(() => setTSpin(false), 1000);
     }
-    const currentNext = next;
-    const upcoming = getPiece();
+    const [currentNext, ...restQueue] = next;
+    const upcoming = [...restQueue, getPiece()];
     if (filled.length) {
       playSound();
       confetti({ particleCount: 80, spread: 70 });
@@ -367,8 +367,8 @@ const Tetris = () => {
       setPiece(temp);
     } else {
       setHold(pieceRef.current);
-      setPiece(next);
-      setNext(getPiece());
+      setPiece(next[0]);
+      setNext([...next.slice(1), getPiece()]);
     }
     setPos({ x: Math.floor(WIDTH/2) - 2, y: 0 });
     lastRotateRef.current = false;
@@ -558,8 +558,16 @@ const Tetris = () => {
           </div>
           <div className="mb-4">
             <div className="text-center mb-1">Next</div>
-            <div className="relative border border-gray-700" style={{ width: 4 * CELL_SIZE, height: 4 * CELL_SIZE }}>
-              {cellPreview(next)}
+            <div className="space-y-2">
+              {next.map((p, i) => (
+                <div
+                  key={i}
+                  className="relative border border-gray-700"
+                  style={{ width: 4 * CELL_SIZE, height: 4 * CELL_SIZE }}
+                >
+                  {cellPreview(p)}
+                </div>
+              ))}
             </div>
           </div>
           <div aria-live="polite">

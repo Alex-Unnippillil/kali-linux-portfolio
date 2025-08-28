@@ -3,6 +3,7 @@ import Draggable from 'react-draggable';
 import {
   MonteCarloAI,
   RandomSalvoAI,
+  RandomAI,
   BOARD_SIZE,
   randomizePlacement,
 } from './battleship/ai';
@@ -58,7 +59,10 @@ const MissMarker = () => (
       fill="none"
       aria-hidden="true"
     >
-      <circle cx="16" cy="16" r="10" opacity="1" />
+      <circle cx="16" cy="16" r="10" opacity="1">
+        <animate attributeName="r" from="0" to="10" dur="0.2s" fill="freeze" />
+        <animate attributeName="stroke-opacity" from="0" to="1" dur="0.2s" fill="freeze" />
+      </circle>
     </svg>
   </div>
 );
@@ -80,6 +84,22 @@ const Battleship = () => {
   });
   const [cursor, setCursor] = useState(0);
 
+  const tryPlace = (shipId, x, y, dir) => {
+    const ship = ships.find((s) => s.id === shipId);
+    const cells = [];
+    for (let k = 0; k < ship.len; k++) {
+      const cx = x + (dir === 0 ? k : 0);
+      const cy = y + (dir === 1 ? k : 0);
+      if (cx < 0 || cy < 0 || cx >= BOARD_SIZE || cy >= BOARD_SIZE) return null;
+      const idx = cy * BOARD_SIZE + cx;
+      for (const s of ships) {
+        if (s.id !== shipId && s.cells && s.cells.includes(idx)) return null;
+      }
+      cells.push(idx);
+    }
+    return cells;
+  };
+
   const placeShips = useCallback((board, layout) => {
     const newBoard = board.slice();
     layout.forEach((ship) => ship.cells.forEach((c) => (newBoard[c] = 'ship')));
@@ -97,7 +117,11 @@ const Battleship = () => {
       setMessage('Place your ships');
       setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
       setGuessHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-      setAi(diff === 'hard' ? new MonteCarloAI() : new RandomSalvoAI());
+      let aiInstance;
+      if (diff === 'hard') aiInstance = new MonteCarloAI();
+      else if (diff === 'medium') aiInstance = new RandomSalvoAI();
+      else aiInstance = new RandomAI();
+      setAi(aiInstance);
       setCursor(0);
     },
     [difficulty, placeShips]
@@ -111,19 +135,25 @@ const Battleship = () => {
     const x = Math.round(data.x / CELL);
     const y = Math.round(data.y / CELL);
     const ship = ships[i];
-    const cells = [];
-    for(let k=0;k<ship.len;k++){
-      const cx = x + (ship.dir===0? k:0);
-      const cy = y + (ship.dir===1? k:0);
-      if(cx<0||cy<0||cx>=BOARD_SIZE||cy>=BOARD_SIZE) return; // out
-      const idx = cy*BOARD_SIZE+cx;
-      // check overlap with other ships
-      for(const s of ships){
-        if(s.id!==ship.id && s.cells && s.cells.includes(idx)) return;
-      }
-      cells.push(idx);
-    }
-    const updated = ships.map(s=>s.id===ship.id?{...s,x,y,cells}:s);
+    const cells = tryPlace(ship.id, x, y, ship.dir);
+    if (!cells) return;
+    const updated = ships.map((s) =>
+      s.id === ship.id ? { ...s, x, y, cells } : s
+    );
+    setShips(updated);
+    setPlayerBoard(placeShips(createBoard(), updated));
+  };
+
+  const rotateShip = (id) => {
+    const ship = ships.find((s) => s.id === id);
+    const newDir = ship.dir === 0 ? 1 : 0;
+    const x = ship.x || 0;
+    const y = ship.y || 0;
+    const cells = tryPlace(id, x, y, newDir);
+    if (!cells) return;
+    const updated = ships.map((s) =>
+      s.id === id ? { ...s, dir: newDir, cells } : s
+    );
     setShips(updated);
     setPlayerBoard(placeShips(createBoard(), updated));
   };
@@ -252,16 +282,30 @@ const Battleship = () => {
           onToggleHeatmap={() => setShowHeatmap((h) => !h)}
         >
         <div className="mb-2" aria-live="polite" role="status">{message}</div>
+        {phase==='done' && (
+          <button className="px-2 py-1 bg-gray-700 mb-2" onClick={() => restart()}>
+            Play Again
+          </button>
+        )}
         {phase==='placement' && (
           <div className="flex space-x-4">
             <div className="relative border border-ub-dark-grey" style={{width:BOARD_SIZE*CELL,height:BOARD_SIZE*CELL}}>
               {renderBoard(playerBoard)}
-              {ships.map((ship,i)=>(
-                <Draggable key={ship.id} grid={[CELL,CELL]} position={{x:(ship.x||0)*CELL,y:(ship.y||0)*CELL}}
-                  onStop={(e,data)=>handleDragStop(i,e,data)} disabled={phase!=='placement'}>
-                  <div className="absolute bg-blue-700 opacity-80" style={{width:(ship.dir===0?ship.len:1)*CELL,height:(ship.dir===1?ship.len:1)*CELL}}/>
-                </Draggable>
-              ))}
+                {ships.map((ship,i)=>(
+                  <Draggable
+                    key={ship.id}
+                    grid={[CELL,CELL]}
+                    position={{x:(ship.x||0)*CELL,y:(ship.y||0)*CELL}}
+                    onStop={(e,data)=>handleDragStop(i,e,data)}
+                    disabled={phase!=='placement'}
+                  >
+                    <div
+                      className="absolute bg-blue-700 opacity-80"
+                      style={{width:(ship.dir===0?ship.len:1)*CELL,height:(ship.dir===1?ship.len:1)*CELL}}
+                      onDoubleClick={()=>rotateShip(ship.id)}
+                    />
+                  </Draggable>
+                ))}
             </div>
             <div className="flex flex-col space-y-2">
               <button className="px-2 py-1 bg-gray-700" onClick={randomize}>Randomize</button>

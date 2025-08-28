@@ -1,24 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-
-// Simple helpers to generate demo data
-const demoNetworks = () => [
-  { ssid: 'CoffeeShopWiFi', strength: -45, channel: 1, history: [-45] },
-  { ssid: 'FreeAirport', strength: -70, channel: 6, history: [-70] },
-  { ssid: 'HomeWiFi', strength: -30, channel: 11, history: [-30] },
-];
-
-const randomHex = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
-const randomMac = () =>
-  `${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}:${randomHex()}`;
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import capture from './sampleCapture.json';
 
 const SignalTimeline = ({ history }) => {
   const canvasRef = useRef(null);
   const reduceMotion = useRef(false);
 
   useEffect(() => {
-    reduceMotion.current = window.matchMedia(
-      '(prefers-reduced-motion: reduce)'
-    ).matches;
+    reduceMotion.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   }, []);
 
   useEffect(() => {
@@ -30,11 +18,11 @@ const SignalTimeline = ({ history }) => {
       const w = canvas.width;
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
-      ctx.strokeStyle = '#f59e0b'; // amber-500 for high contrast
+      ctx.strokeStyle = '#f59e0b';
       ctx.beginPath();
       history.forEach((s, i) => {
         const x = (i / (history.length - 1 || 1)) * w;
-        const y = ((-s - 20) / 70) * h; // map -20..-90 to 0..1
+        const y = ((-s - 20) / 70) * h;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
@@ -144,51 +132,82 @@ const VirtualizedList = ({
 
 const KismetApp = () => {
   const [networks, setNetworks] = useState([]);
-  const [ads, setAds] = useState([]);
+  const [playing, setPlaying] = useState(false);
+  const [frameIndex, setFrameIndex] = useState(0);
+
+  const stepFrame = useCallback(() => {
+    setFrameIndex((idx) => {
+      if (idx >= capture.length) return idx;
+      const frame = capture[idx];
+      setNetworks((prev) => {
+        const existing = prev.find((n) => n.ssid === frame.ssid);
+        if (existing) {
+          return prev.map((n) =>
+            n.ssid === frame.ssid
+              ? {
+                  ...n,
+                  strength: frame.signal,
+                  channel: frame.channel,
+                  history: [...n.history, frame.signal].slice(-50),
+                }
+              : n
+          );
+        }
+        return [
+          ...prev,
+          {
+            ssid: frame.ssid,
+            strength: frame.signal,
+            channel: frame.channel,
+            history: [frame.signal],
+          },
+        ];
+      });
+      return idx + 1;
+    });
+  }, []);
 
   useEffect(() => {
-    // Browsers cannot access wireless cards directly. Populate with
-    // static data and simulate advertisements and channel rotation.
-    setNetworks(demoNetworks());
-    setAds([
-      { id: 'wifi', protocol: 'Wi-Fi', mac: randomMac(), channel: 1 },
-      { id: 'ble', protocol: 'BLE', mac: randomMac(), channel: 37 },
-    ]);
+    if (!playing) return;
+    const id = setInterval(stepFrame, 1000);
+    return () => clearInterval(id);
+  }, [playing, stepFrame]);
 
-    const interval = setInterval(() => {
-      setNetworks((prev) =>
-        prev.map((net) => {
-          const next = Math.max(
-            -90,
-            Math.min(-20, net.strength + (Math.random() * 10 - 5))
-          );
-          const history = [...net.history, next].slice(-50);
-          return { ...net, strength: next, history };
-        })
-      );
-
-      setAds((prev) =>
-        prev.map((ad) => {
-          if (ad.protocol === 'Wi-Fi') {
-            const next = ad.channel === 1 ? 6 : ad.channel === 6 ? 11 : 1;
-            return { ...ad, channel: next };
-          }
-          const next = ad.channel === 37 ? 38 : ad.channel === 38 ? 39 : 37;
-          return { ...ad, channel: next };
-        })
-      );
-    }, 1500);
-
-    return () => clearInterval(interval);
-  }, []);
+  const handleLoad = () => {
+    setNetworks([]);
+    setFrameIndex(0);
+    setPlaying(false);
+  };
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
       <div className="px-3 py-1 border-b border-gray-700">
-      <span className="font-bold">Kismet</span>
+        <span className="font-bold">Kismet</span>
+      </div>
+      <div className="p-2 flex space-x-2 bg-gray-900">
+        <button
+          onClick={handleLoad}
+          className="px-3 py-1 bg-gray-700 rounded"
+        >
+          Load Sample
+        </button>
+        <button
+          onClick={() => setPlaying((p) => !p)}
+          disabled={frameIndex >= capture.length}
+          className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
+        >
+          {playing ? 'Pause' : 'Play'}
+        </button>
+        <button
+          onClick={stepFrame}
+          disabled={playing || frameIndex >= capture.length}
+          className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
+        >
+          Step
+        </button>
       </div>
       <div className="flex flex-grow overflow-hidden">
-        <div className="w-1/2 p-2 flex flex-col">
+        <div className="w-full p-2 flex flex-col">
           <h2 className="text-sm font-semibold mb-2">Nearby Networks</h2>
           {networks.length ? (
             <VirtualizedList
@@ -212,38 +231,13 @@ const KismetApp = () => {
             <p className="text-gray-400 text-sm">No networks detected.</p>
           )}
           <ChannelOccupancy networks={networks} />
-        </div>
-        <div className="w-1/2 p-2 flex flex-col border-l border-gray-700">
-          <h2 className="text-sm font-semibold mb-2">Advertisement Snapshot</h2>
-          {ads.length ? (
-            <table className="text-xs" aria-live="polite">
-              <thead>
-                <tr className="text-left">
-                  <th className="pr-2">Proto</th>
-                  <th className="pr-2">MAC</th>
-                  <th className="text-right">Channel</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ads.map((ad) => (
-                  <tr key={ad.id} className="border-t border-gray-700">
-                    <td className="pr-2">{ad.protocol}</td>
-                    <td className="pr-2 truncate" title={ad.mac}>{ad.mac}</td>
-                    <td className="text-right">{ad.channel}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <p className="text-gray-400 text-sm">No advertisements.</p>
-          )}
           <p className="text-gray-400 text-xs mt-2">
-            Real capture requires hardware with monitor mode.
+            Real capture requires hardware with monitor mode.{' '}
             <a
               href="https://www.kismetwireless.net/docs/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-400 underline ml-1"
+              className="text-blue-400 underline"
             >
               Kismet documentation
             </a>

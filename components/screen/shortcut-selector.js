@@ -48,6 +48,7 @@ class ShortcutSelector extends React.Component {
                 icon={app.icon}
                 openApp={() => this.selectApp(app.id)}
                 disabled={app.disabled}
+                prefetch={app.screen?.prefetch}
             />
         ));
     };

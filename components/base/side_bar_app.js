@@ -134,7 +134,11 @@ export class SideBarApp extends Component {
                             " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
                         }
                     >
-                        <img src={this.state.thumbnail} alt="" className="w-32 h-auto" />
+                        <img
+                            src={this.state.thumbnail}
+                            alt={`Preview of ${this.props.title}`}
+                            className="w-32 h-auto"
+                        />
                     </div>
                 )}
                 <div

@@ -56,12 +56,10 @@ describe('Autopsy plugins and timeline', () => {
     });
     fireEvent.click(screen.getByText('Create Case'));
     await screen.findByText('Hash Analyzer');
-    const select = screen.getByRole('combobox');
-    fireEvent.change(select, { target: { value: 'hash' } });
+    const selects = screen.getAllByRole('combobox');
+    fireEvent.change(selects[0], { target: { value: 'hash' } });
     await waitFor(() =>
-      expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe(
-        'hash'
-      )
+      expect((selects[0] as HTMLSelectElement).value).toBe('hash')
     );
   });
 
@@ -71,8 +69,9 @@ describe('Autopsy plugins and timeline', () => {
       target: { value: 'Demo' },
     });
     fireEvent.click(screen.getByText('Create Case'));
-    await screen.findByText('resume.docx');
-    fireEvent.change(screen.getByPlaceholderText('Filter by type'), {
+    await screen.findByLabelText('Filter by type');
+    expect(screen.getByText('resume.docx')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Filter by type'), {
       target: { value: 'Log' },
     });
     expect(screen.queryByText('resume.docx')).toBeNull();

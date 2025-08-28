@@ -329,7 +329,8 @@ export class Desktop extends Component {
                     id: app.id,
                     icon: app.icon,
                     openApp: this.openApp,
-                    disabled: this.state.disabled_apps[app.id]
+                    disabled: this.state.disabled_apps[app.id],
+                    prefetch: app.screen?.prefetch,
                 }
 
                 appsJsx.push(

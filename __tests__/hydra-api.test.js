@@ -7,6 +7,9 @@ jest.mock('crypto', () => ({
   randomUUID: randomUUIDMock,
 }));
 
+process.env.FEATURE_TOOL_APIS = 'enabled';
+process.env.FEATURE_HYDRA = 'enabled';
+
 jest.mock('child_process', () => ({
   execFile: (cmd, args, options, callback) => {
     if (typeof options === 'function') {
@@ -36,4 +39,9 @@ test('removes temp files after hydra execution', async () => {
 
   await expect(fs.access(userPath)).rejects.toBeTruthy();
   await expect(fs.access(passPath)).rejects.toBeTruthy();
+});
+
+afterAll(() => {
+  delete process.env.FEATURE_TOOL_APIS;
+  delete process.env.FEATURE_HYDRA;
 });

@@ -21,8 +21,9 @@ const defaultMaze = [
 const tileSize = 20;
 const WIDTH = defaultMaze[0].length * tileSize;
 const HEIGHT = defaultMaze.length * tileSize;
-const speed = 1; // pixels per frame
+const speed = 1; // pacman speed in pixels per frame
 const PATH_LENGTH = 25; // number of positions to keep for ghost traces
+const FRUIT_DURATION = 9 * 60; // fruit stays for this many frames
 
 const dirs = [
   { x: 1, y: 0 },
@@ -49,8 +50,6 @@ const modeSchedule = [
   { mode: 'chase', duration: Infinity },
 ];
 
-const fruitSpawnDots = [10, 30];
-
 const TARGET_MODE_LEVEL = 2; // level index where ghosts begin targeting
 const TUNNEL_SPEED = 0.5; // multiplier for speed inside tunnels
 
@@ -62,11 +61,12 @@ const Pacman = () => {
 
   const canvasRef = useRef(null);
 
-  // Levels file can override the maze and fruit tile
+  // Levels file can override the maze, fruit tile and fruit timings
   const [levels, setLevels] = useState([
-    { name: 'Default', maze: defaultMaze, fruit: { x: 7, y: 3 } },
+    { name: 'Default', maze: defaultMaze, fruit: { x: 7, y: 3 }, fruitTimes: [10, 30] },
   ]);
   const [levelIndex, setLevelIndex] = useState(0);
+  const [ghostSpeeds, setGhostSpeeds] = useState({ scatter: 1, chase: 1 });
   const [search, setSearch] = useState('');
   const [highlight, setHighlight] = useState(0);
   const filteredLevels = useMemo(
@@ -108,8 +108,10 @@ const Pacman = () => {
   });
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
-  const [pellets, setPellets] = useState(0);
   const fruitRef = useRef({ active: false, x: 7, y: 3, timer: 0 });
+  const fruitTimesRef = useRef([]);
+  const nextFruitRef = useRef(0);
+  const levelTimerRef = useRef(0);
   const statusRef = useRef('Playing');
   const audioCtxRef = useRef(null);
   const touchStartRef = useRef(null);
@@ -184,12 +186,14 @@ const Pacman = () => {
       fruitRef.current.y = lvl.fruit.y;
       fruitRef.current.active = false;
       fruitRef.current.timer = 0;
+      fruitTimesRef.current = (lvl.fruitTimes || []).map((t) => t * 60);
+      nextFruitRef.current = 0;
+      levelTimerRef.current = 0;
 
       pacRef.current.lives = 3;
       pacRef.current.extra = false;
 
       setScore(0);
-      setPellets(0);
 
       statusRef.current = 'Playing';
       modeRef.current = { index: 0, timer: modeSchedule[0].duration };
@@ -377,6 +381,7 @@ const Pacman = () => {
     squashRef.current *= 0.8;
     const maze = mazeRef.current;
     const randomMode = levelIndex < TARGET_MODE_LEVEL;
+    levelTimerRef.current++;
 
     // handle pacman turning
     const px = pac.x / tileSize;
@@ -412,7 +417,6 @@ const Pacman = () => {
       squashRef.current = 0.3;
       if (maze[pty][ptx] === 2) {
         setScore((s) => s + 10);
-        setPellets((p) => p + 1);
       } else {
         setScore((s) => s + 50);
         frightTimerRef.current = 6 * 60;
@@ -422,9 +426,14 @@ const Pacman = () => {
     }
 
     // fruit
-    if (!fruitRef.current.active && fruitSpawnDots.includes(pellets + 1)) {
+    if (
+      !fruitRef.current.active &&
+      nextFruitRef.current < fruitTimesRef.current.length &&
+      levelTimerRef.current === fruitTimesRef.current[nextFruitRef.current]
+    ) {
       fruitRef.current.active = true;
-      fruitRef.current.timer = 9 * 60;
+      fruitRef.current.timer = FRUIT_DURATION;
+      nextFruitRef.current += 1;
       playSound(440);
     }
     if (fruitRef.current.active) {
@@ -471,7 +480,12 @@ const Pacman = () => {
       const gy = g.y / tileSize;
       const gtxPrev = Math.floor((g.x + tileSize / 2) / tileSize);
       const gtyPrev = Math.floor((g.y + tileSize / 2) / tileSize);
-      const gSpeed = isTunnel(gtxPrev, gtyPrev) ? speed * TUNNEL_SPEED : speed;
+      const base = frightTimerRef.current > 0
+        ? ghostSpeeds.scatter * 0.5
+        : modeSchedule[modeRef.current.index].mode === 'scatter'
+          ? ghostSpeeds.scatter
+          : ghostSpeeds.chase;
+      const gSpeed = (isTunnel(gtxPrev, gtyPrev) ? TUNNEL_SPEED : 1) * base;
 
       if (isCenter(g.x) && isCenter(g.y)) {
         let options = availableDirs(Math.floor(gx), Math.floor(gy), g.dir);
@@ -523,7 +537,7 @@ const Pacman = () => {
         }
       }
     });
-  }, [pellets, score, availableDirs, levelIndex, isTunnel, prefersReduced, setAnnouncement]);
+  }, [score, availableDirs, levelIndex, isTunnel, prefersReduced, setAnnouncement, ghostSpeeds]);
 
   const stepRef = useRef(step);
   useEffect(() => {
@@ -700,6 +714,35 @@ const Pacman = () => {
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className="mb-2 flex space-x-4">
+        <label className="flex items-center space-x-1">
+          <span>Scatter</span>
+          <input
+            type="number"
+            step="0.1"
+            min="0.1"
+            className="w-16 px-1 text-black"
+            value={ghostSpeeds.scatter}
+            onChange={(e) =>
+              setGhostSpeeds((s) => ({ ...s, scatter: parseFloat(e.target.value) || 0 }))
+            }
+          />
+        </label>
+        <label className="flex items-center space-x-1">
+          <span>Chase</span>
+          <input
+            type="number"
+            step="0.1"
+            min="0.1"
+            className="w-16 px-1 text-black"
+            value={ghostSpeeds.chase}
+            onChange={(e) =>
+              setGhostSpeeds((s) => ({ ...s, chase: parseFloat(e.target.value) || 0 }))
+            }
+          />
+        </label>
       </div>
 
       <canvas

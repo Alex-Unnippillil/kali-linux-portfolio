@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { toPng } from 'html-to-image';
 import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
+import AddressBar from '../chrome/AddressBar';
 
 interface TabData {
   id: number;
@@ -67,6 +68,7 @@ const Chrome: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [showFlags, setShowFlags] = useState(false);
+  const dragTabId = useRef<number | null>(null);
   const setIframeMuted = useCallback((mute: boolean) => {
     try {
       const doc = iframeRef.current?.contentDocument;
@@ -135,13 +137,6 @@ const Chrome: React.FC = () => {
     fetchArticle(activeId, url);
   }, [activeId, fetchArticle]);
 
-  const onAddressKey = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') navigate(address);
-    },
-    [address, navigate],
-  );
-
   const addTab = useCallback(() => {
     const id = Date.now();
     setTabs((prev) => [
@@ -173,9 +168,39 @@ const Chrome: React.FC = () => {
         setActiveId(next.id);
         setAddress(next.url);
       }
+  },
+  [activeId, tabs],
+);
+
+  const handleDragStart = useCallback(
+    (id: number) => () => {
+      dragTabId.current = id;
     },
-    [activeId, tabs],
+    [],
   );
+
+  const handleDrop = useCallback(
+    (id: number) => (e: React.DragEvent) => {
+      e.preventDefault();
+      const from = dragTabId.current;
+      dragTabId.current = null;
+      if (from === null || from === id) return;
+      setTabs((prev) => {
+        const next = [...prev];
+        const fromIdx = next.findIndex((t) => t.id === from);
+        const toIdx = next.findIndex((t) => t.id === id);
+        if (fromIdx === -1 || toIdx === -1) return prev;
+        const [moved] = next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, moved);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const allowDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+  }, []);
 
   const reload = useCallback(() => {
     iframeRef.current?.contentWindow?.location.reload();
@@ -325,13 +350,7 @@ const Chrome: React.FC = () => {
         >
           ⚑
         </button>
-        <input
-          className="flex-grow px-2 py-0.5 text-black rounded"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          onKeyDown={onAddressKey}
-          spellCheck={false}
-        />
+        <AddressBar value={address} onChange={setAddress} onNavigate={navigate} />
         <button onClick={addTab} aria-label="New Tab" className="px-2">+</button>
       </div>
       <div className="flex space-x-1 bg-gray-700 text-sm overflow-x-auto">
@@ -340,6 +359,10 @@ const Chrome: React.FC = () => {
             key={t.id}
             className={`flex items-center px-2 py-1 cursor-pointer ${t.id === activeId ? 'bg-gray-600' : 'bg-gray-700'} `}
             onClick={() => setActiveId(t.id)}
+            draggable
+            onDragStart={handleDragStart(t.id)}
+            onDragOver={allowDrop}
+            onDrop={handleDrop(t.id)}
           >
             <span className="mr-2 truncate" style={{ maxWidth: 100 }}>
               {t.url.replace(/^https?:\/\/(www\.)?/, '')}
@@ -388,9 +411,8 @@ const Chrome: React.FC = () => {
           )}
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 export default Chrome;
 export const displayChrome = () => <Chrome />;

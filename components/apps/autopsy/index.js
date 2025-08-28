@@ -9,9 +9,53 @@ const escapeFilename = (str = '') =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-function Timeline({ events }) {
+const demoArtifacts = [
+  {
+    name: 'resume.docx',
+    type: 'Document',
+    description: "Resume found on user's desktop",
+    size: 12345,
+    plugin: 'metadata',
+    timestamp: '2023-08-01T10:00:00Z',
+  },
+  {
+    name: 'photo.jpg',
+    type: 'Image',
+    description: 'Photo from mobile device',
+    size: 23456,
+    plugin: 'hash',
+    timestamp: '2023-08-01T12:30:00Z',
+  },
+  {
+    name: 'system.log',
+    type: 'Log',
+    description: 'System log entry',
+    size: 34567,
+    plugin: 'metadata',
+    timestamp: '2023-08-01T14:45:00Z',
+  },
+  {
+    name: 'run.exe',
+    type: 'File',
+    description: 'Executable recovered from temp folder',
+    size: 45678,
+    plugin: 'hash',
+    timestamp: '2023-08-01T16:15:00Z',
+  },
+  {
+    name: 'HKCU\\Software\\Example',
+    type: 'Registry',
+    description: 'Registry key with suspicious value',
+    size: 0,
+    plugin: 'regParser',
+    timestamp: '2023-08-01T18:20:00Z',
+  },
+];
+
+function Timeline({ events, onSelect }) {
   const canvasRef = useRef(null);
   const workerRef = useRef(null);
+  const positionsRef = useRef([]);
   const [sorted, setSorted] = useState([]);
   const MIN_ZOOM = 1 / (24 * 60); // 1 pixel per day
   const MAX_ZOOM = 60; // 60 pixels per minute
@@ -105,10 +149,12 @@ function Timeline({ events }) {
       }
 
       ctx.fillStyle = '#ffa500';
+      positionsRef.current = [];
       sorted.forEach((ev) => {
         const t = new Date(ev.timestamp).getTime();
         const x = ((t - min) / 60000) * zoom;
         ctx.fillRect(x, height / 2 - 10, 2, 20);
+        positionsRef.current.push({ x, event: ev });
       });
     };
     if (prefersReduced) {
@@ -117,6 +163,19 @@ function Timeline({ events }) {
       requestAnimationFrame(render);
     }
   }, [sorted, zoom]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handleClick = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const hit = positionsRef.current.find((p) => Math.abs(p.x - x) < 5);
+      if (hit && onSelect) onSelect(hit.event);
+    };
+    canvas.addEventListener('click', handleClick);
+    return () => canvas.removeEventListener('click', handleClick);
+  }, [onSelect]);
 
   useEffect(() => {
     draw();
@@ -161,7 +220,8 @@ function Autopsy() {
   const [plugins, setPlugins] = useState([]);
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [announcement, setAnnouncement] = useState('');
-  const [filter, setFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('All');
+  const [selectedArtifact, setSelectedArtifact] = useState(null);
   const parseWorkerRef = useRef(null);
 
   useEffect(() => {
@@ -188,6 +248,7 @@ function Autopsy() {
 
   useEffect(() => {
     if (!currentCase) return;
+    setArtifacts(demoArtifacts);
     fetch('/autopsy-demo.json')
       .then(async (res) => {
         const text = res.text
@@ -198,17 +259,18 @@ function Autopsy() {
         } else {
           try {
             const data = JSON.parse(text);
-            setArtifacts(data.artifacts || []);
+            setArtifacts(data.artifacts || demoArtifacts);
           } catch {
-            setArtifacts([]);
+            setArtifacts(demoArtifacts);
           }
         }
       })
-      .catch(() => setArtifacts([]));
+      .catch(() => setArtifacts(demoArtifacts));
   }, [currentCase]);
 
-  const filteredArtifacts = artifacts.filter((a) =>
-    a.type.toLowerCase().includes(filter.toLowerCase())
+  const types = ['All', ...Array.from(new Set(artifacts.map((a) => a.type)))] ;
+  const filteredArtifacts = artifacts.filter(
+    (a) => typeFilter === 'All' || a.type === typeFilter
   );
 
   const createCase = () => {
@@ -326,18 +388,25 @@ function Autopsy() {
       )}
       {artifacts.length > 0 && (
         <div className="space-y-2">
-          <input
-            type="text"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter by type"
+          <select
+            aria-label="Filter by type"
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
             className="bg-ub-grey text-white px-2 py-1 rounded"
-          />
+          >
+            {types.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
           <div className="grid gap-2 md:grid-cols-2">
             {filteredArtifacts.map((a, idx) => (
-              <div
+              <button
+                type="button"
                 key={`${a.name}-${idx}`}
-                className="p-2 bg-ub-grey rounded text-sm"
+                onClick={() => setSelectedArtifact(a)}
+                className="p-2 bg-ub-grey rounded text-sm text-left"
               >
                 <div
                   className="font-bold"
@@ -348,13 +417,13 @@ function Autopsy() {
                   {new Date(a.timestamp).toLocaleString()}
                 </div>
                 <div className="text-xs">{a.description}</div>
-              </div>
+              </button>
             ))}
           </div>
           {filteredArtifacts.length > 0 && (
             <>
               <div className="text-sm font-bold">Timeline</div>
-              <Timeline events={filteredArtifacts} />
+              <Timeline events={filteredArtifacts} onSelect={setSelectedArtifact} />
             </>
           )}
           <button
@@ -363,6 +432,27 @@ function Autopsy() {
           >
             Download Report
           </button>
+        </div>
+      )}
+      {selectedArtifact && (
+        <div className="fixed right-0 top-0 w-64 h-full bg-ub-grey p-4 overflow-y-auto">
+          <button
+            onClick={() => setSelectedArtifact(null)}
+            className="mb-2 text-right w-full"
+          >
+            Close
+          </button>
+          <div
+            className="font-bold"
+            dangerouslySetInnerHTML={{ __html: escapeFilename(selectedArtifact.name) }}
+          />
+          <div className="text-gray-400">{selectedArtifact.type}</div>
+          <div className="text-xs">
+            {new Date(selectedArtifact.timestamp).toLocaleString()}
+          </div>
+          <div className="text-xs">{selectedArtifact.description}</div>
+          <div className="text-xs">Plugin: {selectedArtifact.plugin}</div>
+          <div className="text-xs">Size: {selectedArtifact.size}</div>
         </div>
       )}
     </div>

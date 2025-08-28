@@ -185,7 +185,11 @@ const Game2048 = () => {
   const [colorBlind, setColorBlind] = usePersistentState('2048-cb', false, (v) => typeof v === 'boolean');
   const [animCells, setAnimCells] = useState(new Set());
   const [mergeCells, setMergeCells] = useState(new Set());
-  const [score, setScore] = useState(0);
+  const [score, setScore] = usePersistentState(
+    '2048-score',
+    0,
+    (v) => typeof v === 'number',
+  );
   const [scorePop, setScorePop] = useState(false);
   const [combo, setCombo] = useState(0);
   const [hint, setHint] = useState(null);

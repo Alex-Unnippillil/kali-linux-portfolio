@@ -10,6 +10,8 @@ let decimate = 1;
 let sampleCount = 0;
 let hidden = false;
 let drawHandle = null;
+let sampleHandle = null;
+let paused = false;
 
 self.onmessage = (e) => {
   const { type } = e.data || {};
@@ -36,13 +38,37 @@ self.onmessage = (e) => {
   } else if (type === 'visibility') {
     hidden = !!e.data.hidden;
     if (hidden || reduceMotion) stopDrawing();
-    else startDrawing();
+    else if (!paused) startDrawing();
+  } else if (type === 'pause') {
+    paused = !!e.data.value;
+    if (paused) {
+      stopSampling();
+      stopDrawing();
+    } else {
+      startSampling();
+      if (!reduceMotion && !hidden) startDrawing();
+    }
+  } else if (type === 'resize') {
+    const sizes = e.data.sizes || {};
+    if (ctx.cpu && sizes.cpu) {
+      ctx.cpu.canvas.width = sizes.cpu.w || ctx.cpu.canvas.width;
+      ctx.cpu.canvas.height = sizes.cpu.h || ctx.cpu.canvas.height;
+    }
+    if (ctx.memory && sizes.memory) {
+      ctx.memory.canvas.width = sizes.memory.w || ctx.memory.canvas.width;
+      ctx.memory.canvas.height = sizes.memory.h || ctx.memory.canvas.height;
+    }
+    if (ctx.network && sizes.network) {
+      ctx.network.canvas.width = sizes.network.w || ctx.network.canvas.width;
+      ctx.network.canvas.height = sizes.network.h || ctx.network.canvas.height;
+    }
   }
 };
 
 function startSampling() {
+  if (sampleHandle) return;
   let last = performance.now();
-  setInterval(() => {
+  const sample = () => {
     const now = performance.now();
     const delay = now - last - 1000; // expected interval 1000ms
     last = now;
@@ -59,9 +85,18 @@ function startSampling() {
     const up = connection.uplink || connection.upload || 0;
 
     push(cpu, memory, down, up);
-    if (reduceMotion && !hidden) draw();
+    if (reduceMotion && !hidden && !paused) draw();
     self.postMessage({ cpu, memory, down, up });
-  }, 1000);
+    sampleHandle = setTimeout(sample, 1000);
+  };
+  sampleHandle = setTimeout(sample, 1000);
+}
+
+function stopSampling() {
+  if (sampleHandle) {
+    clearTimeout(sampleHandle);
+    sampleHandle = null;
+  }
 }
 
 function runStress() {
@@ -92,16 +127,25 @@ function draw() {
   drawNetwork(ctx.network);
 }
 
+const raf =
+  self.requestAnimationFrame ||
+  function (fn) {
+    return setTimeout(() => fn(performance.now()), 1000 / 60);
+  };
+const caf = self.cancelAnimationFrame || clearTimeout;
+
 function startDrawing() {
   if (drawHandle) return;
-  drawHandle = setInterval(() => {
-    draw();
-  }, 1000 / 30);
+  const loop = () => {
+    if (!paused) draw();
+    drawHandle = raf(loop);
+  };
+  drawHandle = raf(loop);
 }
 
 function stopDrawing() {
   if (drawHandle) {
-    clearInterval(drawHandle);
+    caf(drawHandle);
     drawHandle = null;
   }
 }

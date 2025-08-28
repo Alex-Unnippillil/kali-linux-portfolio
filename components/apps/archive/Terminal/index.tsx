@@ -48,6 +48,16 @@ const TerminalPane = forwardRef<
     const hintRef = useRef('');
     const rafRef = useRef<any>(null);
     const fontSizeRef = useRef(14);
+    const [revSearch, setRevSearch] = useState({
+      active: false,
+      query: '',
+      match: '',
+    });
+    const revSearchRef = useRef(revSearch);
+    const searchIdxRef = useRef(0);
+    useEffect(() => {
+      revSearchRef.current = revSearch;
+    }, [revSearch]);
 
     const updateLive = useCallback((msg: string) => {
       if (ariaLiveRef.current) ariaLiveRef.current.textContent = msg;
@@ -208,12 +218,46 @@ const TerminalPane = forwardRef<
         } else if (trimmed === 'clear') {
           termRef.current.clear();
           prompt();
-        } else if (trimmed === 'help') {
+        } else if (trimmed.startsWith('help')) {
           termRef.current.writeln('');
-          const commands = Array.from(knownCommandsRef.current)
-            .sort()
-            .join(' ');
-          writeLine(`Available commands: ${commands}`);
+          const parts = trimmed.split(' ').filter(Boolean);
+          if (parts.length > 1) {
+            const cmd = parts[1];
+            const map: Record<string, string[]> = {
+              pwd: ['pwd - print working directory', 'Example: pwd'],
+              cd: ['cd <dir> - change directory', 'Example: cd projects'],
+              simulate: [
+                'simulate - run a heavy simulation in a worker',
+                'Example: simulate',
+              ],
+              history: ['history - show command history', 'Example: history'],
+              clear: ['clear - clear the terminal screen', 'Example: clear'],
+              help: [
+                'help [command] - show available commands or details',
+                'Example: help pwd',
+              ],
+            };
+            if (map[cmd]) {
+              map[cmd].forEach(writeLine);
+            } else {
+              writeLine(`No help available for '${cmd}'`);
+            }
+          } else {
+            writeLine('Available commands:');
+            [
+              'pwd                - print working directory',
+              'cd <dir>           - change directory',
+              'simulate           - run a simulation in a worker',
+              'history            - show command history',
+              'clear              - clear the screen',
+              'help [command]     - show help information',
+              'split              - split the pane',
+              'exit               - close the pane',
+              'demo nmap          - run nmap demo',
+              'demo hashcat       - run hashcat demo',
+            ].forEach(writeLine);
+            writeLine('Use `help <command>` for more details.');
+          }
           prompt();
         } else if (trimmed === 'history') {
           termRef.current.writeln('');
@@ -271,6 +315,19 @@ const TerminalPane = forwardRef<
       [prompt, updateLive, onSplit, onClose, renderHint, clearSuggestions],
     );
 
+    const updateSearch = useCallback((query: string, repeat = false) => {
+      let start = repeat ? searchIdxRef.current : historyRef.current.length;
+      for (let i = start - 1; i >= 0; i--) {
+        if (historyRef.current[i].includes(query)) {
+          searchIdxRef.current = i;
+          setRevSearch({ active: true, query, match: historyRef.current[i] });
+          return;
+        }
+      }
+      searchIdxRef.current = start;
+      setRevSearch({ active: true, query, match: '' });
+    }, []);
+
     useEffect(() => {
       const term = new XTerm({
         cursorBlink: true,
@@ -302,12 +359,16 @@ const TerminalPane = forwardRef<
           runCommand('split');
           return;
         }
-        if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'C') {
-          domEvent.preventDefault();
-          if (navigator.clipboard) {
-            navigator.clipboard.writeText(term.getSelection());
+        if (domEvent.ctrlKey && domEvent.key.toLowerCase() === 'c') {
+          const sel = term.getSelection();
+          if (sel) {
+            domEvent.preventDefault();
+            if (navigator.clipboard) {
+              navigator.clipboard.writeText(sel);
+            }
+            term.clearSelection();
+            return;
           }
-          return;
         }
         if (domEvent.ctrlKey && domEvent.shiftKey && domEvent.key === 'V') {
           domEvent.preventDefault();
@@ -334,6 +395,16 @@ const TerminalPane = forwardRef<
           fitAddon.fit();
           return;
         }
+        if (domEvent.ctrlKey && domEvent.key === 'r') {
+          domEvent.preventDefault();
+          if (!revSearchRef.current.active) {
+            searchIdxRef.current = historyRef.current.length;
+            setRevSearch({ active: true, query: '', match: '' });
+          } else {
+            updateSearch(revSearchRef.current.query, true);
+          }
+          return;
+        }
         if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
           handleTab();
@@ -353,6 +424,28 @@ const TerminalPane = forwardRef<
       });
 
       term.onData((data: string) => {
+        if (revSearchRef.current.active) {
+          if (data === '\r') {
+            term.write('\x1b[2K\r');
+            term.write(promptText);
+            term.write(revSearchRef.current.match);
+            commandRef.current = revSearchRef.current.match;
+            setRevSearch({ active: false, query: '', match: '' });
+            renderHint();
+          } else if (data === '\u0003' || data === '\u001b') {
+            setRevSearch({ active: false, query: '', match: '' });
+            term.write('\x1b[2K\r');
+            term.write(promptText);
+            term.write(commandRef.current);
+            renderHint();
+          } else if (data === '\u007F') {
+            const next = revSearchRef.current.query.slice(0, -1);
+            updateSearch(next);
+          } else {
+            updateSearch(revSearchRef.current.query + data);
+          }
+          return;
+        }
         if (data === '\r') {
           runCommand(commandRef.current);
           commandRef.current = '';
@@ -420,6 +513,7 @@ const TerminalPane = forwardRef<
       updateLive,
       renderHint,
       clearSuggestions,
+      updateSearch,
     ]);
 
     useImperativeHandle(
@@ -443,6 +537,11 @@ const TerminalPane = forwardRef<
         />
         <div ref={ariaLiveRef} aria-live="polite" className="sr-only" />
         <div ref={suggestionLiveRef} aria-live="polite" className="sr-only" />
+        {revSearch.active && (
+          <div className="absolute bottom-0 left-0 w-full bg-black bg-opacity-90 text-green-400 text-sm px-2 pointer-events-none">
+            (reverse-i-search)`{revSearch.query}`: {revSearch.match}
+          </div>
+        )}
       </div>
     );
   },
@@ -451,8 +550,13 @@ TerminalPane.displayName = 'TerminalPane';
 
 const Terminal = forwardRef<any, any>((props, ref) => {
   const [panes, setPanes] = useState<number[]>([0]);
+  const [paneHeights, setPaneHeights] = useState<number[]>([100]);
   const paneRefs = useRef<any[]>([]);
   const activePaneRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const startYRef = useRef(0);
+  const startHeightsRef = useRef<number[]>([]);
+  const resizingRef = useRef<number | null>(null);
 
   const addPane = useCallback(() => {
     setPanes((prev) => {
@@ -460,6 +564,7 @@ const Terminal = forwardRef<any, any>((props, ref) => {
       activePaneRef.current = next.length - 1;
       return next;
     });
+    setPaneHeights((prev) => Array(prev.length + 1).fill(100 / (prev.length + 1)));
   }, []);
 
   const removePane = useCallback((idx: number) => {
@@ -474,7 +579,43 @@ const Terminal = forwardRef<any, any>((props, ref) => {
       }
       return next;
     });
+    setPaneHeights((prev) => {
+      if (prev.length <= 1) return prev;
+      const remaining = prev.filter((_, i) => i !== idx);
+      const total = remaining.reduce((a, b) => a + b, 0);
+      return remaining.map((h) => (h / total) * 100);
+    });
   }, []);
+
+  const startResize = useCallback(
+    (idx: number, e: React.MouseEvent) => {
+      startYRef.current = e.clientY;
+      startHeightsRef.current = [...paneHeights];
+      resizingRef.current = idx;
+      const onMove = (ev: MouseEvent) => {
+        if (resizingRef.current === null || !containerRef.current) return;
+        const deltaY = ev.clientY - startYRef.current;
+        const totalHeight = containerRef.current.getBoundingClientRect().height;
+        const percent = (deltaY / totalHeight) * 100;
+        const i = resizingRef.current;
+        const newHeights = [...startHeightsRef.current];
+        newHeights[i] = Math.max(10, Math.min(90, startHeightsRef.current[i] + percent));
+        newHeights[i + 1] = Math.max(
+          10,
+          Math.min(90, startHeightsRef.current[i + 1] - percent),
+        );
+        setPaneHeights(newHeights);
+      };
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+        resizingRef.current = null;
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    },
+    [paneHeights],
+  );
 
   useImperativeHandle(
     ref,
@@ -490,19 +631,28 @@ const Terminal = forwardRef<any, any>((props, ref) => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col">
+    <div ref={containerRef} className="h-full w-full flex flex-col">
       {panes.map((id, idx) => (
-        <TerminalPane
-          key={id}
-          ref={(el) => {
-            paneRefs.current[idx] = el;
-          }}
-          onSplit={addPane}
-          onClose={() => removePane(idx)}
-          onFocus={() => {
-            activePaneRef.current = idx;
-          }}
-        />
+        <React.Fragment key={id}>
+          <div style={{ height: `${paneHeights[idx]}%` }} className="relative">
+            <TerminalPane
+              ref={(el) => {
+                paneRefs.current[idx] = el;
+              }}
+              onSplit={addPane}
+              onClose={() => removePane(idx)}
+              onFocus={() => {
+                activePaneRef.current = idx;
+              }}
+            />
+          </div>
+          {idx < panes.length - 1 && (
+            <div
+              className="h-1 bg-gray-700 cursor-row-resize"
+              onMouseDown={(e) => startResize(idx, e)}
+            />
+          )}
+        </React.Fragment>
       ))}
     </div>
   );

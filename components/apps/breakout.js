@@ -39,6 +39,19 @@ const LevelEditor = ({ onSave, cols = 8, rows = 5 }) => {
     Array.from({ length: rows }, () => Array(cols).fill(0))
   );
 
+  useEffect(() => {
+    if (typeof localStorage === "undefined") return;
+    const saved = localStorage.getItem("breakout-custom-level");
+    if (saved) {
+      try {
+        const g = JSON.parse(saved);
+        if (Array.isArray(g)) setGrid(g);
+      } catch {
+        /* ignore invalid JSON */
+      }
+    }
+  }, [cols, rows]);
+
   const toggle = (r, c) => {
     setGrid((g) => {
       const next = g.map((row) => row.slice());
@@ -81,7 +94,7 @@ const LevelEditor = ({ onSave, cols = 8, rows = 5 }) => {
 
 export const createRng = (seed) => (seed ? seedrandom(seed) : Math.random);
 
-const BreakoutGame = ({ levels, seed }) => {
+const BreakoutGame = ({ levels, seed, paddleSpeed = 300 }) => {
   const canvasRef = useRef(null);
   const [level, setLevel] = useState(0);
   const scoreRef = useRef(0);
@@ -94,6 +107,11 @@ const BreakoutGame = ({ levels, seed }) => {
   const audioCtxRef = useRef(null);
   const [prefersReduced, setPrefersReduced] = useState(false);
   const [announce, setAnnounce] = useState("");
+  const paddleSpeedRef = useRef(paddleSpeed);
+
+  useEffect(() => {
+    paddleSpeedRef.current = paddleSpeed;
+  }, [paddleSpeed]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -227,7 +245,8 @@ const BreakoutGame = ({ levels, seed }) => {
       }
 
       // Update paddle
-      paddle.x += (Number(keys.right) - Number(keys.left)) * 300 * dt;
+      paddle.x += (Number(keys.right) - Number(keys.left)) *
+        paddleSpeedRef.current * dt;
       if (paddle.x < 0) paddle.x = 0;
       if (paddle.x > width - paddle.w) paddle.x = width - paddle.w;
       if (paddleTimer > 0) {
@@ -542,9 +561,15 @@ const BreakoutGame = ({ levels, seed }) => {
 
 const Breakout = ({ seed }) => {
   const [levels, setLevels] = useState(levelsData || []);
+  const [speed, setSpeed] = useState(300);
 
   useEffect(() => {
     if (typeof localStorage === "undefined") return;
+    const savedSpeed = parseInt(
+      localStorage.getItem("breakout-speed") || "300",
+      10
+    );
+    if (Number.isFinite(savedSpeed)) setSpeed(savedSpeed);
     const custom = localStorage.getItem("breakout-custom-level");
     if (custom) {
       try {
@@ -560,9 +585,29 @@ const Breakout = ({ seed }) => {
     setLevels((lvls) => [...lvls, grid]);
   };
 
+  const changeSpeed = (e) => {
+    const val = Number(e.target.value);
+    setSpeed(val);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("breakout-speed", String(val));
+    }
+  };
+
   return (
-    <GameLayout editor={<LevelEditor onSave={addLevel} />}>
-      <BreakoutGame levels={levels} seed={seed} />
+    <GameLayout editor={<LevelEditor onSave={addLevel} />}> 
+      <BreakoutGame levels={levels} seed={seed} paddleSpeed={speed} />
+      <div className="absolute bottom-2 right-2 z-20 flex flex-col items-end text-xs text-white">
+        <label htmlFor="paddle-speed">Sensitivity</label>
+        <input
+          id="paddle-speed"
+          type="range"
+          min="100"
+          max="600"
+          value={speed}
+          onChange={changeSpeed}
+          className="w-32"
+        />
+      </div>
     </GameLayout>
   );
 };

@@ -164,4 +164,15 @@ export const evaluateBoard = (board: Board): number => {
   );
 };
 
-export const isDraw = (noCaptureMoves: number) => noCaptureMoves >= 40;
+export const isDraw = (
+  noCaptureMoves: number,
+  positions?: Map<string, number>,
+) => {
+  if (noCaptureMoves >= 40) return true;
+  if (positions) {
+    for (const count of positions.values()) {
+      if (count >= 3) return true;
+    }
+  }
+  return false;
+};

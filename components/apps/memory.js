@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import GameLayout from './GameLayout';
 import { createDeck } from './memory_utils';
 
-const SIZE = 4;
-const BEST_KEY = `game:memory:${SIZE}:best`;
 const MAX_STORAGE = 1000; // safeguard against large writes
+const DEFAULT_TIME = { 4: 60, 6: 120 };
 
 const Memory = () => {
+  const [size, setSize] = useState(4);
+  const [timerMode, setTimerMode] = useState('countup');
   const [cards, setCards] = useState([]);
   const [flipped, setFlipped] = useState([]);
   const [matched, setMatched] = useState([]);
@@ -25,8 +26,11 @@ const Memory = () => {
 
   const runningRef = useRef(false);
   const startRef = useRef(0);
+  const initialTimeRef = useRef(0);
   const rafRef = useRef();
   const reduceMotion = useRef(false);
+
+  const bestKey = useMemo(() => `game:memory:${size}:${timerMode}:best`, [size, timerMode]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -59,68 +63,74 @@ const Memory = () => {
   }, [sound]);
 
   const reset = useCallback(() => {
-    setCards(createDeck(SIZE, deckType));
+    setCards(createDeck(size, deckType));
     setFlipped([]);
     setMatched([]);
     setHighlight([]);
     setMoves(0);
-    setTime(0);
+    const initial = timerMode === 'countdown' ? (DEFAULT_TIME[size] || 60) : 0;
+    setTime(initial);
+    initialTimeRef.current = initial;
     setStars(3);
     setPaused(false);
     runningRef.current = false;
     startRef.current = 0;
     setAnnouncement('');
     setStreak(0);
-  }, [deckType]);
+  }, [size, deckType, timerMode]);
 
   useEffect(() => {
     reset();
     try {
-      const raw = window.localStorage.getItem(BEST_KEY);
+      const raw = window.localStorage.getItem(bestKey);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (typeof parsed === 'object' && parsed !== null) setBest(parsed);
+      } else {
+        setBest({ moves: null, time: null });
       }
     } catch {
       try {
-        window.localStorage.removeItem(BEST_KEY);
+        window.localStorage.removeItem(bestKey);
       } catch {
         // ignore storage errors
       }
     }
-  }, [reset]);
+  }, [reset, bestKey]);
 
   const saveBest = useCallback(() => {
     try {
       let stored = {};
-      const raw = window.localStorage.getItem(BEST_KEY);
+      const raw = window.localStorage.getItem(bestKey);
       if (raw) {
         try {
           stored = JSON.parse(raw) || {};
         } catch {
-          window.localStorage.removeItem(BEST_KEY);
+          window.localStorage.removeItem(bestKey);
         }
       }
+      const elapsed = timerMode === 'countdown' ? initialTimeRef.current - time : time;
       const bestMoves = stored.moves != null ? Math.min(stored.moves, moves) : moves;
-      const bestTime = stored.time != null ? Math.min(stored.time, time) : time;
+      const bestTime = stored.time != null ? Math.min(stored.time, elapsed) : elapsed;
       const updated = { moves: bestMoves, time: bestTime };
       const serialized = JSON.stringify(updated);
       if (serialized.length < MAX_STORAGE) {
-        window.localStorage.setItem(BEST_KEY, serialized);
+        window.localStorage.setItem(bestKey, serialized);
       }
       setBest(updated);
     } catch {
       // ignore storage errors
     }
-  }, [moves, time]);
+  }, [moves, time, bestKey, timerMode]);
 
   useEffect(() => {
     if (cards.length && matched.length === cards.length) {
       runningRef.current = false;
       saveBest();
-      setAnnouncement(`You won in ${moves} moves and ${time} seconds`);
+      const elapsed = timerMode === 'countdown' ? initialTimeRef.current - time : time;
+      setAnnouncement(`You won in ${moves} moves and ${elapsed} seconds`);
     }
-  }, [matched, cards.length, saveBest, moves, time]);
+  }, [matched, cards.length, saveBest, moves, time, timerMode]);
 
   useEffect(() => {
     const pairs = cards.length / 2 || 1;
@@ -146,7 +156,7 @@ const Memory = () => {
   }, []);
 
   const handleCardClick = (idx) => {
-    if (paused || flipped.includes(idx) || matched.includes(idx)) return;
+    if (paused || flipped.includes(idx) || matched.includes(idx) || (timerMode === 'countdown' && time <= 0)) return;
     if (!runningRef.current) {
       runningRef.current = true;
       startRef.current = performance.now();
@@ -184,13 +194,24 @@ const Memory = () => {
   useEffect(() => {
     const loop = (timestamp) => {
       if (runningRef.current && !paused) {
-        setTime(Math.floor((timestamp - startRef.current) / 1000));
+        const elapsed = Math.floor((timestamp - startRef.current) / 1000);
+        if (timerMode === 'countdown') {
+          const remaining = initialTimeRef.current - elapsed;
+          if (remaining <= 0) {
+            setTime(0);
+            runningRef.current = false;
+          } else {
+            setTime(remaining);
+          }
+        } else {
+          setTime(elapsed);
+        }
       }
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [paused]);
+  }, [paused, timerMode]);
 
   return (
     <GameLayout gameId="memory">
@@ -199,12 +220,12 @@ const Memory = () => {
         <div
           className="relative mb-4"
           style={{
-            width: '480px',
+            width: `${size * 120}px`,
             transform: nudge ? 'translateX(2px)' : 'none',
             transition: 'transform 150ms',
           }}
         >
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${size}, minmax(0,1fr))` }}>
             {cards.map((card, i) => {
               const isFlipped = flipped.includes(i) || matched.includes(i);
               const isHighlighted = highlight.includes(i);
@@ -213,7 +234,12 @@ const Memory = () => {
                   key={card.id}
                   onClick={() => handleCardClick(i)}
                   aria-label={isFlipped ? `Card ${card.value}` : 'Hidden card'}
-                  disabled={flipped.includes(i) || matched.includes(i) || paused}
+                  disabled={
+                    flipped.includes(i) ||
+                    matched.includes(i) ||
+                    paused ||
+                    (timerMode === 'countdown' && time <= 0)
+                  }
                   className={`relative w-full aspect-square [perspective:600px] rounded transform ${isHighlighted ? 'ring-4 ring-green-600' : ''} ${reduceMotion.current ? '' : 'transition-transform duration-200'} ${isHighlighted && !reduceMotion.current ? 'scale-105' : ''}`}
                 >
                   <div
@@ -239,7 +265,10 @@ const Memory = () => {
               style={{ left: `${p.x}%`, top: `${p.y}%` }}
             />
           ))}
-          {paused && (
+          {timerMode === 'countdown' && time <= 0 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl">Time's up</div>
+          )}
+          {paused && time > 0 && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl">Paused</div>
           )}
         </div>
@@ -258,12 +287,34 @@ const Memory = () => {
           <button onClick={() => setSound((s) => !s)} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded">
             Sound: {sound ? 'On' : 'Off'}
           </button>
-          <button
-            onClick={() => setDeckType((t) => (t === 'emoji' ? 'pattern' : 'emoji'))}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          <select
+            aria-label="Deck"
+            value={deckType}
+            onChange={(e) => setDeckType(e.target.value)}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
           >
-            Deck: {deckType === 'emoji' ? 'Emoji' : 'Pattern'}
-          </button>
+            <option value="emoji">Emoji</option>
+            <option value="pattern">Pattern</option>
+            <option value="letters">Letters</option>
+          </select>
+          <select
+            aria-label="Timer mode"
+            value={timerMode}
+            onChange={(e) => setTimerMode(e.target.value)}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+          >
+            <option value="countup">Count Up</option>
+            <option value="countdown">Countdown</option>
+          </select>
+          <select
+            aria-label="Grid size"
+            value={size}
+            onChange={(e) => setSize(Number(e.target.value))}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+          >
+            <option value={4}>4x4</option>
+            <option value={6}>6x6</option>
+          </select>
         </div>
       </div>
     </GameLayout>

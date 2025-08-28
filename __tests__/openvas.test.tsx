@@ -71,4 +71,19 @@ describe('OpenVASApp', () => {
       })
     );
   });
+
+  it('displays sample policy settings', () => {
+    render(<OpenVASApp />);
+    expect(screen.getByText('Policy Settings')).toBeInTheDocument();
+    expect(screen.getByText('Full and Fast')).toBeInTheDocument();
+  });
+
+  it('opens issue detail panel with remediation info', () => {
+    render(<OpenVASApp />);
+    fireEvent.click(screen.getByText('Outdated banner exposes software version'));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText(/Remediation/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Close'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
