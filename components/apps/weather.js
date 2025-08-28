@@ -218,16 +218,22 @@ const Weather = () => {
   const pointsWorkerRef = useRef(null);
   const chartRef = useRef(null);
   const timesRef = useRef(null);
+  const geocodeController = useRef(null);
+  const forecastController = useRef(null);
   const fetchForecast = async (lat, lon, cityName) => {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=auto`;
+    forecastController.current?.abort();
+    const controller = new AbortController();
+    forecastController.current = controller;
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) throw new Error('Failed to fetch forecast');
       const json = await res.json();
       setData(json);
       setLastUpdated(new Date());
       setAnnouncement(`Weather updated${cityName ? ' for ' + cityName : ''}`);
-    } catch {
+    } catch (err) {
+      if (err.name === 'AbortError') return;
       try {
         const cached = await caches.match(url);
         if (cached) {
@@ -313,14 +319,24 @@ const Weather = () => {
     };
   }, []);
 
+  const handleCityChange = (e) => {
+    setCity(e.target.value);
+    geocodeController.current?.abort();
+    forecastController.current?.abort();
+  };
+
   const handleCitySubmit = async (e) => {
     e.preventDefault();
     if (!city.trim()) return;
+    geocodeController.current?.abort();
+    const controller = new AbortController();
+    geocodeController.current = controller;
     try {
       const res = await fetch(
         `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
           city.trim()
-        )}`
+        )}`,
+        { signal: controller.signal }
       );
       const json = await res.json();
       const result = json.results && json.results[0];
@@ -330,7 +346,8 @@ const Weather = () => {
       } else {
         setAnnouncement('City not found');
       }
-    } catch {
+    } catch (err) {
+      if (err.name === 'AbortError') return;
       setAnnouncement('City lookup failed');
     }
   };
@@ -368,7 +385,7 @@ const Weather = () => {
         >
           <input
             value={city}
-            onChange={(e) => setCity(e.target.value)}
+            onChange={handleCityChange}
             className="flex-1 p-2 rounded-l text-black"
             placeholder="Enter city"
             aria-label="City"
