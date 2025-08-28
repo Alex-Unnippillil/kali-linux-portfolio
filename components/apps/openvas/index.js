@@ -22,41 +22,44 @@ const escapeHtml = (str = '') =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const SeverityChart = ({ data }) => {
+const DonutChart = ({ data }) => {
   const levels = ['low', 'medium', 'high', 'critical'];
-  const max = Math.max(...levels.map((l) => data[l] || 0), 1);
+  const total = levels.reduce((sum, l) => sum + (data[l] || 0), 0) || 1;
+  let cumulative = 0;
+  const severityHex = {
+    low: '#15803d',
+    medium: '#a16207',
+    high: '#c2410c',
+    critical: '#b91c1c',
+  };
   return (
     <svg
-      viewBox="0 0 100 60"
+      viewBox="0 0 36 36"
       role="img"
       aria-label="OpenVAS findings severity chart"
       className="w-full h-32 mb-4"
     >
-      {levels.map((level, i) => {
+      {levels.map((level) => {
         const value = data[level] || 0;
-        const height = (value / max) * 50;
-        const x = i * 24 + 5;
-        const y = 55 - height;
+        const dashArray = `${(value / total) * 100} ${100 -
+          (value / total) * 100}`;
+        const dashOffset = (cumulative / total) * 100;
+        cumulative += value;
         return (
-          <g key={level}>
-            <rect
-              x={x}
-              y={y}
-              width="20"
-              height={height}
-              className={severityColors[level]}
-            />
-            <text
-              x={x + 10}
-              y="58"
-              textAnchor="middle"
-              className="fill-white text-[8px] capitalize"
-            >
-              {level}
-            </text>
-          </g>
+          <circle
+            key={level}
+            cx="18"
+            cy="18"
+            r="15.915"
+            fill="transparent"
+            stroke={severityHex[level]}
+            strokeWidth="3.8"
+            strokeDasharray={dashArray}
+            strokeDashoffset={-dashOffset}
+          />
         );
       })}
+      <circle cx="18" cy="18" r="12" fill="#1f2937" />
     </svg>
   );
 };
@@ -72,9 +75,11 @@ const severityColors = {
 const OpenVASApp = () => {
   const [target, setTarget] = useState('');
   const [group, setGroup] = useState('');
+  const [profile, setProfile] = useState('quick');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [summaryUrl, setSummaryUrl] = useState(null);
+  const [htmlUrl, setHtmlUrl] = useState(null);
   const [findings, setFindings] = useState([]);
   const [filter, setFilter] = useState(null);
   const [severity, setSeverity] = useState('All');
@@ -103,6 +108,9 @@ const OpenVASApp = () => {
     const summary = `# OpenVAS Scan Summary\n\n- Target: ${target}\n- Group: ${group}\n\n## Output\n\n${data}`;
     const blob = new Blob([summary], { type: 'text/markdown' });
     setSummaryUrl(URL.createObjectURL(blob));
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>OpenVAS Scan Summary</title></head><body><h1>OpenVAS Scan Summary</h1><p>Target: ${escapeHtml(target)}</p><p>Group: ${escapeHtml(group)}</p><h2>Output</h2><pre>${escapeHtml(data)}</pre></body></html>`;
+    const htmlBlob = new Blob([html], { type: 'text/html' });
+    setHtmlUrl(URL.createObjectURL(htmlBlob));
   };
 
   const runScan = async () => {
@@ -111,9 +119,10 @@ const OpenVASApp = () => {
     setProgress(0);
     setOutput('');
     setSummaryUrl(null);
+    setHtmlUrl(null);
     try {
       const res = await fetch(
-        `/api/openvas?target=${encodeURIComponent(target)}&group=${encodeURIComponent(group)}`
+        `/api/openvas?target=${encodeURIComponent(target)}&group=${encodeURIComponent(group)}&profile=${encodeURIComponent(profile)}`
       );
       if (!res.ok) throw new Error(`Request failed with ${res.status}`);
       const data = await res.text();
@@ -199,6 +208,14 @@ const OpenVASApp = () => {
           value={group}
           onChange={(e) => setGroup(e.target.value)}
         />
+        <select
+          className="p-2 rounded text-black"
+          value={profile}
+          onChange={(e) => setProfile(e.target.value)}
+        >
+          <option value="quick">Quick</option>
+          <option value="full">Full</option>
+        </select>
         <button
           type="button"
           onClick={runScan}
@@ -216,7 +233,7 @@ const OpenVASApp = () => {
           />
         </div>
       )}
-      <SeverityChart data={chartData} />
+      <DonutChart data={chartData} />
       {findings.length > 0 && (
         <div className="mb-4">
           <div className="grid grid-cols-5 gap-1 text-center">
@@ -315,14 +332,27 @@ const OpenVASApp = () => {
           {output}
         </pre>
       )}
-      {summaryUrl && (
-        <a
-          href={summaryUrl}
-          download="openvas-summary.md"
-          className="inline-block mt-2 px-4 py-2 bg-blue-600 rounded"
-        >
-          Download Summary
-        </a>
+      {(summaryUrl || htmlUrl) && (
+        <div className="mt-2 space-x-2">
+          {summaryUrl && (
+            <a
+              href={summaryUrl}
+              download="openvas-summary.md"
+              className="inline-block px-4 py-2 bg-blue-600 rounded"
+            >
+              Download Summary
+            </a>
+          )}
+          {htmlUrl && (
+            <a
+              href={htmlUrl}
+              download="openvas-report.html"
+              className="inline-block px-4 py-2 bg-blue-600 rounded"
+            >
+              Download HTML
+            </a>
+          )}
+        </div>
       )}
       <footer className="mt-4 text-xs text-gray-400">
         <a
