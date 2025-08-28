@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect } from 'react';
 
 // Basic keyboard input handler. Works even when no touch or gamepad is present.
