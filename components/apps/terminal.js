@@ -1,2 +1,2 @@
-// Re-export the Terminal component and helper for dynamic usage
-export { default, displayTerminal } from './Terminal';
+// Re-export the Terminal component and helper for dynamic usage from archive
+export { default, displayTerminal } from './archive/Terminal';

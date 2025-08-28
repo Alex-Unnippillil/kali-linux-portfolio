@@ -1,2 +1,2 @@
-// Re-export calculator helpers
-export { default, evaluateExpression, displayTerminalCalc } from './Calc';
+// Re-export calculator helpers from archived source
+export { default, evaluateExpression, displayTerminalCalc } from './archive/Calc';
