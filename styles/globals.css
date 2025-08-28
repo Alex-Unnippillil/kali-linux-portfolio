@@ -17,3 +17,47 @@
   --color-terminal: #00ff00; /* terminal green */
   --color-dark: #0c0f12; /* card back */
 }
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg: #f5f5f5;
+    --color-text: #0f1317;
+    --color-primary: #1793d1;
+    --color-secondary: #e5e5e5;
+    --color-accent: #1793d1;
+    --color-muted: #d0d0d0;
+    --color-surface: #ffffff;
+    --color-inverse: #ffffff;
+    --color-border: #d0d0d0;
+    --color-terminal: #00ff00;
+    --color-dark: #e0e0e0;
+  }
+}
+
+html[data-color-scheme='dark'] {
+  --color-bg: #0f1317;
+  --color-text: #f5f5f5;
+  --color-primary: #1793d1;
+  --color-secondary: #1a1f26;
+  --color-accent: #1793d1;
+  --color-muted: #2a2e36;
+  --color-surface: #1a1f26;
+  --color-inverse: #000000;
+  --color-border: #2a2e36;
+  --color-terminal: #00ff00;
+  --color-dark: #0c0f12;
+}
+
+html[data-color-scheme='light'] {
+  --color-bg: #f5f5f5;
+  --color-text: #0f1317;
+  --color-primary: #1793d1;
+  --color-secondary: #e5e5e5;
+  --color-accent: #1793d1;
+  --color-muted: #d0d0d0;
+  --color-surface: #ffffff;
+  --color-inverse: #ffffff;
+  --color-border: #d0d0d0;
+  --color-terminal: #00ff00;
+  --color-dark: #e0e0e0;
+}
