@@ -1,0 +1,23 @@
+[
+  {
+    "name": "src",
+    "type": "folder",
+    "children": [
+      {
+        "name": "index.ts",
+        "type": "file",
+        "content": "export const hello = () => console.log('Hello, Monaco!');\n"
+      },
+      {
+        "name": "App.tsx",
+        "type": "file",
+        "content": "import React from 'react';\nexport default function App() {\n  return <h1>Sample Project</h1>;\n}\n"
+      }
+    ]
+  },
+  {
+    "name": "package.json",
+    "type": "file",
+    "content": "{\n  \"name\": \"sample-project\",\n  \"version\": \"1.0.0\"\n}\n"
+  }
+]
