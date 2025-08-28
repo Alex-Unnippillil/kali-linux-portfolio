@@ -1,0 +1,7 @@
+{
+  "segments": [
+    { "size": 2000, "type": "process" },
+    { "size": 2000, "type": "dll" },
+    { "size": 2000, "type": "socket" }
+  ]
+}
