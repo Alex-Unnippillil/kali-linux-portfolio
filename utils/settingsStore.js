@@ -5,6 +5,7 @@ const DEFAULT_SETTINGS = {
   wallpaper: 'wall-2',
   density: 'regular',
   reducedMotion: false,
+  fontScale: 1,
 };
 
 export async function getAccent() {
@@ -47,6 +48,17 @@ export async function setReducedMotion(value) {
   window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
 }
 
+export async function getFontScale() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.fontScale;
+  const stored = window.localStorage.getItem('font-scale');
+  return stored ? parseFloat(stored) : DEFAULT_SETTINGS.fontScale;
+}
+
+export async function setFontScale(scale) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('font-scale', String(scale));
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -55,6 +67,7 @@ export async function resetSettings() {
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
+  window.localStorage.removeItem('font-scale');
 }
 
 export const defaults = DEFAULT_SETTINGS;

@@ -47,6 +47,7 @@
 
   /* Fonts */
   --font-family-base: 'Ubuntu', sans-serif;
+  --font-multiplier: 1;
 }
 
 /* High contrast theme */

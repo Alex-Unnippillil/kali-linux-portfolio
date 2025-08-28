@@ -3,7 +3,7 @@ import { useSettings } from '../../hooks/useSettings';
 import { resetSettings, defaults } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, fontScale, setFontScale } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
 
@@ -80,6 +80,18 @@ export function Settings() {
                 </select>
             </div>
             <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Font Size:</label>
+                <input
+                    type="range"
+                    min="0.75"
+                    max="1.5"
+                    step="0.05"
+                    value={fontScale}
+                    onChange={(e) => setFontScale(parseFloat(e.target.value))}
+                    className="ubuntu-slider"
+                />
+            </div>
+            <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
                         type="checkbox"
@@ -134,7 +146,14 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4">
                 <button
-                    onClick={async () => { await resetSettings(); setAccent(defaults.accent); setWallpaper(defaults.wallpaper); setDensity(defaults.density); setReducedMotion(defaults.reducedMotion); }}
+                    onClick={async () => {
+                        await resetSettings();
+                        setAccent(defaults.accent);
+                        setWallpaper(defaults.wallpaper);
+                        setDensity(defaults.density);
+                        setReducedMotion(defaults.reducedMotion);
+                        setFontScale(defaults.fontScale);
+                    }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
                     Reset Desktop
