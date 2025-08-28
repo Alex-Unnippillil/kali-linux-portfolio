@@ -43,6 +43,16 @@ To send text or links directly into the Sticky Notes app:
 
 ---
 
+## Core Commands
+
+- `yarn install` – install project dependencies.
+- `yarn dev` – start the development server with hot reloading.
+- `yarn test` – run the test suite.
+- `yarn lint` – check code for linting issues.
+- `yarn export` – generate a static export in the `out/` directory.
+
+---
+
 ## Tech Stack
 
 - **Next.js 15** (app uses `/pages` routing) + **TypeScript** in parts
