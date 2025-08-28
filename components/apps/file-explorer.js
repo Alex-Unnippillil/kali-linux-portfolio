@@ -1,5 +1,59 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+export async function openFileDialog(options = {}) {
+  if (typeof window !== 'undefined' && window.showOpenFilePicker) {
+    const [handle] = await window.showOpenFilePicker(options);
+    return handle;
+  }
+
+  return await new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    if (options?.multiple) input.multiple = true;
+    if (options?.types) {
+      const accept = options.types
+        .map((t) => t.accept && Object.values(t.accept).flat())
+        .flat()
+        .join(',');
+      if (accept) input.accept = accept;
+    }
+    input.onchange = () => {
+      const file = input.files[0];
+      resolve(
+        file && {
+          name: file.name,
+          getFile: async () => file,
+        }
+      );
+    };
+    input.click();
+  });
+}
+
+export async function saveFileDialog(options = {}) {
+  if (typeof window !== 'undefined' && window.showSaveFilePicker) {
+    return await window.showSaveFilePicker(options);
+  }
+
+  return {
+    name: options?.suggestedName || 'download',
+    async createWritable() {
+      return {
+        async write(data) {
+          const blob = data instanceof Blob ? data : new Blob([data]);
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = options?.suggestedName || 'download';
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+        async close() {},
+      };
+    },
+  };
+}
+
 const DB_NAME = 'file-explorer';
 const STORE_NAME = 'recent';
 
@@ -83,6 +137,7 @@ export default function FileExplorer() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const workerRef = useRef(null);
+  const fallbackInputRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
   const hasOPFS = !!navigator.storage?.getDirectory;
@@ -92,6 +147,14 @@ export default function FileExplorer() {
     setSupported(ok);
     if (ok) getRecentDirs().then(setRecent);
   }, []);
+
+  const openFallback = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    setCurrentFile({ name: file.name });
+    setContent(text);
+  };
 
   const openFolder = async () => {
     try {
@@ -168,7 +231,39 @@ export default function FileExplorer() {
   };
 
   if (!supported) {
-    return <div className="p-4">File System Access API not supported.</div>;
+    return (
+      <div className="p-4 flex flex-col h-full">
+        <input ref={fallbackInputRef} type="file" onChange={openFallback} className="hidden" />
+        {!currentFile && (
+          <button
+            onClick={() => fallbackInputRef.current?.click()}
+            className="px-2 py-1 bg-black bg-opacity-50 rounded self-start"
+          >
+            Open File
+          </button>
+        )}
+        {currentFile && (
+          <>
+            <textarea
+              className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
+              value={content}
+              onChange={onChange}
+            />
+            <button
+              onClick={async () => {
+                const handle = await saveFileDialog({ suggestedName: currentFile.name });
+                const writable = await handle.createWritable();
+                await writable.write(content);
+                await writable.close();
+              }}
+              className="mt-2 px-2 py-1 bg-black bg-opacity-50 rounded self-start"
+            >
+              Save
+            </button>
+          </>
+        )}
+      </div>
+    );
   }
 
   return (
