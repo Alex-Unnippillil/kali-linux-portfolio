@@ -1,3 +1,19 @@
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
+/* global workbox */
+
+const bgSyncPlugin = new workbox.backgroundSync.Plugin('offline-queue', {
+  maxRetentionTime: 24 * 60,
+});
+
+workbox.routing.registerRoute(
+  ({ url, request }) =>
+    url.origin === self.location.origin && request.method === 'POST',
+  new workbox.strategies.NetworkOnly({
+    plugins: [bgSyncPlugin],
+  }),
+  'POST'
+);
+
 const CACHE_NAME = 'weather-cache-v1';
 
 self.addEventListener('install', () => {
