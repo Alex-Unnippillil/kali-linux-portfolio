@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
+import type { PDFDocumentProxy } from 'pdfjs-dist';
+import type { TextItem } from 'pdfjs-dist/types/src/display/api';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
@@ -9,14 +11,22 @@ interface PdfViewerProps {
 
 const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [pdf, setPdf] = useState<any>(null);
+  const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [page, setPage] = useState(1);
   const [thumbs, setThumbs] = useState<HTMLCanvasElement[]>([]);
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<number[]>([]);
 
   useEffect(() => {
-    pdfjsLib.getDocument(url).promise.then(setPdf);
+    const loadPdf = async () => {
+      try {
+        const loadedPdf = await pdfjsLib.getDocument(url).promise;
+        setPdf(loadedPdf);
+      } catch (error) {
+        console.error('Error loading PDF:', error);
+      }
+    };
+    loadPdf();
   }, [url]);
 
   useEffect(() => {
@@ -56,7 +66,9 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
     for (let i = 1; i <= pdf.numPages; i++) {
       const pg = await pdf.getPage(i);
       const textContent = await pg.getTextContent();
-      const text = textContent.items.map((it: any) => it.str).join(' ');
+      const text = (textContent.items as TextItem[])
+        .map((it) => it.str)
+        .join(' ');
       if (text.toLowerCase().includes(query.toLowerCase())) found.push(i);
     }
     setMatches(found);
