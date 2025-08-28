@@ -13,12 +13,30 @@ export default function handler(req, res) {
 
   const trimmed = command.trim();
   if (trimmed.toLowerCase().startsWith('search ')) {
-    const query = trimmed.slice(7).toLowerCase();
-    const results = modules.filter(
-      (m) =>
-        m.name.toLowerCase().includes(query) ||
-        m.description.toLowerCase().includes(query)
-    );
+    const raw = trimmed.slice(7).trim();
+    const match = raw.match(/^([a-z]+):(.+)/i);
+    let field = 'name';
+    let query = raw;
+    if (match) {
+      field = match[1].toLowerCase();
+      query = match[2];
+    }
+    const q = query.toLowerCase();
+    const results = modules.filter((m) => {
+      if (field === 'cve') {
+        return (m.cve || []).some((c) => c.toLowerCase().includes(q));
+      }
+      if (['name', 'type', 'platform'].includes(field)) {
+        return (m[field] || '').toLowerCase().includes(q);
+      }
+      return (
+        m.name.toLowerCase().includes(q) ||
+        (m.type || '').toLowerCase().includes(q) ||
+        (m.platform || '').toLowerCase().includes(q) ||
+        (m.cve || []).some((c) => c.toLowerCase().includes(q)) ||
+        m.description.toLowerCase().includes(q)
+      );
+    });
     let output = 'Matching Modules\n================\n\n   #  Name                                         Description\n   -  ----                                         -----------\n';
     results.forEach((m, idx) => {
       const name = m.name.padEnd(44, ' ');
