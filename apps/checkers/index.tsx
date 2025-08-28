@@ -13,6 +13,7 @@ import {
   hasMoves,
   isDraw,
 } from '../../components/apps/checkers/engine';
+import './checkers.css';
 
 // Helper to get all moves without enforcing capture
 const getAllMovesNoForce = (board: Board, color: 'red' | 'black'): Move[] => {
@@ -170,33 +171,33 @@ export default function CheckersPage() {
           Reset
         </button>
       </div>
-      <div className="grid grid-cols-8 gap-0">
-        {board.map((row, r) =>
-          row.map((cell, c) => {
-            const isDark = (r + c) % 2 === 1;
-            const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
-            const isSelected = selected && selected[0] === r && selected[1] === c;
-            return (
-              <div
-                key={`${r}-${c}`}
-                {...pointerHandlers(() => (selected ? tryMove(r, c) : selectPiece(r, c)))}
-                className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
-                  isDark ? 'bg-gray-700' : 'bg-gray-400'
-                } ${isMove ? 'ring-2 ring-yellow-300 animate-pulse' : ''} ${
-                  isSelected ? 'ring-2 ring-green-400' : ''
-                }`}
-              >
-                {cell && (
-                  <div
-                    className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center ${
-                      cell.color === 'red' ? 'bg-red-500' : 'bg-black'
-                    } ${cell.king ? 'border-4 border-yellow-300' : ''}`}
-                  />
-                )}
-              </div>
-            );
-          }),
-        )}
+      <div className="w-full max-w-lg aspect-square">
+        <div className="grid grid-cols-8 w-full h-full">
+          {board.map((row, r) =>
+            row.map((cell, c) => {
+              const isDark = (r + c) % 2 === 1;
+              const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
+              const isSelected = selected && selected[0] === r && selected[1] === c;
+              return (
+                <div
+                  key={`${r}-${c}`}
+                  {...pointerHandlers(() => (selected ? tryMove(r, c) : selectPiece(r, c)))}
+                  className={`aspect-square flex items-center justify-center ${
+                    isDark ? 'bg-gray-700' : 'bg-gray-400'
+                  } ${isMove ? 'move-square' : ''} ${isSelected ? 'selected-square' : ''}`}
+                >
+                  {cell && (
+                    <div
+                      className={`w-3/4 h-3/4 rounded-full flex items-center justify-center ${
+                        cell.color === 'red' ? 'bg-red-500' : 'bg-black'
+                      } ${cell.king ? 'border-4 border-yellow-300' : ''}`}
+                    />
+                  )}
+                </div>
+              );
+            }),
+          )}
+        </div>
       </div>
     </div>
   );
