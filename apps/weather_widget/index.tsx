@@ -10,7 +10,7 @@ export default function WeatherWidget() {
   }, []);
 
   return (
-    <div>
+    <div className="widget-container">
       <div className="controls">
         <select id="city-picker"></select>
         <select id="unit-toggle">
@@ -20,6 +20,7 @@ export default function WeatherWidget() {
         <input type="text" id="api-key-input" placeholder="API Key (optional)" />
         <button id="save-api-key">Save</button>
       </div>
+      <div id="error-message"></div>
       <div id="weather" className="weather">
         <div className="temp">--°C</div>
         <img className="icon" src="" alt="Weather icon" />
