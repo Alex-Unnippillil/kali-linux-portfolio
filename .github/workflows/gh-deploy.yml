@@ -20,10 +20,13 @@ jobs:
         run: yarn install
 
       - name: Test
-        run: yarn test
+        run: yarn jest -w=1
 
       - name: Lint
         run: yarn lint
+
+      - name: Type Check
+        run: yarn tsc --noEmit
 
       - name: Building
         run: yarn build
