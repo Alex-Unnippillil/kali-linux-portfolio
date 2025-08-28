@@ -10,12 +10,14 @@ export class Window extends Component {
         this.id = null;
         this.startX = 60;
         this.startY = 10;
+        this._preFullscreen = null;
         this.state = {
             cursorType: "cursor-default",
             width: props.defaultWidth || 60,
             height: props.defaultHeight || 85,
             closed: false,
             maximized: false,
+            fullscreen: false,
             parentSize: {
                 height: 100,
                 width: 100
@@ -39,6 +41,7 @@ export class Window extends Component {
 
         // on window resize, resize boundary
         window.addEventListener('resize', this.resizeBoundries);
+        document.addEventListener('fullscreenchange', this.onFullscreenChange);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -48,6 +51,7 @@ export class Window extends Component {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         window.removeEventListener('resize', this.resizeBoundries);
+        document.removeEventListener('fullscreenchange', this.onFullscreenChange);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -128,6 +132,16 @@ export class Window extends Component {
             });
         };
         shrink();
+    }
+
+    onFullscreenChange = () => {
+        const root = document.getElementById(this.id);
+        const isFs = document.fullscreenElement === root;
+        if (!isFs && this.state.fullscreen && this._preFullscreen) {
+            this.setState({ fullscreen: false, width: this._preFullscreen.width, height: this._preFullscreen.height }, this.resizeBoundries);
+        } else {
+            this.setState({ fullscreen: isFs });
+        }
     }
 
     changeCursorToMove = () => {
@@ -312,6 +326,23 @@ export class Window extends Component {
         }
     }
 
+    fullscreenWindow = () => {
+        const element = document.getElementById(this.id);
+        if (!element) return;
+        if (document.fullscreenElement === element) {
+            document.exitFullscreen();
+        } else {
+            this.focusWindow();
+            this._preFullscreen = { width: this.state.width, height: this.state.height };
+            this.setState({ width: 100, height: 100 }, () => {
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                }
+                element.focus();
+            });
+        }
+    }
+
     closeWindow = () => {
         this.setWinowsPosition();
         this.setState({ closed: true }, () => {
@@ -365,7 +396,12 @@ export class Window extends Component {
 
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
-            this.closeWindow();
+            const root = document.getElementById(this.id);
+            if (document.fullscreenElement === root) {
+                document.exitFullscreen();
+            } else {
+                this.closeWindow();
+            }
         } else if (e.key === 'Tab') {
             this.focusWindow();
         } else if (e.key === 'ArrowDown' && e.altKey) {
@@ -412,7 +448,7 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                         />
-                        <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
+                        <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} fullscreen={this.fullscreenWindow} isFullscreen={this.state.fullscreen} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
                         {(this.id === "settings"
                             ? <Settings />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
@@ -532,6 +568,21 @@ export function WindowEditButtons(props) {
                         </button>
                     )
             )}
+            <button
+                type="button"
+                aria-label={props.isFullscreen ? "Window exit fullscreen" : "Window fullscreen"}
+                className="mx-2 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center mt-1 h-5 w-5 items-center"
+                onClick={props.fullscreen}
+            >
+                <NextImage
+                    src={props.isFullscreen ? "/themes/Yaru/window/window-restore-symbolic.svg" : "/themes/Yaru/window/window-maximize-symbolic.svg"}
+                    alt={props.isFullscreen ? "Kali window exit fullscreen" : "Kali window fullscreen"}
+                    className="h-5 w-5 inline"
+                    width={20}
+                    height={20}
+                    sizes="20px"
+                />
+            </button>
             <button
                 type="button"
                 id={`close-${props.id}`}
