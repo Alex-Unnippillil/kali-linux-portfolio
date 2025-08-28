@@ -1,22 +1,9 @@
 import React, { createContext, useContext } from 'react';
 import usePersistedState from '../../hooks/usePersistedState';
 
-interface Settings {
-  difficulty: string;
-  setDifficulty: (d: string) => void;
-  assists: boolean;
-  setAssists: (v: boolean) => void;
-  colorBlind: boolean;
-  setColorBlind: (v: boolean) => void;
-  highContrast: boolean;
-  setHighContrast: (v: boolean) => void;
-  quality: number;
-  setQuality: (v: number) => void;
-}
+const SettingsContext = createContext(undefined);
 
-const SettingsContext = createContext<Settings | undefined>(undefined);
-
-export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const SettingsProvider = ({ children }) => {
   const [difficulty, setDifficulty] = usePersistedState('settings:difficulty', 'normal');
   const [assists, setAssists] = usePersistedState('settings:assists', true);
   const [colorBlind, setColorBlind] = usePersistedState('settings:colorBlind', false);
@@ -50,3 +37,4 @@ export const useSettings = () => {
 };
 
 export default SettingsContext;
+

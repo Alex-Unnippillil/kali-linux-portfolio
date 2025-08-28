@@ -11,7 +11,7 @@ import {
   createSeededRNG,
 } from './asteroids-utils';
 import useGameControls from './useGameControls';
-import GameLayout from './GameLayout';
+import GameLayout from './GameLayout.js';
 
 // Arcade-style tuning constants
 const THRUST = 0.1;

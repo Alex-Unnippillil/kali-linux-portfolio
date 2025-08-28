@@ -4,8 +4,8 @@ import { generateGrid, createRNG } from './generator';
 import type { Position, WordPlacement } from './types';
 import wordList from '../../components/apps/wordle_words.json';
 import { logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
-import GameLayout from '../../components/apps/GameLayout';
-import { SettingsProvider, useSettings } from '../../components/apps/GameSettingsContext';
+import GameLayout from '../../components/apps/GameLayout.js';
+import { SettingsProvider, useSettings } from '../../components/apps/GameSettingsContext.js';
 
 const WORD_COUNT = 5;
 const GRID_SIZE = 12;

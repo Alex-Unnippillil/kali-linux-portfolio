@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactGA from 'react-ga4';
 import confetti from 'canvas-confetti';
-import GameLayout from './GameLayout';
+import GameLayout from './GameLayout.js';
 
 const winningLines = [
   [0, 1, 2],

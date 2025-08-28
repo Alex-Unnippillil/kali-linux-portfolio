@@ -6,7 +6,7 @@ import {
   BOARD_SIZE,
   randomizePlacement,
 } from './battleship/ai';
-import GameLayout from './battleship/GameLayout';
+import GameLayout from './battleship/GameLayout.js';
 import usePersistentState from '../hooks/usePersistentState';
 import useGameControls from './useGameControls';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';

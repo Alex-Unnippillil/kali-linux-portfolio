@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import levelsData from "./breakout-levels.json";
-import GameLayout from "./GameLayout";
+import GameLayout from './GameLayout.js';
 
 // Base logical canvas size (used if container size is unavailable)
 const WIDTH = 640;
