@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
 import ReactGA from 'react-ga4';
+import DOMPurify from 'dompurify';
 import LazyGitHubButton from '../../LazyGitHubButton';
 import Certs from '../certs';
 import data from '../alex/data.json';
@@ -88,7 +89,12 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
         <Head>
           <title>About</title>
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }} />
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(JSON.stringify(structured)),
+            }}
+          />
         </Head>
         <div className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black">
           {this.renderNavLinks()}

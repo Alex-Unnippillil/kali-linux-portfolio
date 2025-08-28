@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 
 const escapeFilename = (str = '') =>
   str
@@ -275,7 +276,7 @@ function Autopsy() {
       <div
         aria-live="polite"
         className="sr-only"
-        dangerouslySetInnerHTML={{ __html: announcement }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(announcement) }}
       />
       <div className="flex space-x-2">
         <input
@@ -341,7 +342,9 @@ function Autopsy() {
               >
                 <div
                   className="font-bold"
-                  dangerouslySetInnerHTML={{ __html: escapeFilename(a.name) }}
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(escapeFilename(a.name)),
+                  }}
                 />
                 <div className="text-gray-400">{a.type}</div>
                 <div className="text-xs">

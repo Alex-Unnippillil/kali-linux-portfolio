@@ -428,7 +428,7 @@ export default function AsciiArt() {
       ) : (
         <pre
           className="font-mono whitespace-pre overflow-auto flex-1"
-          dangerouslySetInnerHTML={{ __html: asciiHtml }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(asciiHtml) }}
         />
       )}
       <canvas ref={canvasRef} className="hidden w-full h-full" />

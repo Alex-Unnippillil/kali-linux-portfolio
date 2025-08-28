@@ -65,7 +65,9 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
   return (
     <div>
       <h1>{article.title}</h1>
-      <div dangerouslySetInnerHTML={{ __html: article.content }} />
+      <div
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content) }}
+      />
       <div className="flex gap-2 mt-4">
         <button onClick={copyMarkdown}>Copy as Markdown</button>
         <button onClick={saveForLater}>Read Later</button>
