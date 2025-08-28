@@ -1,5 +1,6 @@
 import React, { Component } from "react";
 import Image from 'next/image';
+import { toCanvas } from 'html-to-image';
 
 export class SideBarApp extends Component {
     constructor() {
@@ -8,6 +9,7 @@ export class SideBarApp extends Component {
         this.state = {
             showTitle: false,
             scaleImage: false,
+            thumbnail: null,
         };
     }
 
@@ -27,7 +29,32 @@ export class SideBarApp extends Component {
             this.scaleImage();
         }
         this.props.openApp(this.id);
-        this.setState({ showTitle: false });
+        this.setState({ showTitle: false, thumbnail: null });
+    };
+
+    captureThumbnail = async () => {
+        const win = document.getElementById(this.id);
+        if (!win) return;
+        let dataUrl = null;
+        const canvas = win.querySelector('canvas');
+        if (canvas && canvas.toDataURL) {
+            try {
+                dataUrl = canvas.toDataURL();
+            } catch (e) {
+                dataUrl = null;
+            }
+        }
+        if (!dataUrl) {
+            try {
+                const temp = await toCanvas(win);
+                dataUrl = temp.toDataURL();
+            } catch (e) {
+                dataUrl = null;
+            }
+        }
+        if (dataUrl) {
+            this.setState({ thumbnail: dataUrl });
+        }
     };
 
     render() {
@@ -39,10 +66,11 @@ export class SideBarApp extends Component {
                 data-app-id={this.props.id}
                 onClick={this.openApp}
                 onMouseEnter={() => {
+                    this.captureThumbnail();
                     this.setState({ showTitle: true });
                 }}
                 onMouseLeave={() => {
-                    this.setState({ showTitle: false });
+                    this.setState({ showTitle: false, thumbnail: null });
                 }}
                 className={(this.props.isClose[this.id] === false && this.props.isFocus[this.id] ? "bg-white bg-opacity-10 " : "") + " w-auto p-2 outline-none relative transition hover:bg-white hover:bg-opacity-10 rounded m-1"}
                 id={"sidebar-" + this.props.id}
@@ -70,6 +98,17 @@ export class SideBarApp extends Component {
                             : null
                     )
                 }
+                {this.state.thumbnail && (
+                    <div
+                        className={
+                            (this.state.showTitle ? " visible " : " invisible ") +
+                            " pointer-events-none absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2" +
+                            " rounded border border-gray-400 border-opacity-40 shadow-lg overflow-hidden bg-black bg-opacity-50"
+                        }
+                    >
+                        <img src={this.state.thumbnail} alt="" className="w-32 h-auto" />
+                    </div>
+                )}
                 <div
                     className={
                         (this.state.showTitle ? " visible " : " invisible ") +
