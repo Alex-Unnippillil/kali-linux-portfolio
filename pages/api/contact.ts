@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 // Simple in-memory rate limiter. Not suitable for distributed environments.
 export const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
+
 export const rateLimit = new Map<string, { count: number; start: number }>();
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
