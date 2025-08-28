@@ -32,6 +32,50 @@ const Checkers = () => {
   const pathRef = useRef<[number, number][]>([]);
   const makeMoveRef = useRef<((move: Move) => void) | null>(null);
   const crownFrame = useRef<number>(0);
+  const cellRefs = useRef<HTMLDivElement[][]>([]);
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLDivElement>,
+    r: number,
+    c: number
+  ) => {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Space') {
+      e.preventDefault();
+      selected ? tryMove(r, c) : selectPiece(r, c);
+      return;
+    }
+    const focus = (nr: number, nc: number) => {
+      cellRefs.current[nr]?.[nc]?.focus();
+    };
+    switch (e.key) {
+      case 'ArrowUp':
+        if (r > 0) {
+          e.preventDefault();
+          focus(r - 1, c);
+        }
+        break;
+      case 'ArrowDown':
+        if (r < 7) {
+          e.preventDefault();
+          focus(r + 1, c);
+        }
+        break;
+      case 'ArrowLeft':
+        if (c > 0) {
+          e.preventDefault();
+          focus(r, c - 1);
+        }
+        break;
+      case 'ArrowRight':
+        if (c < 7) {
+          e.preventDefault();
+          focus(r, c + 1);
+        }
+        break;
+      default:
+        break;
+    }
+  };
 
   useEffect(() => {
     workerRef.current = new Worker('/checkers-worker.js');
@@ -263,10 +307,16 @@ const Checkers = () => {
             return (
               <div
                 key={`${r}-${c}`}
+                ref={(el) => {
+                  if (!cellRefs.current[r]) cellRefs.current[r] = [];
+                  cellRefs.current[r][c] = el;
+                }}
+                tabIndex={0}
+                onKeyDown={(e) => handleKeyDown(e, r, c)}
                 {...pointerHandlers(() =>
                   selected ? tryMove(r, c) : selectPiece(r, c)
                 )}
-                className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
+                className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-white ${
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
                 } ${
                   isMove
