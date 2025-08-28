@@ -1,4 +1,5 @@
 import React from 'react';
+import WorkflowCard from '../components/WorkflowCard';
 
 interface FrameProps {
   title: string;
@@ -43,6 +44,9 @@ const SecurityEducation = () => (
         link="https://www.cisa.gov/secure-our-world"
         description="CISA guidance on defending against cyber threats."
       />
+    </div>
+    <div className="p-4">
+      <WorkflowCard />
     </div>
   </main>
 );

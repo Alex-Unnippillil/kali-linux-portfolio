@@ -4,6 +4,8 @@
     "description": "MS17-010 EternalBlue SMB Remote Windows Kernel Pool Corruption",
     "severity": "critical",
     "type": "exploit",
+    "platform": "windows",
+    "cve": ["CVE-2017-0144"],
     "tags": ["smb", "rce"],
     "transcript": "[*] Started reverse TCP handler on 0.0.0.0:4444\n[*] 192.168.1.100 - Connecting to target...\n[+] 192.168.1.100 - Connection established\n[*] 192.168.1.100 - Sending exploit...\n[+] 192.168.1.100 - Exploit completed, but no session was created."
   },
@@ -12,6 +14,8 @@
     "description": "Apache Struts 2 Content-Type OGNL RCE",
     "severity": "high",
     "type": "exploit",
+    "platform": "multi",
+    "cve": ["CVE-2017-5638"],
     "tags": ["http", "rce"],
     "transcript": "[*] Started reverse TCP handler on 0.0.0.0:4444\n[*] http://example.com - Sending exploit payload...\n[+] http://example.com - Exploit completed"
   },
@@ -20,6 +24,8 @@
     "description": "VSFTPD v2.3.4 Backdoor Command Execution",
     "severity": "medium",
     "type": "exploit",
+    "platform": "unix",
+    "cve": ["CVE-2011-2523"],
     "tags": ["ftp", "backdoor"],
     "transcript": "[*] 10.0.0.2:21 - Connecting to server...\n[+] 10.0.0.2:21 - Backdoor service discovered\n[*] Command shell session 1 opened"
   },
@@ -28,6 +34,8 @@
     "description": "TCP Port Scanner",
     "severity": "low",
     "type": "auxiliary",
+    "platform": "multi",
+    "cve": [],
     "tags": ["scanner", "network"],
     "transcript": "[*] Scanning 192.168.1.0/24 ports 1-1000\n[*] 192.168.1.1:80 - open\n[*] 192.168.1.10:22 - open\n[*] Scanning completed"
   },
@@ -36,6 +44,8 @@
     "description": "SSH Credentials Gather",
     "severity": "medium",
     "type": "post",
+    "platform": "multi",
+    "cve": [],
     "tags": ["ssh", "credentials"],
     "transcript": "[*] Gathering SSH credentials...\n[+] user:password found in /home/user/.ssh/config\n[*] Post module execution completed"
   }

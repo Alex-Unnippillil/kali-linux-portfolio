@@ -23,6 +23,7 @@ const MetasploitApp = ({
   const [output, setOutput] = usePersistentState('metasploit-history', banner);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
+  const [searchField, setSearchField] = useState('name');
   const [selectedSeverity, setSelectedSeverity] = useState(null);
   const [animationStyle, setAnimationStyle] = useState({ opacity: 1 });
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -53,12 +54,14 @@ const MetasploitApp = ({
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
     if (!q) return [];
-    return modules.filter(
-      (m) =>
-        m.name.toLowerCase().includes(q) ||
-        m.description.toLowerCase().includes(q)
-    );
-  }, [query]);
+    return modules.filter((m) => {
+      if (searchField === 'cve') {
+        return (m.cve || []).some((c) => c.toLowerCase().includes(q));
+      }
+      const field = (m[searchField] || '').toString().toLowerCase();
+      return field.includes(q);
+    });
+  }, [query, searchField]);
 
   const modulesByType = useMemo(() => {
     const filteredMods = modules.filter(
@@ -183,18 +186,36 @@ const MetasploitApp = ({
         </button>
       </div>
       <div className="p-2">
-        <input
-          className="w-full bg-ub-grey text-white p-1 rounded"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search modules"
-          spellCheck={false}
-        />
+        <div className="flex mb-2">
+          <input
+            className="flex-grow bg-ub-grey text-white p-1 rounded"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search modules"
+            spellCheck={false}
+          />
+          <select
+            className="ml-2 bg-ub-grey text-white p-1 rounded"
+            value={searchField}
+            onChange={(e) => setSearchField(e.target.value)}
+          >
+            <option value="name">Name</option>
+            <option value="type">Type</option>
+            <option value="platform">Platform</option>
+            <option value="cve">CVE</option>
+          </select>
+        </div>
         {query && (
           <ul className="mt-2 max-h-40 overflow-auto text-xs">
             {filtered.map((m) => (
               <li key={m.name} className="mb-1">
                 <span className="font-mono">{m.name}</span> - {m.description}
+                {m.platform && (
+                  <span className="ml-1">[{m.platform}]</span>
+                )}
+                {(m.cve || []).map((c) => (
+                  <span key={c} className="ml-1">{c}</span>
+                ))}
               </li>
             ))}
           </ul>
