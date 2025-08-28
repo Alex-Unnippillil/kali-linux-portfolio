@@ -8,7 +8,7 @@ import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const GRID_SIZE = 20;
 const CELL_SIZE = 16; // pixels
-const SPEED = 120; // ms per move
+const DEFAULT_SPEED = 120; // ms per move
 
 /**
  * Generate a random food position that does not overlap the snake.
@@ -45,6 +45,7 @@ const Snake = () => {
   const [running, setRunning] = useState(true);
   const [wrap, setWrap] = useState(false);
   const [sound, setSound] = useState(true);
+  const [speed, setSpeed] = useState(DEFAULT_SPEED);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [highScore, setHighScore] = usePersistentState(
@@ -52,12 +53,17 @@ const Snake = () => {
     0,
     (v) => typeof v === 'number',
   );
+  const speedRef = useRef(DEFAULT_SPEED);
 
   useEffect(() => {
     const handleBlur = () => setRunning(false);
     window.addEventListener('blur', handleBlur);
     return () => window.removeEventListener('blur', handleBlur);
   }, []);
+
+  useEffect(() => {
+    speedRef.current = speed;
+  }, [speed]);
 
   // Respect prefers-reduced-motion by pausing automatic movement
   useEffect(() => {
@@ -165,16 +171,19 @@ const Snake = () => {
       }
     }
     const dir = dirRef.current;
-    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y, scale: 1 };
+    let headX = snake[0].x + dir.x;
+    let headY = snake[0].y + dir.y;
+    headX = Math.round(headX);
+    headY = Math.round(headY);
 
     if (wrap) {
-      head.x = (head.x + GRID_SIZE) % GRID_SIZE;
-      head.y = (head.y + GRID_SIZE) % GRID_SIZE;
+      headX = (headX + GRID_SIZE) % GRID_SIZE;
+      headY = (headY + GRID_SIZE) % GRID_SIZE;
     } else if (
-      head.x < 0 ||
-      head.y < 0 ||
-      head.x >= GRID_SIZE ||
-      head.y >= GRID_SIZE
+      headX < 0 ||
+      headY < 0 ||
+      headX >= GRID_SIZE ||
+      headY >= GRID_SIZE
     ) {
       haptics.danger();
       setGameOver(true);
@@ -183,7 +192,9 @@ const Snake = () => {
       return;
     }
 
-    if (snake.some((s) => s.x === head.x && s.y === head.y)) {
+    const grow = headX === foodRef.current.x && headY === foodRef.current.y;
+    const body = grow ? snake : snake.slice(0, snake.length - 1);
+    if (body.some((s) => s.x === headX && s.y === headY)) {
       haptics.danger();
       setGameOver(true);
       setRunning(false);
@@ -191,8 +202,9 @@ const Snake = () => {
       return;
     }
 
+    const head = { x: headX, y: headY, scale: 1 };
     snake.unshift(head);
-    if (head.x === foodRef.current.x && head.y === foodRef.current.y) {
+    if (grow) {
       setScore((s) => s + 1);
       haptics.score();
       beep(440);
@@ -207,7 +219,7 @@ const Snake = () => {
   const loop = useCallback(
     (time) => {
       rafRef.current = requestAnimationFrame(loop);
-      if (runningRef.current && time - lastRef.current > SPEED) {
+      if (runningRef.current && time - lastRef.current > speedRef.current) {
         lastRef.current = time;
         update();
       }
@@ -307,6 +319,18 @@ const Snake = () => {
           >
             {haptics.enabled ? 'Haptics On' : 'Haptics Off'}
           </button>
+        </div>
+        <div className="mt-2 flex items-center space-x-2">
+          <label htmlFor="speed">Speed</label>
+          <input
+            id="speed"
+            type="range"
+            min="50"
+            max="300"
+            step="10"
+            value={speed}
+            onChange={(e) => setSpeed(Number(e.target.value))}
+          />
         </div>
       </div>
     </GameLayout>
