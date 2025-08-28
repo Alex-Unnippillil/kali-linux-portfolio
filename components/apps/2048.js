@@ -189,6 +189,47 @@ const Game2048 = () => {
   const [combo, setCombo] = useState(0);
   const [hint, setHint] = useState(null);
   const [demo, setDemo] = useState(false);
+  const [bestTile, setBestTile] = usePersistentState(
+    '2048-best',
+    0,
+    (v) => typeof v === 'number',
+  );
+  const [scoreStats, setScoreStats] = usePersistentState(
+    '2048-score-stats',
+    { games: 0, total: 0 },
+    (v) =>
+      v &&
+      typeof v === 'object' &&
+      typeof v.games === 'number' &&
+      typeof v.total === 'number',
+  );
+  const [streak, setStreak] = usePersistentState(
+    '2048-streak',
+    { current: 0, max: 0 },
+    (v) =>
+      v &&
+      typeof v === 'object' &&
+      typeof v.current === 'number' &&
+      typeof v.max === 'number',
+  );
+
+  const updateStats = useCallback(
+    (didWin, finalScore, finalBoard) => {
+      const maxTile = Math.max(
+        ...finalBoard.map((row) => Math.max(...row)),
+      );
+      setBestTile((b) => Math.max(b, maxTile));
+      setScoreStats(({ games, total }) => ({
+        games: games + 1,
+        total: total + finalScore,
+      }));
+      setStreak((s) => {
+        const current = didWin ? s.current + 1 : 0;
+        return { current, max: Math.max(s.max, current) };
+      });
+    },
+    [setBestTile, setScoreStats, setStreak],
+  );
 
   useEffect(() => {
     if (animCells.size > 0) {
@@ -245,15 +286,18 @@ const Game2048 = () => {
       const { board: moved, merged, score: gained, mergedCells } = result;
       if (!boardsEqual(board, moved)) {
         const added = addRandomTile(moved, hardMode, hardMode ? 2 : 1);
+        const nextScore = score + gained;
         setHistory((h) => [...h, { board: cloneBoard(board), score, moves }]);
         setAnimCells(new Set(added));
         setMergeCells(new Set(mergedCells));
         if (gained > 0) {
-          setScore((s) => s + gained);
+          setScore(nextScore);
           setScorePop(true);
         }
         setBoard(cloneBoard(moved));
         setMoves((m) => m + 1);
+        const maxTile = Math.max(...moved.map((row) => Math.max(...row)));
+        setBestTile((b) => Math.max(b, maxTile));
         if (merged) navigator.vibrate?.(50);
         if (mergedCells.length > 1) {
           setCombo((c) => c + 1);
@@ -269,11 +313,27 @@ const Game2048 = () => {
         } else {
           setCombo(0);
         }
-        if (checkWin(moved)) setWon(true);
-        else if (!hasMoves(moved)) setLost(true);
+        if (checkWin(moved)) {
+          setWon(true);
+          updateStats(true, nextScore, moved);
+        } else if (!hasMoves(moved)) {
+          setLost(true);
+          updateStats(false, nextScore, moved);
+        }
       }
     },
-    [board, won, lost, hardMode, score, moves, setBoard, setLost, setWon],
+    [
+      board,
+      won,
+      lost,
+      hardMode,
+      score,
+      moves,
+      setBoard,
+      setLost,
+      setWon,
+      updateStats,
+    ],
   );
 
   useGameControls(handleDirection, '2048');
@@ -343,6 +403,10 @@ const Game2048 = () => {
     });
   };
 
+  const avgScore = scoreStats.games
+    ? Math.round(scoreStats.total / scoreStats.games)
+    : 0;
+
   return (
     <GameLayout>
       <>
@@ -400,6 +464,11 @@ const Game2048 = () => {
           </div>
           <div className="px-4 py-2 bg-gray-700 rounded" data-testid="hint-display">
             Hint: {hint ? hint.replace('Arrow', '') : ''}
+          </div>
+          <div className="px-4 py-2 bg-gray-700 rounded">Best: {bestTile}</div>
+          <div className="px-4 py-2 bg-gray-700 rounded">Avg: {avgScore}</div>
+          <div className="px-4 py-2 bg-gray-700 rounded">
+            Streak: {streak.current} (max: {streak.max})
           </div>
         </div>
         <div className="grid grid-cols-4 gap-2" data-combo={combo} style={{ filter: combo ? `hue-rotate(${combo * 45}deg)` : undefined }}>
