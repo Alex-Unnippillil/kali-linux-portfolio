@@ -17,4 +17,15 @@ describe('theme persistence and unlocking', () => {
     expect(unlocked).toEqual(expect.arrayContaining(['default', 'neon', 'dark']));
     expect(unlocked).not.toContain('matrix');
   });
+
+  test('defaults to system preference when no stored theme', () => {
+    // simulate dark mode preference
+    // @ts-ignore
+    window.matchMedia = jest.fn().mockReturnValue({ matches: true });
+    expect(getTheme()).toBe('dark');
+    // simulate light mode preference
+    // @ts-ignore
+    window.matchMedia = jest.fn().mockReturnValue({ matches: false });
+    expect(getTheme()).toBe('default');
+  });
 });
