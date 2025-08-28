@@ -25,4 +25,26 @@ describe('Nessus sample report', () => {
       screen.getByText('Apache HTTP Server Privilege Escalation')
     ).toBeInTheDocument();
   });
+
+  test('filters by host', () => {
+    render(<NessusReport />);
+    fireEvent.change(screen.getByLabelText('Filter host'), {
+      target: { value: 'server1.example.com' },
+    });
+    const rows = screen.getAllByRole('row');
+    expect(rows.length).toBe(3); // header + 2 findings
+    expect(
+      screen.getByText('Apache HTTP Server Privilege Escalation')
+    ).toBeInTheDocument();
+  });
+
+  test('filters by plugin family', () => {
+    render(<NessusReport />);
+    fireEvent.change(screen.getByLabelText('Filter family'), {
+      target: { value: 'SSH' },
+    });
+    const rows = screen.getAllByRole('row');
+    expect(rows.length).toBe(2); // header + 1 finding
+    expect(screen.getByText('Weak SSH Cipher')).toBeInTheDocument();
+  });
 });
