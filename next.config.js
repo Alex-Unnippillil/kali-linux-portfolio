@@ -44,7 +44,7 @@ const securityHeaders = [
   },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=()',
+    value: 'camera=(), microphone=(), geolocation=*',
   },
   {
     // Allow same-origin framing so the PDF resume renders in an <object>
