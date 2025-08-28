@@ -5,39 +5,41 @@ import Toast from '../../ui/Toast';
 const scripts = [
   {
     name: 'http-title',
-    description: 'Fetches page titles from HTTP services.',
-    command: 'nmap -sV --script http-title <target>'
+    description: 'Fetches page titles from HTTP services.'
   },
   {
     name: 'ssl-cert',
-    description: 'Retrieves TLS certificate information.',
-    command: 'nmap -p 443 --script ssl-cert <target>'
+    description: 'Retrieves TLS certificate information.'
   },
   {
     name: 'smb-os-discovery',
-    description: 'Discovers remote OS information via SMB.',
-    command: 'nmap -p 445 --script smb-os-discovery <target>'
+    description: 'Discovers remote OS information via SMB.'
   },
   {
     name: 'ftp-anon',
-    description: 'Checks for anonymous FTP access.',
-    command: 'nmap -p 21 --script ftp-anon <target>'
+    description: 'Checks for anonymous FTP access.'
   },
   {
     name: 'http-enum',
-    description: 'Enumerates directories on web servers.',
-    command: 'nmap -p 80 --script http-enum <target>'
+    description: 'Enumerates directories on web servers.'
   },
   {
     name: 'dns-brute',
-    description: 'Performs DNS subdomain brute force enumeration.',
-    command: 'nmap --script dns-brute <target>'
+    description: 'Performs DNS subdomain brute force enumeration.'
   }
+];
+
+const portPresets = [
+  { label: 'Default', flag: '' },
+  { label: 'Common', flag: '-F' },
+  { label: 'Full', flag: '-p-' }
 ];
 
 const NmapNSEApp = () => {
   const [target, setTarget] = useState('example.com');
-  const [script, setScript] = useState(scripts[0].name);
+  const [selectedScripts, setSelectedScripts] = useState([scripts[0].name]);
+  const [scriptQuery, setScriptQuery] = useState('');
+  const [portFlag, setPortFlag] = useState('');
   const [examples, setExamples] = useState({});
   const [toast, setToast] = useState('');
   const outputRef = useRef(null);
@@ -49,8 +51,23 @@ const NmapNSEApp = () => {
       .catch(() => setExamples({}));
   }, []);
 
-  const current = scripts.find((s) => s.name === script);
-  const command = current.command.replace('<target>', target);
+  const toggleScript = (name) => {
+    setSelectedScripts((prev) =>
+      prev.includes(name)
+        ? prev.filter((n) => n !== name)
+        : [...prev, name]
+    );
+  };
+
+  const filteredScripts = scripts.filter((s) =>
+    s.name.toLowerCase().includes(scriptQuery.toLowerCase())
+  );
+
+  const command = `nmap ${portFlag} ${
+    selectedScripts.length ? `--script ${selectedScripts.join(',')}` : ''
+  } ${target}`
+    .replace(/\s+/g, ' ')
+    .trim();
 
   const copyCommand = async () => {
     if (typeof window !== 'undefined') {
@@ -64,8 +81,10 @@ const NmapNSEApp = () => {
   };
 
   const copyOutput = async () => {
-    const text = examples[script];
-    if (!text) return;
+    const text = selectedScripts
+      .map((s) => `# ${s}\n${examples[s] || ''}`)
+      .join('\n');
+    if (!text.trim()) return;
     try {
       await navigator.clipboard.writeText(text);
       setToast('Output copied');
@@ -95,10 +114,28 @@ const NmapNSEApp = () => {
     }
   };
 
+  const renderOutput = (text) => {
+    if (!text) return 'No sample output available.';
+    return text.split('\n').map((line, idx) => {
+      const highlight = /open|allowed|Potential/i.test(line);
+      return (
+        <span key={idx} className={highlight ? 'text-yellow-300' : undefined}>
+          {line}
+          {'\n'}
+        </span>
+      );
+    });
+  };
+
   return (
     <div className="flex flex-col md:flex-row h-full w-full text-white">
       <div className="md:w-1/2 p-4 bg-ub-dark overflow-y-auto">
         <h1 className="text-lg mb-4">Nmap NSE Demo</h1>
+        <div className="mb-4 p-2 bg-yellow-900 text-yellow-200 border-l-4 border-yellow-500 rounded">
+          <p className="text-sm font-bold">
+            Educational use only. Do not scan systems without permission.
+          </p>
+        </div>
         <div className="mb-4">
           <label className="block text-sm mb-1" htmlFor="target">Target</label>
           <input
@@ -109,21 +146,47 @@ const NmapNSEApp = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-sm mb-1" htmlFor="script">Script</label>
-          <select
-            id="script"
-            value={script}
-            onChange={(e) => setScript(e.target.value)}
-            className="w-full p-2 text-black"
-          >
-            {scripts.map((s) => (
-              <option key={s.name} value={s.name}>
-                {s.name}
-              </option>
+          <label className="block text-sm mb-1" htmlFor="scripts">Scripts</label>
+          <input
+            id="scripts"
+            value={scriptQuery}
+            onChange={(e) => setScriptQuery(e.target.value)}
+            placeholder="Search scripts"
+            className="w-full p-2 text-black mb-2"
+          />
+          <div className="h-32 overflow-y-auto bg-white text-black rounded p-2">
+            {filteredScripts.map((s) => (
+              <label key={s.name} className="flex items-center space-x-2 mb-1">
+                <input
+                  type="checkbox"
+                  checked={selectedScripts.includes(s.name)}
+                  onChange={() => toggleScript(s.name)}
+                />
+                <span className="font-mono">{s.name}</span>
+              </label>
             ))}
-          </select>
+            {filteredScripts.length === 0 && (
+              <p className="text-sm">No scripts found.</p>
+            )}
+          </div>
         </div>
-        <p className="mb-4 text-sm">{current.description}</p>
+        <div className="mb-4">
+          <p className="block text-sm mb-1">Port presets</p>
+          <div className="flex gap-2">
+            {portPresets.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => setPortFlag(p.flag)}
+                className={`px-2 py-1 rounded text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow ${
+                  portFlag === p.flag ? 'bg-ub-yellow' : 'bg-ub-grey'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex items-center mb-4">
           <pre className="flex-1 bg-black text-green-400 p-2 rounded overflow-auto">
             {command}
@@ -139,14 +202,20 @@ const NmapNSEApp = () => {
       </div>
       <div className="md:w-1/2 p-4 bg-black overflow-y-auto">
         <h2 className="text-lg mb-2">Example output</h2>
-        <pre
+        <div
           ref={outputRef}
           tabIndex={0}
           onKeyDown={handleOutputKey}
           className="whitespace-pre-wrap text-green-400"
         >
-          {examples[script] || 'Select a script to view sample output.'}
-        </pre>
+          {selectedScripts.length === 0 && 'Select scripts to view sample output.'}
+          {selectedScripts.map((s) => (
+            <div key={s} className="mb-4">
+              <h3 className="text-blue-400 font-mono">{s}</h3>
+              <pre>{renderOutput(examples[s])}</pre>
+            </div>
+          ))}
+        </div>
         <div className="mt-2 flex gap-2">
           <button
             type="button"
@@ -164,9 +233,7 @@ const NmapNSEApp = () => {
           </button>
         </div>
       </div>
-      {toast && (
-        <Toast message={toast} onClose={() => setToast('')} />
-      )}
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 };
