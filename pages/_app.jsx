@@ -39,10 +39,15 @@ function MyApp({ Component, pageProps }) {
     }
   }, []);
   return (
-    <SettingsProvider>
-      <Component {...pageProps} />
-      <Analytics />
-    </SettingsProvider>
+    <>
+      <a href="#main" className="skip-link">Skip to main content</a>
+      <SettingsProvider>
+        <main id="main">
+          <Component {...pageProps} />
+        </main>
+        <Analytics />
+      </SettingsProvider>
+    </>
   );
 }
 
