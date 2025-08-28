@@ -30,8 +30,36 @@ describe('NmapNSEApp', () => {
 
     render(<NmapNSEApp />);
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
-    await userEvent.click(screen.getByRole('button', { name: /copy/i }));
-    expect(writeText).toHaveBeenCalled();
+    await userEvent.click(
+      screen.getByRole('button', { name: /copy command/i })
+    );
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining('nmap')
+    );
+
+    mockFetch.mockRestore();
+  });
+
+  it('copies example output to clipboard', async () => {
+    const mockFetch = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation(() =>
+        Promise.resolve({
+          json: () => Promise.resolve({ 'http-title': 'Sample output' }),
+        })
+      );
+    const writeText = jest.fn();
+    // @ts-ignore
+    navigator.clipboard = { writeText };
+
+    render(<NmapNSEApp />);
+    await waitFor(() => expect(mockFetch).toHaveBeenCalled());
+
+    await userEvent.click(
+      screen.getByRole('button', { name: /copy output/i })
+    );
+    expect(writeText).toHaveBeenCalledWith('Sample output');
+    expect(await screen.findByRole('alert')).toHaveTextContent(/copied/i);
 
     mockFetch.mockRestore();
   });
