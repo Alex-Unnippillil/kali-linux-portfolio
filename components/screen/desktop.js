@@ -10,6 +10,7 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import ReactGA from 'react-ga4';
+import WindowSwitcher from '../window-switcher';
 
 export class Desktop extends Component {
     constructor() {
@@ -585,6 +586,10 @@ export class Desktop extends Component {
     }
 
     render() {
+        const openWindows = apps
+            .filter(app => this.state.closed_windows[app.id] === false)
+            .map(app => ({ id: app.id, title: app.title, icon: app.icon }));
+
         return (
             <div className={" h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse pt-8 bg-transparent relative overflow-hidden overscroll-none window-parent"}>
 
@@ -641,6 +646,8 @@ export class Desktop extends Component {
                         games={games}
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+
+                <WindowSwitcher windows={openWindows} onSelect={this.openApp} />
 
             </div>
         )
