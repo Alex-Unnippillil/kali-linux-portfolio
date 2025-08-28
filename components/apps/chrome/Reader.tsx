@@ -16,6 +16,8 @@ interface Article {
 
 const Reader: React.FC<ReaderProps> = ({ url }) => {
   const [article, setArticle] = useState<Article | null>(null);
+  const [markdown, setMarkdown] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'rendered' | 'markdown' | 'split'>('rendered');
   const [error, setError] = useState<string | null>(null);
   const { add } = useReadLater();
 
@@ -39,6 +41,9 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
             content: sanitizedContent,
             excerpt: parsed.excerpt ?? '',
           });
+          const turndown = new TurndownService();
+          const md = turndown.turndown(sanitizedContent);
+          setMarkdown(`# ${parsed.title ?? ''}\n\n${md}`);
         } else {
           setError('Unable to parse article.');
         }
@@ -46,12 +51,24 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
       .catch(() => setError('Unable to load page.'));
   }, [url]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = localStorage.getItem('readerView');
+    if (saved === 'rendered' || saved === 'markdown' || saved === 'split') {
+      setViewMode(saved);
+    }
+  }, []);
+
+  const changeView = (mode: 'rendered' | 'markdown' | 'split') => {
+    setViewMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('readerView', mode);
+    }
+  };
+
   const copyMarkdown = () => {
-    if (!article) return;
-    const turndown = new TurndownService();
-    const md = turndown.turndown(article.content);
-    const text = `# ${article.title}\n\n${md}`;
-    navigator.clipboard?.writeText(text);
+    if (!markdown) return;
+    navigator.clipboard?.writeText(markdown);
   };
 
   const saveForLater = () => {
@@ -62,11 +79,31 @@ const Reader: React.FC<ReaderProps> = ({ url }) => {
   if (error) return <div>{error}</div>;
   if (!article) return <div>Loading...</div>;
 
+  const renderedContent = (
+    <div dangerouslySetInnerHTML={{ __html: article.content }} />
+  );
+
+  const markdownContent = (
+    <pre className="whitespace-pre-wrap overflow-auto">{markdown}</pre>
+  );
+
   return (
     <div>
       <h1>{article.title}</h1>
-      <div dangerouslySetInnerHTML={{ __html: article.content }} />
+      {viewMode === 'split' ? (
+        <div className="grid md:grid-cols-2 gap-4">
+          {renderedContent}
+          {markdownContent}
+        </div>
+      ) : viewMode === 'markdown' ? (
+        markdownContent
+      ) : (
+        renderedContent
+      )}
       <div className="flex gap-2 mt-4">
+        <button onClick={() => changeView('rendered')}>Rendered</button>
+        <button onClick={() => changeView('markdown')}>Markdown</button>
+        <button onClick={() => changeView('split')}>Split</button>
         <button onClick={copyMarkdown}>Copy as Markdown</button>
         <button onClick={saveForLater}>Read Later</button>
       </div>

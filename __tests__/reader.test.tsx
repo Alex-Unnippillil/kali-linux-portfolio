@@ -11,6 +11,7 @@ describe('Reader', () => {
   beforeEach(() => {
     (global as any).fetch = jest.fn(async () => ({ text: async () => sampleHtml }));
     writeTextMock.mockClear();
+    localStorage.clear();
   });
 
   it('parses same-origin pages', async () => {
@@ -35,5 +36,16 @@ describe('Reader', () => {
     await screen.findByText('Sample');
     await user.click(screen.getByText('Copy as Markdown'));
     expect(writeTextMock).toHaveBeenCalled();
+  });
+
+  it('toggles markdown view and saves preference', async () => {
+    const user = userEvent.setup();
+    render(<Reader url="/test" />);
+    await screen.findByText('Sample');
+    await user.click(screen.getByText('Markdown'));
+    expect(
+      screen.getByText((content) => content.includes('# t'))
+    ).toBeInTheDocument();
+    expect(localStorage.getItem('readerView')).toBe('markdown');
   });
 });
