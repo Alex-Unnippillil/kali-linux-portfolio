@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import QRCodeStyling from 'qr-code-styling';
 
 const errorLevels = {
@@ -172,7 +172,7 @@ const QRTool = () => {
     }
   };
 
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     const stream = videoRef.current?.srcObject;
     if (stream) {
       stream.getTracks().forEach((t) => t.stop());
@@ -185,9 +185,9 @@ const QRTool = () => {
       workerRef.current = null;
     }
     setMessage('');
-  };
+  }, []);
 
-  useEffect(() => () => stopCamera(), []);
+  useEffect(() => () => stopCamera(), [stopCamera]);
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
