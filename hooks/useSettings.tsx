@@ -10,6 +10,8 @@ import {
   setReducedMotion as saveReducedMotion,
   getFontScale as loadFontScale,
   setFontScale as saveFontScale,
+  getHighContrast as loadHighContrast,
+  setHighContrast as saveHighContrast,
   defaults,
 } from '../utils/settingsStore';
 type Density = 'regular' | 'compact';
@@ -36,11 +38,13 @@ interface SettingsContextValue {
   density: Density;
   reducedMotion: boolean;
   fontScale: number;
+  highContrast: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
+  setHighContrast: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -49,11 +53,13 @@ export const SettingsContext = createContext<SettingsContextValue>({
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
+  highContrast: defaults.highContrast,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
+  setHighContrast: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -62,6 +68,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
+  const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
 
   useEffect(() => {
     (async () => {
@@ -70,6 +77,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
+      setHighContrast(await loadHighContrast());
     })();
   }, []);
 
@@ -89,6 +97,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     saveWallpaper(wallpaper);
+    document.documentElement.dataset.wallpaper = wallpaper;
   }, [wallpaper]);
 
   useEffect(() => {
@@ -118,17 +127,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [density]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('reduced-motion', reducedMotion);
+    document.documentElement.dataset.reducedMotion = reducedMotion ? 'true' : 'false';
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
 
   useEffect(() => {
+    document.documentElement.dataset.fontScale = fontScale.toString();
     document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
     saveFontScale(fontScale);
   }, [fontScale]);
 
+  useEffect(() => {
+    document.documentElement.dataset.highContrast = highContrast ? 'true' : 'false';
+    saveHighContrast(highContrast);
+  }, [highContrast]);
+
   return (
-    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, fontScale, setAccent, setWallpaper, setDensity, setReducedMotion, setFontScale }}>
+    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, fontScale, highContrast, setAccent, setWallpaper, setDensity, setReducedMotion, setFontScale, setHighContrast }}>
       {children}
     </SettingsContext.Provider>
   );

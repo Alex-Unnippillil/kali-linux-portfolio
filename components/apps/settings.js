@@ -3,17 +3,36 @@ import { useSettings } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, fontScale, setFontScale } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, fontScale, setFontScale, highContrast, setHighContrast } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+
+    const [tempWallpaper, setTempWallpaper] = useState(wallpaper);
+    const [tempReducedMotion, setTempReducedMotion] = useState(reducedMotion);
+    const [tempFontScale, setTempFontScale] = useState(fontScale);
+    const [tempHighContrast, setTempHighContrast] = useState(highContrast);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
-        setWallpaper(name);
+        setTempWallpaper(name);
     };
+
+    useEffect(() => {
+        const root = document.documentElement;
+        root.dataset.wallpaper = tempWallpaper;
+        root.dataset.reducedMotion = tempReducedMotion ? 'true' : 'false';
+        root.dataset.fontScale = tempFontScale.toString();
+        root.dataset.highContrast = tempHighContrast ? 'true' : 'false';
+        return () => {
+            root.dataset.wallpaper = wallpaper;
+            root.dataset.reducedMotion = reducedMotion ? 'true' : 'false';
+            root.dataset.fontScale = fontScale.toString();
+            root.dataset.highContrast = highContrast ? 'true' : 'false';
+        };
+    }, [tempWallpaper, tempReducedMotion, tempFontScale, tempHighContrast, wallpaper, reducedMotion, fontScale, highContrast]);
 
     let hexToRgb = (hex) => {
         hex = hex.replace('#', '');
@@ -57,7 +76,7 @@ export function Settings() {
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
-            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
+            <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${tempWallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
@@ -87,8 +106,8 @@ export function Settings() {
                     min="0.75"
                     max="1.5"
                     step="0.05"
-                    value={fontScale}
-                    onChange={(e) => setFontScale(parseFloat(e.target.value))}
+                    value={tempFontScale}
+                    onChange={(e) => setTempFontScale(parseFloat(e.target.value))}
                     className="ubuntu-slider"
                 />
             </div>
@@ -96,17 +115,28 @@ export function Settings() {
                 <label className="mr-2 text-ubt-grey flex items-center">
                     <input
                         type="checkbox"
-                        checked={reducedMotion}
-                        onChange={(e) => setReducedMotion(e.target.checked)}
+                        checked={tempReducedMotion}
+                        onChange={(e) => setTempReducedMotion(e.target.checked)}
                         className="mr-2"
                     />
                     Reduced Motion
                 </label>
             </div>
             <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={tempHighContrast}
+                        onChange={(e) => setTempHighContrast(e.target.checked)}
+                        className="mr-2"
+                    />
+                    High Contrast
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
                 <div
                     className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
-                    style={{ backgroundColor: '#0f1317', color: '#ffffff' }}
+                    style={{ backgroundColor: tempHighContrast ? '#000000' : '#0f1317', color: '#ffffff' }}
                 >
                     <p className="mb-2 text-center">Preview</p>
                     <button
@@ -128,7 +158,7 @@ export function Settings() {
                             key={index}
                             role="button"
                             aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
-                            aria-pressed={name === wallpaper}
+                            aria-pressed={name === tempWallpaper}
                             tabIndex="0"
                             onClick={changeBackgroundImage}
                             onFocus={changeBackgroundImage}
@@ -139,11 +169,35 @@ export function Settings() {
                                 }
                             }}
                             data-path={name}
-                            className={((name === wallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
+                            className={((name === tempWallpaper) ? " border-yellow-700 " : " border-transparent ") + " md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 border-opacity-80"}
                             style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
                         ></div>
                     ))
                 }
+            </div>
+            <div className="flex justify-center my-4 space-x-4">
+                <button
+                    onClick={() => {
+                        setWallpaper(tempWallpaper);
+                        setReducedMotion(tempReducedMotion);
+                        setFontScale(tempFontScale);
+                        setHighContrast(tempHighContrast);
+                    }}
+                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                >
+                    Save
+                </button>
+                <button
+                    onClick={() => {
+                        setTempWallpaper(wallpaper);
+                        setTempReducedMotion(reducedMotion);
+                        setTempFontScale(fontScale);
+                        setTempHighContrast(highContrast);
+                    }}
+                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                >
+                    Cancel
+                </button>
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
                 <button
@@ -175,6 +229,11 @@ export function Settings() {
                         setDensity(defaults.density);
                         setReducedMotion(defaults.reducedMotion);
                         setFontScale(defaults.fontScale);
+                        setHighContrast(defaults.highContrast);
+                        setTempWallpaper(defaults.wallpaper);
+                        setTempReducedMotion(defaults.reducedMotion);
+                        setTempFontScale(defaults.fontScale);
+                        setTempHighContrast(defaults.highContrast);
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
@@ -193,9 +252,11 @@ export function Settings() {
                     try {
                         const parsed = JSON.parse(text);
                         if (parsed.accent !== undefined) setAccent(parsed.accent);
-                        if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
+                        if (parsed.wallpaper !== undefined) { setWallpaper(parsed.wallpaper); setTempWallpaper(parsed.wallpaper); }
                         if (parsed.density !== undefined) setDensity(parsed.density);
-                        if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
+                        if (parsed.reducedMotion !== undefined) { setReducedMotion(parsed.reducedMotion); setTempReducedMotion(parsed.reducedMotion); }
+                        if (parsed.fontScale !== undefined) { setFontScale(parsed.fontScale); setTempFontScale(parsed.fontScale); }
+                        if (parsed.highContrast !== undefined) { setHighContrast(parsed.highContrast); setTempHighContrast(parsed.highContrast); }
                     } catch (err) {
                         console.error('Invalid settings', err);
                     }

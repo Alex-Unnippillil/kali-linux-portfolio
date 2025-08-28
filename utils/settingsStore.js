@@ -6,6 +6,7 @@ const DEFAULT_SETTINGS = {
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
+  highContrast: false,
 };
 
 export async function getAccent() {
@@ -20,12 +21,12 @@ export async function setAccent(accent) {
 
 export async function getWallpaper() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.wallpaper;
-  return (await get('bg-image')) || DEFAULT_SETTINGS.wallpaper;
+  return window.localStorage.getItem('bg-image') || DEFAULT_SETTINGS.wallpaper;
 }
 
 export async function setWallpaper(wallpaper) {
   if (typeof window === 'undefined') return;
-  await set('bg-image', wallpaper);
+  window.localStorage.setItem('bg-image', wallpaper);
 }
 
 export async function getDensity() {
@@ -59,25 +60,36 @@ export async function setFontScale(scale) {
   window.localStorage.setItem('font-scale', String(scale));
 }
 
+export async function getHighContrast() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
+  return window.localStorage.getItem('high-contrast') === 'true';
+}
+
+export async function setHighContrast(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
-  await Promise.all([
-    del('accent'),
-    del('bg-image'),
-  ]);
+  await del('accent');
+  window.localStorage.removeItem('bg-image');
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');
+  window.localStorage.removeItem('high-contrast');
 }
 
 export async function exportSettings() {
-  const [accent, wallpaper, density, reducedMotion] = await Promise.all([
+  const [accent, wallpaper, density, reducedMotion, fontScale, highContrast] = await Promise.all([
     getAccent(),
     getWallpaper(),
     getDensity(),
     getReducedMotion(),
+    getFontScale(),
+    getHighContrast(),
   ]);
-  return JSON.stringify({ accent, wallpaper, density, reducedMotion });
+  return JSON.stringify({ accent, wallpaper, density, reducedMotion, fontScale, highContrast });
 }
 
 export async function importSettings(json) {
@@ -89,11 +101,13 @@ export async function importSettings(json) {
     console.error('Invalid settings', e);
     return;
   }
-  const { accent, wallpaper, density, reducedMotion } = settings;
+  const { accent, wallpaper, density, reducedMotion, fontScale, highContrast } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
+  if (fontScale !== undefined) await setFontScale(fontScale);
+  if (highContrast !== undefined) await setHighContrast(highContrast);
 }
 
 export const defaults = DEFAULT_SETTINGS;
