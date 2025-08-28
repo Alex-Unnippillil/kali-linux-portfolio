@@ -1,5 +1,7 @@
 import React, { Component } from "react";
 import Image from 'next/image';
+import Badge from '../dock/Badge';
+import { clearDockBadge } from '../../utils/dockBadges';
 
 export class SideBarApp extends Component {
     constructor() {
@@ -27,6 +29,7 @@ export class SideBarApp extends Component {
             this.scaleImage();
         }
         this.props.openApp(this.id);
+        clearDockBadge(this.id);
         this.setState({ showTitle: false });
     };
 
@@ -63,6 +66,7 @@ export class SideBarApp extends Component {
                     alt=""
                     sizes="28px"
                 />
+                <Badge count={this.props.badgeCount} />
                 {
                     (
                         this.props.isClose[this.id] === false

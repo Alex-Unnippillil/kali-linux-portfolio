@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { get, set, createStore } from 'idb-keyval';
+import { updateDockBadge } from '../../utils/dockBadges';
 
 const initialGroups = {
   Today: [],
@@ -44,6 +45,7 @@ export default function Todoist() {
         const { groups: newGroups, taskTitle, to } = e.data || {};
         if (newGroups && taskTitle && to) {
           finalizeMove(newGroups, taskTitle, to);
+          updateDockBadge('todoist');
         }
       };
     }

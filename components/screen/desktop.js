@@ -35,6 +35,7 @@ export class Desktop extends Component {
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
+            badge_counts: {},
         }
     }
 
@@ -49,10 +50,18 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        try {
+            const stored = localStorage.getItem('dock-badges');
+            if (stored) {
+                this.setState({ badge_counts: JSON.parse(stored) });
+            }
+        } catch { }
+        window.addEventListener('dockbadge', this.handleDockBadge);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
+        window.removeEventListener('dockbadge', this.handleDockBadge);
     }
 
     checkForNewFolders = () => {
@@ -151,6 +160,18 @@ export class Desktop extends Component {
             menus[key] = false;
         });
         this.setState({ context_menus: menus, context_app: null });
+    }
+
+    handleDockBadge = (e) => {
+        const { appId, delta = 0, clear } = e.detail || {};
+        if (!appId) return;
+        this.setState(prev => {
+            const current = prev.badge_counts[appId] || 0;
+            const next = clear ? 0 : current + delta;
+            const badge_counts = { ...prev.badge_counts, [appId]: next };
+            try { localStorage.setItem('dock-badges', JSON.stringify(badge_counts)); } catch { }
+            return { badge_counts };
+        });
     }
 
     getMenuPosition = (e) => {
@@ -606,6 +627,7 @@ export class Desktop extends Component {
                     closed_windows={this.state.closed_windows}
                     focused_windows={this.state.focused_windows}
                     isMinimized={this.state.minimized_windows}
+                    badgeCounts={this.state.badge_counts}
                     openAppByAppId={this.openApp} />
 
                 {/* Desktop Apps */}
