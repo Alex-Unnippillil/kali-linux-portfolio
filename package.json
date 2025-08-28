@@ -14,7 +14,7 @@
     "test:watch": "jest --watch",
     "lint": "next lint",
     "a11y": "node scripts/a11y.mjs",
-    "smoke": "node scripts/smoke-all-apps.mjs",
+    "smoke": "jest __tests__/apps.smoke.test.tsx",
     "build:sw": "node scripts/generate-sw.mjs"
   },
   "engines": {
