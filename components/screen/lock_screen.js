@@ -1,6 +1,6 @@
 import React from 'react';
 import Clock from '../util-components/clock';
-import { useSettings } from '../../hooks/useSettings';
+import { useSettings } from '../../hooks/useSettings.js';
 
 export default function LockScreen(props) {
 

@@ -6,7 +6,7 @@ import '../styles/globals.css';
 import '../styles/index.css';
 import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
-import { SettingsProvider } from '../hooks/useSettings';
+import { SettingsProvider } from '../hooks/useSettings.js';
 
 /**
  * @param {import('next/app').AppProps} props

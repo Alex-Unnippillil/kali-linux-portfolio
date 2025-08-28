@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useSettings } from '../../hooks/useSettings';
+import { useSettings } from '../../hooks/useSettings.js';
 import { resetSettings, defaults } from '../../utils/settingsStore';
 
 export function Settings() {

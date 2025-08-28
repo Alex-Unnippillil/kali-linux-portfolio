@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useSettings } from '../../hooks/useSettings';
+import { useSettings } from '../../hooks/useSettings.js';
 
 const MAX_CHARS = 280;
 const RADIUS = 18;

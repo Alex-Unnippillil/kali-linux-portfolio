@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import {
   getTheme as loadTheme,
   setTheme as saveTheme,
@@ -13,27 +13,11 @@ import {
   defaults,
 } from '../utils/settingsStore';
 
-type Theme = 'light' | 'dark' | 'system';
-type Density = 'regular' | 'compact';
-
-interface SettingsContextValue {
-  theme: Theme;
-  accent: string;
-  wallpaper: string;
-  density: Density;
-  reducedMotion: boolean;
-  setTheme: (theme: Theme) => void;
-  setAccent: (accent: string) => void;
-  setWallpaper: (wallpaper: string) => void;
-  setDensity: (density: Density) => void;
-  setReducedMotion: (value: boolean) => void;
-}
-
-export const SettingsContext = createContext<SettingsContextValue>({
-  theme: defaults.theme as Theme,
+export const SettingsContext = createContext({
+  theme: defaults.theme,
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
-  density: defaults.density as Density,
+  density: defaults.density,
   reducedMotion: defaults.reducedMotion,
   setTheme: () => {},
   setAccent: () => {},
@@ -42,19 +26,19 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setReducedMotion: () => {},
 });
 
-export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(defaults.theme as Theme);
-  const [accent, setAccent] = useState<string>(defaults.accent);
-  const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
-  const [density, setDensity] = useState<Density>(defaults.density as Density);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+export function SettingsProvider({ children }) {
+  const [theme, setTheme] = useState(defaults.theme);
+  const [accent, setAccent] = useState(defaults.accent);
+  const [wallpaper, setWallpaper] = useState(defaults.wallpaper);
+  const [density, setDensity] = useState(defaults.density);
+  const [reducedMotion, setReducedMotion] = useState(defaults.reducedMotion);
 
   useEffect(() => {
     (async () => {
-      setTheme((await loadTheme()) as Theme);
+      setTheme(await loadTheme());
       setAccent(await loadAccent());
       setWallpaper(await loadWallpaper());
-      setDensity((await loadDensity()) as Density);
+      setDensity(await loadDensity());
       setReducedMotion(await loadReducedMotion());
     })();
   }, []);
@@ -70,7 +54,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     applyTheme();
     saveTheme(theme);
 
-    let media: MediaQueryList | undefined;
+    let media;
     if (theme === 'system') {
       media = window.matchMedia('(prefers-color-scheme: dark)');
       media.addEventListener('change', applyTheme);
@@ -88,7 +72,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [wallpaper]);
 
   useEffect(() => {
-    const spacing: Record<Density, Record<string, string>> = {
+    const spacing = {
       regular: {
         '--space-1': '0.25rem',
         '--space-2': '0.5rem',
