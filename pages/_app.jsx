@@ -7,6 +7,12 @@ import '../styles/index.css';
 import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
 import { SettingsProvider } from '../hooks/useSettings';
+import { Ubuntu } from 'next/font/google';
+
+const ubuntu = Ubuntu({
+  weight: ['300', '400', '500', '700'],
+  subsets: ['latin'],
+});
 
 /**
  * @param {import('next/app').AppProps} props
@@ -40,7 +46,9 @@ function MyApp({ Component, pageProps }) {
   }, []);
   return (
     <SettingsProvider>
-      <Component {...pageProps} />
+      <main className={ubuntu.className}>
+        <Component {...pageProps} />
+      </main>
       <Analytics />
     </SettingsProvider>
   );
