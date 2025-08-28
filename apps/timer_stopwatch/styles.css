@@ -54,3 +54,12 @@ li {
   border-radius: 4px;
   font-family: 'Courier New', monospace;
 }
+
+@container (max-width: 300px) {
+  .display {
+    font-size: 2rem;
+  }
+  button {
+    width: 100%;
+  }
+}
