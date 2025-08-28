@@ -19,13 +19,20 @@ const Checkers = () => {
   const [moves, setMoves] = useState<Move[]>([]);
   const [winner, setWinner] = useState<string | null>(null);
   const [draw, setDraw] = useState(false);
-  const [history, setHistory] = useState<{ board: Board; turn: string; no: number }[]>([]);
-  const [future, setFuture] = useState<{ board: Board; turn: string; no: number }[]>([]);
+  const [history, setHistory] = useState<
+    { board: Board; turn: string; no: number; move: [number, number][] }[]
+  >([]);
+  const [future, setFuture] = useState<
+    { board: Board; turn: string; no: number; move: [number, number][] }[]
+  >([]);
   const [noCapture, setNoCapture] = useState(0);
   const [hint, setHint] = useState<Move | null>(null);
   const [lastMove, setLastMove] = useState<[number, number][]>([]);
   const [crowned, setCrowned] = useState<[number, number] | null>(null);
   const [ariaMessage, setAriaMessage] = useState('');
+  const [cursor, setCursor] = useState<[number, number]>([0, 0]);
+  const [showLegal, setShowLegal] = useState(false);
+  const boardRef = useRef<HTMLDivElement>(null);
 
   const workerRef = useRef<Worker | null>(null);
   const hintRequest = useRef(false);
@@ -54,8 +61,18 @@ const Checkers = () => {
       const state = JSON.parse(saved);
       setBoard(state.board);
       setTurn(state.turn);
-      setHistory(state.history || []);
-      setFuture(state.future || []);
+      setHistory((state.history || []).map((h: any) => ({
+        board: h.board,
+        turn: h.turn,
+        no: h.no,
+        move: h.move || [],
+      })));
+      setFuture((state.future || []).map((f: any) => ({
+        board: f.board,
+        turn: f.turn,
+        no: f.no,
+        move: f.move || [],
+      })));
       setNoCapture(state.noCapture || 0);
       setWinner(state.winner);
       setDraw(state.draw);
@@ -90,6 +107,7 @@ const Checkers = () => {
   const selectPiece = (r: number, c: number) => {
     const piece = board[r][c];
     if (winner || draw || !piece || piece.color !== turn) return;
+    setCursor([r, c]);
     const pieceMoves = getPieceMoves(board, r, c);
     const mustCapture = allMoves.some((m) => m.captured);
     const filtered = mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
@@ -98,12 +116,15 @@ const Checkers = () => {
       setMoves(filtered);
       setAriaMessage(`${filtered.length} legal move${filtered.length > 1 ? 's' : ''} available`);
     }
+    focusBoard();
   };
 
   const tryMove = (r: number, c: number) => {
     const move = moves.find((m) => m.to[0] === r && m.to[1] === c);
     if (!move) return;
     makeMove(move);
+    setCursor([r, c]);
+    focusBoard();
   };
 
     const makeMove = (move: Move) => {
@@ -134,7 +155,10 @@ const Checkers = () => {
       setNoCapture(0);
       return;
     }
-    const newHistory = [...history, { board, turn, no: noCapture }];
+    const newHistory = [
+      ...history,
+      { board, turn, no: noCapture, move: pathRef.current },
+    ];
     setHistory(newHistory);
     setFuture([]);
     const next = turn === 'red' ? 'black' : 'red';
@@ -174,6 +198,7 @@ const Checkers = () => {
     setLastMove(pathRef.current);
     setAriaMessage('');
     pathRef.current = [];
+    focusBoard();
     };
 
     makeMoveRef.current = makeMove;
@@ -194,13 +219,15 @@ const Checkers = () => {
     setCrowned(null);
     setAriaMessage('');
     pathRef.current = [];
+    setCursor([0, 0]);
     localStorage.removeItem('checkersState');
+    focusBoard();
   };
 
   const undo = () => {
     if (!history.length) return;
     const prev = history[history.length - 1];
-    setFuture([{ board, turn, no: noCapture }, ...future]);
+    setFuture([{ board, turn, no: noCapture, move: lastMove }, ...future]);
     setBoard(prev.board);
     setTurn(prev.turn as 'red' | 'black');
     setNoCapture(prev.no);
@@ -210,16 +237,17 @@ const Checkers = () => {
     setSelected(null);
     setMoves([]);
     setHint(null);
-    setLastMove([]);
+    setLastMove(prev.move || []);
     if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
     setAriaMessage('');
     pathRef.current = [];
+    focusBoard();
   };
 
   const redo = () => {
     if (!future.length) return;
     const next = future[0];
-    setHistory([...history, { board, turn, no: noCapture }]);
+    setHistory([...history, { board, turn, no: noCapture, move: lastMove }]);
     setBoard(next.board);
     setTurn(next.turn as 'red' | 'black');
     setNoCapture(next.no);
@@ -229,18 +257,69 @@ const Checkers = () => {
     setSelected(null);
     setMoves([]);
     setHint(null);
-    setLastMove([]);
+    setLastMove(next.move || []);
     if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
     setAriaMessage('');
     pathRef.current = [];
     if (next.turn === 'black') {
       workerRef.current?.postMessage({ board: next.board, color: 'black', maxDepth: 8 });
     }
+    focusBoard();
   };
 
   const hintMove = () => {
     hintRequest.current = true;
     workerRef.current?.postMessage({ board, color: turn, maxDepth: 8 });
+    focusBoard();
+  };
+
+  const toggleShowLegal = () => {
+    setShowLegal((s) => !s);
+    setAriaMessage(showLegal ? 'Hiding legal moves' : 'Showing legal moves');
+    focusBoard();
+  };
+
+  const focusBoard = () => boardRef.current?.focus();
+
+  useEffect(() => {
+    focusBoard();
+  }, []);
+
+  const handleKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    let [r, c] = cursor;
+    if (e.key === 'ArrowUp') {
+      r = Math.max(0, r - 1);
+    } else if (e.key === 'ArrowDown') {
+      r = Math.min(7, r + 1);
+    } else if (e.key === 'ArrowLeft') {
+      c = Math.max(0, c - 1);
+    } else if (e.key === 'ArrowRight') {
+      c = Math.min(7, c + 1);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      selected ? tryMove(r, c) : selectPiece(r, c);
+      return;
+    } else if (e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      undo();
+      return;
+    } else if (e.key.toLowerCase() === 'y') {
+      e.preventDefault();
+      redo();
+      return;
+    } else if (e.key.toLowerCase() === 'h') {
+      e.preventDefault();
+      hintMove();
+      return;
+    } else if (e.key.toLowerCase() === 'l') {
+      e.preventDefault();
+      toggleShowLegal();
+      return;
+    }
+    if (r !== cursor[0] || c !== cursor[1]) {
+      e.preventDefault();
+      setCursor([r, c]);
+    }
   };
 
   return (
@@ -250,7 +329,13 @@ const Checkers = () => {
       </div>
       {winner && <div className="mb-2 text-xl">{winner} wins!</div>}
       {draw && <div className="mb-2 text-xl">Draw!</div>}
-      <div className="grid grid-cols-8 gap-0">
+      <div
+        ref={boardRef}
+        tabIndex={0}
+        onKeyDown={handleKey}
+        aria-label="Checkers board"
+        className="grid grid-cols-8 gap-0 outline-none"
+      >
         {board.map((row, r) =>
           row.map((cell, c) => {
             const isDark = (r + c) % 2 === 1;
@@ -260,6 +345,8 @@ const Checkers = () => {
             const isSelected = selected && selected[0] === r && selected[1] === c;
             const isLast = lastMove.some((p) => p[0] === r && p[1] === c);
             const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
+            const isCursor = cursor[0] === r && cursor[1] === c;
+            const showMove = showLegal && isMove;
             return (
               <div
                 key={`${r}-${c}`}
@@ -269,7 +356,7 @@ const Checkers = () => {
                 className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
                   isDark ? 'bg-gray-700' : 'bg-gray-400'
                 } ${
-                  isMove
+                  showMove
                     ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-black drop-shadow-[0_0_8px_#fbbf24] motion-safe:animate-glow'
                     : ''
                 } ${
@@ -278,7 +365,7 @@ const Checkers = () => {
                     : ''
                 } ${isSelected ? 'ring-2 ring-green-400' : ''} ${
                   isLast ? 'ring-2 ring-red-400' : ''
-                }`}
+                } ${isCursor ? 'ring-2 ring-yellow-300' : ''}`}
               >
                 {cell && (
                   <div
@@ -326,6 +413,13 @@ const Checkers = () => {
               onClick={hintMove}
             >
               Hint
+            </button>
+            <button
+              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={toggleShowLegal}
+              aria-pressed={showLegal}
+            >
+              {showLegal ? 'Hide Moves' : 'Show Moves'}
             </button>
           </>
         )}
