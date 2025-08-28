@@ -1,22 +1,11 @@
 import { get, set, del } from 'idb-keyval';
 
 const DEFAULT_SETTINGS = {
-  theme: 'system',
-  accent: 'var(--color-primary)',
+  accent: '#1793d1',
   wallpaper: 'wall-2',
   density: 'regular',
   reducedMotion: false,
 };
-
-export async function getTheme() {
-  if (typeof window === 'undefined') return DEFAULT_SETTINGS.theme;
-  return (await get('theme')) || DEFAULT_SETTINGS.theme;
-}
-
-export async function setTheme(theme) {
-  if (typeof window === 'undefined') return;
-  await set('theme', theme);
-}
 
 export async function getAccent() {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS.accent;
@@ -61,7 +50,6 @@ export async function setReducedMotion(value) {
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
-    del('theme'),
     del('accent'),
     del('bg-image'),
   ]);

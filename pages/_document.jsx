@@ -15,7 +15,7 @@ class MyDocument extends Document {
       <Html lang="en">
         <Head>
           <link rel="manifest" href="/manifest.webmanifest" />
-          <meta name="theme-color" content="#000000" />
+          <meta name="theme-color" content="#0f1317" />
           <Script src="/theme.js" strategy="beforeInteractive" />
         </Head>
         <body>

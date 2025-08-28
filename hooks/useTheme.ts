@@ -1,1 +1,1 @@
-export const useTheme = () => ({ theme: 'light', setTheme: () => {} });
+export const useTheme = () => ({ theme: 'kali', setTheme: () => {} });
