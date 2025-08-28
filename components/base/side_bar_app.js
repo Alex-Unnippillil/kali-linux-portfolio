@@ -13,7 +13,35 @@ export class SideBarApp extends Component {
 
     componentDidMount() {
         this.id = this.props.id;
+        this.updateBadge();
     }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.notifications !== this.props.notifications || prevProps.tasks !== this.props.tasks) {
+            this.updateBadge();
+        }
+    }
+
+    updateBadge = () => {
+        if (typeof navigator === 'undefined') return;
+        const hasSet = 'setAppBadge' in navigator;
+        const hasClear = 'clearAppBadge' in navigator;
+        if (!hasSet && !hasClear) return;
+
+        const notifications = Array.isArray(this.props.notifications)
+            ? this.props.notifications.length
+            : (typeof this.props.notifications === 'number' ? this.props.notifications : 0);
+        const tasks = Array.isArray(this.props.tasks)
+            ? this.props.tasks.length
+            : (typeof this.props.tasks === 'number' ? this.props.tasks : 0);
+        const count = notifications + tasks;
+
+        if (count > 0 && hasSet) {
+            navigator.setAppBadge(count).catch(() => {});
+        } else if (hasClear) {
+            navigator.clearAppBadge().catch(() => {});
+        }
+    };
 
     scaleImage = () => {
         setTimeout(() => {
