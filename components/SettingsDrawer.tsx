@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { getTheme, setTheme, getUnlockedThemes } from '../utils/theme';
+import { useSettings } from '../hooks/useSettings';
 
 interface Props {
   highScore?: number;
@@ -9,6 +10,7 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const [theme, setThemeState] = useState(getTheme());
   const unlocked = getUnlockedThemes(highScore);
+  const { accent, setAccent } = useSettings();
 
   const changeTheme = (t: string) => {
     setThemeState(t);
@@ -35,6 +37,15 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                 </option>
               ))}
             </select>
+          </label>
+          <label>
+            Accent
+            <input
+              aria-label="accent-color-picker"
+              type="color"
+              value={accent}
+              onChange={(e) => setAccent(e.target.value)}
+            />
           </label>
         </div>
       )}
