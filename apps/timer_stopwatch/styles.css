@@ -23,8 +23,16 @@ button {
   font-weight: bold;
 }
 
-.tab-panel[hidden] {
-  display: none;
+@supports (content-visibility: auto) {
+  .tab-panel[hidden] {
+    content-visibility: auto;
+  }
+}
+
+@supports not (content-visibility: auto) {
+  .tab-panel[hidden] {
+    display: none;
+  }
 }
 input {
   width: 60px;
