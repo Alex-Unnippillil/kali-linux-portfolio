@@ -1,21 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import LegalInterstitial from '../../components/ui/LegalInterstitial';
+import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 
-const HTTPPreview: React.FC = () => {
-  const [accepted, setAccepted] = useState(false);
+const HTTPBuilder: React.FC = () => {
   const [method, setMethod] = useState('GET');
   const [url, setUrl] = useState('');
-
   const command = `curl -X ${method} ${url}`.trim();
 
-  if (!accepted) {
-    return <LegalInterstitial onAccept={() => setAccepted(true)} />;
-  }
-
   return (
-    <div className="min-h-screen bg-gray-900 p-4 text-white">
+    <div className="h-full bg-gray-900 p-4 text-white overflow-auto">
       <h1 className="mb-4 text-2xl">HTTP Request Builder</h1>
       <p className="mb-4 text-sm text-yellow-300">
         Build a curl command without sending any requests. Learn more at{' '}
@@ -66,6 +61,28 @@ const HTTPPreview: React.FC = () => {
         </pre>
       </div>
     </div>
+  );
+};
+
+const HTTPPreview: React.FC = () => {
+  const [accepted, setAccepted] = useState(false);
+  const countRef = useRef(1);
+
+  if (!accepted) {
+    return <LegalInterstitial onAccept={() => setAccepted(true)} />;
+  }
+
+  const createTab = (): TabDefinition => {
+    const id = Date.now().toString();
+    return { id, title: `Request ${countRef.current++}`, content: <HTTPBuilder /> };
+  };
+
+  return (
+    <TabbedWindow
+      className="min-h-screen bg-gray-900 text-white"
+      initialTabs={[createTab()]}
+      onNewTab={createTab}
+    />
   );
 };
 
