@@ -1,19 +1,2 @@
 @import './tokens.css';
 
-/* Accessible theme color palette meeting WCAG AA contrast ratios */
-:root {
-  /* Base colors */
-  --color-bg: #0f1317; /* kali background */
-  --color-text: #f5f5f5; /* text on dark backgrounds */
-  /* Brand accents */
-  --color-primary: #1793d1; /* kali blue accent */
-  --color-secondary: #1a1f26; /* complementary dark */
-  --color-accent: #1793d1; /* accent matches primary */
-  /* Utility colors */
-  --color-muted: #2a2e36; /* muted surfaces */
-  --color-surface: #1a1f26; /* panel surfaces */
-  --color-inverse: #000000; /* inverse of text */
-  --color-border: #2a2e36; /* subtle borders */
-  --color-terminal: #00ff00; /* terminal green */
-  --color-dark: #0c0f12; /* card back */
-}

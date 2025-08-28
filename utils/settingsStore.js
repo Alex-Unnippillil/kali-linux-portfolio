@@ -5,6 +5,7 @@ const DEFAULT_SETTINGS = {
   wallpaper: 'wall-2',
   density: 'regular',
   reducedMotion: false,
+  highContrast: false,
 };
 
 export async function getAccent() {
@@ -47,6 +48,18 @@ export async function setReducedMotion(value) {
   window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
 }
 
+export async function getHighContrast() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
+  const stored = window.localStorage.getItem('high-contrast');
+  if (stored !== null) return stored === 'true';
+  return window.matchMedia('(prefers-contrast: more)').matches;
+}
+
+export async function setHighContrast(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -55,6 +68,7 @@ export async function resetSettings() {
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
+  window.localStorage.removeItem('high-contrast');
 }
 
 export const defaults = DEFAULT_SETTINGS;
