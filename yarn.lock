@@ -4359,6 +4359,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"chrono-node@npm:^2.8.4":
+  version: 2.8.4
+  resolution: "chrono-node@npm:2.8.4"
+  dependencies:
+    dayjs: "npm:^1.10.0"
+  checksum: 10c0/675acdd2945a093b17511a2c112751f7f858b526ded90bc82d922b37173af9fbceaec0a00fbdf61a099bd4f26d12497bc6e5e2740c66eb04ebcfcef63806011c
+  languageName: node
+  linkType: hard
+
 "ci-info@npm:^4.2.0":
   version: 4.3.0
   resolution: "ci-info@npm:4.3.0"
@@ -4873,6 +4882,13 @@ __metadata:
   version: 4.1.0
   resolution: "date-fns@npm:4.1.0"
   checksum: 10c0/b79ff32830e6b7faa009590af6ae0fb8c3fd9ffad46d930548fbb5acf473773b4712ae887e156ba91a7b3dc30591ce0f517d69fd83bd9c38650fdc03b4e0bac8
+  languageName: node
+  linkType: hard
+
+"dayjs@npm:^1.10.0":
+  version: 1.11.15
+  resolution: "dayjs@npm:1.11.15"
+  checksum: 10c0/bb66cd5419fff017f3950b95fc27643cf4e0ce22a087cef1f67398f18126ed07bf36d6911f33b19029a1621c64090b8ecaef660477de7678287fe8c0f4e68d29
   languageName: node
   linkType: hard
 
@@ -11236,6 +11252,7 @@ __metadata:
     bad-words: "npm:^3.0.4"
     canvas-confetti: "npm:1.9.3"
     chess.js: "npm:^1.0.0"
+    chrono-node: "npm:^2.8.4"
     cytoscape: "npm:^3.33.1"
     cytoscape-cose-bilkent: "npm:^4.1.0"
     dompurify: "npm:^3.2.6"
