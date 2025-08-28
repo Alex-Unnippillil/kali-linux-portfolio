@@ -33,8 +33,10 @@ export default async function handler(req, res) {
   try {
     await execFileAsync('which', ['hydra']);
   } catch {
-    await fs.unlink(userPath).catch(() => {});
-    await fs.unlink(passPath).catch(() => {});
+    await Promise.all([
+      fs.unlink(userPath).catch(() => {}),
+      fs.unlink(passPath).catch(() => {}),
+    ]);
     res.status(500).json({ error: 'Hydra not installed' });
     return;
   }
@@ -48,7 +50,9 @@ export default async function handler(req, res) {
     const msg = error.stderr?.toString() || error.message;
     res.status(500).json({ error: msg });
   } finally {
-    fs.unlink(userPath).catch(() => {});
-    fs.unlink(passPath).catch(() => {});
+    await Promise.all([
+      fs.unlink(userPath).catch(() => {}),
+      fs.unlink(passPath).catch(() => {}),
+    ]);
   }
 }
