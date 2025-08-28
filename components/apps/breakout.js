@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
+import seedrandom from "seedrandom";
 import levelsData from "./breakout-levels.json";
 import GameLayout from "./GameLayout";
 
@@ -78,7 +79,9 @@ const LevelEditor = ({ onSave, cols = 8, rows = 5 }) => {
   );
 };
 
-const BreakoutGame = ({ levels }) => {
+export const createRng = (seed) => (seed ? seedrandom(seed) : Math.random);
+
+const BreakoutGame = ({ levels, seed }) => {
   const canvasRef = useRef(null);
   const [level, setLevel] = useState(0);
   const scoreRef = useRef(0);
@@ -124,6 +127,13 @@ const BreakoutGame = ({ levels }) => {
     soundRef.current = !soundRef.current;
     setSoundOn(soundRef.current);
   };
+
+  const rngRef = useRef(createRng(seed));
+  useEffect(() => {
+    rngRef.current = createRng(seed);
+  }, [seed]);
+
+  const rand = () => rngRef.current();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -289,8 +299,8 @@ const BreakoutGame = ({ levels }) => {
             } else {
               const impactAngle = Math.atan2(ball.vy, ball.vx);
               for (let s = 0; s < 8; s += 1) {
-                const spread = (Math.random() - 0.5) * (Math.PI / 3);
-                const speed = 100 + Math.random() * 100;
+                const spread = (rand() - 0.5) * (Math.PI / 3);
+                const speed = 100 + rand() * 100;
                 shards.push({
                   x: ball.x,
                   y: ball.y,
@@ -302,8 +312,8 @@ const BreakoutGame = ({ levels }) => {
             }
 
             // 20% chance to spawn a power-up
-            if (Math.random() < 0.2) {
-              const type = Math.random() < 0.5 ? "multi" : "expand";
+            if (rand() < 0.2) {
+              const type = rand() < 0.5 ? "multi" : "expand";
               const color = type === "multi" ? "#e11d48" : "#3b82f6"; // red vs blue
               powerUps.push({
                 x: brick.x + brick.w / 2,
@@ -530,7 +540,7 @@ const BreakoutGame = ({ levels }) => {
   );
 };
 
-const Breakout = () => {
+const Breakout = ({ seed }) => {
   const [levels, setLevels] = useState(levelsData || []);
 
   useEffect(() => {
@@ -552,7 +562,7 @@ const Breakout = () => {
 
   return (
     <GameLayout editor={<LevelEditor onSave={addLevel} />}>
-      <BreakoutGame levels={levels} />
+      <BreakoutGame levels={levels} seed={seed} />
     </GameLayout>
   );
 };
