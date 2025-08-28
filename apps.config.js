@@ -62,6 +62,7 @@ const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
+const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
 
 
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
@@ -138,6 +139,7 @@ const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuoteGenerator = createDisplay(QuoteGeneratorApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
+const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 
 const displayGhidra = createDisplay(GhidraApp);
@@ -855,6 +857,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayWeatherWidget,
+  },
+  {
+    id: 'serial-terminal',
+    title: 'Serial Terminal',
+    icon: './themes/Yaru/apps/bash.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displaySerialTerminal,
   },
   {
     id: 'radare2',
