@@ -103,13 +103,11 @@ const saveReplay = (replay: any) => {
 };
 
 const Page2048 = () => {
-  const rngRef = useRef(mulberry32(todaySeed()));
-  const [board, setBoard] = useState<number[][]>(() => {
-    const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-    addRandomTile(b, rngRef.current);
-    addRandomTile(b, rngRef.current);
-    return b;
-  });
+  const rngRef = useRef(mulberry32(0));
+  const seedRef = useRef(0);
+  const [board, setBoard] = useState<number[][]>(
+    Array.from({ length: SIZE }, () => Array(SIZE).fill(0))
+  );
   const [hard, setHard] = useState(false);
   const [timer, setTimer] = useState(3);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -118,6 +116,17 @@ const Page2048 = () => {
   const [boardType, setBoardType] = useState<'classic' | 'hex'>('classic');
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
+
+  useEffect(() => {
+    const seed = todaySeed();
+    const rand = mulberry32(seed);
+    const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+    addRandomTile(b, rand);
+    addRandomTile(b, rand);
+    setBoard(b);
+    rngRef.current = rand;
+    seedRef.current = seed;
+  }, []);
 
   const resetTimer = useCallback(() => {
     if (!hard) return;
@@ -178,7 +187,7 @@ const Page2048 = () => {
   }, [handleMove]);
 
   const reset = () => {
-    const rand = mulberry32(todaySeed());
+    const rand = mulberry32(seedRef.current);
     rngRef.current = rand;
     const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
     addRandomTile(b, rand);
