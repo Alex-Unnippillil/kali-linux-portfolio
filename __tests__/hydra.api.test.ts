@@ -10,11 +10,17 @@ async function cleanup() {
 }
 
 describe('Hydra API temp file cleanup', () => {
+  beforeEach(() => {
+    process.env.FEATURE_TOOL_APIS = 'enabled';
+    process.env.FEATURE_HYDRA = 'enabled';
+  });
   afterEach(async () => {
     jest.resetModules();
     jest.dontMock('child_process');
     jest.dontMock('crypto');
     await cleanup();
+    delete process.env.FEATURE_TOOL_APIS;
+    delete process.env.FEATURE_HYDRA;
   });
 
   it('removes temp files after successful run', async () => {

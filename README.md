@@ -122,6 +122,8 @@ Heavy apps are wrapped with **dynamic import** and most games share a `GameLayou
 | `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
+| `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
+| `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
 
 > In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
 
