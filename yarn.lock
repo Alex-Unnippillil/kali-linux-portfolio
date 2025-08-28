@@ -7586,7 +7586,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"playwright-core@npm:1.55.0":
+"playwright-core@npm:1.55.0, playwright-core@npm:^1.55.0":
   version: 1.55.0
   resolution: "playwright-core@npm:1.55.0"
   bin:
@@ -9481,6 +9481,7 @@ __metadata:
     pa11y-ci: "npm:^4.0.1"
     pdfjs-dist: "npm:^5.4.54"
     phaser: "npm:3.70.0"
+    playwright-core: "npm:^1.55.0"
     postcss: "npm:^8.4.21"
     prop-types: "npm:^15.8.1"
     qr-code-styling: "npm:^1.9.2"
