@@ -4636,13 +4636,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"expr-eval@npm:^2.0.2":
-  version: 2.0.2
-  resolution: "expr-eval@npm:2.0.2"
-  checksum: 10c0/642f112ff28ea34574c595c3ad73ccd8e638498879a4dd28620c4dabebab2e11987a851266ba81883dae85a5800e0c93b3d06f81718b71a215f831534646e4f2
-  languageName: node
-  linkType: hard
-
 "extract-zip@npm:^2.0.1":
   version: 2.0.1
   resolution: "extract-zip@npm:2.0.1"
@@ -9655,7 +9648,6 @@ __metadata:
     dompurify: "npm:^3.2.6"
     eslint: "npm:^9.13.0"
     eslint-config-next: "npm:^15.0.0"
-    expr-eval: "npm:^2.0.2"
     fake-indexeddb: "npm:^6.1.0"
     figlet: "npm:^1.8.2"
     howler: "npm:^2.2.4"
