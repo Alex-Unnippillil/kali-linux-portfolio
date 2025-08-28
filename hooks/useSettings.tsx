@@ -8,6 +8,8 @@ import {
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
   setReducedMotion as saveReducedMotion,
+  getAnalytics as loadAnalytics,
+  setAnalytics as saveAnalytics,
   defaults,
 } from '../utils/settingsStore';
 type Density = 'regular' | 'compact';
@@ -17,10 +19,12 @@ interface SettingsContextValue {
   wallpaper: string;
   density: Density;
   reducedMotion: boolean;
+  analytics: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
+  setAnalytics: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -28,10 +32,12 @@ export const SettingsContext = createContext<SettingsContextValue>({
   wallpaper: defaults.wallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
+  analytics: defaults.analytics,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
+  setAnalytics: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -39,6 +45,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+  const [analytics, setAnalytics] = useState<boolean>(defaults.analytics);
 
   useEffect(() => {
     (async () => {
@@ -46,6 +53,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
+      setAnalytics(await loadAnalytics());
     })();
   }, []);
 
@@ -89,8 +97,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
 
+  useEffect(() => {
+    saveAnalytics(analytics);
+  }, [analytics]);
+
   return (
-    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, setAccent, setWallpaper, setDensity, setReducedMotion }}>
+    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, analytics, setAccent, setWallpaper, setDensity, setReducedMotion, setAnalytics }}>
       {children}
     </SettingsContext.Provider>
   );

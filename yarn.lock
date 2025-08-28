@@ -9684,6 +9684,7 @@ __metadata:
     turndown: "npm:^7.2.1"
     typescript: "npm:^5.9.2"
     wait-on: "npm:^8.0.4"
+    web-vitals: "npm:^5.1.0"
     zod: "npm:^3.23.8"
   languageName: unknown
   linkType: soft
@@ -9844,6 +9845,13 @@ __metadata:
   dependencies:
     makeerror: "npm:1.0.12"
   checksum: 10c0/a17e037bccd3ca8a25a80cb850903facdfed0de4864bd8728f1782370715d679fa72e0a0f5da7c1c1379365159901e5935f35be531229da53bbfc0efdabdb48e
+  languageName: node
+  linkType: hard
+
+"web-vitals@npm:^5.1.0":
+  version: 5.1.0
+  resolution: "web-vitals@npm:5.1.0"
+  checksum: 10c0/1af22ddbe2836ba880fcb492cfba24c3349f4760ebb5e92f38324ea67bca3c4dbb9c86f1a32af4795b6115cdaf98b90000cf3a7402bffef6e8c503f0d1b2e706
   languageName: node
   linkType: hard
 

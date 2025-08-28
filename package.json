@@ -64,6 +64,7 @@
     "tailwindcss": "^3.2.4",
     "three": "^0.179.1",
     "turndown": "^7.2.1",
+    "web-vitals": "^5.1.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
