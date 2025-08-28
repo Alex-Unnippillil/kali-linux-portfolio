@@ -7,6 +7,7 @@ import {
   evaluateBoard,
   bitCount,
   hasMoves,
+  isDraw,
 } from '../components/apps/checkers/engine';
 
 test('forced jumps are enforced', () => {
@@ -129,4 +130,11 @@ test('stalemate detection', () => {
   board[1][2] = { color: 'red', king: false };
   board[2][3] = { color: 'red', king: false };
   expect(hasMoves(board, 'black')).toBe(false);
+});
+
+test('detect draw by repeated positions', () => {
+  const board = createBoard();
+  const map = new Map<string, number>();
+  map.set(JSON.stringify(board), 3);
+  expect(isDraw(0, map)).toBe(true);
 });

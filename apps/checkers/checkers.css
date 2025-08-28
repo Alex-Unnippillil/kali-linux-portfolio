@@ -3,5 +3,5 @@
 }
 
 .move-square {
-  @apply ring-2 ring-yellow-300 animate-pulse;
+  @apply ring-2 ring-yellow-300 bg-yellow-200/40 animate-pulse;
 }
