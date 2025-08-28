@@ -140,7 +140,7 @@ function About() {
                         className=" underline cursor-pointer"
                         href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf"
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                     >
                         Nuclear Engineering
                     </a>{" "}
@@ -149,7 +149,7 @@ function About() {
                         className=" underline cursor-pointer"
                         href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf"
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                     >
                         Networking and I.T. Security
                     </a>
@@ -165,7 +165,7 @@ function About() {
                         className=" underline cursor-pointer"
                         href="https://www.youtube.com/@Alex-Unnippillil/playlists"
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                     >
                         YouTube videos
                     </a>{" "}and{" "}
@@ -173,7 +173,7 @@ function About() {
                         className=" underline cursor-pointer"
                         href="https://myanimelist.net/animelist/alex_u"
                         target="_blank"
-                        rel="noreferrer"
+                        rel="noopener noreferrer"
                     >
                         anime
                     </a>
