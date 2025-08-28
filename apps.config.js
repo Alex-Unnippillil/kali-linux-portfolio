@@ -6,7 +6,7 @@ import { displayVsCode } from './components/apps/vscode';
 import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/Chrome';
 import { displayTrash } from './components/apps/trash';
-import { displayGedit } from './components/apps/gedit';
+import { displayContact } from './components/apps/contact';
 import { displayTodoist } from './components/apps/todoist';
 import { displayYouTube } from './components/apps/youtube';
 import { displayWeather } from './components/apps/weather';
@@ -711,7 +711,7 @@ const apps = [
     disabled: false,
     favourite: false,
     desktop_shortcut: true,
-    screen: displayGedit,
+    screen: displayContact,
   },
   {
     id: 'converter',
