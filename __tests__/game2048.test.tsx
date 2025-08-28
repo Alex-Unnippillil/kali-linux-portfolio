@@ -33,6 +33,36 @@ test('merge triggers animation', () => {
   expect(firstCell?.querySelector('.merge-ripple')).toBeTruthy();
 });
 
+test('score persists in localStorage', async () => {
+  window.localStorage.setItem('2048-board', JSON.stringify([
+    [2, 2, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+  ]));
+  const { unmount } = render(<Game2048 />);
+  fireEvent.keyDown(window, { key: 'ArrowLeft' });
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 0));
+  });
+  expect(window.localStorage.getItem('2048-score')).toBe('4');
+  unmount();
+  const { getByText } = render(<Game2048 />);
+  expect(getByText(/Score:/).textContent).toContain('4');
+});
+
+test('ignores browser key repeat events', () => {
+  window.localStorage.setItem('2048-board', JSON.stringify([
+    [2, 2, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+  ]));
+  const { getByText } = render(<Game2048 />);
+  fireEvent.keyDown(window, { key: 'ArrowLeft', repeat: true });
+  expect(getByText(/Moves: 0/)).toBeTruthy();
+});
+
 test('tracks moves and allows multiple undos', async () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
