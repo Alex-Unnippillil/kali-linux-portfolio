@@ -1,0 +1,17 @@
+[
+  {
+    "name": "pslist",
+    "description": "List running processes.",
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/pslist.html"
+  },
+  {
+    "name": "netscan",
+    "description": "Scan for network connections.",
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/netscan.html"
+  },
+  {
+    "name": "malfind",
+    "description": "Find hidden or injected code sections.",
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/malfind.html"
+  }
+]

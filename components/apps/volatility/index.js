@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import MemoryHeatmap from './MemoryHeatmap';
+import PluginBrowser from './PluginBrowser';
+import memoryDemo from '../../../public/demo-data/volatility/memory.json';
 
 const demoPslist = [
   { pid: 4, ppid: 0, name: 'System' },
@@ -74,7 +76,6 @@ const SortableTable = ({ columns, data }) => {
 };
 
 const VolatilityApp = () => {
-  const [file, setFile] = useState(null);
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [heatmapData, setHeatmapData] = useState([]);
@@ -85,24 +86,18 @@ const VolatilityApp = () => {
     if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
       workerRef.current = new Worker(new URL('./heatmap.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => setHeatmapData(e.data);
+      workerRef.current.postMessage({ segments: memoryDemo.segments });
     }
     return () => workerRef.current?.terminate();
   }, []);
 
   const analyze = async () => {
-    if (!file) return;
     setLoading(true);
     setOutput('');
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      const res = await fetch('/api/volatility', {
-        method: 'POST',
-        body: formData,
-      });
-      const text = await res.text();
-      setOutput(text);
-      workerRef.current?.postMessage({ cols: 100, rows: 60 });
+      // Simulated analysis using static demo data
+      workerRef.current?.postMessage({ segments: memoryDemo.segments });
+      setOutput('Analysis simulated with demo memory plugin output.');
     } catch (err) {
       setOutput('Analysis failed');
     } finally {
@@ -113,14 +108,9 @@ const VolatilityApp = () => {
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
       <div className="p-4 space-y-2">
-        <input
-          type="file"
-          onChange={(e) => setFile(e.target.files[0])}
-          className="w-full text-black"
-        />
         <button
           onClick={analyze}
-          disabled={!file || loading}
+          disabled={loading}
           className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
         >
           {loading ? 'Analyzing...' : 'Analyze'}
@@ -129,7 +119,7 @@ const VolatilityApp = () => {
       <MemoryHeatmap data={heatmapData} />
       <div className="flex-1 flex flex-col">
         <div className="flex space-x-2 px-2 bg-gray-900">
-          {['pslist', 'netscan', 'malfind'].map((tab) => (
+          {['pslist', 'netscan', 'malfind', 'plugins'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -174,6 +164,7 @@ const VolatilityApp = () => {
               data={demoMalfind}
             />
           )}
+          {activeTab === 'plugins' && <PluginBrowser />}
         </div>
       </div>
       {output && (
