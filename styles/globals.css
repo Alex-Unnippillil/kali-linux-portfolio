@@ -3,17 +3,17 @@
 /* Accessible theme color palette meeting WCAG AA contrast ratios */
 :root {
   /* Base colors */
-  --color-bg: #121212; /* background, 17.18:1 vs --color-text */
+  --color-bg: #0f1317; /* kali background */
   --color-text: #f5f5f5; /* text on dark backgrounds */
   /* Brand accents */
-  --color-primary: #e95420; /* 5.13:1 on --color-bg */
-  --color-secondary: #77216f; /* 8.63:1 vs --color-text */
-  --color-accent: #00a36c; /* 5.76:1 on --color-bg */
+  --color-primary: #1793d1; /* kali blue accent */
+  --color-secondary: #1a1f26; /* complementary dark */
+  --color-accent: #1793d1; /* accent matches primary */
   /* Utility colors */
-  --color-muted: #333333; /* 11.59:1 vs --color-text */
-  --color-surface: #ffffff; /* light surfaces, 15.3:1 vs --color-bg */
+  --color-muted: #2a2e36; /* muted surfaces */
+  --color-surface: #1a1f26; /* panel surfaces */
   --color-inverse: #000000; /* inverse of text */
-  --color-border: #d3d7cf; /* subtle borders */
-  --color-terminal: #00ff00; /* terminal green, 15.3:1 on --color-inverse */
-  --color-dark: #1f2937; /* card back */
+  --color-border: #2a2e36; /* subtle borders */
+  --color-terminal: #00ff00; /* terminal green */
+  --color-dark: #0c0f12; /* card back */
 }

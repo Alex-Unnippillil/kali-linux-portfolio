@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useSettings } from '../../hooks/useSettings';
 
 const MAX_CHARS = 280;
 const RADIUS = 18;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function XApp() {
-  const { theme } = useSettings();
+  const theme = 'dark';
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [timelineKey, setTimelineKey] = useState(0);
@@ -128,7 +127,7 @@ export default function XApp() {
       clearTimeout(timeout);
       script && script.removeEventListener('error', handleError);
     };
-  }, [theme, timelineKey, shouldLoadTimeline]);
+  }, [timelineKey, shouldLoadTimeline]);
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col tweet-container">

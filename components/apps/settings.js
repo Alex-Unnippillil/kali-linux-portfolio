@@ -3,7 +3,7 @@ import { useSettings } from '../../hooks/useSettings';
 import { resetSettings, defaults } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { theme, setTheme, accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
 
@@ -52,23 +52,11 @@ export function Settings() {
             }
         });
         return () => cancelAnimationFrame(raf);
-    }, [accent, theme, accentText, contrastRatio]);
+    }, [accent, accentText, contrastRatio]);
 
     return (
         <div className={"w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"}>
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
-            </div>
-            <div className="flex justify-center my-4">
-                <label className="mr-2 text-ubt-grey">Theme:</label>
-                <select
-                    value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
-                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
-                >
-                    <option value="system">System</option>
-                    <option value="dark">Dark</option>
-                    <option value="light">Light</option>
-                </select>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
@@ -105,7 +93,7 @@ export function Settings() {
             <div className="flex justify-center my-4">
                 <div
                     className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
-                    style={{ backgroundColor: theme === 'dark' ? '#000000' : '#ffffff', color: theme === 'dark' ? '#ffffff' : '#000000' }}
+                    style={{ backgroundColor: '#0f1317', color: '#ffffff' }}
                 >
                     <p className="mb-2 text-center">Preview</p>
                     <button
@@ -146,7 +134,7 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4">
                 <button
-                    onClick={async () => { await resetSettings(); setTheme(defaults.theme); setAccent(defaults.accent); setWallpaper(defaults.wallpaper); setDensity(defaults.density); setReducedMotion(defaults.reducedMotion); }}
+                    onClick={async () => { await resetSettings(); setAccent(defaults.accent); setWallpaper(defaults.wallpaper); setDensity(defaults.density); setReducedMotion(defaults.reducedMotion); }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
                     Reset Desktop

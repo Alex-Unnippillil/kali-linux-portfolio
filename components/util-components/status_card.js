@@ -27,8 +27,7 @@ export class StatusCard extends Component {
                 this.wrapperRef = React.createRef();
                 this.state = {
                         sound_level: 75, // better of setting default values from localStorage
-                        brightness_level: 100, // setting default value to 100 so that by default its always full.
-                        theme: 'dark'
+                        brightness_level: 100 // setting default value to 100 so that by default its always full.
                 };
         }
         handleClickOutside = () => {
@@ -37,8 +36,7 @@ export class StatusCard extends Component {
         componentDidMount() {
                 this.setState({
                         sound_level: localStorage.getItem('sound-level') || 75,
-                        brightness_level: localStorage.getItem('brightness-level') || 100,
-                        theme: document.documentElement.dataset.theme || 'dark'
+                        brightness_level: localStorage.getItem('brightness-level') || 100
                 }, () => {
                         document.getElementById('monitor-screen').style.filter = `brightness(${3 / 400 * this.state.brightness_level +
                                 0.25})`;
@@ -57,16 +55,7 @@ export class StatusCard extends Component {
                 localStorage.setItem('sound-level', e.target.value);
         };
 
-        setTheme = (theme) => {
-                this.setState({ theme });
-                localStorage.setItem('theme', theme);
-                document.documentElement.dataset.theme = theme;
-        };
-
-        toggleTheme = () => {
-                const next = this.state.theme === 'dark' ? 'light' : 'dark';
-                this.setTheme(next);
-        };
+        // theme toggling removed for Kali theme
 
 	render() {
 		return (
@@ -116,24 +105,7 @@ export class StatusCard extends Component {
                                                 aria-label="Screen brightness"
                                         />
                                 </div>
-                                <div
-                                        className="w-64 py-1.5 flex items-center justify-center bg-ub-cool-grey hover:bg-ub-warm-grey hover:bg-opacity-20"
-                                        onClick={this.toggleTheme}
-                                >
-                                        <div className="w-8">
-                                                <Image
-                                                        width={16}
-                                                        height={16}
-                                                        src="/themes/Yaru/status/display-brightness-symbolic.svg"
-                                                        alt="theme toggle"
-                                                        sizes="16px"
-                                                />
-                                        </div>
-                                        <div className="w-2/3 flex items-center justify-between">
-                                                <span>Theme</span>
-                                                <span>{this.state.theme === 'dark' ? 'Dark' : 'Light'}</span>
-                                        </div>
-                                </div>
+                                {/* Theme toggle removed for fixed Kali theme */}
                                 <div className="w-64 flex content-center justify-center">
                                         <div className="w-2/4 border-black border-opacity-50 border-b my-2 border-solid" />
                                 </div>
