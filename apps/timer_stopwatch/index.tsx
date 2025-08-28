@@ -20,6 +20,7 @@ export default function TimerStopwatch() {
           <input type="number" id="minutes" min="0" defaultValue="0" /> :
           <input type="number" id="seconds" min="0" max="59" defaultValue="30" />
         </div>
+        <div id="timerError" className="error" />
         <div className="display" id="timerDisplay">00:30</div>
         <div>
           <button id="startTimer">Start</button>

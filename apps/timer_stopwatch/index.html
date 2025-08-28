@@ -44,6 +44,10 @@
       border-radius: 4px;
       font-family: 'Courier New', monospace;
     }
+    .error {
+      color: red;
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
@@ -57,6 +61,7 @@
       <input type="number" id="minutes" min="0" value="0" /> :
       <input type="number" id="seconds" min="0" max="59" value="30" />
     </div>
+    <div id="timerError" class="error"></div>
     <div class="display" id="timerDisplay">00:30</div>
     <div>
       <button id="startTimer">Start</button>

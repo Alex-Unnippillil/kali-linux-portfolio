@@ -12,6 +12,38 @@ const stopwatchControls = document.getElementById('stopwatchControls');
 const minutesInput = document.getElementById('minutes');
 const secondsInput = document.getElementById('seconds');
 const lapsList = document.getElementById('laps');
+const startTimerBtn = document.getElementById('startTimer');
+const timerError = document.getElementById('timerError');
+
+function validateTimerInputs() {
+  const minsStr = minutesInput.value.trim();
+  const secsStr = secondsInput.value.trim();
+
+  const minsValid = /^\d+$/.test(minsStr);
+  const secsValid = /^\d+$/.test(secsStr);
+  const mins = minsValid ? parseInt(minsStr, 10) : NaN;
+  const secs = secsValid ? parseInt(secsStr, 10) : NaN;
+
+  let msg = '';
+  if (!minsValid || !secsValid) {
+    msg = 'Use numbers only.';
+  } else if (mins < 0 || secs < 0 || secs > 59) {
+    msg = 'Minutes >= 0 and seconds 0-59.';
+  }
+
+  if (msg) {
+    timerError.textContent = msg;
+    startTimerBtn.disabled = true;
+    return false;
+  }
+
+  timerError.textContent = '';
+  startTimerBtn.disabled = false;
+  return true;
+}
+
+minutesInput.addEventListener('input', validateTimerInputs);
+secondsInput.addEventListener('input', validateTimerInputs);
 
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
@@ -41,6 +73,7 @@ function updateTimerDisplay() {
 
 function startTimer() {
   if (timerInterval) return;
+  if (!validateTimerInputs()) return;
   const mins = parseInt(minutesInput.value, 10) || 0;
   const secs = parseInt(secondsInput.value, 10) || 0;
   timerRemaining = mins * 60 + secs;
@@ -117,7 +150,7 @@ function playSound() {
   }
 }
 
-document.getElementById('startTimer').addEventListener('click', startTimer);
+startTimerBtn.addEventListener('click', startTimer);
 document.getElementById('stopTimer').addEventListener('click', stopTimer);
 document.getElementById('resetTimer').addEventListener('click', resetTimer);
 
@@ -129,3 +162,4 @@ document.getElementById('lapWatch').addEventListener('click', lapWatch);
 // Initialize displays
 updateTimerDisplay();
 updateStopwatchDisplay();
+validateTimerInputs();
