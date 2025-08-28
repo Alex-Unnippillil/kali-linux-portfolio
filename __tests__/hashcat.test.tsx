@@ -51,4 +51,30 @@ describe('HashcatApp', () => {
       )
     ).toBeInTheDocument();
   });
+
+  it('shows descriptions for hash modes', () => {
+    const { getByText } = render(<HashcatApp />);
+    expect(getByText('Description: Raw MD5')).toBeInTheDocument();
+  });
+
+  it('provides dictionary file hints with example paths', () => {
+    const { getByText } = render(<HashcatApp />);
+    expect(
+      getByText(/\/usr\/share\/wordlists\/rockyou\.txt/)
+    ).toBeInTheDocument();
+  });
+
+  it('displays GPU requirement notice', () => {
+    const { getByText } = render(<HashcatApp />);
+    expect(
+      getByText(/requires a compatible GPU/i)
+    ).toBeInTheDocument();
+  });
+
+  it('renders static sample output', () => {
+    const { getByText } = render(<HashcatApp />);
+    expect(
+      getByText(/hashcat \(v6\.2\.6\) starting in benchmark mode/)
+    ).toBeInTheDocument();
+  });
 });
