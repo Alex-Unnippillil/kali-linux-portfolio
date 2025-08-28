@@ -3,7 +3,7 @@ import { useSettings } from '../../hooks/useSettings';
 import { resetSettings, defaults } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, theme, setTheme } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
 
@@ -67,6 +67,17 @@ export function Settings() {
                     onChange={(e) => setAccent(e.target.value)}
                     className="w-10 h-10 border border-ubt-cool-grey bg-ub-cool-grey"
                 />
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <select
+                    value={theme}
+                    onChange={(e) => setTheme(e.target.value)}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                >
+                    <option value="default">Default</option>
+                    <option value="high-contrast">High Contrast</option>
+                </select>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Density:</label>
@@ -134,7 +145,7 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4">
                 <button
-                    onClick={async () => { await resetSettings(); setAccent(defaults.accent); setWallpaper(defaults.wallpaper); setDensity(defaults.density); setReducedMotion(defaults.reducedMotion); }}
+                    onClick={async () => { await resetSettings(); setAccent(defaults.accent); setWallpaper(defaults.wallpaper); setDensity(defaults.density); setReducedMotion(defaults.reducedMotion); setTheme(defaults.theme); }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
                     Reset Desktop
