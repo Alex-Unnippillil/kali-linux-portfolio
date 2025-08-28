@@ -17,7 +17,7 @@ const numberColors = [
 ];
 
 // simple seeded pseudo random generator
-const mulberry32 = (a) => {
+const mulberry32 = (a) => () => {
   let t = (a += 0x6d2b79f5);
   t = Math.imul(t ^ (t >>> 15), t | 1);
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -27,7 +27,7 @@ const mulberry32 = (a) => {
 const cloneBoard = (board) =>
   board.map((row) => row.map((cell) => ({ ...cell })));
 
-const generateBoard = (seed, sx, sy) => {
+export const generateBoard = (seed, sx, sy) => {
   const board = Array.from({ length: BOARD_SIZE }, () =>
     Array.from({ length: BOARD_SIZE }, () => ({
       mine: false,
@@ -92,6 +92,56 @@ const generateBoard = (seed, sx, sy) => {
         }),
       );
       board[x][y].adjacent = count;
+    }
+  }
+  return board;
+};
+
+export const ensureFirstClickSafe = (board, x, y) => {
+  if (!board[x][y].mine) return board;
+  // remove the mine from the clicked cell
+  board[x][y].mine = false;
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
+        board[nx][ny].adjacent -= 1;
+      }
+    }
+  }
+  // compute adjacency for the cleared cell
+  let count = 0;
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = x + dx;
+      const ny = y + dy;
+      if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
+        if (board[nx][ny].mine) count++;
+      }
+    }
+  }
+  board[x][y].adjacent = count;
+  // find a new spot for the mine
+  for (let i = 0; i < BOARD_SIZE; i++) {
+    for (let j = 0; j < BOARD_SIZE; j++) {
+      if (!board[i][j].mine && (i !== x || j !== y)) {
+        board[i][j].mine = true;
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            const nx = i + dx;
+            const ny = j + dy;
+            if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE) {
+              board[nx][ny].adjacent += 1;
+            }
+          }
+        }
+        board[i][j].adjacent = 0;
+        return board;
+      }
     }
   }
   return board;
@@ -434,7 +484,7 @@ const Minesweeper = () => {
   };
 
   const startGame = (x, y) => {
-    const newBoard = generateBoard(seed, x, y);
+    const newBoard = ensureFirstClickSafe(generateBoard(seed, x, y), x, y);
     setBoard(newBoard);
     setStatus('playing');
     setStartTime(Date.now());
