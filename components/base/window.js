@@ -25,6 +25,7 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            offScreen: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -42,6 +43,7 @@ export class Window extends Component {
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.checkOffScreen();
     }
 
     componentWillUnmount() {
@@ -79,6 +81,7 @@ export class Window extends Component {
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
             }
+            this.checkOffScreen();
         });
     }
 
@@ -217,9 +220,20 @@ export class Window extends Component {
         }
     }
 
+    checkOffScreen = () => {
+        const r = document.getElementById(this.id);
+        if (!r) return;
+        const rect = r.getBoundingClientRect();
+        const offScreen = rect.bottom < 0 || rect.right < 0 || rect.left > window.innerWidth || rect.top > window.innerHeight;
+        if (offScreen !== this.state.offScreen) {
+            this.setState({ offScreen });
+        }
+    }
+
     handleDrag = () => {
         this.checkOverlap();
         this.checkSnapPreview();
+        this.checkOffScreen();
     }
 
     handleStop = () => {
@@ -260,10 +274,12 @@ export class Window extends Component {
         else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+        this.checkOffScreen();
     }
 
     focusWindow = () => {
         this.props.focus(this.id);
+        this.setState({ offScreen: false });
     }
 
     minimizeWindow = () => {
@@ -280,6 +296,7 @@ export class Window extends Component {
         // translate window to that position
         r.style.transform = `translate(${posx}px,${sidebBarApp.y.toFixed(1) - 240}px) scale(0.2)`;
         this.props.hasMinimised(this.id);
+        this.setState({ offScreen: true });
     }
 
     restoreWindow = () => {
@@ -291,7 +308,7 @@ export class Window extends Component {
 
         r.style.transform = `translate(${posx},${posy})`;
         setTimeout(() => {
-            this.setState({ maximized: false });
+            this.setState({ maximized: false, offScreen: false });
             this.checkOverlap();
         }, 300);
     }
@@ -396,7 +413,11 @@ export class Window extends Component {
                     bounds={{ left: 0, top: 0, right: this.state.parentSize.width, bottom: this.state.parentSize.height }}
                 >
                     <div
-                        style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
+                        style={{
+                            width: `${this.state.width}%`,
+                            height: `${this.state.height}%`,
+                            contentVisibility: (this.props.minimized || this.state.offScreen) ? 'auto' : 'visible'
+                        }}
                         className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
