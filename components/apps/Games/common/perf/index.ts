@@ -1,1 +1,1 @@
-export { default, exportPerfReport } from './PerfOverlay';
+export { default, exportPerfReport } from './PerfOverlay.js';

@@ -9,11 +9,6 @@ export default function Overlay({
   onResume,
   muted: externalMuted,
   onToggleSound,
-}: {
-  onPause?: () => void;
-  onResume?: () => void;
-  muted?: boolean;
-  onToggleSound?: (muted: boolean) => void;
 }) {
   const [paused, setPaused] = useState(false);
   const [muted, setMuted] = useState(externalMuted ?? false);
@@ -23,8 +18,8 @@ export default function Overlay({
 
   // track fps using requestAnimationFrame
   useEffect(() => {
-    let raf: number;
-    const measure = (now: number) => {
+    let raf;
+    const measure = (now) => {
       count.current += 1;
       if (now - frame.current >= 1000) {
         setFps(count.current);
