@@ -1,80 +1,55 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  unitMap,
-  unitDetails,
-  categories as allCategories,
-  convertUnit,
-} from './unitData';
+import { unitMap, unitDetails, convertUnit } from './unitData';
 
-const categories = allCategories.filter((c) => c.value !== 'temperature');
-
-const UnitConverter = () => {
-  const [category, setCategory] = useState(categories[0].value);
-  const [fromUnit, setFromUnit] = useState('meter');
-  const [toUnit, setToUnit] = useState('kilometer');
+const TemperatureConverter = () => {
+  const category = 'temperature';
+  const units = Object.keys(unitMap[category]);
+  const [fromUnit, setFromUnit] = useState(units[0]);
+  const [toUnit, setToUnit] = useState(units[1]);
   const [leftVal, setLeftVal] = useState('');
   const [rightVal, setRightVal] = useState('');
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const units = Object.keys(unitMap[category]);
-    setFromUnit(units[0]);
-    setToUnit(units[1] || units[0]);
-    setLeftVal('');
-    setRightVal('');
-    setError('');
-  }, [category]);
-
-  const units = Object.keys(unitMap[category]);
-
-  const withinRange = (cat, unit, val) => {
-    const { min, max } = unitDetails[cat][unit];
+  const withinRange = (unit, val) => {
+    const { min, max } = unitDetails[category][unit];
     return val >= min && val <= max;
   };
 
-  const convertLeftToRight = useCallback(
-    (val) => {
-      if (val === '' || isNaN(parseFloat(val))) {
-        setRightVal('');
-        setError('');
-        return;
-      }
-      const num = parseFloat(val);
-      if (!withinRange(category, fromUnit, num)) {
-        setError(`Value out of range for ${fromUnit}`);
-        setRightVal('');
-        return;
-      }
-      const converted = convertUnit(category, fromUnit, toUnit, num);
-      const precision = unitDetails[category][toUnit].precision;
-      const rounded = Number(converted.toFixed(precision));
-      setRightVal(rounded.toString());
+  const convertLeftToRight = useCallback((val) => {
+    if (val === '' || isNaN(parseFloat(val))) {
+      setRightVal('');
       setError('');
-    },
-    [category, fromUnit, toUnit],
-  );
+      return;
+    }
+    const num = parseFloat(val);
+    if (!withinRange(fromUnit, num)) {
+      setError(`Value out of range for ${fromUnit}`);
+      setRightVal('');
+      return;
+    }
+    const converted = convertUnit(category, fromUnit, toUnit, num);
+    const precision = unitDetails[category][toUnit].precision;
+    setRightVal(Number(converted.toFixed(precision)).toString());
+    setError('');
+  }, [fromUnit, toUnit]);
 
-  const convertRightToLeft = useCallback(
-    (val) => {
-      if (val === '' || isNaN(parseFloat(val))) {
-        setLeftVal('');
-        setError('');
-        return;
-      }
-      const num = parseFloat(val);
-      if (!withinRange(category, toUnit, num)) {
-        setError(`Value out of range for ${toUnit}`);
-        setLeftVal('');
-        return;
-      }
-      const converted = convertUnit(category, toUnit, fromUnit, num);
-      const precision = unitDetails[category][fromUnit].precision;
-      const rounded = Number(converted.toFixed(precision));
-      setLeftVal(rounded.toString());
+  const convertRightToLeft = useCallback((val) => {
+    if (val === '' || isNaN(parseFloat(val))) {
+      setLeftVal('');
       setError('');
-    },
-    [category, fromUnit, toUnit],
-  );
+      return;
+    }
+    const num = parseFloat(val);
+    if (!withinRange(toUnit, num)) {
+      setError(`Value out of range for ${toUnit}`);
+      setLeftVal('');
+      return;
+    }
+    const converted = convertUnit(category, toUnit, fromUnit, num);
+    const precision = unitDetails[category][fromUnit].precision;
+    setLeftVal(Number(converted.toFixed(precision)).toString());
+    setError('');
+  }, [fromUnit, toUnit]);
 
   const handleLeftChange = (e) => {
     const val = e.target.value;
@@ -94,7 +69,7 @@ const UnitConverter = () => {
     } else if (rightVal !== '') {
       convertRightToLeft(rightVal);
     }
-  }, [fromUnit, toUnit, category, leftVal, rightVal, convertLeftToRight, convertRightToLeft]);
+  }, [fromUnit, toUnit, leftVal, rightVal, convertLeftToRight, convertRightToLeft]);
 
   const swapUnits = () => {
     setFromUnit(toUnit);
@@ -113,21 +88,7 @@ const UnitConverter = () => {
 
   return (
     <div className="bg-gray-700 text-white p-4 rounded flex flex-col gap-2">
-      <h2 className="text-xl mb-2">Unit Converter</h2>
-      <label className="flex flex-col">
-        Category
-        <select
-          className="text-black p-1 rounded"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          {categories.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <h2 className="text-xl mb-2">Temperature Converter</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
         <div className="flex flex-col">
           <label className="flex flex-col">
@@ -148,11 +109,7 @@ const UnitConverter = () => {
               onChange={(e) => setFromUnit(e.target.value)}
             >
               {units.map((u) => (
-                <option
-                  key={u}
-                  value={u}
-                  aria-label={`${u} (${unitMap[category][u]})`}
-                >
+                <option key={u} value={u} aria-label={`${u} (${unitMap[category][u]})`}>
                   {u}
                 </option>
               ))}
@@ -178,11 +135,7 @@ const UnitConverter = () => {
               onChange={(e) => setToUnit(e.target.value)}
             >
               {units.map((u) => (
-                <option
-                  key={u}
-                  value={u}
-                  aria-label={`${u} (${unitMap[category][u]})`}
-                >
+                <option key={u} value={u} aria-label={`${u} (${unitMap[category][u]})`}>
                   {u}
                 </option>
               ))}
@@ -199,12 +152,8 @@ const UnitConverter = () => {
           Swap Units
         </button>
       </div>
-      {error && (
-        <div className="text-red-400" role="alert">
-          {error}
-        </div>
-      )}
-      <div data-testid="unit-result" className="mt-2">
+      {error && <div className="text-red-400" role="alert">{error}</div>}
+      <div data-testid="temp-result" className="mt-2">
         {leftVal && rightVal && `${format(leftVal, fromUnit)} = ${format(rightVal, toUnit)}`}
       </div>
       <div className="sr-only" aria-live="polite">
@@ -214,5 +163,5 @@ const UnitConverter = () => {
   );
 };
 
-export default UnitConverter;
+export default TemperatureConverter;
 
