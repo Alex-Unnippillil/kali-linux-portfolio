@@ -9503,9 +9503,6 @@ __metadata:
     turndown: "npm:^7.2.1"
     typescript: "npm:^5.9.2"
     wait-on: "npm:^8.0.4"
-    xterm: "npm:^5.3.0"
-    xterm-addon-fit: "npm:^0.8.0"
-    xterm-addon-search: "npm:^0.13.0"
   languageName: unknown
   linkType: soft
 
@@ -9889,31 +9886,6 @@ __metadata:
   version: 2.2.0
   resolution: "xmlchars@npm:2.2.0"
   checksum: 10c0/b64b535861a6f310c5d9bfa10834cf49127c71922c297da9d4d1b45eeaae40bf9b4363275876088fbe2667e5db028d2cd4f8ee72eed9bede840a67d57dab7593
-  languageName: node
-  linkType: hard
-
-"xterm-addon-fit@npm:^0.8.0":
-  version: 0.8.0
-  resolution: "xterm-addon-fit@npm:0.8.0"
-  peerDependencies:
-    xterm: ^5.0.0
-  checksum: 10c0/39f77c9ec74bcc048ad74fbc4b9d610070c0a67971837f7edf92a8d21d65189c887986713d6ab22c04e2704253022488324d27fdb2425dc8aa95a9b679703101
-  languageName: node
-  linkType: hard
-
-"xterm-addon-search@npm:^0.13.0":
-  version: 0.13.0
-  resolution: "xterm-addon-search@npm:0.13.0"
-  peerDependencies:
-    xterm: ^5.0.0
-  checksum: 10c0/0612c9cbc0d837eb6c6f21cb726d7927a2fb899272e37c925d77c1fc077c7fcd23a75799e470aa3b467cabd9896b95875b8e2a3884bc8529c6a895c594fc36f4
-  languageName: node
-  linkType: hard
-
-"xterm@npm:^5.3.0":
-  version: 5.3.0
-  resolution: "xterm@npm:5.3.0"
-  checksum: 10c0/39bf5ea933cc2f65d5970560d065b4db645ed03c820bcf6c6239bd504e41a876ab1a773ad9e4e09476ba85a4891534702b9fbb885b0838d79e6620ed2f856bae
   languageName: node
   linkType: hard
 
