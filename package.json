@@ -11,7 +11,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "next lint",
-    "a11y": "pa11y-ci --config pa11yci.json",
+    "a11y": "node scripts/a11y.mjs",
     "smoke": "node scripts/smoke-all-apps.mjs"
   },
   "engines": {
@@ -60,10 +60,7 @@
     "swr": "^2.2.5",
     "tailwindcss": "^3.2.4",
     "three": "^0.179.1",
-    "turndown": "^7.2.1",
-    "xterm": "^5.3.0",
-    "xterm-addon-fit": "^0.8.0",
-    "xterm-addon-search": "^0.13.0"
+    "turndown": "^7.2.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
@@ -86,7 +83,7 @@
     "fake-indexeddb": "^6.1.0",
     "jest": "30.0.5",
     "jest-environment-jsdom": "30.0.5",
-    "pa11y-ci": "^4.0.1",
+    "pa11y": "^9.0.0",
     "typescript": "^5.9.2",
     "wait-on": "^8.0.4"
   },

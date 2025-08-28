@@ -166,6 +166,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           this.checkpointFlags.push({ body, flag });
         });
 
+
         this.player = this.matter.add.image(data.spawn.x, data.spawn.y, 'player', undefined, {
           shape: { type: 'rectangle', width: 32, height: 32 },
         });
@@ -219,6 +220,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
 
         const body = this.player.body as MatterJS.BodyType;
         const onGround = Math.abs(body.velocity.y) < 0.01;
+
         if (onGround) this.lastGrounded = time;
 
         if (ctrl.jumpPressed) {
