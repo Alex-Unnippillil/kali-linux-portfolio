@@ -6,15 +6,13 @@ import YouTubePlayer from '../../YouTubePlayer';
 // watch queue is stored in localStorage so it persists between sessions.
 // A search box filters videos on the client by their title.
 
-type Video = { id: string; title: string };
-
 const CHANNEL_ID = 'UC_x5XG1OV2P6uZZ5FSM9Ttw'; // Google Developers channel
 
-export default function YouTubeApp({ initialVideos = [] as Video[] }) {
+export default function YouTubeApp({ initialVideos = [] }) {
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-  const [videos, setVideos] = useState<Video[]>(initialVideos);
+  const [videos, setVideos] = useState(initialVideos);
   const [search, setSearch] = useState('');
-  const [queue, setQueue] = useState<Video[]>(() => {
+  const [queue, setQueue] = useState(() => {
     if (typeof window === 'undefined') return [];
     try {
       const stored = window.localStorage.getItem('yt-queue');
@@ -45,8 +43,8 @@ export default function YouTubeApp({ initialVideos = [] as Video[] }) {
           `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&maxResults=25&order=date&type=video&key=${apiKey}`
         );
         const data = await res.json();
-        const fetched: Video[] =
-          data.items?.map((item: any) => ({
+        const fetched =
+          data.items?.map((item) => ({
             id: item.id.videoId,
             title: item.snippet.title,
           })) || [];
@@ -73,14 +71,14 @@ export default function YouTubeApp({ initialVideos = [] as Video[] }) {
     typeof window !== 'undefined' ? window.location.origin : '';
   const embedBase = `https://${privacy ? 'www.youtube-nocookie.com' : 'www.youtube.com'}`;
 
-  const playVideo = useCallback((video: Video) => {
+  const playVideo = useCallback((video) => {
     setQueue((q) => {
       const without = q.filter((v) => v.id !== video.id);
       return [video, ...without];
     });
   }, []);
 
-  const addToQueue = useCallback((video: Video) => {
+  const addToQueue = useCallback((video) => {
     setQueue((q) => (q.some((v) => v.id === video.id) ? q : [...q, video]));
   }, []);
 
