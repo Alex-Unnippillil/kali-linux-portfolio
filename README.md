@@ -129,13 +129,32 @@ Heavy apps are wrapped with **dynamic import** and most games share a `GameLayou
 
 ## Security Headers & CSP
 
-Defined in `next.config.js`:
+Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) for allowed hostnames:
 
-- **Content-Security-Policy (CSP)** (string built from `ContentSecurityPolicy[]`)
+- **Content-Security-Policy (CSP)** (string built from `ContentSecurityPolicy[]`; see [CSP External Domains](#csp-external-domains))
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
 - `X-Frame-Options: SAMEORIGIN`
+
+### CSP External Domains
+
+These external domains are whitelisted in the default CSP. Update this list whenever `next.config.js` changes.
+
+| Domain | Purpose |
+| --- | --- |
+| `fonts.googleapis.com` | Stylesheets for Google Fonts |
+| `fonts.gstatic.com` | Font files for Google Fonts |
+| `platform.twitter.com` | Twitter widgets and scripts |
+| `syndication.twitter.com` | Twitter embed scripts |
+| `cdn.syndication.twimg.com` | Twitter asset CDN |
+| `*.twitter.com` | Additional Twitter content |
+| `*.x.com` | X (Twitter) domain equivalents |
+| `*.google.com` | Google services used by demos |
+| `stackblitz.com` | StackBlitz IDE embeds |
+| `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
+| `open.spotify.com` | Spotify embeds |
+| `https://*` / `http://*` / `ws://*` / `wss://*` | Wide dev allowance for external resources; tighten for production |
 
 **Notes for prod hardening**
 - The sample CSP currently **permits wide `connect-src` and `frame-src`** to enable sandboxed iframes (Chrome app) and demos. In production, **tighten** these to the exact domains you embed. Remove `http:` origins; prefer `https:` only.
