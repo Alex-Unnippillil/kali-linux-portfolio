@@ -30,6 +30,8 @@ const Reversi = () => {
   const [sound, setSound] = useState(true);
   const [message, setMessage] = useState('Your turn');
   const [wins, setWins] = useState({ player: 0, ai: 0 });
+  const [mobility, setMobility] = useState({ player: 0, ai: 0 });
+  const [tip, setTip] = useState('Tip: Control the corners to gain an advantage.');
 
   // keep refs in sync
   useEffect(() => { boardRef.current = board; }, [board]);
@@ -206,7 +208,7 @@ const Reversi = () => {
           }
         }
       }
-      if (playerRef.current === 'B' && !pausedRef.current) {
+      if (!pausedRef.current) {
         ctx.fillStyle = '#ffff00';
         Object.keys(legalRef.current).forEach((key) => {
           const [r, c] = key.split('-').map(Number);
@@ -228,6 +230,22 @@ const Reversi = () => {
   useEffect(() => {
     const moves = computeLegalMoves(board, player);
     legalRef.current = moves;
+
+    const playerMoves = Object.keys(computeLegalMoves(board, 'B')).length;
+    const aiMoves = Object.keys(computeLegalMoves(board, 'W')).length;
+    setMobility({ player: playerMoves, ai: aiMoves });
+
+    const cornerKeys = [
+      '0-0',
+      `0-${SIZE - 1}`,
+      `${SIZE - 1}-0`,
+      `${SIZE - 1}-${SIZE - 1}`,
+    ];
+    setTip(
+      cornerKeys.some((k) => moves[k])
+        ? 'Tip: Corners are powerful—capture them when you can!'
+        : 'Tip: Control the corners to gain an advantage.',
+    );
     if (Object.keys(moves).length === 0) {
       const opp = player === 'B' ? 'W' : 'B';
       const oppMoves = computeLegalMoves(board, opp);
@@ -293,7 +311,9 @@ const Reversi = () => {
         className="bg-green-700"
       />
       <div className="mt-2">Wins - You: {wins.player} | AI: {wins.ai}</div>
+      <div className="mt-1">Mobility - You: {mobility.player} | AI: {mobility.ai}</div>
       <div className="mt-1" role="status" aria-live="polite">{message}</div>
+      <div className="mt-1 text-sm text-gray-300">{tip}</div>
       <div className="mt-2 flex space-x-2">
         <button
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
