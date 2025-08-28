@@ -127,23 +127,6 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     -moz-box-shadow: 1px 4px 12px 4px rgba(0, 0, 0, 0.2);
 }
 
-.closed-window {
-    animation: closeWindow 200ms 1 forwards;
-}
-
-@keyframes closeWindow {
-    0% {
-        opacity: 1;
-        transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(1);
-        visibility: visible;
-    }
-
-    100% {
-        opacity: 0;
-        transform: translate(var(--window-transform-x), var(--window-transform-y)) scale(0.85);
-        visibility: hidden;
-    }
-}
 
 .windowMainScreen::-webkit-scrollbar-track {
     -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
