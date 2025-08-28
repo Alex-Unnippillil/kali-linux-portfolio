@@ -135,14 +135,69 @@ export default function YouTubeApp({ initialVideos = [] }) {
       setDuration(d);
       const c = player.getVideoData()?.chapters || [];
       setChapters(c);
+      if (
+        typeof navigator !== 'undefined' &&
+        navigator.mediaSession &&
+        window.MediaMetadata
+      ) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: currentVideo.title || '',
+          artist: currentVideo.channelTitle || '',
+          artwork: currentVideo.thumbnail
+            ? [
+                {
+                  src: currentVideo.thumbnail,
+                  sizes: '320x180',
+                  type: 'image/jpeg',
+                },
+              ]
+            : [],
+        });
+        navigator.mediaSession.setActionHandler('play', () =>
+          player.playVideo()
+        );
+        navigator.mediaSession.setActionHandler('pause', () =>
+          player.pauseVideo()
+        );
+        navigator.mediaSession.setActionHandler(
+          'seekbackward',
+          ({ seekOffset = 5 }) => {
+            const t = player.getCurrentTime();
+            player.seekTo(Math.max(t - seekOffset, 0), true);
+          }
+        );
+        navigator.mediaSession.setActionHandler(
+          'seekforward',
+          ({ seekOffset = 5 }) => {
+            const t = player.getCurrentTime();
+            player.seekTo(t + seekOffset, true);
+          }
+        );
+      }
     };
 
     const onStateChange = (e) => {
+      if (navigator.mediaSession) {
+        if (e.data === window.YT.PlayerState.PLAYING) {
+          navigator.mediaSession.playbackState = 'playing';
+        } else if (
+          e.data === window.YT.PlayerState.PAUSED ||
+          e.data === window.YT.PlayerState.ENDED
+        ) {
+          navigator.mediaSession.playbackState = 'paused';
+        }
+      }
       if (e.data === window.YT.PlayerState.PLAYING) {
         const update = () => {
           const d = player.getDuration();
           const t = player.getCurrentTime();
           if (d) setProgress(t / d);
+          if (navigator.mediaSession?.setPositionState) {
+            navigator.mediaSession.setPositionState({
+              duration: d || 0,
+              position: t,
+            });
+          }
           if (prefersReducedMotion) {
             progressRaf.current = setTimeout(update, 1000);
           } else {
@@ -189,6 +244,12 @@ export default function YouTubeApp({ initialVideos = [] }) {
         clearTimeout(progressRaf.current);
       } else {
         cancelAnimationFrame(progressRaf.current);
+      }
+      if (navigator.mediaSession) {
+        navigator.mediaSession.setActionHandler('play', null);
+        navigator.mediaSession.setActionHandler('pause', null);
+        navigator.mediaSession.setActionHandler('seekbackward', null);
+        navigator.mediaSession.setActionHandler('seekforward', null);
       }
       player?.destroy();
     };

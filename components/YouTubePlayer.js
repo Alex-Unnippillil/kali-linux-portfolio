@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import usePrefersReducedMotion from './hooks/usePrefersReducedMotion';
 
@@ -14,6 +14,13 @@ export default function YouTubePlayer({ videoId }) {
   const [showChapters, setShowChapters] = useState(false);
   const [showDoc, setShowDoc] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+
+  // Reflect play/pause state in system media controls
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.mediaSession) {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    }
+  }, [isPlaying]);
 
   // Load the YouTube IFrame API lazily on user interaction
   const loadPlayer = () => {
@@ -34,6 +41,43 @@ export default function YouTubePlayer({ videoId }) {
           onReady: (e) => {
             const data = e.target.getVideoData();
             if (data?.chapters) setChapters(data.chapters);
+            if (
+              typeof navigator !== 'undefined' &&
+              navigator.mediaSession &&
+              window.MediaMetadata
+            ) {
+              navigator.mediaSession.metadata = new MediaMetadata({
+                title: data?.title || '',
+                artist: data?.author || '',
+                artwork: [
+                  {
+                    src: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+                    sizes: '320x180',
+                    type: 'image/jpeg',
+                  },
+                ],
+              });
+              navigator.mediaSession.setActionHandler('play', () =>
+                e.target.playVideo()
+              );
+              navigator.mediaSession.setActionHandler('pause', () =>
+                e.target.pauseVideo()
+              );
+              navigator.mediaSession.setActionHandler(
+                'seekbackward',
+                ({ seekOffset = 5 }) => {
+                  const t = e.target.getCurrentTime();
+                  e.target.seekTo(Math.max(t - seekOffset, 0), true);
+                }
+              );
+              navigator.mediaSession.setActionHandler(
+                'seekforward',
+                ({ seekOffset = 5 }) => {
+                  const t = e.target.getCurrentTime();
+                  e.target.seekTo(t + seekOffset, true);
+                }
+              );
+            }
             if (prefersReducedMotion) {
               e.target.pauseVideo();
             } else {

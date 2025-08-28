@@ -84,6 +84,19 @@ export default function YouTubeApp({ initialVideos = [] }) {
     setQueue((q) => q.slice(1));
   }, []);
 
+  // Allow hardware/media key skipping of queued videos
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.mediaSession) return;
+    if (current) {
+      navigator.mediaSession.setActionHandler('nexttrack', nextVideo);
+    } else {
+      navigator.mediaSession.setActionHandler('nexttrack', null);
+    }
+    return () => {
+      navigator.mediaSession.setActionHandler('nexttrack', null);
+    };
+  }, [current, nextVideo]);
+
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white p-4">
       <div className="mb-4">
