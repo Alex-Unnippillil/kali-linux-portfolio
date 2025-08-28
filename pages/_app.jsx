@@ -7,6 +7,7 @@ import '../styles/index.css';
 import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
 import { SettingsProvider } from '../hooks/useSettings';
+import ShortcutOverlay from '../components/common/ShortcutOverlay';
 
 /**
  * @param {import('next/app').AppProps} props
@@ -42,6 +43,7 @@ function MyApp({ Component, pageProps }) {
   return (
     <SettingsProvider>
       <Component {...pageProps} />
+      <ShortcutOverlay />
       <Analytics />
     </SettingsProvider>
   );
