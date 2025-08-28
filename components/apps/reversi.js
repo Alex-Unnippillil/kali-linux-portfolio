@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   SIZE,
-  DIRECTIONS,
   createBoard,
   computeLegalMoves,
   applyMove,
@@ -51,12 +50,10 @@ const Reversi = () => {
           if (!move) return;
           const [r, c] = move;
           const moves = computeLegalMoves(boardRef.current, 'W');
-          const key = `${r}-${c}`;
-          const flips = moves[key];
-          if (!flips) return;
-          const prev = boardRef.current.map((row) => row.slice());
-          const next = applyMove(prev, r, c, 'W', flips);
-          queueFlips(r, c, 'W', prev);
+          const info = moves[`${r}-${c}`];
+          if (!info) return;
+          const next = applyMove(boardRef.current, r, c, 'W', info.mask);
+          queueFlips(r, c, 'W', info.flips);
           setBoard(next);
           playSound();
           setPlayer('B');
@@ -98,29 +95,16 @@ const Reversi = () => {
     osc.stop(ctx.currentTime + 0.1);
   };
 
-  const queueFlips = (r, c, player, prevBoard) => {
+  const queueFlips = (r, c, player, flips) => {
     if (reduceMotionRef.current) return;
     const start = performance.now();
-    DIRECTIONS.forEach(([dr, dc]) => {
-      const seq = [];
-      let i = r + dr;
-      let j = c + dc;
-      while (
-        i >= 0 && i < SIZE && j >= 0 && j < SIZE &&
-        prevBoard[i][j] && prevBoard[i][j] !== player
-      ) {
-        seq.push([i, j]);
-        i += dr;
-        j += dc;
-      }
-      seq.forEach(([sr, sc], idx) => {
-        flippingRef.current.push({
-          key: `${sr}-${sc}`,
-          from: prevBoard[sr][sc],
-          to: player,
-          start: start + idx * 80,
-          duration: 300,
-        });
+    flips.forEach(([sr, sc], idx) => {
+      flippingRef.current.push({
+        key: `${sr}-${sc}`,
+        from: player === 'B' ? 'W' : 'B',
+        to: player,
+        start: start + idx * 80,
+        duration: 300,
       });
     });
   };
@@ -147,7 +131,10 @@ const Reversi = () => {
       const now = performance.now();
       for (let r = 0; r < SIZE; r += 1) {
         for (let c = 0; c < SIZE; c += 1) {
-          const cell = b[r][c];
+          const mask = 1n << BigInt(r * SIZE + c);
+          let cell = null;
+          if (b.black & mask) cell = 'B';
+          else if (b.white & mask) cell = 'W';
           const anim = flippingRef.current.find((a) => a.key === `${r}-${c}`);
           if (anim) {
             const t = (now - anim.start) / anim.duration;
@@ -265,11 +252,10 @@ const Reversi = () => {
     const r = Math.floor(y / CELL);
     const c = Math.floor(x / CELL);
     const key = `${r}-${c}`;
-    const flips = legalRef.current[key];
-    if (!flips) return;
-    const prev = boardRef.current.map((row) => row.slice());
-    const next = applyMove(prev, r, c, 'B', flips);
-    queueFlips(r, c, 'B', prev);
+    const info = legalRef.current[key];
+    if (!info) return;
+    const next = applyMove(boardRef.current, r, c, 'B', info.mask);
+    queueFlips(r, c, 'B', info.flips);
     setBoard(next);
     playSound();
     setPlayer('W');
