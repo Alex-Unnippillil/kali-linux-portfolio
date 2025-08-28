@@ -16,7 +16,7 @@ describe('WiresharkApp', () => {
     const user = userEvent.setup();
     const { unmount } = render(<WiresharkApp initialPackets={packets} />);
 
-    const filterInput = screen.getByPlaceholderText(/filter expression/i);
+    const filterInput = screen.getByPlaceholderText(/quick search/i);
     await user.type(filterInput, 'bar');
 
     // Only packets matching the filter should remain
@@ -27,7 +27,7 @@ describe('WiresharkApp', () => {
     // Unmount and remount to ensure the filter persists
     unmount();
     render(<WiresharkApp initialPackets={packets} />);
-    expect(screen.getByPlaceholderText(/filter expression/i)).toHaveValue('bar');
+    expect(screen.getByPlaceholderText(/quick search/i)).toHaveValue('bar');
     expect(screen.getByText('bar')).toBeInTheDocument();
     expect(screen.queryByText('foo')).not.toBeInTheDocument();
   });
@@ -87,6 +87,16 @@ describe('WiresharkApp', () => {
 
     expect(await screen.findByText(/decrypted/i)).toBeInTheDocument();
     expect(screen.getByText('secret')).toBeInTheDocument();
+  });
+
+  it('provides quick search and docs link', () => {
+    render(<WiresharkApp initialPackets={[]} />);
+    expect(screen.getByPlaceholderText(/quick search/i)).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /display filter docs/i });
+    expect(link).toHaveAttribute(
+      'href',
+      'https://www.wireshark.org/docs/dfref/'
+    );
   });
 });
 

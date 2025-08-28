@@ -55,9 +55,11 @@ const WiresharkApp = ({ initialPackets = [] }) => {
         setTimeline(e.data.timeline);
       }
     };
+    // seed worker with any bundled packets
+    initialPackets.forEach((pkt) => worker.postMessage(pkt));
     workerRef.current = worker;
     return () => worker.terminate();
-  }, []);
+  }, [initialPackets]);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -149,6 +151,9 @@ const WiresharkApp = ({ initialPackets = [] }) => {
 
   return (
     <div className="w-full h-full flex flex-col bg-black text-green-400 [container-type:inline-size]">
+      <p className="text-yellow-300 text-xs p-2 bg-gray-900">
+        Bundled capture for lab use only. No live traffic.
+      </p>
       <div className="p-2 flex space-x-2 bg-gray-900 flex-wrap">
         <button
           onClick={startCapture}
@@ -174,9 +179,18 @@ const WiresharkApp = ({ initialPackets = [] }) => {
         <input
           value={filter}
           onChange={handleFilterChange}
-          placeholder="Filter expression"
+          placeholder="Quick search (e.g. tcp)"
+          aria-label="Quick search"
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
+        <a
+          href="https://www.wireshark.org/docs/dfref/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 underline whitespace-nowrap"
+        >
+          Display filter docs
+        </a>
         <input
           value={colorRuleText}
           onChange={handleColorRulesChange}
