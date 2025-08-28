@@ -283,7 +283,24 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
       scene: LevelScene,
     });
 
+    const handleVisibility = () => {
+      const scene = game.scene.getScene('level') as Phaser.Scene & {
+        matter: Phaser.Physics.Matter.MatterPhysics;
+      };
+      if (document.visibilityState === 'hidden') {
+        scene.scene.pause();
+        scene.matter.world.pause();
+      } else {
+        scene.scene.resume();
+        scene.matter.world.resume();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
       game.destroy(true);
     };
   }, []);
