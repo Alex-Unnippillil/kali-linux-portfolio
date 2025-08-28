@@ -160,7 +160,13 @@ const PhaserMatter: React.FC = () => {
           this.checkpointFlags.push({ body, flag });
         });
 
-        this.player = this.matter.add.image(data.spawn.x, data.spawn.y, undefined, undefined, {
+        const gfx = this.add.graphics();
+        gfx.fillStyle(0xffffff, 1);
+        gfx.fillRect(0, 0, 32, 32);
+        gfx.generateTexture('player', 32, 32);
+        gfx.destroy();
+
+        this.player = this.matter.add.image(data.spawn.x, data.spawn.y, 'player', undefined, {
           shape: { type: 'rectangle', width: 32, height: 32 },
         });
 
@@ -191,8 +197,9 @@ const PhaserMatter: React.FC = () => {
         const speed = 5;
 
         // Poll gamepad for input
-        if (this.input.gamepad.total > 0) {
-          const pad = this.input.gamepad.getPad(0);
+        const gamepad = this.input.gamepad;
+        if (gamepad && gamepad.total > 0) {
+          const pad = gamepad.getPad(0);
           const pm = padMapRef.current;
           ctrl.left = pad.buttons[pm.left]?.pressed;
           ctrl.right = pad.buttons[pm.right]?.pressed;
@@ -210,7 +217,7 @@ const PhaserMatter: React.FC = () => {
         else if (ctrl.right) this.player.setVelocityX(speed);
         else this.player.setVelocityX(0);
 
-        const onGround = Math.abs(this.player.body.velocity.y) < 0.01;
+        const onGround = Math.abs(this.player.body!.velocity.y) < 0.01;
         if (onGround) this.lastGrounded = time;
 
         if (ctrl.jumpPressed) {
