@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import FormError from '../../ui/FormError';
+import DemoBanner from '../../ui/DemoBanner';
 import { contactSchema } from '../../../utils/contactSchema';
 
 const sanitize = (str: string) =>
@@ -66,6 +67,7 @@ const ContactApp = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [csrfToken, setCsrfToken] = useState('');
+  const demoMode = !process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
   useEffect(() => {
     fetch('/api/contact')
@@ -83,6 +85,7 @@ const ContactApp = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (demoMode) return;
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
     const recaptchaToken = await new Promise<string>((resolve) => {
       const g: any = (window as any).grecaptcha;
@@ -115,6 +118,7 @@ const ContactApp = () => {
 
   return (
     <div className="p-4 text-black">
+      {demoMode && <DemoBanner>Demo mode: form disabled</DemoBanner>}
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <input
           className="p-1 border"
@@ -144,7 +148,12 @@ const ContactApp = () => {
           value={honeypot}
           onChange={(e) => setHoneypot(e.target.value)}
         />
-        <button type="submit" className="bg-blue-500 text-white px-2 py-1">
+        <button
+          type="submit"
+          className="bg-blue-500 text-white px-2 py-1 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={demoMode}
+          aria-disabled={demoMode}
+        >
           Send
         </button>
       </form>
