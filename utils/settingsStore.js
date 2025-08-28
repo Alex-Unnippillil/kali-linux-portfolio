@@ -5,6 +5,7 @@ const DEFAULT_SETTINGS = {
   wallpaper: 'wall-2',
   density: 'regular',
   reducedMotion: false,
+  analytics: true,
 };
 
 export async function getAccent() {
@@ -47,6 +48,16 @@ export async function setReducedMotion(value) {
   window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');
 }
 
+export async function getAnalytics() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.analytics;
+  return window.localStorage.getItem('analytics') !== 'false';
+}
+
+export async function setAnalytics(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('analytics', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -55,6 +66,7 @@ export async function resetSettings() {
   ]);
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
+  window.localStorage.removeItem('analytics');
 }
 
 export const defaults = DEFAULT_SETTINGS;
