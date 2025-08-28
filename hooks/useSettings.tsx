@@ -8,6 +8,8 @@ import {
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
   setReducedMotion as saveReducedMotion,
+  getReducedData as loadReducedData,
+  setReducedData as saveReducedData,
   defaults,
 } from '../utils/settingsStore';
 type Density = 'regular' | 'compact';
@@ -17,10 +19,12 @@ interface SettingsContextValue {
   wallpaper: string;
   density: Density;
   reducedMotion: boolean;
+  reducedData: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
+  setReducedData: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -28,10 +32,12 @@ export const SettingsContext = createContext<SettingsContextValue>({
   wallpaper: defaults.wallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
+  reducedData: defaults.reducedData,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
+  setReducedData: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -39,6 +45,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+  const [reducedData, setReducedData] = useState<boolean>(defaults.reducedData);
 
   useEffect(() => {
     (async () => {
@@ -46,6 +53,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
+      setReducedData(await loadReducedData());
     })();
   }, []);
 
@@ -89,8 +97,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('reduced-data', reducedData);
+    saveReducedData(reducedData);
+  }, [reducedData]);
+
   return (
-    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, setAccent, setWallpaper, setDensity, setReducedMotion }}>
+    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, reducedData, setAccent, setWallpaper, setDensity, setReducedMotion, setReducedData }}>
       {children}
     </SettingsContext.Provider>
   );

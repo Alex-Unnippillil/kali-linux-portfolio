@@ -17,3 +17,25 @@
   --color-terminal: #00ff00; /* terminal green */
   --color-dark: #0c0f12; /* card back */
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (prefers-reduced-data: reduce) {
+  .bg-ubuntu-img {
+    background-image: none !important;
+  }
+}
+
+.reduced-motion *, .reduced-motion *::before, .reduced-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.reduced-data .bg-ubuntu-img {
+  background-image: none !important;
+}
