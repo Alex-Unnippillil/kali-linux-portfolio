@@ -3,7 +3,7 @@ import { useSettings } from '../../hooks/useSettings';
 import { resetSettings, defaults } from '../../utils/settingsStore';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, highContrast, setHighContrast } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
 
@@ -91,6 +91,17 @@ export function Settings() {
                 </label>
             </div>
             <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={highContrast}
+                        onChange={(e) => setHighContrast(e.target.checked)}
+                        className="mr-2"
+                    />
+                    High Contrast Tiles
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
                 <div
                     className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
                     style={{ backgroundColor: '#0f1317', color: '#ffffff' }}
@@ -134,7 +145,7 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4 border-t border-gray-900 pt-4">
                 <button
-                    onClick={async () => { await resetSettings(); setAccent(defaults.accent); setWallpaper(defaults.wallpaper); setDensity(defaults.density); setReducedMotion(defaults.reducedMotion); }}
+                    onClick={async () => { await resetSettings(); setAccent(defaults.accent); setWallpaper(defaults.wallpaper); setDensity(defaults.density); setReducedMotion(defaults.reducedMotion); setHighContrast(defaults.highContrast); }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
                     Reset Desktop

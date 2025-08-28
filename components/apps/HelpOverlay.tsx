@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import InputRemap from './Games/common/input-remap/InputRemap';
 import useInputMapping from './Games/common/input-remap/useInputMapping';
 
@@ -158,13 +158,40 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   const info = GAME_INSTRUCTIONS[gameId];
   const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
   if (!info) return null;
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!dialogRef.current) return;
+    const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+      'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])'
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          (last || first).focus();
+        }
+      } else if (document.activeElement === last) {
+        e.preventDefault();
+        (first || last).focus();
+      }
+    };
+    dialogRef.current.addEventListener('keydown', handleKey);
+    first?.focus();
+    return () => {
+      dialogRef.current?.removeEventListener('keydown', handleKey);
+    };
+  }, []);
   return (
     <div
       className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
       role="dialog"
       aria-modal="true"
     >
-      <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
+      <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg" ref={dialogRef}>
         <h2 className="text-xl font-bold mb-2">{gameId} Help</h2>
         <p className="mb-2"><strong>Objective:</strong> {info.objective}</p>
         {info.actions ? (
@@ -187,7 +214,6 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
         <button
           onClick={onClose}
           className="mt-4 px-3 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
-          autoFocus
         >
           Close
         </button>
