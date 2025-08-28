@@ -41,6 +41,7 @@ yarn export        # outputs to ./out
 - **React GA4** via a thin wrapper in `utils/analytics.ts`
 - **Vercel Analytics** (`@vercel/analytics`)
 - **EmailJS** for the contact (“Gedit”) app
+- Simple in-memory rate limiter for the contact API (not distributed across instances)
 - Client-side only **simulations** of security tools (no real exploitation)
 - A large set of games rendered in-browser (Canvas/DOM), with a shared `GameLayout`
 

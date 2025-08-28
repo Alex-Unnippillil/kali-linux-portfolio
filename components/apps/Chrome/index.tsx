@@ -214,6 +214,7 @@ const Chrome: React.FC = () => {
       setTabs((prev) =>
         prev.map((t) => (t.id === activeId ? { ...t, muted: false } : t)),
       );
+
     }
   }, [activeId, activeTab.url, activeTab.muted, articles, fetchArticle, setIframeMuted]);
 
@@ -260,6 +261,7 @@ const Chrome: React.FC = () => {
       );
     } else {
       console.warn('Unable to control audio for this site.');
+
     }
   }, [activeId, activeTab.muted, setIframeMuted]);
 
@@ -323,6 +325,7 @@ const Chrome: React.FC = () => {
             <span className="mr-2 truncate" style={{ maxWidth: 100 }}>
               {t.url.replace(/^https?:\/\/(www\.)?/, '')}
             </span>
+            {t.muted && <span className="mr-1">🔇</span>}
             {tabs.length > 1 && (
               <button
                 onClick={(e) => {
