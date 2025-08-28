@@ -15,19 +15,7 @@ class MyDocument extends Document {
         <Head>
           <link rel="manifest" href="/manifest.webmanifest" />
           <meta name="theme-color" content="#000000" />
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-              (function() {
-                try {
-                  var stored = window.localStorage.getItem('theme');
-                  var theme = stored ? stored : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-                  document.documentElement.dataset.theme = theme;
-                } catch (e) {}
-              })();
-            `,
-            }}
-          />
+          <script src="/theme.js" />
         </Head>
         <body>
           <Main />
