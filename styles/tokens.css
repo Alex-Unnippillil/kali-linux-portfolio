@@ -25,6 +25,16 @@
   --color-ub-dark-grey: #2a2e36;
   --color-bg: #0f1317;
   --color-text: #F5F5F5;
+  /* Accessible palette */
+  --color-primary: #1793d1; /* kali blue accent */
+  --color-secondary: #1a1f26; /* complementary dark */
+  --color-accent: #1793d1; /* accent matches primary */
+  --color-muted: #2a2e36; /* muted surfaces */
+  --color-surface: #1a1f26; /* panel surfaces */
+  --color-inverse: #000000; /* inverse of text */
+  --color-border: #2a2e36; /* subtle borders */
+  --color-terminal: #00ff00; /* terminal green */
+  --color-dark: #0c0f12; /* card back */
 
   /* Spacing scale */
   --space-1: 0.25rem;
@@ -60,6 +70,15 @@
   --color-ub-orange: #ffff00;
   --color-ub-lite-abrgn: #00ffff;
   --color-ub-border-orange: #ffff00;
+  --color-primary: #ffff00;
+  --color-secondary: #000000;
+  --color-accent: #ffff00;
+  --color-muted: #000000;
+  --color-surface: #000000;
+  --color-inverse: #ffffff;
+  --color-border: #ffff00;
+  --color-terminal: #00ff00;
+  --color-dark: #000000;
 }
 
 /* Dyslexia-friendly fonts */
@@ -94,5 +113,14 @@
     --color-ub-orange: #ffff00;
     --color-ub-lite-abrgn: #00ffff;
     --color-ub-border-orange: #ffff00;
+    --color-primary: #ffff00;
+    --color-secondary: #000000;
+    --color-accent: #ffff00;
+    --color-muted: #000000;
+    --color-surface: #000000;
+    --color-inverse: #ffffff;
+    --color-border: #ffff00;
+    --color-terminal: #00ff00;
+    --color-dark: #000000;
   }
 }
