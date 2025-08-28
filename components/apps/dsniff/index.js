@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
+import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 const parseLines = (text) =>
@@ -31,6 +32,33 @@ const protocolInfo = {
   FTP: 'File Transfer Protocol',
   SSH: 'Secure Shell',
 };
+
+const suiteTools = [
+  {
+    tool: 'arpspoof',
+    description: 'Intercept packets on a switched LAN via ARP replies',
+    risk: 'Facilitates man-in-the-middle attacks',
+    reference: 'https://linux.die.net/man/8/arpspoof',
+  },
+  {
+    tool: 'urlsnarf',
+    description: 'Log HTTP requests in a Common Log Format',
+    risk: 'Captures web activity and cleartext credentials',
+    reference: 'https://linux.die.net/man/8/urlsnarf',
+  },
+  {
+    tool: 'macof',
+    description: 'Flood switch tables with random MAC addresses',
+    risk: 'May force switches into hub mode exposing traffic',
+    reference: 'https://linux.die.net/man/8/macof',
+  },
+  {
+    tool: 'webmitm',
+    description: 'Transparent HTTP/SSL proxy for MITM attacks',
+    risk: 'Intercepts and modifies encrypted sessions',
+    reference: 'https://linux.die.net/man/8/webmitm',
+  },
+];
 
 
 const LogRow = ({ log, prefersReduced }) => {
@@ -72,6 +100,8 @@ const Dsniff = () => {
   const [newField, setNewField] = useState('host');
   const [newValue, setNewValue] = useState('');
   const [prefersReduced, setPrefersReduced] = useState(false);
+
+  const { summary: pcapSummary, remediation } = pcapFixture;
 
   const sampleCommand = 'urlsnarf -i eth0';
   const sampleOutput = urlsnarfFixture.slice(0, 1).join('\n');
@@ -125,6 +155,38 @@ const Dsniff = () => {
       <div className="mb-2 text-yellow-300 text-sm">
         For lab use only – simulated traffic
       </div>
+      <div className="mb-4" data-testid="suite-tools">
+        <h2 className="font-bold mb-2 text-sm">Suite tools</h2>
+        <table className="w-full text-left text-xs">
+          <thead>
+            <tr className="text-green-400">
+              <th className="pr-2">Tool</th>
+              <th className="pr-2">Description</th>
+              <th className="pr-2">Risk</th>
+              <th>Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            {suiteTools.map((t) => (
+              <tr key={t.tool} className="odd:bg-black even:bg-ub-grey">
+                <td className="pr-2 text-green-400">{t.tool}</td>
+                <td className="pr-2 text-white">{t.description}</td>
+                <td className="pr-2 text-red-400">{t.risk}</td>
+                <td>
+                  <a
+                    href={t.reference}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-ubt-blue"
+                  >
+                    man
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <div className="mb-4 flex flex-col md:flex-row gap-4" data-testid="how-it-works">
         <div className="md:w-1/2 bg-black p-2">
@@ -174,6 +236,37 @@ const Dsniff = () => {
           <pre className="text-xs bg-ub-dark p-2 flex-1 overflow-auto" aria-label="sample command output">
             {`${sampleCommand}\n${sampleOutput}`}
           </pre>
+        </div>
+      </div>
+      <div className="mb-4" data-testid="pcap-demo">
+        <h2 className="font-bold mb-2 text-sm">PCAP credential leakage demo</h2>
+        <table className="w-full text-left text-xs mb-2">
+          <thead>
+            <tr className="text-green-400">
+              <th className="pr-2">Src</th>
+              <th className="pr-2">Dst</th>
+              <th className="pr-2">Protocol</th>
+              <th>Info</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pcapSummary.map((pkt, i) => (
+              <tr key={i} className="odd:bg-black even:bg-ub-grey">
+                <td className="pr-2 text-white">{pkt.src}</td>
+                <td className="pr-2 text-white">{pkt.dst}</td>
+                <td className="pr-2 text-green-400">{pkt.protocol}</td>
+                <td className="text-green-400">{pkt.info}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="bg-black p-2">
+          <h3 className="font-bold mb-1 text-sm">Remediation</h3>
+          <ul className="list-disc pl-5 text-xs">
+            {remediation.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
         </div>
       </div>
       <div className="mb-2 flex space-x-2 items-center">
