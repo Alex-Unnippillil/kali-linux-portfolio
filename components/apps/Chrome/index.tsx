@@ -64,6 +64,18 @@ const Chrome: React.FC = () => {
   const [address, setAddress] = useState<string>(tabs.find((t) => t.id === activeId)?.url || HOME_URL);
   const [searchTerm, setSearchTerm] = useState('');
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const setIframeMuted = useCallback((mute: boolean) => {
+    try {
+      const doc = iframeRef.current?.contentDocument;
+      if (!doc) return false;
+      doc.querySelectorAll('audio, video').forEach((el) => {
+        (el as HTMLMediaElement).muted = mute;
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
   const [articles, setArticles] = useState<Record<number, string>>({});
   const sanitizedArticle = useMemo(
     () =>
@@ -198,13 +210,12 @@ const Chrome: React.FC = () => {
     if (!articles[activeId]) {
       fetchArticle(activeId, activeTab.url);
     }
-    try {
-      // @ts-ignore
-      if (iframeRef.current) iframeRef.current.muted = !!activeTab.muted;
-    } catch {
-      /* ignore */
+    if (!setIframeMuted(!!activeTab.muted) && activeTab.muted) {
+      setTabs((prev) =>
+        prev.map((t) => (t.id === activeId ? { ...t, muted: false } : t)),
+      );
     }
-  }, [activeId, activeTab.url, activeTab.muted, articles, fetchArticle]);
+  }, [activeId, activeTab.url, activeTab.muted, articles, fetchArticle, setIframeMuted]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -242,16 +253,15 @@ const Chrome: React.FC = () => {
   }, [searchTerm]);
 
   const toggleMute = useCallback(() => {
-    setTabs((prev) =>
-      prev.map((t) => (t.id === activeId ? { ...t, muted: !t.muted } : t)),
-    );
-    try {
-      // @ts-ignore
-      iframeRef.current.muted = !activeTab.muted;
-    } catch {
-      /* ignore */
+    const next = !activeTab.muted;
+    if (setIframeMuted(next)) {
+      setTabs((prev) =>
+        prev.map((t) => (t.id === activeId ? { ...t, muted: next } : t)),
+      );
+    } else {
+      console.warn('Unable to control audio for this site.');
     }
-  }, [activeId, activeTab.muted]);
+  }, [activeId, activeTab.muted, setIframeMuted]);
 
   const screenshot = useCallback(async () => {
     if (!iframeRef.current) return;
@@ -287,6 +297,13 @@ const Chrome: React.FC = () => {
         <button onClick={goForward} aria-label="Forward" className="px-2">▶</button>
         <button onClick={reload} aria-label="Reload" className="px-2">↻</button>
         <button onClick={stop} aria-label="Stop" className="px-2">✕</button>
+        <button
+          onClick={toggleMute}
+          aria-label={activeTab.muted ? 'Unmute' : 'Mute'}
+          className="px-2"
+        >
+          {activeTab.muted ? '🔇' : '🔊'}
+        </button>
         <input
           className="flex-grow px-2 py-0.5 text-black rounded"
           value={address}
