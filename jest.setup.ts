@@ -112,7 +112,7 @@ global.Worker = WorkerMock as any;
 
 // Mock xterm and addons so terminal tests run without the real library
 jest.mock(
-  'xterm',
+  '@xterm/xterm',
   () => ({
     Terminal: class {
       loadAddon() {}
@@ -132,7 +132,7 @@ jest.mock(
 );
 
 jest.mock(
-  'xterm-addon-fit',
+  '@xterm/addon-fit',
   () => ({
     FitAddon: class {
       activate() {}
@@ -145,7 +145,7 @@ jest.mock(
 );
 
 jest.mock(
-  'xterm-addon-search',
+  '@xterm/addon-search',
   () => ({
     SearchAddon: class {
       activate() {}
