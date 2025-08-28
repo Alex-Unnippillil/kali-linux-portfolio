@@ -35,6 +35,7 @@ export class Desktop extends Component {
             context_app: null,
             showNameBar: false,
             showShortcutSelector: false,
+            statusMessage: '',
         }
     }
 
@@ -304,6 +305,7 @@ export class Desktop extends Component {
                     allowMaximize: app.allowMaximize,
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
+                    announce: this.announce,
                 }
 
                 windowsJsx.push(
@@ -538,6 +540,10 @@ export class Desktop extends Component {
         }
     }
 
+    announce = (message) => {
+        this.setState({ statusMessage: message });
+    }
+
     addToDesktop = (folder_name) => {
         folder_name = folder_name.trim();
         let folder_id = folder_name.replace(/\s+/g, '-').toLowerCase();
@@ -641,6 +647,10 @@ export class Desktop extends Component {
                         games={games}
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+
+                <div role="status" aria-live="polite" className="sr-only">
+                    {this.state.statusMessage}
+                </div>
 
             </div>
         )
