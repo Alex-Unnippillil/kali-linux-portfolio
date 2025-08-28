@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import GuideOverlay from './GuideOverlay';
-import HookGraph from './HookGraph';
+import HookStepper from './HookStepper';
 
 export default function Beef() {
   const [hooks, setHooks] = useState([]);
@@ -17,6 +17,7 @@ export default function Beef() {
 
   const hooksUrl = '/demo-data/beef/hooks.json';
   const modulesUrl = '/demo-data/beef/modules.json';
+  const demoUrl = process.env.NEXT_PUBLIC_BEEF_URL;
 
   const getStatus = (hook) => {
     if (hook.status) return hook.status;
@@ -137,7 +138,7 @@ export default function Beef() {
       </div>
       <div className="flex-1 p-4 overflow-y-auto flex flex-col">
         <div className="h-64 mb-4">
-          <HookGraph hooks={hooks} steps={steps} />
+          <HookStepper hooks={hooks} selected={selected} steps={steps} output={output} />
         </div>
         {selected ? (
           <>
@@ -168,6 +169,19 @@ export default function Beef() {
           </>
         ) : (
           <p>Select a hooked browser to run modules.</p>
+        )}
+        {demoUrl && (
+          <div className="mt-4">
+            <p className="text-xs mb-1 text-center">
+              External demo iframe is sandboxed for safety.
+            </p>
+            <iframe
+              src={demoUrl}
+              title="BeEF demo"
+              className="w-full h-64 border border-gray-700"
+              sandbox="allow-same-origin allow-scripts"
+            />
+          </div>
         )}
       </div>
       <div aria-live="polite" className="sr-only">{liveMessage}</div>

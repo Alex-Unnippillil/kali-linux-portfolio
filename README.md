@@ -118,7 +118,7 @@ Heavy apps are wrapped with **dynamic import** and most games share a `GameLayou
 | `NEXT_PUBLIC_TEMPLATE_ID` | EmailJS template id. |
 | `NEXT_PUBLIC_USER_ID` | EmailJS public key / user id. |
 | `NEXT_PUBLIC_YOUTUBE_API_KEY` | Used by the YouTube app for search/embed enhancements. |
-| `NEXT_PUBLIC_BEEF_URL` | Optional URL for the BeEF demo iframe (if used). |
+| `NEXT_PUBLIC_BEEF_URL` | Optional URL for a sandboxed BeEF demo iframe. |
 | `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
