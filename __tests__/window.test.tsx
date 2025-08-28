@@ -283,3 +283,44 @@ describe('Window keyboard dragging', () => {
     expect(handle).toHaveAttribute('aria-grabbed', 'false');
   });
 });
+
+describe('Window overlay inert behaviour', () => {
+  it('sets and removes inert on #root restoring focus', () => {
+    const ref = React.createRef<Window>();
+    const root = document.createElement('div');
+    root.id = 'root';
+    document.body.appendChild(root);
+
+      const opener = document.createElement('button');
+      document.body.appendChild(opener);
+      opener.focus();
+
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />,
+      { container: root }
+    );
+
+    act(() => {
+      ref.current!.activateOverlay();
+    });
+
+    expect(root).toHaveAttribute('inert');
+
+    act(() => {
+      ref.current!.closeWindow();
+    });
+
+    expect(root).not.toHaveAttribute('inert');
+
+  });
+});

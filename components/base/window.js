@@ -28,6 +28,7 @@ export class Window extends Component {
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
+        this._menuOpener = null;
     }
 
     componentDidMount() {
@@ -128,6 +129,25 @@ export class Window extends Component {
             });
         };
         shrink();
+    }
+
+    activateOverlay = () => {
+        const root = document.getElementById('root');
+        if (root) {
+            root.setAttribute('inert', '');
+        }
+        this._menuOpener = document.activeElement;
+    }
+
+    deactivateOverlay = () => {
+        const root = document.getElementById('root');
+        if (root) {
+            root.removeAttribute('inert');
+        }
+        if (this._menuOpener && typeof this._menuOpener.focus === 'function') {
+            this._menuOpener.focus();
+        }
+        this._menuOpener = null;
     }
 
     changeCursorToMove = () => {
@@ -315,6 +335,7 @@ export class Window extends Component {
     closeWindow = () => {
         this.setWinowsPosition();
         this.setState({ closed: true }, () => {
+            this.deactivateOverlay();
             this.props.hideSideBar(this.id, false);
             setTimeout(() => {
                 this.props.closed(this.id)
