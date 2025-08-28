@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, useEffect, useState } from 'react';
 import BackgroundImage from '../util-components/background-image';
 import SideBar from './side_bar';
 import apps, { games } from '../../apps.config';
@@ -10,6 +10,42 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import ReactGA from 'react-ga4';
+import usePersistentState from '../usePersistentState';
+
+function FirstLoadTooltip() {
+    const [seen, setSeen] = usePersistentState('desktop-first-load-seen', false);
+    const [step, setStep] = useState(1);
+
+    useEffect(() => {
+        if (seen) return;
+        const handleFirstKey = () => {
+            setStep(2);
+        };
+        window.addEventListener('keydown', handleFirstKey, { once: true });
+        return () => window.removeEventListener('keydown', handleFirstKey);
+    }, [seen]);
+
+    useEffect(() => {
+        if (seen || step !== 2) return;
+        const handleCmdK = (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                setSeen(true);
+            }
+        };
+        window.addEventListener('keydown', handleCmdK);
+        return () => window.removeEventListener('keydown', handleCmdK);
+    }, [seen, step, setSeen]);
+
+    if (seen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 text-white pointer-events-none select-none">
+            <div className="bg-gray-800 bg-opacity-90 rounded px-4 py-2">
+                {step === 1 ? 'Press any key to unlock' : 'Press \u2318K/Ctrl+K for command palette'}
+            </div>
+        </div>
+    );
+}
 
 export class Desktop extends Component {
     constructor() {
@@ -641,6 +677,8 @@ export class Desktop extends Component {
                         games={games}
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+
+                <FirstLoadTooltip />
 
             </div>
         )
