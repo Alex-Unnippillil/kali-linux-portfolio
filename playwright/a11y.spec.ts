@@ -1,7 +1,21 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-const urls = ['/', '/apps'];
+const urls = [
+  '/',
+  '/apps',
+  '/apps/chess',
+  '/apps/sudoku',
+  '/apps/youtube',
+  // Additional resource-heavy apps
+  '/apps/vscode',
+  '/apps/spotify',
+  '/apps/x',
+  '/apps/chrome',
+  '/apps/trash',
+  '/apps/gedit',
+  '/apps/todoist',
+];
 
 for (const path of urls) {
   test(`no critical accessibility violations on ${path}`, async ({ page }) => {
