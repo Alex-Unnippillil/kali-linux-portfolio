@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { getMapping } from './Games/common/input-remap/useInputMapping';
+import useGamepad from '../../hooks/useGamepad';
 
 /**
  * Multifunctional game control hook.
@@ -26,6 +27,8 @@ const useGameControls = (arg, gameId = 'default') => {
     hyperspace: false,
     joystick: { x: 0, y: 0, active: false, startX: 0, startY: 0 },
   });
+  const gamepad = useGamepad();
+  const padTime = useRef(0);
 
   // keyboard controls for directional games
   useEffect(() => {
@@ -82,6 +85,19 @@ const useGameControls = (arg, gameId = 'default') => {
       window.removeEventListener('touchend', end);
     };
   }, [onDirection]);
+
+  // gamepad controls for directional games
+  useEffect(() => {
+    if (!onDirection) return;
+    const now = Date.now();
+    if (now - padTime.current < 100) return;
+    const { moveX, moveY } = gamepad;
+    if (Math.abs(moveX) > 0.5 || Math.abs(moveY) > 0.5) {
+      if (Math.abs(moveX) > Math.abs(moveY)) onDirection({ x: Math.sign(moveX), y: 0 });
+      else onDirection({ x: 0, y: Math.sign(moveY) });
+      padTime.current = now;
+    }
+  }, [gamepad, onDirection]);
 
   // keyboard controls for advanced games
   useEffect(() => {
@@ -150,6 +166,14 @@ const useGameControls = (arg, gameId = 'default') => {
       canvas.removeEventListener('touchend', end);
     };
   }, [canvasRef, onDirection]);
+
+  // gamepad controls for advanced games
+  useEffect(() => {
+    if (onDirection) return;
+    stateRef.current.joystick.x = gamepad.moveX;
+    stateRef.current.joystick.y = gamepad.moveY;
+    stateRef.current.fire = gamepad.fire || stateRef.current.fire;
+  }, [gamepad, onDirection]);
 
   return onDirection ? null : stateRef.current;
 };
