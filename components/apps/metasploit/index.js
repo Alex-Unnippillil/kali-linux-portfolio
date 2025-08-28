@@ -38,7 +38,7 @@ const MetasploitApp = ({
 
   // Refresh modules list in the background on mount
   useEffect(() => {
-    if (!demoMode) {
+    if (!demoMode && process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
       fetch('/api/metasploit').catch(() => {});
     }
   }, [demoMode]);
@@ -92,7 +92,7 @@ const MetasploitApp = ({
     if (!cmd) return;
     setLoading(true);
     try {
-      if (demoMode) {
+      if (demoMode || process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
         setOutput(
           (prev) => `${prev}\nmsf6 > ${cmd}\n[demo mode] command disabled`
         );
@@ -129,17 +129,19 @@ const MetasploitApp = ({
     setTimeline([]);
     setProgress(0);
     setReplaying(true);
-    const worker = new Worker(new URL('./exploit.worker.js', import.meta.url));
-    worker.onmessage = (e) => {
-      if (e.data.step) {
-        setTimeline((t) => [...t, e.data.step]);
-      } else if (e.data.done) {
-        setReplaying(false);
-        worker.terminate();
-      }
-    };
-    worker.postMessage('start');
-    workerRef.current = worker;
+    if (typeof Worker === 'function') {
+      const worker = new Worker(new URL('./exploit.worker.js', import.meta.url));
+      worker.onmessage = (e) => {
+        if (e.data.step) {
+          setTimeline((t) => [...t, e.data.step]);
+        } else if (e.data.done) {
+          setReplaying(false);
+          worker.terminate();
+        }
+      };
+      worker.postMessage('start');
+      workerRef.current = worker;
+    }
   };
 
   useEffect(() => {

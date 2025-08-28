@@ -339,7 +339,9 @@ function Timeline() {
               key={event.date}
               className="mb-4 ml-4 timeline-item focus:outline-none"
               tabIndex={activeIndex === i ? 0 : -1}
-              ref={(el) => (itemRefs.current[i] = el)}
+              ref={(el) => {
+                itemRefs.current[i] = el;
+              }}
               onKeyDown={(e) => handleKeyDown(e, i)}
               onFocus={() => {
                 setActiveIndex(i);

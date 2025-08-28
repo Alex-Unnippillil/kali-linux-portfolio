@@ -22,17 +22,20 @@ Always test inside controlled labs and obtain written permission before performi
 ## Quick Start
 
 ### Requirements
-- **Node.js 20.x**
+- **Node.js 20.x** (repo includes `.nvmrc`; run `nvm use`)
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
 ### Install & Run (Dev)
 ```bash
+nvm install  # installs Node 20 from .nvmrc if needed
+nvm use
 yarn install
 yarn dev
 ```
 
 ### Production Build
+Serverful deployments run the built Next.js server so all API routes are available.
 ```bash
 yarn build && yarn start
 ```
@@ -42,9 +45,10 @@ curl -X POST http://localhost:3000/api/dummy
 ```
 
 ### Static Export (for GitHub Pages / S3 Websites)
-This project supports static export. Serverless API routes will not be available in a static export; the UI gracefully degrades.
+This project supports static export. Serverless API routes will not be available; the UI falls back to demo data or hides features.
 ```bash
 yarn export && npx serve out
+
 ```
 Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
 
@@ -159,6 +163,7 @@ keyboard focus so bundles are warmed before launch. When adding a new app, expor
 | `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
+| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
 | `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
 

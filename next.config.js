@@ -1,6 +1,9 @@
 // Security headers configuration for Next.js.
 // Allows external badges and same-origin PDF embedding.
 // Update README (section "CSP External Domains") when editing domains below.
+const { validatePublicEnv } = require('./lib/validate');
+
+validatePublicEnv(process.env);
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -54,6 +57,8 @@ const securityHeaders = [
   },
 ];
 
+const isExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+
 module.exports = {
   typescript: {
     ignoreBuildErrors: true,
@@ -61,6 +66,7 @@ module.exports = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+
   images: {
     domains: [
       'opengraph.githubassets.com',
@@ -70,6 +76,9 @@ module.exports = {
       'yt3.ggpht.com',
       'i.scdn.co',
     ],
+  },
+  experimental: {
+    turbo: false,
   },
   async headers() {
     return [

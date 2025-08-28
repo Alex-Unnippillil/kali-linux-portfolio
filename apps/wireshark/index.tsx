@@ -5,7 +5,7 @@ import WiresharkApp from '../../components/apps/wireshark';
 import tinyCapture from './tinyCapture.json';
 
 const WiresharkPage: React.FC = () => {
-  return <WiresharkApp initialPackets={tinyCapture} />;
+  return <WiresharkApp initialPackets={tinyCapture as any} />;
 };
 
 export default WiresharkPage;

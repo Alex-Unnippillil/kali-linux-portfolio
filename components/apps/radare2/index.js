@@ -32,7 +32,7 @@ const Radare2 = () => {
   // Kick off the worker with the pre-baked analysis so no real
   // analysis runs in the browser.
   useEffect(() => {
-    if (typeof Worker !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./analysisWorker.js', import.meta.url)
       );
@@ -42,7 +42,7 @@ const Radare2 = () => {
         }
       };
       workerRef.current.postMessage({ type: 'graph', analysis: demoAnalysis });
-      return () => workerRef.current.terminate();
+      return () => workerRef.current?.terminate();
     }
     return undefined;
   }, []);

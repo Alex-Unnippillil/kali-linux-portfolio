@@ -9,7 +9,7 @@ const QRPage: React.FC = () => {
   const [scanResult, setScanResult] = useState('');
   const [error, setError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReaderRef = useRef<BrowserQRCodeReader>();
+  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
 
   const generateQr = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,12 +36,13 @@ const QRPage: React.FC = () => {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
-        const codeReader = new BrowserQRCodeReader();
-        codeReaderRef.current = codeReader;
-        codeReader.decodeFromVideoDevice(
-          undefined,
-          videoRef.current!,
-          (result, err) => {
+          const codeReader = new BrowserQRCodeReader();
+          codeReaderRef.current = codeReader;
+          codeReader.decodeFromVideoDevice(
+            null,
+            videoRef.current!,
+            (result, err) => {
+
             if (result) {
               setScanResult(result.getText());
             }

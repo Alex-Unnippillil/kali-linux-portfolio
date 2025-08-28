@@ -39,7 +39,7 @@ const Checkers = () => {
   const pathRef = useRef<[number, number][]>([]);
   const makeMoveRef = useRef<((move: Move) => void) | null>(null);
   const crownFrame = useRef<number>(0);
-  const cellRefs = useRef<HTMLDivElement[][]>([]);
+  const cellRefs = useRef<(HTMLDivElement | null)[][]>([]);
 
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLDivElement>,
@@ -85,18 +85,21 @@ const Checkers = () => {
   };
 
   useEffect(() => {
-    workerRef.current = new Worker('/checkers-worker.js');
-    workerRef.current.onmessage = (e: MessageEvent<Move>) => {
-      const move = e.data;
-      if (hintRequest.current) {
-        setHint(move);
-        hintRequest.current = false;
-        setTimeout(() => setHint(null), 1000);
-      } else if (move) {
-        makeMoveRef.current?.(move);
-      }
-    };
-    return () => workerRef.current?.terminate();
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      workerRef.current = new Worker('/checkers-worker.js');
+      workerRef.current.onmessage = (e: MessageEvent<Move>) => {
+        const move = e.data;
+        if (hintRequest.current) {
+          setHint(move);
+          hintRequest.current = false;
+          setTimeout(() => setHint(null), 1000);
+        } else if (move) {
+          makeMoveRef.current?.(move);
+        }
+      };
+      return () => workerRef.current?.terminate();
+    }
+    return undefined;
   }, []);
 
   useEffect(() => {

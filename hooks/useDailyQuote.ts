@@ -37,7 +37,8 @@ const processQuotes = (data: any[]) =>
     .map((q) => {
       const content = q.content || q.quote || '';
       const author = q.author || 'Unknown';
-      let tags = Array.isArray(q.tags) ? q.tags.map((t) => t.toLowerCase()) : [];
+      let tags = Array.isArray(q.tags) ? q.tags.map((t: string) => t.toLowerCase()) : [];
+
       if (!tags.length) {
         const lower = content.toLowerCase();
         Object.entries(CATEGORY_KEYWORDS).forEach(([cat, keywords]) => {
@@ -50,7 +51,7 @@ const processQuotes = (data: any[]) =>
     .filter(
       (q) =>
         !filter.isProfane(q.content) &&
-        q.tags.some((t) => SAFE_CATEGORIES.includes(t))
+        q.tags.some((t: string) => SAFE_CATEGORIES.includes(t))
     );
 
 const offlineQuotes = processQuotes(offlineQuotesData as any[]);

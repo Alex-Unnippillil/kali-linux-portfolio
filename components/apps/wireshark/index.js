@@ -45,20 +45,22 @@ const WiresharkApp = ({ initialPackets = [] }) => {
 
   // instantiate worker for burst grouping
   useEffect(() => {
-    if (typeof window === 'undefined' || typeof Worker === 'undefined') return;
-    const worker = new Worker(new URL('./burstWorker.js', import.meta.url));
-    worker.onmessage = (e) => {
-      if (e.data.type === 'burst') {
-        setAnnouncement(`Burst starting at ${e.data.start}`);
-      }
-      if (e.data.type === 'timeline') {
-        setTimeline(e.data.timeline);
-      }
-    };
-    // seed worker with any bundled packets
-    initialPackets.forEach((pkt) => worker.postMessage(pkt));
-    workerRef.current = worker;
-    return () => worker.terminate();
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      const worker = new Worker(new URL('./burstWorker.js', import.meta.url));
+      worker.onmessage = (e) => {
+        if (e.data.type === 'burst') {
+          setAnnouncement(`Burst starting at ${e.data.start}`);
+        }
+        if (e.data.type === 'timeline') {
+          setTimeline(e.data.timeline);
+        }
+      };
+      // seed worker with any bundled packets
+      initialPackets.forEach((pkt) => worker.postMessage(pkt));
+      workerRef.current = worker;
+      return () => worker.terminate();
+    }
+    return undefined;
   }, [initialPackets]);
 
   useEffect(() => {

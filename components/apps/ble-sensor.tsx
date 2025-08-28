@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import FormError from '../ui/FormError';
 
+type BluetoothDevice = any;
+type BluetoothRemoteGATTServer = any;
+
 interface CharacteristicData {
   uuid: string;
   value: string;
@@ -54,7 +57,7 @@ const BleSensor: React.FC = () => {
     }
 
     try {
-      const device = await navigator.bluetooth.requestDevice({
+      const device = await (navigator as any).bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: ['battery_service', 'device_information'],
       });
@@ -73,7 +76,7 @@ const BleSensor: React.FC = () => {
       for (const service of primServices) {
         const chars = await service.getCharacteristics();
         const charData = await Promise.all(
-          chars.map(async (char) => {
+          chars.map(async (char: any) => {
             try {
               const val = await char.readValue();
               const decoder = new TextDecoder();

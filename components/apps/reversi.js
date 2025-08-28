@@ -43,7 +43,7 @@ const Reversi = () => {
       reduceMotionRef.current = window.matchMedia(
         '(prefers-reduced-motion: reduce)'
       ).matches;
-      if (typeof window.Worker === 'function') {
+      if (typeof Worker === 'function') {
         workerRef.current = new Worker(
           new URL('./reversi.worker.js', import.meta.url)
         );

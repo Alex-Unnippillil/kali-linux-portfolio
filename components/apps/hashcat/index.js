@@ -178,7 +178,7 @@ function HashcatApp() {
     setProgress(0);
     setResult('');
     if (typeof window === 'undefined') return;
-    if (window.Worker) {
+    if (typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./progress.worker.js', import.meta.url)
       );

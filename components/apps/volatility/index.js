@@ -83,7 +83,7 @@ const VolatilityApp = () => {
   const workerRef = useRef(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./heatmap.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => setHeatmapData(e.data);
       workerRef.current.postMessage({ segments: memoryDemo.segments });

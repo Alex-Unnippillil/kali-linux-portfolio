@@ -25,8 +25,12 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useFocusTrap(menuRef, open);
-  useRovingTabIndex(menuRef, open, 'vertical');
+  useFocusTrap(menuRef as React.RefObject<HTMLElement>, open);
+  useRovingTabIndex(
+    menuRef as React.RefObject<HTMLElement>,
+    open,
+    'vertical',
+  );
 
   useEffect(() => {
     const node = targetRef.current;

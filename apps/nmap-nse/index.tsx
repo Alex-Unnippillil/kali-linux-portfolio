@@ -78,7 +78,7 @@ const NmapNSE: React.FC = () => {
       {filtered.map(([category, scripts]) => (
         <div key={category} className="mb-6">
           <h2 className="text-xl mb-2 capitalize">{category}</h2>
-          {scripts.map((script) => (
+          {scripts.map((script: Script) => (
             <div key={script.name} className="mb-4">
               <button
                 type="button"
