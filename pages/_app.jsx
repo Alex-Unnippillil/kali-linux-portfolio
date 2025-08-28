@@ -17,10 +17,22 @@ function MyApp({ Component, pageProps }) {
     if (trackingId) {
       ReactGA.initialize(trackingId);
     }
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js').catch(() => {
-        // ignore registration errors
-      });
+    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+      fetch('/service-worker.js')
+        .then((response) => {
+          if (response.ok) {
+            navigator.serviceWorker
+              .register('/service-worker.js')
+              .catch((error) => {
+                console.error('Service worker registration failed', error);
+              });
+          } else {
+            console.error('Service worker file not found');
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to fetch service worker', error);
+        });
     }
   }, []);
   return (
