@@ -10,6 +10,16 @@
 </head>
 <body>
   <canvas id="game" width="800" height="600"></canvas>
+  <div id="hud" style="position:fixed;top:10px;left:10px;font-family:monospace;">
+    <div id="score">Score: 0</div>
+    <div id="level">Level: 1</div>
+    <div id="controls" style="margin-top:4px;">
+      Move: arrows or left stick. Shoot: space or buttons. Pause: P or Start.
+    </div>
+  </div>
+  <div id="paused" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-family:monospace;">
+    Paused
+  </div>
   <script type="module" src="main.js"></script>
 </body>
 </html>
