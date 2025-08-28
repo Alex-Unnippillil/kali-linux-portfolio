@@ -121,6 +121,7 @@ const Tetris = () => {
   const animationRef = useRef(null);
   const dasTimer = useRef({ left: null, right: null });
   const arrTimer = useRef({ left: null, right: null });
+  const arrTimeRef = useRef({ left: 0, right: 0 });
   const keyHeld = useRef({ left: false, right: false });
 
   const boardRef = useRef(board);
@@ -386,16 +387,25 @@ const Tetris = () => {
       const action = actionFromKey(e.key.length === 1 ? e.key : e.code);
       if (!action) return;
       e.preventDefault();
-      if (action === 'left' || action === 'right') {
-        const dir = action === 'left' ? -1 : 1;
-        move(dir);
-        if (!keyHeld.current[action]) {
-          keyHeld.current[action] = true;
-          dasTimer.current[action] = setTimeout(() => {
-            arrTimer.current[action] = setInterval(() => move(dir), arr);
-          }, das);
-        }
-      } else if (action === 'down') moveDown(true);
+        if (action === 'left' || action === 'right') {
+          const dir = action === 'left' ? -1 : 1;
+          move(dir);
+          if (!keyHeld.current[action]) {
+            keyHeld.current[action] = true;
+            dasTimer.current[action] = setTimeout(() => {
+              const step = (time) => {
+                if (!keyHeld.current[action]) return;
+                if (!arrTimeRef.current[action]) arrTimeRef.current[action] = time;
+                if (time - arrTimeRef.current[action] >= arr) {
+                  move(dir);
+                  arrTimeRef.current[action] = time;
+                }
+                arrTimer.current[action] = requestAnimationFrame(step);
+              };
+              arrTimer.current[action] = requestAnimationFrame(step);
+            }, das);
+          }
+        } else if (action === 'down') moveDown(true);
       else if (action === 'rotate') rotatePiece();
       else if (action === 'drop') hardDrop();
       else if (action === 'hold') holdPiece();
@@ -411,17 +421,18 @@ const Tetris = () => {
     (e) => {
       const action = actionFromKey(e.key.length === 1 ? e.key : e.code);
       if (!action) return;
-      if (action === 'left' || action === 'right') {
-        keyHeld.current[action] = false;
-        if (dasTimer.current[action]) {
-          clearTimeout(dasTimer.current[action]);
-          dasTimer.current[action] = null;
+        if (action === 'left' || action === 'right') {
+          keyHeld.current[action] = false;
+          if (dasTimer.current[action]) {
+            clearTimeout(dasTimer.current[action]);
+            dasTimer.current[action] = null;
+          }
+          if (arrTimer.current[action]) {
+            cancelAnimationFrame(arrTimer.current[action]);
+            arrTimer.current[action] = null;
+            arrTimeRef.current[action] = 0;
+          }
         }
-        if (arrTimer.current[action]) {
-          clearInterval(arrTimer.current[action]);
-          arrTimer.current[action] = null;
-        }
-      }
     },
     [actionFromKey],
   );
@@ -429,9 +440,13 @@ const Tetris = () => {
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    const dasTimers = dasTimer.current;
+    const arrTimers = arrTimer.current;
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      Object.values(dasTimers).forEach((t) => t && clearTimeout(t));
+      Object.values(arrTimers).forEach((r) => r && cancelAnimationFrame(r));
     };
   }, [handleKeyDown, handleKeyUp]);
 
