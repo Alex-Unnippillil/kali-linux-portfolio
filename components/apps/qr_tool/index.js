@@ -158,22 +158,43 @@ const QRTool = () => {
 
   useEffect(() => () => stopCamera(), [stopCamera]);
 
+  const processFile = useCallback(
+    (file) => {
+      if (!file) return;
+      initWorker();
+      const img = new Image();
+      img.onload = () => {
+        const canvas = scanCanvasRef.current;
+        const ctx = canvas.getContext('2d');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        workerRef.current.postMessage({
+          data: imageData.data,
+          width: imageData.width,
+          height: imageData.height,
+        });
+      };
+      img.onerror = () => setScanMessage('Could not load image');
+      img.src = URL.createObjectURL(file);
+    },
+    [initWorker]
+  );
+
   const handleFile = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-    initWorker();
-    const img = new Image();
-    img.onload = () => {
-      const canvas = scanCanvasRef.current;
-      const ctx = canvas.getContext('2d');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      workerRef.current.postMessage({ data: imageData.data, width: imageData.width, height: imageData.height });
-    };
-    img.onerror = () => setScanMessage('Could not load image');
-    img.src = URL.createObjectURL(file);
+    processFile(file);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer?.files?.[0];
+    processFile(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
   };
 
   return (
@@ -317,7 +338,13 @@ const QRTool = () => {
               Stop
             </button>
           </div>
-          <div className="relative w-64 h-64 bg-black">
+          <div
+            className="relative w-64 h-64 bg-black"
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            data-testid="drop-zone"
+            aria-label="Camera preview. Drop image here to scan"
+          >
             <video
               ref={videoRef}
               className="w-full h-full object-cover"
