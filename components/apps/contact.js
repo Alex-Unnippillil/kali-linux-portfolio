@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
-import FormError from '../../ui/FormError';
+import FormError from '../ui/FormError';
 
-export const isValidEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
+export const isValidEmail = (email) => /\S+@\S+\.\S+/.test(email);
 
-const sanitize = (str: string) =>
+const sanitize = (str) =>
   str.replace(/[&<>"']/g, (c) => ({
     '&': '&amp;',
     '<': '&lt;',
     '>': '&gt;',
     '"': '&quot;',
     "'": '&#39;',
-  }[c]!));
+  }[c]));
 
-export const processContactForm = async (
-  data: { name: string; email: string; message: string; honeypot: string },
-  fetchImpl: typeof fetch = fetch
-) => {
+export const processContactForm = async (data, fetchImpl = fetch) => {
   const name = data.name.trim();
   const email = data.email.trim();
   const message = data.message.trim();
@@ -52,7 +49,7 @@ const ContactApp = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const result = await processContactForm({ name, email, message, honeypot });
     if (!result.success) {
@@ -113,4 +110,6 @@ const ContactApp = () => {
 };
 
 export default ContactApp;
+
+export const displayContact = () => <ContactApp />;
 
