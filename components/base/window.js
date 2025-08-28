@@ -28,6 +28,9 @@ export class Window extends Component {
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
+        // desktop grid configuration
+        this.gridCols = 12;
+        this.gridRows = 8;
     }
 
     componentDidMount() {
@@ -212,6 +215,10 @@ export class Window extends Component {
             snap = { left: '0', top: '0', width: '100%', height: '50%' };
             this.setState({ snapPreview: snap, snapPosition: 'top' });
         }
+        else if (rect.bottom >= window.innerHeight - threshold) {
+            snap = { left: '0', top: '50%', width: '100%', height: '50%' };
+            this.setState({ snapPreview: snap, snapPosition: 'bottom' });
+        }
         else {
             if (this.state.snapPreview) this.setState({ snapPreview: null, snapPosition: null });
         }
@@ -243,6 +250,10 @@ export class Window extends Component {
                 newWidth = 100.2;
                 newHeight = 50;
                 transform = 'translate(-1pt,-2pt)';
+            } else if (snapPos === 'bottom') {
+                newWidth = 100.2;
+                newHeight = 50;
+                transform = `translate(-1pt,${window.innerHeight / 2}px)`;
             }
             var r = document.querySelector("#" + this.id);
             if (r && transform) {
@@ -258,6 +269,16 @@ export class Window extends Component {
             }, this.resizeBoundries);
         }
         else {
+            const node = document.getElementById(this.id);
+            if (node) {
+                const rect = node.getBoundingClientRect();
+                const cellWidth = window.innerWidth / this.gridCols;
+                const cellHeight = window.innerHeight / this.gridRows;
+                const x = Math.round(rect.left / cellWidth) * cellWidth;
+                const y = Math.round(rect.top / cellHeight) * cellHeight;
+                node.style.transform = `translate(${x}px,${y}px)`;
+                this.setWinowsPosition();
+            }
             this.setState({ snapPreview: null, snapPosition: null });
         }
     }
@@ -567,8 +588,10 @@ export class WindowMainScreen extends Component {
     }
     render() {
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp)}
+            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}> 
+                <div className="app-container">
+                    {this.props.screen(this.props.addFolder, this.props.openApp)}
+                </div>
             </div>
         )
     }
