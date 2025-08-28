@@ -1,5 +1,9 @@
 @import './globals.css';
 
+html{
+    font-size: var(--font-size-base);
+}
+
 body{
     font-family: var(--font-family-base);
     font-display: swap;

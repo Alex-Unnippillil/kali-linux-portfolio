@@ -3,6 +3,7 @@ export const THEME_KEY = 'app:theme';
 // Score required to unlock each theme
 export const THEME_UNLOCKS: Record<string, number> = {
   default: 0,
+  'high-contrast': 0,
   neon: 100,
   dark: 500,
   matrix: 1000,
