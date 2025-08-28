@@ -495,3 +495,68 @@ textarea:focus-visible {
     outline: 2px solid #3B82F6;
     outline-offset: 2px;
 }
+
+/* Scroll progress timelines and background animations */
+@scroll-timeline page-scroll {
+    source: auto;
+    orientation: block;
+}
+
+@scroll-timeline horizontal-scroll {
+    source: auto;
+    orientation: inline;
+}
+
+.scroll-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    z-index: 1000;
+    background: linear-gradient(to right, var(--color-ubt-blue) 50%, var(--color-ubt-blue) 50%);
+    background-size: 200% 100%;
+    background-position: 100% 0;
+    animation: progress-bar 1s linear both;
+    animation-timeline: page-scroll;
+}
+
+@keyframes progress-bar {
+    to {
+        background-position: 0 0;
+    }
+}
+
+.bg-pan-x {
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: pan-x 1s linear both;
+    animation-timeline: horizontal-scroll;
+}
+
+.bg-pan-y {
+    background-size: 100% 200%;
+    background-repeat: no-repeat;
+    animation: pan-y 1s linear both;
+    animation-timeline: page-scroll;
+}
+
+@keyframes pan-x {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 100% 0;
+    }
+}
+
+@keyframes pan-y {
+    from {
+        background-position: 0 0;
+    }
+
+    to {
+        background-position: 0 100%;
+    }
+}

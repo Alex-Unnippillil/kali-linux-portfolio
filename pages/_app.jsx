@@ -7,6 +7,7 @@ import '../styles/index.css';
 import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
 import { SettingsProvider } from '../hooks/useSettings';
+import ScrollProgress from '../components/ui/ScrollProgress';
 
 /**
  * @param {import('next/app').AppProps} props
@@ -41,6 +42,7 @@ function MyApp({ Component, pageProps }) {
   }, []);
   return (
     <SettingsProvider>
+      <ScrollProgress />
       <Component {...pageProps} />
       <Analytics />
     </SettingsProvider>
