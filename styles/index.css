@@ -359,9 +359,19 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     100% { transform: translateX(0); }
 }
 
-/* Context Menu */
-.context-menu-bg {
-    background-color: rgb(43, 43, 43);
+/* Context Menu & Panels */
+.context-menu-bg,
+.windowMainScreen {
+    background-color: rgba(43, 43, 43, 0.85); /* Fallback for unsupported browsers */
+}
+
+@supports ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
+    .context-menu-bg,
+    .windowMainScreen {
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        background-color: rgba(43, 43, 43, 0.4);
+    }
 }
 
 .emoji-list>li {
