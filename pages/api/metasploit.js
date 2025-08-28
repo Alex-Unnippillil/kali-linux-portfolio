@@ -1,6 +1,10 @@
 import modules from '../../components/apps/metasploit/modules.json';
 
 export default function handler(req, res) {
+  if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
+    res.status(501).json({ error: 'Not implemented' });
+    return;
+  }
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).end('Method Not Allowed');

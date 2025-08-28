@@ -7,6 +7,10 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 
 export default async function handler(req, res) {
+  if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
+    res.status(501).json({ error: 'Not implemented' });
+    return;
+  }
   // John the Ripper is optional; environments without the binary can stub
   // this handler to return canned responses for demonstration.
   if (req.method !== 'POST') {
