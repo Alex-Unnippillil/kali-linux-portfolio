@@ -92,11 +92,14 @@ export class Desktop extends Component {
         document.addEventListener('contextmenu', this.checkContextMenu);
         // on click, anywhere, hide all menus
         document.addEventListener('click', this.hideAllContextMenu);
+        // allow keyboard activation of context menus
+        document.addEventListener('keydown', this.handleContextKey);
     }
 
     removeContextListeners = () => {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
+        document.removeEventListener('keydown', this.handleContextKey);
     }
 
     handleGlobalShortcut = (e) => {
@@ -133,6 +136,30 @@ export class Desktop extends Component {
                     action: `Opened Default Context Menu`
                 });
                 this.showContextMenu(e, "default");
+        }
+    }
+
+    handleContextKey = (e) => {
+        if (!(e.shiftKey && e.key === 'F10')) return;
+        e.preventDefault();
+        this.hideAllContextMenu();
+        const target = e.target.closest('[data-context]');
+        const context = target ? target.dataset.context : null;
+        const appId = target ? target.dataset.appId : null;
+        const rect = target ? target.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
+        const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
+        switch (context) {
+            case "desktop-area":
+                ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
+                this.showContextMenu(fakeEvent, "desktop");
+                break;
+            case "app":
+                ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
+                break;
+            default:
+                ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
+                this.showContextMenu(fakeEvent, "default");
         }
     }
 

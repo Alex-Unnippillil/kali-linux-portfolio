@@ -40,6 +40,9 @@ export class Window extends Component {
 
         // on window resize, resize boundary
         window.addEventListener('resize', this.resizeBoundries);
+        // Listen for context menu events to toggle inert background
+        window.addEventListener('context-menu-open', this.setInertBackground);
+        window.addEventListener('context-menu-close', this.removeInertBackground);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -49,6 +52,8 @@ export class Window extends Component {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         window.removeEventListener('resize', this.resizeBoundries);
+        window.removeEventListener('context-menu-open', this.setInertBackground);
+        window.removeEventListener('context-menu-close', this.removeInertBackground);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -211,6 +216,20 @@ export class Window extends Component {
         }
         else {
             this.props.hideSideBar(this.id, false);
+        }
+    }
+
+    setInertBackground = () => {
+        const root = document.getElementById(this.id);
+        if (root) {
+            root.setAttribute('inert', '');
+        }
+    }
+
+    removeInertBackground = () => {
+        const root = document.getElementById(this.id);
+        if (root) {
+            root.removeAttribute('inert');
         }
     }
 
