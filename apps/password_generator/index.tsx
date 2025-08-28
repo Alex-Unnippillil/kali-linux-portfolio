@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import CopyButton from '../../components/ui/CopyButton';
 
 const LOWER = 'abcdefghijklmnopqrstuvwxyz';
 const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -34,15 +35,6 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
       pwd += chars[idx];
     }
     setPassword(pwd);
-  };
-
-  const copyToClipboard = async () => {
-    if (!password) return;
-    try {
-      await navigator.clipboard?.writeText(password);
-    } catch (e) {
-      // ignore
-    }
   };
 
   const strengthInfo = () => {
@@ -86,13 +78,10 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
           value={password}
           className="flex-1 text-black px-2 py-1 font-mono leading-[1.2] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
         />
-        <button
-          type="button"
-          onClick={copyToClipboard}
+        <CopyButton
+          text={password}
           className="px-3 py-1 bg-blue-600 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
-        >
-          Copy
-        </button>
+        />
       </div>
       <div>
         <div className="h-2 w-full bg-gray-700 rounded">
