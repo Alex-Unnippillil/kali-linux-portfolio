@@ -89,10 +89,10 @@ function createNoteElement(note) {
   notesContainer.appendChild(el);
 }
 
-function addNote() {
+function addNote(content = '') {
   const note = {
     id: Date.now(),
-    content: '',
+    content,
     x: 50,
     y: 50,
     color: '#fffa65',
@@ -143,6 +143,13 @@ async function init() {
     }
 
     notes.forEach(createNoteElement);
+
+    const params = new URLSearchParams(location.search);
+    const sharedText = params.get('text');
+    if (sharedText) {
+      addNote(sharedText);
+      history.replaceState(null, '', location.pathname);
+    }
   } catch (err) {
     console.error('Failed to load notes', err);
     try {
