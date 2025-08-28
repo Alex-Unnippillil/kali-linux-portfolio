@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import GuideOverlay from './GuideOverlay';
-import HookGraph from './HookGraph';
+
+const HookGraph = dynamic(() => import('./HookGraph'), { ssr: false });
 
 export default function Beef() {
   const [hooks, setHooks] = useState([]);
