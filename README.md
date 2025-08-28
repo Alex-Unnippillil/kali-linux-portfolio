@@ -22,12 +22,14 @@ Always test inside controlled labs and obtain written permission before performi
 ## Quick Start
 
 ### Requirements
-- **Node.js 20.x**
+- **Node.js 20.x** (repo includes `.nvmrc`; run `nvm use`)
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
 ### Install & Run (Dev)
 ```bash
+nvm install  # installs Node 20 from .nvmrc if needed
+nvm use
 yarn install
 yarn dev
 ```
