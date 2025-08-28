@@ -8,6 +8,8 @@ import {
   setDensity as saveDensity,
   getReducedMotion as loadReducedMotion,
   setReducedMotion as saveReducedMotion,
+  getTheme as loadTheme,
+  setTheme as saveTheme,
   defaults,
 } from '../utils/settingsStore';
 type Density = 'regular' | 'compact';
@@ -17,10 +19,12 @@ interface SettingsContextValue {
   wallpaper: string;
   density: Density;
   reducedMotion: boolean;
+  theme: string;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
+  setTheme: (theme: string) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -28,10 +32,12 @@ export const SettingsContext = createContext<SettingsContextValue>({
   wallpaper: defaults.wallpaper,
   density: defaults.density as Density,
   reducedMotion: defaults.reducedMotion,
+  theme: defaults.theme,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
+  setTheme: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -39,6 +45,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
   const [density, setDensity] = useState<Density>(defaults.density as Density);
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+  const [theme, setTheme] = useState<string>(defaults.theme);
 
   useEffect(() => {
     (async () => {
@@ -46,6 +53,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setWallpaper(await loadWallpaper());
       setDensity((await loadDensity()) as Density);
       setReducedMotion(await loadReducedMotion());
+      setTheme(await loadTheme());
     })();
   }, []);
 
@@ -89,8 +97,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('high-contrast', theme === 'high-contrast');
+    saveTheme(theme);
+  }, [theme]);
+
   return (
-    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, setAccent, setWallpaper, setDensity, setReducedMotion }}>
+    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, theme, setAccent, setWallpaper, setDensity, setReducedMotion, setTheme }}>
       {children}
     </SettingsContext.Provider>
   );

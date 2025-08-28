@@ -17,3 +17,17 @@
   --color-terminal: #00ff00; /* terminal green */
   --color-dark: #0c0f12; /* card back */
 }
+/* High contrast theme overrides */
+.high-contrast {
+  --color-bg: #000000;
+  --color-text: #ffffff;
+  --color-primary: #ffff00;
+  --color-secondary: #000000;
+  --color-accent: #ffff00;
+  --color-muted: #444444;
+  --color-surface: #000000;
+  --color-inverse: #ffffff;
+  --color-border: #ffffff;
+  --color-terminal: #00ff00;
+  --color-dark: #000000;
+}
