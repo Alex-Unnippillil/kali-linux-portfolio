@@ -5,6 +5,7 @@ import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../../LazyGitHubButton';
 import Certs from '../certs';
 import data from '../alex/data.json';
+import SafetyNote from './SafetyNote';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -121,6 +122,8 @@ export default function AboutApp() {
   return <AboutAlex />;
 }
 
+export { default as SafetyNote } from './SafetyNote';
+
 function About() {
   return (
     <>
@@ -200,8 +203,50 @@ function About() {
         </li>
         <li className="mt-3 list-star">I also have interests in deep learning, software development, and animation.</li>
       </ul>
+      <WorkerStatus />
+      <SafetyNote />
       <Timeline />
     </>
+  );
+}
+
+const workerApps = [
+  { id: 'hydra', label: 'Hydra' },
+  { id: 'john', label: 'John the Ripper' },
+  { id: 'metasploit', label: 'Metasploit' },
+  { id: 'mimikatz', label: 'Mimikatz' },
+  { id: 'radare2', label: 'Radare2' },
+];
+
+function WorkerStatus() {
+  const [status, setStatus] = React.useState<Record<string, string>>({});
+
+  React.useEffect(() => {
+    workerApps.forEach((app) => {
+      fetch(`/api/${app.id}`, { method: 'HEAD' })
+        .then((res) => {
+          setStatus((s) => ({ ...s, [app.id]: res.status < 500 ? 'Online' : 'Offline' }));
+        })
+        .catch(() => {
+          setStatus((s) => ({ ...s, [app.id]: 'Offline' }));
+        });
+    });
+  }, []);
+
+  return (
+    <section aria-labelledby="app-status-heading" className="mt-8 w-5/6 md:w-3/4">
+      <h2 id="app-status-heading" className="text-lg font-bold text-center">
+        Worker App Availability
+      </h2>
+      <ul role="list" className="mt-2">
+        {workerApps.map((app) => (
+          <li key={app.id} className="flex justify-between items-center py-1 border-b border-gray-600">
+            <span className="capitalize">{app.label}</span>
+            <span aria-live="polite">{status[app.id] || 'Checking...'}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
