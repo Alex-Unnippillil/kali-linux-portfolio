@@ -37,16 +37,20 @@ yarn dev
 ### Production Build
 Serverful deployments run the built Next.js server so all API routes are available.
 ```bash
-# Next.js production build & start
-yarn build
-yarn start
+yarn build && yarn start
+```
+After the server starts, exercise an API route to confirm server-side functionality:
+```bash
+curl -X POST http://localhost:3000/api/dummy
 ```
 
 ### Static Export (for GitHub Pages / S3 Websites)
 This project supports static export. Serverless API routes will not be available; the UI falls back to demo data or hides features.
 ```bash
-yarn export        # outputs to ./out (runs with NEXT_PUBLIC_STATIC_EXPORT=true)
+yarn export && npx serve out
+
 ```
+Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
 
 ### Install as PWA for Sharing
 
