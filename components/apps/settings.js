@@ -139,6 +139,12 @@ export function Settings() {
                 >
                     Reset Desktop
                 </button>
+                <button
+                    onClick={() => { if (window.requestSessionRestore) window.requestSessionRestore(); }}
+                    className="ml-2 px-4 py-2 rounded bg-ub-orange text-white"
+                >
+                    Restore Session
+                </button>
             </div>
         </div>
     )

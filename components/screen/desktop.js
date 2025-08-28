@@ -38,6 +38,32 @@ export class Desktop extends Component {
         }
     }
 
+    saveSession = () => {
+        if (typeof window === 'undefined' || !window.saveSession) return;
+        const windows = this.app_stack.map((id, z) => {
+            const el = document.getElementById(id);
+            const width = el ? parseFloat(el.style.width) || 0 : 0;
+            const height = el ? parseFloat(el.style.height) || 0 : 0;
+            return { id, width, height, z };
+        });
+        window.saveSession(windows);
+    }
+
+    handleRestoreSession = (e) => {
+        const { windows } = e.detail || {};
+        if (!windows || !windows.length) return;
+        windows
+            .sort((a, b) => a.z - b.z)
+            .forEach((w) => {
+                const app = apps.find((a) => a.id === w.id);
+                if (app) {
+                    if (w.width) app.defaultWidth = w.width;
+                    if (w.height) app.defaultHeight = w.height;
+                    this.openApp(w.id);
+                }
+            });
+    }
+
     componentDidMount() {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
@@ -49,10 +75,14 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        window.addEventListener('beforeunload', this.saveSession);
+        window.addEventListener('restore-session', this.handleRestoreSession);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
+        window.removeEventListener('beforeunload', this.saveSession);
+        window.removeEventListener('restore-session', this.handleRestoreSession);
     }
 
     checkForNewFolders = () => {
@@ -439,6 +469,7 @@ export class Desktop extends Component {
                 closed_windows[objId] = false; // openes app's window
                 this.setState({ closed_windows, favourite_apps, allAppsView: false }, this.focus(objId));
                 this.app_stack.push(objId);
+                this.saveSession();
             }, 200);
         }
     }
@@ -459,7 +490,7 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps });
+        this.setState({ closed_windows, favourite_apps }, this.saveSession);
     }
 
     pinApp = (id) => {
