@@ -18,6 +18,7 @@
 # production
 /build
 dist
+lighthouse-reports/
 
 # misc
 .DS_Store

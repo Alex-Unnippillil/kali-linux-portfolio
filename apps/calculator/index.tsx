@@ -1,9 +1,13 @@
 'use client';
 import { useEffect } from 'react';
-import './styles.css';
 
 export default function Calculator() {
   useEffect(() => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '/apps/calculator/styles.css';
+    document.head.appendChild(link);
+
     const load = async () => {
       if (typeof window !== 'undefined' && !(window as any).math) {
         await new Promise((resolve) => {
@@ -16,11 +20,15 @@ export default function Calculator() {
       await import('./main');
     };
     load();
+
+    return () => {
+      document.head.removeChild(link);
+    };
   }, []);
 
   return (
     <div className="calculator">
-      <input id="display" className="display" />
+      <input id="display" className="display" aria-label="Display" />
       <button id="toggle-precise" className="toggle" aria-pressed="false">Precise Mode: Off</button>
       <button id="toggle-scientific" className="toggle" aria-pressed="false">Scientific</button>
       <button id="toggle-programmer" className="toggle" aria-pressed="false">Programmer</button>

@@ -5,9 +5,8 @@
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
-    "prebuild": "npm run build:gamepad",
-    "dev": "next dev",
     "prebuild": "tsc -p tsconfig.gamepad.json",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "export": "next export",
@@ -15,7 +14,8 @@
     "test:watch": "jest --watch",
     "lint": "next lint",
     "a11y": "node scripts/a11y.mjs",
-    "smoke": "node scripts/smoke-all-apps.mjs"
+    "smoke": "node scripts/smoke-all-apps.mjs",
+    "lighthouse": "node scripts/lighthouse-all-apps.mjs"
   },
   "engines": {
     "node": "20.x"
@@ -88,6 +88,7 @@
     "fake-indexeddb": "^6.1.0",
     "jest": "30.0.5",
     "jest-environment-jsdom": "30.0.5",
+    "lighthouse": "^12.8.1",
     "pa11y": "^9.0.0",
     "playwright-core": "^1.55.0",
     "typescript": "^5.9.2",

@@ -99,3 +99,6 @@ if (cities.length) {
 }
 
 setInterval(updateWeather, 10 * 60 * 1000);
+
+
+export {};

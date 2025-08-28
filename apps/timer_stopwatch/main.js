@@ -129,3 +129,6 @@ document.getElementById('lapWatch').addEventListener('click', lapWatch);
 // Initialize displays
 updateTimerDisplay();
 updateStopwatchDisplay();
+
+
+export {};

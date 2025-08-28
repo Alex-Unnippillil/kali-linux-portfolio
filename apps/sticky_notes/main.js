@@ -89,3 +89,6 @@ function enableDrag(el, note) {
 
 addNoteBtn.addEventListener('click', addNote);
 notes.forEach(createNoteElement);
+
+
+export {};
