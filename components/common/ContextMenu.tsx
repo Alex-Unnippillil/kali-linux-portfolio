@@ -24,6 +24,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
+  const opener = useRef<Element | null>(null);
 
   useFocusTrap(menuRef, open);
   useRovingTabIndex(menuRef, open, 'vertical');
@@ -65,7 +66,16 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (open) {
+      opener.current = document.activeElement;
+    }
+    if (!open) {
+      if (opener.current instanceof HTMLElement) {
+        opener.current.focus();
+        opener.current = null;
+      }
+      return;
+    }
 
     const handleClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -106,7 +116,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
             item.onSelect();
             setOpen(false);
           }}
-          className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+          className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           {item.label}
         </button>

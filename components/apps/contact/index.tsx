@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import FormError from '../../ui/FormError';
+import ErrorSummary from '../../ui/ErrorSummary';
 import { contactSchema } from '../../../utils/contactSchema';
 
 const sanitize = (str: string) =>
@@ -115,6 +115,7 @@ const ContactApp = () => {
 
   return (
     <div className="p-4 text-black">
+      <ErrorSummary errors={error ? [error] : []} />
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <input
           className="p-1 border"
@@ -148,7 +149,6 @@ const ContactApp = () => {
           Send
         </button>
       </form>
-      {error && <FormError>{error}</FormError>}
       {success && !error && (
         <div role="status" className="text-green-600 mt-2">
           Message sent!

@@ -1,4 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  createContext,
+  useContext,
+} from 'react';
+import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 export interface TabDefinition {
   id: string;
@@ -36,6 +44,9 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [activeId, setActiveId] = useState<string>(initialTabs[0]?.id || '');
   const prevActive = useRef<string>('');
   const dragSrc = useRef<number | null>(null);
+  const tabListRef = useRef<HTMLDivElement>(null);
+
+  useRovingTabIndex(tabListRef, true, 'horizontal');
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -119,21 +130,6 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     if (e.ctrlKey && e.key.toLowerCase() === 'w') {
       e.preventDefault();
       closeTab(activeId);
-      return;
-    }
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      e.preventDefault();
-      setTabs((prev) => {
-        if (prev.length === 0) return prev;
-        const idx = prev.findIndex((t) => t.id === activeId);
-        const nextIdx =
-          e.key === 'ArrowLeft'
-            ? (idx - 1 + prev.length) % prev.length
-            : (idx + 1) % prev.length;
-        const nextTab = prev[nextIdx];
-        setActiveId(nextTab.id);
-        return prev;
-      });
     }
   };
 
@@ -143,11 +139,18 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
       tabIndex={0}
       onKeyDown={onKeyDown}
     >
-      <div className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto">
+      <div
+        ref={tabListRef}
+        role="tablist"
+        className="flex flex-shrink-0 bg-gray-800 text-white text-sm overflow-x-auto"
+      >
         {tabs.map((t, i) => (
-          <div
+          <button
             key={t.id}
-            className={`flex items-center px-2 py-1 cursor-pointer select-none ${
+            role="tab"
+            aria-selected={t.id === activeId}
+            tabIndex={t.id === activeId ? 0 : -1}
+            className={`flex items-center px-2 py-1 cursor-pointer select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
               t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
             }`}
             draggable
@@ -155,13 +158,14 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             onDragOver={handleDragOver(i)}
             onDrop={handleDrop(i)}
             onClick={() => setActive(t.id)}
+            onFocus={() => setActive(t.id)}
           >
             <span className="mr-2 truncate" style={{ maxWidth: 150 }}>
               {t.title}
             </span>
             {t.closable !== false && tabs.length > 1 && (
               <button
-                className="ml-1"
+                className="ml-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                 onClick={(e) => {
                   e.stopPropagation();
                   closeTab(t.id);
@@ -171,11 +175,11 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                 ×
               </button>
             )}
-          </div>
+          </button>
         ))}
         {onNewTab && (
           <button
-            className="px-2 py-1 bg-gray-800 hover:bg-gray-700"
+            className="px-2 py-1 bg-gray-800 hover:bg-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             onClick={addTab}
             aria-label="New Tab"
           >
