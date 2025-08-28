@@ -17,7 +17,9 @@ export const exportPerfReport = (samples: PerfSample[]) => {
     avgFrameMs: avgDt,
     samples: samples.map((s) => ({ t: Math.round(s.t), dt: +s.dt.toFixed(2) })),
   };
-  const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify(report, null, 2)], {
+    type: 'application/json',
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -31,10 +33,46 @@ const PerfOverlay: React.FC = () => {
   const samplesRef = useRef<PerfSample[]>([]);
   const lastRef = useRef<number>(0);
   const rafRef = useRef<number>(0);
+  const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
+    if (!canvas) return;
+
+    // Prefer OffscreenCanvas with a worker when supported
+    if (
+      typeof window !== 'undefined' &&
+      'Worker' in window &&
+      'OffscreenCanvas' in window
+    ) {
+      const worker = new Worker(new URL('./perf.worker.js', import.meta.url));
+      workerRef.current = worker;
+      const offscreen = canvas.transferControlToOffscreen();
+      worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
+
+      const loop = (now: number) => {
+        if (lastRef.current) {
+          worker.postMessage({ type: 'frame', dt: now - lastRef.current });
+        }
+        lastRef.current = now;
+        rafRef.current = requestAnimationFrame(loop);
+      };
+      rafRef.current = requestAnimationFrame(loop);
+
+      worker.onmessage = (e) => {
+        if (e.data?.type === 'dump') {
+          exportPerfReport(e.data.samples as PerfSample[]);
+        }
+      };
+
+      return () => {
+        worker.terminate();
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      };
+    }
+
+    // Fallback to main-thread rendering when OffscreenCanvas unsupported
+    const ctx = canvas.getContext('2d');
     let mounted = true;
 
     const loop = (now: number) => {
@@ -44,7 +82,7 @@ const PerfOverlay: React.FC = () => {
         const samples = samplesRef.current;
         samples.push({ t: now, dt });
         if (samples.length > MAX_SAMPLES) samples.shift();
-        if (ctx && canvas) {
+        if (ctx) {
           const w = canvas.width;
           const h = canvas.height;
           ctx.clearRect(0, 0, w, h);
@@ -76,7 +114,10 @@ const PerfOverlay: React.FC = () => {
     };
   }, []);
 
-  const handleExport = () => exportPerfReport(samplesRef.current);
+  const handleExport = () => {
+    if (workerRef.current) workerRef.current.postMessage({ type: 'dump' });
+    else exportPerfReport(samplesRef.current);
+  };
 
   return (
     <div className="absolute bottom-2 left-2 z-50 bg-black bg-opacity-50 text-white p-1 text-xs space-y-1">
@@ -89,3 +130,4 @@ const PerfOverlay: React.FC = () => {
 };
 
 export default PerfOverlay;
+
