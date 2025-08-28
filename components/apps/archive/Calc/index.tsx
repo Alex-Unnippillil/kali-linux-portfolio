@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Parser } from 'expr-eval';
+import { create, all } from 'mathjs';
 import usePersistentState from '../../../hooks/usePersistentState';
+
+const math = create(all);
 
 const formatNumber = (n: number) => {
   if (Number.isInteger(n)) return String(n);
@@ -12,10 +14,15 @@ export const evaluateExpression = (expression: string) => {
   if (/^(['"]).*\1$/.test(trimmed)) return trimmed.slice(1, -1);
   if (/[<>]/.test(trimmed)) return 'Invalid Expression';
   try {
-    const result = Parser.evaluate(trimmed);
-    if (typeof result === 'number') {
-      if (!Number.isFinite(result)) return 'Invalid Expression';
-      return formatNumber(result);
+    const result = math.evaluate(trimmed);
+    if (
+      typeof result === 'number' ||
+      math.isBigNumber(result) ||
+      math.isFraction(result)
+    ) {
+      const num = math.number(result as any);
+      if (!Number.isFinite(num)) return 'Invalid Expression';
+      return formatNumber(num);
     }
     return String(result);
   } catch {
@@ -37,6 +44,7 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
     () => [],
     (v) => Array.isArray(v) && v.every((s) => typeof s === 'string'),
   );
+  const safeTape = Array.isArray(tape) ? tape : [];
   const [memory, setMemory] = usePersistentState(
     'calc-memory',
     () => 0,
@@ -70,7 +78,10 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
     const result = evaluateExpression(expr);
     setDisplay(result);
     if (result !== 'Invalid Expression') {
-      setTape((prev: string[]) => [...prev, `${expr} = ${result}`]);
+      setTape((prev: any) => [
+        ...((Array.isArray(prev) ? prev : []) as string[]),
+        `${expr} = ${result}`,
+      ]);
     }
   }, [display, setTape]);
 
@@ -90,12 +101,22 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
   );
 
   const handleMemoryAdd = useCallback(() => {
-    const val = parseFloat(evaluateExpression(display));
-    if (!Number.isNaN(val)) setMemory((m: number) => m + val);
+    try {
+      const val = math.number(math.evaluate(display));
+      if (!Number.isNaN(val))
+        setMemory((m: number) => math.add(m, val));
+    } catch {
+      // ignore invalid expression
+    }
   }, [display, setMemory]);
   const handleMemorySubtract = useCallback(() => {
-    const val = parseFloat(evaluateExpression(display));
-    if (!Number.isNaN(val)) setMemory((m: number) => m - val);
+    try {
+      const val = math.number(math.evaluate(display));
+      if (!Number.isNaN(val))
+        setMemory((m: number) => math.subtract(m, val));
+    } catch {
+      // ignore invalid expression
+    }
   }, [display, setMemory]);
   const handleMemoryRecall = useCallback(() => {
     setDisplay(String(memory));
@@ -103,29 +124,34 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
 
   const handleScientific = useCallback(
     (op: string) => {
-      const val = parseFloat(evaluateExpression(display));
+      let val: number;
+      try {
+        val = math.number(math.evaluate(display));
+      } catch {
+        return;
+      }
       if (Number.isNaN(val)) return;
-      let result: number;
+      let result;
       switch (op) {
         case '%':
-          result = val / 100;
+          result = math.divide(val, 100);
           break;
         case 'sqrt':
-          result = Math.sqrt(val);
+          result = math.sqrt(val);
           break;
         case 'square':
-          result = val * val;
+          result = math.pow(val, 2);
           break;
         case 'reciprocal':
-          result = 1 / val;
+          result = math.divide(1, val);
           break;
         case 'sign':
-          result = -val;
+          result = math.unaryMinus(val);
           break;
         default:
           return;
       }
-      setDisplay(formatNumber(result));
+      setDisplay(formatNumber(math.number(result)));
     },
     [display],
   );
@@ -294,7 +320,7 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto bg-gray-800 rounded p-2 text-sm">
-          {tape.map((entry, idx) => (
+          {safeTape.map((entry, idx) => (
             <div key={idx} className="mb-1 flex items-center justify-between">
               <span>{entry}</span>
               <button
