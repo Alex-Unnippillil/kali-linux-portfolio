@@ -1,4 +1,8 @@
 import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import FormField from '../../components/ui/FormField';
 
 const LOWER = 'abcdefghijklmnopqrstuvwxyz';
 const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -9,41 +13,73 @@ interface PasswordGeneratorProps {
   getDailySeed?: () => Promise<string>;
 }
 
+const schema = z
+  .object({
+    length: z
+      .number({ invalid_type_error: 'Length must be a number' })
+      .min(4, 'Length must be at least 4')
+      .max(64, 'Length must be at most 64'),
+    useLower: z.boolean(),
+    useUpper: z.boolean(),
+    useNumbers: z.boolean(),
+    useSymbols: z.boolean(),
+  })
+  .superRefine((data, ctx) => {
+    if (!(data.useLower || data.useUpper || data.useNumbers || data.useSymbols)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Select at least one character type',
+        path: ['useLower'],
+      });
+    }
+  });
+
+type FormValues = z.infer<typeof schema>;
+
 const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) => {
   void getDailySeed;
-  const [length, setLength] = useState(12);
-  const [useLower, setUseLower] = useState(true);
-  const [useUpper, setUseUpper] = useState(true);
-  const [useNumbers, setUseNumbers] = useState(true);
-  const [useSymbols, setUseSymbols] = useState(false);
   const [password, setPassword] = useState('');
 
-  const generatePassword = () => {
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isValid },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    mode: 'onChange',
+    defaultValues: {
+      length: 12,
+      useLower: true,
+      useUpper: true,
+      useNumbers: true,
+      useSymbols: false,
+    },
+  });
+
+  const onSubmit = (data: FormValues) => {
     let chars = '';
-    if (useLower) chars += LOWER;
-    if (useUpper) chars += UPPER;
-    if (useNumbers) chars += NUMS;
-    if (useSymbols) chars += SYMBOLS;
+    if (data.useLower) chars += LOWER;
+    if (data.useUpper) chars += UPPER;
+    if (data.useNumbers) chars += NUMS;
+    if (data.useSymbols) chars += SYMBOLS;
     if (!chars) {
       setPassword('');
       return;
     }
     let pwd = '';
-    for (let i = 0; i < length; i += 1) {
+    for (let i = 0; i < data.length; i += 1) {
       const idx = Math.floor(Math.random() * chars.length);
       pwd += chars[idx];
     }
     setPassword(pwd);
   };
 
-  const copyToClipboard = async () => {
-    if (!password) return;
-    try {
-      await navigator.clipboard?.writeText(password);
-    } catch (e) {
-      // ignore
-    }
-  };
+  const length = watch('length');
+  const useLower = watch('useLower');
+  const useUpper = watch('useUpper');
+  const useNumbers = watch('useNumbers');
+  const useSymbols = watch('useSymbols');
 
   const strengthInfo = () => {
     const types = [useLower, useUpper, useNumbers, useSymbols].filter(Boolean).length;
@@ -58,26 +94,37 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
 
   const { label, width, color } = strengthInfo();
 
+  const copyToClipboard = async () => {
+    if (!password) return;
+    try {
+      await navigator.clipboard?.writeText(password);
+    } catch (e) {
+      // ignore
+    }
+  };
+
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
-      <div>
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4"
+    >
+      <FormField error={errors.length?.message}>
         <label htmlFor="length" className="mr-2">Length:</label>
         <input
           id="length"
           type="number"
           min={4}
           max={64}
-          value={length}
-          onChange={(e) => setLength(parseInt(e.target.value, 10) || 0)}
           className="text-black px-2"
+          {...register('length', { valueAsNumber: true })}
         />
-      </div>
-      <div className="flex flex-col space-y-1">
-        <label><input type="checkbox" checked={useLower} onChange={(e) => setUseLower(e.target.checked)} /> Lowercase</label>
-        <label><input type="checkbox" checked={useUpper} onChange={(e) => setUseUpper(e.target.checked)} /> Uppercase</label>
-        <label><input type="checkbox" checked={useNumbers} onChange={(e) => setUseNumbers(e.target.checked)} /> Numbers</label>
-        <label><input type="checkbox" checked={useSymbols} onChange={(e) => setUseSymbols(e.target.checked)} /> Symbols</label>
-      </div>
+      </FormField>
+      <FormField error={errors.useLower?.message} className="flex flex-col space-y-1">
+        <label><input type="checkbox" {...register('useLower')} /> Lowercase</label>
+        <label><input type="checkbox" {...register('useUpper')} /> Uppercase</label>
+        <label><input type="checkbox" {...register('useNumbers')} /> Numbers</label>
+        <label><input type="checkbox" {...register('useSymbols')} /> Symbols</label>
+      </FormField>
       <div className="flex space-x-2 items-center">
         <input
           data-testid="password-display"
@@ -102,14 +149,14 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
       </div>
       <div className="mt-auto">
         <button
-          type="button"
-          onClick={generatePassword}
-          className="w-full px-4 py-2 bg-green-600 rounded"
+          type="submit"
+          disabled={!isValid}
+          className="w-full px-4 py-2 bg-green-600 rounded disabled:opacity-50"
         >
           Generate
         </button>
       </div>
-    </div>
+    </form>
   );
 };
 

@@ -664,6 +664,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@hookform/resolvers@npm:^5.2.1":
+  version: 5.2.1
+  resolution: "@hookform/resolvers@npm:5.2.1"
+  dependencies:
+    "@standard-schema/utils": "npm:^0.3.0"
+  peerDependencies:
+    react-hook-form: ^7.55.0
+  checksum: 10c0/e8e48abc188b5139bc444e4495e2fb1680c6aafa31d79c5d7fa4d7d690b0fc2bac1dfbd99213cbc0c6c53c5c3c4e8c4dc28278dd87a3fa0176540795a6f2edde
+  languageName: node
+  linkType: hard
+
 "@humanfs/core@npm:^0.19.1":
   version: 0.19.1
   resolution: "@humanfs/core@npm:0.19.1"
@@ -1637,6 +1648,13 @@ __metadata:
   dependencies:
     "@sinonjs/commons": "npm:^3.0.1"
   checksum: 10c0/a707476efd523d2138ef6bba916c83c4a377a8372ef04fad87499458af9f01afc58f4f245c5fd062793d6d70587309330c6f96947b5bd5697961c18004dc3e26
+  languageName: node
+  linkType: hard
+
+"@standard-schema/utils@npm:^0.3.0":
+  version: 0.3.0
+  resolution: "@standard-schema/utils@npm:0.3.0"
+  checksum: 10c0/6eb74cd13e52d5fc74054df51e37d947ef53f3ab9e02c085665dcca3c38c60ece8d735cebbdf18fbb13c775fbcb9becb3f53109b0e092a63f0f7389ce0993fd0
   languageName: node
   linkType: hard
 
@@ -8155,6 +8173,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"react-hook-form@npm:^7.62.0":
+  version: 7.62.0
+  resolution: "react-hook-form@npm:7.62.0"
+  peerDependencies:
+    react: ^16.8.0 || ^17 || ^18 || ^19
+  checksum: 10c0/451a25a2ddf07be14f690d2ad3f2f970e0b933fd059ef141c6da9e19d0566d739e9d5cc9c482e3533f3fd01d97e658b896a01ce45a1259ad7b0d4638ba0112c6
+  languageName: node
+  linkType: hard
+
 "react-is@npm:^16.13.1":
   version: 16.13.1
   resolution: "react-is@npm:16.13.1"
@@ -9614,6 +9641,7 @@ __metadata:
   dependencies:
     "@axe-core/playwright": "npm:^4.10.2"
     "@emailjs/browser": "npm:^3.10.0"
+    "@hookform/resolvers": "npm:^5.2.1"
     "@mozilla/readability": "npm:^0.6.0"
     "@playwright/test": "npm:^1.55.0"
     "@testing-library/dom": "npm:^10.4.1"
@@ -9671,6 +9699,7 @@ __metadata:
     react-force-graph: "npm:^1.45.0"
     react-ga4: "npm:^2.1.0"
     react-github-calendar: "npm:^4.5.9"
+    react-hook-form: "npm:^7.62.0"
     react-onclickoutside: "npm:^6.12.2"
     react-twitter-embed: "npm:^4.0.4"
     seedrandom: "npm:^3.0.5"
@@ -9681,6 +9710,7 @@ __metadata:
     turndown: "npm:^7.2.1"
     typescript: "npm:^5.9.2"
     wait-on: "npm:^8.0.4"
+    zod: "npm:^4.1.4"
   languageName: unknown
   linkType: soft
 
@@ -10218,5 +10248,12 @@ __metadata:
   version: 3.25.76
   resolution: "zod@npm:3.25.76"
   checksum: 10c0/5718ec35e3c40b600316c5b4c5e4976f7fee68151bc8f8d90ec18a469be9571f072e1bbaace10f1e85cf8892ea12d90821b200e980ab46916a6166a4260a983c
+  languageName: node
+  linkType: hard
+
+"zod@npm:^4.1.4":
+  version: 4.1.4
+  resolution: "zod@npm:4.1.4"
+  checksum: 10c0/f9fbfb519db6a838d50115cb686de3961794a9eb13473df8f9ebd1c021bd8505b56643ed1a5fa5197d2ead136ee28e5368e42c45edc31c3a1e9ed62c9734b55a
   languageName: node
   linkType: hard

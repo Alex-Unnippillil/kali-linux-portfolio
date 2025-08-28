@@ -5,9 +5,8 @@
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
-    "prebuild": "npm run build:gamepad",
-    "dev": "next dev",
     "prebuild": "tsc -p tsconfig.gamepad.json",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "export": "next export",
@@ -22,6 +21,7 @@
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
+    "@hookform/resolvers": "^5.2.1",
     "@mozilla/readability": "^0.6.0",
     "@vercel/analytics": "^1.5.0",
     "@xterm/addon-fit": "^0.10.0",
@@ -58,6 +58,7 @@
     "react-force-graph": "^1.45.0",
     "react-ga4": "^2.1.0",
     "react-github-calendar": "^4.5.9",
+    "react-hook-form": "^7.62.0",
     "react-onclickoutside": "^6.12.2",
     "react-twitter-embed": "^4.0.4",
     "seedrandom": "^3.0.5",
@@ -65,7 +66,8 @@
     "swr": "^2.2.5",
     "tailwindcss": "^3.2.4",
     "three": "^0.179.1",
-    "turndown": "^7.2.1"
+    "turndown": "^7.2.1",
+    "zod": "^4.1.4"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
