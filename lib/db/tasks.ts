@@ -1,20 +1,19 @@
-import { get, set, createStore } from 'idb-keyval';
-
-const STORE_NAME = 'tasks';
-const KEY = 'all';
-const store = createStore('portfolio-tasks', STORE_NAME);
+const STORAGE_KEY = 'portfolio-tasks';
 
 export async function loadTasks(): Promise<any | undefined> {
+  if (typeof window === 'undefined') return undefined;
   try {
-    return (await get(KEY, store)) as any | undefined;
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? (JSON.parse(data) as any) : undefined;
   } catch {
     return undefined;
   }
 }
 
 export async function saveTasks(data: any): Promise<void> {
+  if (typeof window === 'undefined') return;
   try {
-    await set(KEY, data, store);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch {
     // ignore errors
   }

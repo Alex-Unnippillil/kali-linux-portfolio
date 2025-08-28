@@ -33,6 +33,7 @@
     "bad-words": "^3.0.4",
     "canvas-confetti": "1.9.3",
     "chess.js": "^1.0.0",
+    "chrono-node": "^2.8.4",
     "cytoscape": "^3.33.1",
     "cytoscape-cose-bilkent": "^4.1.0",
     "dompurify": "^3.2.6",
