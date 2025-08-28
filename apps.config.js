@@ -13,6 +13,7 @@ import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
+import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
 
 // Dynamic applications and games
@@ -658,6 +659,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayResourceMonitor,
+  },
+  {
+    id: 'screen-recorder',
+    title: 'Screen Recorder',
+    icon: './themes/Yaru/apps/screen-recorder.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayScreenRecorder,
   },
   {
     id: 'ettercap',
