@@ -92,7 +92,7 @@ export function Settings() {
             </div>
             <div className="flex justify-center my-4">
                 <div
-                    className="p-4 rounded transition-colors duration-300 motion-reduce:transition-none"
+                    className="p-4 rounded transition-colors duration-[var(--transition-medium)] ease-[var(--transition-ease)] motion-reduce:transition-none"
                     style={{ backgroundColor: '#0f1317', color: '#ffffff' }}
                 >
                     <p className="mb-2 text-center">Preview</p>

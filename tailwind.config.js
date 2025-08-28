@@ -46,6 +46,13 @@ module.exports = {
       zIndex: {
         '-10': '-10',
       },
+      transitionDuration: {
+        fast: 'var(--transition-fast)',
+        DEFAULT: 'var(--transition-medium)',
+      },
+      transitionTimingFunction: {
+        DEFAULT: 'var(--transition-ease)',
+      },
       keyframes: {
         glow: {
           '0%, 100%': { boxShadow: '0 0 0px theme("colors.amber.400")' },

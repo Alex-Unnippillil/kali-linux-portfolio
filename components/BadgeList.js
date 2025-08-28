@@ -62,7 +62,7 @@ const BadgeList = ({ badges, className = '' }) => {
           <button
             key={badge.label}
             type="button"
-            className="m-1 hover:scale-110 transition-transform cursor-pointer"
+              className="m-1 hover:scale-110 transition-transform duration-[var(--transition-fast)] ease-[var(--transition-ease)] cursor-pointer"
             onClick={(e) => {
               triggerRef.current = e.currentTarget;
               setSelected(badge);

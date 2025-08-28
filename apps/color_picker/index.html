@@ -3,13 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Color Picker</title>
-  <style>
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      padding: 2rem;
-      background: #f4f4f4;
-    }
+    <title>Color Picker</title>
+    <style>
+      :root {
+        --transition-fast: 160ms;
+        --transition-medium: 240ms;
+        --transition-ease: cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        padding: 2rem;
+        background: #f4f4f4;
+      }
     h1 {
       margin-bottom: 1rem;
     }
@@ -20,7 +25,7 @@
       border-radius: 4px;
       cursor: pointer;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-      transition: transform 0.2s ease;
+        transition: transform var(--transition-fast) var(--transition-ease);
     }
     #color-input:hover {
       transform: scale(1.05);
@@ -37,8 +42,8 @@
       border: 1px solid #ccc;
       border-radius: 4px;
       cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
+        transition: transform var(--transition-fast) var(--transition-ease), box-shadow var(--transition-fast) var(--transition-ease);
+      }
     .swatch:hover {
       transform: scale(1.1);
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);

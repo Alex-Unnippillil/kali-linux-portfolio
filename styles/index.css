@@ -28,7 +28,7 @@ button:focus-visible {
 }
 
 .animateShow {
-    animation: transformDownShow 200ms 1 forwards;
+    animation: transformDownShow var(--transition-fast) var(--transition-ease) 1 forwards;
 }
 
 @keyframes transformDownShow {
@@ -252,7 +252,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 .card {
     position: relative;
     transform-style: preserve-3d;
-    transition: transform 0.6s ease, opacity 0.3s ease;
+    transition: transform 0.6s var(--transition-ease), opacity var(--transition-medium) var(--transition-ease);
 }
 
 .card-face {
@@ -284,7 +284,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 .animate-deal {
     transform: translateY(-20px);
     opacity: 0;
-    animation: dealCard 0.3s forwards ease-out;
+    animation: dealCard var(--transition-medium) var(--transition-ease) forwards;
 }
 
 @keyframes dealCard {
@@ -317,11 +317,11 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
     border: 2px solid var(--color-inverse);
     position: absolute;
     left: 0;
-    transition: transform 0.3s;
+    transition: transform var(--transition-medium) var(--transition-ease);
 }
 
 .chip-pop {
-    animation: chipPop 0.3s ease-out forwards;
+    animation: chipPop var(--transition-medium) var(--transition-ease) forwards;
 }
 
 @keyframes chipPop {
@@ -414,7 +414,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .reveal {
-    animation: reveal 0.3s ease-out;
+    animation: reveal var(--transition-medium) var(--transition-ease);
 }
 
 @keyframes tile-pop {
@@ -423,7 +423,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 }
 
 .tile-pop {
-    animation: tile-pop 0.15s ease-out;
+    animation: tile-pop var(--transition-fast) var(--transition-ease);
 
 }
 
@@ -449,7 +449,7 @@ input[type=range].ubuntu-slider::-webkit-slider-thumb {
 
 .score-pop {
     display: inline-block;
-    animation: score-pop 0.3s ease-out;
+    animation: score-pop var(--transition-medium) var(--transition-ease);
 }
 
 @keyframes hangman-draw {
