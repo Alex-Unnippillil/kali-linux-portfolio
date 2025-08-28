@@ -5333,6 +5333,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"idb@npm:7.1.1":
+  version: 7.1.1
+  resolution: "idb@npm:7.1.1"
+  checksum: 10c0/72418e4397638797ee2089f97b45fc29f937b830bc0eb4126f4a9889ecf10320ceacf3a177fe5d7ffaf6b4fe38b20bbd210151549bfdc881db8081eed41c870d
+  languageName: node
+  linkType: hard
+
 "ieee754@npm:^1.2.1":
   version: 1.2.1
   resolution: "ieee754@npm:1.2.1"
@@ -9648,6 +9655,7 @@ __metadata:
     figlet: "npm:^1.8.2"
     howler: "npm:^2.2.4"
     html-to-image: "npm:^1.11.13"
+    idb: "npm:7.1.1"
     idb-keyval: "npm:^6.2.1"
     jest: "npm:30.0.5"
     jest-environment-jsdom: "npm:30.0.5"

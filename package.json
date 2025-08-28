@@ -5,9 +5,8 @@
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
-    "prebuild": "npm run build:gamepad",
-    "dev": "next dev",
     "prebuild": "tsc -p tsconfig.gamepad.json",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "export": "next export",
@@ -39,6 +38,7 @@
     "figlet": "^1.8.2",
     "howler": "^2.2.4",
     "html-to-image": "^1.11.13",
+    "idb": "7.1.1",
     "idb-keyval": "^6.2.1",
     "jsqr": "^1.4.0",
     "mathjs": "^14.6.0",
