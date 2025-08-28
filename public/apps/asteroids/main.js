@@ -3,6 +3,47 @@ import { pollTwinStick } from '../../utils/gamepad.ts';
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
+// simple HUD elements
+const hudScore = document.getElementById('score');
+const hudLevel = document.getElementById('level');
+const pausedOverlay = document.getElementById('paused');
+
+// load persisted progress
+const SAVE_KEY = 'asteroids-progress';
+let score = 0;
+let level = 1;
+try {
+  const save = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}');
+  if (typeof save.level === 'number') level = save.level;
+  if (typeof save.score === 'number') score = save.score;
+} catch {}
+hudScore.textContent = `Score: ${score}`;
+hudLevel.textContent = `Level: ${level}`;
+
+function saveProgress() {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ level, score }));
+  } catch {}
+}
+
+function setLevel(l) {
+  level = l;
+  hudLevel.textContent = `Level: ${level}`;
+  saveProgress();
+}
+
+function addScore(s) {
+  score += s;
+  hudScore.textContent = `Score: ${score}`;
+  saveProgress();
+}
+
+let paused = false;
+function togglePause() {
+  paused = !paused;
+  pausedOverlay.style.display = paused ? 'block' : 'none';
+}
+
 // basic audio ping
 let audioCtx;
 function ping(freq = 880) {
@@ -28,7 +69,7 @@ const bullets = [];
 const asteroids = [];
 const ufoBullets = [];
 let ufo = null;
-let level = 1;
+// level loaded from storage above
 let lastUFOSpawn = 0;
 
 function spawnAsteroid(x, y, r) {
@@ -67,94 +108,109 @@ function shootBullet(x, y, angle) {
 }
 
 let keyState = {};
-window.addEventListener('keydown', (e) => (keyState[e.code] = true));
-window.addEventListener('keyup', (e) => (keyState[e.code] = false));
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyP') togglePause();
+  else keyState[e.code] = true;
+});
+window.addEventListener('keyup', (e) => {
+  keyState[e.code] = false;
+});
+
+let prevStart = false;
 
 let lastTime = 0;
 let fireCooldown = 0;
 spawnWave();
 
 function update(ts) {
-  lastTime = ts;
-  const gp = pollTwinStick();
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const startPressed = pads[0] ? pads[0].buttons[9].pressed : false;
+  if (startPressed && !prevStart) togglePause();
+  prevStart = startPressed;
 
-  // ship control: keyboard
-  if (keyState['ArrowLeft']) ship.angle -= 0.05;
-  if (keyState['ArrowRight']) ship.angle += 0.05;
-  if (keyState['ArrowUp']) {
-    ship.vx += Math.cos(ship.angle) * 0.1;
-    ship.vy += Math.sin(ship.angle) * 0.1;
-  }
-  if (keyState['Space'] && fireCooldown <= 0) {
-    shootBullet(ship.x, ship.y, ship.angle);
-    fireCooldown = 10;
-  }
+  if (!paused) {
+    lastTime = ts;
+    const gp = pollTwinStick();
 
-  // gamepad twin stick
-  if (gp.moveX || gp.moveY) {
-    ship.vx += gp.moveX * 0.1;
-    ship.vy += gp.moveY * 0.1;
-  }
-  if (gp.aimX || gp.aimY) ship.angle = Math.atan2(gp.aimY, gp.aimX);
-  if ((gp.fire || gp.aimX || gp.aimY) && fireCooldown <= 0) {
-    const ang = gp.aimX || gp.aimY ? Math.atan2(gp.aimY, gp.aimX) : ship.angle;
-    shootBullet(ship.x, ship.y, ang);
-    fireCooldown = 10;
-  }
-
-  fireCooldown -= 1;
-
-  // move ship
-  ship.x += ship.vx;
-  ship.y += ship.vy;
-  ship.vx *= 0.99;
-  ship.vy *= 0.99;
-  wrap(ship);
-
-  // update bullets
-  for (let i = bullets.length - 1; i >= 0; i--) {
-    const b = bullets[i];
-    b.x += b.vx;
-    b.y += b.vy;
-    b.life -= 1;
-    wrap(b);
-    if (b.life <= 0) bullets.splice(i, 1);
-  }
-
-  // update asteroids
-  for (let i = asteroids.length - 1; i >= 0; i--) {
-    const a = asteroids[i];
-    a.x += a.vx;
-    a.y += a.vy;
-    wrap(a);
-    // collision with bullets
-    for (let j = bullets.length - 1; j >= 0; j--) {
-      const b = bullets[j];
-      const dist = Math.hypot(a.x - b.x, a.y - b.y);
-      if (dist < a.r + 2) {
-        bullets.splice(j, 1);
-        asteroids.splice(i, 1);
-        splitAsteroid(a);
-        break;
-      }
+    // ship control: keyboard
+    if (keyState['ArrowLeft']) ship.angle -= 0.05;
+    if (keyState['ArrowRight']) ship.angle += 0.05;
+    if (keyState['ArrowUp']) {
+      ship.vx += Math.cos(ship.angle) * 0.1;
+      ship.vy += Math.sin(ship.angle) * 0.1;
     }
-    radarPing(a);
-  }
+    if (keyState['Space'] && fireCooldown <= 0) {
+      shootBullet(ship.x, ship.y, ship.angle);
+      fireCooldown = 10;
+    }
 
-  // update UFO
-  if (ufo) {
-    ufo.x += ufo.vx;
-    ufo.y += ufo.vy;
-    radarPing(ufo);
-    if (ufo.x < -40 || ufo.x > canvas.width + 40) ufo = null;
-  } else if (performance.now() - lastUFOSpawn > 15000) {
-    spawnUFO();
-  }
+    // gamepad twin stick
+    if (gp.moveX || gp.moveY) {
+      ship.vx += gp.moveX * 0.1;
+      ship.vy += gp.moveY * 0.1;
+    }
+    if (gp.aimX || gp.aimY) ship.angle = Math.atan2(gp.aimY, gp.aimX);
+    if ((gp.fire || gp.aimX || gp.aimY) && fireCooldown <= 0) {
+      const ang = gp.aimX || gp.aimY ? Math.atan2(gp.aimY, gp.aimX) : ship.angle;
+      shootBullet(ship.x, ship.y, ang);
+      fireCooldown = 10;
+    }
 
-  // endless waves
-  if (asteroids.length === 0) {
-    level++;
-    spawnWave();
+    fireCooldown -= 1;
+
+    // move ship
+    ship.x += ship.vx;
+    ship.y += ship.vy;
+    ship.vx *= 0.99;
+    ship.vy *= 0.99;
+    wrap(ship);
+
+    // update bullets
+    for (let i = bullets.length - 1; i >= 0; i--) {
+      const b = bullets[i];
+      b.x += b.vx;
+      b.y += b.vy;
+      b.life -= 1;
+      wrap(b);
+      if (b.life <= 0) bullets.splice(i, 1);
+    }
+
+    // update asteroids
+    for (let i = asteroids.length - 1; i >= 0; i--) {
+      const a = asteroids[i];
+      a.x += a.vx;
+      a.y += a.vy;
+      wrap(a);
+      // collision with bullets
+      for (let j = bullets.length - 1; j >= 0; j--) {
+        const b = bullets[j];
+        const dist = Math.hypot(a.x - b.x, a.y - b.y);
+        if (dist < a.r + 2) {
+          bullets.splice(j, 1);
+          asteroids.splice(i, 1);
+          splitAsteroid(a);
+          addScore(10);
+          break;
+        }
+      }
+      radarPing(a);
+    }
+
+    // update UFO
+    if (ufo) {
+      ufo.x += ufo.vx;
+      ufo.y += ufo.vy;
+      radarPing(ufo);
+      if (ufo.x < -40 || ufo.x > canvas.width + 40) ufo = null;
+    } else if (performance.now() - lastUFOSpawn > 15000) {
+      spawnUFO();
+    }
+
+    // endless waves
+    if (asteroids.length === 0) {
+      setLevel(level + 1);
+      spawnWave();
+    }
   }
 
   draw();
