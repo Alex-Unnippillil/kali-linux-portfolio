@@ -4,7 +4,14 @@ describe('contact form', () => {
   it('invalid email blocked', async () => {
     const fetchMock = jest.fn();
     const result = await processContactForm(
-      { name: 'A', email: 'invalid', message: 'Hi', honeypot: '' },
+      {
+        name: 'A',
+        email: 'invalid',
+        message: 'Hi',
+        honeypot: '',
+        csrfToken: 'csrf',
+        recaptchaToken: 'rc',
+      },
       fetchMock
     );
     expect(result.success).toBe(false);
@@ -14,12 +21,22 @@ describe('contact form', () => {
   it('success posts to api', async () => {
     const fetchMock = jest.fn().mockResolvedValue({ ok: true });
     const result = await processContactForm(
-      { name: 'Alex', email: 'alex@example.com', message: 'Hello', honeypot: '' },
+      {
+        name: 'Alex',
+        email: 'alex@example.com',
+        message: 'Hello',
+        honeypot: '',
+        csrfToken: 'csrf',
+        recaptchaToken: 'rc',
+      },
       fetchMock
     );
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/contact',
-      expect.objectContaining({ method: 'POST' })
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ 'X-CSRF-Token': 'csrf' }),
+      })
     );
     expect(result.success).toBe(true);
   });

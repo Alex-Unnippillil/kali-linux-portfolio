@@ -5,9 +5,8 @@
   "homepage": "https://unnippillil.com/",
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
-    "prebuild": "npm run build:gamepad",
-    "dev": "next dev",
     "prebuild": "tsc -p tsconfig.gamepad.json",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "export": "next export",
@@ -65,7 +64,8 @@
     "swr": "^2.2.5",
     "tailwindcss": "^3.2.4",
     "three": "^0.179.1",
-    "turndown": "^7.2.1"
+    "turndown": "^7.2.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
