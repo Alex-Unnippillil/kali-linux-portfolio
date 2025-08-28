@@ -118,6 +118,7 @@ const Page2048 = () => {
   const [boardType, setBoardType] = useState<'classic' | 'hex'>('classic');
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
+  const [history, setHistory] = useState<number[][][]>([]);
 
   useEffect(() => {
     const seed = todaySeed();
@@ -163,6 +164,7 @@ const Page2048 = () => {
       if (dir === 'ArrowUp') moved = moveUp(board);
       if (dir === 'ArrowDown') moved = moveDown(board);
       if (!moved || boardsEqual(board, moved)) return;
+      setHistory((h) => [...h, board.map((row) => [...row])]);
       addRandomTile(moved, rngRef.current);
       const newHighest = checkHighest(moved);
       if ((newHighest === 2048 || newHighest === 4096) && newHighest > highest) {
@@ -178,17 +180,21 @@ const Page2048 = () => {
     [board, won, lost, highest, boardType, resetTimer]
   );
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-        handleMove(e.key as any);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [handleMove]);
+  const handleUndo = useCallback(() => {
+    setHistory((h) => {
+      if (!h.length) return h;
+      const prev = h[h.length - 1];
+      setBoard(prev.map((row) => [...row]));
+      setMoves((m) => m.slice(0, -1));
+      setHighest(checkHighest(prev));
+      setWon(false);
+      setLost(false);
+      resetTimer();
+      return h.slice(0, -1);
+    });
+  }, [resetTimer]);
 
-  const reset = () => {
+  const restart = useCallback(() => {
     const rand = mulberry32(seedRef.current);
     rngRef.current = rand;
     const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
@@ -196,11 +202,32 @@ const Page2048 = () => {
     addRandomTile(b, rand);
     setBoard(b);
     setMoves([]);
+    setHistory([]);
     setWon(false);
     setLost(false);
     setHighest(0);
     resetTimer();
-  };
+  }, [resetTimer]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        handleMove(e.key as any);
+        return;
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        restart();
+        return;
+      }
+      if (['u', 'U', 'Backspace'].includes(e.key)) {
+        e.preventDefault();
+        handleUndo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [handleMove, restart, handleUndo]);
 
   const close = () => {
     if (typeof document !== 'undefined') {
@@ -223,8 +250,11 @@ const Page2048 = () => {
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
       <div className="flex space-x-2">
-        <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={reset}>
-          Reset
+        <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={restart}>
+          Restart
+        </button>
+        <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={handleUndo}>
+          Undo
         </button>
         <label className="flex items-center space-x-1 px-2">
           <input type="checkbox" checked={hard} onChange={(e) => setHard(e.target.checked)} />
