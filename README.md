@@ -33,6 +33,7 @@ yarn dev
 ```
 
 ### Production Build
+Serverful deployments run the built Next.js server so all API routes are available.
 ```bash
 # Next.js production build & start
 yarn build
@@ -40,9 +41,9 @@ yarn start
 ```
 
 ### Static Export (for GitHub Pages / S3 Websites)
-This project supports static export. Serverless API routes will not be available in a static export; the UI gracefully degrades.
+This project supports static export. Serverless API routes will not be available; the UI falls back to demo data or hides features.
 ```bash
-yarn export        # outputs to ./out
+yarn export        # outputs to ./out (runs with NEXT_PUBLIC_STATIC_EXPORT=true)
 ```
 
 ### Install as PWA for Sharing
@@ -156,6 +157,7 @@ keyboard focus so bundles are warmed before launch. When adding a new app, expor
 | `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
+| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
 | `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
 
