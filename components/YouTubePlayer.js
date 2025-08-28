@@ -161,7 +161,7 @@ export default function YouTubePlayer({ videoId }) {
             >
               <img
                 src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
-                alt=""
+                alt="YouTube video thumbnail"
                 loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover"
               />
