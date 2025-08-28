@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings } from '../../hooks/useSettings';
-import { resetSettings, defaults } from '../../utils/settingsStore';
+import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, fontScale, setFontScale } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
+    const fileInput = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -144,7 +145,28 @@ export function Settings() {
                     ))
                 }
             </div>
-            <div className="flex justify-center my-4 border-t border-gray-900 pt-4">
+            <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
+                <button
+                    onClick={async () => {
+                        const data = await exportSettingsData();
+                        const blob = new Blob([data], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'settings.json';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    }}
+                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                >
+                    Export Settings
+                </button>
+                <button
+                    onClick={() => fileInput.current && fileInput.current.click()}
+                    className="px-4 py-2 rounded bg-ub-orange text-white"
+                >
+                    Import Settings
+                </button>
                 <button
                     onClick={async () => {
                         await resetSettings();
@@ -159,6 +181,28 @@ export function Settings() {
                     Reset Desktop
                 </button>
             </div>
+            <input
+                type="file"
+                accept="application/json"
+                ref={fileInput}
+                onChange={async (e) => {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file) return;
+                    const text = await file.text();
+                    await importSettingsData(text);
+                    try {
+                        const parsed = JSON.parse(text);
+                        if (parsed.accent !== undefined) setAccent(parsed.accent);
+                        if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
+                        if (parsed.density !== undefined) setDensity(parsed.density);
+                        if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
+                    } catch (err) {
+                        console.error('Invalid settings', err);
+                    }
+                    e.target.value = '';
+                }}
+                className="hidden"
+            />
         </div>
     )
 }

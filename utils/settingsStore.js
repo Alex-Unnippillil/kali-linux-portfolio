@@ -70,4 +70,30 @@ export async function resetSettings() {
   window.localStorage.removeItem('font-scale');
 }
 
+export async function exportSettings() {
+  const [accent, wallpaper, density, reducedMotion] = await Promise.all([
+    getAccent(),
+    getWallpaper(),
+    getDensity(),
+    getReducedMotion(),
+  ]);
+  return JSON.stringify({ accent, wallpaper, density, reducedMotion });
+}
+
+export async function importSettings(json) {
+  if (typeof window === 'undefined') return;
+  let settings;
+  try {
+    settings = typeof json === 'string' ? JSON.parse(json) : json;
+  } catch (e) {
+    console.error('Invalid settings', e);
+    return;
+  }
+  const { accent, wallpaper, density, reducedMotion } = settings;
+  if (accent !== undefined) await setAccent(accent);
+  if (wallpaper !== undefined) await setWallpaper(wallpaper);
+  if (density !== undefined) await setDensity(density);
+  if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
+}
+
 export const defaults = DEFAULT_SETTINGS;
