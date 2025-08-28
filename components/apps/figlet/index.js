@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 
 const FigletApp = () => {
   const [text, setText] = useState('');
-  const [fonts, setFonts] = useState(['Standard']);
-  const [font, setFont] = useState('Standard');
+  const [fonts, setFonts] = useState([]);
+  const [font, setFont] = useState('');
   const [output, setOutput] = useState('');
   const [inverted, setInverted] = useState(false);
   const [announce, setAnnounce] = useState('');
@@ -16,7 +16,7 @@ const FigletApp = () => {
     workerRef.current.onmessage = (e) => {
       if (e.data?.type === 'fonts') {
         setFonts(e.data.fonts);
-        setFont(e.data.fonts[0]);
+        setFont(e.data.fonts[0] || '');
       } else if (e.data?.type === 'render') {
         setOutput(e.data.output);
         setAnnounce('Preview updated');
@@ -32,7 +32,7 @@ const FigletApp = () => {
   }, []);
 
   const updateFiglet = () => {
-    if (workerRef.current) {
+    if (workerRef.current && font) {
       workerRef.current.postMessage({ text, font });
     }
   };
@@ -61,11 +61,17 @@ const FigletApp = () => {
           onChange={(e) => setFont(e.target.value)}
           aria-label="Select font"
         >
-          {fonts.map((f) => (
-            <option key={f} value={f}>
-              {f}
+          {fonts.length === 0 ? (
+            <option value="" disabled>
+              Loading...
             </option>
-          ))}
+          ) : (
+            fonts.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))
+          )}
         </select>
         <input
           type="text"

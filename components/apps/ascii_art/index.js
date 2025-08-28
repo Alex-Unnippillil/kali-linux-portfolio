@@ -369,8 +369,9 @@ export default function AsciiArt() {
           type="button"
           onClick={downloadAscii}
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          aria-label="Export ASCII as .txt"
         >
-          TXT
+          Export TXT
         </button>
         <button
           type="button"

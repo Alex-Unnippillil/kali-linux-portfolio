@@ -1,22 +1,29 @@
 import figlet from 'figlet';
-import standard from 'figlet/importable-fonts/Standard.js';
-import slant from 'figlet/importable-fonts/Slant.js';
-import big from 'figlet/importable-fonts/Big.js';
-import ghost from 'figlet/importable-fonts/Ghost.js';
-import small from 'figlet/importable-fonts/Small.js';
 
-const fonts = ['Standard', 'Slant', 'Big', 'Ghost', 'Small'];
+// Use CDN hosted fonts so the full list is available in the browser
+figlet.defaults({ fontPath: 'https://unpkg.com/figlet/fonts' });
 
-figlet.parseFont('Standard', standard);
-figlet.parseFont('Slant', slant);
-figlet.parseFont('Big', big);
-figlet.parseFont('Ghost', ghost);
-figlet.parseFont('Small', small);
+// Load the full font list from the CDN directory listing
+async function loadFonts() {
+  try {
+    const res = await fetch('https://unpkg.com/figlet/fonts?meta');
+    const meta = await res.json();
+    const fonts = meta.files
+      .filter((f) => f.path.endsWith('.flf'))
+      .map((f) => f.path.replace('/fonts/', '').replace('.flf', ''));
+    self.postMessage({ type: 'fonts', fonts });
+  } catch (err) {
+    // Fallback to a basic font if the request fails
+    self.postMessage({ type: 'fonts', fonts: ['Standard'] });
+  }
+}
 
-self.postMessage({ type: 'fonts', fonts });
+loadFonts();
 
+// Render figlet output whenever the main thread sends new text/font
 self.onmessage = (e) => {
   const { text, font } = e.data;
-  const rendered = figlet.textSync(text || '', { font });
-  self.postMessage({ type: 'render', output: rendered });
+  figlet.text(text || '', { font }, (_err, output = '') => {
+    self.postMessage({ type: 'render', output });
+  });
 };
