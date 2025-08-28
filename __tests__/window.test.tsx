@@ -255,6 +255,39 @@ describe('Window snapping finalize and release', () => {
   });
 });
 
+describe('Window resize guidelines', () => {
+  it('shows live size guide while resizing', () => {
+    const ref = React.createRef<Window>();
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.state.cursorType = 'cursor-se-resize';
+      ref.current!.startResize({ clientX: 0, clientY: 0, preventDefault: () => {}, stopPropagation: () => {} } as any);
+      ref.current!.performResize({ clientX: 50, clientY: 50 } as any);
+    });
+
+    expect(screen.getByTestId('size-guides')).toBeInTheDocument();
+
+    act(() => {
+      ref.current!.stopResize();
+    });
+
+    expect(screen.queryByTestId('size-guides')).toBeNull();
+  });
+});
+
 describe('Window keyboard dragging', () => {
   it('moves window using arrow keys with grabbed state', () => {
     render(

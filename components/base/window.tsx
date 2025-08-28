@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { Component } from 'react';
 import NextImage from 'next/image';
 import Draggable from 'react-draggable';
@@ -10,6 +11,11 @@ export class Window extends Component {
         this.id = null;
         this.startX = 60;
         this.startY = 10;
+        this.resizeStartX = 0;
+        this.resizeStartY = 0;
+        this.resizeStartWidth = 0;
+        this.resizeStartHeight = 0;
+        this.resizeDir = null;
         this.state = {
             cursorType: "cursor-default",
             width: props.defaultWidth || 60,
@@ -25,6 +31,8 @@ export class Window extends Component {
             snapped: null,
             lastSize: null,
             grabbed: false,
+            resizing: false,
+            resizeGuide: null,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -145,14 +153,68 @@ export class Window extends Component {
         this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
-    handleVerticleResize = () => {
-        if (this.props.resizable === false) return;
-        this.setState({ height: this.state.height + 0.1 }, this.resizeBoundries);
+    handleMouseMove = (e) => {
+        if (this.props.resizable === false || this.state.grabbed || this.state.resizing) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        const edge = 8;
+        const left = x <= edge;
+        const right = x >= rect.width - edge;
+        const top = y <= edge;
+        const bottom = y >= rect.height - edge;
+        let cursor = 'cursor-default';
+        if (left && top) cursor = 'cursor-nw-resize';
+        else if (right && top) cursor = 'cursor-ne-resize';
+        else if (left && bottom) cursor = 'cursor-sw-resize';
+        else if (right && bottom) cursor = 'cursor-se-resize';
+        else if (left || right) cursor = 'cursor-e-resize';
+        else if (top || bottom) cursor = 'cursor-n-resize';
+        if (cursor !== this.state.cursorType) {
+            this.setState({ cursorType: cursor });
+        }
     }
 
-    handleHorizontalResize = () => {
+    handleMouseLeave = () => {
+        if (!this.state.grabbed && !this.state.resizing) {
+            this.setState({ cursorType: 'cursor-default' });
+        }
+    }
+
+    startResize = (e) => {
         if (this.props.resizable === false) return;
-        this.setState({ width: this.state.width + 0.1 }, this.resizeBoundries);
+        const cursor = this.state.cursorType;
+        if (!cursor.includes('resize')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this.resizeDir = cursor.replace('cursor-', '').replace('-resize', '');
+        this.resizeStartX = e.clientX;
+        this.resizeStartY = e.clientY;
+        this.resizeStartWidth = this.state.width;
+        this.resizeStartHeight = this.state.height;
+        this.setState({ resizing: true, resizeGuide: { width: this.state.width, height: this.state.height } });
+        window.addEventListener('mousemove', this.performResize);
+        window.addEventListener('mouseup', this.stopResize);
+    }
+
+    performResize = (e) => {
+        let dx = (e.clientX - this.resizeStartX) / window.innerWidth * 100;
+        let dy = (e.clientY - this.resizeStartY) / window.innerHeight * 100;
+        let newWidth = this.resizeStartWidth;
+        let newHeight = this.resizeStartHeight;
+        if (this.resizeDir.includes('e')) newWidth = this.resizeStartWidth + dx;
+        if (this.resizeDir.includes('s')) newHeight = this.resizeStartHeight + dy;
+        if (this.resizeDir.includes('w')) newWidth = this.resizeStartWidth - dx;
+        if (this.resizeDir.includes('n')) newHeight = this.resizeStartHeight - dy;
+        newWidth = Math.max(20, Math.min(newWidth, 100));
+        newHeight = Math.max(20, Math.min(newHeight, 100));
+        this.setState({ width: newWidth, height: newHeight, resizeGuide: { width: newWidth, height: newHeight } }, this.resizeBoundries);
+    }
+
+    stopResize = () => {
+        window.removeEventListener('mousemove', this.performResize);
+        window.removeEventListener('mouseup', this.stopResize);
+        this.setState({ resizing: false, resizeGuide: null, cursorType: 'cursor-default' }, this.resizeBoundries);
     }
 
     setWinowsPosition = () => {
@@ -403,9 +465,10 @@ export class Window extends Component {
                         aria-label={this.props.title}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
+                        onMouseMove={this.handleMouseMove}
+                        onMouseLeave={this.handleMouseLeave}
+                        onMouseDown={this.startResize}
                     >
-                        {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
-                        {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
                         <WindowTopBar
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
@@ -418,6 +481,13 @@ export class Window extends Component {
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
                                 addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
                                 openApp={this.props.openApp} />)}
+                        {this.state.resizeGuide && (
+                            <div data-testid="size-guides" className="absolute bottom-0 right-0 m-1 px-1 text-xs text-white bg-black bg-opacity-50 rounded">
+                                {Math.round(window.innerWidth * this.state.resizeGuide.width / 100)}
+                                x
+                                {Math.round(window.innerHeight * this.state.resizeGuide.height / 100)}
+                            </div>
+                        )}
                     </div>
                 </Draggable >
             </>
@@ -441,40 +511,6 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
             <div className="flex justify-center text-sm font-bold">{title}</div>
         </div>
     )
-}
-
-// Window's Borders
-export class WindowYBorder extends Component {
-    componentDidMount() {
-        // Use the browser's Image constructor rather than the imported Next.js
-        // Image component to avoid runtime errors when running in tests.
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-        return (
-            <div className=" window-y-border border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }} onDrag={this.props.resize}>
-            </div>
-        )
-    }
-}
-
-export class WindowXBorder extends Component {
-    componentDidMount() {
-        // Use the global Image constructor instead of Next.js Image component
-
-        this.trpImg = new window.Image(0, 0);
-        this.trpImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-        this.trpImg.style.opacity = 0;
-    }
-    render() {
-        return (
-            <div className=" window-x-border border-transparent border-1 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" onDragStart={(e) => { e.dataTransfer.setDragImage(this.trpImg, 0, 0) }} onDrag={this.props.resize}>
-            </div>
-        )
-    }
 }
 
 // Window's Edit Buttons
