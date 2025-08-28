@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist",
+    "allowJs": false,
+    "tsBuildInfoFile": "./dist/tsconfig.gamepad.tsbuildinfo"
+  },
+  "include": ["utils/gamepad.ts"]
+}

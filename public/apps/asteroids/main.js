@@ -1,4 +1,4 @@
-import { pollTwinStick } from '../../utils/gamepad.js';
+import { pollTwinStick } from '../../utils/gamepad.ts';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
