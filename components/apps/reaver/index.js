@@ -70,6 +70,7 @@ export default function ReaverApp() {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState(null); // success | failure
   const [prefersReduced, setPrefersReduced] = useState(false);
+  const [ack, setAck] = useState(false);
   const rafRef = useRef();
 
   const steps = [
@@ -150,12 +151,53 @@ export default function ReaverApp() {
 
   useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
 
+  if (!ack) {
+    return (
+      <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
+        <h2 className="text-lg mb-2">Reaver WPS PIN Attack</h2>
+        <p className="text-yellow-300 text-sm mb-4">
+          For lab use only. Simulation only — no live tests are performed.
+        </p>
+        <button
+          onClick={() => setAck(true)}
+          className="px-4 py-2 bg-ub-green text-black rounded"
+        >
+          I understand
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
       <h2 className="text-lg">Reaver WPS PIN Attack</h2>
       <p className="text-xs text-gray-300 mb-4">
         Simulation only—no live Wi-Fi attacks occur.
       </p>
+      <div className="mb-4 bg-black p-2 text-sm">
+        <h3 className="font-bold mb-1">About WPS</h3>
+        <p>
+          Wi-Fi Protected Setup (WPS) simplifies network configuration but its
+          PIN method is vulnerable to brute-force attacks, potentially exposing
+          WPA/WPA2 keys.
+        </p>
+        <p className="mt-2">
+          Tools like Reaver exploit this weakness. Use only in isolated lab
+          environments with authorization.
+        </p>
+        <p className="mt-2">
+          This simulator references the{' '}
+          <a
+            href="https://github.com/t6x/reaver-wps-fork-t6x"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline text-ub-green"
+          >
+            maintained reaver-wps-fork
+          </a>
+          . No live tests are performed.
+        </p>
+      </div>
       <div className="mb-2">
         <label className="block mb-1">Target BSSID</label>
         <input
