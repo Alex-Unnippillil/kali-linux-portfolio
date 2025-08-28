@@ -43,6 +43,7 @@ export default function Calculator() {
         <button className="btn" data-action="equals">=</button>
         <button className="btn" data-value="+">+</button>
         <button className="btn span-two" data-action="clear">C</button>
+        <button className="btn span-two" data-action="backspace">⌫</button>
       </div>
       <div id="scientific" className="scientific hidden button-grid">
         <button className="btn" data-value="sin(">sin</button>
