@@ -40,6 +40,14 @@ export default function usePersistentState<T>(
   }, [key, state]);
 
   const reset = () => setState(getInitial());
+  const clear = () => {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // ignore remove errors
+    }
+    reset();
+  };
 
-  return [state, setState, reset] as const;
+  return [state, setState, reset, clear] as const;
 }

@@ -26,6 +26,7 @@ export class Desktop extends Component {
             favourite_apps: {},
             hideSideBar: false,
             minimized_windows: {},
+            window_positions: {},
             desktop_apps: [],
             context_menus: {
                 desktop: false,
@@ -43,7 +44,26 @@ export class Desktop extends Component {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         this.fetchAppsData(() => {
-            this.openApp('about-alex');
+            const session = this.props.session || {};
+            const positions = {};
+            if (session.dock && session.dock.length) {
+                let favourite_apps = { ...this.state.favourite_apps };
+                session.dock.forEach(id => {
+                    favourite_apps[id] = true;
+                });
+                this.setState({ favourite_apps });
+            }
+
+            if (session.windows && session.windows.length) {
+                session.windows.forEach(({ id, x, y }) => {
+                    positions[id] = { x, y };
+                });
+                this.setState({ window_positions: positions }, () => {
+                    session.windows.forEach(({ id }) => this.openApp(id));
+                });
+            } else {
+                this.openApp('about-alex');
+            }
         });
         this.setContextListeners();
         this.setEventListeners();
@@ -288,6 +308,7 @@ export class Desktop extends Component {
         apps.forEach((app, index) => {
             if (this.state.closed_windows[app.id] === false) {
 
+                const pos = this.state.window_positions[app.id];
                 const props = {
                     title: app.title,
                     id: app.id,
@@ -304,6 +325,9 @@ export class Desktop extends Component {
                     allowMaximize: app.allowMaximize,
                     defaultWidth: app.defaultWidth,
                     defaultHeight: app.defaultHeight,
+                    initialX: pos ? pos.x : undefined,
+                    initialY: pos ? pos.y : undefined,
+                    onPositionChange: (x, y) => this.updateWindowPosition(app.id, x, y),
                 }
 
                 windowsJsx.push(
@@ -312,6 +336,24 @@ export class Desktop extends Component {
             }
         });
         return windowsJsx;
+    }
+
+    updateWindowPosition = (id, x, y) => {
+        this.setState(prev => ({
+            window_positions: { ...prev.window_positions, [id]: { x, y } }
+        }), this.saveSession);
+    }
+
+    saveSession = () => {
+        if (!this.props.setSession) return;
+        const openWindows = Object.keys(this.state.closed_windows).filter(id => this.state.closed_windows[id] === false);
+        const windows = openWindows.map(id => ({
+            id,
+            x: this.state.window_positions[id] ? this.state.window_positions[id].x : 60,
+            y: this.state.window_positions[id] ? this.state.window_positions[id].y : 10
+        }));
+        const dock = Object.keys(this.state.favourite_apps).filter(id => this.state.favourite_apps[id]);
+        this.props.setSession({ ...this.props.session, windows, dock });
     }
 
     hideSideBar = (objId, hide) => {
@@ -401,12 +443,15 @@ export class Desktop extends Component {
             // tell childs that his app has been not minimised
             let minimized_windows = this.state.minimized_windows;
             minimized_windows[objId] = false;
-            this.setState({ minimized_windows: minimized_windows });
+            this.setState({ minimized_windows: minimized_windows }, this.saveSession);
             return;
         }
 
         //if app is already opened
-        if (this.app_stack.includes(objId)) this.focus(objId);
+        if (this.app_stack.includes(objId)) {
+            this.focus(objId);
+            this.saveSession();
+        }
         else {
             let closed_windows = this.state.closed_windows;
             let favourite_apps = this.state.favourite_apps;
@@ -437,7 +482,10 @@ export class Desktop extends Component {
             setTimeout(() => {
                 favourite_apps[objId] = true; // adds opened app to sideBar
                 closed_windows[objId] = false; // openes app's window
-                this.setState({ closed_windows, favourite_apps, allAppsView: false }, this.focus(objId));
+                this.setState({ closed_windows, favourite_apps, allAppsView: false }, () => {
+                    this.focus(objId);
+                    this.saveSession();
+                });
                 this.app_stack.push(objId);
             }, 200);
         }
@@ -459,7 +507,7 @@ export class Desktop extends Component {
         if (this.initFavourite[objId] === false) favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
         closed_windows[objId] = true; // closes the app's window
 
-        this.setState({ closed_windows, favourite_apps });
+        this.setState({ closed_windows, favourite_apps }, this.saveSession);
     }
 
     pinApp = (id) => {
@@ -471,7 +519,7 @@ export class Desktop extends Component {
         let pinnedApps = JSON.parse(localStorage.getItem('pinnedApps')) || []
         if (!pinnedApps.includes(id)) pinnedApps.push(id)
         localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps })
+        this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
 
@@ -484,7 +532,7 @@ export class Desktop extends Component {
         let pinnedApps = JSON.parse(localStorage.getItem('pinnedApps')) || []
         pinnedApps = pinnedApps.filter(appId => appId !== id)
         localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))
-        this.setState({ favourite_apps })
+        this.setState({ favourite_apps }, () => { this.saveSession(); })
         this.hideAllContextMenu()
     }
 
@@ -612,7 +660,13 @@ export class Desktop extends Component {
                 {this.renderDesktopApps()}
 
                 {/* Context Menus */}
-                <DesktopMenu active={this.state.context_menus.desktop} openApp={this.openApp} addNewFolder={this.addNewFolder} openShortcutSelector={this.openShortcutSelector} />
+                <DesktopMenu
+                    active={this.state.context_menus.desktop}
+                    openApp={this.openApp}
+                    addNewFolder={this.addNewFolder}
+                    openShortcutSelector={this.openShortcutSelector}
+                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
                     active={this.state.context_menus.app}

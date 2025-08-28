@@ -1,11 +1,17 @@
-import React, { Component } from 'react';
+import React, { Component, useEffect } from 'react';
 import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import ReactGA from 'react-ga4';
+import useSession from '../hooks/useSession';
+import { useSettings } from '../hooks/useSettings';
 
-interface UbuntuProps {}
+interface UbuntuProps {
+  session: ReturnType<typeof useSession>['session'];
+  setSession: ReturnType<typeof useSession>['setSession'];
+  clearSession: ReturnType<typeof useSession>['resetSession'];
+}
 
 interface UbuntuState {
   screen_locked: boolean;
@@ -15,7 +21,7 @@ interface UbuntuState {
 
 interface UbuntuContext {}
 
-export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuContext> {
+export class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuContext> {
   context!: UbuntuContext;
 
   constructor(props: UbuntuProps) {
@@ -138,8 +144,33 @@ export default class Ubuntu extends Component<UbuntuProps, UbuntuState, UbuntuCo
           turnOn={this.turnOn}
         />
         <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-        <Desktop />
+        <Desktop
+          session={this.props.session}
+          setSession={this.props.setSession}
+          clearSession={this.props.clearSession}
+        />
       </div>
     );
   }
+}
+
+export default function UbuntuWithSession() {
+  const { session, setSession, resetSession } = useSession();
+  const { wallpaper, setWallpaper } = useSettings();
+
+  useEffect(() => {
+    setWallpaper(session.wallpaper);
+  }, [session.wallpaper, setWallpaper]);
+
+  useEffect(() => {
+    setSession({ ...session, wallpaper });
+  }, [wallpaper]);
+
+  return (
+    <Ubuntu
+      session={session}
+      setSession={setSession}
+      clearSession={resetSession}
+    />
+  );
 }
