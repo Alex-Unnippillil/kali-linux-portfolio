@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 const FigletApp = () => {
   const [text, setText] = useState('');
-  const [fonts, setFonts] = useState(['Standard']);
-  const [font, setFont] = useState('Standard');
+  const [fonts, setFonts] = useState([]); // {name, preview, mono}
+  const [font, setFont] = useState('');
+  const [monoOnly, setMonoOnly] = useState(false);
   const [output, setOutput] = useState('');
   const [inverted, setInverted] = useState(false);
   const [announce, setAnnounce] = useState('');
@@ -14,9 +15,12 @@ const FigletApp = () => {
   useEffect(() => {
     workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
     workerRef.current.onmessage = (e) => {
-      if (e.data?.type === 'fonts') {
-        setFonts(e.data.fonts);
-        setFont(e.data.fonts[0]);
+      if (e.data?.type === 'font') {
+        setFonts((prev) => {
+          const next = [...prev, { name: e.data.font, preview: e.data.preview, mono: e.data.mono }];
+          if (next.length === 1) setFont(e.data.font);
+          return next;
+        });
       } else if (e.data?.type === 'render') {
         setOutput(e.data.output);
         setAnnounce('Preview updated');
@@ -32,8 +36,8 @@ const FigletApp = () => {
   }, []);
 
   const updateFiglet = useCallback(() => {
-    if (workerRef.current) {
-      workerRef.current.postMessage({ text, font });
+    if (workerRef.current && font) {
+      workerRef.current.postMessage({ type: 'render', text, font });
     }
   }, [text, font]);
 
@@ -52,21 +56,20 @@ const FigletApp = () => {
     }
   };
 
+  const displayedFonts = fonts.filter((f) => !monoOnly || f.mono);
+
   return (
     <div className="flex flex-col h-full w-full bg-ub-cool-grey text-white font-mono">
-      <div className="p-2 flex gap-2 bg-ub-gedit-dark">
-        <select
-          className="bg-gray-700 text-white px-1"
-          value={font}
-          onChange={(e) => setFont(e.target.value)}
-          aria-label="Select font"
-        >
-          {fonts.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </select>
+      <div className="p-2 flex gap-2 bg-ub-gedit-dark items-center">
+        <label className="flex items-center gap-1 text-sm">
+          <input
+            type="checkbox"
+            checked={monoOnly}
+            onChange={() => setMonoOnly((m) => !m)}
+            aria-label="Show monospace fonts only"
+          />
+          Monospace only
+        </label>
         <input
           type="text"
           className="flex-1 px-2 bg-gray-700 text-white"
@@ -90,6 +93,22 @@ const FigletApp = () => {
           Invert
         </button>
       </div>
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-1/3 overflow-auto bg-gray-800">
+          {displayedFonts.map((f) => (
+            <button
+              key={f.name}
+              onClick={() => setFont(f.name)}
+              className={`block w-full text-left p-2 border-b border-gray-700 hover:bg-gray-700 ${
+                font === f.name ? 'bg-gray-700' : ''
+              }`}
+              aria-label={`Use ${f.name} font`}
+            >
+              <div className="text-xs mb-1">{f.name}</div>
+              <pre className="text-xs leading-tight whitespace-pre">{f.preview}</pre>
+            </button>
+          ))}
+        </div>
         <pre
           className={`flex-1 overflow-auto p-2 whitespace-pre transition-colors motion-reduce:transition-none ${
             inverted ? 'bg-white text-black' : 'bg-black text-white'
@@ -97,6 +116,18 @@ const FigletApp = () => {
         >
           {output}
         </pre>
+      </div>
+      <div className="p-2 text-xs text-right">
+        About this feature:{' '}
+        <a
+          href="http://www.figlet.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          FIGlet
+        </a>
+      </div>
       <div aria-live="polite" className="sr-only">
         {announce}
       </div>
