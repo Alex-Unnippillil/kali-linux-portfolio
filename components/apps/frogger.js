@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
+import { vibrate } from './Games/common/haptics';
 
 const WIDTH = 7;
 const HEIGHT = 8;
@@ -207,7 +208,7 @@ const Frogger = () => {
       const x = prev.x + dx;
       const y = prev.y + dy;
       if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) return prev;
-      if (navigator.vibrate) navigator.vibrate(50);
+      vibrate(50);
       if (dy === -1) setScore((s) => s + 10);
       playTone(440, 0.05);
       return { x, y };

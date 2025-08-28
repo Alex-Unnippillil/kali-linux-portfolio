@@ -3,6 +3,7 @@ import usePersistentState from '../../hooks/usePersistentState';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
 import { findHint } from '../../apps/games/_2048/ai';
+import { vibrate } from './Games/common/haptics';
 
 const SIZE = 4;
 
@@ -256,7 +257,7 @@ const Game2048 = () => {
         }
         setBoard(cloneBoard(moved));
         setMoves((m) => m + 1);
-        if (merged) navigator.vibrate?.(50);
+        if (merged) vibrate(50);
         if (mergedCells.length > 1) {
           setCombo((c) => c + 1);
           if (typeof window !== 'undefined') {

@@ -4,7 +4,15 @@ import Image from 'next/image'
 export class UbuntuApp extends Component {
     constructor() {
         super();
-        this.state = { launching: false };
+        this.state = { launching: false, dragging: false };
+    }
+
+    handleDragStart = () => {
+        this.setState({ dragging: true });
+    }
+
+    handleDragEnd = () => {
+        this.setState({ dragging: false });
     }
 
     openApp = () => {
@@ -21,7 +29,10 @@ export class UbuntuApp extends Component {
                 aria-label={this.props.name}
                 data-context="app"
                 data-app-id={this.props.id}
-                className={(this.state.launching ? " app-icon-launch " : "") + " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white "}
+                draggable
+                onDragStart={this.handleDragStart}
+                onDragEnd={this.handleDragEnd}
+                className={(this.state.launching ? " app-icon-launch " : "") + (this.state.dragging ? " opacity-70 " : "") + " p-1 m-px z-10 bg-white bg-opacity-0 hover:bg-opacity-20 focus:bg-white focus:bg-opacity-50 focus:border-yellow-700 focus:border-opacity-100 border border-transparent outline-none rounded select-none w-24 h-20 flex flex-col justify-start items-center text-center text-xs font-normal text-white "}
                 id={"app-" + this.props.id}
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
