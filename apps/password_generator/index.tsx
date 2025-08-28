@@ -17,6 +17,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
   const [useNumbers, setUseNumbers] = useState(true);
   const [useSymbols, setUseSymbols] = useState(false);
   const [password, setPassword] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const generatePassword = () => {
     let chars = '';
@@ -40,6 +41,8 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
     if (!password) return;
     try {
       await navigator.clipboard?.writeText(password);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (e) {
       // ignore
     }
@@ -77,11 +80,11 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
           className="text-black px-2"
         />
       </div>
-      <div className="flex flex-col space-y-1">
-        <label><input type="checkbox" checked={useLower} onChange={(e) => setUseLower(e.target.checked)} /> Lowercase</label>
-        <label><input type="checkbox" checked={useUpper} onChange={(e) => setUseUpper(e.target.checked)} /> Uppercase</label>
-        <label><input type="checkbox" checked={useNumbers} onChange={(e) => setUseNumbers(e.target.checked)} /> Numbers</label>
-        <label><input type="checkbox" checked={useSymbols} onChange={(e) => setUseSymbols(e.target.checked)} /> Symbols</label>
+      <div className="flex flex-wrap gap-2">
+        <label className="flex items-center gap-1"><input type="checkbox" checked={useLower} onChange={(e) => setUseLower(e.target.checked)} /> Lowercase</label>
+        <label className="flex items-center gap-1"><input type="checkbox" checked={useUpper} onChange={(e) => setUseUpper(e.target.checked)} /> Uppercase</label>
+        <label className="flex items-center gap-1"><input type="checkbox" checked={useNumbers} onChange={(e) => setUseNumbers(e.target.checked)} /> Numbers</label>
+        <label className="flex items-center gap-1"><input type="checkbox" checked={useSymbols} onChange={(e) => setUseSymbols(e.target.checked)} /> Symbols</label>
       </div>
       <div className="flex space-x-2 items-center">
         <input
@@ -99,6 +102,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
           Copy
         </button>
       </div>
+      {copied && <div className="text-sm text-green-400">Copied!</div>}
       <div>
         <div className="h-2 w-full bg-gray-700 rounded">
           <div className={`h-full ${color} rounded`} style={{ width }} />
