@@ -66,6 +66,7 @@ const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
 const BluetoothApp = createDynamicApp('bluetooth', 'Bluetooth Tools');
+const BleSensorApp = createDynamicApp('ble-sensor', 'BLE Sensor');
 const DsniffApp = createDynamicApp('dsniff', 'dsniff');
 const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
@@ -146,6 +147,7 @@ const displayAutopsy = createDisplay(AutopsyApp);
 
 const displayWireshark = createDisplay(WiresharkApp);
 const displayBluetooth = createDisplay(BluetoothApp);
+const displayBleSensor = createDisplay(BleSensorApp);
 const displayBeef = createDisplay(BeefApp);
 const displayMetasploit = createDisplay(MetasploitApp);
 const displayDsniff = createDisplay(DsniffApp);
@@ -676,6 +678,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayBluetooth,
+  },
+  {
+    id: 'ble-sensor',
+    title: 'BLE Sensor',
+    icon: './themes/Yaru/apps/bluetooth.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayBleSensor,
   },
   {
     id: 'metasploit',
