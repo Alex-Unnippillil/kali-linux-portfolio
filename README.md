@@ -160,22 +160,40 @@ Defined in `next.config.js`:
 
 ---
 
-## CI/CD
+## Deployment
 
-### GitHub Pages (static)
+### Static export (GitHub Pages)
 Workflow: `.github/workflows/gh-deploy.yml`:
 - Installs Node, runs `yarn build && yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
 - **Action item:** update matrix to **Node 20.x** to match `package.json`.
-- Exposes env via repo **Secrets**:
-  - `NEXT_PUBLIC_TRACKING_ID`, `NEXT_PUBLIC_SERVICE_ID`, `NEXT_PUBLIC_TEMPLATE_ID`, `NEXT_PUBLIC_USER_ID`.
+- Required env variables (GitHub Secrets):
+  - `NEXT_PUBLIC_TRACKING_ID`
+  - `NEXT_PUBLIC_SERVICE_ID`
+  - `NEXT_PUBLIC_TEMPLATE_ID`
+  - `NEXT_PUBLIC_USER_ID`
+  - `NEXT_PUBLIC_YOUTUBE_API_KEY`
+  - `NEXT_PUBLIC_BEEF_URL`
+  - `NEXT_PUBLIC_GHIDRA_URL`
+  - `NEXT_PUBLIC_GHIDRA_WASM`
+  - `NEXT_PUBLIC_UI_EXPERIMENTS`
 
-### Vercel (serverless) - optional
-- Create a Vercel project, set the environment variables above.
+### Vercel deployment
+- Create a Vercel project and connect this repo.
+- Required env variables (Project Settings):
+  - `NEXT_PUBLIC_TRACKING_ID`
+  - `NEXT_PUBLIC_SERVICE_ID`
+  - `NEXT_PUBLIC_TEMPLATE_ID`
+  - `NEXT_PUBLIC_USER_ID`
+  - `NEXT_PUBLIC_YOUTUBE_API_KEY`
+  - `NEXT_PUBLIC_BEEF_URL`
+  - `NEXT_PUBLIC_GHIDRA_URL`
+  - `NEXT_PUBLIC_GHIDRA_WASM`
+  - `NEXT_PUBLIC_UI_EXPERIMENTS`
 - Build command: `yarn build`
 - Output: Next.js (serverless by default on Vercel).
-- If you keep API routes, Vercel will deploy them as serverless functions. If you go **static** on Vercel, disable API routes or feature-flag those apps.
+- If you keep API routes, Vercel deploys them as serverless functions. For a static build, disable API routes or feature-flag those apps.
 
-### Docker (self-hosted) - optional
+### Docker image build/run
 ```Dockerfile
 # node:20-alpine
 FROM node:20-alpine AS build
@@ -191,6 +209,26 @@ ENV NODE_ENV=production
 COPY --from=build /app ./
 EXPOSE 3000
 CMD ["yarn","start","-p","3000"]
+```
+
+Build the image:
+```bash
+docker build -t kali-portfolio .
+```
+
+Run the container:
+```bash
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_TRACKING_ID=... \
+  -e NEXT_PUBLIC_SERVICE_ID=... \
+  -e NEXT_PUBLIC_TEMPLATE_ID=... \
+  -e NEXT_PUBLIC_USER_ID=... \
+  -e NEXT_PUBLIC_YOUTUBE_API_KEY=... \
+  -e NEXT_PUBLIC_BEEF_URL=... \
+  -e NEXT_PUBLIC_GHIDRA_URL=... \
+  -e NEXT_PUBLIC_GHIDRA_WASM=... \
+  -e NEXT_PUBLIC_UI_EXPERIMENTS=... \
+  kali-portfolio
 ```
 
 ---
