@@ -1,0 +1,7 @@
+.selected-square {
+  @apply ring-2 ring-green-400;
+}
+
+.move-square {
+  @apply ring-2 ring-yellow-300 animate-pulse;
+}
