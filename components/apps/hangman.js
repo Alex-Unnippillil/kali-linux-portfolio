@@ -361,22 +361,27 @@ const Hangman = () => {
           Hint
         </button>
       </div>
-      <div className="grid grid-cols-13 gap-1 text-xs mb-2">
-        {letters.map((l) => {
-          const intensity =
-            frequencies.max ? frequencies.counts[l] / frequencies.max : 0;
-          const color = `rgba(255,0,0,${intensity})`;
-          return (
-            <span
-              key={l}
-              style={{ backgroundColor: color }}
-              className="px-1 rounded"
-            >
-              {l}
-            </span>
-          );
-        })}
-      </div>
+        <div className="flex flex-wrap justify-center gap-1 text-xs mb-2">
+          {letters.map((l) => {
+            const intensity =
+              frequencies.max ? frequencies.counts[l] / frequencies.max : 0;
+            const color = `rgba(255,0,0,${intensity})`;
+            const guessedAlready = guessed.includes(l);
+            return (
+              <button
+                key={l}
+                type="button"
+                onClick={() => handleGuess(l)}
+                style={{ backgroundColor: color }}
+                className={`px-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange ${guessedAlready ? 'opacity-50' : ''}`}
+                aria-pressed={guessedAlready}
+                disabled={guessedAlready || wrong >= maxWrong || won || paused}
+              >
+                {l}
+              </button>
+            );
+          })}
+        </div>
       <canvas
         ref={canvasRef}
         width={400}
