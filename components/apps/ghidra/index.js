@@ -1,35 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
+import FunctionTree from './FunctionTree';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
 
-const BLOCKS = [
-  {
-    id: 'start',
-    label: 'Start',
-    code: ['start:', '  mov eax, 1'],
-    edges: ['check'],
-    x: 40,
-    y: 60,
-  },
-  {
-    id: 'check',
-    label: 'Check',
-    code: ['cmp eax, 2', 'jne end'],
-    edges: ['end'],
-    x: 140,
-    y: 60,
-  },
-  {
-    id: 'end',
-    label: 'End',
-    code: ['ret'],
-    edges: [],
-    x: 240,
-    y: 60,
-  },
-];
+// Disassembly data is now loaded from pre-generated JSON
 
 // S6: Interactive control flow graph with accessible labelling
 function ControlFlowGraph({ blocks, selected, onSelect, prefersReducedMotion }) {
@@ -84,8 +60,11 @@ function ControlFlowGraph({ blocks, selected, onSelect, prefersReducedMotion }) 
 
 export default function GhidraApp() {
   const [useRemote, setUseRemote] = useState(false);
-  const [selected, setSelected] = useState('start');
+  const [functions, setFunctions] = useState([]);
+  const [funcMap, setFuncMap] = useState({});
+  const [selected, setSelected] = useState(null);
   const [hexMap, setHexMap] = useState({});
+  const [xrefs, setXrefs] = useState({});
   const [liveMessage, setLiveMessage] = useState('');
   const decompileRef = useRef(null);
   const hexRef = useRef(null);
@@ -102,6 +81,29 @@ export default function GhidraApp() {
     }
     WebAssembly.instantiateStreaming(fetch(wasmUrl), {})
       .catch(() => setUseRemote(true));
+  }, []);
+
+  // Load pre-generated disassembly JSON
+  useEffect(() => {
+    fetch('/demo-data/ghidra/disassembly.json')
+      .then((r) => r.json())
+      .then((data) => {
+        const map = {};
+        const xr = {};
+        data.functions.forEach((f) => {
+          map[f.name] = f;
+        });
+        data.functions.forEach((f) => {
+          (f.calls || []).forEach((c) => {
+            if (!xr[c]) xr[c] = [];
+            xr[c].push(f.name);
+          });
+        });
+        setFunctions(data.functions);
+        setFuncMap(map);
+        setXrefs(xr);
+        setSelected(data.functions[0]?.name || null);
+      });
   }, []);
 
   // S2: Respect reduced motion preference
@@ -123,20 +125,21 @@ export default function GhidraApp() {
   }, []);
 
   useEffect(() => {
-    if (!hexWorkerRef.current) return;
-    const block = BLOCKS.find((b) => b.id === selected);
-    if (block && !hexMap[block.id]) {
+    if (!hexWorkerRef.current || !selected) return;
+    const func = funcMap[selected];
+    if (func && !hexMap[func.name]) {
       hexWorkerRef.current.postMessage({
-        id: block.id,
-        code: block.code.join('\n'),
+        id: func.name,
+        code: func.code.join('\n'),
       });
     }
-  }, [selected, hexMap]);
+  }, [selected, hexMap, funcMap]);
 
-  // S4: Announce selected block changes via live region
+  // S4: Announce selected function changes via live region
   useEffect(() => {
-    const block = BLOCKS.find((b) => b.id === selected);
-    setLiveMessage(`Selected block ${block ? block.label : selected}`);
+    if (selected) {
+      setLiveMessage(`Selected function ${selected}`);
+    }
   }, [selected]);
 
   // S5: Synchronize scrolling between decompile and hex panes
@@ -176,31 +179,63 @@ export default function GhidraApp() {
     );
   }
 
-  const selectedBlock = BLOCKS.find((b) => b.id === selected);
+  const currentFunc = funcMap[selected] || { code: [], blocks: [], calls: [] };
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
       <div className="flex flex-1">
-        <div className="w-1/3 border-r border-gray-700">
+        <div className="w-1/4 border-r border-gray-700 overflow-auto">
+          <FunctionTree functions={functions} onSelect={setSelected} selected={selected} />
+        </div>
+        <div className="w-1/4 border-r border-gray-700">
           <ControlFlowGraph
-            blocks={BLOCKS}
-            selected={selected}
-            onSelect={setSelected}
+            blocks={currentFunc.blocks}
+            selected={null}
+            onSelect={() => {}}
             prefersReducedMotion={prefersReducedMotion}
           />
         </div>
-        {/* S7: ARIA-labelled panes for decompiled and hex views */}
+        {/* S7: ARIA-labelled panes for decompiled and hex views with cross-reference jumps */}
         <pre
           ref={decompileRef}
           aria-label="Decompiled code"
-          className="w-1/3 overflow-auto p-2 whitespace-pre-wrap"
+          className="w-1/4 overflow-auto p-2 whitespace-pre-wrap"
         >
-          {selectedBlock.code.join('\n')}
+          {currentFunc.code.map((line, idx) => {
+            const m = line.match(/call\s+(\w+)/);
+            if (m && funcMap[m[1]]) {
+              const target = m[1];
+              return (
+                <div
+                  key={idx}
+                  onClick={() => setSelected(target)}
+                  className="cursor-pointer text-blue-400 hover:underline"
+                >
+                  {line}
+                </div>
+              );
+            }
+            return <div key={idx}>{line}</div>;
+          })}
+          {(xrefs[selected] || []).length > 0 && (
+            <div className="mt-2 text-xs">
+              XREFS:
+              {xrefs[selected].map((xr) => (
+                <button
+                  key={xr}
+                  onClick={() => setSelected(xr)}
+                  className="ml-2 underline text-blue-400"
+                >
+                  {xr}
+                </button>
+              ))}
+            </div>
+          )}
         </pre>
         <pre
           ref={hexRef}
           aria-label="Hexadecimal representation"
-          className="w-1/3 overflow-auto p-2 whitespace-pre-wrap"
+          className="w-1/4 overflow-auto p-2 whitespace-pre-wrap"
         >
           {hexMap[selected] || ''}
         </pre>

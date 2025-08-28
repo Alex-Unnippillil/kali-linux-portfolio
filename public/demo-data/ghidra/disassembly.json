@@ -1,0 +1,29 @@
+{
+  "functions": [
+    {
+      "name": "start",
+      "code": ["start:", "  mov eax, 1", "  call check", "  ret"],
+      "calls": ["check"],
+      "blocks": [
+        {"id": "start", "label": "Start", "code": ["mov eax, 1", "call check", "ret"], "edges": [], "x": 40, "y": 60}
+      ]
+    },
+    {
+      "name": "check",
+      "code": ["check:", "  cmp eax, 2", "  jne end", "  call helper", "  ret"],
+      "calls": ["helper"],
+      "blocks": [
+        {"id": "check", "label": "Check", "code": ["cmp eax, 2", "jne end", "call helper", "ret"], "edges": ["end"], "x": 40, "y": 60},
+        {"id": "end", "label": "End", "code": ["ret"], "edges": [], "x": 160, "y": 60}
+      ]
+    },
+    {
+      "name": "helper",
+      "code": ["helper:", "  ret"],
+      "calls": [],
+      "blocks": [
+        {"id": "helper", "label": "Helper", "code": ["ret"], "edges": [], "x": 40, "y": 60}
+      ]
+    }
+  ]
+}
