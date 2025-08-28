@@ -39,25 +39,42 @@ export default function CheckersPage() {
   const [difficulty, setDifficulty] = useState(3);
   const [winner, setWinner] = useState<string | null>(null);
   const [noCapture, setNoCapture] = useState(0);
+  const [history, setHistory] = useState<
+    { board: Board; turn: 'red' | 'black'; noCapture: number }[]
+  >([]);
   const workerRef = useRef<Worker | null>(null);
+  const moveRef = useRef(false);
+  const positionCounts = useRef<Map<string, number>>(new Map());
+  const [crowned, setCrowned] = useState<[number, number] | null>(null);
 
   const makeMove = useCallback(
     (move: Move) => {
-      const { board: newBoard, capture } = applyMove(board, move);
+      if (!moveRef.current) {
+        setHistory((h) => [...h, { board, turn, noCapture }]);
+        moveRef.current = true;
+      }
+      const { board: newBoard, capture, king } = applyMove(board, move);
       const further = capture
         ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
         : [];
       setBoard(newBoard);
+      if (king) {
+        setCrowned([move.to[0], move.to[1]]);
+      }
       if (capture && further.length) {
         setSelected([move.to[0], move.to[1]]);
         setMoves(further);
         setNoCapture(0);
         return;
       }
+      moveRef.current = false;
       const next = turn === 'red' ? 'black' : 'red';
-      const newNo = capture ? 0 : noCapture + 1;
+      const newNo = capture || king ? 0 : noCapture + 1;
       setNoCapture(newNo);
-      if (isDraw(newNo)) {
+      const key = JSON.stringify(newBoard);
+      const count = positionCounts.current.get(key) || 0;
+      positionCounts.current.set(key, count + 1);
+      if (isDraw(newNo, positionCounts.current)) {
         setWinner('Draw');
       } else {
         const hasNext =
@@ -94,6 +111,10 @@ export default function CheckersPage() {
     return () => workerRef.current?.terminate();
   }, [makeMove]);
 
+  useEffect(() => {
+    positionCounts.current.set(JSON.stringify(board), 1);
+  }, []);
+
   const allMoves = useMemo(
     () =>
       rule === 'forced'
@@ -120,13 +141,51 @@ export default function CheckersPage() {
   };
 
   const reset = () => {
-    setBoard(createBoard());
+    const initial = createBoard();
+    setBoard(initial);
     setTurn('red');
     setSelected(null);
     setMoves([]);
     setWinner(null);
     setNoCapture(0);
+    setHistory([]);
+    moveRef.current = false;
+    positionCounts.current = new Map([[JSON.stringify(initial), 1]]);
+    setCrowned(null);
   };
+
+  const undo = () => {
+    if (!history.length) return;
+    const currentKey = JSON.stringify(board);
+    const count = positionCounts.current.get(currentKey) || 0;
+    if (count <= 1) positionCounts.current.delete(currentKey);
+    else positionCounts.current.set(currentKey, count - 1);
+    const prev = history[history.length - 1];
+    setBoard(prev.board);
+    setTurn(prev.turn);
+    setNoCapture(prev.noCapture);
+    setHistory(history.slice(0, -1));
+    setWinner(null);
+    setSelected(null);
+    setMoves([]);
+    setCrowned(null);
+    if (prev.turn === 'black') {
+      workerRef.current?.postMessage({
+        board: prev.board,
+        color: 'black',
+        difficulty,
+        algorithm,
+        enforceCapture: rule === 'forced',
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (crowned) {
+      const id = setTimeout(() => setCrowned(null), 600);
+      return () => clearTimeout(id);
+    }
+  }, [crowned]);
 
   return (
     <div className="flex flex-col items-center justify-center h-full w-full bg-ub-cool-grey text-white p-4">
@@ -170,6 +229,13 @@ export default function CheckersPage() {
         >
           Reset
         </button>
+        <button
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={undo}
+          disabled={!history.length}
+        >
+          Undo
+        </button>
       </div>
       <div className="w-full max-w-lg aspect-square">
         <div className="grid grid-cols-8 w-full h-full">
@@ -178,6 +244,7 @@ export default function CheckersPage() {
               const isDark = (r + c) % 2 === 1;
               const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
               const isSelected = selected && selected[0] === r && selected[1] === c;
+              const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
               return (
                 <div
                   key={`${r}-${c}`}
@@ -190,7 +257,9 @@ export default function CheckersPage() {
                     <div
                       className={`w-3/4 h-3/4 rounded-full flex items-center justify-center ${
                         cell.color === 'red' ? 'bg-red-500' : 'bg-black'
-                      } ${cell.king ? 'border-4 border-yellow-300' : ''}`}
+                      } ${cell.king ? 'border-4 border-yellow-300' : ''} ${
+                        isCrowned ? 'motion-safe:animate-flourish' : ''
+                      }`}
                     />
                   )}
                 </div>
