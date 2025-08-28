@@ -254,3 +254,32 @@ describe('Window snapping finalize and release', () => {
     expect(ref.current!.state.height).toBe(85);
   });
 });
+
+describe('Window keyboard dragging', () => {
+  it('moves window using arrow keys with grabbed state', () => {
+    render(
+      <Window
+        id="test-window"
+        title="Test"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        hideSideBar={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const handle = screen.getByText('Test').parentElement!;
+
+    fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
+    fireEvent.keyDown(handle, { key: 'ArrowRight' });
+
+    const winEl = document.getElementById('test-window')!;
+    expect(winEl.style.transform).toBe('translate(10px, 0px)');
+    expect(handle).toHaveAttribute('aria-grabbed', 'true');
+
+    fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
+    expect(handle).toHaveAttribute('aria-grabbed', 'false');
+  });
+});

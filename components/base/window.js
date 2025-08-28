@@ -24,6 +24,7 @@ export class Window extends Component {
             snapPosition: null,
             snapped: null,
             lastSize: null,
+            grabbed: false,
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
@@ -137,11 +138,11 @@ export class Window extends Component {
         if (this.state.snapped) {
             this.unsnapWindow();
         }
-        this.setState({ cursorType: "cursor-move" })
+        this.setState({ cursorType: "cursor-move", grabbed: true })
     }
 
     changeCursorToDefault = () => {
-        this.setState({ cursorType: "cursor-default" })
+        this.setState({ cursorType: "cursor-default", grabbed: false })
     }
 
     handleVerticleResize = () => {
@@ -321,6 +322,47 @@ export class Window extends Component {
         });
     }
 
+    handleTitleBarKeyDown = (e) => {
+        if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            if (this.state.grabbed) {
+                this.handleStop();
+            } else {
+                this.changeCursorToMove();
+            }
+        } else if (this.state.grabbed) {
+            const step = 10;
+            let dx = 0, dy = 0;
+            if (e.key === 'ArrowLeft') dx = -step;
+            else if (e.key === 'ArrowRight') dx = step;
+            else if (e.key === 'ArrowUp') dy = -step;
+            else if (e.key === 'ArrowDown') dy = step;
+            if (dx !== 0 || dy !== 0) {
+                e.preventDefault();
+                e.stopPropagation();
+                const node = document.getElementById(this.id);
+                if (node) {
+                    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+                    let x = match ? parseFloat(match[1]) : 0;
+                    let y = match ? parseFloat(match[2]) : 0;
+                    x += dx;
+                    y += dy;
+                    node.style.transform = `translate(${x}px, ${y}px)`;
+                    this.checkOverlap();
+                    this.checkSnapPreview();
+                    this.setWinowsPosition();
+                }
+            }
+        }
+    }
+
+    releaseGrab = () => {
+        if (this.state.grabbed) {
+            this.handleStop();
+        }
+    }
+
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
             this.closeWindow();
@@ -364,7 +406,12 @@ export class Window extends Component {
                     >
                         {this.props.resizable !== false && <WindowYBorder resize={this.handleHorizontalResize} />}
                         {this.props.resizable !== false && <WindowXBorder resize={this.handleVerticleResize} />}
-                        <WindowTopBar title={this.props.title} />
+                        <WindowTopBar
+                            title={this.props.title}
+                            onKeyDown={this.handleTitleBarKeyDown}
+                            onBlur={this.releaseGrab}
+                            grabbed={this.state.grabbed}
+                        />
                         <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
                         {(this.id === "settings"
                             ? <Settings />
@@ -381,10 +428,17 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar(props) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed }) {
     return (
-        <div className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}>
-            <div className="flex justify-center text-sm font-bold">{props.title}</div>
+        <div
+            className={" relative bg-ub-window-title border-t-2 border-white border-opacity-5 py-1.5 px-3 text-white w-full select-none rounded-b-none"}
+            tabIndex={0}
+            role="button"
+            aria-grabbed={grabbed}
+            onKeyDown={onKeyDown}
+            onBlur={onBlur}
+        >
+            <div className="flex justify-center text-sm font-bold">{title}</div>
         </div>
     )
 }
