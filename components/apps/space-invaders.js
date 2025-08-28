@@ -160,11 +160,17 @@ const SpaceInvaders = () => {
     playerBullets.current = createBulletPool(20, -200);
     enemyBullets.current = createBulletPool(20, 200);
 
-    const rows = 4;
-    const cols = 8;
+    const createShelters = () => [
+      { x: w * 0.2 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
+      { x: w * 0.5 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
+      { x: w * 0.8 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
+    ];
+
     const spacing = 30;
 
     const setupWave = () => {
+      const rows = 4 + (stageRef.current - 1);
+      const cols = 8;
       const invArr = [];
       for (let r = 0; r < rows; r += 1) {
         for (let c = 0; c < cols; c += 1) {
@@ -191,19 +197,11 @@ const SpaceInvaders = () => {
         b.active = false;
       });
       powerUps.current = [];
-      shelters.current.forEach((s) => {
-        s.hp = 6;
-      });
+      shelters.current = createShelters();
       ufo.current.active = false;
     };
     setupWaveRef.current = setupWave;
     setupWave();
-
-    shelters.current = [
-      { x: w * 0.2 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
-      { x: w * 0.5 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
-      { x: w * 0.8 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
-    ];
 
     const handleKey = (e) => {
       keys.current[e.code] = e.type === 'keydown';
@@ -287,7 +285,7 @@ const SpaceInvaders = () => {
       }
 
       const p = player.current;
-      p.cooldown -= dt;
+      p.cooldown = Math.max(0, p.cooldown - dt);
       if (muzzleFlash.current > 0) muzzleFlash.current -= dt;
       if (hitFlash.current > 0) hitFlash.current -= dt;
       if (shake.current > 0) shake.current -= dt;
@@ -321,7 +319,7 @@ const SpaceInvaders = () => {
       ) {
         const inv = aliveInv[Math.floor(Math.random() * aliveInv.length)];
         bombWarning.current = { time: 0.5, x: inv.x + 10, y: inv.y + 10 };
-        enemyCooldown.current = 1 / difficultyRef.current;
+        enemyCooldown.current = 1 / (difficultyRef.current * stageRef.current);
       }
 
       moveBullets(playerBullets.current, dt);
@@ -414,13 +412,13 @@ const SpaceInvaders = () => {
       }
 
       const aliveCount = aliveInv.length;
-      const progress = 1 - aliveCount / initialCount.current;
+      const aliveRatio = aliveCount / initialCount.current || 1;
       let lowest = 0;
       for (const inv of aliveInv) if (inv.y > lowest) lowest = inv.y;
       const descent = lowest / h;
       const interval =
-        baseInterval /
-        (stageRef.current * (1 + progress) * (1 + descent) * difficultyRef.current);
+        (baseInterval * aliveRatio) /
+        (stageRef.current * (1 + descent) * difficultyRef.current);
       stepTimer.current += dt;
       if (stepTimer.current >= interval) {
         stepTimer.current -= interval;
