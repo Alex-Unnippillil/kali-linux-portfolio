@@ -107,6 +107,11 @@ export const displaySudoku = () => <SudokuApp />;
 ```
 Heavy apps are wrapped with **dynamic import** and most games share a `GameLayout` with a help overlay.
 
+### Prefetching dynamic apps
+Dynamic app modules include a `webpackPrefetch` hint and expose a `prefetch()` helper. Desktop tiles call this helper on hover or
+keyboard focus so bundles are warmed before launch. When adding a new app, export a default component and register it with
+`createDynamicApp` to opt into this behaviour.
+
 ---
 
 ## Environment Variables
