@@ -6,6 +6,7 @@ import LazyGitHubButton from '../../LazyGitHubButton';
 import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
+import { getCspNonce } from '../../../utils/csp';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -104,12 +105,17 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       name: 'Alex Unnippillil',
       url: 'https://unnippillil.com',
     };
+    const nonce = getCspNonce();
 
     return (
       <main className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
         <Head>
           <title>About</title>
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }} />
+          <script
+            type="application/ld+json"
+            nonce={nonce}
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(structured) }}
+          />
         </Head>
         <div
           className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black"
