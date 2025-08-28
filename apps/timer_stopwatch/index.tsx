@@ -1,17 +1,20 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import useIntersection from '../../hooks/useIntersection';
 import './styles.css';
 
 export default function TimerStopwatch() {
   const [mode, setMode] = useState<'timer' | 'stopwatch'>('timer');
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const isVisible = useIntersection(containerRef);
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isVisible && typeof window !== 'undefined') {
       import('./main');
     }
-  }, []);
+  }, [isVisible]);
 
   return (
-    <div>
+    <div ref={containerRef}>
       <div role="tablist" className="tabs">
         <button
           id="modeTimer"

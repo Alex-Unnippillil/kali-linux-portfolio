@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
+import useIntersection from '../hooks/useIntersection';
 
 const BadgeList = ({ badges, className = '' }) => {
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState(null);
   const triggerRef = useRef(null);
   const modalRef = useRef(null);
+  const listRef = useRef(null);
+  const listVisible = useIntersection(listRef);
 
   const closeModal = () => {
     setSelected(null);
@@ -57,25 +60,26 @@ const BadgeList = ({ badges, className = '' }) => {
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
       />
-      <div className="flex flex-wrap justify-center items-start w-full">
-        {filteredBadges.map((badge) => (
-          <button
-            key={badge.label}
-            type="button"
-            className="m-1 hover:scale-110 transition-transform cursor-pointer"
-            onClick={(e) => {
-              triggerRef.current = e.currentTarget;
-              setSelected(badge);
-            }}
-            aria-label={badge.label}
-          >
-            <img
-              src={badge.src}
-              alt={badge.alt}
-              title={badge.description || badge.label}
-            />
-          </button>
-        ))}
+      <div ref={listRef} className="flex flex-wrap justify-center items-start w-full">
+        {listVisible &&
+          filteredBadges.map((badge) => (
+            <button
+              key={badge.label}
+              type="button"
+              className="m-1 hover:scale-110 transition-transform cursor-pointer"
+              onClick={(e) => {
+                triggerRef.current = e.currentTarget;
+                setSelected(badge);
+              }}
+              aria-label={badge.label}
+            >
+              <img
+                src={badge.src}
+                alt={badge.alt}
+                title={badge.description || badge.label}
+              />
+            </button>
+          ))}
       </div>
       {selected && (
         <div
