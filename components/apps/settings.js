@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import { getTheme, setTheme } from '../../utils/theme';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, fontScale, setFontScale } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, fontScale, setFontScale, highContrast, setHighContrast } = useSettings();
+    const [theme, setThemeState] = useState(getTheme());
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -60,6 +62,19 @@ export function Settings() {
             <div className="md:w-2/5 w-2/3 h-1/3 m-auto my-4" style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}>
             </div>
             <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey">Theme:</label>
+                <select
+                    value={theme}
+                    onChange={(e) => { setThemeState(e.target.value); setTheme(e.target.value); }}
+                    className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                >
+                    <option value="default">Default</option>
+                    <option value="dark">Dark</option>
+                    <option value="neon">Neon</option>
+                    <option value="matrix">Matrix</option>
+                </select>
+            </div>
+            <div className="flex justify-center my-4">
                 <label className="mr-2 text-ubt-grey">Accent:</label>
                 <input
                     type="color"
@@ -101,6 +116,17 @@ export function Settings() {
                         className="mr-2"
                     />
                     Reduced Motion
+                </label>
+            </div>
+            <div className="flex justify-center my-4">
+                <label className="mr-2 text-ubt-grey flex items-center">
+                    <input
+                        type="checkbox"
+                        checked={highContrast}
+                        onChange={(e) => setHighContrast(e.target.checked)}
+                        className="mr-2"
+                    />
+                    High Contrast
                 </label>
             </div>
             <div className="flex justify-center my-4">
@@ -175,6 +201,9 @@ export function Settings() {
                         setDensity(defaults.density);
                         setReducedMotion(defaults.reducedMotion);
                         setFontScale(defaults.fontScale);
+                        setHighContrast(defaults.highContrast);
+                        setThemeState('default');
+                        setTheme('default');
                     }}
                     className="px-4 py-2 rounded bg-ub-orange text-white"
                 >
@@ -196,6 +225,8 @@ export function Settings() {
                         if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
                         if (parsed.density !== undefined) setDensity(parsed.density);
                         if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
+                        if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+                        if (parsed.theme !== undefined) { setThemeState(parsed.theme); setTheme(parsed.theme); }
                     } catch (err) {
                         console.error('Invalid settings', err);
                     }
