@@ -1,15 +1,25 @@
 import figlet from 'figlet';
+import Standard from 'figlet/importable-fonts/Standard.js';
+import Slant from 'figlet/importable-fonts/Slant.js';
+import Big from 'figlet/importable-fonts/Big.js';
+import Small from 'figlet/importable-fonts/Small.js';
+import Doom from 'figlet/importable-fonts/Doom.js';
+import Banner from 'figlet/importable-fonts/Banner.js';
+import Block from 'figlet/importable-fonts/Block.js';
+import Shadow from 'figlet/importable-fonts/Shadow.js';
 
-const FONT_URL = 'https://unpkg.com/figlet@1.8.2/fonts';
-const loaded = new Set();
+const fonts = [
+  { name: 'Standard', data: Standard },
+  { name: 'Slant', data: Slant },
+  { name: 'Big', data: Big },
+  { name: 'Small', data: Small },
+  { name: 'Doom', data: Doom },
+  { name: 'Banner', data: Banner },
+  { name: 'Block', data: Block },
+  { name: 'Shadow', data: Shadow },
+];
 
-async function loadFont(name) {
-  if (loaded.has(name)) return;
-  const res = await fetch(`${FONT_URL}/${encodeURIComponent(name)}.flf`);
-  const data = await res.text();
-  figlet.parseFont(name, data);
-  loaded.add(name);
-}
+fonts.forEach(({ name, data }) => figlet.parseFont(name, data));
 
 function strip(lines) {
   return lines.map((l) => l.replace(/\s+$/, ''));
@@ -27,13 +37,8 @@ function isMonospace(name) {
   return true;
 }
 
-async function init() {
-  const meta = await fetch(`${FONT_URL}?meta`).then((r) => r.json());
-  const fonts = meta.files
-    .filter((f) => f.path.endsWith('.flf'))
-    .map((f) => f.path.split('/').pop().replace('.flf', ''));
-  for (const name of fonts) {
-    await loadFont(name);
+function init() {
+  for (const { name } of fonts) {
     const preview = figlet.textSync('Figlet', { font: name });
     const mono = isMonospace(name);
     self.postMessage({ type: 'font', font: name, preview, mono });
@@ -42,10 +47,9 @@ async function init() {
 
 init();
 
-self.onmessage = async (e) => {
+self.onmessage = (e) => {
   const { text = '', font } = e.data;
   if (!font) return;
-  await loadFont(font);
   const normalized = String(text)
     .split(/\r\n|\r|\n/)
     .map((line) => line.trim())

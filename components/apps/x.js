@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import TweetEmbed from '../tweet-embed';
 
 const MAX_CHARS = 280;
 const RADIUS = 18;
@@ -19,6 +20,13 @@ export default function XApp() {
   const panelRef = useRef(null);
   const [shouldLoadTimeline, setShouldLoadTimeline] = useState(false);
 
+  // Search state
+  const [query, setQuery] = useState('');
+  const [tweets, setTweets] = useState([]);
+  const [loadingTweets, setLoadingTweets] = useState(false);
+  const [savedQueries, setSavedQueries] = useState([]);
+  const [filterTag, setFilterTag] = useState('');
+
   const prefersReducedMotion =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -37,6 +45,58 @@ export default function XApp() {
     frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
   }, [text, prefersReducedMotion]);
+
+  // Load saved queries
+  useEffect(() => {
+    const saved =
+      typeof window !== 'undefined'
+        ? JSON.parse(localStorage.getItem('tweet-searches') || '[]')
+        : [];
+    setSavedQueries(saved);
+  }, []);
+
+  const fetchTweets = async (search) => {
+    setLoadingTweets(true);
+    try {
+      const res = await fetch(
+        `https://cdn.syndication.twimg.com/widgets/search.json?q=${encodeURIComponent(
+          search
+        )}`
+      );
+      const data = await res.json();
+      const results = data.results || data.statuses || [];
+      setTweets(results);
+      if (!savedQueries.includes(search)) {
+        const updated = [search, ...savedQueries];
+        setSavedQueries(updated);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('tweet-searches', JSON.stringify(updated));
+        }
+      }
+    } catch (e) {
+      setTweets([]);
+    } finally {
+      setLoadingTweets(false);
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const q = query.trim();
+    if (!q) return;
+    fetchTweets(q);
+  };
+
+  const handleChipClick = (q) => {
+    setQuery(q);
+    fetchTweets(q);
+  };
+
+  const filteredTweets = filterTag
+    ? tweets.filter((t) =>
+        new RegExp(`#${filterTag}\\b`, 'i').test(t.text || '')
+      )
+    : tweets;
 
   const handleMedia = (e) => {
     const files = Array.from(e.target.files || []);
@@ -258,6 +318,58 @@ export default function XApp() {
             </a>
           </div>
         )}
+        <div className="p-4 space-y-4">
+          <form onSubmit={handleSearch} className="flex gap-2">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search tweets"
+              className="flex-1 p-2 rounded bg-gray-800 text-gray-100 placeholder-gray-400"
+            />
+            <button
+              type="submit"
+              className="px-3 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+              disabled={loadingTweets}
+            >
+              Search
+            </button>
+          </form>
+          {savedQueries.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {savedQueries.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => handleChipClick(q)}
+                  className="px-2 py-1 rounded-full bg-gray-700 text-sm text-gray-100 hover:bg-gray-600"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          )}
+          <input
+            type="text"
+            value={filterTag}
+            onChange={(e) => setFilterTag(e.target.value)}
+            placeholder="Filter by hashtag"
+            className="p-2 rounded bg-gray-800 text-gray-100 placeholder-gray-400"
+          />
+          <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(300px,1fr))] tweet-grid">
+            {loadingTweets
+              ? Array.from({ length: 6 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-48 bg-gray-700 rounded motion-safe:animate-pulse"
+                    aria-hidden="true"
+                  />
+                ))
+              : filteredTweets.map((t) => (
+                  <TweetEmbed key={t.id_str || t.id} id={t.id_str || t.id} />
+                ))}
+          </div>
+        </div>
       </div>
       <style jsx>{`
         .tweet-container {
@@ -265,6 +377,10 @@ export default function XApp() {
         }
         .tweet-feed {
           max-inline-size: 60ch;
+          margin-inline: auto;
+          width: 100%;
+        }
+        .tweet-grid {
           margin-inline: auto;
           width: 100%;
         }
@@ -280,6 +396,9 @@ export default function XApp() {
           .tweet-feed img {
             width: 100%;
             height: auto;
+          }
+          .tweet-grid {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

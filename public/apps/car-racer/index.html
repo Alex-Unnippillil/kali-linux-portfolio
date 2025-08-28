@@ -7,9 +7,14 @@
     body { margin:0; background:#222; color:white; font-family:sans-serif; }
     #hud { position:fixed; top:8px; left:8px; background:rgba(0,0,0,0.5); padding:4px 8px; font-size:14px; }
     canvas { background:#000; display:block; margin:0 auto; }
+    #menu { position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0.8); }
+    #menu button { margin:4px; padding:8px 12px; }
   </style>
 </head>
 <body>
+  <div id="menu">
+    <h2>Select Track</h2>
+  </div>
   <canvas id="game" width="800" height="800"></canvas>
   <div id="hud">
     <div>Seed: <span id="seedDisp"></span></div>

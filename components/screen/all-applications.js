@@ -48,6 +48,7 @@ class AllApplications extends React.Component {
                 icon={app.icon}
                 openApp={() => this.openApp(app.id)}
                 disabled={app.disabled}
+                prefetch={app.screen?.prefetch}
             />
         ));
     };

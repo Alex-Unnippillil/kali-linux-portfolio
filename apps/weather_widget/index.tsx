@@ -12,7 +12,7 @@ export default function WeatherWidget() {
   return (
     <div className="widget-container">
       <div className="controls">
-        <select id="city-picker"></select>
+        <input type="text" id="city-search" placeholder="Search city" />
         <select id="unit-toggle">
           <option value="metric">°C</option>
           <option value="imperial">°F</option>
@@ -25,6 +25,8 @@ export default function WeatherWidget() {
         <div className="temp">--°C</div>
         <img className="icon" src="" alt="Weather icon" />
         <div className="forecast">Loading...</div>
+        <div className="sunrise">Sunrise: --</div>
+        <div className="sunset">Sunset: --</div>
       </div>
     </div>
   );

@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { unitMap, unitDetails, categories, convertUnit } from './unitData';
+import {
+  unitMap,
+  unitDetails,
+  categories as allCategories,
+  convertUnit,
+} from './unitData';
+
+const categories = allCategories.filter((c) => c.value !== 'temperature');
 
 const UnitConverter = () => {
   const [category, setCategory] = useState(categories[0].value);

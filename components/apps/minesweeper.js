@@ -225,6 +225,8 @@ const Minesweeper = () => {
   const [showRisk, setShowRisk] = useState(false);
   const leftDown = useRef(false);
   const rightDown = useRef(false);
+  const chorded = useRef(false);
+  const flagAnim = useRef({});
 
   useEffect(() => {
     initWorker();
@@ -280,6 +282,7 @@ const Minesweeper = () => {
           ctx.fillStyle = cell.revealed ? '#d1d5db' : '#1f2937';
           ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
           ctx.strokeRect(px, py, CELL_SIZE, CELL_SIZE);
+          const key = `${x},${y}`;
           if (cell.revealed) {
             if (cell.mine) {
               ctx.fillStyle = '#000';
@@ -292,14 +295,29 @@ const Minesweeper = () => {
                 py + CELL_SIZE / 2,
               );
             }
-          } else if (cell.flagged) {
-            ctx.fillStyle = '#f00';
-            ctx.fillText('🚩', px + CELL_SIZE / 2, py + CELL_SIZE / 2);
-          } else if (showRisk && riskMap) {
-            const r = riskMap[x][y];
-            if (r > 0) {
-              ctx.fillStyle = `rgba(255,0,0,${r * 0.4})`;
-              ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+          } else {
+            const anim = flagAnim.current[key];
+            if (cell.flagged || anim) {
+              let scale = 1;
+              if (anim) {
+                const t = Math.min((Date.now() - anim.start) / 200, 1);
+                scale = anim.dir > 0 ? t : 1 - t;
+                if (t >= 1) delete flagAnim.current[key];
+              }
+              if (cell.flagged || scale > 0) {
+                ctx.save();
+                ctx.translate(px + CELL_SIZE / 2, py + CELL_SIZE / 2);
+                ctx.scale(scale, scale);
+                ctx.fillStyle = '#f00';
+                ctx.fillText('🚩', 0, 0);
+                ctx.restore();
+              }
+            } else if (showRisk && riskMap) {
+              const r = riskMap[x][y];
+              if (r > 0) {
+                ctx.fillStyle = `rgba(255,0,0,${r * 0.4})`;
+                ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+              }
             }
           }
         }
@@ -426,6 +444,7 @@ const Minesweeper = () => {
   };
 
   const startGame = async (x, y) => {
+    flagAnim.current = {};
     const newBoard = generateBoard(seed, x, y);
     setBoard(newBoard);
     setStatus('playing');
@@ -550,6 +569,10 @@ const Minesweeper = () => {
     const cell = newBoard[x][y];
     if (cell.revealed) return;
     cell.flagged = !cell.flagged;
+    flagAnim.current[`${x},${y}`] = {
+      start: Date.now(),
+      dir: cell.flagged ? 1 : -1,
+    };
     setFlags((f) => f + (cell.flagged ? 1 : -1));
     setBoard(newBoard);
     setAriaMessage(
@@ -638,7 +661,8 @@ const Minesweeper = () => {
       if (rightDown.current) {
         handleChord(x, y);
         rightDown.current = false;
-      } else {
+        chorded.current = true;
+      } else if (!chorded.current) {
         handleClick(x, y);
       }
       leftDown.current = false;
@@ -646,21 +670,25 @@ const Minesweeper = () => {
       if (leftDown.current) {
         handleChord(x, y);
         leftDown.current = false;
-      } else {
+        chorded.current = true;
+      } else if (!chorded.current) {
         toggleFlag(x, y);
       }
       rightDown.current = false;
     }
+    if (!leftDown.current && !rightDown.current) chorded.current = false;
   };
 
   const handleMouseLeave = () => {
     leftDown.current = false;
     rightDown.current = false;
+    chorded.current = false;
   };
 
   const reset = () => {
     workerRef.current?.terminate();
     initWorker();
+    flagAnim.current = {};
     setBoard(null);
     setStatus('ready');
     setSeed(Math.floor(Math.random() * 2 ** 31));
@@ -687,6 +715,7 @@ const Minesweeper = () => {
     if (Number.isNaN(newSeed)) return;
     workerRef.current?.terminate();
     initWorker();
+    flagAnim.current = {};
     setSeed(newSeed);
     setShareCode('');
     setBoard(null);

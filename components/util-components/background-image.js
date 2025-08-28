@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { useSettings } from '../../hooks/useSettings';
+import useDailyQuote from '../../hooks/useDailyQuote';
 
 export default function BackgroundImage() {
     const { wallpaper } = useSettings();
     const [needsOverlay, setNeedsOverlay] = useState(false);
+    const dailyQuote = useDailyQuote();
 
     useEffect(() => {
         const img = new Image();
@@ -46,6 +48,11 @@ export default function BackgroundImage() {
         >
             {needsOverlay && (
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 to-transparent" aria-hidden="true"></div>
+            )}
+            {dailyQuote && (
+                <div className="pointer-events-none absolute inset-0 flex items-end justify-center p-4 text-center">
+                    <p className="max-w-2xl text-white text-sm md:text-lg bg-black/40 rounded p-2">&quot;{dailyQuote.content}&quot; - {dailyQuote.author}</p>
+                </div>
             )}
         </div>
     )

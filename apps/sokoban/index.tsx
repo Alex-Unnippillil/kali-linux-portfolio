@@ -339,7 +339,8 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         <button type="button" onClick={handleHint} className="px-2 py-1 bg-gray-300 rounded">
           Hint
         </button>
-        <div className="ml-4">Pushes: {state.pushes}</div>
+        <div className="ml-4">Moves: {state.moves}</div>
+        <div>Pushes: {state.pushes}</div>
         <div>Best: {best ?? '-'}</div>
         {hint && <div className="ml-4">Hint: {hint}</div>}
         {status && <div className="ml-4 text-red-500">{status}</div>}

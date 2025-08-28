@@ -5,10 +5,12 @@ import { logEvent } from './analytics';
 export const createDynamicApp = (path, name) =>
   dynamic(
     () =>
-      import(`../components/apps/${path}`).then((mod) => {
-        logEvent({ category: 'Application', action: `Loaded ${name}` });
-        return mod.default;
-      }),
+      import(/* webpackPrefetch: true */ `../components/apps/${path}`).then(
+        (mod) => {
+          logEvent({ category: 'Application', action: `Loaded ${name}` });
+          return mod.default;
+        }
+      ),
     {
       ssr: false,
       loading: () => (
@@ -19,7 +21,17 @@ export const createDynamicApp = (path, name) =>
     }
   );
 
-export const createDisplay = (Component) => (addFolder, openApp) => (
-  <Component addFolder={addFolder} openApp={openApp} />
-);
+export const createDisplay = (Component) => {
+  const Display = (addFolder, openApp) => (
+    <Component addFolder={addFolder} openApp={openApp} />
+  );
+
+  Display.prefetch = () => {
+    if (typeof Component.preload === 'function') {
+      Component.preload();
+    }
+  };
+
+  return Display;
+};
 

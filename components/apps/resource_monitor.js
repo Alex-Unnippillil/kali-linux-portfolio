@@ -4,6 +4,7 @@ import { subscribe } from '../../utils/pubsub';
 
 const MAX_POINTS = 50;
 
+
 const ResourceMonitor = () => {
   const cpuRef = useRef(null);
   const memoryRef = useRef(null);
@@ -20,6 +21,7 @@ const ResourceMonitor = () => {
       fpsRef.current = fps;
     });
   }, []);
+
 
   useEffect(() => {
     if (paused) return undefined;
@@ -70,9 +72,46 @@ const ResourceMonitor = () => {
   const changeSpeed = (e) => setSpeed(parseFloat(e.target.value));
   const toggleLayout = () => setLayout((l) => (l === 'row' ? 'col' : 'row'));
 
+
+  const togglePause = () => {
+    const next = !paused;
+    setPaused(next);
+    if (workerRef.current) workerRef.current.postMessage({ type: 'pause', value: next });
+  };
+
+  const updateLayout = useCallback(
+    (key, updates) => {
+      setLayout((l) => ({ ...l, [key]: { ...l[key], ...updates } }));
+    },
+    [setLayout]
+  );
+
+  useEffect(() => {
+    const pairs = [
+      ['cpu', cpuBoxRef],
+      ['memory', memBoxRef],
+      ['network', netBoxRef],
+    ];
+    const observers = pairs.map(([key, ref]) => {
+      if (!ref.current) return null;
+      const obs = new ResizeObserver((entries) => {
+        const rect = entries[0].contentRect;
+        const size = { w: Math.round(rect.width), h: Math.round(rect.height) };
+        updateLayout(key, size);
+        if (workerRef.current) {
+          workerRef.current.postMessage({ type: 'resize', sizes: { [key]: size } });
+        }
+      });
+      obs.observe(ref.current);
+      return obs;
+    });
+    return () => observers.forEach((o) => o && o.disconnect());
+  }, [updateLayout]);
+
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white font-ubuntu">
       <div className="p-2 flex gap-2 items-center">
+
         <button
           onClick={togglePause}
           className="px-2 py-1 bg-ub-dark-grey rounded"
@@ -97,6 +136,13 @@ const ResourceMonitor = () => {
           className="px-2 py-1 bg-ub-dark-grey rounded"
         >
           Layout
+        </button>
+        <button
+          onClick={togglePause}
+          aria-pressed={paused}
+          className="px-2 py-1 bg-ub-dark-grey rounded"
+        >
+          {paused ? 'Resume' : 'Pause'}
         </button>
       </div>
       <div
@@ -126,6 +172,7 @@ const ResourceMonitor = () => {
           aria-label="GPU usage chart"
           className="bg-ub-dark-grey"
         />
+
       </div>
     </div>
   );

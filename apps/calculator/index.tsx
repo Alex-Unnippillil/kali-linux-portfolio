@@ -25,6 +25,11 @@ export default function Calculator() {
       <button id="toggle-scientific" className="toggle" aria-pressed="false">Scientific</button>
       <button id="toggle-programmer" className="toggle" aria-pressed="false">Programmer</button>
       <button id="toggle-history" className="toggle" aria-pressed="false">History</button>
+      <div className="memory-grid">
+        <button className="btn" data-action="mplus">M+</button>
+        <button className="btn" data-action="mminus">M&minus;</button>
+        <button className="btn" data-action="mr">MR</button>
+      </div>
       <div className="button-grid">
         <button className="btn" data-value="7">7</button>
         <button className="btn" data-value="8">8</button>

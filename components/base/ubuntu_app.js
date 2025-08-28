@@ -4,7 +4,7 @@ import Image from 'next/image'
 export class UbuntuApp extends Component {
     constructor() {
         super();
-        this.state = { launching: false, dragging: false };
+        this.state = { launching: false, dragging: false, prefetched: false };
     }
 
     handleDragStart = () => {
@@ -23,6 +23,13 @@ export class UbuntuApp extends Component {
         this.props.openApp(this.props.id);
     }
 
+    handlePrefetch = () => {
+        if (!this.state.prefetched && typeof this.props.prefetch === 'function') {
+            this.props.prefetch();
+            this.setState({ prefetched: true });
+        }
+    }
+
     render() {
         return (
             <div
@@ -39,6 +46,8 @@ export class UbuntuApp extends Component {
                 onDoubleClick={this.openApp}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.openApp(); } }}
                 tabIndex={this.props.disabled ? -1 : 0}
+                onMouseEnter={this.handlePrefetch}
+                onFocus={this.handlePrefetch}
             >
                 <Image
                     width={40}
@@ -48,7 +57,7 @@ export class UbuntuApp extends Component {
                     alt={"Kali " + this.props.name}
                     sizes="40px"
                 />
-                {this.props.name}
+                {this.props.displayName || this.props.name}
 
             </div>
         )

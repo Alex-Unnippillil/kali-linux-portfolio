@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { get, set, createStore } from 'idb-keyval';
+import * as chrono from 'chrono-node';
+
+const STORAGE_KEY = 'portfolio-tasks';
 
 const initialGroups = {
   Today: [],
@@ -16,8 +18,11 @@ const WIP_LIMITS = {
 export default function Todoist() {
   const [groups, setGroups] = useState(initialGroups);
   const [animating, setAnimating] = useState('');
-  const [form, setForm] = useState({ title: '', due: '', labels: '', subtasks: '' });
+  const [form, setForm] = useState({ title: '', due: '', priority: 'medium' });
+  const [quick, setQuick] = useState('');
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   const dragged = useRef({ group: '', id: null, title: '' });
   const liveRef = useRef(null);
   const workerRef = useRef(null);
@@ -26,16 +31,18 @@ export default function Todoist() {
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 
-  const store = createStore('portfolio-tasks', 'tasks');
-  const KEY = 'all';
-
   useEffect(() => {
-    get(KEY, store).then((data) => {
+    if (typeof window !== 'undefined') {
+      const data = localStorage.getItem(STORAGE_KEY);
       if (data) {
-        setGroups({ ...initialGroups, ...data });
+        try {
+          setGroups({ ...initialGroups, ...JSON.parse(data) });
+        } catch {
+          // ignore bad data
+        }
       }
-    });
-  }, [store]);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
@@ -59,7 +66,13 @@ export default function Todoist() {
   const finalizeMove = useCallback(
     (newGroups, taskTitle, to) => {
       setGroups(newGroups);
-      set(KEY, newGroups, store).catch(() => {});
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
+        } catch {
+          // ignore
+        }
+      }
       announce(taskTitle, to);
       if (!prefersReducedMotion.current) {
         requestAnimationFrame(() => {
@@ -68,7 +81,7 @@ export default function Todoist() {
         });
       }
     },
-    [store, announce],
+    [announce],
   );
 
   const handleDragStart = (group, task) => (e) => {
@@ -110,7 +123,7 @@ export default function Todoist() {
     const index = groups[group].findIndex((t) => t.id === task.id);
     if (e.key === ' ' || (e.ctrlKey && e.key.toLowerCase() === 'd')) {
       e.preventDefault();
-      toggleDone(group, task.id);
+      toggleCompleted(group, task.id);
       return;
     }
     if (e.key === 'ArrowUp' && index > 0) {
@@ -155,15 +168,21 @@ export default function Todoist() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const toggleDone = (group, id) => {
+  const toggleCompleted = (group, id) => {
     const newGroups = {
       ...groups,
       [group]: groups[group].map((t) =>
-        t.id === id ? { ...t, done: !t.done } : t
+        t.id === id ? { ...t, completed: !t.completed } : t
       ),
     };
     setGroups(newGroups);
-    set(KEY, newGroups, store).catch(() => {});
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
+      } catch {
+        // ignore
+      }
+    }
   };
 
   const handleAdd = (e) => {
@@ -174,39 +193,85 @@ export default function Todoist() {
       id: Date.now(),
       title: form.title,
       due: form.due || undefined,
-      labels: form.labels
-        ? form.labels.split(',').map((l) => l.trim()).filter(Boolean)
-        : [],
-      subtasks: form.subtasks
-        ? form.subtasks
-            .split('\n')
-            .map((t, i) => ({ id: i + 1, title: t.trim(), done: false }))
-            .filter((t) => t.title)
-        : [],
-      done: false,
+      priority: form.priority,
+      completed: false,
     };
     const newGroups = {
       ...groups,
       Today: [...groups.Today, newTask],
     };
     finalizeMove(newGroups, form.title, 'Today');
-    setForm({ title: '', due: '', labels: '', subtasks: '' });
+    setForm({ title: '', due: '', priority: 'medium' });
   };
 
-  const matchesSearch = (task) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      task.title.toLowerCase().includes(q) ||
-      task.labels.some((l) => l.toLowerCase().includes(q)) ||
-      task.subtasks.some((s) => s.title.toLowerCase().includes(q))
-    );
+  const handleQuickAdd = (e) => {
+    e.preventDefault();
+    if (!quick.trim()) return;
+    let due;
+    try {
+      const date = chrono.parseDate(quick);
+      if (date) {
+        due = date.toISOString().split('T')[0];
+      }
+    } catch {
+      // ignore
+    }
+    const priorityMatch = quick.match(/!([1-3])/);
+    const priorityMap = { '1': 'high', '2': 'medium', '3': 'low' };
+    const priority = priorityMatch ? priorityMap[priorityMatch[1]] : 'medium';
+    let title = quick;
+    if (due) {
+      const parsed = chrono.parse(quick)[0];
+      if (parsed) {
+        title = title.replace(parsed.text, '').trim();
+      }
+    }
+    if (priorityMatch) {
+      title = title.replace(priorityMatch[0], '').trim();
+    }
+    const newTask = {
+      id: Date.now(),
+      title: title || quick,
+      due,
+      priority,
+      completed: false,
+    };
+    const newGroups = {
+      ...groups,
+      Today: [...groups.Today, newTask],
+    };
+    finalizeMove(newGroups, newTask.title, 'Today');
+    setQuick('');
+  };
+
+  const matchesTask = (task) => {
+    if (search && !task.title.toLowerCase().includes(search.toLowerCase())) {
+      return false;
+    }
+    if (statusFilter === 'completed' && !task.completed) return false;
+    if (statusFilter === 'active' && task.completed) return false;
+    if (priorityFilter !== 'all' && task.priority !== priorityFilter) return false;
+    return true;
   };
 
   return (
     <div className="flex h-full w-full flex-col" role="application">
       <div aria-live="polite" className="sr-only" ref={liveRef} />
       <div className="p-2 border-b flex flex-col gap-2">
+        <form onSubmit={handleQuickAdd} className="flex gap-2">
+          <input
+            value={quick}
+            onChange={(e) => setQuick(e.target.value)}
+            placeholder="Quick add (e.g., 'Pay bills tomorrow !1')"
+            className="border p-1 flex-1"
+          />
+          <button
+            type="submit"
+            className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            Add
+          </button>
+        </form>
         <form onSubmit={handleAdd} className="flex flex-wrap gap-2">
           <input
             name="title"
@@ -224,20 +289,16 @@ export default function Todoist() {
             onChange={handleChange}
             className="border p-1"
           />
-          <input
-            name="labels"
-            value={form.labels}
+          <select
+            name="priority"
+            value={form.priority}
             onChange={handleChange}
-            placeholder="labels"
             className="border p-1"
-          />
-          <textarea
-            name="subtasks"
-            value={form.subtasks}
-            onChange={handleChange}
-            placeholder="subtasks"
-            className="border p-1"
-          />
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
           <button
             type="submit"
             className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -245,12 +306,33 @@ export default function Todoist() {
             Add
           </button>
         </form>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search"
-          className="border p-1"
-        />
+        <div className="flex flex-wrap gap-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search"
+            className="border p-1 flex-1"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="border p-1"
+          >
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="completed">Completed</option>
+          </select>
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="border p-1"
+          >
+            <option value="all">All priorities</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
       </div>
       <div className="flex flex-1">
         {Object.keys(groups).map((name) => (
@@ -268,7 +350,7 @@ export default function Todoist() {
               {name}
               {WIP_LIMITS[name] ? ` (${groups[name].length}/${WIP_LIMITS[name]})` : ''}
             </h2>
-            {groups[name].filter(matchesSearch).map((task) => (
+            {groups[name].filter(matchesTask).map((task) => (
               <div
                 key={task.id}
                 tabIndex={0}
@@ -281,34 +363,16 @@ export default function Todoist() {
                 <input
                   type="checkbox"
                   aria-label="Toggle completion"
-                  checked={!!task.done}
-                  onChange={() => toggleDone(name, task.id)}
+                  checked={!!task.completed}
+                  onChange={() => toggleCompleted(name, task.id)}
                   className="w-6 h-6 mr-2 focus:ring-2 focus:ring-blue-500"
                 />
                 <div className="flex-1">
-                  <div className={`font-medium ${task.done ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
+                  <div className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
                   {task.due && (
                     <div className="text-xs text-gray-500">{task.due}</div>
                   )}
-                  {task.labels.length > 0 && (
-                    <div className="text-xs mt-1">
-                      {task.labels.map((l) => (
-                        <span
-                          key={l}
-                          className="mr-1 px-1 bg-gray-200 rounded"
-                        >
-                          {l}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {task.subtasks.length > 0 && (
-                    <ul className="mt-1 text-xs list-disc list-inside">
-                      {task.subtasks.map((s) => (
-                        <li key={s.id}>{s.title}</li>
-                      ))}
-                    </ul>
-                  )}
+                  <div className="text-xs text-gray-500">Priority: {task.priority}</div>
                 </div>
               </div>
             ))}

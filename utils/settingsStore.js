@@ -1,4 +1,5 @@
 import { get, set, del } from 'idb-keyval';
+import { getTheme, setTheme } from './theme';
 
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
@@ -6,6 +7,7 @@ const DEFAULT_SETTINGS = {
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
+  highContrast: false,
 };
 
 export async function getAccent() {
@@ -59,6 +61,16 @@ export async function setFontScale(scale) {
   window.localStorage.setItem('font-scale', String(scale));
 }
 
+export async function getHighContrast() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.highContrast;
+  return window.localStorage.getItem('high-contrast') === 'true';
+}
+
+export async function setHighContrast(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -68,16 +80,19 @@ export async function resetSettings() {
   window.localStorage.removeItem('density');
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');
+  window.localStorage.removeItem('high-contrast');
 }
 
 export async function exportSettings() {
-  const [accent, wallpaper, density, reducedMotion] = await Promise.all([
+  const [accent, wallpaper, density, reducedMotion, highContrast] = await Promise.all([
     getAccent(),
     getWallpaper(),
     getDensity(),
     getReducedMotion(),
+    getHighContrast(),
   ]);
-  return JSON.stringify({ accent, wallpaper, density, reducedMotion });
+  const theme = getTheme();
+  return JSON.stringify({ accent, wallpaper, density, reducedMotion, highContrast, theme });
 }
 
 export async function importSettings(json) {
@@ -89,11 +104,13 @@ export async function importSettings(json) {
     console.error('Invalid settings', e);
     return;
   }
-  const { accent, wallpaper, density, reducedMotion } = settings;
+  const { accent, wallpaper, density, reducedMotion, highContrast, theme } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
+  if (highContrast !== undefined) await setHighContrast(highContrast);
+  if (theme !== undefined) setTheme(theme);
 }
 
 export const defaults = DEFAULT_SETTINGS;

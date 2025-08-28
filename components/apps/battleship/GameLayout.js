@@ -12,6 +12,7 @@ const GameLayout = ({ children, difficulty, onDifficultyChange, onRestart, stats
             onChange={(e) => onDifficultyChange(e.target.value)}
           >
             <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
             <option value="hard">Hard</option>
           </select>
         </label>
