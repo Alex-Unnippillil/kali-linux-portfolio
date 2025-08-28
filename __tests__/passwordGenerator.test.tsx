@@ -21,6 +21,7 @@ describe('PasswordGenerator', () => {
     fireEvent.click(getByText('Copy'));
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledWith(value);
+      expect(getByText('Copied to clipboard')).toBeInTheDocument();
     });
   });
 });
