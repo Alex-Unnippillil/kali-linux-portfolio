@@ -4,7 +4,7 @@ import { getDailySeed } from '../../utils/dailySeed';
 
 const WordSearch = dynamic<{ getDailySeed?: () => Promise<string> }>(
   () => import('../../apps/word_search'),
-  { ssr: false },
+  { ssr: false, loading: () => <p>Loading...</p> },
 );
 
 export default function WordSearchPage(): React.ReactElement {
