@@ -59,6 +59,11 @@ const Snake = () => {
     return () => window.removeEventListener('blur', handleBlur);
   }, []);
 
+  // Respect prefers-reduced-motion by pausing automatic movement
+  useEffect(() => {
+    if (prefersReducedMotion) setRunning(false);
+  }, [prefersReducedMotion]);
+
   /**
    * Play a short tone if sound is enabled.
    * @param {number} freq frequency in Hz

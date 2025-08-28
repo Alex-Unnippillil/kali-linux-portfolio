@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import { GameState } from './gameLogic';
 import usePersistedState from '../../hooks/usePersistedState';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 type Action = 'left' | 'right' | 'jump';
 
@@ -12,6 +13,24 @@ interface PhaserMatterProps {
 const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
   void getDailySeed;
   const containerRef = useRef<HTMLDivElement>(null);
+  const gameRef = useRef<Phaser.Game | null>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const prefersRef = useRef(prefersReducedMotion);
+  // Pause the game loop entirely when reduced motion is requested
+  useEffect(() => {
+    prefersRef.current = prefersReducedMotion;
+    if (!gameRef.current) return;
+    const scene = gameRef.current.scene.getScene('level') as Phaser.Scene & {
+      matter: Phaser.Physics.Matter.MatterPhysics;
+    };
+    if (prefersReducedMotion) {
+      scene.scene.pause();
+      scene.matter.world.pause();
+    } else {
+      scene.scene.resume();
+      scene.matter.world.resume();
+    }
+  }, [prefersReducedMotion]);
   const controls = useRef({
     left: false,
     right: false,
@@ -282,12 +301,13 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
       },
       scene: LevelScene,
     });
+    gameRef.current = game;
 
     const handleVisibility = () => {
       const scene = game.scene.getScene('level') as Phaser.Scene & {
         matter: Phaser.Physics.Matter.MatterPhysics;
       };
-      if (document.visibilityState === 'hidden') {
+      if (document.visibilityState === 'hidden' || prefersRef.current) {
         scene.scene.pause();
         scene.matter.world.pause();
       } else {
@@ -297,11 +317,13 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('focus', handleVisibility);
+    handleVisibility();
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleVisibility);
       game.destroy(true);
+      gameRef.current = null;
     };
   }, []);
 

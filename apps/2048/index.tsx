@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const SIZE = 4;
 
@@ -105,6 +106,8 @@ const saveReplay = (replay: any) => {
 };
 
 const Page2048 = () => {
+  const prefersReducedMotion = usePrefersReducedMotion();
+  // Skip tile transition classes if the user prefers reduced motion
   const rngRef = useRef(mulberry32(0));
   const seedRef = useRef(0);
   const [board, setBoard] = useState<number[][]>(
@@ -278,7 +281,7 @@ const Page2048 = () => {
           row.map((cell, cIdx) => (
             <div
               key={`${rIdx}-${cIdx}`}
-              className="w-full aspect-square transition-transform transition-opacity"
+              className={`w-full aspect-square ${prefersReducedMotion ? '' : 'transition-transform transition-opacity'}`}
             >
               <div
                 className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
