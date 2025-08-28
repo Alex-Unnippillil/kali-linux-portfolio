@@ -37,7 +37,27 @@ describe('OpenVASApp', () => {
     fireEvent.click(screen.getByText('Scan'));
     await waitFor(() => expect(fetch).toHaveBeenCalled());
     expect(fetch).toHaveBeenCalledWith(
-      '/api/openvas?target=1.2.3.4&group=servers'
+      '/api/openvas?target=1.2.3.4&group=servers&profile=quick'
+    );
+  });
+
+  it('passes selected profile in scan request', async () => {
+    render(<OpenVASApp />);
+    fireEvent.change(
+      screen.getByPlaceholderText('Target (e.g. 192.168.1.1)'),
+      { target: { value: '1.2.3.4' } }
+    );
+    fireEvent.change(
+      screen.getByPlaceholderText('Group (e.g. Servers)'),
+      { target: { value: 'servers' } }
+    );
+    fireEvent.change(screen.getByDisplayValue('Quick'), {
+      target: { value: 'full' },
+    });
+    fireEvent.click(screen.getByText('Scan'));
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/openvas?target=1.2.3.4&group=servers&profile=full'
     );
   });
 
