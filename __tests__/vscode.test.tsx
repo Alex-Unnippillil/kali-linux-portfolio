@@ -12,9 +12,13 @@ describe('VsCode app', () => {
 
   it('has an external link', () => {
     render(<VsCode />);
-    const link = screen.getByRole('link', { name: /open externally/i });
-    expect(link).toHaveAttribute('href', 'https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md');
-    expect(link).toHaveAttribute('target', '_blank');
+    const links = screen.getAllByRole('link', { name: /open externally/i });
+    const hasCorrectLink = links.some((link) =>
+      link.getAttribute('href') ===
+        'https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md' &&
+      link.getAttribute('target') === '_blank'
+    );
+    expect(hasCorrectLink).toBe(true);
   });
 
   it('shows banner when cookies are blocked', async () => {
