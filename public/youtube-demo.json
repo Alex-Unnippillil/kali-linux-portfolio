@@ -1,0 +1,32 @@
+{
+  "videos": [
+    {
+      "id": "1",
+      "title": "React Tutorial",
+      "playlist": "Dev",
+      "publishedAt": "2022-01-01T00:00:00Z",
+      "thumbnail": "thumb1.jpg",
+      "url": "https://youtu.be/1"
+    },
+    {
+      "id": "2",
+      "title": "Cooking with React",
+      "playlist": "Cook",
+      "publishedAt": "2022-02-01T00:00:00Z",
+      "thumbnail": "thumb2.jpg",
+      "url": "https://youtu.be/2"
+    },
+    {
+      "id": "3",
+      "title": "Advanced React",
+      "playlist": "Dev",
+      "publishedAt": "2021-06-01T00:00:00Z",
+      "thumbnail": "thumb3.jpg",
+      "url": "https://youtu.be/3"
+    }
+  ],
+  "playlists": [
+    {"id": "Dev", "title": "Dev"},
+    {"id": "Cook", "title": "Cook"}
+  ]
+}

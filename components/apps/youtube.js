@@ -18,6 +18,10 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [sortBy, setSortBy] = useState('date');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(0);
+  const [lastVideo, setLastVideo] = useState(null);
+  const [showHotkeys, setShowHotkeys] = useState(false);
 
   // Currently playing video and player state
   const [currentVideo, setCurrentVideo] = useState(null);
@@ -33,79 +37,114 @@ export default function YouTubeApp({ initialVideos = [] }) {
   const scrollRaf = useRef();
 
   const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+  const PAGE_SIZE = 12;
+  const LAST_KEY = 'youtube:last';
+
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(0);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Load last watched video
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const data = localStorage.getItem(LAST_KEY);
+      if (data) setLastVideo(JSON.parse(data));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!currentVideo) return;
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(LAST_KEY, JSON.stringify(currentVideo));
+      setLastVideo(currentVideo);
+    } catch {
+      // ignore
+    }
+  }, [currentVideo]);
 
   // Fetch videos from YouTube when an API key is available and no initial
   // videos are supplied. This mirrors the behaviour of the original app but
   // keeps the logic concise.
   useEffect(() => {
-    if (!apiKey || initialVideos.length) return;
+    if (initialVideos.length) return;
 
     async function fetchData() {
       try {
-        const channelRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/channels?part=snippet&forHandle=${CHANNEL_HANDLE}&key=${apiKey}`
-        );
-        const channelData = await channelRes.json();
-        const channelId = channelData.items?.[0]?.id;
-        if (!channelId) return;
+        if (apiKey) {
+          const channelRes = await fetch(
+            `https://www.googleapis.com/youtube/v3/channels?part=snippet&forHandle=${CHANNEL_HANDLE}&key=${apiKey}`
+          );
+          const channelData = await channelRes.json();
+          const channelId = channelData.items?.[0]?.id;
+          if (!channelId) return;
 
-        const playlistsRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/playlists?part=snippet&channelId=${channelId}&maxResults=50&key=${apiKey}`
-        );
-        const playlistsData = await playlistsRes.json();
-        const list = playlistsData.items?.map((p) => ({
-          id: p.id,
-          title: p.snippet.title,
-        })) || [];
+          const playlistsRes = await fetch(
+            `https://www.googleapis.com/youtube/v3/playlists?part=snippet&channelId=${channelId}&maxResults=50&key=${apiKey}`
+          );
+          const playlistsData = await playlistsRes.json();
+          const list = playlistsData.items?.map((p) => ({
+            id: p.id,
+            title: p.snippet.title,
+          })) || [];
 
-        // Include the automatically generated "Liked videos" playlist
-        const favoritesId = `LL${channelId}`;
-        list.push({ id: favoritesId, title: 'Favorites' });
-        setPlaylists(list);
+          const favoritesId = `LL${channelId}`;
+          list.push({ id: favoritesId, title: 'Favorites' });
+          setPlaylists(list);
 
-        // Helper to fetch *all* videos from a playlist by following the
-        // YouTube API's `nextPageToken` pagination.
-        async function fetchPlaylistVideos(pl) {
-          let pageToken;
-          const items = [];
+          async function fetchPlaylistVideos(pl) {
+            let pageToken;
+            const items = [];
 
-          do {
-            const tokenParam = pageToken ? `&pageToken=${pageToken}` : '';
-            const res = await fetch(
-              `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${pl.id}&maxResults=50&key=${apiKey}${tokenParam}`
-            );
-            const data = await res.json();
+            do {
+              const tokenParam = pageToken ? `&pageToken=${pageToken}` : '';
+              const res = await fetch(
+                `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${pl.id}&maxResults=50&key=${apiKey}${tokenParam}`
+              );
+              const data = await res.json();
 
-            items.push(
-              ...(data.items?.map((item) => {
-                const id = item.snippet.resourceId.videoId;
-                return {
-                  id,
-                  title: item.snippet.title,
-                  playlist: pl.title,
-                  publishedAt: item.snippet.publishedAt,
-                  thumbnail: item.snippet.thumbnails?.medium?.url,
-                  channelTitle: item.snippet.channelTitle,
-                  url: `https://www.youtube.com/watch?v=${id}`,
-                };
-              }) || [])
-            );
+              items.push(
+                ...(data.items?.map((item) => {
+                  const id = item.snippet.resourceId.videoId;
+                  return {
+                    id,
+                    title: item.snippet.title,
+                    playlist: pl.title,
+                    publishedAt: item.snippet.publishedAt,
+                    thumbnail: item.snippet.thumbnails?.medium?.url,
+                    channelTitle: item.snippet.channelTitle,
+                    url: `https://www.youtube.com/watch?v=${id}`,
+                  };
+                }) || [])
+              );
 
-            pageToken = data.nextPageToken;
-          } while (pageToken);
+              pageToken = data.nextPageToken;
+            } while (pageToken);
 
-          return items;
+            return items;
+          }
+
+          const allVideosData = await Promise.all(
+            list.map((pl) => fetchPlaylistVideos(pl))
+          );
+
+          const flat = allVideosData.flat();
+          const unique = Array.from(new Map(flat.map((v) => [v.id, v])).values());
+          setVideos(unique);
+        } else {
+          const res = await fetch('/youtube-demo.json');
+          const data = await res.json();
+          setVideos(data.videos || []);
+          setPlaylists(data.playlists || []);
         }
-
-        const allVideosData = await Promise.all(
-          list.map((pl) => fetchPlaylistVideos(pl))
-        );
-
-        // Replace the existing feed and deduplicate by video ID to
-        // prevent stale entries from accumulating in the list.
-        const flat = allVideosData.flat();
-        const unique = Array.from(new Map(flat.map((v) => [v.id, v])).values());
-        setVideos(unique);
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Failed to load YouTube data', err);
@@ -197,6 +236,11 @@ export default function YouTubeApp({ initialVideos = [] }) {
   useEffect(() => {
     if (!currentVideo) return;
     const handleKey = (e) => {
+      if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+        e.preventDefault();
+        setShowHotkeys((s) => !s);
+        return;
+      }
       if (!playerRef.current) return;
       if (e.key === ' ' || e.key === 'k' || e.key === 'K') {
         e.preventDefault();
@@ -263,9 +307,9 @@ export default function YouTubeApp({ initialVideos = [] }) {
       videos
         .filter((v) => activeCategory === 'All' || v.playlist === activeCategory)
         .filter((v) =>
-          (v.title || '').toLowerCase().includes(search.toLowerCase())
+          (v.title || '').toLowerCase().includes(debouncedSearch.toLowerCase())
         ),
-    [videos, activeCategory, search]
+    [videos, activeCategory, debouncedSearch]
   );
 
   const sorted = useMemo(() => {
@@ -291,11 +335,26 @@ export default function YouTubeApp({ initialVideos = [] }) {
     }
   }, [filtered, sortBy]);
 
-  const handleCategoryClick = useCallback((cat) => setActiveCategory(cat), []);
+  const paged = useMemo(() => {
+    const start = page * PAGE_SIZE;
+    return sorted.slice(start, start + PAGE_SIZE);
+  }, [sorted, page]);
+
+  const formatTime = (s) => {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60).toString().padStart(2, '0');
+    return `${m}:${sec}`;
+  };
+
+  const handleCategoryClick = useCallback((cat) => {
+    setActiveCategory(cat);
+    setPage(0);
+  }, []);
 
   const handleSortChange = useCallback((e) => {
     const { value } = e.target;
     setSortBy(value);
+    setPage(0);
   }, []);
 
   const handleSearchChange = useCallback((e) => {
@@ -352,19 +411,37 @@ export default function YouTubeApp({ initialVideos = [] }) {
               );
             })}
           </div>
+          {chapters.length > 0 && (
+            <ol className="bg-gray-900 text-xs max-h-40 overflow-auto p-2 space-y-1">
+              {chapters.map((ch, i) => (
+                <li key={i}>
+                  <button
+                    className="hover:underline"
+                    onClick={() => playerRef.current?.seekTo(ch.startTime || 0, true)}
+                  >
+                    {`${formatTime(ch.startTime || 0)} ${ch.title}`}
+                  </button>
+                </li>
+              ))}
+            </ol>
+          )}
           <div className="sr-only" aria-live="polite">
             {`Progress ${Math.round(progress * 100)} percent`}
           </div>
         </div>
       )}
-      {!apiKey && videos.length === 0 ? (
-        <div className="p-2">
-          <p>YouTube API key is not configured.</p>
+      {!currentVideo && lastVideo && (
+        <div className="p-3">
+          <button
+            className="px-3 py-2 bg-red-600 rounded"
+            onClick={() => setCurrentVideo(lastVideo)}
+          >
+            {`Resume ${lastVideo.title}`}
+          </button>
         </div>
-      ) : (
-        <>
-          {/* Search + sorting */}
-          <div className="p-3 flex flex-wrap items-center gap-2">
+      )}
+      {/* Search + sorting */}
+      <div className="p-3 flex flex-wrap items-center gap-2">
             <input
               placeholder="Search"
               className="flex-1 min-w-[150px] text-black px-3 py-2 rounded"
@@ -385,78 +462,112 @@ export default function YouTubeApp({ initialVideos = [] }) {
               <option value="title">Title (A-Z)</option>
               <option value="playlist">Playlist</option>
             </select>
-          </div>
+      </div>
 
-          {/* Category tabs */}
-          <div
-            className="overflow-x-auto px-3 pb-2 flex flex-wrap gap-2"
-            role="tablist"
-            ref={tabListRef}
+      {/* Category tabs */}
+      <div
+        className="overflow-x-auto px-3 pb-2 flex flex-wrap gap-2"
+        role="tablist"
+        ref={tabListRef}
+      >
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => handleCategoryClick(cat)}
+            role="tab"
+            aria-selected={activeCategory === cat}
+            tabIndex={activeCategory === cat ? 0 : -1}
+            className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
+              activeCategory === cat
+                ? 'bg-red-600 text-white'
+                : 'bg-gray-700 hover:bg-gray-600'
+            }`}
           >
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => handleCategoryClick(cat)}
-                role="tab"
-                aria-selected={activeCategory === cat}
-                tabIndex={activeCategory === cat ? 0 : -1}
-                className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
-                  activeCategory === cat
-                    ? 'bg-red-600 text-white'
-                    : 'bg-gray-700 hover:bg-gray-600'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+            {cat}
+          </button>
+        ))}
+      </div>
 
-          {/* Video list */}
-          <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4"> 
-            {sorted.map((video) => (
+      {/* Video list */}
+      <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+        {paged.map((video) => (
+          <div
+            key={video.id}
+            data-testid="video-card"
+            className="bg-gray-800 rounded-lg overflow-hidden shadow flex flex-col hover:shadow-lg transition"
+          >
+            <a
+              href={video.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block"
+              onClick={(e) => {
+                e.preventDefault();
+                setCurrentVideo(video);
+              }}
+            >
+              {video.thumbnail && (
+                <img
+                  src={video.thumbnail}
+                  alt={video.title}
+                  className="w-full"
+                  loading="lazy"
+                />
+              )}
               <div
-                key={video.id}
-                data-testid="video-card"
-                className="bg-gray-800 rounded-lg overflow-hidden shadow flex flex-col hover:shadow-lg transition"
+                className="p-2 font-semibold text-sm"
+                title={video.title}
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                }}
               >
-                <a
-                  href={video.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setCurrentVideo(video);
-                  }}
-                >
-                  {video.thumbnail && (
-                    <img
-                      src={video.thumbnail}
-                      alt={video.title}
-                      className="w-full"
-                      loading="lazy"
-                    />
-                  )}
-                  <div
-                    className="p-2 font-semibold text-sm"
-                    title={video.title}
-                    style={{
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    {video.title}
-                  </div>
-                </a>
-                <div className="px-2 pb-2 text-xs text-gray-300">
-                  {video.playlist} • {new Date(video.publishedAt).toLocaleDateString()}
-                </div>
+                {video.title}
               </div>
-            ))}
+            </a>
+            <div className="px-2 pb-2 text-xs text-gray-300">
+              {video.playlist} • {new Date(video.publishedAt).toLocaleDateString()}
+            </div>
           </div>
-        </>
+        ))}
+      </div>
+      {Math.ceil(sorted.length / PAGE_SIZE) > 1 && (
+        <div className="flex items-center justify-center gap-2 pb-4">
+          <button
+            className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
+            onClick={() => setPage((p) => Math.max(p - 1, 0))}
+            disabled={page === 0}
+          >
+            Prev
+          </button>
+          <span className="text-sm">{page + 1} / {Math.ceil(sorted.length / PAGE_SIZE)}</span>
+          <button
+            className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
+            onClick={() => setPage((p) => Math.min(p + 1, Math.ceil(sorted.length / PAGE_SIZE) - 1))}
+            disabled={page >= Math.ceil(sorted.length / PAGE_SIZE) - 1}
+          >
+            Next
+          </button>
+        </div>
+      )}
+      {showHotkeys && (
+        <div className="fixed inset-0 bg-black/80 text-white flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-4 rounded">
+            <h2 className="text-lg mb-2">Keyboard Shortcuts</h2>
+            <ul className="space-y-1 text-sm">
+              <li><kbd className="px-1">Space</kbd>/<kbd className="px-1">K</kbd> Play/Pause</li>
+              <li><kbd className="px-1">?</kbd> Toggle help</li>
+            </ul>
+            <button
+              className="mt-3 px-2 py-1 bg-red-600 rounded"
+              onClick={() => setShowHotkeys(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

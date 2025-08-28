@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import YouTubeApp from '../components/apps/youtube';
 
@@ -33,14 +33,20 @@ const mockVideos = [
 describe('YouTubeApp', () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_YOUTUBE_API_KEY = 'test';
+    localStorage.clear();
+  });
+  afterEach(() => {
+    jest.resetAllMocks();
   });
 
-  it('shows message when API key is missing', () => {
+  it('falls back to demo JSON when API key is missing', async () => {
     delete process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+    global.fetch = jest.fn(() =>
+      Promise.resolve({ json: () => ({ videos: mockVideos, playlists: [] }) })
+    );
     render(<YouTubeApp />);
-    expect(
-      screen.getByText(/YouTube API key is not configured/i)
-    ).toBeInTheDocument();
+    const cards = await screen.findAllByTestId('video-card');
+    expect(cards).toHaveLength(3);
   });
 
   it('renders video cards with thumbnail and metadata', () => {
@@ -70,8 +76,11 @@ describe('YouTubeApp', () => {
     const user = userEvent.setup();
     render(<YouTubeApp initialVideos={mockVideos} />);
     await user.type(screen.getByPlaceholderText(/search/i), 'Advanced');
-    expect(screen.getAllByTestId('video-card')).toHaveLength(1);
-    expect(screen.getByText('Advanced React')).toBeInTheDocument();
+    await screen.findByText('Advanced React');
+    await screen.findAllByTestId('video-card');
+    await waitFor(() =>
+      expect(screen.getAllByTestId('video-card')).toHaveLength(1)
+    );
     expect(screen.queryByText('React Tutorial')).not.toBeInTheDocument();
   });
 
@@ -181,6 +190,16 @@ describe('YouTubeApp', () => {
 
     unmount();
     jest.resetModules();
+  });
+  it('stores last watched video and offers resume', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<YouTubeApp initialVideos={mockVideos} />);
+    await user.click(screen.getByText('React Tutorial'));
+    // wait for player to render
+    await screen.findByRole('progressbar');
+    unmount();
+    render(<YouTubeApp initialVideos={mockVideos} />);
+    expect(screen.getByRole('button', { name: /resume react tutorial/i })).toBeInTheDocument();
   });
   it('fetches videos from multiple playlists via Promise.all', async () => {
     const responses = {
