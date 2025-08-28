@@ -12,6 +12,7 @@ interface GameLayoutProps {
   lives?: number;
   score?: number;
   highScore?: number;
+  editor?: React.ReactNode;
 }
 
 const GameLayout: React.FC<GameLayoutProps> = ({
@@ -21,6 +22,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   lives,
   score,
   highScore,
+  editor,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -177,6 +179,9 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         {highScore !== undefined && <div>High: {highScore}</div>}
       </div>
       {!prefersReducedMotion && <PerfOverlay />}
+      {editor && (
+        <div className="absolute bottom-2 left-2 z-30">{editor}</div>
+      )}
     </div>
   );
 };
