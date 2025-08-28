@@ -1,9 +1,10 @@
 let mode = 'timer';
-let timerInterval = null;
 let timerRemaining = 30;
-let stopwatchInterval = null;
 let stopwatchElapsed = 0;
 let lapNumber = 1;
+let timerRunning = false;
+let stopwatchRunning = false;
+let worker;
 
 const timerDisplay = document.getElementById('timerDisplay');
 const stopwatchDisplay = document.getElementById('stopwatchDisplay');
@@ -39,26 +40,41 @@ function updateTimerDisplay() {
   timerDisplay.textContent = formatTime(timerRemaining);
 }
 
+function getWorker() {
+  if (!worker) {
+    worker = new Worker(new URL('./ticker.worker.js', import.meta.url));
+    worker.onmessage = ({ data }) => {
+      if (data.type !== 'tick') return;
+      if (data.id === 'timer' && timerRunning) {
+        timerRemaining--;
+        updateTimerDisplay();
+        if (timerRemaining <= 0) {
+          stopTimer();
+          playSound();
+        }
+      } else if (data.id === 'stopwatch' && stopwatchRunning) {
+        stopwatchElapsed++;
+        updateStopwatchDisplay();
+      }
+    };
+  }
+  return worker;
+}
+
 function startTimer() {
-  if (timerInterval) return;
+  if (timerRunning) return;
   const mins = parseInt(minutesInput.value, 10) || 0;
   const secs = parseInt(secondsInput.value, 10) || 0;
   timerRemaining = mins * 60 + secs;
   updateTimerDisplay();
-  timerInterval = setInterval(() => {
-    timerRemaining--;
-    updateTimerDisplay();
-    if (timerRemaining <= 0) {
-      clearInterval(timerInterval);
-      timerInterval = null;
-      playSound();
-    }
-  }, 1000);
+  timerRunning = true;
+  getWorker().postMessage({ type: 'start', id: 'timer' });
 }
 
 function stopTimer() {
-  clearInterval(timerInterval);
-  timerInterval = null;
+  if (!timerRunning) return;
+  timerRunning = false;
+  getWorker().postMessage({ type: 'stop', id: 'timer' });
 }
 
 function resetTimer() {
@@ -74,16 +90,15 @@ function updateStopwatchDisplay() {
 }
 
 function startWatch() {
-  if (stopwatchInterval) return;
-  stopwatchInterval = setInterval(() => {
-    stopwatchElapsed++;
-    updateStopwatchDisplay();
-  }, 1000);
+  if (stopwatchRunning) return;
+  stopwatchRunning = true;
+  getWorker().postMessage({ type: 'start', id: 'stopwatch' });
 }
 
 function stopWatch() {
-  clearInterval(stopwatchInterval);
-  stopwatchInterval = null;
+  if (!stopwatchRunning) return;
+  stopwatchRunning = false;
+  getWorker().postMessage({ type: 'stop', id: 'stopwatch' });
 }
 
 function resetWatch() {
