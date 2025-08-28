@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import confetti from 'canvas-confetti';
 import GameLayout from './GameLayout';
@@ -70,7 +70,6 @@ const TicTacToe = () => {
   const [player, setPlayer] = useState(null);
   const [ai, setAi] = useState(null);
   const [difficulty, setDifficulty] = useState('hard');
-  const [aiMoves, setAiMoves] = useState(0);
   const [winningLine, setWinningLine] = useState([]);
   const [lastMove, setLastMove] = useState(null);
   const [score, setScore] = useState({ player: 0, ai: 0, draw: 0 });
@@ -97,7 +96,6 @@ const TicTacToe = () => {
     setStatus(p === 'X' ? 'Your turn' : "AI's turn");
     ReactGA.event({ category: 'TicTacToe', action: 'start' });
     setBoard(Array(9).fill(null));
-    setAiMoves(0);
     setWinningLine([]);
     setLastMove(null);
     setScore({ player: 0, ai: 0, draw: 0 });
@@ -186,8 +184,6 @@ const TicTacToe = () => {
         index = available[Math.floor(Math.random() * available.length)];
       } else if (difficulty === 'medium') {
         index = getMediumMove(board, ai);
-      } else if (aiMoves === 0) {
-        index = available[Math.floor(Math.random() * available.length)];
       } else {
         index = minimax(board, ai).index;
       }
@@ -207,13 +203,12 @@ const TicTacToe = () => {
             osc.stop(ctx.currentTime + 0.1);
           }
         }, 200);
-        setAiMoves((m) => m + 1);
         ReactGA.event({ category: 'TicTacToe', action: 'move', label: 'ai' });
       }
     } else {
       setStatus('Your turn');
     }
-  }, [board, player, ai, difficulty, aiMoves, paused, sound, seriesLength]);
+  }, [board, player, ai, difficulty, paused, sound, seriesLength]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -311,7 +306,8 @@ const TicTacToe = () => {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#ffffff';
-            ctx.fillText(cell, x, y + 2);
+            const emoji = cell === 'X' ? '❌' : '⭕';
+            ctx.fillText(emoji, x, y + 2);
           } else {
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 4;
@@ -399,43 +395,53 @@ const TicTacToe = () => {
     setHints(moves.filter((m) => m.score === best).map((m) => m.idx));
   }, [board, player, paused]);
 
-  const restart = () => {
-    setBoard(Array(9).fill(null));
-    setAiMoves(0);
-    setWinningLine([]);
-    setLastMove(null);
-    setStatus(player === 'X' ? 'Your turn' : "AI's turn");
-    setPaused(false);
-    strikeProgressRef.current = 1;
-  };
+    const restart = () => {
+      setBoard(Array(9).fill(null));
+      setWinningLine([]);
+      setLastMove(null);
+      setStatus(player === 'X' ? 'Your turn' : "AI's turn");
+      setPaused(false);
+      strikeProgressRef.current = 1;
+    };
 
-  const reset = () => {
-    setBoard(Array(9).fill(null));
-    setStatus('Choose X or O');
-    setPlayer(null);
-    setAi(null);
-    setAiMoves(0);
-    setWinningLine([]);
-    setLastMove(null);
-    setScore({ player: 0, ai: 0, draw: 0 });
-    setPaused(false);
-    strikeProgressRef.current = 1;
-  };
+    const reset = useCallback(() => {
+      setBoard(Array(9).fill(null));
+      setStatus('Choose X or O');
+      setPlayer(null);
+      setAi(null);
+      setWinningLine([]);
+      setLastMove(null);
+      setScore({ player: 0, ai: 0, draw: 0 });
+      setPaused(false);
+      strikeProgressRef.current = 1;
+    }, []);
 
-  const toggleStartPlayer = () => {
-    if (player === null) return;
-    const newPlayer = player === 'X' ? 'O' : 'X';
-    const newAi = newPlayer === 'X' ? 'O' : 'X';
-    setPlayer(newPlayer);
-    setAi(newAi);
-    setBoard(Array(9).fill(null));
-    setAiMoves(0);
-    setWinningLine([]);
-    setLastMove(null);
-    setStatus(newPlayer === 'X' ? 'Your turn' : "AI's turn");
-    setPaused(false);
-    strikeProgressRef.current = 1;
-  };
+    const toggleStartPlayer = () => {
+      if (player === null) return;
+      const newPlayer = player === 'X' ? 'O' : 'X';
+      const newAi = newPlayer === 'X' ? 'O' : 'X';
+      setPlayer(newPlayer);
+      setAi(newAi);
+      setBoard(Array(9).fill(null));
+      setWinningLine([]);
+      setLastMove(null);
+      setStatus(newPlayer === 'X' ? 'Your turn' : "AI's turn");
+      setPaused(false);
+      strikeProgressRef.current = 1;
+    };
+
+    useEffect(() => {
+      const handleKey = (e) => {
+        if (e.key && e.key.toLowerCase() === 'r') {
+          e.preventDefault();
+          reset();
+        }
+      };
+      if (typeof window !== 'undefined') {
+        window.addEventListener('keydown', handleKey);
+        return () => window.removeEventListener('keydown', handleKey);
+      }
+    }, [reset]);
 
   const difficultySlider = (
     <div className="w-56 mb-4">
@@ -495,6 +501,13 @@ const TicTacToe = () => {
     handleClick(idx);
   };
 
+  const currentTurn = board.filter(Boolean).length % 2 === 0 ? 'X' : 'O';
+  const turnIndicator = paused
+    ? 'Paused'
+    : !checkWinner(board).winner
+    ? `${theme === 'emoji' ? (currentTurn === 'X' ? '❌' : '⭕') : currentTurn}'s turn`
+    : '';
+
   if (player === null) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
@@ -514,7 +527,7 @@ const TicTacToe = () => {
               }
             }}
           >
-            X
+            {theme === 'emoji' ? '❌' : 'X'}
           </button>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
@@ -527,7 +540,7 @@ const TicTacToe = () => {
               }
             }}
           >
-            O
+            {theme === 'emoji' ? '⭕' : 'O'}
           </button>
         </div>
       </div>
@@ -535,31 +548,32 @@ const TicTacToe = () => {
     );
   }
 
-  return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      {difficultySlider}
-      {themeSelector}
-      {seriesSelector}
-      <canvas
-        ref={canvasRef}
-        width={300}
-        height={300}
-        className="mb-4 bg-gray-700 w-60 h-60"
-        onClick={handleCanvasClick}
-      />
-      <div className="mb-2 text-sm">
-        Series (Bo{seriesLength}): Player {score.player} - AI {score.ai} | Draws: {score.draw} | Highscore: {highScore}
-      </div>
-      <div className="mb-4" role="status" aria-live="polite">
-        {paused ? 'Paused' : status}
-      </div>
-      <div className="flex space-x-4 flex-wrap justify-center">
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={restart}
-          onTouchStart={restart}
-        >
-          Restart
+    return (
+      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+        {difficultySlider}
+        {themeSelector}
+        {seriesSelector}
+        <div className="mb-2" aria-live="polite">{turnIndicator}</div>
+        <canvas
+          ref={canvasRef}
+          width={300}
+          height={300}
+          className="mb-4 bg-gray-700 w-60 h-60"
+          onClick={handleCanvasClick}
+        />
+        <div className="mb-2 text-sm">
+          Series (Bo{seriesLength}): Player {score.player} - AI {score.ai} | Draws: {score.draw} | Highscore: {highScore}
+        </div>
+        <div className="mb-4" role="status" aria-live="polite">
+          {paused ? 'Paused' : status}
+        </div>
+        <div className="flex space-x-4 flex-wrap justify-center">
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={restart}
+            onTouchStart={restart}
+          >
+            Restart
         </button>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
@@ -573,7 +587,7 @@ const TicTacToe = () => {
           onClick={toggleStartPlayer}
           onTouchStart={toggleStartPlayer}
         >
-          Start: {player}
+          Start: {theme === 'emoji' ? (player === 'X' ? '❌' : '⭕') : player}
         </button>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
