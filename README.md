@@ -41,6 +41,15 @@ To send text or links directly into the Sticky Notes app:
 3. After installation, use the system **Share** action and select "Kali Linux Portfolio".
 4. The shared content will appear as a new note.
 
+
+### Offline Support
+
+The service worker generated via `scripts/generate-sw.mjs` pre-caches assets from the `public/` directory that match `**/*.{js,css,html,png,svg,ico,json}`. This includes the offline fallback page (`offline.html`), core scripts, styles, icons and other static JSON data.
+
+**Limitations:** Only static assets and pages that fall under the precache pattern are available offline. Features that rely on network calls or dynamic API routes will not function without connectivity.
+
+**Update/Clear:** Deploying a new build will update the service worker automatically thanks to `skipWaiting` and `clientsClaim`. To force a refresh or clear cached assets, use your browser's developer tools (Application → Service Workers) to unregister or update the service worker and reload the page.
+
 ---
 
 ## Tech Stack
