@@ -85,6 +85,7 @@
     "jest": "30.0.5",
     "jest-environment-jsdom": "30.0.5",
     "pa11y": "^9.0.0",
+    "playwright-core": "^1.55.0",
     "typescript": "^5.9.2",
     "wait-on": "^8.0.4"
   },
