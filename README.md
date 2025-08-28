@@ -216,6 +216,10 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | Project Gallery | /apps/project-gallery | Utility / Media |
 | Quote_Generator | /apps/quote_generator | Utility / Media |
 
+The Spotify app loads its mood-to-playlist mapping from `public/spotify-playlists.json`,
+remembers the last mood you played, and exposes play/pause and track controls with
+keyboard hotkeys.
+
 ### Terminal Commands
 - `clear` – clears the terminal display.
 - `help` – lists available commands.
