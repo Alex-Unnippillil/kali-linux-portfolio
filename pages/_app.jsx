@@ -38,6 +38,21 @@ function MyApp({ Component, pageProps }) {
         });
     }
   }, []);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.Worker) {
+      const worker = new Worker(new URL('../workers/session.worker.ts', import.meta.url));
+      const requestRestore = () => worker.postMessage({ type: 'load' });
+      window.requestSessionRestore = requestRestore;
+      window.saveSession = (windows) => worker.postMessage({ type: 'save', windows });
+      worker.onmessage = (e) => {
+        if (e.data?.type === 'session') {
+          window.dispatchEvent(new CustomEvent('restore-session', { detail: e.data }));
+        }
+      };
+      requestRestore();
+      return () => worker.terminate();
+    }
+  }, []);
   return (
     <SettingsProvider>
       <Component {...pageProps} />
