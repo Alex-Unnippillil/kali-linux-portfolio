@@ -172,3 +172,23 @@ export class RandomSalvoAI {
     return choice;
   }
 }
+
+export class RandomAI {
+  constructor() {
+    this.available = new Set(
+      Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, i) => i)
+    );
+  }
+
+  record(idx, hit) {
+    this.available.delete(idx);
+  }
+
+  nextMove() {
+    const choices = Array.from(this.available);
+    if (!choices.length) return null;
+    const choice = choices[Math.floor(Math.random() * choices.length)];
+    this.available.delete(choice);
+    return choice;
+  }
+}
