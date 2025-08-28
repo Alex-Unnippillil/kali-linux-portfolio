@@ -19,17 +19,17 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
     jumpPressed: false,
   });
 
-  const [keyMap, setKeyMap] = usePersistedState<Record<Action, string>>('phaser-keys', {
+  const [keyMap] = usePersistedState<Record<Action, string>>('phaser-keys', {
     left: 'ArrowLeft',
     right: 'ArrowRight',
     jump: 'Space',
   });
-  const [padMap, setPadMap] = usePersistedState<Record<Action, number>>('phaser-pad', {
+  const [padMap] = usePersistedState<Record<Action, number>>('phaser-pad', {
     left: 14,
     right: 15,
     jump: 0,
   });
-  const [bufferWindow, setBufferWindow] = usePersistedState<number>('phaser-buffer', 100);
+  const [bufferWindow] = usePersistedState<number>('phaser-buffer', 100);
   const bufferRef = useRef(bufferWindow);
   useEffect(() => {
     bufferRef.current = bufferWindow;
@@ -42,25 +42,18 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
   useEffect(() => {
     padMapRef.current = padMap;
   }, [padMap]);
-  const [waiting, setWaiting] = useState<
-    null | { device: 'key' | 'pad'; action: Action }
-  >(null);
 
-  // Keyboard input and remapping
+  // Keyboard input
   useEffect(() => {
     const handle = (e: KeyboardEvent) => {
-      if (waiting?.device === 'key' && e.type === 'keydown') {
-        setKeyMap((prev) => ({ ...prev, [waiting.action]: e.code }));
-        setWaiting(null);
-        return;
-      }
       const pressed = e.type === 'keydown';
       const action = (Object.keys(keyMapRef.current) as Action[]).find(
         (a) => keyMapRef.current[a] === e.code,
       );
       if (action) {
         if (action === 'jump') {
-          if (pressed && !controls.current.jumpHeld) controls.current.jumpPressed = true;
+          if (pressed && !controls.current.jumpHeld)
+            controls.current.jumpPressed = true;
           controls.current.jumpHeld = pressed;
         } else {
           controls.current[action] = pressed;
@@ -73,29 +66,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
       window.removeEventListener('keydown', handle);
       window.removeEventListener('keyup', handle);
     };
-  }, [waiting, setKeyMap]);
-
-  // Gamepad remapping polling when waiting
-  useEffect(() => {
-    if (!waiting || waiting.device !== 'pad') return;
-    let raf: number;
-    const poll = () => {
-      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
-      for (const gp of pads) {
-        if (!gp) continue;
-        for (let i = 0; i < gp.buttons.length; i++) {
-          if (gp.buttons[i].pressed) {
-            setPadMap((prev) => ({ ...prev, [waiting.action]: i }));
-            setWaiting(null);
-            return;
-          }
-        }
-      }
-      raf = requestAnimationFrame(poll);
-    };
-    raf = requestAnimationFrame(poll);
-    return () => cancelAnimationFrame(raf);
-  }, [waiting, setPadMap]);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -293,6 +264,32 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
           onTouchEnd: () => (controls.current[key] = false),
         };
 
+  const ControlsOverlay: React.FC<{
+    keyMap: Record<Action, string>;
+    padMap: Record<Action, number>;
+    onClose: () => void;
+  }> = ({ keyMap, padMap, onClose }) => (
+    <div className="absolute top-4 left-4 bg-white bg-opacity-80 p-2 rounded text-xs space-y-1">
+      <button
+        className="absolute top-1 right-1 text-sm"
+        onClick={onClose}
+        aria-label="Close controls overlay"
+      >
+        ✕
+      </button>
+      <div className="font-bold">Keyboard</div>
+      <div>Left: {keyMap.left}</div>
+      <div>Right: {keyMap.right}</div>
+      <div>Jump: {keyMap.jump}</div>
+      <div className="pt-2 font-bold">Gamepad</div>
+      <div>Left: {padMap.left}</div>
+      <div>Right: {padMap.right}</div>
+      <div>Jump: {padMap.jump}</div>
+    </div>
+  );
+
+  const [showOverlay, setShowOverlay] = useState(true);
+
   return (
     <div ref={containerRef} className="relative">
       <button className="absolute left-4 bottom-4" {...bind('left')}>
@@ -304,79 +301,15 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
       <button className="absolute right-4 bottom-4" {...bind('jump')}>
         ⇧
       </button>
-      <div className="absolute top-4 left-4 bg-white bg-opacity-80 p-2 rounded text-xs space-y-1">
-        {waiting && <div>Press a {waiting.device === 'key' ? 'key' : 'button'}...</div>}
-        <div>Keyboard</div>
-        <div>
-          Left:
-          <button
-            onClick={() => setWaiting({ device: 'key', action: 'left' })}
-            className="ml-1 border px-1"
-          >
-            {keyMap.left}
-          </button>
-        </div>
-        <div>
-          Right:
-          <button
-            onClick={() => setWaiting({ device: 'key', action: 'right' })}
-            className="ml-1 border px-1"
-          >
-            {keyMap.right}
-          </button>
-        </div>
-        <div>
-          Jump:
-          <button
-            onClick={() => setWaiting({ device: 'key', action: 'jump' })}
-            className="ml-1 border px-1"
-          >
-            {keyMap.jump}
-          </button>
-        </div>
-        <div className="pt-2">Gamepad</div>
-        <div>
-          Left:
-          <button
-            onClick={() => setWaiting({ device: 'pad', action: 'left' })}
-            className="ml-1 border px-1"
-          >
-            {padMap.left}
-          </button>
-        </div>
-        <div>
-          Right:
-          <button
-            onClick={() => setWaiting({ device: 'pad', action: 'right' })}
-            className="ml-1 border px-1"
-          >
-            {padMap.right}
-          </button>
-        </div>
-        <div>
-          Jump:
-          <button
-            onClick={() => setWaiting({ device: 'pad', action: 'jump' })}
-            className="ml-1 border px-1"
-          >
-            {padMap.jump}
-          </button>
-        </div>
-        <div className="pt-2">
-          Buffer:
-          <input
-            type="range"
-            min={0}
-            max={300}
-            value={bufferWindow}
-            onChange={(e) => setBufferWindow(Number(e.target.value))}
-            className="mx-1"
+        {showOverlay && (
+          <ControlsOverlay
+            keyMap={keyMap}
+            padMap={padMap}
+            onClose={() => setShowOverlay(false)}
           />
-          {bufferWindow}ms
-        </div>
+        )}
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 export default PhaserMatter;
