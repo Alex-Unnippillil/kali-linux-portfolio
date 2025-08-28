@@ -66,6 +66,7 @@ const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
 
 const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
 const BluetoothApp = createDynamicApp('bluetooth', 'Bluetooth Tools');
+const HidDemoApp = createDynamicApp('hid-demo', 'HID Demo');
 const DsniffApp = createDynamicApp('dsniff', 'dsniff');
 const BeefApp = createDynamicApp('beef', 'BeEF');
 const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
@@ -146,6 +147,7 @@ const displayAutopsy = createDisplay(AutopsyApp);
 
 const displayWireshark = createDisplay(WiresharkApp);
 const displayBluetooth = createDisplay(BluetoothApp);
+const displayHidDemo = createDisplay(HidDemoApp);
 const displayBeef = createDisplay(BeefApp);
 const displayMetasploit = createDisplay(MetasploitApp);
 const displayDsniff = createDisplay(DsniffApp);
@@ -676,6 +678,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayBluetooth,
+  },
+  {
+    id: 'hid-demo',
+    title: 'HID Demo',
+    icon: './themes/Yaru/apps/game.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHidDemo,
   },
   {
     id: 'metasploit',
