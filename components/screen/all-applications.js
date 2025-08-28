@@ -47,6 +47,7 @@ class AllApplications extends React.Component {
                 id={app.id}
                 icon={app.icon}
                 openApp={() => this.openApp(app.id)}
+                disabled={app.disabled}
             />
         ));
     };
