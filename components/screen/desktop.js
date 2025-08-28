@@ -276,7 +276,7 @@ export class Desktop extends Component {
                 }
 
                 appsJsx.push(
-                    <UbuntuApp key={index} {...props} />
+                    <UbuntuApp key={app.id} {...props} />
                 );
             }
         });
@@ -307,7 +307,7 @@ export class Desktop extends Component {
                 }
 
                 windowsJsx.push(
-                    <Window key={index} {...props} />
+                    <Window key={app.id} {...props} />
                 )
             }
         });

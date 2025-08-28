@@ -77,7 +77,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
       <div className="flex gap-2 overflow-x-auto mt-2">
         {thumbs.map((t, i) => (
           <canvas
-            key={i}
+            key={i + 1}
             data-testid={`thumb-${i + 1}`}
             onClick={() => setPage(i + 1)}
             ref={(el) => {
