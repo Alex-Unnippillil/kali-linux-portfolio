@@ -266,7 +266,7 @@ const Memory = () => {
             />
           ))}
           {timerMode === 'countdown' && time <= 0 && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl">Time's up</div>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl">Time&apos;s up</div>
           )}
           {paused && time > 0 && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl">Paused</div>

@@ -67,11 +67,8 @@ const ResourceMonitor = () => {
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
   }, [paused]);
-
-  const togglePause = () => setPaused((p) => !p);
   const changeSpeed = (e) => setSpeed(parseFloat(e.target.value));
   const toggleLayout = () => setLayout((l) => (l === 'row' ? 'col' : 'row'));
-
 
   const togglePause = () => {
     const next = !paused;
