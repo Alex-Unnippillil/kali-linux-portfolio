@@ -55,6 +55,7 @@ HTMLCanvasElement.prototype.getContext = () => ({
   rotate: () => {},
   arc: () => {},
   fill: () => {},
+  fillText: () => {},
   measureText: () => ({ width: 0 } as TextMetrics),
   transform: () => {},
   rect: () => {},

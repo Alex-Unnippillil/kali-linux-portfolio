@@ -37,8 +37,19 @@ const useGameControls = (arg, gameId = 'default') => {
       if (e.key === map.left) onDirection({ x: -1, y: 0 });
       if (e.key === map.right) onDirection({ x: 1, y: 0 });
     };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    let timeout;
+    const debounced = (e) => {
+      if (timeout) return;
+      timeout = setTimeout(() => {
+        timeout = null;
+      }, 100);
+      handleKey(e);
+    };
+    window.addEventListener('keydown', debounced);
+    return () => {
+      window.removeEventListener('keydown', debounced);
+      if (timeout) clearTimeout(timeout);
+    };
   }, [onDirection, gameId]);
 
   // touch swipe controls for directional games
