@@ -1,6 +1,10 @@
 const CACHE_NAME = 'weather-cache-v1';
+const OFFLINE_URL = '/offline.html';
 
-self.addEventListener('install', () => {
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll([OFFLINE_URL]))
+  );
   self.skipWaiting();
 });
 
@@ -10,6 +14,14 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => caches.match(OFFLINE_URL))
+    );
+    return;
+  }
+
   if (request.url.startsWith('https://api.open-meteo.com')) {
     event.respondWith(
       caches.open(CACHE_NAME).then(async (cache) => {
