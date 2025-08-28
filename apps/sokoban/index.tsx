@@ -37,6 +37,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   const [ghost, setGhost] = useState<Set<string>>(new Set());
   const [puffs, setPuffs] = useState<{ id: number; x: number; y: number }[]>([]);
   const puffId = React.useRef(0);
+  const [showLevels, setShowLevels] = useState(false);
 
   const selectLevel = useCallback(
     (i: number, pIdx: number = packIndex, pData: LevelPack[] = packs) => {
@@ -322,6 +323,13 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
           ))}
         </select>
         <input type="file" accept=".txt,.sas" onChange={handleFile} />
+        <button
+          type="button"
+          onClick={() => setShowLevels(true)}
+          className="px-2 py-1 bg-gray-300 rounded"
+        >
+          Levels
+        </button>
         <button type="button" onClick={handleUndo} className="px-2 py-1 bg-gray-300 rounded">
           Undo
         </button>
@@ -404,6 +412,43 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
           }}
         />
       </div>
+      {showLevels && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex"
+          onClick={() => setShowLevels(false)}
+        >
+          <div
+            className="bg-white p-4 w-80 max-w-full flex space-x-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-1/2 overflow-y-auto max-h-96">
+              {packs.map((p, i) => (
+                <div
+                  key={p.name}
+                  className={`p-2 cursor-pointer ${i === packIndex ? 'bg-blue-200' : ''}`}
+                  onClick={() => selectPack(i)}
+                >
+                  {p.name}
+                </div>
+              ))}
+            </div>
+            <div className="w-1/2 overflow-y-auto max-h-96">
+              {packs[packIndex].levels.map((_, i) => (
+                <div
+                  key={i}
+                  className={`p-2 cursor-pointer ${i === index ? 'bg-blue-200' : ''}`}
+                  onClick={() => {
+                    selectLevel(i);
+                    setShowLevels(false);
+                  }}
+                >
+                  {`Level ${i + 1}`}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
