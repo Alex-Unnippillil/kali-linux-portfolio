@@ -96,6 +96,12 @@ function insertAtCursor(text) {
   display.selectionStart = display.selectionEnd = pos;
 }
 
+function flashButton(btn) {
+  if (!btn) return;
+  btn.classList.add('active-key');
+  setTimeout(() => btn.classList.remove('active-key'), 150);
+}
+
 buttons.forEach((btn) => {
   btn.addEventListener('click', () => {
     const action = btn.dataset.action;
@@ -104,6 +110,14 @@ buttons.forEach((btn) => {
     if (action === 'clear') {
       undoStack.push(display.value);
       display.value = '';
+      updateParenBalance();
+      validateBaseInput();
+      return;
+    }
+
+    if (action === 'backspace') {
+      undoStack.push(display.value);
+      display.value = display.value.slice(0, -1);
       updateParenBalance();
       validateBaseInput();
       return;
@@ -217,6 +231,25 @@ function undo() {
   }
 }
 
+function findButtonForKey(key) {
+  if (/^[0-9]$/.test(key)) {
+    return document.querySelector(`.btn[data-value="${key}"]`);
+  }
+  const valueMap = {
+    '.': '.','+': '+','-': '-','*': '*','/': '/',
+  };
+  if (key in valueMap) {
+    return document.querySelector(`.btn[data-value="${valueMap[key]}"]`);
+  }
+  if (key === 'Enter' || key === '=') {
+    return document.querySelector('.btn[data-action="equals"]');
+  }
+  if (key === 'Backspace') {
+    return document.querySelector('.btn[data-action="backspace"]');
+  }
+  return null;
+}
+
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey) {
     if (e.key.toLowerCase() === 'z') {
@@ -226,46 +259,22 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (e.target !== display) {
-    if (/^[-+*/0-9A-F().&|^~<>]$/i.test(e.key)) {
-      e.preventDefault();
-      undoStack.push(display.value);
-      insertAtCursor(e.key);
-      updateParenBalance();
-      validateBaseInput();
-      display.focus();
-      return;
-    }
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      undoStack.push(display.value);
-      display.value = display.value.slice(0, -1);
-      display.selectionStart = display.selectionEnd = display.value.length;
-      updateParenBalance();
-      validateBaseInput();
-      return;
-    }
-    if (e.key === 'Enter' || e.key === '=') {
-      e.preventDefault();
-      const expr = display.value;
-      const result = evaluate(expr);
-      if (result === null) return;
-      addHistory(expr, result);
-      undoStack.push(expr);
-      display.value = result;
-      return;
-    }
-  } else {
-    if (e.key === 'Enter' || e.key === '=') {
-      e.preventDefault();
-      const expr = display.value;
-      const result = evaluate(expr);
-      if (result === null) return;
-      addHistory(expr, result);
-      undoStack.push(expr);
-      display.value = result;
-      return;
-    }
+  const btn = findButtonForKey(e.key);
+  if (btn) {
+    e.preventDefault();
+    flashButton(btn);
+    btn.click();
+    display.focus();
+    return;
+  }
+
+  if (e.target !== display && /^[-+*/0-9A-F().&|^~<>]$/i.test(e.key)) {
+    e.preventDefault();
+    undoStack.push(display.value);
+    insertAtCursor(e.key);
+    updateParenBalance();
+    validateBaseInput();
+    display.focus();
   }
 });
 

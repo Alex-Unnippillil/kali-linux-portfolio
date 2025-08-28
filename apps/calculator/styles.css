@@ -65,6 +65,10 @@ body {
   background: #e0e0e0;
 }
 
+.btn.active-key {
+  background: #d0d0d0;
+}
+
 .span-two {
   grid-column: span 2;
 }
