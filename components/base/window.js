@@ -4,6 +4,12 @@ import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 
+const EASING_PRESETS = {
+    standard: 'cubic-bezier(0.4, 0, 0.2, 1)',
+    accelerate: 'cubic-bezier(0.4, 0, 1, 1)',
+    decelerate: 'cubic-bezier(0, 0, 0.2, 1)',
+};
+
 export class Window extends Component {
     constructor(props) {
         super(props);
@@ -14,7 +20,6 @@ export class Window extends Component {
             cursorType: "cursor-default",
             width: props.defaultWidth || 60,
             height: props.defaultHeight || 85,
-            closed: false,
             maximized: false,
             parentSize: {
                 height: 100,
@@ -28,6 +33,7 @@ export class Window extends Component {
         }
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
+        this._animation = null;
     }
 
     componentDidMount() {
@@ -128,6 +134,35 @@ export class Window extends Component {
             });
         };
         shrink();
+    }
+
+    runAnimation = (el, keyframes, opts = {}) => {
+        if (!el || typeof el.animate !== 'function') {
+            if (opts.onfinish) opts.onfinish();
+            return;
+        }
+        if (this._animation) {
+            this._animation.cancel();
+        }
+        const { onfinish, easing = EASING_PRESETS.standard, ...rest } = opts;
+        const animation = el.animate(keyframes, { fill: 'forwards', easing, ...rest });
+        this._animation = animation;
+
+        const cancel = () => animation.cancel();
+        el.addEventListener('pointerdown', cancel, { once: true });
+        el.addEventListener('keydown', cancel, { once: true });
+
+        const cleanup = () => {
+            el.removeEventListener('pointerdown', cancel);
+            el.removeEventListener('keydown', cancel);
+            this._animation = null;
+        };
+
+        animation.oncancel = cleanup;
+        animation.onfinish = () => {
+            cleanup();
+            if (onfinish) onfinish();
+        };
     }
 
     changeCursorToMove = () => {
@@ -314,11 +349,22 @@ export class Window extends Component {
 
     closeWindow = () => {
         this.setWinowsPosition();
-        this.setState({ closed: true }, () => {
-            this.props.hideSideBar(this.id, false);
-            setTimeout(() => {
-                this.props.closed(this.id)
-            }, 300) // after 300ms this window will be unmounted from parent (Desktop)
+        this.props.hideSideBar(this.id, false);
+        const r = document.querySelector(`#${this.id}`);
+        if (!r) {
+            this.props.closed(this.id);
+            return;
+        }
+        const x = r.style.getPropertyValue('--window-transform-x');
+        const y = r.style.getPropertyValue('--window-transform-y');
+        const base = `translate(${x},${y})`;
+        this.runAnimation(r, [
+            { opacity: 1, transform: `${base} scale(1)` },
+            { opacity: 0, transform: `${base} scale(0.85)` }
+        ], {
+            duration: 200,
+            easing: EASING_PRESETS.decelerate,
+            onfinish: () => this.props.closed(this.id)
         });
     }
 
@@ -397,7 +443,7 @@ export class Window extends Component {
                 >
                     <div
                         style={{ width: `${this.state.width}%`, height: `${this.state.height}%` }}
-                        className={this.state.cursorType + " " + (this.state.closed ? " closed-window " : "") + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
+                        className={this.state.cursorType + " " + (this.state.maximized ? " duration-300 rounded-none" : " rounded-lg rounded-b-none") + (this.props.minimized ? " opacity-0 invisible duration-200 " : "") + (this.props.isFocused ? " z-30 " : " z-20 notFocused") + " opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute window-shadow border-black border-opacity-40 border border-t-0 flex flex-col"}
                         id={this.id}
                         role="dialog"
                         aria-label={this.props.title}
