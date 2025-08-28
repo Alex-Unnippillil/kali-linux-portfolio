@@ -199,10 +199,14 @@ const Chrome: React.FC = () => {
       fetchArticle(activeId, activeTab.url);
     }
     try {
-      // @ts-ignore
-      if (iframeRef.current) iframeRef.current.muted = !!activeTab.muted;
+      const media = iframeRef.current?.contentWindow?.document.querySelectorAll(
+        'audio,video',
+      );
+      media?.forEach((el) => {
+        (el as HTMLMediaElement).muted = !!activeTab.muted;
+      });
     } catch {
-      /* ignore */
+      /* ignore cross-origin */
     }
   }, [activeId, activeTab.url, activeTab.muted, articles, fetchArticle]);
 
@@ -242,14 +246,18 @@ const Chrome: React.FC = () => {
   }, [searchTerm]);
 
   const toggleMute = useCallback(() => {
-    setTabs((prev) =>
-      prev.map((t) => (t.id === activeId ? { ...t, muted: !t.muted } : t)),
-    );
     try {
-      // @ts-ignore
-      iframeRef.current.muted = !activeTab.muted;
+      const doc = iframeRef.current?.contentWindow?.document;
+      if (!doc) throw new Error();
+      const newMuted = !activeTab.muted;
+      doc
+        .querySelectorAll('audio,video')
+        .forEach((el) => ((el as HTMLMediaElement).muted = newMuted));
+      setTabs((prev) =>
+        prev.map((t) => (t.id === activeId ? { ...t, muted: newMuted } : t)),
+      );
     } catch {
-      /* ignore */
+      alert('Unable to control audio for this site.');
     }
   }, [activeId, activeTab.muted]);
 
@@ -306,6 +314,7 @@ const Chrome: React.FC = () => {
             <span className="mr-2 truncate" style={{ maxWidth: 100 }}>
               {t.url.replace(/^https?:\/\/(www\.)?/, '')}
             </span>
+            {t.muted && <span className="mr-1">🔇</span>}
             {tabs.length > 1 && (
               <button
                 onClick={(e) => {
