@@ -3,6 +3,8 @@ import GameLayout from './GameLayout';
 import { createDeck } from './memory_utils';
 
 const SIZE = 4;
+const BEST_KEY = `game:memory:${SIZE}:best`;
+const MAX_STORAGE = 1000; // safeguard against large writes
 
 const Memory = () => {
   const [cards, setCards] = useState([]);
@@ -25,8 +27,6 @@ const Memory = () => {
   const startRef = useRef(0);
   const rafRef = useRef();
   const reduceMotion = useRef(false);
-
-  const key = `memory_best_${SIZE}`;
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -75,18 +75,44 @@ const Memory = () => {
 
   useEffect(() => {
     reset();
-    const stored = JSON.parse(localStorage.getItem(key) || '{}');
-    setBest(stored);
-  }, [reset, key]);
+    try {
+      const raw = window.localStorage.getItem(BEST_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === 'object' && parsed !== null) setBest(parsed);
+      }
+    } catch {
+      try {
+        window.localStorage.removeItem(BEST_KEY);
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }, [reset]);
 
   const saveBest = useCallback(() => {
-    const stored = JSON.parse(localStorage.getItem(key) || '{}');
-    const bestMoves = stored.moves != null ? Math.min(stored.moves, moves) : moves;
-    const bestTime = stored.time != null ? Math.min(stored.time, time) : time;
-    const updated = { moves: bestMoves, time: bestTime };
-    localStorage.setItem(key, JSON.stringify(updated));
-    setBest(updated);
-  }, [moves, time, key]);
+    try {
+      let stored = {};
+      const raw = window.localStorage.getItem(BEST_KEY);
+      if (raw) {
+        try {
+          stored = JSON.parse(raw) || {};
+        } catch {
+          window.localStorage.removeItem(BEST_KEY);
+        }
+      }
+      const bestMoves = stored.moves != null ? Math.min(stored.moves, moves) : moves;
+      const bestTime = stored.time != null ? Math.min(stored.time, time) : time;
+      const updated = { moves: bestMoves, time: bestTime };
+      const serialized = JSON.stringify(updated);
+      if (serialized.length < MAX_STORAGE) {
+        window.localStorage.setItem(BEST_KEY, serialized);
+      }
+      setBest(updated);
+    } catch {
+      // ignore storage errors
+    }
+  }, [moves, time]);
 
   useEffect(() => {
     if (cards.length && matched.length === cards.length) {
