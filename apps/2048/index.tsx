@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
+import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const SIZE = 4;
 
@@ -119,6 +120,7 @@ const Page2048 = () => {
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
   const [history, setHistory] = useState<number[][][]>([]);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     const seed = todaySeed();
@@ -278,7 +280,9 @@ const Page2048 = () => {
           row.map((cell, cIdx) => (
             <div
               key={`${rIdx}-${cIdx}`}
-              className="w-full aspect-square transition-transform transition-opacity"
+              className={`w-full aspect-square ${
+                prefersReducedMotion ? '' : 'transition-transform transition-opacity'
+              }`}
             >
               <div
                 className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
