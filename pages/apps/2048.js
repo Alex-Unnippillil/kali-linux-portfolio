@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+ function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 
 const SIZE = 4;
 
 // simple seeded PRNG
-const mulberry32 = (seed: number) => () => {
+const mulberry32 = (seed) => () => {
   let t = (seed += 0x6d2b79f5);
   t = Math.imul(t ^ (t >>> 15), t | 1);
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -16,7 +16,7 @@ const todaySeed = () => {
   return parseInt(`${d.getFullYear()}${d.getMonth() + 1}${d.getDate()}`, 10);
 };
 
-const slideRow = (row: number[]) => {
+const slideRow = (row) => {
   const arr = row.filter((n) => n !== 0);
   for (let i = 0; i < arr.length - 1; i += 1) {
     if (arr[i] === arr[i + 1]) {
@@ -29,18 +29,18 @@ const slideRow = (row: number[]) => {
   return newRow;
 };
 
-const transpose = (board: number[][]) => board[0].map((_, c) => board.map((row) => row[c]));
-const flip = (board: number[][]) => board.map((row) => [...row].reverse());
+const transpose = (board) => board[0].map((_, c) => board.map((row) => row[c]));
+const flip = (board) => board.map((row) => [...row].reverse());
 
-const moveLeft = (board: number[][]) => board.map((row) => slideRow(row));
-const moveRight = (board: number[][]) => flip(moveLeft(flip(board)));
-const moveUp = (board: number[][]) => transpose(moveLeft(transpose(board)));
-const moveDown = (board: number[][]) => transpose(moveRight(transpose(board)));
+const moveLeft = (board) => board.map((row) => slideRow(row));
+const moveRight = (board) => flip(moveLeft(flip(board)));
+const moveUp = (board) => transpose(moveLeft(transpose(board)));
+const moveDown = (board) => transpose(moveRight(transpose(board)));
 
-const boardsEqual = (a: number[][], b: number[][]) =>
+const boardsEqual = (a, b) =>
   a.every((row, r) => row.every((cell, c) => cell === b[r][c]));
 
-const hasMoves = (board: number[][]) => {
+const hasMoves = (board) => {
   for (let r = 0; r < SIZE; r += 1) {
     for (let c = 0; c < SIZE; c += 1) {
       if (board[r][c] === 0) return true;
@@ -51,14 +51,14 @@ const hasMoves = (board: number[][]) => {
   return false;
 };
 
-const checkHighest = (board: number[][]) => {
+const checkHighest = (board) => {
   let m = 0;
   board.forEach((row) => row.forEach((v) => { if (v > m) m = v; }));
   return m;
 };
 
-const addRandomTile = (b: number[][], rand: () => number) => {
-  const empty: [number, number][] = [];
+const addRandomTile = (b, rand) => {
+  const empty = [];
   b.forEach((row, r) =>
     row.forEach((cell, c) => {
       if (cell === 0) empty.push([r, c]);
@@ -69,7 +69,7 @@ const addRandomTile = (b: number[][], rand: () => number) => {
   b[r][c] = rand() < 0.9 ? 2 : 4;
 };
 
-const tileColors: Record<number, string> = {
+const tileColors = {
   2: 'bg-gray-300 text-gray-800',
   4: 'bg-gray-400 text-gray-800',
   8: 'bg-yellow-400 text-white',
@@ -86,7 +86,7 @@ const tileColors: Record<number, string> = {
 const DB_NAME = '2048';
 const STORE_NAME = 'replays';
 
-const saveReplay = (replay: any) => {
+const saveReplay = (replay) => {
   if (typeof indexedDB === 'undefined') return;
   const req = indexedDB.open(DB_NAME, 1);
   req.onupgradeneeded = () => {
@@ -105,15 +105,15 @@ const saveReplay = (replay: any) => {
 const Page2048 = () => {
   const rngRef = useRef(mulberry32(0));
   const seedRef = useRef(0);
-  const [board, setBoard] = useState<number[][]>(
+  const [board, setBoard] = useState(
     Array.from({ length: SIZE }, () => Array(SIZE).fill(0))
   );
   const [hard, setHard] = useState(false);
   const [timer, setTimer] = useState(3);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [moves, setMoves] = useState<string[]>([]);
+  const timerRef = useRef(null);
+  const [moves, setMoves] = useState([]);
   const [highest, setHighest] = useState(0);
-  const [boardType, setBoardType] = useState<'classic' | 'hex'>('classic');
+  const [boardType, setBoardType] = useState('classic');
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
 
@@ -153,9 +153,9 @@ const Page2048 = () => {
   }, [hard, moves, boardType]);
 
   const handleMove = useCallback(
-    (dir: 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown') => {
+    (dir) => {
       if (won || lost) return;
-      let moved: number[][] | undefined;
+      let moved;
       if (dir === 'ArrowLeft') moved = moveLeft(board);
       if (dir === 'ArrowRight') moved = moveRight(board);
       if (dir === 'ArrowUp') moved = moveUp(board);
@@ -177,9 +177,9 @@ const Page2048 = () => {
   );
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+    const onKey = (e) => {
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-        handleMove(e.key as any);
+        handleMove(e.key );
       }
     };
     window.addEventListener('keydown', onKey);
@@ -202,11 +202,11 @@ const Page2048 = () => {
 
   const close = () => {
     if (typeof document !== 'undefined') {
-      document.getElementById('close-2048')?.click();
+      _optionalChain([document, 'access', _2 => _2.getElementById, 'call', _3 => _3('close-2048'), 'optionalAccess', _4 => _4.click, 'call', _5 => _5()]);
     }
   };
 
-  const displayCell = (v: number) => {
+  const displayCell = (v) => {
     if (v === 0) return '';
     if (boardType === 'hex') return v.toString(16).toUpperCase();
     return v;
@@ -219,46 +219,46 @@ const Page2048 = () => {
   }, [won, lost, moves, boardType, hard]);
 
   return (
-    <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
-      <div className="flex space-x-2">
-        <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={reset}>
-          Reset
-        </button>
-        <label className="flex items-center space-x-1 px-2">
-          <input type="checkbox" checked={hard} onChange={(e) => setHard(e.target.checked)} />
-          <span>Hard</span>
-        </label>
-        <select
-          className="text-black px-1 rounded"
-          value={boardType}
-          onChange={(e) => setBoardType(e.target.value as any)}
-        >
-          <option value="classic">Classic</option>
-          <option value="hex">Hex 2048</option>
-        </select>
-        <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={close}>
-          Close
-        </button>
-        {hard && <div className="ml-2">{timer}</div>}
-      </div>
-      <div className="grid grid-cols-4 gap-2">
-        {board.map((row, rIdx) =>
+    React.createElement('div', { className: "h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4"       ,}
+      , React.createElement('div', { className: "flex space-x-2" ,}
+        , React.createElement('button', { className: "px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"    , onClick: reset,}, "Reset"
+
+        )
+        , React.createElement('label', { className: "flex items-center space-x-1 px-2"   ,}
+          , React.createElement('input', { type: "checkbox", checked: hard, onChange: (e) => setHard(e.target.checked),} )
+          , React.createElement('span', null, "Hard")
+        )
+        , React.createElement('select', {
+          className: "text-black px-1 rounded"  ,
+          value: boardType,
+          onChange: (e) => setBoardType(e.target.value ),}
+
+          , React.createElement('option', { value: "classic",}, "Classic")
+          , React.createElement('option', { value: "hex",}, "Hex 2048" )
+        )
+        , React.createElement('button', { className: "px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"    , onClick: close,}, "Close"
+
+        )
+        , hard && React.createElement('div', { className: "ml-2",}, timer)
+      )
+      , React.createElement('div', { className: "grid grid-cols-4 gap-2"  ,}
+        , board.map((row, rIdx) =>
           row.map((cell, cIdx) => (
-            <div
-              key={`${rIdx}-${cIdx}`}
-              className={`h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
+            React.createElement('div', {
+              key: `${rIdx}-${cIdx}`,
+              className: `h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
                 cell ? tileColors[cell] || 'bg-gray-700' : 'bg-gray-800'
-              }`}
-            >
-              {displayCell(cell)}
-            </div>
+              }`,}
+
+              , displayCell(cell)
+            )
           ))
-        )}
-      </div>
-      {(won || lost) && (
-        <div className="mt-4 text-xl">{won ? 'You win!' : 'Game over'}</div>
-      )}
-    </div>
+        )
+      )
+      , (won || lost) && (
+        React.createElement('div', { className: "mt-4 text-xl" ,}, won ? 'You win!' : 'Game over')
+      )
+    )
   );
 };
 

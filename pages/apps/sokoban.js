@@ -7,7 +7,7 @@ const Sokoban = dynamic(() => import('../../apps/sokoban'), {
   loading: () => <p>Loading...</p>,
 });
 
-const SokobanPage: React.FC = () => (
+const SokobanPage = () => (
   <Sokoban getDailySeed={() => getDailySeed('sokoban')} />
 );
 
