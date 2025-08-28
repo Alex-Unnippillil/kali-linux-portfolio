@@ -144,12 +144,16 @@ const VirtualizedList = ({
 
 const KismetApp = () => {
   const [networks, setNetworks] = useState([]);
-  const [packets, setPackets] = useState([]);
+  const [ads, setAds] = useState([]);
 
   useEffect(() => {
-    // In browsers we cannot access wireless cards directly. For demo purposes,
-    // populate with static data and simulate packets.
+    // Browsers cannot access wireless cards directly. Populate with
+    // static data and simulate advertisements and channel rotation.
     setNetworks(demoNetworks());
+    setAds([
+      { id: 'wifi', protocol: 'Wi-Fi', mac: randomMac(), channel: 1 },
+      { id: 'ble', protocol: 'BLE', mac: randomMac(), channel: 37 },
+    ]);
 
     const interval = setInterval(() => {
       setNetworks((prev) =>
@@ -163,10 +167,16 @@ const KismetApp = () => {
         })
       );
 
-      setPackets((prev) => [
-        ...prev,
-        { ts: Date.now(), from: randomMac(), to: randomMac() },
-      ]);
+      setAds((prev) =>
+        prev.map((ad) => {
+          if (ad.protocol === 'Wi-Fi') {
+            const next = ad.channel === 1 ? 6 : ad.channel === 6 ? 11 : 1;
+            return { ...ad, channel: next };
+          }
+          const next = ad.channel === 37 ? 38 : ad.channel === 38 ? 39 : 37;
+          return { ...ad, channel: next };
+        })
+      );
     }, 1500);
 
     return () => clearInterval(interval);
@@ -204,22 +214,40 @@ const KismetApp = () => {
           <ChannelOccupancy networks={networks} />
         </div>
         <div className="w-1/2 p-2 flex flex-col border-l border-gray-700">
-          <h2 className="text-sm font-semibold mb-2">Packet Capture</h2>
-          {packets.length ? (
-            <VirtualizedList
-              items={packets}
-              rowHeight={20}
-              keyExtractor={(pkt, idx) => `${pkt.ts}-${idx}`}
-              className="flex-grow"
-              renderRow={(pkt) => (
-                <div className="text-xs">
-                  [{new Date(pkt.ts).toLocaleTimeString()}] {pkt.from} → {pkt.to}
-                </div>
-              )}
-            />
+          <h2 className="text-sm font-semibold mb-2">Advertisement Snapshot</h2>
+          {ads.length ? (
+            <table className="text-xs" aria-live="polite">
+              <thead>
+                <tr className="text-left">
+                  <th className="pr-2">Proto</th>
+                  <th className="pr-2">MAC</th>
+                  <th className="text-right">Channel</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ads.map((ad) => (
+                  <tr key={ad.id} className="border-t border-gray-700">
+                    <td className="pr-2">{ad.protocol}</td>
+                    <td className="pr-2 truncate" title={ad.mac}>{ad.mac}</td>
+                    <td className="text-right">{ad.channel}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           ) : (
-            <p className="text-gray-400 text-sm">No packets captured.</p>
+            <p className="text-gray-400 text-sm">No advertisements.</p>
           )}
+          <p className="text-gray-400 text-xs mt-2">
+            Real capture requires hardware with monitor mode.
+            <a
+              href="https://www.kismetwireless.net/docs/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 underline ml-1"
+            >
+              Kismet documentation
+            </a>
+          </p>
         </div>
       </div>
     </div>
