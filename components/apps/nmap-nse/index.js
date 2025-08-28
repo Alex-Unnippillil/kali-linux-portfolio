@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import Toast from '../../ui/Toast';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
 const scripts = [
@@ -38,6 +39,8 @@ const NmapNSEApp = () => {
   const [target, setTarget] = useState('example.com');
   const [script, setScript] = useState(scripts[0].name);
   const [examples, setExamples] = useState({});
+  const [toast, setToast] = useState('');
+  const outputRef = useRef(null);
 
   useEffect(() => {
     fetch('/demo/nmap-nse.json')
@@ -53,9 +56,42 @@ const NmapNSEApp = () => {
     if (typeof window !== 'undefined') {
       try {
         await navigator.clipboard.writeText(command);
+        setToast('Command copied');
       } catch (e) {
         // ignore
       }
+    }
+  };
+
+  const copyOutput = async () => {
+    const text = examples[script];
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setToast('Output copied');
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const selectOutput = () => {
+    const el = outputRef.current;
+    if (!el || typeof window === 'undefined') return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    setToast('Output selected');
+  };
+
+  const handleOutputKey = (e) => {
+    if (e.ctrlKey && e.key.toLowerCase() === 'c') {
+      e.preventDefault();
+      copyOutput();
+    } else if (e.ctrlKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      selectOutput();
     }
   };
 
@@ -97,16 +133,40 @@ const NmapNSEApp = () => {
             onClick={copyCommand}
             className="ml-2 px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
           >
-            Copy
+            Copy Command
           </button>
         </div>
       </div>
       <div className="md:w-1/2 p-4 bg-black overflow-y-auto">
         <h2 className="text-lg mb-2">Example output</h2>
-        <pre className="whitespace-pre-wrap text-green-400">
+        <pre
+          ref={outputRef}
+          tabIndex={0}
+          onKeyDown={handleOutputKey}
+          className="whitespace-pre-wrap text-green-400"
+        >
           {examples[script] || 'Select a script to view sample output.'}
         </pre>
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={copyOutput}
+            className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+          >
+            Copy Output
+          </button>
+          <button
+            type="button"
+            onClick={selectOutput}
+            className="px-2 py-1 bg-ub-grey text-black rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ub-yellow"
+          >
+            Select All
+          </button>
+        </div>
       </div>
+      {toast && (
+        <Toast message={toast} onClose={() => setToast('')} />
+      )}
     </div>
   );
 };
