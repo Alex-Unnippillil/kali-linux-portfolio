@@ -49,3 +49,22 @@ body {
   border: none;
   cursor: pointer;
 }
+
+.note .title-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.note .title-wrapper input {
+  flex: 1;
+  margin: 0 4px;
+}
+
+.note .char-counter {
+  font-size: 0.8rem;
+}
+
+.note input.invalid {
+  border: 1px solid red;
+}
