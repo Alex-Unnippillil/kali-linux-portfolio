@@ -1,3 +1,5 @@
+import { evaluateExpression, parseExpression } from './parser.js';
+
 const display = document.getElementById('display');
 const buttons = document.querySelectorAll('.btn');
 const sciToggle = document.getElementById('toggle-scientific');
@@ -10,14 +12,20 @@ const baseSelect = document.getElementById('base-select');
 const historyEl = document.getElementById('history');
 const parenIndicator = document.getElementById('paren-indicator');
 const printBtn = document.getElementById('print-tape');
+const exportBtn = document.getElementById('export-tape');
+const graphToggle = document.getElementById('toggle-graph');
+const graphPanel = document.getElementById('graph-panel');
+const graphCanvas = document.getElementById('graph-canvas');
+const graphCopy = document.getElementById('graph-copy');
 
 let preciseMode = false;
 let programmerMode = false;
 let currentBase = 10;
 let lastResult = 0;
 let undoStack = [];
-let history = [];
-const HISTORY_KEY = 'calc-history';
+let tape = [];
+let editIndex = null;
+const TAPE_KEY = 'calc-tape';
 
 function setPreciseMode(on) {
   preciseMode = on;
@@ -54,10 +62,20 @@ baseSelect?.addEventListener('change', () => {
 });
 
 printBtn?.addEventListener('click', printTape);
+exportBtn?.addEventListener('click', exportTape);
+
+graphToggle?.addEventListener('click', () => {
+  const isHidden = graphPanel.classList.toggle('hidden');
+  graphToggle?.setAttribute('aria-pressed', (!isHidden).toString());
+  if (!isHidden) drawGraph();
+});
 
 display?.addEventListener('input', () => {
   updateParenBalance();
   validateBaseInput();
+  if (!graphPanel.classList.contains('hidden')) {
+    drawGraph();
+  }
 });
 
 function updateParenBalance() {
@@ -127,7 +145,7 @@ buttons.forEach((btn) => {
       const expr = display.value;
       const result = evaluate(expr);
       if (result === null) return;
-      addHistory(expr, result);
+      addTape(expr, result);
       undoStack.push(expr);
       display.value = result;
       lastResult = result;
@@ -141,6 +159,11 @@ buttons.forEach((btn) => {
 
     if (action === 'print') {
       printTape();
+      return;
+    }
+
+    if (action === 'export') {
+      exportTape();
       return;
     }
 
@@ -163,7 +186,7 @@ function formatBase(value, base = currentBase) {
   return convertBase(String(value), 10, base).toUpperCase();
 }
 
-function evaluate(expression) {
+function evaluate(expression, scope = {}) {
   try {
     if (programmerMode) {
       if (!validateBaseInput(expression)) {
@@ -173,11 +196,11 @@ function evaluate(expression) {
       const decimalExpr = expression.replace(/\b[0-9A-F]+\b/gi, (m) =>
         parseInt(m, currentBase)
       );
-      const result = math.evaluate(decimalExpr, { Ans: lastResult });
+      const result = evaluateExpression(decimalExpr, { Ans: lastResult });
       lastResult = result;
       return formatBase(result);
     }
-    const result = math.evaluate(expression, { Ans: lastResult });
+    const result = evaluateExpression(expression, { Ans: lastResult, ...scope });
     lastResult = result;
     return result.toString();
   } catch (e) {
@@ -185,21 +208,40 @@ function evaluate(expression) {
   }
 }
 
-function renderHistory() {
+function renderTape() {
   if (!historyEl) return;
   historyEl.innerHTML = '';
-  history.forEach(({ expr, result }) => {
+  tape.forEach(({ expr, result }, i) => {
     const entry = document.createElement('div');
     entry.className = 'history-entry';
-    entry.addEventListener('click', () => {
+    const text = document.createElement('span');
+    text.textContent = `${expr} = ${result}`;
+    entry.appendChild(text);
+
+    const editBtn = document.createElement('button');
+    editBtn.textContent = 'Edit';
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       display.value = expr;
+      editIndex = i;
       updateParenBalance();
       validateBaseInput();
       display.focus();
     });
-    const text = document.createElement('span');
-    text.textContent = `${expr} = ${result}`;
-    entry.appendChild(text);
+    entry.appendChild(editBtn);
+
+    const replayBtn = document.createElement('button');
+    replayBtn.textContent = 'Replay';
+    replayBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const res = evaluate(expr);
+      if (res !== null) {
+        addTape(expr, res);
+        display.value = res;
+      }
+    });
+    entry.appendChild(replayBtn);
+
     const copyBtn = document.createElement('button');
     copyBtn.textContent = 'Copy';
     copyBtn.addEventListener('click', (e) => {
@@ -207,34 +249,128 @@ function renderHistory() {
       navigator.clipboard?.writeText(`${expr} = ${result}`);
     });
     entry.appendChild(copyBtn);
+
     historyEl.appendChild(entry);
   });
 }
 
-function saveHistory() {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+function saveTape() {
+  localStorage.setItem(TAPE_KEY, JSON.stringify(tape));
 }
 
-function addHistory(expr, result) {
-  history.unshift({ expr, result });
-  history = history.slice(0, 10);
-  saveHistory();
-  renderHistory();
+function addTape(expr, result) {
+  if (editIndex !== null) {
+    tape[editIndex] = { expr, result };
+    editIndex = null;
+  } else {
+    tape.unshift({ expr, result });
+  }
+  tape = tape.slice(0, 20);
+  saveTape();
+  renderTape();
 }
 
-function loadHistory() {
+function loadTape() {
   if (!historyEl) return;
-  history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-  history = history.slice(0, 10);
-  renderHistory();
+  tape = JSON.parse(localStorage.getItem(TAPE_KEY) || '[]');
+  tape = tape.slice(0, 20);
+  renderTape();
 }
 
 function printTape() {
-  const text = history.map((h) => `${h.expr} = ${h.result}`).join('\n');
+  const text = tape.map((h) => `${h.expr} = ${h.result}`).join('\n');
   const win = window.open('', '', 'width=400,height=600');
   win.document.write(`<pre>${text}</pre>`);
   win.print();
 }
+
+function exportTape() {
+  const text = JSON.stringify(tape, null, 2);
+  navigator.clipboard?.writeText(text);
+}
+
+let graphRange = { xmin: -10, xmax: 10, ymin: -10, ymax: 10 };
+
+function drawGraph() {
+  if (!graphCanvas) return;
+  const ctx = graphCanvas.getContext('2d');
+  const width = graphCanvas.width;
+  const height = graphCanvas.height;
+  ctx.clearRect(0, 0, width, height);
+  const expr = display.value;
+  let evalFn;
+  try {
+    evalFn = parseExpression(expr);
+  } catch {
+    return;
+  }
+  const scope = { Ans: lastResult };
+
+  // axes
+  ctx.strokeStyle = '#ccc';
+  ctx.lineWidth = 1;
+  const x0 = ((0 - graphRange.xmin) / (graphRange.xmax - graphRange.xmin)) * width;
+  const y0 = height - ((0 - graphRange.ymin) / (graphRange.ymax - graphRange.ymin)) * height;
+  ctx.beginPath();
+  ctx.moveTo(0, y0);
+  ctx.lineTo(width, y0);
+  ctx.moveTo(x0, 0);
+  ctx.lineTo(x0, height);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#0074d9';
+  ctx.beginPath();
+  let first = true;
+  const step = (graphRange.xmax - graphRange.xmin) / width;
+  for (let x = graphRange.xmin; x <= graphRange.xmax; x += step) {
+    scope.x = x;
+    let y;
+    try {
+      y = evalFn(scope);
+    } catch {
+      y = NaN;
+    }
+    if (typeof y !== 'number' || !isFinite(y)) {
+      first = true;
+      continue;
+    }
+    const cx = ((x - graphRange.xmin) / (graphRange.xmax - graphRange.xmin)) * width;
+    const cy = height - ((y - graphRange.ymin) / (graphRange.ymax - graphRange.ymin)) * height;
+    if (first) {
+      ctx.moveTo(cx, cy);
+      first = false;
+    } else {
+      ctx.lineTo(cx, cy);
+    }
+  }
+  ctx.stroke();
+}
+
+function onGraphZoom(e) {
+  e.preventDefault();
+  const factor = e.deltaY > 0 ? 1.2 : 0.8;
+  const cx = (graphRange.xmin + graphRange.xmax) / 2;
+  const cy = (graphRange.ymin + graphRange.ymax) / 2;
+  const xRange = ((graphRange.xmax - graphRange.xmin) * factor) / 2;
+  const yRange = ((graphRange.ymax - graphRange.ymin) * factor) / 2;
+  graphRange.xmin = cx - xRange;
+  graphRange.xmax = cx + xRange;
+  graphRange.ymin = cy - yRange;
+  graphRange.ymax = cy + yRange;
+  drawGraph();
+}
+
+function copyGraph() {
+  if (!graphCanvas) return;
+  graphCanvas.toBlob((blob) => {
+    if (!blob) return;
+    const item = new ClipboardItem({ 'image/png': blob });
+    navigator.clipboard?.write([item]);
+  });
+}
+
+graphCanvas?.addEventListener('wheel', onGraphZoom);
+graphCopy?.addEventListener('click', copyGraph);
 
 function undo() {
   if (undoStack.length) {
@@ -292,17 +428,18 @@ document.addEventListener('keydown', (e) => {
 });
 
 display?.focus();
-loadHistory();
+loadTape();
 
 if (typeof module !== 'undefined') {
   module.exports = {
     evaluate,
-    addHistory,
-    loadHistory,
-    HISTORY_KEY,
+    addTape,
+    loadTape,
+    TAPE_KEY,
     setPreciseMode,
     setProgrammerMode,
     convertBase,
+    parseExpression,
   };
 }
 

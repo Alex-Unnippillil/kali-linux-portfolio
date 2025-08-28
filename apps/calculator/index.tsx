@@ -25,6 +25,7 @@ export default function Calculator() {
       <button id="toggle-scientific" className="toggle" aria-pressed="false">Scientific</button>
       <button id="toggle-programmer" className="toggle" aria-pressed="false">Programmer</button>
       <button id="toggle-history" className="toggle" aria-pressed="false">History</button>
+      <button id="toggle-graph" className="toggle" aria-pressed="false">Graph</button>
       <div className="button-grid">
         <button className="btn" data-value="7">7</button>
         <button className="btn" data-value="8">8</button>
@@ -68,9 +69,14 @@ export default function Calculator() {
         <button className="btn" data-value=">>">&gt;&gt;</button>
         <button className="btn" data-action="ans">Ans</button>
         <button id="print-tape" className="btn" data-action="print">Print</button>
+        <button id="export-tape" className="btn" data-action="export">Export</button>
         <div id="paren-indicator" />
       </div>
       <div id="history" className="history hidden" aria-live="polite" />
+      <div id="graph-panel" className="graph hidden">
+        <canvas id="graph-canvas" width="300" height="200" />
+        <button id="graph-copy" className="toggle">Copy PNG</button>
+      </div>
     </div>
   );
 }
