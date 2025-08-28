@@ -25,7 +25,7 @@ export default function Calculator() {
       <button id="toggle-scientific" className="toggle" aria-pressed="false">Scientific</button>
       <button id="toggle-programmer" className="toggle" aria-pressed="false">Programmer</button>
       <button id="toggle-history" className="toggle" aria-pressed="false">History</button>
-      <div className="buttons">
+      <div className="button-grid">
         <button className="btn" data-value="7">7</button>
         <button className="btn" data-value="8">8</button>
         <button className="btn" data-value="9">9</button>
@@ -44,7 +44,7 @@ export default function Calculator() {
         <button className="btn" data-value="+">+</button>
         <button className="btn span-two" data-action="clear">C</button>
       </div>
-      <div id="scientific" className="scientific hidden">
+      <div id="scientific" className="scientific hidden button-grid">
         <button className="btn" data-value="sin(">sin</button>
         <button className="btn" data-value="cos(">cos</button>
         <button className="btn" data-value="tan(">tan</button>

@@ -13,7 +13,8 @@ body {
   padding: 1rem;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  width: 240px;
+  width: 100%;
+  max-width: 240px;
 }
 
 .display {
@@ -25,6 +26,8 @@ body {
   font-size: 1.2rem;
   border-radius: 4px;
   overflow-x: auto;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .toggle {
@@ -37,11 +40,16 @@ body {
   cursor: pointer;
 }
 
-.buttons,
-.scientific {
+.button-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
+}
+
+@media (max-width: 480px) {
+  .button-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .btn {
