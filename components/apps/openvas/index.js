@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import chartData from './chart-data.json';
+import TaskOverview from './task-overview';
 
 // Simple helper for notifications that falls back to alert()
 const notify = (title, body) => {
@@ -78,6 +79,7 @@ const OpenVASApp = () => {
   const [filter, setFilter] = useState(null);
   const [severity, setSeverity] = useState('All');
   const [announce, setAnnounce] = useState('');
+  const [progress, setProgress] = useState(0);
   const workerRef = useRef(null);
   const reduceMotion = useRef(false);
 
@@ -88,7 +90,9 @@ const OpenVASApp = () => {
       if (typeof window.Worker === 'function') {
         workerRef.current = new Worker(new URL('./openvas.worker.js', import.meta.url));
         workerRef.current.onmessage = (e) => {
-          setFindings(e.data);
+          const { type, data } = e.data || {};
+          if (type === 'progress') setProgress(data);
+          if (type === 'result') setFindings(data);
         };
       }
     }
@@ -104,6 +108,7 @@ const OpenVASApp = () => {
   const runScan = async () => {
     if (!target) return;
     setLoading(true);
+    setProgress(0);
     setOutput('');
     setSummaryUrl(null);
     try {
@@ -113,7 +118,7 @@ const OpenVASApp = () => {
       if (!res.ok) throw new Error(`Request failed with ${res.status}`);
       const data = await res.text();
       setOutput(data);
-      workerRef.current?.postMessage(data);
+      workerRef.current?.postMessage({ text: data });
       generateSummary(data);
       notify('OpenVAS Scan Complete', `Target ${target} finished`);
     } catch (e) {
@@ -179,6 +184,7 @@ const OpenVASApp = () => {
 
   return (
     <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
+      <TaskOverview />
       <h2 className="text-lg mb-2">OpenVAS Scanner</h2>
       <div className="flex mb-4 space-x-2">
         <input
@@ -202,6 +208,14 @@ const OpenVASApp = () => {
           {loading ? 'Scanning...' : 'Scan'}
         </button>
       </div>
+      {loading && (
+        <div className="w-full bg-gray-700 h-2 mb-4">
+          <div
+            style={{ width: `${progress}%` }}
+            className="h-2 bg-green-500 transition-all"
+          />
+        </div>
+      )}
       <SeverityChart data={chartData} />
       {findings.length > 0 && (
         <div className="mb-4">
@@ -320,7 +334,7 @@ const OpenVASApp = () => {
           Official OpenVAS documentation
         </a>
         . Use responsibly and only on systems you own or have permission to
-        test.
+        test. All data shown here is canned for demonstration.
       </footer>
     </div>
   );

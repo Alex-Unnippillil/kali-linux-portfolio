@@ -1,12 +1,12 @@
 self.onmessage = (e) => {
-  const text = e.data || '';
+  const text = e.data?.text || '';
   const lines = text.split('\n');
   const findings = [];
-  const severities = ['low', 'medium', 'high', 'critical'];
   const sevReg = /Severity:\s*(Low|Medium|High|Critical)/i;
   const impactReg = /Impact:\s*(Low|Medium|High|Critical)/i;
   const likelihoodReg = /Likelihood:\s*(Low|Medium|High|Critical)/i;
-  lines.forEach((line) => {
+  const total = lines.length;
+  lines.forEach((line, idx) => {
     const severityMatch = line.match(sevReg);
     const impactMatch = line.match(impactReg);
     const likelihoodMatch = line.match(likelihoodReg);
@@ -19,6 +19,13 @@ self.onmessage = (e) => {
         description: line.trim(),
       });
     }
+    if (idx % 50 === 0) {
+      self.postMessage({
+        type: 'progress',
+        data: Math.round((idx / total) * 100),
+      });
+    }
   });
-  self.postMessage(findings);
+  self.postMessage({ type: 'progress', data: 100 });
+  self.postMessage({ type: 'result', data: findings });
 };
