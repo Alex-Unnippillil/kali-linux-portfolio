@@ -113,19 +113,26 @@ const JohnApp = () => {
         for (const h of hs) {
           if (signal.aborted) throw new Error('cancelled');
           incrementProgress('wordlist');
-          const res = await fetch('/api/john', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hash: h, rules }),
-            signal,
-          });
-          const data = await res.json();
-          incrementProgress('rules');
-          results.push(
-            `${endpoint} (${identifyHashType(h)}): ${
-              data.output || data.error || 'No output'
-            }`
-          );
+          if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+            const res = await fetch('/api/john', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ hash: h, rules }),
+              signal,
+            });
+            const data = await res.json();
+            incrementProgress('rules');
+            results.push(
+              `${endpoint} (${identifyHashType(h)}): ${
+                data.output || data.error || 'No output'
+              }`
+            );
+          } else {
+            incrementProgress('rules');
+            results.push(
+              `${endpoint} (${identifyHashType(h)}): demo result`
+            );
+          }
         }
       }
       setOutput(results.join('\n'));

@@ -38,7 +38,7 @@ const MetasploitApp = ({
 
   // Refresh modules list in the background on mount
   useEffect(() => {
-    if (!demoMode) {
+    if (!demoMode && process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
       fetch('/api/metasploit').catch(() => {});
     }
   }, [demoMode]);
@@ -92,7 +92,7 @@ const MetasploitApp = ({
     if (!cmd) return;
     setLoading(true);
     try {
-      if (demoMode) {
+      if (demoMode || process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
         setOutput(
           (prev) => `${prev}\nmsf6 > ${cmd}\n[demo mode] command disabled`
         );

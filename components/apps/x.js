@@ -117,16 +117,20 @@ export default function XApp() {
     if (!text.trim()) return;
     setSubmitting(true);
     try {
-      const res = await fetch('/api/x', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim() }),
-      });
-      if (res.ok) {
-        setText('');
-        setMedia([]);
-        setTimelineKey((k) => k + 1);
-        setStatus('Post submitted');
+      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+        const res = await fetch('/api/x', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text.trim() }),
+        });
+        if (res.ok) {
+          setText('');
+          setMedia([]);
+          setTimelineKey((k) => k + 1);
+          setStatus('Post submitted');
+        }
+      } else {
+        setStatus('Post disabled in static export');
       }
     } catch (err) {
       setStatus('Post failed');

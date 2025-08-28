@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build && yarn build:sw",
     "start": "next start",
-    "export": "next export",
+    "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build && yarn build:sw",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint --max-warnings=0 .",

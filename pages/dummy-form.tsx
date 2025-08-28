@@ -66,13 +66,15 @@ const DummyForm: React.FC = () => {
     }
     setError('');
     setSuccess(false);
-    await fetch('/api/dummy', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name, email, message }),
-    });
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      await fetch('/api/dummy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, message }),
+      });
+    }
     setSuccess(true);
     window.localStorage.removeItem(STORAGE_KEY);
     setName('');
