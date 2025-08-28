@@ -9,6 +9,7 @@ import ShortcutSelector from '../screen/shortcut-selector'
 import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
+import CommandPalette from '../CommandPalette';
 import ReactGA from 'react-ga4';
 
 export class Desktop extends Component {
@@ -641,6 +642,9 @@ export class Desktop extends Component {
                         games={games}
                         onSelect={this.addShortcutToDesktop}
                         onClose={() => this.setState({ showShortcutSelector: false })} /> : null}
+
+                {/* Global Search / Command Palette */}
+                <CommandPalette openApp={this.openApp} apps={apps} />
 
             </div>
         )
