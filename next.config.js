@@ -17,12 +17,12 @@ const ContentSecurityPolicy = [
   "style-src-elem 'self' https://fonts.googleapis.com",
   // Allow loading fonts from Google
   "font-src 'self' https://fonts.gstatic.com",
-  // External scripts required for embedded timelines
-  "script-src 'self' 'unsafe-inline' https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com",
-  // Allow outbound connections for embeds and the in-browser Chrome app
-  "connect-src 'self' https://* http://* ws://* wss://* https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
-  // Allow iframes from any website and specific providers so the Chrome and StackBlitz apps can load arbitrary content
-  "frame-src 'self' https://* http://* https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com",
+  // External scripts required for embedded timelines and Google APIs
+  "script-src 'self' 'nonce-__CSP_NONCE__' https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.google.com https://www.gstatic.com https://www.googletagmanager.com https://www.google-analytics.com",
+  // Allow outbound connections for embeds and APIs
+  "connect-src 'self' https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.google.com https://www.gstatic.com https://www.googleapis.com https://www.googletagmanager.com https://www.google-analytics.com https://stackblitz.com",
+  // Restrict iframes to trusted providers
+  "frame-src 'self' https://stackblitz.com https://www.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com",
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
   // Enforce HTTPS for all requests
