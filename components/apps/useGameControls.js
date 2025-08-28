@@ -42,6 +42,7 @@ const useGameControls = (arg, gameId = 'default') => {
     };
     let timeout;
     const debounced = (e) => {
+      if (e.repeat) return;
       if (timeout) return;
       timeout = setTimeout(() => {
         timeout = null;
