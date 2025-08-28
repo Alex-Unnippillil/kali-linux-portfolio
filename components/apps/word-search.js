@@ -189,6 +189,7 @@ const WordSearch = () => {
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
+      gain.gain.value = 0.5;
       osc.frequency.value = 600;
       osc.start();
       setTimeout(() => {

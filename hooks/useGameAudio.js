@@ -23,7 +23,7 @@ export default function useGameAudio() {
   // Global mute is persisted across the portfolio, but per‑game volume lives
   // only for the lifetime of the hook instance.
   const [muted, setMuted] = usePersistedState('settings:audioMuted', false);
-  const [gameVolume, setGameVolume] = useState(1);
+  const [gameVolume, setGameVolume] = useState(0.5);
   const [ready, setReady] = useState(false);
 
   // Create the audio graph after the first user interaction to comply with

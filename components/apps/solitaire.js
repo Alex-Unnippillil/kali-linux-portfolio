@@ -63,7 +63,10 @@ const Solitaire = () => {
     if (!sound) return;
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
-    osc.connect(ctx.destination);
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    gain.gain.value = 0.5;
     osc.start();
     osc.stop(ctx.currentTime + 0.05);
   };

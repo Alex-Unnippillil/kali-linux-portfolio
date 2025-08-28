@@ -144,6 +144,7 @@ const BreakoutGame = ({ levels }) => {
       osc.frequency.value = freq;
       osc.connect(gain);
       gain.connect(audioCtx.destination);
+      gain.gain.value = 0.5;
       osc.start();
       osc.stop(audioCtx.currentTime + 0.1);
     };

@@ -98,7 +98,7 @@ const Blackjack = () => {
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.frequency.value = 440;
-    gain.gain.value = 0.1;
+    gain.gain.value = 0.05;
     osc.start();
     osc.stop(ctx.currentTime + 0.1);
   };
@@ -111,7 +111,7 @@ const Blackjack = () => {
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.frequency.value = 600 + Math.random() * 400; // pitch jitter
-    gain.gain.value = 0.15;
+    gain.gain.value = 0.075;
     osc.start();
     osc.stop(ctx.currentTime + 0.05);
   };

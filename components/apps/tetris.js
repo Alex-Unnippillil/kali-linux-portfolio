@@ -147,9 +147,12 @@ const Tetris = () => {
           new (window.AudioContext || window.webkitAudioContext)();
         audioCtxRef.current = ctx;
         const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         osc.type = 'square';
         osc.frequency.value = freq;
-        osc.connect(ctx.destination);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.value = 0.5;
         osc.start();
         osc.stop(ctx.currentTime + duration);
       } catch {

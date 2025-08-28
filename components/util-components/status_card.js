@@ -26,7 +26,7 @@ export class StatusCard extends Component {
                 super();
                 this.wrapperRef = React.createRef();
                 this.state = {
-                        sound_level: 75, // better of setting default values from localStorage
+                        sound_level: 37, // better of setting default values from localStorage
                         brightness_level: 100 // setting default value to 100 so that by default its always full.
                 };
         }
@@ -35,7 +35,7 @@ export class StatusCard extends Component {
         };
         componentDidMount() {
                 this.setState({
-                        sound_level: localStorage.getItem('sound-level') || 75,
+                        sound_level: localStorage.getItem('sound-level') || 37,
                         brightness_level: localStorage.getItem('brightness-level') || 100
                 }, () => {
                         document.getElementById('monitor-screen').style.filter = `brightness(${3 / 400 * this.state.brightness_level +

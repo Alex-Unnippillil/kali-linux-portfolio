@@ -13,7 +13,7 @@ function ping(freq = 880) {
     osc.frequency.value = freq;
     osc.connect(gain);
     gain.connect(audioCtx.destination);
-    gain.gain.value = 0.1;
+    gain.gain.value = 0.05;
     osc.start();
     osc.stop(audioCtx.currentTime + 0.1);
   } catch {}

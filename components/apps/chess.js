@@ -269,8 +269,11 @@ const getBestMove = (board, side, depth) => {
 const playBeep = () => {
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
   osc.frequency.value = 400;
-  osc.connect(ctx.destination);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  gain.gain.value = 0.5;
   osc.start();
   osc.stop(ctx.currentTime + 0.1);
 };

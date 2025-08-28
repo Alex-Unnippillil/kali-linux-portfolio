@@ -120,9 +120,12 @@ const TicTacToe = () => {
     if (sound) {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.value = 440;
-      osc.connect(ctx.destination);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      gain.gain.value = 0.5;
       osc.start();
       osc.stop(ctx.currentTime + 0.1);
     }
@@ -200,9 +203,12 @@ const TicTacToe = () => {
           if (sound) {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
             const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
             osc.type = 'sine';
             osc.frequency.value = 660;
-            osc.connect(ctx.destination);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            gain.gain.value = 0.5;
             osc.start();
             osc.stop(ctx.currentTime + 0.1);
           }

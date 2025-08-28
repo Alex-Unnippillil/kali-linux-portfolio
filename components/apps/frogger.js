@@ -194,7 +194,7 @@ const Frogger = () => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.setValueAtTime(0.05, ctx.currentTime);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();

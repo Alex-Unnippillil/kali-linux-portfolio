@@ -76,7 +76,7 @@ const Snake = () => {
         osc.frequency.value = freq;
         osc.connect(gain);
         gain.connect(ctx.destination);
-        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(
           0.001,
           ctx.currentTime + 0.15,

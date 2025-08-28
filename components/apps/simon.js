@@ -137,7 +137,7 @@ const Simon = () => {
     oscillator.connect(gain);
     gain.connect(ctx.destination);
     gain.gain.setValueAtTime(0.0001, startTime);
-    gain.gain.exponentialRampToValueAtTime(0.5, startTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.25, startTime + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
     oscillator.start(startTime);
     oscillator.stop(startTime + duration + 0.05);
