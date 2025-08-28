@@ -35,8 +35,8 @@ const ENEMY_BAR_HEIGHT = 3;
 const ENEMY_BAR_OFFSET_X = 10;
 const ENEMY_BAR_OFFSET_Y = 14;
 
-// Simple fixed path
-const PATH = [
+// Default enemy path
+const DEFAULT_PATH = [
   { x: 20, y: 20 },
   { x: 380, y: 20 },
   { x: 380, y: 200 },
@@ -46,25 +46,23 @@ const PATH = [
 
 const TARGET_MODES = ['first', 'last', 'strongest', 'closest'];
 
-// Precompute path segments and length
-const pathSegments = [];
-let totalLength = 0;
-for (let i = 0; i < PATH.length - 1; i += 1) {
-  const a = PATH[i];
-  const b = PATH[i + 1];
-  const len = Math.hypot(b.x - a.x, b.y - a.y);
-  pathSegments.push({ a, b, len });
-  totalLength += len;
-}
+// Helpers for dynamic path handling
+const computeSegments = (path) => {
+  const segs = [];
+  let len = 0;
+  for (let i = 0; i < path.length - 1; i += 1) {
+    const a = path[i];
+    const b = path[i + 1];
+    const l = Math.hypot(b.x - a.x, b.y - a.y);
+    segs.push({ a, b, len: l });
+    len += l;
+  }
+  return { segs, len };
+};
 
-/**
- * Returns the coordinates at a distance `d` along the path.
- * @param {number} d distance along the path
- * @returns {{x:number,y:number}}
- */
-const getPointAt = (d) => {
+const getPointAt = (segments, d) => {
   let dist = d;
-  for (const seg of pathSegments) {
+  for (const seg of segments) {
     if (dist <= seg.len) {
       const t = dist / seg.len;
       return {
@@ -74,19 +72,13 @@ const getPointAt = (d) => {
     }
     dist -= seg.len;
   }
-  const last = pathSegments[pathSegments.length - 1];
+  const last = segments[segments.length - 1];
   return { x: last.b.x, y: last.b.y };
 };
 
-/**
- * Checks whether the supplied point lies on or near the path.
- * @param {number} px
- * @param {number} py
- * @returns {boolean}
- */
-const pointOnPath = (px, py) => {
+const pointOnPath = (segments, px, py) => {
   const threshold = 15;
-  for (const seg of pathSegments) {
+  for (const seg of segments) {
     const { a, b } = seg;
     const dx = b.x - a.x;
     const dy = b.y - a.y;
@@ -97,8 +89,7 @@ const pointOnPath = (px, py) => {
     );
     const projX = a.x + t * dx;
     const projY = a.y + t * dy;
-    const dist = Math.hypot(px - projX, py - projY);
-    if (dist < threshold) return true;
+    if (Math.hypot(px - projX, py - projY) < threshold) return true;
   }
   return false;
 };
@@ -130,6 +121,30 @@ function TowerDefense() {
   const speedRef = useRef(1);
   const audioCtxRef = useRef(null);
   const prefersReducedMotion = useRef(false);
+
+  const [path, setPath] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = JSON.parse(localStorage.getItem('td-path') || 'null');
+        if (saved && Array.isArray(saved) && saved.length) return saved;
+      } catch (e) {
+        /* ignore */
+      }
+    }
+    return DEFAULT_PATH;
+  });
+  const pathRef = useRef(path);
+  useEffect(() => { pathRef.current = path; }, [path]);
+  const pathSegRef = useRef([]);
+  const totalLengthRef = useRef(0);
+  useEffect(() => {
+    const { segs, len } = computeSegments(pathRef.current);
+    pathSegRef.current = segs;
+    totalLengthRef.current = len;
+  }, [path]);
+
+  const [editing, setEditing] = useState(false);
+  const [selectedTower, setSelectedTower] = useState(null);
 
   useEffect(() => { waveRef.current = wave; }, [wave]);
   useEffect(() => { runningRef.current = running; }, [running]);
@@ -209,36 +224,69 @@ function TowerDefense() {
     startWave(1);
   }, [startWave]);
 
-  const handleClick = useCallback((e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const existing = towersRef.current.find(
-      (t) => Math.hypot(t.x - x, t.y - y) < TOWER_PLACEMENT_RADIUS
-    );
-    if (existing) {
-      if (e.shiftKey) {
-        const idx = TARGET_MODES.indexOf(existing.mode || 'first');
-        existing.mode = TARGET_MODES[(idx + 1) % TARGET_MODES.length];
-      } else if (existing.level < TOWER_MAX_LEVEL) existing.level += 1;
-      return;
+  const handleClick = useCallback(
+    (e) => {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (editing) {
+        if (e.shiftKey) setPath((p) => p.slice(0, -1));
+        else setPath((p) => [...p, { x, y }]);
+        return;
+      }
+
+      const existing = towersRef.current.find(
+        (t) => Math.hypot(t.x - x, t.y - y) < TOWER_PLACEMENT_RADIUS
+      );
+      if (existing) {
+        if (e.shiftKey) {
+          const idx = TARGET_MODES.indexOf(existing.mode || 'first');
+          existing.mode = TARGET_MODES[(idx + 1) % TARGET_MODES.length];
+        } else if (!e.altKey && existing.level < TOWER_MAX_LEVEL) existing.level += 1;
+        setSelectedTower(existing);
+        return;
+      }
+      if (pointOnPath(pathSegRef.current, x, y)) return;
+      const tower = { x, y, level: 1, cooldown: 0, mode: 'first' };
+      towersRef.current.push(tower);
+      setSelectedTower(tower);
+    },
+    [editing]
+  );
+
+  const saveMap = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('td-path', JSON.stringify(pathRef.current));
     }
-    if (pointOnPath(x, y)) return;
-    towersRef.current.push({ x, y, level: 1, cooldown: 0, mode: 'first' });
   }, []);
+
+  const loadMap = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = JSON.parse(localStorage.getItem('td-path') || 'null');
+        if (saved && Array.isArray(saved) && saved.length) setPath(saved);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  }, []);
+
+  const resetMap = useCallback(() => setPath(DEFAULT_PATH), []);
 
   const spawnEnemies = (dt) => {
     const spawn = spawnRef.current;
     spawn.timer += dt;
     if (spawn.spawned < spawn.count && spawn.timer >= SPAWN_INTERVAL) {
       const hp = BASE_ENEMY_HP + waveRef.current * ENEMY_HP_PER_WAVE;
+      const start = pathRef.current[0];
       enemiesRef.current.push({
         dist: 0,
         speed: BASE_ENEMY_SPEED + waveRef.current * ENEMY_SPEED_PER_WAVE,
         hp,
         maxHp: hp,
-        x: PATH[0].x,
-        y: PATH[0].y,
+        x: start.x,
+        y: start.y,
       });
       spawn.spawned += 1;
       spawn.timer = 0;
@@ -248,7 +296,7 @@ function TowerDefense() {
   const moveEnemies = (dt) => {
     enemiesRef.current.forEach((e) => {
       e.dist += e.speed * dt;
-      const pos = getPointAt(e.dist);
+      const pos = getPointAt(pathSegRef.current, e.dist);
       e.x = pos.x;
       e.y = pos.y;
     });
@@ -385,7 +433,7 @@ function TowerDefense() {
         playSound();
         return false;
       }
-      if (e.dist >= totalLength) {
+      if (e.dist >= totalLengthRef.current) {
         setLives((l) => l - 1);
         return false;
       }
@@ -428,9 +476,20 @@ function TowerDefense() {
     ctx.lineWidth = 20;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(PATH[0].x, PATH[0].y);
-    for (let i = 1; i < PATH.length; i += 1) ctx.lineTo(PATH[i].x, PATH[i].y);
+    const p = pathRef.current;
+    if (p.length) {
+      ctx.moveTo(p[0].x, p[0].y);
+      for (let i = 1; i < p.length; i += 1) ctx.lineTo(p[i].x, p[i].y);
+    }
     ctx.stroke();
+    if (editing) {
+      ctx.fillStyle = '#0f0';
+      p.forEach((pt) => {
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
 
     decalsRef.current.forEach((d) => {
       const alpha = prefersReducedMotion.current ? 1 : d.ttl / DECAL_TTL;
@@ -534,6 +593,13 @@ function TowerDefense() {
     if (lives <= 0) setRunning(false);
   }, [lives]);
 
+  const nextWave = wave + 1;
+  const upcoming = {
+    count: BASE_SPAWN_COUNT + nextWave * ENEMIES_PER_WAVE,
+    hp: BASE_ENEMY_HP + nextWave * ENEMY_HP_PER_WAVE,
+    speed: BASE_ENEMY_SPEED + nextWave * ENEMY_SPEED_PER_WAVE,
+  };
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-2">
       <div className="mb-2" aria-live="polite" role="status">
@@ -542,6 +608,29 @@ function TowerDefense() {
         <span className="mr-4">Score: {score}</span>
         <span>Highscore: {highScore}</span>
       </div>
+      <div className="mb-2 text-sm">{`Next Wave: ${upcoming.count} enemies, HP ${upcoming.hp}, Speed ${upcoming.speed}`}</div>
+      {selectedTower && (
+        <div className="mb-2 text-sm">
+          <div>
+            {`Tower Lv ${selectedTower.level} (${selectedTower.mode})`}
+          </div>
+          <div>
+            {`Damage: ${PROJECTILE_DAMAGE * selectedTower.level}, Range: ${
+              TOWER_BASE_RANGE + selectedTower.level * TOWER_RANGE_PER_LEVEL
+            }`}
+          </div>
+          {selectedTower.level < TOWER_MAX_LEVEL && (
+            <div>
+              {`Next Lv Damage: ${
+                PROJECTILE_DAMAGE * (selectedTower.level + 1)
+              }, Range: ${
+                TOWER_BASE_RANGE +
+                (selectedTower.level + 1) * TOWER_RANGE_PER_LEVEL
+              }`}
+            </div>
+          )}
+        </div>
+      )}
       <div className="mb-2 flex space-x-2">
         <button
           type="button"
@@ -567,6 +656,31 @@ function TowerDefense() {
         >
           {sound ? 'Sound: On' : 'Sound: Off'}
         </button>
+      </div>
+      <div className="mb-2 flex space-x-2">
+        <button
+          type="button"
+          className="px-2 bg-gray-700"
+          onClick={() => {
+            setEditing((e) => !e);
+            if (!editing) setRunning(false);
+          }}
+        >
+          {editing ? 'Done' : 'Edit Map'}
+        </button>
+        {editing && (
+          <>
+            <button type="button" className="px-2 bg-gray-700" onClick={saveMap}>
+              Save
+            </button>
+            <button type="button" className="px-2 bg-gray-700" onClick={loadMap}>
+              Load
+            </button>
+            <button type="button" className="px-2 bg-gray-700" onClick={resetMap}>
+              Reset
+            </button>
+          </>
+        )}
       </div>
       <canvas
         ref={canvasRef}
