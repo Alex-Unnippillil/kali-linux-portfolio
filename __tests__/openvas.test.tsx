@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act } from 'react';
 import OpenVASApp from '../components/apps/openvas';
 
 describe('OpenVASApp', () => {
@@ -70,5 +71,39 @@ describe('OpenVASApp', () => {
         body: 'fail',
       })
     );
+  });
+
+  it('sanitizes finding descriptions', async () => {
+    const workerInstances: any[] = [];
+    class WorkerMock {
+      onmessage: any = null;
+      postMessage() {}
+      terminate() {}
+      constructor() {
+        workerInstances.push(this);
+      }
+    }
+    (global as any).Worker = WorkerMock as any;
+    const { container } = render(<OpenVASApp />);
+    const malicious = '<img src=x onerror="alert(1)">';
+    await act(async () => {
+      workerInstances[0].onmessage({
+        data: [
+          {
+            description: malicious,
+            severity: 'low',
+            likelihood: 'low',
+            impact: 'low',
+          },
+        ],
+      });
+    });
+    const alertItem = await screen.findByRole('alert');
+    expect(alertItem.querySelector('span')?.innerHTML).toBe(
+      '&lt;img src=x onerror="alert(1)"&gt;'
+    );
+    // Cleanup
+    // @ts-ignore
+    delete global.Worker;
   });
 });

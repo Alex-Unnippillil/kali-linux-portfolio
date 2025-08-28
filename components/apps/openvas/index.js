@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import chartData from './chart-data.json';
+import DOMPurify from 'dompurify';
 
 // Simple helper for notifications that falls back to alert()
 const notify = (title, body) => {
@@ -287,7 +288,9 @@ const OpenVASApp = () => {
               className={`p-2 rounded ${severityColors[f.severity]} text-white`}
             >
               <span
-                dangerouslySetInnerHTML={{ __html: escapeHtml(f.description) }}
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(escapeHtml(f.description)),
+                }}
               />
             </li>
           ))}

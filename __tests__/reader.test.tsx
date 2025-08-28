@@ -36,4 +36,15 @@ describe('Reader', () => {
     await user.click(screen.getByText('Copy as Markdown'));
     expect(writeTextMock).toHaveBeenCalled();
   });
+
+  it('sanitizes HTML content', async () => {
+    const maliciousHtml =
+      '<!DOCTYPE html><html><head><title>t</title></head><body><article><h1>Sample</h1><img src=x onerror="alert(1)" /></article></body></html>';
+    (global as any).fetch = jest.fn(async () => ({ text: async () => maliciousHtml }));
+    const { container } = render(<Reader url="/test" />);
+    await screen.findByText('Sample');
+    const img = container.querySelector('img');
+    expect(img).toBeInTheDocument();
+    expect(img).not.toHaveAttribute('onerror');
+  });
 });
