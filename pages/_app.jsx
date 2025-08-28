@@ -7,6 +7,23 @@ import '../styles/index.css';
 import '../styles/resume-print.css';
 import '@xterm/xterm/css/xterm.css';
 import { SettingsProvider } from '../hooks/useSettings';
+import { KBarProvider, useKBar } from 'kbar';
+import CommandPalette from '../components/command-palette';
+
+function KBarShortcut() {
+  const { query } = useKBar();
+  useEffect(() => {
+    const handleKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        query.toggle();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [query]);
+  return null;
+}
 
 /**
  * @param {import('next/app').AppProps} props
@@ -40,8 +57,12 @@ function MyApp({ Component, pageProps }) {
   }, []);
   return (
     <SettingsProvider>
-      <Component {...pageProps} />
-      <Analytics />
+      <KBarProvider actions={[]}>
+        <KBarShortcut />
+        <Component {...pageProps} />
+        <CommandPalette />
+        <Analytics />
+      </KBarProvider>
     </SettingsProvider>
   );
 }

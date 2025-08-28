@@ -49,10 +49,18 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        window.desktopApi = {
+            openApp: this.openApp,
+            focusApp: this.focus,
+            getOpenWindows: () => Object.keys(this.state.closed_windows).filter(id => !this.state.closed_windows[id])
+        };
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
+        if (window.desktopApi) {
+            delete window.desktopApi;
+        }
     }
 
     checkForNewFolders = () => {
