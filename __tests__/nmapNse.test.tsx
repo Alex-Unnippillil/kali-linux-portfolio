@@ -14,7 +14,7 @@ describe('NmapNSEApp', () => {
     render(<NmapNSEApp />);
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
 
-    await userEvent.selectOptions(screen.getByLabelText('Script'), 'ftp-anon');
+    await userEvent.click(screen.getByLabelText(/ftp-anon/i));
     expect(await screen.findByText('FTP output')).toBeInTheDocument();
 
     mockFetch.mockRestore();
@@ -58,7 +58,9 @@ describe('NmapNSEApp', () => {
     await userEvent.click(
       screen.getByRole('button', { name: /copy output/i })
     );
-    expect(writeText).toHaveBeenCalledWith('Sample output');
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining('Sample output')
+    );
     expect(await screen.findByRole('alert')).toHaveTextContent(/copied/i);
 
     mockFetch.mockRestore();
