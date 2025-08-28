@@ -2,13 +2,11 @@ import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
-import { displayVsCode } from './components/apps/vscode';
 import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/Chrome';
 import { displayTrash } from './components/apps/trash';
 import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
-import { displayYouTube } from './components/apps/youtube';
 import { displayWeather } from './components/apps/weather';
 import { displayConverter } from './components/apps/converter';
 import { displayClipboardManager } from './components/apps/ClipboardManager';
@@ -19,6 +17,8 @@ import { displayNikto } from './components/apps/nikto';
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
+const VsCodeApp = createDynamicApp('vscode', 'VsCode');
+const YouTubeApp = createDynamicApp('youtube', 'YouTube');
 const CalculatorApp = createDynamicApp('calculator', 'Calculator');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
@@ -103,6 +103,8 @@ const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
 
 
 const displayTerminal = createDisplay(TerminalApp);
+const displayVsCode = createDisplay(VsCodeApp);
+const displayYouTube = createDisplay(YouTubeApp);
 const displayCalculator = createDisplay(CalculatorApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
