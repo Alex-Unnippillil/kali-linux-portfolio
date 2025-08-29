@@ -7,6 +7,7 @@ import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
+import AboutSlides from './slides';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -153,7 +154,12 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
 }
 
 export default function AboutApp() {
-  return <AboutAlex />;
+  return (
+    <>
+      <AboutAlex />
+      <AboutSlides />
+    </>
+  );
 }
 
 export { default as SafetyNote } from './SafetyNote';
