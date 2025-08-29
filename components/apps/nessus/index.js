@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import HostBubbleChart from './HostBubbleChart';
+import PluginFeedViewer from './PluginFeedViewer';
+import ScanComparison from './ScanComparison';
 import FormError from '../../ui/FormError';
 
 // helpers for persistent storage of jobs and false positives
@@ -180,6 +182,8 @@ const Nessus = () => {
         </button>
       </div>
       <HostBubbleChart hosts={hostData} />
+      <PluginFeedViewer />
+      <ScanComparison />
       {error && <FormError className="mb-2">{error}</FormError>}
       <form onSubmit={addJob} className="mb-4 space-x-2">
         <input

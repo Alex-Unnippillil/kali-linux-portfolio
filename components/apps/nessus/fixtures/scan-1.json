@@ -1,0 +1,23 @@
+[
+  {
+    "id": "1",
+    "name": "OpenSSL Heartbeat Information Disclosure",
+    "cvss": 5.0,
+    "severity": "Medium",
+    "host": "server1.example.com"
+  },
+  {
+    "id": "2",
+    "name": "Apache HTTP Server Privilege Escalation",
+    "cvss": 7.5,
+    "severity": "High",
+    "host": "server1.example.com"
+  },
+  {
+    "id": "3",
+    "name": "Weak SSH Cipher",
+    "cvss": 9.8,
+    "severity": "Critical",
+    "host": "server2.example.com"
+  }
+]
