@@ -9,6 +9,7 @@ import Lyrics from "./Lyrics";
 interface Track {
   title: string;
   url: string;
+  cover?: string;
 }
 
 const DEFAULT_PLAYLIST = [
@@ -68,6 +69,8 @@ const SpotifyApp = () => {
   );
   const playerRef = useRef<CrossfadePlayer | null>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const loadPlaylist = () => {
     try {
@@ -97,8 +100,23 @@ const SpotifyApp = () => {
     setRecent((r) =>
       [track, ...r.filter((t) => t.url !== track.url)].slice(0, 10),
     );
-    playerRef.current?.play(track.url, crossfade);
+    playerRef.current
+      ?.play(track.url, crossfade)
+      .then(() => {
+        setDuration(playerRef.current?.getDuration() ?? 0);
+        setProgress(0);
+      });
   }, [current, queue, setRecent, crossfade]);
+
+  useEffect(() => {
+    let raf: number;
+    const tick = () => {
+      setProgress(playerRef.current?.getCurrentTime() ?? 0);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   const next = () => {
     if (!queue.length) return;
@@ -136,12 +154,12 @@ const SpotifyApp = () => {
       onKeyDown={handleKey}
     >
       <div className="flex items-center justify-between mb-2">
-        <div className="space-x-2">
+        <div className="space-x-1.5">
           <button
             onClick={previous}
             title="Previous"
             disabled={!queue.length}
-            className="w-8 h-8 flex items-center justify-center"
+            className="w-9 h-9 flex items-center justify-center"
           >
             ⏮
           </button>
@@ -149,7 +167,7 @@ const SpotifyApp = () => {
             onClick={togglePlay}
             title="Play/Pause"
             disabled={!queue.length}
-            className="w-8 h-8 flex items-center justify-center"
+            className="w-9 h-9 flex items-center justify-center"
           >
             ⏯
           </button>
@@ -157,7 +175,7 @@ const SpotifyApp = () => {
             onClick={next}
             title="Next"
             disabled={!queue.length}
-            className="w-8 h-8 flex items-center justify-center"
+            className="w-9 h-9 flex items-center justify-center"
           >
             ⏭
           </button>
@@ -189,9 +207,35 @@ const SpotifyApp = () => {
           </button>
         </div>
       </div>
+      {duration > 0 && (
+        <input
+          type="range"
+          min={0}
+          max={duration}
+          value={progress}
+          onChange={(e) => {
+            const t = Number(e.target.value);
+            playerRef.current?.seek(t);
+            setProgress(t);
+          }}
+          className="w-full h-1 mb-2"
+          disabled={!queue.length}
+        />
+      )}
       {currentTrack && (
         <div className="mt-2">
-          <div className="w-16 h-16 mb-2 bg-[var(--color-muted)]" />
+          <div className="relative w-32 aspect-square mb-2 shadow-lg overflow-hidden">
+            {currentTrack.cover ? (
+              <img
+                src={currentTrack.cover}
+                alt={currentTrack.title}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-[var(--color-muted)]" />
+            )}
+            <div className="absolute inset-0 bg-black/40" />
+          </div>
           <p className="mb-2">{currentTrack.title}</p>
           {analyser && <Visualizer analyser={analyser} />}
           <Lyrics title={currentTrack.title} player={playerRef.current} />
