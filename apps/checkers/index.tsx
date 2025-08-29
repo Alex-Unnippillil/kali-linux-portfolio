@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { pointerHandlers } from '../../utils/pointer';
 import usePersistentState from '../../hooks/usePersistentState';
 import {
@@ -8,11 +8,11 @@ import {
   Move,
   createBoard,
   getPieceMoves,
-  getAllMoves as getForcedMoves,
   applyMove,
   hasMoves,
   isDraw,
 } from '../../components/apps/checkers/engine';
+import { getSelectableMoves, getHintMove } from '../../games/checkers/logic';
 import './checkers.css';
 
 // Helper to get all moves without enforcing capture
@@ -46,6 +46,8 @@ export default function CheckersPage() {
   const moveRef = useRef(false);
   const positionCounts = useRef<Map<string, number>>(new Map());
   const [crowned, setCrowned] = useState<[number, number] | null>(null);
+  const [hint, setHint] = useState<Move | null>(null);
+  const [showHint, setShowHint] = useState(false);
 
   const makeMove = useCallback(
     (move: Move) => {
@@ -118,20 +120,10 @@ export default function CheckersPage() {
     positionCounts.current.set(JSON.stringify(board), 1);
   }, []);
 
-  const allMoves = useMemo(
-    () =>
-      rule === 'forced'
-        ? getForcedMoves(board, turn)
-        : getAllMovesNoForce(board, turn),
-    [board, turn, rule],
-  );
-
   const selectPiece = (r: number, c: number) => {
     const piece = board[r][c];
     if (winner || !piece || piece.color !== turn) return;
-    const pieceMoves = getPieceMoves(board, r, c, rule === 'forced');
-    const mustCapture = rule === 'forced' && allMoves.some((m) => m.captured);
-    const filtered = mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
+    const filtered = getSelectableMoves(board, r, c, rule === 'forced');
     if (filtered.length) {
       setSelected([r, c]);
       setMoves(filtered);
@@ -155,6 +147,8 @@ export default function CheckersPage() {
     moveRef.current = false;
     positionCounts.current = new Map([[JSON.stringify(initial), 1]]);
     setCrowned(null);
+    setHint(null);
+    setShowHint(false);
   };
 
   const undo = () => {
@@ -189,6 +183,18 @@ export default function CheckersPage() {
       return () => clearTimeout(id);
     }
   }, [crowned]);
+
+  useEffect(() => {
+    if (showHint) {
+      setHint(getHintMove(board, turn, rule === 'forced'));
+    } else {
+      setHint(null);
+    }
+  }, [board, turn, rule, showHint]);
+
+  const toggleHint = () => {
+    setShowHint((s) => !s);
+  };
 
   return (
     <div className="flex flex-col items-center justify-center h-full w-full bg-ub-cool-grey text-white p-4">
@@ -239,6 +245,12 @@ export default function CheckersPage() {
         >
           Undo
         </button>
+        <button
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={toggleHint}
+        >
+          {showHint ? 'Hide Hint' : 'Show Hint'}
+        </button>
       </div>
       <div className="w-full max-w-lg aspect-square">
         <div className="grid grid-cols-8 w-full h-full">
@@ -248,13 +260,17 @@ export default function CheckersPage() {
               const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
               const isSelected = selected && selected[0] === r && selected[1] === c;
               const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
+              const isHint = hint && hint.from[0] === r && hint.from[1] === c;
+              const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
               return (
                 <div
                   key={`${r}-${c}`}
                   {...pointerHandlers(() => (selected ? tryMove(r, c) : selectPiece(r, c)))}
                   className={`aspect-square flex items-center justify-center ${
                     isDark ? 'bg-gray-700' : 'bg-gray-400'
-                  } ${isMove ? 'move-square' : ''} ${isSelected ? 'selected-square' : ''}`}
+                  } ${isMove ? 'move-square' : ''} ${isSelected ? 'selected-square' : ''} ${
+                    isHint || isHintDest ? 'hint-square' : ''
+                  }`}
                 >
                   {cell && (
                     <div
