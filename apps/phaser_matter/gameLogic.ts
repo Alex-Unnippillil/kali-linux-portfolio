@@ -6,6 +6,7 @@ export interface Point {
 export class GameState {
   spawn: Point;
   checkpoint?: Point;
+  coins = 0;
 
   constructor(spawn: Point) {
     this.spawn = { ...spawn };
@@ -16,6 +17,14 @@ export class GameState {
    */
   setCheckpoint(p: Point) {
     this.checkpoint = { ...p };
+  }
+
+  /**
+   * Records a collected coin and returns the total count.
+   */
+  addCoin() {
+    this.coins++;
+    return this.coins;
   }
 
   /**
