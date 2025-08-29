@@ -20,6 +20,36 @@ const QRTool: React.FC = () => {
   const [svg, setSvg] = useState('');
   const [csv, setCsv] = useState('');
   const [batch, setBatch] = useState<BatchItem[]>([]);
+  const workerRef = React.useRef<Worker | null>(null);
+
+  const initWorker = React.useCallback(() => {
+    if (
+      !workerRef.current &&
+      typeof window !== 'undefined' &&
+      typeof Worker === 'function'
+    ) {
+      workerRef.current = new Worker(
+        new URL('../../../workers/qrEncode.worker.ts', import.meta.url),
+      );
+    }
+    return workerRef.current;
+  }, []);
+
+  const encodeQr = React.useCallback(
+    (text: string) =>
+      new Promise<{ png: string; svg: string }>((resolve) => {
+        const w = initWorker();
+        if (!w) {
+          resolve({ png: '', svg: '' });
+          return;
+        }
+        w.onmessage = (
+          e: MessageEvent<{ png: string; svg: string }>,
+        ) => resolve(e.data);
+        w.postMessage({ text, opts: optsRef.current });
+      }),
+    [initWorker],
+  );
 
   const opts = useMemo(
     () => ({
@@ -33,15 +63,23 @@ const QRTool: React.FC = () => {
     [level, invert],
   );
 
+  const optsRef = React.useRef(opts);
+  useEffect(() => {
+    optsRef.current = opts;
+  }, [opts]);
+
   useEffect(() => {
     const value = text || ' ';
-    QRCode.toDataURL(value, opts)
-      .then(setPng)
-      .catch(() => setPng(''));
-    QRCode.toString(value, { ...opts, type: 'svg' })
-      .then(setSvg)
-      .catch(() => setSvg(''));
-  }, [text, opts]);
+    encodeQr(value)
+      .then(({ png: p, svg: s }) => {
+        setPng(p);
+        setSvg(s);
+      })
+      .catch(() => {
+        setPng('');
+        setSvg('');
+      });
+  }, [text, opts, encodeQr]);
 
   const downloadDataUrl = (dataUrl: string, filename: string) => {
     const link = document.createElement('a');
