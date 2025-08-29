@@ -7,6 +7,7 @@ import {
   saveBookmarks,
 } from './utils';
 import GraphView from '../../../apps/radare2/components/GraphView';
+import tutorialSteps from '../../../apps/radare2/tutorial/steps.json';
 
 const Radare2 = ({ initialData = {} }) => {
   const { file = 'demo', hex = '', disasm = [], xrefs = {}, blocks = [] } =
@@ -18,6 +19,9 @@ const Radare2 = ({ initialData = {} }) => {
   const [notes, setNotes] = useState([]);
   const [noteText, setNoteText] = useState('');
   const [bookmarks, setBookmarks] = useState([]);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
   const disasmRef = useRef(null);
 
   useEffect(() => {
@@ -73,8 +77,20 @@ const Radare2 = ({ initialData = {} }) => {
     saveBookmarks(file, next);
   };
 
+  const startTutorial = () => {
+    setTutorialStep(0);
+    setShowTutorial(true);
+    setShowMenu(false);
+  };
+
+  const nextTutorialStep = () => {
+    setTutorialStep((s) => Math.min(s + 1, tutorialSteps.length - 1));
+  };
+
+  const closeTutorial = () => setShowTutorial(false);
+
   return (
-    <div className="h-full w-full bg-ub-cool-grey text-white p-4 overflow-auto">
+    <div className="h-full w-full bg-ub-cool-grey text-white p-4 overflow-auto relative">
       <div className="flex gap-2 mb-2 flex-wrap">
         <input
           value={seekAddr}
@@ -106,6 +122,24 @@ const Radare2 = ({ initialData = {} }) => {
         >
           {mode === 'code' ? 'Graph' : 'Code'}
         </button>
+        <div className="relative ml-auto">
+          <button
+            onClick={() => setShowMenu((m) => !m)}
+            className="px-3 py-1 bg-gray-700 rounded"
+          >
+            Help
+          </button>
+          {showMenu && (
+            <div className="absolute right-0 mt-1 bg-gray-800 border border-gray-600 rounded shadow-lg z-10">
+              <button
+                onClick={startTutorial}
+                className="block w-full text-left px-4 py-2 hover:bg-gray-700"
+              >
+                Tutorial
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {mode === 'graph' ? (
@@ -175,6 +209,35 @@ const Radare2 = ({ initialData = {} }) => {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {showTutorial && (
+        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-4 rounded max-w-md w-full">
+            <h2 className="text-xl mb-2">Radare2 Tutorial</h2>
+            <p className="mb-2">{tutorialSteps[tutorialStep].text}</p>
+            <pre className="bg-black p-2 rounded mb-4 whitespace-pre-wrap">
+{tutorialSteps[tutorialStep].command}
+            </pre>
+            <div className="flex justify-end gap-2">
+              {tutorialStep < tutorialSteps.length - 1 ? (
+                <button
+                  onClick={nextTutorialStep}
+                  className="px-3 py-1 bg-gray-700 rounded"
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  onClick={closeTutorial}
+                  className="px-3 py-1 bg-gray-700 rounded"
+                >
+                  Done
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
