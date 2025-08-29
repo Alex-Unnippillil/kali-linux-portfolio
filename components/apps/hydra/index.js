@@ -44,6 +44,10 @@ const HydraApp = () => {
   const announceRef = useRef(0);
   const [timeline, setTimeline] = useState([]);
   const startRef = useRef(null);
+  const [charset, setCharset] = useState('abc123');
+  const [rule, setRule] = useState('1:3');
+  const [candidateStats, setCandidateStats] = useState([]);
+  const canvasRef = useRef(null);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -100,6 +104,54 @@ const HydraApp = () => {
   const totalAttempts =
     (selectedUserList?.content.split('\n').filter(Boolean).length || 0) *
     (selectedPassList?.content.split('\n').filter(Boolean).length || 0);
+
+  useEffect(() => {
+    const [minStr, maxStr] = rule.split(':');
+    const min = parseInt(minStr, 10);
+    const max = parseInt(maxStr, 10);
+    if (!charset || isNaN(min) || isNaN(max) || min > max) {
+      setCandidateStats([]);
+      return;
+    }
+    const len = charset.length;
+    const stats = [];
+    for (let l = min; l <= max; l++) {
+      stats.push({ length: l, count: Math.pow(len, l) });
+    }
+    setCandidateStats(stats);
+  }, [charset, rule]);
+
+  const candidateSpace = candidateStats.reduce(
+    (acc, s) => acc + s.count,
+    0
+  );
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!candidateStats.length) return;
+    const max = Math.max(...candidateStats.map((s) => s.count));
+    const barWidth = canvas.width / candidateStats.length;
+    candidateStats.forEach((s, idx) => {
+      const barHeight = (s.count / max) * canvas.height;
+      ctx.fillStyle = '#4caf50';
+      ctx.fillRect(
+        idx * barWidth,
+        canvas.height - barHeight,
+        barWidth - 2,
+        barHeight
+      );
+      ctx.fillStyle = '#fff';
+      ctx.fillText(
+        String(s.length),
+        idx * barWidth + barWidth / 2 - 4,
+        canvas.height - 4
+      );
+    });
+  }, [candidateStats]);
 
   const handleAttempt = (attempt) => {
     const now = Date.now();
@@ -171,6 +223,25 @@ const HydraApp = () => {
     } finally {
       setRunning(false);
     }
+  };
+
+  const dryRunHydra = () => {
+    const user = selectedUserList;
+    const pass = selectedPassList;
+    const userCount = user?.content.split('\n').filter(Boolean).length || 0;
+    const passCount = pass?.content.split('\n').filter(Boolean).length || 0;
+    const report = [
+      `Target: ${target || 'N/A'}`,
+      `Service: ${service}`,
+      `Users: ${userCount}`,
+      `Passwords: ${passCount}`,
+      `Charset: ${charset} (${charset.length})`,
+      `Rule: ${rule}`,
+      `Estimated candidate space: ${candidateSpace.toLocaleString()}`,
+      'Dry run only - no network requests made.',
+    ].join('\n');
+    setOutput(report);
+    setAnnounce('Dry run complete');
   };
 
   const pauseHydra = async () => {
@@ -313,12 +384,48 @@ const HydraApp = () => {
             ))}
           </ul>
         </div>
+        <div>
+          <label className="block mb-1">Charset</label>
+          <input
+            type="text"
+            value={charset}
+            onChange={(e) => setCharset(e.target.value)}
+            className="w-full p-2 rounded text-black"
+            placeholder="abc123"
+          />
+        </div>
+        <div>
+          <label className="block mb-1">Rule (min:max length)</label>
+          <input
+            type="text"
+            value={rule}
+            onChange={(e) => setRule(e.target.value)}
+            className="w-full p-2 rounded text-black"
+            placeholder="1:3"
+          />
+          <p className="mt-1 text-sm">
+            Candidate space: {candidateSpace.toLocaleString()}
+          </p>
+          <canvas
+            ref={canvasRef}
+            width="300"
+            height="100"
+            className="bg-gray-800 mt-2 w-full"
+          ></canvas>
+        </div>
         <button
           onClick={runHydra}
           disabled={running}
           className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
         >
           {running ? 'Running...' : 'Run Hydra'}
+        </button>
+        <button
+          onClick={dryRunHydra}
+          disabled={running}
+          className="ml-2 px-4 py-2 bg-purple-600 rounded disabled:opacity-50"
+        >
+          Dry Run
         </button>
         {running && !paused && (
           <button
@@ -363,6 +470,13 @@ const HydraApp = () => {
         account lockout.
       </p>
       <AttemptTimeline attempts={timeline} />
+
+      <p className="mt-4 text-sm text-gray-300">
+        Common password lists succeed because many users choose simple,
+        predictable passwords or reuse credentials across sites. These habits
+        allow attackers to guess passwords without exploring the full candidate
+        space.
+      </p>
 
       <div role="status" aria-live="polite" className="sr-only">
         {announce}
