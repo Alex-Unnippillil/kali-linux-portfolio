@@ -24,6 +24,7 @@ const FigletApp = () => {
   const announceTimer = useRef(null);
   const preRef = useRef(null);
   const uploadedFonts = useRef({});
+  const [serverFontNames, setServerFontNames] = useState([]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -76,6 +77,22 @@ const FigletApp = () => {
               workerRef.current.postMessage({ type: 'load', name: saved.font, data: saved.data });
             }
             if (saved.font) setFont(saved.font);
+          }
+        } catch {
+          /* ignore */
+        }
+
+        try {
+          const res = await fetch('/api/figlet/fonts');
+          if (res.ok) {
+            const { fonts: list } = await res.json();
+            const names = [];
+            list.forEach(({ name, data }) => {
+              names.push(name);
+              uploadedFonts.current[name] = data;
+              workerRef.current.postMessage({ type: 'load', name, data });
+            });
+            if (names.length) setServerFontNames(names);
           }
         } catch {
           /* ignore */
@@ -265,6 +282,23 @@ const FigletApp = () => {
           className="text-sm"
           aria-label="Upload font"
         />
+        {serverFontNames.length > 0 && (
+          <select
+            value=""
+            onChange={(e) => setFont(e.target.value)}
+            className="px-1 bg-gray-700 text-white"
+            aria-label="Select uploaded font"
+          >
+            <option value="" disabled>
+              Uploaded Fonts
+            </option>
+            {serverFontNames.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        )}
         <input
           type="text"
           className="flex-1 px-2 bg-gray-700 text-white"
