@@ -22,6 +22,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const searchRef = useRef<any>(null);
   const commandRef = useRef('');
   const contentRef = useRef('');
+  const registryRef = useRef<Record<string, (args: string) => void>>({});
 
   function writeLine(text: string) {
     if (termRef.current) termRef.current.writeln(text);
@@ -32,43 +33,46 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     if (termRef.current) termRef.current.write('$ ');
   }
 
-  const registry: Record<string, (args: string) => void> = {
-    help: () =>
-      writeLine(
-        `Available commands: ${Object.keys(registry).join(', ')}`,
-      ),
-    ls: () => writeLine(Object.keys(files).join('  ')),
-    cat: (arg) => {
-      const content = files[arg.trim()];
-      if (content) writeLine(content);
-      else writeLine(`cat: ${arg}: No such file`);
-    },
-    clear: () => {
-      termRef.current?.clear();
-      contentRef.current = '';
-    },
-    open: (arg) => {
-      if (!arg) {
-        writeLine('Usage: open <app>');
-      } else {
-        openApp?.(arg.trim());
-        writeLine(`Opening ${arg}`);
-      }
-    },
-    date: () => writeLine(new Date().toString()),
-    about: () =>
-      writeLine('This terminal is powered by xterm.js'),
-  };
+  useEffect(() => {
+    registryRef.current = {
+      help: () =>
+        writeLine(
+          `Available commands: ${Object.keys(registryRef.current).join(', ')}`,
+        ),
+      ls: () => writeLine(Object.keys(files).join('  ')),
+      cat: (arg) => {
+        const content = files[arg.trim()];
+        if (content) writeLine(content);
+        else writeLine(`cat: ${arg}: No such file`);
+      },
+      clear: () => {
+        termRef.current?.clear();
+        contentRef.current = '';
+      },
+      open: (arg) => {
+        if (!arg) {
+          writeLine('Usage: open <app>');
+        } else {
+          openApp?.(arg.trim());
+          writeLine(`Opening ${arg}`);
+        }
+      },
+      date: () => writeLine(new Date().toString()),
+      about: () =>
+        writeLine('This terminal is powered by xterm.js'),
+    };
+  }, [openApp]);
 
   function runCommand(cmd: string) {
     const [name, ...rest] = cmd.trim().split(/\s+/);
-    const handler = registry[name];
+    const handler = registryRef.current[name];
     if (handler) handler(rest.join(' '));
     else if (name) writeLine(`Command not found: ${name}`);
   }
 
   function autocomplete() {
     const current = commandRef.current;
+    const registry = registryRef.current;
     const matches = Object.keys(registry).filter((c) => c.startsWith(current));
     if (matches.length === 1) {
       const completion = matches[0].slice(current.length);
@@ -146,7 +150,21 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-  }, [openApp]);
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => fitRef.current?.fit();
+    let observer: ResizeObserver | undefined;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(handleResize);
+      if (containerRef.current) observer.observe(containerRef.current);
+    }
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      observer?.disconnect();
+    };
+  }, []);
 
   return (
     <div
