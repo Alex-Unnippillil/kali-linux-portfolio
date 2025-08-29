@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Filter from 'bad-words';
-import offlineQuotesData from '../components/apps/quotes.json';
+import offlineQuotesData from '../public/quotes.json';
 
 const SAFE_CATEGORIES = [
   'inspirational',
