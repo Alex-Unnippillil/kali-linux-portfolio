@@ -75,5 +75,43 @@ describe('YouTube search app', () => {
       expect(items[1].textContent).toBe('Video A');
     });
   });
+
+  it('saves named clips with timestamps', async () => {
+    const user = userEvent.setup();
+    let curTime = 0;
+    (window as any).YT = {
+      Player: function (_el: any, { events }: any) {
+        const obj = {
+          getCurrentTime: () => curTime,
+          getPlayerState: () => 0,
+          loadVideoById: jest.fn(),
+          pauseVideo: jest.fn(),
+          playVideo: jest.fn(),
+          seekTo: jest.fn(),
+          getPlaybackRate: () => 1,
+        };
+        events?.onReady?.({ target: obj });
+        return obj;
+      },
+      PlayerState: { PLAYING: 1 },
+    };
+    render(<YouTubeApp initialResults={mockVideos} />);
+    await user.click(screen.getByAltText('Video A'));
+    curTime = 5;
+    await user.click(screen.getByLabelText('Set loop start'));
+    curTime = 10;
+    await user.click(screen.getByLabelText('Set loop end'));
+    window.prompt = jest.fn().mockReturnValue('My Clip');
+    await user.click(screen.getByLabelText('Save clip'));
+    const stored = JSON.parse(
+      window.localStorage.getItem('youtube:watch-later') || '[]'
+    );
+    expect(stored[0]).toMatchObject({
+      id: 'a',
+      start: 5,
+      end: 10,
+      name: 'My Clip',
+    });
+  });
 });
 
