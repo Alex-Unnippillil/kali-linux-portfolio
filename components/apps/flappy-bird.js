@@ -24,7 +24,19 @@ const FlappyBird = () => {
 
     // mode flags
     let practiceMode = localStorage.getItem('flappy-practice') === '1';
-    let easyGravity = localStorage.getItem('flappy-easy-gravity') === '1';
+
+    // gravity variants
+    const GRAVITY_VARIANTS = [
+      { name: 'Easy', value: 0.2 },
+      { name: 'Normal', value: 0.4 },
+      { name: 'Hard', value: 0.6 },
+    ];
+    let gravityVariant = parseInt(
+      localStorage.getItem('flappy-gravity-variant') || '1',
+      10,
+    );
+    if (gravityVariant < 0 || gravityVariant >= GRAVITY_VARIANTS.length)
+      gravityVariant = 1;
 
     // skins
     const birdSkins = BIRD_SKINS;
@@ -37,9 +49,7 @@ const FlappyBird = () => {
 
     // physics constants
     let bird = { x: 50, y: height / 2, vy: 0 };
-    const baseGravity = 0.4;
-    const easyGravityVal = 0.2;
-    let gravity = easyGravity ? easyGravityVal : baseGravity;
+    let gravity = GRAVITY_VARIANTS[gravityVariant].value;
     const jump = -7;
 
     const pipeWidth = 40;
@@ -194,12 +204,23 @@ const FlappyBird = () => {
       } catch {
         medals = {};
       }
-      let best = 0;
+
+      // records per gravity variant
+      let records = {};
       try {
-        best = parseInt(localStorage.getItem('flappy-best') || '0', 10);
+        records = JSON.parse(localStorage.getItem('flappy-records') || '{}');
       } catch {
-        best = 0;
+        records = {};
       }
+      let best = 0;
+      let ghostRun = null;
+      function loadRecord() {
+        const key = GRAVITY_VARIANTS[gravityVariant].name;
+        const rec = records[key];
+        best = rec ? rec.score : 0;
+        ghostRun = rec ? rec.run : null;
+      }
+      loadRecord();
       function getMedal(dist) {
         let m = null;
         for (const { name, distance } of medalThresholds) {
@@ -221,6 +242,8 @@ const FlappyBird = () => {
     let isReplaying = false;
     let replayFlaps = [];
     let replayIndex = 0;
+    let runPositions = [];
+    let ghostFrame = 0;
 
     function addPipe() {
       const top = rand() * (height - gap - 40) + 20;
@@ -236,7 +259,9 @@ const FlappyBird = () => {
         score = 0;
         running = true;
         flapFrames = [];
-        gravity = easyGravity ? easyGravityVal : baseGravity;
+        runPositions = [];
+        ghostFrame = 0;
+        gravity = GRAVITY_VARIANTS[gravityVariant].value;
         gap = practiceMode ? practiceGap : baseGap;
         pipeInterval = 100;
         nextPipeFrame = pipeInterval;
@@ -278,6 +303,17 @@ const FlappyBird = () => {
         if (practiceMode) ctx.globalAlpha = 1;
       }
 
+      // ghost bird
+      if (ghostRun && ghostFrame < ghostRun.pos.length) {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = 'gray';
+        ctx.beginPath();
+        ctx.arc(bird.x, ghostRun.pos[ghostFrame], 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
       // bird
       ctx.fillStyle = birdSkins[birdSkin % birdSkins.length];
       ctx.beginPath();
@@ -305,7 +341,7 @@ const FlappyBird = () => {
       const medal = getMedal(score);
       if (medal) hudLine(`Medal: ${medal}`);
       if (practiceMode) hudLine('Practice');
-      if (easyGravity) hudLine('Easy Gravity');
+      hudLine(`Gravity: ${GRAVITY_VARIANTS[gravityVariant].name}`);
       if (reduceMotion) hudLine('Reduced Motion');
       if (showHitbox) hudLine('Hitbox');
 
@@ -344,6 +380,7 @@ const FlappyBird = () => {
 
       bird.vy += gravity;
       bird.y += bird.vy;
+      runPositions.push(bird.y);
 
       // top/bottom collision
       if (bird.y + 10 > height || bird.y - 10 < 0) {
@@ -378,20 +415,29 @@ const FlappyBird = () => {
       }
 
       draw();
+      if (ghostRun && ghostFrame < ghostRun.pos.length) {
+        ghostFrame += 1;
+      }
 
       if (!running) {
-          if (!isReplaying) {
-            saveMedal(score);
-            if (score > best) {
-              best = score;
-              localStorage.setItem('flappy-best', String(best));
-            }
-            lastRun = { seed, flaps: flapFrames };
+        if (!isReplaying) {
+          saveMedal(score);
+          if (score > best) {
+            best = score;
+            records[GRAVITY_VARIANTS[gravityVariant].name] = {
+              score: best,
+              run: { pos: runPositions.slice() },
+            };
+            localStorage.setItem('flappy-records', JSON.stringify(records));
+            ghostRun = records[GRAVITY_VARIANTS[gravityVariant].name].run;
           }
-          isReplaying = false;
-          stopLoop();
-          if (liveRef.current) liveRef.current.textContent = `Game over. Final score: ${score}`;
+          lastRun = { seed, flaps: flapFrames };
         }
+        isReplaying = false;
+        stopLoop();
+        if (liveRef.current)
+          liveRef.current.textContent = `Game over. Final score: ${score}`;
+      }
     }
 
     function startLoop() {
@@ -443,12 +489,18 @@ const FlappyBird = () => {
         if (liveRef.current)
           liveRef.current.textContent = practiceMode ? 'Practice mode on' : 'Practice mode off';
         startGame();
-      } else if (e.code === 'KeyG') {
-        easyGravity = !easyGravity;
-        localStorage.setItem('flappy-easy-gravity', easyGravity ? '1' : '0');
+      } else if (e.code === 'KeyG' && !running) {
+        gravityVariant = (gravityVariant + 1) % GRAVITY_VARIANTS.length;
+        localStorage.setItem('flappy-gravity-variant', String(gravityVariant));
+        loadRecord();
         if (liveRef.current)
-          liveRef.current.textContent = easyGravity ? 'Easy gravity on' : 'Easy gravity off';
-        startGame();
+          liveRef.current.textContent = `Gravity: ${GRAVITY_VARIANTS[gravityVariant].name}`;
+      } else if (e.code === 'KeyX' && !running) {
+        const key = GRAVITY_VARIANTS[gravityVariant].name;
+        delete records[key];
+        localStorage.setItem('flappy-records', JSON.stringify(records));
+        loadRecord();
+        if (liveRef.current) liveRef.current.textContent = 'Record reset';
       } else if (e.code === 'KeyB') {
         birdSkin = (birdSkin + 1) % birdSkins.length;
         localStorage.setItem('flappy-bird-skin', String(birdSkin));
