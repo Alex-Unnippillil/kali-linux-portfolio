@@ -2,6 +2,7 @@
   "name": "Kali Linux Portfolio",
   "short_name": "KaliPortfolio",
   "start_url": "/",
+  "offline_page": "/offline.html",
   "display": "standalone",
   "background_color": "#0f1317",
   "theme_color": "#0f1317",

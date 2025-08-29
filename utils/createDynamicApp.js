@@ -20,8 +20,11 @@ export const createDynamicApp = (id, title) =>
   );
 
 export const createDisplay = (Component) => {
+  const DynamicComponent = dynamic(() => Promise.resolve({ default: Component }), {
+    ssr: false,
+  });
   const Display = (addFolder, openApp) => (
-    <Component addFolder={addFolder} openApp={openApp} />
+    <DynamicComponent addFolder={addFolder} openApp={openApp} />
   );
 
   Display.prefetch = () => {
