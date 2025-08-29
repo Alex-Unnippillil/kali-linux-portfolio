@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import TaskTemplates from './components/TaskTemplates';
 
 interface Vulnerability {
   id: string;
@@ -130,6 +131,7 @@ const OpenVASReport: React.FC = () => {
           </span>
         ))}
       </div>
+      <TaskTemplates />
       <p className="mt-4 text-xs text-gray-400">
         All data is static and for demonstration only. Use OpenVAS responsibly
         and only on systems you are authorized to test.
