@@ -47,7 +47,7 @@ const SKINS: Record<string, Record<number, string>> = {
   },
 };
 
-type HistoryEntry = { board: Board; rng: string };
+type HistoryEntry = { board: Board; rng: string; level: number };
 
 const emptyBoard = (): Board => Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
 
@@ -61,6 +61,8 @@ const Game2048 = () => {
   const [best, setBest] = useState(0);
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
+  const [mode, setMode] = useState<'classic' | 'endless'>('classic');
+  const [level, setLevel] = useState(1);
 
   // load best tile from localStorage
   useEffect(() => {
@@ -91,6 +93,7 @@ const Game2048 = () => {
     setUndosLeft(UNDO_LIMIT);
     setWon(false);
     setLost(false);
+    setLevel(1);
   }, []);
 
   useEffect(() => {
@@ -121,15 +124,27 @@ const Game2048 = () => {
           : moveDown;
       const next = fn(board.map((row) => [...row]));
       if (boardsEqual(board, next)) return;
-      setHistory((h) => [...h, { board: board.map((row) => [...row]), rng: serialize() }]);
-      addRandomTile(next);
+      setHistory((h) => [
+        ...h,
+        { board: board.map((row) => [...row]), rng: serialize(), level },
+      ]);
+      if (mode === 'endless') {
+        addRandomTile(next, level > 1, level);
+      } else {
+        addRandomTile(next);
+      }
       const hi = highestTile(next);
       if (hi > best) setBest(hi);
+      if (mode === 'endless') {
+        const target = 2048 * 2 ** (level - 1);
+        if (hi >= target) setLevel((lv) => lv + 1);
+      } else if (hi >= 2048) {
+        setWon(true);
+      }
       setBoard(next);
-      if (hi >= 2048) setWon(true);
-      else if (!hMoves(next)) setLost(true);
+      if (!hMoves(next)) setLost(true);
     },
-    [board, best, won, lost]
+    [board, best, won, lost, level, mode]
   );
 
   const undo = useCallback(() => {
@@ -137,6 +152,7 @@ const Game2048 = () => {
     const last = history[history.length - 1];
     deserialize(last.rng);
     setBoard(last.board.map((row) => [...row]));
+    setLevel(last.level);
     setHistory((h) => h.slice(0, -1));
     setUndosLeft((u) => u - 1);
     setWon(false);
@@ -189,6 +205,17 @@ const Game2048 = () => {
           </button>
           <select
             className="text-black px-1 rounded"
+            value={mode}
+            onChange={(e) => {
+              setMode(e.target.value as any);
+              init();
+            }}
+          >
+            <option value="classic">Classic</option>
+            <option value="endless">Endless</option>
+          </select>
+          <select
+            className="text-black px-1 rounded"
             value={skin}
             onChange={(e) => setSkin(e.target.value as any)}
           >
@@ -198,6 +225,7 @@ const Game2048 = () => {
               </option>
             ))}
           </select>
+          {mode === 'endless' && <div>Level: {level}</div>}
           <div className="ml-auto">Best: {best}</div>
         </div>
         <div className="grid w-full max-w-sm grid-cols-4 gap-2">
