@@ -3,9 +3,9 @@
 }
 
 .move-square {
-  @apply ring-2 ring-yellow-300 bg-yellow-200/40 animate-pulse;
+  @apply ring-2 ring-amber-400 ring-offset-1 ring-offset-black bg-amber-200/30 animate-pulse;
 }
 
 .hint-square {
-  @apply ring-2 ring-blue-400 animate-pulse;
+  @apply ring-2 ring-sky-400 ring-offset-1 ring-offset-black bg-sky-200/30 animate-pulse;
 }

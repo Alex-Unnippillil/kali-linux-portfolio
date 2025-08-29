@@ -34,13 +34,22 @@ export default function CheckersPage() {
   const [turn, setTurn] = useState<'red' | 'black'>('red');
   const [selected, setSelected] = useState<[number, number] | null>(null);
   const [moves, setMoves] = useState<Move[]>([]);
+  const [cursor, setCursor] = useState<[number, number]>([0, 0]);
+  const [capturedRed, setCapturedRed] = useState(0);
+  const [capturedBlack, setCapturedBlack] = useState(0);
   const [rule, setRule] = usePersistentState<'forced' | 'relaxed'>('checkersRule', 'forced');
   const [algorithm, setAlgorithm] = useState<'alphabeta' | 'mcts'>('alphabeta');
   const [difficulty, setDifficulty] = useState(3);
   const [winner, setWinner] = useState<string | null>(null);
   const [noCapture, setNoCapture] = useState(0);
   const [history, setHistory] = useState<
-    { board: Board; turn: 'red' | 'black'; noCapture: number }[]
+    {
+      board: Board;
+      turn: 'red' | 'black';
+      noCapture: number;
+      capturedRed: number;
+      capturedBlack: number;
+    }[]
   >([]);
   const workerRef = useRef<Worker | null>(null);
   const moveRef = useRef(false);
@@ -48,12 +57,21 @@ export default function CheckersPage() {
   const [crowned, setCrowned] = useState<[number, number] | null>(null);
   const [hint, setHint] = useState<Move | null>(null);
   const [showHint, setShowHint] = useState(false);
+  const boardRef = useRef<HTMLDivElement>(null);
 
   const makeMove = useCallback(
     (move: Move) => {
       if (!moveRef.current) {
-        setHistory((h) => [...h, { board, turn, noCapture }]);
+        setHistory((h) => [
+          ...h,
+          { board, turn, noCapture, capturedRed, capturedBlack },
+        ]);
         moveRef.current = true;
+      }
+      let capturedColor: 'red' | 'black' | null = null;
+      if (move.captured) {
+        const piece = board[move.captured[0]][move.captured[1]];
+        capturedColor = piece ? piece.color : null;
       }
       const { board: newBoard, capture, king } = applyMove(board, move);
       const further = capture
@@ -63,6 +81,8 @@ export default function CheckersPage() {
       if (king) {
         setCrowned([move.to[0], move.to[1]]);
       }
+      if (capturedColor === 'red') setCapturedRed((c) => c + 1);
+      else if (capturedColor === 'black') setCapturedBlack((c) => c + 1);
       if (capture && further.length) {
         setSelected([move.to[0], move.to[1]]);
         setMoves(further);
@@ -100,8 +120,18 @@ export default function CheckersPage() {
       }
       setSelected(null);
       setMoves([]);
+      setCursor(move.to);
     },
-    [board, turn, noCapture, rule, difficulty, algorithm],
+    [
+      board,
+      turn,
+      noCapture,
+      rule,
+      difficulty,
+      algorithm,
+      capturedRed,
+      capturedBlack,
+    ],
   );
 
   useEffect(() => {
@@ -127,12 +157,17 @@ export default function CheckersPage() {
     if (filtered.length) {
       setSelected([r, c]);
       setMoves(filtered);
+      setCursor([r, c]);
     }
+    focusBoard();
   };
 
   const tryMove = (r: number, c: number) => {
     const move = moves.find((m) => m.to[0] === r && m.to[1] === c);
-    if (move) makeMove(move);
+    if (move) {
+      makeMove(move);
+    }
+    focusBoard();
   };
 
   const reset = () => {
@@ -149,6 +184,10 @@ export default function CheckersPage() {
     setCrowned(null);
     setHint(null);
     setShowHint(false);
+    setCapturedRed(0);
+    setCapturedBlack(0);
+    setCursor([0, 0]);
+    focusBoard();
   };
 
   const undo = () => {
@@ -161,11 +200,14 @@ export default function CheckersPage() {
     setBoard(prev.board);
     setTurn(prev.turn);
     setNoCapture(prev.noCapture);
+    setCapturedRed(prev.capturedRed);
+    setCapturedBlack(prev.capturedBlack);
     setHistory(history.slice(0, -1));
     setWinner(null);
     setSelected(null);
     setMoves([]);
     setCrowned(null);
+    setCursor([0, 0]);
     if (prev.turn === 'black') {
       workerRef.current?.postMessage({
         board: prev.board,
@@ -175,6 +217,7 @@ export default function CheckersPage() {
         enforceCapture: rule === 'forced',
       });
     }
+    focusBoard();
   };
 
   useEffect(() => {
@@ -194,6 +237,34 @@ export default function CheckersPage() {
 
   const toggleHint = () => {
     setShowHint((s) => !s);
+    focusBoard();
+  };
+
+  const focusBoard = () => boardRef.current?.focus();
+
+  useEffect(() => {
+    focusBoard();
+  }, []);
+
+  const handleKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    let [r, c] = cursor;
+    if (e.key === 'ArrowUp') {
+      r = Math.max(0, r - 1);
+    } else if (e.key === 'ArrowDown') {
+      r = Math.min(7, r + 1);
+    } else if (e.key === 'ArrowLeft') {
+      c = Math.max(0, c - 1);
+    } else if (e.key === 'ArrowRight') {
+      c = Math.min(7, c + 1);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      selected ? tryMove(r, c) : selectPiece(r, c);
+      return;
+    }
+    if (r !== cursor[0] || c !== cursor[1]) {
+      e.preventDefault();
+      setCursor([r, c]);
+    }
   };
 
   return (
@@ -252,8 +323,23 @@ export default function CheckersPage() {
           {showHint ? 'Hide Hint' : 'Show Hint'}
         </button>
       </div>
+      <div className="w-full max-w-lg mb-2 flex justify-between text-sm">
+        <div className="flex items-center gap-1" aria-label="Black pieces captured">
+          <div className="w-4 h-4 rounded-full bg-black" />
+          <span>{capturedBlack}</span>
+        </div>
+        <div className="flex items-center gap-1" aria-label="Red pieces captured">
+          <span>{capturedRed}</span>
+          <div className="w-4 h-4 rounded-full bg-red-500" />
+        </div>
+      </div>
       <div className="w-full max-w-lg aspect-square">
-        <div className="grid grid-cols-8 w-full h-full">
+        <div
+          ref={boardRef}
+          tabIndex={0}
+          onKeyDown={handleKey}
+          className="grid grid-cols-8 w-full h-full"
+        >
           {board.map((row, r) =>
             row.map((cell, c) => {
               const isDark = (r + c) % 2 === 1;
@@ -262,15 +348,16 @@ export default function CheckersPage() {
               const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
               const isHint = hint && hint.from[0] === r && hint.from[1] === c;
               const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
+              const isCursor = cursor[0] === r && cursor[1] === c;
               return (
                 <div
                   key={`${r}-${c}`}
                   {...pointerHandlers(() => (selected ? tryMove(r, c) : selectPiece(r, c)))}
                   className={`aspect-square flex items-center justify-center ${
-                    isDark ? 'bg-gray-700' : 'bg-gray-400'
+                    isDark ? 'bg-black' : 'bg-red-800'
                   } ${isMove ? 'move-square' : ''} ${isSelected ? 'selected-square' : ''} ${
                     isHint || isHintDest ? 'hint-square' : ''
-                  }`}
+                  } ${isCursor ? 'ring-2 ring-yellow-300' : ''}`}
                 >
                   {cell && (
                     <div
