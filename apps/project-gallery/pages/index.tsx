@@ -112,7 +112,11 @@ export default function ProjectGalleryPage() {
       </div>
       <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         {filtered.map((p) => (
-          <div key={p.id} className="border rounded overflow-hidden">
+          <div
+            key={p.id}
+            className="border rounded overflow-hidden transition-transform transition-opacity duration-300 hover:scale-105 hover:opacity-90"
+            aria-label={`${p.title}: ${p.description}`}
+          >
             <img src={p.thumbnail} alt={p.title} className="w-full h-40 object-cover" />
             <div className="p-2">
               <h3 className="font-semibold">{p.title}</h3>
