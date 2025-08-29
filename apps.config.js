@@ -60,7 +60,7 @@ const AboutAlexApp = createDynamicApp('About', 'About Alex');
 
 const QrToolApp = createDynamicApp('qr_tool', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
-const QuoteGeneratorApp = createDynamicApp('quote_generator', 'Quote Generator');
+const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
@@ -144,7 +144,7 @@ const displayAboutAlex = createDisplay(AboutAlexApp);
 
 const displayQrTool = createDisplay(QrToolApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
-const displayQuoteGenerator = createDisplay(QuoteGeneratorApp);
+const displayQuote = createDisplay(QuoteApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
@@ -222,13 +222,13 @@ const utilityList = [
     screen: displayFiglet,
   },
   {
-    id: 'quote-generator',
-    title: 'Quote Generator',
+    id: 'quote',
+    title: 'Quote',
     icon: './themes/Yaru/apps/quote.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayQuoteGenerator,
+    screen: displayQuote,
   },
   {
     id: 'project-gallery',
