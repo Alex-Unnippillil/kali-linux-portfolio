@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import ReportView, { Report } from './components/ReportView';
 
 interface Script {
   name: string;
@@ -13,6 +14,9 @@ type ScriptData = Record<string, Script[]>;
 const NmapNSE: React.FC = () => {
   const [data, setData] = useState<ScriptData>({});
   const [query, setQuery] = useState('');
+  const workerRef = useRef<Worker>();
+  const [report, setReport] = useState<Report | null>(null);
+  const [parseError, setParseError] = useState('');
   const copyExample = useCallback((text: string) => {
     if (typeof window !== 'undefined') {
       try {
@@ -22,6 +26,33 @@ const NmapNSE: React.FC = () => {
       }
     }
   }, []);
+
+  useEffect(() => {
+    workerRef.current = new Worker(
+      new URL('./workers/xmlParser.ts', import.meta.url)
+    );
+    workerRef.current.onmessage = (e) => {
+      const { error } = e.data as { error?: string };
+      if (error) {
+        setParseError(error);
+        setReport(null);
+      } else {
+        setParseError('');
+        setReport(e.data as Report);
+      }
+    };
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      workerRef.current?.postMessage(reader.result);
+    };
+    reader.readAsText(file);
+  };
   const openScriptDoc = useCallback((name: string) => {
     if (typeof window !== 'undefined') {
       window.open(
@@ -102,6 +133,18 @@ const NmapNSE: React.FC = () => {
           ))}
         </div>
       ))}
+      <section className="mt-8">
+        <h2 className="text-xl mb-2">Upload Nmap XML Report</h2>
+        <input type="file" accept=".xml" onChange={onFile} />
+        {parseError && (
+          <div className="mt-2 text-red-400">{parseError}</div>
+        )}
+        {report && (
+          <div className="mt-4">
+            <ReportView report={report} />
+          </div>
+        )}
+      </section>
     </div>
   );
 };
