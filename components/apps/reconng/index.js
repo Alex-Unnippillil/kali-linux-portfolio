@@ -6,6 +6,7 @@ import React, {
 } from 'react';
 import dynamic from 'next/dynamic';
 import usePersistentState from '../../hooks/usePersistentState';
+import ReportTemplates from './components/ReportTemplates';
 
 const CytoscapeComponent = dynamic(
   async () => {
@@ -408,6 +409,13 @@ const ReconNG = () => {
         </button>
         <button
           type="button"
+          onClick={() => setView('reports')}
+          className={`px-2 py-1 ${view === 'reports' ? 'bg-blue-600' : 'bg-gray-800'}`}
+        >
+          Reports
+        </button>
+        <button
+          type="button"
           onClick={() => setView('settings')}
           className={`px-2 py-1 ${view === 'settings' ? 'bg-blue-600' : 'bg-gray-800'}`}
         >
@@ -525,6 +533,7 @@ const ReconNG = () => {
           </div>
         </>
       )}
+      {view === 'reports' && <ReportTemplates />}
       {view === 'settings' && (
         <div className="flex-1 overflow-auto">
           {allModules.map((m) => (
