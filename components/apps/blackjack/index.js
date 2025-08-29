@@ -157,6 +157,13 @@ const Blackjack = () => {
   const [practiceCard, setPracticeCard] = useState(null);
   const [practiceGuess, setPracticeGuess] = useState('');
   const [streak, setStreak] = useState(0);
+  const [bestStreak, setBestStreak] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('bj_best_streak');
+      return stored ? parseInt(stored, 10) : 0;
+    }
+    return 0;
+  });
   const [dealerPeeking, setDealerPeeking] = useState(false);
 
   const [_, dispatch] = useReducer(gameReducer, {
@@ -180,6 +187,12 @@ const Blackjack = () => {
     gameRef.current.shoe.penetration = penetration;
     gameRef.current.shoe.shufflePoint = Math.floor(gameRef.current.shoe.cards.length * penetration);
   }, [penetration]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bj_best_streak', bestStreak.toString());
+    }
+  }, [bestStreak]);
 
   const start = () => {
     try {
@@ -245,7 +258,11 @@ const Blackjack = () => {
   const submitPractice = () => {
     const guess = parseInt(practiceGuess, 10);
     if (guess === practiceShoe.current.runningCount) {
-      setStreak((s) => s + 1);
+      setStreak((s) => {
+        const newStreak = s + 1;
+        setBestStreak((b) => (newStreak > b ? newStreak : b));
+        return newStreak;
+      });
     } else {
       ReactGA.event({ category: 'Blackjack', action: 'count_streak', value: streak });
       setStreak(0);
@@ -328,6 +345,8 @@ const Blackjack = () => {
           </button>
         </div>
         <div className="mt-4">Streak: {streak}</div>
+        <div className="mt-1">Best: {bestStreak}</div>
+        <div className="mt-1">RC: {practiceShoe.current.runningCount}</div>
       </div>
     );
   }
