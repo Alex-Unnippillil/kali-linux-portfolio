@@ -78,3 +78,16 @@ export const findBestMove = (board: Board, depth = 2): Direction | null => {
 };
 
 export const findHint = findBestMove;
+
+export const scoreMoves = (
+  board: Board,
+  depth = 2,
+): Partial<Record<Direction, number>> => {
+  const scores: Partial<Record<Direction, number>> = {};
+  for (const { dir, fn } of MOVES) {
+    const next = fn(cloneBoard(board));
+    if (boardsEqual(board, next)) continue;
+    scores[dir] = expectimax(next, depth - 1, false);
+  }
+  return scores;
+};

@@ -1,8 +1,9 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import useOPFS from '../../hooks/useOPFS.js';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
-import { findHint } from '../../apps/games/_2048/ai';
+import { findHint, scoreMoves } from '../../apps/games/_2048/ai';
 import { vibrate } from './Games/common/haptics';
 import {
   random,
@@ -196,6 +197,7 @@ const validateBoard = (b) =>
   );
 
 const Game2048 = () => {
+  const [seed, setSeedState] = usePersistentState('2048-seed', '', (v) => typeof v === 'string');
   const [board, setBoard] = usePersistentState('2048-board', initBoard, validateBoard);
   const [won, setWon] = usePersistentState('2048-won', false, (v) => typeof v === 'boolean');
   const [lost, setLost] = usePersistentState('2048-lost', false, (v) => typeof v === 'boolean');
@@ -214,7 +216,10 @@ const Game2048 = () => {
   const [combo, setCombo] = useState(0);
   const [hint, setHint] = useState(null);
   const [demo, setDemo] = useState(false);
-  const [best, setBest] = usePersistentState('2048-best', 0, (v) => typeof v === 'number');
+  const [coach, setCoach] = usePersistentState('2048-coach', false, (v) => typeof v === 'boolean');
+  const [moveScores, setMoveScores] = useState(null);
+  const [bestMap, setBestMap, bestReady] = useOPFS('2048-best.json', {});
+  const [best, setBest] = useState(0);
   const [undosLeft, setUndosLeft] = useState(UNDO_LIMIT);
   const moveLock = useRef(false);
 
@@ -257,14 +262,47 @@ const Game2048 = () => {
     }
   }, [scorePop]);
 
+  const today = typeof window !== 'undefined' ? new Date().toISOString().slice(0, 10) : '';
+
+  useEffect(() => {
+    if (!bestReady) return;
+    if (seed !== today) {
+      resetRng(today);
+      setSeedState(today);
+      setBoard(initBoard(hardMode));
+      setHistory([]);
+      setMoves(0);
+      setWon(false);
+      setLost(false);
+      setAnimCells(new Set());
+      setMergeCells(new Set());
+      setScore(0);
+      setUndosLeft(UNDO_LIMIT);
+      setBest(bestMap[today] || 0);
+    } else {
+      resetRng(seed);
+      setBest(bestMap[seed] || 0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bestReady, seed, hardMode, bestMap]);
+
   useEffect(() => {
     setHint(findHint(board));
   }, [board]);
 
   useEffect(() => {
+    if (coach) setMoveScores(scoreMoves(board));
+  }, [board, coach]);
+
+  useEffect(() => {
     const hi = Math.max(...board.flat());
-    if (hi > best) setBest(hi);
-  }, [board, best, setBest]);
+    if (hi > best) {
+      setBest(hi);
+      if (bestReady && seed) {
+        setBestMap({ ...bestMap, [seed]: hi });
+      }
+    }
+  }, [board, best, seed, bestReady, bestMap, setBestMap]);
 
   const handleDirection = useCallback(
     ({ x, y }) => {
@@ -293,7 +331,12 @@ const Game2048 = () => {
         setBoard(cloneBoard(moved));
         setMoves((m) => m + 1);
         const hi = Math.max(...moved.flat());
-        if (hi > best) setBest(hi);
+        if (hi > best) {
+          setBest(hi);
+          if (bestReady && seed) {
+            setBestMap({ ...bestMap, [seed]: hi });
+          }
+        }
         if (merged) vibrate(50);
         if (mergedCells.length > 1) {
           setCombo((c) => c + 1);
@@ -329,6 +372,10 @@ const Game2048 = () => {
       setScore,
       best,
       setBest,
+      bestReady,
+      seed,
+      bestMap,
+      setBestMap,
     ],
   );
 
@@ -370,7 +417,7 @@ const Game2048 = () => {
   }, []);
 
   const reset = () => {
-    resetRng();
+    resetRng(seed || today);
     setBoard(initBoard(hardMode));
     setHistory([]);
     setMoves(0);
@@ -442,6 +489,14 @@ const Game2048 = () => {
             <span>Hard</span>
           </label>
           <label className="flex items-center space-x-1 px-2">
+            <input
+              type="checkbox"
+              checked={coach}
+              onChange={() => setCoach(!coach)}
+            />
+            <span>Coach</span>
+          </label>
+          <label className="flex items-center space-x-1 px-2">
             <span>Skin</span>
             <select
               className="text-black px-1 rounded"
@@ -482,23 +537,57 @@ const Game2048 = () => {
             Hint: {hint ? hint.replace('Arrow', '') : ''}
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-2" data-combo={combo} style={{ filter: combo ? `hue-rotate(${combo * 45}deg)` : undefined }}>
-          {board.map((row, rIdx) =>
-            row.map((cell, cIdx) => {
-              const key = `${rIdx}-${cIdx}`;
-              const colors = SKINS[skin] || tileColors;
-              return (
-                <div
-                  key={key}
-                  className={`relative overflow-hidden h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
-                    cell ? colors[cell] || 'bg-gray-700' : 'bg-gray-800'
-                  } ${animCells.has(key) ? 'tile-pop' : ''}`}
-                >
-                  {cell !== 0 ? cell : ''}
-                  {mergeCells.has(key) && <span className="merge-ripple" />}
-                </div>
-              );
-            })
+        <div className="relative inline-block">
+          <div
+            className="grid grid-cols-4 gap-2"
+            data-combo={combo}
+            style={{ filter: combo ? `hue-rotate(${combo * 45}deg)` : undefined }}
+          >
+            {board.map((row, rIdx) =>
+              row.map((cell, cIdx) => {
+                const key = `${rIdx}-${cIdx}`;
+                const colors = SKINS[skin] || tileColors;
+                return (
+                  <div
+                    key={key}
+                    className={`relative overflow-hidden h-16 w-16 flex items-center justify-center text-2xl font-bold rounded ${
+                      cell ? colors[cell] || 'bg-gray-700' : 'bg-gray-800'
+                    } ${animCells.has(key) ? 'tile-pop' : ''}`}
+                  >
+                    {cell !== 0 ? cell : ''}
+                    {mergeCells.has(key) && <span className="merge-ripple" />}
+                  </div>
+                );
+              })
+            )}
+          </div>
+          {coach && moveScores && (
+            <>
+              <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-sm">
+                ↑{' '}
+                {moveScores.ArrowUp !== undefined
+                  ? Math.round(moveScores.ArrowUp)
+                  : ''}
+              </div>
+              <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-sm">
+                ↓{' '}
+                {moveScores.ArrowDown !== undefined
+                  ? Math.round(moveScores.ArrowDown)
+                  : ''}
+              </div>
+              <div className="absolute top-1/2 -left-6 -translate-y-1/2 text-sm">
+                ←{' '}
+                {moveScores.ArrowLeft !== undefined
+                  ? Math.round(moveScores.ArrowLeft)
+                  : ''}
+              </div>
+              <div className="absolute top-1/2 -right-6 -translate-y-1/2 text-sm">
+                →{' '}
+                {moveScores.ArrowRight !== undefined
+                  ? Math.round(moveScores.ArrowRight)
+                  : ''}
+              </div>
+            </>
           )}
         </div>
         {(won || lost) && (
