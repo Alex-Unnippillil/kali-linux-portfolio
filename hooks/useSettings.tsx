@@ -14,6 +14,8 @@ import {
   setHighContrast as saveHighContrast,
   getLargeHitAreas as loadLargeHitAreas,
   setLargeHitAreas as saveLargeHitAreas,
+  getPongSpin as loadPongSpin,
+  setPongSpin as savePongSpin,
   defaults,
 } from '../utils/settingsStore';
 type Density = 'regular' | 'compact';
@@ -42,6 +44,7 @@ interface SettingsContextValue {
   fontScale: number;
   highContrast: boolean;
   largeHitAreas: boolean;
+  pongSpin: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
@@ -49,6 +52,7 @@ interface SettingsContextValue {
   setFontScale: (value: number) => void;
   setHighContrast: (value: boolean) => void;
   setLargeHitAreas: (value: boolean) => void;
+  setPongSpin: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -59,6 +63,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
   largeHitAreas: defaults.largeHitAreas,
+  pongSpin: defaults.pongSpin,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
@@ -66,6 +71,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setFontScale: () => {},
   setHighContrast: () => {},
   setLargeHitAreas: () => {},
+  setPongSpin: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -76,6 +82,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
+  const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
 
   useEffect(() => {
     (async () => {
@@ -86,6 +93,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setFontScale(await loadFontScale());
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
+      setPongSpin(await loadPongSpin());
     })();
   }, []);
 
@@ -153,8 +161,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveLargeHitAreas(largeHitAreas);
   }, [largeHitAreas]);
 
+  useEffect(() => {
+    savePongSpin(pongSpin);
+  }, [pongSpin]);
+
   return (
-    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, fontScale, highContrast, largeHitAreas, setAccent, setWallpaper, setDensity, setReducedMotion, setFontScale, setHighContrast, setLargeHitAreas }}>
+    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, fontScale, highContrast, largeHitAreas, pongSpin, setAccent, setWallpaper, setDensity, setReducedMotion, setFontScale, setHighContrast, setLargeHitAreas, setPongSpin }}>
       {children}
     </SettingsContext.Provider>
   );
