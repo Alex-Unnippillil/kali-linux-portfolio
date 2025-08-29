@@ -307,7 +307,8 @@ const Pinball = () => {
       cancelAnimationFrame(animRef.current);
       clearTimeout(multiplierTimeout.current);
     };
-  }, [canvasRef, layout, editing, tilt, prefersReducedMotion]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setHighScore is stable, avoid unnecessary reruns
+  }, [canvasRef, layout, editing, tilt, prefersReducedMotion, setHighScore]);
 
   const handleClick = (e) => {
     if (!editing || !canvasRef.current) return;
