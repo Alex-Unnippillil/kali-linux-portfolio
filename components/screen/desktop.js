@@ -70,12 +70,15 @@ export class Desktop extends Component {
         this.setEventListeners();
         this.checkForNewFolders();
         this.checkForAppShortcuts();
+        this.updateTrashIcon();
+        window.addEventListener('trash-change', this.updateTrashIcon);
         document.addEventListener('keydown', this.handleGlobalShortcut);
     }
 
     componentWillUnmount() {
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
+        window.removeEventListener('trash-change', this.updateTrashIcon);
     }
 
     checkForNewFolders = () => {
@@ -559,6 +562,7 @@ export class Desktop extends Component {
             closedAt: now,
         });
         localStorage.setItem('window-trash', JSON.stringify(trash));
+        this.updateTrashIcon();
 
         // remove app from the app stack
         this.app_stack.splice(this.app_stack.indexOf(objId), 1);
@@ -650,6 +654,21 @@ export class Desktop extends Component {
                 }
             });
             this.updateAppsData();
+        }
+    }
+
+    updateTrashIcon = () => {
+        let trash = [];
+        try { trash = JSON.parse(localStorage.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
+        const appIndex = apps.findIndex(app => app.id === 'trash');
+        if (appIndex !== -1) {
+            const icon = trash.length
+                ? './themes/Yaru/system/user-trash-full.png'
+                : './themes/Yaru/status/user-trash-symbolic.svg';
+            if (apps[appIndex].icon !== icon) {
+                apps[appIndex].icon = icon;
+                this.forceUpdate();
+            }
         }
     }
 
