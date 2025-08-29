@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
+import ControlMapper from './components/ControlMapper';
 
 interface Plugin {
   id: number;
@@ -42,6 +43,7 @@ const Nessus: React.FC = () => {
     Low: 0,
     Info: 0,
   });
+  const [findings, setFindings] = useState<Finding[]>([]);
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -65,6 +67,7 @@ const Nessus: React.FC = () => {
           fetch('/demo-data/nessus/scanB.json').then((r) => r.json()),
         ]);
         compareScans(a, b);
+        setFindings(b.findings);
       } catch {
         // ignore
       }
@@ -167,6 +170,10 @@ const Nessus: React.FC = () => {
             <div key={f.plugin}>Plugin {f.plugin} resolved</div>
           ))}
         </div>
+      </section>
+
+      <section>
+        <ControlMapper findings={findings} />
       </section>
 
       <section>
