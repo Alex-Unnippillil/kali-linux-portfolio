@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import HelpOverlay from './HelpOverlay';
 import PerfOverlay from './Games/common/perf';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import { useLeaderboard } from '../../games/utils/leaderboard';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -26,10 +27,14 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [showBoard, setShowBoard] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { leaderboard } = useLeaderboard(gameId);
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
+  const toggleBoard = useCallback(() => setShowBoard((s) => !s), []);
+  const closeBoard = useCallback(() => setShowBoard(false), []);
 
   const fallbackCopy = useCallback((text: string) => {
     if (navigator.clipboard) {
@@ -107,6 +112,18 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     return () => window.removeEventListener('keydown', handler);
   }, [showHelp]);
 
+  useEffect(() => {
+    if (!showBoard) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowBoard(false);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [showBoard]);
+
   // Auto-pause when page becomes hidden or window loses focus
   useEffect(() => {
     const handleVisibility = () => {
@@ -163,6 +180,13 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         )}
         <button
           type="button"
+          onClick={toggleBoard}
+          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+        >
+          Leaderboard
+        </button>
+        <button
+          type="button"
           aria-label="Help"
           aria-expanded={showHelp}
           onClick={toggle}
@@ -171,6 +195,31 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           ?
         </button>
       </div>
+      {showBoard && (
+        <div
+          className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-gray-800 p-4 rounded text-white w-64">
+            <div className="mb-2 text-lg">Leaderboard</div>
+            <ol className="list-decimal ml-4 space-y-1">
+              {leaderboard.map((entry, idx) => (
+                <li key={idx}>
+                  {entry.name}: {entry.score}
+                </li>
+              ))}
+            </ol>
+            <button
+              type="button"
+              onClick={closeBoard}
+              className="mt-2 px-2 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       {children}
       <div className="absolute top-2 left-2 z-10 text-sm space-y-1">
         {stage !== undefined && <div>Stage: {stage}</div>}
