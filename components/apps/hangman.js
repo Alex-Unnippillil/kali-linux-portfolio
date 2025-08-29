@@ -16,7 +16,11 @@ import {
 import { DICTIONARIES } from '../../apps/hangman/engine';
 
 const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
-const dictionaryNames = Object.keys(DICTIONARIES);
+
+const PACKS_BY_DIFFICULTY = {
+  Easy: ['family', 'movie'],
+  Hard: ['sat'],
+};
 
 
 // Helper to draw a line segment with a dashed reveal animation
@@ -65,7 +69,6 @@ const Hangman = () => {
   const [word, setWord] = useState('');
   const [guessed, setGuessed] = useState([]);
   const [wrong, setWrong] = useState(0);
-  const [hintUsed, setHintUsed] = useState(false);
   const [score, setScore] = useState(0);
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = usePersistentState(
@@ -78,6 +81,17 @@ const Hangman = () => {
     0,
     (v) => typeof v === 'number',
   );
+  const [hintCoins, setHintCoins] = usePersistentState(
+    'hangman-hint-coins',
+    3,
+    (v) => typeof v === 'number',
+  );
+  const [stats, setStats] = usePersistentState(
+    'hangman-stats',
+    {},
+    (v) => v !== null && typeof v === 'object',
+  );
+  const [hardMode, setHardMode] = useState(false);
   const [announcement, setAnnouncement] = useState('');
 
   const won = word && word.split('').every((l) => guessed.includes(l));
@@ -132,7 +146,6 @@ const Hangman = () => {
         setWord(chosen);
         setGuessed([]);
         setWrong(0);
-        setHintUsed(false);
         setScore(0);
         setPaused(false);
         partProgressRef.current = new Array(maxWrong).fill(0);
@@ -174,18 +187,18 @@ const Hangman = () => {
     return () => mq.removeEventListener('change', update);
   }, []);
 
-  const hintOnce = useCallback(() => {
-    if (hintUsed || paused) return;
+  const useHint = useCallback(() => {
+    if (paused || hintCoins <= 0) return;
     const remaining = word
       .split('')
       .filter((l) => !guessed.includes(l) && !'aeiou'.includes(l));
     if (!remaining.length) return;
     const letter =
       remaining[Math.floor(Math.random() * remaining.length)];
-    setHintUsed(true);
+    setHintCoins((c) => c - 1);
     setScore((s) => s - 5);
     handleGuess(letter);
-  }, [hintUsed, paused, word, guessed, handleGuess]);
+  }, [paused, hintCoins, word, guessed, handleGuess, setHintCoins]);
 
   const handleGuess = useCallback(
     (letter) => {
@@ -197,7 +210,43 @@ const Hangman = () => {
       )
         return;
       logEvent({ category: 'hangman', action: 'guess', label: letter });
-      setGuessed((g) => [...g, letter]);
+      const newGuessed = [...guessed, letter];
+      setGuessed(newGuessed);
+      const correct = word.includes(letter);
+      if (hardMode && correct) {
+        const wrongLetters = newGuessed.filter((l) => !word.includes(l));
+        const known = word.split('').map((c, i) =>
+          guessed.includes(c) ? c : null,
+        );
+        const candidates = (DICTIONARIES[dict] || []).filter((w) => {
+          if (w.length !== word.length) return false;
+          if (wrongLetters.some((wl) => w.includes(wl))) return false;
+          for (let i = 0; i < w.length; i++) {
+            const k = known[i];
+            if (k && w[i] !== k) return false;
+          }
+          return true;
+        });
+        const avoid = candidates.filter((w) => !w.includes(letter));
+        if (avoid.length) {
+          const newWord =
+            avoid[Math.floor(Math.random() * avoid.length)];
+          setWord(newWord);
+          playTone(200);
+          const idx = wrong;
+          partStartRef.current[idx] = performance.now();
+          partProgressRef.current[idx] = reduceMotionRef.current ? 1 : 0;
+          setWrong((w) => w + 1);
+          setScore((s) => s - 1);
+          const remaining = maxWrong - (wrong + 1);
+          setAnnouncement(
+            `Wrong guess: ${letter}. ${remaining} ${
+              remaining === 1 ? 'try' : 'tries'
+            } left.`,
+          );
+          return;
+        }
+      }
       if (word.includes(letter)) {
         playTone(600);
         setScore((s) => s + 2);
@@ -217,7 +266,7 @@ const Hangman = () => {
         );
       }
     },
-    [paused, guessed, wrong, word, playTone],
+    [paused, guessed, wrong, word, playTone, hardMode, dict],
   );
 
   const togglePause = useCallback(() => setPaused((p) => !p), []);
@@ -261,11 +310,11 @@ const Hangman = () => {
       const k = e.key.toLowerCase();
       if (k === 'r') reset();
       else if (k === 'p') togglePause();
-      else if (k === 'h') hintOnce();
+      else if (k === 'h') useHint();
       else if (k === 's') toggleSound();
       else if (/^[a-z]$/.test(k)) handleGuess(k);
     },
-    [reset, togglePause, hintOnce, toggleSound, handleGuess],
+    [reset, togglePause, useHint, toggleSound, handleGuess],
   );
 
   useEffect(() => {
@@ -279,12 +328,23 @@ const Hangman = () => {
       if (won) {
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         setAnnouncement('You won! Press R to play again.');
+        setHintCoins((c) => c + 1);
       } else {
         setAnnouncement(`You lost! ${word.toUpperCase()}. Press R to restart.`);
       }
+      setStats((s) => {
+        const prev = s[dict] || { plays: 0, wins: 0 };
+        return {
+          ...s,
+          [dict]: {
+            plays: prev.plays + 1,
+            wins: prev.wins + (won ? 1 : 0),
+          },
+        };
+      });
       if (score > highscore) setHighscore(score);
     }
-  }, [won, wrong, word, score, highscore, setHighscore]);
+  }, [won, wrong, word, score, highscore, setHighscore, dict, setStats, setHintCoins]);
 
   const draw = useCallback(
     (ctx) => {
@@ -399,18 +459,30 @@ const Hangman = () => {
           value={dict}
           onChange={(e) => setDict(e.target.value)}
         >
-          {dictionaryNames.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
+          {Object.entries(PACKS_BY_DIFFICULTY).map(([diff, names]) => (
+            <optgroup key={diff} label={diff}>
+              {names.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <button
-          onClick={hintOnce}
-          disabled={hintUsed || paused}
+          onClick={useHint}
+          disabled={hintCoins <= 0 || paused}
           className="px-2 py-1 bg-ub-orange text-black rounded"
         >
-          Hint
+          Hint ({hintCoins})
+        </button>
+        <button
+          onClick={() => setHardMode((m) => !m)}
+          className={`px-2 py-1 rounded text-black ${
+            hardMode ? 'bg-red-600' : 'bg-ubt-blue'
+          }`}
+        >
+          {hardMode ? 'Hard On' : 'Hard Off'}
         </button>
         <button
           onClick={shareLink}
@@ -424,6 +496,11 @@ const Hangman = () => {
         >
           Share Image
         </button>
+      </div>
+      <div className="text-center text-xs mb-2">
+        {`Stats for ${dict}: ${stats[dict]?.wins || 0} wins / ${
+          stats[dict]?.plays || 0
+        } plays`}
       </div>
         <div className="flex flex-wrap justify-center gap-1 text-xs mb-2">
           {letters.map((l) => {
