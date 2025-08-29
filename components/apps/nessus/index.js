@@ -31,10 +31,10 @@ export const loadFalsePositives = () => {
   }
 };
 
-export const recordFalsePositive = (scanId, reason) => {
+export const recordFalsePositive = (findingId, reason) => {
   if (typeof window === 'undefined') return [];
   const fps = loadFalsePositives();
-  const updated = [...fps, { scanId, reason }];
+  const updated = [...fps, { findingId, reason }];
   localStorage.setItem('nessusFalsePositives', JSON.stringify(updated));
   return updated;
 };
@@ -48,7 +48,7 @@ const Nessus = () => {
   const [error, setError] = useState('');
   const [jobs, setJobs] = useState([]);
   const [newJob, setNewJob] = useState({ scanId: '', schedule: '' });
-  const [feedbackScan, setFeedbackScan] = useState(null);
+  const [feedbackId, setFeedbackId] = useState(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [falsePositives, setFalsePositives] = useState([]);
   const [findings, setFindings] = useState([]);
@@ -165,9 +165,9 @@ const Nessus = () => {
 
   const submitFeedback = (e) => {
     e.preventDefault();
-    recordFalsePositive(feedbackScan, feedbackText);
+    recordFalsePositive(feedbackId, feedbackText);
     setFalsePositives(loadFalsePositives());
-    setFeedbackScan(null);
+    setFeedbackId(null);
     setFeedbackText('');
   };
 
@@ -260,6 +260,7 @@ const Nessus = () => {
                     <th className="text-left p-1">Vulnerability</th>
                     <th className="text-left p-1">CVSS</th>
                     <th className="text-left p-1">Severity</th>
+                    <th className="text-left p-1">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -269,6 +270,42 @@ const Nessus = () => {
                       <td className="p-1">{f.name}</td>
                       <td className="p-1">{f.cvss}</td>
                       <td className="p-1">{f.severity}</td>
+                      <td className="p-1">
+                        {falsePositives.some((fp) => fp.findingId === f.id) ? (
+                          <span className="text-xs text-green-400">Marked</span>
+                        ) : feedbackId === f.id ? (
+                          <form onSubmit={submitFeedback} className="space-y-1">
+                            <input
+                              className="w-full p-1 rounded text-black"
+                              value={feedbackText}
+                              onChange={(e) => setFeedbackText(e.target.value)}
+                              placeholder="Reason"
+                            />
+                            <div className="flex space-x-2">
+                              <button
+                                type="submit"
+                                className="bg-green-600 px-2 py-1 rounded text-xs"
+                              >
+                                Submit
+                              </button>
+                              <button
+                                type="button"
+                                className="bg-gray-600 px-2 py-1 rounded text-xs"
+                                onClick={() => setFeedbackId(null)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </form>
+                        ) : (
+                          <button
+                            className="text-xs bg-yellow-600 px-2 py-1 rounded"
+                            onClick={() => setFeedbackId(f.id)}
+                          >
+                            False Positive
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -319,12 +356,12 @@ const Nessus = () => {
               </span>
               <button
                 className="text-xs bg-yellow-600 px-2 py-1 rounded"
-                onClick={() => setFeedbackScan(scan.id)}
+                onClick={() => setFeedbackId(scan.id)}
               >
                 False Positive
               </button>
             </div>
-            {feedbackScan === scan.id && (
+            {feedbackId === scan.id && (
               <form onSubmit={submitFeedback} className="mt-2 space-y-1">
                 <input
                   className="w-full p-1 rounded text-black"
@@ -342,7 +379,7 @@ const Nessus = () => {
                   <button
                     type="button"
                     className="bg-gray-600 px-2 py-1 rounded text-xs"
-                    onClick={() => setFeedbackScan(null)}
+                    onClick={() => setFeedbackId(null)}
                   >
                     Cancel
                   </button>

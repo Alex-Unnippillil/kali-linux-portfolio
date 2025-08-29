@@ -11,7 +11,9 @@ describe('nessus scheduling and feedback', () => {
   });
 
   test('false positive submissions stored', () => {
-    recordFalsePositive('2', 'sample reason');
-    expect(loadFalsePositives()).toEqual([{ scanId: '2', reason: 'sample reason' }]);
+    recordFalsePositive('finding-2', 'sample reason');
+    expect(loadFalsePositives()).toEqual([
+      { findingId: 'finding-2', reason: 'sample reason' },
+    ]);
   });
 });
