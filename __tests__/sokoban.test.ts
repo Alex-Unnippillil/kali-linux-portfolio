@@ -1,5 +1,14 @@
 import { defaultLevels } from '../apps/sokoban/levels';
-import { loadLevel, move, undo, redo, isSolved, findHint, wouldDeadlock } from '../apps/sokoban/engine';
+import {
+  loadLevel,
+  move,
+  undo,
+  redo,
+  isSolved,
+  findHint,
+  wouldDeadlock,
+  findMinPushes,
+} from '../apps/sokoban/engine';
 
 describe('sokoban engine', () => {
   test('simple level solvable', () => {
@@ -46,6 +55,12 @@ describe('sokoban engine', () => {
     const state = loadLevel(defaultLevels[0]);
     const hint = findHint(state);
     expect(hint).toBe('ArrowRight');
+  });
+
+  test('minimal pushes computed', () => {
+    const state = loadLevel(defaultLevels[0]);
+    const min = findMinPushes(state);
+    expect(min).toBe(1);
   });
 
   test('preflight corner deadlock', () => {
