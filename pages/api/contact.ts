@@ -76,8 +76,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
-          secret,
-          response: recaptchaToken,
+          secret: String(secret ?? ''),
+          response: String(recaptchaToken ?? ''),
         }),
       }
     );
