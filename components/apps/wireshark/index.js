@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Waterfall from './Waterfall';
 import { protocolName, getRowColor } from './utils';
+import DecodeTree from './DecodeTree';
+import FlowDiagram from './FlowDiagram';
 
 // Determine if a packet matches the active filter expression
 const matchesFilter = (packet, filter) => {
@@ -15,18 +17,41 @@ const matchesFilter = (packet, filter) => {
   );
 };
 
+// Basic BPF-style filtering support
+const matchesBpf = (packet, expr) => {
+  if (!expr) return true;
+  const f = expr.trim().toLowerCase();
+  if (f === 'tcp') return packet.protocol === 6;
+  if (f === 'udp') return packet.protocol === 17;
+  if (f === 'icmp') return packet.protocol === 1;
+  const port = f.match(/^port (\d+)$/);
+  if (port) {
+    const num = parseInt(port[1], 10);
+    return packet.sport === num || packet.dport === num;
+  }
+  const host = f.match(/^host (.+)$/);
+  if (host) {
+    const ip = host[1];
+    return packet.src === ip || packet.dest === ip;
+  }
+  return true;
+};
+
 const WiresharkApp = ({ initialPackets = [] }) => {
   const [packets, setPackets] = useState(initialPackets);
   const [socket, setSocket] = useState(null);
   const [tlsKeys, setTlsKeys] = useState('');
   const [protocolFilter, setProtocolFilter] = useState('');
   const [filter, setFilter] = useState('');
+   const [bpf, setBpf] = useState('');
   const [colorRuleText, setColorRuleText] = useState('[]');
   const [colorRules, setColorRules] = useState([]);
   const [paused, setPaused] = useState(false);
   const [timeline, setTimeline] = useState([]);
   const [viewIndex, setViewIndex] = useState(0);
   const [announcement, setAnnouncement] = useState('');
+  const [selectedPacket, setSelectedPacket] = useState(null);
+  const [view, setView] = useState('packets');
   const workerRef = useRef(null);
   const pausedRef = useRef(false);
   const prefersReducedMotion = useRef(false);
@@ -79,6 +104,10 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     if (typeof window !== 'undefined') {
       window.localStorage.setItem('wireshark-filter', val);
     }
+  };
+
+  const handleBpfChange = (e) => {
+    setBpf(e.target.value);
   };
 
   const handleTLSKeyUpload = (e) => {
@@ -148,6 +177,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const protocols = Array.from(new Set(packets.map((p) => protocolName(p.protocol))));
   const filteredPackets = packets
     .filter((p) => matchesFilter(p, filter))
+    .filter((p) => matchesBpf(p, bpf))
     .filter((p) => !protocolFilter || protocolName(p.protocol) === protocolFilter);
   const hasTlsKeys = !!tlsKeys;
 
@@ -185,6 +215,21 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           aria-label="Quick search"
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
+        <input
+          value={bpf}
+          onChange={handleBpfChange}
+          list="bpf-suggestions"
+          placeholder="BPF filter (e.g. tcp, port 80)"
+          aria-label="BPF filter"
+          className="px-2 py-1 bg-gray-800 rounded text-white"
+        />
+        <datalist id="bpf-suggestions">
+          <option value="tcp" />
+          <option value="udp" />
+          <option value="icmp" />
+          <option value="port 80" />
+          <option value="host 10.0.0.1" />
+        </datalist>
         <a
           href="https://www.wireshark.org/docs/dfref/"
           target="_blank"
@@ -245,42 +290,74 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           </button>
         ))}
       </div>
-      <div className="flex-1 overflow-auto">
-        <table className="min-w-full text-xs">
-          <thead className="bg-gray-800">
-            <tr>
-              <th className="px-2 py-1 text-left">Time</th>
-              <th className="px-2 py-1 text-left">Source</th>
-              <th className="px-2 py-1 text-left">Destination</th>
-              <th className="px-2 py-1 text-left">Protocol</th>
-              <th className="px-2 py-1 text-left">Info</th>
-              {hasTlsKeys && (
-                <th className="px-2 py-1 text-left">Decrypted</th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {filteredPackets.map((p, i) => (
-              <tr
-                key={i}
-                className={`${i % 2 ? 'bg-gray-900' : 'bg-gray-800'} ${getRowColor(
-                  p,
-                  colorRules
-                )}`}
-              >
-                <td className="px-2 py-1 whitespace-nowrap">{p.timestamp}</td>
-                <td className="px-2 py-1 whitespace-nowrap">{p.src}</td>
-                <td className="px-2 py-1 whitespace-nowrap">{p.dest}</td>
-                <td className="px-2 py-1 whitespace-nowrap">{protocolName(p.protocol)}</td>
-                <td className="px-2 py-1">{p.info}</td>
-                {hasTlsKeys && (
-                  <td className="px-2 py-1">{p.decrypted}</td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="p-2 flex space-x-2 bg-gray-900">
+        <button
+          className={`px-2 py-1 rounded border ${
+            view === 'packets' ? 'bg-gray-700' : 'bg-gray-800'
+          }`}
+          onClick={() => setView('packets')}
+        >
+          Packets
+        </button>
+        <button
+          className={`px-2 py-1 rounded border ${
+            view === 'flows' ? 'bg-gray-700' : 'bg-gray-800'
+          }`}
+          onClick={() => setView('flows')}
+        >
+          Flows
+        </button>
       </div>
+      {view === 'packets' ? (
+        <>
+          <div className="flex-1 overflow-auto">
+            <table className="min-w-full text-xs">
+              <thead className="bg-gray-800">
+                <tr>
+                  <th className="px-2 py-1 text-left">Time</th>
+                  <th className="px-2 py-1 text-left">Source</th>
+                  <th className="px-2 py-1 text-left">Destination</th>
+                  <th className="px-2 py-1 text-left">Protocol</th>
+                  <th className="px-2 py-1 text-left">Info</th>
+                  {hasTlsKeys && (
+                    <th className="px-2 py-1 text-left">Decrypted</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPackets.map((p, i) => (
+                  <tr
+                    key={i}
+                    onClick={() => setSelectedPacket(p)}
+                    className={`${i % 2 ? 'bg-gray-900' : 'bg-gray-800'} ${getRowColor(
+                      p,
+                      colorRules
+                    )} ${selectedPacket === p ? 'outline outline-1 outline-yellow-400' : ''}`}
+                  >
+                    <td className="px-2 py-1 whitespace-nowrap">{p.timestamp}</td>
+                    <td className="px-2 py-1 whitespace-nowrap">{p.src}</td>
+                    <td className="px-2 py-1 whitespace-nowrap">{p.dest}</td>
+                    <td className="px-2 py-1 whitespace-nowrap">{protocolName(p.protocol)}</td>
+                    <td className="px-2 py-1">{p.info}</td>
+                    {hasTlsKeys && (
+                      <td className="px-2 py-1">{p.decrypted}</td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-2 bg-gray-900 overflow-auto text-xs h-40">
+            {selectedPacket ? (
+              <DecodeTree data={selectedPacket.layers} />
+            ) : (
+              <p className="text-gray-400">Select a packet to view details</p>
+            )}
+          </div>
+        </>
+      ) : (
+        <FlowDiagram packets={filteredPackets} />
+      )}
       <div aria-live="polite" className="sr-only">
         {announcement}
       </div>
