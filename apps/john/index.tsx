@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import MaskBuilder from './components/MaskBuilder';
 
 interface PotEntry {
   hash: string;
@@ -169,6 +170,7 @@ const JohnApp: React.FC = () => {
           </p>
         )}
       </div>
+      <MaskBuilder />
       <div className="mt-auto">
         <h2 className="text-lg mb-1">Potfile</h2>
         <div className="flex gap-2 mb-2">
