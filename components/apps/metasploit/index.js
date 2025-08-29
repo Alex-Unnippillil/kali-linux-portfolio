@@ -25,6 +25,7 @@ const MetasploitApp = ({
   const [query, setQuery] = useState('');
   const [searchField, setSearchField] = useState('name');
   const [selectedSeverity, setSelectedSeverity] = useState(null);
+  const [selectedTag, setSelectedTag] = useState('');
   const [animationStyle, setAnimationStyle] = useState({ opacity: 1 });
   const [reduceMotion, setReduceMotion] = useState(false);
 
@@ -41,12 +42,12 @@ const MetasploitApp = ({
   const moduleRaf = useRef();
   const progressRaf = useRef();
 
-  // Refresh modules list in the background on mount
-  useEffect(() => {
-    if (!demoMode && process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-      fetch('/api/metasploit').catch(() => {});
-    }
-  }, [demoMode]);
+  const allTags = useMemo(
+    () => Array.from(new Set(modules.flatMap((m) => m.tags || []))).sort(),
+    []
+  );
+
+  // Modules are loaded from a local JSON index so the app works offline.
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -77,23 +78,29 @@ const MetasploitApp = ({
     const q = query.toLowerCase();
     if (!q) return [];
     return modules.filter((m) => {
+      if (selectedTag && !m.tags.includes(selectedTag)) return false;
       if (searchField === 'cve') {
         return (m.cve || []).some((c) => c.toLowerCase().includes(q));
+      }
+      if (searchField === 'tags') {
+        return (m.tags || []).some((t) => t.toLowerCase().includes(q));
       }
       const field = (m[searchField] || '').toString().toLowerCase();
       return field.includes(q);
     });
-  }, [query, searchField]);
+  }, [query, searchField, selectedTag]);
 
   const modulesByType = useMemo(() => {
     const filteredMods = modules.filter(
-      (m) => !selectedSeverity || m.severity === selectedSeverity
+      (m) =>
+        (!selectedSeverity || m.severity === selectedSeverity) &&
+        (!selectedTag || m.tags.includes(selectedTag))
     );
     return moduleTypes.reduce((acc, type) => {
       acc[type] = filteredMods.filter((m) => m.type === type);
       return acc;
     }, {});
-  }, [selectedSeverity]);
+  }, [selectedSeverity, selectedTag]);
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -241,6 +248,7 @@ const MetasploitApp = ({
               <option value="type">Type</option>
               <option value="platform">Platform</option>
               <option value="cve">CVE</option>
+              <option value="tags">Tags</option>
             </select>
           </div>
           {query && (
@@ -257,6 +265,20 @@ const MetasploitApp = ({
             </ul>
           )}
           <div className="mt-4">
+            <div className="mb-2">
+              <select
+                className="bg-ub-grey text-white p-1 rounded"
+                value={selectedTag}
+                onChange={(e) => setSelectedTag(e.target.value)}
+              >
+                <option value="">All Tags</option>
+                {allTags.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="flex flex-wrap mb-2">
               {severities.map((s) => (
                 <button
@@ -368,7 +390,17 @@ const MetasploitApp = ({
           {selectedModule ? (
             <>
               <h3 className="font-bold mb-1">{selectedModule.name}</h3>
-              <p className="mb-2">{selectedModule.description}</p>
+              <p className="mb-1">{selectedModule.description}</p>
+              {selectedModule.disclosure_date && (
+                <p className="mb-1">
+                  <strong>Disclosed:</strong> {selectedModule.disclosure_date}
+                </p>
+              )}
+              {selectedModule.teaches && (
+                <p className="mb-1">
+                  <strong>Teaches:</strong> {selectedModule.teaches}
+                </p>
+              )}
               <p>{selectedModule.doc || 'No documentation available.'}</p>
             </>
           ) : (
