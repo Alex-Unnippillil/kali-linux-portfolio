@@ -132,7 +132,9 @@ export default function ThreadComposer() {
             className="w-full p-2 border rounded bg-transparent"
           />
           <div
-            ref={(el) => (previewRefs.current[i] = el)}
+            ref={(el) => {
+              previewRefs.current[i] = el;
+            }}
             className="p-2 border rounded whitespace-pre-wrap bg-white text-black dark:bg-black dark:text-white"
           >
             {tweet.text || <span className="text-gray-400">Preview...</span>}
