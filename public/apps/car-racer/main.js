@@ -66,8 +66,10 @@ function applyCurve(v, type) {
 // --- setup params ---
 const params = new URLSearchParams(location.search);
 let seed = params.get('seed');
+const levelCode = params.get('level');
+const mode = params.get('mode');
 const menu = document.getElementById('menu');
-if (!seed) {
+if (!seed && !levelCode) {
   const tracks = [
     { name: 'Layout A', seed: 'trackA' },
     { name: 'Layout B', seed: 'trackB' },
@@ -86,7 +88,7 @@ if (!seed) {
   });
 } else {
   menu.style.display = 'none';
-  document.getElementById('seedDisp').textContent = seed;
+  document.getElementById('seedDisp').textContent = seed || 'custom';
 
   let curveType = params.get('curve') || 'linear';
   const curveSel = document.getElementById('curve');
@@ -112,9 +114,20 @@ if (!seed) {
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
 
-  const track = generateTrack(strToSeed(seed));
+  let track;
+  if (levelCode) {
+    try {
+      track = JSON.parse(atob(levelCode));
+      seed = 'custom';
+    } catch (e) {
+      track = generateTrack(strToSeed(seed));
+    }
+  } else {
+    track = generateTrack(strToSeed(seed));
+  }
 
   let worldTime = 0;
+  let speedScale = 1;
   const rainDrops = Array.from({ length: 80 }, () => ({
     x: Math.random() * WIDTH,
     y: Math.random() * HEIGHT,
@@ -262,9 +275,12 @@ if (!seed) {
     }
 
     // physics
+    if (mode === 'endless') {
+      speedScale += dt * 0.02;
+    }
     const ACCEL = 200;
     const FRICTION = 50;
-    car.speed += accel * ACCEL * dt;
+    car.speed += accel * ACCEL * dt * speedScale;
     car.speed -= FRICTION * dt;
     if (car.speed < 0) car.speed = 0;
     let turn = steer * car.speed * 0.002;
