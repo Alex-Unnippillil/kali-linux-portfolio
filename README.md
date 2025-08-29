@@ -205,7 +205,9 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `cdn.syndication.twimg.com` | Twitter asset CDN |
 | `*.twitter.com` | Additional Twitter content |
 | `*.x.com` | X (Twitter) domain equivalents |
-| `*.google.com` | Google services used by demos |
+| `*.google.com` | Google services used by demos (e.g., reCAPTCHA) |
+| `cdn.jsdelivr.net` | Math.js library |
+| `cdnjs.cloudflare.com` | PDF.js worker |
 | `stackblitz.com` | StackBlitz IDE embeds |
 | `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
