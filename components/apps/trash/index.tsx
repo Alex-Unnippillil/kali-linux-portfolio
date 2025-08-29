@@ -1,91 +1,69 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
+import {
+  listTrash,
+  restoreItem,
+  deleteForever,
+  TrashItem,
+} from "../../../utils/trash";
 
-interface TrashItem {
-  id: string;
-  title: string;
-  icon?: string;
-  image?: string;
-  closedAt: number;
-}
-
-const formatAge = (closedAt: number): string => {
-  const diff = Date.now() - closedAt;
+const formatAge = (deletedAt: number): string => {
+  const diff = Date.now() - deletedAt;
   const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-  if (days > 0) return `${days} day${days !== 1 ? 's' : ''} ago`;
+  if (days > 0) return `${days} day${days !== 1 ? "s" : ""} ago`;
   const hours = Math.floor(diff / (60 * 60 * 1000));
-  if (hours > 0) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+  if (hours > 0) return `${hours} hour${hours !== 1 ? "s" : ""} ago`;
   const minutes = Math.floor(diff / (60 * 1000));
-  if (minutes > 0) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
-  return 'Just now';
+  if (minutes > 0) return `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
+  return "Just now";
 };
 
-export default function Trash({ openApp }: { openApp: (id: string) => void }) {
+export default function Trash() {
   const [items, setItems] = useState<TrashItem[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
 
-  useEffect(() => {
-    const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);
-    const ms = purgeDays * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    let data: TrashItem[] = [];
-    try {
-      data = JSON.parse(localStorage.getItem('window-trash') || '[]');
-    } catch {
-      data = [];
-    }
-    data = data.filter((item) => now - item.closedAt <= ms);
-    localStorage.setItem('window-trash', JSON.stringify(data));
-    setItems(data);
+  const refresh = useCallback(async () => {
+    setItems(await listTrash());
   }, []);
 
-  const persist = (next: TrashItem[]) => {
-    setItems(next);
-    localStorage.setItem('window-trash', JSON.stringify(next));
-  };
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-  const restore = useCallback(() => {
+  const restore = useCallback(async () => {
     if (selected === null) return;
     const item = items[selected];
-    if (!window.confirm(`Restore ${item.title}?`)) return;
-    openApp(item.id);
-    const next = items.filter((_, i) => i !== selected);
-    persist(next);
+    if (!window.confirm(`Restore ${item.name}?`)) return;
+    await restoreItem(item);
     setSelected(null);
-  }, [items, selected, openApp]);
+    refresh();
+  }, [selected, items, refresh]);
 
-  const remove = useCallback(() => {
+  const remove = useCallback(async () => {
     if (selected === null) return;
     const item = items[selected];
-    if (!window.confirm(`Delete ${item.title}?`)) return;
-    const next = items.filter((_, i) => i !== selected);
-    persist(next);
+    if (!window.confirm(`Delete ${item.name}?`)) return;
+    await deleteForever(item);
     setSelected(null);
-  }, [items, selected]);
+    refresh();
+  }, [selected, items, refresh]);
 
-  const restoreAll = () => {
+  const empty = async () => {
     if (items.length === 0) return;
-    if (!window.confirm('Restore all windows?')) return;
-    items.forEach((item) => openApp(item.id));
-    persist([]);
+    if (!window.confirm("Empty trash?")) return;
+    await Promise.all(items.map((i) => deleteForever(i)));
     setSelected(null);
-  };
-
-  const empty = () => {
-    if (items.length === 0) return;
-    if (!window.confirm('Empty trash?')) return;
-    persist([]);
-    setSelected(null);
+    refresh();
   };
 
   const handleKey = useCallback(
     (e: KeyboardEvent) => {
       if (selected === null) return;
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
         remove();
-      } else if (e.key === 'Enter' || e.key.toLowerCase() === 'r') {
+      } else if (e.key === "Enter" || e.key.toLowerCase() === "r") {
         e.preventDefault();
         restore();
       }
@@ -94,8 +72,8 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   );
 
   useEffect(() => {
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
   }, [handleKey]);
 
   return (
@@ -109,13 +87,6 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
             className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
           >
             Restore
-          </button>
-          <button
-            onClick={restoreAll}
-            disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
-          >
-            Restore All
           </button>
           <button
             onClick={remove}
@@ -137,21 +108,19 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
         {items.length === 0 && <div className="w-full text-center mt-10">Trash is empty</div>}
         {items.map((item, idx) => (
           <div
-            key={item.closedAt}
+            key={item.id}
             tabIndex={0}
             onClick={() => setSelected(idx)}
-            className={`m-2 border p-1 w-32 cursor-pointer ${selected === idx ? 'bg-ub-drk-abrgn' : ''}`}
+            className={`m-2 border p-1 w-32 cursor-pointer ${selected === idx ? "bg-ub-drk-abrgn" : ""}`}
           >
-            {item.image ? (
-              <img src={item.image} alt={item.title} className="h-20 w-full object-cover" />
-            ) : item.icon ? (
-              <img src={item.icon} alt={item.title} className="h-20 w-20 mx-auto object-contain" />
-            ) : null}
-            <p className="text-center text-xs truncate mt-1" title={item.title}>
-              {item.title}
+            <p className="text-center text-xs truncate mt-1" title={item.name}>
+              {item.name}
             </p>
-            <p className="text-center text-[10px] text-gray-400" aria-label={`Closed ${formatAge(item.closedAt)}`}>
-              {formatAge(item.closedAt)}
+            <p
+              className="text-center text-[10px] text-gray-400"
+              aria-label={`Deleted ${formatAge(item.deletedAt)}`}
+            >
+              {formatAge(item.deletedAt)}
             </p>
           </div>
         ))}
@@ -159,4 +128,3 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     </div>
   );
 }
-
