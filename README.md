@@ -162,6 +162,8 @@ keyboard focus so bundles are warmed before launch. When adding a new app, expor
 | `NEXT_PUBLIC_BEEF_URL` | Optional URL for the BeEF demo iframe (if used). |
 | `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
+| `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
 | `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
@@ -236,6 +238,8 @@ Workflow: `.github/workflows/gh-deploy.yml`:
   - `NEXT_PUBLIC_GHIDRA_URL`
   - `NEXT_PUBLIC_GHIDRA_WASM`
   - `NEXT_PUBLIC_UI_EXPERIMENTS`
+  - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
+  - `RECAPTCHA_SECRET`
 - Build command: `yarn build`
 - Output: Next.js (serverless by default on Vercel).
 - If you keep API routes, Vercel deploys them as serverless functions. For a static build, disable API routes or feature-flag those apps.

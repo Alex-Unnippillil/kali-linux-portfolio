@@ -16,7 +16,7 @@ describe('contact api rate limiter', () => {
     rateLimit.clear();
     jest.restoreAllMocks();
     delete (global as any).fetch;
-    delete process.env.RECAPTCHA_SECRET_KEY;
+    delete process.env.RECAPTCHA_SECRET;
   });
 
   test('removes stale ip entries', async () => {
@@ -30,7 +30,7 @@ describe('contact api rate limiter', () => {
     (global as any).fetch = jest
       .fn()
       .mockResolvedValue({ json: () => Promise.resolve({ success: true }) });
-    process.env.RECAPTCHA_SECRET_KEY = 'secret';
+    process.env.RECAPTCHA_SECRET = 'secret';
     const req: any = {
       method: 'POST',
       headers: { 'x-csrf-token': 'token', cookie: 'csrfToken=token' },
