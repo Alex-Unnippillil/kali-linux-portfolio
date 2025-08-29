@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
-import modules from './modules.json';
+import modules from '../../public/metasploit-post.json';
 import privTree from './priv-esc.json';
+import ModulesGallery from './components/ModulesGallery';
 
 interface ModuleOption {
   name: string;
@@ -12,7 +13,10 @@ interface ModuleOption {
 
 interface ModuleEntry {
   path: string;
+  os: string;
+  capability: string;
   description: string;
+  tags: string[];
   options?: ModuleOption[];
   sampleOutput: string;
 }
@@ -196,6 +200,7 @@ const MetasploitPost: React.FC = () => {
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen">
       <h1 className="text-xl mb-4">Metasploit Post Modules</h1>
+      <ModulesGallery />
       <div className="flex">
         <div className="w-1/3 overflow-auto border-r border-gray-700 pr-2">
           <ModuleTree data={treeData} onSelect={select} />
