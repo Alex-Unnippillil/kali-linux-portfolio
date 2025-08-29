@@ -84,6 +84,8 @@ const sampleFindings = [
     likelihood: 'low',
     description: 'Outdated banner exposes software version',
     remediation: remediationMap.low,
+    cvss: 5.0,
+    epss: 0.05,
   },
   {
     severity: 'high',
@@ -91,6 +93,43 @@ const sampleFindings = [
     likelihood: 'medium',
     description: 'Remote code execution vulnerability detected',
     remediation: remediationMap.high,
+    cvss: 8.2,
+    epss: 0.6,
+  },
+];
+
+const hostReports = [
+  {
+    host: '192.168.1.10',
+    risk: 'High',
+    summary: { critical: 1, high: 2, medium: 2, low: 1 },
+    vulns: [
+      {
+        title: 'Apache 2.4.49 Path Traversal',
+        cvss: 9.8,
+        epss: 0.76,
+        remediation: ['Patch', 'WAF'],
+      },
+      {
+        title: 'OpenSSH 7.2p2',
+        cvss: 7.5,
+        epss: 0.22,
+        remediation: ['Update'],
+      },
+    ],
+  },
+  {
+    host: '10.0.0.5',
+    risk: 'Medium',
+    summary: { critical: 0, high: 1, medium: 3, low: 2 },
+    vulns: [
+      {
+        title: 'SMBv1 Enabled',
+        cvss: 6.5,
+        epss: 0.17,
+        remediation: ['Disable SMBv1', 'Patch'],
+      },
+    ],
   },
 ];
 
@@ -106,6 +145,7 @@ const OpenVASApp = () => {
   const [announce, setAnnounce] = useState('');
   const [progress, setProgress] = useState(0);
   const [selected, setSelected] = useState(null);
+  const [activeHost, setActiveHost] = useState(null);
   const workerRef = useRef(null);
   const reduceMotion = useRef(false);
 
@@ -213,6 +253,34 @@ const OpenVASApp = () => {
     <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
       <TaskOverview />
       <PolicySettings />
+      {hostReports.length > 0 && (
+        <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 mb-4">
+          {hostReports.map((h) => (
+            <button
+              key={h.host}
+              type="button"
+              onClick={() => setActiveHost(h)}
+              className="p-4 bg-gray-800 rounded text-left focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <div className="font-bold mb-1">{h.host}</div>
+              <div className="mb-1">
+                <span
+                  className={`px-2 py-1 rounded text-xs ${severityColors[h.risk.toLowerCase()]}`}
+                >
+                  {h.risk}
+                </span>
+              </div>
+              <div className="text-xs">
+                {Object.entries(h.summary).map(([sev, count]) => (
+                  <span key={sev} className="mr-2 capitalize">
+                    {sev}: {count}
+                  </span>
+                ))}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
       <h2 className="text-lg mb-2">OpenVAS Scanner</h2>
       <div className="flex mb-4 space-x-2">
         <input
@@ -333,13 +401,68 @@ const OpenVASApp = () => {
                 onClick={() => setSelected(f)}
                 className="w-full text-left focus:outline-none"
               >
-                <span
-                  dangerouslySetInnerHTML={{ __html: escapeHtml(f.description) }}
-                />
+                <div className="flex items-center justify-between">
+                  <span
+                    dangerouslySetInnerHTML={{ __html: escapeHtml(f.description) }}
+                  />
+                  <div className="flex gap-1 ml-2">
+                    <span className="px-1 py-0.5 bg-red-700 rounded text-xs">
+                      CVSS {f.cvss}
+                    </span>
+                    <span className="px-1 py-0.5 bg-blue-700 rounded text-xs">
+                      EPSS {(f.epss * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
               </button>
             </li>
           ))}
         </ul>
+      )}
+      {activeHost && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 bg-black/70 flex items-center justify-center p-4"
+        >
+          <div className="bg-gray-800 p-4 rounded max-w-md w-full">
+            <h3 className="text-lg mb-2">Host {activeHost.host} Findings</h3>
+            <ul className="space-y-2 max-h-60 overflow-auto">
+              {activeHost.vulns.map((v, i) => (
+                <li key={i} className="p-2 bg-gray-700 rounded">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">{v.title}</span>
+                    <div className="flex gap-1 ml-2">
+                      <span className="px-2 py-0.5 rounded text-xs bg-red-700">
+                        CVSS {v.cvss}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-xs bg-blue-700">
+                        EPSS {(v.epss * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-1">
+                    {v.remediation.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-block mr-1 mb-1 px-2 py-0.5 bg-gray-600 rounded text-xs"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => setActiveHost(null)}
+              className="mt-4 px-3 py-1 bg-blue-600 rounded"
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
       {selected && (
         <div
@@ -353,6 +476,18 @@ const OpenVASApp = () => {
               className="mb-2"
               dangerouslySetInnerHTML={{ __html: escapeHtml(selected.description) }}
             />
+            <div className="flex gap-2 mb-2">
+              {selected.cvss !== undefined && (
+                <span className="px-2 py-0.5 bg-red-700 rounded text-xs">
+                  CVSS {selected.cvss}
+                </span>
+              )}
+              {selected.epss !== undefined && (
+                <span className="px-2 py-0.5 bg-blue-700 rounded text-xs">
+                  EPSS {(selected.epss * 100).toFixed(1)}%
+                </span>
+              )}
+            </div>
             {selected.remediation && (
               <p className="text-sm mb-4">
                 <span className="font-bold">Remediation:</span> {selected.remediation}
