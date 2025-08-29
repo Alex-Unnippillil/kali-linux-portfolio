@@ -4,6 +4,7 @@ import trackServerEvent from '@/lib/analytics-server';
 import { reportValue, beta } from 'flags';
 import { contactSchema } from '../../utils/contactSchema';
 import { validateServerEnv } from '../../lib/validate';
+import { getServiceSupabase } from '../../lib/supabase';
 
 // Simple in-memory rate limiter. Not suitable for distributed environments.
 export const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -105,6 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
+  let sanitized: { name: string; email: string; message: string };
   try {
     const parsed = contactSchema.parse({ ...rest, csrfToken: csrfHeader, recaptchaToken });
     if (parsed.honeypot) {
@@ -112,14 +114,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(400).json({ ok: false, code: 'invalid_input' });
       return;
     }
+    sanitized = { name: parsed.name, email: parsed.email, message: parsed.message };
   } catch {
     console.warn('Contact submission rejected', { ip, reason: 'invalid_input' });
     res.status(400).json({ ok: false, code: 'invalid_input' });
     return;
   }
 
-  const isBeta = await beta();
-  reportValue('beta', isBeta);
-  await trackServerEvent('contact_submit', { method: 'api' }, { flags: ['beta'] });
+  try {
+    const supabase = getServiceSupabase();
+    await supabase.from('contact_messages').insert([sanitized]);
+  } catch {
+    console.warn('Failed to store contact message', { ip });
+  }
+
+
   res.status(200).json({ ok: true });
 }
