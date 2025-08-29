@@ -1,0 +1,46 @@
+const CACHE_NAME = 'periodic-cache-v1';
+const ASSETS = [
+  '/apps/weather.js',
+  '/feeds',
+  '/about',
+  '/projects',
+  '/projects.json',
+];
+
+async function prefetchAssets() {
+  const cache = await caches.open(CACHE_NAME);
+  await Promise.all(
+    ASSETS.map(async (url) => {
+      try {
+        const response = await fetch(url, { cache: 'no-cache' });
+        if (response.ok) {
+          await cache.put(url, response.clone());
+        }
+      } catch (err) {
+        // Ignore individual failures
+      }
+    }),
+  );
+}
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(prefetchAssets());
+});
+
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'content-sync') {
+    event.waitUntil(prefetchAssets());
+  }
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'refresh') {
+    event.waitUntil(prefetchAssets());
+  }
+});
+
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request).then((cached) => cached || fetch(event.request)),
+  );
+});
