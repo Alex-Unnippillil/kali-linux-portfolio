@@ -548,17 +548,24 @@ const Tetris = () => {
     lastRotateRef.current = false;
   }, [canHold, getPiece, hold, next]);
 
-  const actionFromKey = useCallback((key) => {
-    const entry = Object.entries(keyBindings).find(([, k]) => k.toLowerCase() === key.toLowerCase());
-    return entry ? entry[0] : null;
-  }, [keyBindings]);
+  const actionFromKey = useCallback(
+    (key, code) => {
+      const entry = Object.entries(keyBindings).find(
+        ([, k]) =>
+          k.toLowerCase() === key.toLowerCase() ||
+          k.toLowerCase() === code.toLowerCase()
+      );
+      return entry ? entry[0] : null;
+    },
+    [keyBindings],
+  );
 
   const togglePause = useCallback(() => setPaused((p) => !p), [setPaused]);
   const toggleSound = useCallback(() => setSound((s) => !s), [setSound]);
 
   const handleKeyDown = useCallback(
     (e) => {
-      const action = actionFromKey(e.key.length === 1 ? e.key : e.code);
+      const action = actionFromKey(e.key, e.code);
       if (!action) return;
       e.preventDefault();
         if (action === 'left' || action === 'right') {
@@ -593,7 +600,7 @@ const Tetris = () => {
 
   const handleKeyUp = useCallback(
     (e) => {
-      const action = actionFromKey(e.key.length === 1 ? e.key : e.code);
+      const action = actionFromKey(e.key, e.code);
       if (!action) return;
         if (action === 'left' || action === 'right') {
           keyHeld.current[action] = false;
