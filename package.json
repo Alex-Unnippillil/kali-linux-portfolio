@@ -85,7 +85,6 @@
     "three": "^0.179.1",
     "turndown": "^7.2.1",
     "workbox-window": "^7.3.0",
-    "ws": "^8.18.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -119,7 +118,8 @@
     "playwright-core": "^1.55.0",
     "typescript": "^5.9.2",
     "wait-on": "^8.0.4",
-    "workbox-build": "^7.3.0"
+    "workbox-build": "^7.3.0",
+    "ws": "^8.18.0"
   },
   "resolutions": {
     "postcss": "^8.5.6",
