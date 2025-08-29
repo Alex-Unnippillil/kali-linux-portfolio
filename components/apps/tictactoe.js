@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import GameLayout from './GameLayout';
-import { checkWinner, minimax, createBoard } from '../../apps/games/tictactoe/engine';
+import { checkWinner, minimax, createBoard } from '../../apps/games/tictactoe/logic';
 
 const SKINS = {
   classic: { X: 'X', O: 'O' },
@@ -62,7 +62,7 @@ const TicTacToe = () => {
 
   const handleClick = (idx) => {
     if (player === null) return;
-    if (board[idx] || checkWinner(board, size).winner) return;
+    if (board[idx] || checkWinner(board, size, mode === 'misere').winner) return;
     const newBoard = board.slice();
     newBoard[idx] = player;
     setBoard(newBoard);
@@ -70,11 +70,7 @@ const TicTacToe = () => {
 
   useEffect(() => {
     if (player === null || ai === null) return;
-    const result = checkWinner(board, size);
-    let winner = result.winner;
-    if (mode === 'misere' && winner && winner !== 'draw') {
-      winner = winner === 'X' ? 'O' : 'X';
-    }
+    const { winner } = checkWinner(board, size, mode === 'misere');
     if (winner) {
       setStatus(winner === 'draw' ? 'Draw' : `${SKINS[skin][winner]} wins`);
       if (winner === 'draw') recordResult('draw');
@@ -119,7 +115,7 @@ const TicTacToe = () => {
             className="bg-gray-700 rounded p-1 ml-2"
           >
             <option value="classic">Classic</option>
-            <option value="misere">Misère</option>
+            <option value="misere">Misère (three-in-a-row loses)</option>
           </select>
         </div>
         <div className="mb-4">Skin:
@@ -211,7 +207,7 @@ const TicTacToe = () => {
   );
 };
 
-export { checkWinner, minimax } from '../../apps/games/tictactoe/engine';
+export { checkWinner, minimax } from '../../apps/games/tictactoe/logic';
 
 export default function TicTacToeApp() {
   return (

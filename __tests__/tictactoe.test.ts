@@ -1,4 +1,4 @@
-import { minimax, checkWinner, createBoard } from '../apps/games/tictactoe/engine';
+import { minimax, checkWinner, createBoard } from '../apps/games/tictactoe/logic';
 
 describe('tic tac toe AI', () => {
   const simulate = (firstMove: number) => {
@@ -73,5 +73,11 @@ describe('checkWinner', () => {
     const result = checkWinner(board, 5);
     expect(result.winner).toBe('O');
     expect(result.line).toEqual([0, 5, 10, 15, 20]);
+  });
+
+  it('inverts winner in misère mode', () => {
+    const board = ['X', 'X', 'X', null, null, null, null, null, null];
+    const result = checkWinner(board, 3, true);
+    expect(result.winner).toBe('O');
   });
 });

@@ -24,13 +24,15 @@ const generateLines = (size: number): number[][] => {
 export const checkWinner = (
   board: Board,
   size = Math.sqrt(board.length),
+  misere = false,
 ): { winner: Player | 'draw' | null; line: number[] } => {
   const lines = generateLines(size);
   for (const line of lines) {
     const [first, ...rest] = line;
     const val = board[first];
     if (val && rest.every((idx) => board[idx] === val)) {
-      return { winner: val, line };
+      const winner = misere ? (val === 'X' ? 'O' : 'X') : val;
+      return { winner, line };
     }
   }
   if (board.every(Boolean)) return { winner: 'draw', line: [] };
@@ -46,9 +48,7 @@ export const minimax = (
   misere = false,
   depth = 0,
 ): { index: number; score: number } => {
-  const result = checkWinner(board, size);
-  let winner = result.winner;
-  if (misere && winner && winner !== 'draw') winner = winner === 'X' ? 'O' : 'X';
+  const winner = checkWinner(board, size, misere).winner;
   if (winner === 'O') return { score: 10 - depth, index: -1 };
   if (winner === 'X') return { score: depth - 10, index: -1 };
   if (winner === 'draw') return { score: 0, index: -1 };
