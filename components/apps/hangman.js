@@ -49,6 +49,10 @@ const HANGMAN_PARTS = [
 
 const maxWrong = HANGMAN_PARTS.length;
 
+// Colorblind-friendly palette for end states
+const SUCCESS_COLOR = '#0072B2';
+const FAILURE_COLOR = '#D55E00';
+
 const Hangman = () => {
   const topics = useMemo(() => Object.keys(DICTIONARIES), []);
   const canvasRef = useRef(null);
@@ -430,12 +434,12 @@ const Hangman = () => {
     if (won) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      ctx.fillStyle = '#0f0';
+      ctx.fillStyle = SUCCESS_COLOR;
       ctx.fillText('You Won! Press R', ctx.canvas.width / 2, 120);
     } else if (lost) {
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      ctx.fillStyle = '#f00';
+      ctx.fillStyle = FAILURE_COLOR;
       ctx.fillText(
         `You Lost! ${word.toUpperCase()}`,
         ctx.canvas.width / 2,
@@ -496,7 +500,7 @@ const Hangman = () => {
         <button
           onClick={useHint}
           disabled={hintCoins <= 0 || paused}
-          className="px-2 py-1 bg-ub-orange text-black rounded"
+          className="px-2 py-0.5 bg-ub-orange text-black rounded-full text-xs shadow" 
         >
           Hint ({hintCoins})
         </button>
@@ -534,7 +538,10 @@ const Hangman = () => {
           stats[dict]?.plays || 0
         } plays`}
       </div>
-        <div className="flex flex-wrap justify-center gap-1 text-xs mb-2">
+        <div
+          className="grid grid-cols-9 gap-x-1 text-xs mb-2 w-max mx-auto justify-items-center"
+          style={{ rowGap: '6px' }}
+        >
           {letters.map((l) => {
             const intensity =
               frequencies.max ? frequencies.counts[l] / frequencies.max : 0;
@@ -546,7 +553,7 @@ const Hangman = () => {
                 type="button"
                 onClick={() => handleGuess(l)}
                 style={{ backgroundColor: color }}
-                className={`px-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange ${guessedAlready ? 'opacity-50' : ''}`}
+                className={`w-6 h-6 flex items-center justify-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange ${guessedAlready ? 'opacity-50' : ''}`}
                 aria-pressed={guessedAlready}
                 disabled={guessedAlready || wrong >= maxWrong || won || paused}
               >
