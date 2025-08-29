@@ -165,6 +165,7 @@ const Blackjack = () => {
     }
     return 0;
   });
+  const [practiceFeedback, setPracticeFeedback] = useState('');
   const [dealerPeeking, setDealerPeeking] = useState(false);
 
   const [_, dispatch] = useReducer(gameReducer, {
@@ -249,20 +250,24 @@ const Blackjack = () => {
     setStreak(0);
     setPracticeCard(practiceShoe.current.draw());
     setPractice(true);
+    setPracticeFeedback('');
     ReactGA.event({ category: 'Blackjack', action: 'count_practice_start' });
   };
 
   const submitPractice = () => {
     const guess = parseInt(practiceGuess, 10);
-    if (guess === practiceShoe.current.runningCount) {
+    const actual = practiceShoe.current.runningCount;
+    if (guess === actual) {
       setStreak((s) => {
         const newStreak = s + 1;
         setBestStreak((b) => (newStreak > b ? newStreak : b));
         return newStreak;
       });
+      setPracticeFeedback(`Correct! Count is ${actual}`);
     } else {
       ReactGA.event({ category: 'Blackjack', action: 'count_streak', value: streak });
       setStreak(0);
+      setPracticeFeedback(`Nope. Count is ${actual}`);
     }
     setPracticeGuess('');
     setPracticeCard(practiceShoe.current.draw());
@@ -341,9 +346,15 @@ const Blackjack = () => {
             Exit
           </button>
         </div>
+        {practiceFeedback && <div className="mt-2">{practiceFeedback}</div>}
         <div className="mt-4">Streak: {streak}</div>
         <div className="mt-1">Best: {bestStreak}</div>
         <div className="mt-1">RC: {practiceShoe.current.runningCount}</div>
+        <div className="mt-1 text-xs">
+          {Object.entries(practiceShoe.current.composition)
+            .map(([v, c]) => `${v}:${c}`)
+            .join(' ')}
+        </div>
       </div>
     );
   }
