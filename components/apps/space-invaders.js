@@ -3,6 +3,8 @@ import GameLayout from './GameLayout';
 import useAssetLoader from '../../hooks/useAssetLoader';
 
 const EXTRA_LIFE_THRESHOLDS = [1000, 5000, 10000];
+const BOSS_EVERY = 3;
+const MAX_SHIELD_HP = 3;
 
 const SpaceInvaders = () => {
   const { loading, error } = useAssetLoader({
@@ -16,7 +18,16 @@ const SpaceInvaders = () => {
   const touch = useRef({ left: false, right: false, fire: false });
   const audioCtx = useRef(null);
 
-  const player = useRef({ x: 0, y: 0, w: 20, h: 10, cooldown: 0, shield: false, rapid: 0 });
+  const player = useRef({
+    x: 0,
+    y: 0,
+    w: 20,
+    h: 10,
+    cooldown: 0,
+    shield: false,
+    shieldHp: 0,
+    rapid: 0,
+  });
   const invaders = useRef([]);
   const invDir = useRef(1);
   const enemyCooldown = useRef(1);
@@ -27,6 +38,17 @@ const SpaceInvaders = () => {
   const powerUps = useRef([]);
   const shelters = useRef([]);
   const ufo = useRef({ active: false, x: 0, y: 15, dir: 1 });
+  const boss = useRef({
+    active: false,
+    x: 0,
+    y: 40,
+    w: 60,
+    h: 20,
+    hp: 0,
+    maxHp: 0,
+    dir: 1,
+    cooldown: 2,
+  });
   const ufoTimer = useRef(0);
   const initialCount = useRef(0);
   const pattern = useRef(0);
@@ -106,6 +128,9 @@ const SpaceInvaders = () => {
     nextExtraLife.current = 0;
     pausedRef.current = false;
     setIsPaused(false);
+    player.current.shield = false;
+    player.current.shieldHp = 0;
+    boss.current.active = false;
     setupWaveRef.current();
   };
 
@@ -154,11 +179,12 @@ const SpaceInvaders = () => {
 
     const createBulletPool = (n, dy) => {
       const arr = [];
-      for (let i = 0; i < n; i += 1) arr.push({ x: 0, y: 0, dy, active: false });
+      for (let i = 0; i < n; i += 1)
+        arr.push({ x: 0, y: 0, dx: 0, dy, active: false });
       return arr;
     };
     playerBullets.current = createBulletPool(20, -200);
-    enemyBullets.current = createBulletPool(20, 200);
+    enemyBullets.current = createBulletPool(50, 200);
 
     const createShelters = () => [
       { x: w * 0.2 - 20, y: h - 60, w: 40, h: 20, hp: 6 },
@@ -169,25 +195,45 @@ const SpaceInvaders = () => {
     const spacing = 30;
 
     const setupWave = () => {
-      const rows = 4 + (stageRef.current - 1);
-      const cols = 8;
-      const invArr = [];
-      for (let r = 0; r < rows; r += 1) {
-        for (let c = 0; c < cols; c += 1) {
-          invArr.push({
-            x: 30 + c * spacing,
-            y: 30 + r * spacing,
-            alive: true,
-            phase: Math.random() * Math.PI * 2,
-          });
+      const isBossStage = stageRef.current % BOSS_EVERY === 0;
+      boss.current.active = false;
+      if (isBossStage) {
+        invaders.current = [];
+        const hp = 20 + stageRef.current * 5;
+        boss.current = {
+          active: true,
+          x: w / 2 - 30,
+          y: 40,
+          w: 60,
+          h: 20,
+          hp,
+          maxHp: hp,
+          dir: 1,
+          cooldown: 2,
+        };
+        initialCount.current = 0;
+      } else {
+        const rows = 4 + (stageRef.current - 1);
+        const cols = 8;
+        const invArr = [];
+        for (let r = 0; r < rows; r += 1) {
+          for (let c = 0; c < cols; c += 1) {
+            invArr.push({
+              x: 30 + c * spacing,
+              y: 30 + r * spacing,
+              alive: true,
+              phase: Math.random() * Math.PI * 2,
+            });
+          }
         }
+        invaders.current = invArr;
+        initialCount.current = invArr.length;
       }
-      invaders.current = invArr;
-      initialCount.current = invArr.length;
 
       player.current.x = w / 2 - player.current.w / 2;
       player.current.cooldown = 0;
       player.current.shield = false;
+      player.current.shieldHp = 0;
       player.current.rapid = 0;
 
       playerBullets.current.forEach((b) => {
@@ -209,11 +255,12 @@ const SpaceInvaders = () => {
     window.addEventListener('keydown', handleKey);
     window.addEventListener('keyup', handleKey);
 
-    const shoot = (pool, x, y, freq) => {
+    const shoot = (pool, x, y, freq, dx = 0) => {
       for (const b of pool) {
         if (!b.active) {
           b.x = x;
           b.y = y;
+          b.dx = dx;
           b.active = true;
           if (freq) playSound(freq);
           break;
@@ -224,8 +271,26 @@ const SpaceInvaders = () => {
     const moveBullets = (pool, dt, mult = 1) => {
       for (const b of pool) {
         if (!b.active) continue;
+        b.x += b.dx * dt * mult;
         b.y += b.dy * dt * mult;
-        if (b.y < 0 || b.y > h) b.active = false;
+        if (b.y < 0 || b.y > h || b.x < 0 || b.x > w) b.active = false;
+      }
+    };
+
+    const enemyShoot = (x, y) => {
+      const patternLevel = Math.floor(stageRef.current / 3);
+      if (patternLevel <= 0) {
+        shoot(enemyBullets.current, x, y, 200);
+      } else if (patternLevel === 1) {
+        shoot(enemyBullets.current, x, y, 200);
+        shoot(enemyBullets.current, x, y, 200, -50);
+        shoot(enemyBullets.current, x, y, 200, 50);
+      } else {
+        shoot(enemyBullets.current, x, y, 200);
+        shoot(enemyBullets.current, x, y, 200, -70);
+        shoot(enemyBullets.current, x, y, 200, 70);
+        shoot(enemyBullets.current, x, y, 200, -40);
+        shoot(enemyBullets.current, x, y, 200, 40);
       }
     };
 
@@ -250,8 +315,9 @@ const SpaceInvaders = () => {
     };
 
     const loseLife = () => {
-      if (player.current.shield) {
-        player.current.shield = false;
+      if (player.current.shield && player.current.shieldHp > 0) {
+        player.current.shieldHp -= 1;
+        if (player.current.shieldHp <= 0) player.current.shield = false;
         return;
       }
       livesRef.current -= 1;
@@ -292,7 +358,7 @@ const SpaceInvaders = () => {
       if (bombWarning.current.time > 0) {
         bombWarning.current.time -= dt;
         if (bombWarning.current.time <= 0) {
-          shoot(enemyBullets.current, bombWarning.current.x, bombWarning.current.y, 200);
+          enemyShoot(bombWarning.current.x, bombWarning.current.y);
         }
       }
 
@@ -310,16 +376,28 @@ const SpaceInvaders = () => {
       }
       if (p.rapid > 0) p.rapid -= dt;
 
-      enemyCooldown.current -= dt;
-      const aliveInv = invaders.current.filter((i) => i.alive);
-      if (
-        enemyCooldown.current <= 0 &&
-        aliveInv.length &&
-        bombWarning.current.time <= 0
-      ) {
-        const inv = aliveInv[Math.floor(Math.random() * aliveInv.length)];
-        bombWarning.current = { time: 0.5, x: inv.x + 10, y: inv.y + 10 };
-        enemyCooldown.current = 1 / (difficultyRef.current * stageRef.current);
+      let aliveInv = [];
+      if (!boss.current.active) {
+        enemyCooldown.current -= dt;
+        aliveInv = invaders.current.filter((i) => i.alive);
+        if (
+          enemyCooldown.current <= 0 &&
+          aliveInv.length &&
+          bombWarning.current.time <= 0
+        ) {
+          const inv = aliveInv[Math.floor(Math.random() * aliveInv.length)];
+          bombWarning.current = { time: 0.5, x: inv.x + 10, y: inv.y + 10 };
+          enemyCooldown.current = 1 / (difficultyRef.current * stageRef.current);
+        }
+      } else {
+        boss.current.cooldown -= dt;
+        boss.current.x += boss.current.dir * 40 * dt;
+        if (boss.current.x < 0 || boss.current.x + boss.current.w > w)
+          boss.current.dir *= -1;
+        if (boss.current.cooldown <= 0) {
+          enemyShoot(boss.current.x + boss.current.w / 2, boss.current.y + boss.current.h);
+          boss.current.cooldown = 1 / difficultyRef.current;
+        }
       }
 
       moveBullets(playerBullets.current, dt);
@@ -382,6 +460,26 @@ const SpaceInvaders = () => {
           addScore(50);
           playSound(1000);
         }
+        if (
+          boss.current.active &&
+          b.x >= boss.current.x &&
+          b.x <= boss.current.x + boss.current.w &&
+          b.y >= boss.current.y &&
+          b.y <= boss.current.y + boss.current.h
+        ) {
+          boss.current.hp -= 1;
+          b.active = false;
+          addScore(20);
+          playSound(600);
+          if (boss.current.hp <= 0) {
+            boss.current.active = false;
+            addScore(200);
+            stageRef.current += 1;
+            setStage(stageRef.current);
+            pattern.current = (pattern.current + 1) % 2;
+            setupWave();
+          }
+        }
       }
 
       // Enemy bullets collisions
@@ -411,64 +509,70 @@ const SpaceInvaders = () => {
         }
       }
 
-      const aliveCount = aliveInv.length;
-      const aliveRatio = aliveCount / initialCount.current || 1;
-      let lowest = 0;
-      for (const inv of aliveInv) if (inv.y > lowest) lowest = inv.y;
-      const descent = lowest / h;
-      const interval =
-        (baseInterval * aliveRatio) /
-        (stageRef.current * (1 + descent) * difficultyRef.current);
-      stepTimer.current += dt;
-      if (stepTimer.current >= interval) {
-        stepTimer.current -= interval;
-        let hitEdge = false;
-        for (const inv of invaders.current) {
-          if (!inv.alive) continue;
-          inv.x += invDir.current * 10;
-          if (pattern.current === 1) {
-            inv.y += Math.sin(time / 200 + inv.phase) * 0.5;
-          }
-          if (inv.x < 10 || inv.x > w - 30) hitEdge = true;
-        }
-        if (hitEdge) {
-          invDir.current *= -1;
+      if (!boss.current.active) {
+        const aliveCount = aliveInv.length;
+        const aliveRatio = aliveCount / initialCount.current || 1;
+        let lowest = 0;
+        for (const inv of aliveInv) if (inv.y > lowest) lowest = inv.y;
+        const descent = lowest / h;
+        const interval =
+          (baseInterval * aliveRatio) /
+          (stageRef.current * (1 + descent) * difficultyRef.current);
+        stepTimer.current += dt;
+        if (stepTimer.current >= interval) {
+          stepTimer.current -= interval;
+          let hitEdge = false;
           for (const inv of invaders.current) {
-            if (inv.alive) inv.y += 10;
+            if (!inv.alive) continue;
+            inv.x += invDir.current * 10;
+            if (pattern.current === 1) {
+              inv.y += Math.sin(time / 200 + inv.phase) * 0.5;
+            }
+            if (inv.x < 10 || inv.x > w - 30) hitEdge = true;
           }
+          if (hitEdge) {
+            invDir.current *= -1;
+            for (const inv of invaders.current) {
+              if (inv.alive) inv.y += 10;
+            }
+          }
+          const beepFreq = 200 + descent * 800;
+          playSound(beepFreq);
         }
-        const beepFreq = 200 + descent * 800;
-        playSound(beepFreq);
+
+        if (aliveCount === 0) {
+          stageRef.current += 1;
+          setStage(stageRef.current);
+          pattern.current = (pattern.current + 1) % 2;
+          setupWave();
+        }
       }
 
-      if (aliveCount === 0) {
-        stageRef.current += 1;
-        setStage(stageRef.current);
-        pattern.current = (pattern.current + 1) % 2;
-        setupWave();
-      }
-
-      ufoTimer.current += dt;
-      if (!ufo.current.active && ufoTimer.current > 15 && Math.random() < 0.02) {
-        ufo.current.active = true;
-        ufo.current.x = 0;
-        ufo.current.dir = 1;
-        ufoTimer.current = 0;
-        playSweep(200, 400, 0.5);
-        setAriaMessage('Saucer approaching');
-        setTimeout(() => setAriaMessage(''), 1000);
-      }
-      if (ufo.current.active) {
-        ufo.current.x += 60 * dt * ufo.current.dir;
-        if (ufo.current.x > w) ufo.current.active = false;
+      if (!boss.current.active) {
+        ufoTimer.current += dt;
+        if (!ufo.current.active && ufoTimer.current > 15 && Math.random() < 0.02) {
+          ufo.current.active = true;
+          ufo.current.x = 0;
+          ufo.current.dir = 1;
+          ufoTimer.current = 0;
+          playSweep(200, 400, 0.5);
+          setAriaMessage('Saucer approaching');
+          setTimeout(() => setAriaMessage(''), 1000);
+        }
+        if (ufo.current.active) {
+          ufo.current.x += 60 * dt * ufo.current.dir;
+          if (ufo.current.x > w) ufo.current.active = false;
+        }
       }
 
       for (const pu of powerUps.current) {
         if (!pu.active) continue;
         if (pu.x >= p.x && pu.x <= p.x + p.w && pu.y >= p.y && pu.y <= p.y + p.h) {
           pu.active = false;
-          if (pu.type === 'shield') p.shield = true;
-          else p.rapid = 5;
+          if (pu.type === 'shield') {
+            p.shield = true;
+            p.shieldHp = MAX_SHIELD_HP;
+          } else p.rapid = 5;
         }
       }
 
@@ -519,6 +623,13 @@ const SpaceInvaders = () => {
       if (p.shield) {
         ctx.strokeStyle = 'cyan';
         ctx.strokeRect(p.x - 2, p.y - 2, p.w + 4, p.h + 4);
+        ctx.fillStyle = 'cyan';
+        ctx.fillRect(
+          p.x - 2,
+          p.y - 6,
+          ((p.w + 4) * p.shieldHp) / MAX_SHIELD_HP,
+          2
+        );
       }
 
       shelters.current.forEach((s) => {
@@ -532,6 +643,17 @@ const SpaceInvaders = () => {
       if (ufo.current.active) {
         ctx.fillStyle = '#ff00ff';
         ctx.fillRect(ufo.current.x, ufo.current.y, 30, 15);
+      }
+      if (boss.current.active) {
+        ctx.fillStyle = 'purple';
+        ctx.fillRect(boss.current.x, boss.current.y, boss.current.w, boss.current.h);
+        ctx.fillStyle = 'red';
+        ctx.fillRect(
+          boss.current.x,
+          boss.current.y - 5,
+          (boss.current.w * boss.current.hp) / boss.current.maxHp,
+          3
+        );
       }
 
       ctx.restore();
