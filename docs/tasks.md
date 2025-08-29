@@ -7,7 +7,7 @@ This document tracks planned improvements and new features for the desktop portf
 - Replace app imports in `apps.config.js` with the factory and `createDisplay` helper.
 - Register apps and games uniformly with `display*` helpers and small default window sizes.
 - Ensure new utilities have Jest tests mirroring existing ones.
-- Fix terminal build by importing `xterm` styles and registering `FitAddon`.
+- Fix terminal build by importing `@xterm/xterm/css/xterm.css` and registering `FitAddon`.
 - Follow `docs/new-app-checklist.md` for all new apps.
 
 ## Desktop Apps
@@ -23,7 +23,7 @@ This document tracks planned improvements and new features for the desktop portf
 - Register with `createDynamicApp('calc','Calc')` and export `displayCalc`.
 
 ### Terminal
-- Import `xterm/css/xterm.css` and `FitAddon`; call `fitAddon.fit()` on mount and resize.
+- Import `@xterm/xterm/css/xterm.css` and `FitAddon`; call `fitAddon.fit()` on mount and resize.
 - Implement command registry (`help`, `ls`, `cat`, `clear`, `open <app>`, `about`, `date`).
 - Add paste support, auto-complete, and scrollback limit.
 - Keep client-only dynamic import.
