@@ -4,6 +4,8 @@ import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
 import FormError from '../../ui/FormError';
 
+const severityLevels = ['All', 'Critical', 'High', 'Medium', 'Low'];
+
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {
   if (typeof window === 'undefined') return [];
@@ -51,23 +53,46 @@ const Nessus = () => {
   const [feedbackScan, setFeedbackScan] = useState(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [falsePositives, setFalsePositives] = useState([]);
+  const [scanFilter, setScanFilter] = useState(() => {
+    if (typeof window === 'undefined') return 'All';
+    try {
+      return localStorage.getItem('nessusScanFilter') || 'All';
+    } catch {
+      return 'All';
+    }
+  });
+
+  const filteredScans = useMemo(() => {
+    if (scanFilter === 'All') return scans;
+    const fallbacks = ['Low', 'Medium', 'High', 'Critical'];
+    return scans.filter((scan, i) => {
+      const sev = scan.severity || fallbacks[i % 4];
+      return sev === scanFilter;
+    });
+  }, [scanFilter, scans]);
 
   const hostData = useMemo(
     () =>
-      scans.map((scan, i) => ({
+      filteredScans.map((scan, i) => ({
         id: scan.id ?? i,
         host: scan.name ?? `Host ${i + 1}`,
         cvss: scan.cvss ?? ((i % 10) + 1),
         severity:
           scan.severity || ['Low', 'Medium', 'High', 'Critical'][i % 4],
       })),
-    [scans]
+    [filteredScans]
   );
 
   useEffect(() => {
     setJobs(loadJobDefinitions());
     setFalsePositives(loadFalsePositives());
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('nessusScanFilter', scanFilter);
+    }
+  }, [scanFilter]);
 
   const login = async (e) => {
     e.preventDefault();
@@ -181,6 +206,36 @@ const Nessus = () => {
           Logout
         </button>
       </div>
+      <div className="mb-4">
+        <div
+          role="radiogroup"
+          aria-label="Filter scans by severity"
+          className="flex flex-wrap gap-2 mb-2"
+        >
+          {severityLevels.map((level) => (
+            <button
+              key={level}
+              onClick={() => setScanFilter(level)}
+              aria-pressed={scanFilter === level}
+              className={`px-3 py-1 rounded-full text-sm border focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                scanFilter === level
+                  ? 'bg-white text-black border-gray-300'
+                  : 'bg-gray-800 text-white border-gray-600'
+              }`}
+            >
+              {level}
+            </button>
+          ))}
+          {scanFilter !== 'All' && (
+            <button
+              onClick={() => setScanFilter('All')}
+              className="text-sm underline ml-2"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
       <HostBubbleChart hosts={hostData} />
       <PluginFeedViewer />
       <ScanComparison />
@@ -215,11 +270,14 @@ const Nessus = () => {
         </div>
       )}
       <ul className="space-y-1">
-        {scans.map((scan) => (
+        {filteredScans.map((scan, i) => {
+          const sev =
+            scan.severity || ['Low', 'Medium', 'High', 'Critical'][i % 4];
+          return (
           <li key={scan.id} className="border-b border-gray-700 pb-1">
             <div className="flex justify-between items-center">
               <span>
-                {scan.name} - {scan.status}
+                {scan.name} - {scan.status} ({sev})
               </span>
               <button
                 className="text-xs bg-yellow-600 px-2 py-1 rounded"
@@ -254,7 +312,8 @@ const Nessus = () => {
               </form>
             )}
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );
