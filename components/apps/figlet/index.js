@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { toPng } from 'html-to-image';
+import usePersistentState from '../../../hooks/usePersistentState';
+import BannerExporter from '../../../apps/figlet/components/BannerExporter';
 
 const FigletApp = () => {
   const [text, setText] = useState('');
   const [fonts, setFonts] = useState([]); // {name, preview, mono}
-  const [font, setFont] = useState('');
+  const [font, setFont] = usePersistentState('figlet-font', '');
   const [monoOnly, setMonoOnly] = useState(false);
   const [output, setOutput] = useState('');
   const [inverted, setInverted] = useState(false);
@@ -19,7 +20,6 @@ const FigletApp = () => {
   const workerRef = useRef(null);
   const frameRef = useRef(null);
   const announceTimer = useRef(null);
-  const preRef = useRef(null);
   const uploadedFonts = useRef({});
 
   useEffect(() => {
@@ -66,11 +66,10 @@ const FigletApp = () => {
             const handle = await dir.getFileHandle('figlet-last-font.json');
             const file = await handle.getFile();
             const saved = JSON.parse(await file.text());
-            if (saved.data) {
+            if (saved.data && saved.font) {
               uploadedFonts.current[saved.font] = saved.data;
               workerRef.current.postMessage({ type: 'load', name: saved.font, data: saved.data });
             }
-            if (saved.font) setFont(saved.font);
           }
         } catch {
           /* ignore */
@@ -98,30 +97,17 @@ const FigletApp = () => {
     return () => cancelAnimationFrame(frameRef.current);
   }, [updateFiglet]);
 
+  const announceMessage = (msg) => {
+    setAnnounce(msg);
+    clearTimeout(announceTimer.current);
+    announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
+  };
+
   const copyOutput = () => {
     if (output) {
       navigator.clipboard.writeText(output);
-      setAnnounce('Copied to clipboard');
-      clearTimeout(announceTimer.current);
-      announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
+      announceMessage('Copied to clipboard');
     }
-  };
-
-  const exportPNG = () => {
-    if (!preRef.current) return;
-    toPng(preRef.current)
-      .then((dataUrl) => {
-        const link = document.createElement('a');
-        link.download = 'figlet.png';
-        link.href = dataUrl;
-        link.click();
-        setAnnounce('Downloaded PNG');
-        clearTimeout(announceTimer.current);
-        announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
-      })
-      .catch(() => {
-        /* ignore export errors */
-      });
   };
 
   const exportText = () => {
@@ -133,9 +119,7 @@ const FigletApp = () => {
     link.href = url;
     link.click();
     URL.revokeObjectURL(url);
-    setAnnounce('Downloaded text');
-    clearTimeout(announceTimer.current);
-    announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
+    announceMessage('Downloaded text');
   };
 
   const handleUpload = async (e) => {
@@ -177,15 +161,15 @@ const FigletApp = () => {
 
   useEffect(() => {
     if (!font || !navigator?.storage?.getDirectory) return;
+    if (!uploadedFonts.current[font]) return;
     (async () => {
       try {
         const dir = await navigator.storage.getDirectory();
         const handle = await dir.getFileHandle('figlet-last-font.json', { create: true });
         const writable = await handle.createWritable();
-        const data = uploadedFonts.current[font]
-          ? { font, data: uploadedFonts.current[font] }
-          : { font };
-        await writable.write(JSON.stringify(data));
+        await writable.write(
+          JSON.stringify({ font, data: uploadedFonts.current[font] }),
+        );
         await writable.close();
       } catch {
         /* ignore */
@@ -324,13 +308,16 @@ const FigletApp = () => {
         >
           Banner to Clipboard
         </button>
-        <button
-          onClick={exportPNG}
-          className="px-2 bg-green-700 hover:bg-green-600 rounded text-white"
-          aria-label="Export PNG"
-        >
-          PNG
-        </button>
+        <BannerExporter
+          output={output}
+          fontSize={fontSize}
+          lineHeight={lineHeight}
+          align={align}
+          kerning={kerning}
+          gradient={gradient}
+          inverted={inverted}
+          onExport={announceMessage}
+        />
         <button
           onClick={exportText}
           className="px-2 bg-purple-700 hover:bg-purple-600 rounded text-white"
@@ -348,7 +335,6 @@ const FigletApp = () => {
       </div>
       <div className="flex-1 overflow-auto">
         <pre
-          ref={preRef}
           className={`min-w-full p-2 whitespace-pre font-mono transition-colors motion-reduce:transition-none ${
             inverted ? 'bg-white' : 'bg-black'
           }`}
