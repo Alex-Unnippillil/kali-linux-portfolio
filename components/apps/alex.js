@@ -4,6 +4,7 @@ import ReactGA from 'react-ga4';
 import LazyGitHubButton from '../LazyGitHubButton';
 import Certs from './certs';
 import data from './alex/data.json';
+import resumeData from './alex/resume.json';
 
 export class AboutAlex extends Component {
 
@@ -24,7 +25,7 @@ export class AboutAlex extends Component {
             "skills": <Skills skills={data.skills} />,
             "certs": <Certs />,
             "projects": <Projects projects={data.projects} />,
-            "resume": <Resume />,
+            "resume": <Resume data={resumeData} />,
         }
 
         let lastVisitedScreen = localStorage.getItem("about-section");
@@ -451,9 +452,23 @@ function Projects({ projects }) {
 }
 
 
-function Resume() {
-    const handleDownload = () => {
+function Resume({ data }) {
+    const [filter, setFilter] = React.useState('all');
+    const [liveMessage, setLiveMessage] = React.useState('');
+
+    const handleDownload = async () => {
         ReactGA.event({ category: 'resume', action: 'download' });
+        const element = document.getElementById('resume-content');
+        if (!element) return;
+        if (!window.html2pdf) {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+            document.body.appendChild(script);
+            await new Promise((resolve) => {
+                script.onload = resolve;
+            });
+        }
+        window.html2pdf().from(element).save('Alex-Unnippillil-Resume.pdf');
     };
 
     const shareContact = async () => {
@@ -472,17 +487,42 @@ function Resume() {
         }
     };
 
+    const tags = React.useMemo(
+        () => Array.from(new Set(data.experience.flatMap((e) => e.tags))),
+        [data]
+    );
+    const experiences = filter === 'all' ? data.experience : data.experience.filter((e) => e.tags.includes(filter));
+
+    React.useEffect(() => {
+        const elements = document.querySelectorAll('.exp-item');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    requestAnimationFrame(() => {
+                        entry.target.classList.add('opacity-100', 'translate-y-0');
+                        setLiveMessage(entry.target.getAttribute('data-description') || '');
+                    });
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+
+        elements.forEach((el) => observer.observe(el));
+
+        return () => {
+            elements.forEach((el) => observer.unobserve(el));
+        };
+    }, [filter]);
+
     return (
         <div className="h-full w-full flex flex-col">
             <div className="p-2 text-right no-print space-x-2">
-                <a
-                    href="/assets/Alex-Unnippillil-Resume.pdf"
-                    download
+                <button
                     onClick={handleDownload}
                     className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
                 >
                     Download
-                </a>
+                </button>
                 <a
                     href="/assets/alex-unnippillil.vcf"
                     download
@@ -497,24 +537,75 @@ function Resume() {
                     Share contact
                 </button>
             </div>
-            <object
-                className="h-full w-full flex-1"
-                data="/assets/Alex-Unnippillil-Resume.pdf"
-                type="application/pdf"
-            >
-                <p className="p-4 text-center">
-                    Unable to display PDF.&nbsp;
-                    <a
-                        href="/assets/Alex-Unnippillil-Resume.pdf"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline text-ubt-blue"
-                        onClick={handleDownload}
-                    >
-                        Download the resume
-                    </a>
-                </p>
-            </object>
+            <div id="resume-content" className="p-4 overflow-y-auto flex-1">
+                <div className="mb-4">
+                    <div className="font-bold text-lg">Skills</div>
+                    <div className="flex flex-wrap mt-2">
+                        {data.skills.map((skill) => (
+                            <span
+                                key={skill}
+                                className="m-1 px-2 py-1 bg-ub-gedit-light rounded-full text-xs"
+                            >
+                                {skill}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+                <div className="mb-4">
+                    <div className="font-bold text-lg">Projects</div>
+                    <ul className="list-disc ml-5 mt-2">
+                        {data.projects.map((p) => (
+                            <li key={p.name} className="text-sm">
+                                <a
+                                    href={p.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="underline text-ubt-blue"
+                                >
+                                    {p.name}
+                                </a>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <div className="mb-4">
+                    <div className="font-bold text-lg">Experience</div>
+                    <div className="flex flex-wrap my-2">
+                        <button
+                            onClick={() => setFilter('all')}
+                            className={(filter === 'all' ? 'bg-ubt-blue' : 'bg-ub-gedit-light') + ' text-xs px-2 py-1 rounded m-1'}
+                        >
+                            All
+                        </button>
+                        {tags.map((tag) => (
+                            <button
+                                key={tag}
+                                onClick={() => setFilter(tag)}
+                                className={(filter === tag ? 'bg-ubt-blue' : 'bg-ub-gedit-light') + ' text-xs px-2 py-1 rounded m-1'}
+                            >
+                                {tag}
+                            </button>
+                        ))}
+                    </div>
+                    <div aria-live="polite" className="sr-only">{liveMessage}</div>
+                    <div className="border-l-2 border-ubt-blue ml-2">
+                        {experiences.map((e, i) => (
+                            <div
+                                key={i}
+                                className="exp-item opacity-0 translate-y-4 transition-all duration-700 ease-out relative mb-8 pl-4"
+                                data-description={`${e.date} ${e.description}`}
+                            >
+                                <div
+                                    aria-hidden="true"
+                                    className="w-3 h-3 bg-ubt-blue rounded-full absolute -left-1.5 top-1.5"
+                                ></div>
+                                <div className="text-ubt-blue font-bold">{e.date}</div>
+                                <p className="text-gray-200">{e.description}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
         </div>
-    )
+    );
 }
