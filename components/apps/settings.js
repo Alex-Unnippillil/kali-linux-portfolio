@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import { getTheme, setTheme } from '../../utils/theme';
+import InputRemap from './Games/common/input-remap/InputRemap';
+import useInputMapping from './Games/common/input-remap/useInputMapping';
+import { GAME_INSTRUCTIONS } from './HelpOverlay';
 
 export function Settings() {
     const { accent, setAccent, wallpaper, setWallpaper, density, setDensity, reducedMotion, setReducedMotion, fontScale, setFontScale, highContrast, setHighContrast } = useSettings();
@@ -9,6 +12,12 @@ export function Settings() {
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+    const mappingInput = useRef(null);
+
+    const games = Object.keys(GAME_INSTRUCTIONS).filter(id => GAME_INSTRUCTIONS[id].actions);
+    const [selectedGame, setSelectedGame] = useState(games[0] || '');
+    const mappingInfo = GAME_INSTRUCTIONS[selectedGame] || {};
+    const [mapping, setKey, setMapping] = useInputMapping(selectedGame, mappingInfo.actions || {});
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
 
@@ -147,6 +156,65 @@ export function Settings() {
                     <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
                 </div>
             </div>
+            <div className="flex flex-col items-center my-4 border-t border-gray-900 pt-4">
+                <div className="flex items-center mb-2">
+                    <label className="mr-2 text-ubt-grey">Game:</label>
+                    <select
+                        value={selectedGame}
+                        onChange={(e) => setSelectedGame(e.target.value)}
+                        className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+                    >
+                        {games.map((g) => (
+                            <option key={g} value={g}>{g}</option>
+                        ))}
+                    </select>
+                </div>
+                {mappingInfo.actions && (
+                    <div className="mb-2">
+                        <InputRemap mapping={mapping} setKey={setKey} actions={mappingInfo.actions} />
+                    </div>
+                )}
+                <div className="flex space-x-2 mt-2">
+                    <button
+                        onClick={() => {
+                            const blob = new Blob([JSON.stringify(mapping)], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `${selectedGame}-mapping.json`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        }}
+                        className="px-4 py-2 rounded bg-ub-orange text-white"
+                    >
+                        Export Mapping
+                    </button>
+                    <button
+                        onClick={() => mappingInput.current && mappingInput.current.click()}
+                        className="px-4 py-2 rounded bg-ub-orange text-white"
+                    >
+                        Import Mapping
+                    </button>
+                </div>
+            </div>
+            <input
+                type="file"
+                accept="application/json"
+                ref={mappingInput}
+                onChange={async (e) => {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file) return;
+                    const text = await file.text();
+                    try {
+                        const parsed = JSON.parse(text);
+                        setMapping(parsed);
+                    } catch (err) {
+                        console.error('Invalid mapping', err);
+                    }
+                    e.target.value = '';
+                }}
+                className="hidden"
+            />
             <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
                 {
                     wallpapers.map((name, index) => (
