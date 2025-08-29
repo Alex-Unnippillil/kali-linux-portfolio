@@ -12,8 +12,9 @@ interface AddressBarProps {
   value: string;
   onChange: (value: string) => void;
   onNavigate: (value: string) => void;
-  onOpenNewTab?: (value: string) => void;
-  onOpenNewWindow?: (value: string) => void;
+  onOpenNewTab: (value: string) => void;
+  onOpenNewWindow: (value: string) => void;
+  historyList?: string[];
 }
 
 interface Favorite {
@@ -35,12 +36,19 @@ const fetchSuggestions = async (term: string): Promise<string[]> => {
   return (data as Array<{ phrase: string }>).map((d) => d.phrase);
 };
 
-const AddressBar: React.FC<AddressBarProps> = ({ value, onChange, onNavigate }) => {
+const AddressBar: React.FC<AddressBarProps> = ({
+  value,
+  onChange,
+  onNavigate,
+  onOpenNewTab,
+  onOpenNewWindow,
+  historyList,
+}) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
   const [index, setIndex] = useState(-1);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const [history, setHistory] = useState<string[]>([]);
+  const [history, setHistory] = useState<string[]>(historyList || []);
   const [menu, setMenu] = useState<{ x: number; y: number; url: string } | null>(
     null,
   );
@@ -60,21 +68,28 @@ const AddressBar: React.FC<AddressBarProps> = ({ value, onChange, onNavigate }) 
         }),
       );
       setFavorites(favs);
-      try {
-        const hist = JSON.parse(localStorage.getItem('chrome-history') || '[]');
-        if (Array.isArray(hist)) setHistory(hist);
-      } catch {
-        /* ignore */
+      let hist: string[] = [];
+      if (historyList) {
+        hist = historyList;
+      } else {
+        try {
+          const parsed = JSON.parse(localStorage.getItem('chrome-history') || '[]');
+          if (Array.isArray(parsed)) hist = parsed;
+        } catch {
+          /* ignore */
+        }
       }
-      setBookmarks(await getBookmarks());
+      setHistory(hist);
+      const bms = await getBookmarks();
+      setBookmarks(bms);
       setSuggestions([
         ...favs.map((f) => f.url),
         ...hist,
-        ...(await getBookmarks()).map((b) => b.url),
+        ...bms.map((b) => b.url),
       ]);
     };
     load();
-  }, []);
+  }, [historyList]);
 
   useEffect(() => {
     if (!value) {
@@ -176,7 +191,7 @@ const AddressBar: React.FC<AddressBarProps> = ({ value, onChange, onNavigate }) 
   const handleOpenTab = useCallback(() => {
     if (menu) {
       addHistory(menu.url);
-      onOpenNewTab?.(menu.url);
+      onOpenNewTab(menu.url);
     }
     setMenu(null);
   }, [menu, onOpenNewTab, addHistory]);
@@ -184,11 +199,7 @@ const AddressBar: React.FC<AddressBarProps> = ({ value, onChange, onNavigate }) 
   const handleOpenWindow = useCallback(() => {
     if (menu) {
       addHistory(menu.url);
-      if (onOpenNewWindow) {
-        onOpenNewWindow(menu.url);
-      } else {
-        window.open(menu.url, '_blank');
-      }
+      onOpenNewWindow(menu.url);
     }
     setMenu(null);
   }, [menu, onOpenNewWindow, addHistory]);

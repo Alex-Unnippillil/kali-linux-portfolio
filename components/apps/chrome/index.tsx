@@ -8,8 +8,8 @@ import React, {
 import { toPng } from 'html-to-image';
 import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
-import AddressBar from '../chrome/AddressBar';
-import { getCachedFavicon, cacheFavicon } from '../chrome/bookmarks';
+import AddressBar from './AddressBar';
+import { getCachedFavicon, cacheFavicon } from './bookmarks';
 
 interface Tile {
   title: string;
@@ -93,6 +93,7 @@ const Chrome: React.FC = () => {
   const [tabQuery, setTabQuery] = useState('');
   const [overflowing, setOverflowing] = useState(false);
   const draggingId = useRef<number | null>(null);
+  const dragTabId = useRef<string | null>(null);
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [editingTiles, setEditingTiles] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -701,6 +702,7 @@ const Chrome: React.FC = () => {
           onNavigate={navigate}
           onOpenNewTab={(url) => addTab(url)}
           onOpenNewWindow={(url) => window.open(url, '_blank')}
+          historyList={tabs.find((t) => t.id === activeId)?.history}
         />
         <button onClick={() => addTab()} aria-label="New Tab" className="px-2">
           +
