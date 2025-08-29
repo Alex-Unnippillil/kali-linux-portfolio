@@ -2315,7 +2315,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@napi-rs/canvas@npm:^0.1.74":
+"@napi-rs/canvas@npm:0.1.77":
   version: 0.1.77
   resolution: "@napi-rs/canvas@npm:0.1.77"
   dependencies:
@@ -2351,6 +2351,45 @@ __metadata:
     "@napi-rs/canvas-win32-x64-msvc":
       optional: true
   checksum: 10c0/f7a1b33e86e53c210db873a6b5b9be9961d9a57b4e1c4e61c2667ed3cb166dec334b4f14d548c8790d9ffc79cf49b9762340f3b3d3f7fc991e9c8cc0a5f8654d
+  languageName: node
+  linkType: hard
+
+"@napi-rs/canvas@patch:@napi-rs/canvas@npm%3A0.1.77#~/.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch":
+  version: 0.1.77
+  resolution: "@napi-rs/canvas@patch:@napi-rs/canvas@npm%3A0.1.77#~/.yarn/patches/@napi-rs-canvas-npm-0.1.77-27723c2ab5.patch::version=0.1.77&hash=93d5cb"
+  dependencies:
+    "@napi-rs/canvas-android-arm64": "npm:0.1.77"
+    "@napi-rs/canvas-darwin-arm64": "npm:0.1.77"
+    "@napi-rs/canvas-darwin-x64": "npm:0.1.77"
+    "@napi-rs/canvas-linux-arm-gnueabihf": "npm:0.1.77"
+    "@napi-rs/canvas-linux-arm64-gnu": "npm:0.1.77"
+    "@napi-rs/canvas-linux-arm64-musl": "npm:0.1.77"
+    "@napi-rs/canvas-linux-riscv64-gnu": "npm:0.1.77"
+    "@napi-rs/canvas-linux-x64-gnu": "npm:0.1.77"
+    "@napi-rs/canvas-linux-x64-musl": "npm:0.1.77"
+    "@napi-rs/canvas-win32-x64-msvc": "npm:0.1.77"
+  dependenciesMeta:
+    "@napi-rs/canvas-android-arm64":
+      optional: true
+    "@napi-rs/canvas-darwin-arm64":
+      optional: true
+    "@napi-rs/canvas-darwin-x64":
+      optional: true
+    "@napi-rs/canvas-linux-arm-gnueabihf":
+      optional: true
+    "@napi-rs/canvas-linux-arm64-gnu":
+      optional: true
+    "@napi-rs/canvas-linux-arm64-musl":
+      optional: true
+    "@napi-rs/canvas-linux-riscv64-gnu":
+      optional: true
+    "@napi-rs/canvas-linux-x64-gnu":
+      optional: true
+    "@napi-rs/canvas-linux-x64-musl":
+      optional: true
+    "@napi-rs/canvas-win32-x64-msvc":
+      optional: true
+  checksum: 10c0/32cd0d4b772e341a6f8fa61e4f8bae29e47d978584cab41800aa304863d4555924fe525508d47be8d96300c713327056bab3e48c0f743850775f43c08667cd28
   languageName: node
   linkType: hard
 
@@ -2783,8 +2822,6 @@ __metadata:
   linkType: hard
 
 "@supabase/supabase-js@npm:^2.56.1":
-
-
   version: 2.56.1
   resolution: "@supabase/supabase-js@npm:2.56.1"
   dependencies:
@@ -6681,9 +6718,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"flags@npm:^4.0.1":
-  version: 4.0.1
-  resolution: "flags@npm:4.0.1"
+"flags@npm:3":
+  version: 3.2.0
+  resolution: "flags@npm:3.2.0"
   dependencies:
     "@edge-runtime/cookies": "npm:^5.0.2"
     jose: "npm:^5.2.1"
@@ -6704,10 +6741,9 @@ __metadata:
       optional: true
     react-dom:
       optional: true
-  checksum: 10c0/e5382e988d35c22e731f2b31737f332f689401adbadb5a46d960f0fc342c94de9c384fb954ebcf78eadb14e5e644928c686d5b6893828e8b1225979cb377eed9
+  checksum: 10c0/73747877d700b93192a2d7524220d01047db5bc74836bd9e88a6bb740d86b97e4620af7a86f8ede78e3bad6ecbf6e3af0ed4233b2bd2c351a42b3cc9be995456
   languageName: node
   linkType: hard
-
 
 "flat-cache@npm:^4.0.0":
   version: 4.0.1
@@ -12280,12 +12316,8 @@ __metadata:
     "@monaco-editor/react": "npm:^4.7.0"
     "@mozilla/readability": "npm:^0.6.0"
     "@playwright/test": "npm:^1.55.0"
-
-    "@supabase/supabase-js": "npm:^2"
-
     "@supabase/ssr": "npm:^0.7.0"
     "@supabase/supabase-js": "npm:^2.56.1"
-
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^6.6.4"
     "@testing-library/react": "npm:^16.3.0"
@@ -12331,7 +12363,6 @@ __metadata:
     fast-xml-parser: "npm:^4.3.5"
     figlet: "npm:^1.8.2"
     flags: "npm:3"
-
     hash-wasm: "npm:^4.12.0"
     howler: "npm:^2.2.4"
     html-to-image: "npm:^1.11.13"
