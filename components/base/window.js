@@ -5,6 +5,7 @@ import NextImage from 'next/image';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
+import useDocPiP from '../../hooks/useDocPiP';
 
 export class Window extends Component {
     constructor(props) {
@@ -501,7 +502,15 @@ export class Window extends Component {
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
                         />
-                        <WindowEditButtons minimize={this.minimizeWindow} maximize={this.maximizeWindow} isMaximised={this.state.maximized} close={this.closeWindow} id={this.id} allowMaximize={this.props.allowMaximize !== false} />
+                        <WindowEditButtons
+                            minimize={this.minimizeWindow}
+                            maximize={this.maximizeWindow}
+                            isMaximised={this.state.maximized}
+                            close={this.closeWindow}
+                            id={this.id}
+                            allowMaximize={this.props.allowMaximize !== false}
+                            pip={() => this.props.screen(this.props.addFolder, this.props.openApp)}
+                        />
                         {(this.id === "settings"
                             ? <Settings />
                             : <WindowMainScreen screen={this.props.screen} title={this.props.title}
@@ -568,8 +577,27 @@ export class WindowXBorder extends Component {
 
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
+    const { togglePin } = useDocPiP(props.pip || (() => null));
+    const pipSupported = typeof window !== 'undefined' && !!window.documentPictureInPicture;
     return (
         <div className="absolute select-none right-0 top-0 mt-1 mr-1 flex justify-center items-center">
+            {pipSupported && props.pip && (
+                <button
+                    type="button"
+                    aria-label="Window pin"
+                    className="mx-1.5 bg-white bg-opacity-0 hover:bg-opacity-10 rounded-full flex justify-center items-center h-11 w-11"
+                    onClick={togglePin}
+                >
+                    <NextImage
+                        src="/themes/Yaru/window/window-pin-symbolic.svg"
+                        alt="Kali window pin"
+                        className="h-5 w-5 inline"
+                        width={20}
+                        height={20}
+                        sizes="20px"
+                    />
+                </button>
+            )}
             <button
                 type="button"
                 aria-label="Window minimize"
