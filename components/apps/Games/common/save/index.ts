@@ -1,4 +1,5 @@
 import { createStore, get, set, del, keys } from 'idb-keyval';
+import { trashSave } from '../../../../../utils/trash';
 
 export interface SaveSlot {
   name: string;
@@ -19,7 +20,11 @@ export async function loadSlot<T = unknown>(gameId: string, name: string): Promi
 
 export async function deleteSlot(gameId: string, name: string): Promise<void> {
   const store = getStore(gameId);
+  const data = await get(name, store);
   await del(name, store);
+  if (data !== undefined) {
+    await trashSave(gameId, name, data);
+  }
 }
 
 export async function listSlots(gameId: string): Promise<string[]> {
