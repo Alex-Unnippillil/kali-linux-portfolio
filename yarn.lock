@@ -9951,6 +9951,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"rrule@npm:2.7.2":
+  version: 2.7.2
+  resolution: "rrule@npm:2.7.2"
+  dependencies:
+    tslib: "npm:^2.4.0"
+  checksum: 10c0/efd8c5866a5bd59c2ebcaf89553333e8ac566816621ba70554745b7afd2265b8fbd5432c29529845ebf72ec936d6c25aa596bf90776b6fa08c778efddf0ade78
+  languageName: node
+  linkType: hard
+
 "rrweb-cssom@npm:^0.8.0":
   version: 0.8.0
   resolution: "rrweb-cssom@npm:0.8.0"
@@ -11424,6 +11433,7 @@ __metadata:
     react-github-calendar: "npm:^4.5.9"
     react-onclickoutside: "npm:^6.12.2"
     react-twitter-embed: "npm:^4.0.4"
+    rrule: "npm:2.7.2"
     seedrandom: "npm:^3.0.5"
     stockfish: "npm:^16.0.0"
     swr: "npm:^2.2.5"
