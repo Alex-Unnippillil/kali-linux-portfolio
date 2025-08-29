@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 interface LogEntry {
   type: string;
@@ -12,32 +12,32 @@ const HidDemo: React.FC = () => {
   const [battery, setBattery] = useState<number | null>(null);
   const [info, setInfo] = useState<Record<string, string>>({});
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const [connecting, setConnecting] = useState(false);
 
   const log = (type: string, message: string) =>
     setLogs((l) => [...l, { type, message }]);
 
   const requestDevice = async () => {
-    if (!navigator.bluetooth) {
-      setError('Web Bluetooth is not supported in this browser.');
+    if (!("bluetooth" in navigator)) {
+      setError("Web Bluetooth is not supported in this browser.");
       return;
     }
     try {
-      const dev = await navigator.bluetooth.requestDevice({
+      const dev = await navigator.bluetooth!.requestDevice({
         acceptAllDevices: true,
         optionalServices: [
-          'battery_service',
-          'device_information',
-          'human_interface_device',
+          "battery_service",
+          "device_information",
+          "human_interface_device",
         ],
       });
       setDevice(dev);
-      setError('');
-      log('info', `Selected ${dev.name || dev.id}`);
+      setError("");
+      log("info", `Selected ${dev.name || dev.id}`);
     } catch (err: any) {
       // User cancelled or permission denied
-      setError(err?.message || 'No device selected');
+      setError(err?.message || "No device selected");
     }
   };
 
@@ -46,53 +46,56 @@ const HidDemo: React.FC = () => {
     try {
       setConnecting(true);
       const server = await device.gatt?.connect();
-      if (!server) throw new Error('GATT server not available');
+      if (!server) throw new Error("GATT server not available");
 
       try {
-        const infoService = await server.getPrimaryService(
-          'device_information'
-        );
+        const infoService =
+          await server.getPrimaryService("device_information");
         const characteristics = await infoService.getCharacteristics();
         const entries: Record<string, string> = {};
         for (const char of characteristics) {
           const value = await char.readValue();
-          const decoder = new TextDecoder('utf-8');
+          const decoder = new TextDecoder("utf-8");
           entries[char.uuid] = decoder.decode(value.buffer).trim();
         }
         setInfo(entries);
       } catch (e) {
-        log('warn', 'Device information not available');
+        log("warn", "Device information not available");
       }
 
       try {
-        const batteryService = await server.getPrimaryService(
-          'battery_service'
-        );
-        const batteryChar = await batteryService.getCharacteristic(
-          'battery_level'
-        );
+        const batteryService =
+          await server.getPrimaryService("battery_service");
+        const batteryChar =
+          await batteryService.getCharacteristic("battery_level");
         const batteryValue = await batteryChar.readValue();
         setBattery(batteryValue.getUint8(0));
       } catch {
-        log('warn', 'Battery information not available');
+        log("warn", "Battery information not available");
       }
 
       try {
         const hidService = await server.getPrimaryService(
-          'human_interface_device'
+          "human_interface_device",
         );
-        const reportChar = await hidService.getCharacteristic('report');
+        const reportChar = await hidService.getCharacteristic("report");
         await reportChar.startNotifications();
-        reportChar.addEventListener('characteristicvaluechanged', (e) => {
-          const val = (e.target as BluetoothRemoteGATTCharacteristic).value;
-          const bytes = Array.from(new Uint8Array(val.buffer));
-          log('hid', bytes.map((b) => b.toString(16).padStart(2, '0')).join(' '));
-        });
+        reportChar.addEventListener(
+          "characteristicvaluechanged",
+          (e: Event) => {
+            const val = (e.target as BluetoothRemoteGATTCharacteristic).value!;
+            const bytes = Array.from(new Uint8Array(val.buffer));
+            log(
+              "hid",
+              bytes.map((b) => b.toString(16).padStart(2, "0")).join(" "),
+            );
+          },
+        );
       } catch {
-        log('warn', 'HID service not available');
+        log("warn", "HID service not available");
       }
     } catch (err: any) {
-      setError(err?.message || 'Failed to connect');
+      setError(err?.message || "Failed to connect");
     } finally {
       setConnecting(false);
     }
@@ -134,7 +137,7 @@ const HidDemo: React.FC = () => {
       )}
       <div className="mt-4 h-40 overflow-auto rounded bg-gray-800 p-2 text-sm">
         {logs.map((l, i) => (
-          <p key={i} className={l.type === 'hid' ? 'text-green-300' : ''}>
+          <p key={i} className={l.type === "hid" ? "text-green-300" : ""}>
             {l.type}: {l.message}
           </p>
         ))}
