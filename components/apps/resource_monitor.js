@@ -7,8 +7,10 @@ const ResourceMonitor = () => {
   const cpuCanvas = useRef(null);
   const memCanvas = useRef(null);
   const fpsCanvas = useRef(null);
+  const netCanvas = useRef(null);
+  const workerRef = useRef(null);
 
-  const dataRef = useRef({ cpu: [], mem: [], fps: [] });
+  const dataRef = useRef({ cpu: [], mem: [], fps: [], net: [] });
 
   const [paused, setPaused] = useState(false);
   const [stress, setStress] = useState(false);
@@ -17,6 +19,27 @@ const ResourceMonitor = () => {
   const stressWindows = useRef([]);
   const stressEls = useRef([]);
   const containerRef = useRef(null);
+
+  // Spawn worker for network speed tests
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof Worker !== 'function') return;
+    workerRef.current = new Worker(
+      new URL('./speedtest.worker.js', import.meta.url),
+    );
+    workerRef.current.onmessage = (e) => {
+      const { speed } = e.data || {};
+      pushSample('net', speed);
+      drawCharts();
+    };
+    workerRef.current.postMessage({ type: 'start' });
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  useEffect(() => {
+    if (workerRef.current) {
+      workerRef.current.postMessage({ type: paused ? 'stop' : 'start' });
+    }
+  }, [paused]);
 
   // Sampling loop using requestAnimationFrame
   useEffect(() => {
@@ -101,6 +124,7 @@ const ResourceMonitor = () => {
     drawChart(cpuCanvas.current, dataRef.current.cpu, '#00ff00', 'CPU %', 100);
     drawChart(memCanvas.current, dataRef.current.mem, '#ffd700', 'Memory %', 100);
     drawChart(fpsCanvas.current, dataRef.current.fps, '#00ffff', 'FPS', 120);
+    drawChart(netCanvas.current, dataRef.current.net, '#ff00ff', 'Mbps', 100);
   };
 
   const togglePause = () => setPaused((p) => !p);
@@ -143,6 +167,14 @@ const ResourceMonitor = () => {
           height={100}
           role="img"
           aria-label="FPS chart"
+          className="bg-ub-dark-grey"
+        />
+        <canvas
+          ref={netCanvas}
+          width={300}
+          height={100}
+          role="img"
+          aria-label="Network speed chart"
           className="bg-ub-dark-grey"
         />
       </div>
