@@ -61,13 +61,6 @@ const securityHeaders = [
 const isExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 
 module.exports = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-
   images: {
     domains: [
       'opengraph.githubassets.com',
