@@ -24,7 +24,7 @@ describe('ProjectGallery', () => {
     );
   });
 
-  it('filters when clicking tag chip inside a project', async () => {
+  it('filters when clicking stack chip inside a project', async () => {
     render(<ProjectGallery />);
     await screen.findByText('Alpha');
     fireEvent.click(
@@ -38,24 +38,38 @@ describe('ProjectGallery', () => {
     );
   });
 
+  it('filters projects by selected tags', async () => {
+    render(<ProjectGallery />);
+    await screen.findByText('Alpha');
+    fireEvent.click(screen.getByLabelText('frontend'));
+    await waitFor(() =>
+      expect(screen.queryByText('Beta')).not.toBeInTheDocument()
+    );
+    expect(screen.getByText(/Showing/)).toHaveTextContent(
+      'Showing 1 project with tags frontend'
+    );
+  });
+
   it('persists filter selection to localStorage', async () => {
     render(<ProjectGallery />);
     await screen.findByText('Alpha');
     fireEvent.change(screen.getByLabelText('Stack'), {
       target: { value: 'TS' },
     });
+    fireEvent.click(screen.getByLabelText('frontend'));
     await waitFor(() => {
       const stored = JSON.parse(
         localStorage.getItem('project-gallery-filters') || '{}'
       );
       expect(stored.stack).toBe('TS');
+      expect(stored.tags).toEqual(['frontend']);
     });
   });
 
   it('loads persisted filters from localStorage', async () => {
     localStorage.setItem(
       'project-gallery-filters',
-      JSON.stringify({ search: '', stack: 'TS', year: '', type: '' })
+      JSON.stringify({ search: '', stack: 'TS', year: '', type: '', tags: [] })
     );
     render(<ProjectGallery />);
     await screen.findByText('Beta');
