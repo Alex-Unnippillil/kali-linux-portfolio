@@ -1,9 +1,16 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import AutopsyApp from '../../components/apps/autopsy';
+import AutopsyAppComponent from '../../components/apps/autopsy';
 import events from './events.json';
 import KeywordTester from './components/KeywordTester';
+import type { Artifact } from './types';
+
+const AutopsyApp = AutopsyAppComponent as React.ComponentType<{
+  initialArtifacts: Artifact[];
+  expandedNodes: string[];
+  onExpandedNodesChange: (nodes: string[]) => void;
+}>;
 
 const AutopsyPage: React.FC = () => {
   // Track which view is active so we can restore UI state when toggling
@@ -61,7 +68,7 @@ const AutopsyPage: React.FC = () => {
       </div>
       {view === 'autopsy' && (
         <AutopsyApp
-          initialArtifacts={events.artifacts}
+          initialArtifacts={events.artifacts as Artifact[]}
           expandedNodes={expandedNodes}
           onExpandedNodesChange={setExpandedNodes}
         />

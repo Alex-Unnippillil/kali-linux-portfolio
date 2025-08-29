@@ -44,7 +44,10 @@ function KeywordTester() {
   };
 
   const matches = events.artifacts.filter((a) => {
-    const content = `${a.name} ${a.description} ${a.user || ''}`.toLowerCase();
+    const artifact = a as any;
+    const content = `${artifact.name} ${artifact.description} ${
+      'user' in artifact ? artifact.user : ''
+    }`.toLowerCase();
     return keywords.some((k) => content.includes(k.toLowerCase()));
   });
 
@@ -62,28 +65,33 @@ function KeywordTester() {
         <div className="text-sm">Loaded {keywords.length} keywords</div>
       )}
       <div className="grid gap-2 md:grid-cols-2">
-        {matches.map((a, idx) => (
-          <div
-            key={`${a.name}-${idx}`}
-            className="p-2 bg-ub-grey rounded text-sm"
-          >
+        {matches.map((a, idx) => {
+          const artifact = a as any;
+          return (
             <div
-              className="font-bold"
-              dangerouslySetInnerHTML={{ __html: highlight(a.name) }}
-            />
-            <div className="text-gray-400">{a.type}</div>
-            {a.user && (
+              key={`${artifact.name}-${idx}`}
+              className="p-2 bg-ub-grey rounded text-sm"
+            >
+              <div
+                className="font-bold"
+                dangerouslySetInnerHTML={{ __html: highlight(artifact.name) }}
+              />
+              <div className="text-gray-400">{artifact.type}</div>
+              {'user' in artifact && (
+                <div
+                  className="text-xs"
+                  dangerouslySetInnerHTML={{
+                    __html: `User: ${highlight(artifact.user)}`,
+                  }}
+                />
+              )}
               <div
                 className="text-xs"
-                dangerouslySetInnerHTML={{ __html: `User: ${highlight(a.user)}` }}
+                dangerouslySetInnerHTML={{ __html: highlight(artifact.description) }}
               />
-            )}
-            <div
-              className="text-xs"
-              dangerouslySetInnerHTML={{ __html: highlight(a.description) }}
-            />
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
