@@ -1,4 +1,5 @@
 import { generateSW } from 'workbox-build';
+import fs from 'fs';
 
 async function buildServiceWorker() {
   try {
@@ -10,6 +11,7 @@ async function buildServiceWorker() {
       clientsClaim: true,
       inlineWorkboxRuntime: true,
       navigateFallback: '/offline.html',
+      importScripts: ['workers/service-worker.js'],
       runtimeCaching: [
         {
           urlPattern: ({ request }) => request.destination === 'document',
@@ -20,6 +22,8 @@ async function buildServiceWorker() {
         },
       ],
     });
+    await fs.promises.mkdir('public/workers', { recursive: true });
+    await fs.promises.copyFile('workers/service-worker.js', 'public/workers/service-worker.js');
     console.log(`Generated ${count} files, totaling ${size} bytes.`);
   } catch (err) {
     console.error('Service worker generation failed:', err);

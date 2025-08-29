@@ -32,9 +32,32 @@ function MyApp({ Component, pageProps }) {
         };
 
         wb.addEventListener('waiting', promptRefresh);
-        wb.register().catch((err) => {
-          console.error('Service worker registration failed', err);
-        });
+        wb
+          .register()
+          .then(async (registration) => {
+            window.manualRefresh = () => wb.messageSW({ type: 'refresh' });
+            if ('periodicSync' in registration) {
+              try {
+                const status = await navigator.permissions.query({
+                  name: 'periodic-background-sync',
+                });
+                if (status.state === 'granted') {
+                  await registration.periodicSync.register('content-sync', {
+                    minInterval: 24 * 60 * 60 * 1000,
+                  });
+                } else {
+                  wb.messageSW({ type: 'refresh' });
+                }
+              } catch {
+                wb.messageSW({ type: 'refresh' });
+              }
+            } else {
+              wb.messageSW({ type: 'refresh' });
+            }
+          })
+          .catch((err) => {
+            console.error('Service worker registration failed', err);
+          });
       };
       register().catch((err) => {
         console.error('Service worker setup failed', err);
