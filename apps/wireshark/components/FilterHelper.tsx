@@ -1,6 +1,6 @@
 import React from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
-import presets from '../../../filters/presets';
+import presets, { FilterPreset } from '../../../filters/presets';
 
 interface FilterHelperProps {
   value: string;
@@ -12,9 +12,18 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     'wireshark:recent-filters',
     []
   );
+  const [customPresets, setCustomPresets] = usePersistentState<FilterPreset[]>(
+    'wireshark:custom-presets',
+    []
+  );
+
+  const allPresets = [...customPresets, ...presets];
 
   const suggestions = Array.from(
-    new Set([...recent, ...presets.map((p) => p.expression)])
+    new Set([
+      ...recent,
+      ...allPresets.map((p) => p.expression),
+    ])
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,6 +55,25 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     e.target.selectedIndex = 0;
   };
 
+  const handleSavePreset = () => {
+    const expression = value.trim();
+    if (!expression) return;
+    const label = prompt('Preset name');
+    if (!label) return;
+    setCustomPresets((prev) => [
+      ...prev.filter((p) => p.label !== label),
+      { label, expression },
+    ]);
+  };
+
+  const handleShare = () => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (value) url.searchParams.set('filter', value);
+    else url.searchParams.delete('filter');
+    navigator.clipboard?.writeText(url.toString());
+  };
+
   return (
     <>
       <select
@@ -55,8 +83,8 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
         className="px-2 py-1 bg-gray-800 rounded text-white"
       >
         <option value="">Preset filters...</option>
-        {presets.map(({ label, expression }) => (
-          <option key={expression} value={expression}>
+        {allPresets.map(({ label, expression }) => (
+          <option key={label} value={expression}>
             {label}
           </option>
         ))}
@@ -71,6 +99,22 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
         aria-label="Quick search"
         className="px-2 py-1 bg-gray-800 rounded text-white"
       />
+      <button
+        onClick={handleSavePreset}
+        aria-label="Save filter preset"
+        className="px-2 py-1 bg-gray-700 rounded text-white"
+        type="button"
+      >
+        Save
+      </button>
+      <button
+        onClick={handleShare}
+        aria-label="Share filter preset"
+        className="px-2 py-1 bg-gray-700 rounded text-white"
+        type="button"
+      >
+        Share
+      </button>
       <datalist id="display-filter-suggestions">
         {suggestions.map((f) => (
           <option key={f} value={f} />

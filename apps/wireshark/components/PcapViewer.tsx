@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 
@@ -139,6 +139,21 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   const [packets, setPackets] = useState<Packet[]>([]);
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const f = params.get('filter');
+    if (f) setFilter(f);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (filter) url.searchParams.set('filter', filter);
+    else url.searchParams.delete('filter');
+    window.history.replaceState(null, '', url.toString());
+  }, [filter]);
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
