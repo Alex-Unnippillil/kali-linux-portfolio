@@ -78,6 +78,7 @@ const CarRacer = () => {
   const ghostRunRef = useRef([]);
   const ghostPosRef = useRef({ lane: 1, y: HEIGHT - CAR_HEIGHT - 10 });
   const ghostIndexRef = useRef(0);
+  const ghostBestScoreRef = useRef(0);
   const startTimeRef = useRef(0);
   const [speed, setSpeed] = useState(0);
   const speedRef = useRef(0);
@@ -110,10 +111,15 @@ const CarRacer = () => {
     }
     try {
       ghostDataRef.current = JSON.parse(localStorage.getItem('car_racer_ghost') || '[]');
+      ghostBestScoreRef.current = parseInt(
+        localStorage.getItem('car_racer_ghost_score') || '0',
+        10,
+      );
       if (ghostDataRef.current.length)
         ghostPosRef.current.lane = ghostDataRef.current[0].lane;
     } catch {
       ghostDataRef.current = [];
+      ghostBestScoreRef.current = 0;
     }
     if (typeof window !== 'undefined') {
       const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -373,7 +379,7 @@ const CarRacer = () => {
           if (checkCollision(car.current, o)) {
             runningRef.current = false;
             playBeep();
-            saveGhostRun();
+            saveGhostRun(scoreRef.current);
             if (scoreRef.current > highScore) {
               setHighScore(scoreRef.current);
               localStorage.setItem('car_racer_high', `${scoreRef.current}`);
@@ -407,10 +413,12 @@ const CarRacer = () => {
     };
   }, [canvasRef, highScore, playBeep]);
 
-  const saveGhostRun = () => {
-    if (ghostRunRef.current.length > 1) {
+  const saveGhostRun = (score) => {
+    if (ghostRunRef.current.length > 1 && score >= ghostBestScoreRef.current) {
       localStorage.setItem('car_racer_ghost', JSON.stringify(ghostRunRef.current));
+      localStorage.setItem('car_racer_ghost_score', `${score}`);
       ghostDataRef.current = ghostRunRef.current.map((g) => ({ ...g }));
+      ghostBestScoreRef.current = score;
     }
   };
 
@@ -502,8 +510,13 @@ const CarRacer = () => {
     ghostIndexRef.current = 0;
     try {
       ghostDataRef.current = JSON.parse(localStorage.getItem('car_racer_ghost') || '[]');
+      ghostBestScoreRef.current = parseInt(
+        localStorage.getItem('car_racer_ghost_score') || '0',
+        10,
+      );
     } catch {
       ghostDataRef.current = [];
+      ghostBestScoreRef.current = 0;
     }
     ghostPosRef.current.lane = ghostDataRef.current.length
       ? ghostDataRef.current[0].lane
