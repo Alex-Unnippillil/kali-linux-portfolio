@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as chrono from 'chrono-node';
+import { RRule } from 'rrule';
+import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
 
 const STORAGE_KEY = 'portfolio-tasks';
 
@@ -25,6 +27,8 @@ export default function Todoist() {
     section: '',
     recurring: '',
   });
+  const [recurringPreview, setRecurringPreview] = useState([]);
+  const [recurringRule, setRecurringRule] = useState('');
   const [quick, setQuick] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -188,12 +192,44 @@ export default function Todoist() {
   };
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+    if (name === 'recurring') {
+      const result = parseRecurring(
+        value,
+        form.due ? new Date(form.due) : new Date(),
+      );
+      setRecurringRule(result?.rrule || '');
+      setRecurringPreview(result?.preview || []);
+    }
   };
 
+  useEffect(() => {
+    if (form.recurring) {
+      const result = parseRecurring(
+        form.recurring,
+        form.due ? new Date(form.due) : new Date(),
+      );
+      setRecurringRule(result?.rrule || '');
+      setRecurringPreview(result?.preview || []);
+    } else {
+      setRecurringRule('');
+      setRecurringPreview([]);
+    }
+  }, [form.due, form.recurring]);
+
   const getNextDue = (task) => {
-    if (!task.recurring) return task.due;
     const base = task.due ? new Date(task.due) : new Date();
+    if (task.rrule) {
+      try {
+        const rule = RRule.fromString(task.rrule);
+        const next = rule.after(base, true);
+        return next ? next.toISOString().split('T')[0] : task.due;
+      } catch {
+        return task.due;
+      }
+    }
+    if (!task.recurring) return task.due;
     const next = chrono.parseDate(`next ${task.recurring}`, base);
     return next ? next.toISOString().split('T')[0] : task.due;
   };
@@ -203,7 +239,7 @@ export default function Todoist() {
       ...groups,
       [group]: groups[group].map((t) => {
         if (t.id !== id) return t;
-        if (t.recurring) {
+        if (t.rrule || t.recurring) {
           return { ...t, due: getNextDue(t) };
         }
         return { ...t, completed: !t.completed };
@@ -230,6 +266,7 @@ export default function Todoist() {
       priority: form.priority,
       section: form.section || undefined,
       recurring: form.recurring || undefined,
+      rrule: recurringRule || undefined,
       completed: false,
     };
     const newGroups = {
@@ -238,6 +275,8 @@ export default function Todoist() {
     };
     finalizeMove(newGroups, form.title, 'Today');
     setForm({ title: '', due: '', priority: 'medium', section: '', recurring: '' });
+    setRecurringRule('');
+    setRecurringPreview([]);
   };
 
   const handleQuickAdd = (e) => {
@@ -254,7 +293,7 @@ export default function Todoist() {
     }
     const priorityMatch = quick.match(/!([1-3])/);
     const sectionMatch = quick.match(/#(\w+)/);
-    const recurringMatch = quick.match(/every\s+([a-z]+)/i);
+    const recurringMatch = quick.match(/every\s+([a-z0-9\s]+)/i);
     const priorityMap = { '1': 'high', '2': 'medium', '3': 'low' };
     const priority = priorityMatch ? priorityMap[priorityMatch[1]] : 'medium';
     let title = quick;
@@ -275,14 +314,15 @@ export default function Todoist() {
     }
     const section = sectionMatch ? sectionMatch[1] : undefined;
     let recurring = recurringMatch ? recurringMatch[1].toLowerCase() : undefined;
-    if (recurring && !due) {
-      try {
-        const next = chrono.parseDate(`next ${recurring}`);
-        if (next) {
-          due = next.toISOString().split('T')[0];
-        }
-      } catch {
-        // ignore
+    let rrule;
+    if (recurringMatch) {
+      const parsed = parseRecurring(
+        recurringMatch[0],
+        due ? new Date(due) : new Date(),
+      );
+      rrule = parsed?.rrule;
+      if (!due && parsed?.preview[0]) {
+        due = parsed.preview[0].toISOString().split('T')[0];
       }
     }
     const newTask = {
@@ -292,6 +332,7 @@ export default function Todoist() {
       priority,
       section,
       recurring,
+      rrule,
       completed: false,
     };
     const newGroups = {
@@ -465,6 +506,13 @@ export default function Todoist() {
             placeholder="Recurring (e.g., every mon)"
             className="border p-1"
           />
+          {recurringPreview.length > 0 && (
+            <div className="text-xs text-gray-500">
+              Next: {recurringPreview
+                .map((d) => d.toISOString().split('T')[0])
+                .join(', ')}
+            </div>
+          )}
           <select
             name="priority"
             value={form.priority}
