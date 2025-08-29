@@ -307,9 +307,9 @@ const Blackjack = () => {
     return remaining.length ? bustCards / remaining.length : 0;
   };
 
-  const renderHand = (hand, hideFirst, showProb, peeking = false) => (
+  const renderHand = (hand, hideFirst, showProb, peeking = false, overlay = null) => (
     <div
-      className="flex space-x-2"
+      className="relative flex space-x-2"
       title={showProb ? `Bust chance: ${(bustProbability(hand) * 100).toFixed(1)}%` : undefined}
     >
       {hand.cards.map((card, idx) => (
@@ -321,6 +321,11 @@ const Blackjack = () => {
         />
       ))}
       <div className="ml-2 self-center">{handValue(hand.cards)}</div>
+      {overlay && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-black bg-opacity-75 px-1 text-xs rounded">
+          {overlay.toUpperCase()}
+        </div>
+      )}
     </div>
   );
 
@@ -450,7 +455,7 @@ const Blackjack = () => {
           <div className="mb-1">{`Player${playerHands.length > 1 ? ` ${idx + 1}` : ''}`}</div>
           <div className="flex items-center space-x-2">
             <BetChips amount={hand.bet} />
-            {renderHand(hand, false, true)}
+            {renderHand(hand, false, true, false, idx === current && showHints ? rec : null)}
           </div>
           {idx === current && playerHands.length > 0 && (
             <div className="mt-2 flex flex-col items-start">
@@ -461,7 +466,6 @@ const Blackjack = () => {
                 <button className={`px-3 py-1 bg-gray-700 ${rec === 'split' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('split')}>Split</button>
                 <button className={`px-3 py-1 bg-gray-700 ${rec === 'surrender' ? 'border-2 border-yellow-400 text-yellow-300' : ''}`} onClick={() => act('surrender')}>Surrender</button>
               </div>
-              {showHints && rec && <div className="mt-1 text-sm">Hint: {rec.toUpperCase()}</div>}
             </div>
           )}
         </div>
