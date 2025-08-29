@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 import offlineQuotes from '../../components/apps/quotes.json';
+import share, { canShare } from '../../utils/share';
 
 interface Quote {
   content: string;
@@ -161,6 +162,12 @@ export default function QuoteApp() {
       .catch(() => { /* ignore */ });
   };
 
+  const shareQuote = () => {
+    if (!current) return;
+    const text = `"${current.content}" — ${current.author}`;
+    share(text);
+  };
+
   const categories = useMemo(() => {
     const base = Array.from(
       new Set(
@@ -201,6 +208,11 @@ export default function QuoteApp() {
           <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={shareCard}>
             Share as Card
           </button>
+          {canShare() && (
+            <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={shareQuote}>
+              Share
+            </button>
+          )}
           <label className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded cursor-pointer">
             Import
             <input type="file" accept="application/json" className="hidden" onChange={importQuotes} />
