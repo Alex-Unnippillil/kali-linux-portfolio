@@ -85,7 +85,14 @@ export default function Settings() {
   };
 
   const handleReset = async () => {
+    if (
+      !window.confirm(
+        "Reset desktop to default settings? This will clear all saved data."
+      )
+    )
+      return;
     await resetSettings();
+    window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
     setDensity(defaults.density as any);
@@ -202,6 +209,14 @@ export default function Settings() {
               ></div>
             ))}
           </div>
+          <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
+            <button
+              onClick={handleReset}
+              className="px-4 py-2 rounded bg-ub-orange text-white"
+            >
+              Reset Desktop
+            </button>
+          </div>
         </>
       )}
       {activeTab === "accessibility" && (
@@ -275,12 +290,6 @@ export default function Settings() {
               className="px-4 py-2 rounded bg-ub-orange text-white"
             >
               Import Settings
-            </button>
-            <button
-              onClick={handleReset}
-              className="px-4 py-2 rounded bg-ub-orange text-white"
-            >
-              Reset Desktop
             </button>
           </div>
         </>
