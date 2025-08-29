@@ -28,7 +28,19 @@ function setPreciseMode(on) {
     preciseToggle.textContent = `Precise Mode: ${preciseMode ? 'On' : 'Off'}`;
     preciseToggle.setAttribute('aria-pressed', preciseMode.toString());
   }
-  math.config(preciseMode ? { number: 'Fraction' } : { number: 'number' });
+  // switch math.js number type and maintain memory/last result types
+  math.config(
+    preciseMode
+      ? { number: 'BigNumber', precision: 64 }
+      : { number: 'number' }
+  );
+  if (preciseMode) {
+    memory = math.bignumber(memory);
+    lastResult = math.bignumber(lastResult);
+  } else {
+    memory = math.number(memory);
+    lastResult = math.number(lastResult);
+  }
   saveMode();
 }
 
@@ -138,7 +150,6 @@ buttons.forEach((btn) => {
       addHistory(expr, result);
       undoStack.push(expr);
       display.value = result;
-      lastResult = result;
       return;
     }
 
@@ -186,6 +197,152 @@ function formatBase(value, base = currentBase) {
   return convertBase(String(value), 10, base).toUpperCase();
 }
 
+// --- Shunting-yard based parser ---
+function tokenize(expr) {
+  const tokens = [];
+  let i = 0;
+  while (i < expr.length) {
+    const ch = expr[i];
+    if (/\s/.test(ch)) {
+      i++;
+      continue;
+    }
+    if (ch === '-' && (tokens.length === 0 || tokens[tokens.length - 1].type === 'operator' || tokens[tokens.length - 1].value === '(')) {
+      // unary minus
+      const next = expr[i + 1];
+      if (/\d|\./.test(next)) {
+        let num = '-';
+        i++;
+        while (i < expr.length && /[0-9.]/.test(expr[i])) {
+          num += expr[i];
+          i++;
+        }
+        tokens.push({ type: 'number', value: num });
+        continue;
+      }
+      tokens.push({ type: 'number', value: '0' });
+      tokens.push({ type: 'operator', value: '-' });
+      i++;
+      continue;
+    }
+    if (/[0-9.]/.test(ch)) {
+      let num = ch;
+      i++;
+      while (i < expr.length && /[0-9.]/.test(expr[i])) {
+        num += expr[i];
+        i++;
+      }
+      tokens.push({ type: 'number', value: num });
+      continue;
+    }
+    if (/[A-Za-z]/.test(ch)) {
+      const id = expr.slice(i).match(/^[A-Za-z]+/)[0];
+      tokens.push({ type: 'id', value: id });
+      i += id.length;
+      continue;
+    }
+    if ('+-*/^()'.includes(ch)) {
+      tokens.push({ type: ch === '(' || ch === ')' ? 'paren' : 'operator', value: ch });
+    }
+    i++;
+  }
+  return tokens;
+}
+
+function toRPN(tokens) {
+  const output = [];
+  const ops = [];
+  const prec = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 };
+  const rightAssoc = { '^': true };
+  for (const token of tokens) {
+    if (token.type === 'number' || token.type === 'id') {
+      output.push(token);
+    } else if (token.type === 'operator') {
+      while (ops.length) {
+        const top = ops[ops.length - 1];
+        if (
+          top.type === 'operator' &&
+          ((rightAssoc[token.value]
+            ? prec[token.value] < prec[top.value]
+            : prec[token.value] <= prec[top.value]))
+        ) {
+          output.push(ops.pop());
+        } else {
+          break;
+        }
+      }
+      ops.push(token);
+    } else if (token.value === '(') {
+      ops.push(token);
+    } else if (token.value === ')') {
+      while (ops.length && ops[ops.length - 1].value !== '(') {
+        output.push(ops.pop());
+      }
+      ops.pop();
+    }
+  }
+  while (ops.length) output.push(ops.pop());
+  return output;
+}
+
+function evalRPN(rpn) {
+  const stack = [];
+  for (const token of rpn) {
+    if (token.type === 'number') {
+      const num = preciseMode
+        ? math.bignumber(token.value)
+        : Number(token.value);
+      stack.push(num);
+    } else if (token.type === 'id') {
+      const val = token.value.toLowerCase() === 'ans' ? lastResult : 0;
+      stack.push(preciseMode ? math.bignumber(val) : Number(val));
+    } else if (token.type === 'operator') {
+      const b = stack.pop();
+      const a = stack.pop();
+      let res;
+      if (preciseMode) {
+        switch (token.value) {
+          case '+':
+            res = math.add(a, b);
+            break;
+          case '-':
+            res = math.subtract(a, b);
+            break;
+          case '*':
+            res = math.multiply(a, b);
+            break;
+          case '/':
+            res = math.divide(a, b);
+            break;
+          case '^':
+            res = math.pow(a, b);
+            break;
+        }
+      } else {
+        switch (token.value) {
+          case '+':
+            res = a + b;
+            break;
+          case '-':
+            res = a - b;
+            break;
+          case '*':
+            res = a * b;
+            break;
+          case '/':
+            res = a / b;
+            break;
+          case '^':
+            res = a ** b;
+            break;
+        }
+      }
+      stack.push(res);
+    }
+  }
+  return stack.pop();
+}
+
 function evaluate(expression) {
   try {
     if (programmerMode) {
@@ -200,9 +357,11 @@ function evaluate(expression) {
       lastResult = result;
       return formatBase(result);
     }
-    const result = math.evaluate(expression, { Ans: lastResult });
+    const tokens = tokenize(expression);
+    const rpn = toRPN(tokens);
+    const result = evalRPN(rpn);
     lastResult = result;
-    return result.toString();
+    return preciseMode ? result.toString() : String(result);
   } catch (e) {
     return 'Error';
   }
@@ -211,22 +370,44 @@ function evaluate(expression) {
 function memoryAdd() {
   const val = evaluate(display.value);
   if (val === null || val === 'Error') return;
-  const num = programmerMode ? parseInt(val, currentBase) : parseFloat(val);
-  memory += num;
+  const num = programmerMode
+    ? parseInt(val, currentBase)
+    : preciseMode
+      ? math.bignumber(val)
+      : parseFloat(val);
+  memory = preciseMode ? math.add(memory, num) : memory + num;
 }
 
 function memorySubtract() {
   const val = evaluate(display.value);
   if (val === null || val === 'Error') return;
-  const num = programmerMode ? parseInt(val, currentBase) : parseFloat(val);
-  memory -= num;
+  const num = programmerMode
+    ? parseInt(val, currentBase)
+    : preciseMode
+      ? math.bignumber(val)
+      : parseFloat(val);
+  memory = preciseMode ? math.subtract(memory, num) : memory - num;
 }
 
 function memoryRecall() {
-  display.value = formatBase(memory);
+  const val = preciseMode ? memory.toString() : memory;
+  display.value = formatBase(val);
   updateParenBalance();
   validateBaseInput();
   display.focus();
+}
+
+function copyHistory() {
+  const text = history.map((h) => `${h.expr} = ${h.result}`).join('\n');
+  navigator.clipboard?.writeText(text);
+}
+
+function undoHistory() {
+  if (history.length) {
+    history.shift();
+    saveHistory();
+    renderHistory();
+  }
 }
 
 function renderHistory() {
@@ -234,6 +415,16 @@ function renderHistory() {
   historyEl.innerHTML = '';
   const header = document.createElement('div');
   header.className = 'history-header';
+  const copyBtn = document.createElement('button');
+  copyBtn.textContent = 'Copy';
+  copyBtn.addEventListener('click', copyHistory);
+  header.appendChild(copyBtn);
+
+  const undoBtn = document.createElement('button');
+  undoBtn.textContent = 'Undo';
+  undoBtn.addEventListener('click', undoHistory);
+  header.appendChild(undoBtn);
+
   const clearBtn = document.createElement('button');
   clearBtn.textContent = 'Clear';
   clearBtn.addEventListener('click', () => {
@@ -354,6 +545,33 @@ document.addEventListener('keydown', (e) => {
     }
     display.focus();
     return;
+  }
+
+  if (e.ctrlKey && e.shiftKey) {
+    switch (e.key.toLowerCase()) {
+      case 'c':
+        e.preventDefault();
+        copyHistory();
+        return;
+      case 'z':
+        e.preventDefault();
+        undoHistory();
+        return;
+      case 'l':
+        e.preventDefault();
+        history = [];
+        saveHistory();
+        renderHistory();
+        return;
+      case 'h':
+        e.preventDefault();
+        historyToggle?.click();
+        return;
+      case 's':
+        e.preventDefault();
+        sciToggle?.click();
+        return;
+    }
   }
 
   if (e.ctrlKey || e.metaKey) {
