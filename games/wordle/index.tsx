@@ -14,14 +14,27 @@ import Keyboard from "./components/Keyboard";
 import share from "../../utils/share";
 
 const WordleGame = () => {
-  const [hardMode, setHardMode] = usePersistentState<boolean>("wordle:hard", false);
-  const wordList = dictionaries.common; // single dictionary for now
-  const solution = useMemo(() => getWordOfTheDay("common"), []);
+  const [hardMode, setHardMode] = usePersistentState<boolean>(
+    "wordle:hard",
+    false
+  );
+  const [dictName, setDictName] = usePersistentState<string>(
+    "wordle:dict",
+    "common"
+  );
+  const wordList = dictionaries[dictName];
+  const solution = useMemo(() => getWordOfTheDay(dictName), [dictName]);
 
   type GuessWithReveal = GuessEntry & { revealed: number };
   const [guesses, setGuesses] = useState<GuessWithReveal[]>([]);
   const [guess, setGuess] = useState("");
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    setGuesses([]);
+    setGuess("");
+    setMessage("");
+  }, [dictName]);
 
   const revealRow = (row: number) => {
     for (let i = 0; i < 5; i += 1) {
@@ -129,14 +142,30 @@ const WordleGame = () => {
   });
 
   const settings = (
-    <label className="flex items-center space-x-2">
-      <input
-        type="checkbox"
-        checked={hardMode}
-        onChange={(e) => setHardMode(e.target.checked)}
-      />
-      <span>Hard Mode</span>
-    </label>
+    <div className="space-y-2">
+      <label className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          checked={hardMode}
+          onChange={(e) => setHardMode(e.target.checked)}
+        />
+        <span>Hard Mode</span>
+      </label>
+      <label className="flex items-center space-x-2">
+        <span>Word Pack</span>
+        <select
+          className="text-black"
+          value={dictName}
+          onChange={(e) => setDictName(e.target.value)}
+        >
+          {Object.keys(dictionaries).map((name) => (
+            <option key={name} value={name}>
+              {name.charAt(0).toUpperCase() + name.slice(1)}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
   );
 
   const isSolved = guesses.some((g) => g.guess === solution);

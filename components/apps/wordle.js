@@ -420,14 +420,20 @@ const Wordle = () => {
           />
           <span>Hard Mode</span>
         </label>
-        <select
-          className="text-black text-sm"
-          value={dictName}
-          onChange={(e) => setDictName(e.target.value)}
-        >
-          <option value="common">Common</option>
-          <option value="alt">Alt</option>
-        </select>
+        <label className="flex items-center space-x-1 text-sm">
+          <span>Word Pack</span>
+          <select
+            className="text-black text-sm"
+            value={dictName}
+            onChange={(e) => setDictName(e.target.value)}
+          >
+            {Object.keys(dictionaries).map((name) => (
+              <option key={name} value={name}>
+                {name.charAt(0).toUpperCase() + name.slice(1)}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="grid grid-rows-6 gap-1" role="grid" aria-label="Wordle board">
