@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Waterfall from './Waterfall';
-import { protocolName, getRowColor } from './utils';
+import { protocolName, getRowColor, matchesDisplayFilter } from './utils';
 import DecodeTree from './DecodeTree';
 import FlowGraph from '../../../apps/wireshark/components/FlowGraph';
 import FilterHelper from '../../../apps/wireshark/components/FilterHelper';
+import ColorRuleEditor from '../../../apps/wireshark/components/ColorRuleEditor';
 
 const SMALL_CAPTURE_SIZE = 1024 * 1024; // 1MB threshold
 
@@ -81,19 +82,6 @@ const parseWithWiregasm = async (buf) => {
   return parseWithCap(buf);
 };
 
-// Determine if a packet matches the active filter expression
-const matchesFilter = (packet, filter) => {
-  if (!filter) return true;
-  const term = filter.toLowerCase();
-  return (
-    packet.src.toLowerCase().includes(term) ||
-    packet.dest.toLowerCase().includes(term) ||
-    protocolName(packet.protocol).toLowerCase().includes(term) ||
-    (packet.info || '').toLowerCase().includes(term) ||
-    (packet.decrypted || '').toLowerCase().includes(term)
-  );
-};
-
 // Basic BPF-style filtering support
 const matchesBpf = (packet, expr) => {
   if (!expr) return true;
@@ -121,7 +109,6 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const [protocolFilter, setProtocolFilter] = useState('');
   const [filter, setFilter] = useState('');
   const [bpf, setBpf] = useState('');
-  const [colorRuleText, setColorRuleText] = useState('[]');
   const [colorRules, setColorRules] = useState([]);
   const [paused, setPaused] = useState(false);
   const [timeline, setTimeline] = useState([]);
@@ -194,17 +181,6 @@ const WiresharkApp = ({ initialPackets = [] }) => {
       const reader = new FileReader();
       reader.onload = () => setTlsKeys(reader.result);
       reader.readAsText(file);
-    }
-  };
-
-  const handleColorRulesChange = (e) => {
-    const text = e.target.value;
-    setColorRuleText(text);
-    try {
-      const parsed = JSON.parse(text);
-      setColorRules(Array.isArray(parsed) ? parsed : []);
-    } catch {
-      // ignore invalid JSON
     }
   };
 
@@ -283,7 +259,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
 
   const protocols = Array.from(new Set(packets.map((p) => protocolName(p.protocol))));
   const filteredPackets = packets
-    .filter((p) => matchesFilter(p, filter))
+    .filter((p) => matchesDisplayFilter(p, filter))
     .filter((p) => matchesBpf(p, bpf))
     .filter((p) => !protocolFilter || protocolName(p.protocol) === protocolFilter);
   const hasTlsKeys = !!tlsKeys;
@@ -346,12 +322,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
         >
           Display filter docs
         </a>
-        <input
-          value={colorRuleText}
-          onChange={handleColorRulesChange}
-          placeholder='Color rules JSON'
-          className="px-2 py-1 bg-gray-800 rounded text-white"
-        />
+        <ColorRuleEditor rules={colorRules} onChange={setColorRules} />
         <button
           onClick={handlePause}
           className="px-3 py-1 bg-gray-700 rounded"
@@ -434,7 +405,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
               </thead>
               <tbody>
                 {filteredPackets.map((p, i) => {
-                  const isMatch = matchesFilter(p, filter);
+                  const isMatch = matchesDisplayFilter(p, filter);
                   return (
                     <tr
                       key={i}
