@@ -79,22 +79,26 @@ const Wordle = () => {
   }, [dictName, wordList]);
 
   // guesses for today are stored under a daily key so a new game starts each day
+  const emptyGuesses = useMemo(() => [], []);
+  const emptyHistory = useMemo(() => ({}), []);
+  const emptyStreak = useMemo(() => ({ current: 0, max: 0 }), []);
   const [guesses, setGuesses] = usePersistentState(
     `wordle-guesses-${dictName}-${todayKey}`,
-    []
+    emptyGuesses
   );
   const [history, setHistory] = usePersistentState(
     `wordle-history-${dictName}`,
-    {}
+    emptyHistory
   );
   const [streak, setStreak] = usePersistentState(
     `wordle-streak-${dictName}`,
-    { current: 0, max: 0 }
+    emptyStreak
   );
   const [guess, setGuess] = useState('');
   const [message, setMessage] = useState('');
   const [analysis, setAnalysis] = useState('');
   const [revealMap, setRevealMap] = useState({});
+  const [keyStatuses, setKeyStatuses] = useState({});
 
   // settings
   const [colorBlind, setColorBlind] = usePersistentState(
@@ -125,9 +129,28 @@ const Wordle = () => {
         absent: 'bg-gray-700 border-gray-700',
       };
 
+  const keyColors = colorBlind
+    ? { correct: 'bg-blue-800', present: 'bg-orange-600', absent: 'bg-gray-700' }
+    : { correct: 'bg-green-600', present: 'bg-yellow-500', absent: 'bg-gray-700' };
+
   const emojiMap = colorBlind
     ? { correct: '🟦', present: '🟧', absent: '⬛' }
     : { correct: '🟩', present: '🟨', absent: '⬛' };
+
+  const statusPriority = { absent: 0, present: 1, correct: 2 };
+
+  useEffect(() => {
+    const map = {};
+    guesses.forEach(({ guess: g, result }) => {
+      g.split('').forEach((ch, idx) => {
+        const res = result[idx];
+        if (!map[ch] || statusPriority[res] > statusPriority[map[ch]]) {
+          map[ch] = res;
+        }
+      });
+    });
+    setKeyStatuses(map);
+  }, [guesses]);
 
   const getPossibleWords = () =>
     wordList.filter((word) =>
@@ -187,8 +210,7 @@ const Wordle = () => {
     );
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const attemptGuess = () => {
     if (isGameOver) return;
     const upper = guess.toUpperCase();
     if (upper.length !== 5) return;
@@ -265,6 +287,22 @@ const Wordle = () => {
       };
       setHistory(newHistory);
       updateStreaks(newHistory);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    attemptGuess();
+  };
+
+  const handleVirtualKey = (ch) => {
+    if (isGameOver) return;
+    if (ch === 'ENTER') {
+      attemptGuess();
+    } else if (ch === 'DEL') {
+      setGuess((g) => g.slice(0, -1));
+    } else if (/^[A-Z]$/.test(ch) && guess.length < 5) {
+      setGuess((g) => g + ch);
     }
   };
 
@@ -352,6 +390,31 @@ const Wordle = () => {
     );
   };
 
+  const renderKey = (ch) => {
+    const status = keyStatuses[ch];
+    let classes = 'px-2 py-2 m-0.5 rounded text-sm font-bold';
+    if (status) classes += ` ${keyColors[status]} text-white`;
+    else classes += ' bg-gray-500 text-white';
+    const label = status ? `${ch} ${status}` : ch;
+    return (
+      <button
+        key={ch}
+        type="button"
+        onClick={() => handleVirtualKey(ch)}
+        className={classes}
+        aria-label={label}
+      >
+        {ch}
+      </button>
+    );
+  };
+
+  const keyboardRows = [
+    'QWERTYUIOP'.split(''),
+    'ASDFGHJKL'.split(''),
+    ['ENTER', ...'ZXCVBNM'.split(''), 'DEL'],
+  ];
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
       <h1 className="text-xl font-bold">Wordle</h1>
@@ -391,6 +454,14 @@ const Wordle = () => {
         ))}
       </div>
 
+      <div className="space-y-1">
+        {keyboardRows.map((row, i) => (
+          <div key={i} className="flex justify-center">
+            {row.map((k) => renderKey(k))}
+          </div>
+        ))}
+      </div>
+
       {!isGameOver && (
         <form onSubmit={handleSubmit} className="flex space-x-2">
           <input
@@ -419,21 +490,26 @@ const Wordle = () => {
 
       {isGameOver && (
         <div className="flex flex-col items-center space-y-2">
+          <div className="bg-gray-800 p-4 rounded text-center">
+            <div className="font-bold mb-2">
+              {`Wordle ${isSolved ? guesses.length : 'X'}/6`}
+            </div>
+            <div
+              role="img"
+              aria-label="Emoji result grid"
+              className="font-mono leading-5"
+            >
+              {guesses.map((g, i) => (
+                <div key={i}>{g.result.map((r) => emojiMap[r]).join('')}</div>
+              ))}
+            </div>
+          </div>
           <button
             onClick={share}
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           >
             Share
           </button>
-          <div
-            role="img"
-            aria-label="Emoji result grid"
-            className="font-mono leading-5"
-          >
-            {guesses.map((g, i) => (
-              <div key={i}>{g.result.map((r) => emojiMap[r]).join('')}</div>
-            ))}
-          </div>
         </div>
       )}
 

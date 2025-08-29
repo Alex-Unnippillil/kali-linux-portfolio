@@ -19,20 +19,26 @@ describe('Wordle', () => {
     Object.assign(navigator, {
       clipboard: { writeText: jest.fn() },
     });
+    localStorage.clear();
     Wordle = require('../components/apps/wordle').default;
   });
   afterEach(() => {
     jest.clearAllTimers();
   });
 
-  test('solves puzzle and shares result', async () => {
+  test('solves puzzle, shows keyboard hints, and shares result', async () => {
     render(<Wordle />);
     const seed = getDailySeed('wordle-common', new Date('2024-01-01T00:00:00Z'));
     const solution = wordList[hash(seed) % wordList.length];
     const input = screen.getByPlaceholderText('Guess');
     fireEvent.change(input, { target: { value: solution } });
     fireEvent.submit(input.closest('form')!);
-    const shareBtn = await screen.findByText('Share');
+    const key = await screen.findByRole('button', {
+      name: `${solution[0]} correct`,
+    });
+    expect(key).toBeInTheDocument();
+    expect(screen.getByText('Wordle 1/6')).toBeInTheDocument();
+    const shareBtn = screen.getByText('Share');
     fireEvent.click(shareBtn);
     expect((navigator as any).clipboard.writeText).toHaveBeenCalled();
   });
@@ -46,9 +52,10 @@ describe('Wordle', () => {
     fireEvent.change(input, { target: { value: 'ABDOM' } });
     fireEvent.submit(input.closest('form')!);
 
-    fireEvent.change(input, { target: { value: 'ABASE' } });
+    fireEvent.change(input, { target: { value: 'AAHED' } });
     fireEvent.submit(input.closest('form')!);
 
-    expect(await screen.findByText(/Hard mode:/)).toBeInTheDocument();
+    const status = await screen.findByRole('status');
+    expect(status.textContent).toMatch(/Hard mode:/);
   });
 });
