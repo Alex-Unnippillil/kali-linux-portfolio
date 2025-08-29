@@ -31,8 +31,8 @@ const ConnectFour = () => {
   });
   const [scores, setScores] = useState({ red: 0, yellow: 0 });
   const highRef = useRef(0);
-  const [difficulty, setDifficulty] = useState('medium');
-  const depthMap = { easy: 2, medium: 4, hard: 6 };
+  const [depth, setDepth] = useState(4);
+  const threatsRef = useRef({ 1: [], 2: [] });
   const [size, setSize] = useState(80);
 
   useEffect(() => {
@@ -88,6 +88,7 @@ const ConnectFour = () => {
   const reset = () => {
     cancelAnim();
     boardRef.current = createBoard();
+    updateThreats();
     setBoardState(boardRef.current);
     setWinner(null);
     setCurrent(1);
@@ -248,6 +249,22 @@ const ConnectFour = () => {
     return false;
   };
 
+  const updateThreats = useCallback(() => {
+    const board = boardRef.current;
+    const threats = { 1: [], 2: [] };
+    for (let c = 0; c < COLS; c++) {
+      const r = getAvailableRow(c);
+      if (r !== null) {
+        let result = dropPiece(board, c, 1);
+        if (checkWin(result.board, r, c, 1)) threats[1].push([r, c]);
+        result = dropPiece(board, c, 2);
+        if (checkWin(result.board, r, c, 2)) threats[2].push([r, c]);
+      }
+    }
+    threatsRef.current = threats;
+  }, [getAvailableRow, dropPiece, checkWin]);
+
+
   const evaluateWindow = (window, color) => {
     let score = 0;
     const opp = color === 1 ? 2 : 1;
@@ -335,7 +352,6 @@ const ConnectFour = () => {
   };
 
   const makeAIMove = useCallback(() => {
-    const depth = depthMap[difficulty];
     const board = boardRef.current.map((row) => row.slice());
     const { col } = minimax(board, depth, -Infinity, Infinity, true);
     if (col !== null && col !== undefined) {
@@ -351,7 +367,7 @@ const ConnectFour = () => {
         setAnnouncement(`Yellow disc dropped in column ${col + 1}, row ${row + 1}`);
       }
     }
-  }, [difficulty, size]);
+  }, [depth, size]);
 
   useEffect(() => {
     if (current === 2 && !winner && !dropRef.current && !pausedRef.current) {
@@ -387,7 +403,7 @@ const ConnectFour = () => {
       if (hover.col !== null) {
         ctx.fillStyle = 'rgba(255,255,255,0.2)';
         ctx.fillRect(hover.col * size, 0, size, canvas.height);
-      if (hover.row !== null && !dropRef.current && !pausedRef.current) {
+        if (hover.row !== null && !dropRef.current && !pausedRef.current) {
           ctx.beginPath();
           ctx.arc(
             hover.col * size + size / 2,
@@ -399,8 +415,24 @@ const ConnectFour = () => {
           ctx.fillStyle =
             current === 1 ? 'rgba(239,68,68,0.5)' : 'rgba(250,204,21,0.5)';
           ctx.fill();
+        }
       }
-    }
+
+      const threats = threatsRef.current;
+      for (const [r, c] of threats[1]) {
+        ctx.beginPath();
+        ctx.arc(c * size + size / 2, r * size + size / 2, size / 2 - 8, 0, Math.PI * 2);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#ef4444';
+        ctx.stroke();
+      }
+      for (const [r, c] of threats[2]) {
+        ctx.beginPath();
+        ctx.arc(c * size + size / 2, r * size + size / 2, size / 2 - 8, 0, Math.PI * 2);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#facc15';
+        ctx.stroke();
+      }
 
       if (dropRef.current && !pausedRef.current) {
         const p = dropRef.current;
@@ -414,6 +446,7 @@ const ConnectFour = () => {
         if (p.y >= target) {
           p.y = target;
           boardRef.current[p.row][p.col] = p.color;
+          updateThreats();
           setBoardState(boardRef.current.map((row) => row.slice()));
           const nextRow = getAvailableRow(p.col);
           hoverRef.current =
@@ -502,15 +535,17 @@ const ConnectFour = () => {
         {announcement}
       </div>
       <div className="mt-4 flex gap-2 items-center">
-        <select
-          className="px-2 py-1 bg-gray-700 rounded"
-          value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value)}
-        >
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
-        </select>
+        <label className="flex items-center gap-1">
+          Depth:
+          <input
+            type="number"
+            min="1"
+            max="8"
+            value={depth}
+            onChange={(e) => setDepth(Math.max(1, Math.min(8, parseInt(e.target.value, 10) || 1)))}
+            className="w-16 px-2 py-1 bg-gray-700 rounded"
+          />
+        </label>
         <button className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded" onClick={reset}>
           Reset
         </button>

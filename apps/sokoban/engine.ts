@@ -9,6 +9,7 @@ export interface State {
   pushes: number;
   moves: number;
   history: HistoryEntry[];
+  future: HistoryEntry[];
   deadlocks: Set<string>;
 }
 interface HistoryEntry {
@@ -65,6 +66,7 @@ export function loadLevel(lines: string[]): State {
     pushes: 0,
     moves: 0,
     history: [],
+    future: [],
     deadlocks: new Set(),
   };
   state.deadlocks = computeDeadlocks(state);
@@ -123,7 +125,13 @@ export function move(state: State, dirKey: DirectionKey): State {
   const next: Position = { x: state.player.x + dir.x, y: state.player.y + dir.y };
   const nextKey = key(next);
   if (state.walls.has(nextKey)) return state;
-  const result = { ...state, player: { ...state.player }, boxes: new Set(state.boxes), history: [...state.history] };
+  const result = {
+    ...state,
+    player: { ...state.player },
+    boxes: new Set(state.boxes),
+    history: [...state.history],
+    future: [],
+  };
   result.history.push(cloneState(state));
   if (result.boxes.has(nextKey)) {
     const beyond: Position = { x: next.x + dir.x, y: next.y + dir.y };
@@ -153,6 +161,24 @@ export function undo(state: State): State {
     pushes: prev.pushes,
     moves: prev.moves,
     history: state.history.slice(0, -1),
+    future: [...state.future, cloneState(state)],
+  };
+  restored.deadlocks = computeDeadlocks(restored);
+  return restored;
+}
+
+export function redo(state: State): State {
+  if (!state.future.length) return state;
+  const next = state.future[state.future.length - 1];
+  const boxes = new Set(next.boxes);
+  const restored: State = {
+    ...state,
+    player: { ...next.player },
+    boxes,
+    pushes: next.pushes,
+    moves: next.moves,
+    history: [...state.history, cloneState(state)],
+    future: state.future.slice(0, -1),
   };
   restored.deadlocks = computeDeadlocks(restored);
   return restored;

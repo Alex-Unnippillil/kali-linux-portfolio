@@ -5,7 +5,7 @@ import {
   updatePhysics,
   collectCoin,
   movePlayer,
-  GRAVITY,
+  physics,
 } from '../../public/apps/platformer/engine.js';
 
 const TILE_SIZE = 16;
@@ -165,7 +165,7 @@ const Platformer = () => {
             life: p.life - dt,
             x: p.x + p.vx * dt,
             y: p.y + p.vy * dt,
-            vy: p.vy + GRAVITY * dt * 0.5,
+            vy: p.vy + physics.GRAVITY * dt * 0.5,
           }))
           .filter((p) => p.life > 0);
         bgOffsets.forEach((o, i) => {

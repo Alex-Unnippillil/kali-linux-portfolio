@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Platformer Editor</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { font-family: sans-serif; padding: 4px; }
+    #palette button { width: 24px; height: 24px; margin: 2px; }
+    #output { width: 100%; margin-top: 4px; }
+    canvas { border: 1px solid #555; image-rendering: pixelated; }
+  </style>
+</head>
+<body>
+  <div id="palette"></div>
+  <button id="exportBtn">Export</button>
+  <textarea id="output" rows="5"></textarea>
+  <p>Left click to paint tiles. Right click to set spawn.</p>
+  <canvas id="editor" width="320" height="160"></canvas>
+  <script type="module" src="editor.js"></script>
+</body>
+</html>
+

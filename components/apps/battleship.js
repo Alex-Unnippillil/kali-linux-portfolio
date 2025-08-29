@@ -6,7 +6,7 @@ import {
   RandomAI,
   BOARD_SIZE,
   randomizePlacement,
-} from './battleship/ai';
+} from '../../apps/games/battleship/ai';
 import GameLayout from './battleship/GameLayout';
 import usePersistentState from '../hooks/usePersistentState';
 import useGameControls from './useGameControls';
@@ -72,12 +72,17 @@ const Battleship = () => {
   const [playerBoard, setPlayerBoard] = useState(createBoard());
   const [enemyBoard, setEnemyBoard] = useState(createBoard());
   const [ships, setShips] = useState([]); // player's ship objects
-    const [aiHeat, setAiHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-    const [guessHeat, setGuessHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-    const [showHeatmap, setShowHeatmap] = useState(false);
-    const [message, setMessage] = useState('Place your ships');
+  const [enemyShips, setEnemyShips] = useState([]);
+  const [aiHeat, setAiHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+  const [guessHeat, setGuessHeat] = useState(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+  const [showHeatmap, setShowHeatmap] = useState(false);
+  const [message, setMessage] = useState('Place your ships');
   const [difficulty, setDifficulty] = useState('easy');
   const [ai, setAi] = useState(null);
+  const [salvo, setSalvo] = useState(false);
+  const [fog, setFog] = useState(false);
+  const [playerShots, setPlayerShots] = useState(1);
+  const [aiShots, setAiShots] = useState(1);
   const [stats, setStats] = usePersistentState('battleship-stats', {
     wins: 0,
     losses: 0,
@@ -106,13 +111,21 @@ const Battleship = () => {
     return newBoard;
   }, []);
 
+  const countRemaining = useCallback(
+    (board, layout) =>
+      layout.filter((sh) => sh.cells.some((c) => board[c] === 'ship')).length,
+    [],
+  );
+
   const restart = useCallback(
     (diff = difficulty) => {
       const layout = randomizePlacement();
       const newShips = layout.map((s, i) => ({ ...s, id: i }));
+      const enemyLayout = randomizePlacement();
       setShips(newShips);
+      setEnemyShips(enemyLayout);
       setPlayerBoard(placeShips(createBoard(), newShips));
-      setEnemyBoard(placeShips(createBoard(), randomizePlacement()));
+      setEnemyBoard(placeShips(createBoard(), enemyLayout));
       setPhase('placement');
       setMessage('Place your ships');
       setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
@@ -123,8 +136,12 @@ const Battleship = () => {
       else aiInstance = new RandomAI();
       setAi(aiInstance);
       setCursor(0);
+      const pShots = salvo ? newShips.length : 1;
+      const aShots = salvo ? enemyLayout.length : 1;
+      setPlayerShots(pShots);
+      setAiShots(aShots);
     },
-    [difficulty, placeShips]
+    [difficulty, placeShips, salvo]
   );
 
   useEffect(() => {
@@ -172,8 +189,43 @@ const Battleship = () => {
       return;
     }
     setPhase('battle');
+    if (salvo) {
+      setPlayerShots(countRemaining(playerBoard, ships));
+      setAiShots(countRemaining(enemyBoard, enemyShips));
+    }
     setMessage('Your turn');
   };
+
+  const aiTurn = useCallback(
+    (shots, playerHit) => {
+      let pb = playerBoard.slice();
+      let nh = aiHeat.slice();
+      for (let s = 0; s < shots; s++) {
+        const move = ai.nextMove();
+        if (move == null) break;
+        const hit2 = pb[move] === 'ship';
+        pb[move] = hit2 ? 'hit' : 'miss';
+        nh[move]++;
+        ai.record(move, hit2);
+        if (!pb.includes('ship')) {
+          setPlayerBoard(pb);
+          setAiHeat(nh);
+          setMessage('AI wins!');
+          setPhase('done');
+          setStats((st) => ({ ...st, losses: st.losses + 1 }));
+          return;
+        }
+      }
+      setPlayerBoard(pb);
+      setAiHeat(nh);
+      if (salvo) {
+        setAiShots(countRemaining(enemyBoard, enemyShips));
+        setPlayerShots(countRemaining(pb, ships));
+      }
+      setMessage(playerHit ? 'Hit!' : 'Miss!');
+    },
+    [ai, aiHeat, playerBoard, salvo, enemyBoard, enemyShips, countRemaining, ships, setPlayerBoard, setAiHeat, setMessage, setPhase, setStats]
+  );
 
   const fire = useCallback(
     (idx) => {
@@ -193,26 +245,16 @@ const Battleship = () => {
         setStats((s) => ({ ...s, wins: s.wins + 1 }));
         return;
       }
-      // AI turn
-      setTimeout(() => {
-        const move = ai.nextMove();
-        if (move == null) return;
-        const pb = playerBoard.slice();
-        const hit2 = pb[move] === 'ship';
-        pb[move] = hit2 ? 'hit' : 'miss';
-        setPlayerBoard(pb);
-        const nh = aiHeat.slice();
-        nh[move]++;
-        setAiHeat(nh);
-        ai.record(move, hit2);
-        if (!pb.includes('ship')) {
-          setMessage('AI wins!');
-          setPhase('done');
-          setStats((s) => ({ ...s, losses: s.losses + 1 }));
-        } else setMessage(hit ? 'Hit!' : 'Miss!');
-      }, 100); // simulate thinking
+      let shots = salvo ? playerShots - 1 : 0;
+      setPlayerShots(shots);
+      if (salvo && shots > 0) {
+        setMessage(hit ? 'Hit!' : 'Miss!');
+        return;
+      }
+      const aiCount = salvo ? aiShots : 1;
+      setTimeout(() => aiTurn(aiCount, hit), 100);
     },
-      [ai, enemyBoard, aiHeat, phase, playerBoard, setEnemyBoard, setPlayerBoard, setAiHeat, setGuessHeat, setMessage, setPhase, setStats]
+    [phase, enemyBoard, salvo, playerShots, aiShots, aiTurn, setEnemyBoard, setGuessHeat, setMessage, setPhase, setStats]
   );
 
   useGameControls(({ x, y }) => {
@@ -237,9 +279,11 @@ const Battleship = () => {
     return () => window.removeEventListener('keydown', handleKey);
   }, [phase, cursor, fire]);
 
-  const renderBoard = (board, isEnemy=false) => (
-    <div className="grid" style={{gridTemplateColumns:`repeat(${BOARD_SIZE}, ${CELL}px)`}}>
-      {board.map((cell,idx)=>{
+  const renderBoard = (board, opts = {}) => {
+    const { isEnemy = false, hideInfo = false } = opts;
+    return (
+      <div className="grid" style={{ gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL}px)` }}>
+        {board.map((cell, idx) => {
           const heatArr = isEnemy ? guessHeat : aiHeat;
           const heatVal = heatArr[idx];
           const color = showHeatmap && heatVal
@@ -247,26 +291,30 @@ const Battleship = () => {
               ? `rgba(0,150,255,${Math.min(heatVal / 5, 0.6)})`
               : `rgba(255,0,0,${Math.min(heatVal / 5, 0.7)})`
             : 'transparent';
-        return (
-          <div key={idx} className="border border-ub-dark-grey relative" style={{width:CELL,height:CELL}}>
-            {isEnemy && phase==='battle' && !['hit','miss'].includes(cell)?(
-              <button
-                className="w-full h-full"
-                onClick={()=>fire(idx)}
-                aria-label={`fire at ${Math.floor(idx/BOARD_SIZE)+1},${(idx%BOARD_SIZE)+1}`}
-              />
-            ):null}
-            {cell==='hit' && <HitMarker />}
-            {cell==='miss' && <MissMarker />}
-            <div className="absolute inset-0" style={{background:color}} aria-hidden="true" />
-            {isEnemy && phase==='battle' && idx===cursor && (
-              <div className="absolute inset-0 border-2 border-yellow-300 pointer-events-none" />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
+          return (
+            <div key={idx} className="border border-ub-dark-grey relative" style={{ width: CELL, height: CELL }}>
+              {isEnemy && phase === 'battle' && !['hit', 'miss'].includes(cell) ? (
+                <button
+                  className="w-full h-full"
+                  onClick={() => fire(idx)}
+                  aria-label={`fire at ${Math.floor(idx / BOARD_SIZE) + 1},${(idx % BOARD_SIZE) + 1}`}
+                />
+              ) : null}
+              {cell === 'hit' && !hideInfo && <HitMarker />}
+              {cell === 'miss' && !hideInfo && <MissMarker />}
+              <div className="absolute inset-0" style={{ background: color }} aria-hidden="true" />
+              {hideInfo && phase === 'battle' && (
+                <div className="absolute inset-0 bg-gray-800" aria-hidden="true" />
+              )}
+              {isEnemy && phase === 'battle' && idx === cursor && (
+                <div className="absolute inset-0 border-2 border-yellow-300 pointer-events-none" />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto font-ubuntu">
@@ -280,6 +328,13 @@ const Battleship = () => {
           stats={stats}
           showHeatmap={showHeatmap}
           onToggleHeatmap={() => setShowHeatmap((h) => !h)}
+          salvo={salvo}
+          onSalvoChange={(v) => {
+            setSalvo(v);
+            restart(difficulty);
+          }}
+          fog={fog}
+          onFogChange={(v) => setFog(v)}
         >
         <div className="mb-2" aria-live="polite" role="status">{message}</div>
         {phase==='done' && (
@@ -315,8 +370,8 @@ const Battleship = () => {
         )}
         {phase!=='placement' && (
           <div className="flex space-x-8">
-            <div>{renderBoard(playerBoard)}</div>
-            <div>{renderBoard(enemyBoard,true)}</div>
+            <div>{renderBoard(playerBoard, { hideInfo: fog && phase==='battle' })}</div>
+            <div>{renderBoard(enemyBoard, { isEnemy: true })}</div>
           </div>
         )}
       </GameLayout>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import GameLayout from './GameLayout';
-import { createDeck } from './memory_utils';
+import { createDeck, PATTERN_THEMES } from './memory_utils';
 
 const MAX_STORAGE = 1000; // safeguard against large writes
-const DEFAULT_TIME = { 4: 60, 6: 120 };
+const DEFAULT_TIME = { 2: 30, 4: 60, 6: 120 };
 
 const Memory = () => {
   const [size, setSize] = useState(4);
@@ -20,6 +20,9 @@ const Memory = () => {
   const [best, setBest] = useState({ moves: null, time: null });
   const [announcement, setAnnouncement] = useState('');
   const [deckType, setDeckType] = useState('emoji');
+  const [patternTheme, setPatternTheme] = useState('vibrant');
+  const [previewTime, setPreviewTime] = useState(3);
+  const [previewing, setPreviewing] = useState(false);
   const [streak, setStreak] = useState(0);
   const [particles, setParticles] = useState([]);
   const [nudge, setNudge] = useState(false);
@@ -29,6 +32,7 @@ const Memory = () => {
   const initialTimeRef = useRef(0);
   const rafRef = useRef();
   const reduceMotion = useRef(false);
+  const previewTimeout = useRef();
 
   const bestKey = useMemo(() => `game:memory:${size}:${timerMode}:best`, [size, timerMode]);
 
@@ -43,6 +47,8 @@ const Memory = () => {
       mq.removeEventListener ? mq.removeEventListener('change', update) : mq.removeListener(update);
     };
   }, []);
+
+  useEffect(() => () => clearTimeout(previewTimeout.current), []);
 
   const beep = useCallback(() => {
     if (!sound || typeof window === 'undefined') return;
@@ -63,8 +69,21 @@ const Memory = () => {
   }, [sound]);
 
   const reset = useCallback(() => {
-    setCards(createDeck(size, deckType));
-    setFlipped([]);
+    clearTimeout(previewTimeout.current);
+    const deck = createDeck(size, deckType, patternTheme);
+    setCards(deck);
+    const all = Array.from({ length: size * size }, (_, i) => i);
+    if (previewTime > 0) {
+      setFlipped(all);
+      setPreviewing(true);
+      previewTimeout.current = setTimeout(() => {
+        setFlipped([]);
+        setPreviewing(false);
+      }, previewTime * 1000);
+    } else {
+      setFlipped([]);
+      setPreviewing(false);
+    }
     setMatched([]);
     setHighlight([]);
     setMoves(0);
@@ -77,7 +96,7 @@ const Memory = () => {
     startRef.current = 0;
     setAnnouncement('');
     setStreak(0);
-  }, [size, deckType, timerMode]);
+  }, [size, deckType, timerMode, patternTheme, previewTime]);
 
   useEffect(() => {
     reset();
@@ -156,7 +175,7 @@ const Memory = () => {
   }, []);
 
   const handleCardClick = (idx) => {
-    if (paused || flipped.includes(idx) || matched.includes(idx) || (timerMode === 'countdown' && time <= 0)) return;
+    if (paused || previewing || flipped.includes(idx) || matched.includes(idx) || (timerMode === 'countdown' && time <= 0)) return;
     if (!runningRef.current) {
       runningRef.current = true;
       startRef.current = performance.now();
@@ -238,6 +257,7 @@ const Memory = () => {
                     flipped.includes(i) ||
                     matched.includes(i) ||
                     paused ||
+                    previewing ||
                     (timerMode === 'countdown' && time <= 0)
                   }
                   className={`relative w-full aspect-square [perspective:600px] rounded transform ${isHighlighted ? 'ring-4 ring-green-600' : ''} ${reduceMotion.current ? '' : 'transition-transform duration-200'} ${isHighlighted && !reduceMotion.current ? 'scale-105' : ''}`}
@@ -266,7 +286,7 @@ const Memory = () => {
             />
           ))}
           {timerMode === 'countdown' && time <= 0 && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl">Time's up</div>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl">Time&apos;s up</div>
           )}
           {paused && time > 0 && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl">Paused</div>
@@ -297,6 +317,20 @@ const Memory = () => {
             <option value="pattern">Pattern</option>
             <option value="letters">Letters</option>
           </select>
+          {deckType === 'pattern' && (
+            <select
+              aria-label="Pattern theme"
+              value={patternTheme}
+              onChange={(e) => setPatternTheme(e.target.value)}
+              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+            >
+              {Object.keys(PATTERN_THEMES).map((t) => (
+                <option key={t} value={t}>
+                  {t[0].toUpperCase() + t.slice(1)}
+                </option>
+              ))}
+            </select>
+          )}
           <select
             aria-label="Timer mode"
             value={timerMode}
@@ -312,9 +346,25 @@ const Memory = () => {
             onChange={(e) => setSize(Number(e.target.value))}
             className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
           >
+            <option value={2}>2x2</option>
             <option value={4}>4x4</option>
             <option value={6}>6x6</option>
           </select>
+          <div className="flex items-center space-x-1">
+            <label htmlFor="preview-time" className="text-sm">
+              Preview {previewTime}s
+            </label>
+            <input
+              id="preview-time"
+              type="range"
+              min="0"
+              max="10"
+              step="1"
+              value={previewTime}
+              onChange={(e) => setPreviewTime(Number(e.target.value))}
+              className="w-24"
+            />
+          </div>
         </div>
       </div>
     </GameLayout>

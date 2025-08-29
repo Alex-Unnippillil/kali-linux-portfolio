@@ -105,7 +105,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   sokoban: {
     objective: 'Push all boxes onto target squares.',
-    controls: 'Use arrow keys to move and push boxes.',
+    controls:
+      'Use arrow keys to move and push boxes. U/Z/Backspace to undo, Y to redo, R to reset.',
   },
   solitaire: {
     objective: 'Move all cards to the foundation piles.',
@@ -121,7 +122,7 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   'tower-defense': {
     objective: 'Stop enemies before they reach the end.',
-    controls: 'Click to place and upgrade towers.',
+    controls: 'Use Edit Map to draw paths, then click to place and upgrade towers.',
   },
   'word-search': {
     objective: 'Find all listed words in the grid.',
@@ -141,11 +142,14 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   sudoku: {
     objective: 'Fill the grid so each row, column, and box has 1-9.',
-    controls: 'Click a cell then type a number.',
+    controls:
+      'Click a cell then type a number. Toggle Notes or hold Shift for pencil marks. Conflicts highlight automatically. Choose a difficulty and use Hint for human strategies.',
   },
   'flappy-bird': {
-    objective: 'Fly through gaps between pipes. Practice gates and easy mode available.',
-    controls: 'Space/click to flap. P: practice, G: easy gravity, M: reduced motion.',
+    objective:
+      'Fly through gaps between pipes. Practice gates, slow-motion, easy mode, and skins available.',
+    controls:
+      'Space/click to flap. P: practice, G: easy gravity, M: reduced motion, O: pipe skin, H: hitbox preview.',
   },
   'candy-crush': {
     objective: 'Match three candies to clear them.',

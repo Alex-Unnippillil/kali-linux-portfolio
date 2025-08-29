@@ -43,7 +43,7 @@ const PerfOverlay: React.FC = () => {
     // Prefer OffscreenCanvas with a worker when supported
     if (
       typeof window !== 'undefined' &&
-      'Worker' in window &&
+      typeof Worker === 'function' &&
       'OffscreenCanvas' in window
     ) {
       const worker = new Worker(new URL('./perf.worker.js', import.meta.url));

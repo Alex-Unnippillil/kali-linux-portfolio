@@ -7,6 +7,7 @@ const LANES = 3;
 const LANE_WIDTH = WIDTH / LANES;
 const PLAYER_Y = HEIGHT - 40;
 const OBSTACLE_HEIGHT = 20;
+const BASE_SPEEDS = [100, 120, 140];
 
 export const detectCollision = (
   playerLane,
@@ -15,7 +16,7 @@ export const detectCollision = (
   threshold = OBSTACLE_HEIGHT
 ) =>
   obstacles.some(
-    (o) => o.lane === playerLane && Math.abs(o.y - playerY) < threshold
+    (o) => o.lane === playerLane && Math.abs(o.y - playerY) < threshold * 0.8
   );
 
 export const updateScore = (score, speed, dt) => score + speed * dt;
@@ -74,13 +75,13 @@ const LaneRunner = () => {
     if (!ctx) return;
 
     setScore(0);
-    setSpeed(100);
+    setSpeed(BASE_SPEEDS[1]);
     setRunning(true);
     setLives(3);
 
     let playerLane = 1;
     let obstacles = [];
-    let s = 100;
+    let speeds = [...BASE_SPEEDS];
     let sc = 0;
     let l = 3;
     let last = performance.now();
@@ -108,8 +109,10 @@ const LaneRunner = () => {
       const dt = (time - last) / 1000;
       last = time;
       spawn += dt;
-      s += dt * 10;
-      obstacles.forEach((o) => (o.y += s * dt));
+      speeds = speeds.map((sp) => sp + dt * 10);
+      obstacles.forEach((o) => {
+        o.y += speeds[o.lane] * dt;
+      });
       obstacles = obstacles.filter((o) => o.y < HEIGHT + OBSTACLE_HEIGHT);
       if (spawn > 1) {
         obstacles.push({ lane: Math.floor(Math.random() * LANES), y: -OBSTACLE_HEIGHT });
@@ -131,9 +134,9 @@ const LaneRunner = () => {
           setRunning(false);
         }
       }
-      sc = updateScore(sc, s, dt);
+      sc = updateScore(sc, speeds[playerLane], dt);
       setScore(sc);
-      setSpeed(s);
+      setSpeed(speeds[playerLane]);
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
       ctx.fillStyle = 'cyan';
       const x = playerLane * LANE_WIDTH + 10;
@@ -149,7 +152,7 @@ const LaneRunner = () => {
       ctx.font = '12px sans-serif';
       for (let i = 0; i < LANES; i += 1) {
         const tx = i * LANE_WIDTH + LANE_WIDTH / 2 - 10;
-        ctx.fillText(Math.round(s).toString(), tx, 12);
+        ctx.fillText(Math.round(speeds[i]).toString(), tx, 12);
       }
       if (alive) animId = requestAnimationFrame(loop);
       else {
@@ -174,7 +177,14 @@ const LaneRunner = () => {
       <div className="absolute top-2 left-2 bg-black/60 p-2 rounded text-xs space-y-1">
         <div>Score: {Math.floor(score)}</div>
         <div>Speed: {Math.round(speed)}</div>
-        <div>Lives: {lives}</div>
+        <div className="flex items-center gap-1">
+          <span>Lives:</span>
+          {Array.from({ length: lives }).map((_, i) => (
+            <span key={i} role="img" aria-label="life">
+              ❤️
+            </span>
+          ))}
+        </div>
         <div className="flex items-center gap-1">
           <label htmlFor="ctrl">Control:</label>
           <select

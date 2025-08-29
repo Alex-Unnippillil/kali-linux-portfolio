@@ -22,28 +22,35 @@ Always test inside controlled labs and obtain written permission before performi
 ## Quick Start
 
 ### Requirements
-- **Node.js 20.x**
+- **Node.js 20.x** (repo includes `.nvmrc`; run `nvm use`)
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
 ### Install & Run (Dev)
 ```bash
+nvm install  # installs Node 20 from .nvmrc if needed
+nvm use
 yarn install
 yarn dev
 ```
 
 ### Production Build
+Serverful deployments run the built Next.js server so all API routes are available.
 ```bash
-# Next.js production build & start
-yarn build
-yarn start
+yarn build && yarn start
+```
+After the server starts, exercise an API route to confirm server-side functionality:
+```bash
+curl -X POST http://localhost:3000/api/dummy
 ```
 
 ### Static Export (for GitHub Pages / S3 Websites)
-This project supports static export. Serverless API routes will not be available in a static export; the UI gracefully degrades.
+This project supports static export. Serverless API routes will not be available; the UI falls back to demo data or hides features.
 ```bash
-yarn export        # outputs to ./out
+yarn export && npx serve out
+
 ```
+Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
 
 ### Install as PWA for Sharing
 
@@ -155,7 +162,10 @@ keyboard focus so bundles are warmed before launch. When adding a new app, expor
 | `NEXT_PUBLIC_BEEF_URL` | Optional URL for the BeEF demo iframe (if used). |
 | `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
+| `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
+| `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
+| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
 | `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
 
@@ -228,6 +238,8 @@ Workflow: `.github/workflows/gh-deploy.yml`:
   - `NEXT_PUBLIC_GHIDRA_URL`
   - `NEXT_PUBLIC_GHIDRA_WASM`
   - `NEXT_PUBLIC_UI_EXPERIMENTS`
+  - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
+  - `RECAPTCHA_SECRET`
 - Build command: `yarn build`
 - Output: Next.js (serverless by default on Vercel).
 - If you keep API routes, Vercel deploys them as serverless functions. For a static build, disable API routes or feature-flag those apps.
@@ -307,7 +319,7 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | Settings | /apps/settings | Utility / Media |
 | Trash | /apps/trash | Utility / Media |
 | Project Gallery | /apps/project-gallery | Utility / Media |
-| Quote_Generator | /apps/quote_generator | Utility / Media |
+| Quote | /apps/quote | Utility / Media |
 
 The Spotify app loads its mood-to-playlist mapping from `public/spotify-playlists.json`,
 remembers the last mood you played, and exposes play/pause and track controls with
@@ -326,7 +338,7 @@ keyboard hotkeys.
 | Blackjack | /apps/blackjack | Game |
 | Breakout | /apps/breakout | Game |
 | Candy Crush | /apps/candy-crush | Game |
-| Car Racer | /apps/car-racer | Game |
+| Car Racer | /apps/car-racer | Game - ghost replays, lane assist, drift scoring |
 | Checkers | /apps/checkers | Game |
 | Chess | /apps/chess | Game |
 | Connect Four | /apps/connect-four | Game |
@@ -368,7 +380,7 @@ keyboard hotkeys.
 | John the Ripper | /apps/john | Security Tool (simulated) |
 | Kismet | /apps/kismet | Security Tool (simulated) |
 | Metasploit | /apps/metasploit | Security Tool (simulated) |
-| Metasploit Post | /apps/msf-post | Security Tool (simulated) |
+| Metasploit Post | /apps/metasploit-post | Security Tool (simulated) |
 | Mimikatz | /apps/mimikatz | Security Tool (simulated) |
 | Nessus | /apps/nessus | Security Tool (simulated) |
 | Nmap NSE | /apps/nmap-nse | Security Tool (simulated) |

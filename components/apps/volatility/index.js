@@ -3,11 +3,30 @@ import MemoryHeatmap from './MemoryHeatmap';
 import PluginBrowser from './PluginBrowser';
 import memoryDemo from '../../../public/demo-data/volatility/memory.json';
 
-const demoPslist = [
-  { pid: 4, ppid: 0, name: 'System' },
-  { pid: 248, ppid: 4, name: 'smss.exe' },
-  { pid: 612, ppid: 248, name: 'csrss.exe' },
+const demoPstree = [
+  {
+    pid: 4,
+    name: 'System',
+    children: [
+      {
+        pid: 248,
+        name: 'smss.exe',
+        children: [
+          { pid: 612, name: 'csrss.exe', children: [] },
+        ],
+      },
+    ],
+  },
 ];
+
+const demoDlllist = {
+  4: [{ base: '0x1000', name: 'ntoskrnl.exe' }],
+  248: [{ base: '0x2000', name: 'smss.exe' }],
+  612: [
+    { base: '0x3000', name: 'csrss.exe' },
+    { base: '0x4000', name: 'kernel32.dll' },
+  ],
+};
 
 const demoNetscan = [
   { proto: 'TCP', local: '0.0.0.0:80', foreign: '0.0.0.0:0', state: 'LISTENING' },
@@ -25,7 +44,46 @@ const demoMalfind = [
   { pid: 700, address: '0x401000', protection: 'RWX', description: 'Suspicious Section' },
 ];
 
-const SortableTable = ({ columns, data }) => {
+const demoYara = [
+  { pid: 612, rule: 'SuspiciousAPIs', address: '0x401000', heuristic: 'suspicious' },
+  { pid: 248, rule: 'EncodedPayload', address: '0x500000', heuristic: 'malicious' },
+];
+
+const heuristicColors = {
+  informational: 'bg-blue-600',
+  suspicious: 'bg-yellow-600',
+  malicious: 'bg-red-600',
+};
+
+const glossary = {
+  pstree: {
+    title: 'Process Tree',
+    description: 'Hierarchy of running processes.',
+    link: '/docs/template-glossary#process-tree',
+  },
+  dlllist: {
+    title: 'Module List',
+    description: 'DLLs and modules loaded by the selected process.',
+    link: '/docs/template-glossary#module',
+  },
+  netscan: {
+    title: 'Network Connections',
+    description: 'Sockets and network endpoints identified in memory.',
+    link: '/docs/template-glossary#netscan',
+  },
+  malfind: {
+    title: 'Malfind',
+    description: 'Heuristics to locate injected or malicious code.',
+    link: '/docs/template-glossary#malfind',
+  },
+  yara: {
+    title: 'Yara Scan',
+    description: 'Pattern-based rules that highlight suspicious memory content.',
+    link: '/docs/template-glossary#yara',
+  },
+};
+
+const SortableTable = ({ columns, data, onRowClick }) => {
   const [sort, setSort] = useState({ key: null, dir: 'asc' });
 
   const sorted = React.useMemo(() => {
@@ -62,10 +120,14 @@ const SortableTable = ({ columns, data }) => {
       </thead>
       <tbody>
         {sorted.map((row, i) => (
-          <tr key={i} className="odd:bg-gray-800">
+          <tr
+            key={i}
+            className="odd:bg-gray-800 cursor-pointer"
+            onClick={() => onRowClick && onRowClick(row)}
+          >
             {columns.map((col) => (
               <td key={col.key} className="px-2 py-1 whitespace-nowrap">
-                {row[col.key]}
+                {col.render ? col.render(row) : row[col.key]}
               </td>
             ))}
           </tr>
@@ -79,11 +141,13 @@ const VolatilityApp = () => {
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [heatmapData, setHeatmapData] = useState([]);
-  const [activeTab, setActiveTab] = useState('pslist');
+  const [activeTab, setActiveTab] = useState('pstree');
+  const [selectedPid, setSelectedPid] = useState(null);
+  const [finding, setFinding] = useState(null);
   const workerRef = useRef(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./heatmap.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => setHeatmapData(e.data);
       workerRef.current.postMessage({ segments: memoryDemo.segments });
@@ -95,7 +159,6 @@ const VolatilityApp = () => {
     setLoading(true);
     setOutput('');
     try {
-      // Simulated analysis using static demo data
       workerRef.current?.postMessage({ segments: memoryDemo.segments });
       setOutput('Analysis simulated with demo memory plugin output.');
     } catch (err) {
@@ -104,6 +167,27 @@ const VolatilityApp = () => {
       setLoading(false);
     }
   };
+
+  const TreeNode = ({ node }) => (
+    <li>
+      <span
+        className="cursor-pointer hover:underline"
+        onClick={() => {
+          setSelectedPid(node.pid);
+          setFinding(glossary.pstree);
+        }}
+      >
+        {node.name} ({node.pid})
+      </span>
+      {node.children && node.children.length > 0 && (
+        <ul className="ml-4">
+          {node.children.map((child) => (
+            <TreeNode key={child.pid} node={child} />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
@@ -117,55 +201,119 @@ const VolatilityApp = () => {
         </button>
       </div>
       <MemoryHeatmap data={heatmapData} />
-      <div className="flex-1 flex flex-col">
-        <div className="flex space-x-2 px-2 bg-gray-900">
-          {['pslist', 'netscan', 'malfind', 'plugins'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-2 py-1 text-sm rounded ${
-                activeTab === tab ? 'bg-gray-700' : 'bg-gray-800'
-              }`}
+      <div className="flex-1 flex">
+        <div className="flex-1 flex flex-col">
+          <div className="flex space-x-2 px-2 bg-gray-900">
+            {['pstree', 'netscan', 'malfind', 'yarascan', 'plugins'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-2 py-1 text-sm rounded ${
+                  activeTab === tab ? 'bg-gray-700' : 'bg-gray-800'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 overflow-auto p-2">
+            {activeTab === 'pstree' && (
+              <div className="flex space-x-4">
+                <ul className="w-1/2 text-xs">
+                  {demoPstree.map((node) => (
+                    <TreeNode key={node.pid} node={node} />
+                  ))}
+                </ul>
+                <div className="w-1/2">
+                  {selectedPid ? (
+                    <>
+                      <h3 className="text-sm mb-2">Modules for PID {selectedPid}</h3>
+                      <SortableTable
+                        columns={[
+                          { key: 'base', label: 'Base' },
+                          { key: 'name', label: 'Name' },
+                        ]}
+                        data={demoDlllist[selectedPid] || []}
+                        onRowClick={() => setFinding(glossary.dlllist)}
+                      />
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-400">Select a process to view modules.</p>
+                  )}
+                </div>
+              </div>
+            )}
+            {activeTab === 'netscan' && (
+              <SortableTable
+                columns={[
+                  { key: 'proto', label: 'Proto' },
+                  { key: 'local', label: 'LocalAddr' },
+                  { key: 'foreign', label: 'ForeignAddr' },
+                  { key: 'state', label: 'State' },
+                ]}
+                data={demoNetscan}
+                onRowClick={() => setFinding(glossary.netscan)}
+              />
+            )}
+            {activeTab === 'malfind' && (
+              <SortableTable
+                columns={[
+                  { key: 'pid', label: 'PID' },
+                  { key: 'address', label: 'Address' },
+                  { key: 'protection', label: 'Protection' },
+                  { key: 'description', label: 'Description' },
+                ]}
+                data={demoMalfind}
+                onRowClick={() => setFinding(glossary.malfind)}
+              />
+            )}
+            {activeTab === 'yarascan' && (
+              <SortableTable
+                columns={[
+                  { key: 'pid', label: 'PID' },
+                  { key: 'rule', label: 'Rule' },
+                  { key: 'address', label: 'Address' },
+                  {
+                    key: 'heuristic',
+                    label: 'Heuristic',
+                    render: (row) => (
+                      <span
+                        className={`px-2 py-0.5 rounded ${
+                          heuristicColors[row.heuristic] || 'bg-gray-700'
+                        }`}
+                      >
+                        {row.heuristic}
+                      </span>
+                    ),
+                  },
+                ]}
+                data={demoYara}
+                onRowClick={() => setFinding(glossary.yara)}
+              />
+            )}
+            {activeTab === 'plugins' && <PluginBrowser />}
+          </div>
+        </div>
+        {finding && (
+          <aside className="w-64 p-3 border-l border-gray-700 bg-gray-900">
+            <h3 className="text-sm font-semibold mb-2">Explain this finding</h3>
+            <p className="text-xs mb-2">{finding.description}</p>
+            <a
+              href={finding.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-400 underline"
             >
-              {tab}
+              Learn more
+            </a>
+            <button
+              onClick={() => setFinding(null)}
+              className="mt-2 text-xs text-red-400"
+            >
+              Close
             </button>
-          ))}
-        </div>
-        <div className="flex-1 overflow-auto p-2">
-          {activeTab === 'pslist' && (
-            <SortableTable
-              columns={[
-                { key: 'pid', label: 'PID' },
-                { key: 'ppid', label: 'PPID' },
-                { key: 'name', label: 'Name' },
-              ]}
-              data={demoPslist}
-            />
-          )}
-          {activeTab === 'netscan' && (
-            <SortableTable
-              columns={[
-                { key: 'proto', label: 'Proto' },
-                { key: 'local', label: 'LocalAddr' },
-                { key: 'foreign', label: 'ForeignAddr' },
-                { key: 'state', label: 'State' },
-              ]}
-              data={demoNetscan}
-            />
-          )}
-          {activeTab === 'malfind' && (
-            <SortableTable
-              columns={[
-                { key: 'pid', label: 'PID' },
-                { key: 'address', label: 'Address' },
-                { key: 'protection', label: 'Protection' },
-                { key: 'description', label: 'Description' },
-              ]}
-              data={demoMalfind}
-            />
-          )}
-          {activeTab === 'plugins' && <PluginBrowser />}
-        </div>
+          </aside>
+        )}
       </div>
       {output && (
         <pre className="h-32 overflow-auto p-4 bg-black text-green-400 whitespace-pre-wrap">
@@ -181,4 +329,3 @@ export default VolatilityApp;
 export const displayVolatility = () => {
   return <VolatilityApp />;
 };
-

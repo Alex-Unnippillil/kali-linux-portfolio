@@ -3,6 +3,7 @@ import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
+import { createDisplay } from '../../utils/createDynamicApp';
 
 export class Gedit extends Component {
 
@@ -210,7 +211,4 @@ export class Gedit extends Component {
 }
 
 export default Gedit;
-
-export const displayGedit = () => {
-    return <Gedit> </Gedit>;
-}
+export const displayGedit = createDisplay(Gedit);

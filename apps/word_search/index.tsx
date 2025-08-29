@@ -7,6 +7,7 @@ import wordList from '../../components/apps/wordle_words.json';
 import { logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 import GameLayout from '../../components/apps/GameLayout';
 import { SettingsProvider, useSettings } from '../../components/apps/GameSettingsContext';
+import { PUZZLE_PACKS, PackName } from '../../games/word-search/packs';
 
 const WORD_COUNT = 5;
 const GRID_SIZE = 12;
@@ -55,6 +56,10 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const startRef = useRef<number>(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const { quality, setQuality, highContrast, setHighContrast } = useSettings();
+  const [pack, setPack] = useState<PackName | 'random'>('random');
+  const [allowBackwards, setAllowBackwards] = useState(true);
+  const [allowDiagonal, setAllowDiagonal] = useState(true);
+  const [elapsed, setElapsed] = useState(0);
 
   // load saved game on mount
   useEffect(() => {
@@ -77,7 +82,10 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     }
   }, []);
 
-  function pickWords(s: string) {
+  function pickWords(s: string, p: PackName | 'random') {
+    if (p !== 'random') {
+      return PUZZLE_PACKS[p];
+    }
     const rng = createRNG(s);
     const chosen = new Set<string>();
     while (chosen.size < WORD_COUNT) {
@@ -117,14 +125,22 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
       const defaultSeed = (await getDailySeed?.()) ?? new Date().toISOString().split('T')[0];
       const s = typeof seedQuery === 'string' ? seedQuery : defaultSeed;
       setSeed(s);
-      setWords(queryWords.length ? queryWords : pickWords(s));
+      setWords(queryWords.length ? queryWords : pickWords(s, pack));
     };
     void init();
-  }, [seedQuery, wordsQuery, seed, words.length, getDailySeed]);
+  }, [seedQuery, wordsQuery, seed, words.length, getDailySeed, pack]);
+
+  useEffect(() => {
+    if (!seed) return;
+    setWords(pickWords(seed, pack));
+  }, [pack, seed]);
 
   useEffect(() => {
     if (!seed || !words.length) return;
-    const { grid: g, placements: p } = generateGrid(words, GRID_SIZE, seed);
+    const { grid: g, placements: p } = generateGrid(words, GRID_SIZE, seed, {
+      allowBackwards,
+      allowDiagonal,
+    });
     setGrid(g);
     setPlacements(p);
     setFound(new Set());
@@ -133,8 +149,18 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     setFirstHints(3);
     setLastHints(3);
     startRef.current = Date.now();
+    setElapsed(0);
     logGameStart('word_search');
-  }, [seed, words]);
+  }, [seed, words, allowBackwards, allowDiagonal]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (startRef.current) {
+        setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // auto-save progress every 5 seconds
   useEffect(() => {
@@ -350,6 +376,35 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
           />
           <text x="18" y="20.5" textAnchor="middle" className="text-xs">{`${found.size}/${words.length}`}</text>
         </svg>
+        <span className="text-sm">Time: {elapsed}s</span>
+        <select
+          value={pack}
+          onChange={(e) => setPack(e.target.value as PackName | 'random')}
+          className="px-2 py-1 border rounded"
+        >
+          <option value="random">Random</option>
+          {Object.keys(PUZZLE_PACKS).map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+        <label className="flex items-center space-x-1">
+          <input
+            type="checkbox"
+            checked={allowBackwards}
+            onChange={(e) => setAllowBackwards(e.target.checked)}
+          />
+          <span className="text-sm">Backwards</span>
+        </label>
+        <label className="flex items-center space-x-1">
+          <input
+            type="checkbox"
+            checked={allowDiagonal}
+            onChange={(e) => setAllowDiagonal(e.target.checked)}
+          />
+          <span className="text-sm">Diagonal</span>
+        </label>
         <button type="button" onClick={newPuzzle} className="px-2 py-1 bg-blue-700 text-white rounded">
           New
         </button>

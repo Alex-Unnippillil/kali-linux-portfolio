@@ -413,6 +413,7 @@ const ChessGame = () => {
   }, [showHints]);
 
   useEffect(() => {
+    if (!spritesReady) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const render = () => {
@@ -516,7 +517,7 @@ const ChessGame = () => {
     };
     animRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animRef.current);
-  }, [selected, moves, mateSquares, cursor]);
+  }, [selected, moves, mateSquares, cursor, spritesReady]);
 
   const endGame = (result) => {
     // result: 1 win, 0 draw, -1 loss

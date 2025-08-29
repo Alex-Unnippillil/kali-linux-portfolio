@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Stepper from './Stepper';
+import AttemptTimeline from './Timeline';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -43,6 +44,7 @@ const HydraApp = () => {
   const announceRef = useRef(0);
 
   const LOCKOUT_THRESHOLD = 10;
+  const BACKOFF_THRESHOLD = 5;
 
   useEffect(() => {
     setUserLists(loadWordlists('hydraUserLists'));
@@ -121,19 +123,24 @@ const HydraApp = () => {
     setAnnounce('Hydra started');
     announceRef.current = Date.now();
     try {
-      const res = await fetch('/api/hydra', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          target,
-          service,
-          userList: user.content,
-          passList: pass.content,
-        }),
-      });
-      const data = await res.json();
-      setOutput(data.output || data.error || 'No output');
-      setAnnounce('Hydra finished');
+      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+        const res = await fetch('/api/hydra', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            target,
+            service,
+            userList: user.content,
+            passList: pass.content,
+          }),
+        });
+        const data = await res.json();
+        setOutput(data.output || data.error || 'No output');
+        setAnnounce('Hydra finished');
+      } else {
+        setOutput('Hydra demo output: feature disabled in static export');
+        setAnnounce('Hydra finished (demo)');
+      }
     } catch (err) {
       setOutput(err.message);
       setAnnounce('Hydra failed');
@@ -145,21 +152,25 @@ const HydraApp = () => {
   const pauseHydra = async () => {
     setPaused(true);
     setAnnounce('Hydra paused');
-    await fetch('/api/hydra', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'pause' }),
-    });
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      await fetch('/api/hydra', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pause' }),
+      });
+    }
   };
 
   const resumeHydra = async () => {
     setPaused(false);
     setAnnounce('Hydra resumed');
-    await fetch('/api/hydra', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'resume' }),
-    });
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      await fetch('/api/hydra', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'resume' }),
+      });
+    }
   };
 
   const cancelHydra = async () => {
@@ -167,11 +178,13 @@ const HydraApp = () => {
     setPaused(false);
     setRunId((id) => id + 1);
     setOutput('');
-    await fetch('/api/hydra', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'cancel' }),
-    });
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      await fetch('/api/hydra', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' }),
+      });
+    }
     setAnnounce('Hydra cancelled');
   };
 
@@ -313,11 +326,17 @@ const HydraApp = () => {
       <Stepper
         active={running && !paused}
         totalAttempts={totalAttempts}
-        backoffThreshold={5}
+        backoffThreshold={BACKOFF_THRESHOLD}
         lockoutThreshold={LOCKOUT_THRESHOLD}
         runId={runId}
         onAttemptChange={handleAttempt}
       />
+      <p className="mt-2 text-sm text-yellow-300">
+        This demo slows after {BACKOFF_THRESHOLD} tries to mimic password spray
+        throttling and stops at {LOCKOUT_THRESHOLD} attempts to illustrate
+        account lockout.
+      </p>
+      <AttemptTimeline />
 
       <div role="status" aria-live="polite" className="sr-only">
         {announce}

@@ -19,29 +19,32 @@ export default function HookGraph({ hooks, steps }) {
   }, []);
 
   useEffect(() => {
-    workerRef.current = new Worker(
-      URL.createObjectURL(
-        new Blob(
-          [
-            `self.onmessage = (e) => {\n` +
-              `  const { hooks, steps } = e.data;\n` +
-              `  const elements = [];\n` +
-              `  hooks.forEach((h) => {\n` +
-              `    elements.push({ data: { id: h.id, label: h.label, type: 'hook' } });\n` +
-              `  });\n` +
-              `  steps.forEach((s) => {\n` +
-              `    const moduleNode = 'module-' + s.id;\n` +
-              `    elements.push({ data: { id: moduleNode, label: s.module, type: 'module' } });\n` +
-              `    elements.push({ data: { id: 'edge-' + s.id, source: s.hook, target: moduleNode } });\n` +
-              `  });\n` +
-              `  self.postMessage(elements);\n` +
-              `};`
-          ],
-          { type: 'application/javascript' }
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      workerRef.current = new Worker(
+        URL.createObjectURL(
+          new Blob(
+            [
+              `self.onmessage = (e) => {\n` +
+                `  const { hooks, steps } = e.data;\n` +
+                `  const elements = [];\n` +
+                `  hooks.forEach((h) => {\n` +
+                `    elements.push({ data: { id: h.id, label: h.label, type: 'hook' } });\n` +
+                `  });\n` +
+                `  steps.forEach((s) => {\n` +
+                `    const moduleNode = 'module-' + s.id;\n` +
+                `    elements.push({ data: { id: moduleNode, label: s.module, type: 'module' } });\n` +
+                `    elements.push({ data: { id: 'edge-' + s.id, source: s.hook, target: moduleNode } });\n` +
+                `  });\n` +
+                `  self.postMessage(elements);\n` +
+                `};`
+            ],
+            { type: 'application/javascript' }
+          )
         )
-      )
-    );
-    return () => workerRef.current && workerRef.current.terminate();
+      );
+      return () => workerRef.current && workerRef.current.terminate();
+    }
+    return undefined;
   }, []);
 
   useEffect(() => {

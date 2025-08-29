@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState.js';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
@@ -20,21 +20,21 @@ export default function SpotifyApp() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [mood, setMood]);
 
   useRovingTabIndex(gridRef, true, 'horizontal');
 
-  const post = (cmd) => {
+  const post = useCallback((cmd) => {
     iframeRef.current?.contentWindow?.postMessage({ command: cmd }, '*');
-  };
+  }, []);
 
-  const togglePlay = () => {
+  const togglePlay = useCallback(() => {
     post(isPlaying ? 'pause' : 'play');
     setIsPlaying(!isPlaying);
-  };
+  }, [post, isPlaying]);
 
-  const next = () => post('next');
-  const previous = () => post('previous');
+  const next = useCallback(() => post('next'), [post]);
+  const previous = useCallback(() => post('previous'), [post]);
 
   useEffect(() => {
     const handleMessage = (e) => {
@@ -61,7 +61,7 @@ export default function SpotifyApp() {
     };
     window.addEventListener('keydown', handleKeys);
     return () => window.removeEventListener('keydown', handleKeys);
-  }, [togglePlay]);
+  }, [togglePlay, next, previous]);
 
   return (
     <div className="h-full w-full bg-ub-cool-grey flex flex-col">

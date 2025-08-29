@@ -29,6 +29,7 @@ const Radare2 = ({ initialData = {} }) => {
     if (typeof window !== 'undefined') {
       setNotes(loadNotes(file));
       setBookmarks(loadBookmarks(file));
+
     }
   }, [file]);
 

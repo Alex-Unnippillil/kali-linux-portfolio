@@ -46,7 +46,8 @@ const NmapNSE: React.FC = () => {
   }, []);
 
   const queryLower = query.toLowerCase();
-  const filtered = Object.entries(data).flatMap(([category, scripts]) => {
+  const filtered: [string, Script[]][] = Object.entries(data).flatMap(
+    ([category, scripts]) => {
     const categoryMatch = category.toLowerCase().includes(queryLower);
     const matchedScripts = scripts.filter((s) =>
       s.name.toLowerCase().includes(queryLower)
@@ -77,7 +78,7 @@ const NmapNSE: React.FC = () => {
       {filtered.map(([category, scripts]) => (
         <div key={category} className="mb-6">
           <h2 className="text-xl mb-2 capitalize">{category}</h2>
-          {scripts.map((script) => (
+          {scripts.map((script: Script) => (
             <div key={script.name} className="mb-4">
               <button
                 type="button"

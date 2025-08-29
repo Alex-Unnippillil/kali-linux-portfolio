@@ -6,6 +6,7 @@ import {
   computeLegalMoves,
   applyMove,
   countPieces,
+  getBookMove,
 } from './reversiLogic';
 
 const BOARD_SIZE = 400;
@@ -23,6 +24,7 @@ const Reversi = () => {
   const aiThinkingRef = useRef(false);
   const reduceMotionRef = useRef(false);
   const flippingRef = useRef([]);
+  const previewRef = useRef(null);
 
   const [board, setBoard] = useState(() => createBoard());
   const [player, setPlayer] = useState('B');
@@ -32,6 +34,8 @@ const Reversi = () => {
   const [wins, setWins] = useState({ player: 0, ai: 0 });
   const [mobility, setMobility] = useState({ player: 0, ai: 0 });
   const [tip, setTip] = useState('Tip: Control the corners to gain an advantage.');
+  const [depth, setDepth] = useState(3);
+  const [useBook, setUseBook] = useState(true);
 
   // keep refs in sync
   useEffect(() => { boardRef.current = board; }, [board]);
@@ -43,7 +47,7 @@ const Reversi = () => {
       reduceMotionRef.current = window.matchMedia(
         '(prefers-reduced-motion: reduce)'
       ).matches;
-      if (typeof window.Worker === 'function') {
+      if (typeof Worker === 'function') {
         workerRef.current = new Worker(
           new URL('./reversi.worker.js', import.meta.url)
         );
@@ -208,6 +212,23 @@ const Reversi = () => {
           }
         }
       }
+      if (!pausedRef.current && previewRef.current) {
+        const { r, c, flips } = previewRef.current;
+        ctx.save();
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.arc(c * CELL + CELL / 2, r * CELL + CELL / 2, CELL / 2 - 4, 0, Math.PI * 2);
+        ctx.fillStyle = playerRef.current === 'B' ? '#000' : '#fff';
+        ctx.fill();
+        ctx.restore();
+        ctx.strokeStyle = '#ffff00';
+        ctx.lineWidth = 2;
+        flips.forEach(([fr, fc]) => {
+          ctx.beginPath();
+          ctx.arc(fc * CELL + CELL / 2, fr * CELL + CELL / 2, CELL / 2 - 4, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+      }
       if (!pausedRef.current) {
         ctx.fillStyle = '#ffff00';
         Object.keys(legalRef.current).forEach((key) => {
@@ -266,9 +287,23 @@ const Reversi = () => {
       return;
     }
     if (player === 'W' && !paused && !aiThinkingRef.current) {
-      aiThinkingRef.current = true;
-      if (workerRef.current) {
-        workerRef.current.postMessage({ board, player: 'W', depth: 3 });
+      const bookMove = useBook ? getBookMove(board, 'W') : null;
+      if (bookMove) {
+        const [r, c] = bookMove;
+        const flips = moves[`${r}-${c}`];
+        if (flips) {
+          const prev = boardRef.current.map((row) => row.slice());
+          const next = applyMove(prev, r, c, 'W', flips);
+          queueFlips(r, c, 'W', prev);
+          setBoard(next);
+          playSound();
+          setPlayer('B');
+        }
+      } else {
+        aiThinkingRef.current = true;
+        if (workerRef.current) {
+          workerRef.current.postMessage({ board, player: 'W', depth });
+        }
       }
     }
     setMessage(player === 'B' ? 'Your turn' : "AI's turn");
@@ -285,12 +320,33 @@ const Reversi = () => {
     const key = `${r}-${c}`;
     const flips = legalRef.current[key];
     if (!flips) return;
+    previewRef.current = null;
     const prev = boardRef.current.map((row) => row.slice());
     const next = applyMove(prev, r, c, 'B', flips);
     queueFlips(r, c, 'B', prev);
     setBoard(next);
     playSound();
     setPlayer('W');
+  };
+
+  const handleMouseMove = (e) => {
+    if (pausedRef.current || playerRef.current !== 'B') {
+      previewRef.current = null;
+      return;
+    }
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const r = Math.floor(y / CELL);
+    const c = Math.floor(x / CELL);
+    const key = `${r}-${c}`;
+    const flips = legalRef.current[key];
+    previewRef.current = flips ? { r, c, flips } : null;
+  };
+
+  const handleMouseLeave = () => {
+    previewRef.current = null;
   };
 
   const reset = () => {
@@ -308,6 +364,8 @@ const Reversi = () => {
         width={BOARD_SIZE}
         height={BOARD_SIZE}
         onClick={handleClick}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
         className="bg-green-700"
       />
       <div className="mt-2">Wins - You: {wins.player} | AI: {wins.ai}</div>
@@ -332,6 +390,23 @@ const Reversi = () => {
           onClick={() => setSound((s) => !s)}
         >
           {sound ? 'Sound: On' : 'Sound: Off'}
+        </button>
+        <select
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          value={depth}
+          onChange={(e) => setDepth(Number(e.target.value))}
+        >
+          {[1, 2, 3, 4, 5].map((d) => (
+            <option key={d} value={d}>
+              {`Depth: ${d}`}
+            </option>
+          ))}
+        </select>
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setUseBook((b) => !b)}
+        >
+          {useBook ? 'Book: On' : 'Book: Off'}
         </button>
       </div>
     </div>

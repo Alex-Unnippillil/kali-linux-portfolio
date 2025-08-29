@@ -68,6 +68,19 @@ export const countPieces = (board) => {
   return { black, white };
 };
 
+// Very small opening book for the first AI move
+// Returns a preset move for white based on board symmetry
+export const getBookMove = (board, player) => {
+  if (player !== 'W') return null;
+  const { black, white } = countPieces(board);
+  // Only apply book in the early opening (after one black move)
+  if (black + white > 5) return null;
+  const moves = computeLegalMoves(board, player);
+  if (moves['2-2']) return [2, 2];
+  if (moves['5-5']) return [5, 5];
+  return null;
+};
+
 const corners = [
   [0, 0],
   [0, SIZE - 1],

@@ -10,6 +10,7 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import ReactGA from 'react-ga4';
+import { toPng } from 'html-to-image';
 
 export class Desktop extends Component {
     constructor() {
@@ -529,7 +530,35 @@ export class Desktop extends Component {
         }
     }
 
-    closeApp = (objId) => {
+    closeApp = async (objId) => {
+
+        // capture window snapshot
+        let image = null;
+        const node = document.getElementById(objId);
+        if (node) {
+            try {
+                image = await toPng(node);
+            } catch (e) {
+                // ignore snapshot errors
+            }
+        }
+
+        // persist in trash with autopurge
+        const appMeta = apps.find(a => a.id === objId) || {};
+        const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);
+        const ms = purgeDays * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        let trash = [];
+        try { trash = JSON.parse(localStorage.getItem('window-trash')) || []; } catch (e) { trash = []; }
+        trash = trash.filter(item => now - item.closedAt <= ms);
+        trash.push({
+            id: objId,
+            title: appMeta.title || objId,
+            icon: appMeta.icon,
+            image,
+            closedAt: now,
+        });
+        localStorage.setItem('window-trash', JSON.stringify(trash));
 
         // remove app from the app stack
         this.app_stack.splice(this.app_stack.indexOf(objId), 1);

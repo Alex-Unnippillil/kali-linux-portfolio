@@ -1,4 +1,11 @@
-import { Player, updatePhysics, collectCoin, movePlayer } from './engine.js';
+import {
+  Player,
+  updatePhysics,
+  collectCoin,
+  movePlayer,
+  setPhysics,
+  physics,
+} from './engine.js';
 
 const params = new URLSearchParams(location.search);
 const levelFile = params.get('lvl') || 'levels/level1.json';
@@ -53,6 +60,54 @@ bufferSlider.addEventListener('input', () => {
   jumpBufferMs = Number(bufferSlider.value);
   bufferLabel.textContent = String(jumpBufferMs);
   localStorage.setItem('pf-buffer', String(jumpBufferMs));
+});
+
+// physics sliders
+const gravSlider = document.getElementById('gravitySlider');
+const gravLabel = document.getElementById('gravityLabel');
+const accelSlider = document.getElementById('accelSlider');
+const accelLabel = document.getElementById('accelLabel');
+const frictionSlider = document.getElementById('frictionSlider');
+const frictionLabel = document.getElementById('frictionLabel');
+const speedSlider = document.getElementById('speedSlider');
+const speedLabel = document.getElementById('speedLabel');
+const jumpSlider = document.getElementById('jumpSlider');
+const jumpLabel = document.getElementById('jumpLabel');
+
+const storedPhysics = JSON.parse(
+  localStorage.getItem('pf-physics') || '{}'
+);
+setPhysics({ ...storedPhysics });
+
+function syncPhysicsUI() {
+  gravSlider.value = String(physics.GRAVITY);
+  gravLabel.textContent = String(Math.round(physics.GRAVITY));
+  accelSlider.value = String(physics.ACCEL);
+  accelLabel.textContent = String(Math.round(physics.ACCEL));
+  frictionSlider.value = String(physics.FRICTION);
+  frictionLabel.textContent = String(Math.round(physics.FRICTION));
+  speedSlider.value = String(physics.MAX_SPEED);
+  speedLabel.textContent = String(Math.round(physics.MAX_SPEED));
+  jumpSlider.value = String(physics.JUMP_SPEED);
+  jumpLabel.textContent = String(Math.round(physics.JUMP_SPEED));
+}
+
+syncPhysicsUI();
+
+function updatePhysicsSetting() {
+  setPhysics({
+    GRAVITY: Number(gravSlider.value),
+    ACCEL: Number(accelSlider.value),
+    FRICTION: Number(frictionSlider.value),
+    MAX_SPEED: Number(speedSlider.value),
+    JUMP_SPEED: Number(jumpSlider.value),
+  });
+  syncPhysicsUI();
+  localStorage.setItem('pf-physics', JSON.stringify(physics));
+}
+
+[gravSlider, accelSlider, frictionSlider, speedSlider, jumpSlider].forEach((el) => {
+  el.addEventListener('input', updatePhysicsSetting);
 });
 
 const padButtons = {

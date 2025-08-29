@@ -28,7 +28,7 @@ const Pong = () => {
   const [difficulty, setDifficulty] = useState(5); // 1-10 difficulty scale
   const [match, setMatch] = useState({ player: 0, opponent: 0 });
   const [matchWinner, setMatchWinner] = useState(null);
-  const [mode, setMode] = useState('cpu'); // 'cpu', 'online', or 'practice'
+  const [mode, setMode] = useState('cpu'); // 'cpu', 'local', 'online', or 'practice'
   const [offerSDP, setOfferSDP] = useState('');
   const [answerSDP, setAnswerSDP] = useState('');
   const [connected, setConnected] = useState(false);
@@ -55,8 +55,10 @@ const Pong = () => {
   }, [paused]);
 
   useEffect(() => {
-    speedRef.current = speedMultiplier;
-  }, [speedMultiplier]);
+    const base = mode === 'practice' ? speedMultiplier : 1;
+    const ramp = 1 + Math.min(rally * 0.05, 1); // up to 2x
+    speedRef.current = base * ramp;
+  }, [speedMultiplier, rally, mode]);
 
     const playSound = useCallback(
       (freq) => {
@@ -80,18 +82,27 @@ const Pong = () => {
       [sound],
     );
 
-  const controls = useGameControls(canvasRef, (state) => {
-    if (mode === 'online' && channelRef.current) {
+  const controls = useRef(useGameControls(canvasRef));
+
+  useEffect(() => {
+    if (mode !== 'online' || !channelRef.current) return undefined;
+    const send = () => {
       channelRef.current.send(
         JSON.stringify({
           type: 'input',
           frame: frameRef.current + 1,
-          up: state.up,
-          down: state.down,
+          up: controls.current.keys['ArrowUp'] || false,
+          down: controls.current.keys['ArrowDown'] || false,
         })
       );
-    }
-  });
+    };
+    window.addEventListener('keydown', send);
+    window.addEventListener('keyup', send);
+    return () => {
+      window.removeEventListener('keydown', send);
+      window.removeEventListener('keyup', send);
+    };
+  }, [mode]);
 
   // Main game effect
   useEffect(() => {
@@ -317,9 +328,14 @@ const Pong = () => {
       decay(ball);
 
       // local player
-      applyInputs(player, controls.current, dt);
+      const p1 = {
+        up: controls.current.keys['ArrowUp'],
+        down: controls.current.keys['ArrowDown'],
+        touchY: null,
+      };
+      applyInputs(player, p1, dt);
 
-      // opponent (AI or remote)
+      // opponent (AI, local or remote)
       if (mode === 'cpu') {
         const error = ball.y - (opponent.y + paddleHeight / 2);
         const gain = difficulty * 10;
@@ -330,6 +346,13 @@ const Pong = () => {
         opponent.y += opponent.vy * dt;
         if (opponent.y < 0) opponent.y = 0;
         if (opponent.y > height - paddleHeight) opponent.y = height - paddleHeight;
+      } else if (mode === 'local') {
+        const p2 = {
+          up: controls.current.keys['w'] || controls.current.keys['W'],
+          down: controls.current.keys['s'] || controls.current.keys['S'],
+          touchY: null,
+        };
+        applyInputs(opponent, p2, dt);
       } else if (mode === 'online') {
         applyInputs(opponent, remoteKeys, dt);
       }
@@ -369,6 +392,7 @@ const Pong = () => {
       }
 
       const paddleCollision = (pad, dir) => {
+        setRally((r) => r + 1);
         const { spin, relative } = computeBallSpin(
           ball.y,
           pad.y,
@@ -422,11 +446,13 @@ const Pong = () => {
         }
       } else {
         if (ball.x < 0) {
+          setRally(0);
           oppScore += 1;
           setScores({ player: playerScore, opponent: oppScore });
           resetBall(1);
           playSound(200);
         } else if (ball.x > width) {
+          setRally(0);
           playerScore += 1;
           setScores({ player: playerScore, opponent: oppScore });
           resetBall(-1);
@@ -622,7 +648,7 @@ const Pong = () => {
             aria-label="Speed multiplier"
           />
         </div>
-      ) : (
+      ) : mode === 'cpu' ? (
         <div className="mt-2 flex items-center space-x-2">
           <label>AI Difficulty: {difficulty}</label>
           <input
@@ -634,7 +660,7 @@ const Pong = () => {
             aria-label="AI difficulty"
           />
         </div>
-      )}
+      ) : null}
 
       <div className="mt-2 space-x-2">
         <button
@@ -642,6 +668,12 @@ const Pong = () => {
           onClick={() => setMode('cpu')}
         >
           vs CPU
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={() => setMode('local')}
+        >
+          2 Players
         </button>
         <button
           className="px-2 py-1 bg-gray-700 rounded"

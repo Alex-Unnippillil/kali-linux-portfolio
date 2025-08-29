@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
+import { BIRD_SKINS, PIPE_SKINS } from '../../apps/games/flappy-bird/skins';
 
 const WIDTH = 400;
 const HEIGHT = 300;
@@ -26,14 +27,13 @@ const FlappyBird = () => {
     let easyGravity = localStorage.getItem('flappy-easy-gravity') === '1';
 
     // skins
-    const birdSkins = ['yellow', 'red', 'blue'];
-    const pipeSkins = [
-      [[34, 139, 34], [144, 238, 144]],
-      [[139, 69, 19], [222, 184, 135]],
-      [[70, 130, 180], [176, 196, 222]],
-    ];
+    const birdSkins = BIRD_SKINS;
+    const pipeSkins = PIPE_SKINS;
     let birdSkin = parseInt(localStorage.getItem('flappy-bird-skin') || '0', 10);
     let pipeSkin = parseInt(localStorage.getItem('flappy-pipe-skin') || '0', 10);
+
+    // hitbox preview
+    let showHitbox = localStorage.getItem('flappy-hitbox') === '1';
 
     // physics constants
     let bird = { x: 50, y: height / 2, vy: 0 };
@@ -270,6 +270,11 @@ const FlappyBird = () => {
         if (practiceMode) ctx.globalAlpha = 0.4;
         ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
         ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, height - pipe.bottom);
+        if (showHitbox) {
+          ctx.strokeStyle = 'red';
+          ctx.strokeRect(pipe.x, 0, pipeWidth, pipe.top);
+          ctx.strokeRect(pipe.x, pipe.bottom, pipeWidth, height - pipe.bottom);
+        }
         if (practiceMode) ctx.globalAlpha = 1;
       }
 
@@ -278,6 +283,10 @@ const FlappyBird = () => {
       ctx.beginPath();
       ctx.arc(bird.x, bird.y, 10, 0, Math.PI * 2);
       ctx.fill();
+      if (showHitbox) {
+        ctx.strokeStyle = 'red';
+        ctx.strokeRect(bird.x - 10, bird.y - 10, 20, 20);
+      }
 
       // HUD
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -298,6 +307,7 @@ const FlappyBird = () => {
       if (practiceMode) hudLine('Practice');
       if (easyGravity) hudLine('Easy Gravity');
       if (reduceMotion) hudLine('Reduced Motion');
+      if (showHitbox) hudLine('Hitbox');
 
       if (!running) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -387,6 +397,7 @@ const FlappyBird = () => {
     function startLoop() {
       stopLoop();
       fps = highHz ? 120 : 60;
+      if (practiceMode) fps /= 2;
       let last = performance.now();
       const frameFunc = (now) => {
         loopId = requestAnimationFrame(frameFunc);
@@ -448,6 +459,13 @@ const FlappyBird = () => {
         localStorage.setItem('flappy-pipe-skin', String(pipeSkin));
         if (liveRef.current)
           liveRef.current.textContent = `Pipe skin ${pipeSkin + 1}`;
+      } else if (e.code === 'KeyH') {
+        showHitbox = !showHitbox;
+        localStorage.setItem('flappy-hitbox', showHitbox ? '1' : '0');
+        if (liveRef.current)
+          liveRef.current.textContent = showHitbox
+            ? 'Hitbox on'
+            : 'Hitbox off';
       }
     }
 

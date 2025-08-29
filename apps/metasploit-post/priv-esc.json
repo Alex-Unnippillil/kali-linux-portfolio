@@ -1,0 +1,25 @@
+{
+  "label": "Post Exploitation",
+  "children": [
+    {
+      "label": "Gather System Info",
+      "children": [
+        { "label": "enum_network" },
+        { "label": "local_exploit_suggester" }
+      ]
+    },
+    {
+      "label": "Escalate Privileges",
+      "children": [
+        { "label": "kernel exploits" },
+        { "label": "service misconfig" }
+      ]
+    },
+    {
+      "label": "Establish Persistence",
+      "children": [
+        { "label": "enable_rdp" }
+      ]
+    }
+  ]
+}

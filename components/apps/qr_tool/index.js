@@ -77,7 +77,7 @@ const QRTool = () => {
   };
 
   const initWorker = () => {
-    if (!workerRef.current) {
+    if (!workerRef.current && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./scan.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
         setDecodedText(e.data || 'No QR code found');

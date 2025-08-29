@@ -4,11 +4,9 @@ import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
 import { displaySettings } from './components/apps/settings';
 import { displayChrome } from './components/apps/Chrome';
-import { displayTrash } from './components/apps/trash';
 import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
 import { displayWeather } from './components/apps/weather';
-import { displayConverter } from './components/apps/converter';
 import { displayClipboardManager } from './components/apps/ClipboardManager';
 import { displayFiglet } from './components/apps/figlet';
 import { displayResourceMonitor } from './components/apps/resource_monitor';
@@ -20,6 +18,7 @@ const TerminalApp = createDynamicApp('terminal', 'Terminal');
 const VsCodeApp = createDynamicApp('vscode', 'VsCode');
 const YouTubeApp = createDynamicApp('youtube', 'YouTube');
 const CalculatorApp = createDynamicApp('calculator', 'Calculator');
+const ConverterApp = createDynamicApp('converter', 'Converter');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
 const ConnectFourApp = createDynamicApp('connect-four', 'Connect Four');
@@ -58,15 +57,16 @@ const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('About', 'About Alex');
 
-const QrToolApp = createDynamicApp('qr_tool', 'QR Tool');
+const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
-const QuoteGeneratorApp = createDynamicApp('quote_generator', 'Quote Generator');
+const QuoteApp = createDynamicApp('quote', 'Quote');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
 const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
 const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
 const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
 
 const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
+const TrashApp = createDynamicApp('trash', 'Trash');
 const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
 
 
@@ -99,6 +99,7 @@ const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
+const ContactApp = createDynamicApp('contact', 'Contact');
 
 
 
@@ -106,6 +107,7 @@ const displayTerminal = createDisplay(TerminalApp);
 const displayVsCode = createDisplay(VsCodeApp);
 const displayYouTube = createDisplay(YouTubeApp);
 const displayCalculator = createDisplay(CalculatorApp);
+const displayConverter = createDisplay(ConverterApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
 const displayConnectFour = createDisplay(ConnectFourApp);
@@ -142,10 +144,11 @@ const displayFileExplorer = createDisplay(FileExplorerApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
 
-const displayQrTool = createDisplay(QrToolApp);
+const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
-const displayQuoteGenerator = createDisplay(QuoteGeneratorApp);
+const displayQuote = createDisplay(QuoteApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
+const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
@@ -178,6 +181,7 @@ const displayReconNG = createDisplay(ReconNGApp);
 const displaySecurityTools = createDisplay(SecurityToolsApp);
 const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
+const displayContact = createDisplay(ContactApp);
 
 const displayHashcat = createDisplay(HashcatApp);
 
@@ -186,13 +190,13 @@ const displayKismet = createDisplay(KismetApp);
 // Utilities list used for the "Utilities" folder on the desktop
 const utilityList = [
   {
-    id: 'qr-tool',
+    id: 'qr',
     title: 'QR Tool',
     icon: './themes/Yaru/apps/qr.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayQrTool,
+    screen: displayQr,
   },
   {
     id: 'ascii-art',
@@ -222,13 +226,13 @@ const utilityList = [
     screen: displayFiglet,
   },
   {
-    id: 'quote-generator',
-    title: 'Quote Generator',
+    id: 'quote',
+    title: 'Quote',
     icon: './themes/Yaru/apps/quote.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayQuoteGenerator,
+    screen: displayQuote,
   },
   {
     id: 'project-gallery',
@@ -867,6 +871,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayHTTP,
+  },
+  {
+    id: 'contact',
+    title: 'Contact',
+    icon: './themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayContact,
   },
   {
     id: 'hydra',

@@ -471,7 +471,7 @@ const TerminalPane = forwardRef<
         renderHint();
       });
 
-      if (typeof window !== 'undefined' && typeof window.Worker === 'function') {
+      if (typeof window !== 'undefined' && typeof Worker === 'function') {
         workerRef.current = new Worker(
           new URL('./terminal.worker.js', import.meta.url),
         );

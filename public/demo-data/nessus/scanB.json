@@ -1,0 +1,7 @@
+{
+  "findings": [
+    {"plugin": 1001, "severity": "High"},
+    {"plugin": 1002, "severity": "High"},
+    {"plugin": 1003, "severity": "Critical"}
+  ]
+}

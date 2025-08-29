@@ -9,7 +9,7 @@ const QRPage: React.FC = () => {
   const [scanResult, setScanResult] = useState('');
   const [error, setError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReaderRef = useRef<BrowserQRCodeReader>();
+  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
 
   const generateQr = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +23,7 @@ const QRPage: React.FC = () => {
   };
 
   useEffect(() => {
+    const videoEl = videoRef.current;
     const startScanner = async () => {
       if (!navigator.mediaDevices) {
         setError('Camera API not supported');
@@ -32,24 +33,26 @@ const QRPage: React.FC = () => {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment' },
         });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+        if (videoEl) {
+          videoEl.srcObject = stream;
+          await videoEl.play();
         }
         const codeReader = new BrowserQRCodeReader();
         codeReaderRef.current = codeReader;
-        codeReader.decodeFromVideoDevice(
-          undefined,
-          videoRef.current!,
-          (result, err) => {
-            if (result) {
-              setScanResult(result.getText());
-            }
-            if (err && !(err instanceof NotFoundException)) {
-              setError('Failed to read QR code');
-            }
-          },
-        );
+        if (videoEl) {
+          codeReader.decodeFromVideoDevice(
+            null,
+            videoEl,
+            (result, err) => {
+              if (result) {
+                setScanResult(result.getText());
+              }
+              if (err && !(err instanceof NotFoundException)) {
+                setError('Failed to read QR code');
+              }
+            },
+          );
+        }
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === 'NotAllowedError') {
           setError('Camera access was denied');
@@ -63,9 +66,10 @@ const QRPage: React.FC = () => {
 
     return () => {
       codeReaderRef.current?.reset();
-      if (videoRef.current && videoRef.current.srcObject) {
-        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+      if (videoEl && videoEl.srcObject) {
+        const tracks = (videoEl.srcObject as MediaStream).getTracks();
         tracks.forEach((t) => t.stop());
+        videoEl.srcObject = null;
       }
     };
   }, []);

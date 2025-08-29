@@ -28,3 +28,11 @@ export function clearShortcuts() {
   shortcuts.length = 0;
   listeners.forEach((l) => l([]));
 }
+
+export function updateShortcut(description: string, keys: string) {
+  const shortcut = shortcuts.find((s) => s.description === description);
+  if (shortcut) {
+    shortcut.keys = keys;
+    listeners.forEach((l) => l([...shortcuts]));
+  }
+}

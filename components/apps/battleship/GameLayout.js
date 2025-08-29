@@ -1,6 +1,18 @@
 import React from 'react';
 
-const GameLayout = ({ children, difficulty, onDifficultyChange, onRestart, stats, showHeatmap, onToggleHeatmap }) => {
+const GameLayout = ({
+  children,
+  difficulty,
+  onDifficultyChange,
+  onRestart,
+  stats,
+  showHeatmap,
+  onToggleHeatmap,
+  salvo,
+  onSalvoChange,
+  fog,
+  onFogChange,
+}) => {
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto">
       <div className="flex items-center space-x-2 mb-2">
@@ -22,6 +34,24 @@ const GameLayout = ({ children, difficulty, onDifficultyChange, onRestart, stats
         <button className="px-2 py-1 bg-gray-700" onClick={onToggleHeatmap}>
           {showHeatmap ? 'Hide' : 'Show'} Heatmap
         </button>
+        <label className="text-sm">
+          <input
+            type="checkbox"
+            className="mr-1"
+            checked={salvo}
+            onChange={(e) => onSalvoChange(e.target.checked)}
+          />
+          Salvo
+        </label>
+        <label className="text-sm">
+          <input
+            type="checkbox"
+            className="mr-1"
+            checked={fog}
+            onChange={(e) => onFogChange(e.target.checked)}
+          />
+          Fog of War
+        </label>
         {stats && (
           <div className="ml-4 text-sm">
             W: {stats.wins} L: {stats.losses}
