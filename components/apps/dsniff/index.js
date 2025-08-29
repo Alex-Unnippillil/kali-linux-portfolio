@@ -205,7 +205,7 @@ const Dsniff = () => {
         }, idx * 1000);
       });
     }
-  }, [urlsnarfLogs, prefersReduced]);
+  }, [urlsnarfLogs, prefersReduced, pcapSummary]);
 
   const addFilter = () => {
     if (newValue.trim()) {
