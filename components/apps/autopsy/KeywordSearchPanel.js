@@ -9,6 +9,17 @@ const escapeHtml = (str = '') =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+// Map common artifact types to simple emoji icons so the case browser cards
+// give a quick visual cue about the evidence type. These are intentionally
+// lightweight to avoid adding extra image assets.
+const typeIcons = {
+  Document: '📄',
+  Image: '🖼️',
+  Log: '📜',
+  File: '📁',
+  Registry: '🗃️',
+};
+
 function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
   const highlight = (text = '') => {
     const safe = escapeHtml(text);
@@ -54,12 +65,16 @@ function KeywordSearchPanel({ keyword, setKeyword, artifacts, onSelect }) {
             type="button"
             key={`${a.name}-${idx}`}
             onClick={() => onSelect(a)}
-            className="p-2 bg-ub-grey rounded text-sm text-left"
+            className="p-2 bg-ub-grey rounded text-sm text-left flex flex-col"
           >
-            <div
-              className="font-bold"
-              dangerouslySetInnerHTML={{ __html: highlight(a.name) }}
-            />
+            <div className="flex items-center font-bold">
+              <span className="mr-1" aria-hidden="true">
+                {typeIcons[a.type] || '📁'}
+              </span>
+              <span
+                dangerouslySetInnerHTML={{ __html: highlight(a.name) }}
+              />
+            </div>
             <div className="text-gray-400">{a.type}</div>
             <div className="text-xs">
               {new Date(a.timestamp).toLocaleString()}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
@@ -22,6 +22,20 @@ function Timeline({ events, onSelect }) {
   const MAX_ZOOM = 60; // 60 pixels per minute
   const [zoom, setZoom] = useState(1 / 60); // start at 1 pixel per hour
   const [zoomAnnouncement, setZoomAnnouncement] = useState('');
+  const [sliderIndex, setSliderIndex] = useState(0);
+  const [hoverIndex, setHoverIndex] = useState(null);
+  const dayMarkers = useMemo(() => {
+    const days = [];
+    const seen = new Set();
+    sorted.forEach((ev, idx) => {
+      const day = new Date(ev.timestamp).toISOString().split('T')[0];
+      if (!seen.has(day)) {
+        seen.add(day);
+        days.push({ day, idx });
+      }
+    });
+    return days;
+  }, [sorted]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
@@ -37,6 +51,10 @@ function Timeline({ events, onSelect }) {
   useEffect(() => {
     if (workerRef.current) workerRef.current.postMessage({ events });
   }, [events]);
+
+  useEffect(() => {
+    setSliderIndex(0);
+  }, [sorted]);
 
   useEffect(() => {
     const minutesPerPixel = 1 / zoom;
@@ -166,6 +184,63 @@ function Timeline({ events, onSelect }) {
           -
         </button>
       </div>
+      {sorted.length > 0 && (
+        <div className="relative mb-2">
+          <input
+            type="range"
+            min={0}
+            max={sorted.length - 1}
+            value={sliderIndex}
+            onChange={(e) => {
+              const idx = Number(e.target.value);
+              setSliderIndex(idx);
+              if (onSelect && sorted[idx]) onSelect(sorted[idx]);
+            }}
+            onMouseMove={(e) => {
+              const rect = e.target.getBoundingClientRect();
+              const percent = (e.clientX - rect.left) / rect.width;
+              const idx = Math.round(percent * (sorted.length - 1));
+              setHoverIndex(idx);
+            }}
+            onMouseLeave={() => setHoverIndex(null)}
+            list="timeline-day-markers"
+            className="w-full"
+            aria-label="Timeline scrub bar"
+          />
+          <datalist id="timeline-day-markers">
+            {dayMarkers.map((m) => (
+              <option
+                key={m.day}
+                value={m.idx}
+                label={new Date(m.day).toLocaleDateString()}
+              />
+            ))}
+          </datalist>
+          {hoverIndex !== null && sorted[hoverIndex] && (
+            <div
+              className="absolute -top-10 bg-ub-grey text-xs p-1 rounded"
+              style={{
+                left: `${
+                  sorted.length > 1
+                    ? (hoverIndex / (sorted.length - 1)) * 100
+                    : 0
+                }%`,
+                transform: 'translateX(-50%)',
+              }}
+            >
+              <div>
+                {new Date(sorted[hoverIndex].timestamp).toLocaleString()}
+              </div>
+              <div>{sorted[hoverIndex].name}</div>
+              {sorted[hoverIndex].description && (
+                <div className="text-[10px]">
+                  {sorted[hoverIndex].description}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         className="bg-ub-grey"
@@ -193,6 +268,7 @@ function Autopsy({ initialArtifacts = null }) {
   const [hashDB, setHashDB] = useState({});
   const [selectedFile, setSelectedFile] = useState(null);
   const [keyword, setKeyword] = useState('');
+  const [previewTab, setPreviewTab] = useState('hex');
   const parseWorkerRef = useRef(null);
 
   useEffect(() => {
@@ -323,11 +399,44 @@ function Autopsy({ initialArtifacts = null }) {
         hash = bufferToHex(new Uint8Array(buf)).replace(/ /g, '');
       }
       const known = hashDB[hash];
-      setSelectedFile({ name: file.name, hex, strings, hash, known });
+      let imageUrl = null;
+      const isImage = /\.(png|jpe?g|gif|bmp|webp)$/i.test(file.name);
+      if (isImage && typeof URL !== 'undefined') {
+        try {
+          imageUrl = URL.createObjectURL(new Blob([bytes]));
+        } catch {
+          imageUrl = null;
+        }
+      }
+      setSelectedFile({
+        name: file.name,
+        hex,
+        strings,
+        hash,
+        known,
+        imageUrl,
+      });
+      setPreviewTab('hex');
     } catch (e) {
-      setSelectedFile({ name: file.name, hex: '', strings: '', hash: '', known: null });
+      setSelectedFile({
+        name: file.name,
+        hex: '',
+        strings: '',
+        hash: '',
+        known: null,
+        imageUrl: null,
+      });
+      setPreviewTab('hex');
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (selectedFile && selectedFile.imageUrl) {
+        URL.revokeObjectURL(selectedFile.imageUrl);
+      }
+    };
+  }, [selectedFile]);
 
   const renderTree = (node) => {
     if (!node) return null;
@@ -487,12 +596,57 @@ function Autopsy({ initialArtifacts = null }) {
                   Known: {selectedFile.known}
                 </div>
               )}
-              <div className="font-mono whitespace-pre-wrap break-all">
-                {selectedFile.hex}
+              <div className="flex space-x-2 mb-2">
+                <button
+                  className={`${
+                    previewTab === 'hex'
+                      ? 'bg-ub-orange text-black'
+                      : 'bg-ub-cool-grey'
+                  } px-2 py-1 rounded`}
+                  onClick={() => setPreviewTab('hex')}
+                >
+                  Hex
+                </button>
+                <button
+                  className={`${
+                    previewTab === 'text'
+                      ? 'bg-ub-orange text-black'
+                      : 'bg-ub-cool-grey'
+                  } px-2 py-1 rounded`}
+                  onClick={() => setPreviewTab('text')}
+                >
+                  Text
+                </button>
+                {selectedFile.imageUrl && (
+                  <button
+                    className={`${
+                      previewTab === 'image'
+                        ? 'bg-ub-orange text-black'
+                        : 'bg-ub-cool-grey'
+                    } px-2 py-1 rounded`}
+                    onClick={() => setPreviewTab('image')}
+                  >
+                    Image
+                  </button>
+                )}
               </div>
-              <div className="font-mono whitespace-pre-wrap break-all mt-1">
-                {selectedFile.strings}
-              </div>
+              {previewTab === 'hex' && (
+                <div className="font-mono whitespace-pre-wrap break-all">
+                  {selectedFile.hex}
+                </div>
+              )}
+              {previewTab === 'text' && (
+                <div className="font-mono whitespace-pre-wrap break-all">
+                  {selectedFile.strings}
+                </div>
+              )}
+              {previewTab === 'image' && selectedFile.imageUrl && (
+                <img
+                  src={selectedFile.imageUrl}
+                  alt={selectedFile.name}
+                  className="max-w-full h-auto"
+                />
+              )}
             </div>
           )}
           <ReportExport caseName={currentCase || 'case'} artifacts={artifacts} />
