@@ -11,6 +11,17 @@ const fontList = ['Standard', 'Slant', 'Big'];
 
 const ramp = '@%#*+=-:. ';
 
+const colorOptions = [
+  { label: 'Green', value: 'green', ansi: '32', class: 'text-green-400' },
+  { label: 'Red', value: 'red', ansi: '31', class: 'text-red-400' },
+  { label: 'Yellow', value: 'yellow', ansi: '33', class: 'text-yellow-400' },
+  { label: 'Blue', value: 'blue', ansi: '34', class: 'text-blue-400' },
+  { label: 'Magenta', value: 'magenta', ansi: '35', class: 'text-pink-400' },
+  { label: 'Cyan', value: 'cyan', ansi: '36', class: 'text-cyan-400' },
+  { label: 'White', value: 'white', ansi: '37', class: 'text-white' },
+] as const;
+type ColorValue = typeof colorOptions[number]['value'];
+
 function download(text: string, filename: string) {
   const blob = new Blob([text], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
@@ -25,13 +36,16 @@ const AsciiArtApp = () => {
   const router = useRouter();
   const [tab, setTab] = useState<'text' | 'image'>('text');
   const [text, setText] = useState('');
-    const [font, setFont] = useState<figlet.Fonts>('Standard');
+  const [font, setFont] = useState<figlet.Fonts>('Standard');
+  const [color, setColor] = useState<ColorValue>('green');
   const [output, setOutput] = useState('');
+  const [ansiOutput, setAnsiOutput] = useState('');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [imgOutput, setImgOutput] = useState('');
-    const [brightness, setBrightness] = useState(0); // -1 to 1
-    const [contrast, setContrast] = useState(1); // 0 to 2
+  const [imgOutput, setImgOutput] = useState('');
+  const [imgAnsiOutput, setImgAnsiOutput] = useState('');
+  const [brightness, setBrightness] = useState(0); // -1 to 1
+  const [contrast, setContrast] = useState(1); // 0 to 2
 
     useEffect(() => {
       figlet.parseFont('Standard', Standard);
@@ -71,11 +85,20 @@ const AsciiArtApp = () => {
   // render text ascii
   useEffect(() => {
     try {
-      setOutput(figlet.textSync(text || '', { font }));
+      const txt = figlet.textSync(text || '', { font });
+      setOutput(txt);
+      const code =
+        colorOptions.find((c) => c.value === color)?.ansi || colorOptions[0].ansi;
+      const colored = txt
+        .split('\n')
+        .map((line) => (line ? `\u001b[${code}m${line}\u001b[0m` : ''))
+        .join('\n');
+      setAnsiOutput(colored);
     } catch {
       setOutput('');
+      setAnsiOutput('');
     }
-  }, [text, font]);
+  }, [text, font, color]);
 
   const copy = async (value: string) => {
     try {
@@ -114,7 +137,11 @@ const AsciiArtApp = () => {
     const { width, height } = canvas;
     const data = ctx.getImageData(0, 0, width, height).data;
     let result = '';
+    let ansiResult = '';
+    const code =
+      colorOptions.find((c) => c.value === color)?.ansi || colorOptions[0].ansi;
     for (let y = 0; y < height; y += 1) {
+      let line = '';
       for (let x = 0; x < width; x += 1) {
         const idx = (y * width + x) * 4;
         let val = (data[idx] + data[idx + 1] + data[idx + 2]) / 3 / 255; // 0-1
@@ -122,16 +149,18 @@ const AsciiArtApp = () => {
         val = (val - 0.5) * contrast + 0.5; // apply contrast
         val = Math.min(1, Math.max(0, val));
         const charIdx = Math.floor((1 - val) * (ramp.length - 1));
-        result += ramp[charIdx];
+        line += ramp[charIdx];
       }
-      result += '\n';
+      result += `${line}\n`;
+      ansiResult += `\u001b[${code}m${line}\u001b[0m\n`;
     }
     setImgOutput(result);
+    setImgAnsiOutput(ansiResult);
   };
 
   useEffect(() => {
     renderImageAscii();
-  }, [brightness, contrast]);
+  }, [brightness, contrast, color]);
 
   return (
     <div className="p-4 bg-gray-900 text-white h-full overflow-auto font-mono">
@@ -169,21 +198,36 @@ const AsciiArtApp = () => {
               </option>
             ))}
           </select>
+          <select
+            value={color}
+            onChange={(e) => setColor(e.target.value as ColorValue)}
+            className="px-2 py-1 text-black rounded"
+          >
+            {colorOptions.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
           <div className="flex gap-2">
             <button
               className="px-2 py-1 bg-blue-700 rounded"
-              onClick={() => copy(output)}
+              onClick={() => copy(ansiOutput)}
             >
               Copy
             </button>
             <button
               className="px-2 py-1 bg-green-700 rounded"
-              onClick={() => download(output, 'ascii-art.txt')}
+              onClick={() => download(ansiOutput, 'ascii-art.txt')}
             >
               Download
             </button>
           </div>
-          <pre className="bg-black text-green-400 p-2 whitespace-pre overflow-auto">
+          <pre
+            className={`bg-black p-2 whitespace-pre overflow-auto ${
+              colorOptions.find((c) => c.value === color)?.class
+            }`}
+          >
             {output}
           </pre>
         </div>
@@ -211,22 +255,37 @@ const AsciiArtApp = () => {
               onChange={(e) => setContrast(Number(e.target.value))}
             />
           </div>
+          <select
+            value={color}
+            onChange={(e) => setColor(e.target.value as ColorValue)}
+            className="px-2 py-1 text-black rounded"
+          >
+            {colorOptions.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </select>
           <div className="flex gap-2">
             <button
               className="px-2 py-1 bg-blue-700 rounded"
-              onClick={() => copy(imgOutput)}
+              onClick={() => copy(imgAnsiOutput)}
             >
               Copy
             </button>
             <button
               className="px-2 py-1 bg-green-700 rounded"
-              onClick={() => download(imgOutput, 'image-ascii.txt')}
+              onClick={() => download(imgAnsiOutput, 'image-ascii.txt')}
             >
               Download
             </button>
           </div>
           <canvas ref={canvasRef} className="hidden" />
-          <pre className="bg-black text-green-400 p-2 whitespace-pre overflow-auto">
+          <pre
+            className={`bg-black p-2 whitespace-pre overflow-auto ${
+              colorOptions.find((c) => c.value === color)?.class
+            }`}
+          >
             {imgOutput}
           </pre>
         </div>
