@@ -39,6 +39,28 @@ export default function usePersistentState<T>(
     }
   }, [key, state]);
 
+  // Sync state across browser tabs/windows
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key !== key) return;
+      try {
+        if (e.newValue === null) {
+          setState(getInitial());
+        } else {
+          const parsed = JSON.parse(e.newValue);
+          if (!validator || validator(parsed)) {
+            setState(parsed as T);
+          }
+        }
+      } catch {
+        // ignore parse errors from other tabs
+      }
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
   const reset = () => setState(getInitial());
   const clear = () => {
     try {

@@ -12,10 +12,8 @@ import {
   moveDown,
   boardsEqual,
 } from '../../apps/games/_2048/logic';
-import { reset, serialize, deserialize } from '../../apps/games/rng';
-
-// limit of undo operations per game
-const UNDO_LIMIT = 5;
+import { reset as resetRng, serialize, deserialize } from '../../apps/games/rng';
+import useGameState, { emptyBoard, UNDO_LIMIT } from './state';
 
 // tile skins
 const SKINS: Record<string, Record<number, string>> = {
@@ -47,55 +45,45 @@ const SKINS: Record<string, Record<number, string>> = {
   },
 };
 
-type HistoryEntry = { board: Board; rng: string };
-
-const emptyBoard = (): Board => Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-
 const highestTile = (b: Board) => Math.max(...b.flat());
 
 const Game2048 = () => {
-  const [board, setBoard] = useState<Board>(emptyBoard());
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [undosLeft, setUndosLeft] = useState(UNDO_LIMIT);
-  const [skin, setSkin] = useState<keyof typeof SKINS>('classic');
-  const [best, setBest] = useState(0);
-  const [won, setWon] = useState(false);
-  const [lost, setLost] = useState(false);
-
-  // load best tile from localStorage
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem('game_2048_best');
-      if (stored) setBest(parseInt(stored, 10));
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  // persist best tile
-  useEffect(() => {
-    try {
-      window.localStorage.setItem('game_2048_best', best.toString());
-    } catch {
-      /* ignore */
-    }
-  }, [best]);
+  const [game, setGame] = useGameState();
+  const { board, history, undosLeft, skin, best, won, lost, rng } = game;
+  const [showResume, setShowResume] = useState(false);
 
   const init = useCallback(() => {
-    reset();
+    resetRng();
     const b = emptyBoard();
     addRandomTile(b);
     addRandomTile(b);
-    setBoard(b);
-    setHistory([]);
-    setUndosLeft(UNDO_LIMIT);
-    setWon(false);
-    setLost(false);
-  }, []);
+    setGame((g) => ({
+      ...g,
+      board: b,
+      history: [],
+      undosLeft: UNDO_LIMIT,
+      won: false,
+      lost: false,
+      rng: serialize(),
+    }));
+  }, [setGame]);
 
   useEffect(() => {
-    init();
-  }, [init]);
+    if (rng) {
+      try {
+        deserialize(rng);
+      } catch {
+        /* ignore */
+      }
+    }
+    const hasProgress = board.some((row) => row.some((cell) => cell !== 0));
+    if (hasProgress) {
+      setShowResume(true);
+    } else {
+      init();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // check if moves available
   const hMoves = (b: Board) => {
     for (let r = 0; r < SIZE; r++) {
@@ -121,27 +109,35 @@ const Game2048 = () => {
           : moveDown;
       const next = fn(board.map((row) => [...row]));
       if (boardsEqual(board, next)) return;
-      setHistory((h) => [...h, { board: board.map((row) => [...row]), rng: serialize() }]);
+      const prevRng = serialize();
       addRandomTile(next);
       const hi = highestTile(next);
-      if (hi > best) setBest(hi);
-      setBoard(next);
-      if (hi >= 2048) setWon(true);
-      else if (!hMoves(next)) setLost(true);
+      setGame((g) => ({
+        ...g,
+        board: next,
+        history: [...g.history, { board: board.map((row) => [...row]), rng: prevRng }],
+        best: hi > g.best ? hi : g.best,
+        won: hi >= 2048,
+        lost: hi >= 2048 ? false : !hMoves(next),
+        rng: serialize(),
+      }));
     },
-    [board, best, won, lost]
+    [board, won, lost, setGame]
   );
 
   const undo = useCallback(() => {
     if (!history.length || undosLeft === 0) return;
     const last = history[history.length - 1];
     deserialize(last.rng);
-    setBoard(last.board.map((row) => [...row]));
-    setHistory((h) => h.slice(0, -1));
-    setUndosLeft((u) => u - 1);
-    setWon(false);
-    setLost(false);
-  }, [history, undosLeft]);
+    setGame((g) => ({
+      ...g,
+      board: last.board.map((row) => [...row]),
+      history: g.history.slice(0, -1),
+      undosLeft: g.undosLeft - 1,
+      won: false,
+      lost: false,
+    }));
+  }, [history, undosLeft, setGame]);
 
   // keyboard controls
   useEffect(() => {
@@ -172,7 +168,28 @@ const Game2048 = () => {
 
   return (
     <GameShell>
-      <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">
+      <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4 relative">
+        {showResume && (
+          <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10">
+            <div className="bg-gray-800 p-4 rounded space-x-2">
+              <button
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+                onClick={() => setShowResume(false)}
+              >
+                Resume
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+                onClick={() => {
+                  init();
+                  setShowResume(false);
+                }}
+              >
+                New Game
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex space-x-2 items-center">
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
@@ -190,7 +207,9 @@ const Game2048 = () => {
           <select
             className="text-black px-1 rounded"
             value={skin}
-            onChange={(e) => setSkin(e.target.value as any)}
+            onChange={(e) =>
+              setGame((g) => ({ ...g, skin: e.target.value as keyof typeof SKINS }))
+            }
           >
             {Object.keys(SKINS).map((k) => (
               <option key={k} value={k}>

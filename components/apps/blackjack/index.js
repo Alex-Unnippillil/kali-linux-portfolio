@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useReducer } from 'react';
 import ReactGA from 'react-ga4';
 import { BlackjackGame, handValue, basicStrategy, cardValue, Shoe } from './engine';
+import { useBestStreak } from '../../../games/blackjack/state';
 
 const CHIP_VALUES = [1, 5, 25, 100];
 const CHIP_COLORS = {
@@ -157,13 +158,7 @@ const Blackjack = () => {
   const [practiceCard, setPracticeCard] = useState(null);
   const [practiceGuess, setPracticeGuess] = useState('');
   const [streak, setStreak] = useState(0);
-  const [bestStreak, setBestStreak] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('bj_best_streak');
-      return stored ? parseInt(stored, 10) : 0;
-    }
-    return 0;
-  });
+  const [bestStreak, setBestStreak] = useBestStreak();
   const [dealerPeeking, setDealerPeeking] = useState(false);
 
   const [_, dispatch] = useReducer(gameReducer, {
@@ -188,11 +183,7 @@ const Blackjack = () => {
     gameRef.current.shoe.shufflePoint = Math.floor(gameRef.current.shoe.cards.length * penetration);
   }, [penetration]);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('bj_best_streak', bestStreak.toString());
-    }
-  }, [bestStreak]);
+  // bestStreak persists via useBestStreak
 
   const start = () => {
     try {

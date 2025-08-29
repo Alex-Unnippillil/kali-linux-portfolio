@@ -19,6 +19,23 @@ export default function usePersistentState(key, initialValue) {
     }
   }, [key, state]);
 
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== key) return;
+      try {
+        if (e.newValue === null) {
+          setState(initialValue);
+        } else {
+          setState(JSON.parse(e.newValue));
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+    window.addEventListener('storage', handler);
+    return () => window.removeEventListener('storage', handler);
+  }, [key]);
+
   return [state, setState];
 }
 
