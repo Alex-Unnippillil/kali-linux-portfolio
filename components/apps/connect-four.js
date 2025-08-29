@@ -155,12 +155,45 @@ const minimax = (board, depth, alpha, beta, maximizing) => {
   return { column, score: value };
 };
 
+const simulateRandomGame = (board, current) => {
+  const tempBoard = board.map((r) => [...r]);
+  let player = current;
+  while (true) {
+    const valid = getValidLocations(tempBoard);
+    if (valid.length === 0) return 'draw';
+    const col = valid[Math.floor(Math.random() * valid.length)];
+    const row = getValidRow(tempBoard, col);
+    tempBoard[row][col] = player;
+    if (checkWinner(tempBoard, player)) return player;
+    player = player === 'red' ? 'yellow' : 'red';
+  }
+};
+
+const calculateWinProbabilities = (board, player, simulations = 50) => {
+  const valid = getValidLocations(board);
+  const probs = Array(COLS).fill(null);
+  for (const col of valid) {
+    let wins = 0;
+    for (let i = 0; i < simulations; i += 1) {
+      const newBoard = board.map((r) => [...r]);
+      const row = getValidRow(newBoard, col);
+      newBoard[row][col] = player;
+      const winner = simulateRandomGame(
+        newBoard,
+        player === 'red' ? 'yellow' : 'red',
+      );
+      if (winner === player) wins += 1;
+    }
+    probs[col] = Math.round((wins / simulations) * 100);
+  }
+  return probs;
+};
+
 export default function ConnectFour() {
   const [board, setBoard] = useState(createEmptyBoard());
   const [player, setPlayer] = useState('yellow');
   const [winner, setWinner] = useState(null);
-  const [explain, setExplain] = useState(false);
-  const [scores, setScores] = useState(Array(COLS).fill(null));
+  const [winProbs, setWinProbs] = useState(Array(COLS).fill(null));
 
   const dropDisc = (col, color) => {
     const row = getValidRow(board, col);
@@ -187,29 +220,16 @@ export default function ConnectFour() {
       const { column } = minimax(board, 4, -Infinity, Infinity, true);
       if (column !== undefined) dropDisc(column, 'red');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player, winner, board]);
 
   useEffect(() => {
-    if (explain && player === 'red' && !winner) {
-      const valid = getValidLocations(board);
-      const newScores = Array(COLS).fill(null);
-      for (const col of valid) {
-        const row = getValidRow(board, col);
-        const newBoard = board.map((r) => [...r]);
-        newBoard[row][col] = 'red';
-        const score = minimax(newBoard, 3, -Infinity, Infinity, false).score;
-        newScores[col] = score;
-      }
-      setScores(newScores);
+    if (!winner) {
+      setWinProbs(calculateWinProbabilities(board, player));
     } else {
-      setScores(Array(COLS).fill(null));
+      setWinProbs(Array(COLS).fill(null));
     }
-  }, [board, player, winner, explain]);
-
-  const bestCol = scores.reduce(
-    (best, val, idx) => (val !== null && (best === null || val > scores[best]) ? idx : best),
-    null,
-  );
+  }, [board, player, winner]);
 
   return (
     <GameLayout gameId="connect-four">
@@ -219,24 +239,18 @@ export default function ConnectFour() {
             {winner === 'draw' ? 'Draw!' : `${winner} wins!`}
           </div>
         )}
-        {explain && (
-          <div className="grid grid-cols-7 gap-1 mb-1 text-xs text-center">
-            {scores.map((s, idx) => (
-              <div key={idx} className={bestCol === idx ? 'text-yellow-400' : ''}>
-                {s !== null ? s : ''}
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-7 gap-1 mb-1 text-xs text-center">
+          {winProbs.map((p, idx) => (
+            <div key={idx}>{p !== null ? `${p}%` : ''}</div>
+          ))}
+        </div>
         <div className="grid grid-cols-7 gap-1 mb-4">
           {board.map((row, rIdx) =>
             row.map((cell, cIdx) => (
               <button
                 key={`${rIdx}-${cIdx}`}
                 aria-label={`cell-${rIdx}-${cIdx}`}
-                className={`w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center focus:outline-none ${
-                  explain && bestCol === cIdx ? 'ring-2 ring-yellow-300' : ''
-                }`}
+                className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center focus:outline-none"
                 onClick={() => handleClick(cIdx)}
               >
                 {cell && (
@@ -260,12 +274,6 @@ export default function ConnectFour() {
             }}
           >
             Reset
-          </button>
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={() => setExplain((e) => !e)}
-          >
-            {explain ? 'Hide Explain' : 'Explain'}
           </button>
         </div>
       </div>
