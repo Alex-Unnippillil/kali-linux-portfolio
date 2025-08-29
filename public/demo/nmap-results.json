@@ -1,0 +1,23 @@
+{
+  "hosts": [
+    {
+      "ip": "192.0.2.10",
+      "ports": [
+        { "port": 80, "service": "http", "cvss": 5.0 },
+        { "port": 443, "service": "https", "cvss": 3.1 }
+      ]
+    },
+    {
+      "ip": "192.0.2.20",
+      "ports": [
+        { "port": 21, "service": "ftp", "cvss": 7.5 }
+      ]
+    },
+    {
+      "ip": "192.0.2.30",
+      "ports": [
+        { "port": 445, "service": "microsoft-ds", "cvss": 4.0 }
+      ]
+    }
+  ]
+}

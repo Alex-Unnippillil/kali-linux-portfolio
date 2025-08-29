@@ -1,124 +1,57 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
-const DiscoveryMap = ({ trigger }) => {
+const drawMap = (canvas, hosts = []) => {
+  const ctx = canvas.getContext('2d');
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(0, 0, width, height);
+
+  // center node
+  ctx.beginPath();
+  ctx.fillStyle = '#ffffff';
+  ctx.arc(width / 2, height / 2, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  hosts.forEach((host, i) => {
+    const angle = (i / hosts.length) * 2 * Math.PI;
+    const x = width / 2 + 100 * Math.cos(angle);
+    const y = height / 2 + 100 * Math.sin(angle);
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#4ade80';
+    ctx.moveTo(width / 2, height / 2);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.fillStyle = '#60a5fa';
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '10px monospace';
+    ctx.fillText(host.ip || host, x + 6, y + 3);
+  });
+};
+
+const DiscoveryMap = ({ hosts = [] }) => {
   const canvasRef = useRef(null);
-  const [ariaMessage, setAriaMessage] = useState('');
-
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
-    const supportsWorker =
-      typeof window !== 'undefined' &&
-      typeof Worker === 'function' &&
-      'OffscreenCanvas' in window;
-    let worker;
-    let animationFrame;
-
-    if (supportsWorker) {
-      worker = new Worker(new URL('./discovery.worker.js', import.meta.url));
-      const offscreen = canvas.transferControlToOffscreen();
-      const reduceMotion = window
-        .matchMedia('(prefers-reduced-motion: reduce)')
-        .matches;
-      worker.postMessage(
-        { type: 'init', canvas: offscreen, reduceMotion },
-        [offscreen]
-      );
-      worker.onmessage = (e) => {
-        const { message } = e.data || {};
-        if (message) setAriaMessage(message);
-      };
-    } else {
-      const ctx = canvas.getContext('2d');
-      const width = canvas.width;
-      const height = canvas.height;
-      const hosts = Array.from({ length: 5 }, (_, i) => ({
-        x: width / 2 + 100 * Math.cos((i / 5) * 2 * Math.PI),
-        y: height / 2 + 100 * Math.sin((i / 5) * 2 * Math.PI),
-        discovered: false,
-        scripted: false,
-      }));
-      let step = 0;
-      const prefersReducedMotion = window
-        .matchMedia('(prefers-reduced-motion: reduce)')
-        .matches;
-
-      const draw = () => {
-        ctx.clearRect(0, 0, width, height);
-        ctx.fillStyle = '#1a1a1a';
-        ctx.fillRect(0, 0, width, height);
-
-        ctx.beginPath();
-        ctx.fillStyle = '#ffffff';
-        ctx.arc(width / 2, height / 2, 5, 0, Math.PI * 2);
-        ctx.fill();
-
-        hosts.forEach((host) => {
-          if (host.discovered) {
-            ctx.beginPath();
-            ctx.strokeStyle = '#4ade80';
-            ctx.lineWidth = 2;
-            ctx.moveTo(width / 2, height / 2);
-            ctx.lineTo(host.x, host.y);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.fillStyle = host.scripted ? '#4ade80' : '#60a5fa';
-            ctx.arc(host.x, host.y, 5, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        });
-      };
-
-      const tick = () => {
-        if (!prefersReducedMotion) {
-          if (step < hosts.length) {
-            hosts[step].discovered = true;
-            setAriaMessage(`Host ${step + 1} discovered`);
-          } else if (step < hosts.length * 2) {
-            const idx = step - hosts.length;
-            hosts[idx].scripted = true;
-            setAriaMessage(`Script stage completed for host ${idx + 1}`);
-          } else {
-            draw();
-            return;
-          }
-          step += 1;
-        } else {
-          hosts.forEach((h) => {
-            h.discovered = true;
-            h.scripted = true;
-          });
-        }
-        draw();
-        animationFrame = requestAnimationFrame(tick);
-      };
-
-      draw();
-      animationFrame = requestAnimationFrame(tick);
-    }
-
-    return () => {
-      if (worker) worker.terminate();
-      if (animationFrame) cancelAnimationFrame(animationFrame);
-    };
-  }, [trigger]);
-
+    drawMap(canvas, hosts);
+  }, [hosts]);
   return (
-    <div className="w-full mb-4">
-      <canvas
-        ref={canvasRef}
-        width={300}
-        height={200}
-        className="w-full border border-gray-500"
-        role="img"
-        aria-label="Animated network discovery map"
-      />
-      <div aria-live="polite" className="sr-only">
-        {ariaMessage}
-      </div>
-    </div>
+    <canvas
+      ref={canvasRef}
+      width={300}
+      height={200}
+      className="w-full border border-gray-500"
+      role="img"
+      aria-label="Network topology mini-map"
+    />
   );
 };
 
