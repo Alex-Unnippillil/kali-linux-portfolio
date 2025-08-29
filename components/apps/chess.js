@@ -1,6 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { Chess } from 'chess.js';
-import { suggestMoves } from '../../games/chess/engine/wasmEngine';
+import React, { useRef, useEffect, useState } from "react";
+import { Chess } from "chess.js";
+import { suggestMoves } from "../../games/chess/engine/wasmEngine";
 
 // 0x88 board representation utilities
 const EMPTY = 0;
@@ -24,28 +24,28 @@ const pieceValues = {
 };
 
 const pieceUnicode = {
-  [PAWN]: { [WHITE]: '♙', [BLACK]: '♟' },
-  [KNIGHT]: { [WHITE]: '♘', [BLACK]: '♞' },
-  [BISHOP]: { [WHITE]: '♗', [BLACK]: '♝' },
-  [ROOK]: { [WHITE]: '♖', [BLACK]: '♜' },
-  [QUEEN]: { [WHITE]: '♕', [BLACK]: '♛' },
-  [KING]: { [WHITE]: '♔', [BLACK]: '♚' },
+  [PAWN]: { [WHITE]: "♙", [BLACK]: "♟" },
+  [KNIGHT]: { [WHITE]: "♘", [BLACK]: "♞" },
+  [BISHOP]: { [WHITE]: "♗", [BLACK]: "♝" },
+  [ROOK]: { [WHITE]: "♖", [BLACK]: "♜" },
+  [QUEEN]: { [WHITE]: "♕", [BLACK]: "♛" },
+  [KING]: { [WHITE]: "♔", [BLACK]: "♚" },
 };
 
 // sprite images for consistent piece rendering
 const spritePaths = {
-  [PAWN]: { [WHITE]: '/pieces/wP.svg', [BLACK]: '/pieces/bP.svg' },
-  [KNIGHT]: { [WHITE]: '/pieces/wN.svg', [BLACK]: '/pieces/bN.svg' },
-  [BISHOP]: { [WHITE]: '/pieces/wB.svg', [BLACK]: '/pieces/bB.svg' },
-  [ROOK]: { [WHITE]: '/pieces/wR.svg', [BLACK]: '/pieces/bR.svg' },
-  [QUEEN]: { [WHITE]: '/pieces/wQ.svg', [BLACK]: '/pieces/bQ.svg' },
-  [KING]: { [WHITE]: '/pieces/wK.svg', [BLACK]: '/pieces/bK.svg' },
+  [PAWN]: { [WHITE]: "/pieces/wP.svg", [BLACK]: "/pieces/bP.svg" },
+  [KNIGHT]: { [WHITE]: "/pieces/wN.svg", [BLACK]: "/pieces/bN.svg" },
+  [BISHOP]: { [WHITE]: "/pieces/wB.svg", [BLACK]: "/pieces/bB.svg" },
+  [ROOK]: { [WHITE]: "/pieces/wR.svg", [BLACK]: "/pieces/bR.svg" },
+  [QUEEN]: { [WHITE]: "/pieces/wQ.svg", [BLACK]: "/pieces/bQ.svg" },
+  [KING]: { [WHITE]: "/pieces/wK.svg", [BLACK]: "/pieces/bK.svg" },
 };
 
 const SIZE = 320; // canvas size
 const SQ = SIZE / 8;
 
-const files = 'abcdefgh';
+const files = "abcdefgh";
 const sqToAlg = (sq) => {
   const file = sq & 15;
   const rank = (sq >> 4) + 1;
@@ -171,8 +171,7 @@ const generateMoves = (board, side) => {
       }
       for (const cap of [dir + 1, dir - 1]) {
         const to = from + cap;
-        if (inside(to) && board[to] * side < 0)
-          moves.push({ from, to });
+        if (inside(to) && board[to] * side < 0) moves.push({ from, to });
       }
     } else if (type === KNIGHT) {
       for (const o of knightOffsets) {
@@ -269,7 +268,10 @@ const getBestMove = (board, side, depth) => {
     b[m.to] = b[m.from];
     b[m.from] = EMPTY;
     const val = minimax(b, depth - 1, -Infinity, Infinity, -side);
-    if ((side === WHITE && val > bestVal) || (side === BLACK && val < bestVal)) {
+    if (
+      (side === WHITE && val > bestVal) ||
+      (side === BLACK && val < bestVal)
+    ) {
       bestVal = val;
       best = m;
     }
@@ -296,7 +298,7 @@ const ChessGame = () => {
   const [selected, setSelected] = useState(null);
   const [cursor, setCursor] = useState(0);
   const [moves, setMoves] = useState([]);
-  const [status, setStatus] = useState('Your move');
+  const [status, setStatus] = useState("Your move");
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = useState(true);
   const [sanLog, setSanLog] = useState([]);
@@ -304,9 +306,9 @@ const ChessGame = () => {
   const [showHints, setShowHints] = useState(false);
   const [mateSquares, setMateSquares] = useState([]);
   const [elo, setElo] = useState(() =>
-    typeof window === 'undefined'
+    typeof window === "undefined"
       ? 1200
-      : Number(localStorage.getItem('chessElo') || 1200)
+      : Number(localStorage.getItem("chessElo") || 1200),
   );
   const animRef = useRef(null);
   const trailsRef = useRef([]);
@@ -315,18 +317,19 @@ const ChessGame = () => {
   const reduceMotionRef = useRef(false);
   const spritesRef = useRef({});
   const [spritesReady, setSpritesReady] = useState(false);
-  const [pieceSet, setPieceSet] = useState('sprites');
+  const [pieceSet, setPieceSet] = useState("sprites");
   const [analysisMoves, setAnalysisMoves] = useState([]);
-  const evalPercent =
-    (1 / (1 + Math.exp(-displayEval / 200))) * 100;
+  const [analysisDepth, setAnalysisDepth] = useState(2);
+  const pgnInputRef = useRef(null);
+  const evalPercent = (1 / (1 + Math.exp(-displayEval / 200))) * 100;
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     reduceMotionRef.current = mq.matches;
     const handler = () => (reduceMotionRef.current = mq.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
   }, []);
 
   useEffect(() => {
@@ -417,13 +420,13 @@ const ChessGame = () => {
   }, [showHints]);
 
   const runAnalysis = () => {
-    const suggestions = suggestMoves(chessRef.current.fen());
+    const suggestions = suggestMoves(chessRef.current.fen(), analysisDepth);
     setAnalysisMoves(suggestions);
   };
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     const render = () => {
       ctx.clearRect(0, 0, SIZE, SIZE);
       for (let r = 0; r < 8; r++) {
@@ -431,7 +434,7 @@ const ChessGame = () => {
           const x = f * SQ;
           const y = (7 - r) * SQ;
           const light = (r + f) % 2 === 0;
-          ctx.fillStyle = light ? '#eee' : '#555';
+          ctx.fillStyle = light ? "#eee" : "#555";
           ctx.fillRect(x, y, SQ, SQ);
 
           const sq = r * 16 + f;
@@ -439,25 +442,25 @@ const ChessGame = () => {
             lastMoveRef.current &&
             (sq === lastMoveRef.current.from || sq === lastMoveRef.current.to)
           ) {
-            ctx.strokeStyle = '#ff0';
+            ctx.strokeStyle = "#ff0";
             ctx.lineWidth = 3;
             ctx.strokeRect(x + 1, y + 1, SQ - 2, SQ - 2);
           }
           if (selected === sq) {
-            ctx.strokeStyle = '#ff0';
+            ctx.strokeStyle = "#ff0";
             ctx.lineWidth = 2;
             ctx.strokeRect(x + 2, y + 2, SQ - 4, SQ - 4);
           } else {
             const move = moves.find((m) => m.to === sq);
             if (move) {
-              ctx.strokeStyle = '#ff0';
+              ctx.strokeStyle = "#ff0";
               ctx.lineWidth = 2;
               ctx.strokeRect(x + 4, y + 4, SQ - 8, SQ - 8);
             }
           }
 
           if (cursor === sq) {
-            ctx.strokeStyle = '#ff0';
+            ctx.strokeStyle = "#ff0";
             ctx.lineWidth = 2;
             ctx.strokeRect(x + 2, y + 2, SQ - 4, SQ - 4);
           }
@@ -465,27 +468,25 @@ const ChessGame = () => {
           if (mateSquares.includes(sq)) {
             ctx.beginPath();
             ctx.arc(x + SQ / 2, y + SQ / 2, SQ / 6, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0,0,255,0.5)';
+            ctx.fillStyle = "rgba(0,0,255,0.5)";
             ctx.fill();
           }
 
           const piece = boardRef.current[sq];
           if (piece) {
             const img =
-              spritesRef.current[Math.abs(piece)]?.[
-                piece > 0 ? WHITE : BLACK
-              ];
-            if (pieceSet === 'sprites' && img && spritesReady) {
+              spritesRef.current[Math.abs(piece)]?.[piece > 0 ? WHITE : BLACK];
+            if (pieceSet === "sprites" && img && spritesReady) {
               ctx.drawImage(img, x + 2, y + 2, SQ - 4, SQ - 4);
             } else {
               ctx.font = `${SQ - 10}px serif`;
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillStyle = piece > 0 ? '#000' : '#fff';
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillStyle = piece > 0 ? "#000" : "#fff";
               ctx.fillText(
                 pieceUnicode[Math.abs(piece)][piece > 0 ? WHITE : BLACK],
                 x + SQ / 2,
-                y + SQ / 2
+                y + SQ / 2,
               );
             }
           }
@@ -508,17 +509,19 @@ const ChessGame = () => {
         ctx.moveTo(t.tx, t.ty);
         ctx.lineTo(
           t.tx - head * Math.cos(angle - Math.PI / 6),
-          t.ty - head * Math.sin(angle - Math.PI / 6)
+          t.ty - head * Math.sin(angle - Math.PI / 6),
         );
         ctx.lineTo(
           t.tx - head * Math.cos(angle + Math.PI / 6),
-          t.ty - head * Math.sin(angle + Math.PI / 6)
+          t.ty - head * Math.sin(angle + Math.PI / 6),
         );
         ctx.closePath();
         ctx.fillStyle = `rgba(255,0,0,${alpha})`;
         ctx.fill();
       }
-      particlesRef.current = particlesRef.current.filter((p) => now - p.t < 500);
+      particlesRef.current = particlesRef.current.filter(
+        (p) => now - p.t < 500,
+      );
       for (const p of particlesRef.current) {
         const age = (now - p.t) / 1000;
         const px = p.x + p.vx * age;
@@ -543,29 +546,29 @@ const ChessGame = () => {
     const k = 32;
     const newElo = Math.round(elo + k * (score - expected));
     setElo(newElo);
-    if (typeof window !== 'undefined')
-      localStorage.setItem('chessElo', String(newElo));
+    if (typeof window !== "undefined")
+      localStorage.setItem("chessElo", String(newElo));
   };
 
   const checkGameState = (defaultStatus, skipElo = false) => {
     const game = chessRef.current;
     if (game.isCheckmate()) {
-      if (game.turn() === 'w') {
-        setStatus('Checkmate! You lose');
+      if (game.turn() === "w") {
+        setStatus("Checkmate! You lose");
         if (!skipElo) endGame(-1);
       } else {
-        setStatus('Checkmate! You win');
+        setStatus("Checkmate! You win");
         if (!skipElo) endGame(1);
       }
       return true;
     }
     if (game.isDraw()) {
-      setStatus('Draw');
+      setStatus("Draw");
       if (!skipElo) endGame(0);
       return true;
     }
     if (game.isCheck()) {
-      setStatus('Check!');
+      setStatus("Check!");
     } else if (defaultStatus) {
       setStatus(defaultStatus);
     }
@@ -579,7 +582,7 @@ const ChessGame = () => {
       const res = chessRef.current.move({
         from: sqToAlg(move.from),
         to: sqToAlg(move.to),
-        promotion: 'q',
+        promotion: "q",
       });
       if (!res) return;
       boardRef.current[move.to] = boardRef.current[move.from];
@@ -595,7 +598,7 @@ const ChessGame = () => {
       lastMoveRef.current = { from: move.from, to: move.to };
       updateEval();
       updateMateHints();
-      checkGameState('Your move');
+      checkGameState("Your move");
     }
   };
 
@@ -610,7 +613,7 @@ const ChessGame = () => {
         const res = chessRef.current.move({
           from: sqToAlg(legal.from),
           to: sqToAlg(legal.to),
-          promotion: 'q',
+          promotion: "q",
         });
         if (res) {
           const capture = boardRef.current[legal.to] !== EMPTY;
@@ -627,7 +630,7 @@ const ChessGame = () => {
           lastMoveRef.current = { from: legal.from, to: legal.to };
           updateEval();
           updateMateHints();
-          if (!checkGameState('AI thinking...')) {
+          if (!checkGameState("AI thinking...")) {
             setTimeout(aiMove, 200);
           }
           return;
@@ -659,11 +662,11 @@ const ChessGame = () => {
   const handleKey = (e) => {
     if (paused) return;
     let next = cursor;
-    if (e.key === 'ArrowUp') next += 16;
-    else if (e.key === 'ArrowDown') next -= 16;
-    else if (e.key === 'ArrowLeft') next -= 1;
-    else if (e.key === 'ArrowRight') next += 1;
-    else if (e.key === 'Enter' || e.key === ' ') {
+    if (e.key === "ArrowUp") next += 16;
+    else if (e.key === "ArrowDown") next -= 16;
+    else if (e.key === "ArrowLeft") next -= 1;
+    else if (e.key === "ArrowRight") next += 1;
+    else if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       handleSquare(cursor);
       return;
@@ -688,7 +691,7 @@ const ChessGame = () => {
     updateEval();
     updateMateHints();
     setPaused(false);
-    setStatus('Your move');
+    setStatus("Your move");
     lastMoveRef.current = null;
   };
 
@@ -696,7 +699,7 @@ const ChessGame = () => {
   const toggleSound = () => setSound((s) => !s);
   const toggleHints = () => setShowHints((s) => !s);
   const togglePieces = () =>
-    setPieceSet((p) => (p === 'sprites' ? 'unicode' : 'sprites'));
+    setPieceSet((p) => (p === "sprites" ? "unicode" : "sprites"));
   const undoMove = () => {
     let undone = 0;
     if (historyRef.current.length <= 1) return;
@@ -705,13 +708,17 @@ const ChessGame = () => {
       historyRef.current.pop();
       undone++;
     }
-    if (chessRef.current.turn() === 'b' && chessRef.current.history().length > 0) {
+    if (
+      chessRef.current.turn() === "b" &&
+      chessRef.current.history().length > 0
+    ) {
       chessRef.current.undo();
       historyRef.current.pop();
       undone++;
     }
-    boardRef.current = historyRef.current[historyRef.current.length - 1].slice();
-    sideRef.current = chessRef.current.turn() === 'w' ? WHITE : BLACK;
+    boardRef.current =
+      historyRef.current[historyRef.current.length - 1].slice();
+    sideRef.current = chessRef.current.turn() === "w" ? WHITE : BLACK;
     trailsRef.current = [];
     particlesRef.current = [];
     setSelected(null);
@@ -720,19 +727,18 @@ const ChessGame = () => {
     updateEval();
     updateMateHints();
     lastMoveRef.current = null;
-    setStatus('Your move');
+    setStatus("Your move");
   };
 
   const copyMoves = () => {
     navigator.clipboard?.writeText(chessRef.current.pgn());
   };
 
-  const loadPGN = () => {
-    const pgn = prompt('Paste PGN');
+  const loadPGNString = (pgn) => {
     if (!pgn) return;
     reset();
     if (!chessRef.current.load_pgn(pgn)) {
-      alert('Invalid PGN');
+      alert("Invalid PGN");
       reset();
       return;
     }
@@ -743,12 +749,12 @@ const ChessGame = () => {
     setSanLog([]);
     sideRef.current = WHITE;
     setPaused(true);
-    setStatus('Replaying PGN...');
+    setStatus("Replaying PGN...");
     let i = 0;
     const playNext = () => {
       if (i >= moves.length) {
         setPaused(false);
-        checkGameState('Your move', true);
+        checkGameState("Your move", true);
         return;
       }
       const m = moves[i++];
@@ -763,7 +769,7 @@ const ChessGame = () => {
       lastMoveRef.current = { from, to };
       historyRef.current.push(boardRef.current.slice());
       setSanLog((l) => [...l, res.san]);
-      sideRef.current = chessRef.current.turn() === 'w' ? WHITE : BLACK;
+      sideRef.current = chessRef.current.turn() === "w" ? WHITE : BLACK;
       updateEval();
       updateMateHints();
       if (sound) playBeep();
@@ -773,18 +779,31 @@ const ChessGame = () => {
     playNext();
   };
 
+  const handlePGNImport = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => loadPGNString(reader.result);
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const loadPGN = () => {
+    pgnInputRef.current?.click();
+  };
+
   const moveLines = [];
   for (let i = 0; i < sanLog.length; i += 2) {
     moveLines.push(
-      `${i / 2 + 1}. ${sanLog[i]}${sanLog[i + 1] ? ' ' + sanLog[i + 1] : ''}`
+      `${i / 2 + 1}. ${sanLog[i]}${sanLog[i + 1] ? " " + sanLog[i + 1] : ""}`,
     );
   }
 
-  const statusClass = status.includes('Checkmate')
-    ? 'bg-red-700 text-white'
-    : status.includes('Check')
-    ? 'bg-yellow-300 text-black'
-    : '';
+  const statusClass = status.includes("Checkmate")
+    ? "bg-red-700 text-white"
+    : status.includes("Check")
+      ? "bg-yellow-300 text-black"
+      : "";
 
   return (
     <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white p-2 select-none">
@@ -800,6 +819,14 @@ const ChessGame = () => {
             aria-label="Chess board"
             className="border border-gray-600"
           />
+          <input
+            type="file"
+            accept=".pgn"
+            ref={pgnInputRef}
+            onChange={handlePGNImport}
+            className="hidden"
+            aria-label="PGN file input"
+          />
           <div className="mt-2 flex flex-wrap gap-2 justify-center">
             <button className="px-2 py-1 bg-gray-700" onClick={reset}>
               Reset
@@ -808,17 +835,29 @@ const ChessGame = () => {
               Undo
             </button>
             <button className="px-2 py-1 bg-gray-700" onClick={togglePause}>
-              {paused ? 'Resume' : 'Pause'}
+              {paused ? "Resume" : "Pause"}
             </button>
             <button className="px-2 py-1 bg-gray-700" onClick={toggleSound}>
-              {sound ? 'Sound Off' : 'Sound On'}
+              {sound ? "Sound Off" : "Sound On"}
             </button>
             <button className="px-2 py-1 bg-gray-700" onClick={togglePieces}>
-              {pieceSet === 'sprites' ? 'Unicode' : 'Sprites'}
+              {pieceSet === "sprites" ? "Unicode" : "Sprites"}
             </button>
             <button className="px-2 py-1 bg-gray-700" onClick={toggleHints}>
-              {showHints ? 'Hide Hints' : 'Mate in 1'}
+              {showHints ? "Hide Hints" : "Mate in 1"}
             </button>
+            <select
+              className="px-2 py-1 bg-gray-700"
+              value={analysisDepth}
+              onChange={(e) => setAnalysisDepth(parseInt(e.target.value))}
+              aria-label="Stockfish depth"
+            >
+              {[1, 2, 3, 4, 5].map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
             <button className="px-2 py-1 bg-gray-700" onClick={runAnalysis}>
               Analyze
             </button>
@@ -828,7 +867,10 @@ const ChessGame = () => {
           </div>
         </div>
         <div className="w-40 flex flex-col text-sm font-mono">
-          <div className={`mb-2 p-1 text-center font-bold ${statusClass}`} aria-live="polite">
+          <div
+            className={`mb-2 p-1 text-center font-bold ${statusClass}`}
+            aria-live="polite"
+          >
             {status}
           </div>
           <div className="w-full" aria-label="Evaluation">
@@ -840,7 +882,7 @@ const ChessGame = () => {
               aria-valuenow={evalPercent.toFixed(0)}
             >
               <div
-                className={`h-full ${displayEval >= 0 ? 'bg-green-600' : 'bg-red-600'}`}
+                className={`h-full ${displayEval >= 0 ? "bg-green-600" : "bg-red-600"}`}
                 style={{ width: `${evalPercent}%` }}
               />
             </div>
@@ -882,4 +924,3 @@ const ChessGame = () => {
 };
 
 export default ChessGame;
-
