@@ -2,20 +2,25 @@ const WIDTH = 300;
 const HEIGHT = 200;
 let ctx;
 let hosts = [];
+let names = [];
 let step = 0;
 let reduceMotion = false;
 
 self.onmessage = (e) => {
   const { type } = e.data || {};
   if (type === 'init') {
-    const { canvas } = e.data;
+    const { canvas, addresses = [] } = e.data;
     ctx = canvas.getContext('2d');
     reduceMotion = !!e.data.reduceMotion;
     const width = canvas.width || WIDTH;
     const height = canvas.height || HEIGHT;
-    hosts = Array.from({ length: 5 }, (_, i) => ({
-      x: width / 2 + 100 * Math.cos((i / 5) * 2 * Math.PI),
-      y: height / 2 + 100 * Math.sin((i / 5) * 2 * Math.PI),
+    names =
+      addresses.length > 0
+        ? addresses
+        : Array.from({ length: 5 }, (_, i) => `host${i + 1}`);
+    hosts = names.map((_, i) => ({
+      x: width / 2 + 100 * Math.cos((i / names.length) * 2 * Math.PI),
+      y: height / 2 + 100 * Math.sin((i / names.length) * 2 * Math.PI),
       discovered: false,
       scripted: false,
     }));
@@ -65,14 +70,16 @@ function draw(width, height) {
 function tick(width, height) {
   if (step < hosts.length) {
     hosts[step].discovered = true;
-    self.postMessage({ message: `Host ${step + 1} discovered` });
+    self.postMessage({ message: `Host ${names[step]} discovered` });
     step += 1;
     draw(width, height);
     self.requestAnimationFrame(() => tick(width, height));
   } else if (step < hosts.length * 2) {
     const idx = step - hosts.length;
     hosts[idx].scripted = true;
-    self.postMessage({ message: `Script stage completed for host ${idx + 1}` });
+    self.postMessage({
+      message: `Script stage completed for host ${names[idx]}`,
+    });
     step += 1;
     draw(width, height);
     self.requestAnimationFrame(() => tick(width, height));

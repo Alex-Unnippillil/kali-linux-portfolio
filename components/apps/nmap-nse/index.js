@@ -1,33 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
-
-// Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
-const scripts = [
-  {
-    name: 'http-title',
-    description: 'Fetches page titles from HTTP services.'
-  },
-  {
-    name: 'ssl-cert',
-    description: 'Retrieves TLS certificate information.'
-  },
-  {
-    name: 'smb-os-discovery',
-    description: 'Discovers remote OS information via SMB.'
-  },
-  {
-    name: 'ftp-anon',
-    description: 'Checks for anonymous FTP access.'
-  },
-  {
-    name: 'http-enum',
-    description: 'Enumerates directories on web servers.'
-  },
-  {
-    name: 'dns-brute',
-    description: 'Performs DNS subdomain brute force enumeration.'
-  }
-];
+import DiscoveryMap from './DiscoveryMap';
 
 const portPresets = [
   { label: 'Default', flag: '' },
@@ -35,21 +8,74 @@ const portPresets = [
   { label: 'Full', flag: '-p-' }
 ];
 
+const cvssByCategory = { discovery: 3, vuln: 9, safe: 1 };
+
 const NmapNSEApp = () => {
   const [target, setTarget] = useState('example.com');
-  const [selectedScripts, setSelectedScripts] = useState([scripts[0].name]);
   const [scriptQuery, setScriptQuery] = useState('');
   const [portFlag, setPortFlag] = useState('');
+  const [scriptArgs, setScriptArgs] = useState('');
+  const [scripts, setScripts] = useState([]); // flat list with category
+  const [categories, setCategories] = useState({}); // name -> category
+  const [selectedScripts, setSelectedScripts] = useState([]);
   const [examples, setExamples] = useState({});
+  const [hostTree, setHostTree] = useState({});
+  const [addresses, setAddresses] = useState([]);
   const [toast, setToast] = useState('');
   const outputRef = useRef(null);
 
   useEffect(() => {
+    fetch('/demo-data/nmap/scripts.json')
+      .then((r) => r.json())
+      .then((json) => {
+        const flat = [];
+        const catMap = {};
+        Object.entries(json).forEach(([cat, list]) => {
+          list.forEach((s) => {
+            flat.push({ ...s, category: cat });
+            catMap[s.name] = cat;
+          });
+        });
+        setScripts(flat);
+        setCategories(catMap);
+        if (flat.length > 0) setSelectedScripts([flat[0].name]);
+      })
+      .catch(() => setScripts([]));
     fetch('/demo/nmap-nse.json')
       .then((r) => r.json())
       .then(setExamples)
       .catch(() => setExamples({}));
   }, []);
+
+  useEffect(() => {
+    const dns = examples['dns-brute'];
+    if (!dns) return setAddresses([]);
+    const addrs = [];
+    dns.split('\n').forEach((line) => {
+      const m = line.match(/(\d+\.\d+\.\d+\.\d+)/);
+      if (m) addrs.push(m[1]);
+    });
+    setAddresses(addrs);
+  }, [examples]);
+
+  useEffect(() => {
+    const ports = {};
+    const host = target;
+    selectedScripts.forEach((name) => {
+      const text = examples[name];
+      if (!text) return;
+      text.split('\n').forEach((line) => {
+        const m = line.match(/^(\d+)\/\w+\s+open\s+(\S+)/);
+        if (m) {
+          const port = m[1];
+          const service = m[2];
+          if (!ports[port]) ports[port] = { service, scripts: [] };
+          ports[port].scripts.push(name);
+        }
+      });
+    });
+    setHostTree({ [host]: ports });
+  }, [selectedScripts, examples, target]);
 
   const toggleScript = (name) => {
     setSelectedScripts((prev) =>
@@ -59,13 +85,16 @@ const NmapNSEApp = () => {
     );
   };
 
-  const filteredScripts = scripts.filter((s) =>
-    s.name.toLowerCase().includes(scriptQuery.toLowerCase())
-  );
+  const filteredScripts = scripts.filter((s) => {
+    const q = scriptQuery.toLowerCase();
+    return (
+      s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q)
+    );
+  });
 
   const command = `nmap ${portFlag} ${
     selectedScripts.length ? `--script ${selectedScripts.join(',')}` : ''
-  } ${target}`
+  } ${scriptArgs ? `--script-args ${scriptArgs}` : ''} ${target}`
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -127,10 +156,20 @@ const NmapNSEApp = () => {
     });
   };
 
+  const computeCvss = (scripts) => {
+    let score = 0;
+    scripts.forEach((n) => {
+      const cat = categories[n];
+      score = Math.max(score, cvssByCategory[cat] || 0);
+    });
+    return score.toFixed(1);
+  };
+
   return (
     <div className="flex flex-col md:flex-row h-full w-full text-white">
       <div className="md:w-1/2 p-4 bg-ub-dark overflow-y-auto">
         <h1 className="text-lg mb-4">Nmap NSE Demo</h1>
+        <DiscoveryMap addresses={addresses} trigger={selectedScripts.join(',')} />
         <div className="mb-4 p-2 bg-yellow-900 text-yellow-200 border-l-4 border-yellow-500 rounded">
           <p className="text-sm font-bold">
             Educational use only. Do not scan systems without permission.
@@ -156,19 +195,36 @@ const NmapNSEApp = () => {
           />
           <div className="h-32 overflow-y-auto bg-white text-black rounded p-2">
             {filteredScripts.map((s) => (
-              <label key={s.name} className="flex items-center space-x-2 mb-1">
+              <label key={s.name} className="flex items-start space-x-2 mb-2">
                 <input
                   type="checkbox"
                   checked={selectedScripts.includes(s.name)}
                   onChange={() => toggleScript(s.name)}
                 />
-                <span className="font-mono">{s.name}</span>
+                <div>
+                  <span className="font-mono">{s.name}</span>
+                  <span className="ml-2 text-xs bg-ub-grey px-1 rounded">
+                    {s.category}
+                  </span>
+                  <p className="text-xs">{s.description}</p>
+                </div>
               </label>
             ))}
             {filteredScripts.length === 0 && (
               <p className="text-sm">No scripts found.</p>
             )}
           </div>
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm mb-1" htmlFor="scriptArgs">
+            Script Args
+          </label>
+          <input
+            id="scriptArgs"
+            value={scriptArgs}
+            onChange={(e) => setScriptArgs(e.target.value)}
+            className="w-full p-2 text-black"
+          />
         </div>
         <div className="mb-4">
           <p className="block text-sm mb-1">Port presets</p>
@@ -198,6 +254,27 @@ const NmapNSEApp = () => {
           >
             Copy Command
           </button>
+        </div>
+        <div className="mb-4">
+          <h2 className="text-lg mb-2">Host/Port Summary</h2>
+          <ul className="ml-4 list-disc">
+            {Object.entries(hostTree).map(([host, ports]) => (
+              <li key={host}>
+                {host}
+                <ul className="ml-4 list-disc">
+                  {Object.entries(ports).map(([port, info]) => (
+                    <li key={port}>
+                      {port}/tcp {info.service}
+                      <span className="ml-2 px-1 rounded bg-ub-grey text-black text-xs">
+                        CVSS {computeCvss(info.scripts)}
+                      </span>
+                    </li>
+                  ))}
+                  {Object.keys(ports).length === 0 && <li>No open ports</li>}
+                </ul>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
       <div className="md:w-1/2 p-4 bg-black overflow-y-auto">
@@ -241,3 +318,4 @@ const NmapNSEApp = () => {
 export default NmapNSEApp;
 
 export const displayNmapNSE = () => <NmapNSEApp />;
+

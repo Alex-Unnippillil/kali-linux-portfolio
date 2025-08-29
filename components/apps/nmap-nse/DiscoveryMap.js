@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const DiscoveryMap = ({ trigger }) => {
+const DiscoveryMap = ({ trigger, addresses = [] }) => {
   const canvasRef = useRef(null);
   const [ariaMessage, setAriaMessage] = useState('');
 
@@ -22,7 +22,7 @@ const DiscoveryMap = ({ trigger }) => {
         .matchMedia('(prefers-reduced-motion: reduce)')
         .matches;
       worker.postMessage(
-        { type: 'init', canvas: offscreen, reduceMotion },
+        { type: 'init', canvas: offscreen, reduceMotion, addresses },
         [offscreen]
       );
       worker.onmessage = (e) => {
@@ -33,9 +33,13 @@ const DiscoveryMap = ({ trigger }) => {
       const ctx = canvas.getContext('2d');
       const width = canvas.width;
       const height = canvas.height;
-      const hosts = Array.from({ length: 5 }, (_, i) => ({
-        x: width / 2 + 100 * Math.cos((i / 5) * 2 * Math.PI),
-        y: height / 2 + 100 * Math.sin((i / 5) * 2 * Math.PI),
+      const names =
+        addresses.length > 0
+          ? addresses
+          : Array.from({ length: 5 }, (_, i) => `host${i + 1}`);
+      const hosts = names.map((_, i) => ({
+        x: width / 2 + 100 * Math.cos((i / names.length) * 2 * Math.PI),
+        y: height / 2 + 100 * Math.sin((i / names.length) * 2 * Math.PI),
         discovered: false,
         scripted: false,
       }));
@@ -75,16 +79,17 @@ const DiscoveryMap = ({ trigger }) => {
         if (!prefersReducedMotion) {
           if (step < hosts.length) {
             hosts[step].discovered = true;
-            setAriaMessage(`Host ${step + 1} discovered`);
+            setAriaMessage(`Host ${names[step]} discovered`);
+            step += 1;
           } else if (step < hosts.length * 2) {
             const idx = step - hosts.length;
             hosts[idx].scripted = true;
-            setAriaMessage(`Script stage completed for host ${idx + 1}`);
+            setAriaMessage(`Script stage completed for host ${names[idx]}`);
+            step += 1;
           } else {
             draw();
             return;
           }
-          step += 1;
         } else {
           hosts.forEach((h) => {
             h.discovered = true;
@@ -103,7 +108,7 @@ const DiscoveryMap = ({ trigger }) => {
       if (worker) worker.terminate();
       if (animationFrame) cancelAnimationFrame(animationFrame);
     };
-  }, [trigger]);
+  }, [trigger, addresses]);
 
   return (
     <div className="w-full mb-4">
