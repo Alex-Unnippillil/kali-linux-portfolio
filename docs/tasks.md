@@ -29,8 +29,7 @@ This document tracks planned improvements and new features for the desktop portf
 - Keep client-only dynamic import.
 
 ### Visual Studio Code
-- Convert to JS and export `displayVsCode`.
-- Add "Open folder" using JSON "virtual FS" backed by `localStorage` with editor tabs and search.
+- App now embeds a StackBlitz IDE via iframe instead of a local Monaco editor.
 
 ### X
 - Implement read-only timeline embed with SSR disabled and light/dark toggle.

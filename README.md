@@ -309,7 +309,7 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | --- | --- | --- |
 | Alex | /apps/alex | Utility / Media |
 | Chrome | /apps/chrome | Utility / Media |
-| Vscode | /apps/vscode | Utility / Media |
+| VS Code | /apps/vscode | StackBlitz IDE embed |
 | Spotify | /apps/spotify | Utility / Media |
 | Youtube | /apps/youtube | Utility / Media |
 | Weather | /apps/weather | Utility / Media |
@@ -320,6 +320,8 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | Trash | /apps/trash | Utility / Media |
 | Project Gallery | /apps/project-gallery | Utility / Media |
 | Quote | /apps/quote | Utility / Media |
+
+> The VS Code app now embeds a StackBlitz IDE via iframe instead of the local Monaco editor.
 
 The Spotify app loads its mood-to-playlist mapping from `public/spotify-playlists.json`,
 remembers the last mood you played, and exposes play/pause and track controls with
