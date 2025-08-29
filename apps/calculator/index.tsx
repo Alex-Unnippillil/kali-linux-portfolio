@@ -30,7 +30,7 @@ export default function Calculator() {
         <button className="btn" data-action="mminus">M&minus;</button>
         <button className="btn" data-action="mr">MR</button>
       </div>
-      <div className="button-grid">
+      <div id="standard" className="button-grid">
         <button className="btn" data-value="7">7</button>
         <button className="btn" data-value="8">8</button>
         <button className="btn" data-value="9">9</button>
