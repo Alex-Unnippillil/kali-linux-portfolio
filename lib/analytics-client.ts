@@ -1,13 +1,21 @@
-export const trackEvent = (
-  name: string,
-  props: Record<string, any> = {},
-): void => {
+import { track } from '@vercel/analytics';
+
+export type EventName =
+  | 'cta_click'
+  | 'signup_submit'
+  | 'contact_submit'
+  | 'outbound_link_click'
+  | 'download_click';
+
+export function trackEvent(
+  name: EventName,
+  props?: Record<string, string | number | boolean>,
+) {
   try {
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', name, props);
-    }
+    track(name, props);
   } catch {
-    // Ignore analytics errors
+    // ignore analytics errors
   }
-};
+}
+
 
