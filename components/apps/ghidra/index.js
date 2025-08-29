@@ -299,8 +299,8 @@ export default function GhidraApp() {
       <div className="p-2 border-t border-gray-700">
         <ImportAnnotate />
       </div>
-      <div className="flex flex-1">
-        <div className="w-1/4 border-r border-gray-700 overflow-auto">
+      <div className="grid flex-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+        <div className="border-b md:border-b-0 md:border-r border-gray-700 overflow-auto min-h-0 last:border-b-0 md:last:border-r-0">
           <div className="p-2">
             <input
               type="text"
@@ -327,7 +327,7 @@ export default function GhidraApp() {
             <FunctionTree functions={functions} onSelect={setSelected} selected={selected} />
           )}
         </div>
-        <div className="w-1/4 border-r border-gray-700">
+        <div className="border-b md:border-b-0 md:border-r border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0">
           <ControlFlowGraph
             blocks={currentFunc.blocks}
             selected={null}
@@ -339,7 +339,7 @@ export default function GhidraApp() {
         <pre
           ref={decompileRef}
           aria-label="Decompiled code"
-          className="w-1/4 overflow-auto p-2 whitespace-pre-wrap"
+          className="overflow-auto p-2 whitespace-pre-wrap border-b md:border-b-0 md:border-r border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0"
         >
           {currentFunc.code.map((line, idx) => {
             const m = line.match(/call\s+(\w+)/);
@@ -396,7 +396,7 @@ export default function GhidraApp() {
         <pre
           ref={hexRef}
           aria-label="Hexadecimal representation"
-          className="w-1/4 overflow-auto p-2 whitespace-pre-wrap"
+          className="overflow-auto p-2 whitespace-pre-wrap border-b md:border-b-0 border-gray-700 min-h-0 last:border-b-0 md:last:border-r-0"
         >
           {hexMap[selected] || ''}
         </pre>
@@ -421,8 +421,8 @@ export default function GhidraApp() {
           className="w-full h-16 p-1 rounded text-black"
         />
       </div>
-      <div className="flex border-t border-gray-700 h-40">
-        <div className="w-1/2 overflow-auto p-2">
+      <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
+        <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
           <input
             type="text"
             value={stringQuery}
@@ -445,7 +445,7 @@ export default function GhidraApp() {
             ))}
           </ul>
         </div>
-        <div className="w-1/2 p-2">
+        <div className="p-2">
           <label className="block text-sm mb-1">
             Notes for {
               strings.find((s) => s.id === selectedString)?.value || 'string'
