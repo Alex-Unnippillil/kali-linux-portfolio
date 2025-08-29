@@ -206,6 +206,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `*.x.com` | X (Twitter) domain equivalents |
 | `*.google.com` | Google services used by demos |
 | `stackblitz.com` | StackBlitz IDE embeds |
+| `codesandbox.io` | CodeSandbox demo embeds |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
 | `open.spotify.com` | Spotify embeds |
 | `https://*` / `http://*` / `ws://*` / `wss://*` | Wide dev allowance for external resources; tighten for production |
