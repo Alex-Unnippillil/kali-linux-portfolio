@@ -1,4 +1,4 @@
-import { recordScore, getLeaderboard } from '../components/apps/Games/common/leaderboard';
+import { recordScore, getLeaderboard } from '../games/utils/leaderboard';
 
 describe('per-game leaderboard with anti-cheat', () => {
   beforeEach(() => {

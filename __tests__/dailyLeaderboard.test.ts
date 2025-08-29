@@ -1,4 +1,4 @@
-import { getDailySeed, recordScore, getLeaderboard } from '../utils/dailyChallenge';
+import { getDailySeed, recordScore, getLeaderboard } from '../games/utils/leaderboard';
 
 describe('daily challenge and leaderboard', () => {
   beforeEach(() => {
