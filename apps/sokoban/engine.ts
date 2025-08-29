@@ -15,6 +15,7 @@ interface HistoryEntry {
   player: Position;
   boxes: string[];
   pushes: number;
+  moves: number;
 }
 const key = (p: Position) => `${p.x},${p.y}`;
 
@@ -75,6 +76,7 @@ function cloneState(state: State): HistoryEntry {
     player: { ...state.player },
     boxes: Array.from(state.boxes),
     pushes: state.pushes,
+    moves: state.moves,
   };
 }
 
@@ -149,7 +151,7 @@ export function undo(state: State): State {
     player: { ...prev.player },
     boxes,
     pushes: prev.pushes,
-    moves: state.moves + 1,
+    moves: prev.moves,
     history: state.history.slice(0, -1),
   };
   restored.deadlocks = computeDeadlocks(restored);

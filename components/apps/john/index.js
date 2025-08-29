@@ -48,13 +48,15 @@ const JohnApp = () => {
 
   const startProgress = (total) => {
     if (workerRef.current) workerRef.current.terminate();
-    workerRef.current = new Worker(new URL('./progress.worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => {
-      const { percent, phase: p } = e.data;
-      setProgress(percent);
-      setPhase(p);
-    };
-    workerRef.current.postMessage({ type: 'init', total });
+    if (typeof Worker === 'function') {
+      workerRef.current = new Worker(new URL('./progress.worker.js', import.meta.url));
+      workerRef.current.onmessage = (e) => {
+        const { percent, phase: p } = e.data;
+        setProgress(percent);
+        setPhase(p);
+      };
+      workerRef.current.postMessage({ type: 'init', total });
+    }
   };
 
   const incrementProgress = (p) => {
@@ -111,19 +113,26 @@ const JohnApp = () => {
         for (const h of hs) {
           if (signal.aborted) throw new Error('cancelled');
           incrementProgress('wordlist');
-          const res = await fetch('/api/john', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hash: h, rules }),
-            signal,
-          });
-          const data = await res.json();
-          incrementProgress('rules');
-          results.push(
-            `${endpoint} (${identifyHashType(h)}): ${
-              data.output || data.error || 'No output'
-            }`
-          );
+          if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+            const res = await fetch('/api/john', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ hash: h, rules }),
+              signal,
+            });
+            const data = await res.json();
+            incrementProgress('rules');
+            results.push(
+              `${endpoint} (${identifyHashType(h)}): ${
+                data.output || data.error || 'No output'
+              }`
+            );
+          } else {
+            incrementProgress('rules');
+            results.push(
+              `${endpoint} (${identifyHashType(h)}): demo result`
+            );
+          }
         }
       }
       setOutput(results.join('\n'));

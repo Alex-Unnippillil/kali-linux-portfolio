@@ -74,8 +74,8 @@ afterEach(() => {
 });
 
 test('combo meter increments and resets', () => {
-  const { getAllByRole, getByTestId } = render(<Memory />);
-  const cards = getAllByRole('button');
+  const { getAllByTestId, getByTestId } = render(<Memory />);
+  const cards = getAllByTestId('card-inner').map((el) => el.parentElement as HTMLElement);
   const combo = getByTestId('combo-meter');
 
   expect(combo.textContent).toContain('0');
@@ -103,9 +103,9 @@ test('combo meter increments and resets', () => {
 });
 
 test('card flip applies transform style', () => {
-  const { getAllByRole } = render(<Memory />);
-  const card = getAllByRole('button')[0];
-  const inner = card.querySelector('[data-testid="card-inner"]') as HTMLElement;
+  const { getAllByTestId } = render(<Memory />);
+  const inner = getAllByTestId('card-inner')[0] as HTMLElement;
+  const card = inner.parentElement as HTMLElement;
   expect(inner.style.transform).toBe('rotateY(0deg)');
   fireEvent.click(card);
   expect(inner.style.transform).toBe('rotateY(180deg)');

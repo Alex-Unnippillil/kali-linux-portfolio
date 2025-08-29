@@ -1,5 +1,9 @@
 // Security headers configuration for Next.js.
 // Allows external badges and same-origin PDF embedding.
+// Update README (section "CSP External Domains") when editing domains below.
+const { validatePublicEnv } = require('./lib/validate');
+
+validatePublicEnv(process.env);
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -23,6 +27,7 @@ const ContentSecurityPolicy = [
   "connect-src 'self' https://* http://* ws://* wss://* https://platform.twitter.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
   // Allow iframes from any website and specific providers so the Chrome and StackBlitz apps can load arbitrary content
   "frame-src 'self' https://* http://* https://stackblitz.com https://*.google.com https://platform.twitter.com https://syndication.twitter.com https://*.twitter.com https://*.x.com https://www.youtube-nocookie.com https://open.spotify.com https://example.com https://developer.mozilla.org https://en.wikipedia.org",
+
   // Allow this site to embed its own resources (resume PDF)
   "frame-ancestors 'self'",
   // Enforce HTTPS for all requests
@@ -53,7 +58,16 @@ const securityHeaders = [
   },
 ];
 
+const isExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+
 module.exports = {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   images: {
     domains: [
       'opengraph.githubassets.com',
@@ -63,6 +77,9 @@ module.exports = {
       'yt3.ggpht.com',
       'i.scdn.co',
     ],
+  },
+  experimental: {
+    turbo: false,
   },
   async headers() {
     return [

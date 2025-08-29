@@ -1,0 +1,15 @@
+@media print {
+  @page {
+    margin: 1in;
+  }
+  body {
+    background: white;
+    color: black;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .timeline-item {
+    page-break-inside: avoid;
+  }
+}

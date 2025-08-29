@@ -2,33 +2,31 @@ name: Node.js CI
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [20.x]
-
-
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: yarn
+          node-version: 20
+          cache: 'yarn'
+          cache-dependency-path: 'yarn.lock'
       - name: Installing Packages
         run: yarn install
 
       - name: Test
-        run: yarn test
+        run: yarn jest -w=1
 
       - name: Lint
         run: yarn lint
+
+      - name: Type Check
+        run: yarn tsc --noEmit
 
       - name: Building
         run: yarn build

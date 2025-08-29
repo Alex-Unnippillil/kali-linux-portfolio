@@ -4,7 +4,12 @@ import React, {
   useRef,
   useCallback,
 } from 'react';
-import { validateSolution, puzzles } from './nonogramUtils';
+import {
+  validateSolution,
+  puzzles,
+  findHint,
+  autoFillLines,
+} from './nonogramUtils';
 
 // visual settings
 const CELL_SIZE = 30;
@@ -54,6 +59,7 @@ const Nonogram = () => {
   const [preventIllegal, setPreventIllegal] = useState(false);
   const [time, setTime] = useState(0);
   const [highScore, setHighScore] = useState(null);
+  const [mistakes, setMistakes] = useState(0);
   const startTime = useRef(Date.now());
   const completed = useRef(false);
 
@@ -98,6 +104,15 @@ const Nonogram = () => {
   const setCellValue = useCallback(
     (i, j, value) => {
       if (paused || completed.current) return;
+      const current = gridRef.current[i][j];
+      if (current !== value) {
+        if (
+          (value === 1 && solution[i][j] !== 1) ||
+          (value === -1 && solution[i][j] === 1)
+        ) {
+          setMistakes((m) => m + 1);
+        }
+      }
       setGrid((g) => {
         const ng = g.map((row) => row.slice());
         if (preventIllegal) {
@@ -106,12 +121,13 @@ const Nonogram = () => {
         }
         if (ng[i][j] === value) return g;
         ng[i][j] = value;
-        checkSolved(ng);
-        return ng;
+        const auto = autoFillLines(ng, rows, cols);
+        checkSolved(auto);
+        return auto;
       });
       playSound();
     },
-    [paused, preventIllegal, solution, checkSolved, playSound]
+    [paused, preventIllegal, solution, checkSolved, playSound, rows, cols]
   );
 
   const reset = useCallback(() => {
@@ -120,6 +136,7 @@ const Nonogram = () => {
     setTime(0);
     completed.current = false;
     setPaused(false);
+    setMistakes(0);
   }, [height, width]);
 
   // respect reduced motion preference
@@ -378,7 +395,8 @@ const Nonogram = () => {
       dragStart.current = { i, j };
       dragAxis.current = null;
       const current = gridRef.current[i][j];
-      if (mode === 'paint') dragValue.current = current === 1 ? 0 : 1;
+      if (e.button === 2) dragValue.current = current === -1 ? 0 : -1;
+      else if (mode === 'paint') dragValue.current = current === 1 ? 0 : 1;
       else dragValue.current = current === -1 ? 0 : -1;
       setCellValue(i, j, dragValue.current);
     },
@@ -417,6 +435,11 @@ const Nonogram = () => {
     return () => window.removeEventListener('mouseup', up);
   }, []);
 
+  const handleHint = useCallback(() => {
+    const hint = findHint(rows, cols, gridRef.current);
+    if (hint) setCellValue(hint.i, hint.j, hint.value);
+  }, [rows, cols, setCellValue]);
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
       <div className="sr-only" aria-live="polite">{liveMessage}</div>
@@ -446,6 +469,7 @@ const Nonogram = () => {
       </div>
       <div className="mb-2">
         Time: {time}s{highScore !== null && ` | Best: ${highScore}s`}
+        {` | Mistakes: ${mistakes}`}
       </div>
       <canvas
         ref={canvasRef}
@@ -466,6 +490,12 @@ const Nonogram = () => {
           onClick={reset}
         >
           Reset
+        </button>
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={handleHint}
+        >
+          Hint
         </button>
         <button
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"

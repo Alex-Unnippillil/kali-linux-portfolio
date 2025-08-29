@@ -1,12 +1,12 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, RefObject } from 'react';
 import useIntersection from '../../hooks/useIntersection';
 import './styles.css';
 
 export default function TimerStopwatch() {
   const [mode, setMode] = useState<'timer' | 'stopwatch'>('timer');
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const isVisible = useIntersection(containerRef);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isVisible = useIntersection(containerRef as RefObject<Element>);
   useEffect(() => {
     if (isVisible && typeof window !== 'undefined') {
       import('./main');

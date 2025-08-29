@@ -12,6 +12,7 @@ export default function ProjectGallery() {
   const [techs, setTechs] = useState([]);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selected, setSelected] = useState(null);
+  const [slide, setSlide] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [columns, setColumns] = useState(1);
   const itemRefs = useRef([]);
@@ -49,6 +50,7 @@ export default function ProjectGallery() {
           title: repo.name,
           description: repo.description || 'No description provided.',
           image: `https://opengraph.githubassets.com/1/${GITHUB_USER}/${repo.name}`,
+          images: [`https://opengraph.githubassets.com/1/${GITHUB_USER}/${repo.name}`],
           tech: [repo.language].filter(Boolean),
           live: repo.homepage,
           repo: repo.html_url,
@@ -65,6 +67,29 @@ export default function ProjectGallery() {
     };
     fetchRepos();
   }, []);
+
+  useEffect(() => {
+    if (projects.length === 0) return;
+    if (typeof window === 'undefined') return;
+    const openFromHash = () => {
+      const id = window.location.hash.slice(1);
+      if (!id) return;
+      const project = projects.find((p) => String(p.id) === id);
+      if (project) setSelected(project);
+    };
+    openFromHash();
+    window.addEventListener('hashchange', openFromHash);
+    return () => window.removeEventListener('hashchange', openFromHash);
+  }, [projects]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (selected) {
+      window.location.hash = `${selected.id}`;
+    } else {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, [selected]);
 
   const updateDisplay = useCallback(
     (selectedFilter, query) => {
@@ -171,6 +196,20 @@ export default function ProjectGallery() {
     return () => document.removeEventListener('keydown', handle);
   }, [selected, display]);
 
+  useEffect(() => {
+    if (selected) setSlide(0);
+  }, [selected]);
+
+  const nextSlide = () => {
+    if (!selected) return;
+    setSlide((s) => (s + 1) % selected.images.length);
+  };
+
+  const prevSlide = () => {
+    if (!selected) return;
+    setSlide((s) => (s - 1 + selected.images.length) % selected.images.length);
+  };
+
   return (
     <div className="p-4 w-full h-full overflow-y-auto bg-ub-cool-grey text-white">
       <div aria-live="polite" className="sr-only">
@@ -249,12 +288,19 @@ export default function ProjectGallery() {
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1">
                     {project.tech.map((t, i) => (
-                      <span
+                      <button
                         key={i}
-                        className="px-2 py-0.5 text-xs rounded bg-gray-700 text-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFilter(t);
+                        }}
+                        className={`px-2 py-0.5 text-xs rounded focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                          filter === t ? 'bg-blue-600' : 'bg-gray-700'
+                        }`}
+                        aria-pressed={filter === t}
                       >
                         {t}
-                      </span>
+                      </button>
                     ))}
                   </div>
                   <div className="mt-3 flex gap-2">
@@ -303,6 +349,33 @@ export default function ProjectGallery() {
                 >
                   Close
                 </button>
+                <div className="relative mb-2 w-full" style={{ aspectRatio: '3 / 2' }}>
+                  <Image
+                    src={selected.images[slide]}
+                    alt={`${selected.title} screenshot ${slide + 1}`}
+                    fill
+                    className="object-cover"
+                    sizes="100%"
+                  />
+                  {selected.images.length > 1 && (
+                    <>
+                      <button
+                        onClick={prevSlide}
+                        aria-label="Previous image"
+                        className="absolute top-1/2 left-2 -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full px-2"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        onClick={nextSlide}
+                        aria-label="Next image"
+                        className="absolute top-1/2 right-2 -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full px-2"
+                      >
+                        ›
+                      </button>
+                    </>
+                  )}
+                </div>
                 <h2 className="text-xl font-semibold mb-2">{selected.title}</h2>
                 <p className="mb-2">{selected.description}</p>
                 <div className="flex flex-wrap gap-1 mb-2">

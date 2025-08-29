@@ -87,26 +87,29 @@ export const autoFillLines = (grid, rows, cols) => {
   while (changed) {
     changed = false;
     rows.forEach((clue, i) => {
-      const { solved } = evaluateLine(g[i], clue);
-      if (solved) {
-        for (let j = 0; j < g[i].length; j++) {
-          if (g[i][j] === 0) {
-            g[i][j] = -1;
+      const line = g[i];
+      const solutions = getPossibleLineSolutions(clue, line);
+      if (solutions.length === 1) {
+        solutions[0].forEach((val, j) => {
+          const newVal = val ? 1 : -1;
+          if (g[i][j] !== newVal) {
+            g[i][j] = newVal;
             changed = true;
           }
-        }
+        });
       }
     });
     cols.forEach((clue, j) => {
       const col = g.map((row) => row[j]);
-      const { solved } = evaluateLine(col, clue);
-      if (solved) {
-        for (let i = 0; i < col.length; i++) {
-          if (g[i][j] === 0) {
-            g[i][j] = -1;
+      const solutions = getPossibleLineSolutions(clue, col);
+      if (solutions.length === 1) {
+        solutions[0].forEach((val, i) => {
+          const newVal = val ? 1 : -1;
+          if (g[i][j] !== newVal) {
+            g[i][j] = newVal;
             changed = true;
           }
-        }
+        });
       }
     });
   }

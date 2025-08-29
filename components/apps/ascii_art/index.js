@@ -97,30 +97,33 @@ export default function AsciiArt() {
 
   // Setup worker
   useEffect(() => {
-    workerRef.current = new Worker(new URL('./ascii.worker.js', import.meta.url));
-    workerRef.current.onmessage = (e) => {
-      const { type } = e.data;
-      if (type === 'chunk') {
-        const { plain, html, ansi } = e.data;
-        setPlainAscii((p) => p + plain);
-        setAsciiHtml((h) => h + DOMPurify.sanitize(html));
-        setAnsiAscii((a) => a + ansi);
-      } else if (type === 'done') {
-        const { colors: colorArr, width, height } = e.data;
-        const update = () => {
-          setColors({ data: colorArr, width, height });
-          setAltText(`ASCII art ${width}x${height}`);
-        };
-        if (prefersReducedMotion.current) {
-          update();
-        } else {
-          requestAnimationFrame(update);
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      workerRef.current = new Worker(new URL('./ascii.worker.js', import.meta.url));
+      workerRef.current.onmessage = (e) => {
+        const { type } = e.data;
+        if (type === 'chunk') {
+          const { plain, html, ansi } = e.data;
+          setPlainAscii((p) => p + plain);
+          setAsciiHtml((h) => h + DOMPurify.sanitize(html));
+          setAnsiAscii((a) => a + ansi);
+        } else if (type === 'done') {
+          const { colors: colorArr, width, height } = e.data;
+          const update = () => {
+            setColors({ data: colorArr, width, height });
+            setAltText(`ASCII art ${width}x${height}`);
+          };
+          if (prefersReducedMotion.current) {
+            update();
+          } else {
+            requestAnimationFrame(update);
+          }
         }
-      }
-    };
-    return () => {
-      workerRef.current?.terminate();
-    };
+      };
+      return () => {
+        workerRef.current?.terminate();
+      };
+    }
+    return undefined;
   }, []);
 
   const processFile = useCallback(async () => {

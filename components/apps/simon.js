@@ -9,6 +9,7 @@ const padStyles = [
   {
     id: 'green',
     color: { base: 'bg-green-700', active: 'bg-green-500' },
+    colorblind: { base: 'bg-emerald-700', active: 'bg-emerald-500' },
     symbol: '▲',
     label: 'green',
     pattern:
@@ -17,6 +18,7 @@ const padStyles = [
   {
     id: 'red',
     color: { base: 'bg-red-700', active: 'bg-red-500' },
+    colorblind: { base: 'bg-orange-700', active: 'bg-orange-500' },
     symbol: '■',
     label: 'red',
     pattern:
@@ -25,6 +27,7 @@ const padStyles = [
   {
     id: 'yellow',
     color: { base: 'bg-yellow-500', active: 'bg-yellow-300' },
+    colorblind: { base: 'bg-purple-700', active: 'bg-purple-500' },
     symbol: '●',
     label: 'yellow',
     pattern:
@@ -33,6 +36,7 @@ const padStyles = [
   {
     id: 'blue',
     color: { base: 'bg-blue-700', active: 'bg-blue-500' },
+    colorblind: { base: 'bg-teal-700', active: 'bg-teal-500' },
     symbol: '◆',
     label: 'blue',
     pattern:
@@ -108,6 +112,7 @@ const Simon = () => {
   const [striped, setStriped] = useState(false);
   const [thickOutline, setThickOutline] = useState(false);
   const [audioOnly, setAudioOnly] = useState(false);
+  const [colorblindPalette, setColorblindPalette] = useState(false);
   const [seed, setSeed] = useState('');
   const [strictMode, setStrictMode] = useState(true);
   const [leaderboard, setLeaderboard] = usePersistentState(
@@ -132,6 +137,7 @@ const Simon = () => {
     const ctx =
       audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.current = ctx;
+    if (ctx.state === 'suspended') ctx.resume();
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
     oscillator.frequency.value = freq;
@@ -159,16 +165,15 @@ const Simon = () => {
 
   const stepDuration = useCallback(() => {
     const base = 60 / bpm;
-    if (mode === 'speed') {
-      return Math.max(base - sequence.length * 0.02, 0.2);
-    }
-    return base;
+    const reduction = mode === 'speed' ? 0.03 : 0.015;
+    return Math.max(base - sequence.length * reduction, 0.2);
   }, [bpm, mode, sequence.length]);
 
   const playSequence = useCallback(() => {
     const ctx =
       audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.current = ctx;
+    if (ctx.state === 'suspended') ctx.resume();
     setIsPlayerTurn(false);
     setStatus('Listen...');
     const start = ctx.currentTime + 0.1;
@@ -223,7 +228,8 @@ const Simon = () => {
       if (!isPlayerTurn) return;
       const duration = stepDuration();
       flashPad(idx, duration);
-      scheduleTone(tones[idx], audioCtx.current.currentTime, duration);
+      const start = (audioCtx.current?.currentTime || 0) + 0.001;
+      scheduleTone(tones[idx], start, duration);
 
       if (sequence[step] !== idx) {
         if (!errorSound.current) {
@@ -231,15 +237,25 @@ const Simon = () => {
         }
         errorSound.current.play();
         setErrorFlash(true);
-        const streak = Math.max(sequence.length - 1, 0);
-        setLeaderboard((prev) =>
-          [...prev, streak].sort((a, b) => b - a).slice(0, 5)
-        );
+        if (strictMode) {
+          const streak = Math.max(sequence.length - 1, 0);
+          setLeaderboard((prev) =>
+            [...prev, streak].sort((a, b) => b - a).slice(0, 5)
+          );
+        }
         setIsPlayerTurn(false);
-        setStatus('Wrong pad! Game over.');
+        setStatus(
+          strictMode ? 'Wrong pad! Game over.' : 'Wrong pad! Try again.'
+        );
         setTimeout(() => {
           setErrorFlash(false);
-          restartGame();
+          if (strictMode) {
+            restartGame();
+          } else {
+            setStep(0);
+            setStatus('Listen...');
+            playSequence();
+          }
         }, 600);
         return;
       }
@@ -261,6 +277,8 @@ const Simon = () => {
       step,
       stepDuration,
       setLeaderboard,
+      strictMode,
+      playSequence,
     ]
   );
 
@@ -270,7 +288,9 @@ const Simon = () => {
       const colors =
         mode === 'colorblind' || audioOnly
           ? { base: 'bg-gray-700', active: 'bg-gray-500' }
-          : pad.color;
+          : colorblindPalette
+            ? pad.colorblind
+            : pad.color;
       const isActive = activePad === idx;
       const ring = thickOutline ? 'ring-8' : 'ring-4';
       return `h-32 w-32 rounded flex items-center justify-center text-3xl transition-shadow ${ring} ring-offset-2 ring-offset-gray-900 ${
@@ -279,7 +299,7 @@ const Simon = () => {
           : `${colors.base} ring-transparent`
       }`;
     },
-    [activePad, audioOnly, mode, thickOutline]
+    [activePad, audioOnly, colorblindPalette, mode, thickOutline]
   );
 
   return (
@@ -350,6 +370,14 @@ const Simon = () => {
               onChange={(e) => setThickOutline(e.target.checked)}
             />
             Thick outline
+          </label>
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={colorblindPalette}
+              onChange={(e) => setColorblindPalette(e.target.checked)}
+            />
+            Colorblind palette
           </label>
           <label className="flex items-center gap-1">
             <input

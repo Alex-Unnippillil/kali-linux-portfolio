@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import FormError from '../../ui/FormError';
+import FormError from '../ui/FormError';
+
+type SerialPort = any;
 
 const SerialTerminalApp: React.FC = () => {
   const supported = typeof navigator !== 'undefined' && 'serial' in navigator;
@@ -16,9 +18,9 @@ const SerialTerminalApp: React.FC = () => {
         setPort(null);
       }
     };
-    navigator.serial.addEventListener('disconnect', handleDisconnect);
+    (navigator as any).serial.addEventListener('disconnect', handleDisconnect);
     return () => {
-      navigator.serial.removeEventListener('disconnect', handleDisconnect);
+      (navigator as any).serial.removeEventListener('disconnect', handleDisconnect);
     };
   }, [supported, port]);
 
@@ -45,7 +47,7 @@ const SerialTerminalApp: React.FC = () => {
     if (!supported) return;
     setError('');
     try {
-      const p = await navigator.serial.requestPort();
+      const p = await (navigator as any).serial.requestPort();
       await p.open({ baudRate: 9600 });
       setPort(p);
       readLoop(p);

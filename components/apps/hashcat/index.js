@@ -5,34 +5,54 @@ const hashTypes = [
   {
     id: '0',
     name: 'MD5',
+    description: 'Raw MD5',
     regex: /^[a-f0-9]{32}$/i,
     example: '5f4dcc3b5aa765d61d8327deb882cf99',
     output: 'password',
+    description: 'Fast, legacy 32-character hash',
   },
   {
     id: '100',
     name: 'SHA1',
+    description: 'SHA-1',
     regex: /^[a-f0-9]{40}$/i,
     example: '5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8',
     output: 'password',
+    description: '160-bit secure hash algorithm',
   },
   {
     id: '1400',
     name: 'SHA256',
+    description: 'SHA-256',
     regex: /^[a-f0-9]{64}$/i,
     example:
       '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8',
     output: 'password',
+    description: '256-bit SHA2 hash',
   },
   {
     id: '3200',
     name: 'bcrypt',
+    description: 'bcrypt $2*$',
     regex: /^\$2[aby]\$.{56}$/,
     example:
       '$2b$12$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     output: 'password',
+    description: 'Adaptive hash with salt and cost factor',
   },
 ];
+
+const sampleOutput = `hashcat (v6.2.6) starting in benchmark mode...
+OpenCL API (OpenCL 3.0) - Platform #1 [MockGPU]
+* Device #1: Mock GPU
+
+Benchmark relevant options:
+===========================
+* --hash-type: 0 (MD5)
+* --wordlist: rockyou.txt
+
+Speed.#1.........: 100.0 H/s (100.00%)
+`;
 
 export const detectHashType = (hash) => {
   const type = hashTypes.find((t) => t.regex.test(hash));
@@ -158,7 +178,7 @@ function HashcatApp() {
     setProgress(0);
     setResult('');
     if (typeof window === 'undefined') return;
-    if (window.Worker) {
+    if (typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./progress.worker.js', import.meta.url)
       );
@@ -282,7 +302,7 @@ function HashcatApp() {
           {filteredHashTypes.length ? (
             filteredHashTypes.map((h) => (
               <option key={h.id} value={h.id}>
-                {h.id} - {h.name}
+                {h.id} - {h.name} ({h.description})
               </option>
             ))
           ) : (
@@ -291,8 +311,10 @@ function HashcatApp() {
         </select>
       </div>
       <div>Detected: {selectedHash}</div>
+      <div>Description: {selected.description}</div>
       <div>Example hash: {selected.example}</div>
       <div>Expected output: {selected.output}</div>
+      <div>Description: {selected.description}</div>
       <button onClick={runBenchmark}>Run Benchmark</button>
       {benchmark && (
         <div data-testid="benchmark-output">{benchmark}</div>
@@ -312,7 +334,9 @@ function HashcatApp() {
           <option value="top100">top-100.txt</option>
         </select>
         <div className="text-xs mt-1">
-          Wordlist selection is simulated. Learn more at{' '}
+          Wordlist selection is simulated. Common files live under{' '}
+          <code>/usr/share/wordlists/</code> e.g.{' '}
+          <code>/usr/share/wordlists/rockyou.txt</code>. Learn more at{' '}
           <a
             className="underline"
             href="https://hashcat.net/wiki/doku.php?id=wordlists"
@@ -322,6 +346,10 @@ function HashcatApp() {
             hashcat.net
           </a>
           .
+        </div>
+        <div className="text-xs mt-1">
+          Sample entries: <code>password123</code>, <code>qwerty</code>,{' '}
+          <code>letmein</code>
         </div>
       </div>
       <div>
@@ -348,7 +376,45 @@ function HashcatApp() {
         )}
         <div className="text-xs mt-1">Uploading wordlists is disabled.</div>
       </div>
+      <div className="mt-2">
+        <div className="text-sm">Demo Command:</div>
+        <div className="flex items-center">
+          <code
+            className="bg-black px-2 py-1 text-xs"
+            data-testid="demo-command"
+          >
+            {`hashcat -m ${hashType} ${hashInput || 'hash.txt'} ${
+              wordlist ? `${wordlist}.txt` : 'wordlist.txt'
+            }`}
+          </code>
+          <button
+            className="ml-2"
+            onClick={() => {
+              if (navigator?.clipboard?.writeText) {
+                navigator.clipboard.writeText(
+                  `hashcat -m ${hashType} ${hashInput || 'hash.txt'} ${
+                    wordlist ? `${wordlist}.txt` : 'wordlist.txt'
+                  }`
+                );
+              }
+            }}
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+      <div className="mt-4 w-full max-w-md">
+        <div className="text-sm">Sample Output:</div>
+        <pre className="bg-black p-2 text-xs overflow-auto">
+          hashcat (demo) starting
+
+          5f4dcc3b5aa765d61d8327deb882cf99:password
+
+          Session completed.
+        </pre>
+      </div>
       <Gauge value={gpuUsage} />
+      <div className="text-xs">Note: real hashcat requires a compatible GPU.</div>
       {!isCracking ? (
         <button onClick={startCracking}>Start Cracking</button>
       ) : (
@@ -360,6 +426,9 @@ function HashcatApp() {
         reduceMotion={prefersReducedMotion}
       />
       {result && <div>Result: {result}</div>}
+      <pre className="bg-black text-green-400 p-2 rounded text-xs w-full max-w-md overflow-x-auto mt-4">
+        {sampleOutput}
+      </pre>
       <div className="text-xs mt-4">
         This tool simulates hash cracking for educational purposes only.
       </div>

@@ -23,6 +23,22 @@
       "size": 34567,
       "plugin": "metadata",
       "timestamp": "2023-08-01T14:45:00Z"
+    },
+    {
+      "name": "run.exe",
+      "type": "File",
+      "description": "Executable recovered from temp folder",
+      "size": 45678,
+      "plugin": "hash",
+      "timestamp": "2023-08-01T16:15:00Z"
+    },
+    {
+      "name": "HKCU\\Software\\Example",
+      "type": "Registry",
+      "description": "Registry key with suspicious value",
+      "size": 0,
+      "plugin": "regParser",
+      "timestamp": "2023-08-01T18:20:00Z"
     }
   ]
 }

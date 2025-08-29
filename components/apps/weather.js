@@ -279,11 +279,14 @@ const Weather = () => {
 
   // S3: Offload polyline generation to worker only when needed
   useEffect(() => {
-    pointsWorkerRef.current = new Worker(
-      new URL('./weather.worker.js', import.meta.url)
-    );
-    pointsWorkerRef.current.onmessage = (e) => setPoints(e.data);
-    return () => pointsWorkerRef.current.terminate();
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
+      pointsWorkerRef.current = new Worker(
+        new URL('./weather.worker.js', import.meta.url)
+      );
+      pointsWorkerRef.current.onmessage = (e) => setPoints(e.data);
+      return () => pointsWorkerRef.current?.terminate();
+    }
+    return undefined;
   }, []);
 
   useEffect(() => {

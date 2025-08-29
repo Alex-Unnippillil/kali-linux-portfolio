@@ -20,5 +20,19 @@ describe('PopularModules', () => {
       expect.stringContaining('tryhackme.com/room/rpnmap')
     );
   });
+
+  it('searches modules and builds command preview', () => {
+    render(<PopularModules />);
+    const search = screen.getByPlaceholderText(/search modules/i);
+    fireEvent.change(search, { target: { value: 'port' } });
+    fireEvent.click(screen.getByRole('button', { name: /Port Scanner/i }));
+    fireEvent.change(screen.getByLabelText('Target'), {
+      target: { value: '192.168.0.1' },
+    });
+    expect(screen.getByTestId('command-preview')).toHaveTextContent(
+      'port-scan --target 192.168.0.1'
+    );
+    expect(screen.getByRole('log')).toHaveTextContent('Starting port scan');
+  });
 });
 

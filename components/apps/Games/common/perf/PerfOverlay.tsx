@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { publish } from '../../../../../utils/pubsub';
 
 interface PerfSample {
   t: number;
@@ -42,7 +43,7 @@ const PerfOverlay: React.FC = () => {
     // Prefer OffscreenCanvas with a worker when supported
     if (
       typeof window !== 'undefined' &&
-      'Worker' in window &&
+      typeof Worker === 'function' &&
       'OffscreenCanvas' in window
     ) {
       const worker = new Worker(new URL('./perf.worker.js', import.meta.url));
@@ -52,7 +53,9 @@ const PerfOverlay: React.FC = () => {
 
       const loop = (now: number) => {
         if (lastRef.current) {
-          worker.postMessage({ type: 'frame', dt: now - lastRef.current });
+          const dt = now - lastRef.current;
+          publish('fps', 1000 / dt);
+          worker.postMessage({ type: 'frame', dt });
         }
         lastRef.current = now;
         rafRef.current = requestAnimationFrame(loop);
@@ -82,6 +85,7 @@ const PerfOverlay: React.FC = () => {
         const samples = samplesRef.current;
         samples.push({ t: now, dt });
         if (samples.length > MAX_SAMPLES) samples.shift();
+        publish('fps', 1000 / dt);
         if (ctx) {
           const w = canvas.width;
           const h = canvas.height;

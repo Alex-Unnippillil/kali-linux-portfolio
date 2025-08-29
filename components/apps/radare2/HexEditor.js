@@ -21,12 +21,12 @@ const HexEditor = ({ hex }) => {
   }, []);
 
   useEffect(() => {
-    if (typeof Worker !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(
         new URL('./hexWorker.js', import.meta.url)
       );
       workerRef.current.onmessage = (e) => setBytes(e.data);
-      return () => workerRef.current.terminate();
+      return () => workerRef.current?.terminate();
     }
     return undefined;
   }, []);

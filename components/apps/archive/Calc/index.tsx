@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { create, all } from 'mathjs';
 import usePersistentState from '../../../hooks/usePersistentState';

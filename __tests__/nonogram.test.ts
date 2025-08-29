@@ -1,4 +1,11 @@
-import { validateSolution, findHint, getPuzzleBySeed, generateLinePatterns, lineToClues } from '../components/apps/nonogramUtils';
+import {
+  validateSolution,
+  findHint,
+  getPuzzleBySeed,
+  generateLinePatterns,
+  lineToClues,
+  autoFillLines,
+} from '../components/apps/nonogramUtils';
 
 describe('nonogram utilities', () => {
   test('validateSolution confirms grid matches clues', () => {
@@ -45,6 +52,22 @@ describe('nonogram utilities', () => {
     backtrack(0);
     expect(solutions.length).toBeGreaterThan(0);
     solutions.forEach((sol) => expect(sol[i][j]).toBe(1));
+  });
+
+  test('autoFillLines solves uniquely determined lines', () => {
+    const rows = [[1]];
+    const cols = [[1]];
+    const grid = [[0]];
+    const result = autoFillLines(grid, rows, cols);
+    expect(result[0][0]).toBe(1);
+  });
+
+  test('autoFillLines marks blanks for empty clues', () => {
+    const rows: number[][] = [[]];
+    const cols: number[][] = [[]];
+    const grid = [[0]];
+    const result = autoFillLines(grid, rows, cols);
+    expect(result[0][0]).toBe(-1);
   });
 
   test('daily seed deterministic', () => {

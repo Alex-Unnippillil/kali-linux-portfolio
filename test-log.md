@@ -20,3 +20,9 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 | /apps/timer_stopwatch | HTTP 500 | HTTP 500 | HTTP 500 |
 | /apps/weather_widget | HTTP 500 | HTTP 500 | HTTP 500 |
 | /apps/word_search | HTTP 500 | HTTP 500 | HTTP 500 |
+
+## Serverful and Static modes (2025-02-13)
+
+- `yarn build` failed: Module not found: Can't resolve '../../ui/FormError' in `components/apps/serial-terminal.tsx`.
+- `yarn export` failed: `next export` has been removed; configure `output: 'export'` in next.config.js.
+- `yarn test` reported failing tests: `hashcat.test.tsx`, `beef.test.tsx`, `mimikatz.test.ts`.

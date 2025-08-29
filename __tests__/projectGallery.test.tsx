@@ -40,12 +40,35 @@ describe('ProjectGallery', () => {
   it('filters projects and updates live region', async () => {
     render(<ProjectGallery />);
     await waitFor(() => screen.getByText('Repo1'));
-    fireEvent.click(screen.getByRole('button', { name: 'TS' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'TS' })[0]);
     await waitFor(() =>
       expect(screen.queryByText('Repo1')).not.toBeInTheDocument()
     );
     expect(screen.getByText(/Showing/)).toHaveTextContent(
       'Showing 1 project filtered by TS'
     );
+  });
+
+  it('filters when clicking tag chip inside a project', async () => {
+    render(<ProjectGallery />);
+    await waitFor(() => screen.getByText('Repo1'));
+    fireEvent.click(
+      screen.getAllByRole('button', { name: 'JS' })[1] // chip inside Repo1
+    );
+    await waitFor(() =>
+      expect(screen.queryByText('Repo2')).not.toBeInTheDocument()
+    );
+    expect(screen.getByText(/Showing/)).toHaveTextContent(
+      'Showing 1 project filtered by JS'
+    );
+  });
+
+  it('updates hash when opening project details', async () => {
+    render(<ProjectGallery />);
+    await screen.findByText('Repo1');
+    fireEvent.click(screen.getAllByText('Details')[0]);
+    await screen.findByRole('dialog');
+    expect(window.location.hash).toBe('#1');
+    window.location.hash = '';
   });
 });

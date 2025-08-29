@@ -100,6 +100,7 @@ const Dsniff = () => {
   const [newField, setNewField] = useState('host');
   const [newValue, setNewValue] = useState('');
   const [prefersReduced, setPrefersReduced] = useState(false);
+  const [selectedPacket, setSelectedPacket] = useState(null);
 
   const { summary: pcapSummary, remediation } = pcapFixture;
 
@@ -109,6 +110,14 @@ const Dsniff = () => {
   const copySampleCommand = () => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(sampleCommand);
+    }
+  };
+
+  const copySelectedPacket = () => {
+    if (selectedPacket !== null && navigator.clipboard) {
+      const pkt = pcapSummary[selectedPacket];
+      const text = `${pkt.src}\t${pkt.dst}\t${pkt.protocol}\t${pkt.info}`;
+      navigator.clipboard.writeText(text);
     }
   };
 
@@ -251,7 +260,21 @@ const Dsniff = () => {
           </thead>
           <tbody>
             {pcapSummary.map((pkt, i) => (
-              <tr key={i} className="odd:bg-black even:bg-ub-grey">
+              <tr
+                key={i}
+                tabIndex={0}
+                onClick={() => setSelectedPacket(i)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') setSelectedPacket(i);
+                }}
+                className={`cursor-pointer ${
+                  selectedPacket === i
+                    ? 'bg-ubt-blue'
+                    : i % 2 === 0
+                    ? 'bg-black'
+                    : 'bg-ub-grey'
+                }`}
+              >
                 <td className="pr-2 text-white">{pkt.src}</td>
                 <td className="pr-2 text-white">{pkt.dst}</td>
                 <td className="pr-2 text-green-400">{pkt.protocol}</td>
@@ -260,6 +283,13 @@ const Dsniff = () => {
             ))}
           </tbody>
         </table>
+        <button
+          onClick={copySelectedPacket}
+          disabled={selectedPacket === null}
+          className="mb-2 px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
+        >
+          Copy selected row
+        </button>
         <div className="bg-black p-2">
           <h3 className="font-bold mb-1 text-sm">Remediation</h3>
           <ul className="list-disc pl-5 text-xs">

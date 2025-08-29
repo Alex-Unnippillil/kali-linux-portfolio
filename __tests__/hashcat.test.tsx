@@ -50,5 +50,48 @@ describe('HashcatApp', () => {
         'Example hash: 5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8'
       )
     ).toBeInTheDocument();
+    expect(getByText('Description: 160-bit secure hash algorithm')).toBeInTheDocument();
+  });
+
+  it('generates demo command and shows sample output', () => {
+    const { getByLabelText, getByTestId, getByText } = render(
+      <HashcatApp />
+    );
+    fireEvent.change(getByLabelText('Hash:'), {
+      target: { value: '5f4dcc3b5aa765d61d8327deb882cf99' },
+    });
+    fireEvent.change(getByLabelText('Wordlist:'), {
+      target: { value: 'rockyou' },
+    });
+    expect(getByTestId('demo-command').textContent).toContain(
+      'hashcat -m 0 5f4dcc3b5aa765d61d8327deb882cf99 rockyou.txt'
+    );
+    expect(getByText('Sample Output:')).toBeInTheDocument();
+  });
+
+  it('shows descriptions for hash modes', () => {
+    const { getByText } = render(<HashcatApp />);
+    expect(getByText('Description: Raw MD5')).toBeInTheDocument();
+  });
+
+  it('provides dictionary file hints with example paths', () => {
+    const { getByText } = render(<HashcatApp />);
+    expect(
+      getByText(/\/usr\/share\/wordlists\/rockyou\.txt/)
+    ).toBeInTheDocument();
+  });
+
+  it('displays GPU requirement notice', () => {
+    const { getByText } = render(<HashcatApp />);
+    expect(
+      getByText(/requires a compatible GPU/i)
+    ).toBeInTheDocument();
+  });
+
+  it('renders static sample output', () => {
+    const { getByText } = render(<HashcatApp />);
+    expect(
+      getByText(/hashcat \(v6\.2\.6\) starting in benchmark mode/)
+    ).toBeInTheDocument();
   });
 });

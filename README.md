@@ -6,31 +6,51 @@ A desktop-style portfolio built with Next.js and Tailwind that emulates a Kali/U
 
 ---
 
+## ⚠️ Disclaimer & Risk Overview
+
+This repository showcases **static, non-operational simulations** of security tools for educational purposes only. Running real offensive commands against systems without explicit authorization is illegal and can cause damage or service disruption.
+
+**Potential Risks**
+- Network scans may trigger intrusion detection and block your IP.
+- Brute-force attempts can lock accounts or corrupt data.
+- Sample outputs are canned and not from live targets.
+
+Always test inside controlled labs and obtain written permission before performing any security assessment.
+
+---
+
 ## Quick Start
 
 ### Requirements
-- **Node.js 20.x**
+- **Node.js 20.x** (repo includes `.nvmrc`; run `nvm use`)
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
 ### Install & Run (Dev)
 ```bash
+nvm install  # installs Node 20 from .nvmrc if needed
+nvm use
 yarn install
 yarn dev
 ```
 
 ### Production Build
+Serverful deployments run the built Next.js server so all API routes are available.
 ```bash
-# Next.js production build & start
-yarn build
-yarn start
+yarn build && yarn start
+```
+After the server starts, exercise an API route to confirm server-side functionality:
+```bash
+curl -X POST http://localhost:3000/api/dummy
 ```
 
 ### Static Export (for GitHub Pages / S3 Websites)
-This project supports static export. Serverless API routes will not be available in a static export; the UI gracefully degrades.
+This project supports static export. Serverless API routes will not be available; the UI falls back to demo data or hides features.
 ```bash
-yarn export        # outputs to ./out
+yarn export && npx serve out
+
 ```
+Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
 
 ### Install as PWA for Sharing
 
@@ -40,6 +60,22 @@ To send text or links directly into the Sticky Notes app:
 2. Use the browser's **Install** or **Add to Home screen** option.
 3. After installation, use the system **Share** action and select "Kali Linux Portfolio".
 4. The shared content will appear as a new note.
+
+### Service Worker (SW)
+
+- Only assets under `public/` are precached.
+- Dynamic routes or API responses are not cached.
+- Future work may use `injectManifest` for finer control.
+
+---
+
+## Core Commands
+
+- `yarn install` – install project dependencies.
+- `yarn dev` – start the development server with hot reloading.
+- `yarn test` – run the test suite.
+- `yarn lint` – check code for linting issues.
+- `yarn export` – generate a static export in the `out/` directory.
 
 ---
 
@@ -107,6 +143,11 @@ export const displaySudoku = () => <SudokuApp />;
 ```
 Heavy apps are wrapped with **dynamic import** and most games share a `GameLayout` with a help overlay.
 
+### Prefetching dynamic apps
+Dynamic app modules include a `webpackPrefetch` hint and expose a `prefetch()` helper. Desktop tiles call this helper on hover or
+keyboard focus so bundles are warmed before launch. When adding a new app, export a default component and register it with
+`createDynamicApp` to opt into this behaviour.
+
 ---
 
 ## Environment Variables
@@ -122,6 +163,9 @@ Heavy apps are wrapped with **dynamic import** and most games share a `GameLayou
 | `NEXT_PUBLIC_GHIDRA_URL` | Optional URL for a remote Ghidra Web interface. |
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
+| `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
+| `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
+| `FEATURE_HYDRA` | Allow the Hydra API (`/api/hydra`); requires `FEATURE_TOOL_APIS`. |
 
 > In production (Vercel/GitHub Actions), set these as **environment variables or repo secrets**. See **CI/CD** below.
 
@@ -129,13 +173,32 @@ Heavy apps are wrapped with **dynamic import** and most games share a `GameLayou
 
 ## Security Headers & CSP
 
-Defined in `next.config.js`:
+Defined in `next.config.js`. See [CSP External Domains](#csp-external-domains) for allowed hostnames:
 
-- **Content-Security-Policy (CSP)** (string built from `ContentSecurityPolicy[]`)
+- **Content-Security-Policy (CSP)** (string built from `ContentSecurityPolicy[]`; see [CSP External Domains](#csp-external-domains))
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
 - `X-Frame-Options: SAMEORIGIN`
+
+### CSP External Domains
+
+These external domains are whitelisted in the default CSP. Update this list whenever `next.config.js` changes.
+
+| Domain | Purpose |
+| --- | --- |
+| `fonts.googleapis.com` | Stylesheets for Google Fonts |
+| `fonts.gstatic.com` | Font files for Google Fonts |
+| `platform.twitter.com` | Twitter widgets and scripts |
+| `syndication.twitter.com` | Twitter embed scripts |
+| `cdn.syndication.twimg.com` | Twitter asset CDN |
+| `*.twitter.com` | Additional Twitter content |
+| `*.x.com` | X (Twitter) domain equivalents |
+| `*.google.com` | Google services used by demos |
+| `stackblitz.com` | StackBlitz IDE embeds |
+| `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
+| `open.spotify.com` | Spotify embeds |
+| `https://*` / `http://*` / `ws://*` / `wss://*` | Wide dev allowance for external resources; tighten for production |
 
 **Notes for prod hardening**
 - The sample CSP currently **permits wide `connect-src` and `frame-src`** to enable sandboxed iframes (Chrome app) and demos. In production, **tighten** these to the exact domains you embed. Remove `http:` origins; prefer `https:` only.
@@ -144,22 +207,40 @@ Defined in `next.config.js`:
 
 ---
 
-## CI/CD
+## Deployment
 
-### GitHub Pages (static)
+### Static export (GitHub Pages)
 Workflow: `.github/workflows/gh-deploy.yml`:
 - Installs Node, runs `yarn build && yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
 - **Action item:** update matrix to **Node 20.x** to match `package.json`.
-- Exposes env via repo **Secrets**:
-  - `NEXT_PUBLIC_TRACKING_ID`, `NEXT_PUBLIC_SERVICE_ID`, `NEXT_PUBLIC_TEMPLATE_ID`, `NEXT_PUBLIC_USER_ID`.
+- Required env variables (GitHub Secrets):
+  - `NEXT_PUBLIC_TRACKING_ID`
+  - `NEXT_PUBLIC_SERVICE_ID`
+  - `NEXT_PUBLIC_TEMPLATE_ID`
+  - `NEXT_PUBLIC_USER_ID`
+  - `NEXT_PUBLIC_YOUTUBE_API_KEY`
+  - `NEXT_PUBLIC_BEEF_URL`
+  - `NEXT_PUBLIC_GHIDRA_URL`
+  - `NEXT_PUBLIC_GHIDRA_WASM`
+  - `NEXT_PUBLIC_UI_EXPERIMENTS`
 
-### Vercel (serverless) - optional
-- Create a Vercel project, set the environment variables above.
+### Vercel deployment
+- Create a Vercel project and connect this repo.
+- Required env variables (Project Settings):
+  - `NEXT_PUBLIC_TRACKING_ID`
+  - `NEXT_PUBLIC_SERVICE_ID`
+  - `NEXT_PUBLIC_TEMPLATE_ID`
+  - `NEXT_PUBLIC_USER_ID`
+  - `NEXT_PUBLIC_YOUTUBE_API_KEY`
+  - `NEXT_PUBLIC_BEEF_URL`
+  - `NEXT_PUBLIC_GHIDRA_URL`
+  - `NEXT_PUBLIC_GHIDRA_WASM`
+  - `NEXT_PUBLIC_UI_EXPERIMENTS`
 - Build command: `yarn build`
 - Output: Next.js (serverless by default on Vercel).
-- If you keep API routes, Vercel will deploy them as serverless functions. If you go **static** on Vercel, disable API routes or feature-flag those apps.
+- If you keep API routes, Vercel deploys them as serverless functions. For a static build, disable API routes or feature-flag those apps.
 
-### Docker (self-hosted) - optional
+### Docker image build/run
 ```Dockerfile
 # node:20-alpine
 FROM node:20-alpine AS build
@@ -175,6 +256,26 @@ ENV NODE_ENV=production
 COPY --from=build /app ./
 EXPOSE 3000
 CMD ["yarn","start","-p","3000"]
+```
+
+Build the image:
+```bash
+docker build -t kali-portfolio .
+```
+
+Run the container:
+```bash
+docker run -p 3000:3000 \
+  -e NEXT_PUBLIC_TRACKING_ID=... \
+  -e NEXT_PUBLIC_SERVICE_ID=... \
+  -e NEXT_PUBLIC_TEMPLATE_ID=... \
+  -e NEXT_PUBLIC_USER_ID=... \
+  -e NEXT_PUBLIC_YOUTUBE_API_KEY=... \
+  -e NEXT_PUBLIC_BEEF_URL=... \
+  -e NEXT_PUBLIC_GHIDRA_URL=... \
+  -e NEXT_PUBLIC_GHIDRA_WASM=... \
+  -e NEXT_PUBLIC_UI_EXPERIMENTS=... \
+  kali-portfolio
 ```
 
 ---
@@ -215,6 +316,10 @@ Browse all apps, games, and security tool demos at `/apps`, which presents a sea
 | Trash | /apps/trash | Utility / Media |
 | Project Gallery | /apps/project-gallery | Utility / Media |
 | Quote_Generator | /apps/quote_generator | Utility / Media |
+
+The Spotify app loads its mood-to-playlist mapping from `public/spotify-playlists.json`,
+remembers the last mood you played, and exposes play/pause and track controls with
+keyboard hotkeys.
 
 ### Terminal Commands
 - `clear` – clears the terminal display.
@@ -352,7 +457,7 @@ See [`LICENSE`](./LICENSE).
 - `export` → `next export`
 - `test` → `jest`
 - `test:watch` → `jest --watch`
-- `lint` → `next lint`
+- `lint` → `eslint --max-warnings=0 .`
 - `smoke` → `node scripts/smoke-all-apps.mjs`
 
 ### Smoke Tests
