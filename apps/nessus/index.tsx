@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
+import TrendChart from './components/TrendChart';
 
 interface Plugin {
   id: number;
@@ -192,6 +193,10 @@ const Nessus: React.FC = () => {
         >
           Export
         </button>
+      </section>
+      <section>
+        <h2 className="text-xl mb-2">Trends</h2>
+        <TrendChart />
       </section>
     </div>
   );
