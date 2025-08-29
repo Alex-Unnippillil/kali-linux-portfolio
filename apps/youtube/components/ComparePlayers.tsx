@@ -2,13 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-  }
-}
-
 function parseVideoId(input: string): string {
   try {
     const url = new URL(input);
