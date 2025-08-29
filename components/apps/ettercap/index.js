@@ -4,6 +4,11 @@ import data from './data.json';
 const { arpTable, flows } = data;
 const attackerMac = 'aa:aa:aa:aa:aa:aa';
 
+const filterExamples = {
+  'Block HTTP': "if (ip.proto == 'TCP' && tcp.port == 80) {\n  drop();\n}",
+  'Pass DNS': "if (udp.port == 53) {\n  pass();\n}",
+};
+
 const randomMac = () =>
   Array.from({ length: 6 }, () =>
     Math.floor(Math.random() * 256)
@@ -19,6 +24,8 @@ const EttercapApp = () => {
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState('');
   const [logs, setLogs] = useState([]);
+  const [flowIndex, setFlowIndex] = useState(0);
+  const [filterText, setFilterText] = useState(filterExamples['Block HTTP']);
 
   const containerRef = useRef(null);
   const attackerRef = useRef(null);
@@ -33,6 +40,45 @@ const EttercapApp = () => {
     l1: { x1: 0, y1: 0, x2: 0, y2: 0 },
     l2: { x1: 0, y1: 0, x2: 0, y2: 0 },
   });
+  const canvasRef = useRef(null);
+  const hostPositions = useRef({});
+
+  const highlightFilter = (code) =>
+    code
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/(if|else|drop|pass)/g, '<span class="text-blue-400">$1</span>')
+      .replace(/('[^']*')/g, '<span class="text-green-300">$1</span>');
+
+  const drawMap = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    Object.entries(hostPositions.current).forEach(([ip, pos]) => {
+      ctx.fillStyle = '#1f2937';
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, 15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(ip, pos.x, pos.y + 25);
+    });
+    flows.forEach((f, i) => {
+      const from = hostPositions.current[f.source];
+      const to = hostPositions.current[f.destination];
+      if (!from || !to) return;
+      ctx.strokeStyle = i === flowIndex ? '#fbbf24' : '#4b5563';
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
+      ctx.stroke();
+    });
+  };
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -43,6 +89,38 @@ const EttercapApp = () => {
   }, []);
 
   useEffect(() => () => clearInterval(logIntervalRef.current), []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const { width, height } = canvas;
+    const cx = width / 2;
+    const cy = height / 2;
+    const radius = Math.min(cx, cy) - 30;
+    const positions = {};
+    arpTable.forEach(({ ip }, idx) => {
+      const angle = (idx / arpTable.length) * Math.PI * 2;
+      positions[ip] = {
+        x: cx + Math.cos(angle) * radius,
+        y: cy + Math.sin(angle) * radius,
+      };
+    });
+    hostPositions.current = positions;
+    drawMap();
+  }, []);
+
+  useEffect(() => {
+    drawMap();
+  }, [flowIndex]);
+
+  useEffect(() => {
+    if (!flows.length) return;
+    const id = setInterval(
+      () => setFlowIndex((i) => (i + 1) % flows.length),
+      1500
+    );
+    return () => clearInterval(id);
+  }, []);
 
   const computeLines = () => {
     const container = containerRef.current?.getBoundingClientRect();
@@ -256,6 +334,20 @@ const stopSpoof = () => {
         ))}
       </div>
       <div className="mt-4">
+        <h2 className="font-semibold">Host Pairs</h2>
+        <canvas
+          ref={canvasRef}
+          width={300}
+          height={200}
+          className="bg-gray-800 rounded mt-2"
+        />
+        <div className="text-xs mt-2">
+          {flows[flowIndex]
+            ? `Traffic ${flows[flowIndex].source} → ${flows[flowIndex].destination} (${flows[flowIndex].protocol})`
+            : ''}
+        </div>
+      </div>
+      <div className="mt-4">
         <h2 className="font-semibold">ARP Table</h2>
         <table className="w-full text-left border-collapse mt-2">
           <caption className="sr-only">Mock ARP entries</caption>
@@ -392,6 +484,30 @@ const stopSpoof = () => {
             </svg>
           </div>
         </div>
+      </div>
+      <div className="mt-4">
+        <h2 className="font-semibold">Filter Editor</h2>
+        <select
+          className="mt-2 p-1 rounded text-black"
+          onChange={(e) => setFilterText(filterExamples[e.target.value])}
+        >
+          {Object.keys(filterExamples).map((k) => (
+            <option key={k}>{k}</option>
+          ))}
+        </select>
+        <textarea
+          className="w-full h-24 mt-2 p-2 rounded text-black font-mono"
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+        />
+        <pre
+          className="mt-2 p-2 bg-gray-800 rounded overflow-auto text-xs font-mono"
+          aria-label="syntax highlighted filter"
+        >
+          <code
+            dangerouslySetInnerHTML={{ __html: highlightFilter(filterText) }}
+          />
+        </pre>
       </div>
       <div className="mt-4 text-xs bg-gray-800 p-2 rounded">
         <p>
