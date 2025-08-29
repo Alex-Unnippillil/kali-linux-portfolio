@@ -47,8 +47,8 @@ test('score persists in localStorage', async () => {
   });
   expect(window.localStorage.getItem('2048-score')).toBe('4');
   unmount();
-  const { getByText } = render(<Game2048 />);
-  expect(getByText(/Score:/).textContent).toContain('4');
+  const { getAllByText } = render(<Game2048 />);
+  expect(getAllByText(/Score:/)[0].textContent).toContain('4');
 });
 
 test('ignores browser key repeat events', () => {
@@ -78,7 +78,7 @@ test('tracks moves and allows multiple undos', async () => {
   });
   fireEvent.keyDown(window, { key: 'ArrowRight' });
   expect(getByText(/Moves: 2/)).toBeTruthy();
-  const undoBtn = getByText('Undo');
+  const undoBtn = getByText(/Undo/);
   fireEvent.click(undoBtn);
   expect(getByText(/Moves: 1/)).toBeTruthy();
   fireEvent.click(undoBtn);
@@ -87,7 +87,7 @@ test('tracks moves and allows multiple undos', async () => {
   expect(board).toEqual(initial);
 });
 
-test('colorblind palette toggle changes tile class', () => {
+test('skin selection changes tile class', () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 0, 0, 0],
     [0, 0, 0, 0],
@@ -97,8 +97,8 @@ test('colorblind palette toggle changes tile class', () => {
   const { container, getByLabelText } = render(<Game2048 />);
   const firstCell = container.querySelector('.grid div');
   expect(firstCell?.className).toContain('bg-gray-300');
-  const toggle = getByLabelText('Colorblind');
-  fireEvent.click(toggle);
+  const select = getByLabelText('Skin');
+  fireEvent.change(select, { target: { value: 'neon' } });
   const updated = container.querySelector('.grid div');
   expect(updated?.className).not.toContain('bg-gray-300');
 });

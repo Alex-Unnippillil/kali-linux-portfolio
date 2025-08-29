@@ -4,22 +4,20 @@ import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
 import { findHint } from '../../apps/games/_2048/ai';
 import { vibrate } from './Games/common/haptics';
+import {
+  random,
+  reset as resetRng,
+  serialize as serializeRng,
+  deserialize as deserializeRng,
+} from '../../apps/games/rng';
 
 // Basic 2048 game logic with tile merging mechanics.
 
 const SIZE = 4;
+const UNDO_LIMIT = 5;
 
 // seeded RNG so tests can be deterministic
-let rng = Math.random;
-export const setSeed = (seed) => {
-  let t = seed >>> 0;
-  rng = () => {
-    t += 0x6d2b79f5;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-};
+export const setSeed = (seed) => resetRng(seed);
 
 const cloneBoard = (b) => b.map((row) => [...row]);
 
@@ -40,8 +38,8 @@ const addRandomTile = (board, hard, count = 1) => {
       }),
     );
     if (empty.length === 0) return added;
-    const [r, c] = empty[Math.floor(rng() * empty.length)];
-    board[r][c] = hard ? 4 : rng() < 0.9 ? 2 : 4;
+    const [r, c] = empty[Math.floor(random() * empty.length)];
+    board[r][c] = hard ? 4 : random() < 0.9 ? 2 : 4;
     added.push(`${r}-${c}`);
   }
   return added;
@@ -170,6 +168,26 @@ const colorBlindColors = {
   2048: 'bg-yellow-600 text-white',
 };
 
+const neonColors = {
+  2: 'bg-pink-500 text-white',
+  4: 'bg-fuchsia-500 text-white',
+  8: 'bg-purple-500 text-white',
+  16: 'bg-indigo-500 text-white',
+  32: 'bg-blue-500 text-white',
+  64: 'bg-cyan-500 text-white',
+  128: 'bg-teal-500 text-white',
+  256: 'bg-lime-500 text-white',
+  512: 'bg-yellow-500 text-white',
+  1024: 'bg-orange-500 text-white',
+  2048: 'bg-red-500 text-white',
+};
+
+const SKINS = {
+  classic: tileColors,
+  colorblind: colorBlindColors,
+  neon: neonColors,
+};
+
 const validateBoard = (b) =>
   Array.isArray(b) &&
   b.length === SIZE &&
@@ -184,7 +202,7 @@ const Game2048 = () => {
   const [history, setHistory] = useState([]);
   const [moves, setMoves] = useState(0);
   const [hardMode, setHardMode] = usePersistentState('2048-hard', false, (v) => typeof v === 'boolean');
-  const [colorBlind, setColorBlind] = usePersistentState('2048-cb', false, (v) => typeof v === 'boolean');
+  const [skin, setSkin] = usePersistentState('2048-skin', 'classic', (v) => typeof v === 'string');
   const [animCells, setAnimCells] = useState(new Set());
   const [mergeCells, setMergeCells] = useState(new Set());
   const [score, setScore] = usePersistentState(
@@ -196,6 +214,8 @@ const Game2048 = () => {
   const [combo, setCombo] = useState(0);
   const [hint, setHint] = useState(null);
   const [demo, setDemo] = useState(false);
+  const [best, setBest] = usePersistentState('2048-best', 0, (v) => typeof v === 'number');
+  const [undosLeft, setUndosLeft] = useState(UNDO_LIMIT);
   const moveLock = useRef(false);
 
   useEffect(() => {
@@ -241,6 +261,11 @@ const Game2048 = () => {
     setHint(findHint(board));
   }, [board]);
 
+  useEffect(() => {
+    const hi = Math.max(...board.flat());
+    if (hi > best) setBest(hi);
+  }, [board, best, setBest]);
+
   const handleDirection = useCallback(
     ({ x, y }) => {
       if (won || lost || moveLock.current) return;
@@ -253,8 +278,12 @@ const Game2048 = () => {
       const { board: moved, merged, score: gained, mergedCells } = result;
       if (!boardsEqual(board, moved)) {
         moveLock.current = true;
+        const rngState = serializeRng();
         const added = addRandomTile(moved, hardMode, hardMode ? 2 : 1);
-        setHistory((h) => [...h, { board: cloneBoard(board), score, moves }]);
+        setHistory((h) => [
+          ...h,
+          { board: cloneBoard(board), score, moves, rng: rngState },
+        ]);
         setAnimCells(new Set(added));
         setMergeCells(new Set(mergedCells));
         if (gained > 0) {
@@ -263,6 +292,8 @@ const Game2048 = () => {
         }
         setBoard(cloneBoard(moved));
         setMoves((m) => m + 1);
+        const hi = Math.max(...moved.flat());
+        if (hi > best) setBest(hi);
         if (merged) vibrate(50);
         if (mergedCells.length > 1) {
           setCombo((c) => c + 1);
@@ -285,7 +316,20 @@ const Game2048 = () => {
         }, 200);
       }
     },
-    [board, won, lost, hardMode, score, moves, setBoard, setLost, setWon, setScore],
+    [
+      board,
+      won,
+      lost,
+      hardMode,
+      score,
+      moves,
+      setBoard,
+      setLost,
+      setWon,
+      setScore,
+      best,
+      setBest,
+    ],
   );
 
   useGameControls(handleDirection, '2048');
@@ -326,6 +370,7 @@ const Game2048 = () => {
   }, []);
 
   const reset = () => {
+    resetRng();
     setBoard(initBoard(hardMode));
     setHistory([]);
     setMoves(0);
@@ -334,6 +379,7 @@ const Game2048 = () => {
     setAnimCells(new Set());
     setMergeCells(new Set());
     setScore(0);
+    setUndosLeft(UNDO_LIMIT);
   };
 
   const close = () => {
@@ -341,22 +387,37 @@ const Game2048 = () => {
   };
 
   const undo = () => {
-    setHistory((h) => {
-      if (!h.length) return h;
-      const prev = h[h.length - 1];
-      setBoard(cloneBoard(prev.board));
-      setScore(prev.score);
-      setMoves(prev.moves);
-      setWon(checkWin(prev.board));
-      setLost(!hasMoves(prev.board));
-      setAnimCells(new Set());
-      setMergeCells(new Set());
-      return h.slice(0, -1);
-    });
+    if (!history.length || undosLeft === 0) return;
+    const prev = history[history.length - 1];
+    deserializeRng(prev.rng);
+    setBoard(cloneBoard(prev.board));
+    setScore(prev.score);
+    setMoves(prev.moves);
+    setWon(checkWin(prev.board));
+    setLost(!hasMoves(prev.board));
+    setAnimCells(new Set());
+    setMergeCells(new Set());
+    setHistory((h) => h.slice(0, -1));
+    setUndosLeft((u) => u - 1);
   };
 
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'u' || e.key === 'U' || e.key === 'Backspace') {
+        e.preventDefault();
+        undo();
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        reset();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [undo, reset]);
+
   return (
-    <GameLayout>
+    <GameLayout gameId="2048" score={score} highScore={best}>
       <>
         <div className="mb-2 flex flex-wrap gap-2 items-center">
           <button
@@ -368,9 +429,9 @@ const Game2048 = () => {
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
             onClick={undo}
-            disabled={history.length === 0}
+            disabled={history.length === 0 || undosLeft === 0}
           >
-            Undo
+            Undo ({undosLeft})
           </button>
           <label className="flex items-center space-x-1 px-2">
             <input
@@ -381,12 +442,18 @@ const Game2048 = () => {
             <span>Hard</span>
           </label>
           <label className="flex items-center space-x-1 px-2">
-            <input
-              type="checkbox"
-              checked={colorBlind}
-              onChange={() => setColorBlind(!colorBlind)}
-            />
-            <span>Colorblind</span>
+            <span>Skin</span>
+            <select
+              className="text-black px-1 rounded"
+              value={skin}
+              onChange={(e) => setSkin(e.target.value)}
+            >
+              {Object.keys(SKINS).map((k) => (
+                <option key={k} value={k}>
+                  {k}
+                </option>
+              ))}
+            </select>
           </label>
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
@@ -406,6 +473,7 @@ const Game2048 = () => {
           >
             Score: <span className={scorePop ? 'score-pop' : ''}>{score}</span>
           </div>
+          <div className="px-4 py-2 bg-gray-700 rounded">Best: {best}</div>
           <div className="px-4 py-2 bg-gray-700 rounded">Moves: {moves}</div>
           <div className="px-4 py-2 bg-gray-700 rounded" data-testid="combo-meter">
             Combo: {combo}
@@ -418,7 +486,7 @@ const Game2048 = () => {
           {board.map((row, rIdx) =>
             row.map((cell, cIdx) => {
               const key = `${rIdx}-${cIdx}`;
-              const colors = colorBlind ? colorBlindColors : tileColors;
+              const colors = SKINS[skin] || tileColors;
               return (
                 <div
                   key={key}
