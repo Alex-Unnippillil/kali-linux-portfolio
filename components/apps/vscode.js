@@ -1,6 +1,4 @@
-import dynamic from 'next/dynamic';
-
-const VsCode = dynamic(() => import('../../apps/vscode'), { ssr: false });
+import VsCode from '../../apps/vscode';
 
 export default VsCode;
 

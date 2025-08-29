@@ -2,6 +2,7 @@
 
 import ExternalFrame from '../../components/ExternalFrame';
 
+
 export default function VsCode() {
   return (
     <ExternalFrame
@@ -12,6 +13,7 @@ export default function VsCode() {
       allowFullScreen
       frameBorder="0"
       prefetch={false}
+
     />
   );
 }
