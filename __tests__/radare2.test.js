@@ -1,4 +1,12 @@
-import { saveSnippet, loadSnippets, convertAnalysisToGhidra } from '../components/apps/radare2/utils';
+import {
+  saveSnippet,
+  loadSnippets,
+  convertAnalysisToGhidra,
+  saveNotes,
+  loadNotes,
+  saveBookmarks,
+  loadBookmarks,
+} from '../components/apps/radare2/utils';
 
 describe('Radare2 utilities', () => {
   beforeEach(() => {
@@ -23,5 +31,23 @@ describe('Radare2 utilities', () => {
         { name: 'helper', calls: [] },
       ],
     });
+  });
+
+  test('stores notes per file', () => {
+    const notesA = [{ addr: '0x1', text: 'foo' }];
+    const notesB = [{ addr: '0x2', text: 'bar' }];
+    saveNotes('a.bin', notesA);
+    saveNotes('b.bin', notesB);
+    expect(loadNotes('a.bin')).toEqual(notesA);
+    expect(loadNotes('b.bin')).toEqual(notesB);
+  });
+
+  test('stores bookmarks per file', () => {
+    const bmA = ['0x1'];
+    const bmB = ['0x2'];
+    saveBookmarks('a.bin', bmA);
+    saveBookmarks('b.bin', bmB);
+    expect(loadBookmarks('a.bin')).toEqual(bmA);
+    expect(loadBookmarks('b.bin')).toEqual(bmB);
   });
 });
