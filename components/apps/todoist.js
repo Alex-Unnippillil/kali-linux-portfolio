@@ -956,6 +956,7 @@ export default function Todoist() {
                 </div>
               )}
         </div>
+        </div>
       </div>
     </div>
   );
