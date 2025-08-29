@@ -5,6 +5,7 @@ import {
   useState,
   FormEvent,
   KeyboardEvent,
+  type SVGProps,
 } from 'react';
 import DOMPurify from 'dompurify';
 import Script from 'next/script';
@@ -13,6 +14,55 @@ import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
+
+const IconRefresh = (
+  props: SVGProps<SVGSVGElement>,
+) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <polyline points="23 4 23 10 17 10" />
+    <polyline points="1 20 1 14 7 14" />
+    <path d="M3.51 9a9 9 0 0 1 14.36-3.36L23 10M1 14l5.63 4.36A9 9 0 0 0 20.49 15" />
+  </svg>
+);
+
+const IconShare = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <polyline points="16 6 12 2 8 6" />
+    <line x1="12" y1="2" x2="12" y2="15" />
+    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+  </svg>
+);
+
+const IconBadge = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9 12l2 2 4-4" />
+  </svg>
+);
 
 export default function XTimeline() {
   const { accent } = useSettings();
@@ -250,7 +300,29 @@ export default function XTimeline() {
         }}
         onError={() => setScriptError(true)}
       />
-      <div className="p-4 space-y-4">
+      <div className="flex flex-col h-full">
+        <header className="flex items-center justify-between p-1.5 border-b gap-1.5">
+          <button
+            type="button"
+            aria-label="Refresh timeline"
+            onClick={() => loaded && loadTimeline()}
+            className="p-1 rounded hover:bg-[var(--color-muted)]"
+          >
+            <IconRefresh className="w-6 h-6" />
+          </button>
+          <div className="flex-1 text-center text-sm font-semibold">
+            Timeline
+          </div>
+          <button
+            type="button"
+            aria-label="Open on x.com"
+            onClick={() => window.open(`https://x.com/${feed}`, '_blank')}
+            className="p-1 rounded hover:bg-[var(--color-muted)]"
+          >
+            <IconShare className="w-6 h-6" />
+          </button>
+        </header>
+        <div className="p-1.5 space-y-4 flex-1 overflow-auto">
         <form onSubmit={handleScheduleTweet} className="space-y-2">
           <textarea
             value={tweetText}
@@ -384,16 +456,30 @@ export default function XTimeline() {
         ) : (
           <>
             {loading && !timelineLoaded && !scriptError && (
-              <ul className="space-y-4" aria-hidden="true">
+              <ul className="tweet-feed space-y-1.5" aria-hidden="true">
                 {Array.from({ length: 3 }).map((_, i) => (
                   <li
                     key={i}
-                    className="h-24 rounded bg-[var(--color-muted)] animate-pulse"
-                  />
+                    className="flex gap-1.5 p-1.5 rounded-md border"
+                  >
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-full bg-[var(--color-muted)] animate-pulse" />
+                      <IconBadge className="w-3 h-3 absolute bottom-0 right-0 text-[var(--color-muted)]" />
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-3/4" />
+                      <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-1/2" />
+                      <div className="h-3 bg-[var(--color-muted)] rounded animate-pulse w-full" />
+                    </div>
+                    <IconShare className="w-5 h-5 text-[var(--color-muted)]" />
+                  </li>
                 ))}
               </ul>
             )}
-            <div ref={timelineRef} className={timelineLoaded ? 'block' : 'hidden'} />
+            <div
+              ref={timelineRef}
+              className={`tweet-feed ${timelineLoaded ? 'block' : 'hidden'}`}
+            />
             {scriptError && (
               <div className="text-center">
                 <div className="mb-2">Nothing to see</div>
@@ -413,7 +499,15 @@ export default function XTimeline() {
             )}
           </>
         )}
+        </div>
       </div>
+      <style jsx>{`
+        .tweet-feed {
+          max-inline-size: 60ch;
+          margin-inline: auto;
+          width: 100%;
+        }
+      `}</style>
     </>
   );
 }
