@@ -20,6 +20,7 @@ const TerminalApp = createDynamicApp('terminal', 'Terminal');
 const VsCodeApp = createDynamicApp('vscode', 'VsCode');
 const YouTubeApp = createDynamicApp('youtube', 'YouTube');
 const CalculatorApp = createDynamicApp('calculator', 'Calculator');
+const CalcApp = createDynamicApp('calc', 'Calc');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
 const ConnectFourApp = createDynamicApp('connect-four', 'Connect Four');
@@ -106,6 +107,7 @@ const displayTerminal = createDisplay(TerminalApp);
 const displayVsCode = createDisplay(VsCodeApp);
 const displayYouTube = createDisplay(YouTubeApp);
 const displayCalculator = createDisplay(CalculatorApp);
+const displayCalc = createDisplay(CalcApp);
 const displayTicTacToe = createDisplay(TicTacToeApp);
 const displayChess = createDisplay(ChessApp);
 const displayConnectFour = createDisplay(ConnectFourApp);
@@ -592,6 +594,19 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayCalculator,
+    resizable: false,
+    allowMaximize: false,
+    defaultWidth: 28,
+    defaultHeight: 50,
+  },
+  {
+    id: 'calc',
+    title: 'Calc',
+    icon: './themes/Yaru/apps/calc.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayCalc,
     resizable: false,
     allowMaximize: false,
     defaultWidth: 28,
