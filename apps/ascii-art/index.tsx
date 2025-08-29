@@ -43,9 +43,17 @@ const AsciiArtApp = () => {
   // load from query string on first render
   useEffect(() => {
     if (!router.isReady) return;
-    const { t, f } = router.query;
+    const { t, f, b, c } = router.query;
     if (typeof t === 'string') setText(t);
     if (typeof f === 'string' && fontList.includes(f)) setFont(f);
+    if (typeof b === 'string') {
+      const br = parseFloat(b);
+      if (!Number.isNaN(br) && br >= -1 && br <= 1) setBrightness(br);
+    }
+    if (typeof c === 'string') {
+      const ct = parseFloat(c);
+      if (!Number.isNaN(ct) && ct >= 0 && ct <= 2) setContrast(ct);
+    }
   }, [router.isReady]);
 
   // update query string permalink
@@ -54,10 +62,12 @@ const AsciiArtApp = () => {
     const params = new URLSearchParams();
     if (text) params.set('t', text);
     if (font && font !== 'Standard') params.set('f', font);
+    if (brightness !== 0) params.set('b', String(brightness));
+    if (contrast !== 1) params.set('c', String(contrast));
     const qs = params.toString();
     const url = qs ? `${router.pathname}?${qs}` : router.pathname;
     router.replace(url, undefined, { shallow: true });
-  }, [text, font]);
+  }, [text, font, brightness, contrast]);
 
   // render text ascii
   useEffect(() => {
