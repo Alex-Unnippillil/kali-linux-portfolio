@@ -87,6 +87,10 @@ const WordleGame = () => {
     );
   };
 
+  // Track the best known status for each letter to provide colored hints on the
+  // virtual keyboard. Later guesses should not downgrade existing hints (e.g.
+  // once a letter is marked correct it should stay green even if absent in a
+  // subsequent guess).
   const letterHints = useMemo(() => {
     const map: Record<string, LetterResult> = {};
     const priority: Record<LetterResult, number> = {
