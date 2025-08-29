@@ -42,6 +42,8 @@ const HydraApp = () => {
   const [runId, setRunId] = useState(0);
   const [announce, setAnnounce] = useState('');
   const announceRef = useRef(0);
+  const [timeline, setTimeline] = useState([]);
+  const startRef = useRef(null);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -101,6 +103,26 @@ const HydraApp = () => {
 
   const handleAttempt = (attempt) => {
     const now = Date.now();
+    if (attempt > 0 && startRef.current) {
+      const elapsed = ((now - startRef.current) / 1000).toFixed(1);
+      const users =
+        selectedUserList?.content.split('\n').filter(Boolean) || [];
+      const passes =
+        selectedPassList?.content.split('\n').filter(Boolean) || [];
+      const passCount = passes.length || 1;
+      const user = users[Math.floor((attempt - 1) / passCount)] || '';
+      const password = passes[(attempt - 1) % passCount] || '';
+      const result =
+        attempt >= LOCKOUT_THRESHOLD
+          ? 'lockout'
+          : attempt >= BACKOFF_THRESHOLD
+          ? 'throttled'
+          : 'attempt';
+      setTimeline((t) => [
+        ...t,
+        { time: parseFloat(elapsed), user, password, result },
+      ]);
+    }
     if (now - announceRef.current > 1000) {
       const limit = Math.min(LOCKOUT_THRESHOLD, totalAttempts);
       setAnnounce(`Attempt ${attempt} of ${limit}`);
@@ -120,6 +142,8 @@ const HydraApp = () => {
     setPaused(false);
     setRunId((id) => id + 1);
     setOutput('');
+    setTimeline([]);
+    startRef.current = Date.now();
     setAnnounce('Hydra started');
     announceRef.current = Date.now();
     try {
@@ -178,6 +202,8 @@ const HydraApp = () => {
     setPaused(false);
     setRunId((id) => id + 1);
     setOutput('');
+    setTimeline([]);
+    startRef.current = null;
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
       await fetch('/api/hydra', {
         method: 'POST',
@@ -336,7 +362,7 @@ const HydraApp = () => {
         throttling and stops at {LOCKOUT_THRESHOLD} attempts to illustrate
         account lockout.
       </p>
-      <AttemptTimeline />
+      <AttemptTimeline attempts={timeline} />
 
       <div role="status" aria-live="polite" className="sr-only">
         {announce}
