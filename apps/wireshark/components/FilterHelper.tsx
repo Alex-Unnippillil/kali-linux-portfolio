@@ -1,14 +1,6 @@
 import React from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
-
-const EXAMPLE_FILTERS = [
-  'tcp',
-  'udp',
-  'icmp',
-  'http',
-  'tcp.port == 80',
-  'ip.addr == 10.0.0.1',
-];
+import presets from '../filters/presets.json';
 
 interface FilterHelperProps {
   value: string;
@@ -21,7 +13,9 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     []
   );
 
-  const suggestions = Array.from(new Set([...recent, ...EXAMPLE_FILTERS]));
+  const suggestions = Array.from(
+    new Set([...recent, ...presets.map((p) => p.expression)])
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
@@ -42,8 +36,31 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     }
   };
 
+  const handlePresetSelect = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const val = e.target.value;
+    if (!val) return;
+    onChange(val);
+    setRecent((prev) => [val, ...prev.filter((f) => f !== val)].slice(0, 5));
+    e.target.selectedIndex = 0;
+  };
+
   return (
     <>
+      <select
+        onChange={handlePresetSelect}
+        defaultValue=""
+        aria-label="Preset filters"
+        className="px-2 py-1 bg-gray-800 rounded text-white"
+      >
+        <option value="">Preset filters...</option>
+        {presets.map(({ label, expression }) => (
+          <option key={expression} value={expression}>
+            {label}
+          </option>
+        ))}
+      </select>
       <input
         list="display-filter-suggestions"
         value={value}

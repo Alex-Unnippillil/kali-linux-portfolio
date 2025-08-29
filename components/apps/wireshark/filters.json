@@ -1,5 +1,0 @@
-[
-  { "label": "HTTP traffic", "expression": "tcp.port == 80" },
-  { "label": "HTTPS traffic", "expression": "tcp.port == 443" },
-  { "label": "DNS queries", "expression": "udp.port == 53" }
-]
