@@ -36,16 +36,28 @@ interface Direction {
   readonly dy: number;
 }
 
-const DIRECTIONS: readonly Direction[] = [
-  { dx: 1, dy: 0 },
-  { dx: -1, dy: 0 },
-  { dx: 0, dy: 1 },
-  { dx: 0, dy: -1 },
-  { dx: 1, dy: 1 },
-  { dx: -1, dy: -1 },
-  { dx: 1, dy: -1 },
-  { dx: -1, dy: 1 },
-];
+export interface GenerateOptions {
+  readonly allowBackwards?: boolean;
+  readonly allowDiagonal?: boolean;
+}
+
+function getDirections(options: GenerateOptions = {}): Direction[] {
+  const { allowBackwards = true, allowDiagonal = true } = options;
+  const dirs: Direction[] = [
+    { dx: 1, dy: 0 },
+    { dx: 0, dy: 1 },
+  ];
+  if (allowBackwards) {
+    dirs.push({ dx: -1, dy: 0 }, { dx: 0, dy: -1 });
+  }
+  if (allowDiagonal) {
+    dirs.push({ dx: 1, dy: 1 });
+    if (allowBackwards) {
+      dirs.push({ dx: -1, dy: -1 }, { dx: 1, dy: -1 }, { dx: -1, dy: 1 });
+    }
+  }
+  return dirs;
+}
 
 export interface GenerateResult {
   grid: string[][];
@@ -55,15 +67,17 @@ export interface GenerateResult {
 export function generateGrid(
   words: string[],
   size = 12,
-  seed = 'seed'
+  seed = 'seed',
+  options: GenerateOptions = {}
 ): GenerateResult {
   const rng = createRNG(seed);
   const grid: string[][] = Array.from({ length: size }, () => Array(size).fill(''));
   const placements: WordPlacement[] = [];
+  const directions = getDirections(options);
   words.forEach((w) => {
     const word = w.toUpperCase();
     for (let attempt = 0; attempt < 200; attempt += 1) {
-      const dir = DIRECTIONS[Math.floor(rng() * DIRECTIONS.length)];
+      const dir = directions[Math.floor(rng() * directions.length)];
       const maxRow = dir.dy > 0 ? size - word.length : dir.dy < 0 ? word.length - 1 : size - 1;
       const maxCol = dir.dx > 0 ? size - word.length : dir.dx < 0 ? word.length - 1 : size - 1;
       const startRow = Math.floor(rng() * (maxRow + 1));
