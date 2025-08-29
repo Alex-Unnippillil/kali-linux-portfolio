@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import plugins from '../../../public/demo-data/volatility/plugins.json';
+
+const VOLATILITY_VERSION = '3.0';
 
 const PluginBrowser = () => {
   const [category, setCategory] = useState('All');
@@ -9,6 +11,16 @@ const PluginBrowser = () => {
     () => ['All', ...Array.from(new Set(plugins.map((p) => p.category)))],
     []
   );
+
+  useEffect(() => {
+    plugins.forEach((p) => {
+      if (p.minVersion && p.minVersion !== VOLATILITY_VERSION) {
+        console.warn(
+          `Plugin ${p.name} requires Volatility ${p.minVersion} but version ${VOLATILITY_VERSION} is loaded.`
+        );
+      }
+    });
+  }, []);
 
   const filtered = plugins.filter(
     (p) => category === 'All' || p.category === category
@@ -38,6 +50,11 @@ const PluginBrowser = () => {
         >
           <h3 className="font-semibold text-sm">{p.name}</h3>
           <p className="text-[10px] text-gray-400">{p.category}</p>
+          {p.minVersion && p.minVersion !== VOLATILITY_VERSION && (
+            <p className="text-[10px] text-red-400">
+              Requires Volatility {p.minVersion}
+            </p>
+          )}
           <p className="text-xs mb-1">{p.description}</p>
           <a
             href={p.doc}

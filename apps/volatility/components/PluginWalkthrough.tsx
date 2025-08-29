@@ -1,16 +1,29 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import plugins from '../../../public/demo-data/volatility/plugins.json';
+
+const VOLATILITY_VERSION = '3.0';
 
 interface PluginInfo {
   name: string;
   description: string;
   output: string;
+  minVersion?: string;
 }
 
 const PluginWalkthrough: React.FC = () => {
   const data = plugins as PluginInfo[];
   const [index, setIndex] = useState(0);
   const current = data[index];
+
+  useEffect(() => {
+    data.forEach((p) => {
+      if (p.minVersion && p.minVersion !== VOLATILITY_VERSION) {
+        console.warn(
+          `Plugin ${p.name} requires Volatility ${p.minVersion} but version ${VOLATILITY_VERSION} is loaded.`
+        );
+      }
+    });
+  }, [data]);
 
   const next = () => setIndex((i) => (i + 1) % data.length);
   const prev = () => setIndex((i) => (i - 1 + data.length) % data.length);
@@ -28,6 +41,11 @@ const PluginWalkthrough: React.FC = () => {
           </button>
         </div>
       </div>
+      {current.minVersion && current.minVersion !== VOLATILITY_VERSION && (
+        <p className="text-red-400">
+          Requires Volatility {current.minVersion}
+        </p>
+      )}
       <p>{current.description}</p>
       <pre className="bg-black p-2 rounded overflow-auto whitespace-pre-wrap">
         {current.output}
