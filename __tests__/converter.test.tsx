@@ -19,6 +19,14 @@ describe('Unit conversion', () => {
     expect(convertUnit('currency', 'USD', 'EUR', 10)).toBeCloseTo(9);
   });
 
+  it('converts seconds to minutes', () => {
+    expect(convertUnit('time', 'second', 'minute', 60)).toBeCloseTo(1);
+  });
+
+  it('converts megabytes to kilobytes', () => {
+    expect(convertUnit('digital', 'megabyte', 'kilobyte', 1)).toBeCloseTo(1000);
+  });
+
   it('respects precision when provided', () => {
     expect(
       convertUnit('length', 'meter', 'kilometer', 1234, 2)
@@ -42,5 +50,12 @@ describe('UnitConverter UI', () => {
     const inputs = screen.getAllByRole('spinbutton');
     fireEvent.change(inputs[0], { target: { value: '1000' } });
     expect(inputs[1].value).toBe('1');
+  });
+
+  it('shows new categories in dropdown', () => {
+    render(<UnitConverter />);
+    const select = screen.getByLabelText('Category') as HTMLSelectElement;
+    const options = Array.from(select.options).map((o) => o.value);
+    expect(options).toEqual(expect.arrayContaining(['time', 'digital']));
   });
 });
