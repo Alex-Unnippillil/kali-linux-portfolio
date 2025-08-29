@@ -3,6 +3,8 @@ import {
   parseRules,
   distributeTasks,
   identifyHashType,
+  generateIncrementalCandidates,
+  parsePotfile,
 } from './utils';
 import FormError from '../../ui/FormError';
 
@@ -21,6 +23,10 @@ const JohnApp = () => {
   const [phase, setPhase] = useState('wordlist');
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [animOffset, setAnimOffset] = useState(0);
+  const [mode, setMode] = useState('wordlist');
+  const [candidates, setCandidates] = useState([]);
+  const [potfileEntries, setPotfileEntries] = useState([]);
+  const [potFilter, setPotFilter] = useState('');
   const workerRef = useRef(null);
   const controllerRef = useRef(null);
 
@@ -77,6 +83,57 @@ const JohnApp = () => {
       setRules(parseRules(String(text)));
     };
     reader.readAsText(file);
+  };
+
+  const handleWordlistUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = String(ev.target?.result || '');
+      const words = text.split(/\r?\n/).filter(Boolean).slice(0, 10);
+      setCandidates(words);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleModeChange = (e) => {
+    const m = e.target.value;
+    setMode(m);
+    if (m === 'incremental') {
+      setCandidates(generateIncrementalCandidates());
+    } else {
+      setCandidates([]);
+    }
+  };
+
+  const handlePotfileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = String(ev.target?.result || '');
+      setPotfileEntries(parsePotfile(text));
+    };
+    reader.readAsText(file);
+  };
+
+  const handleExport = () => {
+    const filtered = potfileEntries.filter(
+      (p) =>
+        p.hash.includes(potFilter) ||
+        p.password.toLowerCase().includes(potFilter.toLowerCase())
+    );
+    const blob = new Blob(
+      [filtered.map((p) => `${p.hash}:${p.password}`).join('\n')],
+      { type: 'text/plain' }
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'potfile.txt';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleHashesChange = (e) => {
@@ -156,6 +213,12 @@ const JohnApp = () => {
     setLoading(false);
   };
 
+  const filteredPotfile = potfileEntries.filter(
+    (p) =>
+      p.hash.includes(potFilter) ||
+      p.password.toLowerCase().includes(potFilter.toLowerCase())
+  );
+
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
       <p className="text-xs text-yellow-300 p-2">Demo only – no real cracking performed.</p>
@@ -189,6 +252,42 @@ const JohnApp = () => {
           onChange={handleRuleUpload}
           className="text-sm"
         />
+        <label htmlFor="john-mode" className="text-sm">
+          Mode
+        </label>
+        <select
+          id="john-mode"
+          value={mode}
+          onChange={handleModeChange}
+          className="px-2 py-1 bg-gray-800 text-white rounded"
+        >
+          <option value="wordlist">Wordlist</option>
+          <option value="incremental">Incremental</option>
+        </select>
+        {mode === 'wordlist' && (
+          <>
+            <label htmlFor="john-wordlist" className="text-sm">
+              Wordlist file
+            </label>
+            <input
+              id="john-wordlist"
+              type="file"
+              accept=".txt"
+              onChange={handleWordlistUpload}
+              className="text-sm"
+            />
+          </>
+        )}
+        {candidates.length > 0 && (
+          <div className="text-xs bg-gray-900 p-2 rounded">
+            <p className="mb-1">Candidate preview:</p>
+            <ul className="max-h-24 overflow-auto">
+              {candidates.map((c, i) => (
+                <li key={i}>{c}</li>
+              ))}
+            </ul>
+          </div>
+        )}
         <label htmlFor="john-endpoints" className="text-sm">
           Endpoints (comma separated)
         </label>
@@ -252,6 +351,39 @@ const JohnApp = () => {
         {error && <FormError id="john-error">{error}</FormError>}
       </form>
       <pre className="flex-1 overflow-auto p-4 whitespace-pre-wrap">{output}</pre>
+      <div className="p-4 flex flex-col gap-2 border-t border-gray-700">
+        <label htmlFor="john-potfile" className="text-sm">Potfile</label>
+        <input
+          id="john-potfile"
+          type="file"
+          accept=".pot,.txt"
+          onChange={handlePotfileUpload}
+          className="text-sm"
+        />
+        {potfileEntries.length > 0 && (
+          <>
+            <input
+              type="text"
+              value={potFilter}
+              onChange={(e) => setPotFilter(e.target.value)}
+              placeholder="Filter"
+              className="px-2 py-1 bg-gray-800 text-white rounded text-sm"
+            />
+            <div className="max-h-40 overflow-auto bg-gray-900 p-2 rounded text-xs">
+              {filteredPotfile.map((p, i) => (
+                <div key={i}>{`${p.hash}:${p.password}`}</div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={handleExport}
+              className="self-start px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+            >
+              Export
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 };
