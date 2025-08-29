@@ -108,7 +108,10 @@ function Timeline({ events, onSelect }) {
       '(prefers-reduced-motion: reduce)'
     ).matches;
     const render = () => {
-      ctx.fillStyle = '#1f1f1f';
+      const gradient = ctx.createLinearGradient(0, 0, width, 0);
+      gradient.addColorStop(0, '#1f1f1f');
+      gradient.addColorStop(1, '#2a2a2a');
+      ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, width, height);
       ctx.strokeStyle = '#ffffff';
       ctx.beginPath();
@@ -160,7 +163,10 @@ function Timeline({ events, onSelect }) {
         const owidth = container ? container.clientWidth : 600;
         overview.width = owidth;
         overview.height = 20;
-        octx.fillStyle = '#1f1f1f';
+        const ogradient = octx.createLinearGradient(0, 0, owidth, 0);
+        ogradient.addColorStop(0, '#1f1f1f');
+        ogradient.addColorStop(1, '#2a2a2a');
+        octx.fillStyle = ogradient;
         octx.fillRect(0, 0, owidth, 20);
         octx.fillStyle = '#ffa500';
         const total = max - min || 1;
@@ -307,7 +313,10 @@ function Timeline({ events, onSelect }) {
           )}
         </div>
       )}
-      <div ref={containerRef} className="w-full overflow-x-auto">
+      <div
+        ref={containerRef}
+        className="w-full overflow-x-auto p-1.5 bg-gradient-to-r from-ub-grey to-ub-cool-grey rounded"
+      >
         <canvas
           ref={canvasRef}
           className="bg-ub-grey"
@@ -433,9 +442,7 @@ function Autopsy({ initialArtifacts = null }) {
     reader.onload = (event) => {
       const buffer = event.target.result;
       const bytes = new Uint8Array(buffer).slice(0, 20);
-      const hex = Array.from(bytes)
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join(' ');
+      const hex = bufferToHex(bytes);
       const safeName = escapeFilename(file.name);
       setAnalysis(
         `File: ${safeName}\nSize: ${file.size} bytes\nFirst 20 bytes: ${hex}`
@@ -455,7 +462,13 @@ function Autopsy({ initialArtifacts = null }) {
   };
 
   const bufferToHex = (buffer) =>
-    Array.from(buffer, (b) => b.toString(16).padStart(2, '0')).join(' ');
+    Array.from(buffer, (b, i) => {
+      const byte = b.toString(16).padStart(2, '0');
+      const sep = i % 8 === 7 ? '  ' : ' ';
+      return byte + sep;
+    })
+      .join('')
+      .trim();
 
   const decodeBase64 = (b64) =>
     Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -514,25 +527,28 @@ function Autopsy({ initialArtifacts = null }) {
 
   const renderTree = (node) => {
     if (!node) return null;
-    if (node.children) {
-      return (
-        <div key={node.name} className="pl-2">
-          <div className="font-bold">{node.name}</div>
+    const isFolder = !!node.children;
+    return (
+      <div key={node.name} className="pl-2">
+        <div className="flex items-center h-8">
+          <span className="mr-1">{isFolder ? '📁' : '📄'}</span>
+          {isFolder ? (
+            <span className="font-bold">{node.name}</span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => selectFile(node)}
+              className="text-blue-400 underline"
+            >
+              {node.name}
+            </button>
+          )}
+        </div>
+        {isFolder && (
           <div className="pl-4">
             {node.children.map((c) => renderTree(c))}
           </div>
-        </div>
-      );
-    }
-    return (
-      <div key={node.name} className="pl-2">
-        <button
-          type="button"
-          onClick={() => selectFile(node)}
-          className="text-blue-400 underline"
-        >
-          {node.name}
-        </button>
+        )}
       </div>
     );
   };
@@ -656,70 +672,72 @@ function Autopsy({ initialArtifacts = null }) {
             </>
           )}
           {fileTree && (
-            <div>
-              <div className="text-sm font-bold">File Explorer</div>
-              {renderTree(fileTree)}
-            </div>
-          )}
-          {selectedFile && (
-            <div className="bg-ub-grey p-2 rounded text-xs">
-              <div className="font-bold mb-1">{selectedFile.name}</div>
-              <div className="mb-1">SHA-256: {selectedFile.hash}</div>
-              {selectedFile.known && (
-                <div className="mb-1 text-green-400">
-                  Known: {selectedFile.known}
-                </div>
-              )}
-              <div className="flex space-x-2 mb-2">
-                <button
-                  className={`${
-                    previewTab === 'hex'
-                      ? 'bg-ub-orange text-black'
-                      : 'bg-ub-cool-grey'
-                  } px-2 py-1 rounded`}
-                  onClick={() => setPreviewTab('hex')}
-                >
-                  Hex
-                </button>
-                <button
-                  className={`${
-                    previewTab === 'text'
-                      ? 'bg-ub-orange text-black'
-                      : 'bg-ub-cool-grey'
-                  } px-2 py-1 rounded`}
-                  onClick={() => setPreviewTab('text')}
-                >
-                  Text
-                </button>
-                {selectedFile.imageUrl && (
-                  <button
-                    className={`${
-                      previewTab === 'image'
-                        ? 'bg-ub-orange text-black'
-                        : 'bg-ub-cool-grey'
-                    } px-2 py-1 rounded`}
-                    onClick={() => setPreviewTab('image')}
-                  >
-                    Image
-                  </button>
-                )}
+            <div className="flex space-x-4">
+              <div className="w-1/3">
+                <div className="text-sm font-bold mb-1">File Explorer</div>
+                {renderTree(fileTree)}
               </div>
-              {previewTab === 'hex' && (
-                <div className="font-mono whitespace-pre-wrap break-all">
-                  {selectedFile.hex}
+              {selectedFile && (
+                <div className="flex-grow bg-ub-grey p-2 rounded text-xs">
+                  <div className="font-bold mb-1">{selectedFile.name}</div>
+                  <div className="mb-1">SHA-256: {selectedFile.hash}</div>
+                  {selectedFile.known && (
+                    <div className="mb-1 text-green-400">
+                      Known: {selectedFile.known}
+                    </div>
+                  )}
+                  <div className="flex space-x-2 mb-2">
+                    <button
+                      className={`${
+                        previewTab === 'hex'
+                          ? 'bg-ub-orange text-black'
+                          : 'bg-ub-cool-grey'
+                      } px-2 py-1 rounded`}
+                      onClick={() => setPreviewTab('hex')}
+                    >
+                      Hex
+                    </button>
+                    <button
+                      className={`${
+                        previewTab === 'text'
+                          ? 'bg-ub-orange text-black'
+                          : 'bg-ub-cool-grey'
+                      } px-2 py-1 rounded`}
+                      onClick={() => setPreviewTab('text')}
+                    >
+                      Text
+                    </button>
+                    {selectedFile.imageUrl && (
+                      <button
+                        className={`${
+                          previewTab === 'image'
+                            ? 'bg-ub-orange text-black'
+                            : 'bg-ub-cool-grey'
+                        } px-2 py-1 rounded`}
+                        onClick={() => setPreviewTab('image')}
+                      >
+                        Image
+                      </button>
+                    )}
+                  </div>
+                  {previewTab === 'hex' && (
+                    <pre className="font-mono whitespace-pre-wrap break-all">
+                      {selectedFile.hex}
+                    </pre>
+                  )}
+                  {previewTab === 'text' && (
+                    <pre className="font-mono whitespace-pre-wrap break-all">
+                      {selectedFile.strings}
+                    </pre>
+                  )}
+                  {previewTab === 'image' && selectedFile.imageUrl && (
+                    <img
+                      src={selectedFile.imageUrl}
+                      alt={selectedFile.name}
+                      className="max-w-full h-auto"
+                    />
+                  )}
                 </div>
-              )}
-              {previewTab === 'text' && (
-                <div className="font-mono whitespace-pre-wrap break-all">
-                  {selectedFile.strings}
-                </div>
-              )}
-              {previewTab === 'image' && selectedFile.imageUrl && (
-                <img
-                  src={selectedFile.imageUrl}
-                  alt={selectedFile.name}
-                  className="max-w-full h-auto"
-                />
               )}
             </div>
           )}
