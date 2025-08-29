@@ -24,8 +24,8 @@ const createWorkspace = (index) => ({
   graph: [],
   entities: {
     domain: new Set(),
-    person: new Set(),
-    asset: new Set(),
+    ip: new Set(),
+    entity: new Set(),
   },
 });
 
@@ -129,14 +129,14 @@ const ReconNG = () => {
         },
       },
       {
-        selector: 'node[type="person"]',
+        selector: 'node[type="ip"]',
         style: {
-          'background-color': '#d62728',
-          shape: 'ellipse',
+          'background-color': '#ff7f0e',
+          shape: 'rectangle',
         },
       },
       {
-        selector: 'node[type="asset"]',
+        selector: 'node[type="entity"]',
         style: {
           'background-color': '#006400',
           shape: 'diamond',
@@ -176,8 +176,8 @@ const ReconNG = () => {
     updateWorkspace((ws) => {
       const entities = {
         domain: new Set(ws.entities.domain),
-        person: new Set(ws.entities.person),
-        asset: new Set(ws.entities.asset),
+        ip: new Set(ws.entities.ip),
+        entity: new Set(ws.entities.entity),
       };
       nodes.forEach((n) => {
         if (n.data.type && n.data.label) {
@@ -193,8 +193,8 @@ const ReconNG = () => {
     setOutput(`Running ${selectedModule} on ${target}...\nResults will appear here.`);
     const nodes = [
       { data: { id: 'domains', label: 'Domains' } },
-      { data: { id: 'people', label: 'People' } },
-      { data: { id: 'assets', label: 'Assets' } },
+      { data: { id: 'ips', label: 'IPs' } },
+      { data: { id: 'entities', label: 'Entities' } },
       {
         data: {
           id: target,
@@ -205,24 +205,24 @@ const ReconNG = () => {
       },
       {
         data: {
-          id: 'John Doe',
-          label: 'John Doe',
-          parent: 'people',
-          type: 'person',
+          id: '192.0.2.1',
+          label: '192.0.2.1',
+          parent: 'ips',
+          type: 'ip',
         },
       },
       {
         data: {
-          id: 'Server1',
-          label: 'Server1',
-          parent: 'assets',
-          type: 'asset',
+          id: 'John Doe',
+          label: 'John Doe',
+          parent: 'entities',
+          type: 'entity',
         },
       },
     ];
     const edges = [
-      { data: { id: 'e1', source: target, target: 'John Doe' } },
-      { data: { id: 'e2', source: 'John Doe', target: 'Server1' } },
+      { data: { id: 'e1', source: target, target: '192.0.2.1' } },
+      { data: { id: 'e2', source: '192.0.2.1', target: 'John Doe' } },
     ];
     addEntities(nodes);
     updateWorkspace((ws) => ({ ...ws, graph: [...nodes, ...edges] }));
@@ -391,7 +391,7 @@ const ReconNG = () => {
           )}
           {Object.entries(currentWorkspace.entities).map(([type, set]) => (
             <div key={type} className="mb-2">
-              <h3 className="font-bold capitalize">{type}</h3>
+              <h3 className={`font-bold ${type === 'ip' ? 'uppercase' : 'capitalize'}`}>{type}</h3>
               <table className="w-full text-sm">
                 <tbody>
                   {Array.from(set).map((label) => (
