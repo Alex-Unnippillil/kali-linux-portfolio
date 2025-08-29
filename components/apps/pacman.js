@@ -610,7 +610,17 @@ const Pacman = () => {
         }
       }
     });
-  }, [score, availableDirs, levelIndex, isTunnel, prefersReduced, setAnnouncement, ghostSpeeds, gameSpeed]);
+  }, [
+    score,
+    availableDirs,
+    levelIndex,
+    isTunnel,
+    prefersReduced,
+    setAnnouncement,
+    ghostSpeeds,
+    gameSpeed,
+    submitScore,
+  ]);
 
   const stepRef = useRef(step);
   useEffect(() => {
