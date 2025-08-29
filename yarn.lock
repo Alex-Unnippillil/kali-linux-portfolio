@@ -6511,6 +6511,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"hash-wasm@npm:^4.12.0":
+  version: 4.12.0
+  resolution: "hash-wasm@npm:4.12.0"
+  checksum: 10c0/6cb95055319810b6f673de755289960683a9831807690795f0e8918b2fd7e6ae5b82a9dc47cbace171cf2814b412ef68c315a0ead0b4d96bd3e56a05e4bde136
+  languageName: node
+  linkType: hard
+
 "hasown@npm:^2.0.0, hasown@npm:^2.0.2":
   version: 2.0.2
   resolution: "hasown@npm:2.0.2"
@@ -11284,6 +11291,7 @@ __metadata:
     eslint-plugin-no-top-level-window: "file:eslint-plugin-no-top-level-window"
     fake-indexeddb: "npm:^6.1.0"
     figlet: "npm:^1.8.2"
+    hash-wasm: "npm:^4.12.0"
     howler: "npm:^2.2.4"
     html-to-image: "npm:^1.11.13"
     idb: "npm:7.1.1"
