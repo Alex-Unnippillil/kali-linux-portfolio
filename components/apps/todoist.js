@@ -36,6 +36,7 @@ export default function Todoist() {
   const [view, setView] = useState('all');
   const [activeProject, setActiveProject] = useState('all');
   const [editingTask, setEditingTask] = useState({ id: null, group: '', title: '' });
+  const [subInputs, setSubInputs] = useState({});
   const dragged = useRef({ group: '', id: null, title: '' });
   const liveRef = useRef(null);
   const workerRef = useRef(null);
@@ -173,12 +174,102 @@ export default function Todoist() {
     setEditingTask({ id: null, group: '', title: '' });
   };
 
+  const toggleExpanded = (group, id) => {
+    const newGroups = {
+      ...groups,
+      [group]: groups[group].map((t) =>
+        t.id === id ? { ...t, expanded: !t.expanded } : t,
+      ),
+    };
+    updateGroups(newGroups);
+  };
+
+  const addSubtask = (group, taskId) => {
+    const title = (subInputs[taskId] || '').trim();
+    if (!title) return;
+    const newGroups = {
+      ...groups,
+      [group]: groups[group].map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              expanded: true,
+              subtasks: [
+                ...(t.subtasks || []),
+                { id: Date.now(), title, completed: false },
+              ],
+            }
+          : t,
+      ),
+    };
+    setSubInputs({ ...subInputs, [taskId]: '' });
+    updateGroups(newGroups);
+  };
+
+  const toggleSubtask = (group, taskId, subId) => {
+    const newGroups = {
+      ...groups,
+      [group]: groups[group].map((t) => {
+        if (t.id !== taskId) return t;
+        return {
+          ...t,
+          subtasks: (t.subtasks || []).map((s) =>
+            s.id === subId ? { ...s, completed: !s.completed } : s,
+          ),
+        };
+      }),
+    };
+    updateGroups(newGroups);
+  };
+
+  const moveSubtask = (group, task, index, dir) => {
+    const subtasks = [...(task.subtasks || [])];
+    [subtasks[index + dir], subtasks[index]] = [
+      subtasks[index],
+      subtasks[index + dir],
+    ];
+    const newGroups = {
+      ...groups,
+      [group]: groups[group].map((t) =>
+        t.id === task.id ? { ...t, subtasks } : t,
+      ),
+    };
+    updateGroups(newGroups);
+  };
+
+  const handleSubtaskKeyDown = (group, task, index) => (e) => {
+    if (e.key === ' ' || e.key === 'Spacebar') {
+      e.preventDefault();
+      const sub = task.subtasks[index];
+      toggleSubtask(group, task.id, sub.id);
+      return;
+    }
+    if (e.key === 'ArrowUp' && index > 0) {
+      e.preventDefault();
+      moveSubtask(group, task, index, -1);
+    } else if (e.key === 'ArrowDown' && index < task.subtasks.length - 1) {
+      e.preventDefault();
+      moveSubtask(group, task, index, 1);
+    }
+  };
+
   const handleKeyDown = (group, task) => (e) => {
     const names = Object.keys(groups);
     const index = groups[group].findIndex((t) => t.id === task.id);
     if (e.key === ' ' || (e.ctrlKey && e.key.toLowerCase() === 'd')) {
       e.preventDefault();
       toggleCompleted(group, task.id);
+      return;
+    }
+    const hasSub = task.subtasks && task.subtasks.length > 0;
+    if (e.key === 'ArrowRight' && hasSub && !task.expanded) {
+      e.preventDefault();
+      toggleExpanded(group, task.id);
+      return;
+    }
+    if (e.key === 'ArrowLeft' && hasSub && task.expanded) {
+      e.preventDefault();
+      toggleExpanded(group, task.id);
       return;
     }
     if (e.key === 'ArrowUp' && index > 0) {
@@ -296,6 +387,8 @@ export default function Todoist() {
       recurring: form.recurring || undefined,
       rrule: recurringRule || undefined,
       completed: false,
+      subtasks: [],
+      expanded: false,
     };
     const newGroups = {
       ...groups,
@@ -362,6 +455,8 @@ export default function Todoist() {
       recurring,
       rrule,
       completed: false,
+      subtasks: [],
+      expanded: false,
     };
     const newGroups = {
       ...groups,
@@ -434,6 +529,16 @@ export default function Todoist() {
           className="rounded shadow bg-white text-black flex items-center min-h-[44px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
           role="listitem"
         >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleExpanded(group, task.id);
+            }}
+            aria-label={task.expanded ? 'Collapse task' : 'Expand task'}
+            className="mr-2 text-xs"
+          >
+            {task.expanded ? '▾' : '▸'}
+          </button>
           <label className="mr-2 inline-flex items-center">
             <input
               type="checkbox"
@@ -465,6 +570,42 @@ export default function Todoist() {
             Edit
           </button>
         </div>
+        {task.expanded && (
+          <div className="ml-6 mt-2">
+            {(task.subtasks || []).map((sub, i) => (
+              <div
+                key={sub.id}
+                tabIndex={0}
+                onKeyDown={handleSubtaskKeyDown(group, task, i)}
+                className="flex items-center mb-1"
+              >
+                <label className="mr-2 inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    aria-label="Toggle completion"
+                    checked={!!sub.completed}
+                    onChange={() => toggleSubtask(group, task.id, sub.id)}
+                    className="w-5 h-5 focus:ring-2 focus:ring-blue-500"
+                  />
+                </label>
+                <div
+                  className={`flex-1 text-sm ${sub.completed ? 'line-through text-gray-500' : ''}`}
+                >
+                  {sub.title}
+                </div>
+              </div>
+            ))}
+            <input
+              value={subInputs[task.id] || ''}
+              onChange={(e) =>
+                setSubInputs({ ...subInputs, [task.id]: e.target.value })
+              }
+              onKeyDown={(e) => e.key === 'Enter' && addSubtask(group, task.id)}
+              placeholder="Add subtask"
+              className="mt-1 ml-2 w-full border p-1 text-sm"
+            />
+          </div>
+        )}
         <div
           className={`transition-[max-height] duration-300 overflow-hidden px-2 ${isEditing ? 'max-h-20' : 'max-h-0'}`}
         >
