@@ -1,0 +1,17 @@
+[
+  {
+    "ssid": "CafeWiFi",
+    "bssid": "00:11:22:33:44:55",
+    "wps": "enabled"
+  },
+  {
+    "ssid": "HomeSecure",
+    "bssid": "66:77:88:99:AA:BB",
+    "wps": "locked"
+  },
+  {
+    "ssid": "Guest",
+    "bssid": "CC:DD:EE:FF:00:11",
+    "wps": "disabled"
+  }
+]
