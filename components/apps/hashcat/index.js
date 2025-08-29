@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
+import StatsChart from '../../StatsChart';
 
 const hashTypes = [
   {
@@ -172,11 +173,43 @@ function HashcatApp() {
   const [attackMode, setAttackMode] = useState('0');
   const [mask, setMask] = useState('');
   const appendMask = (token) => setMask((m) => m + token);
+  const [maskStats, setMaskStats] = useState({ count: 0, time: 0 });
   const showMask = ['3', '6', '7'].includes(attackMode);
   const [ruleSet, setRuleSet] = useState('none');
   const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
+
+  const formatTime = (seconds) => {
+    if (seconds < 60) return `${seconds.toFixed(2)}s`;
+    const minutes = seconds / 60;
+    if (minutes < 60) return `${minutes.toFixed(2)}m`;
+    const hours = minutes / 60;
+    if (hours < 24) return `${hours.toFixed(2)}h`;
+    const days = hours / 24;
+    return `${days.toFixed(2)}d`;
+  };
+
+  useEffect(() => {
+    if (!mask) {
+      setMaskStats({ count: 0, time: 0 });
+      return;
+    }
+    const sets = { '?l': 26, '?u': 26, '?d': 10, '?s': 33, '?a': 95 };
+    let total = 1;
+    for (let i = 0; i < mask.length; i++) {
+      if (mask[i] === '?' && i < mask.length - 1) {
+        const token = mask.slice(i, i + 2);
+        if (sets[token]) {
+          total *= sets[token];
+          i++;
+          continue;
+        }
+      }
+      total *= 1;
+    }
+    setMaskStats({ count: total, time: total / 1_000_000 });
+  }, [mask]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -371,6 +404,15 @@ function HashcatApp() {
               </button>
             ))}
           </div>
+          {mask && (
+            <div className="mt-2">
+              <p>Candidate space: {maskStats.count.toLocaleString()}</p>
+              <p className="text-sm">
+                Estimated @1M/s: {formatTime(maskStats.time)}
+              </p>
+              <StatsChart count={maskStats.count} time={maskStats.time} />
+            </div>
+          )}
         </div>
       )}
       <div>
