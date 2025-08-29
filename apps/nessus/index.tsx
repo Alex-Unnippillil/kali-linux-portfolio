@@ -3,34 +3,23 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { toPng } from 'html-to-image';
 import TrendChart from './components/TrendChart';
-
-interface Plugin {
-  id: number;
-  name: string;
-  severity: Severity;
-}
-
-interface Finding {
-  plugin: number;
-  severity: Severity;
-}
-
-interface Scan {
-  findings: Finding[];
-}
-
-const severities = ['Critical', 'High', 'Medium', 'Low', 'Info'] as const;
-type Severity = (typeof severities)[number];
+import SummaryDashboard from './components/SummaryDashboard';
+import FindingCard from './components/FindingCard';
+import FiltersDrawer from './components/FiltersDrawer';
+import { Plugin, Severity, Scan, Finding, severities } from './types';
 
 const Nessus: React.FC = () => {
   const [plugins, setPlugins] = useState<Plugin[]>([]);
-  const [filters, setFilters] = useState<Record<Severity, boolean>>({
+  const [tags, setTags] = useState<string[]>([]);
+  const [severityFilters, setSeverityFilters] = useState<Record<Severity, boolean>>({
     Critical: true,
     High: true,
     Medium: true,
     Low: true,
     Info: true,
   });
+  const [tagFilters, setTagFilters] = useState<string[]>([]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [diff, setDiff] = useState({
     added: [] as Finding[],
     removed: [] as Finding[],
@@ -43,6 +32,7 @@ const Nessus: React.FC = () => {
     Low: 0,
     Info: 0,
   });
+  const [trend, setTrend] = useState<number[]>([]);
   const chartRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const PAGE_SIZE = 50;
@@ -52,8 +42,13 @@ const Nessus: React.FC = () => {
     const load = async () => {
       try {
         const res = await fetch('/demo-data/nessus/plugins.json');
-        const json = await res.json();
+        const json: Plugin[] = await res.json();
         setPlugins(json);
+        const tagSet = new Set<string>();
+        for (const p of json) {
+          p.tags?.forEach((t) => tagSet.add(t));
+        }
+        setTags(Array.from(tagSet));
       } catch {
         // ignore fetch errors
       }
@@ -98,7 +93,17 @@ const Nessus: React.FC = () => {
     }
     setDiff({ added, removed, changed });
 
-    const counts: Record<Severity, number> = {
+    const countsA: Record<Severity, number> = {
+      Critical: 0,
+      High: 0,
+      Medium: 0,
+      Low: 0,
+      Info: 0,
+    };
+    for (const sev of mapA.values()) {
+      countsA[sev] += 1;
+    }
+    const countsB: Record<Severity, number> = {
       Critical: 0,
       High: 0,
       Medium: 0,
@@ -106,17 +111,32 @@ const Nessus: React.FC = () => {
       Info: 0,
     };
     for (const sev of mapB.values()) {
-      counts[sev] += 1;
+      countsB[sev] += 1;
     }
-    setSummary(counts);
+    setSummary(countsB);
+    setTrend([
+      Object.values(countsA).reduce((a, b) => a + b, 0),
+      Object.values(countsB).reduce((a, b) => a + b, 0),
+    ]);
   };
 
-  const toggle = (sev: Severity) =>
-    setFilters((f) => ({ ...f, [sev]: !f[sev] }));
+  const toggleSeverity = (sev: Severity) =>
+    setSeverityFilters((f) => ({ ...f, [sev]: !f[sev] }));
+
+  const toggleTag = (tag: string) =>
+    setTagFilters((t) =>
+      t.includes(tag) ? t.filter((x) => x !== tag) : [...t, tag],
+    );
 
   const filtered = useMemo(
-    () => plugins.filter((p) => filters[p.severity]),
-    [plugins, filters]
+    () =>
+      plugins.filter(
+        (p) =>
+          severityFilters[p.severity] &&
+          (tagFilters.length === 0 ||
+            p.tags?.some((t) => tagFilters.includes(t))),
+      ),
+    [plugins, severityFilters, tagFilters],
   );
 
   useEffect(() => {
@@ -150,26 +170,21 @@ const Nessus: React.FC = () => {
 
       <section>
         <h2 className="text-xl mb-2">Plugin Feed</h2>
-        <div className="mb-4 flex gap-2 flex-wrap">
-          {severities.map((sev) => (
-            <label key={sev} className="flex items-center gap-1">
-              <input
-                type="checkbox"
-                checked={filters[sev]}
-                onChange={() => toggle(sev)}
-              />
-              {sev}
-            </label>
-          ))}
-        </div>
+        <button
+          type="button"
+          onClick={() => setDrawerOpen(true)}
+          className="mb-4 px-3 py-1 bg-gray-700 rounded"
+        >
+          Filters
+        </button>
         <ul
           ref={listRef}
           onScroll={handleScroll}
-          className="space-y-1 max-h-96 overflow-auto"
+          className="space-y-2 max-h-96 overflow-auto"
         >
           {filtered.slice(0, visibleCount).map((p) => (
-            <li key={p.id} className="border-b border-gray-700 pb-1">
-              <span className="font-mono">{p.id}</span>: {p.name} - {p.severity}
+            <li key={p.id}>
+              <FindingCard plugin={p} />
             </li>
           ))}
         </ul>
@@ -199,19 +214,8 @@ const Nessus: React.FC = () => {
 
       <section>
         <h2 className="text-xl mb-2">Executive Summary</h2>
-        <div ref={chartRef} className="space-y-2">
-          {severities.map((sev) => (
-            <div key={sev} className="flex items-center gap-2">
-              <span className="w-24">{sev}</span>
-              <div className="flex-1 bg-gray-700 h-4">
-                <div
-                  className="bg-blue-500 h-4"
-                  style={{ width: `${summary[sev] * 30}px` }}
-                />
-              </div>
-              <span className="w-6 text-right">{summary[sev]}</span>
-            </div>
-          ))}
+        <div ref={chartRef}>
+          <SummaryDashboard summary={summary} trend={trend} />
         </div>
         <button
           type="button"
@@ -225,6 +229,15 @@ const Nessus: React.FC = () => {
         <h2 className="text-xl mb-2">Trends</h2>
         <TrendChart />
       </section>
+      <FiltersDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        severityFilters={severityFilters}
+        toggleSeverity={toggleSeverity}
+        tags={tags}
+        tagFilters={tagFilters}
+        toggleTag={toggleTag}
+      />
     </div>
   );
 };
