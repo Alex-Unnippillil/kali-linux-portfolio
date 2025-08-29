@@ -9,6 +9,8 @@ import {
 
 const params = new URLSearchParams(location.search);
 const levelFile = params.get('lvl') || 'levels/level1.json';
+const dataParam = params.get('data');
+const levelKey = dataParam ? `data:${dataParam}` : levelFile;
 const cpParam = params.get('cp');
 let checkpoint = null;
 if (cpParam) {
@@ -46,6 +48,11 @@ const player = new Player();
 const camera = { x: 0, y: 0, deadZone: { w: 100, h: 60 } };
 const keys = {};
 const effects = [];
+let ghostData = [];
+let ghostRun = [];
+let ghostIndex = 0;
+let ghostPos = null;
+let runTime = 0;
 
 const timerEl = document.getElementById('timer');
 const completeEl = document.getElementById('complete');
@@ -197,28 +204,47 @@ function playCoinSound() {
   } catch (e) {}
 }
 
-function loadLevel(name) {
-  fetch(name)
-    .then(r => r.json())
-    .then(data => {
-      mapWidth = data.width;
-      mapHeight = data.height;
-      tiles = data.tiles;
-      spawn = data.spawn;
-      if (checkpoint) spawn = checkpoint;
-      player.x = spawn.x;
-      player.y = spawn.y;
-      player.vx = player.vy = 0;
-      score = 0;
-      coinTotal = 0;
-      for (let y = 0; y < mapHeight; y++) {
-        for (let x = 0; x < mapWidth; x++) if (tiles[y][x] === 5) coinTotal++;
-      }
-      levelStart = performance.now();
-      initBackground();
-    });
+async function loadLevel(name) {
+  let data;
+  if (name.startsWith('opfs/')) {
+    const root = await navigator.storage.getDirectory();
+    const handle = await root.getFileHandle(name.slice(5));
+    const file = await handle.getFile();
+    data = JSON.parse(await file.text());
+  } else {
+    const res = await fetch(name);
+    data = await res.json();
+  }
+  loadLevelData(data);
 }
-loadLevel(levelFile);
+
+function loadLevelData(data) {
+  mapWidth = data.width;
+  mapHeight = data.height;
+  tiles = data.tiles;
+  spawn = data.spawn;
+  if (checkpoint) spawn = checkpoint;
+  player.x = spawn.x;
+  player.y = spawn.y;
+  player.vx = player.vy = 0;
+  score = 0;
+  coinTotal = 0;
+  for (let y = 0; y < mapHeight; y++) {
+    for (let x = 0; x < mapWidth; x++) if (tiles[y][x] === 5) coinTotal++;
+  }
+  levelStart = performance.now();
+  runTime = 0;
+  ghostRun = [{ t: 0, x: player.x, y: player.y }];
+  ghostData = JSON.parse(localStorage.getItem(`pf-ghost-${levelKey}`) || '[]');
+  ghostIndex = 0;
+  ghostPos = ghostData.length ? ghostData[0] : null;
+  initBackground();
+}
+if (dataParam) {
+  loadLevelData(JSON.parse(atob(dataParam)));
+} else {
+  loadLevel(levelFile);
+}
 
 let last = 0;
 function loop(ts) {
@@ -250,6 +276,16 @@ function update(dt) {
   }
   updateEffects(dt);
 
+  runTime += dt;
+  ghostRun.push({ t: runTime, x: player.x, y: player.y });
+  if (ghostData.length && ghostIndex < ghostData.length) {
+    const next = ghostData[ghostIndex];
+    if (next.t <= runTime) {
+      ghostPos = next;
+      ghostIndex++;
+    }
+  }
+
   if (player.y > mapHeight * tileSize) respawn();
 
   const cx = Math.floor((player.x + player.w / 2) / tileSize);
@@ -267,6 +303,11 @@ function update(dt) {
     tiles[cy][cx] = 0;
     spawn = { x: cx * tileSize, y: cy * tileSize };
     window.parent.postMessage({ type: 'checkpoint', checkpoint: spawn }, '*');
+    runTime = 0;
+    ghostRun = [{ t: 0, x: player.x, y: player.y }];
+    ghostIndex = ghostData.findIndex(g => g.x === spawn.x && g.y === spawn.y);
+    if (ghostIndex < 0) ghostIndex = 0;
+    ghostPos = ghostData[ghostIndex] || null;
     announce('Checkpoint reached');
   }
 
@@ -290,6 +331,8 @@ function update(dt) {
     if (completeEl) completeEl.classList.remove('hidden');
     window.parent.postMessage({ type: 'levelComplete' }, '*');
     announce('Level complete');
+    localStorage.setItem(`pf-ghost-${levelKey}`, JSON.stringify(ghostRun));
+    ghostData = ghostRun.map(g => ({ ...g }));
     coinTotal = -1;
   }
 }
@@ -298,6 +341,10 @@ function respawn() {
   player.x = spawn.x;
   player.y = spawn.y;
   player.vx = player.vy = 0;
+  runTime = 0;
+  ghostRun = [{ t: 0, x: player.x, y: player.y }];
+  ghostIndex = 0;
+  ghostPos = ghostData.length ? ghostData[0] : null;
   announce('Respawned');
 }
 
@@ -405,6 +452,10 @@ function draw() {
 
   drawEffects();
 
+  if (ghostPos) {
+    ctx.fillStyle = 'rgba(0,255,255,0.5)';
+    ctx.fillRect(ghostPos.x - camera.x, ghostPos.y - camera.y, player.w, player.h);
+  }
   ctx.fillStyle = '#0f0';
   ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
 }

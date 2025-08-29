@@ -10,6 +10,7 @@ let spawn = { x: 0, y: 0 };
 let current = 1;
 
 const palette = document.getElementById('palette');
+const filenameEl = document.getElementById('filename');
 const types = [
   { id: 0, color: '#222', label: '0' },
   { id: 1, color: '#777', label: '1' },
@@ -88,5 +89,60 @@ draw();
 document.getElementById('exportBtn').addEventListener('click', () => {
   const data = { width, height, tiles, spawn };
   document.getElementById('output').value = JSON.stringify(data);
+});
+
+async function getRootDir() {
+  if (!navigator.storage?.getDirectory) throw new Error('OPFS not supported');
+  return await navigator.storage.getDirectory();
+}
+
+async function saveFile(name, data) {
+  const root = await getRootDir();
+  const handle = await root.getFileHandle(name, { create: true });
+  const writable = await handle.createWritable();
+  await writable.write(data);
+  await writable.close();
+}
+
+async function loadFile(name) {
+  const root = await getRootDir();
+  const handle = await root.getFileHandle(name);
+  const file = await handle.getFile();
+  return await file.text();
+}
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  const name = filenameEl.value || 'level.json';
+  const data = JSON.stringify({ width, height, tiles, spawn });
+  await saveFile(name, data);
+});
+
+document.getElementById('loadBtn').addEventListener('click', async () => {
+  const name = filenameEl.value || 'level.json';
+  try {
+    const text = await loadFile(name);
+    const data = JSON.parse(text);
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        tiles[y][x] = data.tiles[y][x] || 0;
+      }
+    }
+    spawn = data.spawn;
+    draw();
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+document.getElementById('shareBtn').addEventListener('click', async () => {
+  const data = JSON.stringify({ width, height, tiles, spawn });
+  const encoded = btoa(data);
+  const url = `${location.origin}${location.pathname.replace('editor.html','index.html')}?data=${encoded}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    alert('Share URL copied to clipboard');
+  } catch (e) {
+    console.error(e);
+  }
 });
 
