@@ -9,6 +9,7 @@ interface Project {
   title: string;
   description: string;
   stack: string[];
+  tags: string[];
   year: number;
   type: string;
   thumbnail: string;
@@ -19,6 +20,7 @@ export default function ProjectGalleryPage() {
   const router = useRouter();
 
   const [stack, setStack] = usePersistentState<string>('pg-stack', '');
+  const [tag, setTag] = usePersistentState<string>('pg-tag', '');
   const [year, setYear] = usePersistentState<string>('pg-year', '');
   const [type, setType] = usePersistentState<string>('pg-type', '');
 
@@ -33,8 +35,9 @@ export default function ProjectGalleryPage() {
   // initialize from query string
   useEffect(() => {
     if (!router.isReady) return;
-    const { stack: qsStack, year: qsYear, type: qsType } = router.query;
+    const { stack: qsStack, tag: qsTag, year: qsYear, type: qsType } = router.query;
     if (typeof qsStack === 'string') setStack(qsStack);
+    if (typeof qsTag === 'string') setTag(qsTag);
     if (typeof qsYear === 'string') setYear(qsYear);
     if (typeof qsType === 'string') setType(qsType);
   }, [router.isReady]);
@@ -43,13 +46,18 @@ export default function ProjectGalleryPage() {
   useEffect(() => {
     const query: Record<string, string> = {};
     if (stack) query.stack = stack;
+    if (tag) query.tag = tag;
     if (year) query.year = year;
     if (type) query.type = type;
     router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
-  }, [stack, year, type]);
+  }, [stack, tag, year, type]);
 
   const stacks = useMemo(
     () => Array.from(new Set(projects.flatMap((p) => p.stack))),
+    [projects]
+  );
+  const tags = useMemo(
+    () => Array.from(new Set(projects.flatMap((p) => p.tags ?? []))),
     [projects]
   );
   const years = useMemo(
@@ -66,10 +74,11 @@ export default function ProjectGalleryPage() {
       projects.filter(
         (p) =>
           (!stack || p.stack.includes(stack)) &&
+          (!tag || p.tags?.includes(tag)) &&
           (!year || String(p.year) === year) &&
           (!type || p.type === type)
       ),
-    [projects, stack, year, type]
+    [projects, stack, tag, year, type]
   );
 
   const pillClass = (active: boolean) =>
@@ -77,6 +86,17 @@ export default function ProjectGalleryPage() {
 
   return (
     <div className="p-4 space-y-4 text-black">
+      <div className="flex flex-wrap gap-2">
+        {tags.map((t) => (
+          <button
+            key={t}
+            onClick={() => setTag(tag === t ? '' : t)}
+            className={pillClass(tag === t)}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
       <div className="flex flex-wrap gap-2">
         {stacks.map((s) => (
           <button
@@ -117,6 +137,16 @@ export default function ProjectGalleryPage() {
             <div className="p-2">
               <h3 className="font-semibold">{p.title}</h3>
               <p className="text-sm">{p.description}</p>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {p.tags.map((t) => (
+                  <span
+                    key={t}
+                    className="text-xs bg-gray-300 rounded px-2 py-0.5"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         ))}

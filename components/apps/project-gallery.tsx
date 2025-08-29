@@ -7,6 +7,7 @@ interface Project {
   title: string;
   description: string;
   stack: string[];
+  tags: string[];
   year: number;
   type: string;
   thumbnail: string;
@@ -29,6 +30,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const projects: Project[] = projectsData as Project[];
   const [search, setSearch] = useState('');
   const [stack, setStack] = useState('');
+  const [tag, setTag] = useState('');
   const [year, setYear] = useState('');
   const [type, setType] = useState('');
   const [ariaMessage, setAriaMessage] = useState('');
@@ -56,6 +58,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const writeFilters = async (data: {
     search: string;
     stack: string;
+    tag: string;
     year: string;
     type: string;
   }) => {
@@ -81,6 +84,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     readFilters().then((data) => {
       setSearch(data.search || '');
       setStack(data.stack || '');
+      setTag(data.tag || '');
       setYear(data.year || '');
       setType(data.type || '');
       setAriaMessage(`Showing ${projects.length} projects`);
@@ -89,6 +93,10 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
 
   const stacks = useMemo(
     () => Array.from(new Set(projects.flatMap((p) => p.stack))),
+    [projects]
+  );
+  const tags = useMemo(
+    () => Array.from(new Set(projects.flatMap((p) => p.tags ?? []))),
     [projects]
   );
   const years = useMemo(
@@ -105,24 +113,25 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       projects.filter(
         (p) =>
           (!stack || p.stack.includes(stack)) &&
+          (!tag || p.tags?.includes(tag)) &&
           (!year || String(p.year) === year) &&
           (!type || p.type === type) &&
           (search === '' ||
             p.title.toLowerCase().includes(search.toLowerCase()) ||
             p.description.toLowerCase().includes(search.toLowerCase()))
       ),
-    [projects, stack, year, type, search]
+    [projects, stack, tag, year, type, search]
   );
 
   useEffect(() => {
-    writeFilters({ search, stack, year, type });
-  }, [search, stack, year, type]);
+    writeFilters({ search, stack, tag, year, type });
+  }, [search, stack, tag, year, type]);
 
   useEffect(() => {
     setAriaMessage(
-      `Showing ${filtered.length} project${filtered.length === 1 ? '' : 's'}${stack ? ` filtered by ${stack}` : ''}${year ? ` in ${year}` : ''}${type ? ` of type ${type}` : ''}${search ? ` matching "${search}"` : ''}`
+      `Showing ${filtered.length} project${filtered.length === 1 ? '' : 's'}${stack ? ` filtered by ${stack}` : ''}${tag ? ` tagged with ${tag}` : ''}${year ? ` in ${year}` : ''}${type ? ` of type ${type}` : ''}${search ? ` matching \"${search}\"` : ''}`
     );
-  }, [filtered.length, stack, year, type, search]);
+  }, [filtered.length, stack, tag, year, type, search]);
 
   const openInChrome = (url: string) => {
     try {
@@ -156,6 +165,19 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           {stacks.map((s) => (
             <option key={s} value={s}>
               {s}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Tag"
+          value={tag}
+          onChange={(e) => setTag(e.target.value)}
+          className="px-2 py-1 text-black"
+        >
+          <option value="">All Tags</option>
+          {tags.map((t) => (
+            <option key={t} value={t}>
+              {t}
             </option>
           ))}
         </select>
@@ -220,6 +242,15 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
                     className="bg-gray-700 text-xs px-2 py-1 rounded-full"
                   >
                     {s}
+                  </button>
+                ))}
+                {project.tags.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTag(t)}
+                    className="bg-gray-600 text-xs px-2 py-1 rounded-full"
+                  >
+                    {t}
                   </button>
                 ))}
               </div>
