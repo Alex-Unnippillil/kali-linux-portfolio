@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { convertUnit, unitMap } from '../../components/apps/converter/unitData';
+import usePersistentState from '../../hooks/usePersistentState';
 
 const currencyRates: Record<string, number> = {
   USD: 1,
@@ -37,28 +38,43 @@ export default function Converter() {
   const [toValue, setToValue] = useState('');
   const [precision, setPrecision] = useState(2);
   const [sigFig, setSigFig] = useState(false);
-  const [favourites, setFavourites] = useState<string[]>([]);
-
-  // load favourites
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('converter-favourites');
-      if (stored) setFavourites(JSON.parse(stored));
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  // persist favourites
-  useEffect(() => {
-    try {
-      localStorage.setItem('converter-favourites', JSON.stringify(favourites));
-    } catch {
-      // ignore
-    }
-  }, [favourites]);
+  const [favourites, setFavourites] = usePersistentState<string[]>(
+    'converter-favourites',
+    [],
+    Array.isArray,
+  );
 
   const units = categoryUnits[category];
+
+  const currentFavourite =
+    fromValue && toValue
+      ? `${fromValue} ${fromUnit} = ${toValue} ${toUnit}`
+      : '';
+  const isFavourite = currentFavourite
+    ? favourites.includes(currentFavourite)
+    : false;
+
+  const toggleFavourite = () => {
+    if (!currentFavourite) return;
+    setFavourites((prev) =>
+      prev.includes(currentFavourite)
+        ? prev.filter((f) => f !== currentFavourite)
+        : [...prev, currentFavourite],
+    );
+  };
+
+  const removeFavourite = (index: number) => {
+    setFavourites((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const moveFavourite = (index: number, direction: number) => {
+    setFavourites((prev) => {
+      const arr = [...prev];
+      const [item] = arr.splice(index, 1);
+      arr.splice(index + direction, 0, item);
+      return arr;
+    });
+  };
 
   const format = (num: number) =>
     sigFig ? Number(num).toPrecision(precision) : Number(num).toFixed(precision);
@@ -102,12 +118,6 @@ export default function Converter() {
     setToValue(fromValue);
   };
 
-  const saveFavourite = () => {
-    if (!fromValue || !toValue) return;
-    const fav = `${fromValue} ${fromUnit} = ${toValue} ${toUnit}`;
-    setFavourites((prev) => [...prev, fav]);
-  };
-
   const applyFavourite = (fav: string) => {
     const match = fav.match(/([\d.eE+-]+) (\w+) = ([\d.eE+-]+) (\w+)/);
     if (!match) return;
@@ -134,6 +144,45 @@ export default function Converter() {
   return (
     <div className="converter-container h-full w-full p-4 overflow-y-auto bg-ub-cool-grey text-white">
       <h2 className="text-xl mb-2">Converter</h2>
+      <div className="mb-6">
+        <h3 className="text-lg mb-2">Favourites</h3>
+        {favourites.length === 0 ? (
+          <div>No favourites yet</div>
+        ) : (
+          <ul className="space-y-1">
+            {favourites.map((f, i) => (
+              <li key={i} className="flex items-center gap-2">
+                <button
+                  className="underline flex-1 text-left"
+                  onClick={() => applyFavourite(f)}
+                >
+                  {f}
+                </button>
+                <button
+                  onClick={() => moveFavourite(i, -1)}
+                  disabled={i === 0}
+                  className="bg-gray-600 px-1 rounded disabled:opacity-50"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={() => moveFavourite(i, 1)}
+                  disabled={i === favourites.length - 1}
+                  className="bg-gray-600 px-1 rounded disabled:opacity-50"
+                >
+                  ↓
+                </button>
+                <button
+                  onClick={() => removeFavourite(i)}
+                  className="bg-gray-600 px-1 rounded"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <label>
           Category
@@ -214,28 +263,13 @@ export default function Converter() {
         <button onClick={swap} className="bg-gray-600 px-2 py-1 rounded">
           Swap
         </button>
-        <button onClick={saveFavourite} className="bg-gray-600 px-2 py-1 rounded">
-          Save
+        <button
+          onClick={toggleFavourite}
+          className="bg-gray-600 px-2 py-1 rounded"
+          aria-label={isFavourite ? 'remove favourite' : 'add favourite'}
+        >
+          {isFavourite ? '★' : '☆'}
         </button>
-      </div>
-      <div className="mt-6">
-        <h3 className="text-lg mb-2">Favourites</h3>
-        {favourites.length === 0 ? (
-          <div>No favourites yet</div>
-        ) : (
-          <ul className="list-disc list-inside space-y-1">
-            {favourites.map((f, i) => (
-              <li key={i}>
-                <button
-                  className="underline"
-                  onClick={() => applyFavourite(f)}
-                >
-                  {f}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
     </div>
   );
