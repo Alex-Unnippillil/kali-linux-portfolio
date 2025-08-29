@@ -1,24 +1,25 @@
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, within } from '@testing-library/react';
 import Dsniff from '../components/apps/dsniff';
 
 describe('Dsniff component', () => {
   it('shows fixture logs', async () => {
     render(<Dsniff />);
-    expect(await screen.findByText('example.com')).toBeInTheDocument();
-    expect(await screen.findByText('test.com')).toBeInTheDocument();
+    expect((await screen.findAllByText('example.com')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('test.com')).length).toBeGreaterThan(0);
   });
 
   it('applies host filter', async () => {
     render(<Dsniff />);
-    await screen.findByText('example.com');
+    const logArea = screen.getByRole('log');
+    await within(logArea).findByText('example.com');
 
     fireEvent.change(screen.getByPlaceholderText('Value'), {
       target: { value: 'example.com' },
     });
     fireEvent.click(screen.getByText('Add'));
-    expect(screen.getAllByText(/example.com/).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/test.com/)).toBeNull();
+    expect(within(logArea).getAllByText(/example.com/).length).toBeGreaterThan(0);
+    expect(within(logArea).queryByText(/test.com/)).toBeNull();
   });
 
   it('displays pcap summary and remediation', async () => {
@@ -29,6 +30,13 @@ describe('Dsniff component', () => {
     expect(
       screen.getByText(/HTTPS\/TLS to encrypt credentials/i)
     ).toBeInTheDocument();
+  });
+
+  it('redacts credentials when enabled', async () => {
+    render(<Dsniff />);
+    expect(await screen.findByText('demo:demo123')).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Redact passwords'));
+    expect(await screen.findByText('demo:***')).toBeInTheDocument();
   });
 });
 

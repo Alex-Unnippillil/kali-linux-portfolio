@@ -122,6 +122,7 @@ const Dsniff = () => {
   const [selectedPacket, setSelectedPacket] = useState(null);
   const [domainSummary, setDomainSummary] = useState([]);
   const [timeline, setTimeline] = useState([]);
+  const [redact, setRedact] = useState(false);
 
   const { summary: pcapSummary, remediation } = pcapFixture;
 
@@ -217,18 +218,18 @@ const Dsniff = () => {
     setFilters(filters.filter((_, i) => i !== idx));
   };
 
-  const exportRedacted = () => {
-    const redacted = domainSummary.map((d) => ({
+  const exportSummary = () => {
+    const data = domainSummary.map((d) => ({
       domain: d.domain,
       urls: d.urls,
       credentials: d.credentials.map((c) => ({
         username: c.username,
-        password: c.password ? '***' : '',
+        password: redact && c.password ? '***' : c.password,
       })),
       risk: d.risk,
     }));
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(JSON.stringify(redacted, null, 2));
+      navigator.clipboard.writeText(JSON.stringify(data, null, 2));
     }
   };
 
@@ -405,7 +406,11 @@ const Dsniff = () => {
                 <td className="pr-2 text-white">
                   {d.credentials.length
                     ? d.credentials
-                        .map((c) => `${c.username || ''}${c.password ? ':' + c.password : ''}`)
+                        .map((c) =>
+                          `${c.username || ''}${
+                            c.password ? ':' + (redact ? '***' : c.password) : ''
+                          }`
+                        )
                         .join(' | ')
                     : '—'}
                 </td>
@@ -416,12 +421,23 @@ const Dsniff = () => {
             ))}
           </tbody>
         </table>
-        <button
-          onClick={exportRedacted}
-          className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
-        >
-          Export redacted
-        </button>
+        <div className="flex items-center gap-2">
+          <label className="text-xs flex items-center">
+            <input
+              type="checkbox"
+              checked={redact}
+              onChange={(e) => setRedact(e.target.checked)}
+              className="mr-1"
+            />
+            Redact passwords
+          </label>
+          <button
+            onClick={exportSummary}
+            className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          >
+            Quick export
+          </button>
+        </div>
       </div>
       <div className="mb-4" data-testid="capture-timeline">
         <h2 className="font-bold mb-2 text-sm">Capture timeline</h2>
