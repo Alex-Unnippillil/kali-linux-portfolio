@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import useGameControls from '../../components/apps/useGameControls';
+import { getBestMove } from '../../games/connect-four/solver';
 
 const ROWS = 6;
 const COLS = 7;
@@ -60,110 +61,6 @@ const checkWinner = (board: Board, player: Exclude<Cell, null>) => {
 
 const isBoardFull = (board: Board) => board[0].every(Boolean);
 
-const evaluateWindow = (window: Cell[], player: Exclude<Cell, null>) => {
-  const opp = player === 'red' ? 'yellow' : 'red';
-  let score = 0;
-  const playerCount = window.filter((v) => v === player).length;
-  const oppCount = window.filter((v) => v === opp).length;
-  const empty = window.filter((v) => v === null).length;
-  if (playerCount === 4) score += 100;
-  else if (playerCount === 3 && empty === 1) score += 5;
-  else if (playerCount === 2 && empty === 2) score += 2;
-  if (oppCount === 3 && empty === 1) score -= 4;
-  return score;
-};
-
-const scorePosition = (board: Board, player: Exclude<Cell, null>) => {
-  let score = 0;
-  const center = Math.floor(COLS / 2);
-  const centerArray = board.map((row) => row[center]);
-  score += centerArray.filter((v) => v === player).length * 3;
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS - 3; c++) {
-      score += evaluateWindow(board[r].slice(c, c + 4), player);
-    }
-  }
-  for (let c = 0; c < COLS; c++) {
-    for (let r = 0; r < ROWS - 3; r++) {
-      score += evaluateWindow(
-        [board[r][c], board[r + 1][c], board[r + 2][c], board[r + 3][c]],
-        player
-      );
-    }
-  }
-  for (let r = 0; r < ROWS - 3; r++) {
-    for (let c = 0; c < COLS - 3; c++) {
-      score += evaluateWindow(
-        [board[r][c], board[r + 1][c + 1], board[r + 2][c + 2], board[r + 3][c + 3]],
-        player
-      );
-    }
-  }
-  for (let r = 3; r < ROWS; r++) {
-    for (let c = 0; c < COLS - 3; c++) {
-      score += evaluateWindow(
-        [board[r][c], board[r - 1][c + 1], board[r - 2][c + 2], board[r - 3][c + 3]],
-        player
-      );
-    }
-  }
-  return score;
-};
-
-const getValidLocations = (board: Board) => {
-  const locations: number[] = [];
-  for (let c = 0; c < COLS; c++) {
-    if (!board[0][c]) locations.push(c);
-  }
-  return locations;
-};
-
-const minimax = (board: Board, depth: number, alpha: number, beta: number, maximizing: boolean) => {
-  const validLocations = getValidLocations(board);
-  const isTerminal =
-    checkWinner(board, 'red') ||
-    checkWinner(board, 'yellow') ||
-    validLocations.length === 0;
-  if (depth === 0 || isTerminal) {
-    if (checkWinner(board, 'red')) return { score: 1000000 };
-    if (checkWinner(board, 'yellow')) return { score: -1000000 };
-    return { score: scorePosition(board, 'red') };
-  }
-  if (maximizing) {
-    let value = -Infinity;
-    let column = validLocations[0];
-    for (const col of validLocations) {
-      const row = getValidRow(board, col);
-      const newBoard = board.map((r) => [...r]);
-      newBoard[row][col] = 'red';
-      const score = minimax(newBoard, depth - 1, alpha, beta, false).score;
-      if (score > value) {
-        value = score;
-        column = col;
-      }
-      alpha = Math.max(alpha, value);
-      if (alpha >= beta) break;
-    }
-    return { column, score: value };
-  } else {
-    let value = Infinity;
-    let column = validLocations[0];
-    for (const col of validLocations) {
-      const row = getValidRow(board, col);
-      const newBoard = board.map((r) => [...r]);
-      newBoard[row][col] = 'yellow';
-      const score = minimax(newBoard, depth - 1, alpha, beta, true).score;
-      if (score < value) {
-        value = score;
-        column = col;
-      }
-      beta = Math.min(beta, value);
-      if (alpha >= beta) break;
-    }
-    return { column, score: value };
-  }
-};
-
 const getImmediateLines = (board: Board, player: Exclude<Cell, null>) => {
   const dirs = [
     { dr: 0, dc: 1 },
@@ -207,6 +104,7 @@ const ConnectFour = () => {
   const [winner, setWinner] = useState<Winner>(null);
   const [winningCells, setWinningCells] = useState<{ r: number; c: number }[]>([]);
   const [animDisc, setAnimDisc] = useState<AnimatedDisc | null>(null);
+  const [hintColumn, setHintColumn] = useState<number | null>(null);
 
   const dropDisc = React.useCallback(
     (col: number, color: Exclude<Cell, null> = player) => {
@@ -232,6 +130,14 @@ const ConnectFour = () => {
     const opp = player === 'red' ? 'yellow' : 'red';
     setTeaching({ wins: getImmediateLines(board, player), threats: getImmediateLines(board, opp) });
   }, [board, player]);
+  useEffect(() => {
+    if (player === 'yellow' && !winner && !animDisc) {
+      const { column } = getBestMove(board, aiDepth, 'yellow');
+      setHintColumn(column);
+    } else {
+      setHintColumn(null);
+    }
+  }, [board, player, winner, animDisc, aiDepth]);
 
   const finalizeMove = React.useCallback(
     (newBoard: Board, color: Exclude<Cell, null>, col: number) => {
@@ -279,7 +185,7 @@ const ConnectFour = () => {
   }, [animDisc, board, finalizeMove]);
 
   const aiMove = React.useCallback(() => {
-    const { column } = minimax(board, aiDepth, -Infinity, Infinity, true);
+    const { column } = getBestMove(board, aiDepth, 'red');
     if (column !== undefined) dropDisc(column, 'red');
   }, [board, dropDisc, aiDepth]);
 
@@ -321,7 +227,7 @@ const ConnectFour = () => {
                 key={`${rIdx}-${cIdx}`}
                 className={`h-10 w-10 flex items-center justify-center cursor-pointer bg-blue-700 ${cellHighlight(
                   rIdx,
-                  cIdx
+                  cIdx,
                 )}`}
                 onClick={() => dropDisc(cIdx, 'yellow')}
                 onMouseEnter={() => setSelectedCol(cIdx)}
@@ -346,6 +252,14 @@ const ConnectFour = () => {
               height: BOARD_HEIGHT,
             }}
           />
+        )}
+        {hintColumn !== null && player === 'yellow' && (
+          <div
+            className="absolute"
+            style={{ left: hintColumn * SLOT + CELL_SIZE / 2 - 4, top: -8 }}
+          >
+            <div className="h-2 w-2 rounded-full bg-yellow-300" />
+          </div>
         )}
         {winColumn !== null && (
           <div
