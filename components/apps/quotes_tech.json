@@ -2,16 +2,19 @@
   {
     "id": 1,
     "quote": "Technology is best when it brings people together.",
-    "author": "Matt Mullenweg"
+    "author": "Matt Mullenweg",
+    "tags": ["technology"]
   },
   {
     "id": 2,
     "quote": "It has become appallingly obvious that our technology has exceeded our humanity.",
-    "author": "Albert Einstein"
+    "author": "Albert Einstein",
+    "tags": ["technology"]
   },
   {
     "id": 3,
     "quote": "Any sufficiently advanced technology is indistinguishable from magic.",
-    "author": "Arthur C. Clarke"
+    "author": "Arthur C. Clarke",
+    "tags": ["technology"]
   }
 ]

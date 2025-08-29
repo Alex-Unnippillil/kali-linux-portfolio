@@ -1,59 +1,61 @@
-import React, { useEffect, useRef, useState } from 'react';
-import Filter from 'bad-words';
-import { toPng } from 'html-to-image';
+import React, { useEffect, useRef, useState, useMemo } from "react";
+import Filter from "bad-words";
+import { toPng } from "html-to-image";
 
-import defaultQuotes from './quotes.json';
-import techQuotes from './quotes_tech.json';
+import defaultQuotes from "../../quotes/database.json";
+import techQuotes from "./quotes_tech.json";
 
 const SAFE_CATEGORIES = [
-  'inspirational',
-  'life',
-  'love',
-  'wisdom',
-  'technology',
-  'humor',
-  'general',
+  "inspirational",
+  "life",
+  "love",
+  "wisdom",
+  "technology",
+  "humor",
+  "general",
 ];
 
 const CATEGORY_KEYWORDS = {
   inspirational: [
-    'inspire',
-    'dream',
-    'goal',
-    'courage',
-    'success',
-    'motivation',
-    'believe',
-    'achieve',
+    "inspire",
+    "dream",
+    "goal",
+    "courage",
+    "success",
+    "motivation",
+    "believe",
+    "achieve",
   ],
-  life: ['life', 'living', 'journey', 'experience'],
-  love: ['love', 'heart', 'passion'],
-  wisdom: ['wisdom', 'knowledge', 'learn', 'education'],
-  technology: ['technology', 'science', 'computer'],
-  humor: ['laugh', 'funny', 'humor'],
+  life: ["life", "living", "journey", "experience"],
+  love: ["love", "heart", "passion"],
+  wisdom: ["wisdom", "knowledge", "learn", "education"],
+  technology: ["technology", "science", "computer"],
+  humor: ["laugh", "funny", "humor"],
 };
 
 const processQuotes = (data) => {
   const filter = new Filter();
   return data
     .map((q) => {
-      const content = q.content || q.quote || '';
-      const author = q.author || 'Unknown';
+      const content = q.content || q.quote || "";
+      const author = q.author || "Unknown";
       // Use provided tags when available, otherwise guess based on keywords
-      let tags = Array.isArray(q.tags) ? q.tags.map((t) => t.toLowerCase()) : [];
+      let tags = Array.isArray(q.tags)
+        ? q.tags.map((t) => t.toLowerCase())
+        : [];
       if (!tags.length) {
         const lower = content.toLowerCase();
         Object.entries(CATEGORY_KEYWORDS).forEach(([cat, keywords]) => {
           if (keywords.some((k) => lower.includes(k))) tags.push(cat);
         });
       }
-      if (!tags.length) tags.push('general');
+      if (!tags.length) tags.push("general");
       return { content, author, tags };
     })
     .filter(
       (q) =>
         !filter.isProfane(q.content) &&
-        q.tags.some((t) => SAFE_CATEGORIES.includes(t))
+        q.tags.some((t) => SAFE_CATEGORIES.includes(t)),
     );
 };
 const PACKS = {
@@ -71,59 +73,80 @@ const shuffleArray = (arr) => {
 };
 
 const QuoteGenerator = () => {
-  const [pack, setPack] = useState(() => localStorage.getItem('quotePack') || 'default');
+  const [pack, setPack] = useState(
+    () => localStorage.getItem("quotePack") || "default",
+  );
+  const [category, setCategory] = useState("");
   const [order, setOrder] = useState([]);
   const [index, setIndex] = useState(0);
   const [current, setCurrent] = useState(null);
-  const [displayedText, setDisplayedText] = useState('');
+  const [displayedText, setDisplayedText] = useState("");
   const [prefersReduced, setPrefersReduced] = useState(false);
   const rafRef = useRef();
   const liveRef = useRef(null);
 
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handler = () => setPrefersReduced(media.matches);
-    handler();
-    media.addEventListener('change', handler);
-    return () => media.removeEventListener('change', handler);
-  }, []);
-  useEffect(() => {
+  const getBase = () => {
     const base = PACKS[pack] || [];
-    let storedOrder;
-    try {
-      storedOrder = JSON.parse(localStorage.getItem('quoteOrder_' + pack));
-    } catch {
-      // ignore parse error
-    }
-    if (!Array.isArray(storedOrder) || storedOrder.length !== base.length) {
-      storedOrder = shuffleArray(base.map((_, i) => i));
-    }
-    setOrder(storedOrder);
-    const savedIndex = parseInt(
-      localStorage.getItem('quoteIndex_' + pack) || '0',
-      10
+    return category ? base.filter((q) => q.tags.includes(category)) : base;
+  };
+
+  const categories = useMemo(() => {
+    const base = PACKS[pack] || [];
+    return Array.from(new Set(base.flatMap((q) => q.tags))).filter((t) =>
+      SAFE_CATEGORIES.includes(t),
     );
-    setIndex(Math.min(savedIndex, storedOrder.length - 1));
   }, [pack]);
 
   useEffect(() => {
-    const base = PACKS[pack] || [];
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handler = () => setPrefersReduced(media.matches);
+    handler();
+    media.addEventListener("change", handler);
+    return () => media.removeEventListener("change", handler);
+  }, []);
+  useEffect(() => {
+    const base = getBase();
+    let storedOrder;
+    if (!category) {
+      try {
+        storedOrder = JSON.parse(localStorage.getItem("quoteOrder_" + pack));
+      } catch {
+        // ignore parse error
+      }
+      if (!Array.isArray(storedOrder) || storedOrder.length !== base.length) {
+        storedOrder = shuffleArray(base.map((_, i) => i));
+      }
+      const savedIndex = parseInt(
+        localStorage.getItem("quoteIndex_" + pack) || "0",
+        10,
+      );
+      setIndex(Math.min(savedIndex, storedOrder.length - 1));
+    } else {
+      storedOrder = shuffleArray(base.map((_, i) => i));
+      setIndex(0);
+    }
+    setOrder(storedOrder);
+  }, [pack, category]);
+
+  useEffect(() => {
+    const base = getBase();
     if (!order.length) {
       setCurrent(null);
       return;
     }
     setCurrent(base[order[index]]);
-  }, [pack, order, index]);
+  }, [pack, category, order, index]);
 
   useEffect(() => {
-    localStorage.setItem('quotePack', pack);
-    localStorage.setItem('quoteIndex_' + pack, index.toString());
-    localStorage.setItem('quoteOrder_' + pack, JSON.stringify(order));
-  }, [pack, index, order]);
+    if (category) return;
+    localStorage.setItem("quotePack", pack);
+    localStorage.setItem("quoteIndex_" + pack, index.toString());
+    localStorage.setItem("quoteOrder_" + pack, JSON.stringify(order));
+  }, [pack, index, order, category]);
 
   useEffect(() => {
     if (!current || !liveRef.current) return;
-    liveRef.current.textContent = '';
+    liveRef.current.textContent = "";
     const announcement = `"${current.content}" - ${current.author}`;
     requestAnimationFrame(() => {
       if (liveRef.current) liveRef.current.textContent = announcement;
@@ -133,7 +156,7 @@ const QuoteGenerator = () => {
   const nextQuote = () => {
     if (!order.length) return;
     if (index + 1 >= order.length) {
-      const base = PACKS[pack] || [];
+      const base = getBase();
       const newOrder = shuffleArray(base.map((_, i) => i));
       setOrder(newOrder);
       setIndex(0);
@@ -154,7 +177,7 @@ const QuoteGenerator = () => {
       setDisplayedText(current.content);
       return;
     }
-    setDisplayedText('');
+    setDisplayedText("");
     let index = 0;
     let last = 0;
     const step = (time) => {
@@ -173,9 +196,7 @@ const QuoteGenerator = () => {
 
   const copyQuote = () => {
     if (current && navigator.clipboard) {
-      navigator.clipboard.writeText(
-        `"${current.content}" - ${current.author}`
-      );
+      navigator.clipboard.writeText(`"${current.content}" - ${current.author}`);
     }
   };
 
@@ -183,11 +204,11 @@ const QuoteGenerator = () => {
     if (!current) return;
     const text = `"${current.content}" - ${current.author}`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   };
 
   const dataUrlToFile = (dataUrl, filename) => {
-    const arr = dataUrl.split(',');
+    const arr = dataUrl.split(",");
     const mime = arr[0].match(/:(.*?);/)[1];
     const bstr = atob(arr[1]);
     let n = bstr.length;
@@ -197,29 +218,33 @@ const QuoteGenerator = () => {
   };
 
   const shareCard = () => {
-    const node = document.getElementById('quote-card');
+    const node = document.getElementById("quote-card");
     if (!node) return;
     const exportCard = () => {
       toPng(node)
         .then((dataUrl) => {
-          const file = dataUrlToFile(dataUrl, 'quote.png');
+          const file = dataUrlToFile(dataUrl, "quote.png");
           const shareData = {
             files: [file],
-            title: 'Quote',
+            title: "Quote",
             text: current
               ? `"${current.content}" - ${current.author}`
-              : 'Quote',
+              : "Quote",
           };
-          if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+          if (
+            navigator.share &&
+            navigator.canShare &&
+            navigator.canShare(shareData)
+          ) {
             navigator.share(shareData).catch(() => {
-              const link = document.createElement('a');
-              link.download = 'quote.png';
+              const link = document.createElement("a");
+              link.download = "quote.png";
               link.href = dataUrl;
               link.click();
             });
           } else {
-            const link = document.createElement('a');
-            link.download = 'quote.png';
+            const link = document.createElement("a");
+            link.download = "quote.png";
             link.href = dataUrl;
             link.click();
           }
@@ -241,8 +266,12 @@ const QuoteGenerator = () => {
         <div id="quote-card" className="p-4 text-center">
           {current ? (
             <>
-              <p className="text-lg mb-2" aria-hidden="true">&quot;{displayedText}&quot;</p>
-              <p className="text-sm text-gray-200" aria-hidden="true">- {current.author}</p>
+              <p className="text-lg mb-2" aria-hidden="true">
+                &quot;{displayedText}&quot;
+              </p>
+              <p className="text-sm text-gray-200" aria-hidden="true">
+                - {current.author}
+              </p>
               <span
                 role="status"
                 aria-live="polite"
@@ -288,7 +317,10 @@ const QuoteGenerator = () => {
         </div>
         <select
           value={pack}
-          onChange={(e) => setPack(e.target.value)}
+          onChange={(e) => {
+            setPack(e.target.value);
+            setCategory("");
+          }}
           className="px-2 py-1 rounded text-black mt-4"
         >
           {Object.keys(PACKS).map((p) => (
@@ -297,10 +329,23 @@ const QuoteGenerator = () => {
             </option>
           ))}
         </select>
+        {categories.length > 0 && (
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="px-2 py-1 rounded text-black mt-2"
+          >
+            <option value="">all</option>
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
     </div>
   );
 };
 
 export default QuoteGenerator;
-

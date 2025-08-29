@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "quote": "Your heart is the size of an ocean. Go find yourself in its hidden depths.",
+    "author": "Rumi",
+    "tags": ["love"]
+  },
+  {
+    "id": 2,
+    "quote": "Thinking is the capital, Enterprise is the way, Hard Work is the solution.",
+    "author": "Abdul Kalam",
+    "tags": ["inspirational"]
+  },
+  {
+    "id": 3,
+    "quote": "It has become appallingly obvious that our technology has exceeded our humanity.",
+    "author": "Albert Einstein",
+    "tags": ["technology"]
+  },
+  {
+    "id": 4,
+    "quote": "A computer once beat me at chess, but it was no match for me at kick boxing.",
+    "author": "Emo Philips",
+    "tags": ["humor", "technology"]
+  }
+]
