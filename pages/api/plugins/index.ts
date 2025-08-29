@@ -2,6 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs';
 import path from 'path';
 
+export const runtime = 'nodejs';
+
 export default function handler(_req: NextApiRequest, res: NextApiResponse) {
   const catalogDir = path.join(process.cwd(), 'plugins', 'catalog');
   try {

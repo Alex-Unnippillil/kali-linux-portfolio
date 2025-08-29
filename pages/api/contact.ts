@@ -9,6 +9,8 @@ const RATE_LIMIT_MAX = 5;
 
 export const rateLimit = new Map<string, { count: number; start: number }>();
 
+export const runtime = 'nodejs';
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     validateServerEnv(process.env);
