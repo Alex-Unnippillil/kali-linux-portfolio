@@ -26,6 +26,7 @@ export class Shoe {
     this.penetration = penetration;
     this.shuffleCount = 0;
     this.runningCount = 0;
+    this.composition = {};
     this.shuffle();
   }
 
@@ -39,6 +40,10 @@ export class Shoe {
     this.dealt = 0;
     this.shuffleCount += 1;
     this.runningCount = 0;
+    this.composition = {};
+    RANKS.forEach((r) => {
+      this.composition[r] = this.decks * 4;
+    });
     // burn one card
     this.draw();
   }
@@ -50,6 +55,7 @@ export class Shoe {
     this.dealt += 1;
     const card = this.cards.pop();
     const v = card.value;
+    if (this.composition[v] !== undefined) this.composition[v] -= 1;
     if (['2', '3', '4', '5', '6'].includes(v)) this.runningCount += 1;
     else if (['10', 'J', 'Q', 'K', 'A'].includes(v)) this.runningCount -= 1;
     return card;
