@@ -27,6 +27,7 @@
     "@mozilla/readability": "^0.6.0",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
+    "@vercel/toolbar": "^0.1.38",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-search": "^0.15.0",
     "@xterm/xterm": "^5.5.0",
@@ -47,6 +48,7 @@
     "fast-xml-parser": "^4.3.5",
     "figlet": "^1.8.2",
     "flags": "3",
+
     "hash-wasm": "^4.12.0",
     "howler": "^2.2.4",
     "html-to-image": "^1.11.13",
