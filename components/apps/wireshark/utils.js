@@ -58,5 +58,7 @@ export const getRowColor = (packet, rules) => {
   const rule = rules.find((r) => matchesDisplayFilter(packet, r.expression));
   if (!rule) return '';
   const key = rule.color ? rule.color.toLowerCase() : '';
-  return colorMap[key] || rule.color || '';
+  if (colorMap[key]) return colorMap[key];
+  if (rule.color) return `border-[${rule.color}]`;
+  return '';
 };

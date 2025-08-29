@@ -119,6 +119,12 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const [selectedPacket, setSelectedPacket] = useState(null);
   const [view, setView] = useState('packets');
   const [error, setError] = useState('');
+  const devices = [
+    { name: 'eth0', icon: '🖧' },
+    { name: 'wlan0', icon: '📶' },
+  ];
+  const [selectedDevice, setSelectedDevice] = useState(devices[0]);
+  const [showDeviceMenu, setShowDeviceMenu] = useState(false);
   const workerRef = useRef(null);
   const pausedRef = useRef(false);
   const prefersReducedMotion = useRef(false);
@@ -225,6 +231,11 @@ const WiresharkApp = ({ initialPackets = [] }) => {
       if (tlsKeys) {
         ws.send(JSON.stringify({ type: 'tlsKeys', keys: tlsKeys }));
       }
+      if (selectedDevice) {
+        ws.send(
+          JSON.stringify({ type: 'device', name: selectedDevice.name })
+        );
+      }
     };
     ws.onmessage = (event) => {
       try {
@@ -281,21 +292,53 @@ const WiresharkApp = ({ initialPackets = [] }) => {
       {error && (
         <p className="text-red-400 text-xs p-2 bg-gray-900">{error}</p>
       )}
-      <div className="p-2 flex space-x-2 bg-gray-900 flex-wrap">
+      <div className="p-2 flex space-x-2 bg-gray-900 flex-wrap items-center">
         <button
           onClick={startCapture}
           disabled={!!socket}
-          className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
+          className="p-1 bg-gray-700 rounded disabled:opacity-50 flex items-center justify-center w-6 h-6"
+          aria-label="Start capture"
         >
-          Start
+          <span aria-hidden="true" className="text-2xl leading-none">▶</span>
         </button>
         <button
           onClick={stopCapture}
           disabled={!socket}
-          className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50"
+          className="p-1 bg-gray-700 rounded disabled:opacity-50 flex items-center justify-center w-6 h-6"
+          aria-label="Stop capture"
         >
-          Stop
+          <span aria-hidden="true" className="text-2xl leading-none">■</span>
         </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowDeviceMenu((v) => !v)}
+            className="px-2 py-1 bg-gray-700 rounded flex items-center space-x-1 text-xs"
+            aria-haspopup="true"
+            aria-expanded={showDeviceMenu}
+          >
+            <span className="w-4 h-4">
+              {selectedDevice.icon}
+            </span>
+            <span>{selectedDevice.name}</span>
+          </button>
+          {showDeviceMenu && (
+            <ul className="absolute z-10 mt-1 bg-gray-800 rounded shadow text-white text-xs">
+              {devices.map((d) => (
+                <li
+                  key={d.name}
+                  className="px-2 py-1 flex items-center space-x-1 hover:bg-gray-700 cursor-pointer"
+                  onClick={() => {
+                    setSelectedDevice(d);
+                    setShowDeviceMenu(false);
+                  }}
+                >
+                  <span className="w-4 h-4">{d.icon}</span>
+                  <span>{d.name}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <input
           type="file"
           accept=".keys,.txt,.log"
@@ -330,10 +373,13 @@ const WiresharkApp = ({ initialPackets = [] }) => {
         <ColorRuleEditor rules={colorRules} onChange={setColorRules} />
         <button
           onClick={handlePause}
-          className="px-3 py-1 bg-gray-700 rounded"
+          className="p-1 bg-gray-700 rounded flex items-center justify-center w-6 h-6"
           aria-pressed={paused}
+          aria-label={paused ? 'Resume capture' : 'Pause capture'}
         >
-          {paused ? 'Resume' : 'Pause'}
+          <span aria-hidden="true" className="text-2xl leading-none">
+            {paused ? '▶' : '⏸'}
+          </span>
         </button>
         <input
           type="range"
@@ -412,16 +458,18 @@ const WiresharkApp = ({ initialPackets = [] }) => {
               <tbody>
                 {filteredPackets.map((p, i) => {
                   const isMatch = matchesDisplayFilter(p, filter);
+                  const ruleColor = getRowColor(p, colorRules);
                   return (
                     <tr
                       key={i}
                       onClick={() => setSelectedPacket(p)}
-                      className={`${i % 2 ? 'bg-gray-900' : 'bg-gray-800'} ${getRowColor(
-                        p,
-                        colorRules
-                      )} ${isMatch ? 'bg-yellow-900' : ''} ${
-                        selectedPacket === p ? 'outline outline-1 outline-yellow-400' : ''
-                      }`}
+                      className={`h-8 ${i % 2 ? 'bg-gray-900' : 'bg-gray-800'} ${
+                        isMatch ? 'bg-yellow-900' : ''
+                      } ${
+                        selectedPacket === p
+                          ? 'outline outline-1 outline-yellow-400'
+                          : ''
+                      } border-l-4 ${ruleColor || 'border-transparent'}`}
                     >
                       <td className="px-2 py-1 whitespace-nowrap">{p.timestamp}</td>
                       <td className="px-2 py-1 whitespace-nowrap">{p.src}</td>
@@ -437,7 +485,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
               </tbody>
             </table>
           </div>
-          <div className="p-2 bg-gray-900 overflow-auto text-xs h-40">
+          <div className="p-2 bg-gray-900 overflow-auto text-xs h-40 font-mono">
             {selectedPacket ? (
               <>
                 <DecodeTree data={selectedPacket.layers} />
