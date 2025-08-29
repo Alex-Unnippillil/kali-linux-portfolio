@@ -55,6 +55,7 @@ const ReaverPanel: React.FC = () => {
   const [attempts, setAttempts] = useState(0);
   const [running, setRunning] = useState(false);
   const [lockRemaining, setLockRemaining] = useState(0);
+  const [stageIdx, setStageIdx] = useState(-1);
   const intervalRef = useRef<NodeJS.Timeout>();
   const burstRef = useRef(0); // attempts since last lock
   const lockRef = useRef(0); // lockout seconds remaining
@@ -90,6 +91,8 @@ const ReaverPanel: React.FC = () => {
 
         if (next >= TOTAL_PINS) {
           clearInterval(intervalRef.current!);
+          setRunning(false);
+          setStageIdx(stages.length);
           return TOTAL_PINS;
         }
         return next;
@@ -110,12 +113,28 @@ const ReaverPanel: React.FC = () => {
     burstRef.current = 0;
     lockRef.current = 0;
     setLockRemaining(0);
+    setStageIdx(0);
     setRunning(true);
   };
 
   const stop = () => {
     setRunning(false);
     clearInterval(intervalRef.current!);
+    setStageIdx(-1);
+  };
+
+  useEffect(() => {
+    if (!running) return;
+    if (stageIdx >= 0 && stageIdx < stages.length - 1) {
+      const timer = setTimeout(() => setStageIdx((s) => s + 1), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [running, stageIdx]);
+
+  const stageStatus = (i: number) => {
+    if (i < stageIdx) return 'completed';
+    if (i === stageIdx && running) return 'running';
+    return 'pending';
   };
 
   const timeRemaining = (TOTAL_PINS - attempts) / rate + lockRemaining;
@@ -129,6 +148,26 @@ const ReaverPanel: React.FC = () => {
 
       <div className="mb-6">
         <h2 className="text-lg mb-2">Attack Stages</h2>
+        <div className="flex mb-4">
+          {stages.map((s, i) => {
+            const status = stageStatus(i);
+            const color =
+              status === 'completed'
+                ? 'bg-green-500'
+                : status === 'running'
+                ? 'bg-yellow-500'
+                : 'bg-gray-600';
+            return (
+              <div
+                key={s.title}
+                className="flex-1 flex flex-col items-center mr-2 last:mr-0"
+              >
+                <div className={`w-full h-2 ${color}`} />
+                <span className="mt-1 text-xs text-center">{s.title}</span>
+              </div>
+            );
+          })}
+        </div>
         <ol className="list-decimal list-inside space-y-2 text-sm">
           {stages.map((s) => (
             <li key={s.title}>
