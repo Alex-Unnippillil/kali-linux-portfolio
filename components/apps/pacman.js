@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
+import SpeedControls from '../../games/pacman/components/SpeedControls';
 
 /**
  * Small Pacman implementation used inside the portfolio. The goal of this
@@ -716,34 +717,7 @@ const Pacman = () => {
         </ul>
       </div>
 
-      <div className="mb-2 flex space-x-4">
-        <label className="flex items-center space-x-1">
-          <span>Scatter</span>
-          <input
-            type="number"
-            step="0.1"
-            min="0.1"
-            className="w-16 px-1 text-black"
-            value={ghostSpeeds.scatter}
-            onChange={(e) =>
-              setGhostSpeeds((s) => ({ ...s, scatter: parseFloat(e.target.value) || 0 }))
-            }
-          />
-        </label>
-        <label className="flex items-center space-x-1">
-          <span>Chase</span>
-          <input
-            type="number"
-            step="0.1"
-            min="0.1"
-            className="w-16 px-1 text-black"
-            value={ghostSpeeds.chase}
-            onChange={(e) =>
-              setGhostSpeeds((s) => ({ ...s, chase: parseFloat(e.target.value) || 0 }))
-            }
-          />
-        </label>
-      </div>
+      <SpeedControls ghostSpeeds={ghostSpeeds} setGhostSpeeds={setGhostSpeeds} />
 
       <canvas
         ref={canvasRef}
