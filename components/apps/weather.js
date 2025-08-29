@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import usePersistentState from '../usePersistentState';
 
 const defaultLocation = {
   latitude: 40.7128,
@@ -215,12 +216,19 @@ const Weather = () => {
   const [announcement, setAnnouncement] = useState('');
   const [lastUpdated, setLastUpdated] = useState(null);
   const [points, setPoints] = useState('');
+  const [unit, setUnit] = usePersistentState('weatherUnit', 'metric');
+  const [savedCities, setSavedCities] = usePersistentState('savedWeatherCities', []);
+  const [currentLocation, setCurrentLocation] = useState({
+    latitude: defaultLocation.latitude,
+    longitude: defaultLocation.longitude,
+    name: '',
+  });
   const pointsWorkerRef = useRef(null);
   const chartRef = useRef(null);
   const timesRef = useRef(null);
   const [error, setError] = useState('');
   const fetchForecast = async (lat, lon, cityName) => {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m&daily=weathercode,temperature_2m_max,temperature_2m_min&current_weather=true&timezone=auto`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,apparent_temperature&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min&current_weather=true&temperature_unit=${unit === 'metric' ? 'celsius' : 'fahrenheit'}&timezone=auto`;
     try {
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch forecast');
@@ -228,6 +236,10 @@ const Weather = () => {
       setData(json);
       setLastUpdated(new Date());
       setAnnouncement(`Weather updated${cityName ? ' for ' + cityName : ''}`);
+      setCurrentLocation({ latitude: lat, longitude: lon, name: cityName || '' });
+      if (cityName && !savedCities.some((c) => c.name === cityName)) {
+        setSavedCities([...savedCities, { name: cityName, latitude: lat, longitude: lon }]);
+      }
     } catch {
       try {
         const cached = await caches.match(url);
@@ -248,6 +260,16 @@ const Weather = () => {
     fetchForecast(defaultLocation.latitude, defaultLocation.longitude);
   }, []);
 
+  useEffect(() => {
+    if (currentLocation)
+      fetchForecast(
+        currentLocation.latitude,
+        currentLocation.longitude,
+        currentLocation.name
+      );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unit]);
+
   const requestLocation = () => {
     if (!navigator.geolocation) {
       setLocationDenied(true);
@@ -266,6 +288,12 @@ const Weather = () => {
         setError('Permission denied. Please enter your city manually.');
       }
     );
+  }; 
+
+  const handleSavedSelect = (e) => {
+    const selected = savedCities.find((c) => c.name === e.target.value);
+    if (selected)
+      fetchForecast(selected.latitude, selected.longitude, selected.name);
   };
 
   // S2: Respect reduced motion preference
@@ -370,42 +398,91 @@ const Weather = () => {
       className={`h-full w-full flex flex-col items-center justify-start text-white p-4 overflow-auto ${gradient}`}
     >
       <Icon still={reduceMotion} />
-      <button
-        onClick={requestLocation}
-        className="mb-4 bg-white/20 px-4 py-2 rounded"
-        aria-label="Use my location"
-      >
-        Use My Location
-      </button>
-      {error && <div className="mb-4 text-red-500">{error}</div>}
-      {locationDenied && (
-        <form
-          onSubmit={handleCitySubmit}
-          className="mb-4 w-full max-w-md flex"
-          aria-label="Manual city entry"
+      {savedCities.length > 0 && (
+        <select
+          onChange={handleSavedSelect}
+          className="mb-4 bg-white/20 px-2 py-2 rounded text-black"
+          aria-label="Saved cities"
+          defaultValue=""
         >
-          <input
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            className="flex-1 p-2 rounded-l text-black"
-            placeholder="Enter city"
-            aria-label="City"
-          />
-          <button type="submit" className="bg-white/20 px-4 rounded-r">
-            Go
-          </button>
-        </form>
+          <option value="">Saved Cities</option>
+          {savedCities.map((c) => (
+            <option key={c.name} value={c.name}>
+              {c.name}
+            </option>
+          ))}
+        </select>
       )}
-      <div className="mb-2">{label}</div>
-      <div className="text-4xl mb-4">
-        {Math.round(data.current_weather.temperature)}°C
+      <form
+        onSubmit={handleCitySubmit}
+        className="mb-4 w-full max-w-md flex"
+        aria-label="City search"
+      >
+        <input
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          className="flex-1 p-2 rounded-l text-black"
+          placeholder="Enter city"
+          aria-label="City"
+        />
+        <button type="submit" className="bg-white/20 px-4 rounded-r">
+          Go
+        </button>
+      </form>
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={requestLocation}
+          className="bg-white/20 px-4 py-2 rounded"
+          aria-label="Use my location"
+        >
+          Use My Location
+        </button>
+        <button
+          onClick={() =>
+            setUnit(unit === 'metric' ? 'imperial' : 'metric')
+          }
+          className="bg-white/20 px-4 py-2 rounded"
+          aria-label="Toggle units"
+        >
+          {unit === 'metric' ? '°F' : '°C'}
+        </button>
+        <button
+          onClick={() => {
+            if (typeof window !== 'undefined' && currentLocation.name) {
+              window.localStorage.setItem('pinnedCity', currentLocation.name);
+            }
+          }}
+          className="bg-white/20 px-4 py-2 rounded"
+          aria-label="Pin city"
+        >
+          Pin City
+        </button>
       </div>
+      {error && <div className="mb-4 text-red-500">{error}</div>}
+      <div className="mb-2">{label}</div>
+      <div className="text-4xl mb-2">
+        {Math.round(data.current_weather.temperature)}°
+        {unit === 'metric' ? 'C' : 'F'}
+      </div>
+      {(() => {
+        const idx = data.hourly.time.indexOf(
+          data.current_weather.time
+        );
+        const feels =
+          idx >= 0 ? data.hourly.apparent_temperature[idx] : null;
+        return (
+          <div className="mb-4">
+            Feels like {Math.round(feels ?? data.current_weather.temperature)}°
+            {unit === 'metric' ? 'C' : 'F'}
+          </div>
+        );
+      })()}
       {/* S7: ARIA-labelled forecast sections */}
       <div
         className="grid grid-cols-3 gap-2 w-full max-w-md mb-4 text-sm"
-        aria-label="7-day forecast"
+        aria-label="5-day forecast"
       >
-        {data.daily.time.map((t, i) => {
+        {data.daily.time.slice(0, 5).map((t, i) => {
           const { Icon: DayIcon } = getCondition(
             data.daily.weathercode[i]
           );
@@ -418,7 +495,8 @@ const Weather = () => {
               <DayIcon still={reduceMotion} />
               <span>
                 {Math.round(data.daily.temperature_2m_max[i])}/
-                {Math.round(data.daily.temperature_2m_min[i])}°C
+                {Math.round(data.daily.temperature_2m_min[i])}°
+                {unit === 'metric' ? 'C' : 'F'}
               </span>
             </div>
           );
