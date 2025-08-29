@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 // Number of samples to keep in the timeline
 const MAX_POINTS = 60;
@@ -11,6 +11,10 @@ const ResourceMonitor = () => {
   const workerRef = useRef(null);
 
   const dataRef = useRef({ cpu: [], mem: [], fps: [], net: [] });
+  const displayRef = useRef({ cpu: [], mem: [], fps: [], net: [] });
+  const animRef = useRef();
+  const lastDrawRef = useRef(0);
+  const THROTTLE_MS = 1000;
 
   const [paused, setPaused] = useState(false);
   const [stress, setStress] = useState(false);
@@ -19,6 +23,8 @@ const ResourceMonitor = () => {
   const stressWindows = useRef([]);
   const stressEls = useRef([]);
   const containerRef = useRef(null);
+
+  useEffect(() => () => cancelAnimationFrame(animRef.current), []);
 
   // Spawn worker for network speed tests
   useEffect(() => {
@@ -29,11 +35,11 @@ const ResourceMonitor = () => {
     workerRef.current.onmessage = (e) => {
       const { speed } = e.data || {};
       pushSample('net', speed);
-      drawCharts();
+      scheduleDraw();
     };
     workerRef.current.postMessage({ type: 'start' });
     return () => workerRef.current?.terminate();
-  }, []);
+  }, [scheduleDraw]);
 
   useEffect(() => {
     if (workerRef.current) {
@@ -64,14 +70,14 @@ const ResourceMonitor = () => {
         pushSample('cpu', cpu);
         pushSample('mem', mem);
         pushSample('fps', currentFps);
-        drawCharts();
+        scheduleDraw();
         lastSample = now;
       }
       raf = requestAnimationFrame(sample);
     };
     raf = requestAnimationFrame(sample);
     return () => cancelAnimationFrame(raf);
-  }, [paused]);
+  }, [paused, scheduleDraw]);
 
   // Stress test animation – many moving windows
   useEffect(() => {
@@ -120,12 +126,49 @@ const ResourceMonitor = () => {
     if (arr.length > MAX_POINTS) arr.shift();
   };
 
-  const drawCharts = () => {
-    drawChart(cpuCanvas.current, dataRef.current.cpu, '#00ff00', 'CPU %', 100);
-    drawChart(memCanvas.current, dataRef.current.mem, '#ffd700', 'Memory %', 100);
-    drawChart(fpsCanvas.current, dataRef.current.fps, '#00ffff', 'FPS', 120);
-    drawChart(netCanvas.current, dataRef.current.net, '#ff00ff', 'Mbps', 100);
+  const drawCharts = (dataset = dataRef.current) => {
+    drawChart(cpuCanvas.current, dataset.cpu, '#00ff00', 'CPU %', 100);
+    drawChart(memCanvas.current, dataset.mem, '#ffd700', 'Memory %', 100);
+    drawChart(fpsCanvas.current, dataset.fps, '#00ffff', 'FPS', 120);
+    drawChart(netCanvas.current, dataset.net, '#ff00ff', 'Mbps', 100);
   };
+
+  const animateCharts = useCallback(() => {
+    const from = { ...displayRef.current };
+    const to = { ...dataRef.current };
+    const start = performance.now();
+    const duration = 300;
+
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const interpolated = {};
+      ['cpu', 'mem', 'fps', 'net'].forEach((key) => {
+        const fromArr = from[key];
+        const toArr = to[key];
+        interpolated[key] = toArr.map((v, i) => {
+          const a = fromArr[i] ?? fromArr[fromArr.length - 1] ?? 0;
+          return a + (v - a) * t;
+        });
+      });
+      drawCharts(interpolated);
+      if (t < 1) {
+        animRef.current = requestAnimationFrame(step);
+      } else {
+        displayRef.current = to;
+      }
+    };
+
+    cancelAnimationFrame(animRef.current);
+    animRef.current = requestAnimationFrame(step);
+  }, []);
+
+  const scheduleDraw = useCallback(() => {
+    const now = performance.now();
+    if (now - lastDrawRef.current >= THROTTLE_MS) {
+      lastDrawRef.current = now;
+      animateCharts();
+    }
+  }, [animateCharts]);
 
   const togglePause = () => setPaused((p) => !p);
   const toggleStress = () => setStress((s) => !s);
