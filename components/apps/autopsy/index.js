@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import KeywordSearchPanel from './KeywordSearchPanel';
 import demoArtifacts from './data/sample-artifacts.json';
+import ReportExport from '../../../apps/autopsy/components/ReportExport';
 
 const escapeFilename = (str = '') =>
   str
@@ -353,19 +354,6 @@ function Autopsy({ initialArtifacts = null }) {
     );
   };
 
-  const downloadReport = () => {
-    const lines = artifacts.map(
-      (a) => `${a.timestamp} - ${a.name} (${a.size} bytes) [Plugin: ${a.plugin}]`
-    );
-    const report = `Case: ${currentCase}\n` + lines.join('\n');
-    const blob = new Blob([report], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${currentCase || 'case'}-report.txt`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
 
   useEffect(() => {
     if (artifacts.length > 0) {
@@ -507,12 +495,7 @@ function Autopsy({ initialArtifacts = null }) {
               </div>
             </div>
           )}
-          <button
-            onClick={downloadReport}
-            className="bg-ub-orange px-3 py-1 rounded text-sm text-black"
-          >
-            Download Report
-          </button>
+          <ReportExport caseName={currentCase || 'case'} artifacts={artifacts} />
         </div>
       )}
       {selectedArtifact && (
