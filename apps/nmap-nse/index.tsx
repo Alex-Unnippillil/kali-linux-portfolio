@@ -17,6 +17,7 @@ const NmapNSE: React.FC = () => {
   const workerRef = useRef<Worker>();
   const [report, setReport] = useState<Report | null>(null);
   const [parseError, setParseError] = useState('');
+  const [hasUpdate, setHasUpdate] = useState(false);
   const copyExample = useCallback((text: string) => {
     if (typeof window !== 'undefined') {
       try {
@@ -76,6 +77,22 @@ const NmapNSE: React.FC = () => {
     load();
   }, []);
 
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch('/api/nse/update');
+        if (!res.ok) return;
+        const info = await res.json();
+        if (info.updateAvailable) {
+          setHasUpdate(true);
+        }
+      } catch {
+        // ignore
+      }
+    };
+    check();
+  }, []);
+
   const queryLower = query.toLowerCase();
   const filtered: [string, Script[]][] = Object.entries(data).flatMap(
     ([category, scripts]) => {
@@ -94,6 +111,11 @@ const NmapNSE: React.FC = () => {
 
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen">
+      {hasUpdate && (
+        <div className="mb-4 p-2 bg-yellow-800 text-yellow-200 rounded">
+          Newer NSE script versions are available.
+        </div>
+      )}
       <h1 className="text-2xl mb-4">Nmap NSE Script Library</h1>
       <input
         type="text"
