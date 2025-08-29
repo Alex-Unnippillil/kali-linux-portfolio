@@ -17,7 +17,109 @@ const CytoscapeComponent = dynamic(
   { ssr: false },
 );
 
-const modules = ['DNS Enumeration', 'WHOIS Lookup', 'Reverse IP Lookup'];
+// Built-in modules with simple schemas and canned demo data. Each schema defines
+// the expected input type, a demo generator for offline usage, and an optional
+// fetchUrl function used when the user opts into live network requests.
+const moduleSchemas = {
+  'DNS Enumeration': {
+    input: 'domain',
+    demo: (target) => ({
+      output: `DNS records for ${target}\nA\t93.184.216.34`,
+      nodes: [
+        { data: { id: 'domains', label: 'Domains' } },
+        { data: { id: 'ips', label: 'IPs' } },
+        { data: { id: 'entities', label: 'Entities' } },
+        { data: { id: target, label: target, parent: 'domains', type: 'domain' } },
+        {
+          data: {
+            id: '93.184.216.34',
+            label: '93.184.216.34',
+            parent: 'ips',
+            type: 'ip',
+          },
+        },
+        {
+          data: {
+            id: 'John Doe',
+            label: 'John Doe',
+            parent: 'entities',
+            type: 'entity',
+          },
+        },
+      ],
+      edges: [
+        { data: { id: 'e1', source: target, target: '93.184.216.34' } },
+        { data: { id: 'e2', source: '93.184.216.34', target: 'John Doe' } },
+      ],
+    }),
+    fetchUrl: (target) =>
+      `https://dns.google/resolve?name=${encodeURIComponent(target)}`,
+  },
+  'WHOIS Lookup': {
+    input: 'domain',
+    demo: (target) => ({
+      output: `WHOIS data for ${target}\nRegistrant: Example Corp`,
+      nodes: [
+        { data: { id: 'domains', label: 'Domains' } },
+        { data: { id: 'entities', label: 'Entities' } },
+        { data: { id: target, label: target, parent: 'domains', type: 'domain' } },
+        {
+          data: {
+            id: 'Example Corp',
+            label: 'Example Corp',
+            parent: 'entities',
+            type: 'entity',
+          },
+        },
+      ],
+      edges: [
+        { data: { id: 'e1', source: target, target: 'Example Corp' } },
+      ],
+    }),
+    fetchUrl: (target) =>
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(
+        `https://api.hackertarget.com/whois/?q=${target}`,
+      )}`,
+  },
+  'Reverse IP Lookup': {
+    input: 'ip',
+    demo: (target) => ({
+      output: `Domains hosted on ${target}\nexample.com`,
+      nodes: [
+        { data: { id: 'domains', label: 'Domains' } },
+        { data: { id: 'ips', label: 'IPs' } },
+        { data: { id: 'entities', label: 'Entities' } },
+        {
+          data: {
+            id: 'example.com',
+            label: 'example.com',
+            parent: 'domains',
+            type: 'domain',
+          },
+        },
+        { data: { id: target, label: target, parent: 'ips', type: 'ip' } },
+        {
+          data: {
+            id: 'John Doe',
+            label: 'John Doe',
+            parent: 'entities',
+            type: 'entity',
+          },
+        },
+      ],
+      edges: [
+        { data: { id: 'e1', source: 'example.com', target } },
+        { data: { id: 'e2', source: target, target: 'John Doe' } },
+      ],
+    }),
+    fetchUrl: (target) =>
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(
+        `https://api.hackertarget.com/reverseiplookup/?q=${target}`,
+      )}`,
+  },
+};
+
+const modules = Object.keys(moduleSchemas);
 
 const createWorkspace = (index) => ({
   name: `Workspace ${index + 1}`,
@@ -33,6 +135,7 @@ const ReconNG = () => {
   const [selectedModule, setSelectedModule] = useState(modules[0]);
   const [target, setTarget] = useState('');
   const [output, setOutput] = useState('');
+  const [useLiveData, setUseLiveData] = useState(false);
   const [view, setView] = useState('run');
   const [marketplace, setMarketplace] = useState([]);
   const [apiKeys, setApiKeys] = usePersistentState('reconng-api-keys', {});
@@ -109,7 +212,7 @@ const ReconNG = () => {
     setFocusedNodeIndex(0);
   }, [currentWorkspace.graph, prefersReducedMotion]);
 
-  const allModules = [...modules, ...marketplace];
+  const allModules = useMemo(() => [...modules, ...marketplace], [marketplace]);
 
   const stylesheet = useMemo(
     () => [
@@ -188,44 +291,22 @@ const ReconNG = () => {
     });
   };
 
-  const runModule = () => {
+  const runModule = async () => {
     if (!target) return;
-    setOutput(`Running ${selectedModule} on ${target}...\nResults will appear here.`);
-    const nodes = [
-      { data: { id: 'domains', label: 'Domains' } },
-      { data: { id: 'ips', label: 'IPs' } },
-      { data: { id: 'entities', label: 'Entities' } },
-      {
-        data: {
-          id: target,
-          label: target,
-          parent: 'domains',
-          type: 'domain',
-        },
-      },
-      {
-        data: {
-          id: '192.0.2.1',
-          label: '192.0.2.1',
-          parent: 'ips',
-          type: 'ip',
-        },
-      },
-      {
-        data: {
-          id: 'John Doe',
-          label: 'John Doe',
-          parent: 'entities',
-          type: 'entity',
-        },
-      },
-    ];
-    const edges = [
-      { data: { id: 'e1', source: target, target: '192.0.2.1' } },
-      { data: { id: 'e2', source: '192.0.2.1', target: 'John Doe' } },
-    ];
-    addEntities(nodes);
-    updateWorkspace((ws) => ({ ...ws, graph: [...nodes, ...edges] }));
+    const schema = moduleSchemas[selectedModule];
+    const demo = schema.demo(target);
+    let text = demo.output;
+    if (useLiveData && schema.fetchUrl) {
+      try {
+        const res = await fetch(schema.fetchUrl(target));
+        text = await res.text();
+      } catch {
+        text = `${demo.output}\n\n(Live fetch failed; showing demo data)`;
+      }
+    }
+    setOutput(text);
+    addEntities(demo.nodes);
+    updateWorkspace((ws) => ({ ...ws, graph: [...demo.nodes, ...demo.edges] }));
   };
 
   const runChain = () => {
@@ -361,6 +442,14 @@ const ReconNG = () => {
               placeholder="Target"
               className="flex-1 bg-gray-800 px-2 py-1"
             />
+            <label className="flex items-center gap-1 text-xs">
+              <input
+                type="checkbox"
+                checked={useLiveData}
+                onChange={(e) => setUseLiveData(e.target.checked)}
+              />
+              Live fetch
+            </label>
             <button
               type="button"
               onClick={runModule}
