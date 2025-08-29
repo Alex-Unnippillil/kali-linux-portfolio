@@ -11,6 +11,11 @@ body{
     color: var(--color-text);
 }
 
+button, [role="button"], input[type="button"], input[type="submit"], input[type="reset"], .hit-area {
+    min-width: var(--hit-area);
+    min-height: var(--hit-area);
+}
+
 a:focus-visible,
 button:focus-visible {
     outline: 2px solid var(--color-ubt-blue) !important;

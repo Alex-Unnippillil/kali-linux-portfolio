@@ -12,6 +12,8 @@ import {
   setFontScale as saveFontScale,
   getHighContrast as loadHighContrast,
   setHighContrast as saveHighContrast,
+  getLargeHitAreas as loadLargeHitAreas,
+  setLargeHitAreas as saveLargeHitAreas,
   defaults,
 } from '../utils/settingsStore';
 type Density = 'regular' | 'compact';
@@ -39,12 +41,14 @@ interface SettingsContextValue {
   reducedMotion: boolean;
   fontScale: number;
   highContrast: boolean;
+  largeHitAreas: boolean;
   setAccent: (accent: string) => void;
   setWallpaper: (wallpaper: string) => void;
   setDensity: (density: Density) => void;
   setReducedMotion: (value: boolean) => void;
   setFontScale: (value: number) => void;
   setHighContrast: (value: boolean) => void;
+  setLargeHitAreas: (value: boolean) => void;
 }
 
 export const SettingsContext = createContext<SettingsContextValue>({
@@ -54,12 +58,14 @@ export const SettingsContext = createContext<SettingsContextValue>({
   reducedMotion: defaults.reducedMotion,
   fontScale: defaults.fontScale,
   highContrast: defaults.highContrast,
+  largeHitAreas: defaults.largeHitAreas,
   setAccent: () => {},
   setWallpaper: () => {},
   setDensity: () => {},
   setReducedMotion: () => {},
   setFontScale: () => {},
   setHighContrast: () => {},
+  setLargeHitAreas: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -69,6 +75,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
+  const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
 
   useEffect(() => {
     (async () => {
@@ -78,6 +85,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setReducedMotion(await loadReducedMotion());
       setFontScale(await loadFontScale());
       setHighContrast(await loadHighContrast());
+      setLargeHitAreas(await loadLargeHitAreas());
     })();
   }, []);
 
@@ -140,8 +148,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHighContrast(highContrast);
   }, [highContrast]);
 
+  useEffect(() => {
+    document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
+    saveLargeHitAreas(largeHitAreas);
+  }, [largeHitAreas]);
+
   return (
-    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, fontScale, highContrast, setAccent, setWallpaper, setDensity, setReducedMotion, setFontScale, setHighContrast }}>
+    <SettingsContext.Provider value={{ accent, wallpaper, density, reducedMotion, fontScale, highContrast, largeHitAreas, setAccent, setWallpaper, setDensity, setReducedMotion, setFontScale, setHighContrast, setLargeHitAreas }}>
       {children}
     </SettingsContext.Provider>
   );

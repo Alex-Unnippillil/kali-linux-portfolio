@@ -8,6 +8,7 @@ const DEFAULT_SETTINGS = {
   reducedMotion: false,
   fontScale: 1,
   highContrast: false,
+  largeHitAreas: false,
 };
 
 export async function getAccent() {
@@ -71,6 +72,16 @@ export async function setHighContrast(value) {
   window.localStorage.setItem('high-contrast', value ? 'true' : 'false');
 }
 
+export async function getLargeHitAreas() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.largeHitAreas;
+  return window.localStorage.getItem('large-hit-areas') === 'true';
+}
+
+export async function setLargeHitAreas(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -81,19 +92,21 @@ export async function resetSettings() {
   window.localStorage.removeItem('reduced-motion');
   window.localStorage.removeItem('font-scale');
   window.localStorage.removeItem('high-contrast');
+  window.localStorage.removeItem('large-hit-areas');
 }
 
 export async function exportSettings() {
-  const [accent, wallpaper, density, reducedMotion, fontScale, highContrast] = await Promise.all([
+  const [accent, wallpaper, density, reducedMotion, fontScale, highContrast, largeHitAreas] = await Promise.all([
     getAccent(),
     getWallpaper(),
     getDensity(),
     getReducedMotion(),
     getFontScale(),
     getHighContrast(),
+    getLargeHitAreas(),
   ]);
   const theme = getTheme();
-  return JSON.stringify({ accent, wallpaper, density, reducedMotion, fontScale, highContrast, theme });
+  return JSON.stringify({ accent, wallpaper, density, reducedMotion, fontScale, highContrast, largeHitAreas, theme });
 }
 
 export async function importSettings(json) {
@@ -105,13 +118,14 @@ export async function importSettings(json) {
     console.error('Invalid settings', e);
     return;
   }
-  const { accent, wallpaper, density, reducedMotion, fontScale, highContrast, theme } = settings;
+  const { accent, wallpaper, density, reducedMotion, fontScale, highContrast, largeHitAreas, theme } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
   if (fontScale !== undefined) await setFontScale(fontScale);
   if (highContrast !== undefined) await setHighContrast(highContrast);
+  if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (theme !== undefined) setTheme(theme);
 }
 
