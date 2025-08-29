@@ -8394,6 +8394,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"monaco-editor@npm:^0.47.0":
+  version: 0.47.0
+  resolution: "monaco-editor@npm:0.47.0"
+  checksum: 10c0/bbe4fc284a7803e4ed0fa69b6e31c41ef6f5d259722e8a876ce2850b7139e68eff3a6435306e11eff848db8662b818e40f9cafc6f7a53d4a4551fed362d5dc02
+  languageName: node
+  linkType: hard
+
 "ms@npm:^2.1.1, ms@npm:^2.1.3":
   version: 2.1.3
   resolution: "ms@npm:2.1.3"
@@ -11292,6 +11299,7 @@ __metadata:
     jest-environment-jsdom: "npm:30.0.5"
     mathjs: "npm:^14.6.0"
     matter-js: "npm:0.20.0"
+    monaco-editor: "npm:^0.47.0"
     next: "npm:^15.0.0"
     pa11y: "npm:^9.0.0"
     pdfjs-dist: "npm:^5.4.54"
