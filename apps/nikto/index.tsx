@@ -23,6 +23,7 @@ const NiktoPage: React.FC = () => {
   const [ssl, setSsl] = useState(false);
   const [findings, setFindings] = useState<NiktoFinding[]>([]);
   const [selected, setSelected] = useState<NiktoFinding | null>(null);
+  const [rawLog, setRawLog] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -30,6 +31,12 @@ const NiktoPage: React.FC = () => {
         const res = await fetch('/demo-data/nikto/report.json');
         const data = await res.json();
         setFindings(data);
+      } catch {
+        // ignore errors
+      }
+      try {
+        const logRes = await fetch('/demo/nikto-output.txt');
+        setRawLog(await logRes.text());
       } catch {
         // ignore errors
       }
@@ -76,6 +83,24 @@ const NiktoPage: React.FC = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  const summary = useMemo(() => {
+    const counts = { critical: 0, warning: 0, info: 0 };
+    rawLog
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .forEach((line) => {
+        if (/vulnerability/i.test(line)) {
+          counts.critical += 1;
+        } else if (/not defined/i.test(line)) {
+          counts.warning += 1;
+        } else {
+          counts.info += 1;
+        }
+      });
+    return counts;
+  }, [rawLog]);
 
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen space-y-4">
@@ -203,6 +228,26 @@ const NiktoPage: React.FC = () => {
           className="w-full h-64 bg-white"
         />
       </div>
+      {rawLog && (
+        <div>
+          <h2 className="text-lg mb-2">Summary</h2>
+          <div className="flex space-x-2 mb-4 text-sm">
+            <div className="bg-red-700 px-2 py-1 rounded">
+              Critical: {summary.critical}
+            </div>
+            <div className="bg-yellow-600 px-2 py-1 rounded">
+              Warning: {summary.warning}
+            </div>
+            <div className="bg-blue-600 px-2 py-1 rounded">
+              Info: {summary.info}
+            </div>
+          </div>
+          <h2 className="text-lg mb-2">Raw Log</h2>
+          <pre className="bg-black text-green-400 p-2 rounded overflow-auto">
+            {rawLog}
+          </pre>
+        </div>
+      )}
       <HeaderLab />
     </div>
   );

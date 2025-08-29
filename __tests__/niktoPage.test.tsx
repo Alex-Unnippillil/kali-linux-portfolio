@@ -5,20 +5,34 @@ import NiktoPage from '../apps/nikto';
 
 describe('NiktoPage', () => {
   beforeEach(() => {
-    global.fetch = jest.fn(() =>
-      Promise.resolve({
-        json: () =>
-          Promise.resolve([
-            {
-              path: '/admin',
-              finding: 'admin portal',
-              references: ['OSVDB-1'],
-              severity: 'High',
-              details: 'details',
-            },
-          ]),
-      })
-    ) as any;
+    global.fetch = jest.fn((url: string) => {
+      if (url.endsWith('report.json')) {
+        return Promise.resolve({
+          json: () =>
+            Promise.resolve([
+              {
+                path: '/admin',
+                finding: 'admin portal',
+                references: ['OSVDB-1'],
+                severity: 'High',
+                details: 'details',
+              },
+            ]),
+        }) as any;
+      }
+      return Promise.resolve({
+        text: () =>
+          Promise.resolve(
+            [
+              '+ Server: Apache/2.4.41 (Ubuntu)',
+              '+ The X-XSS-Protection header is not defined. This can allow XSS.',
+              '+ /login.php: Database error reveals SQL injection vulnerability.',
+              '+ /etc/passwd: Local File Inclusion vulnerability.',
+              '+ http://example.com/remote.txt: Remote File Inclusion vulnerability.',
+            ].join('\n')
+          ),
+      }) as any;
+    }) as any;
   });
 
   it('builds command preview and shows fix suggestion', async () => {
@@ -31,5 +45,8 @@ describe('NiktoPage', () => {
     expect(
       await screen.findByText(/Restrict access to the admin portal/i)
     ).toBeInTheDocument();
+    await waitFor(() => screen.getByText(/Critical: 3/i));
+    expect(screen.getByText(/Warning: 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/Info: 1/i)).toBeInTheDocument();
   });
 });
