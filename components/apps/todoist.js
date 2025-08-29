@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import * as chrono from 'chrono-node';
 import { RRule } from 'rrule';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
@@ -11,14 +11,28 @@ const initialGroups = {
   Someday: [],
 };
 
+const groupsToSections = (groups) =>
+  Object.entries(groups).map(([title, tasks]) => ({ title, tasks }));
+
+const sectionsToGroups = (sections) => {
+  const obj = {};
+  sections.forEach((s) => {
+    obj[s.title] = s.tasks;
+  });
+  return obj;
+};
+
 const WIP_LIMITS = {
   Today: 0,
   Upcoming: 0,
   Someday: 0,
 };
 
+const initialSections = groupsToSections(initialGroups);
+
 export default function Todoist() {
-  const [groups, setGroups] = useState(initialGroups);
+  const [sections, setSections] = useState(initialSections);
+  const groups = useMemo(() => sectionsToGroups(sections), [sections]);
   const [animating, setAnimating] = useState('');
   const [form, setForm] = useState({
     title: '',
@@ -48,7 +62,12 @@ export default function Todoist() {
       const data = localStorage.getItem(STORAGE_KEY);
       if (data) {
         try {
-          setGroups({ ...initialGroups, ...JSON.parse(data) });
+          const parsed = JSON.parse(data);
+          if (Array.isArray(parsed)) {
+            setSections(parsed);
+          } else {
+            setSections(groupsToSections({ ...initialGroups, ...parsed }));
+          }
         } catch {
           // ignore bad data
         }
@@ -75,9 +94,9 @@ export default function Todoist() {
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./todoist.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
-        const { groups: newGroups, taskTitle, to } = e.data || {};
-        if (newGroups && taskTitle && to) {
-          finalizeMove(newGroups, taskTitle, to);
+        const { sections: newSections, taskTitle, to } = e.data || {};
+        if (newSections && taskTitle && to) {
+          finalizeMove(newSections, taskTitle, to);
         }
       };
     }
@@ -91,11 +110,11 @@ export default function Todoist() {
   }, []);
 
   const finalizeMove = useCallback(
-    (newGroups, taskTitle, to) => {
-      setGroups(newGroups);
+    (newSections, taskTitle, to) => {
+      setSections(newSections);
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newSections));
         } catch {
           // ignore
         }
@@ -122,31 +141,31 @@ export default function Todoist() {
     if (!id || from === group) return;
     if (WIP_LIMITS[group] && groups[group].length >= WIP_LIMITS[group]) return;
     if (workerRef.current) {
-      workerRef.current.postMessage({ type: 'move', groups, from, to: group, id });
+      workerRef.current.postMessage({ type: 'move', sections, from, to: group, id });
     } else {
-      const newGroups = moveTask(groups, from, group, id);
-      finalizeMove(newGroups, title, group);
+      const newSections = moveTask(sections, from, group, id);
+      finalizeMove(newSections, title, group);
     }
   };
 
   const handleDragOver = (e) => e.preventDefault();
 
   const moveTask = (data, from, to, id) => {
-    const newGroups = {
-      ...data,
-      [from]: [...data[from]],
-      [to]: [...data[to]],
-    };
-    const index = newGroups[from].findIndex((t) => t.id === id);
-    if (index > -1) {
-      const [task] = newGroups[from].splice(index, 1);
-      newGroups[to].push(task);
+    const newSections = data.map((s) => ({ ...s, tasks: [...s.tasks] }));
+    const fromIndex = newSections.findIndex((s) => s.title === from);
+    const toIndex = newSections.findIndex((s) => s.title === to);
+    if (fromIndex > -1 && toIndex > -1) {
+      const index = newSections[fromIndex].tasks.findIndex((t) => t.id === id);
+      if (index > -1) {
+        const [task] = newSections[fromIndex].tasks.splice(index, 1);
+        newSections[toIndex].tasks.push(task);
+      }
     }
-    return newGroups;
+    return newSections;
   };
 
   const handleKeyDown = (group, task) => (e) => {
-    const names = Object.keys(groups);
+    const names = sections.map((s) => s.title);
     const index = groups[group].findIndex((t) => t.id === task.id);
     if (e.key === ' ' || (e.ctrlKey && e.key.toLowerCase() === 'd')) {
       e.preventDefault();
@@ -160,7 +179,7 @@ export default function Todoist() {
         newGroups[group][index],
         newGroups[group][index - 1],
       ];
-      finalizeMove(newGroups, task.title, group);
+      finalizeMove(groupsToSections(newGroups), task.title, group);
     } else if (e.key === 'ArrowDown' && index < groups[group].length - 1) {
       e.preventDefault();
       const newGroups = { ...groups, [group]: [...groups[group]] };
@@ -168,7 +187,7 @@ export default function Todoist() {
         newGroups[group][index],
         newGroups[group][index + 1],
       ];
-      finalizeMove(newGroups, task.title, group);
+      finalizeMove(groupsToSections(newGroups), task.title, group);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
       const dir = e.key === 'ArrowLeft' ? -1 : 1;
@@ -178,14 +197,14 @@ export default function Todoist() {
         if (workerRef.current) {
           workerRef.current.postMessage({
             type: 'move',
-            groups,
+            sections,
             from: group,
             to: target,
             id: task.id,
           });
         } else {
-          const newGroups = moveTask(groups, group, target, task.id);
-          finalizeMove(newGroups, task.title, target);
+          const newSections = moveTask(sections, group, target, task.id);
+          finalizeMove(newSections, task.title, target);
         }
       }
     }
@@ -245,10 +264,11 @@ export default function Todoist() {
         return { ...t, completed: !t.completed };
       }),
     };
-    setGroups(newGroups);
+    const newSections = groupsToSections(newGroups);
+    setSections(newSections);
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newSections));
       } catch {
         // ignore
       }
@@ -273,7 +293,7 @@ export default function Todoist() {
       ...groups,
       Today: [...groups.Today, newTask],
     };
-    finalizeMove(newGroups, form.title, 'Today');
+    finalizeMove(groupsToSections(newGroups), form.title, 'Today');
     setForm({ title: '', due: '', priority: 'medium', section: '', recurring: '' });
     setRecurringRule('');
     setRecurringPreview([]);
@@ -339,13 +359,13 @@ export default function Todoist() {
       ...groups,
       Today: [...groups.Today, newTask],
     };
-    finalizeMove(newGroups, newTask.title, 'Today');
+    finalizeMove(groupsToSections(newGroups), newTask.title, 'Today');
     setQuick('');
   };
 
   const handleExport = () => {
     try {
-      const blob = new Blob([JSON.stringify(groups)], {
+      const blob = new Blob([JSON.stringify(sections)], {
         type: 'application/json',
       });
       const url = URL.createObjectURL(blob);
@@ -366,10 +386,17 @@ export default function Todoist() {
     reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result);
-        const newGroups = { ...initialGroups, ...parsed };
-        setGroups(newGroups);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
+        if (Array.isArray(parsed)) {
+          setSections(parsed);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+          }
+        } else {
+          const newSections = groupsToSections({ ...initialGroups, ...parsed });
+          setSections(newSections);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newSections));
+          }
         }
       } catch {
         // ignore
@@ -570,7 +597,7 @@ export default function Todoist() {
       </div>
       <div className="flex flex-1">
         {view === 'all'
-          ? Object.keys(groups).map((name) => renderGroup(name))
+          ? sections.map((s) => renderGroup(s.title))
           : (
             <div
               className="flex-1 p-2 overflow-y-auto"
