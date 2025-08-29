@@ -103,6 +103,7 @@ const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
 const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
 const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
 const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
+const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
 const ContactApp = createDynamicApp('contact', 'Contact');
 
 
@@ -186,6 +187,7 @@ const displayReconNG = createDisplay(ReconNGApp);
 const displaySecurityTools = createDisplay(SecurityToolsApp);
 const displaySSH = createDisplay(SSHApp);
 const displayHTTP = createDisplay(HTTPApp);
+const displayHtmlRewrite = createDisplay(HtmlRewriteApp);
 const displayContact = createDisplay(ContactApp);
 
 const displayHashcat = createDisplay(HashcatApp);
@@ -878,6 +880,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayHTTP,
+  },
+  {
+    id: 'html-rewriter',
+    title: 'HTML Rewriter',
+    icon: './themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayHtmlRewrite,
   },
   {
     id: 'contact',
