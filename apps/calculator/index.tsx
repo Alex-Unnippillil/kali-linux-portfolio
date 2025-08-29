@@ -4,6 +4,7 @@ import usePersistentState from '../../hooks/usePersistentState';
 import ModeSwitcher from './components/ModeSwitcher';
 import './styles.css';
 import MemorySlots from './components/MemorySlots';
+import FormulaEditor from './components/FormulaEditor';
 
 export default function Calculator() {
   const HISTORY_LIMIT = 10;
@@ -56,6 +57,8 @@ export default function Calculator() {
       const buttons = document.querySelectorAll<HTMLButtonElement>('.btn');
       const historyToggle = document.getElementById('toggle-history');
       const historyEl = document.getElementById('history');
+      const formulasToggle = document.getElementById('toggle-formulas');
+      const formulasEl = document.getElementById('formulas');
       const baseSelect = document.getElementById('base-select') as HTMLSelectElement | null;
 
       const insertAtCursor = (text: string) => {
@@ -166,6 +169,10 @@ export default function Calculator() {
         historyEl?.classList.toggle('hidden');
       });
 
+      formulasToggle?.addEventListener('click', () => {
+        formulasEl?.classList.toggle('hidden');
+      });
+
       baseSelect?.addEventListener('change', () => {
         setBase(parseInt(baseSelect.value, 10));
       });
@@ -189,6 +196,7 @@ export default function Calculator() {
       <button id="toggle-scientific" className="toggle h-12" aria-pressed="false" aria-label="toggle scientific mode">Scientific</button>
       <button id="toggle-programmer" className="toggle h-12" aria-pressed="false" aria-label="toggle programmer mode">Programmer</button>
       <button id="toggle-history" className="toggle h-12" aria-pressed="false" aria-label="toggle history">History</button>
+      <button id="toggle-formulas" className="toggle h-12" aria-pressed="false" aria-label="toggle formulas">Formulas</button>
       <div className="memory-grid grid grid-cols-3 !gap-1" aria-label="memory functions">
         <button className={btnCls} data-action="mplus" aria-label="add to memory">M+</button>
         <button className={btnCls} data-action="mminus" aria-label="subtract from memory">M&minus;</button>
@@ -212,8 +220,8 @@ export default function Calculator() {
         <button className={btnCls} data-value="." data-key="." aria-label="decimal point">.</button>
         <button className={btnCls} data-action="equals" data-key="= Enter" aria-label="equals">=</button>
         <button className={btnCls} data-value="+" data-key="+" aria-label="add">+</button>
-        <button className={`${btnCls} span-two w-full`} data-action="clear" data-key="Escape c" aria-label="clear">C</button>
-        <button className={`${btnCls} span-two w-full`} data-action="backspace" data-key="Backspace" aria-label="backspace">⌫</button>
+      <button className={`${btnCls} span-two w-full`} data-action="clear" data-key="Escape c" aria-label="clear">C</button>
+      <button className={`${btnCls} span-two w-full`} data-action="backspace" data-key="Backspace" aria-label="backspace">⌫</button>
       </div>
       <div id="scientific" className="scientific hidden grid grid-cols-3 !gap-1" aria-label="scientific functions">
         <button className={btnCls} data-value="sin(" aria-label="sine">sin</button>
@@ -240,6 +248,7 @@ export default function Calculator() {
       <button id="print-tape" className={btnCls} data-action="print" aria-label="print tape">Print</button>
         <div id="paren-indicator" />
       </div>
+      <FormulaEditor />
       <div id="history" className="history hidden" aria-live="polite">
         {history.map(({ expr, result }, i) => (
           <div key={i} className="history-entry">
