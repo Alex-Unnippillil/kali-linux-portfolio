@@ -4,6 +4,7 @@ const BYTES_PER_ROW = 16;
 
 const HexEditor = ({ hex, theme }) => {
   const [bytes, setBytes] = useState([]);
+  const [patches, setPatches] = useState([]);
   const [selection, setSelection] = useState([null, null]);
   const [liveMessage, setLiveMessage] = useState('');
   const workerRef = useRef(null);
@@ -42,7 +43,23 @@ const HexEditor = ({ hex, theme }) => {
       workerRef.current = new Worker(
         new URL('./hexWorker.js', import.meta.url)
       );
-      workerRef.current.onmessage = (e) => setBytes(e.data);
+      workerRef.current.onmessage = (e) => {
+        const { type, bytes: b = [], patches: p = [] } = e.data || {};
+        if (type === 'bytes') {
+          setBytes(b);
+          setPatches(p);
+        } else if (type === 'export') {
+          const blob = new Blob([JSON.stringify(p, null, 2)], {
+            type: 'application/json',
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'patches.json';
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      };
       return () => workerRef.current?.terminate();
     }
     return undefined;
@@ -123,6 +140,21 @@ const HexEditor = ({ hex, theme }) => {
     return out;
   }, [bytes]);
 
+  const handleEdit = (idx, current) => {
+    const value =
+      typeof window !== 'undefined'
+        ? window.prompt('Enter byte (two hex chars)', current)
+        : null;
+    if (value) {
+      workerRef.current?.postMessage({
+        type: 'patch',
+        offset: idx,
+        value,
+      });
+      setLiveMessage(`Patched byte ${idx}`);
+    }
+  };
+
   return (
     <div className="mb-6" aria-label="hex editor">
       <div className="flex gap-2">
@@ -148,6 +180,7 @@ const HexEditor = ({ hex, theme }) => {
                       key={idx}
                       onMouseDown={() => handleMouseDown(idx)}
                       onMouseEnter={() => handleMouseEnter(idx)}
+                      onDoubleClick={() => handleEdit(idx, b)}
                       className="w-6 h-6 flex items-center justify-center rounded focus:outline-none focus-visible:ring-2"
                       style={{
                         backgroundColor: selected
@@ -178,6 +211,18 @@ const HexEditor = ({ hex, theme }) => {
           }}
           aria-label="hex mini map"
         />
+      </div>
+      <div className="mt-2">
+        <button
+          onClick={() => workerRef.current?.postMessage({ type: 'export' })}
+          className="px-3 py-1 rounded"
+          style={{
+            backgroundColor: 'var(--r2-surface)',
+            border: '1px solid var(--r2-border)',
+          }}
+        >
+          Export Patches
+        </button>
       </div>
       <div aria-live="polite" className="sr-only">
         {liveMessage}
