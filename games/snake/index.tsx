@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import GameShell from "../../components/games/GameShell";
 import usePersistentState from "../../hooks/usePersistentState";
-import { GRID_SIZE, createState, step, GameState } from "./logic";
+import { DEFAULT_GRID_SIZE, createState, step, GameState } from "./logic";
 
 const CELL_SIZE = 16;
 
@@ -11,17 +11,23 @@ const Snake = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [wrap, setWrap] = usePersistentState<boolean>("snake:wrap", false);
   const [speed, setSpeed] = usePersistentState<number>("snake:speed", 150);
-  const [state, setState] = useState<GameState>(() => createState(wrap));
+  const [gridSize, setGridSize] = usePersistentState<number>(
+    "snake:gridSize",
+    DEFAULT_GRID_SIZE,
+  );
+  const [state, setState] = useState<GameState>(() =>
+    createState(wrap, gridSize),
+  );
   const [score, setScore] = useState(0);
   const [foodAnim, setFoodAnim] = useState(1);
   const runningRef = useRef(true);
 
-  // keep state.wrap in sync with persisted wrap
+  // reset when wrap or grid size changes
   useEffect(() => {
-    setState((s) => ({ ...s, wrap }));
+    setState(createState(wrap, gridSize));
     setScore(0);
     runningRef.current = true;
-  }, [wrap]);
+  }, [wrap, gridSize]);
 
   // game loop
   useEffect(() => {
@@ -57,7 +63,7 @@ const Snake = () => {
     const ctx = canvasRef.current?.getContext("2d");
     if (!ctx) return;
     ctx.fillStyle = "#111827";
-    ctx.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+    ctx.fillRect(0, 0, state.gridSize * CELL_SIZE, state.gridSize * CELL_SIZE);
     const foodX = state.food.x * CELL_SIZE;
     const foodY = state.food.y * CELL_SIZE;
     const size = CELL_SIZE * foodAnim;
@@ -96,14 +102,29 @@ const Snake = () => {
   }, []);
 
   const settings = (
-    <label className="flex items-center space-x-2">
-      <input
-        type="checkbox"
-        checked={wrap}
-        onChange={(e) => setWrap(e.target.checked)}
-      />
-      <span>Wrap edges</span>
-    </label>
+    <div className="flex flex-col space-y-2">
+      <label className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          checked={wrap}
+          onChange={(e) => setWrap(e.target.checked)}
+        />
+        <span>Wrap edges</span>
+      </label>
+      <label className="flex items-center space-x-2">
+        <span>Map size</span>
+        <select
+          value={gridSize}
+          onChange={(e) => setGridSize(parseInt(e.target.value, 10))}
+        >
+          {[10, 15, 20, 25, 30].map((s) => (
+            <option key={s} value={s}>
+              {s}x{s}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
   );
 
   const speeds = [
@@ -112,7 +133,7 @@ const Snake = () => {
     { label: "Fast", value: 100 },
   ];
 
-  const width = GRID_SIZE * CELL_SIZE;
+  const width = state.gridSize * CELL_SIZE;
 
   return (
     <GameShell settings={settings}>

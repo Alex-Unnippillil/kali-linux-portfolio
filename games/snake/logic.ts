@@ -1,4 +1,4 @@
-export const GRID_SIZE = 20;
+export const DEFAULT_GRID_SIZE = 20;
 
 export interface Point {
   x: number;
@@ -10,29 +10,34 @@ export interface GameState {
   dir: Point;
   food: Point;
   wrap: boolean;
+  gridSize: number;
 }
 
-export const randomFood = (snake: Point[]): Point => {
+export const randomFood = (snake: Point[], gridSize: number): Point => {
   let pos: Point;
   do {
     pos = {
-      x: Math.floor(Math.random() * GRID_SIZE),
-      y: Math.floor(Math.random() * GRID_SIZE),
+      x: Math.floor(Math.random() * gridSize),
+      y: Math.floor(Math.random() * gridSize),
     };
   } while (snake.some((s) => s.x === pos.x && s.y === pos.y));
   return pos;
 };
 
-export const createState = (wrap = false): GameState => {
+export const createState = (
+  wrap = false,
+  gridSize = DEFAULT_GRID_SIZE,
+): GameState => {
   const start = {
-    x: Math.floor(GRID_SIZE / 2),
-    y: Math.floor(GRID_SIZE / 2),
+    x: Math.floor(gridSize / 2),
+    y: Math.floor(gridSize / 2),
   };
   return {
     snake: [start],
     dir: { x: 1, y: 0 },
-    food: randomFood([start]),
+    food: randomFood([start], gridSize),
     wrap,
+    gridSize,
   };
 };
 
@@ -43,15 +48,12 @@ export const step = (
   let headX = snake[0].x + state.dir.x;
   let headY = snake[0].y + state.dir.y;
 
+  const { gridSize } = state;
+
   if (state.wrap) {
-    headX = (headX + GRID_SIZE) % GRID_SIZE;
-    headY = (headY + GRID_SIZE) % GRID_SIZE;
-  } else if (
-    headX < 0 ||
-    headY < 0 ||
-    headX >= GRID_SIZE ||
-    headY >= GRID_SIZE
-  ) {
+    headX = (headX + gridSize) % gridSize;
+    headY = (headY + gridSize) % gridSize;
+  } else if (headX < 0 || headY < 0 || headX >= gridSize || headY >= gridSize) {
     return { state, gameOver: true, ate: false };
   }
 
@@ -65,7 +67,7 @@ export const step = (
   let ate = false;
   if (headX === food.x && headY === food.y) {
     ate = true;
-    food = randomFood(snake);
+    food = randomFood(snake, gridSize);
   } else {
     snake.pop();
   }
@@ -74,7 +76,7 @@ export const step = (
 };
 
 export default {
-  GRID_SIZE,
+  DEFAULT_GRID_SIZE,
   randomFood,
   createState,
   step,
