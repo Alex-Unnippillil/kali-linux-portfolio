@@ -1,174 +1,163 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import ReportView, { Report } from './components/ReportView';
+import React, { useEffect, useMemo, useState } from 'react';
+import share, { canShare } from '../../utils/share';
 
 interface Script {
   name: string;
   description: string;
   example: string;
+  tag: string;
 }
 
-type ScriptData = Record<string, Script[]>;
+type ScriptData = Record<string, Omit<Script, 'tag'>[]>;
 
+/**
+ * Nmap NSE playground with a script browser on the left and
+ * script details/output on the right. Data is static and meant
+ * purely for learning/demo purposes.
+ */
 const NmapNSE: React.FC = () => {
-  const [data, setData] = useState<ScriptData>({});
-  const [query, setQuery] = useState('');
-  const workerRef = useRef<Worker>();
-  const [report, setReport] = useState<Report | null>(null);
-  const [parseError, setParseError] = useState('');
-  const [hasUpdate, setHasUpdate] = useState(false);
-  const copyExample = useCallback((text: string) => {
-    if (typeof window !== 'undefined') {
-      try {
-        navigator.clipboard?.writeText(text);
-      } catch (e) {
-        // ignore copy errors
-      }
-    }
-  }, []);
+  const [data, setData] = useState<Script[]>([]);
+  const [activeTag, setActiveTag] = useState('');
+  const [selected, setSelected] = useState<Script | null>(null);
+  const [result, setResult] = useState<{ script: string; output: string } | null>(
+    null
+  );
 
-  useEffect(() => {
-    workerRef.current = new Worker(
-      new URL('./workers/xmlParser.ts', import.meta.url)
-    );
-    workerRef.current.onmessage = (e) => {
-      const { error } = e.data as { error?: string };
-      if (error) {
-        setParseError(error);
-        setReport(null);
-      } else {
-        setParseError('');
-        setReport(e.data as Report);
-      }
-    };
-    return () => workerRef.current?.terminate();
-  }, []);
-
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      workerRef.current?.postMessage(reader.result);
-    };
-    reader.readAsText(file);
-  };
-  const openScriptDoc = useCallback((name: string) => {
-    if (typeof window !== 'undefined') {
-      window.open(
-        `https://nmap.org/nsedoc/scripts/${name}.html`,
-        '_blank',
-        'noopener,noreferrer'
-      );
-    }
-  }, []);
-
+  // load static script metadata
   useEffect(() => {
     const load = async () => {
       try {
         const res = await fetch('/demo-data/nmap/scripts.json');
-        const json = await res.json();
-        setData(json);
-      } catch (e) {
-        // ignore
+        const json: ScriptData = await res.json();
+        const flat = Object.entries(json).flatMap(([tag, scripts]) =>
+          scripts.map((s) => ({ ...s, tag }))
+        );
+        setData(flat);
+      } catch {
+        /* ignore */
       }
     };
     load();
   }, []);
 
-  useEffect(() => {
-    const check = async () => {
-      try {
-        const res = await fetch('/api/nse/update');
-        if (!res.ok) return;
-        const info = await res.json();
-        if (info.updateAvailable) {
-          setHasUpdate(true);
-        }
-      } catch {
-        // ignore
-      }
-    };
-    check();
-  }, []);
+  const tags = useMemo(() => Array.from(new Set(data.map((s) => s.tag))), [
+    data,
+  ]);
 
-  const queryLower = query.toLowerCase();
-  const filtered: [string, Script[]][] = Object.entries(data).flatMap(
-    ([category, scripts]) => {
-    const categoryMatch = category.toLowerCase().includes(queryLower);
-    const matchedScripts = scripts.filter((s) =>
-      s.name.toLowerCase().includes(queryLower)
-    );
-    if (categoryMatch) {
-      return [[category, scripts]];
-    }
-    if (matchedScripts.length > 0) {
-      return [[category, matchedScripts]];
-    }
-    return [] as [string, Script[]][];
-  });
+  const scripts = useMemo(
+    () => (activeTag ? data.filter((s) => s.tag === activeTag) : data),
+    [activeTag, data]
+  );
+
+  const run = () => {
+    if (!selected) return;
+    setResult({ script: selected.name, output: selected.example });
+  };
+
+  const download = () => {
+    if (!result) return;
+    const blob = new Blob([JSON.stringify(result, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${result.script}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const shareResult = () => {
+    if (!result) return;
+    share(JSON.stringify(result, null, 2), 'Nmap NSE Result');
+  };
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen">
-      {hasUpdate && (
-        <div className="mb-4 p-2 bg-yellow-800 text-yellow-200 rounded">
-          Newer NSE script versions are available.
+    <div className="flex h-full min-h-screen bg-gray-900 text-white">
+      {/* script browser */}
+      <aside className="w-1/3 border-r border-gray-700 flex flex-col">
+        <div className="sticky top-0 p-2 bg-gray-900 z-10 flex flex-wrap items-center gap-2">
+          {tags.map((tag) => (
+            <button
+              key={tag}
+              className={`px-2 py-1 rounded-full text-xs capitalize bg-gray-700 hover:bg-gray-600 ${
+                activeTag === tag ? 'bg-blue-600' : ''
+              }`}
+              onClick={() => setActiveTag(activeTag === tag ? '' : tag)}
+            >
+              {tag}
+            </button>
+          ))}
+          <button
+            className="ml-auto px-3 py-1 bg-green-700 rounded disabled:opacity-50"
+            onClick={run}
+            disabled={!selected}
+          >
+            Run
+          </button>
         </div>
-      )}
-      <h1 className="text-2xl mb-4">Nmap NSE Script Library</h1>
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Filter scripts"
-        className="mb-4 p-2 w-full rounded text-black"
-      />
-      <p className="text-sm text-yellow-300 mb-4">
-        Script details use static demo data for learning purposes only. Links open
-        in isolated tabs.
-      </p>
-      {filtered.map(([category, scripts]) => (
-        <div key={category} className="mb-6">
-          <h2 className="text-xl mb-2 capitalize">{category}</h2>
-          {scripts.map((script: Script) => (
-            <div key={script.name} className="mb-4">
-              <button
-                type="button"
-                onClick={() => openScriptDoc(script.name)}
-                className="font-mono text-blue-400 underline"
-              >
-                {script.name}
-              </button>
-              <p className="mb-2">{script.description}</p>
-              <pre className="bg-black text-green-400 p-2 rounded overflow-auto font-mono leading-[1.2]">
-                {script.example}
-              </pre>
-              <button
-                type="button"
-                onClick={() => copyExample(script.example)}
-                className="mt-2 px-2 py-1 bg-blue-700 rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
-              >
-                Copy
-              </button>
-            </div>
+        <div className="overflow-y-auto flex-1 p-2 space-y-1">
+          {scripts.map((s) => (
+            <button
+              key={s.name}
+              onClick={() => setSelected(s)}
+              className={`block w-full text-left px-2 py-1 rounded font-mono text-sm hover:bg-gray-800 ${
+                selected?.name === s.name ? 'bg-gray-800' : ''
+              }`}
+            >
+              {s.name}
+            </button>
           ))}
         </div>
-      ))}
-      <section className="mt-8">
-        <h2 className="text-xl mb-2">Upload Nmap XML Report</h2>
-        <input type="file" accept=".xml" onChange={onFile} />
-        {parseError && (
-          <div className="mt-2 text-red-400">{parseError}</div>
-        )}
-        {report && (
-          <div className="mt-4">
-            <ReportView report={report} />
+      </aside>
+
+      {/* details */}
+      <main className="flex-1 p-4 overflow-y-auto">
+        {selected ? (
+          <div>
+            <h1 className="text-2xl mb-2 font-mono">{selected.name}</h1>
+            <p className="mb-4">{selected.description}</p>
+            <p className="mb-2 text-sm">Tag: {selected.tag}</p>
+            <h2 className="text-xl mb-2">Sample Output</h2>
+            <pre className="bg-black text-green-400 p-2 rounded overflow-auto font-mono leading-[1.2]">
+              {selected.example}
+            </pre>
+            {result && (
+              <div className="mt-4">
+                <h2 className="text-xl mb-2">Result</h2>
+                <pre className="bg-black text-green-400 p-2 rounded overflow-auto font-mono leading-[1.2]">
+                  {JSON.stringify(result, null, 2)}
+                </pre>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    className="px-2 py-1 bg-blue-700 rounded"
+                    onClick={download}
+                    type="button"
+                  >
+                    Download JSON
+                  </button>
+                  {canShare() && (
+                    <button
+                      className="px-2 py-1 bg-purple-700 rounded"
+                      onClick={shareResult}
+                      type="button"
+                    >
+                      Share
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+        ) : (
+          <p>Select a script to view details.</p>
         )}
-      </section>
+      </main>
     </div>
   );
 };
 
 export default NmapNSE;
+
