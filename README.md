@@ -23,12 +23,13 @@ Always test inside controlled labs and obtain written permission before performi
 
 ### Requirements
 - **Node.js 20.x** (repo includes `.nvmrc`; run `nvm use`; update `.nvmrc` and `package.json` `engines` if you upgrade)
+
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
 ### Install & Run (Dev)
 ```bash
-nvm install  # installs Node 20 from .nvmrc if needed
+nvm install  # installs Node 22 from .nvmrc if needed
 nvm use
 yarn install
 yarn dev
@@ -39,6 +40,7 @@ Serverful deployments run the built Next.js server so all API routes are availab
 ```bash
 yarn build && yarn start
 ```
+> **Note:** Workbox's build tooling uses `glob@7`, which pulls the deprecated [`inflight`](https://www.npmjs.com/package/inflight) module. Security scanners may surface advisories such as [GHSA-ww39-953v-wcq6](https://github.com/advisories/GHSA-ww39-953v-wcq6) and [GHSA-cj88-88mr-972w](https://github.com/advisories/GHSA-cj88-88mr-972w); these warnings stem from transient build-time dependencies and are considered safe here.
 After the server starts, exercise an API route to confirm server-side functionality:
 ```bash
 curl -X POST http://localhost:3000/api/dummy
@@ -223,7 +225,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 ### Static export (GitHub Pages)
 Workflow: `.github/workflows/gh-deploy.yml`:
 - Installs Node, runs `yarn build && yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
-- **Action item:** update matrix to **Node 20.x** to match `package.json`.
+- **Action item:** update matrix to **Node 22.x** to match `package.json`.
 - Required env variables (GitHub Secrets):
   - `NEXT_PUBLIC_TRACKING_ID`
   - `NEXT_PUBLIC_SERVICE_ID`
@@ -436,7 +438,7 @@ play/pause and track controls include keyboard hotkeys.
 
 ## Production Hardening Checklist
 
-- [ ] **Pin Node to 20.x** across runtime and CI.
+- [ ] **Pin Node to 22.x** across runtime and CI.
 - [ ] **Tighten CSP** (`connect-src`, `frame-src`, remove `http:` and `'unsafe-inline'`).
 - [ ] **Set env vars** in the hosting platform; rotate EmailJS keys regularly.
 - [ ] **Disable/flag API demo routes** for production or protect behind feature flags.
