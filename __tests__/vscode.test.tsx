@@ -2,28 +2,11 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import VsCode from '../apps/vscode';
 
+jest.mock('@monaco-editor/react', () => function MonacoMock() { return <div data-testid="editor" />; });
+
 describe('VsCode app', () => {
-  it('renders external frame', () => {
+  it('renders open button', () => {
     render(<VsCode />);
-    const frame = screen.getByTitle('VsCode');
-    expect(frame.tagName).toBe('IFRAME');
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
-  it('shows banner when cookies are blocked', async () => {
-    const original = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
-    Object.defineProperty(document, 'cookie', {
-      configurable: true,
-      get: () => '',
-      set: () => {},
-    });
-
-    render(<VsCode />);
-    const alert = await screen.findByRole('alert');
-    expect(alert).toBeInTheDocument();
-
-    if (original) {
-      Object.defineProperty(document, 'cookie', original);
-    }
+    expect(screen.getByRole('button', { name: /open/i })).toBeInTheDocument();
   });
 });
