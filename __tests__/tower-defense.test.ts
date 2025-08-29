@@ -11,7 +11,7 @@ import {
   deactivateEnemy,
   loadSprite,
   clearSpriteCache,
-} from '../components/apps/tower-defense-core';
+} from '../apps/games/tower-defense';
 
 describe('tower defense core', () => {
   test('path computed once and reused', () => {
