@@ -1,10 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import {
-  checkContradictions,
-  autoFill,
-  createHintSystem,
-} from '../apps/games/nonogram/logic';
+import { checkContradictions, autoFill } from '../apps/games/nonogram/logic';
+import { createHintSystem, revealRandomCell } from '../apps/games/nonogram/hints';
 import {
   parsePack,
   loadPackFromJSON,
@@ -46,13 +43,29 @@ describe('games/nonogram logic', () => {
   });
 
   test('hint system enforces usage limit', () => {
-    const rows = [[1]];
-    const cols = [[1]];
-    const grid = [[0]];
+    const grid = [[0]] as (0 | 1 | -1)[][];
+    const solution = [[1]] as (0 | 1)[][];
     const hints = createHintSystem(1);
-    expect(hints.useHint(rows, cols, grid)).toEqual({ i: 0, j: 0, value: 1 });
-    expect(hints.useHint(rows, cols, grid)).toBeNull();
+    expect(hints.useHint(grid, solution)).toEqual({ i: 0, j: 0, value: 1 });
+    expect(hints.useHint(grid, solution)).toBeNull();
     expect(hints.remaining()).toBe(0);
+  });
+
+  test('random hint reveals a correct cell', () => {
+    const grid = [
+      [0, 0],
+      [0, 0],
+    ] as (0 | 1 | -1)[][];
+    const solution = [
+      [1, 0],
+      [0, 1],
+    ] as (0 | 1)[][];
+    const hint = revealRandomCell(grid, solution);
+    expect(hint).not.toBeNull();
+    if (hint) {
+      expect(solution[hint.i][hint.j]).toBe(1);
+      expect(grid[hint.i][hint.j]).not.toBe(1);
+    }
   });
 
   test('loads puzzle packs from JSON files', () => {
