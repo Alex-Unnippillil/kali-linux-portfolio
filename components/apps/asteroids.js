@@ -124,6 +124,11 @@ const Asteroids = () => {
   const [saveData, setSaveData, saveReady] = useOPFS('asteroids-save.json', { upgrades: [], ghost: [] });
   const saveDataRef = useRef(saveData);
   useEffect(() => { saveDataRef.current = saveData; }, [saveData]);
+  const [inventory, setInventory] = useState([]);
+  const inventoryRef = useRef(inventory);
+  useEffect(() => { inventoryRef.current = inventory; }, [inventory]);
+  const [selectingLevel, setSelectingLevel] = useState(true);
+  const [startLevelNum, setStartLevelNum] = useState(1);
 
   useEffect(() => {
     const hs = Number(localStorage.getItem(HIGH_KEY) || 0);
@@ -137,7 +142,7 @@ const Asteroids = () => {
   useEffect(() => { lastScoreRef.current = lastScore; }, [lastScore]);
 
   useEffect(() => {
-    if (!saveReady) return;
+    if (!saveReady || selectingLevel) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -172,7 +177,7 @@ const Asteroids = () => {
     };
     let lives = 3;
     let score = 0;
-    let level = 1;
+    let level = startLevelNum;
     let extraLifeScore = 10000;
     const bullets = createBulletPool(40);
     const asteroids = [];
@@ -194,6 +199,8 @@ const Asteroids = () => {
     const ufo = { active: false, x: 0, y: 0, dx: 0, dy: 0, r: 15, cooldown: 0 };
     const ufoBullets = [];
     const powerUps = [];
+    inventoryRef.current = [];
+    setInventory([]);
     let ufoTimer = 600; // frames until next UFO
     let multiplier = 1;
     let multiplierTimer = 0;
@@ -306,6 +313,24 @@ const Asteroids = () => {
       }
     };
 
+    const handleInventoryUse = (e) => {
+      if (e.key >= '1' && e.key <= '9') {
+        const idx = Number(e.key) - 1;
+        if (inventoryRef.current[idx]) {
+          lives = applyPowerUp(
+            { type: inventoryRef.current[idx] },
+            ship,
+            lives,
+            SHIELD_DURATION,
+            600,
+          );
+          inventoryRef.current.splice(idx, 1);
+          setInventory([...inventoryRef.current]);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleInventoryUse);
+
     // Gamepad support
     const padState = { turn: 0, thrust: 0, fire: false, hyperspace: false };
     function pollGamepad() {
@@ -376,11 +401,13 @@ const Asteroids = () => {
         currentRun.length = 0;
         lives = 3;
         score = 0;
-        level = 1;
+        level = startLevelNum;
         asteroids.length = 0;
         powerUps.length = 0;
-        startLevel();
-        ga.start();
+        inventoryRef.current = [];
+        setInventory([]);
+        setSelectingLevel(true);
+        return;
       }
     }
 
@@ -565,7 +592,8 @@ const Asteroids = () => {
       powerUps.forEach((p, i) => {
         const dist = Math.hypot(p.x - ship.x, p.y - ship.y);
         if (dist < p.r + ship.r) {
-          lives = applyPowerUp(p, ship, lives, SHIELD_DURATION);
+          inventoryRef.current.push(p.type);
+          setInventory([...inventoryRef.current]);
           powerUps.splice(i, 1);
         }
       });
@@ -638,7 +666,12 @@ const Asteroids = () => {
       // Power-ups
       powerUps.forEach((p) => {
         ctx.beginPath();
-        ctx.strokeStyle = p.type === POWER_UPS.SHIELD ? 'cyan' : 'yellow';
+        ctx.strokeStyle =
+          p.type === POWER_UPS.SHIELD
+            ? 'cyan'
+            : p.type === POWER_UPS.RAPID_FIRE
+              ? 'yellow'
+              : 'lime';
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.stroke();
       });
@@ -732,6 +765,18 @@ const Asteroids = () => {
       ctx.fillText(`Lives: ${lives}`, 10, 40);
       ctx.fillText(`High: ${highScoreRef.current} Last: ${lastScoreRef.current}`, 10, 60);
 
+      inventoryRef.current.forEach((type, i) => {
+        ctx.beginPath();
+        ctx.strokeStyle =
+          type === POWER_UPS.SHIELD
+            ? 'cyan'
+            : type === POWER_UPS.RAPID_FIRE
+              ? 'yellow'
+              : 'lime';
+        ctx.arc(10 + i * 20, 80, 8, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+
       if (waveBannerTimer > 0) {
         ctx.save();
         ctx.globalAlpha = Math.min(1, waveBannerTimer / 30);
@@ -750,11 +795,12 @@ const Asteroids = () => {
       cancelAnimationFrame(requestRef.current);
       window.removeEventListener('resize', resize);
       window.removeEventListener('keydown', handleDebugToggle);
+      window.removeEventListener('keydown', handleInventoryUse);
     }
 
     requestRef.current = requestAnimationFrame(update);
     return cleanup;
-  }, [controlsRef, dpr, restartKey, saveReady]);
+  }, [controlsRef, dpr, restartKey, saveReady, selectingLevel, startLevelNum]);
   const togglePause = () => {
     pausedRef.current = !pausedRef.current;
     setPaused(pausedRef.current);
@@ -763,6 +809,9 @@ const Asteroids = () => {
   const restartGame = () => {
     pausedRef.current = false;
     setPaused(false);
+    inventoryRef.current = [];
+    setInventory([]);
+    setSelectingLevel(true);
     setRestartKey((k) => k + 1);
   };
 
@@ -775,6 +824,25 @@ const Asteroids = () => {
 
   return (
     <GameLayout paused={paused} onPause={togglePause} onRestart={restartGame}>
+      {selectingLevel && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-75 text-white space-y-2 z-50">
+          <div>Select Starting Level</div>
+          {[1, 2, 3, 4, 5].map((lvl) => (
+            <button
+              key={lvl}
+              type="button"
+              onClick={() => {
+                setStartLevelNum(lvl);
+                setSelectingLevel(false);
+                setRestartKey((k) => k + 1);
+              }}
+              className="px-2 py-1 bg-gray-700 rounded"
+            >
+              Level {lvl}
+            </button>
+          ))}
+        </div>
+      )}
       <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />
       <div aria-live="polite" className="sr-only">
         {liveText}
