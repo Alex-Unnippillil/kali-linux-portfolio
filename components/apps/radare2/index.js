@@ -7,6 +7,7 @@ import {
   saveBookmarks,
 } from './utils';
 import GraphView from '../../../apps/radare2/components/GraphView';
+import GuideOverlay from './GuideOverlay';
 
 const Radare2 = ({ initialData = {} }) => {
   const { file = 'demo', hex = '', disasm = [], xrefs = {}, blocks = [] } =
@@ -18,6 +19,7 @@ const Radare2 = ({ initialData = {} }) => {
   const [notes, setNotes] = useState([]);
   const [noteText, setNoteText] = useState('');
   const [bookmarks, setBookmarks] = useState([]);
+  const [showGuide, setShowGuide] = useState(false);
   const disasmRef = useRef(null);
 
   useEffect(() => {
@@ -27,6 +29,16 @@ const Radare2 = ({ initialData = {} }) => {
 
     }
   }, [file]);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && !localStorage.getItem('r2HelpDismissed')) {
+        setShowGuide(true);
+      }
+    } catch {
+      /* ignore storage errors */
+    }
+  }, []);
 
   const scrollToAddr = (addr) => {
     const idx = disasm.findIndex(
@@ -75,6 +87,7 @@ const Radare2 = ({ initialData = {} }) => {
 
   return (
     <div className="h-full w-full bg-ub-cool-grey text-white p-4 overflow-auto">
+      {showGuide && <GuideOverlay onClose={() => setShowGuide(false)} />}
       <div className="flex gap-2 mb-2 flex-wrap">
         <input
           value={seekAddr}
@@ -105,6 +118,12 @@ const Radare2 = ({ initialData = {} }) => {
           className="px-3 py-1 bg-gray-700 rounded"
         >
           {mode === 'code' ? 'Graph' : 'Code'}
+        </button>
+        <button
+          onClick={() => setShowGuide(true)}
+          className="px-3 py-1 bg-gray-700 rounded"
+        >
+          Help
         </button>
       </div>
 
