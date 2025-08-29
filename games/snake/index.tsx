@@ -9,19 +9,29 @@ const CELL_SIZE = 16;
 
 const Snake = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [wrap, setWrap] = usePersistentState<boolean>("snake:wrap", false);
-  const [speed, setSpeed] = usePersistentState<number>("snake:speed", 150);
-  const [state, setState] = useState<GameState>(() => createState(wrap));
+  const [walls, setWalls] = usePersistentState<boolean>("snake:walls", true);
+  const [baseSpeed, setBaseSpeed] = usePersistentState<number>(
+    "snake:speed",
+    150,
+  );
+  const [speed, setSpeed] = useState(baseSpeed);
+  const [state, setState] = useState<GameState>(() => createState(!walls));
   const [score, setScore] = useState(0);
   const [foodAnim, setFoodAnim] = useState(1);
   const runningRef = useRef(true);
 
-  // keep state.wrap in sync with persisted wrap
+  // reset speed when base speed changes
   useEffect(() => {
-    setState((s) => ({ ...s, wrap }));
+    setSpeed(baseSpeed);
+  }, [baseSpeed]);
+
+  // keep state.wrap in sync with walls toggle
+  useEffect(() => {
+    setState((s) => ({ ...s, wrap: !walls }));
     setScore(0);
+    setSpeed(baseSpeed);
     runningRef.current = true;
-  }, [wrap]);
+  }, [walls, baseSpeed]);
 
   // game loop
   useEffect(() => {
@@ -35,6 +45,7 @@ const Snake = () => {
         if (result.ate) {
           setScore((sc) => sc + 1);
           setFoodAnim(0);
+          setSpeed((sp) => Math.max(30, sp * 0.95));
         }
         return result.state;
       });
@@ -90,6 +101,7 @@ const Snake = () => {
         setState((s) => ({ ...s, dir: { x: -1, y: 0 } }));
       if (e.key === "ArrowRight" && dir.x !== -1)
         setState((s) => ({ ...s, dir: { x: 1, y: 0 } }));
+      if (e.key.toLowerCase() === "w") setWalls((w) => !w);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -99,10 +111,10 @@ const Snake = () => {
     <label className="flex items-center space-x-2">
       <input
         type="checkbox"
-        checked={wrap}
-        onChange={(e) => setWrap(e.target.checked)}
+        checked={walls}
+        onChange={(e) => setWalls(e.target.checked)}
       />
-      <span>Wrap edges</span>
+      <span>Walls</span>
     </label>
   );
 
@@ -122,9 +134,9 @@ const Snake = () => {
             {speeds.map((s) => (
               <button
                 key={s.value}
-                onClick={() => setSpeed(s.value)}
+                onClick={() => setBaseSpeed(s.value)}
                 className={`px-2 py-1 rounded-full text-xs ${
-                  speed === s.value
+                  baseSpeed === s.value
                     ? "bg-blue-500 text-white"
                     : "bg-gray-700 text-gray-200"
                 }`}
