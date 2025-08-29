@@ -22,6 +22,7 @@ describe('OpenVASApp', () => {
 
   afterEach(() => {
     jest.resetAllMocks();
+    localStorage.clear();
   });
 
   it('includes group and profile in scan request', async () => {
@@ -80,6 +81,19 @@ describe('OpenVASApp', () => {
     render(<OpenVASApp />);
     expect(screen.getByText('Policy Settings')).toBeInTheDocument();
     expect(screen.getByText('PCI DSS')).toBeInTheDocument();
+  });
+
+  it('allows saving and loading a custom policy', () => {
+    render(<OpenVASApp />);
+    fireEvent.change(screen.getByLabelText('Policy Name'), {
+      target: { value: 'Custom Policy' },
+    });
+    fireEvent.click(screen.getByText('Save Policy'));
+    fireEvent.change(screen.getByLabelText('Policy Name'), {
+      target: { value: 'Modified' },
+    });
+    fireEvent.click(screen.getByText('Load Policy'));
+    expect(screen.getByLabelText('Policy Name')).toHaveValue('Custom Policy');
   });
 
   it('opens issue detail panel with remediation info', () => {
