@@ -44,15 +44,15 @@ describe('WiresharkApp', () => {
     const addBtn = screen.getByRole('button', { name: /add rule/i });
     await user.click(addBtn);
     let exprInputs = screen.getAllByPlaceholderText(/filter expression/i);
-    let colorInputs = screen.getAllByPlaceholderText(/color class/i);
+    let colorSelects = screen.getAllByLabelText(/color/i);
     await user.type(exprInputs[0], 'tcp');
-    await user.type(colorInputs[0], 'text-red-500');
+    await user.selectOptions(colorSelects[0], 'Red');
 
     await user.click(addBtn);
     exprInputs = screen.getAllByPlaceholderText(/filter expression/i);
-    colorInputs = screen.getAllByPlaceholderText(/color class/i);
+    colorSelects = screen.getAllByLabelText(/color/i);
     await user.type(exprInputs[1], 'ip.addr == 8.8.8.8');
-    await user.type(colorInputs[1], 'text-blue-500');
+    await user.selectOptions(colorSelects[1], 'Blue');
 
     const tcpRow = screen.getByText('tcp packet').closest('tr');
     const udpRow = screen.getByText('udp packet').closest('tr');
