@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 
-const hashTypes = [
+export const hashTypes = [
   {
     id: '0',
     name: 'MD5',
