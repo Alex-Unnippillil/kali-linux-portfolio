@@ -2783,8 +2783,6 @@ __metadata:
   linkType: hard
 
 "@supabase/supabase-js@npm:^2.56.1":
-
-
   version: 2.56.1
   resolution: "@supabase/supabase-js@npm:2.56.1"
   dependencies:
@@ -4504,7 +4502,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bare-fs@npm:^4.0.1":
+"bare-fs@npm:4.2.1":
   version: 4.2.1
   resolution: "bare-fs@npm:4.2.1"
   dependencies:
@@ -4520,10 +4518,33 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bare-os@npm:^3.0.1":
+"bare-fs@patch:bare-fs@npm%3A4.2.1#~/.yarn/patches/bare-fs-npm-4.2.1-033b0791f0.patch":
+  version: 4.2.1
+  resolution: "bare-fs@patch:bare-fs@npm%3A4.2.1#~/.yarn/patches/bare-fs-npm-4.2.1-033b0791f0.patch::version=4.2.1&hash=9f34e9"
+  dependencies:
+    bare-events: "npm:^2.5.4"
+    bare-path: "npm:^3.0.0"
+    bare-stream: "npm:^2.6.4"
+  peerDependencies:
+    bare-buffer: "*"
+  peerDependenciesMeta:
+    bare-buffer:
+      optional: true
+  checksum: 10c0/c074ec6ba133c383797ef41deb45430cff58f51c233dfa0ad52d2f0bec4a008e333e6b3642b1aa17e2cdab31f64f5f43d626c92d90f6a5a82364cb4ab4fe450c
+  languageName: node
+  linkType: hard
+
+"bare-os@npm:3.6.2":
   version: 3.6.2
   resolution: "bare-os@npm:3.6.2"
   checksum: 10c0/7d917bc202b7efbb6b78658403fac04ae4e91db98d38cbd24037f896a2b1b4f4571d8cd408d12bed6a4c406d6abaf8d03836eacbcc4c75a0b6974e268574fc5a
+  languageName: node
+  linkType: hard
+
+"bare-os@patch:bare-os@npm%3A3.6.2#~/.yarn/patches/bare-os-npm-3.6.2-fb7820f69d.patch":
+  version: 3.6.2
+  resolution: "bare-os@patch:bare-os@npm%3A3.6.2#~/.yarn/patches/bare-os-npm-3.6.2-fb7820f69d.patch::version=3.6.2&hash=cb8f2e"
+  checksum: 10c0/db3c924fdb5ad6d73dd2ae6062837ee2ac933240e184ae943208322bca8cf43ddac9138d53b3c20289737747b656229afe7d61c06d41a25a310d2c3e34efbeb4
   languageName: node
   linkType: hard
 
@@ -6681,9 +6702,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"flags@npm:^4.0.1":
-  version: 4.0.1
-  resolution: "flags@npm:4.0.1"
+"flags@npm:3":
+  version: 3.2.0
+  resolution: "flags@npm:3.2.0"
   dependencies:
     "@edge-runtime/cookies": "npm:^5.0.2"
     jose: "npm:^5.2.1"
@@ -6704,10 +6725,9 @@ __metadata:
       optional: true
     react-dom:
       optional: true
-  checksum: 10c0/e5382e988d35c22e731f2b31737f332f689401adbadb5a46d960f0fc342c94de9c384fb954ebcf78eadb14e5e644928c686d5b6893828e8b1225979cb377eed9
+  checksum: 10c0/73747877d700b93192a2d7524220d01047db5bc74836bd9e88a6bb740d86b97e4620af7a86f8ede78e3bad6ecbf6e3af0ed4233b2bd2c351a42b3cc9be995456
   languageName: node
   linkType: hard
-
 
 "flat-cache@npm:^4.0.0":
   version: 4.0.1
@@ -12280,12 +12300,8 @@ __metadata:
     "@monaco-editor/react": "npm:^4.7.0"
     "@mozilla/readability": "npm:^0.6.0"
     "@playwright/test": "npm:^1.55.0"
-
-    "@supabase/supabase-js": "npm:^2"
-
     "@supabase/ssr": "npm:^0.7.0"
     "@supabase/supabase-js": "npm:^2.56.1"
-
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^6.6.4"
     "@testing-library/react": "npm:^16.3.0"
@@ -12331,7 +12347,6 @@ __metadata:
     fast-xml-parser: "npm:^4.3.5"
     figlet: "npm:^1.8.2"
     flags: "npm:3"
-
     hash-wasm: "npm:^4.12.0"
     howler: "npm:^2.2.4"
     html-to-image: "npm:^1.11.13"
