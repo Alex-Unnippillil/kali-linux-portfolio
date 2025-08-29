@@ -5,6 +5,7 @@ import modules from './modules.json';
 import privTree from './priv-esc.json';
 import RemediationTable from './components/RemediationTable';
 import ResultCard from './components/ResultCard';
+import usePersistentState from '../../hooks/usePersistentState';
 
 interface ModuleOption {
   name: string;
@@ -38,6 +39,11 @@ interface Evidence {
 interface ResultItem {
   title: string;
   output: string;
+}
+
+interface ModuleSet {
+  name: string;
+  modules: string[];
 }
 
 const buildModuleTree = (catalog: ModuleEntry[]) => {
@@ -171,6 +177,9 @@ const MetasploitPost: React.FC = () => {
     Enumeration: [],
   });
   const [report, setReport] = useState<ResultItem[]>([]);
+  const [queue, setQueue] = useState<ModuleEntry[]>([]);
+  const [setName, setSetName] = useState('');
+  const [savedSets, setSavedSets] = usePersistentState<ModuleSet[]>('msf-post-sets', []);
 
   const treeData = useMemo(() => buildModuleTree(modules as ModuleEntry[]), []);
 
@@ -195,14 +204,50 @@ const MetasploitPost: React.FC = () => {
     });
   }, [steps]);
 
-  const run = () => {
-    if (!selected) return;
-    const result = { title: selected.path, output: selected.sampleOutput };
+  const runModule = (mod: ModuleEntry) => {
+    const result = { title: mod.path, output: mod.sampleOutput };
     setResults((prev) => ({
       ...prev,
       [activeTab]: [...prev[activeTab], result],
     }));
+    setSelected(mod);
     animateSteps();
+  };
+
+  const run = () => {
+    if (!selected) return;
+    runModule(selected);
+  };
+
+  const addToQueue = () => {
+    if (!selected) return;
+    setQueue((prev) => [...prev, selected]);
+  };
+
+  const runQueue = () => {
+    queue.forEach((mod, idx) => {
+      setTimeout(() => runModule(mod), idx * 1000);
+    });
+    setQueue([]);
+  };
+
+  const saveSet = () => {
+    if (!setName || queue.length === 0) return;
+    const newSet = { name: setName, modules: queue.map((m) => m.path) };
+    setSavedSets((prev) => [...prev, newSet]);
+    setQueue([]);
+    setSetName('');
+  };
+
+  const runSavedSet = (paths: string[]) => {
+    const mods = (modules as ModuleEntry[]).filter((m) => paths.includes(m.path));
+    mods.forEach((mod, idx) => {
+      setTimeout(() => runModule(mod), idx * 1000);
+    });
+  };
+
+  const deleteSet = (idx: number) => {
+    setSavedSets((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const saveReport = () => {
@@ -265,9 +310,58 @@ const MetasploitPost: React.FC = () => {
               <button onClick={run} className="mt-2 px-3 py-1 bg-green-600 rounded">
                 Run
               </button>
+              <button onClick={addToQueue} className="mt-2 ml-2 px-3 py-1 bg-purple-600 rounded">
+                Add to Queue
+              </button>
             </div>
           ) : (
             <p className="text-gray-400">Select a module to view details.</p>
+          )}
+          {queue.length > 0 && (
+            <div className="mt-4">
+              <h3 className="font-semibold mb-2">Queued Modules</h3>
+              <ul className="list-disc pl-6">
+                {queue.map((m, i) => (
+                  <li key={i}>{m.path}</li>
+                ))}
+              </ul>
+              <div className="flex items-center space-x-2 mt-2">
+                <button onClick={runQueue} className="px-3 py-1 bg-green-600 rounded">
+                  Run Queue
+                </button>
+                <input
+                  className="p-1 text-black"
+                  placeholder="Set name"
+                  value={setName}
+                  onChange={(e) => setSetName(e.target.value)}
+                />
+                <button onClick={saveSet} className="px-3 py-1 bg-blue-600 rounded">
+                  Save Set
+                </button>
+              </div>
+            </div>
+          )}
+          {savedSets.length > 0 && (
+            <div className="mt-4">
+              <h3 className="font-semibold mb-2">Saved Sets</h3>
+              {savedSets.map((s, idx) => (
+                <div key={idx} className="flex items-center space-x-2 mb-1">
+                  <span className="flex-1">{s.name}</span>
+                  <button
+                    onClick={() => runSavedSet(s.modules)}
+                    className="px-2 py-0.5 bg-green-600 rounded"
+                  >
+                    Run
+                  </button>
+                  <button
+                    onClick={() => deleteSet(idx)}
+                    className="px-2 py-0.5 bg-red-600 rounded"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
           <svg width="220" height={steps.length * 80} className="mt-4">
             {steps.map((step, i) => (
