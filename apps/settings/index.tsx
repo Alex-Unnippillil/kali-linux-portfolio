@@ -11,6 +11,8 @@ import {
 } from "../../utils/settingsStore";
 import { getTheme, setTheme } from "../../utils/theme";
 import KeymapOverlay from "./components/KeymapOverlay";
+import Tabs from "../../components/Tabs";
+import ToggleSwitch from "../../components/ToggleSwitch";
 
 export default function Settings() {
   const {
@@ -108,22 +110,7 @@ export default function Settings() {
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
       <div className="flex justify-center border-b border-gray-900">
-        <div role="tablist" className="flex">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              role="tab"
-              aria-selected={activeTab === t.id}
-              tabIndex={activeTab === t.id ? 0 : -1}
-              onClick={() => setActiveTab(t.id)}
-              className={`px-4 py-2 focus:outline-none ${
-                activeTab === t.id ? "bg-ub-orange text-white" : "text-ubt-grey"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
       </div>
       {activeTab === "appearance" && (
         <>
@@ -179,7 +166,7 @@ export default function Settings() {
           <div className="flex justify-center my-4">
             <BackgroundSlideshow />
           </div>
-          <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 justify-items-center border-t border-gray-900">
             {wallpapers.map((name) => (
               <div
                 key={name}
@@ -244,27 +231,21 @@ export default function Settings() {
               <option value="compact">Compact</option>
             </select>
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={reducedMotion}
-                onChange={(e) => setReducedMotion(e.target.checked)}
-                className="mr-2"
-              />
-              Reduced Motion
-            </label>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">Reduced Motion:</span>
+            <ToggleSwitch
+              checked={reducedMotion}
+              onChange={setReducedMotion}
+              ariaLabel="Reduced Motion"
+            />
           </div>
-          <div className="flex justify-center my-4">
-            <label className="mr-2 text-ubt-grey flex items-center">
-              <input
-                type="checkbox"
-                checked={highContrast}
-                onChange={(e) => setHighContrast(e.target.checked)}
-                className="mr-2"
-              />
-              High Contrast
-            </label>
+          <div className="flex justify-center my-4 items-center">
+            <span className="mr-2 text-ubt-grey">High Contrast:</span>
+            <ToggleSwitch
+              checked={highContrast}
+              onChange={setHighContrast}
+              ariaLabel="High Contrast"
+            />
           </div>
           <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
             <button
