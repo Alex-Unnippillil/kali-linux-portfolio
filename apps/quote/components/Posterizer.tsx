@@ -36,6 +36,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
   const [bg, setBg] = useState('#000000');
   const [fg, setFg] = useState('#ffffff');
   const [font, setFont] = useState('serif');
+  const [align, setAlign] = useState<'left' | 'center' | 'right'>('center');
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -48,10 +49,12 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
     ctx.fillRect(0, 0, width, height);
 
     ctx.fillStyle = fg;
-    ctx.textAlign = 'center';
+    ctx.textAlign = align;
     ctx.textBaseline = 'middle';
     const padding = 20;
     const maxWidth = width - padding * 2;
+    const baseX =
+      align === 'center' ? width / 2 : align === 'left' ? padding : width - padding;
 
     const drawText = (text: string, y: number, size: number) => {
       ctx.font = `${size}px ${font}`;
@@ -72,7 +75,7 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
       const totalHeight = lines.length * size * 1.2;
       let currentY = y - totalHeight / 2 + size / 2;
       lines.forEach((l) => {
-        ctx.fillText(l.trim(), width / 2, currentY);
+        ctx.fillText(l.trim(), baseX, currentY);
         currentY += size * 1.2;
       });
       return currentY;
@@ -80,8 +83,8 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
 
     const nextY = drawText(quote.content, height / 2, 24);
     ctx.font = `20px ${font}`;
-    ctx.fillText(`- ${quote.author}`, width / 2, nextY + 20);
-  }, [quote, bg, fg, font]);
+    ctx.fillText(`- ${quote.author}`, baseX, nextY + 20);
+  }, [quote, bg, fg, font, align]);
 
   const ratio = contrastRatio(bg, fg);
   const accessible = ratio >= 4.5;
@@ -114,6 +117,15 @@ export default function Posterizer({ quote }: { quote: Quote | null }) {
           className="px-2 py-1 rounded text-black"
           placeholder="Font"
         />
+        <select
+          value={align}
+          onChange={(e) => setAlign(e.target.value as 'left' | 'center' | 'right')}
+          className="px-2 py-1 rounded text-black"
+        >
+          <option value="left">Left</option>
+          <option value="center">Center</option>
+          <option value="right">Right</option>
+        </select>
         <span className={accessible ? 'text-green-400' : 'text-red-400'}>
           Contrast: {ratio.toFixed(2)}
         </span>
