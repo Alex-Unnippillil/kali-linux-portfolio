@@ -1,6 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import { vibrate } from './Games/common/haptics';
+import {
+  generateLaneConfig,
+  SKINS,
+  getDefaultSkin,
+} from '../../apps/games/frogger/config';
 
 const WIDTH = 7;
 const HEIGHT = 8;
@@ -38,23 +43,7 @@ const handlePads = (frogPos, pads) => {
   return { pads: newPads, dead: false, levelComplete, padHit: true };
 };
 
-const rampLane = (base, level, minSpawn, diffMult = 1) => ({
-  ...base,
-  speed: base.speed * diffMult * (1 + (level - 1) * 0.2),
-  spawnRate: Math.max(minSpawn, base.spawnRate * (1 - (level - 1) * 0.1)),
-});
-
 const initialFrog = { x: Math.floor(WIDTH / 2), y: HEIGHT - 1 };
-
-const carLaneDefs = [
-  { y: 4, dir: 1, speed: 1, spawnRate: 2, length: 1 },
-  { y: 5, dir: -1, speed: 1.2, spawnRate: 1.8, length: 1 },
-];
-
-const logLaneDefs = [
-  { y: 1, dir: -1, speed: 0.5, spawnRate: 2.5, length: 2 },
-  { y: 2, dir: 1, speed: 0.7, spawnRate: 2.2, length: 2 },
-];
 
 const initLane = (lane, seed) => {
   const rng = makeRng(seed);
@@ -125,9 +114,14 @@ const updateLogs = (prev, frogPos, dt) => {
 const Frogger = () => {
   const [frog, setFrog] = useState(initialFrog);
   const frogRef = useRef(frog);
-  const [cars, setCars] = useState(carLaneDefs.map((l, i) => initLane(l, i + 1)));
+  const initialLanes = generateLaneConfig(1, DIFFICULTY_MULTIPLIERS.normal);
+  const [cars, setCars] = useState(
+    initialLanes.cars.map((l, i) => initLane(l, i + 1)),
+  );
   const carsRef = useRef(cars);
-  const [logs, setLogs] = useState(logLaneDefs.map((l, i) => initLane(l, i + 101)));
+  const [logs, setLogs] = useState(
+    initialLanes.logs.map((l, i) => initLane(l, i + 101)),
+  );
   const logsRef = useRef(logs);
   const [pads, setPads] = useState(PAD_POSITIONS.map(() => false));
   const padsRef = useRef(pads);
@@ -151,6 +145,8 @@ const Frogger = () => {
   const splashesRef = useRef([]);
   const [slowTime, setSlowTime] = useState(false);
   const slowTimeRef = useRef(slowTime);
+  const [skin, setSkin] = useState(getDefaultSkin());
+  const [showHitboxes, setShowHitboxes] = useState(false);
   const deathStreakRef = useRef(0);
   const safeFlashRef = useRef(0);
 
@@ -276,16 +272,9 @@ const Frogger = () => {
     (full = false, diff = difficulty, lvl = level) => {
       setFrog(initialFrog);
       const mult = DIFFICULTY_MULTIPLIERS[diff];
-      setCars(
-        carLaneDefs.map((l, i) =>
-          initLane(rampLane(l, lvl, 0.3, mult), i + 1)
-        )
-      );
-      setLogs(
-        logLaneDefs.map((l, i) =>
-          initLane(rampLane(l, lvl, 0.5, mult), i + 101)
-        )
-      );
+      const lanes = generateLaneConfig(lvl, mult);
+      setCars(lanes.cars.map((l, i) => initLane(l, i + 1)));
+      setLogs(lanes.logs.map((l, i) => initLane(l, i + 101)));
       setStatus('');
       if (full) {
         setScore(0);
@@ -338,22 +327,25 @@ const Frogger = () => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
+      const colors = SKINS[skin];
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const phase = rippleRef.current;
       for (let y = 0; y < HEIGHT; y += 1) {
         for (let x = 0; x < WIDTH; x += 1) {
           if (y === 0) {
-            ctx.fillStyle = '#1e3a8a';
+            ctx.fillStyle = colors.water;
             ctx.fillRect(x * CELL, 0, CELL, CELL);
             const idx = PAD_POSITIONS.indexOf(x);
             if (idx >= 0) {
-              const color = padsRef.current[idx] ? '#22c55e' : '#15803d';
+              const padColor = padsRef.current[idx]
+                ? colors.frog
+                : colors.grass;
               const bob = Math.sin(phase + x) * 2;
-              ctx.fillStyle = color;
+              ctx.fillStyle = padColor;
               ctx.fillRect(x * CELL, bob, CELL, CELL);
             }
           } else if (y === 3 || y === 6) {
-            ctx.fillStyle = '#15803d';
+            ctx.fillStyle = colors.grass;
             ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
             if (safeFlashRef.current > 0 && Math.floor(phase * 8) % 2 === 0) {
               ctx.fillStyle = 'rgba(251,191,36,0.5)';
@@ -367,7 +359,7 @@ const Frogger = () => {
             ctx.fillStyle = '#111827';
             ctx.fillRect(x * CELL, y * CELL + CELL - 4, CELL, 4);
           } else {
-            ctx.fillStyle = '#1e3a8a';
+            ctx.fillStyle = colors.water;
             ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
           }
         }
@@ -388,7 +380,7 @@ const Frogger = () => {
         }
       }
       logsRef.current.forEach((lane) => {
-        ctx.fillStyle = '#d97706';
+        ctx.fillStyle = colors.log;
         lane.entities.forEach((e) => {
           ctx.fillRect(e.x * CELL, lane.y * CELL, lane.length * CELL, CELL);
         });
@@ -397,7 +389,7 @@ const Frogger = () => {
         lane.entities.forEach((e) => {
           const x = e.x * CELL;
           const y = lane.y * CELL;
-          ctx.fillStyle = '#ef4444';
+          ctx.fillStyle = colors.car;
           ctx.fillRect(x, y, lane.length * CELL, CELL);
           ctx.globalAlpha = 0.3;
           ctx.fillRect(x - lane.dir * 8, y, lane.length * CELL, CELL);
@@ -414,8 +406,37 @@ const Frogger = () => {
         ctx.stroke();
         ctx.globalAlpha = 1;
       });
-      ctx.fillStyle = '#22c55e';
+      ctx.fillStyle = colors.frog;
       ctx.fillRect(frogRef.current.x * CELL, frogRef.current.y * CELL, CELL, CELL);
+      if (showHitboxes) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        logsRef.current.forEach((lane) => {
+          lane.entities.forEach((e) => {
+            ctx.strokeRect(
+              e.x * CELL,
+              lane.y * CELL,
+              lane.length * CELL,
+              CELL,
+            );
+          });
+        });
+        carsRef.current.forEach((lane) => {
+          lane.entities.forEach((e) => {
+            ctx.strokeRect(
+              e.x * CELL,
+              lane.y * CELL,
+              lane.length * CELL,
+              CELL,
+            );
+          });
+        });
+        ctx.strokeRect(
+          frogRef.current.x * CELL,
+          frogRef.current.y * CELL,
+          CELL,
+          CELL,
+        );
+      }
       if (pausedRef.current) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -490,7 +511,7 @@ const Frogger = () => {
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [difficulty, level, loseLife, reset]);
+  }, [difficulty, level, loseLife, reset, skin, showHitboxes]);
 
   useEffect(() => {
     if (score >= nextLife.current) {
@@ -552,6 +573,13 @@ const Frogger = () => {
         >
           Time: {slowTime ? 'Slow' : 'Normal'}
         </button>
+        <button
+          type="button"
+          onClick={() => setShowHitboxes((h) => !h)}
+          className="px-2 py-1 bg-gray-700 rounded"
+        >
+          Hitboxes: {showHitboxes ? 'On' : 'Off'}
+        </button>
         <label htmlFor="difficulty">Difficulty:</label>
         <select
           id="difficulty"
@@ -566,6 +594,19 @@ const Frogger = () => {
           <option value="easy">Easy</option>
           <option value="normal">Normal</option>
           <option value="hard">Hard</option>
+        </select>
+        <label htmlFor="skin">Skin:</label>
+        <select
+          id="skin"
+          className="bg-gray-700"
+          value={skin}
+          onChange={(e) => setSkin(e.target.value)}
+        >
+          {Object.keys(SKINS).map((s) => (
+            <option key={s} value={s}>
+              {s.charAt(0).toUpperCase() + s.slice(1)}
+            </option>
+          ))}
         </select>
       </div>
       <div className="grid grid-cols-3 gap-1 mt-4 sm:hidden">
@@ -600,7 +641,5 @@ export {
   updateLogs,
   handlePads,
   PAD_POSITIONS,
-  carLaneDefs,
-  logLaneDefs,
-  rampLane,
 };
+export { carLaneDefs, logLaneDefs, rampLane } from '../../apps/games/frogger/config';
