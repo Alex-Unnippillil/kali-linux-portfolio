@@ -33,8 +33,9 @@ jest.mock(
 jest.mock('@xterm/xterm/css/xterm.css', () => ({}), { virtual: true });
 
 import React, { createRef, act } from 'react';
-import { render } from '@testing-library/react';
+import { render, fireEvent } from '@testing-library/react';
 import Terminal from '../apps/terminal';
+import TerminalTabs from '../apps/terminal/tabs';
 
 describe('Terminal component', () => {
   const openApp = jest.fn();
@@ -58,5 +59,21 @@ describe('Terminal component', () => {
       ref.current.runCommand('open calculator');
     });
     expect(openApp).toHaveBeenCalledWith('calculator');
+  });
+
+  it('supports tab management shortcuts', async () => {
+    const { container } = render(<TerminalTabs openApp={openApp} />);
+    await act(async () => {});
+    const root = container.firstChild as HTMLElement;
+    root.focus();
+    fireEvent.keyDown(root, { ctrlKey: true, key: 't' });
+    expect(container.querySelectorAll('.flex.items-center.px-2.py-1.cursor-pointer').length).toBe(2);
+
+    fireEvent.keyDown(root, { ctrlKey: true, key: 'Tab' });
+    const headers = container.querySelectorAll('.flex.items-center.px-2.py-1.cursor-pointer');
+    expect(headers[0].className).toContain('bg-gray-700');
+
+    fireEvent.keyDown(root, { ctrlKey: true, key: 'w' });
+    expect(container.querySelectorAll('.flex.items-center.px-2.py-1.cursor-pointer').length).toBe(1);
   });
 });
