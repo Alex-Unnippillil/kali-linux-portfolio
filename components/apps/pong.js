@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
+import usePersistentState from '../../hooks/usePersistentState';
 import { computeBallSpin } from '../../utils/physics';
 
 // Basic timing constants so the simulation is consistent across refresh rates
@@ -37,6 +38,11 @@ const Pong = () => {
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [rally, setRally] = useState(0);
+  const [highScore, setHighScore] = usePersistentState(
+    'pong_highscore',
+    0,
+    (v) => typeof v === 'number',
+  );
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const speedRef = useRef(1);
   const [history, setHistory] = useState(() => {
@@ -59,6 +65,10 @@ const Pong = () => {
     const ramp = 1 + Math.min(rally * 0.05, 1); // up to 2x
     speedRef.current = base * ramp;
   }, [speedMultiplier, rally, mode]);
+
+  useEffect(() => {
+    if (rally > highScore) setHighScore(rally);
+  }, [rally, highScore, setHighScore]);
 
     const playSound = useCallback(
       (freq) => {
@@ -338,9 +348,11 @@ const Pong = () => {
       // opponent (AI, local or remote)
       if (mode === 'cpu') {
         const error = ball.y - (opponent.y + paddleHeight / 2);
-        const gain = difficulty * 10;
+        // Non-linear difficulty curve for smoother progression
+        const diff = difficulty / 10; // 0-1
+        const gain = 5 + diff * diff * 45; // 5-50
         opponent.vy = error * gain;
-        const max = 400;
+        const max = 200 + diff * 200; // 200-400
         if (opponent.vy > max) opponent.vy = max;
         if (opponent.vy < -max) opponent.vy = -max;
         opponent.y += opponent.vy * dt;
@@ -621,12 +633,14 @@ const Pong = () => {
       />
       {mode === 'practice' ? (
         <div className="mt-2" aria-live="polite" role="status">
-          Rally: {rally}
+          Rally: {rally} (Best: {highScore})
         </div>
       ) : (
         <>
           <div className="mt-2" aria-live="polite" role="status">
-            Player: {scores.player} | Opponent: {scores.opponent}
+            {mode === 'local'
+              ? `P1: ${scores.player} | P2: ${scores.opponent}`
+              : `Player: ${scores.player} | Opponent: ${scores.opponent}`}
           </div>
           <div className="mt-1">Games: {match.player} | {match.opponent}</div>
           {matchWinner && (
