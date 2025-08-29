@@ -5,6 +5,7 @@ import {
   saveNotes,
   loadBookmarks,
   saveBookmarks,
+  extractStrings,
 } from './utils';
 import GraphView from '../../../apps/radare2/components/GraphView';
 import GuideOverlay from './GuideOverlay';
@@ -22,6 +23,7 @@ const Radare2 = ({ initialData = {} }) => {
   const [noteText, setNoteText] = useState('');
   const [bookmarks, setBookmarks] = useState([]);
   const [showGuide, setShowGuide] = useState(false);
+  const [strings, setStrings] = useState([]);
   const disasmRef = useRef(null);
   const { theme, setTheme } = useTheme();
 
@@ -42,6 +44,11 @@ const Radare2 = ({ initialData = {} }) => {
       /* ignore storage errors */
     }
   }, []);
+
+  useEffect(() => {
+    const base = disasm[0]?.addr || '0x0';
+    setStrings(extractStrings(hex, base));
+  }, [hex, disasm]);
 
   const scrollToAddr = (addr) => {
     const idx = disasm.findIndex(
@@ -212,6 +219,27 @@ const Radare2 = ({ initialData = {} }) => {
               ))}
             </ul>
           </div>
+        </div>
+      )}
+
+      {strings.length > 0 && (
+        <div className="mt-4">
+          <h2 className="text-lg">Strings</h2>
+          <ul
+            className="rounded p-2"
+            style={{
+              backgroundColor: 'var(--r2-surface)',
+              border: '1px solid var(--r2-border)',
+            }}
+          >
+            {strings.map((s) => (
+              <li key={s.addr}>
+                <button onClick={() => scrollToAddr(s.addr)} className="underline">
+                  {s.addr}: {s.text}
+                </button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
