@@ -1,8 +1,8 @@
-[
-  { "year": "2012", "description": "Began Nuclear Engineering at Ontario Tech." },
-  { "year": "2016", "description": "Graduated with B. Eng." },
-  { "year": "2020", "description": "Started Networking and I.T. Security program." },
-  { "year": "2021", "description": "Completed first capture-the-flag competition." },
-  { "year": "2023", "description": "Built portfolio showcasing 20+ security projects." },
-  { "year": "2024", "description": "Graduated with BIT in Networking and I.T. Security." }
-]
+{
+  "2012": "Began Nuclear Engineering at Ontario Tech.",
+  "2016": "Graduated with B. Eng.",
+  "2020": "Started Networking and I.T. Security program.",
+  "2021": "Completed first capture-the-flag competition.",
+  "2023": "Built portfolio showcasing 20+ security projects.",
+  "2024": "Graduated with BIT in Networking and I.T. Security."
+}
