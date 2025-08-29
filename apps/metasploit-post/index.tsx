@@ -4,6 +4,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import modules from './modules.json';
 import privTree from './priv-esc.json';
 import RemediationTable from './components/RemediationTable';
+import ResultCard from './components/ResultCard';
 
 interface ModuleOption {
   name: string;
@@ -32,6 +33,11 @@ interface Evidence {
   note: string;
   fileName?: string;
   tags: string[];
+}
+
+interface ResultItem {
+  title: string;
+  output: string;
 }
 
 const buildModuleTree = (catalog: ModuleEntry[]) => {
@@ -150,13 +156,21 @@ const EvidenceVault: React.FC = () => {
 const MetasploitPost: React.FC = () => {
   const [selected, setSelected] = useState<ModuleEntry | null>(null);
   const [params, setParams] = useState<Record<string, string>>({});
-  const [output, setOutput] = useState('');
   const [steps, setSteps] = useState([
     { label: 'Gather System Info', done: false },
     { label: 'Escalate Privileges', done: false },
     { label: 'Establish Persistence', done: false },
     { label: 'Cleanup Traces', done: false },
   ]);
+
+  const tabs = ['Hash Dump', 'Persistence', 'Enumeration'];
+  const [activeTab, setActiveTab] = useState('Hash Dump');
+  const [results, setResults] = useState<Record<string, ResultItem[]>>({
+    'Hash Dump': [],
+    Persistence: [],
+    Enumeration: [],
+  });
+  const [report, setReport] = useState<ResultItem[]>([]);
 
   const treeData = useMemo(() => buildModuleTree(modules as ModuleEntry[]), []);
 
@@ -165,7 +179,6 @@ const MetasploitPost: React.FC = () => {
     const initial: Record<string, string> = {};
     mod.options?.forEach((o) => (initial[o.name] = o.value || ''));
     setParams(initial);
-    setOutput('');
     setSteps((prev) => prev.map((s) => ({ ...s, done: false })));
   };
 
@@ -184,19 +197,52 @@ const MetasploitPost: React.FC = () => {
 
   const run = () => {
     if (!selected) return;
-    const lines = selected.sampleOutput.split('\n');
-    setOutput('');
-    lines.forEach((line, idx) => {
-      setTimeout(() => {
-        setOutput((prev) => (prev ? prev + '\n' : '') + line);
-      }, idx * 500);
-    });
+    const result = { title: selected.path, output: selected.sampleOutput };
+    setResults((prev) => ({
+      ...prev,
+      [activeTab]: [...prev[activeTab], result],
+    }));
     animateSteps();
+  };
+
+  const saveReport = () => {
+    const all = [
+      ...results['Hash Dump'],
+      ...results['Persistence'],
+      ...results['Enumeration'],
+    ];
+    setReport((prev) => [...prev, ...all]);
   };
 
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen">
       <h1 className="text-xl mb-4">Metasploit Post Modules</h1>
+      <div className="flex space-x-4 mb-4">
+        {tabs.map((t) => (
+          <button
+            key={t}
+            onClick={() => setActiveTab(t)}
+            className={`px-3 py-1 rounded ${activeTab === t ? 'bg-gray-800' : 'bg-gray-700'}`}
+          >
+            {t}
+            <span
+              className={`ml-2 px-2 py-0.5 rounded text-xs ${
+                results[t].length ? 'bg-green-600' : 'bg-gray-600'
+              }`}
+            >
+              {results[t].length ? 'done' : 'pending'}
+            </span>
+          </button>
+        ))}
+      </div>
+      <div className="mb-4">
+        {results[activeTab].map((r, i) => (
+          <ResultCard key={i} title={r.title} output={r.output} />
+        ))}
+        <button onClick={saveReport} className="mt-2 px-3 py-1 bg-blue-600 rounded">
+          Save report
+        </button>
+      </div>
       <div className="flex">
         <div className="w-1/3 overflow-auto border-r border-gray-700 pr-2">
           <ModuleTree data={treeData} onSelect={select} />
@@ -219,7 +265,6 @@ const MetasploitPost: React.FC = () => {
               <button onClick={run} className="mt-2 px-3 py-1 bg-green-600 rounded">
                 Run
               </button>
-              <pre className="mt-4 bg-black p-2 h-40 overflow-auto whitespace-pre-wrap">{output}</pre>
             </div>
           ) : (
             <p className="text-gray-400">Select a module to view details.</p>
@@ -248,6 +293,14 @@ const MetasploitPost: React.FC = () => {
           <EvidenceVault />
         </div>
       </div>
+      {report.length > 0 && (
+        <div className="mt-8">
+          <h3 className="font-semibold mb-2">Saved Report</h3>
+          {report.map((r, i) => (
+            <ResultCard key={i} title={r.title} output={r.output} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
