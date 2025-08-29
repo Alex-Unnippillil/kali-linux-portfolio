@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
 import OpenVASApp from '../components/apps/openvas';
 
 describe('OpenVASApp', () => {
@@ -18,6 +18,7 @@ describe('OpenVASApp', () => {
 
     // @ts-ignore
     global.URL.createObjectURL = jest.fn(() => 'blob:summary');
+    localStorage.clear();
   });
 
   afterEach(() => {
@@ -89,5 +90,37 @@ describe('OpenVASApp', () => {
     expect(screen.getByText(/Remediation/)).toBeInTheDocument();
     fireEvent.click(screen.getByText('Close'));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('saves session and resumes pending scan', async () => {
+    const resolvers: Function[] = [];
+    global.fetch = jest.fn(
+      () =>
+        new Promise((resolve) => {
+          resolvers.push(() =>
+            resolve({ ok: true, text: () => Promise.resolve('scan complete') })
+          );
+        })
+    ) as any;
+
+    const { unmount } = render(<OpenVASApp />);
+    fireEvent.change(
+      screen.getByPlaceholderText('Target (e.g. 192.168.1.1)'),
+      { target: { value: '1.2.3.4' } }
+    );
+    fireEvent.click(screen.getByText('Scan'));
+    expect(localStorage.getItem('openvas/session')).toBeTruthy();
+
+    unmount();
+    render(<OpenVASApp />);
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    expect(fetch).toHaveBeenLastCalledWith(
+      '/api/openvas?target=1.2.3.4&group=&profile=PCI'
+    );
+
+    await act(async () => {
+      resolvers.forEach((r) => r());
+    });
   });
 });
