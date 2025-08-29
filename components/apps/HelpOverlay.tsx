@@ -121,7 +121,7 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   'tower-defense': {
     objective: 'Stop enemies before they reach the end.',
-    controls: 'Click to place and upgrade towers.',
+    controls: 'Use Edit Map to draw paths, then click to place and upgrade towers.',
   },
   'word-search': {
     objective: 'Find all listed words in the grid.',
