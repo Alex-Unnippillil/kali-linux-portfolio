@@ -69,7 +69,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           }
         >
           <Image
-            className=" w-3 md:w-4"
+            className="w-3 md:w-4 rounded border border-gray-600"
             alt={section.alt}
             src={section.icon}
             width={16}
@@ -170,7 +170,7 @@ function About() {
     <>
       <div className="w-20 md:w-28 my-4 full">
         <Image
-          className="w-full"
+          className="w-full rounded border border-gray-600"
           src="/images/logos/bitmoji.png"
           alt="Alex Unnippillil Logo"
           width={256}
