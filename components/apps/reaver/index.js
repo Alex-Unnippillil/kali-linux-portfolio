@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import data from './data/handshakes.json';
+import SmallArrow from '../../util-components/small_arrow';
 
 const ReaverStepper = () => {
   const { handshakes, risks, defenses } = data;
   const messages = handshakes[0]?.messages || [];
   const [current, setCurrent] = useState(0);
   const isSummary = current >= messages.length;
+  const direction =
+    messages[current]?.from === 'Access Point' ? 'right' : 'left';
+  const logMessages = messages.slice(0, Math.min(current + 1, messages.length));
 
   const next = () => setCurrent((c) => Math.min(messages.length, c + 1));
   const prev = () => setCurrent((c) => Math.max(0, c - 1));
@@ -17,6 +21,28 @@ const ReaverStepper = () => {
       className="p-4 bg-ub-cool-grey text-white h-full overflow-y-auto"
     >
       <h1 className="text-2xl mb-4">EAPOL Handshake Explorer</h1>
+
+      {!isSummary && (
+        <div className="relative h-12 mb-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-500" />
+          </div>
+          <div
+            key={current}
+            className={`arrow absolute top-1/2 -translate-y-1/2 ${
+              direction === 'right' ? 'arrow-right' : 'arrow-left'
+            }`}
+          >
+            <SmallArrow angle={direction} />
+          </div>
+          <span className="absolute left-0 -top-6 text-xs">
+            {messages[current].from}
+          </span>
+          <span className="absolute right-0 -top-6 text-xs">
+            {messages[current].to}
+          </span>
+        </div>
+      )}
 
       {isSummary ? (
         <div id="summary">
@@ -47,6 +73,14 @@ const ReaverStepper = () => {
         </div>
       )}
 
+      <div className="mt-4 bg-black text-green-400 font-mono text-xs p-2 h-32 overflow-y-auto">
+        {logMessages.map((m) => (
+          <div key={m.step}>
+            [{m.step}] {m.from} ➜ {m.to}
+          </div>
+        ))}
+      </div>
+
       <div className="mt-4 flex justify-between print:hidden">
         <button
           onClick={prev}
@@ -73,6 +107,35 @@ const ReaverStepper = () => {
       </div>
 
       <style jsx>{`
+        .arrow {
+          width: 1rem;
+          height: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .arrow-right {
+          animation: move-right 1s forwards;
+        }
+        .arrow-left {
+          animation: move-left 1s forwards;
+        }
+        @keyframes move-right {
+          from {
+            left: 0;
+          }
+          to {
+            left: calc(100% - 1rem);
+          }
+        }
+        @keyframes move-left {
+          from {
+            left: calc(100% - 1rem);
+          }
+          to {
+            left: 0;
+          }
+        }
         @media print {
           #reaver-stepper {
             background: white;
