@@ -21,6 +21,13 @@ export default class Navbar extends Component {
                                 <div
                                         className={'pl-3 pr-3 outline-none transition duration-100 ease-in-out border-b-2 border-transparent py-1 '}
                                 >
+                                        <Image
+                                                src="/themes/Yaru/status/decompiler-symbolic.svg"
+                                                alt="Decompiler"
+                                                width={16}
+                                                height={16}
+                                                className="inline mr-1"
+                                        />
                                         Activities
                                 </div>
                                 <div
