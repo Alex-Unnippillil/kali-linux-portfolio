@@ -1,0 +1,72 @@
+// Prisma schema for CVSS Live Updates
+// using SQLite for development
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Cve {
+  id              String         @id
+  published       DateTime
+  lastModified    DateTime
+  sourceIdentifier String?
+  title           String?
+  description     String?
+  cwes            Json           @default("[]")
+  references      Json           @default("[]")
+  cvssSnapshots   CvssSnapshot[]
+  changeEvents    ChangeEvent[]
+  kevFlags        KevFlag[]
+  epssDaily       EpssDaily[]
+}
+
+model CvssSnapshot {
+  id           Int       @id @default(autoincrement())
+  cve          Cve       @relation(fields: [cveId], references: [id])
+  cveId        String
+  version      String
+  vectorString String?
+  baseScore    Float?
+  baseSeverity String?
+  metricsJson  Json?
+  createdAt    DateTime @default(now())
+}
+
+model ChangeEvent {
+  id         Int      @id @default(autoincrement())
+  cve        Cve      @relation(fields: [cveId], references: [id])
+  cveId      String
+  eventName  String
+  changedAt  DateTime
+  diffJson   Json?
+}
+
+model KevFlag {
+  id          Int      @id @default(autoincrement())
+  cve         Cve      @relation(fields: [cveId], references: [id])
+  cveId       String
+  firstSeen   DateTime
+  lastSeen    DateTime?
+  remediationDue DateTime?
+}
+
+model EpssDaily {
+  id        Int      @id @default(autoincrement())
+  cve       Cve      @relation(fields: [cveId], references: [id])
+  cveId     String
+  date      DateTime
+  epss      Float
+  percentile Float
+}
+
+model IngestionState {
+  id             String   @id
+  lastModCursor  DateTime?
+  changeCursor   DateTime?
+}
+

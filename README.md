@@ -52,6 +52,26 @@ yarn export && npx serve out
 ```
 Verify that features relying on `/api/*` return 404 or other placeholders when served statically.
 
+## CVSS Live Updates Demo
+
+This repo includes a small demonstration dashboard that syncs CVE records from the [NVD API](https://services.nvd.nist.gov/rest/json/cves/2.0) and surfaces CVSS score changes.
+
+### Setup
+
+1. Copy `.env.local.example` to `.env.local` and provide a `DATABASE_URL` and optional `NVD_API_KEY`.
+2. Generate the database and client:
+   ```bash
+   yarn prisma migrate dev
+   yarn prisma:generate
+   ```
+3. Seed a recent window of CVEs:
+   ```bash
+   yarn ingest:once --window=168h
+   ```
+4. Start the dev server and open [http://localhost:3000/cves](http://localhost:3000/cves).
+
+The ingestion script can be scheduled hourly using your platform of choice (e.g. Vercel Cron).
+
 ### Install as PWA for Sharing
 
 To send text or links directly into the Sticky Notes app:
