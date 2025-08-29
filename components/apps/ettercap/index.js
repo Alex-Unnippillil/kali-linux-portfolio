@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import data from './data.json';
 import ArpLab from './components/ArpLab';
 import vendors from '../kismet/oui.json';
@@ -67,46 +67,49 @@ const EttercapApp = () => {
   const [traceIndex, setTraceIndex] = useState(0);
   const [animProgress, setAnimProgress] = useState(0);
 
-  const steps = [
-    {
-      title: 'Normal Operation',
-      packetTrace: [
-        'Victim -> Gateway: DNS query',
-        'Gateway -> Victim: DNS response',
-      ],
-      before: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
-      after: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
-    },
-    {
-      title: 'ARP Poisoning',
-      packetTrace: [
-        'Attacker -> Victim: ARP reply (gateway is-at attacker)',
-        'Attacker -> Gateway: ARP reply (victim is-at attacker)',
-      ],
-      before: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
-      after: [
-        { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
-        { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
-      ],
-    },
-    {
-      title: 'DNS Spoofing',
-      packetTrace: [
-        'Victim -> Attacker: DNS query',
-        'Attacker -> Victim: spoofed DNS response',
-      ],
-      before: [
-        { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
-        { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
-      ],
-      after: [
-        { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
-        { from: 'Attacker', to: 'Gateway', color: '#f87171' },
-      ],
-    },
-  ];
+  const steps = useMemo(
+    () => [
+      {
+        title: 'Normal Operation',
+        packetTrace: [
+          'Victim -> Gateway: DNS query',
+          'Gateway -> Victim: DNS response',
+        ],
+        before: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
+        after: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
+      },
+      {
+        title: 'ARP Poisoning',
+        packetTrace: [
+          'Attacker -> Victim: ARP reply (gateway is-at attacker)',
+          'Attacker -> Gateway: ARP reply (victim is-at attacker)',
+        ],
+        before: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
+        after: [
+          { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
+          { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
+        ],
+      },
+      {
+        title: 'DNS Spoofing',
+        packetTrace: [
+          'Victim -> Attacker: DNS query',
+          'Attacker -> Victim: spoofed DNS response',
+        ],
+        before: [
+          { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
+          { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
+        ],
+        after: [
+          { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
+          { from: 'Attacker', to: 'Gateway', color: '#f87171' },
+        ],
+      },
+    ],
+    []
+  );
 
-  const drawStoryboard = () => {
+  const drawStoryboard = useCallback(() => {
     const canvas = boardRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -144,12 +147,12 @@ const EttercapApp = () => {
       ctx.font = '10px monospace';
       ctx.fillText(n.label, n.x, n.y + 30);
     });
-  };
+  }, [animProgress, step, steps]);
 
   useEffect(() => {
     nodesRef.current = nodes;
     drawStoryboard();
-  }, [nodes, step, animProgress]);
+  }, [nodes, drawStoryboard]);
 
   useEffect(() => {
     const canvas = boardRef.current;
@@ -210,7 +213,7 @@ const EttercapApp = () => {
       }
     }, 1000);
     return () => clearInterval(id);
-  }, [step]);
+  }, [step, steps]);
 
   useEffect(() => {
     setNodes((n) => ({
@@ -311,7 +314,7 @@ const EttercapApp = () => {
       .replace(/(if|else|drop|pass)/g, '<span class="text-blue-400">$1</span>')
       .replace(/('[^']*')/g, '<span class="text-green-300">$1</span>');
 
-  const drawMap = () => {
+  const drawMap = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -338,7 +341,7 @@ const EttercapApp = () => {
       ctx.lineTo(to.x, to.y);
       ctx.stroke();
     });
-  };
+  }, [flowIndex]);
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -367,11 +370,11 @@ const EttercapApp = () => {
     });
     hostPositions.current = positions;
     drawMap();
-  }, []);
+  }, [drawMap]);
 
   useEffect(() => {
     drawMap();
-  }, [flowIndex]);
+  }, [drawMap]);
 
   useEffect(() => {
     if (!flows.length) return;
