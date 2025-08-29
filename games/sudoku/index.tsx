@@ -2,13 +2,19 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import GameShell from "../../components/games/GameShell";
-import { generateSudoku, SIZE } from "../../apps/games/sudoku";
+import {
+  generateSudoku,
+  SIZE,
+  isValidPlacement,
+} from "../../apps/games/sudoku";
 import {
   Cell,
   createCell,
   cloneCell,
   toggleCandidate,
+  cellsToBoard,
 } from "../../apps/games/sudoku/cell";
+import PencilMarks from "./components/PencilMarks";
 
 const formatTime = (s: number) =>
   `${Math.floor(s / 60)}:${("0" + (s % 60)).slice(-2)}`;
@@ -42,6 +48,7 @@ const SudokuGame: React.FC = () => {
     null,
   );
   const [time, setTime] = useState(0);
+  const [ariaMessage, setAriaMessage] = useState("");
   const inputRefs = useRef<(HTMLInputElement | null)[][]>([]);
 
   const startGame = () => {
@@ -76,8 +83,26 @@ const SudokuGame: React.FC = () => {
       toggleCandidate(cell, v);
     } else {
       const val = isNaN(v) ? 0 : v;
+      if (
+        val !== 0 &&
+        !isValidPlacement(cellsToBoard(newBoard), r, c, val)
+      ) {
+        setAriaMessage(`Move at row ${r + 1}, column ${c + 1} invalid`);
+        return;
+      }
       cell.value = val;
       cell.candidates = [];
+      if (hasConflict(newBoard, r, c, cell.value)) {
+        setAriaMessage(`Conflict at row ${r + 1}, column ${c + 1}`);
+      } else if (
+        cell.value !== 0 &&
+        solution.length > 0 &&
+        cell.value !== solution[r][c]
+      ) {
+        setAriaMessage(`Incorrect value at row ${r + 1}, column ${c + 1}`);
+      } else {
+        setAriaMessage("");
+      }
     }
     setBoard(newBoard);
   };
@@ -121,6 +146,9 @@ const SudokuGame: React.FC = () => {
 
   return (
     <GameShell>
+      <div className="sr-only" aria-live="polite">
+        {ariaMessage}
+      </div>
       <div className="flex flex-col items-center space-y-2">
         <div className="flex w-full items-center justify-between">
           <div className="space-x-2">
@@ -196,17 +224,18 @@ const SudokuGame: React.FC = () => {
                     disabled={original}
                     inputMode="numeric"
                   />
-                  {cell.candidates.length > 0 && val === 0 && (
-                    <div className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3 text-[8px] leading-3 text-gray-600">
-                      {Array.from({ length: 9 }, (_, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-center"
-                        >
-                          {cell.candidates.includes(i + 1) ? i + 1 : ""}
-                        </div>
-                      ))}
-                    </div>
+                  {val === 0 && (
+                    <PencilMarks
+                      marks={cell.candidates}
+                      hidden={cell.candidates.length === 0}
+                      onChange={(marks) => {
+                        const nb = board.map((row) =>
+                          row.map((cell) => cloneCell(cell))
+                        );
+                        nb[r][c].candidates = marks;
+                        setBoard(nb);
+                      }}
+                    />
                   )}
                 </div>
               );
