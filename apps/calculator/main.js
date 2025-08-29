@@ -208,99 +208,149 @@ function tokenize(expr) {
       continue;
     }
     if (ch === '-' && (tokens.length === 0 || tokens[tokens.length - 1].type === 'operator' || tokens[tokens.length - 1].value === '(')) {
-      // unary minus
       const next = expr[i + 1];
       if (/\d|\./.test(next)) {
         let num = '-';
+        const start = i;
         i++;
         while (i < expr.length && /[0-9.]/.test(expr[i])) {
           num += expr[i];
           i++;
         }
-        tokens.push({ type: 'number', value: num });
+        tokens.push({ type: 'number', value: num, start });
+        let unit = '';
+        while (i < expr.length && /[A-Za-z]/.test(expr[i])) {
+          unit += expr[i];
+          i++;
+        }
+        if (unit) tokens.push({ type: 'unit', value: unit, start: i - unit.length });
         continue;
       }
-      tokens.push({ type: 'number', value: '0' });
-      tokens.push({ type: 'operator', value: '-' });
+      tokens.push({ type: 'number', value: '0', start: i });
+      tokens.push({ type: 'operator', value: '-', start: i });
       i++;
       continue;
     }
     if (/[0-9.]/.test(ch)) {
       let num = ch;
+      const start = i;
       i++;
       while (i < expr.length && /[0-9.]/.test(expr[i])) {
         num += expr[i];
         i++;
       }
-      tokens.push({ type: 'number', value: num });
+      tokens.push({ type: 'number', value: num, start });
+      let unit = '';
+      while (i < expr.length && /[A-Za-z]/.test(expr[i])) {
+        unit += expr[i];
+        i++;
+      }
+      if (unit) tokens.push({ type: 'unit', value: unit, start: i - unit.length });
       continue;
     }
     if (/[A-Za-z]/.test(ch)) {
+      const start = i;
       const id = expr.slice(i).match(/^[A-Za-z]+/)[0];
-      tokens.push({ type: 'id', value: id });
       i += id.length;
+      if (expr[i] === '(') {
+        tokens.push({ type: 'func', value: id, start });
+      } else {
+        tokens.push({ type: 'id', value: id, start });
+      }
       continue;
     }
-    if ('+-*/^()'.includes(ch)) {
-      tokens.push({ type: ch === '(' || ch === ')' ? 'paren' : 'operator', value: ch });
+    if ('+-*/^(),'.includes(ch)) {
+      tokens.push({ type: ch === '(' || ch === ')' ? 'paren' : ch === ',' ? 'comma' : 'operator', value: ch, start: i });
+      i++;
+      continue;
     }
-    i++;
+    const err = new Error(`Unexpected '${ch}'`);
+    err.index = i;
+    throw err;
   }
   return tokens;
 }
 
-function toRPN(tokens) {
-  const output = [];
-  const ops = [];
-  const prec = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 };
-  const rightAssoc = { '^': true };
-  for (const token of tokens) {
-    if (token.type === 'number' || token.type === 'id') {
-      output.push(token);
-    } else if (token.type === 'operator') {
-      while (ops.length) {
-        const top = ops[ops.length - 1];
-        if (
-          top.type === 'operator' &&
-          ((rightAssoc[token.value]
-            ? prec[token.value] < prec[top.value]
-            : prec[token.value] <= prec[top.value]))
-        ) {
+  function toRPN(tokens) {
+    const output = [];
+    const ops = [];
+    const prec = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 };
+    const rightAssoc = { '^': true };
+    for (const token of tokens) {
+      if (token.type === 'number' || token.type === 'id' || token.type === 'unit') {
+        output.push(token);
+      } else if (token.type === 'func') {
+        ops.push(token);
+      } else if (token.type === 'operator') {
+        while (ops.length) {
+          const top = ops[ops.length - 1];
+          if (
+            (top.type === 'operator' &&
+              (rightAssoc[token.value]
+                ? prec[token.value] < prec[top.value]
+                : prec[token.value] <= prec[top.value])) ||
+            top.type === 'func'
+          ) {
+            output.push(ops.pop());
+          } else {
+            break;
+          }
+        }
+        ops.push(token);
+      } else if (token.type === 'paren' && token.value === '(') {
+        ops.push(token);
+      } else if (token.type === 'paren' && token.value === ')') {
+        while (ops.length && ops[ops.length - 1].value !== '(') {
           output.push(ops.pop());
-        } else {
-          break;
+        }
+        if (!ops.length) {
+          const err = new Error('Mismatched parenthesis');
+          err.index = token.start;
+          throw err;
+        }
+        ops.pop();
+        if (ops.length && ops[ops.length - 1].type === 'func') {
+          output.push(ops.pop());
         }
       }
-      ops.push(token);
-    } else if (token.value === '(') {
-      ops.push(token);
-    } else if (token.value === ')') {
-      while (ops.length && ops[ops.length - 1].value !== '(') {
-        output.push(ops.pop());
-      }
-      ops.pop();
     }
+    while (ops.length) {
+      const op = ops.pop();
+      if (op.type === 'paren') {
+        const err = new Error('Mismatched parenthesis');
+        err.index = op.start;
+        throw err;
+      }
+      output.push(op);
+    }
+    return output;
   }
-  while (ops.length) output.push(ops.pop());
-  return output;
-}
 
-function evalRPN(rpn) {
-  const stack = [];
-  for (const token of rpn) {
-    if (token.type === 'number') {
-      const num = preciseMode
-        ? math.bignumber(token.value)
-        : Number(token.value);
-      stack.push(num);
-    } else if (token.type === 'id') {
-      const val = token.value.toLowerCase() === 'ans' ? lastResult : 0;
-      stack.push(preciseMode ? math.bignumber(val) : Number(val));
-    } else if (token.type === 'operator') {
-      const b = stack.pop();
-      const a = stack.pop();
-      let res;
-      if (preciseMode) {
+  function evalRPN(rpn) {
+    const stack = [];
+    for (const token of rpn) {
+      if (token.type === 'number') {
+        const num = preciseMode ? math.bignumber(token.value) : Number(token.value);
+        stack.push(num);
+      } else if (token.type === 'id') {
+        if (token.value.toLowerCase() === 'ans') {
+          stack.push(lastResult);
+        } else if (math[token.value] !== undefined) {
+          stack.push(math[token.value]);
+        } else {
+          stack.push(0);
+        }
+      } else if (token.type === 'unit') {
+        const a = stack.pop();
+        stack.push(math.multiply(a, math.unit(1, token.value)));
+      } else if (token.type === 'func') {
+        const a = stack.pop();
+        const fn = math[token.value];
+        stack.push(fn ? fn(a) : a);
+      } else if (token.type === 'operator') {
+        const b = stack.pop();
+        const a = stack.pop();
+        let res;
         switch (token.value) {
           case '+':
             res = math.add(a, b);
@@ -318,54 +368,41 @@ function evalRPN(rpn) {
             res = math.pow(a, b);
             break;
         }
-      } else {
-        switch (token.value) {
-          case '+':
-            res = a + b;
-            break;
-          case '-':
-            res = a - b;
-            break;
-          case '*':
-            res = a * b;
-            break;
-          case '/':
-            res = a / b;
-            break;
-          case '^':
-            res = a ** b;
-            break;
-        }
+        stack.push(res);
       }
-      stack.push(res);
     }
+    return stack.pop();
   }
-  return stack.pop();
-}
 
-function evaluate(expression) {
-  try {
-    if (programmerMode) {
-      if (!validateBaseInput(expression)) {
-        display.reportValidity?.();
-        return null;
+  function evaluate(expression) {
+    try {
+      if (programmerMode) {
+        if (!validateBaseInput(expression)) {
+          display.reportValidity?.();
+          return null;
+        }
+        const decimalExpr = expression.replace(/\b[0-9A-F]+\b/gi, (m) =>
+          parseInt(m, currentBase)
+        );
+        const result = math.evaluate(decimalExpr, { Ans: lastResult });
+        lastResult = result;
+        return formatBase(result);
       }
-      const decimalExpr = expression.replace(/\b[0-9A-F]+\b/gi, (m) =>
-        parseInt(m, currentBase)
-      );
-      const result = math.evaluate(decimalExpr, { Ans: lastResult });
+      const tokens = tokenize(expression);
+      const rpn = toRPN(tokens);
+      const result = evalRPN(rpn);
       lastResult = result;
-      return formatBase(result);
+      document.dispatchEvent(new CustomEvent('clear-error'));
+      return result.toString();
+    } catch (e) {
+      document.dispatchEvent(
+        new CustomEvent('parse-error', {
+          detail: { index: e.index || 0, message: e.message },
+        })
+      );
+      return 'Error';
     }
-    const tokens = tokenize(expression);
-    const rpn = toRPN(tokens);
-    const result = evalRPN(rpn);
-    lastResult = result;
-    return preciseMode ? result.toString() : String(result);
-  } catch (e) {
-    return 'Error';
   }
-}
 
 function memoryAdd() {
   const val = evaluate(display.value);

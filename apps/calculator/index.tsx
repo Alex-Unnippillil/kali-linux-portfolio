@@ -16,6 +16,24 @@ export default function Calculator() {
       await import('./main');
     };
     load();
+
+    const display = document.getElementById('display') as HTMLInputElement | null;
+    const handleError = (e: any) => {
+      if (!display) return;
+      const idx = e.detail.index || 0;
+      display.classList.add('error');
+      display.focus();
+      display.setSelectionRange(idx, idx + 1);
+    };
+    const clearError = () => display?.classList.remove('error');
+    document.addEventListener('parse-error', handleError);
+    document.addEventListener('clear-error', clearError);
+    display?.addEventListener('input', clearError);
+    return () => {
+      document.removeEventListener('parse-error', handleError);
+      document.removeEventListener('clear-error', clearError);
+      display?.removeEventListener('input', clearError);
+    };
   }, []);
 
   return (

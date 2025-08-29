@@ -490,3 +490,15 @@ In another terminal, run the Playwright smoke test which visits every `/apps/*` 
 npm run smoke
 ```
 
+
+## Calculator Syntax
+
+The calculator supports a subset of math.js expressions with the following features:
+
+- Operators: `+`, `-`, `*`, `/`, and `^` with standard precedence and parenthesis grouping.
+- Built-in functions such as `sin`, `cos`, `tan`, `sqrt`, `abs`, `ceil`, `floor`, `round`, `exp`, and `log`.
+- Unit suffixes like `cm`, `m`, `in`, or `ft` allowing mixed-unit arithmetic (e.g. `2m + 30cm`).
+- The previous answer is accessible via `Ans`.
+
+Invalid syntax is highlighted in the calculator input, selecting the character where parsing failed.
+
