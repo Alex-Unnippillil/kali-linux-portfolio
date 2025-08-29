@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 export interface AccessPoint {
   ssid: string;
   bssid: string;
+  channel: number;
   wps: 'enabled' | 'locked' | 'disabled';
 }
 
@@ -76,15 +77,19 @@ const APList: React.FC = () => {
         <tr className="text-left">
           <th className="pb-2">SSID</th>
           <th className="pb-2">BSSID</th>
+          <th className="pb-2">Ch</th>
           <th className="pb-2">WPS</th>
         </tr>
       </thead>
       <tbody>
         {aps.map((ap) => (
           <tr key={ap.bssid} className="odd:bg-gray-800">
-            <td className="py-1 px-2">{ap.ssid}</td>
-            <td className="py-1 px-2 font-mono">{ap.bssid}</td>
-            <td className="py-1 px-2">{statusIcon(ap.wps)}</td>
+            <td className="py-1.5 px-2">{ap.ssid}</td>
+            <td className="py-1.5 px-2 font-mono">{ap.bssid}</td>
+            <td className="py-1.5 px-2">
+              <span className="px-1 rounded bg-gray-700 text-xs font-mono">{ap.channel}</span>
+            </td>
+            <td className="py-1.5 px-2">{statusIcon(ap.wps)}</td>
           </tr>
         ))}
       </tbody>
