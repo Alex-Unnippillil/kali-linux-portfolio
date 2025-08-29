@@ -212,7 +212,7 @@ function Timeline({ events, onSelect }) {
   );
 }
 
-function Autopsy() {
+function Autopsy({ initialArtifacts = null }) {
   const [caseName, setCaseName] = useState('');
   const [currentCase, setCurrentCase] = useState(null);
   const [analysis, setAnalysis] = useState('');
@@ -222,6 +222,10 @@ function Autopsy() {
   const [announcement, setAnnouncement] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [selectedArtifact, setSelectedArtifact] = useState(null);
+  const [fileTree, setFileTree] = useState(null);
+  const [hashDB, setHashDB] = useState({});
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [keyword, setKeyword] = useState('');
   const parseWorkerRef = useRef(null);
 
   useEffect(() => {
@@ -248,29 +252,47 @@ function Autopsy() {
 
   useEffect(() => {
     if (!currentCase) return;
-    setArtifacts(demoArtifacts);
-    fetch('/autopsy-demo.json')
-      .then(async (res) => {
-        const text = res.text
-          ? await res.text()
-          : JSON.stringify(await res.json());
-        if (parseWorkerRef.current) {
-          parseWorkerRef.current.postMessage(text);
-        } else {
-          try {
-            const data = JSON.parse(text);
-            setArtifacts(data.artifacts || demoArtifacts);
-          } catch {
-            setArtifacts(demoArtifacts);
+    if (initialArtifacts) {
+      setArtifacts(initialArtifacts);
+    } else {
+      setArtifacts(demoArtifacts);
+      fetch('/autopsy-demo.json')
+        .then(async (res) => {
+          const text = res.text
+            ? await res.text()
+            : JSON.stringify(await res.json());
+          if (parseWorkerRef.current) {
+            parseWorkerRef.current.postMessage(text);
+          } else {
+            try {
+              const data = JSON.parse(text);
+              setArtifacts(data.artifacts || demoArtifacts);
+            } catch {
+              setArtifacts(demoArtifacts);
+            }
           }
-        }
-      })
-      .catch(() => setArtifacts(demoArtifacts));
-  }, [currentCase]);
+        })
+        .catch(() => setArtifacts(demoArtifacts));
+    }
+    fetch('/demo-data/autopsy/filetree.json')
+      .then((res) => res.json())
+      .then((data) => setFileTree(data && data.name ? data : null))
+      .catch(() => setFileTree(null));
+    fetch('/demo-data/autopsy/hashes.json')
+      .then((res) => res.json())
+      .then((data) => setHashDB(data || {}))
+      .catch(() => setHashDB({}));
+  }, [currentCase, initialArtifacts]);
 
   const types = ['All', ...Array.from(new Set(artifacts.map((a) => a.type)))] ;
   const filteredArtifacts = artifacts.filter(
     (a) => typeFilter === 'All' || a.type === typeFilter
+  );
+  const searchLower = keyword.toLowerCase();
+  const visibleArtifacts = filteredArtifacts.filter(
+    (a) =>
+      a.name.toLowerCase().includes(searchLower) ||
+      a.description.toLowerCase().includes(searchLower)
   );
 
   const createCase = () => {
@@ -307,6 +329,77 @@ function Autopsy() {
       ]);
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  const bufferToHex = (buffer) =>
+    Array.from(buffer, (b) => b.toString(16).padStart(2, '0')).join(' ');
+
+  const decodeBase64 = (b64) =>
+    Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+  const selectFile = async (file) => {
+    try {
+      const bytes = decodeBase64(file.content || '');
+      const hex = bufferToHex(bytes);
+      const strings = new TextDecoder()
+        .decode(bytes)
+        .replace(/[^\x20-\x7E]+/g, ' ');
+      let hash = '';
+      if (crypto && crypto.subtle) {
+        const buf = await crypto.subtle.digest('SHA-256', bytes);
+        hash = bufferToHex(new Uint8Array(buf)).replace(/ /g, '');
+      }
+      const known = hashDB[hash];
+      setSelectedFile({ name: file.name, hex, strings, hash, known });
+    } catch (e) {
+      setSelectedFile({ name: file.name, hex: '', strings: '', hash: '', known: null });
+    }
+  };
+
+  const renderTree = (node) => {
+    if (!node) return null;
+    if (node.children) {
+      return (
+        <div key={node.name} className="pl-2">
+          <div className="font-bold">{node.name}</div>
+          <div className="pl-4">
+            {node.children.map((c) => renderTree(c))}
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div key={node.name} className="pl-2">
+        <button
+          type="button"
+          onClick={() => selectFile(node)}
+          className="text-blue-400 underline"
+        >
+          {node.name}
+        </button>
+      </div>
+    );
+  };
+
+  const highlight = (text = '') => {
+    const safe = escapeFilename(text);
+    if (!keyword) return safe;
+    const re = new RegExp(
+      `(${keyword.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')})`,
+      'gi'
+    );
+    return safe.replace(re, '<mark>$1</mark>');
+  };
+
+  const exportHits = () => {
+    const data = JSON.stringify(visibleArtifacts, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'autopsy-hits.json';
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const downloadReport = () => {
@@ -400,8 +493,23 @@ function Autopsy() {
               </option>
             ))}
           </select>
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="Keyword search"
+              className="flex-grow bg-ub-grey text-white px-2 py-1 rounded"
+            />
+            <button
+              onClick={exportHits}
+              className="bg-ub-orange px-2 py-1 rounded text-sm text-black"
+            >
+              Export Hits
+            </button>
+          </div>
           <div className="grid gap-2 md:grid-cols-2">
-            {filteredArtifacts.map((a, idx) => (
+            {visibleArtifacts.map((a, idx) => (
               <button
                 type="button"
                 key={`${a.name}-${idx}`}
@@ -410,21 +518,47 @@ function Autopsy() {
               >
                 <div
                   className="font-bold"
-                  dangerouslySetInnerHTML={{ __html: escapeFilename(a.name) }}
+                  dangerouslySetInnerHTML={{ __html: highlight(a.name) }}
                 />
                 <div className="text-gray-400">{a.type}</div>
                 <div className="text-xs">
                   {new Date(a.timestamp).toLocaleString()}
                 </div>
-                <div className="text-xs">{a.description}</div>
+                <div
+                  className="text-xs"
+                  dangerouslySetInnerHTML={{ __html: highlight(a.description) }}
+                />
               </button>
             ))}
           </div>
-          {filteredArtifacts.length > 0 && (
+          {visibleArtifacts.length > 0 && (
             <>
               <div className="text-sm font-bold">Timeline</div>
-              <Timeline events={filteredArtifacts} onSelect={setSelectedArtifact} />
+              <Timeline events={visibleArtifacts} onSelect={setSelectedArtifact} />
             </>
+          )}
+          {fileTree && (
+            <div>
+              <div className="text-sm font-bold">File Explorer</div>
+              {renderTree(fileTree)}
+            </div>
+          )}
+          {selectedFile && (
+            <div className="bg-ub-grey p-2 rounded text-xs">
+              <div className="font-bold mb-1">{selectedFile.name}</div>
+              <div className="mb-1">SHA-256: {selectedFile.hash}</div>
+              {selectedFile.known && (
+                <div className="mb-1 text-green-400">
+                  Known: {selectedFile.known}
+                </div>
+              )}
+              <div className="font-mono whitespace-pre-wrap break-all">
+                {selectedFile.hex}
+              </div>
+              <div className="font-mono whitespace-pre-wrap break-all mt-1">
+                {selectedFile.strings}
+              </div>
+            </div>
           )}
           <button
             onClick={downloadReport}
