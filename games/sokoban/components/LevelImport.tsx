@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { LevelPack, parseLevels } from "../../../apps/sokoban/levels";
 
 const STORAGE_KEY = "sokoban_packs";
@@ -48,19 +48,21 @@ interface LevelImportProps {
 }
 
 const LevelImport: React.FC<LevelImportProps> = ({ onImport }) => {
+  const [text, setText] = useState("");
+
   const handleFile = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
       try {
-        const text = await file.text();
+        const t = await file.text();
         let levels: string[][] = [];
         if (file.name.endsWith(".json")) {
-          const data = JSON.parse(text);
+          const data = JSON.parse(t);
           if (Array.isArray(data)) levels = data;
           else if (Array.isArray(data.levels)) levels = data.levels;
         } else {
-          levels = parseLevels(text);
+          levels = parseLevels(t);
         }
         if (!levels.length) return;
         const pack: LevelPack = {
@@ -80,7 +82,34 @@ const LevelImport: React.FC<LevelImportProps> = ({ onImport }) => {
     [onImport]
   );
 
-  return <input type="file" accept=".txt,.json" onChange={handleFile} />;
+  const handleTextImport = useCallback(async () => {
+    try {
+      const levels = parseLevels(text);
+      if (!levels.length) return;
+      const pack: LevelPack = { name: "Custom", difficulty: "Custom", levels };
+      const existing = await loadLocalPacks();
+      await saveLocalPacks([...existing, pack]);
+      onImport?.(pack);
+      setText("");
+    } catch {
+      // ignore parse errors
+    }
+  }, [text, onImport]);
+
+  return (
+    <div className="space-y-2">
+      <input type="file" accept=".txt,.json" onChange={handleFile} />
+      <textarea
+        className="w-full h-24 border"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Paste level text here"
+      />
+      <button type="button" onClick={handleTextImport} className="px-2 py-1 bg-gray-300 rounded">
+        Import Text
+      </button>
+    </div>
+  );
 };
 
 export default LevelImport;

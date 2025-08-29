@@ -347,6 +347,45 @@ export function findHint(state: State): DirectionKey | null {
   return null;
 }
 
+export function findSolution(state: State): DirectionKey[] | null {
+  const startBoxes = new Set(state.boxes);
+  const startKey = serialize(state.player, startBoxes);
+  const visited = new Set<string>([startKey]);
+  const q: { player: Position; boxes: Set<string>; path: DirectionKey[] }[] = [
+    { player: { ...state.player }, boxes: startBoxes, path: [] },
+  ];
+
+  while (q.length) {
+    const cur = q.shift()!;
+    let solved = true;
+    cur.boxes.forEach((b) => {
+      if (!state.targets.has(b)) solved = false;
+    });
+    if (solved) return cur.path;
+
+    for (const dirKey of directionKeys) {
+      const dir = DIRS[dirKey];
+      const nextPlayer = { x: cur.player.x + dir.x, y: cur.player.y + dir.y };
+      const nextKey = key(nextPlayer);
+      if (state.walls.has(nextKey)) continue;
+      const newBoxes = new Set(cur.boxes);
+      if (newBoxes.has(nextKey)) {
+        const beyond = { x: nextPlayer.x + dir.x, y: nextPlayer.y + dir.y };
+        const beyondKey = key(beyond);
+        if (state.walls.has(beyondKey) || newBoxes.has(beyondKey)) continue;
+        newBoxes.delete(nextKey);
+        newBoxes.add(beyondKey);
+        if (isDeadlockWith(state, newBoxes, beyond)) continue;
+      }
+      const ser = serialize(nextPlayer, newBoxes);
+      if (visited.has(ser)) continue;
+      visited.add(ser);
+      q.push({ player: nextPlayer, boxes: newBoxes, path: [...cur.path, dirKey] });
+    }
+  }
+  return null;
+}
+
 export function findMinPushes(state: State): number | null {
   const startBoxes = new Set(state.boxes);
   const startKey = serialize(state.player, startBoxes);
