@@ -11,9 +11,11 @@ interface WifiData {
 
 interface Props {
   canvasRef: React.RefObject<HTMLCanvasElement>;
+  onPayloadChange?: (payload: string) => void;
+  size: number;
 }
 
-const Presets: React.FC<Props> = ({ canvasRef }) => {
+const Presets: React.FC<Props> = ({ canvasRef, onPayloadChange, size }) => {
   const [preset, setPreset] = useState<Preset>('text');
   const [text, setText] = useState('');
   const [url, setUrl] = useState('');
@@ -30,7 +32,8 @@ const Presets: React.FC<Props> = ({ canvasRef }) => {
       value = `WIFI:T:${enc};S:${ssid};P:${password};;`;
     }
     setPayload(value);
-  }, [preset, text, url, wifi]);
+    onPayloadChange?.(value);
+  }, [preset, text, url, wifi, onPayloadChange]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -42,11 +45,11 @@ const Presets: React.FC<Props> = ({ canvasRef }) => {
       return;
     }
 
-    QRCode.toCanvas(canvas, payload, { margin: 1 }).catch(() => {
+    QRCode.toCanvas(canvas, payload, { margin: 1, width: size }).catch(() => {
       const ctx = canvas.getContext('2d');
       if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
     });
-  }, [payload, canvasRef]);
+  }, [payload, canvasRef, size]);
 
   const copyPayload = async () => {
     if (!payload) return;
@@ -152,8 +155,6 @@ const Presets: React.FC<Props> = ({ canvasRef }) => {
           </div>
         </div>
       )}
-
-      <canvas ref={canvasRef} className="h-48 w-48 bg-white" />
     </div>
   );
 };
