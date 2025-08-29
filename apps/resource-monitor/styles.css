@@ -1,0 +1,22 @@
+.stress-area {
+  position: relative;
+}
+
+.stress-window {
+  position: absolute;
+  top: 0;
+  width: 80px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #888;
+  animation: float 1s ease-in-out infinite alternate;
+}
+
+@keyframes float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(80px);
+  }
+}
