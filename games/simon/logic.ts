@@ -5,10 +5,15 @@ export interface SimonState {
   difficulty: number;
   /** seconds remaining before the next round starts */
   countdown: number;
+  /** whether strict mode is enabled */
+  strict: boolean;
+  /** current speed level */
+  speed: number;
 }
 
 export const INITIAL_LIVES = 3;
 export const INITIAL_DIFFICULTY = 1;
+export const INITIAL_SPEED = 1;
 
 /**
  * Create a new Simon game state.
@@ -16,7 +21,9 @@ export const INITIAL_DIFFICULTY = 1;
 export const createState = (
   lives: number = INITIAL_LIVES,
   difficulty: number = INITIAL_DIFFICULTY,
-): SimonState => ({ lives, difficulty, countdown: 0 });
+  strict = false,
+  speed: number = INITIAL_SPEED,
+): SimonState => ({ lives, difficulty, countdown: 0, strict, speed });
 
 /**
  * Begin a round countdown.
@@ -41,6 +48,10 @@ export const tick = (state: SimonState): SimonState => ({
  * Decrease a life and automatically adjust difficulty.
  */
 export const loseLife = (state: SimonState): SimonState => {
+  if (state.strict) {
+    // restart the game when strict mode is enabled
+    return createState(INITIAL_LIVES, INITIAL_DIFFICULTY, true, INITIAL_SPEED);
+  }
   const lives = Math.max(0, state.lives - 1);
   return { ...state, lives, difficulty: adjustDifficulty(state.difficulty, lives) };
 };
@@ -50,7 +61,12 @@ export const loseLife = (state: SimonState): SimonState => {
  */
 export const gainLife = (state: SimonState): SimonState => {
   const lives = state.lives + 1;
-  return { ...state, lives, difficulty: adjustDifficulty(state.difficulty, lives) };
+  return {
+    ...state,
+    lives,
+    difficulty: adjustDifficulty(state.difficulty, lives),
+    speed: state.speed + 1,
+  };
 };
 
 /**
@@ -68,4 +84,13 @@ export const adjustDifficulty = (current: number, lives: number): number => {
  * Helper to determine if the game has ended.
  */
 export const isGameOver = (state: SimonState): boolean => state.lives === 0;
+
+/**
+ * Advance to the next level and increase speed.
+ */
+export const nextLevel = (state: SimonState): SimonState => ({
+  ...state,
+  difficulty: state.difficulty + 1,
+  speed: state.speed + 1,
+});
 
