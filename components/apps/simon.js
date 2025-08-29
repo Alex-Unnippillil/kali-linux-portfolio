@@ -108,13 +108,13 @@ const Simon = () => {
   const [activePad, setActivePad] = useState(null);
   const [status, setStatus] = useState('Press Start');
   const [mode, setMode] = useState('classic');
-  const [bpm, setBpm] = useState(100);
+  const [tempo, setTempo] = useState(100);
   const [striped, setStriped] = useState(false);
   const [thickOutline, setThickOutline] = useState(false);
   const [audioOnly, setAudioOnly] = useState(false);
   const [colorblindPalette, setColorblindPalette] = useState(false);
   const [seed, setSeed] = useState('');
-  const [strictMode, setStrictMode] = useState(true);
+  const [playMode, setPlayMode] = useState('strict');
   const [leaderboard, setLeaderboard] = usePersistentState(
     'simon_leaderboard',
     []
@@ -164,10 +164,10 @@ const Simon = () => {
   );
 
   const stepDuration = useCallback(() => {
-    const base = 60 / bpm;
+    const base = 60 / tempo;
     const reduction = mode === 'speed' ? 0.03 : 0.015;
     return Math.max(base - sequence.length * reduction, 0.2);
-  }, [bpm, mode, sequence.length]);
+  }, [tempo, mode, sequence.length]);
 
   const playSequence = useCallback(() => {
     const ctx =
@@ -237,7 +237,7 @@ const Simon = () => {
         }
         errorSound.current.play();
         setErrorFlash(true);
-        if (strictMode) {
+        if (playMode === 'strict') {
           const streak = Math.max(sequence.length - 1, 0);
           setLeaderboard((prev) =>
             [...prev, streak].sort((a, b) => b - a).slice(0, 5)
@@ -245,11 +245,13 @@ const Simon = () => {
         }
         setIsPlayerTurn(false);
         setStatus(
-          strictMode ? 'Wrong pad! Game over.' : 'Wrong pad! Try again.'
+          playMode === 'strict'
+            ? 'Wrong pad! Game over.'
+            : 'Wrong pad! Try again.'
         );
         setTimeout(() => {
           setErrorFlash(false);
-          if (strictMode) {
+          if (playMode === 'strict') {
             restartGame();
           } else {
             setStep(0);
@@ -277,7 +279,7 @@ const Simon = () => {
       step,
       stepDuration,
       setLeaderboard,
-      strictMode,
+      playMode,
       playSequence,
     ]
   );
@@ -314,7 +316,7 @@ const Simon = () => {
               onPointerDown={handlePadClick(idx)}
               aria-label={`${pad.label} pad`}
             >
-              {mode === 'colorblind' ? pad.symbol : ''}
+              {mode === 'colorblind' ? pad.label.toUpperCase() : ''}
             </button>
           ))}
         </div>
@@ -336,10 +338,10 @@ const Simon = () => {
               type="range"
               min="60"
               max="140"
-              value={bpm}
-              onChange={(e) => setBpm(Number(e.target.value))}
+              value={tempo}
+              onChange={(e) => setTempo(Number(e.target.value))}
             />
-            <span>{bpm} BPM</span>
+            <span>{tempo} BPM</span>
           </div>
           <input
             className="px-2 py-1 w-24 bg-gray-700 hover:bg-gray-600 rounded"
@@ -347,14 +349,14 @@ const Simon = () => {
             value={seed}
             onChange={(e) => setSeed(e.target.value)}
           />
-          <label className="flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={strictMode}
-              onChange={(e) => setStrictMode(e.target.checked)}
-            />
-            Strict
-          </label>
+          <select
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            value={playMode}
+            onChange={(e) => setPlayMode(e.target.value)}
+          >
+            <option value="strict">Strict</option>
+            <option value="casual">Casual</option>
+          </select>
           <label className="flex items-center gap-1">
             <input
               type="checkbox"
