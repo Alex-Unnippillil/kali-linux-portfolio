@@ -21,6 +21,20 @@ describe('Hydra Stepper', () => {
     jest.useRealTimers();
   });
 
+  it('shows backoff indicator', () => {
+    render(
+      <Stepper
+        active
+        totalAttempts={10}
+        backoffThreshold={2}
+        lockoutThreshold={5}
+        runId={1}
+      />
+    );
+    expect(screen.getByTestId('backoff-bar')).toBeInTheDocument();
+    expect(screen.getByText(/Delay: 500ms/)).toBeInTheDocument();
+  });
+
   it('locks out after reaching threshold', () => {
     render(
       <Stepper

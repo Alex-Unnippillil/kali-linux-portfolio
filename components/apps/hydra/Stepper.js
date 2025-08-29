@@ -11,7 +11,9 @@ const Stepper = ({
 }) => {
   const [attempt, setAttempt] = useState(initialAttempt);
   const [locked, setLocked] = useState(initialAttempt >= lockoutThreshold);
+  const [delayMs, setDelayMs] = useState(500);
   const timerRef = useRef(null);
+  const delayRef = useRef(500);
 
   useEffect(() => {
     setAttempt(initialAttempt);
@@ -30,6 +32,8 @@ const Stepper = ({
         delay = Math.min(delay * 2, 4000);
       }
     }
+    delayRef.current = delay;
+    setDelayMs(delay);
 
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
@@ -39,6 +43,8 @@ const Stepper = ({
     if (prefersReducedMotion) {
       const final = Math.min(lockoutThreshold, totalAttempts);
       setAttempt(final);
+      setDelayMs(0);
+      delayRef.current = 0;
       if (final >= lockoutThreshold) {
         setLocked(true);
       }
@@ -55,18 +61,21 @@ const Stepper = ({
             if (final >= lockoutThreshold) {
               setLocked(true);
             }
+            setDelayMs(0);
+            delayRef.current = 0;
             return final;
           }
           if (next >= backoffThreshold) {
-            delay = Math.min(delay * 2, 4000);
+            delayRef.current = Math.min(delayRef.current * 2, 4000);
           }
-          timerRef.current = setTimeout(tick, delay);
+          setDelayMs(delayRef.current);
+          timerRef.current = setTimeout(tick, delayRef.current);
           return next;
         });
       });
     };
 
-    timerRef.current = setTimeout(tick, delay);
+    timerRef.current = setTimeout(tick, delayRef.current);
 
     return () => {
       if (timerRef.current) {
@@ -91,9 +100,21 @@ const Stepper = ({
       {locked ? (
         <div className="text-red-400 mt-1">Locked out</div>
       ) : (
-        <div className="text-white mt-1">
-          Attempt {attempt} of {lockoutThreshold}
-        </div>
+        <>
+          <div className="text-white mt-1">
+            Attempt {attempt} of {lockoutThreshold}
+          </div>
+          <div className="mt-2 w-full bg-gray-700 h-2 rounded">
+            <div
+              data-testid="backoff-bar"
+              className="bg-yellow-500 h-2 rounded"
+              style={{ width: `${(delayMs / 4000) * 100}%` }}
+            />
+          </div>
+          <div className="text-xs text-yellow-300 mt-1">
+            Delay: {delayMs}ms
+          </div>
+        </>
       )}
     </div>
   );
