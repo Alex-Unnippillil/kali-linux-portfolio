@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   SIZE,
   DIRECTIONS,
@@ -350,7 +350,7 @@ const Reversi = () => {
     setHistory([]);
   };
 
-  const undo = () => {
+  const undo = useCallback(() => {
     if (!history.length) return;
     const last = history[history.length - 1];
     setBoard(last.board.map((row) => row.slice()));
@@ -360,7 +360,7 @@ const Reversi = () => {
     previewRef.current = null;
     flippingRef.current = [];
     aiThinkingRef.current = false;
-  };
+  }, [history]);
 
   useEffect(() => {
     const handler = (e) => {
