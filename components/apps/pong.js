@@ -126,7 +126,7 @@ const PongInner = () => {
       canvas.removeEventListener('touchend', endTouch);
       canvas.removeEventListener('touchcancel', endTouch);
     };
-  }, []);
+  }, [canvasRef]);
 
   useEffect(() => {
     if (mode !== 'online' || !channelRef.current) return undefined;
@@ -590,7 +590,7 @@ const PongInner = () => {
         motionQuery.removeListener(handleMotionChange);
       }
     };
-    }, [difficulty, mode, connected, matchWinner, controls, canvasRef, playSound]);
+    }, [difficulty, mode, connected, matchWinner, controls, canvasRef, playSound, pongSpin]);
 
   const reset = useCallback(() => {
     if (resetRef.current) resetRef.current();
