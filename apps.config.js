@@ -15,7 +15,7 @@ import { displayNikto } from './components/apps/nikto';
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
-// VSCode app uses a Stack iframe, so no editor dependencies are required
+// VSCode app now uses Monaco editor with filesystem access
 const VsCodeApp = createDynamicApp('vscode', 'VsCode');
 const YouTubeApp = createDynamicApp('youtube', 'YouTube');
 const CalculatorApp = createDynamicApp('calculator', 'Calculator');
@@ -617,7 +617,7 @@ const apps = [
     screen: displayTerminal,
   },
   {
-    // VSCode app uses a Stack iframe, so no editor dependencies are required
+    // VSCode app now uses Monaco editor with filesystem access
     id: 'vscode',
     title: 'Visual Studio Code',
     icon: './themes/Yaru/apps/vscode.png',
