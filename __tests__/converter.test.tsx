@@ -27,6 +27,17 @@ describe('Unit conversion', () => {
     expect(convertUnit('digital', 'megabyte', 'kilobyte', 1)).toBeCloseTo(1000);
   });
 
+  it('converts square meters to square feet', () => {
+    expect(convertUnit('area', 'square meter', 'square foot', 1)).toBeCloseTo(
+      10.7639,
+      4,
+    );
+  });
+
+  it('converts liters to gallons', () => {
+    expect(convertUnit('volume', 'liter', 'gallon', 3.78541)).toBeCloseTo(1, 5);
+  });
+
   it('respects precision when provided', () => {
     expect(
       convertUnit('length', 'meter', 'kilometer', 1234, 2)
@@ -56,6 +67,8 @@ describe('UnitConverter UI', () => {
     render(<UnitConverter />);
     const select = screen.getByLabelText('Category') as HTMLSelectElement;
     const options = Array.from(select.options).map((o) => o.value);
-    expect(options).toEqual(expect.arrayContaining(['time', 'digital']));
+    expect(options).toEqual(
+      expect.arrayContaining(['time', 'digital', 'area', 'volume']),
+    );
   });
 });
