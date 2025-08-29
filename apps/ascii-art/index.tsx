@@ -11,6 +11,20 @@ const fontList = ['Standard', 'Slant', 'Big'];
 
 const ramp = '@%#*+=-:. ';
 
+const ESC = '\u001b';
+
+const colorOptions = {
+  green: { label: 'Green', ansi: `${ESC}[32m`, class: 'text-green-400' },
+  red: { label: 'Red', ansi: `${ESC}[31m`, class: 'text-red-400' },
+  yellow: { label: 'Yellow', ansi: `${ESC}[33m`, class: 'text-yellow-400' },
+  blue: { label: 'Blue', ansi: `${ESC}[34m`, class: 'text-blue-400' },
+  magenta: { label: 'Magenta', ansi: `${ESC}[35m`, class: 'text-fuchsia-400' },
+  cyan: { label: 'Cyan', ansi: `${ESC}[36m`, class: 'text-cyan-400' },
+  white: { label: 'White', ansi: `${ESC}[37m`, class: 'text-white' },
+};
+
+type ColorKey = keyof typeof colorOptions;
+
 function download(text: string, filename: string) {
   const blob = new Blob([text], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
@@ -28,6 +42,7 @@ const AsciiArtApp = () => {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [font, setFont] = useState<figlet.Fonts>('Standard');
   const [output, setOutput] = useState('');
+  const [color, setColor] = useState<ColorKey>('green');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [imgOutput, setImgOutput] = useState('');
@@ -89,7 +104,10 @@ const AsciiArtApp = () => {
 
   const copy = async (value: string) => {
     try {
-      await navigator.clipboard.writeText(value);
+      const colored = value
+        ? `${colorOptions[color].ansi}${value}${ESC}[0m`
+        : '';
+      await navigator.clipboard.writeText(colored);
     } catch {
       // ignore
     }
@@ -180,6 +198,17 @@ const AsciiArtApp = () => {
               </option>
             ))}
           </select>
+          <select
+            value={color}
+            onChange={(e) => setColor(e.target.value as ColorKey)}
+            className="px-2 py-1 text-black rounded"
+          >
+            {Object.entries(colorOptions).map(([key, val]) => (
+              <option key={key} value={key}>
+                {val.label}
+              </option>
+            ))}
+          </select>
           <div className="flex gap-2">
             <button
               className="px-2 py-1 bg-blue-700 rounded"
@@ -189,12 +218,19 @@ const AsciiArtApp = () => {
             </button>
             <button
               className="px-2 py-1 bg-green-700 rounded"
-              onClick={() => download(output, 'ascii-art.txt')}
+              onClick={() =>
+                download(
+                  `${colorOptions[color].ansi}${output}${ESC}[0m`,
+                  'ascii-art.txt',
+                )
+              }
             >
               Download
             </button>
           </div>
-          <pre className="bg-black text-green-400 p-2 whitespace-pre overflow-auto">
+          <pre
+            className={`bg-black p-2 whitespace-pre overflow-auto ${colorOptions[color].class}`}
+          >
             {output}
           </pre>
         </div>
@@ -222,6 +258,17 @@ const AsciiArtApp = () => {
               onChange={(e) => setContrast(Number(e.target.value))}
             />
           </div>
+          <select
+            value={color}
+            onChange={(e) => setColor(e.target.value as ColorKey)}
+            className="px-2 py-1 text-black rounded"
+          >
+            {Object.entries(colorOptions).map(([key, val]) => (
+              <option key={key} value={key}>
+                {val.label}
+              </option>
+            ))}
+          </select>
           <div className="flex gap-2">
             <button
               className="px-2 py-1 bg-blue-700 rounded"
@@ -231,13 +278,20 @@ const AsciiArtApp = () => {
             </button>
             <button
               className="px-2 py-1 bg-green-700 rounded"
-              onClick={() => download(imgOutput, 'image-ascii.txt')}
+              onClick={() =>
+                download(
+                  `${colorOptions[color].ansi}${imgOutput}${ESC}[0m`,
+                  'image-ascii.txt',
+                )
+              }
             >
               Download
             </button>
           </div>
           <canvas ref={canvasRef} className="hidden" />
-          <pre className="bg-black text-green-400 p-2 whitespace-pre overflow-auto">
+          <pre
+            className={`bg-black p-2 whitespace-pre overflow-auto ${colorOptions[color].class}`}
+          >
             {imgOutput}
           </pre>
         </div>
