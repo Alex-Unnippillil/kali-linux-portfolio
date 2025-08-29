@@ -18,12 +18,12 @@ declare global {
 }
 
 interface PipPortalContextValue {
-  open: (content: React.ReactNode) => Promise<void>;
+  open: (content: React.ReactNode) => Promise<Window | null>;
   close: () => void;
 }
 
 const PipPortalContext = createContext<PipPortalContextValue>({
-  open: async () => {},
+  open: async () => null,
   close: () => {},
 });
 
@@ -50,15 +50,15 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   }, []);
 
   const open = useCallback(
-    async (node: React.ReactNode) => {
-      if (typeof window === 'undefined' || !window.documentPictureInPicture) return;
+    async (node: React.ReactNode): Promise<Window | null> => {
+      if (typeof window === 'undefined' || !window.documentPictureInPicture) return null;
 
       let win = pipWindowRef.current;
       if (!win || win.closed) {
         try {
           win = await window.documentPictureInPicture.requestWindow();
         } catch {
-          return;
+          return null;
         }
         pipWindowRef.current = win;
         setContainer(win.document.body);
@@ -69,6 +69,7 @@ const PipPortalProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       }
 
       setContent(node);
+      return win;
     },
     [close],
   );
