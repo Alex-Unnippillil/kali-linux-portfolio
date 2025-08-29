@@ -158,6 +158,20 @@ export default function Settings() {
         />
       </div>
       <div className="flex justify-center my-4">
+        <label className="mr-2 text-ubt-grey">Wallpaper:</label>
+        <input
+          type="range"
+          min="0"
+          max={wallpapers.length - 1}
+          step="1"
+          value={wallpapers.indexOf(wallpaper)}
+          onChange={(e) =>
+            changeBackground(wallpapers[parseInt(e.target.value, 10)])
+          }
+          className="ubuntu-slider"
+        />
+      </div>
+      <div className="flex justify-center my-4">
         <label className="mr-2 text-ubt-grey">Icon Size:</label>
         <input
           type="range"
