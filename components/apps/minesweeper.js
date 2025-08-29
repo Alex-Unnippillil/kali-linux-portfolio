@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import usePersistedState from '../../hooks/usePersistedState';
 
 /**
  * Classic Minesweeper implementation.
@@ -39,6 +40,7 @@ const generateBoard = (seed, sx, sy) => {
       mine: false,
       revealed: false,
       flagged: false,
+      question: false,
       adjacent: 0,
     })),
   );
@@ -228,7 +230,15 @@ const Minesweeper = () => {
   const [sound, setSound] = useState(true);
   const [ariaMessage, setAriaMessage] = useState('');
   const prefersReducedMotion = useRef(false);
-  const [showRisk, setShowRisk] = useState(false);
+  const [showRisk, setShowRisk] = usePersistedState(
+    'minesweeperAssist',
+    false,
+  );
+  const [useQuestionMarks, setUseQuestionMarks] = usePersistedState(
+    'minesweeperQuestion',
+    false,
+  );
+  const [showSettings, setShowSettings] = useState(false);
   const leftDown = useRef(false);
   const rightDown = useRef(false);
   const chorded = useRef(false);
@@ -243,6 +253,31 @@ const Minesweeper = () => {
     if (typeof window !== 'undefined') {
       const best = localStorage.getItem('minesweeper-best-time');
       if (best) setBestTime(parseFloat(best));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('minesweeper-state');
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          if (data.board) setBoard(data.board);
+          if (data.status) setStatus(data.status);
+          if (data.seed !== undefined) setSeed(data.seed);
+          if (data.shareCode) setShareCode(data.shareCode);
+          if (data.bv) setBV(data.bv);
+          if (data.flags) setFlags(data.flags);
+          if (data.paused) setPaused(data.paused);
+          if (data.status === 'playing' && !data.paused) {
+            setStartTime(Date.now() - (data.elapsed || 0) * 1000);
+            setElapsed(data.elapsed || 0);
+          } else {
+            if (data.startTime) setStartTime(data.startTime);
+            if (data.elapsed) setElapsed(data.elapsed);
+          }
+        } catch {}
+      }
     }
   }, []);
 
@@ -280,7 +315,13 @@ const Minesweeper = () => {
         for (let y = 0; y < BOARD_SIZE; y++) {
           const cell = board
             ? board[x][y]
-            : { revealed: false, flagged: false, adjacent: 0, mine: false };
+            : {
+                revealed: false,
+                flagged: false,
+                question: false,
+                adjacent: 0,
+                mine: false,
+              };
           const px = y * CELL_SIZE;
           const py = x * CELL_SIZE;
           ctx.strokeStyle = '#111';
@@ -318,6 +359,9 @@ const Minesweeper = () => {
                 ctx.fillText('🚩', 0, 0);
                 ctx.restore();
               }
+            } else if (cell.question) {
+              ctx.fillStyle = '#fff';
+              ctx.fillText('?', px + CELL_SIZE / 2, py + CELL_SIZE / 2);
             } else if (showRisk && riskMap) {
               const r = riskMap[x][y];
               if (r > 0) {
@@ -339,6 +383,41 @@ const Minesweeper = () => {
     draw();
     return () => cancelAnimationFrame(frame);
   }, [board, status, paused, flags, showRisk]);
+
+  useEffect(() => {
+    if (!useQuestionMarks && board) {
+      const newBoard = cloneBoard(board);
+      let changed = false;
+      for (let x = 0; x < BOARD_SIZE; x++) {
+        for (let y = 0; y < BOARD_SIZE; y++) {
+          if (newBoard[x][y].question) {
+            newBoard[x][y].question = false;
+            changed = true;
+          }
+        }
+      }
+      if (changed) setBoard(newBoard);
+    }
+  }, [useQuestionMarks, board]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const data = {
+          board,
+          status,
+          seed,
+          shareCode,
+          startTime,
+          elapsed,
+          bv,
+          flags,
+          paused,
+        };
+        localStorage.setItem('minesweeper-state', JSON.stringify(data));
+      } catch {}
+    }
+  }, [board, status, seed, shareCode, startTime, elapsed, bv, flags, paused]);
 
   const playSound = (type) => {
     if (!sound || typeof window === 'undefined') return;
@@ -574,18 +653,36 @@ const Minesweeper = () => {
     const newBoard = cloneBoard(board);
     const cell = newBoard[x][y];
     if (cell.revealed) return;
-    cell.flagged = !cell.flagged;
-    flagAnim.current[`${x},${y}`] = {
-      start: Date.now(),
-      dir: cell.flagged ? 1 : -1,
-    };
-    setFlags((f) => f + (cell.flagged ? 1 : -1));
+
+    if (cell.flagged) {
+      cell.flagged = false;
+      setFlags((f) => f - 1);
+      flagAnim.current[`${x},${y}`] = { start: Date.now(), dir: -1 };
+      if (useQuestionMarks) {
+        cell.question = true;
+        setAriaMessage(
+          `Question marked cell at row ${x + 1}, column ${y + 1}`,
+        );
+      } else {
+        setAriaMessage(
+          `Unflagged cell at row ${x + 1}, column ${y + 1}`,
+        );
+      }
+    } else if (cell.question) {
+      cell.question = false;
+      setAriaMessage(
+        `Cleared mark at row ${x + 1}, column ${y + 1}`,
+      );
+    } else {
+      cell.flagged = true;
+      setFlags((f) => f + 1);
+      flagAnim.current[`${x},${y}`] = { start: Date.now(), dir: 1 };
+      setAriaMessage(
+        `Flagged cell at row ${x + 1}, column ${y + 1}`,
+      );
+    }
+
     setBoard(newBoard);
-    setAriaMessage(
-      cell.flagged
-        ? `Flagged cell at row ${x + 1}, column ${y + 1}`
-        : `Unflagged cell at row ${x + 1}, column ${y + 1}`,
-    );
     playSound('flag');
   };
 
@@ -775,7 +872,7 @@ const Minesweeper = () => {
   const toggleSound = () => setSound((s) => !s);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <div className="relative h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
       <div className="mb-2 flex items-center space-x-2">
         <span>Seed:</span>
         <span className="font-mono">{seed.toString(36)}</span>
@@ -847,11 +944,40 @@ const Minesweeper = () => {
         </button>
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={() => setShowRisk((r) => !r)}
+          onClick={() => setShowSettings(true)}
         >
-          {showRisk ? 'Risk: On' : 'Risk: Off'}
+          Settings
         </button>
       </div>
+      {showSettings && (
+        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-gray-800 p-4 rounded">
+            <h2 className="mb-2 text-center">Settings</h2>
+            <div className="mb-2 flex items-center">
+              <label className="w-40">Question Marks</label>
+              <input
+                type="checkbox"
+                checked={useQuestionMarks}
+                onChange={(e) => setUseQuestionMarks(e.target.checked)}
+              />
+            </div>
+            <div className="mb-2 flex items-center">
+              <label className="w-40">Solver Assist</label>
+              <input
+                type="checkbox"
+                checked={showRisk}
+                onChange={(e) => setShowRisk(e.target.checked)}
+              />
+            </div>
+            <button
+              className="mt-2 px-2 py-1 bg-blue-500"
+              onClick={() => setShowSettings(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       <div aria-live="polite" className="sr-only">{ariaMessage}</div>
     </div>
   );
