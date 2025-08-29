@@ -3,8 +3,8 @@ import { reset, serialize } from '../apps/games/rng';
 
 describe('2048 logic', () => {
   it('slides and merges', () => {
-    expect(slide([2, 0, 2, 0])).toEqual([4, 0, 0, 0]);
-    expect(slide([2, 2, 2, 0])).toEqual([4, 2, 0, 0]);
+    expect(slide([2, 0, 2, 0]).row).toEqual([4, 0, 0, 0]);
+    expect(slide([2, 2, 2, 0]).row).toEqual([4, 2, 0, 0]);
   });
 
   it('moves left across the board', () => {
@@ -14,7 +14,7 @@ describe('2048 logic', () => {
       [0, 0, 0, 0],
       [0, 0, 0, 0],
     ];
-    expect(moveLeft(board)).toEqual([
+    expect(moveLeft(board).board).toEqual([
       [4, 0, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
