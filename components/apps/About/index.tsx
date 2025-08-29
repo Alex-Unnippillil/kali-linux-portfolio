@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
 import ReactGA from 'react-ga4';
@@ -7,7 +7,8 @@ import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
 import { getCspNonce } from '../../../utils/csp';
-import AboutSlides from './slides';
+import { usePipPortal } from '../../common/PipPortal';
+import slides from './slides/data';
 
 class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_screen: string; navbar: boolean }> {
   screens: Record<string, React.ReactNode> = {};
@@ -157,12 +158,69 @@ export default function AboutApp() {
   return (
     <>
       <AboutAlex />
-      <AboutSlides />
+      <SlideDeck />
     </>
   );
 }
 
 export { default as SafetyNote } from './SafetyNote';
+
+function SlideDeck() {
+  const { open, close } = usePipPortal();
+  const [index, setIndex] = useState(0);
+
+  const show = useCallback(
+    (i: number) => {
+      const slide = slides[i];
+      if (!slide) {
+        close();
+        return;
+      }
+      open(
+        <div className="p-4 bg-black text-white text-sm">
+          <h1 className="text-lg font-bold mb-2">{slide.title}</h1>
+          <p>{slide.body}</p>
+          <div className="flex justify-between mt-4">
+            <button
+              onClick={() => setIndex((idx) => Math.max(0, idx - 1))}
+              disabled={i === 0}
+              className="px-2 py-1 bg-gray-700 rounded disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setIndex((idx) => idx + 1)}
+              className="px-2 py-1 bg-gray-700 rounded"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      );
+    },
+    [open, close]
+  );
+
+  useEffect(() => {
+    show(index);
+  }, [index, show]);
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        setIndex((i) => i + 1);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setIndex((i) => Math.max(0, i - 1));
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
+
+  return null;
+}
 
 function About() {
   return (
