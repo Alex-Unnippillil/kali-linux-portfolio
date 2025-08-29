@@ -145,7 +145,17 @@ const MsfPostApp = () => {
 
   const runModule = () => {
     if (!selectedModule) return;
-    setOutput(selectedModule.sampleOutput);
+    const lines = selectedModule.sampleOutput.split('\n');
+    setOutput('');
+    let idx = 0;
+    const append = () => {
+      setOutput((prev) => prev + (idx > 0 ? '\n' : '') + lines[idx]);
+      idx += 1;
+      if (idx < lines.length) {
+        setTimeout(append, 500);
+      }
+    };
+    append();
     animateSteps();
   };
 
@@ -212,55 +222,25 @@ const MsfPostApp = () => {
       <div className="sr-only" aria-live="polite" role="status">
         {liveMessage}
       </div>
-      <svg
+      <ul
+        className="mt-4 space-y-2"
         role="list"
         aria-label="Post-exploitation checklist"
-        className="mt-4 mx-auto"
-        width="220"
-        height={steps.length * 80}
       >
-        {steps.map((step, i) => (
-          <g
-            key={step.label}
-            role="listitem"
-            aria-label={`${step.label} ${step.done ? 'completed' : 'pending'}`}
-            transform={`translate(20, ${i * 70 + 20})`}
-          >
-            <circle
-              cx="0"
-              cy="0"
-              r="20"
-              fill={step.done ? '#22c55e' : '#6b7280'}
+        {steps.map((step) => (
+          <li key={step.label} className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              checked={step.done}
+              readOnly
+              className="form-checkbox h-4 w-4 text-green-500 rounded"
             />
-            {step.done && (
-              <path
-                d="M-8 0 l4 4 l8 -8"
-                stroke="#fff"
-                strokeWidth="2"
-                fill="none"
-              />
-            )}
-            <text
-              x="40"
-              y="5"
-              fill={step.done ? '#22c55e' : '#d1d5db'}
-              fontSize="14"
-            >
+            <span className={step.done ? 'text-green-400' : 'text-gray-400'}>
               {step.label}
-            </text>
-            {i < steps.length - 1 && (
-              <line
-                x1="0"
-                y1="20"
-                x2="0"
-                y2="70"
-                stroke="#6b7280"
-                strokeWidth="2"
-              />
-            )}
-          </g>
+            </span>
+          </li>
         ))}
-      </svg>
+      </ul>
     </div>
   );
 };

@@ -90,6 +90,7 @@ const KismetApp = createDynamicApp('kismet', 'Kismet');
 
 const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
 const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
+const EvidenceVaultApp = createDynamicApp('evidence-vault', 'Evidence Vault');
 const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
 const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
 const ReaverApp = createDynamicApp('reaver', 'Reaver');
@@ -172,6 +173,7 @@ const displayPinball = createDisplay(PinballApp);
 const displayVolatility = createDisplay(VolatilityApp);
 
 const displayMsfPost = createDisplay(MsfPostApp);
+const displayEvidenceVault = createDisplay(EvidenceVaultApp);
 const displayMimikatz = createDisplay(MimikatzApp);
 const displayEttercap = createDisplay(EttercapApp);
 const displayReaver = createDisplay(ReaverApp);
@@ -966,6 +968,15 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayMsfPost,
+  },
+  {
+    id: 'evidence-vault',
+    title: 'Evidence Vault',
+    icon: './themes/Yaru/apps/project-gallery.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayEvidenceVault,
   },
   {
     id: 'dsniff',
