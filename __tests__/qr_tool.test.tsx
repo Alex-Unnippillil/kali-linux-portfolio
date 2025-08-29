@@ -9,12 +9,26 @@ describe('QRTool generator', () => {
   beforeEach(() => {
     (QRCode.toDataURL as jest.Mock).mockResolvedValue('data:image/png;base64,abc');
     (QRCode.toString as jest.Mock).mockResolvedValue('<svg></svg>');
+
+    class MockWorker {
+      onmessage: ((e: any) => void) | null = null;
+      // eslint-disable-next-line class-methods-use-this
+      postMessage() {
+        this.onmessage?.({ data: { png: 'data:image/png;base64,abc', svg: '<svg></svg>' } });
+      }
+      // eslint-disable-next-line class-methods-use-this
+      terminate() {}
+    }
+    // @ts-ignore
+    global.Worker = MockWorker;
   });
 
   it('generates preview and batch items', async () => {
     const { getByLabelText, getByText } = render(<QRTool />);
     fireEvent.change(getByLabelText('Text'), { target: { value: 'hello' } });
-    await waitFor(() => expect(QRCode.toDataURL).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(document.querySelector('img[alt="QR preview"]')).toBeInTheDocument(),
+    );
 
     fireEvent.change(getByLabelText(/Batch CSV/), { target: { value: 'hello,first' } });
     fireEvent.click(getByText('Generate Batch'));
