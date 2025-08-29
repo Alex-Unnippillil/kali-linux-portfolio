@@ -13,6 +13,7 @@ export interface GameState {
   waste: Card[];
   foundations: Record<Suit, Card[]>;
   tableau: Card[][];
+  drawMode: 'draw1' | 'draw3';
 }
 
 const suits: Suit[] = ['♠', '♥', '♦', '♣'];
@@ -34,7 +35,7 @@ const shuffle = (deck: Card[]) => {
   }
 };
 
-export const initGame = (): GameState => {
+export const initGame = (drawMode: 'draw1' | 'draw3' = 'draw1'): GameState => {
   const deck = createDeck();
   shuffle(deck);
   const tableau: Card[][] = [];
@@ -57,15 +58,29 @@ export const initGame = (): GameState => {
       '♣': [],
     },
     tableau,
+    drawMode,
   };
 };
 
-export const draw = (state: GameState, mode: 'draw1' | 'draw3') => {
+export const setDrawMode = (state: GameState, mode: 'draw1' | 'draw3') => {
+  if (state.drawMode === mode) return;
+  state.drawMode = mode;
+  state.stock = [...state.stock, ...state.waste.reverse()].map((c) => ({
+    ...c,
+    faceDown: true,
+  }));
+  state.waste = [];
+};
+
+export const toggleDrawMode = (state: GameState) =>
+  setDrawMode(state, state.drawMode === 'draw1' ? 'draw3' : 'draw1');
+
+export const draw = (state: GameState) => {
   if (state.stock.length === 0) {
     state.stock = state.waste.reverse().map((c) => ({ ...c, faceDown: true }));
     state.waste = [];
   }
-  const count = Math.min(mode === 'draw1' ? 1 : 3, state.stock.length);
+  const count = Math.min(state.drawMode === 'draw1' ? 1 : 3, state.stock.length);
   for (let i = 0; i < count; i += 1) {
     const card = state.stock.shift()!;
     card.faceDown = false;
