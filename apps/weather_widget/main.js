@@ -114,11 +114,15 @@ saveApiKeyBtn.addEventListener('click', () => {
   updateWeather();
 });
 
-const lastCity = localStorage.getItem('lastCity');
-if (lastCity) {
-  citySearch.value = lastCity;
+const pinnedForecast = JSON.parse(localStorage.getItem('pinnedCityForecast') || 'null');
+if (pinnedForecast) {
+  citySearch.value = pinnedForecast.name;
+  renderWeather(pinnedForecast);
+} else {
+  const lastCity = localStorage.getItem('lastCity');
+  if (lastCity) {
+    citySearch.value = lastCity;
+  }
+  updateWeather();
+  setInterval(updateWeather, 10 * 60 * 1000);
 }
-
-updateWeather();
-
-setInterval(updateWeather, 10 * 60 * 1000);

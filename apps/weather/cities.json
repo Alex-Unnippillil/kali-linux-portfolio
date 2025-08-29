@@ -1,0 +1,24 @@
+{
+  "New York": {
+    "name": "New York",
+    "current": { "tempC": 27, "condition": "Sunny", "icon": "01d", "sunrise": 1716967200, "sunset": 1717017600 },
+    "days": [
+      { "date": "2024-05-28", "tempC": 27, "windKph": 10, "humidity": 40, "condition": "sunny" },
+      { "date": "2024-05-29", "tempC": 22, "windKph": 5, "humidity": 50, "condition": "cloudy" },
+      { "date": "2024-05-30", "tempC": 20, "windKph": 15, "humidity": 60, "condition": "rain" },
+      { "date": "2024-05-31", "tempC": 24, "windKph": 8, "humidity": 55, "condition": "sunny" },
+      { "date": "2024-06-01", "tempC": 26, "windKph": 12, "humidity": 45, "condition": "sunny" }
+    ]
+  },
+  "London": {
+    "name": "London",
+    "current": { "tempC": 18, "condition": "Cloudy", "icon": "02d", "sunrise": 1716963600, "sunset": 1717014000 },
+    "days": [
+      { "date": "2024-05-28", "tempC": 18, "windKph": 12, "humidity": 70, "condition": "cloudy" },
+      { "date": "2024-05-29", "tempC": 16, "windKph": 10, "humidity": 65, "condition": "rain" },
+      { "date": "2024-05-30", "tempC": 17, "windKph": 8, "humidity": 60, "condition": "sunny" },
+      { "date": "2024-05-31", "tempC": 19, "windKph": 9, "humidity": 55, "condition": "sunny" },
+      { "date": "2024-06-01", "tempC": 20, "windKph": 11, "humidity": 50, "condition": "cloudy" }
+    ]
+  }
+}

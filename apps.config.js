@@ -901,7 +901,7 @@ const apps = [
     icon: './themes/Yaru/apps/weather.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: false,
+    desktop_shortcut: true,
     screen: displayWeatherWidget,
   },
   {
