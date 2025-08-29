@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Chess } from 'chess.js';
+import { parseImport } from '../../games/chess/utils/import';
 
 // 0x88 board representation utilities
 const EMPTY = 0;
@@ -705,49 +706,61 @@ const ChessGame = () => {
     navigator.clipboard?.writeText(chessRef.current.pgn());
   };
 
-  const loadPGN = () => {
-    const pgn = prompt('Paste PGN');
-    if (!pgn) return;
+  const loadImport = () => {
+    const str = prompt('Paste FEN or PGN');
+    if (!str) return;
     reset();
-    if (!chessRef.current.load_pgn(pgn)) {
-      alert('Invalid PGN');
+    const parsed = parseImport(str);
+    if (!parsed) {
+      alert('Invalid FEN or PGN');
       reset();
       return;
     }
-    const moves = chessRef.current.history({ verbose: true });
-    chessRef.current.reset();
-    boardRef.current = createInitialBoard();
-    historyRef.current = [boardRef.current.slice()];
-    setSanLog([]);
-    sideRef.current = WHITE;
-    setPaused(true);
-    setStatus('Replaying PGN...');
-    let i = 0;
-    const playNext = () => {
-      if (i >= moves.length) {
-        setPaused(false);
-        checkGameState('Your move', true);
-        return;
-      }
-      const m = moves[i++];
-      const res = chessRef.current.move(m);
-      const from = algToSq(m.from);
-      const to = algToSq(m.to);
-      const capture = boardRef.current[to] !== EMPTY;
-      boardRef.current[to] = boardRef.current[from];
-      boardRef.current[from] = EMPTY;
-      addTrail(from, to);
-      if (capture) addCaptureSparks(to);
-      historyRef.current.push(boardRef.current.slice());
-      setSanLog((l) => [...l, res.san]);
-      sideRef.current = chessRef.current.turn() === 'w' ? WHITE : BLACK;
+    if (parsed.type === 'fen') {
+      chessRef.current.load(parsed.fen);
+      boardRef.current = parsed.board;
+      historyRef.current = [boardRef.current.slice()];
+      sideRef.current = parsed.turn;
+      setSanLog([]);
       updateEval();
       updateMateHints();
-      if (sound) playBeep();
-      checkGameState(undefined, true);
-      setTimeout(playNext, 500);
-    };
-    playNext();
+      setStatus('Position loaded');
+      checkGameState('Your move', true);
+    } else {
+      chessRef.current.reset();
+      boardRef.current = createInitialBoard();
+      historyRef.current = [boardRef.current.slice()];
+      setSanLog([]);
+      sideRef.current = WHITE;
+      setPaused(true);
+      setStatus('Replaying PGN...');
+      let i = 0;
+      const playNext = () => {
+        if (i >= parsed.moves.length) {
+          setPaused(false);
+          checkGameState('Your move', true);
+          return;
+        }
+        const m = parsed.moves[i++];
+        const res = chessRef.current.move(m);
+        const from = algToSq(m.from);
+        const to = algToSq(m.to);
+        const capture = boardRef.current[to] !== EMPTY;
+        boardRef.current[to] = boardRef.current[from];
+        boardRef.current[from] = EMPTY;
+        addTrail(from, to);
+        if (capture) addCaptureSparks(to);
+        historyRef.current.push(boardRef.current.slice());
+        setSanLog((l) => [...l, res.san]);
+        sideRef.current = chessRef.current.turn() === 'w' ? WHITE : BLACK;
+        updateEval();
+        updateMateHints();
+        if (sound) playBeep();
+        checkGameState(undefined, true);
+        setTimeout(playNext, 500);
+      };
+      playNext();
+    }
   };
 
   const moveLines = [];
@@ -785,8 +798,8 @@ const ChessGame = () => {
         <button className="px-2 py-1 bg-gray-700" onClick={toggleHints}>
           {showHints ? 'Hide Hints' : 'Mate in 1'}
         </button>
-        <button className="px-2 py-1 bg-gray-700" onClick={loadPGN}>
-          Load PGN
+        <button className="px-2 py-1 bg-gray-700" onClick={loadImport}>
+          Load FEN/PGN
         </button>
       </div>
       <div className="mt-2">{status}</div>
