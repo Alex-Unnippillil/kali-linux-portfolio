@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { getMapping } from './Games/common/input-remap/useInputMapping';
 import useGamepad from '../../hooks/useGamepad';
+import usePersistedState from '../../hooks/usePersistedState';
 
 /**
  * Multifunctional game control hook.
@@ -180,6 +181,136 @@ const useGameControls = (arg, gameId = 'default') => {
   }, [gamepad, onDirection]);
 
   return onDirection ? null : stateRef.current;
+};
+
+export const useGameSettings = (gameId = 'default') => {
+  const [paused, setPaused] = useState(false);
+  const [speed, setSpeedRaw] = usePersistedState(`game:${gameId}:speed`, 1);
+  const [muted, setMuted] = usePersistedState(`game:${gameId}:muted`, false);
+  const [screenShake, setScreenShake] = usePersistedState(`game:${gameId}:shake`, true);
+  const [palette, setPalette] = usePersistedState(`game:${gameId}:palette`, 'normal');
+
+  const togglePause = useCallback(() => setPaused((p) => !p), []);
+  const toggleMute = useCallback(() => setMuted((m) => !m), [setMuted]);
+  const setSpeed = useCallback(
+    (v) => setSpeedRaw(Math.min(2, Math.max(0.5, v))),
+    [setSpeedRaw],
+  );
+
+  return {
+    paused,
+    togglePause,
+    speed,
+    setSpeed,
+    muted,
+    toggleMute,
+    screenShake,
+    setScreenShake,
+    palette,
+    setPalette,
+  };
+};
+
+export const useGamePersistence = (gameId = 'default') => {
+  const saveSnapshot = useCallback(
+    (data) => {
+      try {
+        localStorage.setItem(`snapshot:${gameId}`, JSON.stringify(data));
+      } catch {
+        /* ignore */
+      }
+    },
+    [gameId],
+  );
+
+  const loadSnapshot = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(`snapshot:${gameId}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }, [gameId]);
+
+  const getHighScore = useCallback(() => {
+    try {
+      return Number(localStorage.getItem(`highscore:${gameId}`)) || 0;
+    } catch {
+      return 0;
+    }
+  }, [gameId]);
+
+  const setHighScore = useCallback(
+    (score) => {
+      try {
+        const current = getHighScore();
+        if (score > current)
+          localStorage.setItem(`highscore:${gameId}`, String(score));
+      } catch {
+        /* ignore */
+      }
+    },
+    [gameId, getHighScore],
+  );
+
+  const getAchievements = useCallback(() => {
+    try {
+      return (
+        JSON.parse(localStorage.getItem(`achievements:${gameId}`)) || []
+      );
+    } catch {
+      return [];
+    }
+  }, [gameId]);
+
+  const unlockAchievement = useCallback(
+    (id) => {
+      try {
+        const list = getAchievements();
+        if (!list.includes(id)) {
+          list.push(id);
+          localStorage.setItem(
+            `achievements:${gameId}`,
+            JSON.stringify(list),
+          );
+        }
+      } catch {
+        /* ignore */
+      }
+    },
+    [gameId, getAchievements],
+  );
+
+  return {
+    saveSnapshot,
+    loadSnapshot,
+    getHighScore,
+    setHighScore,
+    getAchievements,
+    unlockAchievement,
+  };
+};
+
+export const colorBlindPalettes = {
+  normal: ['#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff'],
+  protanopia: ['#000000', '#ffffff', '#ff6f00', '#008f00', '#0000ff'],
+  deuteranopia: ['#000000', '#ffffff', '#ff0000', '#7f7f00', '#0000ff'],
+  tritanopia: ['#000000', '#ffffff', '#ff0000', '#00ff00', '#7f7fff'],
+};
+
+export const useInputLatencyTest = () => {
+  const [latency, setLatency] = useState(null);
+
+  const start = useCallback(() => {
+    const begin = performance.now();
+    const handler = () => {
+      setLatency(performance.now() - begin);
+      window.removeEventListener('keydown', handler);
+    };
+    window.addEventListener('keydown', handler, { once: true });
+  }, []);
+
+  return { latency, start };
 };
 
 export default useGameControls;
