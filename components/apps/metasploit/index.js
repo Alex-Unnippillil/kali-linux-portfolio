@@ -28,6 +28,10 @@ const MetasploitApp = ({
   const [animationStyle, setAnimationStyle] = useState({ opacity: 1 });
   const [reduceMotion, setReduceMotion] = useState(false);
 
+  const [platformInput, setPlatformInput] = useState('');
+  const [payloadInput, setPayloadInput] = useState('');
+  const [optionsInput, setOptionsInput] = useState('');
+
   const [selectedModule, setSelectedModule] = useState(null);
   const [loot, setLoot] = useState([]);
   const [notes, setNotes] = useState([]);
@@ -40,13 +44,6 @@ const MetasploitApp = ({
   const workerRef = useRef();
   const moduleRaf = useRef();
   const progressRaf = useRef();
-
-  // Refresh modules list in the background on mount
-  useEffect(() => {
-    if (!demoMode && process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
-      fetch('/api/metasploit').catch(() => {});
-    }
-  }, [demoMode]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -72,6 +69,16 @@ const MetasploitApp = ({
       active = false;
     };
   }, []);
+
+  const commandPreview = useMemo(() => {
+    const parts = [];
+    if (selectedModule) parts.push(`use ${selectedModule.name}`);
+    if (platformInput) parts.push(`set PLATFORM ${platformInput}`);
+    if (payloadInput) parts.push(`set PAYLOAD ${payloadInput}`);
+    if (optionsInput) parts.push(optionsInput);
+    if (parts.length) parts.push('run');
+    return parts.join(' && ');
+  }, [selectedModule, platformInput, payloadInput, optionsInput]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -114,19 +121,9 @@ const MetasploitApp = ({
     if (!cmd) return;
     setLoading(true);
     try {
-      if (demoMode || process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
-        setOutput(
-          (prev) => `${prev}\nmsf6 > ${cmd}\n[demo mode] command disabled`
-        );
-      } else {
-        const res = await fetch('/api/metasploit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ command: cmd }),
-        });
-        const data = await res.json();
-        setOutput((prev) => `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`);
-      }
+      setOutput(
+        (prev) => `${prev}\nmsf6 > ${cmd}\n[offline mode] command disabled`
+      );
     } catch (e) {
       setOutput((prev) => `${prev}\nError: ${e.message}`);
     } finally {
@@ -195,8 +192,9 @@ const MetasploitApp = ({
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white">
-      <div className="bg-yellow-400 text-black text-xs p-2 text-center">
-        For authorized security testing and educational use only.
+      <div className="bg-red-700 text-white text-xs p-2 text-center font-bold">
+        Safety Notice: This is a simulated interface for educational use only. No
+        real network actions will be executed.
       </div>
       <div className="flex p-2">
         <input
@@ -222,6 +220,40 @@ const MetasploitApp = ({
           Run Demo
         </button>
       </div>
+      <div className="flex p-2 space-x-2">
+        <input
+          className="bg-ub-grey text-white p-1 rounded"
+          value={platformInput}
+          onChange={(e) => setPlatformInput(e.target.value)}
+          placeholder="Platform"
+          spellCheck={false}
+        />
+        <input
+          className="bg-ub-grey text-white p-1 rounded"
+          value={payloadInput}
+          onChange={(e) => setPayloadInput(e.target.value)}
+          placeholder="Payload"
+          spellCheck={false}
+        />
+        <input
+          className="flex-grow bg-ub-grey text-white p-1 rounded"
+          value={optionsInput}
+          onChange={(e) => setOptionsInput(e.target.value)}
+          placeholder="Options"
+          spellCheck={false}
+        />
+      </div>
+      {commandPreview && (
+        <div className="flex p-2 items-center bg-ub-grey text-xs">
+          <code className="flex-grow whitespace-pre-wrap">{commandPreview}</code>
+          <button
+            onClick={() => navigator.clipboard.writeText(commandPreview)}
+            className="ml-2 px-2 py-1 bg-ub-orange rounded text-black"
+          >
+            Copy
+          </button>
+        </div>
+      )}
       <div className="flex p-2">
         <div className="w-2/3 pr-2">
           <div className="flex mb-2">
