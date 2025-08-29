@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import FormError from '../../ui/FormError';
 import Toast from '../../ui/Toast';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
 import { contactSchema } from '../../../utils/contactSchema';
+import usePersistentState from '../../../hooks/usePersistentState';
+import ErrorBanner from '../../../apps/contact/components/ErrorBanner';
+import errorMap from '../../../apps/contact/utils/errorMap';
 
 const sanitize = (str: string) =>
   str.replace(/[&<>"']/g, (c) => ({
@@ -15,13 +17,6 @@ const sanitize = (str: string) =>
     '"': '&quot;',
     "'": '&#39;',
   }[c]!));
-
-const errorMap: Record<string, string> = {
-  rate_limit: 'Too many requests. Please try again later.',
-  invalid_input: 'Please check your input and try again.',
-  invalid_csrf: 'Security token mismatch. Refresh and retry.',
-  invalid_recaptcha: 'Captcha verification failed. Please try again.',
-};
 
 export const processContactForm = async (
   data: {
@@ -52,14 +47,16 @@ export const processContactForm = async (
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
+      const code: string | number = body.code ?? res.status;
       return {
         success: false,
-        error: errorMap[body.code as string] || 'Submission failed',
+        code,
+        error: errorMap[code] || 'Submission failed',
       };
     }
     return { success: true };
   } catch {
-    return { success: false, error: 'Submission failed' };
+    return { success: false, code: 'network_error', error: 'Submission failed' };
   }
 };
 
@@ -123,10 +120,15 @@ const ContactApp: React.FC = () => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [honeypot, setHoneypot] = useState('');
-  const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState<string | number | null>(null);
   const [toast, setToast] = useState('');
   const [csrfToken, setCsrfToken] = useState('');
   const [fallback, setFallback] = useState(false);
+  const [retryCount, setRetryCount] = usePersistentState<number>(
+    'contact-retry-count',
+    0,
+    (v): v is number => typeof v === 'number'
+  );
 
   useEffect(() => {
     (async () => {
@@ -149,9 +151,11 @@ const ContactApp: React.FC = () => {
     void writeDraft({ name, email, message });
   }, [name, email, message]);
 
+  const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setErrorCode(null);
     let recaptchaToken = '';
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
     let shouldFallback = fallback;
@@ -163,35 +167,48 @@ const ContactApp: React.FC = () => {
     }
     if (shouldFallback) {
       setFallback(true);
-      setError('Email service unavailable. Use the options above.');
+      setErrorCode(503);
       setToast('Failed to send');
       return;
     }
-    const result = await processContactForm({
-      name,
-      email,
-      message,
-      honeypot,
-      csrfToken,
-      recaptchaToken,
-    });
-    if (result.success) {
-      setToast('Message sent');
-      setName('');
-      setEmail('');
-      setMessage('');
-      setHoneypot('');
-      void deleteDraft();
-    } else {
-      setError(result.error || 'Submission failed');
-      setToast('Failed to send');
-      if (
-        result.error?.toLowerCase().includes('captcha') ||
-        result.error === 'Submission failed'
-      ) {
-        setFallback(true);
+
+    const attemptSend = async (attempt: number): Promise<void> => {
+      const result = await processContactForm({
+        name,
+        email,
+        message,
+        honeypot,
+        csrfToken,
+        recaptchaToken,
+      });
+      if (result.success) {
+        setToast('Message sent');
+        setName('');
+        setEmail('');
+        setMessage('');
+        setHoneypot('');
+        setRetryCount(0);
+        setErrorCode(null);
+        void deleteDraft();
+      } else {
+        setErrorCode(result.code ?? 'unknown');
+        setToast('Failed to send');
+        if (
+          result.error?.toLowerCase().includes('captcha') ||
+          result.error === 'Submission failed'
+        ) {
+          setFallback(true);
+        }
+        if (attempt < 3) {
+          setRetryCount((r) => r + 1);
+          const wait = Math.min(1000 * 2 ** attempt, 30000);
+          await delay(wait);
+          await attemptSend(attempt + 1);
+        }
       }
-    }
+    };
+
+    await attemptSend(0);
   };
 
   return (
@@ -264,7 +281,9 @@ const ContactApp: React.FC = () => {
           tabIndex={-1}
           autoComplete="off"
         />
-        {error && <FormError>{error}</FormError>}
+        {errorCode && (
+          <ErrorBanner code={errorCode} onClose={() => setErrorCode(null)} />
+        )}
         <button
           type="submit"
           className="rounded bg-blue-600 px-4 py-2"
