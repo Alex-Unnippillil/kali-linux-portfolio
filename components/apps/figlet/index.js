@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toPng } from 'html-to-image';
+import AlignmentControls from '../../../apps/figlet/components/AlignmentControls';
 
 const FigletApp = () => {
   const [text, setText] = useState('');
@@ -7,6 +8,7 @@ const FigletApp = () => {
   const [font, setFont] = useState('');
   const [monoOnly, setMonoOnly] = useState(false);
   const [output, setOutput] = useState('');
+  const [rawOutput, setRawOutput] = useState('');
   const [inverted, setInverted] = useState(false);
   const [fontSize, setFontSize] = useState(16);
   const [lineHeight, setLineHeight] = useState(1);
@@ -15,6 +17,7 @@ const FigletApp = () => {
   const [kerning, setKerning] = useState(0); // letter spacing
   const [gradient, setGradient] = useState(0);
   const [align, setAlign] = useState('left');
+  const [padding, setPadding] = useState(0);
   const [announce, setAnnounce] = useState('');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
@@ -43,6 +46,8 @@ const FigletApp = () => {
     if (!Number.isNaN(g)) setGradient(g);
     const k = Number(params.get('kerning'));
     if (!Number.isNaN(k)) setKerning(k);
+    const pd = Number(params.get('pad'));
+    if (!Number.isNaN(pd)) setPadding(pd);
   }, []);
 
   useEffect(() => {
@@ -52,7 +57,7 @@ const FigletApp = () => {
         if (e.data?.type === 'font') {
           setFonts((prev) => [...prev, { name: e.data.font, preview: e.data.preview, mono: e.data.mono }]);
         } else if (e.data?.type === 'render') {
-          setOutput(e.data.output);
+          setRawOutput(e.data.output);
           setAnnounce('Preview updated');
           clearTimeout(announceTimer.current);
           announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
@@ -97,6 +102,41 @@ const FigletApp = () => {
     frameRef.current = requestAnimationFrame(updateFiglet);
     return () => cancelAnimationFrame(frameRef.current);
   }, [updateFiglet]);
+
+  useEffect(() => {
+    if (!rawOutput) {
+      setOutput('');
+      return;
+    }
+    const lines = rawOutput.split('\n').map((l) => l.replace(/\s+$/, ''));
+    const max = lines.reduce((m, l) => Math.max(m, l.length), 0);
+    const transformed = lines
+      .map((line) => {
+        let result = line;
+        if (align === 'right') {
+          result = ' '.repeat(max - line.length) + line;
+        } else if (align === 'center') {
+          const space = Math.floor((max - line.length) / 2);
+          result = ' '.repeat(space) + line;
+        } else if (align === 'justify') {
+          const words = line.trim().split(/ +/);
+          if (words.length > 1) {
+            const totalSpaces = max - words.reduce((sum, w) => sum + w.length, 0);
+            const gaps = words.length - 1;
+            const even = Math.floor(totalSpaces / gaps);
+            const extra = totalSpaces % gaps;
+            result = words
+              .map((w, i) =>
+                w + (i < gaps ? ' '.repeat(even + (i < extra ? 1 : 0)) : '')
+              )
+              .join('');
+          }
+        }
+        return ' '.repeat(padding) + result;
+      })
+      .join('\n');
+    setOutput(transformed);
+  }, [rawOutput, align, padding]);
 
   const copyOutput = () => {
     if (output) {
@@ -169,11 +209,12 @@ const FigletApp = () => {
     if (width !== 80) params.set('width', String(width));
     if (layout !== 'default') params.set('layout', layout);
     if (align !== 'left') params.set('align', align);
+    if (padding !== 0) params.set('pad', String(padding));
     if (gradient !== 0) params.set('gradient', String(gradient));
     if (kerning !== 0) params.set('kerning', String(kerning));
     const query = params.toString();
     history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}`);
-  }, [text, font, fontSize, lineHeight, width, layout, align, gradient, kerning]);
+  }, [text, font, fontSize, lineHeight, width, layout, align, gradient, kerning, padding]);
 
   useEffect(() => {
     if (!font || !navigator?.storage?.getDirectory) return;
@@ -304,19 +345,12 @@ const FigletApp = () => {
             aria-label="Kerning"
           />
         </label>
-        <label className="flex items-center gap-1 text-sm">
-          Align
-          <select
-            value={align}
-            onChange={(e) => setAlign(e.target.value)}
-            className="px-1 bg-gray-700 text-white"
-            aria-label="Alignment"
-          >
-            <option value="left">Left</option>
-            <option value="center">Center</option>
-            <option value="right">Right</option>
-          </select>
-        </label>
+        <AlignmentControls
+          align={align}
+          setAlign={setAlign}
+          padding={padding}
+          setPadding={setPadding}
+        />
         <button
           onClick={copyOutput}
           className="px-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
@@ -355,7 +389,6 @@ const FigletApp = () => {
           style={{
             fontSize: `${fontSize}px`,
             lineHeight,
-            textAlign: align,
             letterSpacing: `${kerning}px`,
             backgroundImage: `linear-gradient(to right, hsl(${gradient},100%,50%), hsl(${(gradient + 120) % 360},100%,50%))`,
             WebkitBackgroundClip: 'text',
