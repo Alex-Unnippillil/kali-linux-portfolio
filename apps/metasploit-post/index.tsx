@@ -3,6 +3,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import modules from './modules.json';
 import privTree from './priv-esc.json';
+import RemediationTable from './components/RemediationTable';
 
 interface ModuleOption {
   name: string;
@@ -243,6 +244,7 @@ const MetasploitPost: React.FC = () => {
             <h3 className="font-semibold mb-2">Privilege Escalation Tree</h3>
             <PrivTree node={privTree as PrivNode} />
           </div>
+          <RemediationTable />
           <EvidenceVault />
         </div>
       </div>
