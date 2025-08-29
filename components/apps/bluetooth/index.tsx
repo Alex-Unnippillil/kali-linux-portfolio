@@ -12,8 +12,7 @@ const BluetoothApp: React.FC = () => {
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [error, setError] = useState("");
   const [rssiFilter, setRssiFilter] = useState("");
-  const [classFilter, setClassFilter] = useState("");
-  const [nameFilter, setNameFilter] = useState("");
+  const [search, setSearch] = useState("");
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [pairingDevice, setPairingDevice] = useState<DeviceInfo | null>(null);
@@ -40,12 +39,20 @@ const BluetoothApp: React.FC = () => {
 
   const filtered = devices.filter((d) => {
     const rssiOk = !rssiFilter || d.rssi >= Number(rssiFilter);
-    const classOk =
-      !classFilter || d.class.toLowerCase().includes(classFilter.toLowerCase());
-    const nameOk =
-      !nameFilter || d.name.toLowerCase().includes(nameFilter.toLowerCase());
-    return rssiOk && classOk && nameOk;
+    const searchLower = search.toLowerCase();
+    const searchOk =
+      !search ||
+      d.name.toLowerCase().includes(searchLower) ||
+      d.address.toLowerCase().includes(searchLower) ||
+      d.class.toLowerCase().includes(searchLower);
+    return rssiOk && searchOk;
   });
+
+  const grouped = filtered.reduce<Record<string, DeviceInfo[]>>((acc, d) => {
+    const type = d.class || "Unknown";
+    (acc[type] ||= []).push(d);
+    return acc;
+  }, {});
 
   return (
     <div className="relative h-full w-full bg-black p-4 text-white">
@@ -64,37 +71,37 @@ const BluetoothApp: React.FC = () => {
         />
         <input
           type="text"
-          placeholder="Device Class"
-          value={classFilter}
-          onChange={(e) => setClassFilter(e.target.value)}
-          className="w-1/3 rounded bg-gray-800 p-2 text-white"
-        />
-        <input
-          type="text"
-          placeholder="Name"
-          value={nameFilter}
-          onChange={(e) => setNameFilter(e.target.value)}
-          className="w-1/3 rounded bg-gray-800 p-2 text-white"
+          placeholder="Search devices"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-2/3 rounded bg-gray-800 p-2 text-white"
         />
       </div>
       {error && <FormError className="mb-4 mt-0">{error}</FormError>}
       {pairedDevice && <p className="mb-2">Paired with: {pairedDevice}</p>}
-      <ul className="space-y-2 overflow-auto">
-        {filtered.map((d) => (
-          <li key={d.address} className="border-b border-gray-700 pb-2">
-            <p className="font-bold">{d.name || d.address}</p>
-            <p className="text-sm">
-              RSSI: {d.rssi} | Class: {d.class}
-            </p>
-            <button
-              onClick={() => setPairingDevice(d)}
-              className="mt-2 rounded bg-gray-700 px-2 py-1 text-sm"
-            >
-              Pair
-            </button>
-          </li>
+      <div className="space-y-4 overflow-auto">
+        {Object.entries(grouped).map(([type, list]) => (
+          <div key={type}>
+            <h3 className="mb-2 font-bold">{type}</h3>
+            <ul className="space-y-2">
+              {list.map((d) => (
+                <li key={d.address} className="border-b border-gray-700 pb-2">
+                  <p className="font-bold">{d.name || d.address}</p>
+                  <p className="text-sm">
+                    RSSI: {d.rssi} | Class: {d.class}
+                  </p>
+                  <button
+                    onClick={() => setPairingDevice(d)}
+                    className="mt-2 rounded bg-gray-700 px-2 py-1 text-sm"
+                  >
+                    Pair
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
       {showPermissionModal && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70">
           <div className="w-64 rounded bg-gray-800 p-4 text-center">
