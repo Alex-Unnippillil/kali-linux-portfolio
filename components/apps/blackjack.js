@@ -24,6 +24,7 @@ const Blackjack = () => {
   const [options, setOptions] = useState({ decks: 6, hitSoft17: true });
   const [showHints, setShowHints] = useState(false);
   const [history, setHistory] = useState([]);
+  const [pendingAction, setPendingAction] = useState(null);
 
   const initGame = useCallback(
     (br = bankroll) => {
@@ -42,7 +43,8 @@ const Blackjack = () => {
     }
     const game = gameRef.current;
     const baseX = WIDTH / 2 - (game.playerHands.length * CARD_W * 0.7) / 2 + handIdx * CARD_W * 1.5;
-    return { x: baseX + cardIdx * CARD_W * 0.7, y: HEIGHT - CARD_H - 60 };
+    // mirror dealer/player spacing for visual balance
+    return { x: baseX + cardIdx * CARD_W * 0.7, y: HEIGHT - CARD_H - 40 };
   };
 
   const addCardAnimation = (card, handIdx, cardIdx, isDealer = false, faceDown = false, delay = 0) => {
@@ -211,6 +213,11 @@ const Blackjack = () => {
         ctx.fillStyle = card.suit === '\u2665' || card.suit === '\u2666' ? 'red' : 'black';
         ctx.font = '20px sans-serif';
         ctx.fillText(card.value + card.suit, 5, 25);
+        // draw mirrored value for consistent card faces
+        ctx.save();
+        ctx.rotate(Math.PI);
+        ctx.fillText(card.value + card.suit, -CARD_W + 5, -CARD_H + 25);
+        ctx.restore();
       }
       ctx.restore();
     };
@@ -278,7 +285,7 @@ const Blackjack = () => {
           game.playerHands.forEach((hand, idx) => {
             const baseX = WIDTH / 2 - (game.playerHands.length * CARD_W * 0.7) / 2 + idx * CARD_W * 1.5;
             hand.cards.forEach((c, i) => {
-              if (!animatedCards.has(c)) drawCard(c, baseX + i * CARD_W * 0.7, HEIGHT - CARD_H - 60);
+              if (!animatedCards.has(c)) drawCard(c, baseX + i * CARD_W * 0.7, HEIGHT - CARD_H - 40);
             });
             ctx.fillStyle = 'white';
             ctx.font = '16px sans-serif';
@@ -361,6 +368,13 @@ const Blackjack = () => {
           <span>Show hints</span>
         </label>
       </div>
+      <div
+        className="mt-2 text-sm text-center bg-gray-800 px-4 py-1 rounded"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {message}
+      </div>
       {gameRef.current && gameRef.current.playerHands.length === 0 ? (
         <div className="mt-2">
           <div>Bet: {bet}</div>
@@ -368,7 +382,9 @@ const Blackjack = () => {
             {CHIP_VALUES.map((v, i) => (
               <button
                 key={v}
-                className={`px-2 py-1 bg-gray-700 ${bet + v > bankroll ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-6 h-6 flex items-center justify-center bg-gray-700 text-xs rounded ${
+                  bet + v > bankroll ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
                 onClick={() => addBet(v, i)}
               >
                 {v}
@@ -391,16 +407,41 @@ const Blackjack = () => {
             <button className="px-3 py-1 bg-gray-700" onClick={() => act('stand')}>
               Stand
             </button>
-            <button className="px-3 py-1 bg-gray-700" onClick={() => act('double')}>
+            <button className="px-3 py-1 bg-gray-700" onClick={() => setPendingAction('double')}>
               Double
             </button>
-            <button className="px-3 py-1 bg-gray-700" onClick={() => act('split')}>
+            <button className="px-3 py-1 bg-gray-700" onClick={() => setPendingAction('split')}>
               Split
             </button>
           </div>
         </div>
       )}
-      <div className="mt-2 text-sm" aria-live="polite" aria-atomic="true">{message}</div>
+      {pendingAction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded space-y-4 text-center">
+            <div className="text-lg">
+              {pendingAction === 'double' ? 'Double down?' : 'Split hand?'}
+            </div>
+            <div className="flex justify-center space-x-4">
+              <button
+                className="px-6 py-3 bg-green-600 rounded-lg text-white text-lg"
+                onClick={() => {
+                  act(pendingAction);
+                  setPendingAction(null);
+                }}
+              >
+                {pendingAction === 'double' ? 'Double' : 'Split'}
+              </button>
+              <button
+                className="px-6 py-3 bg-gray-600 rounded-lg text-white text-lg"
+                onClick={() => setPendingAction(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {history.length > 0 && (
         <div className="mt-2 text-xs max-h-32 overflow-auto w-full px-4">
           {history.map((h, i) => (
