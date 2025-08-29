@@ -19,7 +19,7 @@
     "build:sw": "node scripts/generate-sw.mjs"
   },
   "engines": {
-    "node": "22.x"
+    "node": "20.x"
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
@@ -129,5 +129,4 @@
     "test-exclude": "^7.0.1"
   },
   "packageManager": "yarn@4.9.2"
-
 }
