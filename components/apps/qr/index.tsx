@@ -45,7 +45,7 @@ const QRScanner: React.FC = () => {
           ]);
           const codeReader = new BrowserQRCodeReader();
           controlsRef.current = await codeReader.decodeFromVideoDevice(
-            null,
+            undefined,
             videoRef.current!,
             (res, err) => {
               if (res) setResult(res.getText());
