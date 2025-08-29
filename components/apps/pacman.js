@@ -68,6 +68,7 @@ const Pacman = () => {
   ]);
   const [levelIndex, setLevelIndex] = useState(0);
   const [ghostSpeeds, setGhostSpeeds] = useState({ scatter: 1, chase: 1 });
+  const [gameSpeed, setGameSpeed] = useState(1);
   const [search, setSearch] = useState('');
   const [highlight, setHighlight] = useState(0);
   const filteredLevels = useMemo(
@@ -108,6 +109,7 @@ const Pacman = () => {
     timer: modeSchedule[0].duration,
   });
   const [score, setScore] = useState(0);
+  const [pelletCount, setPelletCount] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [started, setStarted] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -195,6 +197,8 @@ const Pacman = () => {
       const lvl = lvls[idx];
       setLevelIndex(idx);
       mazeRef.current = lvl.maze.map((r) => r.slice());
+      const pellets = lvl.maze.flat().filter((t) => t === 2 || t === 3).length;
+      setPelletCount(pellets);
       fruitRef.current.x = lvl.fruit.x;
       fruitRef.current.y = lvl.fruit.y;
       fruitRef.current.active = false;
@@ -462,7 +466,8 @@ const Pacman = () => {
 
     const pacTileX = Math.floor((pac.x + tileSize / 2) / tileSize);
     const pacTileY = Math.floor((pac.y + tileSize / 2) / tileSize);
-    const pacSpeed = isTunnel(pacTileX, pacTileY) ? speed * TUNNEL_SPEED : speed;
+    const pacSpeed =
+      (isTunnel(pacTileX, pacTileY) ? speed * TUNNEL_SPEED : speed) * gameSpeed;
 
     // move pacman
     const tx = Math.floor((pac.x + pac.dir.x * pacSpeed + tileSize / 2) / tileSize);
@@ -487,6 +492,7 @@ const Pacman = () => {
         frightTimerRef.current = 6 * 60;
         setAnnouncement('Pacman energized');
       }
+      setPelletCount((c) => c - 1);
       maze[pty][ptx] = 0;
     }
 
@@ -545,11 +551,12 @@ const Pacman = () => {
       const gy = g.y / tileSize;
       const gtxPrev = Math.floor((g.x + tileSize / 2) / tileSize);
       const gtyPrev = Math.floor((g.y + tileSize / 2) / tileSize);
-      const base = frightTimerRef.current > 0
-        ? ghostSpeeds.scatter * 0.5
-        : modeSchedule[modeRef.current.index].mode === 'scatter'
-          ? ghostSpeeds.scatter
-          : ghostSpeeds.chase;
+      const base =
+        (frightTimerRef.current > 0
+          ? ghostSpeeds.scatter * 0.5
+          : modeSchedule[modeRef.current.index].mode === 'scatter'
+            ? ghostSpeeds.scatter
+            : ghostSpeeds.chase) * gameSpeed;
       const gSpeed = (isTunnel(gtxPrev, gtyPrev) ? TUNNEL_SPEED : 1) * base;
 
       if (isCenter(g.x) && isCenter(g.y)) {
@@ -603,7 +610,7 @@ const Pacman = () => {
         }
       }
     });
-  }, [score, availableDirs, levelIndex, isTunnel, prefersReduced, setAnnouncement, ghostSpeeds]);
+  }, [score, availableDirs, levelIndex, isTunnel, prefersReduced, setAnnouncement, ghostSpeeds, gameSpeed]);
 
   const stepRef = useRef(step);
   useEffect(() => {
@@ -804,7 +811,12 @@ const Pacman = () => {
         </ul>
       </div>
 
-      <SpeedControls ghostSpeeds={ghostSpeeds} setGhostSpeeds={setGhostSpeeds} />
+      <SpeedControls
+        ghostSpeeds={ghostSpeeds}
+        setGhostSpeeds={setGhostSpeeds}
+        gameSpeed={gameSpeed}
+        setGameSpeed={setGameSpeed}
+      />
 
       <div
         className="relative"
@@ -819,6 +831,7 @@ const Pacman = () => {
         />
         <div className="absolute top-0 left-0 w-full text-xs bg-black bg-opacity-75 px-1 flex justify-between">
           <span>Score: {score}</span>
+          <span>Pellets: {pelletCount}</span>
           <span>Lvl: {levelIndex + 1}</span>
           <span>P: pause</span>
         </div>
