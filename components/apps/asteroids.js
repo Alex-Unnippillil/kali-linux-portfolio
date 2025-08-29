@@ -14,6 +14,7 @@ import useGameControls from './useGameControls';
 import GameLayout from './GameLayout';
 import { vibrate } from './Games/common/haptics';
 import { getMapping } from './Games/common/input-remap/useInputMapping';
+import useOPFS from '../../hooks/useOPFS';
 
 // Arcade-style tuning constants
 const THRUST = 0.1;
@@ -119,6 +120,9 @@ const Asteroids = () => {
   const [lastScore, setLastScore] = useState(0);
   const highScoreRef = useRef(0);
   const lastScoreRef = useRef(0);
+  const [saveData, setSaveData, saveReady] = useOPFS('asteroids-save.json', { upgrades: [], ghost: [] });
+  const saveDataRef = useRef(saveData);
+  useEffect(() => { saveDataRef.current = saveData; }, [saveData]);
 
   useEffect(() => {
     const hs = Number(localStorage.getItem(HIGH_KEY) || 0);
@@ -132,6 +136,7 @@ const Asteroids = () => {
   useEffect(() => { lastScoreRef.current = lastScore; }, [lastScore]);
 
   useEffect(() => {
+    if (!saveReady) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -194,6 +199,29 @@ const Asteroids = () => {
     let rand = Math.random;
     let waveBannerText = '';
     let waveBannerTimer = 0;
+    const currentRun = [];
+    let ghostData = saveDataRef.current.ghost || [];
+    let ghostIndex = 0;
+    let ghostShip = ghostData.length ? { ...ghostData[0] } : null;
+    const upgrades = [...(saveDataRef.current.upgrades || [])];
+
+    const applyUpgrades = () => {
+      upgrades.forEach((u) => {
+        if (u === POWER_UPS.SHIELD) ship.shield = SHIELD_DURATION;
+        if (u === POWER_UPS.RAPID_FIRE) ship.rapidFire = 600;
+      });
+    };
+
+    const chooseUpgrade = () => {
+      const choice = prompt('Choose upgrade:\n1: Shield\n2: Rapid Fire');
+      if (choice === '1') upgrades.push(POWER_UPS.SHIELD);
+      else if (choice === '2') upgrades.push(POWER_UPS.RAPID_FIRE);
+      if (choice === '1' || choice === '2') {
+        const updated = { upgrades, ghost: saveDataRef.current.ghost };
+        saveDataRef.current = updated;
+        setSaveData(updated);
+      }
+    };
 
     // Particle pooling
     const spawnParticles = (x, y, count, color = 'white', type = 'spark', baseAngle = 0) => {
@@ -262,6 +290,7 @@ const Asteroids = () => {
       waveBannerText = `Wave ${level}`;
       waveBannerTimer = 120;
       setLiveText(waveBannerText);
+      applyUpgrades();
     };
 
     startLevel();
@@ -337,6 +366,13 @@ const Asteroids = () => {
         setLastScore(score);
         lastScoreRef.current = score;
         try { localStorage.setItem(LAST_KEY, String(score)); } catch {}
+        const updated = { upgrades, ghost: currentRun };
+        saveDataRef.current = updated;
+        setSaveData(updated);
+        ghostData = currentRun.slice();
+        ghostShip = ghostData.length ? { ...ghostData[0] } : null;
+        ghostIndex = 0;
+        currentRun.length = 0;
         lives = 3;
         score = 0;
         level = 1;
@@ -371,6 +407,7 @@ const Asteroids = () => {
       if (!asteroids.length) {
         level += 1;
         ga.level_up();
+        chooseUpgrade();
         startLevel();
       }
     }
@@ -429,10 +466,19 @@ const Asteroids = () => {
       ship.velY *= INERTIA;
       ship.x = wrap(ship.x + ship.velX, canvas.width, ship.r);
       ship.y = wrap(ship.y + ship.velY, canvas.height, ship.r);
+      currentRun.push({ x: ship.x, y: ship.y, angle: ship.angle });
       ship.cooldown = Math.max(0, ship.cooldown - 1);
       ship.rapidFire = Math.max(0, ship.rapidFire - 1);
       ship.shield = Math.max(0, ship.shield - 1);
       ship.hitCooldown = Math.max(0, ship.hitCooldown - 1);
+
+      if (ghostShip && ghostIndex < ghostData.length) {
+        const g = ghostData[ghostIndex];
+        ghostShip.x = g.x;
+        ghostShip.y = g.y;
+        ghostShip.angle = g.angle;
+        ghostIndex += 1;
+      }
 
       if (multiplierTimer > 0) multiplierTimer -= 1;
       else multiplier = 1;
@@ -526,6 +572,21 @@ const Asteroids = () => {
 
       // Rendering
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (ghostShip) {
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.translate(ghostShip.x, ghostShip.y);
+        ctx.rotate(ghostShip.angle);
+        ctx.beginPath();
+        ctx.moveTo(12, 0);
+        ctx.lineTo(-12, 8);
+        ctx.lineTo(-12, -8);
+        ctx.closePath();
+        ctx.strokeStyle = 'gray';
+        ctx.stroke();
+        ctx.restore();
+      }
 
       // Ship
       ctx.save();
@@ -693,7 +754,7 @@ const Asteroids = () => {
 
     requestRef.current = requestAnimationFrame(update);
     return cleanup;
-  }, [controlsRef, dpr, restartKey]);
+  }, [controlsRef, dpr, restartKey, saveReady]);
   const togglePause = () => {
     pausedRef.current = !pausedRef.current;
     setPaused(pausedRef.current);
@@ -705,11 +766,27 @@ const Asteroids = () => {
     setRestartKey((k) => k + 1);
   };
 
+  const resetProgress = () => {
+    const cleared = { upgrades: [], ghost: [] };
+    saveDataRef.current = cleared;
+    setSaveData(cleared);
+    restartGame();
+  };
+
   return (
     <GameLayout paused={paused} onPause={togglePause} onRestart={restartGame}>
       <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />
       <div aria-live="polite" className="sr-only">
         {liveText}
+      </div>
+      <div className="absolute bottom-2 right-2 z-40">
+        <button
+          type="button"
+          onClick={resetProgress}
+          className="px-2 py-1 bg-gray-700 text-white rounded"
+        >
+          Reset Progress
+        </button>
       </div>
     </GameLayout>
   );
