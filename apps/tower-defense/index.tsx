@@ -28,6 +28,7 @@ const TowerDefense = () => {
   const pathSetRef = useRef<Set<string>>(new Set());
   const [towers, setTowers] = useState<Tower[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+  const [maps, setMaps] = useState<Record<string, { x: number; y: number }[]>>({});
   const enemiesRef = useRef<EnemyInstance[]>([]);
   const enemyPool = useRef(createEnemyPool(50));
   const lastTime = useRef(0);
@@ -45,6 +46,26 @@ const TowerDefense = () => {
       set.add(key);
       return [...p, { x, y }];
     });
+  };
+
+  useEffect(() => {
+    const stored = localStorage.getItem('tdMaps');
+    if (stored) {
+      try {
+        setMaps(JSON.parse(stored));
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
+  const loadMap = (name: string) => {
+    const m = maps[name];
+    if (!m) return;
+    setPath(m);
+    pathSetRef.current = new Set(m.map((c) => `${c.x},${c.y}`));
+    setTowers([]);
+    setSelected(null);
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
@@ -217,6 +238,18 @@ const TowerDefense = () => {
     <GameLayout gameId="tower-defense">
       <div className="p-2 space-y-2">
         <div className="space-x-2 mb-2">
+          <select
+            className="px-2 py-1 bg-gray-700 rounded"
+            onChange={(e) => loadMap(e.target.value)}
+            defaultValue=""
+          >
+            <option value="">Load Map</option>
+            {Object.keys(maps).map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
           <button
             className="px-2 py-1 bg-gray-700 rounded"
             onClick={() => setEditing((e) => !e)}
