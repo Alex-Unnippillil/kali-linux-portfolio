@@ -1,3 +1,115 @@
+export interface ButtonEvent {
+  gamepad: Gamepad;
+  index: number;
+  value: number;
+  pressed: boolean;
+}
+
+export interface AxisEvent {
+  gamepad: Gamepad;
+  index: number;
+  value: number;
+}
+
+export type GamepadEventMap = {
+  connected: Gamepad;
+  disconnected: Gamepad;
+  button: ButtonEvent;
+  axis: AxisEvent;
+};
+
+type Listener<T> = (event: T) => void;
+
+class GamepadManager {
+  private listeners: Record<string, Set<Listener<any>>> = {};
+  private prevButtons = new Map<number, number[]>();
+  private prevAxes = new Map<number, number[]>();
+  private raf: number | null = null;
+  private deadzone: number;
+
+  constructor(deadzone = 0.1) {
+    this.deadzone = deadzone;
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('gamepadconnected', (e) =>
+        this.emit('connected', (e as GamepadEvent).gamepad)
+      );
+      window.addEventListener('gamepaddisconnected', (e) =>
+        this.emit('disconnected', (e as GamepadEvent).gamepad)
+      );
+    }
+  }
+
+  on<K extends keyof GamepadEventMap>(type: K, fn: Listener<GamepadEventMap[K]>) {
+    (this.listeners[type as string] ??= new Set()).add(fn as Listener<any>);
+  }
+
+  off<K extends keyof GamepadEventMap>(type: K, fn: Listener<GamepadEventMap[K]>) {
+    this.listeners[type as string]?.delete(fn as Listener<any>);
+  }
+
+  private emit<K extends keyof GamepadEventMap>(type: K, event: GamepadEventMap[K]) {
+    this.listeners[type as string]?.forEach((fn) => (fn as Listener<GamepadEventMap[K]>)(event));
+  }
+
+  start() {
+    if (this.raf !== null) return;
+    const poll = () => {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for (const pad of pads) {
+        if (!pad) continue;
+
+        const prevB = this.prevButtons.get(pad.index) || [];
+        const prevA = this.prevAxes.get(pad.index) || [];
+
+        pad.buttons.forEach((b, i) => {
+          const prev = prevB[i] || 0;
+          if (b.value !== prev) {
+            const pressed = b.value > 0.5;
+            const prevPressed = prev > 0.5;
+            this.emit('button', { gamepad: pad, index: i, value: b.value, pressed });
+            if (pressed && !prevPressed && pad.vibrationActuator?.playEffect) {
+              try {
+                pad.vibrationActuator.playEffect('dual-rumble', {
+                  duration: 30,
+                  strongMagnitude: 1.0,
+                  weakMagnitude: 1.0,
+                });
+              } catch {
+                // ignore
+              }
+            }
+          }
+        });
+
+        pad.axes.forEach((v, i) => {
+          const prev = prevA[i] || 0;
+          const nv = Math.abs(v) < this.deadzone ? 0 : v;
+          const pv = Math.abs(prev) < this.deadzone ? 0 : prev;
+          if (nv !== pv) {
+            this.emit('axis', { gamepad: pad, index: i, value: nv });
+          }
+        });
+
+        this.prevButtons.set(pad.index, pad.buttons.map((b) => b.value));
+        this.prevAxes.set(pad.index, Array.from(pad.axes));
+      }
+      this.raf = requestAnimationFrame(poll);
+    };
+    poll();
+  }
+
+  stop() {
+    if (this.raf !== null) {
+      cancelAnimationFrame(this.raf);
+      this.raf = null;
+    }
+  }
+}
+
+export const gamepad = new GamepadManager();
+export default gamepad;
+
 export interface TwinStickState {
   moveX: number;
   moveY: number;

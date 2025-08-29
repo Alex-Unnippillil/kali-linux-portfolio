@@ -90,6 +90,14 @@ To send text or links directly into the Sticky Notes app:
 - Client-side only **simulations** of security tools (no real exploitation)
 - A large set of games rendered in-browser (Canvas/DOM), with a shared `GameLayout`
 
+### Gamepad Input & Remapping
+
+Games can listen for normalized gamepad events via `utils/gamepad.ts`. The manager polls
+`navigator.getGamepads`, emits button and axis changes, and triggers haptic feedback
+through `gamepad.vibrationActuator` where available. Key bindings configured with
+`components/apps/Games/common/input-remap` are persisted in the browser's Origin Private
+File System (OPFS) so players can store per-game profiles.
+
 ---
 
 ## App Shell & Architecture

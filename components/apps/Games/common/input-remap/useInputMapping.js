@@ -1,17 +1,52 @@
-import usePersistedState from '../../../../../hooks/usePersistedState';
+import { useState, useEffect } from 'react';
 
-export const getMapping = (gameId, defaults = {}) => {
-  if (typeof window === 'undefined') return defaults;
+const cache = {};
+
+export const getMapping = (gameId, defaults = {}) =>
+  cache[gameId] ? { ...defaults, ...cache[gameId] } : defaults;
+
+async function readMapping(gameId, defaults) {
   try {
-    const raw = window.localStorage.getItem(`controls:${gameId}`);
-    return raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
+    const root = await navigator.storage.getDirectory();
+    const dir = await root.getDirectoryHandle('controls', { create: true });
+    const file = await dir.getFileHandle(`${gameId}.json`);
+    const data = await file.getFile();
+    const json = JSON.parse(await data.text());
+    cache[gameId] = json;
+    return { ...defaults, ...json };
   } catch {
     return defaults;
   }
-};
+}
+
+async function writeMapping(gameId, mapping) {
+  try {
+    const root = await navigator.storage.getDirectory();
+    const dir = await root.getDirectoryHandle('controls', { create: true });
+    const file = await dir.getFileHandle(`${gameId}.json`, { create: true });
+    const writable = await file.createWritable();
+    await writable.write(JSON.stringify(mapping));
+    await writable.close();
+    cache[gameId] = mapping;
+  } catch {
+    // ignore write errors
+  }
+}
 
 export default function useInputMapping(gameId, defaults = {}) {
-  const [mapping, setMapping] = usePersistedState(`controls:${gameId}`, getMapping(gameId, defaults));
+  const [mapping, setMapping] = useState(defaults);
+
+  useEffect(() => {
+    let active = true;
+    if (navigator.storage?.getDirectory) {
+      readMapping(gameId, defaults).then((m) => {
+        if (active) setMapping(m);
+      });
+    }
+    return () => {
+      active = false;
+    };
+  }, [gameId]);
 
   const setKey = (action, key) => {
     let conflict = null;
@@ -24,6 +59,7 @@ export default function useInputMapping(gameId, defaults = {}) {
         }
       });
       next[action] = key;
+      writeMapping(gameId, next);
       return next;
     });
     return conflict;
