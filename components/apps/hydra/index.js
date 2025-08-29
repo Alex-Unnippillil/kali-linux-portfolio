@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Stepper from './Stepper';
+import AttemptTimeline from './Timeline';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -43,6 +44,7 @@ const HydraApp = () => {
   const announceRef = useRef(0);
 
   const LOCKOUT_THRESHOLD = 10;
+  const BACKOFF_THRESHOLD = 5;
 
   useEffect(() => {
     setUserLists(loadWordlists('hydraUserLists'));
@@ -324,11 +326,17 @@ const HydraApp = () => {
       <Stepper
         active={running && !paused}
         totalAttempts={totalAttempts}
-        backoffThreshold={5}
+        backoffThreshold={BACKOFF_THRESHOLD}
         lockoutThreshold={LOCKOUT_THRESHOLD}
         runId={runId}
         onAttemptChange={handleAttempt}
       />
+      <p className="mt-2 text-sm text-yellow-300">
+        This demo slows after {BACKOFF_THRESHOLD} tries to mimic password spray
+        throttling and stops at {LOCKOUT_THRESHOLD} attempts to illustrate
+        account lockout.
+      </p>
+      <AttemptTimeline />
 
       <div role="status" aria-live="polite" className="sr-only">
         {announce}
