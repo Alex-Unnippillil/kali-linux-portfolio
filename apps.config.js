@@ -21,6 +21,7 @@ const CalculatorApp = createDynamicApp('calculator', 'Calculator');
 const ConverterApp = createDynamicApp('converter', 'Converter');
 const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
 const ChessApp = createDynamicApp('chess', 'Chess');
+// Classic four-in-a-row game
 const ConnectFourApp = createDynamicApp('connect-four', 'Connect Four');
 const HangmanApp = createDynamicApp('hangman', 'Hangman');
 const FroggerApp = createDynamicApp('frogger', 'Frogger');
@@ -348,6 +349,7 @@ const gameList = [
     desktop_shortcut: false,
     screen: displayChess,
   },
+  // Simple placeholder implementation
   {
     id: 'connect-four',
     title: 'Connect Four',
