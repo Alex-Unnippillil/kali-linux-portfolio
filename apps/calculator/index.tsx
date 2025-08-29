@@ -1,8 +1,20 @@
 'use client';
 import { useEffect } from 'react';
+import usePersistentState from '../../hooks/usePersistentState';
+import ModeSwitcher from './components/ModeSwitcher';
 import './styles.css';
 
 export default function Calculator() {
+  const [tape, setTape] = usePersistentState<{expr: string; result: string}[]>('calc-tape', () => [], (v): v is {expr: string; result: string}[] => Array.isArray(v) && v.every(item => typeof item?.expr === 'string' && typeof item?.result === 'string'));
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      setTape(prev => [e.detail, ...prev].slice(0,10));
+    };
+    document.addEventListener('tape-add', handler);
+    return () => document.removeEventListener('tape-add', handler);
+  }, [setTape]);
+
   useEffect(() => {
     const load = async () => {
       if (typeof window !== 'undefined' && !(window as any).math) {
@@ -38,7 +50,8 @@ export default function Calculator() {
 
   return (
     <div className="calculator">
-      <input id="display" className="display" />
+      <ModeSwitcher />
+            <input id="display" className="display" />
       <button id="toggle-precise" className="toggle" aria-pressed="false">Precise Mode: Off</button>
       <button id="toggle-scientific" className="toggle" aria-pressed="false">Scientific</button>
       <button id="toggle-programmer" className="toggle" aria-pressed="false">Programmer</button>
