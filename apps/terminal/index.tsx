@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import useOPFS from '../../hooks/useOPFS';
 
 export interface TerminalProps {
   openApp?: (id: string) => void;
@@ -23,10 +24,16 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const commandRef = useRef('');
   const contentRef = useRef('');
   const registryRef = useRef<Record<string, (args: string) => void>>({});
+  const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
+    useOPFS();
+  const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
 
   function writeLine(text: string) {
     if (termRef.current) termRef.current.writeln(text);
     contentRef.current += `${text}\n`;
+    if (opfsSupported && dirRef.current) {
+      writeFile('history.txt', contentRef.current, dirRef.current);
+    }
   }
 
   function prompt() {
@@ -48,6 +55,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       clear: () => {
         termRef.current?.clear();
         contentRef.current = '';
+        if (opfsSupported && dirRef.current) {
+          deleteFile('history.txt', dirRef.current);
+        }
       },
       open: (arg) => {
         if (!arg) {
@@ -130,6 +140,21 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       term.open(containerRef.current!);
       fit.fit();
       term.focus();
+      if (opfsSupported) {
+        dirRef.current = await getDir('terminal');
+        const existing = await readFile('history.txt', dirRef.current || undefined);
+        if (existing) {
+          existing
+            .split('\n')
+            .filter(Boolean)
+            .forEach((l) => {
+              if (termRef.current) termRef.current.writeln(l);
+            });
+          contentRef.current = existing.endsWith('\n')
+            ? existing
+            : `${existing}\n`;
+        }
+      }
       writeLine('Welcome to the web terminal!');
       writeLine('Type "help" to see available commands.');
       prompt();
@@ -150,7 +175,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       disposed = true;
       termRef.current?.dispose();
     };
-  }, []);
+  }, [opfsSupported, getDir, readFile]);
 
   useEffect(() => {
     const handleResize = () => fitRef.current?.fit();
