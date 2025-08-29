@@ -13,7 +13,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     validateServerEnv(process.env);
   } catch {
-    res.status(500).json({ ok: false, code: 'server_not_configured' });
+    if (!process.env.RECAPTCHA_SECRET) {
+      res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
+    } else {
+      res.status(500).json({ ok: false });
+    }
+
     return;
   }
   if (req.method === 'GET') {
@@ -62,6 +67,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { recaptchaToken = '', ...rest } = req.body || {};
   const secret = process.env.RECAPTCHA_SECRET;
+  if (!secret) {
+    console.warn('Contact submission rejected', { ip, reason: 'recaptcha_disabled' });
+    res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
+    return;
+  }
   if (!recaptchaToken) {
     console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
     res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
