@@ -170,6 +170,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
   const overlayRef = useRef<HTMLDivElement>(null);
   const prevFocus = useRef<HTMLElement | null>(null);
+  const noop = () => null;
 
   useEffect(() => {
     if (!overlayRef.current) return;
@@ -226,7 +227,11 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
                 .join(', ')}
             </p>
             <div className="mt-2">
-              <InputRemap mapping={mapping} setKey={setKey} actions={info.actions} />
+              <InputRemap
+                mapping={mapping}
+                setKey={setKey ?? noop}
+                actions={info.actions}
+              />
             </div>
           </>
         ) : (
