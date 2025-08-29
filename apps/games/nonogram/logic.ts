@@ -44,6 +44,45 @@ export const getPossibleLineSolutions = (clue: Clue, line: Cell[]): Cell[][] => 
   );
 };
 
+// Find forced cells in a line based on all possible solutions
+export const findForcedCellsInLine = (
+  clue: Clue,
+  line: Cell[]
+): { index: number; value: Cell }[] => {
+  const solutions = getPossibleLineSolutions(clue, line);
+  if (!solutions.length) return [];
+  const forced: { index: number; value: Cell }[] = [];
+  for (let i = 0; i < line.length; i++) {
+    const val = solutions[0][i];
+    if (solutions.every((s) => s[i] === val) && line[i] === 0) {
+      forced.push({ index: i, value: (val ? 1 : -1) as Cell });
+    }
+  }
+  return forced;
+};
+
+// Locate a hint by finding a forced filled cell
+export const findHint = (
+  rows: Clue[],
+  cols: Clue[],
+  grid: Grid
+): { i: number; j: number; value: 1 } | null => {
+  for (let i = 0; i < rows.length; i++) {
+    const forced = findForcedCellsInLine(rows[i], grid[i]).filter(
+      (f) => f.value === 1
+    );
+    if (forced.length) return { i, j: forced[0].index, value: 1 };
+  }
+  for (let j = 0; j < cols.length; j++) {
+    const col = grid.map((row) => row[j]);
+    const forced = findForcedCellsInLine(cols[j], col).filter(
+      (f) => f.value === 1
+    );
+    if (forced.length) return { i: forced[0].index, j, value: 1 };
+  }
+  return null;
+};
+
 // Evaluate whether a line is solved or contradictory
 export const evaluateLine = (line: Cell[], clue: Clue) => {
   const solved = JSON.stringify(lineToClues(line)) === JSON.stringify(clue);
@@ -74,11 +113,67 @@ export const toggleCross = (grid: Grid, r: number, c: number): Grid => {
   return g;
 };
 
+// Autofill any rows or columns that have only one possible solution
+export const autoFill = (grid: Grid, rows: Clue[], cols: Clue[]): Grid => {
+  const g = grid.map((row) => row.slice());
+  let changed = true;
+  while (changed) {
+    changed = false;
+    rows.forEach((clue, i) => {
+      const line = g[i];
+      const solutions = getPossibleLineSolutions(clue, line);
+      if (solutions.length === 1) {
+        solutions[0].forEach((val, j) => {
+          const newVal = (val ? 1 : -1) as Cell;
+          if (g[i][j] !== newVal) {
+            g[i][j] = newVal;
+            changed = true;
+          }
+        });
+      }
+    });
+    cols.forEach((clue, j) => {
+      const col = g.map((row) => row[j]);
+      const solutions = getPossibleLineSolutions(clue, col);
+      if (solutions.length === 1) {
+        solutions[0].forEach((val, i) => {
+          const newVal = (val ? 1 : -1) as Cell;
+          if (g[i][j] !== newVal) {
+            g[i][j] = newVal;
+            changed = true;
+          }
+        });
+      }
+    });
+  }
+  return g;
+};
+
+// Simple hint system with limited uses
+export const createHintSystem = (maxHints: number) => {
+  let used = 0;
+  return {
+    useHint(rows: Clue[], cols: Clue[], grid: Grid) {
+      if (used >= maxHints) return null;
+      const hint = findHint(rows, cols, grid);
+      if (hint) used += 1;
+      return hint;
+    },
+    remaining() {
+      return maxHints - used;
+    },
+  };
+};
+
 export default {
   lineToClues,
   generateLinePatterns,
   getPossibleLineSolutions,
+  findForcedCellsInLine,
+  findHint,
   evaluateLine,
   checkContradictions,
   toggleCross,
+  autoFill,
+  createHintSystem,
 };
