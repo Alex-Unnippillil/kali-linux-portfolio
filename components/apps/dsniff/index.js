@@ -91,6 +91,25 @@ const LogRow = ({ log, prefersReduced }) => {
   );
 };
 
+const TimelineItem = ({ log, prefersReduced }) => {
+  const itemRef = useRef(null);
+  useEffect(() => {
+    const el = itemRef.current;
+    if (!el || prefersReduced) return;
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.5s ease-in';
+    requestAnimationFrame(() => {
+      el.style.opacity = '1';
+    });
+  }, [prefersReduced]);
+
+  return (
+    <li ref={itemRef} className="mb-1">
+      <span className="text-green-400">{log.protocol}</span> {log.host} {log.details}
+    </li>
+  );
+};
+
 const Dsniff = () => {
   const [urlsnarfLogs, setUrlsnarfLogs] = useState([]);
   const [arpspoofLogs, setArpspoofLogs] = useState([]);
@@ -101,6 +120,8 @@ const Dsniff = () => {
   const [newValue, setNewValue] = useState('');
   const [prefersReduced, setPrefersReduced] = useState(false);
   const [selectedPacket, setSelectedPacket] = useState(null);
+  const [domainSummary, setDomainSummary] = useState([]);
+  const [timeline, setTimeline] = useState([]);
 
   const { summary: pcapSummary, remediation } = pcapFixture;
 
@@ -136,6 +157,55 @@ const Dsniff = () => {
     setArpspoofLogs(arpspoofData);
   }, []);
 
+  useEffect(() => {
+    if (!urlsnarfLogs.length) return;
+
+    const domainMap = {};
+    urlsnarfLogs.forEach((log) => {
+      const path = log.details.split(' ')[0] || '';
+      if (!domainMap[log.host])
+        domainMap[log.host] = { urls: new Set(), credentials: [], risk: 'Low' };
+      domainMap[log.host].urls.add(path);
+      if (log.protocol === 'HTTP') domainMap[log.host].risk = 'High';
+    });
+
+    pcapSummary.forEach((pkt) => {
+      const domain = pkt.dst;
+      if (!domainMap[domain])
+        domainMap[domain] = { urls: new Set(), credentials: [], risk: 'Low' };
+      const pathMatch = pkt.info.match(/\s(\/[^\s]*)/);
+      if (pathMatch) domainMap[domain].urls.add(pathMatch[1]);
+      const uMatch = pkt.info.match(/username=([^\s]+)/);
+      const pMatch = pkt.info.match(/password=([^\s]+)/);
+      if (uMatch || pMatch) {
+        domainMap[domain].credentials.push({
+          username: uMatch ? uMatch[1] : '',
+          password: pMatch ? pMatch[1] : '',
+        });
+        domainMap[domain].risk = 'High';
+      }
+    });
+
+    const summary = Object.entries(domainMap).map(([domain, data]) => ({
+      domain,
+      urls: Array.from(data.urls),
+      credentials: data.credentials,
+      risk: data.risk,
+    }));
+    setDomainSummary(summary);
+
+    if (prefersReduced) {
+      setTimeline(urlsnarfLogs);
+    } else {
+      setTimeline([]);
+      urlsnarfLogs.forEach((log, idx) => {
+        setTimeout(() => {
+          setTimeline((prev) => [...prev, log]);
+        }, idx * 1000);
+      });
+    }
+  }, [urlsnarfLogs, prefersReduced]);
+
   const addFilter = () => {
     if (newValue.trim()) {
       setFilters([...filters, { field: newField, value: newValue.trim() }]);
@@ -145,6 +215,21 @@ const Dsniff = () => {
 
   const removeFilter = (idx) => {
     setFilters(filters.filter((_, i) => i !== idx));
+  };
+
+  const exportRedacted = () => {
+    const redacted = domainSummary.map((d) => ({
+      domain: d.domain,
+      urls: d.urls,
+      credentials: d.credentials.map((c) => ({
+        username: c.username,
+        password: c.password ? '***' : '',
+      })),
+      risk: d.risk,
+    }));
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(JSON.stringify(redacted, null, 2));
+    }
   };
 
   const logs = activeTab === 'urlsnarf' ? urlsnarfLogs : arpspoofLogs;
@@ -298,6 +383,53 @@ const Dsniff = () => {
             ))}
           </ul>
         </div>
+      </div>
+      <div className="mb-4" data-testid="domain-summary">
+        <h2 className="font-bold mb-2 text-sm">
+          Parsed credentials/URLs by domain
+        </h2>
+        <table className="w-full text-left text-xs mb-2">
+          <thead>
+            <tr className="text-green-400">
+              <th className="pr-2">Domain</th>
+              <th className="pr-2">URLs</th>
+              <th className="pr-2">Credentials</th>
+              <th>Risk</th>
+            </tr>
+          </thead>
+          <tbody>
+            {domainSummary.map((d) => (
+              <tr key={d.domain} className="odd:bg-black even:bg-ub-grey">
+                <td className="pr-2 text-white">{d.domain}</td>
+                <td className="pr-2 text-green-400">{d.urls.join(', ')}</td>
+                <td className="pr-2 text-white">
+                  {d.credentials.length
+                    ? d.credentials
+                        .map((c) => `${c.username || ''}${c.password ? ':' + c.password : ''}`)
+                        .join(' | ')
+                    : '—'}
+                </td>
+                <td className={d.risk === 'High' ? 'text-red-400' : 'text-yellow-300'}>
+                  {d.risk}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <button
+          onClick={exportRedacted}
+          className="px-2 py-1 bg-ub-grey rounded text-xs focus:outline-none focus:ring-2 focus:ring-yellow-400"
+        >
+          Export redacted
+        </button>
+      </div>
+      <div className="mb-4" data-testid="capture-timeline">
+        <h2 className="font-bold mb-2 text-sm">Capture timeline</h2>
+        <ol className="list-decimal pl-5 text-xs">
+          {timeline.map((log, i) => (
+            <TimelineItem key={i} log={log} prefersReduced={prefersReduced} />
+          ))}
+        </ol>
       </div>
       <div className="mb-2 flex space-x-2 items-center">
         <button
