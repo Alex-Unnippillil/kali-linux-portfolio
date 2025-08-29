@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 interface Project {
   id: number;
@@ -39,18 +39,31 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     load();
   }, []);
 
-  const stacks = Array.from(new Set(projects.flatMap((p) => p.stack)));
-  const years = Array.from(new Set(projects.map((p) => p.year))).sort((a, b) => b - a);
-  const types = Array.from(new Set(projects.map((p) => p.type)));
+  const stacks = useMemo(
+    () => Array.from(new Set(projects.flatMap((p) => p.stack))),
+    [projects]
+  );
+  const years = useMemo(
+    () => Array.from(new Set(projects.map((p) => p.year))).sort((a, b) => b - a),
+    [projects]
+  );
+  const types = useMemo(
+    () => Array.from(new Set(projects.map((p) => p.type))),
+    [projects]
+  );
 
-  const filtered = projects.filter(
-    (p) =>
-      (!stack || p.stack.includes(stack)) &&
-      (!year || String(p.year) === year) &&
-      (!type || p.type === type) &&
-      (search === '' ||
-        p.title.toLowerCase().includes(search.toLowerCase()) ||
-        p.description.toLowerCase().includes(search.toLowerCase()))
+  const filtered = useMemo(
+    () =>
+      projects.filter(
+        (p) =>
+          (!stack || p.stack.includes(stack)) &&
+          (!year || String(p.year) === year) &&
+          (!type || p.type === type) &&
+          (search === '' ||
+            p.title.toLowerCase().includes(search.toLowerCase()) ||
+            p.description.toLowerCase().includes(search.toLowerCase()))
+      ),
+    [projects, stack, year, type, search]
   );
 
   useEffect(() => {
