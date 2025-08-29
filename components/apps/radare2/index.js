@@ -1,35 +1,36 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
-import HexEditor from './HexEditor';
-import {
-  loadNotes,
-  saveNotes,
-  loadBookmarks,
-  saveBookmarks,
-} from './utils';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import HexEditor from "./HexEditor";
+import { loadNotes, saveNotes, loadBookmarks, saveBookmarks } from "./utils";
+import CommandCheatsheet from "../../../apps/radare2/components/CommandCheatsheet";
 
 const ForceGraph2D = dynamic(
-  () => import('react-force-graph').then((mod) => mod.ForceGraph2D),
-  { ssr: false }
+  () => import("react-force-graph").then((mod) => mod.ForceGraph2D),
+  { ssr: false },
 );
 
 const Radare2 = ({ initialData = {} }) => {
-  const { file = 'demo', hex = '', disasm = [], xrefs = {}, blocks = [] } =
-    initialData;
-  const [mode, setMode] = useState('code');
-  const [seekAddr, setSeekAddr] = useState('');
-  const [findTerm, setFindTerm] = useState('');
+  const {
+    file = "demo",
+    hex = "",
+    disasm = [],
+    xrefs = {},
+    blocks = [],
+  } = initialData;
+  const [mode, setMode] = useState("code");
+  const [seekAddr, setSeekAddr] = useState("");
+  const [findTerm, setFindTerm] = useState("");
   const [currentAddr, setCurrentAddr] = useState(null);
   const [notes, setNotes] = useState([]);
-  const [noteText, setNoteText] = useState('');
+  const [noteText, setNoteText] = useState("");
   const [bookmarks, setBookmarks] = useState([]);
+  const [showCheatsheet, setShowCheatsheet] = useState(false);
   const disasmRef = useRef(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       setNotes(loadNotes(file));
       setBookmarks(loadBookmarks(file));
-
     }
   }, [file]);
 
@@ -37,19 +38,19 @@ const Radare2 = ({ initialData = {} }) => {
     const nodes = blocks.map((b) => ({ id: b.addr }));
     const links = [];
     blocks.forEach((b) =>
-      (b.edges || []).forEach((e) => links.push({ source: b.addr, target: e }))
+      (b.edges || []).forEach((e) => links.push({ source: b.addr, target: e })),
     );
     return { nodes, links };
   }, [blocks]);
 
   const scrollToAddr = (addr) => {
     const idx = disasm.findIndex(
-      (l) => l.addr.toLowerCase() === addr.toLowerCase()
+      (l) => l.addr.toLowerCase() === addr.toLowerCase(),
     );
     if (idx >= 0) {
       setCurrentAddr(disasm[idx].addr);
       const el = document.getElementById(`asm-${idx}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   };
 
@@ -62,12 +63,12 @@ const Radare2 = ({ initialData = {} }) => {
     const idx = disasm.findIndex(
       (l) =>
         l.text.toLowerCase().includes(findTerm.toLowerCase()) ||
-        l.addr.toLowerCase() === findTerm.toLowerCase()
+        l.addr.toLowerCase() === findTerm.toLowerCase(),
     );
     if (idx >= 0) {
       setCurrentAddr(disasm[idx].addr);
       const el = document.getElementById(`asm-${idx}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   };
 
@@ -76,7 +77,7 @@ const Radare2 = ({ initialData = {} }) => {
     const next = [...notes, { addr: currentAddr, text: noteText.trim() }];
     setNotes(next);
     saveNotes(file, next);
-    setNoteText('');
+    setNoteText("");
   };
 
   const toggleBookmark = (addr) => {
@@ -88,7 +89,7 @@ const Radare2 = ({ initialData = {} }) => {
   };
 
   return (
-    <div className="h-full w-full bg-ub-cool-grey text-white p-4 overflow-auto">
+    <div className="h-full w-full bg-ub-cool-grey text-white p-4 overflow-auto relative">
       <div className="flex gap-2 mb-2 flex-wrap">
         <input
           value={seekAddr}
@@ -96,10 +97,7 @@ const Radare2 = ({ initialData = {} }) => {
           placeholder="seek 0x..."
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
-        <button
-          onClick={handleSeek}
-          className="px-3 py-1 bg-gray-700 rounded"
-        >
+        <button onClick={handleSeek} className="px-3 py-1 bg-gray-700 rounded">
           Seek
         </button>
         <input
@@ -108,21 +106,24 @@ const Radare2 = ({ initialData = {} }) => {
           placeholder="find"
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
-        <button
-          onClick={handleFind}
-          className="px-3 py-1 bg-gray-700 rounded"
-        >
+        <button onClick={handleFind} className="px-3 py-1 bg-gray-700 rounded">
           Find
         </button>
         <button
-          onClick={() => setMode((m) => (m === 'code' ? 'graph' : 'code'))}
+          onClick={() => setMode((m) => (m === "code" ? "graph" : "code"))}
           className="px-3 py-1 bg-gray-700 rounded"
         >
-          {mode === 'code' ? 'Graph' : 'Code'}
+          {mode === "code" ? "Graph" : "Code"}
+        </button>
+        <button
+          onClick={() => setShowCheatsheet(true)}
+          className="px-3 py-1 bg-gray-700 rounded"
+        >
+          Cheatsheet
         </button>
       </div>
 
-      {mode === 'graph' ? (
+      {mode === "graph" ? (
         <div className="h-64 bg-black rounded">
           <ForceGraph2D graphData={graphData} />
         </div>
@@ -139,7 +140,7 @@ const Radare2 = ({ initialData = {} }) => {
                   key={line.addr}
                   id={`asm-${idx}`}
                   className={`cursor-pointer ${
-                    currentAddr === line.addr ? 'bg-gray-700' : ''
+                    currentAddr === line.addr ? "bg-gray-700" : ""
                   }`}
                   onClick={() => setCurrentAddr(line.addr)}
                 >
@@ -150,7 +151,7 @@ const Radare2 = ({ initialData = {} }) => {
                     }}
                     className="mr-1"
                   >
-                    {bookmarks.includes(line.addr) ? '★' : '☆'}
+                    {bookmarks.includes(line.addr) ? "★" : "☆"}
                   </button>
                   {line.addr}: {line.text}
                 </li>
@@ -164,7 +165,7 @@ const Radare2 = ({ initialData = {} }) => {
         <div className="mt-4">
           <h2 className="text-lg">Xrefs for {currentAddr}</h2>
           <p className="mb-2">
-            {(xrefs[currentAddr] || []).join(', ') || 'None'}
+            {(xrefs[currentAddr] || []).join(", ") || "None"}
           </p>
           <textarea
             value={noteText}
@@ -192,6 +193,10 @@ const Radare2 = ({ initialData = {} }) => {
             ))}
           </ul>
         </div>
+      )}
+
+      {showCheatsheet && (
+        <CommandCheatsheet onClose={() => setShowCheatsheet(false)} />
       )}
     </div>
   );
