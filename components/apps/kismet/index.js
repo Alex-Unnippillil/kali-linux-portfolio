@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import seedrandom from 'seedrandom';
 import capture from './sampleCapture.json';
 import clients from './sampleClients.json';
 import vendors from './oui.json';
@@ -79,7 +80,7 @@ const ChannelOccupancy = ({ networks }) => {
 
 const SSIDHeatmap = ({ data }) => {
   const ssids = Object.keys(data);
-  const max = Math.max(0, ...ssids.flatMap((s) => data[s]));
+  const max = Math.max(0, ...ssids.flatMap((s) => data[s].counts));
   return (
     <div className="mt-4" aria-live="polite">
       <h3 className="text-sm font-semibold mb-2">SSID/Channel Heatmap</h3>
@@ -97,10 +98,16 @@ const SSIDHeatmap = ({ data }) => {
         <tbody>
           {ssids.map((ssid) => (
             <tr key={ssid}>
-              <td className="pr-1 truncate max-w-[5rem]" title={ssid}>
+              <td
+                className="pr-1 truncate max-w-[5rem]"
+                title={`${ssid} (${data[ssid].vendor})`}
+              >
                 {ssid}
+                <div className="text-gray-400 text-[10px] truncate">
+                  {data[ssid].vendor}
+                </div>
               </td>
-              {data[ssid].map((count, i) => (
+              {data[ssid].counts.map((count, i) => (
                 <td
                   key={i}
                   style={{
@@ -150,12 +157,13 @@ const WardriveMap = () => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const rng = seedrandom('kismet');
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#111827';
     ctx.fillRect(0, 0, 200, 200);
     for (let i = 0; i < 20; i++) {
-      const x = Math.random() * 200;
-      const y = Math.random() * 200;
+      const x = rng() * 200;
+      const y = rng() * 200;
       ctx.fillStyle = '#f59e0b';
       ctx.fillRect(x, y, 3, 3);
     }
@@ -167,7 +175,7 @@ const WardriveMap = () => {
       height={200}
       className="mt-4 border border-gray-700"
       role="img"
-      aria-label="Random wardriving map"
+      aria-label="Seeded wardriving map"
     />
   );
 };
@@ -243,9 +251,14 @@ const KismetApp = () => {
 
   const heatmapData = useMemo(() => {
     const data = {};
-    capture.slice(0, frameIndex).forEach(({ ssid, channel }) => {
-      if (!data[ssid]) data[ssid] = Array(11).fill(0);
-      if (channel > 0 && channel <= 11) data[ssid][channel - 1]++;
+    capture.slice(0, frameIndex).forEach(({ ssid, channel, bssid }) => {
+      if (!data[ssid]) {
+        data[ssid] = {
+          counts: Array(11).fill(0),
+          vendor: vendors[bssid.slice(0, 8).toUpperCase()] || 'Unknown',
+        };
+      }
+      if (channel > 0 && channel <= 11) data[ssid].counts[channel - 1]++;
     });
     return data;
   }, [frameIndex]);
@@ -255,12 +268,13 @@ const KismetApp = () => {
       if (idx >= capture.length) return idx;
       const frame = capture[idx];
       setNetworks((prev) => {
-        const existing = prev.find((n) => n.ssid === frame.ssid);
+        const existing = prev.find((n) => n.bssid === frame.bssid);
         if (existing) {
           return prev.map((n) =>
-            n.ssid === frame.ssid
+            n.bssid === frame.bssid
               ? {
                   ...n,
+                  ssid: frame.ssid,
                   strength: frame.signal,
                   channel: frame.channel,
                   history: [...n.history, frame.signal].slice(-50),
@@ -272,6 +286,9 @@ const KismetApp = () => {
           ...prev,
           {
             ssid: frame.ssid,
+            bssid: frame.bssid,
+            vendor:
+              vendors[frame.bssid.slice(0, 8).toUpperCase()] || 'Unknown',
             strength: frame.signal,
             channel: frame.channel,
             history: [frame.signal],
@@ -328,12 +345,21 @@ const KismetApp = () => {
             <VirtualizedList
               items={networks}
               rowHeight={40}
-              keyExtractor={(n) => n.ssid}
+              keyExtractor={(n) => n.bssid}
               className="flex-grow"
               renderRow={(net) => (
                 <div className="flex items-center justify-between p-1">
-                  <span className="truncate w-24" title={net.ssid}>
+                  <span
+                    className="truncate w-24"
+                    title={`${net.ssid} (${net.bssid})`}
+                  >
                     {net.ssid}
+                  </span>
+                  <span
+                    className="text-gray-400 text-xs w-24 truncate"
+                    title={net.vendor}
+                  >
+                    {net.vendor}
                   </span>
                   <SignalTimeline history={net.history} />
                   <span className="text-gray-400 text-xs w-16 text-right">
