@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSettings } from '../../hooks/useSettings';
 import BackgroundSlideshow from './components/BackgroundSlideshow';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../../utils/settingsStore';
 import { getTheme, setTheme } from '../../utils/theme';
 import KeymapOverlay from './components/KeymapOverlay';
+import { indexSettings, SettingIndex } from './indexer';
 
 export default function Settings() {
   const {
@@ -89,9 +90,28 @@ export default function Settings() {
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
+  const [query, setQuery] = useState('');
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [indexed, setIndexed] = useState<SettingIndex[]>([]);
+
+  useEffect(() => {
+    if (rootRef.current) {
+      setIndexed(indexSettings(rootRef.current));
+    }
+  }, []);
+
+  useEffect(() => {
+    const q = query.toLowerCase();
+    indexed.forEach(({ element, label }) => {
+      element.style.display = label.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }, [query, indexed]);
 
   return (
-    <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
+    <div
+      ref={rootRef}
+      className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey"
+    >
       <div
         className="md:w-2/5 w-2/3 h-1/3 m-auto my-4"
         style={{
@@ -102,6 +122,19 @@ export default function Settings() {
         }}
       ></div>
       <div className="flex justify-center my-4">
+        <label htmlFor="settings-search" className="sr-only">
+          Search settings
+        </label>
+        <input
+          id="settings-search"
+          type="search"
+          placeholder="Search settings"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="bg-ub-cool-grey text-ubt-grey px-2 py-1 rounded border border-ubt-cool-grey"
+        />
+      </div>
+      <div data-setting-label="Theme" className="flex justify-center my-4">
         <label className="mr-2 text-ubt-grey">Theme:</label>
         <select
           value={theme}
@@ -117,7 +150,7 @@ export default function Settings() {
           <option value="matrix">Matrix</option>
         </select>
       </div>
-      <div className="flex justify-center my-4">
+      <div data-setting-label="Accent" className="flex justify-center my-4">
         <label className="mr-2 text-ubt-grey">Accent:</label>
         <input
           type="color"
@@ -127,7 +160,7 @@ export default function Settings() {
           className="w-10 h-10 border border-ubt-cool-grey bg-ub-cool-grey"
         />
       </div>
-      <div className="flex justify-center my-4">
+      <div data-setting-label="Wallpaper" className="flex justify-center my-4">
         <label className="mr-2 text-ubt-grey">Wallpaper:</label>
         <input
           type="range"
@@ -141,10 +174,10 @@ export default function Settings() {
           className="ubuntu-slider"
         />
       </div>
-      <div className="flex justify-center my-4">
+      <div data-setting-label="Background Slideshow" className="flex justify-center my-4">
         <BackgroundSlideshow />
       </div>
-      <div className="flex justify-center my-4">
+      <div data-setting-label="Icon Size" className="flex justify-center my-4">
         <label className="mr-2 text-ubt-grey">Icon Size:</label>
         <input
           type="range"
@@ -156,7 +189,7 @@ export default function Settings() {
           className="ubuntu-slider"
         />
       </div>
-      <div className="flex justify-center my-4">
+      <div data-setting-label="Density" className="flex justify-center my-4">
         <label className="mr-2 text-ubt-grey">Density:</label>
         <select
           value={density}
@@ -167,7 +200,7 @@ export default function Settings() {
           <option value="compact">Compact</option>
         </select>
       </div>
-      <div className="flex justify-center my-4">
+      <div data-setting-label="Reduced Motion" className="flex justify-center my-4">
         <label className="mr-2 text-ubt-grey flex items-center">
           <input
             type="checkbox"
@@ -178,7 +211,7 @@ export default function Settings() {
           Reduced Motion
         </label>
       </div>
-      <div className="flex justify-center my-4">
+      <div data-setting-label="High Contrast" className="flex justify-center my-4">
         <label className="mr-2 text-ubt-grey flex items-center">
           <input
             type="checkbox"
@@ -189,7 +222,10 @@ export default function Settings() {
           High Contrast
         </label>
       </div>
-      <div className="flex flex-wrap justify-center items-center border-t border-gray-900">
+      <div
+        data-setting-label="Wallpaper Options"
+        className="flex flex-wrap justify-center items-center border-t border-gray-900"
+      >
         {wallpapers.map((name) => (
           <div
             key={name}
@@ -217,16 +253,23 @@ export default function Settings() {
           ></div>
         ))}
       </div>
-      <div className="flex justify-center my-4 border-t border-gray-900 pt-4 space-x-4">
+      <div
+        data-setting-label="Export Settings"
+        className="flex justify-center my-4 border-t border-gray-900 pt-4"
+      >
         <button onClick={handleExport} className="px-4 py-2 rounded bg-ub-orange text-white">
           Export Settings
         </button>
+      </div>
+      <div data-setting-label="Import Settings" className="flex justify-center my-4">
         <button
           onClick={() => fileInputRef.current?.click()}
           className="px-4 py-2 rounded bg-ub-orange text-white"
         >
           Import Settings
         </button>
+      </div>
+      <div data-setting-label="Reset Desktop" className="flex justify-center my-4">
         <button onClick={handleReset} className="px-4 py-2 rounded bg-ub-orange text-white">
           Reset Desktop
         </button>
@@ -242,7 +285,10 @@ export default function Settings() {
         }}
         className="hidden"
       />
-      <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
+      <div
+        data-setting-label="Edit Shortcuts"
+        className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center"
+      >
         <button
           onClick={() => setShowKeymap(true)}
           className="px-4 py-2 rounded bg-ub-orange text-white"
