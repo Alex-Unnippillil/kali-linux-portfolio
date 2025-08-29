@@ -6,22 +6,30 @@ const Stepper = ({
   backoffThreshold = 5,
   lockoutThreshold = 10,
   runId,
+  initialAttempt = 0,
   onAttemptChange = () => {},
 }) => {
-  const [attempt, setAttempt] = useState(0);
-  const [locked, setLocked] = useState(false);
+  const [attempt, setAttempt] = useState(initialAttempt);
+  const [locked, setLocked] = useState(initialAttempt >= lockoutThreshold);
   const timerRef = useRef(null);
 
   useEffect(() => {
-    setAttempt(0);
-    setLocked(false);
-    onAttemptChange(0);
+    setAttempt(initialAttempt);
+    setLocked(initialAttempt >= lockoutThreshold);
+    onAttemptChange(initialAttempt);
     // onAttemptChange is stable enough for this use
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [runId]);
+  }, [runId, initialAttempt, lockoutThreshold]);
 
   useEffect(() => {
     if (!active || locked) return;
+
+    let delay = 500;
+    if (initialAttempt >= backoffThreshold) {
+      for (let i = backoffThreshold; i < initialAttempt; i++) {
+        delay = Math.min(delay * 2, 4000);
+      }
+    }
 
     const prefersReducedMotion =
       typeof window !== 'undefined' &&
@@ -36,8 +44,6 @@ const Stepper = ({
       }
       return;
     }
-
-    let delay = 500;
 
     const tick = () => {
       requestAnimationFrame(() => {
