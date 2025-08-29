@@ -18,14 +18,22 @@ const WIP_LIMITS = {
 export default function Todoist() {
   const [groups, setGroups] = useState(initialGroups);
   const [animating, setAnimating] = useState('');
-  const [form, setForm] = useState({ title: '', due: '', priority: 'medium' });
+  const [form, setForm] = useState({
+    title: '',
+    due: '',
+    priority: 'medium',
+    section: '',
+    recurring: '',
+  });
   const [quick, setQuick] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [view, setView] = useState('all');
   const dragged = useRef({ group: '', id: null, title: '' });
   const liveRef = useRef(null);
   const workerRef = useRef(null);
+  const quickRef = useRef(null);
   const prefersReducedMotion = useRef(
     typeof window !== 'undefined' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -42,6 +50,21 @@ export default function Todoist() {
         }
       }
     }
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (
+        e.key.toLowerCase() === 'q' &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement)
+      ) {
+        e.preventDefault();
+        quickRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, []);
 
   useEffect(() => {
@@ -168,12 +191,23 @@ export default function Todoist() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const getNextDue = (task) => {
+    if (!task.recurring) return task.due;
+    const base = task.due ? new Date(task.due) : new Date();
+    const next = chrono.parseDate(`next ${task.recurring}`, base);
+    return next ? next.toISOString().split('T')[0] : task.due;
+  };
+
   const toggleCompleted = (group, id) => {
     const newGroups = {
       ...groups,
-      [group]: groups[group].map((t) =>
-        t.id === id ? { ...t, completed: !t.completed } : t
-      ),
+      [group]: groups[group].map((t) => {
+        if (t.id !== id) return t;
+        if (t.recurring) {
+          return { ...t, due: getNextDue(t) };
+        }
+        return { ...t, completed: !t.completed };
+      }),
     };
     setGroups(newGroups);
     if (typeof window !== 'undefined') {
@@ -194,6 +228,8 @@ export default function Todoist() {
       title: form.title,
       due: form.due || undefined,
       priority: form.priority,
+      section: form.section || undefined,
+      recurring: form.recurring || undefined,
       completed: false,
     };
     const newGroups = {
@@ -201,7 +237,7 @@ export default function Todoist() {
       Today: [...groups.Today, newTask],
     };
     finalizeMove(newGroups, form.title, 'Today');
-    setForm({ title: '', due: '', priority: 'medium' });
+    setForm({ title: '', due: '', priority: 'medium', section: '', recurring: '' });
   };
 
   const handleQuickAdd = (e) => {
@@ -217,6 +253,8 @@ export default function Todoist() {
       // ignore
     }
     const priorityMatch = quick.match(/!([1-3])/);
+    const sectionMatch = quick.match(/#(\w+)/);
+    const recurringMatch = quick.match(/every\s+([a-z]+)/i);
     const priorityMap = { '1': 'high', '2': 'medium', '3': 'low' };
     const priority = priorityMatch ? priorityMap[priorityMatch[1]] : 'medium';
     let title = quick;
@@ -229,11 +267,31 @@ export default function Todoist() {
     if (priorityMatch) {
       title = title.replace(priorityMatch[0], '').trim();
     }
+    if (sectionMatch) {
+      title = title.replace(sectionMatch[0], '').trim();
+    }
+    if (recurringMatch) {
+      title = title.replace(recurringMatch[0], '').trim();
+    }
+    const section = sectionMatch ? sectionMatch[1] : undefined;
+    let recurring = recurringMatch ? recurringMatch[1].toLowerCase() : undefined;
+    if (recurring && !due) {
+      try {
+        const next = chrono.parseDate(`next ${recurring}`);
+        if (next) {
+          due = next.toISOString().split('T')[0];
+        }
+      } catch {
+        // ignore
+      }
+    }
     const newTask = {
       id: Date.now(),
       title: title || quick,
       due,
       priority,
+      section,
+      recurring,
       completed: false,
     };
     const newGroups = {
@@ -242,6 +300,41 @@ export default function Todoist() {
     };
     finalizeMove(newGroups, newTask.title, 'Today');
     setQuick('');
+  };
+
+  const handleExport = () => {
+    try {
+      const blob = new Blob([JSON.stringify(groups)], {
+        type: 'application/json',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tasks.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleImport = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        const newGroups = { ...initialGroups, ...parsed };
+        setGroups(newGroups);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
+        }
+      } catch {
+        // ignore
+      }
+    };
+    reader.readAsText(file);
   };
 
   const matchesTask = (task) => {
@@ -254,12 +347,81 @@ export default function Todoist() {
     return true;
   };
 
+  const renderTask = (group, task) => (
+    <div
+      key={task.id}
+      tabIndex={0}
+      draggable
+      onDragStart={handleDragStart(group, task)}
+      onKeyDown={handleKeyDown(group, task)}
+      className="mb-2 p-2 rounded shadow bg-white text-black flex items-center min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+      role="listitem"
+    >
+      <input
+        type="checkbox"
+        aria-label="Toggle completion"
+        checked={!!task.completed}
+        onChange={() => toggleCompleted(group, task.id)}
+        className="w-6 h-6 mr-2 focus:ring-2 focus:ring-blue-500"
+      />
+      <div className="flex-1">
+        <div className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
+        {task.due && <div className="text-xs text-gray-500">{task.due}</div>}
+        {task.section && <div className="text-xs text-gray-500">{task.section}</div>}
+        <div className="text-xs text-gray-500">Priority: {task.priority}</div>
+      </div>
+    </div>
+  );
+
+  const renderGroup = (name) => {
+    const filtered = groups[name].filter(matchesTask);
+    const bySection = {};
+    filtered.forEach((t) => {
+      const sec = t.section || 'General';
+      if (!bySection[sec]) bySection[sec] = [];
+      bySection[sec].push(t);
+    });
+    return (
+      <div
+        key={name}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop(name)}
+        className={`flex-1 p-2 border-r last:border-r-0 border-gray-300 overflow-y-auto ${
+          !prefersReducedMotion.current ? 'transition-colors' : ''
+        } ${animating === name ? 'bg-blue-200' : ''}`}
+        role="list"
+        aria-label={name}
+      >
+        <h2 className="mb-2 font-bold text-lg text-gray-800">
+          {name}
+          {WIP_LIMITS[name] ? ` (${groups[name].length}/${WIP_LIMITS[name]})` : ''}
+        </h2>
+        {Object.keys(bySection).map((sec) => (
+          <div key={sec} className="mb-4">
+            {sec !== 'General' && <h3 className="font-semibold">{sec}</h3>}
+            {bySection[sec].map((task) => renderTask(name, task))}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const flatTasks = Object.entries(groups).flatMap(([g, arr]) =>
+    arr.map((t) => ({ ...t, group: g }))
+  );
+  const todayTasks = flatTasks.filter((t) => t.due === todayStr && matchesTask(t));
+  const upcomingTasks = flatTasks
+    .filter((t) => t.due && t.due > todayStr && matchesTask(t))
+    .sort((a, b) => a.due.localeCompare(b.due));
+
   return (
     <div className="flex h-full w-full flex-col" role="application">
       <div aria-live="polite" className="sr-only" ref={liveRef} />
       <div className="p-2 border-b flex flex-col gap-2">
         <form onSubmit={handleQuickAdd} className="flex gap-2">
           <input
+            ref={quickRef}
             value={quick}
             onChange={(e) => setQuick(e.target.value)}
             placeholder="Quick add (e.g., 'Pay bills tomorrow !1')"
@@ -287,6 +449,20 @@ export default function Todoist() {
             name="due"
             value={form.due}
             onChange={handleChange}
+            className="border p-1"
+          />
+          <input
+            name="section"
+            value={form.section}
+            onChange={handleChange}
+            placeholder="Section"
+            className="border p-1"
+          />
+          <input
+            name="recurring"
+            value={form.recurring}
+            onChange={handleChange}
+            placeholder="Recurring (e.g., every mon)"
             className="border p-1"
           />
           <select
@@ -333,51 +509,34 @@ export default function Todoist() {
             <option value="low">Low</option>
           </select>
         </div>
+        <div className="flex flex-wrap gap-2">
+          <button className="px-2 py-1 border rounded" onClick={() => setView('all')}>All</button>
+          <button className="px-2 py-1 border rounded" onClick={() => setView('today')}>Today</button>
+          <button className="px-2 py-1 border rounded" onClick={() => setView('upcoming')}>Upcoming</button>
+          <button className="px-2 py-1 border rounded" onClick={handleExport}>Export</button>
+          <label className="px-2 py-1 border rounded cursor-pointer">
+            Import
+            <input type="file" accept="application/json" onChange={handleImport} className="sr-only" />
+          </label>
+        </div>
       </div>
       <div className="flex flex-1">
-        {Object.keys(groups).map((name) => (
-          <div
-            key={name}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop(name)}
-            className={`flex-1 p-2 border-r last:border-r-0 border-gray-300 overflow-y-auto ${
-              !prefersReducedMotion.current ? 'transition-colors' : ''
-            } ${animating === name ? 'bg-blue-200' : ''}`}
-            role="list"
-            aria-label={name}
-          >
-            <h2 className="mb-2 font-bold text-lg text-gray-800">
-              {name}
-              {WIP_LIMITS[name] ? ` (${groups[name].length}/${WIP_LIMITS[name]})` : ''}
-            </h2>
-            {groups[name].filter(matchesTask).map((task) => (
-              <div
-                key={task.id}
-                tabIndex={0}
-                draggable
-                onDragStart={handleDragStart(name, task)}
-                onKeyDown={handleKeyDown(name, task)}
-                className="mb-2 p-2 rounded shadow bg-white text-black flex items-center min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-                role="listitem"
-              >
-                <input
-                  type="checkbox"
-                  aria-label="Toggle completion"
-                  checked={!!task.completed}
-                  onChange={() => toggleCompleted(name, task.id)}
-                  className="w-6 h-6 mr-2 focus:ring-2 focus:ring-blue-500"
-                />
-                <div className="flex-1">
-                  <div className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
-                  {task.due && (
-                    <div className="text-xs text-gray-500">{task.due}</div>
-                  )}
-                  <div className="text-xs text-gray-500">Priority: {task.priority}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ))}
+        {view === 'all'
+          ? Object.keys(groups).map((name) => renderGroup(name))
+          : (
+            <div
+              className="flex-1 p-2 overflow-y-auto"
+              role="list"
+              aria-label={view === 'today' ? 'Today' : 'Upcoming'}
+            >
+              <h2 className="mb-2 font-bold text-lg text-gray-800">
+                {view === 'today' ? 'Today' : 'Upcoming'}
+              </h2>
+              {(view === 'today' ? todayTasks : upcomingTasks).map((task) =>
+                renderTask(task.group, task)
+              )}
+            </div>
+          )}
       </div>
     </div>
   );
