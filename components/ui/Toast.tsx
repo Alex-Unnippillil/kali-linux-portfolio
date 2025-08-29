@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface ToastProps {
   message: string;
@@ -16,8 +16,10 @@ const Toast: React.FC<ToastProps> = ({
   duration = 6000,
 }) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    setVisible(true);
     timeoutRef.current = setTimeout(() => {
       onClose && onClose();
     }, duration);
@@ -30,7 +32,7 @@ const Toast: React.FC<ToastProps> = ({
     <div
       role="alert"
       aria-live="assertive"
-      className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 text-white px-4 py-2 rounded shadow-md flex items-center"
+      className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-80 text-white px-4 py-2 rounded shadow-md flex items-center transition-transform duration-150 ease-in-out ${visible ? 'translate-y-0' : 'translate-y-full'}`}
     >
       <span>{message}</span>
       {onAction && actionLabel && (
