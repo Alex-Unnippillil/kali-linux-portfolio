@@ -293,7 +293,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
         </button>
         <input
           type="file"
-          accept=".keys,.txt"
+          accept=".keys,.txt,.log"
           onChange={handleTLSKeyUpload}
           aria-label="TLS key file"
           className="px-2 py-1 bg-gray-800 rounded text-white"
@@ -399,7 +399,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
                   <th className="px-2 py-1 text-left">Protocol</th>
                   <th className="px-2 py-1 text-left">Info</th>
                   {hasTlsKeys && (
-                    <th className="px-2 py-1 text-left">Decrypted</th>
+                    <th className="px-2 py-1 text-left">Plaintext</th>
                   )}
                 </tr>
               </thead>
@@ -423,9 +423,9 @@ const WiresharkApp = ({ initialPackets = [] }) => {
                       <td className="px-2 py-1 whitespace-nowrap">{protocolName(p.protocol)}</td>
                       <td className="px-2 py-1">{p.info}</td>
                       {hasTlsKeys && (
-                        <td className="px-2 py-1">{p.decrypted}</td>
+                        <td className="px-2 py-1">{p.plaintext || p.decrypted}</td>
                       )}
-                    </tr>
+                </tr>
                   );
                 })}
               </tbody>
