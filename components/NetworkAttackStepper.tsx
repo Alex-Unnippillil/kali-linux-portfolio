@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import WarningBanner from './WarningBanner';
 
 interface Step {
   title: string;
@@ -111,9 +112,7 @@ const NetworkAttackStepper: React.FC = () => {
         <div className="bg-green-100 border-l-4 border-green-500 p-2">
           <strong>Mitigation:</strong> {current.mitigation}
         </div>
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 p-2">
-          <strong>Warning:</strong> {current.warning}
-        </div>
+        <WarningBanner>{current.warning}</WarningBanner>
       </div>
       <div className="mt-4 flex justify-between">
         <button

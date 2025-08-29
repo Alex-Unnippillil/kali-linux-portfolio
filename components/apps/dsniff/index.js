@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
+import TerminalOutput from '../../TerminalOutput';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 const parseLines = (text) =>
@@ -389,9 +390,10 @@ const Dsniff = () => {
               Copy sample command
             </button>
           </div>
-          <pre className="text-xs bg-ub-dark p-2 flex-1 overflow-auto" aria-label="sample command output">
-            {`${sampleCommand}\n${sampleOutput}`}
-          </pre>
+          <TerminalOutput
+            text={`${sampleCommand}\n${sampleOutput}`}
+            ariaLabel="sample command output"
+          />
         </div>
       </div>
       <div className="mb-4" data-testid="pcap-demo">

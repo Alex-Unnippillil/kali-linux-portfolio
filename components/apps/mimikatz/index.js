@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import WarningBanner from "../../WarningBanner";
 
 // Demo output for each tab
 const demoOutput = {
@@ -25,10 +26,15 @@ const tabs = [
 
 // Masks tokens and hashes unless unmasked by user
 const maskSensitive = (line, show) => {
-  if (show) return line;
-  return line.replace(
-    /(Token|NTLM hash|Kerberos Ticket|Ticket cache):\s*\S+/gi,
-    (match, p1) => `${p1}: ********`,
+  const match = line.match(
+    /(Token|NTLM hash|Kerberos Ticket|Ticket cache):\s*(\S+)/i,
+  );
+  if (!match) return line;
+  const [, label, value] = match;
+  return (
+    <>
+      {label}: <span className="p-[6px]">{show ? value : "********"}</span>
+    </>
   );
 };
 
@@ -56,9 +62,9 @@ const MimikatzApp = () => {
 
   return (
     <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
-      <div className="bg-yellow-600 text-black text-center text-sm py-1">
-        Warning: demo only. No real credentials are used.
-      </div>
+      <WarningBanner>
+        Demo only. No real credentials are used.
+      </WarningBanner>
       <div className="flex border-b border-gray-700">
         {tabs.map((t) => (
           <button
