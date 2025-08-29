@@ -9,9 +9,26 @@ import RouterProfiles, {
 import APList from './components/APList';
 import ProgressDonut from './components/ProgressDonut';
 
+const PlayIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
+    <path d="M6 4l12 6-12 6V4z" />
+  </svg>
+);
+
+const StopIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
+    <path d="M6 6h8v8H6V6z" />
+  </svg>
+);
+
 interface RouterMeta {
   model: string;
   notes: string;
+}
+
+interface LogEntry {
+  level: 'info' | 'warn' | 'success' | 'error';
+  text: string;
 }
 
 const stages = [
@@ -61,7 +78,7 @@ const ReaverPanel: React.FC = () => {
   const intervalRef = useRef<NodeJS.Timeout>();
   const burstRef = useRef(0); // attempts since last lock
   const lockRef = useRef(0); // lockout seconds remaining
-  const [logs, setLogs] = useState<string[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -90,19 +107,22 @@ const ReaverPanel: React.FC = () => {
           if (profile.lockDuration > 0) {
             lockRef.current = profile.lockDuration;
             setLockRemaining(lockRef.current);
-            setLogs((l) => [...l, `WPS locked for ${profile.lockDuration}s`]);
+            setLogs((l) => [
+              ...l,
+              { level: 'warn', text: `WPS locked for ${profile.lockDuration}s` },
+            ]);
           }
         }
 
         if (next % 1000 === 0) {
-          setLogs((l) => [...l, `Tried ${next} PINs`]);
+          setLogs((l) => [...l, { level: 'info', text: `Tried ${next} PINs` }]);
         }
 
         if (next >= TOTAL_PINS) {
           clearInterval(intervalRef.current!);
           setRunning(false);
           setStageIdx(stages.length);
-          setLogs((l) => [...l, `PIN found: ${FOUND_PIN}`]);
+          setLogs((l) => [...l, { level: 'success', text: `PIN found: ${FOUND_PIN}` }]);
           return TOTAL_PINS;
         }
         return next;
@@ -125,14 +145,14 @@ const ReaverPanel: React.FC = () => {
     setLockRemaining(0);
     setStageIdx(0);
     setRunning(true);
-    setLogs(['Attack started']);
+    setLogs([{ level: 'info', text: 'Attack started' }]);
   };
 
   const stop = () => {
     setRunning(false);
     clearInterval(intervalRef.current!);
     setStageIdx(-1);
-    setLogs((l) => [...l, 'Attack stopped']);
+    setLogs((l) => [...l, { level: 'warn', text: 'Attack stopped' }]);
   };
 
   useEffect(() => {
@@ -145,10 +165,13 @@ const ReaverPanel: React.FC = () => {
 
   useEffect(() => {
     if (stageIdx >= 0 && stageIdx < stages.length) {
-      setLogs((l) => [...l, `Stage: ${stages[stageIdx].title}`]);
+      setLogs((l) => [
+        ...l,
+        { level: 'info', text: `Stage: ${stages[stageIdx].title}` },
+      ]);
     }
     if (stageIdx === stages.length) {
-      setLogs((l) => [...l, 'Attack complete']);
+      setLogs((l) => [...l, { level: 'success', text: 'Attack complete' }]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stageIdx]);
@@ -161,6 +184,20 @@ const ReaverPanel: React.FC = () => {
     if (i < stageIdx) return 'completed';
     if (i === stageIdx && running) return 'running';
     return 'pending';
+  };
+
+  const stripColor = (level: LogEntry['level']) => {
+    switch (level) {
+      case 'warn':
+        return 'bg-yellow-500';
+      case 'success':
+        return 'bg-green-500';
+      case 'error':
+        return 'bg-red-500';
+      case 'info':
+      default:
+        return 'bg-blue-500';
+    }
   };
 
   const timeRemaining = (TOTAL_PINS - attempts) / rate + lockRemaining;
@@ -227,9 +264,16 @@ const ReaverPanel: React.FC = () => {
             <button
               type="button"
               onClick={running ? stop : start}
-              className="px-2 py-1 bg-green-700 rounded disabled:opacity-50"
+              className={`w-12 h-12 flex items-center justify-center rounded disabled:opacity-50 ${
+                running ? 'bg-red-700' : 'bg-green-700'
+              }`}
+              aria-label={running ? 'Stop attack' : 'Start attack'}
             >
-              {running ? 'Stop' : 'Start'}
+              {running ? (
+                <StopIcon className="w-6 h-6" />
+              ) : (
+                <PlayIcon className="w-6 h-6" />
+              )}
             </button>
           </div>
           <ProgressDonut value={attempts} total={TOTAL_PINS} />
@@ -256,7 +300,13 @@ const ReaverPanel: React.FC = () => {
           className="h-32 bg-gray-800 rounded p-2 overflow-y-auto text-xs font-mono mb-4"
         >
           {logs.map((log, i) => (
-            <div key={i}>{log}</div>
+            <div key={i} className="flex items-start">
+              <span
+                className={`w-1 h-4 mr-2 rounded ${stripColor(log.level)}`}
+                aria-hidden="true"
+              />
+              <span>{log.text}</span>
+            </div>
           ))}
         </div>
         {stageIdx === stages.length && (

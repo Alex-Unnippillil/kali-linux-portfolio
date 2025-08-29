@@ -1,5 +1,14 @@
 {
+  "version": 2,
   "functions": {
-    "runtime": "nodejs22.x"
+    "api/**/*.js": { "runtime": "nodejs22.x" },
+    "api/**/*.ts": { "runtime": "nodejs22.x" }
+  },
+  "env": {
+    "FLAGS_SECRET": "@flags_secret"
+
+  },
+  "env": {
+    "ADMIN_READ_KEY": "@admin-read-key"
   }
 }

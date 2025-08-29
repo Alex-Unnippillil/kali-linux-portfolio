@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import modules from './modules.json';
 import usePersistentState from '../../usePersistentState';
+import ConsolePane from './ConsolePane';
 
 const severities = ['critical', 'high', 'medium', 'low'];
 const severityStyles = {
@@ -34,6 +35,8 @@ const MetasploitApp = ({
   const [loot, setLoot] = useState([]);
   const [notes, setNotes] = useState([]);
   const [showLoot, setShowLoot] = useState(false);
+
+  const [sessions, setSessions] = useState([]);
 
   const [timeline, setTimeline] = useState([]);
   const [replaying, setReplaying] = useState(false);
@@ -238,6 +241,22 @@ const MetasploitApp = ({
     return () => cancelAnimationFrame(progressRaf.current);
   }, [replaying, reduceMotion]);
 
+  useEffect(() => {
+    const regex = /Session\s+(\d+)\s+opened/g;
+    setSessions((prev) => {
+      const existing = new Set(prev.map((s) => s.id));
+      const added = [];
+      let m;
+      while ((m = regex.exec(output))) {
+        if (!existing.has(m[1])) {
+          existing.add(m[1]);
+          added.push({ id: m[1] });
+        }
+      }
+      return added.length ? [...prev, ...added] : prev;
+    });
+  }, [output]);
+
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white">
       <div className="bg-yellow-400 text-black text-xs p-2 text-center">
@@ -268,7 +287,34 @@ const MetasploitApp = ({
         </button>
       </div>
       <div className="flex p-2">
-        <div className="w-2/3 pr-2">
+        <aside
+          className="w-40 pr-2 border-r space-y-1.5 text-xs"
+          style={{ borderColor: 'var(--color-primary)' }}
+        >
+          <h3 className="text-sm font-bold">Sessions</h3>
+          {sessions.length ? (
+            <ul className="space-y-1.5">
+              {sessions.map((s) => (
+                <li key={s.id} className="flex items-center justify-between">
+                  <span>#{s.id}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOutput((prev) => `${prev}\nmsf6 > sessions -i ${s.id}`)
+                    }
+                    className="px-1 text-black rounded"
+                    style={{ background: 'var(--color-primary)' }}
+                  >
+                    use
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs">No sessions</p>
+          )}
+        </aside>
+        <div className="flex-1 px-2">
           <div className="flex mb-2">
             <input
               className="flex-grow bg-ub-grey text-white p-1 rounded"
@@ -336,27 +382,39 @@ const MetasploitApp = ({
             {moduleTypes.map((type) => (
               <div key={type} className="mb-2">
                 <h3 className="text-sm font-bold capitalize">{type}</h3>
-                <ul style={animationStyle} className="max-h-32 overflow-auto text-xs">
+                <div
+                  style={animationStyle}
+                  className="grid grid-cols-2 gap-2 max-h-32 overflow-auto text-xs"
+                >
                   {(modulesByType[type] || []).map((m) => (
-                    <li key={m.name} className="mb-1">
-                      <button
-                        type="button"
-                        onClick={() => showModule(m)}
-                        className="text-left w-full"
+                    <button
+                      key={m.name}
+                      type="button"
+                      onClick={() => showModule(m)}
+                      className="p-2 text-left bg-ub-grey rounded flex"
+                    >
+                      <svg
+                        className="w-6 h-6 mr-2"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        aria-hidden="true"
                       >
-                        <span className={`px-1 rounded mr-1 ${severityStyles[m.severity]}`}>
-                          {m.severity}
-                        </span>
-                        <span className="font-mono">{m.name}</span> - {m.description}
-                        {m.tags.map((t) => (
-                          <span key={t} className="ml-1 px-1 bg-ub-grey rounded">
-                            {t}
+                        <circle cx="12" cy="12" r="10" />
+                      </svg>
+                      <div>
+                        <div className="flex items-center mb-1">
+                          <span
+                            className={`px-1 rounded mr-1 ${severityStyles[m.severity]}`}
+                          >
+                            {m.severity}
                           </span>
-                        ))}
-                      </button>
-                    </li>
+                          <span className="font-mono">{m.name}</span>
+                        </div>
+                        <p>{m.description}</p>
+                      </div>
+                    </button>
                   ))}
-                </ul>
+                </div>
               </div>
             ))}
           </div>
@@ -446,9 +504,7 @@ const MetasploitApp = ({
           )}
         </aside>
       </div>
-      <pre className="flex-grow bg-black text-green-400 p-2 overflow-auto whitespace-pre-wrap">
-        {loading ? 'Running...' : output}
-      </pre>
+      <ConsolePane output={loading ? 'Running...' : output} />
     </div>
   );
 };

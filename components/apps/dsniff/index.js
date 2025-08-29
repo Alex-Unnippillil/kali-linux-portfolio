@@ -2,13 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
+import TerminalOutput from '../../TerminalOutput';
 
 // Simple parser that attempts to extract protocol, host and remaining details
+// Each parsed line is also given a synthetic timestamp for display purposes
 const parseLines = (text) =>
   text
     .split('\n')
     .filter(Boolean)
-    .map((line) => {
+    .map((line, i) => {
       const parts = line.trim().split(/\s+/);
       let protocol = parts[0] || '';
       let host = parts[1] || '';
@@ -17,11 +19,15 @@ const parseLines = (text) =>
         host = parts[2] || '';
         rest = parts.slice(3);
       }
+      // use deterministic timestamp based on line index
+      const timestamp = new Date(i * 1000).toISOString().split('T')[1].split('.')[0];
       return {
         raw: line,
         protocol,
         host,
         details: rest.join(' '),
+        timestamp,
+
       };
     });
 
@@ -39,6 +45,14 @@ const protocolIcons = {
   ARP: '🔁',
   FTP: '📁',
   SSH: '🔐',
+};
+
+const protocolColors = {
+  HTTP: 'bg-blue-500',
+  HTTPS: 'bg-green-500',
+  ARP: 'bg-yellow-500',
+  FTP: 'bg-red-500',
+  SSH: 'bg-purple-500',
 };
 
 const protocolRisks = {
@@ -98,7 +112,9 @@ const LogRow = ({ log, prefersReduced }) => {
 
   return (
     <tr ref={rowRef} className="odd:bg-black even:bg-ub-grey">
+      <td className="pr-2 text-gray-400 whitespace-nowrap">{log.timestamp}</td>
       <td className="pr-2 text-green-400">
+
         <abbr
           title={protocolInfo[log.protocol] || log.protocol}
           className="underline decoration-dotted cursor-help"
@@ -107,8 +123,8 @@ const LogRow = ({ log, prefersReduced }) => {
           {log.protocol}
         </abbr>
       </td>
-      <td className="pr-2 text-white">{log.host}</td>
-      <td className="text-green-400">{log.details}</td>
+      <td className="px-2 py-[6px] text-white">{log.host}</td>
+      <td className="px-2 py-[6px] text-green-400">{log.details}</td>
     </tr>
   );
 };
@@ -154,6 +170,45 @@ const Credential = ({ cred }) => {
     </span>
   );
 };
+
+const SessionTile = ({ session, onView }) => (
+  <div className="flex bg-ub-grey rounded overflow-hidden">
+    <div
+      className={`w-1 ${protocolColors[session.protocol] || 'bg-gray-500'}`}
+    />
+    <div className="flex-1 p-2 space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-xl">
+          {protocolIcons[session.protocol] || '❓'}
+        </span>
+        <div className="flex space-x-1">
+          <button
+            className="w-6 h-6 flex items-center justify-center bg-gray-700 rounded"
+            title="Copy session"
+            onClick={() =>
+              navigator.clipboard?.writeText(
+                `${session.src}\t${session.dst}\t${session.protocol}\t${session.info}`,
+              )
+            }
+          >
+            📋
+          </button>
+          <button
+            className="w-6 h-6 flex items-center justify-center bg-gray-700 rounded"
+            title="View details"
+            onClick={onView}
+          >
+            🔍
+          </button>
+        </div>
+      </div>
+      <div className="text-xs text-white">
+        {session.src} → {session.dst}
+      </div>
+      <div className="text-xs text-green-400">{session.info}</div>
+    </div>
+  </div>
+);
 
 const Dsniff = () => {
   const [urlsnarfLogs, setUrlsnarfLogs] = useState([]);
@@ -385,13 +440,19 @@ const Dsniff = () => {
               Copy sample command
             </button>
           </div>
-          <pre className="text-xs bg-ub-dark p-2 flex-1 overflow-auto" aria-label="sample command output">
-            {`${sampleCommand}\n${sampleOutput}`}
-          </pre>
+          <TerminalOutput
+            text={`${sampleCommand}\n${sampleOutput}`}
+            ariaLabel="sample command output"
+          />
         </div>
       </div>
       <div className="mb-4" data-testid="pcap-demo">
         <h2 className="font-bold mb-2 text-sm">PCAP credential leakage demo</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mb-2">
+          {pcapSummary.map((pkt, i) => (
+            <SessionTile key={`tile-${i}`} session={pkt} onView={() => setSelectedPacket(i)} />
+          ))}
+        </div>
         <table className="w-full text-left text-xs mb-2">
           <thead>
             <tr className="text-green-400">
@@ -571,12 +632,20 @@ const Dsniff = () => {
         </div>
       </div>
       <div
-        className="bg-black text-green-400 p-2 h-40 overflow-auto"
+        className="bg-black text-green-400 p-2 h-40 overflow-auto font-mono"
         aria-live="polite"
         role="log"
       >
         {filteredLogs.length ? (
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm font-mono">
+            <thead>
+              <tr className="text-gray-400">
+                <th className="pr-2">Time</th>
+                <th className="pr-2">Protocol</th>
+                <th className="pr-2">Host</th>
+                <th>Details</th>
+              </tr>
+            </thead>
             <tbody>
               {filteredLogs.map((log, i) => (
                 <LogRow

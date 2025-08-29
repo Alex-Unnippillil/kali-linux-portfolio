@@ -22,13 +22,13 @@ Always test inside controlled labs and obtain written permission before performi
 ## Quick Start
 
 ### Requirements
-- **Node.js 22.x** (repo includes `.nvmrc`; run `nvm use`)
+- **Node.js 20.x** (repo includes `.nvmrc`; run `nvm use`)
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
 ### Install & Run (Dev)
 ```bash
-nvm install  # installs Node 22 from .nvmrc if needed
+nvm install  # installs Node 20 from .nvmrc if needed
 nvm use
 yarn install
 yarn dev
@@ -77,6 +77,17 @@ To send text or links directly into the Sticky Notes app:
 - `yarn test` – run the test suite.
 - `yarn lint` – check code for linting issues.
 - `yarn export` – generate a static export in the `out/` directory.
+
+---
+
+## Speed Insights
+
+- Enable Speed Insights in the Vercel project dashboard.
+- `<SpeedInsights />` is rendered in [`pages/_app.jsx`](./pages/_app.jsx) alongside `<Analytics />`.
+- Validate collection by requesting `/_vercel/speed-insights/script.js` from a deployed build.
+- No metrics are collected in development mode; ad blockers or network filters can block the script.
+
+See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/quickstart) and [troubleshooting guide](https://vercel.com/docs/speed-insights/troubleshooting) for more information.
 
 ---
 
@@ -173,6 +184,7 @@ keyboard focus so bundles are warmed before launch. When adding a new app, expor
 | `NEXT_PUBLIC_GHIDRA_WASM` | Optional URL for a Ghidra WebAssembly build. |
 | `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` | ReCAPTCHA site key used on the client. |
 | `RECAPTCHA_SECRET` | ReCAPTCHA secret key for server-side verification. |
+| `ADMIN_READ_KEY` | Secret key required by admin message APIs. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enable experimental UI heuristics. |
 | `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during `yarn export` to disable server APIs. |
 | `FEATURE_TOOL_APIS` | Enable server-side tool API routes like Hydra and John; set to `enabled` to allow. |
@@ -205,7 +217,9 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `cdn.syndication.twimg.com` | Twitter asset CDN |
 | `*.twitter.com` | Additional Twitter content |
 | `*.x.com` | X (Twitter) domain equivalents |
-| `*.google.com` | Google services used by demos |
+| `*.google.com` | Google services used by demos (e.g., reCAPTCHA) |
+| `cdn.jsdelivr.net` | Math.js library |
+| `cdnjs.cloudflare.com` | PDF.js worker |
 | `stackblitz.com` | StackBlitz IDE embeds |
 | `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |
@@ -224,7 +238,7 @@ These external domains are whitelisted in the default CSP. Update this list when
 ### Static export (GitHub Pages)
 Workflow: `.github/workflows/gh-deploy.yml`:
 - Installs Node, runs `yarn build && yarn export`, adds `.nojekyll`, and deploys `./out` → `gh-pages` branch.
-- **Action item:** update matrix to **Node 22.x** to match `package.json`.
+- **Action item:** update matrix to **Node 20.x** to match `package.json`.
 - Required env variables (GitHub Secrets):
   - `NEXT_PUBLIC_TRACKING_ID`
   - `NEXT_PUBLIC_SERVICE_ID`
@@ -250,6 +264,7 @@ Workflow: `.github/workflows/gh-deploy.yml`:
   - `NEXT_PUBLIC_UI_EXPERIMENTS`
   - `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`
   - `RECAPTCHA_SECRET`
+  - `ADMIN_READ_KEY`
 - Build command: `yarn build`
 - Output: Next.js (serverless by default on Vercel).
 - If you keep API routes, Vercel deploys them as serverless functions. For a static build, disable API routes or feature-flag those apps.
@@ -436,7 +451,7 @@ play/pause and track controls include keyboard hotkeys.
 
 ## Production Hardening Checklist
 
-- [ ] **Pin Node to 22.x** across runtime and CI.
+- [ ] **Pin Node to 20.x** across runtime and CI.
 - [ ] **Tighten CSP** (`connect-src`, `frame-src`, remove `http:` and `'unsafe-inline'`).
 - [ ] **Set env vars** in the hosting platform; rotate EmailJS keys regularly.
 - [ ] **Disable/flag API demo routes** for production or protect behind feature flags.

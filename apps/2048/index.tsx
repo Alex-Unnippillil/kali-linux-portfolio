@@ -260,8 +260,19 @@ const Page2048 = () => {
   useEffect(() => {
     if (won || lost) {
       saveReplay({ date: new Date().toISOString(), moves, boardType, hard });
+      fetch('/api/leaderboard/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          game: '2048',
+          username: 'Anonymous',
+          score: highest,
+        }),
+      }).catch(() => {
+        // ignore network errors
+      });
     }
-  }, [won, lost, moves, boardType, hard]);
+  }, [won, lost, moves, boardType, hard, highest]);
 
   return (
     <div className="h-full w-full bg-gray-900 text-white p-4 flex flex-col space-y-4">

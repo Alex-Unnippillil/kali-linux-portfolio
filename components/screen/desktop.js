@@ -663,7 +663,7 @@ export class Desktop extends Component {
         const appIndex = apps.findIndex(app => app.id === 'trash');
         if (appIndex !== -1) {
             const icon = trash.length
-                ? './themes/Yaru/system/user-trash-full.png'
+                ? './themes/Yaru/status/user-trash-full-symbolic.svg'
                 : './themes/Yaru/status/user-trash-symbolic.svg';
             if (apps[appIndex].icon !== icon) {
                 apps[appIndex].icon = icon;

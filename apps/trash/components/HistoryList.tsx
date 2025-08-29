@@ -26,8 +26,8 @@ export default function HistoryList({ history, onRestore, onRestoreAll }: Props)
       </div>
       <ul className="max-h-32 overflow-auto">
         {history.map((item, idx) => (
-          <li key={item.closedAt} className="flex justify-between items-center py-1">
-            <span className="truncate mr-2" title={item.title}>
+          <li key={item.closedAt} className="flex justify-between items-center h-9">
+            <span className="truncate mr-2 font-mono" title={item.title}>
               {item.title}
             </span>
             <button

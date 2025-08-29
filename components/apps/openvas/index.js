@@ -6,6 +6,24 @@ import hipaaProfile from './templates/hipaa.json';
 
 const templates = { PCI: pciProfile, HIPAA: hipaaProfile };
 
+const CardIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="2" y="5" width="20" height="14" rx="2" />
+    <rect x="4" y="8" width="16" height="2" />
+  </svg>
+);
+
+const HealthIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M11 2h2v8h8v2h-8v8h-2v-8H3v-2h8z" />
+  </svg>
+);
+
+const profileTabs = [
+  { id: 'PCI', label: 'PCI', icon: <CardIcon /> },
+  { id: 'HIPAA', label: 'HIPAA', icon: <HealthIcon /> },
+];
+
 // Simple helper for notifications that falls back to alert()
 const notify = (title, body) => {
   if (typeof window === 'undefined') return;
@@ -368,18 +386,23 @@ const OpenVASApp = () => {
           value={group}
           onChange={(e) => setGroup(e.target.value)}
         />
-        <select
-          aria-label="Scan profile"
-          className="flex-1 p-2 rounded text-black"
-          value={profile}
-          onChange={(e) => setProfile(e.target.value)}
-        >
-          {Object.keys(templates).map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
+        <div className="flex items-center space-x-2" role="tablist" aria-label="Scan profile">
+          {profileTabs.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              role="tab"
+              aria-selected={profile === p.id}
+              aria-label={p.label}
+              onClick={() => setProfile(p.id)}
+              className={`w-6 h-6 flex items-center justify-center rounded ${
+                profile === p.id ? 'bg-gray-700' : 'bg-gray-600'
+              }`}
+            >
+              {p.icon}
+            </button>
           ))}
-        </select>
+        </div>
         <button
           type="button"
           onClick={() => runScan()}
@@ -602,17 +625,22 @@ const OpenVASApp = () => {
         {announce}
       </div>
       {output && (
-        <pre className="bg-black text-green-400 p-2 rounded whitespace-pre-wrap">
-          {output}
-        </pre>
+        <div className="bg-black text-white text-xs font-mono rounded overflow-auto">
+          {output.split('\n').map((line, i) => (
+            <div key={i} className={`px-2 ${i % 2 ? 'bg-gray-900' : 'bg-gray-800'}`}>
+              {line || '\u00A0'}
+            </div>
+          ))}
+        </div>
       )}
       {summaryUrl && (
         <a
           href={summaryUrl}
           download="openvas-summary.md"
-          className="inline-block mt-2 px-4 py-2 bg-blue-600 rounded"
+          aria-label="Download summary"
+          className="inline-flex items-center mt-2 p-2 bg-blue-600 rounded"
         >
-          Download Summary
+          <img src="/themes/Yaru/status/download.svg" alt="" className="w-4 h-4" />
         </a>
       )}
       <footer className="mt-4 text-xs text-gray-400">

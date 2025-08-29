@@ -8,6 +8,7 @@ interface HashItem {
   progress: number;
   status: 'pending' | 'cracked' | 'failed';
   password?: string;
+  strength?: 'weak' | 'medium' | 'strong';
 }
 
 const PASSWORDS: Record<string, string> = {
@@ -51,6 +52,8 @@ const JohnApp: React.FC = () => {
   const [running, setRunning] = useState(false);
   const [hashes, setHashes] = useState<HashItem[]>(initialHashes);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [eta, setEta] = useState('00:00');
 
   const start = () => {
     const candidates =
@@ -63,6 +66,8 @@ const JohnApp: React.FC = () => {
     setHashes(initialHashes.map((h) => ({ ...h }))); // reset
     setMessage(null);
     setRunning(true);
+    setStartTime(Date.now());
+    setEta('00:00');
 
     const step = Math.max(1, Math.floor(100 / candidates.length));
     const intervals: NodeJS.Timeout[] = [];
@@ -79,8 +84,10 @@ const JohnApp: React.FC = () => {
           item.progress = Math.min(item.progress + step, 100);
           if (item.progress === 100) {
             if (PASSWORDS[item.hash]) {
+              const pw = PASSWORDS[item.hash];
               item.status = 'cracked';
-              item.password = PASSWORDS[item.hash];
+              item.password = pw;
+              item.strength = getStrength(pw);
             } else {
               item.status = 'failed';
             }
@@ -104,22 +111,47 @@ const JohnApp: React.FC = () => {
     }
   }, [hashes, running]);
 
-  const downloadResult = (item: HashItem) => {
-    const text = `${item.hash}:${item.password}`;
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${item.hash}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const modes = [
     { key: 'single', label: 'Single' },
     { key: 'incremental', label: 'Incremental' },
     { key: 'wordlist', label: 'Wordlist' },
   ] as const;
+
+  const getStrength = (pw: string): 'weak' | 'medium' | 'strong' => {
+    const hasUpper = /[A-Z]/.test(pw);
+    const hasLower = /[a-z]/.test(pw);
+    const hasNumber = /[0-9]/.test(pw);
+    const hasSpecial = /[^A-Za-z0-9]/.test(pw);
+    if (pw.length >= 10 && hasUpper && hasLower && hasNumber && hasSpecial)
+      return 'strong';
+    if (pw.length >= 6 && ((hasUpper && hasLower) || hasNumber)) return 'medium';
+    return 'weak';
+  };
+
+  const strengthClass = {
+    weak: 'bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200',
+    medium: 'bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200',
+    strong: 'bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200',
+  } as const;
+
+  const overallProgress =
+    hashes.reduce((sum, h) => sum + h.progress, 0) / hashes.length;
+
+  useEffect(() => {
+    if (!running || !startTime) return;
+    const elapsed = (Date.now() - startTime) / 1000;
+    if (overallProgress > 0) {
+      const totalTime = elapsed / (overallProgress / 100);
+      const remaining = Math.max(totalTime - elapsed, 0);
+      const mins = Math.floor(remaining / 60);
+      const secs = Math.floor(remaining % 60);
+      setEta(
+        `${mins.toString().padStart(2, '0')}:${secs
+          .toString()
+          .padStart(2, '0')}`,
+      );
+    }
+  }, [overallProgress, running, startTime]);
 
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white flex flex-col gap-4">
@@ -181,45 +213,43 @@ const JohnApp: React.FC = () => {
         </button>
       </div>
 
-      <ul className="space-y-2">
+      <div className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-2 rounded">
+        <div className="w-full bg-gray-400 dark:bg-gray-600 rounded h-2">
+          <div
+            className="h-2 bg-blue-500 rounded"
+            style={{ width: `${overallProgress}%` }}
+          />
+        </div>
+        <div className="text-xs text-center mt-1">ETA: {eta}</div>
+      </div>
+
+      <ul className="space-y-1 font-mono">
         {hashes.map((h) => (
-          <li key={h.hash} className="bg-gray-800 p-2 rounded">
-            <div className="flex justify-between items-center flex-wrap gap-2">
-              <span className="font-mono text-xs sm:text-sm">{h.hash}</span>
-              {h.status === 'cracked' && (
-                <div className="flex items-center gap-2 flex-wrap text-xs">
-                  <span className="px-2 py-0.5 rounded-full bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200">
-                    Cracked
-                  </span>
-                  <span className="font-mono">{h.password}</span>
-                  <button
-                    type="button"
-                    onClick={() => navigator.clipboard.writeText(h.password!)}
-                    className="underline text-blue-400"
-                  >
-                    Copy
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => downloadResult(h)}
-                    className="underline text-blue-400"
-                  >
-                    Download
-                  </button>
-                </div>
-              )}
-              {h.status === 'failed' && (
-                <span className="px-2 py-0.5 rounded-full bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200 text-xs">
-                  Failed
+          <li
+            key={h.hash}
+            className="bg-gray-800 rounded px-2 h-9 flex items-center justify-between text-xs sm:text-sm"
+          >
+            <span className="truncate">{h.hash}</span>
+            {h.status === 'cracked' ? (
+              <div className="flex items-center gap-2">
+                <span className="truncate">{h.password}</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs ${
+                    strengthClass[h.strength!]
+                  }`}
+                >
+                  {h.strength}
                 </span>
-              )}
-            </div>
-            <div className="w-full bg-gray-700 rounded h-2 mt-1">
-              <div
-                className="h-full bg-blue-500"
-                style={{ width: `${h.progress}%` }}
-              />
-            </div>
+              </div>
+            ) : h.status === 'failed' ? (
+              <span className="px-2 py-0.5 rounded-full bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200 text-xs">
+                Failed
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 rounded-full bg-gray-500 text-gray-100 text-xs">
+                Pending
+              </span>
+            )}
           </li>
         ))}
       </ul>

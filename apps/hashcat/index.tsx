@@ -76,7 +76,6 @@ const Hashcat: React.FC = () => {
 
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [speed, setSpeed] = useState(0);
   const [eta, setEta] = useState('00:00');
   const [recovered, setRecovered] = useState(0);
   const total = 1;
@@ -107,7 +106,6 @@ const Hashcat: React.FC = () => {
           .toString()
           .padStart(2, '0')}`);
         const currentSpeed = 1000 + Math.random() * 500;
-        setSpeed(currentSpeed);
         setLogs((l) =>
           [...l.slice(-19), `Progress ${next.toFixed(1)}% @ ${currentSpeed.toFixed(0)} H/s`]
         );
@@ -168,57 +166,7 @@ const Hashcat: React.FC = () => {
     setMaskStats({ count: total, time: total / 1_000_000 });
   }, [mask]);
 
-  const SpeedGauge: React.FC<{ speed: number }> = ({ speed }) => {
-    const pct = Math.min((speed / 2000) * 100, 100);
-    return (
-      <div className="w-48">
-        <div className="text-sm mb-1">Speed: {speed.toFixed(0)} H/s</div>
-        <div className="w-full h-4 bg-gray-700 rounded">
-          <div className="h-4 bg-green-500 rounded" style={{ width: `${pct}%` }} />
-        </div>
-      </div>
-    );
-  };
-
-  const CompletionDonut: React.FC<{ progress: number }> = ({ progress }) => {
-    const radius = 30;
-    const stroke = 8;
-    const normalized = radius - stroke * 0.5;
-    const circumference = normalized * 2 * Math.PI;
-    const offset = circumference - (progress / 100) * circumference;
-    return (
-      <svg height={radius * 2} width={radius * 2} className="text-xs">
-        <circle
-          stroke="#374151"
-          fill="transparent"
-          strokeWidth={stroke}
-          r={normalized}
-          cx={radius}
-          cy={radius}
-        />
-        <circle
-          stroke="#10B981"
-          fill="transparent"
-          strokeWidth={stroke}
-          strokeDasharray={`${circumference} ${circumference}`}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          r={normalized}
-          cx={radius}
-          cy={radius}
-        />
-        <text
-          x="50%"
-          y="50%"
-          dominantBaseline="middle"
-          textAnchor="middle"
-          fill="white"
-        >
-          {Math.round(progress)}%
-        </text>
-      </svg>
-    );
-  };
+  // progress and eta are displayed in a neutral banner
 
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen space-y-4">
@@ -232,11 +180,11 @@ const Hashcat: React.FC = () => {
               key={m.value}
               type="button"
               onClick={() => setAttackMode(m.value)}
-              className={`p-2 rounded bg-gray-800 flex items-center space-x-2 border ${
+              className={`p-3 rounded-lg bg-gray-800 flex flex-col items-center gap-1 border ${
                 attackMode === m.value ? 'border-green-500' : 'border-transparent'
               }`}
             >
-              <span>{m.icon}</span>
+              <span className="text-2xl">{m.icon}</span>
               <span>{m.label}</span>
             </button>
           ))}
@@ -368,18 +316,21 @@ const Hashcat: React.FC = () => {
         </button>
       </div>
 
-      <div className="flex items-center space-x-4">
-        <SpeedGauge speed={speed} />
-        <CompletionDonut progress={progress} />
+      <div className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 p-2 rounded">
+        <div className="w-full bg-gray-400 dark:bg-gray-600 rounded h-2">
+          <div
+            className="h-2 bg-green-500 rounded"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="text-xs text-center mt-1">ETA: {eta}</div>
       </div>
       <div className="bg-black text-green-400 p-2 h-32 overflow-auto font-mono text-xs">
         {logs.map((l, i) => (
           <div key={i}>{l}</div>
         ))}
       </div>
-      <div className="text-sm">
-        ETA: {eta} | Recovered: {recovered}/{total}
-      </div>
+      <div className="text-sm">Recovered: {recovered}/{total}</div>
     </div>
   );
 };
