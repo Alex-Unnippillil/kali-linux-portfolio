@@ -1,0 +1,7 @@
+[
+  {"id": 1001, "name": "SSL Certificate Expiry", "severity": "High"},
+  {"id": 1002, "name": "Weak SSH Ciphers", "severity": "Medium"},
+  {"id": 1003, "name": "Default Credentials", "severity": "Critical"},
+  {"id": 1004, "name": "Outdated Web Server", "severity": "Low"},
+  {"id": 1005, "name": "Informational Banner", "severity": "Info"}
+]
