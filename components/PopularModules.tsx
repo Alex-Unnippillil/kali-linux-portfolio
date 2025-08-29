@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import modulesData from '../data/module-index.json';
 
 interface Module {
   id: string;
   name: string;
   description: string;
   tags: string[];
-  log: string;
+  log: { level: string; message: string }[];
   results: { target: string; status: string }[];
   data: string;
   inputs: string[];
@@ -13,65 +14,14 @@ interface Module {
   options: { name: string; label: string }[];
 }
 
-const modules: Module[] = [
-  {
-    id: 'port-scan',
-    name: 'Port Scanner',
-    description: 'Scans for open network ports',
-    tags: ['network', 'scanner'],
-    log: 'Starting port scan...\nFound open port 22 on 192.168.0.1\nScan complete.',
-    results: [
-      { target: '192.168.0.1', status: 'Ports 22,80 open' },
-      { target: '192.168.0.2', status: 'No open ports' },
-    ],
-    data: 'Open ports discovered on the target host',
-    inputs: ['Target IP or range'],
-    lab: 'https://tryhackme.com/room/rpnmap',
-    options: [
-      { name: 'target', label: 'Target' },
-      { name: 'ports', label: 'Ports' },
-    ],
-  },
-  {
-    id: 'bruteforce',
-    name: 'Brute Force',
-    description: 'Attempts common passwords',
-    tags: ['attack', 'password'],
-    log: 'Starting brute force...\nTried 100 passwords\nNo valid credentials found.',
-    results: [
-      { target: 'admin@example.com', status: 'Login failed' },
-      { target: 'root@example.com', status: 'Login failed' },
-    ],
-    data: 'Accounts that accept guessed credentials',
-    inputs: ['Target service or account', 'Password list'],
-    lab: 'https://tryhackme.com/room/hydra',
-    options: [
-      { name: 'user', label: 'User' },
-      { name: 'wordlist', label: 'Wordlist' },
-    ],
-  },
-  {
-    id: 'vuln-check',
-    name: 'Vuln Check',
-    description: 'Checks for known CVEs',
-    tags: ['vulnerability', 'scanner'],
-    log: 'Checking for vulnerabilities...\nCVE-2024-1234 found on host1\nCheck complete.',
-    results: [
-      { target: 'host1', status: 'CVE-2024-1234' },
-      { target: 'host2', status: 'No issues' },
-    ],
-    data: 'Known vulnerabilities present on a host',
-    inputs: ['Target host'],
-    lab: 'https://tryhackme.com/room/vulnversity',
-    options: [{ name: 'target', label: 'Target' }],
-  },
-];
+const modules: Module[] = modulesData as Module[];
 
 const PopularModules: React.FC = () => {
   const [filter, setFilter] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   const [selected, setSelected] = useState<Module | null>(null);
   const [options, setOptions] = useState<Record<string, string>>({});
+  const [logFilter, setLogFilter] = useState<string>('');
 
   const tags = Array.from(new Set(modules.flatMap((m) => m.tags)));
   let listed = filter ? modules.filter((m) => m.tags.includes(filter)) : modules;
@@ -86,6 +36,7 @@ const PopularModules: React.FC = () => {
   const handleSelect = (m: Module) => {
     setSelected(m);
     setOptions(Object.fromEntries(m.options.map((o) => [o.name, ''])));
+    setLogFilter('');
   };
 
   const commandPreview = selected
@@ -94,6 +45,26 @@ const PopularModules: React.FC = () => {
         .map(([k, v]) => ` --${k} ${v}`)
         .join('')}`
     : '';
+
+  const filteredLog = selected
+    ? selected.log.filter((l) =>
+        l.message.toLowerCase().includes(logFilter.toLowerCase())
+      )
+    : [];
+
+  const copyLogs = () => {
+    const text = filteredLog.map((l) => l.message).join('\n');
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    }
+  };
+
+  const levelClass: Record<string, string> = {
+    info: 'text-blue-300',
+    success: 'text-green-400',
+    error: 'text-red-400',
+    warning: 'text-yellow-300',
+  };
 
   return (
     <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
@@ -175,9 +146,35 @@ const PopularModules: React.FC = () => {
           >
             {commandPreview}
           </pre>
-          <pre className="bg-black text-green-400 p-2 overflow-auto" role="log">
-            {selected.log}
-          </pre>
+          <div className="space-y-1">
+            <label className="block text-sm">
+              Filter logs
+              <input
+                placeholder="Filter logs"
+                type="text"
+                value={logFilter}
+                onChange={(e) => setLogFilter(e.target.value)}
+                className="w-full p-1 mt-1 text-black rounded"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={copyLogs}
+              className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              Copy Logs
+            </button>
+            <pre className="bg-black p-2 overflow-auto" role="log">
+              {filteredLog.map((line, idx) => (
+                <React.Fragment key={idx}>
+                  <span className={levelClass[line.level] || levelClass.info}>
+                    {line.message}
+                  </span>
+                  {'\n'}
+                </React.Fragment>
+              ))}
+            </pre>
+          </div>
           <table className="min-w-full text-sm">
             <thead>
               <tr>
