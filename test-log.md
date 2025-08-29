@@ -26,3 +26,9 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 - `yarn build` failed: Module not found: Can't resolve '../../ui/FormError' in `components/apps/serial-terminal.tsx`.
 - `yarn export` failed: `next export` has been removed; configure `output: 'export'` in next.config.js.
 - `yarn test` reported failing tests: `hashcat.test.tsx`, `beef.test.tsx`, `mimikatz.test.ts`.
+
+## bare-fs warning (2025-08-29)
+
+- `yarn why bare-fs` shows the module is required by `tar-fs@3.1.0` via `@puppeteer/browsers@2.10.7`.
+- Latest versions (`@puppeteer/browsers@2.10.8`, `tar-fs@3.1.0`) still depend on `bare-fs@4.2.1`, so the warning remains.
+- `puppeteer` and `puppeteer-core` require this chain; removing them would break existing tooling, so the warning is ignored.
