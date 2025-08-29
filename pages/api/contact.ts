@@ -60,14 +60,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
-  const { recaptchaToken = '', ...rest } = req.body || {};
-  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  const { recaptchaToken: rawToken = '', ...rest } = req.body || {};
+  const recaptchaToken = String(rawToken);
+  const secret = String(process.env.RECAPTCHA_SECRET ?? '');
+  if (!secret) {
+    res.status(500).json({ ok: false });
+    return;
+  }
   if (!recaptchaToken) {
     console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
     res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
     return;
   }
   try {
+    const form = new URLSearchParams();
+    form.append('secret', secret);
+    form.append('response', recaptchaToken);
     const verify = await fetch(
       'https://www.google.com/recaptcha/api/siteverify',
       {
@@ -75,10 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: new URLSearchParams({
-          secret,
-          response: recaptchaToken,
-        }),
+        body: form.toString(),
       }
     );
     const captcha = await verify.json();
