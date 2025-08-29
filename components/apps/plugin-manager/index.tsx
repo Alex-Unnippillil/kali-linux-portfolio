@@ -16,6 +16,22 @@ export default function PluginManager() {
     return {};
   });
 
+  interface LastRun {
+    id: string;
+    output: string[];
+  }
+
+  const [lastRun, setLastRun] = useState<LastRun | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return JSON.parse(localStorage.getItem('lastPluginRun') || 'null');
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+
   useEffect(() => {
     fetch('/api/plugins')
       .then((res) => res.json())
@@ -29,6 +45,30 @@ export default function PluginManager() {
     const updated = { ...installed, [plugin.id]: text };
     setInstalled(updated);
     localStorage.setItem('installedPlugins', JSON.stringify(updated));
+  };
+
+  const run = (plugin: PluginInfo) => {
+    const text = installed[plugin.id];
+    if (!text) return;
+    const result = { id: plugin.id, output: text.split(/\r?\n/) };
+    setLastRun(result);
+    try {
+      localStorage.setItem('lastPluginRun', JSON.stringify(result));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const exportCsv = () => {
+    if (!lastRun) return;
+    const csv = ['result', ...lastRun.output.map((line) => JSON.stringify(line))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${lastRun.id}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -45,9 +85,31 @@ export default function PluginManager() {
             >
               {installed[p.id] ? 'Installed' : 'Install'}
             </button>
+            {installed[p.id] && (
+              <button
+                className="bg-ub-green text-black px-2 py-1 rounded ml-2"
+                onClick={() => run(p)}
+              >
+                Run
+              </button>
+            )}
           </li>
         ))}
       </ul>
+      {lastRun && (
+        <div className="mt-4">
+          <h2 className="text-lg mb-2">Last Run: {lastRun.id}</h2>
+          <pre className="bg-black p-2 mb-2 overflow-auto text-xs">
+            {lastRun.output.join('\n')}
+          </pre>
+          <button
+            onClick={exportCsv}
+            className="bg-ub-green text-black px-2 py-1 rounded"
+          >
+            Export CSV
+          </button>
+        </div>
+      )}
     </div>
   );
 }
