@@ -211,7 +211,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
               this.state.setCheckpoint({ x: body.position.x, y: body.position.y });
             }
             if (body.label === 'hazard') {
-              const s = this.state.checkpoint || this.state.spawn;
+              const s = this.state.getRespawnPoint();
               this.player.setPosition(s.x, s.y);
               this.player.setVelocity(0, 0);
             }
