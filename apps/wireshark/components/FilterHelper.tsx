@@ -84,9 +84,8 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
           <option key={label} value={expression}>
             {label}
           </option>
-
         ))}
-      </div>
+      </select>
       <input
         list="display-filter-suggestions"
         value={value}

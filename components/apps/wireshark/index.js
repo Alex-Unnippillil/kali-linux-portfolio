@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import Waterfall from './Waterfall';
 import BurstChart from './BurstChart';
 import { protocolName, getRowColor, matchesDisplayFilter } from './utils';
@@ -123,6 +124,11 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const pausedRef = useRef(false);
   const prefersReducedMotion = useRef(false);
   const VISIBLE = 100;
+
+  const interfaces = [
+    { name: 'eth0', type: 'wired' },
+    { name: 'wlan0', type: 'wireless' },
+  ];
 
   // Load persisted filter on mount
   useEffect(() => {
@@ -281,6 +287,58 @@ const WiresharkApp = ({ initialPackets = [] }) => {
       {error && (
         <p className="text-red-400 text-xs p-2 bg-gray-900">{error}</p>
       )}
+      <div className="p-2 grid gap-2 md:grid-cols-2 bg-gray-900">
+        {interfaces.map((iface) => (
+          <div
+            key={iface.name}
+            className="flex items-center justify-between bg-gray-800 rounded p-2"
+          >
+            <div className="flex items-center space-x-2">
+              <Image
+                src={
+                  iface.type === 'wired'
+                    ? '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg'
+                    : '/themes/Yaru/status/network-wireless-signal-good-symbolic.svg'
+                }
+                alt={iface.type}
+                width={24}
+                height={24}
+              />
+              <span className="text-white">{iface.name}</span>
+            </div>
+            <div className="flex items-center space-x-1">
+              <button
+                onClick={startCapture}
+                aria-label={`start capture on ${iface.name}`}
+                className="p-1"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="w-6 h-6"
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </button>
+              <button
+                onClick={stopCapture}
+                aria-label={`stop capture on ${iface.name}`}
+                className="p-1"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="w-6 h-6"
+                >
+                  <path d="M6 6h12v12H6z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
       <div className="p-2 flex space-x-2 bg-gray-900 flex-wrap">
         <button
           onClick={startCapture}
