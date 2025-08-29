@@ -151,6 +151,26 @@ const hostReports = [
   },
 ];
 
+// Persist in-progress scans so they can resume after reload
+const loadSession = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return JSON.parse(localStorage.getItem('openvas/session') || 'null');
+  } catch {
+    return null;
+  }
+};
+
+const saveSession = (session) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('openvas/session', JSON.stringify(session));
+};
+
+const clearSession = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('openvas/session');
+};
+
 const OpenVASApp = () => {
   const [target, setTarget] = useState('');
   const [group, setGroup] = useState('');
@@ -167,6 +187,7 @@ const OpenVASApp = () => {
   const [activeHost, setActiveHost] = useState(null);
   const workerRef = useRef(null);
   const reduceMotion = useRef(false);
+  const sessionRef = useRef({});
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -176,13 +197,30 @@ const OpenVASApp = () => {
         workerRef.current = new Worker(new URL('./openvas.worker.js', import.meta.url));
         workerRef.current.onmessage = (e) => {
           const { type, data } = e.data || {};
-          if (type === 'progress') setProgress(data);
+          if (type === 'progress') {
+            setProgress(data);
+            saveSession({ ...sessionRef.current, progress: data });
+          }
           if (type === 'result')
             setFindings(data.map((f) => ({ ...f, remediation: remediationMap[f.severity] })));
         };
       }
+
+      const session = loadSession();
+      if (session) {
+        sessionRef.current = session;
+        setTarget(session.target || '');
+        setGroup(session.group || '');
+        setProfile(session.profile || 'PCI');
+        setProgress(session.progress || 0);
+        if (session.target && session.progress < 1) {
+          runScan(session.target, session.group || '', session.profile || 'PCI');
+        }
+      }
     }
     return () => workerRef.current?.terminate();
+    // runScan is stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const generateSummary = (data) => {
@@ -191,27 +229,38 @@ const OpenVASApp = () => {
     setSummaryUrl(URL.createObjectURL(blob));
   };
 
-  const runScan = async () => {
-    if (!target) return;
+  const runScan = async (
+    t = target,
+    g = group,
+    p = profile,
+  ) => {
+    if (!t) return;
+    sessionRef.current = { target: t, group: g, profile: p };
+    saveSession({ ...sessionRef.current, progress: 0 });
+    setTarget(t);
+    setGroup(g);
+    setProfile(p);
     setLoading(true);
     setProgress(0);
     setOutput('');
     setSummaryUrl(null);
     try {
       const res = await fetch(
-        `/api/openvas?target=${encodeURIComponent(target)}&group=${encodeURIComponent(group)}&profile=${encodeURIComponent(profile)}`
+        `/api/openvas?target=${encodeURIComponent(t)}&group=${encodeURIComponent(g)}&profile=${encodeURIComponent(p)}`
       );
       if (!res.ok) throw new Error(`Request failed with ${res.status}`);
       const data = await res.text();
       setOutput(data);
       workerRef.current?.postMessage({ text: data });
       generateSummary(data);
-      notify('OpenVAS Scan Complete', `Target ${target} finished`);
+      notify('OpenVAS Scan Complete', `Target ${t} finished`);
     } catch (e) {
       setOutput(e.message);
       notify('OpenVAS Scan Failed', e.message);
     } finally {
       setLoading(false);
+      clearSession();
+      sessionRef.current = {};
     }
   };
 
@@ -333,7 +382,7 @@ const OpenVASApp = () => {
         </select>
         <button
           type="button"
-          onClick={runScan}
+          onClick={() => runScan()}
           disabled={loading}
           className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
         >
