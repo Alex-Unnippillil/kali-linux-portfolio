@@ -1,6 +1,6 @@
 import React from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
-import presets from '../../../filters/presets';
+import presets, { FilterPreset } from '../../../filters/presets';
 
 interface FilterHelperProps {
   value: string;
@@ -12,13 +12,19 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     'wireshark:recent-filters',
     []
   );
-  const [applied, setApplied] = usePersistentState<Record<string, boolean>>(
-    'wireshark:applied-presets',
-    {}
+  const [customPresets, setCustomPresets] = usePersistentState<FilterPreset[]>(
+    'wireshark:custom-presets',
+    []
   );
 
+  const allPresets = [...customPresets, ...presets];
+
+
   const suggestions = Array.from(
-    new Set([...recent, ...presets.map((p) => p.expression)])
+    new Set([
+      ...recent,
+      ...allPresets.map((p) => p.expression),
+    ])
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,28 +52,39 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     setApplied((prev) => ({ ...prev, [expression]: true }));
   };
 
+  const handleSavePreset = () => {
+    const expression = value.trim();
+    if (!expression) return;
+    const label = prompt('Preset name');
+    if (!label) return;
+    setCustomPresets((prev) => [
+      ...prev.filter((p) => p.label !== label),
+      { label, expression },
+    ]);
+  };
+
+  const handleShare = () => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (value) url.searchParams.set('filter', value);
+    else url.searchParams.delete('filter');
+    navigator.clipboard?.writeText(url.toString());
+  };
+
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 mb-2">
-        {presets.map(({ label, expression, docUrl }) => (
-          <div key={expression} className="flex items-center gap-1">
-            <button
-              onClick={() => handlePresetClick(expression)}
-              className="px-2 py-1 bg-gray-800 rounded text-white text-xs"
-              aria-label={`Apply ${label} filter`}
-            >
-              {label}
-              {applied[expression] ? ' ✓' : ''}
-            </button>
-            <a
-              href={docUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 underline text-xs"
-            >
-              docs
-            </a>
-          </div>
+      <select
+        onChange={handlePresetSelect}
+        defaultValue=""
+        aria-label="Preset filters"
+        className="px-2 py-1 bg-gray-800 rounded text-white"
+      >
+        <option value="">Preset filters...</option>
+        {allPresets.map(({ label, expression }) => (
+          <option key={label} value={expression}>
+            {label}
+          </option>
+
         ))}
       </div>
       <input
@@ -80,6 +97,22 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
         aria-label="Quick search"
         className="px-2 py-1 bg-gray-800 rounded text-white"
       />
+      <button
+        onClick={handleSavePreset}
+        aria-label="Save filter preset"
+        className="px-2 py-1 bg-gray-700 rounded text-white"
+        type="button"
+      >
+        Save
+      </button>
+      <button
+        onClick={handleShare}
+        aria-label="Share filter preset"
+        className="px-2 py-1 bg-gray-700 rounded text-white"
+        type="button"
+      >
+        Share
+      </button>
       <datalist id="display-filter-suggestions">
         {suggestions.map((f) => (
           <option key={f} value={f} />
