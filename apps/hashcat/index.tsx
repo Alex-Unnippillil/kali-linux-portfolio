@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import RulesSandbox from './components/RulesSandbox';
 
 interface RuleSets {
   [key: string]: string[];
@@ -162,6 +163,8 @@ const Hashcat: React.FC = () => {
           {rulePreview || '(no rules)'}
         </pre>
       </div>
+
+      <RulesSandbox />
 
       <div>
         <button
