@@ -103,10 +103,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   useEffect(() => {
     registryRef.current = {
       ...commandRegistry,
-      help: () =>
+      help: () => {
         writeLine(
           `Available commands: ${Object.keys(registryRef.current).join(', ')}`,
-        ),
+        );
+        writeLine(
+          'Example scripts: https://github.com/unnippillil/kali-linux-portfolio/tree/main/scripts/examples',
+        );
+      },
       ls: () => writeLine(Object.keys(filesRef.current).join('  ')),
       clear: () => {
         termRef.current?.clear();
