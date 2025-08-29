@@ -1,51 +1,52 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Howl } from 'howler';
-import seedrandom from 'seedrandom';
-import GameLayout from './GameLayout';
-import usePersistentState from '../usePersistentState';
-import { vibrate } from './Games/common/haptics';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Howl } from "howler";
+import seedrandom from "seedrandom";
+import GameLayout from "./GameLayout";
+import usePersistentState from "../usePersistentState";
+import { vibrate } from "./Games/common/haptics";
 
 const padStyles = [
   {
-    id: 'green',
-    color: { base: 'bg-green-700', active: 'bg-green-500' },
-    colorblind: { base: 'bg-emerald-700', active: 'bg-emerald-500' },
-    symbol: '▲',
-    label: 'green',
+    id: "green",
+    color: { base: "bg-green-700", active: "bg-green-500" },
+    colorblind: { base: "bg-emerald-700", active: "bg-emerald-500" },
+    symbol: "▲",
+    label: "green",
     pattern:
-      'repeating-linear-gradient(45deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)',
+      "repeating-linear-gradient(45deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)",
   },
   {
-    id: 'red',
-    color: { base: 'bg-red-700', active: 'bg-red-500' },
-    colorblind: { base: 'bg-orange-700', active: 'bg-orange-500' },
-    symbol: '■',
-    label: 'red',
+    id: "red",
+    color: { base: "bg-red-700", active: "bg-red-500" },
+    colorblind: { base: "bg-orange-700", active: "bg-orange-500" },
+    symbol: "■",
+    label: "red",
     pattern:
-      'repeating-linear-gradient(-45deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)',
+      "repeating-linear-gradient(-45deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)",
   },
   {
-    id: 'yellow',
-    color: { base: 'bg-yellow-500', active: 'bg-yellow-300' },
-    colorblind: { base: 'bg-purple-700', active: 'bg-purple-500' },
-    symbol: '●',
-    label: 'yellow',
+    id: "yellow",
+    color: { base: "bg-yellow-500", active: "bg-yellow-300" },
+    colorblind: { base: "bg-purple-700", active: "bg-purple-500" },
+    symbol: "●",
+    label: "yellow",
     pattern:
-      'repeating-linear-gradient(0deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)',
+      "repeating-linear-gradient(0deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)",
   },
   {
-    id: 'blue',
-    color: { base: 'bg-blue-700', active: 'bg-blue-500' },
-    colorblind: { base: 'bg-teal-700', active: 'bg-teal-500' },
-    symbol: '◆',
-    label: 'blue',
+    id: "blue",
+    color: { base: "bg-blue-700", active: "bg-blue-500" },
+    colorblind: { base: "bg-teal-700", active: "bg-teal-500" },
+    symbol: "◆",
+    label: "blue",
     pattern:
-      'repeating-linear-gradient(90deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)',
+      "repeating-linear-gradient(90deg, rgba(255,255,255,0.2) 0, rgba(255,255,255,0.2) 10px, transparent 10px, transparent 20px)",
   },
 ];
 
 const tones = [329.63, 261.63, 220, 164.81];
-const ERROR_SOUND_SRC = 'data:audio/wav;base64,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';
+const ERROR_SOUND_SRC =
+  "data:audio/wav;base64,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";
 
 /**
  * Create a schedule of times using a starting value, step and ramp factor.
@@ -86,7 +87,7 @@ export const generateSequence = (length, seed) => {
   }
 
   const values = new Uint8Array(length);
-  if (typeof globalThis.crypto?.getRandomValues === 'function') {
+  if (typeof globalThis.crypto?.getRandomValues === "function") {
     globalThis.crypto.getRandomValues(values);
   } else {
     for (let i = 0; i < length; i += 1) {
@@ -107,29 +108,35 @@ const Simon = () => {
   const [step, setStep] = useState(0);
   const [isPlayerTurn, setIsPlayerTurn] = useState(false);
   const [activePad, setActivePad] = useState(null);
-  const [status, setStatus] = useState('Press Start');
-  const [mode, setMode] = usePersistentState('simon_mode', 'classic');
-  const [tempo, setTempo] = usePersistentState('simon_tempo', 100);
-  const [striped, setStriped] = usePersistentState('simon_striped', false);
+  const [status, setStatus] = useState("Press Start");
+  const [mode, setMode] = usePersistentState("simon_mode", "classic");
+  const [tempo, setTempo] = usePersistentState("simon_tempo", 100);
+  const [striped, setStriped] = usePersistentState("simon_striped", false);
   const [thickOutline, setThickOutline] = usePersistentState(
-    'simon_thick_outline',
-    false
+    "simon_thick_outline",
+    false,
   );
-  const [audioOnly, setAudioOnly] = usePersistentState('simon_audio_only', false);
+  const [audioOnly, setAudioOnly] = usePersistentState(
+    "simon_audio_only",
+    false,
+  );
   const [colorblindPalette, setColorblindPalette] = usePersistentState(
-    'simon_colorblind_palette',
-    false
+    "simon_colorblind_palette",
+    false,
   );
-  const [seed, setSeed] = usePersistentState('simon_seed', '');
-  const [playMode, setPlayMode] = usePersistentState('simon_play_mode', 'strict');
-  const [timing, setTiming] = usePersistentState('simon_timing', 'relaxed');
+  const [seed, setSeed] = usePersistentState("simon_seed", "");
+  const [playMode, setPlayMode] = usePersistentState(
+    "simon_play_mode",
+    "normal",
+  );
+  const [timing, setTiming] = usePersistentState("simon_timing", "relaxed");
   const [randomPalette, setRandomPalette] = usePersistentState(
-    'simon_random_palette',
-    false
+    "simon_random_palette",
+    false,
   );
   const [leaderboard, setLeaderboard] = usePersistentState(
-    'simon_leaderboard',
-    {}
+    "simon_leaderboard",
+    {},
   );
   const audioCtx = useRef(null);
   const errorSound = useRef(null);
@@ -139,11 +146,11 @@ const Simon = () => {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const handleChange = () => setPrefersReducedMotion(media.matches);
     handleChange();
-    media.addEventListener('change', handleChange);
-    return () => media.removeEventListener('change', handleChange);
+    media.addEventListener("change", handleChange);
+    return () => media.removeEventListener("change", handleChange);
   }, []);
 
   const updateHighScores = useCallback(
@@ -156,14 +163,15 @@ const Simon = () => {
         return { ...prev, [key]: current.slice(0, 5) };
       });
     },
-    [mode, timing, setLeaderboard]
+    [mode, timing, setLeaderboard],
   );
 
   const scheduleTone = (freq, startTime, duration) => {
     const ctx =
-      audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx.current ||
+      new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.current = ctx;
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === "suspended") ctx.resume();
     const oscillator = ctx.createOscillator();
     const gain = ctx.createGain();
     oscillator.frequency.value = freq;
@@ -183,26 +191,27 @@ const Simon = () => {
       window.requestAnimationFrame(() => setActivePad(idx));
       setTimeout(
         () => window.requestAnimationFrame(() => setActivePad(null)),
-        duration * 1000
+        duration * 1000,
       );
     },
-    [audioOnly, prefersReducedMotion]
+    [audioOnly, prefersReducedMotion],
   );
 
   const stepDuration = useCallback(() => {
     const base = 60 / tempo;
-    if (mode === 'endless') return base;
-    const reduction = mode === 'speed' ? 0.03 : 0.015;
+    if (mode === "endless") return base;
+    const reduction = mode === "speed" ? 0.03 : 0.015;
     return Math.max(base - sequence.length * reduction, 0.2);
   }, [tempo, mode, sequence.length]);
 
   const playSequence = useCallback(() => {
     const ctx =
-      audioCtx.current || new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx.current ||
+      new (window.AudioContext || window.webkitAudioContext)();
     audioCtx.current = ctx;
-    if (ctx.state === 'suspended') ctx.resume();
+    if (ctx.state === "suspended") ctx.resume();
     setIsPlayerTurn(false);
-    setStatus('Listen...');
+    setStatus("Listen...");
     const start = ctx.currentTime + 0.1;
     const baseDelta = stepDuration();
     const ramp = 0.97;
@@ -210,7 +219,7 @@ const Simon = () => {
       sequence.length,
       start,
       baseDelta,
-      ramp
+      ramp,
     );
     let currentDelta = baseDelta;
     let finalDelta = baseDelta;
@@ -225,7 +234,7 @@ const Simon = () => {
     const totalDelay =
       (schedule[schedule.length - 1] - ctx.currentTime + finalDelta) * 1000;
     setTimeout(() => {
-      setStatus('Your turn');
+      setStatus("Your turn");
       setIsPlayerTurn(true);
       setStep(0);
     }, totalDelay);
@@ -238,7 +247,7 @@ const Simon = () => {
   }, [sequence, isPlayerTurn, playSequence]);
 
   useEffect(() => {
-    if (timing !== 'strict' || !isPlayerTurn) {
+    if (timing !== "strict" || !isPlayerTurn) {
       clearTimeout(timeoutRef.current);
       return;
     }
@@ -248,28 +257,39 @@ const Simon = () => {
         errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
       }
       errorSound.current.play();
+      if (!prefersReducedMotion) vibrate(100);
       setErrorFlash(true);
-      if (playMode === 'strict') {
+      if (playMode === "strict") {
         const streak = Math.max(sequence.length - 1, 0);
         updateHighScores(streak);
       }
       setIsPlayerTurn(false);
       setStatus(
-        playMode === 'strict' ? 'Time up! Game over.' : 'Time up! Try again.'
+        playMode === "strict" ? "Time up! Game over." : "Time up! Try again.",
       );
       setTimeout(() => {
         setErrorFlash(false);
-        if (playMode === 'strict') {
+        if (playMode === "strict") {
           restartGame();
         } else {
           setStep(0);
-          setStatus('Listen...');
+          setStatus("Listen...");
           playSequence();
         }
       }, 600);
     }, 5000);
     return () => clearTimeout(timeoutRef.current);
-  }, [timing, isPlayerTurn, step, playMode, sequence.length, updateHighScores, restartGame, playSequence]);
+  }, [
+    timing,
+    isPlayerTurn,
+    step,
+    playMode,
+    sequence.length,
+    updateHighScores,
+    restartGame,
+    playSequence,
+    prefersReducedMotion,
+  ]);
 
   const startGame = useCallback(() => {
     rngRef.current = seed ? seedrandom(seed) : Math.random;
@@ -284,7 +304,7 @@ const Simon = () => {
       setPads(padStyles);
     }
     setSequence([Math.floor(rngRef.current() * 4)]);
-    setStatus('Listen...');
+    setStatus("Listen...");
   }, [seed, randomPalette]);
 
   const restartGame = useCallback(() => {
@@ -292,7 +312,7 @@ const Simon = () => {
     setSequence([]);
     setStep(0);
     setIsPlayerTurn(false);
-    setStatus('Press Start');
+    setStatus("Press Start");
   }, []);
 
   const handlePadClick = useCallback(
@@ -308,24 +328,25 @@ const Simon = () => {
           errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
         }
         errorSound.current.play();
+        if (!prefersReducedMotion) vibrate(100);
         setErrorFlash(true);
-        if (playMode === 'strict') {
+        if (playMode === "strict") {
           const streak = Math.max(sequence.length - 1, 0);
           updateHighScores(streak);
         }
         setIsPlayerTurn(false);
         setStatus(
-          playMode === 'strict'
-            ? 'Wrong pad! Game over.'
-            : 'Wrong pad! Try again.'
+          playMode === "strict"
+            ? "Wrong pad! Game over."
+            : "Wrong pad! Try again.",
         );
         setTimeout(() => {
           setErrorFlash(false);
-          if (playMode === 'strict') {
+          if (playMode === "strict") {
             restartGame();
           } else {
             setStep(0);
-            setStatus('Listen...');
+            setStatus("Listen...");
             playSequence();
           }
         }, 600);
@@ -351,27 +372,37 @@ const Simon = () => {
       updateHighScores,
       playMode,
       playSequence,
-    ]
+      prefersReducedMotion,
+    ],
   );
-
 
   const padClass = useCallback(
     (pad, idx) => {
       const colors =
-        mode === 'colorblind' || audioOnly
-          ? { base: 'bg-gray-700', active: 'bg-gray-500' }
+        mode === "colorblind" || audioOnly
+          ? { base: "bg-gray-700", active: "bg-gray-500" }
           : colorblindPalette
             ? pad.colorblind
             : pad.color;
-      const isActive = activePad === idx;
-      const ring = thickOutline ? 'ring-8' : 'ring-4';
-      return `h-32 w-32 rounded flex items-center justify-center text-3xl transition-shadow ${ring} ring-offset-2 ring-offset-gray-900 ${
+      const isActive = activePad === idx || errorFlash;
+      const ring = thickOutline ? "ring-8" : "ring-4";
+      const corner =
+        idx === 0
+          ? "rounded-tl-full"
+          : idx === 1
+            ? "rounded-tr-full"
+            : idx === 2
+              ? "rounded-bl-full"
+              : "rounded-br-full";
+      return `relative h-32 w-32 ${corner} flex items-center justify-center text-3xl transition-shadow ${ring} ring-offset-2 ring-offset-gray-900 ${
         isActive
-          ? `${colors.active} pad-pulse ring-white`
+          ? `${colors.active} ring-white`
           : `${colors.base} ring-transparent`
-      }`;
+      } before:content-[''] before:absolute before:inset-0 before:rounded-inherit before:scale-110 before:opacity-0 before:transition before:duration-200 before:blur-lg before:bg-white ${
+        isActive ? "before:opacity-50" : ""
+      } ${errorFlash ? "animate-pulse" : ""}`;
     },
-    [activePad, audioOnly, colorblindPalette, mode, thickOutline]
+    [activePad, audioOnly, colorblindPalette, mode, thickOutline, errorFlash],
   );
 
   const scoreKey = `${mode}-${timing}`;
@@ -379,8 +410,8 @@ const Simon = () => {
 
   return (
     <GameLayout onRestart={restartGame}>
-      <div className={errorFlash ? 'buzz' : ''}>
-        <div className="grid grid-cols-2 gap-4 mb-4">
+      <div className={errorFlash ? "buzz" : ""}>
+        <div className="grid grid-cols-2 gap-[6px] mb-4">
           {pads.map((pad, idx) => (
             <button
               key={pad.id}
@@ -389,7 +420,7 @@ const Simon = () => {
               onPointerDown={handlePadClick(idx)}
               aria-label={`${pad.label} pad`}
             >
-              {mode === 'colorblind' ? pad.label.toUpperCase() : ''}
+              {mode === "colorblind" ? pad.label.toUpperCase() : ""}
             </button>
           ))}
         </div>
@@ -423,14 +454,21 @@ const Simon = () => {
             value={seed}
             onChange={(e) => setSeed(e.target.value)}
           />
-          <select
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-            value={playMode}
-            onChange={(e) => setPlayMode(e.target.value)}
-          >
-            <option value="strict">Strict</option>
-            <option value="casual">Relaxed</option>
-          </select>
+          <div className="flex gap-2">
+            {["normal", "strict"].map((m) => (
+              <button
+                key={m}
+                onClick={() => setPlayMode(m)}
+                className={`px-2 py-1 rounded-full border ${
+                  playMode === m
+                    ? "bg-gray-600 border-white"
+                    : "bg-gray-700 border-gray-500 hover:bg-gray-600"
+                }`}
+              >
+                {m === "strict" ? "Strict" : "Normal"}
+              </button>
+            ))}
+          </div>
           <select
             className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
             value={timing}
