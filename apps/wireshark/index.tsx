@@ -1,11 +1,10 @@
 'use client';
 
 import React from 'react';
-import WiresharkApp from '../../components/apps/wireshark';
-import tinyCapture from './tinyCapture.json';
+import PcapViewer from './components/PcapViewer';
 
 const WiresharkPage: React.FC = () => {
-  return <WiresharkApp initialPackets={tinyCapture as any} />;
+  return <PcapViewer />;
 };
 
 export default WiresharkPage;
