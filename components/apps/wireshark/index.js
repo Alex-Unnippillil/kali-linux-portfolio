@@ -3,6 +3,7 @@ import Waterfall from './Waterfall';
 import { protocolName, getRowColor } from './utils';
 import DecodeTree from './DecodeTree';
 import FlowDiagram from './FlowDiagram';
+import filters from './filters.json';
 
 // Determine if a packet matches the active filter expression
 const matchesFilter = (packet, filter) => {
@@ -99,6 +100,14 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   }, [timeline, paused]);
 
   const handleFilterChange = (e) => {
+    const val = e.target.value;
+    setFilter(val);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('wireshark-filter', val);
+    }
+  };
+
+  const handleFilterSelect = (e) => {
     const val = e.target.value;
     setFilter(val);
     if (typeof window !== 'undefined') {
@@ -208,6 +217,19 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           aria-label="TLS key file"
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
+        <select
+          value={filters.some((f) => f.expression === filter) ? filter : ''}
+          onChange={handleFilterSelect}
+          aria-label="Common filters"
+          className="px-2 py-1 bg-gray-800 rounded text-white"
+        >
+          <option value="">Choose filter...</option>
+          {filters.map(({ label, expression }) => (
+            <option key={expression} value={expression}>
+              {label}
+            </option>
+          ))}
+        </select>
         <input
           value={filter}
           onChange={handleFilterChange}
@@ -325,25 +347,30 @@ const WiresharkApp = ({ initialPackets = [] }) => {
                 </tr>
               </thead>
               <tbody>
-                {filteredPackets.map((p, i) => (
-                  <tr
-                    key={i}
-                    onClick={() => setSelectedPacket(p)}
-                    className={`${i % 2 ? 'bg-gray-900' : 'bg-gray-800'} ${getRowColor(
-                      p,
-                      colorRules
-                    )} ${selectedPacket === p ? 'outline outline-1 outline-yellow-400' : ''}`}
-                  >
-                    <td className="px-2 py-1 whitespace-nowrap">{p.timestamp}</td>
-                    <td className="px-2 py-1 whitespace-nowrap">{p.src}</td>
-                    <td className="px-2 py-1 whitespace-nowrap">{p.dest}</td>
-                    <td className="px-2 py-1 whitespace-nowrap">{protocolName(p.protocol)}</td>
-                    <td className="px-2 py-1">{p.info}</td>
-                    {hasTlsKeys && (
-                      <td className="px-2 py-1">{p.decrypted}</td>
-                    )}
-                  </tr>
-                ))}
+                {filteredPackets.map((p, i) => {
+                  const isMatch = matchesFilter(p, filter);
+                  return (
+                    <tr
+                      key={i}
+                      onClick={() => setSelectedPacket(p)}
+                      className={`${i % 2 ? 'bg-gray-900' : 'bg-gray-800'} ${getRowColor(
+                        p,
+                        colorRules
+                      )} ${isMatch ? 'bg-yellow-900' : ''} ${
+                        selectedPacket === p ? 'outline outline-1 outline-yellow-400' : ''
+                      }`}
+                    >
+                      <td className="px-2 py-1 whitespace-nowrap">{p.timestamp}</td>
+                      <td className="px-2 py-1 whitespace-nowrap">{p.src}</td>
+                      <td className="px-2 py-1 whitespace-nowrap">{p.dest}</td>
+                      <td className="px-2 py-1 whitespace-nowrap">{protocolName(p.protocol)}</td>
+                      <td className="px-2 py-1">{p.info}</td>
+                      {hasTlsKeys && (
+                        <td className="px-2 py-1">{p.decrypted}</td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
