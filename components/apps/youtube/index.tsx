@@ -120,7 +120,7 @@ function Sidebar({
       <div data-testid="watch-later-list">
         {watchLater.map((v, i) => (
           <div
-            key={v.id}
+            key={`${v.id}-${v.start ?? 0}-${v.end ?? 0}`}
             className="mb-2 cursor-pointer"
             onClick={() => onPlay(v)}
             draggable
@@ -131,7 +131,7 @@ function Sidebar({
             onKeyDown={(e) => handleKey(i, e)}
           >
             <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
-            <div>{v.title}</div>
+            <div>{v.name || v.title}</div>
           </div>
         ))}
         {!watchLater.length && <div className="text-ubt-grey">Empty</div>}
@@ -237,6 +237,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [loopStart, setLoopStart] = useState<number | null>(null);
   const [loopEnd, setLoopEnd] = useState<number | null>(null);
   const [looping, setLooping] = useState(false);
+  const [, setPlaybackRate] = useState(1);
 
   const downloadCurrent = useCallback(async () => {
     if (!current) return;
@@ -308,11 +309,20 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!looping || loopStart === null || loopEnd === null) return;
+    if (!playerReady || loopStart === null) return;
+    playerRef.current?.seekTo(loopStart, true);
+  }, [playerReady, loopStart, current]);
+
+  useEffect(() => {
+    if (loopStart === null || loopEnd === null) return;
     const id = window.setInterval(() => {
       const cur = playerRef.current?.getCurrentTime() ?? 0;
       if (cur >= loopEnd) {
-        playerRef.current?.seekTo(loopStart, true);
+        if (looping && loopStart !== null) {
+          playerRef.current?.seekTo(loopStart, true);
+        } else {
+          playerRef.current?.pauseVideo();
+        }
       }
     }, 500);
     return () => clearInterval(id);
@@ -374,9 +384,37 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const addQueue = useCallback((v: Video) => setQueue((q) => [...q, v]), []);
   const addWatchLater = useCallback(
     (v: Video) =>
-      setWatchLater((w) => (w.some((x) => x.id === v.id) ? w : [...w, v])),
-    []
+      setWatchLater((w) =>
+        w.some(
+          (x) => x.id === v.id && x.start === v.start && x.end === v.end,
+        )
+          ? w
+          : [...w, v],
+      ),
+    [],
   );
+  const shareClip = useCallback(async () => {
+    if (!current || loopStart === null || loopEnd === null) return;
+    const url = `https://youtu.be/${current.id}?start=${Math.floor(
+      loopStart,
+    )}&end=${Math.floor(loopEnd)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      window.prompt('Clip URL', url);
+    }
+  }, [current, loopStart, loopEnd]);
+  const saveClip = useCallback(() => {
+    if (!current || loopStart === null || loopEnd === null) return;
+    const name = window.prompt('Clip name?')?.trim();
+    if (!name) return;
+    addWatchLater({
+      ...current,
+      name,
+      start: Math.floor(loopStart),
+      end: Math.floor(loopEnd),
+    });
+  }, [current, loopStart, loopEnd, addWatchLater]);
   const moveWatchLater = useCallback(
     (from: number, to: number) => {
       setWatchLater((list) => {
@@ -388,16 +426,22 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     },
     [setWatchLater],
   );
+  const playVideo = useCallback((v: Video) => {
+    setCurrent(v);
+    setLoopStart(v.start ?? null);
+    setLoopEnd(v.end ?? null);
+    setLooping(false);
+  }, []);
   const playNext = useCallback(() => {
     setQueue((q) => {
       if (q.length) {
         const [next, ...rest] = q;
-        setCurrent(next);
+        playVideo(next);
         return rest;
       }
       return q;
     });
-  }, []);
+  }, [playVideo]);
 
   useEffect(() => {
     const handleKeys = (e: KeyboardEvent) => {
@@ -522,6 +566,22 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 </svg>
               </button>
               <button
+                onClick={shareClip}
+                disabled={loopStart === null || loopEnd === null}
+                aria-label="Copy share link"
+                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+              >
+                <span className="flex h-6 w-6 items-center justify-center">Link</span>
+              </button>
+              <button
+                onClick={saveClip}
+                disabled={loopStart === null || loopEnd === null}
+                aria-label="Save clip"
+                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+              >
+                <span className="flex h-6 w-6 items-center justify-center">Save</span>
+              </button>
+              <button
                 onClick={downloadCurrent}
                 aria-label="Download video"
                 className="ml-auto text-ubt-cool-grey hover:text-ubt-green"
@@ -539,7 +599,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
         )}
         <VirtualGrid
           items={results}
-          onPlay={setCurrent}
+          onPlay={playVideo}
           onQueue={addQueue}
           onWatchLater={addWatchLater}
         />
@@ -547,7 +607,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       <Sidebar
         queue={queue}
         watchLater={watchLater}
-        onPlay={setCurrent}
+        onPlay={playVideo}
         onReorder={moveWatchLater}
       />
     </div>
