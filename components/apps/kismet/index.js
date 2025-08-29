@@ -173,15 +173,23 @@ const ClientTable = ({ clients }) => (
       <thead>
         <tr>
           <th className="text-left">MAC</th>
-          <th className="text-left">SSID</th>
+          <th className="text-left">History</th>
           <th className="text-left">Vendor</th>
         </tr>
       </thead>
       <tbody>
         {clients.map((c, idx) => (
-          <tr key={idx} className="odd:bg-gray-800">
-            <td className="pr-2">{c.mac}</td>
-            <td className="pr-2">{c.ssid}</td>
+          <tr key={idx} className="odd:bg-gray-800 align-top">
+            <td className="pr-2 whitespace-nowrap">{c.mac}</td>
+            <td className="pr-2">
+              {c.history.map((h, i) => (
+                <div key={i}>
+                  <a href={`#${h.bssid}`} className="text-blue-400 underline">
+                    {h.ssid}
+                  </a>
+                </div>
+              ))}
+            </td>
             <td>{c.vendor}</td>
           </tr>
         ))}
@@ -443,6 +451,7 @@ const KismetApp = ({ onNetworkDiscovered = () => {} }) => {
               className="flex-grow"
               renderRow={(net) => (
                 <div
+                  id={net.bssid}
                   onClick={() => setSelected(net)}
                   className={`flex items-center justify-between p-1 transition-colors duration-500 cursor-pointer ${
                     net.highlight ? 'bg-yellow-700' : ''
