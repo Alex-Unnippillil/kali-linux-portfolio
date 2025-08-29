@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import modules from './modules.json';
+import modules from '../../../public/metasploit-modules.json';
 import usePersistentState from '../../usePersistentState';
 
 const severities = ['critical', 'high', 'medium', 'low'];
