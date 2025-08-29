@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Engine, Render, World, Bodies, Body, Runner } from 'matter-js';
+import TiltSensor from '../../games/pinball/components/TiltSensor';
 
 const themes: Record<string, { bg: string; flipper: string }> = {
   classic: { bg: '#0b3d91', flipper: '#ffd700' },
@@ -20,6 +21,23 @@ export default function Pinball() {
   const [bounce, setBounce] = useState(0.5);
   const [tilt, setTilt] = useState(false);
   const nudgesRef = useRef<number[]>([]);
+
+  const handleNudge = useCallback(() => {
+    if (tilt) return;
+    const now = Date.now();
+    nudgesRef.current = nudgesRef.current.filter((t) => now - t < 5000);
+    nudgesRef.current.push(now);
+    if (ballRef.current) {
+      Body.applyForce(ballRef.current, ballRef.current.position, { x: 0.02, y: 0 });
+    }
+    if (nudgesRef.current.length >= 3) {
+      setTilt(true);
+      setTimeout(() => {
+        setTilt(false);
+        nudgesRef.current = [];
+      }, 3000);
+    }
+  }, [tilt]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -71,17 +89,7 @@ export default function Pinball() {
       } else if (e.code === 'ArrowRight') {
         Body.setAngle(rightFlipper, Math.PI / 4 * power);
       } else if (e.code === 'KeyN') {
-        const now = Date.now();
-        nudgesRef.current = nudgesRef.current.filter((t) => now - t < 5000);
-        nudgesRef.current.push(now);
-        Body.applyForce(ballRef.current!, ballRef.current!.position, { x: 0.02, y: 0 });
-        if (nudgesRef.current.length >= 3) {
-          setTilt(true);
-          setTimeout(() => {
-            setTilt(false);
-            nudgesRef.current = [];
-          }, 3000);
-        }
+        handleNudge();
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -103,7 +111,7 @@ export default function Pinball() {
       World.clear(engine.world, false);
       Engine.clear(engine);
     };
-  }, [theme, power, bounce, tilt]);
+  }, [theme, power, bounce, tilt, handleNudge]);
 
   useEffect(() => {
     if (leftFlipperRef.current) {
@@ -156,9 +164,10 @@ export default function Pinball() {
         </label>
       </div>
       {tilt && <div className="text-red-500 font-bold">TILT!</div>}
-      <canvas ref={canvasRef} width={400} height={600} className="border" />
-      <p className="text-xs">Left/Right arrows to flip, N to nudge.</p>
-    </div>
-  );
-}
+        <canvas ref={canvasRef} width={400} height={600} className="border" />
+        <p className="text-xs">Left/Right arrows to flip, N to nudge.</p>
+        <TiltSensor onNudge={handleNudge} />
+      </div>
+    );
+  }
 
