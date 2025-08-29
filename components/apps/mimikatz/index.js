@@ -1,92 +1,112 @@
-import React, { useState } from 'react';
-import eventLogsData from './eventLogs.json';
-import lsassDiagrams from './lsass.json';
-import BlueTeamPanel from '../../../apps/mimikatz/components/BlueTeamPanel';
+import React, { useState } from "react";
 
-// Storyboard UI showing attack steps and mitigations.
+// Demo output for each tab
+const demoOutput = {
+  dump: [
+    "[*] lsass.exe (1234)",
+    "[+] Dump saved to C:/dumps/lsass.dmp",
+    "Token: 0123456789ABCDEF0123456789ABCDEF",
+  ],
+  tokens: [
+    "NTLM hash: 5d41402abc4b2a76b9719d911017c592",
+    "Token: FEDCBA9876543210FEDCBA9876543210",
+  ],
+  tickets: [
+    "Kerberos Ticket: 05000000123456789abcdef",
+    "Ticket cache: user@EXAMPLE.COM",
+  ],
+};
+
+const tabs = [
+  { id: "dump", label: "Dump", icon: "💾" },
+  { id: "tokens", label: "Tokens", icon: "🔑" },
+  { id: "tickets", label: "Tickets", icon: "🎫" },
+];
+
+// Masks tokens and hashes unless unmasked by user
+const maskSensitive = (line, show) => {
+  if (show) return line;
+  return line.replace(
+    /(Token|NTLM hash|Kerberos Ticket|Ticket cache):\s*\S+/gi,
+    (match, p1) => `${p1}: ********`,
+  );
+};
+
 const MimikatzApp = () => {
-  const [tab, setTab] = useState('attack');
-  const [logs, setLogs] = useState(eventLogsData);
+  const [active, setActive] = useState("dump");
+  const [showSensitive, setShowSensitive] = useState(false);
 
-  const resources = {
-    'Invoke Mimikatz':
-      'https://learn.microsoft.com/en-us/windows/security/threat-protection/windows-defender-application-control/applocker-overview',
-    'Dump LSASS':
-      'https://learn.microsoft.com/en-us/windows-server/security/credential-protection/lsass-protection',
+  const output = demoOutput[active];
+
+  const copyLine = async (line) => {
+    try {
+      await navigator.clipboard.writeText(line);
+    } catch {}
   };
 
-  const handleImport = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        if (Array.isArray(data)) setLogs(data);
-      } catch {
-        // ignore malformed files
-      }
-    };
-    reader.readAsText(file);
+  const exportOutput = () => {
+    const blob = new Blob([output.join("\n")], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${active}-output.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <div className="h-full w-full flex flex-col text-white">
-      <div className="flex border-b border-gray-700">
-        <button
-          className={`px-4 py-2 ${
-            tab === 'attack' ? 'bg-red-700' : 'bg-red-600'
-          }`}
-          onClick={() => setTab('attack')}
-        >
-          Red Team
-        </button>
-        <button
-          className={`px-4 py-2 ${
-            tab === 'defense' ? 'bg-blue-700' : 'bg-blue-600'
-          }`}
-          onClick={() => setTab('defense')}
-        >
-          Blue Team
-        </button>
+    <div className="h-full w-full flex flex-col bg-ub-cool-grey text-white">
+      <div className="bg-yellow-600 text-black text-center text-sm py-1">
+        Warning: demo only. No real credentials are used.
       </div>
-      {tab === 'attack' ? (
-        <div className="p-4 overflow-auto flex-1 bg-ub-cool-grey">
-          <h2 className="text-lg mb-2">Attack Storyboard</h2>
-          <input
-            type="file"
-            accept="application/json"
-            onChange={handleImport}
-            className="mb-4"
-          />
-          <ul className="space-y-2">
-            {logs.map((l, idx) => (
-              <li key={idx} className="bg-ub-dark p-2 rounded">
-                <div className="font-bold">Step {idx + 1}: {l.step}</div>
-                <div className="text-sm">{l.log}</div>
-                {l.mitigation && (
-                  <div className="text-xs text-blue-300 mt-1">
-                    Mitigation: {l.mitigation}
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-4">
-            <h3 className="text-lg mb-2">LSASS Diagram</h3>
-            <pre className="bg-black p-2 whitespace-pre-wrap">
-              {lsassDiagrams[0]?.diagram}
-            </pre>
-          </div>
+      <div className="flex border-b border-gray-700">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            className={`flex items-center gap-1 px-4 py-2 ${
+              active === t.id ? "bg-purple-700" : "bg-purple-600"
+            }`}
+            onClick={() => setActive(t.id)}
+          >
+            <span>{t.icon}</span>
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="p-2 flex-1 overflow-auto">
+        <div className="flex justify-between items-center mb-2 text-xs">
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
+              checked={showSensitive}
+              onChange={(e) => setShowSensitive(e.target.checked)}
+            />
+            Show tokens
+          </label>
+          <button
+            className="bg-gray-700 px-2 py-1 rounded"
+            onClick={exportOutput}
+          >
+            Export
+          </button>
         </div>
-      ) : (
-        <div className="p-4 overflow-auto flex-1 bg-ub-cool-grey">
-          <h2 className="text-lg mb-2">Mitigation Tips</h2>
-          <BlueTeamPanel
-            logs={logs.map((l) => ({ ...l, resource: resources[l.step] }))}
-          />
+        <div className="bg-black text-green-400 font-mono text-sm p-2 rounded">
+          {output.map((line, idx) => (
+            <div key={idx} className="flex items-start">
+              <span className="flex-1 whitespace-pre-wrap">
+                {maskSensitive(line, showSensitive)}
+              </span>
+              <button
+                className="ml-2 text-gray-400 hover:text-white"
+                onClick={() => copyLine(line)}
+                aria-label="copy line"
+              >
+                📋
+              </button>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 };
