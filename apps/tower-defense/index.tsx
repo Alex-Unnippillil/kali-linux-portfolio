@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import GameLayout from '../../components/apps/GameLayout';
+import DpsCharts from '../games/tower-defense/components/DpsCharts';
 import {
   ENEMY_TYPES,
   Tower,
@@ -253,6 +254,7 @@ const TowerDefense = () => {
           className="bg-black"
           onClick={handleCanvasClick}
         />
+        {!editing && <DpsCharts towers={towers} />}
       </div>
     </GameLayout>
   );
