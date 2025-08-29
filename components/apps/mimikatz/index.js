@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import eventLogsData from './eventLogs.json';
 import lsassDiagrams from './lsass.json';
+import BlueTeamPanel from '../../../apps/mimikatz/components/BlueTeamPanel';
 
 // Storyboard UI showing attack steps and mitigations.
 const MimikatzApp = () => {
   const [tab, setTab] = useState('attack');
   const [logs, setLogs] = useState(eventLogsData);
+
+  const resources = {
+    'Invoke Mimikatz':
+      'https://learn.microsoft.com/en-us/windows/security/threat-protection/windows-defender-application-control/applocker-overview',
+    'Dump LSASS':
+      'https://learn.microsoft.com/en-us/windows-server/security/credential-protection/lsass-protection',
+  };
 
   const handleImport = (e) => {
     const file = e.target.files?.[0];
@@ -74,13 +82,9 @@ const MimikatzApp = () => {
       ) : (
         <div className="p-4 overflow-auto flex-1 bg-ub-cool-grey">
           <h2 className="text-lg mb-2">Mitigation Tips</h2>
-          <ul className="list-disc pl-4 space-y-1">
-            {logs.map((l, idx) => (
-              <li key={idx}>
-                <span className="font-semibold">{l.step}</span>: {l.mitigation}
-              </li>
-            ))}
-          </ul>
+          <BlueTeamPanel
+            logs={logs.map((l) => ({ ...l, resource: resources[l.step] }))}
+          />
         </div>
       )}
     </div>
