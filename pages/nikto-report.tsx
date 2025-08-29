@@ -32,7 +32,7 @@ const NiktoReport: React.FC = () => {
       findings.filter(
         (f) =>
           (severity === 'All' || f.severity.toLowerCase() === severity.toLowerCase()) &&
-          f.path.toLowerCase().includes(pathFilter.toLowerCase())
+          f.path.toLowerCase().startsWith(pathFilter.toLowerCase())
       ),
     [findings, severity, pathFilter]
   );
