@@ -109,6 +109,8 @@ const Pacman = () => {
   });
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
+  const [started, setStarted] = useState(false);
+  const [leaderboard, setLeaderboard] = useState([]);
   const fruitRef = useRef({ active: false, x: 7, y: 3, timer: 0 });
   const fruitTimesRef = useRef([]);
   const nextFruitRef = useRef(0);
@@ -209,6 +211,45 @@ const Pacman = () => {
   const reset = useCallback(() => {
     loadLevel(levelIndex);
   }, [loadLevel, levelIndex]);
+
+  const startGame = () => {
+    setStarted(true);
+    reset();
+  };
+
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') return;
+    const load = async () => {
+      try {
+        const res = await fetch('/api/pacman/leaderboard');
+        const data = await res.json();
+        setLeaderboard(data);
+      } catch {
+        setLeaderboard([]);
+      }
+    };
+    void load();
+  }, []);
+
+  const submitScore = useCallback(
+    async (finalScore) => {
+      if (process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') return;
+      try {
+        const name = window.prompt('Enter your name', 'Player');
+        if (!name) return;
+        const res = await fetch('/api/pacman/leaderboard', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, score: finalScore }),
+        });
+        const data = await res.json();
+        setLeaderboard(data);
+      } catch {
+        /* ignore */
+      }
+    },
+    [],
+  );
 
   const targetFor = (ghost, pac) => {
     if (frightTimerRef.current > 0) return null;
@@ -530,6 +571,7 @@ const Pacman = () => {
           pac.lives -= 1;
           if (pac.lives <= 0) {
             statusRef.current = 'Game Over';
+            submitScore(score);
           } else {
             resetPositions();
             frightTimerRef.current = 0;
@@ -674,9 +716,31 @@ const Pacman = () => {
     );
   }
 
+  if (!started) {
     return (
+      <div className="flex flex-col items-center">
+        <button className="px-2 py-1 bg-ub-grey rounded" onClick={startGame}>
+          Start
+        </button>
+        {leaderboard.length > 0 && (
+          <div className="mt-4 text-left">
+            <h3 className="font-bold">Top Scores</h3>
+            <ol className="ml-4 list-decimal">
+              {leaderboard.map((entry, i) => (
+                <li key={`${entry.name}-${i}`}>
+                  {entry.name}: {entry.score}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </div>
+    );
+  }
 
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+  return (
+
+  <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <div className="mb-2 w-full max-w-xs">
         <input
           type="text"
