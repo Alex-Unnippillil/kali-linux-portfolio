@@ -43,6 +43,255 @@ const EttercapApp = () => {
   const canvasRef = useRef(null);
   const hostPositions = useRef({});
 
+  // storyboard state for interactive canvas
+  const boardRef = useRef(null);
+  const nodesRef = useRef({
+    attacker: { x: 150, y: 60, label: 'Attacker' },
+    victim: { x: 50, y: 140, label: 'Victim' },
+    gateway: { x: 250, y: 140, label: 'Gateway' },
+  });
+  const [nodes, setNodes] = useState(nodesRef.current);
+  const [dragNode, setDragNode] = useState(null);
+  const [step, setStep] = useState(0);
+  const [traceIndex, setTraceIndex] = useState(0);
+  const [animProgress, setAnimProgress] = useState(0);
+
+  const steps = [
+    {
+      title: 'Normal Operation',
+      packetTrace: [
+        'Victim -> Gateway: DNS query',
+        'Gateway -> Victim: DNS response',
+      ],
+      before: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
+      after: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
+    },
+    {
+      title: 'ARP Poisoning',
+      packetTrace: [
+        'Attacker -> Victim: ARP reply (gateway is-at attacker)',
+        'Attacker -> Gateway: ARP reply (victim is-at attacker)',
+      ],
+      before: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
+      after: [
+        { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
+        { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
+      ],
+    },
+    {
+      title: 'DNS Spoofing',
+      packetTrace: [
+        'Victim -> Attacker: DNS query',
+        'Attacker -> Victim: spoofed DNS response',
+      ],
+      before: [
+        { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
+        { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
+      ],
+      after: [
+        { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
+        { from: 'Attacker', to: 'Gateway', color: '#f87171' },
+      ],
+    },
+  ];
+
+  const drawStoryboard = () => {
+    const canvas = boardRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const activeNodes = nodesRef.current;
+    const flowsToDraw = steps[step].after;
+    flowsToDraw.forEach((f, i) => {
+      const from = activeNodes[f.from.toLowerCase()];
+      const to = activeNodes[f.to.toLowerCase()];
+      if (!from || !to) return;
+      ctx.strokeStyle = f.color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
+      ctx.stroke();
+      if (i === 0) {
+        const x = from.x + (to.x - from.x) * animProgress;
+        const y = from.y + (to.y - from.y) * animProgress;
+        ctx.fillStyle = f.color;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+    Object.values(activeNodes).forEach((n) => {
+      ctx.fillStyle = '#1f2937';
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.font = '10px monospace';
+      ctx.fillText(n.label, n.x, n.y + 30);
+    });
+  };
+
+  useEffect(() => {
+    nodesRef.current = nodes;
+    drawStoryboard();
+  }, [nodes, step, animProgress]);
+
+  useEffect(() => {
+    const canvas = boardRef.current;
+    if (!canvas) return;
+    const getNodeAt = (x, y) => {
+      return Object.entries(nodesRef.current).find(
+        ([, n]) => Math.hypot(n.x - x, n.y - y) < 20
+      )?.[0];
+    };
+    const handleDown = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const nodeKey = getNodeAt(x, y);
+      if (nodeKey) setDragNode(nodeKey);
+    };
+    const handleMove = (e) => {
+      if (!dragNode) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setNodes((n) => ({ ...n, [dragNode]: { ...n[dragNode], x, y } }));
+    };
+    const handleUp = () => setDragNode(null);
+    canvas.addEventListener('mousedown', handleDown);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    return () => {
+      canvas.removeEventListener('mousedown', handleDown);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+    };
+  }, [dragNode]);
+
+  useEffect(() => {
+    let start;
+    let raf;
+    const stepAnim = (ts) => {
+      if (!start) start = ts;
+      const progress = ((ts - start) % 2000) / 2000;
+      setAnimProgress(progress);
+      raf = requestAnimationFrame(stepAnim);
+    };
+    raf = requestAnimationFrame(stepAnim);
+    return () => cancelAnimationFrame(raf);
+  }, [step]);
+
+  useEffect(() => {
+    setTraceIndex(0);
+    const traces = steps[step].packetTrace;
+    let idx = 0;
+    const id = setInterval(() => {
+      idx++;
+      if (idx > traces.length) {
+        clearInterval(id);
+      } else {
+        setTraceIndex(idx);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [step]);
+
+  useEffect(() => {
+    setNodes((n) => ({
+      ...n,
+      victim: { ...n.victim, label: target1 || 'Victim' },
+      gateway: { ...n.gateway, label: target2 || 'Gateway' },
+    }));
+  }, [target1, target2]);
+
+  const nextStep = () => setStep((s) => (s + 1) % steps.length);
+  const restartLab = () => {
+    setNodes({
+      attacker: { x: 150, y: 60, label: 'Attacker' },
+      victim: { x: 50, y: 140, label: target1 || 'Victim' },
+      gateway: { x: 250, y: 140, label: target2 || 'Gateway' },
+    });
+    setStep(0);
+    setTraceIndex(0);
+  };
+
+  const renderMini = (flowsArr) => {
+    const positions = {
+      Victim: { x: 40, y: 40 },
+      Attacker: { x: 110, y: 40 },
+      Gateway: { x: 180, y: 40 },
+    };
+    return (
+      <svg width="220" height="80" aria-hidden="true">
+        <defs>
+          <marker
+            id="mini-arrow"
+            markerWidth="10"
+            markerHeight="7"
+            refX="10"
+            refY="3.5"
+            orient="auto"
+          >
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24" />
+          </marker>
+          <marker
+            id="mini-arrow-red"
+            markerWidth="10"
+            markerHeight="7"
+            refX="10"
+            refY="3.5"
+            orient="auto"
+          >
+            <polygon points="0 0, 10 3.5, 0 7" fill="#f87171" />
+          </marker>
+        </defs>
+        {Object.entries(positions).map(([name, pos]) => (
+          <React.Fragment key={name}>
+            <rect
+              x={pos.x - 30}
+              y={pos.y - 10}
+              width={60}
+              height={20}
+              fill="#1f2937"
+              stroke="white"
+            />
+            <text
+              x={pos.x}
+              y={pos.y + 4}
+              fill="white"
+              textAnchor="middle"
+              fontSize="10"
+            >
+              {name}
+            </text>
+          </React.Fragment>
+        ))}
+        {flowsArr.map((f, i) => {
+          const from = positions[f.from];
+          const to = positions[f.to];
+          const markerId = f.color === '#f87171' ? 'mini-arrow-red' : 'mini-arrow';
+          return (
+            <line
+              key={i}
+              x1={from.x + 30}
+              y1={from.y}
+              x2={to.x - 30}
+              y2={to.y}
+              stroke={f.color}
+              strokeWidth="2"
+              markerEnd={`url(#${markerId})`}
+            />
+          );
+        })}
+      </svg>
+    );
+  };
+
   const highlightFilter = (code) =>
     code
       .replace(/&/g, '&amp;')
@@ -334,6 +583,44 @@ const stopSpoof = () => {
         ))}
       </div>
       <div className="mt-4">
+        <h2 className="font-semibold">Lab Storyboard</h2>
+        <canvas
+          ref={boardRef}
+          width={300}
+          height={200}
+          className="bg-gray-800 rounded mt-2 cursor-move"
+        />
+        <div className="mt-2 space-x-2">
+          <button
+            className="px-2 py-1 bg-blue-600 rounded"
+            onClick={nextStep}
+          >
+            Next Step
+          </button>
+          <button
+            className="px-2 py-1 bg-gray-600 rounded"
+            onClick={restartLab}
+          >
+            Restart Lab
+          </button>
+        </div>
+        <div className="mt-2 text-xs font-mono">
+          {steps[step].packetTrace.slice(0, traceIndex).map((p, i) => (
+            <div key={i}>{p}</div>
+          ))}
+        </div>
+        <div className="flex flex-col md:flex-row md:space-x-8 mt-4">
+          <div className="flex flex-col items-center">
+            <h3 className="mb-2">Before</h3>
+            {renderMini(steps[step].before)}
+          </div>
+          <div className="flex flex-col items-center mt-4 md:mt-0">
+            <h3 className="mb-2">After</h3>
+            {renderMini(steps[step].after)}
+          </div>
+        </div>
+      </div>
+      <div className="mt-4">
         <h2 className="font-semibold">Host Pairs</h2>
         <canvas
           ref={canvasRef}
@@ -398,92 +685,6 @@ const stopSpoof = () => {
             ))}
           </tbody>
         </table>
-      </div>
-      <div className="mt-4">
-        <h2 className="font-semibold">ARP Poisoning Flow</h2>
-        <div className="flex flex-col md:flex-row md:space-x-8 mt-2">
-          <div className="flex flex-col items-center">
-            <h3 className="mb-2">Before</h3>
-            <svg width="160" height="80" aria-hidden="true">
-              <defs>
-                <marker
-                  id="arrowhead-static-before"
-                  markerWidth="10"
-                  markerHeight="7"
-                  refX="10"
-                  refY="3.5"
-                  orient="auto"
-                >
-                  <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24" />
-                </marker>
-              </defs>
-              <rect x="10" y="30" width="60" height="20" fill="#1f2937" stroke="white" />
-              <text x="40" y="44" fill="white" textAnchor="middle" fontSize="10">
-                Victim
-              </text>
-              <rect x="90" y="30" width="60" height="20" fill="#1f2937" stroke="white" />
-              <text x="120" y="44" fill="white" textAnchor="middle" fontSize="10">
-                Gateway
-              </text>
-              <line
-                x1="70"
-                y1="40"
-                x2="90"
-                y2="40"
-                stroke="#fbbf24"
-                strokeWidth="2"
-                markerEnd="url(#arrowhead-static-before)"
-              />
-            </svg>
-          </div>
-          <div className="flex flex-col items-center mt-4 md:mt-0">
-            <h3 className="mb-2">After</h3>
-            <svg width="220" height="80" aria-hidden="true">
-              <defs>
-                <marker
-                  id="arrowhead-static-after"
-                  markerWidth="10"
-                  markerHeight="7"
-                  refX="10"
-                  refY="3.5"
-                  orient="auto"
-                >
-                  <polygon points="0 0, 10 3.5, 0 7" fill="#fbbf24" />
-                </marker>
-              </defs>
-              <rect x="10" y="30" width="60" height="20" fill="#1f2937" stroke="white" />
-              <text x="40" y="44" fill="white" textAnchor="middle" fontSize="10">
-                Victim
-              </text>
-              <rect x="85" y="30" width="60" height="20" fill="#1f2937" stroke="white" />
-              <text x="115" y="44" fill="white" textAnchor="middle" fontSize="10">
-                Attacker
-              </text>
-              <rect x="160" y="30" width="60" height="20" fill="#1f2937" stroke="white" />
-              <text x="190" y="44" fill="white" textAnchor="middle" fontSize="10">
-                Gateway
-              </text>
-              <line
-                x1="70"
-                y1="40"
-                x2="85"
-                y2="40"
-                stroke="#fbbf24"
-                strokeWidth="2"
-                markerEnd="url(#arrowhead-static-after)"
-              />
-              <line
-                x1="145"
-                y1="40"
-                x2="160"
-                y2="40"
-                stroke="#fbbf24"
-                strokeWidth="2"
-                markerEnd="url(#arrowhead-static-after)"
-              />
-            </svg>
-          </div>
-        </div>
       </div>
       <div className="mt-4">
         <h2 className="font-semibold">Filter Editor</h2>
