@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 const suggestions = {
   '/admin': 'Restrict access to the admin portal or remove it from public view.',
@@ -13,6 +13,10 @@ const NiktoApp = () => {
   const [ssl, setSsl] = useState(false);
   const [findings, setFindings] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [entries, setEntries] = useState([]);
+  const [filterHost, setFilterHost] = useState('');
+  const [filterPath, setFilterPath] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -63,6 +67,92 @@ const NiktoApp = () => {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'nikto-report.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const parseText = (text) => {
+    const lines = text.split(/\r?\n/);
+    const data = [];
+    let currentHost = '';
+    lines.forEach((line) => {
+      const hostMatch = line.match(/^Host:\s*(.+)$/i);
+      if (hostMatch) {
+        currentHost = hostMatch[1].trim();
+        return;
+      }
+      const entryMatch = line.match(/^([^\s]+)\s+(Info|Low|Medium|High|Critical)$/i);
+      if (entryMatch && currentHost) {
+        data.push({ host: currentHost, path: entryMatch[1], severity: entryMatch[2] });
+      }
+    });
+    return data;
+  };
+
+  const parseXml = (text) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, 'application/xml');
+    if (doc.querySelector('parsererror')) throw new Error('Invalid XML');
+    const host = doc.querySelector('target > hostname')?.textContent || '';
+    const data = [];
+    doc.querySelectorAll('item').forEach((item) => {
+      const path = item.querySelector('uri, url')?.textContent || '';
+      const severity = item.querySelector('severity')?.textContent || '';
+      if (host && path) {
+        data.push({ host, path, severity });
+      }
+    });
+    return data;
+  };
+
+  const handleDrop = useCallback(async (e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      let data = [];
+      if (file.name.endsWith('.xml')) {
+        data = parseXml(text);
+      } else if (file.name.endsWith('.txt')) {
+        data = parseText(text);
+      } else {
+        throw new Error('Unsupported file type');
+      }
+      if (!data.length) throw new Error('No valid findings');
+      setEntries(data);
+      setError('');
+    } catch (err) {
+      setEntries([]);
+      setError(err.message || 'Failed to parse file');
+    }
+  }, []);
+
+  const filtered = useMemo(() => {
+    return entries.filter(
+      (e) =>
+        e.host.toLowerCase().includes(filterHost.toLowerCase()) &&
+        e.path.toLowerCase().includes(filterPath.toLowerCase())
+    );
+  }, [entries, filterHost, filterPath]);
+
+  const exportCsv = () => {
+    const rows = [
+      ['Host', 'Path', 'Severity'],
+      ...filtered.map((r) => [r.host, r.path, r.severity]),
+    ];
+    const csv = rows
+      .map((row) =>
+        row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(',')
+      )
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nikto.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -197,6 +287,61 @@ const NiktoApp = () => {
           srcDoc={htmlReport}
           className="w-full h-64 bg-white"
         />
+      </div>
+      <div>
+        <h2 className="text-lg mb-2">Parse Report</h2>
+        <div
+          data-testid="drop-zone"
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
+          className="border-2 border-dashed border-gray-600 p-4 text-center mb-4"
+        >
+          Drop Nikto text or XML report here
+        </div>
+        {error && <p className="text-red-500 mb-2">{error}</p>}
+        {entries.length > 0 && (
+          <div>
+            <div className="flex space-x-2 mb-2">
+              <input
+                placeholder="Filter host"
+                value={filterHost}
+                onChange={(e) => setFilterHost(e.target.value)}
+                className="p-1 rounded text-black flex-1"
+              />
+              <input
+                placeholder="Filter path"
+                value={filterPath}
+                onChange={(e) => setFilterPath(e.target.value)}
+                className="p-1 rounded text-black flex-1"
+              />
+              <button
+                type="button"
+                onClick={exportCsv}
+                className="px-2 py-1 bg-blue-600 rounded text-sm"
+              >
+                Export CSV
+              </button>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-700">
+                  <th className="p-2 text-left">Host</th>
+                  <th className="p-2 text-left">Path</th>
+                  <th className="p-2 text-left">Severity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((r, i) => (
+                  <tr key={i} className="odd:bg-gray-900">
+                    <td className="p-2">{r.host}</td>
+                    <td className="p-2">{r.path}</td>
+                    <td className="p-2">{r.severity}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
