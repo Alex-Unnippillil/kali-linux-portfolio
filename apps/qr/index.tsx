@@ -1,4 +1,5 @@
 'use client';
-import QRScanner from '../../components/apps/qr';
 
-export default QRScanner;
+import Scanner from './components/Scanner';
+
+export default Scanner;
