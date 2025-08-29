@@ -140,8 +140,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           if (q) searchRef.current?.findNext(q);
         }
       });
-      term.onPaste((d: string) => handleInput(d));
-    })();
+      })();
     return () => {
       disposed = true;
       termRef.current?.dispose();

@@ -8,13 +8,13 @@ import Big from 'figlet/importable-fonts/Big.js';
 import { useRouter } from 'next/router';
 
 // preload a small set of fonts
-const fontData: Record<string, any> = {
+const fontData: Record<string, string> = {
   Standard,
   Slant,
   Big,
 };
 Object.entries(fontData).forEach(([name, data]) => figlet.parseFont(name, data));
-const fontList = Object.keys(fontData);
+const fontList = Object.keys(fontData) as figlet.Fonts[];
 
 const ramp = '@%#*+=-:. ';
 
@@ -32,7 +32,7 @@ const AsciiArtApp = () => {
   const router = useRouter();
   const [tab, setTab] = useState<'text' | 'image'>('text');
   const [text, setText] = useState('');
-  const [font, setFont] = useState('Standard');
+  const [font, setFont] = useState<figlet.Fonts>('Standard');
   const [output, setOutput] = useState('');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -45,7 +45,8 @@ const AsciiArtApp = () => {
     if (!router.isReady) return;
     const { t, f } = router.query;
     if (typeof t === 'string') setText(t);
-    if (typeof f === 'string' && fontList.includes(f)) setFont(f);
+    if (typeof f === 'string' && fontList.includes(f as figlet.Fonts))
+      setFont(f as figlet.Fonts);
   }, [router.isReady]);
 
   // update query string permalink
@@ -151,7 +152,7 @@ const AsciiArtApp = () => {
           />
           <select
             value={font}
-            onChange={(e) => setFont(e.target.value)}
+            onChange={(e) => setFont(e.target.value as figlet.Fonts)}
             className="px-2 py-1 text-black rounded"
           >
             {fontList.map((f) => (

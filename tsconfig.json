@@ -15,6 +15,22 @@
     "incremental": true,
     "types": ["jest", "node"]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "__tests__"]
+  "include": [
+    "next-env.d.ts",
+    "app",
+    "apps",
+    "components",
+    "lib",
+    "pages",
+    "types",
+    "utils",
+    "workers"
+  ],
+  "exclude": [
+    "node_modules",
+    "__tests__",
+    "playwright",
+    "scripts",
+    ".next"
+  ]
 }

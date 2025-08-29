@@ -66,7 +66,7 @@ function randomLayout(
     if (i >= shipLens.length) return true;
     const len = shipLens[i];
     const options: Layout[] = [];
-    for (let dir: 0 | 1 = 0; dir < 2; dir++) {
+    for (const dir of [0, 1] as const) {
       const maxX = dir === 0 ? BOARD_SIZE - len : BOARD_SIZE - 1;
       const maxY = dir === 1 ? BOARD_SIZE - len : BOARD_SIZE - 1;
       for (let x = 0; x <= maxX; x++) {

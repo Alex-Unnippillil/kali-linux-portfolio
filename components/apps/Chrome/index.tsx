@@ -247,22 +247,22 @@ const Chrome: React.FC = () => {
   [activeId, tabs],
 );
 
-  const handleDragStart = useCallback(
-    (id: number) => () => {
-      dragTabId.current = id;
-    },
-    [],
-  );
+    const handleDragStart = useCallback(
+      (id: number) => () => {
+        draggingId.current = id;
+      },
+      [],
+    );
 
-  const handleDrop = useCallback(
-    (id: number) => (e: React.DragEvent) => {
-      e.preventDefault();
-      const from = dragTabId.current;
-      dragTabId.current = null;
-      if (from === null || from === id) return;
-      setTabs((prev) => {
-        const next = [...prev];
-        const fromIdx = next.findIndex((t) => t.id === from);
+    const handleDrop = useCallback(
+      (id: number) => (e: React.DragEvent) => {
+        e.preventDefault();
+        const from = draggingId.current;
+        draggingId.current = null;
+        if (from === null || from === id) return;
+        setTabs((prev) => {
+          const next = [...prev];
+          const fromIdx = next.findIndex((t) => t.id === from);
         const toIdx = next.findIndex((t) => t.id === id);
         if (fromIdx === -1 || toIdx === -1) return prev;
         const [moved] = next.splice(fromIdx, 1);
