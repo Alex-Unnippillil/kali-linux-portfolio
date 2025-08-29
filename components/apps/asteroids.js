@@ -5,11 +5,15 @@ import {
   spawnBullet,
   updateBullets,
   createGA,
-  spawnPowerUp,
-  updatePowerUps,
-  POWER_UPS,
   createSeededRNG,
 } from './asteroids-utils';
+import {
+  POWER_UPS,
+  SHIELD_DURATION,
+  spawnPowerUp,
+  updatePowerUps,
+  applyPowerUp,
+} from '../../games/asteroids/powerups';
 import useGameControls from './useGameControls';
 import GameLayout from './GameLayout';
 import { vibrate } from './Games/common/haptics';
@@ -23,7 +27,6 @@ const COLLISION_COOLDOWN = 60; // frames
 const MULTIPLIER_TIMEOUT = 180; // frames
 const MAX_MULTIPLIER = 5;
 const EXHAUST_COLOR = '#ffa500';
-const SHIELD_DURATION = 600; // frames
 const RADAR_COLORS = { outline: '#0f0', ship: '#fff', asteroid: '#0f0', ufo: '#f00' };
 const DEFAULT_MAP = {
   up: 'ArrowUp',
@@ -206,10 +209,7 @@ const Asteroids = () => {
     const upgrades = [...(saveDataRef.current.upgrades || [])];
 
     const applyUpgrades = () => {
-      upgrades.forEach((u) => {
-        if (u === POWER_UPS.SHIELD) ship.shield = SHIELD_DURATION;
-        if (u === POWER_UPS.RAPID_FIRE) ship.rapidFire = 600;
-      });
+      upgrades.forEach((u) => applyPowerUp(ship, u));
     };
 
     const chooseUpgrade = () => {
@@ -564,8 +564,7 @@ const Asteroids = () => {
       powerUps.forEach((p, i) => {
         const dist = Math.hypot(p.x - ship.x, p.y - ship.y);
         if (dist < p.r + ship.r) {
-        if (p.type === POWER_UPS.SHIELD) ship.shield = SHIELD_DURATION;
-          else ship.rapidFire = 600;
+          applyPowerUp(ship, p.type);
           powerUps.splice(i, 1);
         }
       });
