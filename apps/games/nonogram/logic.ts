@@ -149,22 +149,6 @@ export const autoFill = (grid: Grid, rows: Clue[], cols: Clue[]): Grid => {
   return g;
 };
 
-// Simple hint system with limited uses
-export const createHintSystem = (maxHints: number) => {
-  let used = 0;
-  return {
-    useHint(rows: Clue[], cols: Clue[], grid: Grid) {
-      if (used >= maxHints) return null;
-      const hint = findHint(rows, cols, grid);
-      if (hint) used += 1;
-      return hint;
-    },
-    remaining() {
-      return maxHints - used;
-    },
-  };
-};
-
 export default {
   lineToClues,
   generateLinePatterns,
@@ -175,5 +159,4 @@ export default {
   checkContradictions,
   toggleCross,
   autoFill,
-  createHintSystem,
 };
