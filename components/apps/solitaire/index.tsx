@@ -14,6 +14,7 @@ import {
   findHint,
   suits,
 } from './engine';
+import { solve } from './solver';
 
 type Variant = 'klondike' | 'spider' | 'freecell';
 type Stats = {
@@ -313,6 +314,7 @@ const Solitaire = () => {
     if (h) setHint(h);
   };
 
+
   const handleDragStart = (source: 'tableau' | 'waste', pile: number, index: number) => {
     if (source === 'tableau') {
       const card = game.tableau[pile][index];
@@ -425,6 +427,43 @@ const Solitaire = () => {
     },
     [foundationRefs, tableauRefs, wasteRef, rootRef, scale],
   );
+
+  const runSolver = useCallback(() => {
+    const moves = solve(game);
+    const play = (index: number, g: GameState) => {
+      if (index >= moves.length) return;
+      const m = moves[index];
+      let next = g;
+      if (m.type === 'draw') {
+        next = drawFromStock(g);
+        setGame(next);
+        setTimeout(() => play(index + 1, next), 300);
+        return;
+      }
+      if (m.type === 'wasteToTableau') {
+        next = moveWasteToTableau(g, m.to);
+        setGame(next);
+        setTimeout(() => play(index + 1, next), 300);
+        return;
+      }
+      if (m.type === 'tableauToTableau') {
+        next = moveTableauToTableau(g, m.from, m.index, m.to);
+        setGame(next);
+        setTimeout(() => play(index + 1, next), 300);
+        return;
+      }
+      if (m.type === 'wasteToFoundation') {
+        next = moveToFoundation(g, 'waste', null);
+        flyMove(g, next, 'waste', null, () => play(index + 1, next));
+        return;
+      }
+      if (m.type === 'tableauToFoundation') {
+        next = moveToFoundation(g, 'tableau', m.from);
+        flyMove(g, next, 'tableau', m.from, () => play(index + 1, next));
+      }
+    };
+    play(0, game);
+  }, [game, flyMove]);
 
   const dropToTableau = (pileIndex: number) => {
     if (!drag) return;
@@ -627,6 +666,12 @@ const Solitaire = () => {
           onClick={showHint}
         >
           Hint
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={runSolver}
+        >
+          Solve
         </button>
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
