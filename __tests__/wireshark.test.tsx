@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import WiresharkApp from '../components/apps/wireshark';
 
@@ -106,6 +106,41 @@ describe('WiresharkApp', () => {
     expect(link).toHaveAttribute(
       'href',
       'https://www.wireshark.org/docs/dfref/'
+    );
+  });
+
+  it('imports and exports color rules via JSON', async () => {
+    const packets = [
+      { timestamp: '1', src: '1.1.1.1', dest: '2.2.2.2', protocol: 6, info: 'tcp packet' },
+    ];
+    const writeText = jest.fn();
+    if (navigator.clipboard) {
+      jest.spyOn(navigator.clipboard, 'writeText').mockImplementation(writeText);
+    } else {
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText },
+        configurable: true,
+      });
+    }
+    const user = userEvent.setup();
+    render(<WiresharkApp initialPackets={packets} />);
+
+    const file = new File(
+      [JSON.stringify([{ expression: 'tcp', color: 'Red' }])],
+      'rules.json',
+      { type: 'application/json' }
+    );
+    const input = screen.getByLabelText(/color rules json file/i);
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() =>
+      expect(screen.getByText('tcp packet').closest('tr')).toHaveClass('text-red-500')
+    );
+
+    const exportBtn = screen.getByRole('button', { name: /export json/i });
+    await user.click(exportBtn);
+    expect(writeText).toHaveBeenCalledWith(
+      JSON.stringify([{ expression: 'tcp', color: 'Red' }], null, 2)
     );
   });
 });
