@@ -77,6 +77,18 @@
       { "src": "https://img.shields.io/badge/NIST-black?style=flat&logo=netapp&logoColor=ffffff", "alt": "NIST", "description": "Cybersecurity Framework" }
     ]
   },
+  "milestones": [
+    { "year": "2020", "description": "Began cybersecurity journey" },
+    { "year": "2021", "description": "Completed first capture-the-flag competition" },
+    { "year": "2023", "description": "Built portfolio showcasing 20+ security projects" }
+  ],
+  "badges": [
+    { "date": "2024-01-01", "count": 1 },
+    { "date": "2024-02-15", "count": 2 },
+    { "date": "2024-03-10", "count": 3 },
+    { "date": "2024-04-05", "count": 1 },
+    { "date": "2024-05-20", "count": 4 }
+  ],
   "projects": [
     {"name":"Text-Encryption-Decryption-AES-PKCS7","date":"Sep 2023","link":"https://github.com/Alex-Unnippillil/Text-Encryption-Decryption-AES-PKCS7","description":["Text File Encryption/Decryption using AES with PKCS7 Padding in Python"],"domains":["python"]},
     {"name":"Password Generator","date":"Jun 2023","link":"https://github.com/Alex-Unnippillil/PasswordGenerator.py","description":["Password Generator password tick menu of numbers, lowecase, uppercase and/or special characters strength of password metre"],"domains":["python"]},
