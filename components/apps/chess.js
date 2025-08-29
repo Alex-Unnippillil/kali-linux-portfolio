@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Chess } from 'chess.js';
+import { suggestMoves } from '../../games/chess/engine/wasmEngine';
 
 // 0x88 board representation utilities
 const EMPTY = 0;
@@ -313,6 +314,7 @@ const ChessGame = () => {
   const reduceMotionRef = useRef(false);
   const spritesRef = useRef({});
   const [spritesReady, setSpritesReady] = useState(false);
+  const [analysisMoves, setAnalysisMoves] = useState([]);
   const evalPercent =
     (1 / (1 + Math.exp(-displayEval / 200))) * 100;
 
@@ -411,6 +413,11 @@ const ChessGame = () => {
     }
     setMateSquares(mates);
   }, [showHints]);
+
+  const runAnalysis = () => {
+    const suggestions = suggestMoves(chessRef.current.fen());
+    setAnalysisMoves(suggestions);
+  };
 
   useEffect(() => {
     if (!spritesReady) return;
@@ -785,6 +792,9 @@ const ChessGame = () => {
         <button className="px-2 py-1 bg-gray-700" onClick={toggleHints}>
           {showHints ? 'Hide Hints' : 'Mate in 1'}
         </button>
+        <button className="px-2 py-1 bg-gray-700" onClick={runAnalysis}>
+          Analyze
+        </button>
         <button className="px-2 py-1 bg-gray-700" onClick={loadPGN}>
           Load PGN
         </button>
@@ -808,6 +818,18 @@ const ChessGame = () => {
         </div>
       </div>
       <div className="mt-1">ELO: {elo}</div>
+      {analysisMoves.length > 0 && (
+        <div className="mt-2 w-full text-sm" aria-label="Suggested moves">
+          <div>Suggested moves:</div>
+          <ol className="list-decimal ml-4">
+            {analysisMoves.map((m, idx) => (
+              <li key={idx}>
+                {m.san} ({(m.evaluation / 100).toFixed(2)})
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
       <ol
         className="mt-2 w-full h-24 overflow-y-auto bg-gray-800 p-2 text-sm font-mono"
         aria-label="Move history"
