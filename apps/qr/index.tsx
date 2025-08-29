@@ -1,9 +1,15 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import QRCode from 'qrcode';
 import Presets from './components/Presets';
 import Scan from './components/Scan';
+import {
+  loadLastGeneration,
+  loadLastScan,
+  saveLastGeneration,
+  saveLastScan,
+} from '../../utils/qrStorage';
 
 export default function QR() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -11,6 +17,27 @@ export default function QR() {
   const [mode, setMode] = useState<'generate' | 'scan'>('generate');
   const [size, setSize] = useState(256);
   const [scanResult, setScanResult] = useState('');
+  const [lastGen, setLastGen] = useState('');
+  const [lastScan, setLastScan] = useState('');
+
+  useEffect(() => {
+    setLastGen(loadLastGeneration());
+    setLastScan(loadLastScan());
+  }, []);
+
+  useEffect(() => {
+    if (payload) {
+      saveLastGeneration(payload);
+      setLastGen(payload);
+    }
+  }, [payload]);
+
+  useEffect(() => {
+    if (scanResult) {
+      saveLastScan(scanResult);
+      setLastScan(scanResult);
+    }
+  }, [scanResult]);
 
   const downloadPng = useCallback(async () => {
     if (!payload) return;
@@ -129,12 +156,27 @@ export default function QR() {
         </>
       )}
 
-      {mode === 'scan' && scanResult && (
+      {lastScan && (
         <div className="space-y-2">
-          <p className="break-all text-sm">{scanResult}</p>
+          <p className="text-xs text-gray-300">Last scan</p>
+          <p className="break-all text-sm">{lastScan}</p>
           <button
             type="button"
-            onClick={() => navigator.clipboard?.writeText(scanResult)}
+            onClick={() => navigator.clipboard?.writeText(lastScan)}
+            className="px-2 py-1 bg-blue-600 rounded"
+          >
+            Copy
+          </button>
+        </div>
+      )}
+
+      {lastGen && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-300">Last generation</p>
+          <p className="break-all text-sm">{lastGen}</p>
+          <button
+            type="button"
+            onClick={() => navigator.clipboard?.writeText(lastGen)}
             className="px-2 py-1 bg-blue-600 rounded"
           >
             Copy
