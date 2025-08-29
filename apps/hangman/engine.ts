@@ -8,9 +8,9 @@ export interface HangmanGame {
 // Basic dictionaries used by the hangman game. Having them here keeps the
 // engine self‑contained so consumers do not need to supply their own word
 // lists.
-import topics from '../../games/hangman/data/topics.json';
+import wordsets from '../../games/hangman/wordsets';
 
-export const DICTIONARIES: Record<string, string[]> = topics;
+export const DICTIONARIES: Record<string, string[]> = wordsets;
 
 export const FAMILY_WORDS = DICTIONARIES.family;
 export const SAT_WORDS = DICTIONARIES.sat;
