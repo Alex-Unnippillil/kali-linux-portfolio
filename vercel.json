@@ -4,5 +4,8 @@
     "api/**/*.js": { "runtime": "nodejs20.x" },
     "api/**/*.ts": { "runtime": "nodejs20.x" }
 
+  },
+  "env": {
+    "ADMIN_READ_KEY": "@admin-read-key"
   }
 }
