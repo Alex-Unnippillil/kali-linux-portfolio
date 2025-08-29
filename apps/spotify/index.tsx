@@ -58,6 +58,7 @@ const SpotifyApp = () => {
       const parsed = JSON.parse(playlistText);
       if (isTrackArray(parsed)) {
         setQueue(parsed);
+        setPlaylistText(serialize(parsed));
         setCurrent(0);
       }
     } catch {
