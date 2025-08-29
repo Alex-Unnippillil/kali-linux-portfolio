@@ -32,6 +32,9 @@ describe('BeEF app', () => {
     });
 
     render(<Beef />);
+    fireEvent.click(screen.getByText('Begin'));
+    fireEvent.click(screen.getByText('Next'));
+    fireEvent.click(screen.getByText('Next'));
     // initial hooks fetch
     expect(await screen.findByText('1')).toBeInTheDocument();
     expect(screen.queryByText('2')).toBeNull();
@@ -66,6 +69,9 @@ describe('BeEF app', () => {
     });
 
     render(<Beef />);
+    fireEvent.click(screen.getByText('Begin'));
+    fireEvent.click(screen.getByText('Next'));
+    fireEvent.click(screen.getByText('Next'));
     fireEvent.click(await screen.findByText('1'));
     fireEvent.click(screen.getByText('Category'));
     fireEvent.click(screen.getByText('Module 1'));
@@ -86,6 +92,9 @@ describe('BeEF app', () => {
     });
 
     render(<Beef />);
+    fireEvent.click(screen.getByText('Begin'));
+    fireEvent.click(screen.getByText('Next'));
+    fireEvent.click(screen.getByText('Next'));
     fireEvent.click(await screen.findByText('1'));
     const payloadTab = screen.getByRole('tab', { name: 'Payload Builder' });
     expect(screen.getByPlaceholderText('Enter JS payload...')).not.toBeVisible();

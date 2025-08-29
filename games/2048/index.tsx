@@ -5,13 +5,15 @@ import GameShell from '../../components/games/GameShell';
 import {
   Board,
   SIZE,
+  HiddenTiles,
   addRandomTile,
+  revealHidden,
   moveLeft,
   moveRight,
   moveUp,
   moveDown,
   boardsEqual,
-} from '../../apps/games/_2048/logic';
+} from './logic';
 import { reset, serialize, deserialize } from '../../apps/games/rng';
 
 // limit of undo operations per game
@@ -47,11 +49,16 @@ const SKINS: Record<string, Record<number, string>> = {
   },
 };
 
-type HistoryEntry = { board: Board; rng: string };
+type HistoryEntry = { board: Board; rng: string; hidden: string[] };
 
 const emptyBoard = (): Board => Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
 
 const highestTile = (b: Board) => Math.max(...b.flat());
+
+let seed = '';
+export const setSeed = (s: string) => {
+  seed = s;
+};
 
 const Game2048 = () => {
   const [board, setBoard] = useState<Board>(emptyBoard());
@@ -61,6 +68,8 @@ const Game2048 = () => {
   const [best, setBest] = useState(0);
   const [won, setWon] = useState(false);
   const [lost, setLost] = useState(false);
+  const [hideMode, setHideMode] = useState(false);
+  const [hidden, setHidden] = useState<HiddenTiles>(new Set());
 
   // load best tile from localStorage
   useEffect(() => {
@@ -82,15 +91,18 @@ const Game2048 = () => {
   }, [best]);
 
   const init = useCallback(() => {
-    reset();
+    reset(seed);
+    seed = '';
     const b = emptyBoard();
-    addRandomTile(b);
-    addRandomTile(b);
+    const h = new Set<string>();
+    addRandomTile(b, h);
+    addRandomTile(b, h);
     setBoard(b);
     setHistory([]);
     setUndosLeft(UNDO_LIMIT);
     setWon(false);
     setLost(false);
+    setHidden(h);
   }, []);
 
   useEffect(() => {
@@ -121,15 +133,21 @@ const Game2048 = () => {
           : moveDown;
       const next = fn(board.map((row) => [...row]));
       if (boardsEqual(board, next)) return;
-      setHistory((h) => [...h, { board: board.map((row) => [...row]), rng: serialize() }]);
-      addRandomTile(next);
+      setHistory((h) => [
+        ...h,
+        { board: board.map((row) => [...row]), rng: serialize(), hidden: Array.from(hidden) },
+      ]);
+      const nextHidden = new Set(hidden);
+      revealHidden(nextHidden);
+      addRandomTile(next, nextHidden, false, 1, hideMode);
       const hi = highestTile(next);
       if (hi > best) setBest(hi);
       setBoard(next);
+      setHidden(nextHidden);
       if (hi >= 2048) setWon(true);
       else if (!hMoves(next)) setLost(true);
     },
-    [board, best, won, lost]
+    [board, best, won, lost, hideMode, hidden]
   );
 
   const undo = useCallback(() => {
@@ -137,11 +155,16 @@ const Game2048 = () => {
     const last = history[history.length - 1];
     deserialize(last.rng);
     setBoard(last.board.map((row) => [...row]));
+    setHidden(new Set(last.hidden));
     setHistory((h) => h.slice(0, -1));
     setUndosLeft((u) => u - 1);
     setWon(false);
     setLost(false);
   }, [history, undosLeft]);
+
+  useEffect(() => {
+    if (!hideMode) setHidden(new Set());
+  }, [hideMode]);
 
   // keyboard controls
   useEffect(() => {
@@ -198,21 +221,33 @@ const Game2048 = () => {
               </option>
             ))}
           </select>
+          <label className="flex items-center space-x-1">
+            <input
+              type="checkbox"
+              checked={hideMode}
+              onChange={(e) => setHideMode(e.target.checked)}
+            />
+            <span>Hide</span>
+          </label>
           <div className="ml-auto">Best: {best}</div>
         </div>
         <div className="grid w-full max-w-sm grid-cols-4 gap-2">
           {board.map((row, rIdx) =>
-            row.map((cell, cIdx) => (
-              <div key={`${rIdx}-${cIdx}`} className="w-full aspect-square">
-                <div
-                  className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
-                    cell ? currentSkin[cell] || 'bg-gray-700' : 'bg-gray-800'
-                  }`}
-                >
-                  {cell || ''}
+            row.map((cell, cIdx) => {
+              const key = `${rIdx}-${cIdx}`;
+              const isHidden = hideMode && hidden.has(key);
+              return (
+                <div key={key} className="w-full aspect-square">
+                  <div
+                    className={`h-full w-full flex items-center justify-center text-2xl font-bold rounded ${
+                      cell && !isHidden ? currentSkin[cell] || 'bg-gray-700' : 'bg-gray-800'
+                    }`}
+                  >
+                    {cell && !isHidden ? cell : ''}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
         {(won || lost) && (
