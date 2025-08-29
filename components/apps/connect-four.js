@@ -194,6 +194,7 @@ export default function ConnectFour() {
   const [player, setPlayer] = useState('yellow');
   const [winner, setWinner] = useState(null);
   const [winProbs, setWinProbs] = useState(Array(COLS).fill(null));
+  const [game, setGame] = useState({ history: [] });
 
   const dropDisc = (col, color) => {
     const row = getValidRow(board, col);
@@ -212,7 +213,19 @@ export default function ConnectFour() {
 
   const handleClick = (col) => {
     if (winner || player !== 'yellow') return;
+    setGame((g) => ({ history: [...g.history, board.map((r) => [...r])] }));
     dropDisc(col, 'yellow');
+  };
+
+  const undo = () => {
+    setGame((g) => {
+      if (!g.history.length) return g;
+      const prev = g.history[g.history.length - 1];
+      setBoard(prev);
+      setPlayer('yellow');
+      setWinner(null);
+      return { history: g.history.slice(0, -1) };
+    });
   };
 
   useEffect(() => {
@@ -271,9 +284,17 @@ export default function ConnectFour() {
               setBoard(createEmptyBoard());
               setPlayer('yellow');
               setWinner(null);
+              setGame({ history: [] });
             }}
           >
             Reset
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={undo}
+            disabled={game.history.length === 0}
+          >
+            Undo
           </button>
         </div>
       </div>
