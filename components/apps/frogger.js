@@ -4,8 +4,9 @@ import { vibrate } from './Games/common/haptics';
 import {
   generateLaneConfig,
   SKINS,
-  getDefaultSkin,
+  getRandomSkin,
 } from '../../apps/games/frogger/config';
+import { getLevelConfig } from '../../apps/games/frogger/levels';
 
 const WIDTH = 7;
 const HEIGHT = 8;
@@ -114,7 +115,11 @@ const updateLogs = (prev, frogPos, dt) => {
 const Frogger = () => {
   const [frog, setFrog] = useState(initialFrog);
   const frogRef = useRef(frog);
-  const initialLanes = generateLaneConfig(1, DIFFICULTY_MULTIPLIERS.normal);
+  const initialLanes = generateLaneConfig(
+    1,
+    DIFFICULTY_MULTIPLIERS.normal,
+    getLevelConfig(1),
+  );
   const [cars, setCars] = useState(
     initialLanes.cars.map((l, i) => initLane(l, i + 1)),
   );
@@ -145,7 +150,7 @@ const Frogger = () => {
   const splashesRef = useRef([]);
   const [slowTime, setSlowTime] = useState(false);
   const slowTimeRef = useRef(slowTime);
-  const [skin, setSkin] = useState(getDefaultSkin());
+  const [skin, setSkin] = useState(getRandomSkin);
   const [showHitboxes, setShowHitboxes] = useState(false);
   const deathStreakRef = useRef(0);
   const safeFlashRef = useRef(0);
@@ -272,7 +277,8 @@ const Frogger = () => {
     (full = false, diff = difficulty, lvl = level) => {
       setFrog(initialFrog);
       const mult = DIFFICULTY_MULTIPLIERS[diff];
-      const lanes = generateLaneConfig(lvl, mult);
+      const base = getLevelConfig(lvl);
+      const lanes = generateLaneConfig(lvl, mult, base);
       setCars(lanes.cars.map((l, i) => initLane(l, i + 1)));
       setLogs(lanes.logs.map((l, i) => initLane(l, i + 101)));
       setStatus('');
@@ -281,6 +287,7 @@ const Frogger = () => {
         setLives(3);
         setPads(PAD_POSITIONS.map(() => false));
         setLevel(1);
+        setSkin(getRandomSkin());
         nextLife.current = 500;
         deathStreakRef.current = 0;
         ReactGA.event({
