@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useSettings } from '../../hooks/useSettings';
 import {
   resetSettings,
@@ -9,12 +9,7 @@ import {
   importSettings as importSettingsData,
 } from '../../utils/settingsStore';
 import { getTheme, setTheme } from '../../utils/theme';
-import {
-  getShortcuts,
-  subscribe,
-  updateShortcut,
-  Shortcut,
-} from '../../utils/shortcutRegistry';
+import KeymapOverlay from './components/KeymapOverlay';
 
 export default function Settings() {
   const {
@@ -92,33 +87,7 @@ export default function Settings() {
     setTheme('default');
   };
 
-  // Keyboard shortcuts
-  const [shortcuts, setShortcuts] = useState<Shortcut[]>(getShortcuts());
-  const [rebinding, setRebinding] = useState<string | null>(null);
-  useEffect(() => {
-    const unsub = subscribe(setShortcuts);
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    if (!rebinding) return;
-    const handler = (e: KeyboardEvent) => {
-      e.preventDefault();
-      const combo = [
-        e.ctrlKey ? 'Ctrl' : '',
-        e.altKey ? 'Alt' : '',
-        e.shiftKey ? 'Shift' : '',
-        e.metaKey ? 'Meta' : '',
-        e.key.length === 1 ? e.key.toUpperCase() : e.key,
-      ]
-        .filter(Boolean)
-        .join('+');
-      updateShortcut(rebinding, combo);
-      setRebinding(null);
-    };
-    window.addEventListener('keydown', handler, { once: true });
-    return () => window.removeEventListener('keydown', handler);
-  }, [rebinding]);
+  const [showKeymap, setShowKeymap] = useState(false);
 
   return (
     <div className="w-full flex-col flex-grow z-20 max-h-full overflow-y-auto windowMainScreen select-none bg-ub-cool-grey">
@@ -269,23 +238,15 @@ export default function Settings() {
         }}
         className="hidden"
       />
-      <div className="border-t border-gray-900 mt-4 pt-4 px-4">
-        <h2 className="text-center mb-2 text-ubt-grey">Keyboard Shortcuts</h2>
-        <ul className="space-y-2">
-          {shortcuts.map((s) => (
-            <li key={s.description} className="flex justify-between items-center">
-              <span className="flex-1">{s.description}</span>
-              <span className="font-mono mr-2">{s.keys}</span>
-              <button
-                className="px-2 py-1 bg-ub-orange text-white rounded text-sm"
-                onClick={() => setRebinding(s.description)}
-              >
-                {rebinding === s.description ? 'Press keys...' : 'Rebind'}
-              </button>
-            </li>
-          ))}
-        </ul>
+      <div className="border-t border-gray-900 mt-4 pt-4 px-4 flex justify-center">
+        <button
+          onClick={() => setShowKeymap(true)}
+          className="px-4 py-2 rounded bg-ub-orange text-white"
+        >
+          Edit Shortcuts
+        </button>
       </div>
+      <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
     </div>
   );
 }
