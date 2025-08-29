@@ -1,11 +1,13 @@
 export const BOARD_SIZE = 10;
-export const SHIPS = [5,4,3,3,2];
+export const SHIPS = [5, 4, 3, 3, 2];
 
-// Utility to pick random integer [0, n)
-const rand = (n) => Math.floor(Math.random() * n);
+type Layout = { x: number; y: number; dir: 0 | 1; len: number; cells: number[] };
+
+// Utility to pick random integer [0,n)
+const rand = (n: number) => Math.floor(Math.random() * n);
 
 // Fisher-Yates shuffle
-const shuffle = (arr) => {
+const shuffle = <T>(arr: T[]): T[] => {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = rand(i + 1);
     [arr[i], arr[j]] = [arr[j], arr[i]];
@@ -15,17 +17,20 @@ const shuffle = (arr) => {
 
 // Try to place all ships randomly respecting hits/misses.
 // If noAdjacency is true, ships may not touch (even diagonally).
-function randomLayout(hits, misses, noAdjacency = false) {
+function randomLayout(
+  hits: Set<number>,
+  misses: Set<number>,
+  noAdjacency = false,
+): Layout[] | null {
   const grid = Array(BOARD_SIZE * BOARD_SIZE).fill(0);
   const hitSet = new Set(hits);
-  // mark misses as blocked, hits as special value 2
   misses.forEach((m) => (grid[m] = -1));
   hits.forEach((h) => (grid[h] = 2));
 
-  const layout = [];
+  const layout: Layout[] = [];
 
-  const canPlace = (x, y, dir, len) => {
-    const cells = [];
+  const canPlace = (x: number, y: number, dir: 0 | 1, len: number) => {
+    const cells: number[] = [];
     for (let i = 0; i < len; i++) {
       const cx = x + (dir === 0 ? i : 0);
       const cy = y + (dir === 1 ? i : 0);
@@ -55,13 +60,13 @@ function randomLayout(hits, misses, noAdjacency = false) {
   };
 
   const shipLens = SHIPS.slice();
-  shuffle(shipLens); // randomize order for fairness
+  shuffle(shipLens);
 
-  const placeShip = (i) => {
+  const placeShip = (i: number): boolean => {
     if (i >= shipLens.length) return true;
     const len = shipLens[i];
-    const options = [];
-    for (let dir = 0; dir < 2; dir++) {
+    const options: Layout[] = [];
+    for (let dir: 0 | 1 = 0; dir < 2; dir++) {
       const maxX = dir === 0 ? BOARD_SIZE - len : BOARD_SIZE - 1;
       const maxY = dir === 1 ? BOARD_SIZE - len : BOARD_SIZE - 1;
       for (let x = 0; x <= maxX; x++) {
@@ -84,8 +89,7 @@ function randomLayout(hits, misses, noAdjacency = false) {
 
   if (!placeShip(0)) return null;
 
-  // ensure all hits are covered by some ship
-  const allCells = new Set();
+  const allCells = new Set<number>();
   layout.forEach((sh) => sh.cells.forEach((c) => allCells.add(c)));
   for (const h of hits) {
     if (!allCells.has(h)) return null;
@@ -95,51 +99,65 @@ function randomLayout(hits, misses, noAdjacency = false) {
 }
 
 export class MonteCarloAI {
+  hits: Set<number>;
+  misses: Set<number>;
+  noAdjacency: boolean;
+
   constructor(noAdjacency = false) {
     this.hits = new Set();
     this.misses = new Set();
     this.noAdjacency = noAdjacency;
   }
-  record(idx, hit) {
-    (hit?this.hits:this.misses).add(idx);
+
+  record(idx: number, hit: boolean) {
+    (hit ? this.hits : this.misses).add(idx);
   }
-  nextMove(simulations=200) {
-    const scores=new Array(BOARD_SIZE*BOARD_SIZE).fill(0);
-    for(let s=0;s<simulations;s++){
+
+  nextMove(simulations = 200): number | null {
+    const scores = new Array(BOARD_SIZE * BOARD_SIZE).fill(0);
+    for (let s = 0; s < simulations; s++) {
       const layout = randomLayout(this.hits, this.misses, this.noAdjacency);
-      if(!layout) continue;
-      const occ=new Set();
-      layout.forEach(sh=>sh.cells.forEach(c=>occ.add(c)));
-      for(let i=0;i<scores.length;i++){
-        if(this.hits.has(i)||this.misses.has(i)) continue;
-        if(occ.has(i)) scores[i]++;
+      if (!layout) continue;
+      const occ = new Set<number>();
+      layout.forEach((sh) => sh.cells.forEach((c) => occ.add(c)));
+      for (let i = 0; i < scores.length; i++) {
+        if (this.hits.has(i) || this.misses.has(i)) continue;
+        if (occ.has(i)) scores[i]++;
       }
     }
-    let best=-1, bestScore=-1; const avail=[];
-    for(let i=0;i<scores.length;i++){
-      if(this.hits.has(i)||this.misses.has(i)) continue;
-      if(scores[i]>bestScore){bestScore=scores[i];best=i;}
+    let best = -1;
+    let bestScore = -1;
+    for (let i = 0; i < scores.length; i++) {
+      if (this.hits.has(i) || this.misses.has(i)) continue;
+      if (scores[i] > bestScore) {
+        bestScore = scores[i];
+        best = i;
+      }
     }
-    return best>=0?best:null;
+    return best >= 0 ? best : null;
   }
 }
 
-// randomize player layout used by UI
-export function randomizePlacement(noAdjacency = false) {
+export function randomizePlacement(noAdjacency = false): Layout[] {
+  // keep trying until a layout is generated
   while (true) {
     const layout = randomLayout(new Set(), new Set(), noAdjacency);
     if (layout) return layout;
   }
 }
 
-
 export class RandomSalvoAI {
+  available: Set<number>;
+  queue: number[];
+
   constructor() {
-    this.available = new Set(Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, i) => i));
+    this.available = new Set(
+      Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, i) => i),
+    );
     this.queue = [];
   }
 
-  record(idx, hit) {
+  record(idx: number, hit: boolean) {
     this.available.delete(idx);
     if (hit) {
       const x = idx % BOARD_SIZE;
@@ -161,9 +179,9 @@ export class RandomSalvoAI {
     }
   }
 
-  nextMove() {
+  nextMove(): number | null {
     if (this.queue.length) {
-      return this.queue.shift();
+      return this.queue.shift()!;
     }
     const choices = Array.from(this.available);
     if (!choices.length) return null;
@@ -174,17 +192,19 @@ export class RandomSalvoAI {
 }
 
 export class RandomAI {
+  available: Set<number>;
+
   constructor() {
     this.available = new Set(
-      Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, i) => i)
+      Array.from({ length: BOARD_SIZE * BOARD_SIZE }, (_, i) => i),
     );
   }
 
-  record(idx, hit) {
+  record(idx: number) {
     this.available.delete(idx);
   }
 
-  nextMove() {
+  nextMove(): number | null {
     const choices = Array.from(this.available);
     if (!choices.length) return null;
     const choice = choices[Math.floor(Math.random() * choices.length)];
@@ -192,3 +212,12 @@ export class RandomAI {
     return choice;
   }
 }
+
+export default {
+  BOARD_SIZE,
+  SHIPS,
+  MonteCarloAI,
+  RandomSalvoAI,
+  RandomAI,
+  randomizePlacement,
+};
