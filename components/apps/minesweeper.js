@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import usePersistedState from '../../hooks/usePersistedState';
+import calculate3BV from '../../games/minesweeper/metrics';
 
 /**
  * Classic Minesweeper implementation.
@@ -105,50 +106,6 @@ const generateBoard = (seed, sx, sy) => {
   return board;
 };
 
-const calculateBV = (board) => {
-  const visited = board.map((row) => row.map(() => false));
-  let bv = 0;
-  const dirs = [-1, 0, 1];
-  const inBounds = (x, y) =>
-    x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE;
-
-  for (let x = 0; x < BOARD_SIZE; x++) {
-    for (let y = 0; y < BOARD_SIZE; y++) {
-      if (board[x][y].mine || visited[x][y] || board[x][y].adjacent !== 0)
-        continue;
-      bv++;
-      const queue = [[x, y]];
-      visited[x][y] = true;
-      while (queue.length) {
-        const [cx, cy] = queue.shift();
-        dirs.forEach((dx) =>
-          dirs.forEach((dy) => {
-            if (dx === 0 && dy === 0) return;
-            const nx = cx + dx;
-            const ny = cy + dy;
-            if (
-              inBounds(nx, ny) &&
-              !visited[nx][ny] &&
-              !board[nx][ny].mine
-            ) {
-              visited[nx][ny] = true;
-              if (board[nx][ny].adjacent === 0) {
-                queue.push([nx, ny]);
-              }
-            }
-          }),
-        );
-      }
-    }
-  }
-
-  for (let x = 0; x < BOARD_SIZE; x++) {
-    for (let y = 0; y < BOARD_SIZE; y++) {
-      if (!board[x][y].mine && !visited[x][y]) bv++;
-    }
-  }
-  return bv;
-};
 
 const checkWin = (board) =>
   board.flat().every((cell) => cell.revealed || cell.mine);
@@ -535,7 +492,7 @@ const Minesweeper = () => {
     setStatus('playing');
     setStartTime(Date.now());
     setShareCode(`${seed.toString(36)}-${x}-${y}`);
-    setBV(calculateBV(newBoard));
+    setBV(calculate3BV(newBoard));
     setFlags(0);
     setPaused(false);
     const finalize = (count) => {
@@ -837,7 +794,7 @@ const Minesweeper = () => {
         setStatus('playing');
         setStartTime(Date.now());
         setShareCode(codeInput.trim());
-        setBV(calculateBV(newBoard));
+        setBV(calculate3BV(newBoard));
         setFlags(0);
         const finalize = (count) => {
           setAriaMessage(`Revealed ${count} cells`);
@@ -920,8 +877,8 @@ const Minesweeper = () => {
             ? 'Paused'
             : 'Game in progress'
           : status === 'won'
-          ? 'You win!'
-          : 'Boom! Game over'}
+          ? `You win! 3BV: ${bv}`
+          : `Boom! Game over (3BV: ${bv})`}
       </div>
       <div className="flex space-x-2">
         <button
