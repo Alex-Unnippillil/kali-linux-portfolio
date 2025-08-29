@@ -13,6 +13,7 @@ export default function Converter() {
     length: {} as Rates,
     weight: {} as Rates,
   });
+  type Domain = keyof typeof rates;
   const [fromUnit, setFromUnit] = useState('');
   const [toUnit, setToUnit] = useState('');
   const [input, setInput] = useState('');
@@ -35,11 +36,11 @@ export default function Converter() {
   }, []);
 
   useEffect(() => {
-    const data = rates[active];
-    const units = Object.keys(data);
+    const data = rates[active as Domain];
+    const units = Object.keys(data) as (keyof typeof data)[];
     if (units.length) {
-      setFromUnit(units[0]);
-      setToUnit(units[1] || units[0]);
+      setFromUnit(units[0] as string);
+      setToUnit((units[1] || units[0]) as string);
     }
     setInput('');
     setOutput('');
@@ -52,12 +53,14 @@ export default function Converter() {
       setOutput('');
       return;
     }
-    const data = rates[active];
-    const result = (n * data[toUnit]) / data[fromUnit];
+    const data = rates[active as Domain];
+    const result =
+      (n * data[toUnit as keyof typeof data]) /
+      data[fromUnit as keyof typeof data];
     setOutput(result.toString());
   };
 
-  const units = Object.keys(rates[active] || {});
+  const units = Object.keys(rates[active as Domain] || {}) as string[];
 
   return (
     <div className="p-4 bg-ub-cool-grey text-white h-full overflow-y-auto">
