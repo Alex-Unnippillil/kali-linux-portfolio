@@ -42,6 +42,19 @@ const hashTypes = [
   },
 ];
 
+const attackModes = [
+  { value: '0', label: 'Straight' },
+  { value: '3', label: 'Brute-force' },
+  { value: '6', label: 'Hybrid Wordlist + Mask' },
+  { value: '7', label: 'Hybrid Mask + Wordlist' },
+];
+
+const ruleSets = {
+  none: [],
+  best64: ['c', 'u', 'l', 'r', 'd', 'p', 't', 's'],
+  quick: ['l', 'u', 'c', 'd'],
+};
+
 const sampleOutput = `hashcat (v6.2.6) starting in benchmark mode...
 OpenCL API (OpenCL 3.0) - Platform #1 [MockGPU]
 * Device #1: Mock GPU
@@ -98,6 +111,9 @@ const ProgressGauge = ({ progress, info, reduceMotion }) => {
     ? info.hashRate
     : [info.hashRate];
   const etas = Array.isArray(info.eta) ? info.eta : [info.eta];
+  const recovered = Array.isArray(info.recovered)
+    ? info.recovered
+    : [info.recovered];
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -133,6 +149,7 @@ const ProgressGauge = ({ progress, info, reduceMotion }) => {
       <div role="status" aria-live="polite" className="text-sm mt-2">
         <div>Attempts/sec: {hashRates[index]}</div>
         <div>ETA: {etas[index]}</div>
+        <div>Recovered: {recovered[index]}</div>
         <div>Mode: {info.mode}</div>
       </div>
     </div>
@@ -152,6 +169,12 @@ function HashcatApp() {
   const [result, setResult] = useState('');
   const [isCracking, setIsCracking] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [attackMode, setAttackMode] = useState('0');
+  const [mask, setMask] = useState('');
+  const appendMask = (token) => setMask((m) => m + token);
+  const showMask = ['3', '6', '7'].includes(attackMode);
+  const [ruleSet, setRuleSet] = useState('none');
+  const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
 
@@ -242,7 +265,10 @@ function HashcatApp() {
       h.name.toLowerCase().includes(hashFilter.toLowerCase())
   );
   const selectedHash = selected.name;
-  const info = { ...progressInfo, mode: selected.name };
+  const selectedMode =
+    attackModes.find((m) => m.value === attackMode)?.label ||
+    attackModes[0].label;
+  const info = { ...progressInfo, mode: selectedMode };
 
   const handleHashChange = (e) => {
     const value = e.target.value.trim();
@@ -309,6 +335,61 @@ function HashcatApp() {
             <option disabled>No modes</option>
           )}
         </select>
+      </div>
+      <div>
+        <label className="mr-2" htmlFor="attack-mode">
+          Attack Mode:
+        </label>
+        <select
+          id="attack-mode"
+          className="text-black px-2 py-1"
+          value={attackMode}
+          onChange={(e) => setAttackMode(e.target.value)}
+        >
+          {attackModes.map((m) => (
+            <option key={m.value} value={m.value}>
+              {m.value} - {m.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      {showMask && (
+        <div>
+          <label className="block" htmlFor="mask-input">
+            Mask
+          </label>
+          <input
+            id="mask-input"
+            className="text-black px-2 py-1 w-full"
+            value={mask}
+            onChange={(e) => setMask(e.target.value)}
+          />
+          <div className="space-x-2 mt-1">
+            {['?l', '?u', '?d', '?s', '?a'].map((t) => (
+              <button key={t} onClick={() => appendMask(t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <div>
+        <label className="mr-2" htmlFor="rule-set">
+          Rule Set:
+        </label>
+        <select
+          id="rule-set"
+          className="text-black px-2 py-1"
+          value={ruleSet}
+          onChange={(e) => setRuleSet(e.target.value)}
+        >
+          <option value="none">None</option>
+          <option value="best64">best64</option>
+          <option value="quick">quick</option>
+        </select>
+        <pre className="bg-black p-2 text-xs mt-2 overflow-auto h-24">
+          {rulePreview || '(no rules)'}
+        </pre>
       </div>
       <div>Detected: {selectedHash}</div>
       <div>Description: {selected.description}</div>
@@ -383,18 +464,22 @@ function HashcatApp() {
             className="bg-black px-2 py-1 text-xs"
             data-testid="demo-command"
           >
-            {`hashcat -m ${hashType} ${hashInput || 'hash.txt'} ${
-              wordlist ? `${wordlist}.txt` : 'wordlist.txt'
-            }`}
+            {`hashcat -m ${hashType} -a ${attackMode} ${
+              hashInput || 'hash.txt'
+            } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
+              showMask && mask ? ` ${mask}` : ''
+            }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`}
           </code>
           <button
             className="ml-2"
             onClick={() => {
               if (navigator?.clipboard?.writeText) {
                 navigator.clipboard.writeText(
-                  `hashcat -m ${hashType} ${hashInput || 'hash.txt'} ${
-                    wordlist ? `${wordlist}.txt` : 'wordlist.txt'
-                  }`
+                  `hashcat -m ${hashType} -a ${attackMode} ${
+                    hashInput || 'hash.txt'
+                  } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
+                    showMask && mask ? ` ${mask}` : ''
+                  }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`
                 );
               }
             }}
