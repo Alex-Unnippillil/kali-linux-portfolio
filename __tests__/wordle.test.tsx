@@ -32,6 +32,20 @@ describe('Wordle', () => {
     expect((navigator as any).clipboard.writeText).toHaveBeenCalled();
   });
 
+  test('supports themed word packs', async () => {
+    render(<Wordle />);
+    const packSelect = screen.getByLabelText('Word Pack');
+    fireEvent.change(packSelect, { target: { value: 'animals' } });
+    const solution = getWordOfTheDay(
+      'animals',
+      new Date('2024-01-01T00:00:00Z')
+    );
+    const input = screen.getByPlaceholderText('Guess');
+    fireEvent.change(input, { target: { value: solution } });
+    fireEvent.submit(input.closest('form')!);
+    expect(await screen.findByText('Share')).toBeInTheDocument();
+  });
+
   test('enforces hard mode rules', async () => {
     render(<Wordle />);
     const hardToggle = screen.getByLabelText('Hard Mode');

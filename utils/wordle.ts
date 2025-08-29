@@ -1,12 +1,16 @@
 import commonWords from '../components/apps/wordle_words.json';
 import altWords from '../components/apps/wordle_words_alt.json';
+import animalWords from '../components/apps/wordle_words_animals.json';
+import fruitWords from '../components/apps/wordle_words_fruits.json';
 import { getDailySeed } from './dailyChallenge';
 
-type DictName = 'common' | 'alt';
+type DictName = 'common' | 'alt' | 'animals' | 'fruits';
 
 const dictionaries: Record<DictName, string[]> = {
   common: commonWords as string[],
   alt: altWords as string[],
+  animals: animalWords as string[],
+  fruits: fruitWords as string[],
 };
 
 function hash(str: string): number {
