@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import useTrashState from './state';
 import HistoryList from './components/HistoryList';
-import type { TrashItem } from './state';
 
 const DEFAULT_ICON = './themes/Yaru/system/folder.png';
 
@@ -17,6 +16,28 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     restoreAllFromHistory,
   } = useTrashState();
   const [selected, setSelected] = useState<number | null>(null);
+  const [purgeDays, setPurgeDays] = useState(30);
+  const [emptyCountdown, setEmptyCountdown] = useState<number | null>(null);
+  const [, setTick] = useState(0);
+  const daysLeft = useCallback(
+    (closedAt: number) =>
+      Math.max(
+        purgeDays -
+          Math.floor((Date.now() - closedAt) / (24 * 60 * 60 * 1000)),
+        0,
+      ),
+    [purgeDays],
+  );
+
+  useEffect(() => {
+    const pd = parseInt(
+      window.localStorage.getItem('trash-purge-days') || '30',
+      10,
+    );
+    setPurgeDays(pd);
+    const id = setInterval(() => setTick(t => t + 1), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const notifyChange = () => window.dispatchEvent(new Event('trash-change'));
 
@@ -41,6 +62,20 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     notifyChange();
   }, [items, selected, setItems, pushHistory]);
 
+  const purge = useCallback(() => {
+    if (selected === null) return;
+    const item = items[selected];
+    if (
+      !window.confirm(
+        `Permanently delete ${item.title}? This action cannot be undone.`,
+      )
+    )
+      return;
+    setItems(items => items.filter((_, i) => i !== selected));
+    setSelected(null);
+    notifyChange();
+  }, [items, selected, setItems]);
+
   const restoreAll = () => {
     if (items.length === 0) return;
     if (!window.confirm('Restore all windows?')) return;
@@ -51,12 +86,23 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   };
 
   const empty = () => {
-    if (items.length === 0) return;
+    if (items.length === 0 || emptyCountdown !== null) return;
     if (!window.confirm('Empty trash?')) return;
-    pushHistory(items);
-    setItems([]);
-    setSelected(null);
-    notifyChange();
+    let count = 3;
+    setEmptyCountdown(count);
+    const timer = setInterval(() => {
+      count -= 1;
+      if (count <= 0) {
+        clearInterval(timer);
+        pushHistory(items);
+        setItems([]);
+        setSelected(null);
+        setEmptyCountdown(null);
+        notifyChange();
+      } else {
+        setEmptyCountdown(count);
+      }
+    }, 1000);
   };
 
   const handleKey = useCallback((e: KeyboardEvent) => {
@@ -108,6 +154,13 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
             >
               Delete
             </button>
+            <button
+              onClick={purge}
+              disabled={selected === null}
+              className="px-3 py-1 my-1 rounded bg-yellow-600 text-white hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:opacity-50"
+            >
+              Purge
+            </button>
           </div>
           <button
             onClick={restoreAll}
@@ -118,10 +171,10 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           </button>
           <button
             onClick={empty}
-            disabled={items.length === 0}
+            disabled={items.length === 0 || emptyCountdown !== null}
             className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
           >
-            Empty
+            {emptyCountdown !== null ? `Emptying in ${emptyCountdown}` : 'Empty'}
           </button>
         </div>
       </div>
@@ -151,6 +204,16 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
                 />
                 <span className="truncate" title={item.title}>
                   {item.title}
+                </span>
+                <span
+                  className="ml-auto text-xs opacity-70"
+                  aria-label={`Purges in ${daysLeft(item.closedAt)} day${
+                    daysLeft(item.closedAt) === 1 ? '' : 's'
+                  }`}
+                >
+                  {`${daysLeft(item.closedAt)} day${
+                    daysLeft(item.closedAt) === 1 ? '' : 's'
+                  } left`}
                 </span>
               </li>
             ))}
