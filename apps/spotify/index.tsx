@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import usePersistentState from '../../hooks/usePersistentState';
-import CrossfadePlayer from './utils/crossfade';
-import Visualizer from './Visualizer';
-import Lyrics from './Lyrics';
+import { useEffect, useRef, useState } from "react";
+import usePersistentState from "../../hooks/usePersistentState";
+import CrossfadePlayer from "./utils/crossfade";
+import Visualizer from "./Visualizer";
+import Lyrics from "./Lyrics";
 
 interface Track {
   title: string;
@@ -13,47 +13,59 @@ interface Track {
 
 const DEFAULT_PLAYLIST = [
   {
-    title: 'Song 1',
-    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+    title: "Song 1",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
   },
   {
-    title: 'Song 2',
-    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+    title: "Song 2",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
   },
   {
-    title: 'Song 3',
-    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+    title: "Song 3",
+    url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
   },
 ];
 
 const serialize = (tracks: Track[]) => JSON.stringify(tracks, null, 2);
 
 const isTrackArray = (v: unknown): v is Track[] =>
-  Array.isArray(v) && v.every((t) => t && typeof t.url === 'string');
+  Array.isArray(v) && v.every((t) => t && typeof t.url === "string");
 
 const SpotifyApp = () => {
   const [playlistText, setPlaylistText] = usePersistentState(
-    'spotify-playlist-text',
+    "spotify-playlist-text",
     () => serialize(DEFAULT_PLAYLIST),
   );
   const [queue, setQueue] = usePersistentState<Track[]>(
-    'spotify-queue',
+    "spotify-queue",
     () => DEFAULT_PLAYLIST,
     isTrackArray,
   );
   const [recent, setRecent] = usePersistentState<Track[]>(
-    'spotify-recent',
+    "spotify-recent",
     [],
     isTrackArray,
   );
   const [current, setCurrent] = usePersistentState<number>(
-    'spotify-current-index',
+    "spotify-current-index",
     0,
-    (v): v is number => typeof v === 'number',
+    (v): v is number => typeof v === "number",
   );
-  const [mini, setMini] = usePersistentState('spotify-mini', false, (v): v is boolean => typeof v === 'boolean');
-  const [crossfade, setCrossfade] = usePersistentState<number>('spotify-crossfade', 0, (v): v is number => typeof v === 'number');
-  const [gapless, setGapless] = usePersistentState('spotify-gapless', false, (v): v is boolean => typeof v === 'boolean');
+  const [mini, setMini] = usePersistentState(
+    "spotify-mini",
+    false,
+    (v): v is boolean => typeof v === "boolean",
+  );
+  const [crossfade, setCrossfade] = usePersistentState<number>(
+    "spotify-crossfade",
+    0,
+    (v): v is number => typeof v === "number",
+  );
+  const [gapless, setGapless] = usePersistentState(
+    "spotify-gapless",
+    false,
+    (v): v is boolean => typeof v === "boolean",
+  );
   const playerRef = useRef<CrossfadePlayer | null>(null);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
@@ -82,7 +94,9 @@ const SpotifyApp = () => {
   useEffect(() => {
     const track = queue[current];
     if (!track) return;
-    setRecent((r) => [track, ...r.filter((t) => t.url !== track.url)].slice(0, 10));
+    setRecent((r) =>
+      [track, ...r.filter((t) => t.url !== track.url)].slice(0, 10),
+    );
     playerRef.current?.play(track.url, crossfade);
   }, [current, queue, setRecent, crossfade]);
 
@@ -99,13 +113,13 @@ const SpotifyApp = () => {
   const togglePlay = () => playerRef.current?.toggle();
 
   const handleKey = (e: React.KeyboardEvent) => {
-    if (e.code === 'MediaTrackNext') {
+    if (e.code === "MediaTrackNext") {
       e.preventDefault();
       next();
-    } else if (e.code === 'MediaTrackPrevious') {
+    } else if (e.code === "MediaTrackPrevious") {
       e.preventDefault();
       previous();
-    } else if (e.code === 'MediaPlayPause') {
+    } else if (e.code === "MediaPlayPause") {
       e.preventDefault();
       togglePlay();
     }
@@ -115,21 +129,36 @@ const SpotifyApp = () => {
 
   return (
     <div
-      className={`h-full w-full bg-ub-cool-grey text-white flex flex-col ${
-        mini ? 'p-2' : 'p-4'
+      className={`h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col ${
+        mini ? "p-2" : "p-4"
       }`}
       tabIndex={0}
       onKeyDown={handleKey}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="space-x-2">
-          <button onClick={previous} title="Previous" disabled={!queue.length}>
+          <button
+            onClick={previous}
+            title="Previous"
+            disabled={!queue.length}
+            className="w-8 h-8 flex items-center justify-center"
+          >
             ⏮
           </button>
-          <button onClick={togglePlay} title="Play/Pause" disabled={!queue.length}>
+          <button
+            onClick={togglePlay}
+            title="Play/Pause"
+            disabled={!queue.length}
+            className="w-8 h-8 flex items-center justify-center"
+          >
             ⏯
           </button>
-          <button onClick={next} title="Next" disabled={!queue.length}>
+          <button
+            onClick={next}
+            title="Next"
+            disabled={!queue.length}
+            className="w-8 h-8 flex items-center justify-center"
+          >
             ⏭
           </button>
         </div>
@@ -152,13 +181,17 @@ const SpotifyApp = () => {
             />
             <span>Gapless</span>
           </label>
-          <button onClick={() => setMini(!mini)} className="border px-2 py-1 rounded">
-            {mini ? 'Full' : 'Mini'}
+          <button
+            onClick={() => setMini(!mini)}
+            className="border px-2 py-1 rounded"
+          >
+            {mini ? "Full" : "Mini"}
           </button>
         </div>
       </div>
       {currentTrack && (
         <div className="mt-2">
+          <div className="w-16 h-16 mb-2 bg-[var(--color-muted)]" />
           <p className="mb-2">{currentTrack.title}</p>
           {analyser && <Visualizer analyser={analyser} />}
           <Lyrics title={currentTrack.title} player={playerRef.current} />
@@ -166,7 +199,7 @@ const SpotifyApp = () => {
       )}
       {!mini && (
         <div className="flex-1 overflow-auto mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+          <div className="hidden md:block">
             <h2 className="mb-2 text-lg">Playlist JSON</h2>
             <textarea
               className="w-full h-40 text-black p-1"
@@ -182,7 +215,7 @@ const SpotifyApp = () => {
             <h2 className="mt-4 mb-2 text-lg">Queue</h2>
             <ul className="max-h-40 overflow-auto border border-gray-700 rounded">
               {queue.map((t, i) => (
-                <li key={t.url} className={i === current ? 'bg-gray-700' : ''}>
+                <li key={t.url} className={i === current ? "bg-gray-700" : ""}>
                   <button
                     className="w-full text-left px-2 py-1 hover:bg-gray-600 focus:outline-none"
                     onClick={() => setCurrent(i)}
@@ -197,7 +230,10 @@ const SpotifyApp = () => {
             <h2 className="mb-2 text-lg">Recently Played</h2>
             <ul className="max-h-72 overflow-auto border border-gray-700 rounded">
               {recent.map((t) => (
-                <li key={t.url} className="px-2 py-1 border-b border-gray-700 last:border-b-0">
+                <li
+                  key={t.url}
+                  className="px-2 py-1 border-b border-gray-700 last:border-b-0"
+                >
                   {t.title || t.url}
                 </li>
               ))}
@@ -210,4 +246,3 @@ const SpotifyApp = () => {
 };
 
 export default SpotifyApp;
-
