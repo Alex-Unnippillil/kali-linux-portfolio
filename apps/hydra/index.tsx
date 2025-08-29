@@ -4,6 +4,7 @@ import React, { useRef, useState } from 'react';
 import LegalInterstitial from '../../components/ui/LegalInterstitial';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 import HydraApp from '../../components/apps/hydra';
+import StrategyTrainer from './components/StrategyTrainer';
 
 const HydraPreview: React.FC = () => {
   const [accepted, setAccepted] = useState(false);
@@ -19,11 +20,10 @@ const HydraPreview: React.FC = () => {
   };
 
   return (
-    <TabbedWindow
-      className="min-h-screen bg-gray-900 text-white"
-      initialTabs={[createTab()]}
-      onNewTab={createTab}
-    />
+    <div className="min-h-screen bg-gray-900 text-white">
+      <TabbedWindow initialTabs={[createTab()]} onNewTab={createTab} />
+      <StrategyTrainer />
+    </div>
   );
 };
 
