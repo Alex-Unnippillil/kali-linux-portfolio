@@ -1,0 +1,27 @@
+[
+  {
+    "format": "Raw-MD5",
+    "example": "5f4dcc3b5aa765d61d8327deb882cf99",
+    "salt": null
+  },
+  {
+    "format": "Raw-SHA1",
+    "example": "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8",
+    "salt": null
+  },
+  {
+    "format": "bcrypt",
+    "example": "$2b$12$TwqKISeBNtB7o4NKjalzPOuq6vCFPlwMby5tt6pTG5Vhk3TWqIUwm",
+    "salt": "TwqKISeBNtB7o4NKjalzPO"
+  },
+  {
+    "format": "md5crypt",
+    "example": "$1$salt1234$HJCsv4hSeVLHo3hVyl4nh0",
+    "salt": "salt1234"
+  },
+  {
+    "format": "sha512crypt",
+    "example": "$6$saltsalt$qFmFH.bQmmtXzyBY0s9v7Oicd2z4XSIecDzlB5KiA2/jctKu9YterLp8wwnSq.qc.eoxqOmSuNp2xS0ktL3nh/",
+    "salt": "saltsalt"
+  }
+]
