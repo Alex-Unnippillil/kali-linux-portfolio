@@ -216,12 +216,28 @@ if (!seed && !levelCode) {
   // tilt controls
   let tiltSteer = 0;
   let tiltActive = false;
-  window.addEventListener('deviceorientation', (e) => {
-    if (e.gamma != null) {
+
+  function enableTilt() {
+    if (
+      typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function'
+    ) {
+      DeviceOrientationEvent.requestPermission().then((state) => {
+        if (state === 'granted') tiltActive = true;
+      });
+    } else {
       tiltActive = true;
+    }
+  }
+
+  window.addEventListener('deviceorientation', (e) => {
+    if (!tiltActive) return;
+    if (e.gamma != null) {
       tiltSteer = Math.max(-1, Math.min(1, e.gamma / 30));
     }
   });
+
+  window.addEventListener('click', enableTilt, { once: true });
 
   // ghost storage
   let bestReplay = null;
