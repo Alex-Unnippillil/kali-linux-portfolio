@@ -7,6 +7,7 @@ import RouterProfiles, {
   ROUTER_PROFILES,
   RouterProfile,
 } from './components/RouterProfiles';
+import { clearLog, logAttempt } from './log';
 
 interface RouterMeta {
   model: string;
@@ -68,33 +69,34 @@ const ReaverPanel: React.FC = () => {
 
   useEffect(() => {
     if (!running) return;
-    intervalRef.current = setInterval(() => {
-      setAttempts((prev) => {
-        // handle lockout countdown
-        if (lockRef.current > 0) {
-          lockRef.current -= 1;
-          setLockRemaining(lockRef.current);
-          return prev;
-        }
-
-        const next = prev + rate;
-        burstRef.current += rate;
-
-        if (burstRef.current >= profile.lockAttempts) {
-          burstRef.current = 0;
-          if (profile.lockDuration > 0) {
-            lockRef.current = profile.lockDuration;
+      intervalRef.current = setInterval(() => {
+        setAttempts((prev) => {
+          // handle lockout countdown
+          if (lockRef.current > 0) {
+            lockRef.current -= 1;
             setLockRemaining(lockRef.current);
+            return prev;
           }
-        }
 
-        if (next >= TOTAL_PINS) {
-          clearInterval(intervalRef.current!);
-          return TOTAL_PINS;
-        }
-        return next;
-      });
-    }, 1000);
+          const next = prev + rate;
+          logAttempt(next, rate);
+          burstRef.current += rate;
+
+          if (burstRef.current >= profile.lockAttempts) {
+            burstRef.current = 0;
+            if (profile.lockDuration > 0) {
+              lockRef.current = profile.lockDuration;
+              setLockRemaining(lockRef.current);
+            }
+          }
+
+          if (next >= TOTAL_PINS) {
+            clearInterval(intervalRef.current!);
+            return TOTAL_PINS;
+          }
+          return next;
+        });
+      }, 1000);
     return () => clearInterval(intervalRef.current!);
   }, [running, rate, profile]);
 
@@ -105,13 +107,14 @@ const ReaverPanel: React.FC = () => {
     setLockRemaining(0);
   }, [profile]);
 
-  const start = () => {
-    setAttempts(0);
-    burstRef.current = 0;
-    lockRef.current = 0;
-    setLockRemaining(0);
-    setRunning(true);
-  };
+    const start = () => {
+      setAttempts(0);
+      burstRef.current = 0;
+      lockRef.current = 0;
+      setLockRemaining(0);
+      setRunning(true);
+      clearLog();
+    };
 
   const stop = () => {
     setRunning(false);
