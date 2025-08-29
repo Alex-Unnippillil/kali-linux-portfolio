@@ -7,9 +7,12 @@
 </head>
 <body>
   <canvas id="game" width="640" height="360"></canvas>
-  <div id="timer" aria-live="off"></div>
+  <div id="hud">
+    <div id="timer" aria-live="off"></div>
+    <div id="hints">Move: ←/→ Jump: Space</div>
+  </div>
   <div id="complete" class="hidden" role="status" aria-live="assertive">Level Complete!</div>
-  <div id="controls">
+  <div id="controls" class="hidden">
     <button id="btnLeft">◀</button>
     <button id="btnRight">▶</button>
     <button id="btnJump">⮝</button>
@@ -60,6 +63,9 @@
     </div>
     <div>
       Balance: <span id="balanceLabel">0</span>
+    </div>
+    <div>
+      <label><input type="checkbox" id="buttonsToggle" /> Show Buttons</label>
     </div>
     <div>
       Pad Left: <button id="padLeft"></button>

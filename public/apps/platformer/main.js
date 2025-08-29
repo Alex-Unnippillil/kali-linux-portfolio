@@ -153,6 +153,22 @@ Object.keys(padButtons).forEach(a => {
   padButtons[a].textContent = padMap[a];
 });
 
+const controlsEl = document.getElementById('controls');
+const buttonsToggle = document.getElementById('buttonsToggle');
+let showButtons = JSON.parse(
+  localStorage.getItem('pf-buttons') ||
+    (window.matchMedia('(pointer: coarse)').matches ? 'true' : 'false')
+);
+controlsEl.classList.toggle('hidden', !showButtons);
+if (buttonsToggle) {
+  buttonsToggle.checked = showButtons;
+  buttonsToggle.addEventListener('change', () => {
+    showButtons = buttonsToggle.checked;
+    controlsEl.classList.toggle('hidden', !showButtons);
+    localStorage.setItem('pf-buttons', JSON.stringify(showButtons));
+  });
+}
+
 let waitingPad = null;
 function pollRemap() {
   if (!waitingPad) return;
@@ -300,7 +316,10 @@ function update(dt) {
     balance += coinValue;
     balanceLabel.textContent = String(balance);
     if (!reduceMotion)
-      effects.push({ type: 'coin', x: cx * tileSize + tileSize / 2, y: cy * tileSize + tileSize / 2, life: 0 });
+      spawnCoinParticles(
+        cx * tileSize + tileSize / 2,
+        cy * tileSize + tileSize / 2
+      );
     playCoinSound();
     announce(`Score ${score}`);
   }
@@ -312,18 +331,22 @@ function update(dt) {
     announce('Checkpoint reached');
   }
 
+  let targetX = camera.x;
+  let targetY = camera.y;
   const centerX = camera.x + canvas.width / 2;
   const centerY = camera.y + canvas.height / 2;
   if (player.x < centerX - camera.deadZone.w / 2)
-    camera.x = player.x - (canvas.width / 2 - camera.deadZone.w / 2);
+    targetX = player.x - (canvas.width / 2 - camera.deadZone.w / 2);
   if (player.x + player.w > centerX + camera.deadZone.w / 2)
-    camera.x = player.x + player.w - (canvas.width / 2 + camera.deadZone.w / 2);
+    targetX = player.x + player.w - (canvas.width / 2 + camera.deadZone.w / 2);
   if (player.y < centerY - camera.deadZone.h / 2)
-    camera.y = player.y - (canvas.height / 2 - camera.deadZone.h / 2);
+    targetY = player.y - (canvas.height / 2 - camera.deadZone.h / 2);
   if (player.y + player.h > centerY + camera.deadZone.h / 2)
-    camera.y = player.y + player.h - (canvas.height / 2 + camera.deadZone.h / 2);
-  camera.x = Math.max(0, Math.min(camera.x, mapWidth * tileSize - canvas.width));
-  camera.y = Math.max(0, Math.min(camera.y, mapHeight * tileSize - canvas.height));
+    targetY = player.y + player.h - (canvas.height / 2 + camera.deadZone.h / 2);
+  targetX = Math.max(0, Math.min(targetX, mapWidth * tileSize - canvas.width));
+  targetY = Math.max(0, Math.min(targetY, mapHeight * tileSize - canvas.height));
+  camera.x += (targetX - camera.x) * 0.1;
+  camera.y += (targetY - camera.y) * 0.1;
 
   const elapsed = simTime.toFixed(2);
   timerEl.textContent = `Time: ${elapsed}s`;
@@ -337,6 +360,8 @@ function update(dt) {
 }
 
 function respawn() {
+  if (!reduceMotion)
+    spawnDamage(player.x + player.w / 2, player.y + player.h / 2);
   player.x = spawn.x;
   player.y = spawn.y;
   player.vx = player.vy = 0;
@@ -356,12 +381,38 @@ function updateEffects(dt) {
   for (let i = effects.length - 1; i >= 0; i--) {
     const e = effects[i];
     e.life += dt * 2;
-    if (e.type === 'dust') {
+    if (e.type === 'dust' || e.type === 'coin' || e.type === 'damage') {
       e.x += e.vx * dt;
       e.y += e.vy * dt;
       e.vy += 400 * dt;
     }
     if (e.life > 1) effects.splice(i, 1);
+  }
+}
+
+function spawnCoinParticles(x, y) {
+  for (let i = 0; i < 5; i++) {
+    effects.push({
+      type: 'coin',
+      x,
+      y,
+      life: 0,
+      vx: (Math.random() - 0.5) * 80,
+      vy: (Math.random() - 0.5) * 80,
+    });
+  }
+}
+
+function spawnDamage(x, y) {
+  for (let i = 0; i < 8; i++) {
+    effects.push({
+      type: 'damage',
+      x,
+      y,
+      life: 0,
+      vx: (Math.random() - 0.5) * 120,
+      vy: (Math.random() - 0.5) * 120,
+    });
   }
 }
 
@@ -378,7 +429,7 @@ function spawnDust(x, y) {
   }
 }
 
-function drawBackground() {
+function drawBackground(camX, camY) {
   if (reduceMotion) {
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -386,11 +437,11 @@ function drawBackground() {
   }
   bgLayers.forEach(layer => {
     ctx.fillStyle = layer.color;
-    ctx.fillRect(-camera.x * layer.speed, -camera.y * layer.speed, canvas.width * 2, canvas.height * 2);
+    ctx.fillRect(-camX * layer.speed, -camY * layer.speed, canvas.width * 2, canvas.height * 2);
     ctx.fillStyle = '#888';
     layer.stars.forEach(s => {
-      const x = s.x - camera.x * layer.speed;
-      const y = s.y - camera.y * layer.speed;
+      const x = s.x - camX * layer.speed;
+      const y = s.y - camY * layer.speed;
       if (x >= -2 && x <= canvas.width + 2 && y >= -2 && y <= canvas.height + 2) {
         ctx.fillRect(x, y, 2, 2);
       }
@@ -398,22 +449,26 @@ function drawBackground() {
   });
 }
 
-function drawEffects() {
+function drawEffects(camX, camY) {
   if (reduceMotion) return;
   effects.forEach(e => {
     ctx.save();
-    ctx.translate(e.x - camera.x, e.y - camera.y);
+    ctx.translate(e.x - camX, e.y - camY);
     ctx.globalAlpha = 1 - e.life;
     if (e.type === 'coin') {
-      ctx.scale(1 + e.life * 2, 1 + e.life * 2);
-      ctx.fillStyle = 'yellow';
+      ctx.fillStyle = 'gold';
       ctx.beginPath();
-      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.arc(0, 0, 2, 0, Math.PI * 2);
       ctx.fill();
     } else if (e.type === 'dust') {
       ctx.fillStyle = '#bbb';
       ctx.beginPath();
       ctx.arc(0, 0, 3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (e.type === 'damage') {
+      ctx.fillStyle = 'red';
+      ctx.beginPath();
+      ctx.arc(0, 0, 2, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -421,15 +476,17 @@ function drawEffects() {
 }
 
 function draw() {
+  const camX = Math.round(camera.x);
+  const camY = Math.round(camera.y);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawBackground();
+  drawBackground(camX, camY);
 
   for (let y = 0; y < mapHeight; y++) {
     for (let x = 0; x < mapWidth; x++) {
       const t = tiles[y][x];
       if (t === 0) continue;
-      const screenX = x * tileSize - camera.x;
-      const screenY = y * tileSize - camera.y;
+      const screenX = x * tileSize - camX;
+      const screenY = y * tileSize - camY;
       if (t === 1) {
         ctx.fillStyle = '#888';
         ctx.fillRect(screenX, screenY, tileSize, tileSize);
@@ -445,10 +502,15 @@ function draw() {
     }
   }
 
-  drawEffects();
+  drawEffects(camX, camY);
 
   ctx.fillStyle = '#0f0';
-  ctx.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
+  ctx.fillRect(
+    Math.round(player.x - camX),
+    Math.round(player.y - camY),
+    player.w,
+    player.h
+  );
 }
 
 window.addEventListener('keydown', e => {
