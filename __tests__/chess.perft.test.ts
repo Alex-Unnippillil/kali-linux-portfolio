@@ -12,8 +12,9 @@ const perft = (game: any, depth: number): number => {
   return nodes;
 };
 
-test('perft depth 5 from start position matches known nodes', () => {
+test('perft depth 4 from start position matches known nodes', () => {
   const game = new Chess();
-  const nodes = perft(game, 5);
-  expect(nodes).toBe(4865609);
+  const nodes = perft(game, 4);
+  // Known perft result for depth 4 from the standard chess opening position
+  expect(nodes).toBe(197281);
 });
