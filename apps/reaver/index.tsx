@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import LegalInterstitial from '../../components/ui/LegalInterstitial';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
+import WpsMath from './components/WpsMath';
 
 interface RouterMeta {
   model: string;
@@ -137,6 +138,11 @@ const ReaverPanel: React.FC = () => {
         <div className="text-sm">
           Est. time remaining: {formatTime(timeRemaining)}
         </div>
+      </div>
+
+      <div className="mb-6">
+        <h2 className="text-lg mb-2">WPS PIN Math</h2>
+        <WpsMath />
       </div>
 
       <div>
