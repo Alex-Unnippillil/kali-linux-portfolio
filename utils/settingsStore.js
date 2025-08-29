@@ -84,15 +84,16 @@ export async function resetSettings() {
 }
 
 export async function exportSettings() {
-  const [accent, wallpaper, density, reducedMotion, highContrast] = await Promise.all([
+  const [accent, wallpaper, density, reducedMotion, fontScale, highContrast] = await Promise.all([
     getAccent(),
     getWallpaper(),
     getDensity(),
     getReducedMotion(),
+    getFontScale(),
     getHighContrast(),
   ]);
   const theme = getTheme();
-  return JSON.stringify({ accent, wallpaper, density, reducedMotion, highContrast, theme });
+  return JSON.stringify({ accent, wallpaper, density, reducedMotion, fontScale, highContrast, theme });
 }
 
 export async function importSettings(json) {
@@ -104,11 +105,12 @@ export async function importSettings(json) {
     console.error('Invalid settings', e);
     return;
   }
-  const { accent, wallpaper, density, reducedMotion, highContrast, theme } = settings;
+  const { accent, wallpaper, density, reducedMotion, fontScale, highContrast, theme } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (density !== undefined) await setDensity(density);
   if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
+  if (fontScale !== undefined) await setFontScale(fontScale);
   if (highContrast !== undefined) await setHighContrast(highContrast);
   if (theme !== undefined) setTheme(theme);
 }
