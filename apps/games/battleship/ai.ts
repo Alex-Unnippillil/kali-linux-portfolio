@@ -102,15 +102,22 @@ export class MonteCarloAI {
   hits: Set<number>;
   misses: Set<number>;
   noAdjacency: boolean;
+  lastScores: number[];
 
   constructor(noAdjacency = false) {
     this.hits = new Set();
     this.misses = new Set();
     this.noAdjacency = noAdjacency;
+    this.lastScores = new Array(BOARD_SIZE * BOARD_SIZE).fill(0);
   }
 
   record(idx: number, hit: boolean) {
     (hit ? this.hits : this.misses).add(idx);
+  }
+
+  /** Returns the heat map from the last call to nextMove */
+  getHeatmap() {
+    return this.lastScores;
   }
 
   nextMove(simulations = 200): number | null {
@@ -125,6 +132,7 @@ export class MonteCarloAI {
         if (occ.has(i)) scores[i]++;
       }
     }
+    this.lastScores = scores;
     let best = -1;
     let bestScore = -1;
     for (let i = 0; i < scores.length; i++) {

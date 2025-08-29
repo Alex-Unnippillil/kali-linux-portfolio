@@ -79,6 +79,7 @@ const Battleship = () => {
   const [message, setMessage] = useState('Place your ships');
   const [difficulty, setDifficulty] = useState('easy');
   const [ai, setAi] = useState(null);
+  const [playerAi, setPlayerAi] = useState(null);
   const [salvo, setSalvo] = useState(false);
   const [fog, setFog] = useState(false);
   const [playerShots, setPlayerShots] = useState(1);
@@ -128,13 +129,21 @@ const Battleship = () => {
       setEnemyBoard(placeShips(createBoard(), enemyLayout));
       setPhase('placement');
       setMessage('Place your ships');
-      setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-      setGuessHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
       let aiInstance;
       if (diff === 'hard') aiInstance = new MonteCarloAI();
       else if (diff === 'medium') aiInstance = new RandomSalvoAI();
       else aiInstance = new RandomAI();
       setAi(aiInstance);
+      if (typeof aiInstance.getHeatmap === 'function') {
+        aiInstance.nextMove();
+        setAiHeat(aiInstance.getHeatmap().slice());
+      } else {
+        setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+      }
+      const playerAiInstance = new MonteCarloAI();
+      playerAiInstance.nextMove();
+      setPlayerAi(playerAiInstance);
+      setGuessHeat(playerAiInstance.getHeatmap().slice());
       setCursor(0);
       const pShots = salvo ? newShips.length : 1;
       const aShots = salvo ? enemyLayout.length : 1;
@@ -199,25 +208,33 @@ const Battleship = () => {
   const aiTurn = useCallback(
     (shots, playerHit) => {
       let pb = playerBoard.slice();
-      let nh = aiHeat.slice();
+      let heat = aiHeat.slice();
       for (let s = 0; s < shots; s++) {
         const move = ai.nextMove();
         if (move == null) break;
+        if (typeof ai.getHeatmap === 'function') {
+          heat = ai.getHeatmap().slice();
+        } else {
+          heat[move]++;
+        }
         const hit2 = pb[move] === 'ship';
         pb[move] = hit2 ? 'hit' : 'miss';
-        nh[move]++;
         ai.record(move, hit2);
         if (!pb.includes('ship')) {
           setPlayerBoard(pb);
-          setAiHeat(nh);
+          setAiHeat(heat);
           setMessage('AI wins!');
           setPhase('done');
           setStats((st) => ({ ...st, losses: st.losses + 1 }));
           return;
         }
       }
+      if (typeof ai.getHeatmap === 'function') {
+        ai.nextMove();
+        heat = ai.getHeatmap().slice();
+      }
       setPlayerBoard(pb);
-      setAiHeat(nh);
+      setAiHeat(heat);
       if (salvo) {
         setAiShots(countRemaining(enemyBoard, enemyShips));
         setPlayerShots(countRemaining(pb, ships));
@@ -234,11 +251,11 @@ const Battleship = () => {
       const hit = newBoard[idx] === 'ship';
       newBoard[idx] = hit ? 'hit' : 'miss';
       setEnemyBoard(newBoard);
-      setGuessHeat((h) => {
-        const nh = h.slice();
-        nh[idx]++;
-        return nh;
-      });
+      if (playerAi) {
+        playerAi.record(idx, hit);
+        playerAi.nextMove();
+        setGuessHeat(playerAi.getHeatmap().slice());
+      }
       if (!newBoard.includes('ship')) {
         setMessage('You win!');
         setPhase('done');
@@ -254,7 +271,7 @@ const Battleship = () => {
       const aiCount = salvo ? aiShots : 1;
       setTimeout(() => aiTurn(aiCount, hit), 100);
     },
-    [phase, enemyBoard, salvo, playerShots, aiShots, aiTurn, setEnemyBoard, setGuessHeat, setMessage, setPhase, setStats]
+    [phase, enemyBoard, salvo, playerShots, aiShots, aiTurn, setEnemyBoard, playerAi, setGuessHeat, setMessage, setPhase, setStats]
   );
 
   useGameControls(({ x, y }) => {
@@ -281,15 +298,17 @@ const Battleship = () => {
 
   const renderBoard = (board, opts = {}) => {
     const { isEnemy = false, hideInfo = false } = opts;
+    const heatArr = isEnemy ? guessHeat : aiHeat;
+    const maxHeat = Math.max(...heatArr);
     return (
       <div className="grid" style={{ gridTemplateColumns: `repeat(${BOARD_SIZE}, ${CELL}px)` }}>
         {board.map((cell, idx) => {
-          const heatArr = isEnemy ? guessHeat : aiHeat;
           const heatVal = heatArr[idx];
+          const norm = maxHeat ? heatVal / maxHeat : 0;
           const color = showHeatmap && heatVal
             ? isEnemy
-              ? `rgba(0,150,255,${Math.min(heatVal / 5, 0.6)})`
-              : `rgba(255,0,0,${Math.min(heatVal / 5, 0.7)})`
+              ? `rgba(0,150,255,${norm * 0.6})`
+              : `rgba(255,0,0,${norm * 0.7})`
             : 'transparent';
           return (
             <div key={idx} className="border border-ub-dark-grey relative" style={{ width: CELL, height: CELL }}>
