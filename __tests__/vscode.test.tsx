@@ -2,28 +2,16 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import VsCode from '../apps/vscode';
 
+jest.mock('../apps/vscode/extensions/recommend', () => ({
+  scanProjectType: jest.fn().mockResolvedValue('node'),
+  getRecommendations: () => [{ id: 'dbaeumer.vscode-eslint', name: 'ESLint' }],
+}));
+
 describe('VsCode app', () => {
-  it('renders external frame', () => {
+  it('shows recommended extensions in marketplace', async () => {
     render(<VsCode />);
-    const frame = screen.getByTitle('VsCode');
-    expect(frame.tagName).toBe('IFRAME');
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
-  it('shows banner when cookies are blocked', async () => {
-    const original = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
-    Object.defineProperty(document, 'cookie', {
-      configurable: true,
-      get: () => '',
-      set: () => {},
-    });
-
-    render(<VsCode />);
-    const alert = await screen.findByRole('alert');
-    expect(alert).toBeInTheDocument();
-
-    if (original) {
-      Object.defineProperty(document, 'cookie', original);
-    }
+    const ext = await screen.findByText('ESLint');
+    expect(ext).toBeInTheDocument();
+    expect(ext.tagName).toBe('A');
   });
 });

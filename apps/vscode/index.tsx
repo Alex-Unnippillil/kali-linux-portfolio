@@ -4,6 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useSnippets } from './state/snippets';
 import { loadTasks, runTask, Task } from './utils/taskRunner';
+import {
+  scanProjectType,
+  getRecommendations,
+  type ExtensionRecommendation,
+} from './extensions/recommend';
 
 const PROJECT = 'demo';
 
@@ -42,6 +47,7 @@ export default function VsCode() {
   const [snippetPrefix, setSnippetPrefix] = useState('');
   const [snippetBody, setSnippetBody] = useState('');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [extensions, setExtensions] = useState<ExtensionRecommendation[]>([]);
   const lintWorker = useRef<Worker>();
   const runWorker = useRef<Worker>();
 
@@ -49,26 +55,35 @@ export default function VsCode() {
     loadProject().then(async (saved) => {
       if (saved) setCode(saved);
       else {
-        const res = await fetch('/data/vscode-example/main.js');
-        const sample = await res.text();
-        setCode(sample);
-        saveProject(sample);
+        try {
+          const res = await fetch('/data/vscode-example/main.js');
+          const sample = await res.text();
+          setCode(sample);
+          saveProject(sample);
+        } catch {
+          /* ignore fetch errors */
+        }
       }
     });
 
-    lintWorker.current = new Worker(new URL('../../workers/webLints.worker.ts', import.meta.url), { type: 'module' });
-    runWorker.current = new Worker(new URL('../../workers/jsRunner.ts', import.meta.url), { type: 'module' });
+    if (typeof Worker !== 'undefined') {
+      lintWorker.current = new Worker(new URL('../../workers/webLints.worker.ts', import.meta.url), {
+        type: 'module',
+      });
+      runWorker.current = new Worker(new URL('../../workers/jsRunner.ts', import.meta.url), {
+        type: 'module',
+      });
 
-    lintWorker.current.onmessage = (e) => {
-      if (e.data.type === 'format') setCode(e.data.formatted);
-      if (e.data.type === 'lint') setLint(e.data.messages);
-    };
+      lintWorker.current.onmessage = (e) => {
+        if (e.data.type === 'format') setCode(e.data.formatted);
+        if (e.data.type === 'lint') setLint(e.data.messages);
+      };
 
-    runWorker.current.onmessage = (e) => {
-      const { type, message } = e.data;
-      setConsoleOutput((prev) => [...prev, `${type}: ${message}`]);
-    };
-
+      runWorker.current.onmessage = (e) => {
+        const { type, message } = e.data;
+        setConsoleOutput((prev) => [...prev, `${type}: ${message}`]);
+      };
+    }
     return () => {
       lintWorker.current?.terminate();
       runWorker.current?.terminate();
@@ -77,6 +92,13 @@ export default function VsCode() {
 
   useEffect(() => {
     loadTasks(PROJECT, language).then(setTasks);
+  }, [language]);
+
+  useEffect(() => {
+    scanProjectType(PROJECT).then((type) => {
+      const recs = getRecommendations(type === 'unknown' ? language : type);
+      setExtensions(recs);
+    });
   }, [language]);
 
   const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -171,6 +193,20 @@ export default function VsCode() {
               >
                 {t.label}
               </button>
+            ))}
+          </div>
+          <div className="mt-4">
+            <div className="font-bold">Marketplace</div>
+            {extensions.map((ext) => (
+              <a
+                key={ext.id}
+                href={`https://marketplace.visualstudio.com/items?itemName=${ext.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="block w-full text-left px-2 py-1 bg-white rounded mt-1 text-xs text-blue-600 truncate"
+              >
+                {ext.name}
+              </a>
             ))}
           </div>
         </div>
