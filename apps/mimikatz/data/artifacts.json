@@ -1,0 +1,41 @@
+[
+  {
+    "name": "SAM",
+    "children": [
+      {
+        "name": "Domains",
+        "children": [
+          {
+            "name": "Account",
+            "children": [
+              {
+                "name": "Users",
+                "children": [
+                  { "name": "000001F4", "value": "Administrator:FAKEHASH1" },
+                  { "name": "000001F5", "value": "Guest:FAKEHASH2" }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "SECURITY",
+    "children": [
+      {
+        "name": "Policy",
+        "children": [
+          {
+            "name": "Secrets",
+            "children": [
+              { "name": "L$MACHINE.ACC", "value": "DEADBEEF" },
+              { "name": "L$WEBSITE", "value": "0123456789ABCDEF" }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

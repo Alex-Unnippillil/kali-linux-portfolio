@@ -1,11 +1,10 @@
 'use client';
 
 import React from 'react';
-import MimikatzApp from '../../components/apps/mimikatz';
+import ArtifactBrowser from './components/ArtifactBrowser';
 
 const MimikatzPage: React.FC = () => {
-  return <MimikatzApp />;
+  return <ArtifactBrowser />;
 };
 
 export default MimikatzPage;
-
