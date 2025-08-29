@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import ProjectGallery from '../components/apps/project-gallery';
 
 jest.mock('react-ga4', () => ({ event: jest.fn() }));
@@ -74,5 +74,26 @@ describe('ProjectGallery', () => {
     render(<ProjectGallery />);
     await screen.findByText('Beta');
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
+  });
+
+  it('compares two projects side-by-side', async () => {
+    render(<ProjectGallery />);
+    await screen.findByText('Alpha');
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Select Alpha for comparison' })
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Select Beta for comparison' })
+    );
+    const table = await screen.findByRole('table');
+    const tbl = within(table);
+    expect(tbl.getByText('Alpha')).toBeInTheDocument();
+    expect(tbl.getByText('Beta')).toBeInTheDocument();
+    expect(tbl.getByText('Stack')).toBeInTheDocument();
+    expect(tbl.getByText('Highlights')).toBeInTheDocument();
+    expect(tbl.getByText('JS')).toBeInTheDocument();
+    expect(tbl.getByText('TS')).toBeInTheDocument();
+    expect(tbl.getByText('frontend, react')).toBeInTheDocument();
+    expect(tbl.getByText('backend')).toBeInTheDocument();
   });
 });
