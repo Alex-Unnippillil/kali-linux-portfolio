@@ -37,12 +37,17 @@ const Reversi = () => {
   const [depth, setDepth] = useState(3);
   const [useBook, setUseBook] = useState(true);
   const [history, setHistory] = useState([]);
+  const [score, setScore] = useState(() => countPieces(board));
+  const [diskTheme, setDiskTheme] = useState('dark');
+  const themeRef = useRef('dark');
   const bookEnabled = React.useMemo(() => useBook, [useBook]);
 
   // keep refs in sync
   useEffect(() => { boardRef.current = board; }, [board]);
   useEffect(() => { playerRef.current = player; }, [player]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
+  useEffect(() => { themeRef.current = diskTheme; }, [diskTheme]);
+  useEffect(() => { setScore(countPieces(board)); }, [board]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -154,75 +159,54 @@ const Reversi = () => {
       }
       const b = boardRef.current;
       const now = performance.now();
+      const colors = themeRef.current === 'dark'
+        ? { B: '#000', W: '#fff' }
+        : { B: '#333', W: '#ddd' };
+      const drawDisk = (x, y, color, scaleY = 1) => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(1, scaleY);
+        ctx.beginPath();
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetY = 2;
+        ctx.arc(0, 0, CELL / 2 - 4, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.restore();
+      };
       for (let r = 0; r < SIZE; r += 1) {
         for (let c = 0; c < SIZE; c += 1) {
           const cell = b[r][c];
           const anim = flippingRef.current.find((a) => a.key === `${r}-${c}`);
+          const x = c * CELL + CELL / 2;
+          const y = r * CELL + CELL / 2;
           if (anim) {
             const t = (now - anim.start) / anim.duration;
             if (t <= 0) {
-              // Animation hasn't started yet; show original piece
-              ctx.beginPath();
-              ctx.arc(
-                c * CELL + CELL / 2,
-                r * CELL + CELL / 2,
-                CELL / 2 - 4,
-                0,
-                Math.PI * 2,
-              );
-              ctx.fillStyle = anim.from === 'B' ? '#000' : '#fff';
-              ctx.fill();
+              drawDisk(x, y, colors[anim.from]);
             } else if (t >= 1) {
               const idx = flippingRef.current.indexOf(anim);
               if (idx !== -1) flippingRef.current.splice(idx, 1);
-              ctx.beginPath();
-              ctx.arc(
-                c * CELL + CELL / 2,
-                r * CELL + CELL / 2,
-                CELL / 2 - 4,
-                0,
-                Math.PI * 2,
-              );
-              ctx.fillStyle = anim.to === 'B' ? '#000' : '#fff';
-              ctx.fill();
+              drawDisk(x, y, colors[anim.to]);
             } else {
               const scale = Math.abs(1 - 2 * t);
-              ctx.save();
-              ctx.translate(c * CELL + CELL / 2, r * CELL + CELL / 2);
-              ctx.scale(1, scale);
-              ctx.beginPath();
-              ctx.arc(0, 0, CELL / 2 - 4, 0, Math.PI * 2);
-              ctx.fillStyle =
-                t < 0.5
-                  ? anim.from === 'B' ? '#000' : '#fff'
-                  : anim.to === 'B' ? '#000' : '#fff';
-              ctx.fill();
-              ctx.restore();
+              drawDisk(x, y, t < 0.5 ? colors[anim.from] : colors[anim.to], scale);
             }
             continue;
           }
           if (cell) {
-            ctx.beginPath();
-            ctx.arc(
-              c * CELL + CELL / 2,
-              r * CELL + CELL / 2,
-              CELL / 2 - 4,
-              0,
-              Math.PI * 2,
-            );
-            ctx.fillStyle = cell === 'B' ? '#000' : '#fff';
-            ctx.fill();
+            drawDisk(x, y, colors[cell]);
           }
         }
       }
       if (!pausedRef.current && previewRef.current) {
         const { r, c, flips } = previewRef.current;
+        const x = c * CELL + CELL / 2;
+        const y = r * CELL + CELL / 2;
         ctx.save();
         ctx.globalAlpha = 0.5;
-        ctx.beginPath();
-        ctx.arc(c * CELL + CELL / 2, r * CELL + CELL / 2, CELL / 2 - 4, 0, Math.PI * 2);
-        ctx.fillStyle = playerRef.current === 'B' ? '#000' : '#fff';
-        ctx.fill();
+        drawDisk(x, y, playerRef.current === 'B' ? colors.B : colors.W);
         ctx.restore();
         ctx.strokeStyle = '#ffff00';
         ctx.lineWidth = 2;
@@ -233,13 +217,16 @@ const Reversi = () => {
         });
       }
       if (!pausedRef.current) {
-        ctx.fillStyle = '#ffff00';
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = playerRef.current === 'B' ? colors.B : colors.W;
         Object.keys(legalRef.current).forEach((key) => {
           const [r, c] = key.split('-').map(Number);
           ctx.beginPath();
           ctx.arc(c * CELL + CELL / 2, r * CELL + CELL / 2, 4, 0, Math.PI * 2);
           ctx.fill();
         });
+        ctx.restore();
       }
     };
     const loop = () => {
@@ -388,32 +375,51 @@ const Reversi = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
-      <canvas
-        ref={canvasRef}
-        width={BOARD_SIZE}
-        height={BOARD_SIZE}
-        onClick={handleClick}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        className="bg-green-700"
-      />
+      <div className="relative">
+        <canvas
+          ref={canvasRef}
+          width={BOARD_SIZE}
+          height={BOARD_SIZE}
+          onClick={handleClick}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          className="bg-green-700"
+        />
+        <div className="absolute top-1 left-1 flex items-center space-x-1 text-sm">
+          <div
+            className={`w-4 h-4 rounded-full ${diskTheme === 'dark' ? 'bg-black' : 'bg-gray-700'} shadow`}
+          />
+          <span>{score.black}</span>
+        </div>
+        <div className="absolute top-1 right-1 flex items-center space-x-1 text-sm">
+          <div
+            className={`w-4 h-4 rounded-full ${diskTheme === 'dark' ? 'bg-white' : 'bg-gray-200'} shadow`}
+          />
+          <span>{score.white}</span>
+        </div>
+      </div>
       <div className="mt-2">Wins - You: {wins.player} | AI: {wins.ai}</div>
       <div className="mt-1">Mobility - You: {mobility.player} | AI: {mobility.ai}</div>
       <div className="mt-1" role="status" aria-live="polite">{message}</div>
       <div className="mt-1 text-sm text-gray-300">{tip}</div>
-      <div className="mt-2 flex space-x-2">
+      <div className="mt-2 flex space-x-2 items-center">
         <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="w-6 h-6 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center"
           onClick={reset}
+          aria-label="Reset"
         >
-          Reset
+          <img src="/themes/Yaru/status/chrome_refresh.svg" width="24" height="24" alt="" />
         </button>
         <button
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50"
+          className="w-6 h-6 bg-gray-700 hover:bg-gray-600 rounded flex items-center justify-center disabled:opacity-50"
           onClick={undo}
           disabled={!history.length}
+          aria-label="Undo"
         >
-          Undo
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="24" height="24">
+            <path d="M9 15L3 9l6-6" />
+            <path d="M3 9h11a4 4 0 0 1 0 8h-1" />
+          </svg>
         </button>
         <button
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
@@ -426,6 +432,12 @@ const Reversi = () => {
           onClick={() => setSound((s) => !s)}
         >
           {sound ? 'Sound: On' : 'Sound: Off'}
+        </button>
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setDiskTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+        >
+          {diskTheme === 'dark' ? 'Theme: Dark' : 'Theme: Light'}
         </button>
         <select
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
