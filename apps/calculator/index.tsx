@@ -53,43 +53,43 @@ export default function Calculator() {
     <div className="calculator">
       <ModeSwitcher />
             <input id="display" className="display" />
-      <button id="toggle-precise" className="toggle" aria-pressed="false">Precise Mode: Off</button>
-      <button id="toggle-scientific" className="toggle" aria-pressed="false">Scientific</button>
-      <button id="toggle-programmer" className="toggle" aria-pressed="false">Programmer</button>
-      <button id="toggle-history" className="toggle" aria-pressed="false">History</button>
+      <button id="toggle-precise" className="toggle" aria-pressed="false" aria-label="toggle precise mode">Precise Mode: Off</button>
+      <button id="toggle-scientific" className="toggle" aria-pressed="false" aria-label="toggle scientific mode">Scientific</button>
+      <button id="toggle-programmer" className="toggle" aria-pressed="false" aria-label="toggle programmer mode">Programmer</button>
+      <button id="toggle-history" className="toggle" aria-pressed="false" aria-label="toggle history">History</button>
       <div className="memory-grid">
-        <button className="btn" data-action="mplus">M+</button>
-        <button className="btn" data-action="mminus">M&minus;</button>
-        <button className="btn" data-action="mr">MR</button>
+        <button className="btn" data-action="mplus" aria-label="add to memory">M+</button>
+        <button className="btn" data-action="mminus" aria-label="subtract from memory">M&minus;</button>
+        <button className="btn" data-action="mr" aria-label="recall memory">MR</button>
       </div>
       <MemorySlots />
       <div className="button-grid">
-        <button className="btn" data-value="7">7</button>
-        <button className="btn" data-value="8">8</button>
-        <button className="btn" data-value="9">9</button>
-        <button className="btn" data-value="/">&divide;</button>
-        <button className="btn" data-value="4">4</button>
-        <button className="btn" data-value="5">5</button>
-        <button className="btn" data-value="6">6</button>
-        <button className="btn" data-value="*">&times;</button>
-        <button className="btn" data-value="1">1</button>
-        <button className="btn" data-value="2">2</button>
-        <button className="btn" data-value="3">3</button>
-        <button className="btn" data-value="-">&minus;</button>
-        <button className="btn" data-value="0">0</button>
-        <button className="btn" data-value=".">.</button>
-        <button className="btn" data-action="equals">=</button>
-        <button className="btn" data-value="+">+</button>
-        <button className="btn span-two" data-action="clear">C</button>
-        <button className="btn span-two" data-action="backspace">⌫</button>
+        <button className="btn" data-value="7" data-key="7" aria-label="seven">7</button>
+        <button className="btn" data-value="8" data-key="8" aria-label="eight">8</button>
+        <button className="btn" data-value="9" data-key="9" aria-label="nine">9</button>
+        <button className="btn" data-value="/" data-key="/" aria-label="divide">&divide;</button>
+        <button className="btn" data-value="4" data-key="4" aria-label="four">4</button>
+        <button className="btn" data-value="5" data-key="5" aria-label="five">5</button>
+        <button className="btn" data-value="6" data-key="6" aria-label="six">6</button>
+        <button className="btn" data-value="*" data-key="*" aria-label="multiply">&times;</button>
+        <button className="btn" data-value="1" data-key="1" aria-label="one">1</button>
+        <button className="btn" data-value="2" data-key="2" aria-label="two">2</button>
+        <button className="btn" data-value="3" data-key="3" aria-label="three">3</button>
+        <button className="btn" data-value="-" data-key="-" aria-label="subtract">&minus;</button>
+        <button className="btn" data-value="0" data-key="0" aria-label="zero">0</button>
+        <button className="btn" data-value="." data-key="." aria-label="decimal point">.</button>
+        <button className="btn" data-action="equals" data-key="= Enter" aria-label="equals">=</button>
+        <button className="btn" data-value="+" data-key="+" aria-label="add">+</button>
+        <button className="btn span-two" data-action="clear" data-key="Escape c" aria-label="clear">C</button>
+        <button className="btn span-two" data-action="backspace" data-key="Backspace" aria-label="backspace">⌫</button>
       </div>
       <div id="scientific" className="scientific hidden button-grid">
-        <button className="btn" data-value="sin(">sin</button>
-        <button className="btn" data-value="cos(">cos</button>
-        <button className="btn" data-value="tan(">tan</button>
-        <button className="btn" data-value="sqrt(">√</button>
-        <button className="btn" data-value="(">(</button>
-        <button className="btn" data-value=")">)</button>
+        <button className="btn" data-value="sin(" aria-label="sine">sin</button>
+        <button className="btn" data-value="cos(" aria-label="cosine">cos</button>
+        <button className="btn" data-value="tan(" aria-label="tangent">tan</button>
+        <button className="btn" data-value="sqrt(" aria-label="square root">√</button>
+        <button className="btn" data-value="(" data-key="(" aria-label="left parenthesis">(</button>
+        <button className="btn" data-value=")" data-key=")" aria-label="right parenthesis">)</button>
       </div>
       <div id="programmer" className="programmer hidden">
         <select id="base-select" defaultValue="10">
@@ -98,14 +98,14 @@ export default function Calculator() {
           <option value="10">Dec</option>
           <option value="16">Hex</option>
         </select>
-        <button className="btn" data-value="&amp;">&amp;</button>
-        <button className="btn" data-value="|">|</button>
-        <button className="btn" data-value="^">^</button>
-        <button className="btn" data-value="~">~</button>
-        <button className="btn" data-value="<<">&lt;&lt;</button>
-        <button className="btn" data-value=">>">&gt;&gt;</button>
-        <button className="btn" data-action="ans">Ans</button>
-        <button id="print-tape" className="btn" data-action="print">Print</button>
+        <button className="btn" data-value="&amp;" data-key="&amp;" aria-label="bitwise and">&amp;</button>
+        <button className="btn" data-value="|" data-key="|" aria-label="bitwise or">|</button>
+        <button className="btn" data-value="^" data-key="^" aria-label="bitwise xor">^</button>
+        <button className="btn" data-value="~" data-key="~" aria-label="bitwise not">~</button>
+        <button className="btn" data-value="<<" data-key="&lt;" aria-label="left shift">&lt;&lt;</button>
+        <button className="btn" data-value=">>" data-key="&gt;" aria-label="right shift">&gt;&gt;</button>
+      <button className="btn" data-action="ans" aria-label="previous answer">Ans</button>
+      <button id="print-tape" className="btn" data-action="print" aria-label="print tape">Print</button>
         <div id="paren-indicator" />
       </div>
       <div id="history" className="history hidden" aria-live="polite" />

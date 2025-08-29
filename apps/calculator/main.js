@@ -576,22 +576,12 @@ function undo() {
 }
 
 function findButtonForKey(key) {
-  if (/^[0-9]$/.test(key)) {
-    return document.querySelector(`.btn[data-value="${key}"]`);
-  }
-  const valueMap = {
-    '.': '.','+': '+','-': '-','*': '*','/': '/',
-  };
-  if (key in valueMap) {
-    return document.querySelector(`.btn[data-value="${valueMap[key]}"]`);
-  }
-  if (key === 'Enter' || key === '=') {
-    return document.querySelector('.btn[data-action="equals"]');
-  }
-  if (key === 'Backspace') {
-    return document.querySelector('.btn[data-action="backspace"]');
-  }
-  return null;
+  return (
+    Array.from(buttons).find((btn) => {
+      const keys = (btn.dataset.key || '').split(' ');
+      return keys.includes(key);
+    }) || null
+  );
 }
 
 document.addEventListener('keydown', (e) => {
