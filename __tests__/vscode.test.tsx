@@ -1,29 +1,18 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import VsCode from '../apps/vscode';
 
 describe('VsCode app', () => {
-  it('renders external frame', () => {
+  it('renders file tree', () => {
     render(<VsCode />);
-    const frame = screen.getByTitle('VsCode');
-    expect(frame.tagName).toBe('IFRAME');
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByText('README.md')).toBeInTheDocument();
   });
 
-  it('shows banner when cookies are blocked', async () => {
-    const original = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
-    Object.defineProperty(document, 'cookie', {
-      configurable: true,
-      get: () => '',
-      set: () => {},
-    });
-
+  it('opens file in tab', () => {
     render(<VsCode />);
-    const alert = await screen.findByRole('alert');
-    expect(alert).toBeInTheDocument();
-
-    if (original) {
-      Object.defineProperty(document, 'cookie', original);
-    }
+    fireEvent.click(screen.getByText('README.md'));
+    expect(
+      screen.getAllByRole('button', { name: 'README.md' }).length
+    ).toBeGreaterThan(1);
   });
 });
