@@ -11,19 +11,13 @@ interface NiktoFinding {
   details: string;
 }
 
-const suggestions: Record<string, string> = {
-  '/admin': 'Restrict access to the admin portal or remove it from public view.',
-  '/cgi-bin/test': 'Remove or secure unnecessary CGI scripts and ensure they are up to date.',
-  '/': 'Disable or standardize ETag headers to avoid disclosing inodes.',
-};
-
 const NiktoPage: React.FC = () => {
   const [host, setHost] = useState('');
   const [port, setPort] = useState('');
   const [ssl, setSsl] = useState(false);
   const [findings, setFindings] = useState<NiktoFinding[]>([]);
-  const [selected, setSelected] = useState<NiktoFinding | null>(null);
   const [rawLog, setRawLog] = useState('');
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -54,34 +48,49 @@ const NiktoPage: React.FC = () => {
     }, {});
   }, [findings]);
 
-  const htmlReport = useMemo(() => {
-    const rows = findings
-      .map(
-        (f) =>
-          `<tr><td>${f.path}</td><td>${f.finding}</td><td>${f.severity}</td></tr>`
-      )
-      .join('');
-    return `<!DOCTYPE html><html><body><h1>Nikto Report</h1><table border="1"><tr><th>Path</th><th>Finding</th><th>Severity</th></tr>${rows}</table></body></html>`;
-  }, [findings]);
+  const headers = useMemo(() => {
+    return rawLog
+      .split(/\r?\n/)
+      .map((l) => l.trim().replace(/^\+\s*/, ''))
+      .filter((l) => /^[A-Za-z-]+:/.test(l))
+      .map((line) => {
+        const idx = line.indexOf(':');
+        return { name: line.slice(0, idx), value: line.slice(idx + 1).trim() };
+      });
+  }, [rawLog]);
 
-  const copyReport = async () => {
+  const url = useMemo(() => {
+    if (!host) return 'http://target';
+    const proto = ssl ? 'https://' : 'http://';
+    return `${proto}${host}${port ? `:${port}` : ''}`;
+  }, [host, port, ssl]);
+
+  const copySection = async (list: NiktoFinding[]) => {
     try {
-      await navigator.clipboard?.writeText(htmlReport);
+      await navigator.clipboard?.writeText(JSON.stringify(list, null, 2));
     } catch {
       // ignore
     }
   };
 
-  const exportReport = () => {
-    const blob = new Blob([htmlReport], { type: 'text/html' });
+  const exportSection = (list: NiktoFinding[], sev: string) => {
+    const blob = new Blob([JSON.stringify(list, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'nikto-report.html';
+    a.download = `nikto-${sev.toLowerCase()}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const colorMap: Record<string, string> = {
+    High: 'bg-red-700',
+    Medium: 'bg-yellow-700',
+    Info: 'bg-blue-700',
   };
 
   const summary = useMemo(() => {
@@ -149,103 +158,90 @@ const NiktoPage: React.FC = () => {
         <h2 className="text-lg mb-2">Command Preview</h2>
         <pre className="bg-black text-green-400 p-2 rounded overflow-auto">{command}</pre>
       </div>
-      <div>
-        <h2 className="text-lg mb-2">Findings</h2>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-700">
-              <th className="p-2 text-left">Path</th>
-              <th className="p-2 text-left">Finding</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(grouped).map(([sev, list]) => (
-              <React.Fragment key={sev}>
-                <tr className="bg-gray-800">
-                  <td colSpan={2} className="p-2 font-bold">
-                    {sev}
-                  </td>
-                </tr>
-                {list.map((f) => (
-                  <tr
-                    key={f.path}
-                    className="odd:bg-gray-900 cursor-pointer hover:bg-gray-700"
-                    onClick={() => setSelected(f)}
-                  >
-                    <td className="p-2">{f.path}</td>
-                    <td className="p-2">{f.finding}</td>
-                  </tr>
+      <div className="relative bg-gray-800 p-4 rounded shadow space-y-4">
+        <div className="absolute top-2 right-2 bg-gray-700 text-xs px-2 py-1 rounded-full">
+          Phase 3 • {findings.length} results
+        </div>
+        <div>
+          <h2 className="text-lg mb-2">Target</h2>
+          <p className="mb-2">
+            <span className="font-bold">URL:</span> {url}
+          </p>
+          {headers.length > 0 && (
+            <div className="mb-4">
+              <h3 className="text-md mb-1">Headers</h3>
+              <ul className="text-sm space-y-1 font-mono">
+                {headers.map((h) => (
+                  <li key={h.name}>
+                    <span className="font-bold">{h.name}:</span> {h.value}
+                  </li>
                 ))}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {selected && (
-        <div className="fixed top-0 right-0 w-80 h-full bg-gray-800 p-4 overflow-auto shadow-lg">
-          <button
-            type="button"
-            onClick={() => setSelected(null)}
-            className="mb-2 bg-red-600 px-2 py-1 rounded text-sm"
-          >
-            Close
-          </button>
-          <h3 className="text-xl mb-2">{selected.path}</h3>
-          <p className="mb-2">{selected.finding}</p>
-          <p className="mb-2">
-            <span className="font-bold">Severity:</span> {selected.severity}
-          </p>
-          <p className="mb-2">
-            <span className="font-bold">References:</span> {selected.references.join(', ')}
-          </p>
-          <p className="mb-4">{selected.details}</p>
-          <p className="text-sm text-green-300">
-            {suggestions[selected.path] || 'No suggestion available.'}
-          </p>
+              </ul>
+            </div>
+          )}
         </div>
-      )}
-      <div>
-        <h2 className="text-lg mb-2">HTML Report Preview</h2>
-        <div className="flex space-x-2 mb-2">
-          <button
-            type="button"
-            onClick={copyReport}
-            className="px-2 py-1 bg-blue-600 rounded text-sm"
-          >
-            Copy HTML
-          </button>
-          <button
-            type="button"
-            onClick={exportReport}
-            className="px-2 py-1 bg-blue-600 rounded text-sm"
-          >
-            Export HTML
-          </button>
+        <div>
+          <h2 className="text-lg mb-2">Vulnerabilities</h2>
+          {Object.entries(grouped).map(([sev, list]) => {
+            const open = openSections[sev];
+            return (
+              <div key={sev} className="mb-2 border border-gray-700 rounded">
+                <div
+                  className="flex justify-between items-center p-2 bg-gray-800 cursor-pointer"
+                  onClick={() => setOpenSections((s) => ({ ...s, [sev]: !open }))}
+                >
+                  <span className="font-bold">{sev}</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="bg-gray-600 rounded-full px-2 text-xs">{list.length}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        copySection(list);
+                      }}
+                      className="text-xs bg-blue-600 px-2 py-1 rounded"
+                    >
+                      Copy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        exportSection(list, sev);
+                      }}
+                      className="text-xs bg-blue-600 px-2 py-1 rounded"
+                    >
+                      Export JSON
+                    </button>
+                  </div>
+                </div>
+                {open && (
+                  <ul className="p-2 space-y-1">
+                    {list.map((f) => (
+                      <li
+                        key={f.path}
+                        className={`p-2 rounded ${colorMap[f.severity] || 'bg-gray-700'}`}
+                      >
+                        <span className="font-mono">{f.path}</span>: {f.finding}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
         </div>
-        <iframe
-          title="Nikto HTML Report"
-          srcDoc={htmlReport}
-          className="w-full h-64 bg-white"
-        />
       </div>
       {rawLog && (
         <div>
           <h2 className="text-lg mb-2">Summary</h2>
           <div className="flex space-x-2 mb-4 text-sm">
-            <div className="bg-red-700 px-2 py-1 rounded">
-              Critical: {summary.critical}
-            </div>
-            <div className="bg-yellow-600 px-2 py-1 rounded">
-              Warning: {summary.warning}
-            </div>
-            <div className="bg-blue-600 px-2 py-1 rounded">
-              Info: {summary.info}
-            </div>
+            <div className="bg-red-700 px-2 py-1 rounded">Critical: {summary.critical}</div>
+            <div className="bg-yellow-600 px-2 py-1 rounded">Warning: {summary.warning}</div>
+            <div className="bg-blue-600 px-2 py-1 rounded">Info: {summary.info}</div>
           </div>
           <h2 className="text-lg mb-2">Raw Log</h2>
-          <pre className="bg-black text-green-400 p-2 rounded overflow-auto">
-            {rawLog}
-          </pre>
+          <pre className="bg-black text-green-400 p-2 rounded overflow-auto">{rawLog}</pre>
         </div>
       )}
       <HeaderLab />
@@ -254,3 +250,4 @@ const NiktoPage: React.FC = () => {
 };
 
 export default NiktoPage;
+
