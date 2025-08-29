@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { CAR_SKINS, loadSkinAssets } from '../../apps/games/car-racer/customization';
+import { hasOffscreenCanvas } from '../../utils/feature';
 
 // Canvas dimensions
 const WIDTH = 300;
@@ -149,8 +150,7 @@ const CarRacer = () => {
     const canvas = canvasRef.current;
     if (!canvas || typeof window === 'undefined') return;
 
-    const supportsWorker =
-      typeof Worker === 'function' && 'OffscreenCanvas' in window;
+    const supportsWorker = typeof Worker === 'function' && hasOffscreenCanvas();
     let worker;
     let ctx;
     if (supportsWorker) {

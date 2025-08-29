@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { publish } from '../../../../../utils/pubsub';
+import { hasOffscreenCanvas } from '../../../../../utils/feature';
 
 interface PerfSample {
   t: number;
@@ -41,11 +42,7 @@ const PerfOverlay: React.FC = () => {
     if (!canvas) return;
 
     // Prefer OffscreenCanvas with a worker when supported
-    if (
-      typeof window !== 'undefined' &&
-      typeof Worker === 'function' &&
-      'OffscreenCanvas' in window
-    ) {
+    if (typeof Worker === 'function' && hasOffscreenCanvas()) {
       const worker = new Worker(new URL('./perf.worker.js', import.meta.url));
       workerRef.current = worker;
       const offscreen = canvas.transferControlToOffscreen();
