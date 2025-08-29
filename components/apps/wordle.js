@@ -32,7 +32,7 @@ function usePersistentState(key, defaultValue) {
     } catch {
       setState(defaultValue);
     }
-  }, [key]);
+  }, [key, defaultValue]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -97,7 +97,7 @@ const Wordle = () => {
       won: 0,
       guessDist: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, fail: 0 },
     }),
-    [dictName]
+    []
   );
   const [stats, setStats] = usePersistentState(
     `wordle-stats-${dictName}`,
