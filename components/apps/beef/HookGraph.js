@@ -1,118 +1,47 @@
-import React, { useEffect, useRef, useState } from 'react';
-import CytoscapeComponent from 'react-cytoscapejs';
-import cytoscape from 'cytoscape';
-import coseBilkent from 'cytoscape-cose-bilkent';
+import React from 'react';
+import modulesData from './modules.json';
 
-cytoscape.use(coseBilkent);
-
+// Render a grid of animated cards for each executed module
 export default function HookGraph({ hooks, steps }) {
-  const cyRef = useRef(null);
-  const workerRef = useRef(null);
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const update = () => setReduceMotion(media.matches);
-    update();
-    media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
-      workerRef.current = new Worker(
-        URL.createObjectURL(
-          new Blob(
-            [
-              `self.onmessage = (e) => {\n` +
-                `  const { hooks, steps } = e.data;\n` +
-                `  const elements = [];\n` +
-                `  hooks.forEach((h) => {\n` +
-                `    elements.push({ data: { id: h.id, label: h.label, type: 'hook' } });\n` +
-                `  });\n` +
-                `  steps.forEach((s) => {\n` +
-                `    const moduleNode = 'module-' + s.id;\n` +
-                `    elements.push({ data: { id: moduleNode, label: s.module, type: 'module' } });\n` +
-                `    elements.push({ data: { id: 'edge-' + s.id, source: s.hook, target: moduleNode } });\n` +
-                `  });\n` +
-                `  self.postMessage(elements);\n` +
-                `};`
-            ],
-            { type: 'application/javascript' }
-          )
-        )
-      );
-      return () => workerRef.current && workerRef.current.terminate();
-    }
-    return undefined;
-  }, []);
-
-  useEffect(() => {
-    if (!workerRef.current) return;
-    const formattedHooks = hooks.map((h) => ({
-      id: h.session || h.id,
-      label: h.name || h.session || h.id,
-    }));
-    workerRef.current.onmessage = (e) => {
-      const elements = e.data;
-      if (!cyRef.current) return;
-      const cy = cyRef.current;
-      cy.batch(() => {
-        cy.elements().remove();
-        cy.add(elements);
-      });
-      requestAnimationFrame(() => {
-        cy.layout({
-          name: 'cose-bilkent',
-          animate: !reduceMotion,
-          randomize: true,
-        }).run();
-      });
-    };
-    workerRef.current.postMessage({ hooks: formattedHooks, steps });
-  }, [hooks, steps, reduceMotion]);
-
-  const stylesheet = [
-    {
-      selector: 'node[type="hook"]',
-      style: {
-        'background-color': '#1a73e8',
-        color: '#fff',
-        'text-outline-width': 1,
-        'text-outline-color': '#000',
-        label: 'data(label)',
-      },
-    },
-    {
-      selector: 'node[type="module"]',
-      style: {
-        'background-color': '#e37400',
-        color: '#fff',
-        'text-outline-width': 1,
-        'text-outline-color': '#000',
-        label: 'data(label)',
-      },
-    },
-    {
-      selector: 'edge',
-      style: {
-        width: 2,
-        'line-color': '#ccc',
-        'target-arrow-color': '#ccc',
-        'target-arrow-shape': 'triangle',
-      },
-    },
-  ];
+  const findModule = (id) => modulesData.modules.find((m) => m.id === id);
 
   return (
-    <CytoscapeComponent
-      cy={(cy) => {
-        cyRef.current = cy;
-      }}
-      elements={[]}
-      style={{ width: '100%', height: '100%', backgroundColor: '#000' }}
-      stylesheet={stylesheet}
-      wheelSensitivity={0.1}
-    />
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 h-full overflow-auto p-2">
+      {steps.map((step) => {
+        const mod = findModule(step.module) || {
+          name: step.module,
+          description: 'Module metadata not found',
+          demo: '',
+          link: 'https://github.com/beefproject/beef/wiki',
+        };
+        return (
+          <a
+            key={step.id}
+            href={mod.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-ub-gray-50 text-black p-3 rounded shadow transition-transform duration-300 transform hover:scale-105 fade-in"
+          >
+            <h3 className="font-bold text-sm mb-1">{mod.name}</h3>
+            <p className="text-xs mb-2">{mod.description}</p>
+            {mod.demo && (
+              <pre className="text-[10px] bg-black text-green-400 p-1 rounded mb-2 overflow-x-auto">
+                {mod.demo}
+              </pre>
+            )}
+            <p className="text-[10px] italic">Hook: {step.hook}</p>
+          </a>
+        );
+      })}
+      <style jsx>{`
+        .fade-in {
+          animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+    </div>
   );
 }
