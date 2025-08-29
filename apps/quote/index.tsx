@@ -2,7 +2,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
-import offlineQuotes from '../../components/apps/quotes.json';
+import offlineQuotes from '../../public/quotes.json';
+import PlaylistBuilder from './components/PlaylistBuilder';
 import share, { canShare } from '../../utils/share';
 
 interface Quote {
@@ -61,6 +62,10 @@ export default function QuoteApp() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [dailyQuote, setDailyQuote] = useState<Quote | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [playlist, setPlaylist] = useState<number[]>([]);
+  const [playIndex, setPlayIndex] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [loop, setLoop] = useState(false);
 
   useEffect(() => {
     const fav = localStorage.getItem('quote-favorites');
@@ -75,6 +80,22 @@ export default function QuoteApp() {
       } catch { /* ignore */ }
     }
   }, []);
+
+  useEffect(() => {
+    if (!quotes.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get('playlist');
+    if (p) {
+      const ids = p
+        .split(',')
+        .map((n) => parseInt(n, 10))
+        .filter((n) => !Number.isNaN(n) && n >= 0 && n < quotes.length);
+      if (ids.length) {
+        setPlaylist(ids);
+        setCurrent(quotes[ids[0]]);
+      }
+    }
+  }, [quotes]);
 
   useEffect(() => {
     if (!quotes.length) return;
@@ -117,6 +138,32 @@ export default function QuoteApp() {
   useEffect(() => {
     changeQuote();
   }, [filtered]);
+
+  useEffect(() => {
+    if (!playing || !playlist.length) return;
+    const id = setInterval(() => {
+      setPlayIndex((i) => {
+        const next = i + 1;
+        if (next >= playlist.length) {
+          if (loop) {
+            return 0;
+          }
+          setPlaying(false);
+          return i;
+        }
+        return next;
+      });
+    }, 5000);
+    return () => clearInterval(id);
+  }, [playing, playlist, loop]);
+
+  useEffect(() => {
+    if (!playlist.length) return;
+    const idx = playlist[playIndex];
+    if (idx >= 0 && idx < quotes.length) {
+      setCurrent(quotes[idx]);
+    }
+  }, [playIndex, playlist, quotes]);
 
   const toggleFavorite = () => {
     if (!current) return;
@@ -168,6 +215,16 @@ export default function QuoteApp() {
     share(text);
   };
 
+  const startPlaylist = () => {
+    if (!playlist.length) return;
+    setPlayIndex(0);
+    const idx = playlist[0];
+    if (idx >= 0 && idx < quotes.length) setCurrent(quotes[idx]);
+    setPlaying(true);
+  };
+
+  const stopPlaylist = () => setPlaying(false);
+
   const categories = useMemo(() => {
     const base = Array.from(
       new Set(
@@ -199,7 +256,11 @@ export default function QuoteApp() {
           )}
         </div>
         <div className="flex flex-wrap justify-center gap-2 mt-4">
-          <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={changeQuote}>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={changeQuote}
+            disabled={playing}
+          >
             New Quote
           </button>
           <button className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded" onClick={toggleFavorite}>
@@ -237,6 +298,31 @@ export default function QuoteApp() {
               </option>
             ))}
           </select>
+        </div>
+        <PlaylistBuilder quotes={quotes} playlist={playlist} setPlaylist={setPlaylist} />
+        <div className="mt-2 flex flex-wrap justify-center gap-2">
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={startPlaylist}
+            disabled={!playlist.length || playing}
+          >
+            Play Playlist
+          </button>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={stopPlaylist}
+            disabled={!playing}
+          >
+            Stop
+          </button>
+          <label className="flex items-center space-x-1">
+            <input
+              type="checkbox"
+              checked={loop}
+              onChange={(e) => setLoop(e.target.checked)}
+            />
+            <span>Loop</span>
+          </label>
         </div>
       </div>
     </div>
