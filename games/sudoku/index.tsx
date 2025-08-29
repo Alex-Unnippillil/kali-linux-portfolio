@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import GameShell from "../../components/games/GameShell";
 import { generateSudoku, SIZE } from "../../apps/games/sudoku";
 import {
@@ -119,6 +119,40 @@ const SudokuGame: React.FC = () => {
     row.every((cell, c) => cell.value === solution[r][c]),
   );
 
+  const rowErrors = useMemo(
+    () =>
+      board.map((row, r) =>
+        row.reduce(
+          (acc, cell, c) =>
+            acc +
+            (puzzle[r][c] === 0 &&
+            cell.value !== 0 &&
+            cell.value !== solution[r][c]
+              ? 1
+              : 0),
+          0,
+        ),
+      ),
+    [board, puzzle, solution],
+  );
+
+  const colErrors = useMemo(
+    () =>
+      Array.from({ length: SIZE }, (_, c) =>
+        board.reduce(
+          (acc, row, r) =>
+            acc +
+            (puzzle[r][c] === 0 &&
+            row[c].value !== 0 &&
+            row[c].value !== solution[r][c]
+              ? 1
+              : 0),
+          0,
+        ),
+      ),
+    [board, puzzle, solution],
+  );
+
   return (
     <GameShell>
       <div className="flex flex-col items-center space-y-2">
@@ -146,72 +180,94 @@ const SudokuGame: React.FC = () => {
             ✏️
           </button>
         </div>
-        <div className="grid grid-cols-9 gap-[2px]" role="grid">
-          {board.map((row, r) =>
-            row.map((cell, c) => {
-              const original = puzzle[r][c] !== 0;
-              const val = cell.value;
-              const conflict = hasConflict(board, r, c, val);
-              const wrong =
-                !original && val !== 0 && val !== solution[r][c];
-              const correct =
-                !original && val !== 0 && val === solution[r][c];
-              const inHighlight =
-                selected &&
-                (selected.r === r ||
-                  selected.c === c ||
-                  (Math.floor(selected.r / 3) === Math.floor(r / 3) &&
-                    Math.floor(selected.c / 3) === Math.floor(c / 3)));
-              const isSelected =
-                selected && selected.r === r && selected.c === c;
-              return (
-                <div
-                  key={`${r}-${c}`}
-                  className={`relative border w-8 h-8 sm:w-10 sm:h-10 ${
-                    original ? "bg-gray-200" : "bg-white"
-                  } ${inHighlight ? "bg-yellow-100" : ""} ${
-                    isSelected ? "bg-yellow-200" : ""
-                  } ${
-                    conflict
-                      ? "bg-red-200"
-                      : correct
-                      ? "bg-green-100"
-                      : wrong
-                      ? "bg-red-100"
-                      : ""
-                  }`}
-                >
-                  <input
-                    ref={(el) => {
-                      if (!inputRefs.current[r]) inputRefs.current[r] = [];
-                      inputRefs.current[r][c] = el;
-                    }}
-                    className="w-full h-full text-center bg-transparent outline-none"
-                    value={val === 0 ? "" : val}
-                    onChange={(e) => handleValue(r, c, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(e, r, c)}
-                    onFocus={() => setSelected({ r, c })}
-                    onBlur={() => setSelected(null)}
-                    maxLength={1}
-                    disabled={original}
-                    inputMode="numeric"
-                  />
-                  {cell.candidates.length > 0 && val === 0 && (
-                    <div className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3 text-[8px] leading-3 text-gray-600">
-                      {Array.from({ length: 9 }, (_, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-center"
-                        >
-                          {cell.candidates.includes(i + 1) ? i + 1 : ""}
+        <div className="flex">
+          <div>
+            <div className="grid grid-cols-9 gap-[2px]" role="grid">
+              {board.map((row, r) =>
+                row.map((cell, c) => {
+                  const original = puzzle[r][c] !== 0;
+                  const val = cell.value;
+                  const conflict = hasConflict(board, r, c, val);
+                  const wrong =
+                    !original && val !== 0 && val !== solution[r][c];
+                  const correct =
+                    !original && val !== 0 && val === solution[r][c];
+                  const inHighlight =
+                    selected &&
+                    (selected.r === r ||
+                      selected.c === c ||
+                      (Math.floor(selected.r / 3) === Math.floor(r / 3) &&
+                        Math.floor(selected.c / 3) === Math.floor(c / 3)));
+                  const isSelected =
+                    selected && selected.r === r && selected.c === c;
+                  return (
+                    <div
+                      key={`${r}-${c}`}
+                      className={`relative border w-8 h-8 sm:w-10 sm:h-10 ${
+                        original ? "bg-gray-200" : "bg-white"
+                      } ${inHighlight ? "bg-yellow-100" : ""} ${
+                        isSelected ? "bg-yellow-200" : ""
+                      } ${
+                        conflict
+                          ? "bg-red-200"
+                          : correct
+                          ? "bg-green-100"
+                          : wrong
+                          ? "bg-red-100"
+                          : ""
+                      }`}
+                    >
+                      <input
+                        ref={(el) => {
+                          if (!inputRefs.current[r]) inputRefs.current[r] = [];
+                          inputRefs.current[r][c] = el;
+                        }}
+                        className="w-full h-full text-center bg-transparent outline-none"
+                        value={val === 0 ? "" : val}
+                        onChange={(e) => handleValue(r, c, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, r, c)}
+                        onFocus={() => setSelected({ r, c })}
+                        onBlur={() => setSelected(null)}
+                        maxLength={1}
+                        disabled={original}
+                        inputMode="numeric"
+                      />
+                      {cell.candidates.length > 0 && val === 0 && (
+                        <div className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3 text-[8px] leading-3 text-gray-600">
+                          {Array.from({ length: 9 }, (_, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center justify-center"
+                            >
+                              {cell.candidates.includes(i + 1) ? i + 1 : ""}
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  )}
+                  );
+                }),
+              )}
+            </div>
+            <div className="mt-1 grid grid-cols-9 gap-[2px] text-xs text-center">
+              {colErrors.map((e, i) => (
+                <div key={i} data-testid={`col-error-${i}`}>
+                  {e > 0 ? e : ""}
                 </div>
-              );
-            }),
-          )}
+              ))}
+            </div>
+          </div>
+          <div className="ml-1 grid grid-rows-9 gap-[2px] text-xs">
+            {rowErrors.map((e, i) => (
+              <div
+                key={i}
+                data-testid={`row-error-${i}`}
+                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center"
+              >
+                {e > 0 ? e : ""}
+              </div>
+            ))}
+          </div>
         </div>
         {completed && <div className="mt-2">Completed!</div>}
       </div>
