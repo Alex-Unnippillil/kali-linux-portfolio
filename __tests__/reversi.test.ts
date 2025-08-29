@@ -3,6 +3,7 @@ import {
   computeLegalMoves,
   applyMove,
   evaluateBoard,
+  getBookMove,
 } from '../components/apps/reversiLogic';
 
 describe('Reversi rules', () => {
@@ -32,5 +33,12 @@ describe('Reversi rules', () => {
     board[0][0] = 'W';
     const withoutCorner = evaluateBoard(board, 'B');
     expect(withCorner).toBeGreaterThan(withoutCorner);
+  });
+
+  test('opening book provides first response', () => {
+    const board = createBoard();
+    const moves = computeLegalMoves(board, 'B');
+    const after = applyMove(board, 2, 3, 'B', moves['2-3']);
+    expect(getBookMove(after, 'W')).toEqual([2, 2]);
   });
 });
