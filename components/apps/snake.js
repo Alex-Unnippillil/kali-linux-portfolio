@@ -5,25 +5,15 @@ import useGameHaptics from '../../hooks/useGameHaptics';
 import usePersistentState from '../../hooks/usePersistentState';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import {
+  GRID_SIZE,
+  randomFood,
+  generateObstacles,
+  randomObstacle,
+} from '../../apps/games/snake';
 
-const GRID_SIZE = 20;
 const CELL_SIZE = 16; // pixels
 const DEFAULT_SPEED = 120; // ms per move
-
-/**
- * Generate a random food position that does not overlap the snake.
- * @param {Array<{x:number,y:number}>} snake current snake segments
- */
-const randomFood = (snake) => {
-  let pos;
-  do {
-    pos = {
-      x: Math.floor(Math.random() * GRID_SIZE),
-      y: Math.floor(Math.random() * GRID_SIZE),
-    };
-  } while (snake.some((s) => s.x === pos.x && s.y === pos.y));
-  return pos;
-};
 
 const Snake = () => {
   const canvasRef = useCanvasResize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
@@ -32,7 +22,15 @@ const Snake = () => {
     { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2), scale: 1 },
   ]);
   const dirRef = useRef({ x: 1, y: 0 });
-  const foodRef = useRef(randomFood(snakeRef.current));
+  const obstaclesRef = useRef([]);
+  const foodRef = useRef(randomFood(snakeRef.current, obstaclesRef.current));
+  if (obstaclesRef.current.length === 0) {
+    obstaclesRef.current = generateObstacles(
+      5,
+      snakeRef.current,
+      foodRef.current,
+    );
+  }
   const moveQueueRef = useRef([]);
 
   const rafRef = useRef();
@@ -134,6 +132,12 @@ const Snake = () => {
       });
     }
 
+    // Obstacles
+    ctx.fillStyle = '#6b7280';
+    obstaclesRef.current.forEach((o) => {
+      ctx.fillRect(o.x * CELL_SIZE, o.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+    });
+
     // Food
     ctx.fillStyle = '#ef4444';
     const food = foodRef.current;
@@ -194,7 +198,10 @@ const Snake = () => {
 
     const grow = headX === foodRef.current.x && headY === foodRef.current.y;
     const body = grow ? snake : snake.slice(0, snake.length - 1);
-    if (body.some((s) => s.x === headX && s.y === headY)) {
+    if (
+      body.some((s) => s.x === headX && s.y === headY) ||
+      obstaclesRef.current.some((o) => o.x === headX && o.y === headY)
+    ) {
       haptics.danger();
       setGameOver(true);
       setRunning(false);
@@ -208,8 +215,12 @@ const Snake = () => {
       setScore((s) => s + 1);
       haptics.score();
       beep(440);
-      foodRef.current = randomFood(snake);
+      foodRef.current = randomFood(snake, obstaclesRef.current);
+      obstaclesRef.current.push(
+        randomObstacle(snake, foodRef.current, obstaclesRef.current),
+      );
       if (!prefersReducedMotion) head.scale = 0;
+      setSpeed((s) => Math.max(50, s * 0.95));
     } else {
       snake.pop();
     }
@@ -260,11 +271,18 @@ const Snake = () => {
       { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2), scale: 1 },
     ];
     dirRef.current = { x: 1, y: 0 };
-    foodRef.current = randomFood(snakeRef.current);
     moveQueueRef.current = [];
+    foodRef.current = randomFood(snakeRef.current, []);
+    obstaclesRef.current = generateObstacles(
+      5,
+      snakeRef.current,
+      foodRef.current,
+    );
     setScore(0);
     setGameOver(false);
     setRunning(true);
+    setSpeed(DEFAULT_SPEED);
+    speedRef.current = DEFAULT_SPEED;
     draw();
   }, [draw]);
 
