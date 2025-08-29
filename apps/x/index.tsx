@@ -209,8 +209,17 @@ export default function XTimeline() {
   return (
     <>
       {showSetup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 p-4 rounded max-w-sm text-sm">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{
+            backgroundColor:
+              'color-mix(in srgb, var(--color-inverse) 50%, transparent)',
+          }}
+        >
+          <div
+            className="p-4 rounded max-w-sm text-sm"
+            style={{ backgroundColor: 'var(--color-surface)' }}
+          >
             <p className="mb-2">
               To use this app you need X API credentials: API key, API secret,
               access token and access token secret.
@@ -230,7 +239,7 @@ export default function XTimeline() {
             <button
               type="button"
               onClick={() => setShowSetup(false)}
-              className="px-3 py-1 rounded text-white"
+              className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
               style={{ backgroundColor: accent }}
             >
               Close
@@ -253,18 +262,18 @@ export default function XTimeline() {
             value={tweetText}
             onChange={(e) => setTweetText(e.target.value)}
             placeholder="Tweet text"
-            className="w-full p-2 rounded border bg-transparent"
+            className="w-full p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
           />
           <div className="flex gap-2 items-center">
             <input
               type="datetime-local"
               value={tweetTime}
               onChange={(e) => setTweetTime(e.target.value)}
-              className="flex-1 p-2 rounded border bg-transparent"
+              className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
             />
             <button
               type="submit"
-              className="px-3 py-1 rounded text-white"
+              className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
               style={{ backgroundColor: accent }}
             >
               Schedule
@@ -279,7 +288,7 @@ export default function XTimeline() {
                   tabIndex={0}
                   data-scheduled-item
                   onKeyDown={(e) => handleScheduledKey(e, t.id)}
-                  className="flex justify-between items-center p-2 rounded border"
+                  className="flex justify-between items-center p-2 rounded border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
                 >
                   <span>
                     {t.text} - {new Date(t.time).toLocaleString()}
@@ -287,7 +296,7 @@ export default function XTimeline() {
                   <button
                     type="button"
                     onClick={() => removeScheduled(t.id)}
-                    className="ml-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700"
+                    className="ml-2 px-2 py-1 rounded bg-[var(--color-muted)] text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
                   >
                     ×
                   </button>
@@ -300,10 +309,10 @@ export default function XTimeline() {
           <button
             type="button"
             onClick={() => setTimelineType('profile')}
-            className={`px-2 py-1 rounded text-sm ${
+            className={`px-2 py-1 rounded text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
               timelineType === 'profile'
-                ? 'text-white'
-                : 'bg-gray-200 dark:bg-gray-700'
+                ? 'text-[var(--color-text)]'
+                : 'bg-[var(--color-muted)]'
             }`}
             style={
               timelineType === 'profile' ? { backgroundColor: accent } : undefined
@@ -314,10 +323,10 @@ export default function XTimeline() {
           <button
             type="button"
             onClick={() => setTimelineType('list')}
-            className={`px-2 py-1 rounded text-sm ${
+            className={`px-2 py-1 rounded text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
               timelineType === 'list'
-                ? 'text-white'
-                : 'bg-gray-200 dark:bg-gray-700'
+                ? 'text-[var(--color-text)]'
+                : 'bg-[var(--color-muted)]'
             }`}
             style={
               timelineType === 'list' ? { backgroundColor: accent } : undefined
@@ -335,11 +344,11 @@ export default function XTimeline() {
                 ? 'Add screen name'
                 : 'Add list (owner/slug or id)'
             }
-            className="flex-1 p-2 rounded border bg-transparent"
+            className="flex-1 p-2 rounded border bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
           />
           <button
             type="submit"
-            className="px-3 py-1 rounded text-white"
+            className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
             style={{ backgroundColor: accent }}
           >
             Save
@@ -354,10 +363,10 @@ export default function XTimeline() {
                 onClick={() => {
                   setFeed(p);
                 }}
-                className={`px-2 py-1 rounded-full text-sm ${
+                className={`px-2 py-1 rounded-full text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] ${
                   feed === p
-                    ? 'text-white'
-                    : 'bg-gray-200 dark:bg-gray-700'
+                    ? 'text-[var(--color-text)]'
+                    : 'bg-[var(--color-muted)]'
                 }`}
                 style={feed === p ? { backgroundColor: accent } : undefined}
               >
@@ -373,7 +382,7 @@ export default function XTimeline() {
               setLoaded(true);
               if (scriptLoaded) loadTimeline();
             }}
-            className="px-4 py-2 rounded text-white"
+            className="px-4 py-2 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
             style={{ backgroundColor: accent }}
           >
             Load timeline
@@ -385,7 +394,7 @@ export default function XTimeline() {
                 {Array.from({ length: 3 }).map((_, i) => (
                   <li
                     key={i}
-                    className="h-24 rounded bg-gray-200 dark:bg-gray-700 animate-pulse"
+                    className="h-24 rounded bg-[var(--color-muted)] animate-pulse"
                   />
                 ))}
               </ul>
@@ -406,7 +415,7 @@ export default function XTimeline() {
               </div>
             )}
             {!loading && !timelineLoaded && !scriptError && (
-              <div className="text-center text-gray-500">Nothing to see</div>
+              <div className="text-center text-[var(--color-muted)]">Nothing to see</div>
             )}
           </>
         )}

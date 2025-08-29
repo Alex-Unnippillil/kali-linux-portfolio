@@ -55,10 +55,19 @@ export default function TweetEmbed({ id }) {
   }
 
   return (
-    <div
-      className="tweet-embed"
-      dangerouslySetInnerHTML={{ __html: html }}
-      suppressHydrationWarning
-    />
+    <>
+      <div
+        className="tweet-embed"
+        dangerouslySetInnerHTML={{ __html: html }}
+        suppressHydrationWarning
+      />
+      <style jsx>{`
+        .tweet-embed svg {
+          width: 20px;
+          height: 20px;
+          margin: 0 0.25rem;
+        }
+      `}</style>
+    </>
   );
 }
