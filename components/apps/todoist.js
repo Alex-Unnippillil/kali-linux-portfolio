@@ -34,6 +34,8 @@ export default function Todoist() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [view, setView] = useState('all');
+  const [activeProject, setActiveProject] = useState('all');
+  const [editingTask, setEditingTask] = useState({ id: null, group: '', title: '' });
   const dragged = useRef({ group: '', id: null, title: '' });
   const liveRef = useRef(null);
   const workerRef = useRef(null);
@@ -143,6 +145,32 @@ export default function Todoist() {
       newGroups[to].push(task);
     }
     return newGroups;
+  };
+
+  const updateGroups = (newGroups) => {
+    setGroups(newGroups);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const saveEditing = () => {
+    const { id, group, title } = editingTask;
+    if (!id) return;
+    const newGroups = {
+      ...groups,
+      [group]: [...groups[group]],
+    };
+    const idx = newGroups[group].findIndex((t) => t.id === id);
+    if (idx > -1) {
+      newGroups[group][idx] = { ...newGroups[group][idx], title };
+      updateGroups(newGroups);
+    }
+    setEditingTask({ id: null, group: '', title: '' });
   };
 
   const handleKeyDown = (group, task) => (e) => {
@@ -388,31 +416,74 @@ export default function Todoist() {
     return true;
   };
 
-  const renderTask = (group, task) => (
-    <div
-      key={task.id}
-      tabIndex={0}
-      draggable
-      onDragStart={handleDragStart(group, task)}
-      onKeyDown={handleKeyDown(group, task)}
-      className="mb-2 p-2 rounded shadow bg-white text-black flex items-center min-h-[44px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-      role="listitem"
-    >
-      <input
-        type="checkbox"
-        aria-label="Toggle completion"
-        checked={!!task.completed}
-        onChange={() => toggleCompleted(group, task.id)}
-        className="w-6 h-6 mr-2 focus:ring-2 focus:ring-blue-500"
-      />
-      <div className="flex-1">
-        <div className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
-        {task.due && <div className="text-xs text-gray-500">{task.due}</div>}
-        {task.section && <div className="text-xs text-gray-500">{task.section}</div>}
-        <div className="text-xs text-gray-500">Priority: {task.priority}</div>
+  const renderTask = (group, task) => {
+    const isEditing = editingTask.id === task.id;
+    const today = new Date().toISOString().split('T')[0];
+    let chipColor = 'bg-blue-100 text-blue-700';
+    if (task.due) {
+      if (task.due < today) chipColor = 'bg-red-100 text-red-700';
+      else if (task.due === today) chipColor = 'bg-yellow-100 text-yellow-700';
+    }
+    return (
+      <div key={task.id} className="mb-2">
+        <div
+          tabIndex={0}
+          draggable
+          onDragStart={handleDragStart(group, task)}
+          onKeyDown={handleKeyDown(group, task)}
+          className="rounded shadow bg-white text-black flex items-center min-h-[44px] px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          role="listitem"
+        >
+          <label className="mr-2 inline-flex items-center">
+            <input
+              type="checkbox"
+              aria-label="Toggle completion"
+              checked={!!task.completed}
+              onChange={() => toggleCompleted(group, task.id)}
+              className="w-6 h-6 focus:ring-2 focus:ring-blue-500"
+            />
+          </label>
+          <div className="flex-1">
+            <div className={`font-medium ${task.completed ? 'line-through text-gray-500' : ''}`}>{task.title}</div>
+            <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+              {task.due && (
+                <span className={`inline-flex items-center gap-1 px-2 py-[2px] rounded-full ${chipColor}`}>
+                  <span aria-hidden>📅</span>
+                  {task.due}
+                </span>
+              )}
+              {task.section && <span>{task.section}</span>}
+              <span>Priority: {task.priority}</span>
+            </div>
+          </div>
+          <button
+            onClick={() =>
+              setEditingTask({ id: task.id, group, title: task.title })
+            }
+            className="ml-2 text-xs text-blue-600"
+          >
+            Edit
+          </button>
+        </div>
+        <div
+          className={`transition-[max-height] duration-300 overflow-hidden px-2 ${isEditing ? 'max-h-20' : 'max-h-0'}`}
+        >
+          {isEditing && (
+            <input
+              value={editingTask.title}
+              onChange={(e) =>
+                setEditingTask({ ...editingTask, title: e.target.value })
+              }
+              onBlur={saveEditing}
+              onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
+              className="mt-2 w-full border p-1"
+              autoFocus
+            />
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderGroup = (name) => {
     const filtered = groups[name].filter(matchesTask);
@@ -456,15 +527,43 @@ export default function Todoist() {
     .filter((t) => t.due && t.due > todayStr && matchesTask(t))
     .sort((a, b) => a.due.localeCompare(b.due));
 
+  const projectNames = Object.keys(groups);
+
   return (
-    <div className="flex h-full w-full flex-col" role="application">
-      <div aria-live="polite" className="sr-only" ref={liveRef} />
-      <div className="p-2 border-b flex flex-col gap-2">
-        <form onSubmit={handleQuickAdd} className="flex gap-2">
-          <input
-            ref={quickRef}
-            value={quick}
-            onChange={(e) => setQuick(e.target.value)}
+    <div className="flex h-full w-full" role="application">
+      <aside className="w-40 border-r p-1 space-y-1">
+        <button
+          onClick={() => setActiveProject('all')}
+          className={`w-full text-left px-2 py-1 rounded-full transition-colors ${
+            activeProject === 'all'
+              ? 'bg-gray-800 text-white'
+              : 'text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          All Projects
+        </button>
+        {projectNames.map((name) => (
+          <button
+            key={name}
+            onClick={() => setActiveProject(name)}
+            className={`w-full text-left px-2 py-1 rounded-full transition-colors ${
+              activeProject === name
+                ? 'bg-gray-800 text-white'
+                : 'text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {name}
+          </button>
+        ))}
+      </aside>
+      <div className="flex flex-1 flex-col">
+        <div aria-live="polite" className="sr-only" ref={liveRef} />
+        <div className="p-2 border-b flex flex-col gap-2">
+          <form onSubmit={handleQuickAdd} className="flex gap-2">
+            <input
+              ref={quickRef}
+              value={quick}
+              onChange={(e) => setQuick(e.target.value)}
             placeholder="Quick add (e.g., 'Pay bills tomorrow !1')"
             className="border p-1 flex-1"
           />
@@ -567,24 +666,26 @@ export default function Todoist() {
             <input type="file" accept="application/json" onChange={handleImport} className="sr-only" />
           </label>
         </div>
-      </div>
-      <div className="flex flex-1">
-        {view === 'all'
-          ? Object.keys(groups).map((name) => renderGroup(name))
-          : (
-            <div
-              className="flex-1 p-2 overflow-y-auto"
-              role="list"
-              aria-label={view === 'today' ? 'Today' : 'Upcoming'}
-            >
-              <h2 className="mb-2 font-bold text-lg text-gray-800">
-                {view === 'today' ? 'Today' : 'Upcoming'}
-              </h2>
-              {(view === 'today' ? todayTasks : upcomingTasks).map((task) =>
-                renderTask(task.group, task)
-              )}
-            </div>
-          )}
+        <div className="flex flex-1">
+          {view === 'all'
+            ? (activeProject === 'all'
+                ? projectNames.map((name) => renderGroup(name))
+                : renderGroup(activeProject))
+            : (
+              <div
+                className="flex-1 p-2 overflow-y-auto"
+                role="list"
+                aria-label={view === 'today' ? 'Today' : 'Upcoming'}
+              >
+                <h2 className="mb-2 font-bold text-lg text-gray-800">
+                  {view === 'today' ? 'Today' : 'Upcoming'}
+                </h2>
+                {(view === 'today' ? todayTasks : upcomingTasks).map((task) =>
+                  renderTask(task.group, task)
+                )}
+              </div>
+            )}
+        </div>
       </div>
     </div>
   );
