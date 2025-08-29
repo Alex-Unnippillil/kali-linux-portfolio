@@ -2,7 +2,8 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import useGameControls from './useGameControls';
 import usePersistentState from '../../hooks/usePersistentState';
-import { useSettings } from '../../hooks/useSettings';
+import { useSettings as useGlobalSettings } from '../../hooks/useSettings';
+import { SettingsProvider, useSettings as useGameSettings } from './GameSettingsContext';
 import { getBallSpin } from '../../games/pong/physics';
 
 // Basic timing constants so the simulation is consistent across refresh rates
@@ -19,7 +20,7 @@ const MAX_TRAIL = 2;
 const WIDTH = 600;
 const HEIGHT = 400;
 
-const Pong = () => {
+const PongInner = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
   const resetRef = useRef(null);
   const peerRef = useRef(null);
@@ -27,7 +28,7 @@ const Pong = () => {
   const frameRef = useRef(0);
 
   const [scores, setScores] = useState({ player: 0, opponent: 0 });
-  const [difficulty, setDifficulty] = useState(5); // 1-10 difficulty scale
+  const { difficulty, setDifficulty } = useGameSettings();
   const [match, setMatch] = useState({ player: 0, opponent: 0 });
   const [matchWinner, setMatchWinner] = useState(null);
   const [mode, setMode] = useState('cpu'); // 'cpu', 'local', 'online', or 'practice'
@@ -39,7 +40,7 @@ const Pong = () => {
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [rally, setRally] = useState(0);
-  const { pongSpin } = useSettings();
+  const { pongSpin } = useGlobalSettings();
   const [highScore, setHighScore] = usePersistentState(
     'pong_highscore',
     0,
@@ -381,8 +382,10 @@ const Pong = () => {
       // opponent (AI, local or remote)
       if (mode === 'cpu') {
         const error = ball.y - (opponent.y + paddleHeight / 2);
+        // Map difficulty string to 0-1 scale
+        const diffMap = { easy: 0.3, normal: 0.6, hard: 1 };
+        const diff = diffMap[difficulty] ?? 0.6;
         // Non-linear difficulty curve for smoother progression
-        const diff = difficulty / 10; // 0-1
         const gain = 5 + diff * diff * 45; // 5-50
         opponent.vy = error * gain;
         const max = 200 + diff * 200; // 200-400
@@ -699,14 +702,16 @@ const Pong = () => {
       ) : mode === 'cpu' ? (
         <div className="mt-2 flex items-center space-x-2">
           <label>AI Difficulty: {difficulty}</label>
-          <input
-            type="range"
-            min="1"
-            max="10"
+          <select
             value={difficulty}
-            onChange={(e) => setDifficulty(parseInt(e.target.value, 10))}
+            onChange={(e) => setDifficulty(e.target.value)}
             aria-label="AI difficulty"
-          />
+            className="text-black p-1"
+          >
+            <option value="easy">Easy</option>
+            <option value="normal">Normal</option>
+            <option value="hard">Hard</option>
+          </select>
         </div>
       ) : null}
 
@@ -802,5 +807,11 @@ const Pong = () => {
     </div>
   );
 };
+
+const Pong = () => (
+  <SettingsProvider>
+    <PongInner />
+  </SettingsProvider>
+);
 
 export default Pong;
