@@ -414,7 +414,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
           ? w
           : [...w, v],
       ),
-    [],
+    [setWatchLater],
   );
   const shareClip = useCallback(async () => {
     if (!current || loopStart === null || loopEnd === null) return;
