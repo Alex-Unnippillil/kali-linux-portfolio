@@ -2195,6 +2195,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@kurkle/color@npm:^0.3.0":
+  version: 0.3.4
+  resolution: "@kurkle/color@npm:0.3.4"
+  checksum: 10c0/0e9fd55c614b005c5f0c4c755bca19ec0293bc7513b4ea3ec1725234f9c2fa81afbc78156baf555c8b9cb0d305619253c3f5bca016067daeebb3d00ebb4ea683
+  languageName: node
+  linkType: hard
+
 "@mixmark-io/domino@npm:^2.2.0":
   version: 2.2.0
   resolution: "@mixmark-io/domino@npm:2.2.0"
@@ -2867,6 +2874,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/cytoscape@npm:*":
+  version: 3.21.9
+  resolution: "@types/cytoscape@npm:3.21.9"
+  checksum: 10c0/49c25b18322c405166982ae60ea6618e07329931e7b8824c84ee418ba705ac178d6a47886089bc3087167493c4dfe297a1b20fbc964fc22d662ee83f377d8f5b
+  languageName: node
+  linkType: hard
+
+"@types/diff@npm:^8.0.0":
+  version: 8.0.0
+  resolution: "@types/diff@npm:8.0.0"
+  dependencies:
+    diff: "npm:*"
+  checksum: 10c0/c6e3376abeac8bc77b33252afc239a3cfc2729ecf59abcf00fa0f0eca8c505fd3a375a99a64afecdbb97fbec77b9a6aa8a8918f4d53fd5b45638d609343717cc
+  languageName: node
+  linkType: hard
+
 "@types/estree@npm:0.0.39":
   version: 0.0.39
   resolution: "@types/estree@npm:0.0.39"
@@ -3010,10 +3033,29 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/qrcode@npm:^1.5.5":
+  version: 1.5.5
+  resolution: "@types/qrcode@npm:1.5.5"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/b8e6709905d1edb32dda414408acab18ac4aefcbe7bf96d9e32ba94218f45b99c8938ba7a09863ce82a67b226195099fd0f48881d16ee844899087b7f249955f
+  languageName: node
+  linkType: hard
+
 "@types/raf@npm:^3.4.0":
   version: 3.4.3
   resolution: "@types/raf@npm:3.4.3"
   checksum: 10c0/dea835f0daa399c51db9137f5337dc08a2b4a5f61f645658966ecabaebbbd0fd59551f384a1141e14e22a1cc5a591da7d4d88c60a525ad1399108b6dd2641d75
+  languageName: node
+  linkType: hard
+
+"@types/react-cytoscapejs@npm:^1.2.5":
+  version: 1.2.5
+  resolution: "@types/react-cytoscapejs@npm:1.2.5"
+  dependencies:
+    "@types/cytoscape": "npm:*"
+    "@types/react": "npm:*"
+  checksum: 10c0/dadaa63a98ec9c0f3ff000d17486c2a4ef9cae54cad2642d156f9eafdd45fcfc0aea908f62e7dcf155c23b09e3617bbc1ce8fb637a881a80e1b38b8f8674649f
   languageName: node
   linkType: hard
 
@@ -3111,10 +3153,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/web-bluetooth@npm:^0.0.21":
+  version: 0.0.21
+  resolution: "@types/web-bluetooth@npm:0.0.21"
+  checksum: 10c0/5f47c5ec452ca31e6a9b44c8aaa54b66c4f57d4aca00166c45902a3883139580e14b254b774172ff982ba4458cc444b5aa59bb4573c2fd34562cfa599721f8e4
+  languageName: node
+  linkType: hard
+
 "@types/webxr@npm:*":
   version: 0.5.22
   resolution: "@types/webxr@npm:0.5.22"
   checksum: 10c0/dd015cadd71b2cdd3b7bab18152e579d33ff66652b2eab26f371f3583ca607e9a1f1bd5af5e2f7ff861a50aa352f44b3be40f26b64561e365d1fec254c7dfdcd
+  languageName: node
+  linkType: hard
+
+"@types/wicg-file-system-access@npm:^2023.10.6":
+  version: 2023.10.6
+  resolution: "@types/wicg-file-system-access@npm:2023.10.6"
+  checksum: 10c0/6d1086450b28351ea5c8c6078411930984a16588b40d999f9abdc42c9bff63de93101bd7b1edcaba5c5c9ea83acdeb277bcaff913f39f6dac12091459974631f
   languageName: node
   linkType: hard
 
@@ -4433,6 +4489,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"chart.js@npm:^4.5.0":
+  version: 4.5.0
+  resolution: "chart.js@npm:4.5.0"
+  dependencies:
+    "@kurkle/color": "npm:^0.3.0"
+  checksum: 10c0/f12c7f9a238ee7ce6d3f7111628e9daba86bb8ff8e54cfe63525fde6ded9003c72c4c8d2c7d5702539dc0aff7e682dfec058660ade8d03a970da002656d4ac91
+  languageName: node
+  linkType: hard
+
 "check-types@npm:^11.2.3":
   version: 11.2.3
   resolution: "check-types@npm:11.2.3"
@@ -5192,6 +5257,13 @@ __metadata:
   version: 1.2.2
   resolution: "didyoumean@npm:1.2.2"
   checksum: 10c0/95d0b53d23b851aacff56dfadb7ecfedce49da4232233baecfeecb7710248c4aa03f0aa8995062f0acafaf925adf8536bd7044a2e68316fd7d411477599bc27b
+  languageName: node
+  linkType: hard
+
+"diff@npm:*":
+  version: 8.0.2
+  resolution: "diff@npm:8.0.2"
+  checksum: 10c0/abfb387f033e089df3ec3be960205d17b54df8abf0924d982a7ced3a94c557a4e6cbff2e78b121f216b85f466b3d8d041673a386177c311aaea41459286cc9bc
   languageName: node
   linkType: hard
 
@@ -11590,16 +11662,21 @@ __metadata:
     "@testing-library/react": "npm:^16.3.0"
     "@testing-library/user-event": "npm:^14.6.1"
     "@types/canvas-confetti": "npm:^1"
+    "@types/diff": "npm:^8.0.0"
     "@types/figlet": "npm:^1"
     "@types/howler": "npm:^2"
     "@types/jest": "npm:30.0.0"
     "@types/leaflet": "npm:^1"
     "@types/matter-js": "npm:0.20.0"
     "@types/node": "npm:^24.2.1"
+    "@types/qrcode": "npm:^1.5.5"
     "@types/react": "npm:18.3.7"
+    "@types/react-cytoscapejs": "npm:^1.2.5"
     "@types/react-dom": "npm:18.3.0"
     "@types/seedrandom": "npm:^3"
     "@types/three": "npm:^0.179.0"
+    "@types/web-bluetooth": "npm:^0.0.21"
+    "@types/wicg-file-system-access": "npm:^2023.10.6"
     "@vercel/analytics": "npm:^1.5.0"
     "@xterm/addon-fit": "npm:^0.10.0"
     "@xterm/addon-search": "npm:^0.15.0"
@@ -11610,6 +11687,7 @@ __metadata:
     autoprefixer: "npm:^10.4.13"
     bad-words: "npm:^3.0.4"
     canvas-confetti: "npm:1.9.3"
+    chart.js: "npm:^4.5.0"
     chess.js: "npm:^1.0.0"
     chrono-node: "npm:^2.8.4"
     cytoscape: "npm:^3.33.1"
