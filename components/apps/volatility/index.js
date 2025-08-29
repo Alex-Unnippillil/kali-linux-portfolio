@@ -3,51 +3,14 @@ import MemoryHeatmap from './MemoryHeatmap';
 import PluginBrowser from './PluginBrowser';
 import memoryDemo from '../../../public/demo-data/volatility/memory.json';
 
-const demoPstree = [
-  {
-    pid: 4,
-    name: 'System',
-    children: [
-      {
-        pid: 248,
-        name: 'smss.exe',
-        children: [
-          { pid: 612, name: 'csrss.exe', children: [] },
-        ],
-      },
-    ],
-  },
-];
-
-const demoDlllist = {
-  4: [{ base: '0x1000', name: 'ntoskrnl.exe' }],
-  248: [{ base: '0x2000', name: 'smss.exe' }],
-  612: [
-    { base: '0x3000', name: 'csrss.exe' },
-    { base: '0x4000', name: 'kernel32.dll' },
-  ],
-};
-
-const demoNetscan = [
-  { proto: 'TCP', local: '0.0.0.0:80', foreign: '0.0.0.0:0', state: 'LISTENING' },
-  { proto: 'UDP', local: '127.0.0.1:53', foreign: '0.0.0.0:0', state: 'NONE' },
-  {
-    proto: 'TCP',
-    local: '192.168.1.5:445',
-    foreign: '192.168.1.10:51234',
-    state: 'ESTABLISHED',
-  },
-];
-
-const demoMalfind = [
-  { pid: 612, address: '0x7f12a000', protection: 'RWX', description: 'Injected Code' },
-  { pid: 700, address: '0x401000', protection: 'RWX', description: 'Suspicious Section' },
-];
-
-const demoYara = [
-  { pid: 612, rule: 'SuspiciousAPIs', address: '0x401000', heuristic: 'suspicious' },
-  { pid: 248, rule: 'EncodedPayload', address: '0x500000', heuristic: 'malicious' },
-];
+// pull demo data for various volatility plugins from the memory fixture
+const {
+  pstree = [],
+  dlllist = {},
+  netscan = [],
+  malfind = [],
+  yarascan = [],
+} = memoryDemo;
 
 const heuristicColors = {
   informational: 'bg-blue-600',
@@ -220,7 +183,7 @@ const VolatilityApp = () => {
             {activeTab === 'pstree' && (
               <div className="flex space-x-4">
                 <ul className="w-1/2 text-xs">
-                  {demoPstree.map((node) => (
+                  {pstree.map((node) => (
                     <TreeNode key={node.pid} node={node} />
                   ))}
                 </ul>
@@ -233,7 +196,7 @@ const VolatilityApp = () => {
                           { key: 'base', label: 'Base' },
                           { key: 'name', label: 'Name' },
                         ]}
-                        data={demoDlllist[selectedPid] || []}
+                        data={dlllist[selectedPid] || []}
                         onRowClick={() => setFinding(glossary.dlllist)}
                       />
                     </>
@@ -251,7 +214,7 @@ const VolatilityApp = () => {
                   { key: 'foreign', label: 'ForeignAddr' },
                   { key: 'state', label: 'State' },
                 ]}
-                data={demoNetscan}
+                data={netscan}
                 onRowClick={() => setFinding(glossary.netscan)}
               />
             )}
@@ -263,7 +226,7 @@ const VolatilityApp = () => {
                   { key: 'protection', label: 'Protection' },
                   { key: 'description', label: 'Description' },
                 ]}
-                data={demoMalfind}
+                data={malfind}
                 onRowClick={() => setFinding(glossary.malfind)}
               />
             )}
@@ -287,7 +250,7 @@ const VolatilityApp = () => {
                     ),
                   },
                 ]}
-                data={demoYara}
+                data={yarascan}
                 onRowClick={() => setFinding(glossary.yara)}
               />
             )}
