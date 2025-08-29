@@ -46,6 +46,7 @@ export default function AsciiArt() {
   const [altText, setAltText] = useState('');
   const [typingMode, setTypingMode] = useState(false);
   const [contrast, setContrast] = useState(1);
+  const [brightness, setBrightness] = useState(0);
   const [density, setDensity] = useState(presetCharSets.standard.length);
   const [imgSrc, setImgSrc] = useState(null);
   const [font, setFont] = useState('monospace');
@@ -131,6 +132,7 @@ export default function AsciiArt() {
       const g = data[idx + 1];
       const b = data[idx + 2];
       let val = 0.299 * r + 0.587 * g + 0.114 * b;
+      val += brightness;
       val = (val - 128) * contrast + 128;
       gray[i] = Math.max(0, Math.min(255, val));
     }
@@ -224,7 +226,7 @@ export default function AsciiArt() {
       }
     };
     requestAnimationFrame(step);
-  }, [charSet, density, cellSize, paletteName, useColor, contrast]);
+  }, [charSet, density, cellSize, paletteName, useColor, contrast, brightness]);
 
   const handleFile = useCallback(
     (e) => {
@@ -239,7 +241,7 @@ export default function AsciiArt() {
 
   useEffect(() => {
     processFile();
-  }, [processFile, contrast, density, cellSize, charSet, paletteName, useColor]);
+  }, [processFile, contrast, brightness, density, cellSize, charSet, paletteName, useColor]);
 
   const copyAscii = useCallback(() => {
     const text = useColor ? ansiAscii : plainAscii;
@@ -386,6 +388,19 @@ export default function AsciiArt() {
             value={cellSize}
             onChange={(e) => setCellSize(Number(e.target.value))}
             className="w-16 px-1 bg-gray-700"
+          />
+        </label>
+        <label className="flex items-center gap-2">
+          Brightness:
+          <input
+            type="range"
+            min="-100"
+            max="100"
+            step="10"
+            value={brightness}
+            onChange={(e) => setBrightness(Number(e.target.value))}
+            className="w-24"
+            aria-label="Brightness"
           />
         </label>
         <label className="flex items-center gap-2">
