@@ -189,6 +189,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [current, setCurrent] = useState<Video | null>(null);
   const [queue, setQueue] = useState<Video[]>([]);
   const [watchLater, setWatchLater] = useState<Video[]>([]);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -231,15 +232,46 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     void search();
   };
 
-  const addQueue = (v: Video) => setQueue((q) => [...q, v]);
-  const addWatchLater = (v: Video) =>
-    setWatchLater((w) => (w.some((x) => x.id === v.id) ? w : [...w, v]));
+  const addQueue = useCallback((v: Video) => setQueue((q) => [...q, v]), []);
+  const addWatchLater = useCallback(
+    (v: Video) =>
+      setWatchLater((w) => (w.some((x) => x.id === v.id) ? w : [...w, v])),
+    []
+  );
+  const playNext = useCallback(() => {
+    setQueue((q) => {
+      if (q.length) {
+        const [next, ...rest] = q;
+        setCurrent(next);
+        return rest;
+      }
+      return q;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleKeys = (e: KeyboardEvent) => {
+      if (e.key === '/' && document.activeElement !== searchRef.current) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      } else if (e.key.toLowerCase() === 'q' && current) {
+        addQueue(current);
+      } else if (e.key.toLowerCase() === 'l' && current) {
+        addWatchLater(current);
+      } else if (e.key.toLowerCase() === 'n') {
+        playNext();
+      }
+    };
+    window.addEventListener('keydown', handleKeys);
+    return () => window.removeEventListener('keydown', handleKeys);
+  }, [current, addQueue, addWatchLater, playNext]);
 
   return (
     <div className="flex h-full flex-1 bg-gray-900 text-white">
       <div className="flex flex-1 flex-col">
         <form onSubmit={handleSearch} className="p-4">
           <input
+            ref={searchRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search YouTube"
