@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import GameLayout from '../../components/apps/GameLayout';
+import WaveEditor, {
+  WaveConfig,
+} from '../../games/tower-defense/components/WaveEditor';
 import {
   ENEMY_TYPES,
   Tower,
@@ -32,6 +35,9 @@ const TowerDefense = () => {
   const lastTime = useRef(0);
   const running = useRef(false);
   const spawnTimer = useRef(0);
+  const [waves, setWaves] = useState<WaveConfig[]>([]);
+  const waveIndex = useRef(0);
+  const waveProgress = useRef(0);
 
   const togglePath = (x: number, y: number) => {
     const key = `${x},${y}`;
@@ -122,10 +128,9 @@ const TowerDefense = () => {
   };
 
   const spawnEnemyInstance = () => {
-    if (!path.length) return;
-    const types = Object.keys(ENEMY_TYPES) as (keyof typeof ENEMY_TYPES)[];
-    const type = types[Math.floor(Math.random() * types.length)];
-    const spec = ENEMY_TYPES[type];
+    const wave = waves[waveIndex.current];
+    if (!path.length || !wave) return;
+    const spec = ENEMY_TYPES[wave.type];
     const enemy = spawnEnemy(enemyPool.current, {
       id: Date.now(),
       x: path[0].x,
@@ -137,19 +142,26 @@ const TowerDefense = () => {
       baseSpeed: spec.speed,
       slow: null,
       dot: null,
-      type,
+      type: wave.type,
     });
     if (enemy) enemiesRef.current.push(enemy as EnemyInstance);
+    waveProgress.current += 1;
+    if (waveProgress.current >= wave.count) {
+      waveIndex.current += 1;
+      waveProgress.current = 0;
+    }
   };
 
   const update = (time: number) => {
     const dt = (time - lastTime.current) / 1000;
     lastTime.current = time;
     if (running.current) {
-      spawnTimer.current += dt;
-      if (spawnTimer.current > 1) {
-        spawnTimer.current = 0;
-        spawnEnemyInstance();
+      if (waveIndex.current < waves.length) {
+        spawnTimer.current += dt;
+        if (spawnTimer.current > 1) {
+          spawnTimer.current = 0;
+          spawnEnemyInstance();
+        }
       }
       enemiesRef.current.forEach((en) => {
         const next = path[en.pathIndex + 1];
@@ -196,9 +208,11 @@ const TowerDefense = () => {
   }, []);
 
   const start = () => {
-    if (!path.length) return;
+    if (!path.length || !waves.length) return;
     running.current = true;
     setEditing(false);
+    waveIndex.current = 0;
+    waveProgress.current = 0;
   };
 
   const upgrade = (type: 'range' | 'damage') => {
@@ -215,47 +229,48 @@ const TowerDefense = () => {
   return (
     <GameLayout gameId="tower-defense">
       <div className="p-2 space-y-2">
-        <div className="space-x-2 mb-2">
-          <button
-            className="px-2 py-1 bg-gray-700 rounded"
-            onClick={() => setEditing((e) => !e)}
-          >
-            {editing ? 'Finish Editing' : 'Edit Map'}
-          </button>
-          <button
-            className="px-2 py-1 bg-gray-700 rounded"
-            onClick={start}
-            disabled={running.current}
-          >
-            Start
-          </button>
-          {selected !== null && (
-            <>
-              <button
-                className="px-2 py-1 bg-gray-700 rounded"
-                onClick={() => upgrade('range')}
-              >
-                Upgrade Range
-              </button>
-              <button
-                className="px-2 py-1 bg-gray-700 rounded"
-                onClick={() => upgrade('damage')}
-              >
-                Upgrade Damage
-              </button>
-            </>
-          )}
-        </div>
-        <canvas
-          ref={canvasRef}
-          width={CANVAS_SIZE}
-          height={CANVAS_SIZE}
-          className="bg-black"
-          onClick={handleCanvasClick}
-        />
+      <div className="space-x-2 mb-2">
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={() => setEditing((e) => !e)}
+        >
+          {editing ? 'Finish Editing' : 'Edit Map'}
+        </button>
+        <button
+          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={start}
+          disabled={running.current}
+        >
+          Start
+        </button>
+        {selected !== null && (
+          <>
+            <button
+              className="px-2 py-1 bg-gray-700 rounded"
+              onClick={() => upgrade('range')}
+            >
+              Upgrade Range
+            </button>
+            <button
+              className="px-2 py-1 bg-gray-700 rounded"
+              onClick={() => upgrade('damage')}
+            >
+              Upgrade Damage
+            </button>
+          </>
+        )}
       </div>
-    </GameLayout>
-  );
+      <WaveEditor waves={waves} setWaves={setWaves} />
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_SIZE}
+        height={CANVAS_SIZE}
+        className="bg-black"
+        onClick={handleCanvasClick}
+      />
+    </div>
+  </GameLayout>
+);
 };
 
 export default TowerDefense;
