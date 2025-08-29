@@ -316,7 +316,8 @@ const ChessGame = () => {
   const spritesRef = useRef({});
   const [spritesReady, setSpritesReady] = useState(false);
   const [pieceSet, setPieceSet] = useState('sprites');
-  const [analysisMoves, setAnalysisMoves] = useState([]);
+  const [hintMoves, setHintMoves] = useState([]);
+  const [aiStrength, setAiStrength] = useState(2);
   const evalPercent =
     (1 / (1 + Math.exp(-displayEval / 200))) * 100;
 
@@ -416,9 +417,9 @@ const ChessGame = () => {
     setMateSquares(mates);
   }, [showHints]);
 
-  const runAnalysis = () => {
-    const suggestions = suggestMoves(chessRef.current.fen());
-    setAnalysisMoves(suggestions);
+  const showHint = () => {
+    const suggestions = suggestMoves(chessRef.current.fen(), aiStrength);
+    setHintMoves(suggestions);
   };
 
   useEffect(() => {
@@ -426,6 +427,9 @@ const ChessGame = () => {
     const ctx = canvas.getContext('2d');
     const render = () => {
       ctx.clearRect(0, 0, SIZE, SIZE);
+      const hint = hintMoves[0];
+      const hintFrom = hint ? algToSq(hint.from) : -1;
+      const hintTo = hint ? algToSq(hint.to) : -1;
       for (let r = 0; r < 8; r++) {
         for (let f = 0; f < 8; f++) {
           const x = f * SQ;
@@ -442,6 +446,11 @@ const ChessGame = () => {
             ctx.strokeStyle = '#ff0';
             ctx.lineWidth = 3;
             ctx.strokeRect(x + 1, y + 1, SQ - 2, SQ - 2);
+          }
+          if (sq === hintFrom || sq === hintTo) {
+            ctx.strokeStyle = '#0f0';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 4, y + 4, SQ - 8, SQ - 8);
           }
           if (selected === sq) {
             ctx.strokeStyle = '#ff0';
@@ -573,7 +582,7 @@ const ChessGame = () => {
   };
 
   const aiMove = () => {
-    const move = getBestMove(boardRef.current, sideRef.current, 2);
+    const move = getBestMove(boardRef.current, sideRef.current, aiStrength);
     if (move) {
       const capture = boardRef.current[move.to] !== EMPTY;
       const res = chessRef.current.move({
@@ -596,6 +605,7 @@ const ChessGame = () => {
       updateEval();
       updateMateHints();
       checkGameState('Your move');
+      setHintMoves([]);
     }
   };
 
@@ -603,6 +613,7 @@ const ChessGame = () => {
     if (paused) return;
     setCursor(sq);
     const side = sideRef.current;
+    setHintMoves([]);
 
     if (selected !== null) {
       const legal = moves.find((m) => m.to === sq);
@@ -690,6 +701,7 @@ const ChessGame = () => {
     setPaused(false);
     setStatus('Your move');
     lastMoveRef.current = null;
+    setHintMoves([]);
   };
 
   const togglePause = () => setPaused((p) => !p);
@@ -721,6 +733,7 @@ const ChessGame = () => {
     updateMateHints();
     lastMoveRef.current = null;
     setStatus('Your move');
+    setHintMoves([]);
   };
 
   const copyMoves = () => {
@@ -819,8 +832,19 @@ const ChessGame = () => {
             <button className="px-2 py-1 bg-gray-700" onClick={toggleHints}>
               {showHints ? 'Hide Hints' : 'Mate in 1'}
             </button>
-            <button className="px-2 py-1 bg-gray-700" onClick={runAnalysis}>
-              Analyze
+            <label className="px-2 py-1 bg-gray-700 flex items-center">
+              AI Strength
+              <input
+                type="range"
+                min={1}
+                max={4}
+                value={aiStrength}
+                onChange={(e) => setAiStrength(Number(e.target.value))}
+                className="ml-2"
+              />
+            </label>
+            <button className="px-2 py-1 bg-gray-700" onClick={showHint}>
+              Hint
             </button>
             <button className="px-2 py-1 bg-gray-700" onClick={loadPGN}>
               Load PGN
@@ -849,11 +873,11 @@ const ChessGame = () => {
             </div>
           </div>
           <div className="mt-1">ELO: {elo}</div>
-          {analysisMoves.length > 0 && (
+          {hintMoves.length > 0 && (
             <div className="mt-2 w-full" aria-label="Suggested moves">
               <div>Suggested moves:</div>
               <ol className="list-decimal ml-4">
-                {analysisMoves.map((m, idx) => (
+                {hintMoves.map((m, idx) => (
                   <li key={idx}>
                     {m.san} ({(m.evaluation / 100).toFixed(2)})
                   </li>
