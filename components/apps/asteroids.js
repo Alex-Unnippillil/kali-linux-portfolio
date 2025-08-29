@@ -13,7 +13,7 @@ import {
 import useGameControls from './useGameControls';
 import GameLayout from './GameLayout';
 import { vibrate } from './Games/common/haptics';
-import { getMapping } from './Games/common/input-remap/useInputMapping';
+import { getMapping, loadProfile } from './Games/common/input-remap/useInputMapping';
 
 // Arcade-style tuning constants
 const THRUST = 0.1;
@@ -121,6 +121,7 @@ const Asteroids = () => {
   const lastScoreRef = useRef(0);
 
   useEffect(() => {
+    loadProfile('asteroids', DEFAULT_MAP);
     const hs = Number(localStorage.getItem(HIGH_KEY) || 0);
     const ls = Number(localStorage.getItem(LAST_KEY) || 0);
     setHighScore(hs);

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { getMapping } from './Games/common/input-remap/useInputMapping';
+import { getMapping, loadProfile } from './Games/common/input-remap/useInputMapping';
 import useGamepad from '../../hooks/useGamepad';
 import usePersistedState from '../../hooks/usePersistedState';
 
@@ -30,6 +30,10 @@ const useGameControls = (arg, gameId = 'default') => {
   });
   const gamepad = useGamepad();
   const padTime = useRef(0);
+
+  useEffect(() => {
+    loadProfile(gameId, defaultMap);
+  }, [gameId]);
 
   // keyboard controls for directional games
   useEffect(() => {
