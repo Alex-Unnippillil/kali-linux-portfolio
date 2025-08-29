@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import SignatureBrowser from './components/SignatureBrowser';
 
 interface NiktoFinding {
   path: string;
@@ -202,6 +203,7 @@ const NiktoPage: React.FC = () => {
           className="w-full h-64 bg-white"
         />
       </div>
+      <SignatureBrowser />
     </div>
   );
 };
