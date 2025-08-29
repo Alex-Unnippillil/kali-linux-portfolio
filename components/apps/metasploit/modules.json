@@ -7,7 +7,8 @@
     "platform": "windows",
     "cve": ["CVE-2017-0144"],
     "tags": ["smb", "rce"],
-    "transcript": "[*] Started reverse TCP handler on 0.0.0.0:4444\n[*] 192.168.1.100 - Connecting to target...\n[+] 192.168.1.100 - Connection established\n[*] 192.168.1.100 - Sending exploit...\n[+] 192.168.1.100 - Exploit completed, but no session was created."
+    "transcript": "[*] Started reverse TCP handler on 0.0.0.0:4444\n[*] 192.168.1.100 - Connecting to target...\n[+] 192.168.1.100 - Connection established\n[*] 192.168.1.100 - Sending exploit...\n[+] 192.168.1.100 - Exploit completed, but no session was created.",
+    "doc": "Mock documentation for EternalBlue exploit."
   },
   {
     "name": "exploit/multi/http/struts2_content_type_ognl",
@@ -17,7 +18,8 @@
     "platform": "multi",
     "cve": ["CVE-2017-5638"],
     "tags": ["http", "rce"],
-    "transcript": "[*] Started reverse TCP handler on 0.0.0.0:4444\n[*] http://example.com - Sending exploit payload...\n[+] http://example.com - Exploit completed"
+    "transcript": "[*] Started reverse TCP handler on 0.0.0.0:4444\n[*] http://example.com - Sending exploit payload...\n[+] http://example.com - Exploit completed",
+    "doc": "Mock docs for Struts2 OGNL RCE."
   },
   {
     "name": "exploit/unix/ftp/vsftpd_234_backdoor",
@@ -27,7 +29,8 @@
     "platform": "unix",
     "cve": ["CVE-2011-2523"],
     "tags": ["ftp", "backdoor"],
-    "transcript": "[*] 10.0.0.2:21 - Connecting to server...\n[+] 10.0.0.2:21 - Backdoor service discovered\n[*] Command shell session 1 opened"
+    "transcript": "[*] 10.0.0.2:21 - Connecting to server...\n[+] 10.0.0.2:21 - Backdoor service discovered\n[*] Command shell session 1 opened",
+    "doc": "Mock docs for VSFTPD backdoor."
   },
   {
     "name": "auxiliary/scanner/portscan/tcp",
@@ -37,7 +40,8 @@
     "platform": "multi",
     "cve": [],
     "tags": ["scanner", "network"],
-    "transcript": "[*] Scanning 192.168.1.0/24 ports 1-1000\n[*] 192.168.1.1:80 - open\n[*] 192.168.1.10:22 - open\n[*] Scanning completed"
+    "transcript": "[*] Scanning 192.168.1.0/24 ports 1-1000\n[*] 192.168.1.1:80 - open\n[*] 192.168.1.10:22 - open\n[*] Scanning completed",
+    "doc": "Documentation for TCP port scanner."
   },
   {
     "name": "post/multi/gather/ssh_creds",
@@ -47,6 +51,7 @@
     "platform": "multi",
     "cve": [],
     "tags": ["ssh", "credentials"],
-    "transcript": "[*] Gathering SSH credentials...\n[+] user:password found in /home/user/.ssh/config\n[*] Post module execution completed"
+    "transcript": "[*] Gathering SSH credentials...\n[+] user:password found in /home/user/.ssh/config\n[*] Post module execution completed",
+    "doc": "Collect SSH credentials from config files."
   }
 ]
