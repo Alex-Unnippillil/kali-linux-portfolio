@@ -1,50 +1,71 @@
 import React, { useState, useEffect, useRef } from 'react';
+import seedrandom from 'seedrandom';
+import useOPFS from '../../hooks/useOPFS.js';
 
 // Approximate pixel size of each grid cell for SVG overlay calculations
 const CELL_SIZE = 32;
 const GAP_SIZE = 4; // grid gap-1 in pixels
 
-const WORD_LISTS = {
-  tech: [
-    'REACT',
-    'CODE',
-    'TAILWIND',
-    'NODE',
-    'JAVASCRIPT',
-    'HTML',
-    'CSS',
-    'PYTHON',
-  ],
-  animals: [
-    'DOG',
-    'CAT',
-    'EAGLE',
-    'TIGER',
-    'HORSE',
-    'SHARK',
-    'SNAKE',
-    'LION',
-  ],
-  fruits: [
-    'APPLE',
-    'BANANA',
-    'ORANGE',
-    'GRAPE',
-    'MANGO',
-    'LEMON',
-    'PEACH',
-    'CHERRY',
-  ],
-  colors: [
-    'RED',
-    'BLUE',
-    'GREEN',
-    'YELLOW',
-    'PURPLE',
-    'ORANGE',
-    'BLACK',
-    'WHITE',
-  ],
+const DEFAULT_LISTS = {
+  tech: {
+    language: 'en',
+    words: [
+      'REACT',
+      'CODE',
+      'TAILWIND',
+      'NODE',
+      'JAVASCRIPT',
+      'HTML',
+      'CSS',
+      'PYTHON',
+    ],
+  },
+  animals: {
+    language: 'en',
+    words: [
+      'DOG',
+      'CAT',
+      'EAGLE',
+      'TIGER',
+      'HORSE',
+      'SHARK',
+      'SNAKE',
+      'LION',
+    ],
+  },
+  fruits: {
+    language: 'en',
+    words: [
+      'APPLE',
+      'BANANA',
+      'ORANGE',
+      'GRAPE',
+      'MANGO',
+      'LEMON',
+      'PEACH',
+      'CHERRY',
+    ],
+  },
+  colors: {
+    language: 'en',
+    words: [
+      'RED',
+      'BLUE',
+      'GREEN',
+      'YELLOW',
+      'PURPLE',
+      'ORANGE',
+      'BLACK',
+      'WHITE',
+    ],
+  },
+};
+
+const ALPHABETS = {
+  en: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  es: 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ',
+  fr: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  de: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
 };
 
 const DIFFICULTIES = {
@@ -77,19 +98,24 @@ const usePersistentState = (key, initial) => {
   return [state, setState];
 };
 
-const pickWords = (count, theme) => {
-  let list;
-  if (theme && WORD_LISTS[theme]) {
-    list = WORD_LISTS[theme];
+const pickWords = (count, list, rng, lists, language) => {
+  let pool;
+  if (list && lists[list]) {
+    pool = lists[list].words;
   } else {
-    const lists = Object.values(WORD_LISTS);
-    list = lists[Math.floor(Math.random() * lists.length)];
+    const available = Object.values(lists).filter(
+      (l) => !language || l.language === language,
+    );
+    const chosen =
+      available[Math.floor(rng() * available.length)]?.words || [];
+    pool = chosen;
   }
-  return [...list]
-    .sort(() => Math.random() - 0.5)
+  return [...pool]
+    .sort(() => rng() - 0.5)
     .slice(0, count);
 };
-const randomLetter = () => String.fromCharCode(65 + Math.floor(Math.random() * 26));
+const randomLetter = (rng, alphabet) =>
+  alphabet[Math.floor(rng() * alphabet.length)];
 
 const DIRECTIONS = [
   { dx: 1, dy: 0 },
@@ -102,18 +128,20 @@ const DIRECTIONS = [
   { dx: -1, dy: 1 },
 ];
 
-const generatePuzzle = (size, words) => {
+const generatePuzzle = (size, words, rng, alphabet) => {
   const grid = Array.from({ length: size }, () => Array(size).fill(''));
   const placements = {};
 
   words.forEach((word) => {
     let placed = false;
     for (let attempt = 0; attempt < 100 && !placed; attempt++) {
-      const dir = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
-      const maxRow = dir.dy > 0 ? size - word.length : dir.dy < 0 ? word.length - 1 : size - 1;
-      const maxCol = dir.dx > 0 ? size - word.length : dir.dx < 0 ? word.length - 1 : size - 1;
-      const row = Math.floor(Math.random() * (maxRow + 1));
-      const col = Math.floor(Math.random() * (maxCol + 1));
+      const dir = DIRECTIONS[Math.floor(rng() * DIRECTIONS.length)];
+      const maxRow =
+        dir.dy > 0 ? size - word.length : dir.dy < 0 ? word.length - 1 : size - 1;
+      const maxCol =
+        dir.dx > 0 ? size - word.length : dir.dx < 0 ? word.length - 1 : size - 1;
+      const row = Math.floor(rng() * (maxRow + 1));
+      const col = Math.floor(rng() * (maxCol + 1));
 
       let fits = true;
       for (let i = 0; i < word.length; i++) {
@@ -139,7 +167,7 @@ const generatePuzzle = (size, words) => {
 
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
-      if (!grid[r][c]) grid[r][c] = randomLetter();
+      if (!grid[r][c]) grid[r][c] = randomLetter(rng, alphabet);
     }
   }
 
@@ -166,7 +194,23 @@ const WordSearch = () => {
     'wordsearch-difficulty',
     'easy',
   );
-  const [theme, setTheme] = usePersistentState('wordsearch-theme', 'random');
+  const [listName, setListName] = usePersistentState(
+    'wordsearch-list',
+    'random',
+  );
+  const [language, setLanguage] = usePersistentState(
+    'wordsearch-language',
+    'en',
+  );
+  const [seed, setSeed] = usePersistentState('wordsearch-seed', () =>
+    Math.random().toString(36).slice(2, 10),
+  );
+  const [customLists, setCustomLists, listsReady] = useOPFS(
+    'wordsearch-lists.json',
+    {},
+  );
+  const allLists = { ...DEFAULT_LISTS, ...customLists };
+  const alphabet = ALPHABETS[language] || ALPHABETS.en;
   const { size: SIZE, count: WORD_COUNT } = DIFFICULTIES[difficulty];
   const [bestTimes, setBestTimes] = usePersistentState(
     'wordsearch-best-times',
@@ -182,10 +226,11 @@ const WordSearch = () => {
     120,
   );
   const [streak, setStreak] = usePersistentState('wordsearch-streak', 0);
+  const [newListName, setNewListName] = useState('');
+  const [newListWords, setNewListWords] = useState('');
+  const [newListLang, setNewListLang] = useState('en');
 
-  const [puzzle, setPuzzle] = useState(() =>
-    generatePuzzle(SIZE, pickWords(WORD_COUNT, theme === 'random' ? undefined : theme)),
-  );
+  const [puzzle, setPuzzle] = useState({ grid: [], placements: {}, words: [] });
   const { grid, placements, words } = puzzle;
   const GRID_PIXELS = SIZE * (CELL_SIZE + GAP_SIZE) - GAP_SIZE;
   const [foundWords, setFoundWords] = useState([]);
@@ -210,6 +255,21 @@ const WordSearch = () => {
         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     }
   }, []);
+
+  useEffect(() => {
+    if (!listsReady) return;
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlSeed = params.get('seed');
+      if (urlSeed) {
+        setSeed(urlSeed);
+        reset(true, urlSeed);
+        return;
+      }
+    }
+    reset(true, seed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listsReady]);
 
   const playBeep = () => {
     if (!sound) return;
@@ -291,9 +351,9 @@ const WordSearch = () => {
   }, [lassos]);
 
   useEffect(() => {
-    reset(true);
+    if (listsReady) reset(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [difficulty, theme, challenge, timeLimit]);
+  }, [difficulty, listName, challenge, timeLimit, language, listsReady]);
 
   const handleMouseDown = (r, c) => {
     if (paused) return;
@@ -378,11 +438,46 @@ const WordSearch = () => {
     setTimeout(() => setHintCells([]), 1000);
   };
 
-  function reset(failed = true) {
+  const addList = () => {
+    if (!newListName.trim() || !newListWords.trim()) return;
+    const wordsArr = newListWords
+      .split(',')
+      .map((w) => w.trim().toUpperCase())
+      .filter(Boolean);
+    if (!wordsArr.length) return;
+    setCustomLists({
+      ...customLists,
+      [newListName]: { language: newListLang, words: wordsArr },
+    });
+    setNewListName('');
+    setNewListWords('');
+  };
+
+  const share = () => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    url.searchParams.set('seed', seed);
+    url.searchParams.set('list', listName);
+    url.searchParams.set('lang', language);
+    navigator.clipboard?.writeText(url.toString());
+  };
+
+  function reset(failed = true, newSeed) {
+    const s = newSeed || Math.random().toString(36).slice(2, 10);
+    setSeed(s);
+    const rng = seedrandom(s);
     setPuzzle(
       generatePuzzle(
         SIZE,
-        pickWords(WORD_COUNT, theme === 'random' ? undefined : theme),
+        pickWords(
+          WORD_COUNT,
+          listName === 'random' ? undefined : listName,
+          rng,
+          allLists,
+          language,
+        ),
+        rng,
+        alphabet,
       ),
     );
     setFoundWords([]);
@@ -503,7 +598,7 @@ const WordSearch = () => {
               className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
               onClick={() => reset(true)}
             >
-              Reset
+              New Puzzle
             </button>
             <button
               className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
@@ -536,13 +631,54 @@ const WordSearch = () => {
                 <option value={180}>180s</option>
               </select>
             )}
+            <div className="flex gap-1">
+              <input
+                className="px-2 py-1 text-black flex-1"
+                value={seed}
+                onChange={(e) => setSeed(e.target.value)}
+              />
+              <button
+                className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
+                onClick={() => reset(true, seed)}
+              >
+                Load
+              </button>
+            </div>
+            <div className="flex gap-1">
+              <button
+                className="flex-1 px-4 py-1 bg-gray-700 hover:bg-gray-600"
+                onClick={share}
+              >
+                Share
+              </button>
+              <button
+                className="flex-1 px-4 py-1 bg-gray-700 hover:bg-gray-600"
+                onClick={() => window.print()}
+              >
+                Print
+              </button>
+            </div>
             <select
               className="px-2 py-1 text-black"
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
             >
-              <option value="random">Random Theme</option>
-              {Object.keys(WORD_LISTS).map((t) => (
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+            </select>
+            <select
+              className="px-2 py-1 text-black"
+              value={listName}
+              onChange={(e) => {
+                setListName(e.target.value);
+                const l = allLists[e.target.value];
+                if (l?.language) setLanguage(l.language);
+              }}
+            >
+              <option value="random">Random List</option>
+              {Object.keys(allLists).map((t) => (
                 <option key={t} value={t}>
                   {t.charAt(0).toUpperCase() + t.slice(1)}
                 </option>
@@ -559,6 +695,36 @@ const WordSearch = () => {
                 </option>
               ))}
             </select>
+            <div className="border border-gray-600 p-2 flex flex-col gap-1">
+              <input
+                className="px-1 text-black"
+                placeholder="List name"
+                value={newListName}
+                onChange={(e) => setNewListName(e.target.value)}
+              />
+              <select
+                className="px-2 py-1 text-black"
+                value={newListLang}
+                onChange={(e) => setNewListLang(e.target.value)}
+              >
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+              </select>
+              <textarea
+                className="px-1 text-black"
+                placeholder="Comma separated words"
+                value={newListWords}
+                onChange={(e) => setNewListWords(e.target.value)}
+              />
+              <button
+                className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
+                onClick={addList}
+              >
+                Save List
+              </button>
+            </div>
           </div>
         </div>
       </div>
