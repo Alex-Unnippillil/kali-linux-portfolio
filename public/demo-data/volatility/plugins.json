@@ -1,11 +1,19 @@
 [
   {
+    "name": "pslist",
+    "category": "Processes",
+    "description": "Lists running processes with details.",
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/pslist.html",
+    "minVersion": "3.0",
+    "output": "System (4)\\nsmss.exe (248)"
+  },
+  {
     "name": "pstree",
     "category": "Processes",
     "description": "Displays hierarchical parent-child relationships of running processes.",
     "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/pstree.html",
     "minVersion": "3.0",
-    "output": "System (4)\n└─ smss.exe (248)\n   └─ csrss.exe (612)  # child process"
+    "output": "System (4)\\n└─ smss.exe (248)\\n   └─ csrss.exe (612)  # child process"
   },
   {
     "name": "dlllist",
