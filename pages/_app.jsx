@@ -23,43 +23,32 @@ function MyApp({ Component, pageProps }) {
     }
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       const register = async () => {
-        const { Workbox } = await import('workbox-window');
-        const wb = new Workbox('/service-worker.js');
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js');
 
-        const promptRefresh = () => {
-          wb.addEventListener('controlling', () => {
-            window.location.reload();
-          });
-          wb.messageSkipWaiting();
-        };
+          window.manualRefresh = () => registration.update();
 
-        wb.addEventListener('waiting', promptRefresh);
-        wb
-          .register()
-          .then(async (registration) => {
-            window.manualRefresh = () => wb.messageSW({ type: 'refresh' });
-            if ('periodicSync' in registration) {
-              try {
-                const status = await navigator.permissions.query({
-                  name: 'periodic-background-sync',
+          if ('periodicSync' in registration) {
+            try {
+              const status = await navigator.permissions.query({
+                name: 'periodic-background-sync',
+              });
+              if (status.state === 'granted') {
+                await registration.periodicSync.register('content-sync', {
+                  minInterval: 24 * 60 * 60 * 1000,
                 });
-                if (status.state === 'granted') {
-                  await registration.periodicSync.register('content-sync', {
-                    minInterval: 24 * 60 * 60 * 1000,
-                  });
-                } else {
-                  wb.messageSW({ type: 'refresh' });
-                }
-              } catch {
-                wb.messageSW({ type: 'refresh' });
+              } else {
+                registration.update();
               }
-            } else {
-              wb.messageSW({ type: 'refresh' });
+            } catch {
+              registration.update();
             }
-          })
-          .catch((err) => {
-            console.error('Service worker registration failed', err);
-          });
+          } else {
+            registration.update();
+          }
+        } catch (err) {
+          console.error('Service worker registration failed', err);
+        }
       };
       register().catch((err) => {
         console.error('Service worker setup failed', err);
