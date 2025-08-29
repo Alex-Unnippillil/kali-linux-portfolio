@@ -1,9 +1,18 @@
 'use client';
-import { useEffect, useRef, useState, FormEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  FormEvent,
+  KeyboardEvent,
+} from 'react';
 import DOMPurify from 'dompurify';
 import Script from 'next/script';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
+import useScheduledTweets, {
+  ScheduledTweet,
+} from './state/scheduled';
 
 declare global {
   interface Window {
@@ -39,6 +48,8 @@ export default function XTimeline() {
   const setFeed = timelineType === 'profile' ? setProfileFeed : setListFeed;
 
   const [input, setInput] = useState('');
+  const [tweetText, setTweetText] = useState('');
+  const [tweetTime, setTweetTime] = useState('');
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [timelineLoaded, setTimelineLoaded] = useState(false);
@@ -51,6 +62,8 @@ export default function XTimeline() {
       : 'light'
   );
   const timelineRef = useRef<HTMLDivElement>(null);
+  const timeoutsRef = useRef<Record<string, number>>({});
+  const [scheduled, setScheduled] = useScheduledTweets();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -60,6 +73,45 @@ export default function XTimeline() {
     observer.observe(root, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (
+      typeof window !== 'undefined' &&
+      'Notification' in window &&
+      Notification.permission === 'default'
+    ) {
+      Notification.requestPermission().catch(() => {});
+    }
+    return () => {
+      Object.values(timeoutsRef.current).forEach(clearTimeout);
+    };
+  }, []);
+
+  useEffect(() => {
+    scheduled.forEach((t) => {
+      if (!timeoutsRef.current[t.id]) {
+        const delay = t.time - Date.now();
+        if (delay > 0) {
+          timeoutsRef.current[t.id] = window.setTimeout(() => {
+            if (
+              'Notification' in window &&
+              Notification.permission === 'granted'
+            ) {
+              new Notification('Tweet reminder', { body: t.text });
+            }
+            setScheduled((prev) => prev.filter((s) => s.id !== t.id));
+            delete timeoutsRef.current[t.id];
+          }, delay);
+        }
+      }
+    });
+    Object.keys(timeoutsRef.current).forEach((id) => {
+      if (!scheduled.some((t) => t.id === id)) {
+        clearTimeout(timeoutsRef.current[id]);
+        delete timeoutsRef.current[id];
+      }
+    });
+  }, [scheduled, setScheduled]);
 
   useEffect(() => {
     if (!loaded || !scriptLoaded) return;
@@ -113,6 +165,46 @@ export default function XTimeline() {
     setInput('');
   };
 
+  const handleScheduleTweet = (e: FormEvent) => {
+    e.preventDefault();
+    if (!tweetText.trim() || !tweetTime) return;
+    const newTweet: ScheduledTweet = {
+      id: Date.now().toString(),
+      text: DOMPurify.sanitize(tweetText.trim()),
+      time: new Date(tweetTime).getTime(),
+    };
+    setScheduled([...scheduled, newTweet]);
+    setTweetText('');
+    setTweetTime('');
+  };
+
+  const removeScheduled = (id: string) => {
+    setScheduled(scheduled.filter((t) => t.id !== id));
+  };
+
+  const handleScheduledKey = (
+    e: KeyboardEvent<HTMLDivElement>,
+    id: string,
+  ) => {
+    if (e.key === 'Delete') {
+      removeScheduled(id);
+    } else if (e.key === 'ArrowDown') {
+      const next = (e.currentTarget.parentElement
+        ?.nextElementSibling as HTMLElement | null)?.querySelector(
+        '[data-scheduled-item]',
+      ) as HTMLElement | null;
+      next?.focus();
+      e.preventDefault();
+    } else if (e.key === 'ArrowUp') {
+      const prev = (e.currentTarget.parentElement
+        ?.previousElementSibling as HTMLElement | null)?.querySelector(
+        '[data-scheduled-item]',
+      ) as HTMLElement | null;
+      prev?.focus();
+      e.preventDefault();
+    }
+  };
+
   return (
     <>
       <Script
@@ -125,6 +217,54 @@ export default function XTimeline() {
         onError={() => setScriptError(true)}
       />
       <div className="p-4 space-y-4">
+        <form onSubmit={handleScheduleTweet} className="space-y-2">
+          <textarea
+            value={tweetText}
+            onChange={(e) => setTweetText(e.target.value)}
+            placeholder="Tweet text"
+            className="w-full p-2 rounded border bg-transparent"
+          />
+          <div className="flex gap-2 items-center">
+            <input
+              type="datetime-local"
+              value={tweetTime}
+              onChange={(e) => setTweetTime(e.target.value)}
+              className="flex-1 p-2 rounded border bg-transparent"
+            />
+            <button
+              type="submit"
+              className="px-3 py-1 rounded text-white"
+              style={{ backgroundColor: accent }}
+            >
+              Schedule
+            </button>
+          </div>
+        </form>
+        {scheduled.length > 0 && (
+          <ul className="space-y-2">
+            {scheduled.map((t) => (
+              <li key={t.id}>
+                <div
+                  tabIndex={0}
+                  data-scheduled-item
+                  onKeyDown={(e) => handleScheduledKey(e, t.id)}
+                  className="flex justify-between items-center p-2 rounded border"
+                >
+                  <span>
+                    {t.text} - {new Date(t.time).toLocaleString()}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeScheduled(t.id)}
+                    className="ml-2 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700"
+                  >
+                    ×
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="flex gap-2">
           <button
             type="button"
