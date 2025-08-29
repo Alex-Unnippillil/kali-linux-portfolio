@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import WorkloadVisualizer from './components/WorkloadVisualizer';
 
 interface RuleSets {
   [key: string]: string[];
@@ -183,6 +184,9 @@ const Hashcat: React.FC = () => {
         <div className="mt-2 text-sm">
           Speed: {speed.toFixed(0)} H/s | ETA: {eta} | Recovered: {recovered}/{total}
         </div>
+      </div>
+      <div className="mt-4">
+        <WorkloadVisualizer />
       </div>
     </div>
   );
