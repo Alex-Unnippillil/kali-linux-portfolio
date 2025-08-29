@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import KeywordSearchPanel from './KeywordSearchPanel';
+import demoArtifacts from './data/sample-artifacts.json';
 
 const escapeFilename = (str = '') =>
   str
@@ -10,48 +11,6 @@ const escapeFilename = (str = '') =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-const demoArtifacts = [
-  {
-    name: 'resume.docx',
-    type: 'Document',
-    description: "Resume found on user's desktop",
-    size: 12345,
-    plugin: 'metadata',
-    timestamp: '2023-08-01T10:00:00Z',
-  },
-  {
-    name: 'photo.jpg',
-    type: 'Image',
-    description: 'Photo from mobile device',
-    size: 23456,
-    plugin: 'hash',
-    timestamp: '2023-08-01T12:30:00Z',
-  },
-  {
-    name: 'system.log',
-    type: 'Log',
-    description: 'System log entry',
-    size: 34567,
-    plugin: 'metadata',
-    timestamp: '2023-08-01T14:45:00Z',
-  },
-  {
-    name: 'run.exe',
-    type: 'File',
-    description: 'Executable recovered from temp folder',
-    size: 45678,
-    plugin: 'hash',
-    timestamp: '2023-08-01T16:15:00Z',
-  },
-  {
-    name: 'HKCU\\Software\\Example',
-    type: 'Registry',
-    description: 'Registry key with suspicious value',
-    size: 0,
-    plugin: 'regParser',
-    timestamp: '2023-08-01T18:20:00Z',
-  },
-];
 
 function Timeline({ events, onSelect }) {
   const canvasRef = useRef(null);
@@ -225,6 +184,9 @@ function Autopsy({ initialArtifacts = null }) {
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
+  const [userFilter, setUserFilter] = useState('All');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [selectedArtifact, setSelectedArtifact] = useState(null);
   const [fileTree, setFileTree] = useState(null);
   const [hashDB, setHashDB] = useState({});
@@ -288,15 +250,21 @@ function Autopsy({ initialArtifacts = null }) {
       .catch(() => setHashDB({}));
   }, [currentCase, initialArtifacts]);
 
-  const types = ['All', ...Array.from(new Set(artifacts.map((a) => a.type)))] ;
+  const types = ['All', ...Array.from(new Set(artifacts.map((a) => a.type)))];
+  const users = ['All', ...Array.from(new Set(artifacts.map((a) => a.user).filter(Boolean)))];
   const filteredArtifacts = artifacts.filter(
-    (a) => typeFilter === 'All' || a.type === typeFilter
+    (a) =>
+      (typeFilter === 'All' || a.type === typeFilter) &&
+      (userFilter === 'All' || a.user === userFilter) &&
+      (!startTime || new Date(a.timestamp) >= new Date(startTime)) &&
+      (!endTime || new Date(a.timestamp) <= new Date(endTime))
   );
   const searchLower = keyword.toLowerCase();
   const visibleArtifacts = filteredArtifacts.filter(
     (a) =>
       a.name.toLowerCase().includes(searchLower) ||
-      a.description.toLowerCase().includes(searchLower)
+      a.description.toLowerCase().includes(searchLower) ||
+      (a.user && a.user.toLowerCase().includes(searchLower))
   );
 
   const createCase = () => {
@@ -464,18 +432,46 @@ function Autopsy({ initialArtifacts = null }) {
       )}
       {artifacts.length > 0 && (
         <div className="space-y-2">
-          <select
-            aria-label="Filter by type"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="bg-ub-grey text-white px-2 py-1 rounded"
-          >
-            {types.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap gap-2">
+            <select
+              aria-label="Filter by type"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="bg-ub-grey text-white px-2 py-1 rounded"
+            >
+              {types.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Filter by user"
+              value={userFilter}
+              onChange={(e) => setUserFilter(e.target.value)}
+              className="bg-ub-grey text-white px-2 py-1 rounded"
+            >
+              {users.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
+            <input
+              type="datetime-local"
+              aria-label="Start time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="bg-ub-grey text-white px-2 py-1 rounded"
+            />
+            <input
+              type="datetime-local"
+              aria-label="End time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className="bg-ub-grey text-white px-2 py-1 rounded"
+            />
+          </div>
           <KeywordSearchPanel
             keyword={keyword}
             setKeyword={setKeyword}
@@ -537,6 +533,7 @@ function Autopsy({ initialArtifacts = null }) {
           </div>
           <div className="text-xs">{selectedArtifact.description}</div>
           <div className="text-xs">Plugin: {selectedArtifact.plugin}</div>
+          <div className="text-xs">User: {selectedArtifact.user || 'Unknown'}</div>
           <div className="text-xs">Size: {selectedArtifact.size}</div>
         </div>
       )}
