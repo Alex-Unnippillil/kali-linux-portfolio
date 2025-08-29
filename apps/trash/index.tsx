@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import SecurePurge from './components/SecurePurge';
 
 interface TrashItem {
   id: string;
@@ -13,6 +14,7 @@ interface TrashItem {
 export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const [items, setItems] = useState<TrashItem[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+  const [secureIndex, setSecureIndex] = useState<number | null>(null);
 
   useEffect(() => {
     const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);
@@ -52,6 +54,21 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     persist(next);
     setSelected(null);
   }, [items, selected]);
+
+  const secureRemove = useCallback(() => {
+    if (selected === null) return;
+    const item = items[selected];
+    if (!window.confirm(`Securely delete ${item.title}?`)) return;
+    setSecureIndex(selected);
+  }, [items, selected]);
+
+  const handleSecureComplete = () => {
+    if (secureIndex === null) return;
+    const next = items.filter((_, i) => i !== secureIndex);
+    persist(next);
+    setSelected(null);
+    setSecureIndex(null);
+  };
 
   const restoreAll = () => {
     if (items.length === 0) return;
@@ -103,20 +120,27 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           >
             Restore All
           </button>
-          <button
-            onClick={remove}
-            disabled={selected === null}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
-          >
-            Delete
-          </button>
-          <button
-            onClick={empty}
-            disabled={items.length === 0}
-            className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
-          >
-            Empty
-          </button>
+            <button
+              onClick={remove}
+              disabled={selected === null}
+              className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            >
+              Delete
+            </button>
+            <button
+              onClick={secureRemove}
+              disabled={selected === null}
+              className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            >
+              Secure Delete
+            </button>
+            <button
+              onClick={empty}
+              disabled={items.length === 0}
+              className="border border-black bg-black bg-opacity-50 px-3 py-1 my-1 mx-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange disabled:opacity-50"
+            >
+              Empty
+            </button>
         </div>
       </div>
       <div className="flex flex-wrap content-start p-2 overflow-auto">
@@ -139,6 +163,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           </div>
         ))}
       </div>
+      {secureIndex !== null && <SecurePurge onComplete={handleSecureComplete} />}
     </div>
   );
 }
