@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 import offlineQuotes from '../../public/quotes.json';
@@ -68,6 +68,7 @@ export default function QuoteApp() {
   const [playIndex, setPlayIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [loop, setLoop] = useState(false);
+  const historyRef = useRef<string[]>([]);
 
   useEffect(() => {
     const fav = localStorage.getItem('quote-favorites');
@@ -129,17 +130,36 @@ export default function QuoteApp() {
     });
   }, [quotes, category, search, favorites]);
 
-  const changeQuote = () => {
+  const changeQuote = useCallback(() => {
     if (filtered.length === 0) {
       setCurrent(null);
       return;
     }
-    setCurrent(filtered[Math.floor(Math.random() * filtered.length)]);
-  };
+    let attempts = 0;
+    const maxAttempts = filtered.length;
+    let next: Quote;
+    do {
+      next = filtered[Math.floor(Math.random() * filtered.length)];
+      attempts++;
+    } while (
+      historyRef.current.includes(keyOf(next)) &&
+      attempts < maxAttempts
+    );
+    setCurrent(next);
+  }, [filtered]);
 
   useEffect(() => {
     changeQuote();
-  }, [filtered]);
+  }, [changeQuote]);
+
+  useEffect(() => {
+    if (!current) return;
+    const key = keyOf(current);
+    historyRef.current = [
+      key,
+      ...historyRef.current.filter((k) => k !== key),
+    ].slice(0, 20);
+  }, [current]);
 
   useEffect(() => {
     if (!playing || !playlist.length) return;
@@ -241,11 +261,11 @@ export default function QuoteApp() {
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto">
       {dailyQuote && (
-        <div className="mb-4 p-3 bg-gray-700 rounded" id="daily-quote">
-          <p className="text-sm italic">"{dailyQuote.content}"</p>
-          <p className="text-xs text-gray-300 text-right">- {dailyQuote.author}</p>
-        </div>
-      )}
+          <div className="mb-4 p-3 bg-gray-700 rounded" id="daily-quote">
+            <p className="text-sm italic">&quot;{dailyQuote.content}&quot;</p>
+            <p className="text-xs text-gray-300 text-right">- {dailyQuote.author}</p>
+          </div>
+        )}
       <div className="w-full max-w-md flex flex-col items-center">
         <div ref={cardRef} id="quote-card" className="p-4 text-center">
           {current ? (
