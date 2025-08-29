@@ -19,12 +19,12 @@ const HidDemo: React.FC = () => {
     setLogs((l) => [...l, { type, message }]);
 
   const requestDevice = async () => {
-    if (!navigator.bluetooth) {
+    if (!('bluetooth' in navigator)) {
       setError('Web Bluetooth is not supported in this browser.');
       return;
     }
     try {
-      const dev = await navigator.bluetooth.requestDevice({
+      const dev = await navigator.bluetooth!.requestDevice({
         acceptAllDevices: true,
         optionalServices: [
           'battery_service',
@@ -83,8 +83,8 @@ const HidDemo: React.FC = () => {
         );
         const reportChar = await hidService.getCharacteristic('report');
         await reportChar.startNotifications();
-        reportChar.addEventListener('characteristicvaluechanged', (e) => {
-          const val = (e.target as BluetoothRemoteGATTCharacteristic).value;
+        reportChar.addEventListener('characteristicvaluechanged', (e: Event) => {
+          const val = (e.target as BluetoothRemoteGATTCharacteristic).value!;
           const bytes = Array.from(new Uint8Array(val.buffer));
           log('hid', bytes.map((b) => b.toString(16).padStart(2, '0')).join(' '));
         });
