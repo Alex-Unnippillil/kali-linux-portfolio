@@ -1,4 +1,5 @@
 import React from 'react';
+import { colorDefinitions } from '../../../components/apps/wireshark/colorDefs';
 
 interface Rule {
   expression: string;
@@ -38,12 +39,19 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
             placeholder="Filter expression"
             className="px-1 py-0.5 bg-gray-800 rounded text-white text-xs"
           />
-          <input
+          <select
             value={rule.color}
             onChange={(e) => handleRuleChange(i, 'color', e.target.value)}
-            placeholder="Color class"
+            aria-label="Color"
             className="px-1 py-0.5 bg-gray-800 rounded text-white text-xs"
-          />
+          >
+            <option value="">Select color</option>
+            {colorDefinitions.map((c) => (
+              <option key={c.name} value={c.name}>
+                {c.name}
+              </option>
+            ))}
+          </select>
           <button
             onClick={() => handleRemove(i)}
             aria-label="Remove rule"

@@ -11,6 +11,13 @@ export const protocolName = (proto) => {
   }
 };
 
+import { colorDefinitions } from './colorDefs';
+
+const colorMap = colorDefinitions.reduce((acc, def) => {
+  acc[def.name.toLowerCase()] = def.className;
+  return acc;
+}, {});
+
 // Basic display filter engine used for both quick searches and colour rules.
 // Supports protocol keywords (tcp/udp/icmp), ip.addr == x.x.x.x and
 // tcp.port/udp.port == N expressions. Falls back to substring search.
@@ -49,5 +56,7 @@ export const matchesDisplayFilter = (packet, filter) => {
 // Determine the colour class for a packet based on user rules
 export const getRowColor = (packet, rules) => {
   const rule = rules.find((r) => matchesDisplayFilter(packet, r.expression));
-  return rule ? rule.color : '';
+  if (!rule) return '';
+  const key = rule.color ? rule.color.toLowerCase() : '';
+  return colorMap[key] || rule.color || '';
 };
