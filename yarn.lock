@@ -12209,7 +12209,8 @@ __metadata:
     fake-indexeddb: "npm:^6.1.0"
     fast-xml-parser: "npm:^4.3.5"
     figlet: "npm:^1.8.2"
-    flags: "npm:^4.0.1"
+    flags: "npm:3"
+
     hash-wasm: "npm:^4.12.0"
     howler: "npm:^2.2.4"
     html-to-image: "npm:^1.11.13"
