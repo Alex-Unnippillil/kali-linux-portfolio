@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import GameLayout from './GameLayout';
 import useGameControls from './useGameControls';
+import { useSaveSlots } from './Games/common';
 import useGameHaptics from '../../hooks/useGameHaptics';
 import usePersistentState from '../../hooks/usePersistentState';
 import useCanvasResize from '../../hooks/useCanvasResize';
@@ -22,7 +23,14 @@ const Snake = () => {
     { x: Math.floor(GRID_SIZE / 2), y: Math.floor(GRID_SIZE / 2), scale: 1 },
   ]);
   const dirRef = useRef({ x: 1, y: 0 });
-  const obstaclesRef = useRef([]);
+  const [obstaclePack] = usePersistentState(
+    'snake:obstacles',
+    [],
+    (v) => Array.isArray(v),
+  );
+  const obstaclesRef = useRef(
+    obstaclePack.length ? obstaclePack : [],
+  );
   const foodRef = useRef(randomFood(snakeRef.current, obstaclesRef.current));
   if (obstaclesRef.current.length === 0) {
     obstaclesRef.current = generateObstacles(
@@ -41,7 +49,11 @@ const Snake = () => {
   const prefersReducedMotion = usePrefersReducedMotion();
 
   const [running, setRunning] = useState(true);
-  const [wrap, setWrap] = useState(false);
+  const [wrap, setWrap] = usePersistentState(
+    'snake_wrap',
+    false,
+    (v) => typeof v === 'boolean',
+  );
   const [sound, setSound] = useState(true);
   const [speed, setSpeed] = useState(DEFAULT_SPEED);
   const [score, setScore] = useState(0);
@@ -52,6 +64,17 @@ const Snake = () => {
     (v) => typeof v === 'number',
   );
   const speedRef = useRef(DEFAULT_SPEED);
+  const {
+    save: saveReplay,
+    load: loadReplay,
+    list: listReplays,
+    remove: removeReplay,
+  } = useSaveSlots('snake-replay');
+  const [selectedReplay, setSelectedReplay] = useState('');
+  const playingRef = useRef(false);
+  const playbackRef = useRef([]);
+  const playbackIndexRef = useRef(0);
+  const recordingRef = useRef([]);
 
   useEffect(() => {
     const handleBlur = () => setRunning(false);
@@ -62,6 +85,21 @@ const Snake = () => {
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
+
+  useEffect(() => {
+    recordingRef.current = [
+      {
+        snake: snakeRef.current.map((s) => ({
+          x: s.x,
+          y: s.y,
+          scale: s.scale,
+        })),
+        food: { ...foodRef.current },
+        obstacles: obstaclesRef.current.map((o) => ({ ...o })),
+        score: 0,
+      },
+    ];
+  }, []);
 
   // Respect prefers-reduced-motion by pausing automatic movement
   useEffect(() => {
@@ -164,6 +202,23 @@ const Snake = () => {
 
   /** Advance the game state by one step. */
   const update = useCallback(() => {
+    if (playingRef.current) {
+      const frames = playbackRef.current;
+      const idx = playbackIndexRef.current;
+      if (!frames || idx >= frames.length) {
+        playingRef.current = false;
+        setRunning(false);
+        return;
+      }
+      const frame = frames[idx];
+      playbackIndexRef.current += 1;
+      snakeRef.current = frame.snake.map((s) => ({ ...s }));
+      foodRef.current = { ...frame.food };
+      obstaclesRef.current = frame.obstacles.map((o) => ({ ...o }));
+      setScore(frame.score || 0);
+      return;
+    }
+
     const snake = snakeRef.current;
     if (moveQueueRef.current.length) {
       const next = moveQueueRef.current.shift();
@@ -224,6 +279,13 @@ const Snake = () => {
     } else {
       snake.pop();
     }
+
+    recordingRef.current.push({
+      snake: snake.map((seg) => ({ x: seg.x, y: seg.y, scale: seg.scale })),
+      food: { ...foodRef.current },
+      obstacles: obstaclesRef.current.map((o) => ({ ...o })),
+      score: snake.length - 1,
+    });
   }, [wrap, beep, haptics, prefersReducedMotion]);
 
   /** Main animation loop driven by requestAnimationFrame. */
@@ -249,6 +311,7 @@ const Snake = () => {
   }, [loop]);
 
   useGameControls(({ x, y }) => {
+    if (playingRef.current) return;
     const queue = moveQueueRef.current;
     const curr = queue.length ? queue[queue.length - 1] : dirRef.current;
     if (curr.x + x === 0 && curr.y + y === 0) return;
@@ -265,6 +328,13 @@ const Snake = () => {
     if (gameOver) haptics.gameOver();
   }, [gameOver, haptics]);
 
+  useEffect(() => {
+    if (gameOver && recordingRef.current.length) {
+      const name = `replay-${Date.now()}`;
+      saveReplay(name, { frames: recordingRef.current, wrap });
+    }
+  }, [gameOver, saveReplay, wrap]);
+
   /** Reset the game to its initial state. */
   const reset = useCallback(() => {
     snakeRef.current = [
@@ -272,19 +342,58 @@ const Snake = () => {
     ];
     dirRef.current = { x: 1, y: 0 };
     moveQueueRef.current = [];
-    foodRef.current = randomFood(snakeRef.current, []);
-    obstaclesRef.current = generateObstacles(
-      5,
-      snakeRef.current,
-      foodRef.current,
-    );
+    playingRef.current = false;
+    playbackRef.current = [];
+    playbackIndexRef.current = 0;
+    obstaclesRef.current = obstaclePack.length ? obstaclePack : [];
+    foodRef.current = randomFood(snakeRef.current, obstaclesRef.current);
+    if (!obstaclePack.length) {
+      obstaclesRef.current = generateObstacles(
+        5,
+        snakeRef.current,
+        foodRef.current,
+      );
+    }
     setScore(0);
     setGameOver(false);
     setRunning(true);
     setSpeed(DEFAULT_SPEED);
     speedRef.current = DEFAULT_SPEED;
+    recordingRef.current = [
+      {
+        snake: snakeRef.current.map((s) => ({
+          x: s.x,
+          y: s.y,
+          scale: s.scale,
+        })),
+        food: { ...foodRef.current },
+        obstacles: obstaclesRef.current.map((o) => ({ ...o })),
+        score: 0,
+      },
+    ];
     draw();
-  }, [draw]);
+  }, [draw, obstaclePack]);
+
+  const startReplay = useCallback(
+    (name) => {
+      const data = loadReplay(name);
+      if (!data) return;
+      playbackRef.current = data.frames || [];
+      playbackIndexRef.current = 0;
+      playingRef.current = true;
+      setWrap(data.wrap ?? false);
+      setRunning(true);
+      setGameOver(false);
+      if (data.frames?.length) {
+        const first = data.frames[0];
+        snakeRef.current = first.snake.map((s) => ({ ...s }));
+        obstaclesRef.current = first.obstacles.map((o) => ({ ...o }));
+        foodRef.current = { ...first.food };
+        setScore(first.score || 0);
+      }
+    },
+    [loadReplay, setWrap],
+  );
 
   return (
     <GameLayout gameId="snake" score={score} highScore={highScore}>
@@ -349,6 +458,39 @@ const Snake = () => {
             value={speed}
             onChange={(e) => setSpeed(Number(e.target.value))}
           />
+        </div>
+        <div className="mt-2 flex items-center space-x-2">
+          <label htmlFor="replay">Replay</label>
+          <select
+            id="replay"
+            className="bg-gray-700 rounded"
+            value={selectedReplay}
+            onChange={(e) => setSelectedReplay(e.target.value)}
+          >
+            <option value="">Select</option>
+            {listReplays().map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={() => startReplay(selectedReplay)}
+            disabled={!selectedReplay}
+          >
+            Play
+          </button>
+          <button
+            className="px-2 py-1 bg-gray-700 rounded"
+            onClick={() => {
+              removeReplay(selectedReplay);
+              setSelectedReplay('');
+            }}
+            disabled={!selectedReplay}
+          >
+            Delete
+          </button>
         </div>
       </div>
     </GameLayout>
