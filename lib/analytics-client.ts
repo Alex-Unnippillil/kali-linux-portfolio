@@ -1,13 +1,13 @@
-export const trackEvent = async (
+export const trackEvent = (
   name: string,
-  properties?: Record<string, string | number | boolean | null>,
-): Promise<void> => {
+  props: Record<string, any> = {},
+): void => {
   try {
-    const { track } = await import("@vercel/analytics");
-    track(name, properties);
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', name, props);
+    }
   } catch {
-    // ignore analytics errors
+    // Ignore analytics errors
   }
 };
 
-export default trackEvent;

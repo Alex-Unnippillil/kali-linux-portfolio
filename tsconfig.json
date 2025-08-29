@@ -16,8 +16,8 @@
     "types": [],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "flags": ["./flags"]
+      "@/*": ["./*"]
+
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "types/**/*.d.ts"],
