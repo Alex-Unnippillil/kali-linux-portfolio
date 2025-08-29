@@ -1,6 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
-import { BIRD_SKINS, PIPE_SKINS } from '../../apps/games/flappy-bird/skins';
+import {
+  BIRD_SKINS,
+  BIRD_ASSETS,
+  PIPE_SKINS,
+} from '../../apps/games/flappy-bird/skins';
 
 const WIDTH = 400;
 const HEIGHT = 300;
@@ -8,8 +12,32 @@ const HEIGHT = 300;
 const FlappyBird = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
   const liveRef = useRef(null);
+  const [started, setStarted] = useState(false);
+  const [skin, setSkin] = useState(0);
+  const [pipeSkinIndex, setPipeSkinIndex] = useState(0);
+  const birdImages = useRef([]);
 
   useEffect(() => {
+    try {
+      setSkin(parseInt(localStorage.getItem('flappy-bird-skin') || '0', 10));
+      setPipeSkinIndex(
+        parseInt(localStorage.getItem('flappy-pipe-skin') || '0', 10),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    birdImages.current = BIRD_ASSETS.map((src) => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!started) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -39,10 +67,10 @@ const FlappyBird = () => {
       gravityVariant = 1;
 
     // skins
-    const birdSkins = BIRD_SKINS;
+    const birdSkins = birdImages.current;
     const pipeSkins = PIPE_SKINS;
-    let birdSkin = parseInt(localStorage.getItem('flappy-bird-skin') || '0', 10);
-    let pipeSkin = parseInt(localStorage.getItem('flappy-pipe-skin') || '0', 10);
+    let birdSkin = skin;
+    let pipeSkin = pipeSkinIndex;
 
     // hitbox preview
     let showHitbox = localStorage.getItem('flappy-hitbox') === '1';
@@ -315,10 +343,15 @@ const FlappyBird = () => {
       }
 
       // bird
-      ctx.fillStyle = birdSkins[birdSkin % birdSkins.length];
-      ctx.beginPath();
-      ctx.arc(bird.x, bird.y, 10, 0, Math.PI * 2);
-      ctx.fill();
+      const img = birdSkins[birdSkin % birdSkins.length];
+      if (img && img.complete) {
+        ctx.drawImage(img, bird.x - 10, bird.y - 10, 20, 20);
+      } else {
+        ctx.fillStyle = 'yellow';
+        ctx.beginPath();
+        ctx.arc(bird.x, bird.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+      }
       if (showHitbox) {
         ctx.strokeStyle = 'red';
         ctx.strokeRect(bird.x - 10, bird.y - 10, 20, 20);
@@ -503,11 +536,13 @@ const FlappyBird = () => {
         if (liveRef.current) liveRef.current.textContent = 'Record reset';
       } else if (e.code === 'KeyB') {
         birdSkin = (birdSkin + 1) % birdSkins.length;
+        setSkin(birdSkin);
         localStorage.setItem('flappy-bird-skin', String(birdSkin));
         if (liveRef.current)
           liveRef.current.textContent = `Bird skin ${birdSkin + 1}`;
       } else if (e.code === 'KeyO') {
         pipeSkin = (pipeSkin + 1) % pipeSkins.length;
+        setPipeSkinIndex(pipeSkin);
         localStorage.setItem('flappy-pipe-skin', String(pipeSkin));
         if (liveRef.current)
           liveRef.current.textContent = `Pipe skin ${pipeSkin + 1}`;
@@ -541,10 +576,56 @@ const FlappyBird = () => {
       canvas.removeEventListener('touchstart', handlePointer);
       stopLoop();
     };
-  }, [canvasRef]);
+  }, [canvasRef, started]);
 
   return (
-    <>
+    <div className="relative w-full h-full">
+      {!started && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center space-y-4 bg-black bg-opacity-70 text-white">
+          <label className="flex flex-col items-center">
+            Bird Skin
+            <select
+              className="text-black mt-1"
+              value={skin}
+              onChange={(e) => setSkin(parseInt(e.target.value, 10))}
+            >
+              {BIRD_SKINS.map((name, i) => (
+                <option key={name} value={i}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col items-center">
+            Pipe Skin
+            <select
+              className="text-black mt-1"
+              value={pipeSkinIndex}
+              onChange={(e) => setPipeSkinIndex(parseInt(e.target.value, 10))}
+            >
+              {PIPE_SKINS.map((_, i) => (
+                <option key={i} value={i}>
+                  {`Skin ${i + 1}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={() => {
+              try {
+                localStorage.setItem('flappy-bird-skin', String(skin));
+                localStorage.setItem('flappy-pipe-skin', String(pipeSkinIndex));
+              } catch {
+                /* ignore */
+              }
+              setStarted(true);
+            }}
+          >
+            Start
+          </button>
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         className="w-full h-full bg-black"
@@ -552,7 +633,7 @@ const FlappyBird = () => {
         aria-label="Flappy Bird game"
       />
       <div ref={liveRef} className="sr-only" aria-live="polite" />
-    </>
+    </div>
   );
 };
 
