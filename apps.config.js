@@ -58,7 +58,7 @@ const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
 const Radare2App = createDynamicApp('radare2', 'Radare2');
 const AboutAlexApp = createDynamicApp('About', 'About Alex');
 
-const QrToolApp = createDynamicApp('qr_tool', 'QR Tool');
+const QrApp = createDynamicApp('qr', 'QR Tool');
 const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
 const QuoteGeneratorApp = createDynamicApp('quote_generator', 'Quote Generator');
 const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
@@ -142,7 +142,7 @@ const displayFileExplorer = createDisplay(FileExplorerApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
 
-const displayQrTool = createDisplay(QrToolApp);
+const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuoteGenerator = createDisplay(QuoteGeneratorApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
@@ -186,13 +186,13 @@ const displayKismet = createDisplay(KismetApp);
 // Utilities list used for the "Utilities" folder on the desktop
 const utilityList = [
   {
-    id: 'qr-tool',
+    id: 'qr',
     title: 'QR Tool',
     icon: './themes/Yaru/apps/qr.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: false,
-    screen: displayQrTool,
+    screen: displayQr,
   },
   {
     id: 'ascii-art',
