@@ -1,11 +1,12 @@
 'use client';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 import offlineQuotes from '../../public/quotes.json';
 import PlaylistBuilder from './components/PlaylistBuilder';
 import share, { canShare } from '../../utils/share';
 import Posterizer from './components/Posterizer';
+import copyToClipboard from '../../utils/clipboard';
 
 interface Quote {
   content: string;
@@ -58,6 +59,7 @@ const keyOf = (q: Quote) => `${q.content}—${q.author}`;
 export default function QuoteApp() {
   const [quotes, setQuotes] = useState<Quote[]>(processQuotes(offlineQuotes as any[]));
   const [current, setCurrent] = useState<Quote | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -129,6 +131,17 @@ export default function QuoteApp() {
     });
   }, [quotes, category, search, favorites]);
 
+  useEffect(() => {
+    if (!current) {
+      setCurrentIndex(0);
+      return;
+    }
+    const idx = filtered.findIndex(
+      (q) => q.content === current.content && q.author === current.author,
+    );
+    if (idx >= 0) setCurrentIndex(idx);
+  }, [current, filtered]);
+
   const changeQuote = () => {
     if (filtered.length === 0) {
       setCurrent(null);
@@ -137,9 +150,39 @@ export default function QuoteApp() {
     setCurrent(filtered[Math.floor(Math.random() * filtered.length)]);
   };
 
+  const nextQuote = useCallback(() => {
+    if (!filtered.length) {
+      setCurrent(null);
+      return;
+    }
+    const next = (currentIndex + 1) % filtered.length;
+    setCurrent(filtered[next]);
+  }, [filtered, currentIndex]);
+
+  const prevQuote = useCallback(() => {
+    if (!filtered.length) {
+      setCurrent(null);
+      return;
+    }
+    const prev = (currentIndex - 1 + filtered.length) % filtered.length;
+    setCurrent(filtered[prev]);
+  }, [filtered, currentIndex]);
+
   useEffect(() => {
     changeQuote();
   }, [filtered]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        nextQuote();
+      } else if (e.key === 'ArrowLeft') {
+        prevQuote();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [nextQuote, prevQuote]);
 
   useEffect(() => {
     if (!playing || !playlist.length) return;
@@ -217,6 +260,19 @@ export default function QuoteApp() {
     share(text);
   };
 
+  const copyQuote = () => {
+    if (!current) return;
+    const text = `"${current.content}" — ${current.author}`;
+    copyToClipboard(text);
+  };
+
+  const tweetQuote = () => {
+    if (!current) return;
+    const text = `"${current.content}" — ${current.author}`;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
   const startPlaylist = () => {
     if (!playlist.length) return;
     setPlayIndex(0);
@@ -247,11 +303,51 @@ export default function QuoteApp() {
         </div>
       )}
       <div className="w-full max-w-md flex flex-col items-center">
-        <div ref={cardRef} id="quote-card" className="p-4 text-center">
+        <div
+          ref={cardRef}
+          id="quote-card"
+          className="group relative p-6 rounded text-center bg-gradient-to-br from-[var(--color-primary)]/30 to-[var(--color-secondary)]/30 text-white"
+        >
           {current ? (
             <>
-              <p className="text-lg mb-2">&quot;{current.content}&quot;</p>
-              <p className="text-sm text-gray-200">- {current.author}</p>
+              <p className="text-3xl sm:text-4xl mb-4">&ldquo;{current.content}&rdquo;</p>
+              <p className="text-sm text-white/80">— {current.author}</p>
+              <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
+                <button
+                  onClick={copyQuote}
+                  className="p-1 bg-black/30 hover:bg-black/50 rounded"
+                  aria-label="Copy quote"
+                >
+                  📋
+                </button>
+                <button
+                  onClick={tweetQuote}
+                  className="p-1 bg-black/30 hover:bg-black/50 rounded"
+                  aria-label="Tweet quote"
+                >
+                  🐦
+                </button>
+              </div>
+              <div className="absolute left-2 top-1/2 -translate-y-1/2 flex flex-col items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
+                <button
+                  onClick={prevQuote}
+                  className="p-2 bg-black/30 hover:bg-black/50 rounded-full"
+                  aria-label="Previous quote"
+                >
+                  ←
+                </button>
+                <kbd className="mt-1 text-xs text-white/70">←</kbd>
+              </div>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition">
+                <button
+                  onClick={nextQuote}
+                  className="p-2 bg-black/30 hover:bg-black/50 rounded-full"
+                  aria-label="Next quote"
+                >
+                  →
+                </button>
+                <kbd className="mt-1 text-xs text-white/70">→</kbd>
+              </div>
             </>
           ) : (
             <p>No quotes found.</p>
