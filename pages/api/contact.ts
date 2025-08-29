@@ -61,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { recaptchaToken = '', ...rest } = req.body || {};
-  const secret = process.env.RECAPTCHA_SECRET_KEY;
+  const secret = process.env.RECAPTCHA_SECRET;
   if (!recaptchaToken) {
     console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
     res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
