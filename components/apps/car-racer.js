@@ -18,6 +18,8 @@ const NEAR_INTERVAL = 0.3;
 const FAR_INTERVAL = 0.5;
 const BG_NEAR_INTERVAL = 0.5;
 const BG_FAR_INTERVAL = 1;
+const DRIFT_WINDOW = 1;
+const DRIFT_SCORE = 50;
 
 const MEDAL_THRESHOLDS = [
   { name: 'bronze', score: 500 },
@@ -59,6 +61,16 @@ const CarRacer = () => {
   const workerRef = useRef(null);
   const lastRenderRef = useRef({});
   const medalsRef = useRef({});
+  const [laneAssist, setLaneAssist] = useState(false);
+  const laneAssistRef = useRef(false);
+  const [driftCombo, setDriftCombo] = useState(0);
+  const driftComboRef = useRef(0);
+  const lastLaneChangeRef = useRef(0);
+  const ghostDataRef = useRef([]);
+  const ghostRunRef = useRef([]);
+  const ghostPosRef = useRef({ lane: 1, y: HEIGHT - CAR_HEIGHT - 10 });
+  const ghostIndexRef = useRef(0);
+  const startTimeRef = useRef(0);
 
   const audioCtxRef = useRef(null);
   const playBeep = () => {
@@ -84,6 +96,13 @@ const CarRacer = () => {
     } catch {
       medalsRef.current = {};
     }
+    try {
+      ghostDataRef.current = JSON.parse(localStorage.getItem('car_racer_ghost') || '[]');
+      if (ghostDataRef.current.length)
+        ghostPosRef.current.lane = ghostDataRef.current[0].lane;
+    } catch {
+      ghostDataRef.current = [];
+    }
     if (typeof window !== 'undefined') {
       const media = window.matchMedia('(prefers-reduced-motion: reduce)');
       const updateMotion = () => {
@@ -93,6 +112,9 @@ const CarRacer = () => {
       media.addEventListener('change', updateMotion);
       return () => media.removeEventListener('change', updateMotion);
     }
+    // start timer and record initial lane for ghost run
+    startTimeRef.current = performance.now();
+    ghostRunRef.current = [{ t: 0, lane: car.current.lane }];
   }, []);
 
   useEffect(() => {
@@ -161,6 +183,12 @@ const CarRacer = () => {
       }
       ctx.setLineDash([]);
 
+      if (state.ghost) {
+        const gx = state.ghost.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.fillRect(gx, state.ghost.y, CAR_WIDTH, CAR_HEIGHT);
+      }
+
       const carX = state.car.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
       ctx.fillStyle = 'red';
       ctx.fillRect(carX, state.car.y, CAR_WIDTH, CAR_HEIGHT);
@@ -189,6 +217,10 @@ const CarRacer = () => {
               far: backgroundRef.current.far.map((s) => ({ x: s.x, y: s.y })),
             },
         lineOffset,
+        ghost:
+          ghostDataRef.current.length > 0
+            ? { lane: ghostPosRef.current.lane, y: car.current.y }
+            : null,
       };
       if (supportsWorker) {
         const diff = {};
@@ -281,10 +313,23 @@ const CarRacer = () => {
           );
         }
 
+        if (ghostDataRef.current.length) {
+          const elapsedGhost = (performance.now() - startTimeRef.current) / 1000;
+          const data = ghostDataRef.current;
+          while (
+            ghostIndexRef.current < data.length &&
+            data[ghostIndexRef.current].t <= elapsedGhost
+          ) {
+            ghostPosRef.current.lane = data[ghostIndexRef.current].lane;
+            ghostIndexRef.current += 1;
+          }
+        }
+
         for (const o of obstaclesRef.current) {
           if (checkCollision(car.current, o)) {
             runningRef.current = false;
             playBeep();
+            saveGhostRun();
             if (scoreRef.current > highScore) {
               setHighScore(scoreRef.current);
               localStorage.setItem('car_racer_high', `${scoreRef.current}`);
@@ -318,17 +363,55 @@ const CarRacer = () => {
     };
   }, [canvasRef, highScore]);
 
+  const saveGhostRun = () => {
+    if (ghostRunRef.current.length > 1) {
+      localStorage.setItem('car_racer_ghost', JSON.stringify(ghostRunRef.current));
+      ghostDataRef.current = ghostRunRef.current.map((g) => ({ ...g }));
+    }
+  };
+
+  const registerDrift = () => {
+    const now = performance.now() / 1000;
+    if (now - lastLaneChangeRef.current < DRIFT_WINDOW) {
+      driftComboRef.current += 1;
+    } else {
+      driftComboRef.current = 1;
+    }
+    lastLaneChangeRef.current = now;
+    const bonus = DRIFT_SCORE * driftComboRef.current;
+    scoreRef.current += bonus;
+    setScore(Math.floor(scoreRef.current));
+    setDriftCombo(driftComboRef.current);
+    setTimeout(() => setDriftCombo(0), 1000);
+  };
+
+  const recordLaneChange = () => {
+    const t = (performance.now() - startTimeRef.current) / 1000;
+    ghostRunRef.current.push({ t, lane: car.current.lane });
+    registerDrift();
+  };
+
+  const canSwitch = (newLane) =>
+    !laneAssistRef.current ||
+    !obstaclesRef.current.some((o) =>
+      checkCollision({ lane: newLane, y: car.current.y, height: CAR_HEIGHT }, o)
+    );
+
   const moveLeft = React.useCallback(() => {
-    if (car.current.lane > 0) {
-      car.current.lane -= 1;
+    const newLane = car.current.lane - 1;
+    if (car.current.lane > 0 && canSwitch(newLane)) {
+      car.current.lane = newLane;
       playBeep();
+      recordLaneChange();
     }
   }, []);
 
   const moveRight = React.useCallback(() => {
-    if (car.current.lane < LANES - 1) {
-      car.current.lane += 1;
+    const newLane = car.current.lane + 1;
+    if (car.current.lane < LANES - 1 && canSwitch(newLane)) {
+      car.current.lane = newLane;
       playBeep();
+      recordLaneChange();
     }
   }, []);
 
@@ -367,6 +450,18 @@ const CarRacer = () => {
     runningRef.current = true;
     setPaused(false);
     pausedRef.current = false;
+    startTimeRef.current = performance.now();
+    ghostRunRef.current = [{ t: 0, lane: car.current.lane }];
+    ghostIndexRef.current = 0;
+    try {
+      ghostDataRef.current = JSON.parse(localStorage.getItem('car_racer_ghost') || '[]');
+    } catch {
+      ghostDataRef.current = [];
+    }
+    ghostPosRef.current.lane = ghostDataRef.current.length
+      ? ghostDataRef.current[0].lane
+      : car.current.lane;
+    setDriftCombo(0);
   };
 
   const togglePause = () => {
@@ -379,6 +474,11 @@ const CarRacer = () => {
   const toggleSound = () => {
     soundRef.current = !soundRef.current;
     setSound(soundRef.current);
+  };
+
+  const toggleLaneAssist = () => {
+    laneAssistRef.current = !laneAssistRef.current;
+    setLaneAssist(laneAssistRef.current);
   };
 
   const saveMedal = (s) => {
@@ -401,6 +501,7 @@ const CarRacer = () => {
         <div>High: {highScore}</div>
         {getMedal(score) && <div data-testid="medal-display">Medal: {getMedal(score)}</div>}
         {boost && !reduceMotionRef.current && <div>Boost!</div>}
+        {driftCombo > 1 && <div>Drift x{driftCombo}</div>}
       </div>
       <div className="absolute bottom-2 left-2 space-x-2 z-10 text-sm">
         <button
@@ -420,6 +521,12 @@ const CarRacer = () => {
           onClick={toggleSound}
         >
           {sound ? 'Sound: on' : 'Sound: off'}
+        </button>
+        <button
+          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          onClick={toggleLaneAssist}
+        >
+          {laneAssist ? 'Lane Assist: on' : 'Lane Assist: off'}
         </button>
         <button
           className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"

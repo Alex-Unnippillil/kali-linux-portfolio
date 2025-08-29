@@ -13,6 +13,7 @@ let state = {
   roadside: { near: [], far: [] },
   background: { near: [], far: [] },
   lineOffset: 0,
+  ghost: null,
 };
 
 self.onmessage = (e) => {
@@ -65,6 +66,13 @@ function draw() {
     ctx.stroke();
   }
   ctx.setLineDash([]);
+  if (state.ghost) {
+    const gx = state.ghost.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(gx, state.ghost.y, CAR_WIDTH, CAR_HEIGHT);
+    ctx.globalAlpha = 1;
+  }
 
   const carX = state.car.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
   ctx.fillStyle = 'red';
