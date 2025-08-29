@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import modulesData from '../data/module-index.json';
+import versionInfo from '../data/module-version.json';
 
 interface Module {
   id: string;
@@ -14,9 +15,10 @@ interface Module {
   options: { name: string; label: string }[];
 }
 
-const modules: Module[] = modulesData as Module[];
-
 const PopularModules: React.FC = () => {
+  const [modules, setModules] = useState<Module[]>(modulesData as Module[]);
+  const [version, setVersion] = useState<string>(versionInfo.version);
+  const [updateMessage, setUpdateMessage] = useState<string>('');
   const [filter, setFilter] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   const [selected, setSelected] = useState<Module | null>(null);
@@ -59,6 +61,23 @@ const PopularModules: React.FC = () => {
     }
   };
 
+  const handleUpdate = async () => {
+    try {
+      const res = await fetch(`/api/modules/update?version=${version}`);
+      const data = await res.json();
+      if (data.needsUpdate) {
+        const mods = await fetch('/data/module-index.json').then((r) => r.json());
+        setModules(mods);
+        setVersion(data.latest);
+        setUpdateMessage(`Updated to v${data.latest}`);
+      } else {
+        setUpdateMessage('Already up to date');
+      }
+    } catch {
+      setUpdateMessage('Update failed');
+    }
+  };
+
   const levelClass: Record<string, string> = {
     info: 'text-blue-300',
     success: 'text-green-400',
@@ -72,6 +91,16 @@ const PopularModules: React.FC = () => {
         All modules are simulated; no network activity occurs. This interface is
         non-operational.
       </p>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleUpdate}
+          className="px-2 py-1 text-sm rounded bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+        >
+          Update Modules
+        </button>
+        <span className="text-xs">v{version}</span>
+      </div>
+      {updateMessage && <p className="text-sm">{updateMessage}</p>}
       <input
         type="text"
         placeholder="Search modules"
