@@ -1,36 +1,36 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import usePersistentState from '../../../hooks/usePersistentState';
+import { useEffect } from "react";
+import usePersistentState from "../../../hooks/usePersistentState";
 
 interface AlertsProps {
   latitude: number;
   longitude: number;
 }
 
-const isNumber = (v: unknown): v is number => typeof v === 'number';
-const isBoolean = (v: unknown): v is boolean => typeof v === 'boolean';
+const isNumber = (v: unknown): v is number => typeof v === "number";
+const isBoolean = (v: unknown): v is boolean => typeof v === "boolean";
 
 const Alerts = ({ latitude, longitude }: AlertsProps) => {
   const [enabled, setEnabled] = usePersistentState<boolean>(
-    'weather-alerts-enabled',
+    "weather-alerts-enabled",
     false,
     isBoolean,
   );
   const [high, setHigh] = usePersistentState<number>(
-    'weather-alerts-high',
+    "weather-alerts-high",
     30,
     isNumber,
   );
   const [low, setLow] = usePersistentState<number>(
-    'weather-alerts-low',
+    "weather-alerts-low",
     0,
     isNumber,
   );
 
   useEffect(() => {
-    if (!enabled || typeof window === 'undefined') return;
-    if ('Notification' in window && Notification.permission === 'default') {
+    if (!enabled || typeof window === "undefined") return;
+    if ("Notification" in window && Notification.permission === "default") {
       void Notification.requestPermission();
     }
 
@@ -39,18 +39,21 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
     const poll = async () => {
       try {
         const res = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`,
+          `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&hourly=temperature_2m&forecast_days=1`,
         );
         const json = await res.json();
-        const temp: number | undefined = json?.current_weather?.temperature;
-        if (typeof temp !== 'number') return;
-        if (temp >= high) {
-          new Notification('High temperature alert', {
-            body: `${temp}\u00B0`,
+        const temps: unknown = json?.hourly?.temperature_2m;
+        if (!Array.isArray(temps)) return;
+        const numbers = temps.filter((t): t is number => typeof t === "number");
+        if (numbers.some((t) => t >= high)) {
+          const max = Math.max(...numbers);
+          new Notification("High temperature forecast", {
+            body: `${max}\u00B0`,
           });
-        } else if (temp <= low) {
-          new Notification('Low temperature alert', {
-            body: `${temp}\u00B0`,
+        } else if (numbers.some((t) => t <= low)) {
+          const min = Math.min(...numbers);
+          new Notification("Low temperature forecast", {
+            body: `${min}\u00B0`,
           });
         }
       } catch {
@@ -72,13 +75,13 @@ const Alerts = ({ latitude, longitude }: AlertsProps) => {
 
     if (document.hasFocus()) start();
 
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("blur", handleBlur);
 
     return () => {
       stop();
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("blur", handleBlur);
     };
   }, [enabled, high, low, latitude, longitude]);
 
