@@ -16,6 +16,14 @@ const FlappyBird = () => {
   const [skin, setSkin] = useState(0);
   const [pipeSkinIndex, setPipeSkinIndex] = useState(0);
   const birdImages = useRef([]);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const scoreRef = useRef(0);
+  const bestRef = useRef(0);
+
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
 
   useEffect(() => {
     try {
@@ -93,6 +101,9 @@ const FlappyBird = () => {
     let frame = 0;
     let score = 0;
     let running = true;
+    let crashing = false;
+    let crashTimer = 0;
+    let birdAngle = 0;
     let loopId = 0;
     let highHz = localStorage.getItem('flappy-120hz') === '1';
     let fps = highHz ? 120 : 60;
@@ -105,6 +116,8 @@ const FlappyBird = () => {
     let gust = 0;
     let gustTimer = 0;
     let foliage = [];
+    let hillsBack = [];
+    let hillsFront = [];
 
     function mixColor(c1, c2, t) {
       return `rgb(${Math.round(c1[0] + (c2[0] - c1[0]) * t)},${Math.round(
@@ -124,6 +137,30 @@ const FlappyBird = () => {
     function initClouds() {
       cloudsBack = Array.from({ length: 3 }, () => makeCloud(0.2));
       cloudsFront = Array.from({ length: 3 }, () => makeCloud(0.5));
+    }
+
+    function initHills() {
+      hillsBack = Array.from({ length: 2 }, (_, i) => ({ x: i * width, speed: 0.3 }));
+      hillsFront = Array.from({ length: 2 }, (_, i) => ({ x: i * width, speed: 0.6 }));
+    }
+
+    function drawHills() {
+      ctx.fillStyle = '#228B22';
+      for (const h of hillsBack) ctx.fillRect(h.x, height - 30, width, 30);
+      ctx.fillStyle = '#006400';
+      for (const h of hillsFront) ctx.fillRect(h.x, height - 15, width, 15);
+    }
+
+    function updateHills() {
+      if (reduceMotion) return;
+      for (const h of hillsBack) {
+        h.x -= h.speed;
+        if (h.x <= -width) h.x += width * 2;
+      }
+      for (const h of hillsFront) {
+        h.x -= h.speed;
+        if (h.x <= -width) h.x += width * 2;
+      }
     }
 
     function drawCloud(c) {
@@ -247,6 +284,7 @@ const FlappyBird = () => {
         const rec = records[key];
         best = rec ? rec.score : 0;
         ghostRun = rec ? rec.run : null;
+        bestRef.current = best;
       }
       loadRecord();
       function getMedal(dist) {
@@ -283,23 +321,31 @@ const FlappyBird = () => {
       rand = createRandom(seed);
       bird = { x: 50, y: height / 2, vy: 0 };
       pipes = [];
-        frame = 0;
-        score = 0;
-        running = true;
-        flapFrames = [];
-        runPositions = [];
-        ghostFrame = 0;
-        gravity = GRAVITY_VARIANTS[gravityVariant].value;
-        gap = practiceMode ? practiceGap : baseGap;
-        pipeInterval = 100;
-        nextPipeFrame = pipeInterval;
-        initClouds();
-        initFoliage();
-        gust = 0;
-        gustTimer = 0;
-      }
+      frame = 0;
+      score = 0;
+      running = true;
+      crashing = false;
+      crashTimer = 0;
+      birdAngle = 0;
+      flapFrames = [];
+      runPositions = [];
+      ghostFrame = 0;
+      gravity = GRAVITY_VARIANTS[gravityVariant].value;
+      gap = practiceMode ? practiceGap : baseGap;
+      pipeInterval = 100;
+      nextPipeFrame = pipeInterval;
+      initClouds();
+      initHills();
+      initFoliage();
+      gust = 0;
+      gustTimer = 0;
+      scoreRef.current = 0;
+      bestRef.current = best;
+    }
 
     function startGame(newSeed = Date.now()) {
+      pausedRef.current = false;
+      setPaused(false);
       reset(newSeed);
       addPipe();
       startLoop();
@@ -313,16 +359,33 @@ const FlappyBird = () => {
 
     function draw() {
       drawBackground();
+      drawHills();
       drawClouds();
       drawFoliage();
 
       // pipes / practice gates
       const [pipeC1, pipeC2] = pipeSkins[pipeSkin % pipeSkins.length];
-      ctx.fillStyle = mixColor(pipeC1, pipeC2, skyProgress);
+      const pipeColor = mixColor(pipeC1, pipeC2, skyProgress);
+      ctx.fillStyle = pipeColor;
       for (const pipe of pipes) {
         if (practiceMode) ctx.globalAlpha = 0.4;
         ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
         ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, height - pipe.bottom);
+        // bevel
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillRect(pipe.x, 0, 4, pipe.top);
+        ctx.fillRect(pipe.x, pipe.bottom, 4, height - pipe.bottom);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(pipe.x + pipeWidth - 4, 0, 4, pipe.top);
+        ctx.fillRect(
+          pipe.x + pipeWidth - 4,
+          pipe.bottom,
+          4,
+          height - pipe.bottom,
+        );
+        ctx.fillRect(pipe.x, pipe.top - 2, pipeWidth, 2);
+        ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, 2);
+        ctx.fillStyle = pipeColor;
         if (showHitbox) {
           ctx.strokeStyle = 'red';
           ctx.strokeRect(pipe.x, 0, pipeWidth, pipe.top);
@@ -344,18 +407,22 @@ const FlappyBird = () => {
 
       // bird
       const img = birdSkins[birdSkin % birdSkins.length];
+      ctx.save();
+      ctx.translate(bird.x, bird.y);
+      ctx.rotate(birdAngle);
       if (img && img.complete) {
-        ctx.drawImage(img, bird.x - 10, bird.y - 10, 20, 20);
+        ctx.drawImage(img, -10, -10, 20, 20);
       } else {
         ctx.fillStyle = 'yellow';
         ctx.beginPath();
-        ctx.arc(bird.x, bird.y, 10, 0, Math.PI * 2);
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
         ctx.fill();
       }
       if (showHitbox) {
         ctx.strokeStyle = 'red';
-        ctx.strokeRect(bird.x - 10, bird.y - 10, 20, 20);
+        ctx.strokeRect(-10, -10, 20, 20);
       }
+      ctx.restore();
 
       // HUD
       ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -393,12 +460,49 @@ const FlappyBird = () => {
     }
 
     function update() {
-      if (!running) return;
+      if (pausedRef.current) {
+        draw();
+        return;
+      }
+
+      if (crashing) {
+        bird.vy += gravity * 2;
+        bird.y += bird.vy;
+        birdAngle += 0.3;
+        draw();
+        crashTimer -= 1;
+        if (bird.y + 10 > height || crashTimer <= 0) {
+          crashing = false;
+          running = false;
+        }
+        if (!crashing && !running) {
+          if (!isReplaying) {
+            saveMedal(score);
+            if (score > best) {
+              best = score;
+              bestRef.current = best;
+              records[GRAVITY_VARIANTS[gravityVariant].name] = {
+                score: best,
+                run: { pos: runPositions.slice() },
+              };
+              localStorage.setItem('flappy-records', JSON.stringify(records));
+              ghostRun = records[GRAVITY_VARIANTS[gravityVariant].name].run;
+            }
+            lastRun = { seed, flaps: flapFrames };
+          }
+          isReplaying = false;
+          stopLoop();
+          if (liveRef.current)
+            liveRef.current.textContent = `Game over. Final score: ${score}`;
+        }
+        return;
+      }
 
       frame += 1;
 
       updateWind();
       updateClouds();
+      updateHills();
 
       if (frame >= nextPipeFrame) {
         addPipe();
@@ -417,7 +521,8 @@ const FlappyBird = () => {
 
       // top/bottom collision
       if (bird.y + 10 > height || bird.y - 10 < 0) {
-        running = false;
+        crashing = true;
+        crashTimer = 10;
       }
 
       // move pipes and track passed ones
@@ -433,7 +538,8 @@ const FlappyBird = () => {
           pipe.x + pipeWidth > bird.x - 10 &&
           (bird.y - 10 < pipe.top || bird.y + 10 > pipe.bottom)
         ) {
-          running = false;
+          crashing = true;
+          crashTimer = 10;
         }
 
         if (pipe.x + pipeWidth < 0) {
@@ -445,31 +551,12 @@ const FlappyBird = () => {
         score += passed;
         pipes = pipes.filter((p) => p.x + pipeWidth >= 0);
         if (liveRef.current) liveRef.current.textContent = `Score: ${score}`;
+        scoreRef.current = score;
       }
 
       draw();
       if (ghostRun && ghostFrame < ghostRun.pos.length) {
         ghostFrame += 1;
-      }
-
-      if (!running) {
-        if (!isReplaying) {
-          saveMedal(score);
-          if (score > best) {
-            best = score;
-            records[GRAVITY_VARIANTS[gravityVariant].name] = {
-              score: best,
-              run: { pos: runPositions.slice() },
-            };
-            localStorage.setItem('flappy-records', JSON.stringify(records));
-            ghostRun = records[GRAVITY_VARIANTS[gravityVariant].name].run;
-          }
-          lastRun = { seed, flaps: flapFrames };
-        }
-        isReplaying = false;
-        stopLoop();
-        if (liveRef.current)
-          liveRef.current.textContent = `Game over. Final score: ${score}`;
       }
     }
 
@@ -493,6 +580,20 @@ const FlappyBird = () => {
     }
 
     function handleKey(e) {
+      if (pausedRef.current) {
+        if (e.code === 'Escape' || e.code === 'Space') {
+          pausedRef.current = false;
+          setPaused(false);
+        }
+        return;
+      }
+
+      if (e.code === 'Escape' && running) {
+        pausedRef.current = true;
+        setPaused(true);
+        return;
+      }
+
       if (e.code === 'Space') {
         e.preventDefault();
         if (running) {
@@ -557,7 +658,10 @@ const FlappyBird = () => {
     }
 
     function handlePointer() {
-      if (running) {
+      if (pausedRef.current) {
+        pausedRef.current = false;
+        setPaused(false);
+      } else if (running) {
         flap();
       } else {
         startGame();
@@ -611,7 +715,7 @@ const FlappyBird = () => {
             </select>
           </label>
           <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-6 py-3 w-32 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={() => {
               try {
                 localStorage.setItem('flappy-bird-skin', String(skin));
@@ -632,6 +736,25 @@ const FlappyBird = () => {
         role="img"
         aria-label="Flappy Bird game"
       />
+      {paused && (
+        <div
+          className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black bg-opacity-50 text-white"
+          onClick={() => {
+            pausedRef.current = false;
+            setPaused(false);
+          }}
+          onTouchStart={() => {
+            pausedRef.current = false;
+            setPaused(false);
+          }}
+        >
+          <div className="mb-4 text-center">
+            <p>Score: {scoreRef.current}</p>
+            <p>Best: {bestRef.current}</p>
+          </div>
+          <button className="px-6 py-3 w-32 bg-gray-700 rounded">Resume</button>
+        </div>
+      )}
       <div ref={liveRef} className="sr-only" aria-live="polite" />
     </div>
   );
