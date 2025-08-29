@@ -48,8 +48,38 @@ const MetasploitPage: React.FC = () => {
   const splitRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const [toast, setToast] = useState('');
+  const [query, setQuery] = useState('');
+  const [tag, setTag] = useState('');
 
-  const tree = useMemo(() => buildTree(modulesData as Module[]), []);
+  const allTags = useMemo(
+    () =>
+      Array.from(
+        new Set((modulesData as Module[]).flatMap((m) => m.tags || [])),
+      ).sort(),
+    [],
+  );
+
+  const filteredModules = useMemo(
+    () =>
+      (modulesData as Module[]).filter((m) => {
+        if (tag && !(m.tags || []).includes(tag)) return false;
+        if (query) {
+          const q = query.toLowerCase();
+          return (
+            m.name.toLowerCase().includes(q) ||
+            m.description.toLowerCase().includes(q)
+          );
+        }
+        return true;
+      }),
+    [tag, query],
+  );
+
+  const tree = useMemo(() => buildTree(filteredModules), [filteredModules]);
+
+  useEffect(() => {
+    setSelected(null);
+  }, [query, tag]);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -103,7 +133,37 @@ const MetasploitPage: React.FC = () => {
 
   return (
     <div className="flex h-full">
-      <div className="w-1/3 border-r overflow-auto">{renderTree(tree)}</div>
+      <div className="w-1/3 border-r overflow-auto p-2">
+        <input
+          type="text"
+          placeholder="Search modules"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full p-1 mb-2 border rounded"
+        />
+        <div className="flex flex-wrap gap-1 mb-2">
+          <button
+            onClick={() => setTag('')}
+            className={`px-2 py-0.5 text-xs rounded ${
+              tag === '' ? 'bg-blue-600 text-white' : 'bg-gray-200'
+            }`}
+          >
+            All
+          </button>
+          {allTags.map((t) => (
+            <button
+              key={t}
+              onClick={() => setTag(t)}
+              className={`px-2 py-0.5 text-xs rounded ${
+                tag === t ? 'bg-blue-600 text-white' : 'bg-gray-200'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        {renderTree(tree)}
+      </div>
       <div className="flex-1 flex flex-col">
         <div className="flex-1 overflow-auto p-4">
           {selected ? (
