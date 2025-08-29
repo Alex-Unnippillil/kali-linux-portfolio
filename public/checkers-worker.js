@@ -96,6 +96,22 @@ const bitCount = (n) => {
   return count;
 };
 
+let tablebasePromise;
+
+const loadTablebase = () => {
+  if (!tablebasePromise) {
+    tablebasePromise = fetch('/games/checkers/tablebase.json')
+      .then((r) => r.json())
+      .catch(() => ({}));
+  }
+  return tablebasePromise;
+};
+
+const serialize = (board, turn) => {
+  const { red, black, kings } = boardToBitboards(board);
+  return `${red.toString(16)}-${black.toString(16)}-${kings.toString(16)}-${turn}`;
+};
+
 const evaluate = (board) => {
   const { red, black, kings } = boardToBitboards(board);
   const redKings = red & kings;
@@ -137,8 +153,14 @@ const minimax = (board, depth, maximizing, alpha, beta) => {
   return { score: maximizing ? alpha : beta, move: bestMove };
 };
 
-self.onmessage = (e) => {
+self.onmessage = async (e) => {
   const { board, color, maxDepth } = e.data;
+  const tablebase = await loadTablebase();
+  const key = serialize(board, color);
+  if (tablebase[key]) {
+    postMessage(tablebase[key]);
+    return;
+  }
   const start = Date.now();
   let best = null;
   for (let d = 1; d <= maxDepth; d++) {
