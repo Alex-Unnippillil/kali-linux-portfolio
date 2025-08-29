@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   parseRules,
   distributeTasks,
@@ -15,6 +15,10 @@ const JohnApp = () => {
   const [hashes, setHashes] = useState('');
   const [hashTypes, setHashTypes] = useState([]);
   const [rules, setRules] = useState([]);
+  const [ruleText, setRuleText] = useState('');
+  const [wordlistText, setWordlistText] = useState('');
+  const [wordlistFile, setWordlistFile] = useState(null);
+  const [stats, setStats] = useState(null);
   const [endpoints, setEndpoints] = useState('');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,6 +32,7 @@ const JohnApp = () => {
   const [potfileEntries, setPotfileEntries] = useState([]);
   const [potFilter, setPotFilter] = useState('');
   const workerRef = useRef(null);
+  const statsWorkerRef = useRef(null);
   const controllerRef = useRef(null);
 
   useEffect(() => {
@@ -50,7 +55,13 @@ const JohnApp = () => {
     return () => cancelAnimationFrame(frame);
   }, [prefersReducedMotion]);
 
-  useEffect(() => () => workerRef.current?.terminate(), []);
+  useEffect(
+    () => () => {
+      workerRef.current?.terminate();
+      statsWorkerRef.current?.terminate();
+    },
+    []
+  );
 
   const startProgress = (total) => {
     if (workerRef.current) workerRef.current.terminate();
@@ -74,27 +85,110 @@ const JohnApp = () => {
     workerRef.current = null;
   };
 
+  const initStatsWorker = () => {
+    if (statsWorkerRef.current || typeof Worker !== 'function') return;
+    statsWorkerRef.current = new Worker(
+      new URL('./stats.worker.js', import.meta.url)
+    );
+    statsWorkerRef.current.onmessage = (e) => {
+      const { count, time, preview, error: err } = e.data;
+      if (err) {
+        setError(err);
+        return;
+      }
+      setStats({ count, time });
+      setCandidates(preview);
+    };
+  };
+
+  const analyzeWordlist = useCallback(
+    (file, text) => {
+      initStatsWorker();
+      statsWorkerRef.current?.postMessage({ file, text, rules });
+    },
+    [rules]
+  );
+
   const handleRuleUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const text = ev.target?.result || '';
-      setRules(parseRules(String(text)));
+      const text = String(ev.target?.result || '');
+      setRuleText(text);
+      setRules(parseRules(text));
     };
     reader.readAsText(file);
+  };
+
+  const handleRuleTextChange = (e) => {
+    const text = e.target.value;
+    setRuleText(text);
+    setRules(parseRules(text));
   };
 
   const handleWordlistUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = String(ev.target?.result || '');
-      const words = text.split(/\r?\n/).filter(Boolean).slice(0, 10);
-      setCandidates(words);
-    };
-    reader.readAsText(file);
+    setWordlistFile(file);
+    setWordlistText('');
+  };
+
+  const handleWordlistTextChange = (e) => {
+    setWordlistFile(null);
+    setWordlistText(e.target.value);
+  };
+
+  const sampleWordlists = [
+    { label: 'Common Passwords', path: '/samples/common.txt' },
+    { label: 'Names', path: '/samples/names.txt' },
+  ];
+
+  const handleSampleWordlist = async (e) => {
+    const path = e.target.value;
+    if (!path) return;
+    const res = await fetch(path);
+    const text = await res.text();
+    setWordlistFile(null);
+    setWordlistText(text);
+  };
+
+  useEffect(() => {
+    if (mode !== 'wordlist') return;
+    if (!wordlistFile && !wordlistText) {
+      setStats(null);
+      setCandidates([]);
+      return;
+    }
+    analyzeWordlist(wordlistFile, wordlistText);
+  }, [wordlistFile, wordlistText, mode, analyzeWordlist]);
+
+  const formatTime = (seconds) => {
+    if (seconds < 60) return `${seconds.toFixed(2)}s`;
+    const minutes = seconds / 60;
+    if (minutes < 60) return `${minutes.toFixed(2)}m`;
+    const hours = minutes / 60;
+    if (hours < 24) return `${hours.toFixed(2)}h`;
+    const days = hours / 24;
+    return `${days.toFixed(2)}d`;
+  };
+
+  const StatsChart = ({ count, time }) => {
+    const max = Math.max(count, time, 1);
+    const cH = (count / max) * 80;
+    const tH = (time / max) * 80;
+    return (
+      <svg viewBox="0 0 120 100" className="w-full h-24 mt-2">
+        <rect x="10" y={90 - cH} width="40" height={cH} fill="#10b981" />
+        <rect x="70" y={90 - tH} width="40" height={tH} fill="#3b82f6" />
+        <text x="30" y="95" textAnchor="middle" fontSize="8" fill="white">
+          candidates
+        </text>
+        <text x="90" y="95" textAnchor="middle" fontSize="8" fill="white">
+          seconds
+        </text>
+      </svg>
+    );
   };
 
   const handleModeChange = (e) => {
@@ -242,6 +336,16 @@ const JohnApp = () => {
             ))}
           </ul>
         )}
+        <label htmlFor="john-rule-text" className="text-sm">
+          Rules
+        </label>
+        <textarea
+          id="john-rule-text"
+          value={ruleText}
+          onChange={handleRuleTextChange}
+          placeholder="Enter rules"
+          className="flex-1 px-2 py-1 bg-gray-800 text-white rounded h-24"
+        />
         <label htmlFor="john-rule" className="text-sm">
           Rule file
         </label>
@@ -266,6 +370,16 @@ const JohnApp = () => {
         </select>
         {mode === 'wordlist' && (
           <>
+            <label htmlFor="john-wordlist-text" className="text-sm">
+              Wordlist
+            </label>
+            <textarea
+              id="john-wordlist-text"
+              value={wordlistText}
+              onChange={handleWordlistTextChange}
+              placeholder="Enter wordlist (one per line)"
+              className="flex-1 px-2 py-1 bg-gray-800 text-white rounded h-24"
+            />
             <label htmlFor="john-wordlist" className="text-sm">
               Wordlist file
             </label>
@@ -276,16 +390,38 @@ const JohnApp = () => {
               onChange={handleWordlistUpload}
               className="text-sm"
             />
+            <label htmlFor="john-sample-wordlist" className="text-sm">
+              Sample wordlist
+            </label>
+            <select
+              id="john-sample-wordlist"
+              onChange={handleSampleWordlist}
+              className="px-2 py-1 bg-gray-800 text-white rounded text-sm"
+            >
+              <option value="">Select sample</option>
+              {sampleWordlists.map((s) => (
+                <option key={s.path} value={s.path}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
           </>
         )}
-        {candidates.length > 0 && (
+        {stats && (
           <div className="text-xs bg-gray-900 p-2 rounded">
-            <p className="mb-1">Candidate preview:</p>
-            <ul className="max-h-24 overflow-auto">
-              {candidates.map((c, i) => (
-                <li key={i}>{c}</li>
-              ))}
-            </ul>
+            {candidates.length > 0 && (
+              <>
+                <p className="mb-1">Candidate preview:</p>
+                <ul className="max-h-24 overflow-auto">
+                  {candidates.map((c, i) => (
+                    <li key={i}>{c}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <p className="mt-2">{`Total: ${stats.count.toLocaleString()}`}</p>
+            <p>{`Estimated @1M/s: ${formatTime(stats.time)}`}</p>
+            <StatsChart count={stats.count} time={stats.time} />
           </div>
         )}
         <label htmlFor="john-endpoints" className="text-sm">
