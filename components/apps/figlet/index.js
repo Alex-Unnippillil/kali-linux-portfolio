@@ -11,24 +11,46 @@ const FigletApp = () => {
   const [fontSize, setFontSize] = useState(16);
   const [lineHeight, setLineHeight] = useState(1);
   const [width, setWidth] = useState(80);
-  const [kerning, setKerning] = useState('default');
+  const [layout, setLayout] = useState('default');
+  const [kerning, setKerning] = useState(0); // letter spacing
+  const [gradient, setGradient] = useState(0);
   const [align, setAlign] = useState('left');
   const [announce, setAnnounce] = useState('');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
   const announceTimer = useRef(null);
   const preRef = useRef(null);
+  const uploadedFonts = useRef({});
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get('text');
+    if (t) setText(t);
+    const f = params.get('font');
+    if (f) setFont(f);
+    const s = Number(params.get('size'));
+    if (!Number.isNaN(s)) setFontSize(s);
+    const l = Number(params.get('line'));
+    if (!Number.isNaN(l)) setLineHeight(l);
+    const w = Number(params.get('width'));
+    if (!Number.isNaN(w)) setWidth(w);
+    const la = params.get('layout');
+    if (la) setLayout(la);
+    const a = params.get('align');
+    if (a) setAlign(a);
+    const g = Number(params.get('gradient'));
+    if (!Number.isNaN(g)) setGradient(g);
+    const k = Number(params.get('kerning'));
+    if (!Number.isNaN(k)) setKerning(k);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
         if (e.data?.type === 'font') {
-          setFonts((prev) => {
-            const next = [...prev, { name: e.data.font, preview: e.data.preview, mono: e.data.mono }];
-            if (next.length === 1) setFont(e.data.font);
-            return next;
-          });
+          setFonts((prev) => [...prev, { name: e.data.font, preview: e.data.preview, mono: e.data.mono }]);
         } else if (e.data?.type === 'render') {
           setOutput(e.data.output);
           setAnnounce('Preview updated');
@@ -36,6 +58,25 @@ const FigletApp = () => {
           announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
         }
       };
+
+      (async () => {
+        try {
+          if (navigator?.storage?.getDirectory) {
+            const dir = await navigator.storage.getDirectory();
+            const handle = await dir.getFileHandle('figlet-last-font.json');
+            const file = await handle.getFile();
+            const saved = JSON.parse(await file.text());
+            if (saved.data) {
+              uploadedFonts.current[saved.font] = saved.data;
+              workerRef.current.postMessage({ type: 'load', name: saved.font, data: saved.data });
+            }
+            if (saved.font) setFont(saved.font);
+          }
+        } catch {
+          /* ignore */
+        }
+      })();
+
       return () => {
         workerRef.current?.terminate();
         if (frameRef.current) cancelAnimationFrame(frameRef.current);
@@ -47,9 +88,9 @@ const FigletApp = () => {
 
   const updateFiglet = useCallback(() => {
     if (workerRef.current && font) {
-      workerRef.current.postMessage({ type: 'render', text, font, width, layout: kerning });
+      workerRef.current.postMessage({ type: 'render', text, font, width, layout });
     }
-  }, [text, font, width, kerning]);
+  }, [text, font, width, layout]);
 
   useEffect(() => {
     if (frameRef.current) cancelAnimationFrame(frameRef.current);
@@ -97,7 +138,60 @@ const FigletApp = () => {
     announceTimer.current = setTimeout(() => setAnnounce(''), 2000);
   };
 
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const name = file.name.replace(/\.flf$/i, '');
+    const data = await file.text();
+    uploadedFonts.current[name] = data;
+    workerRef.current?.postMessage({ type: 'load', name, data });
+    setFont(name);
+    e.target.value = '';
+  };
+
   const displayedFonts = fonts.filter((f) => !monoOnly || f.mono);
+
+  useEffect(() => {
+    if (fonts.length && !font) setFont(fonts[0].name);
+  }, [fonts, font]);
+
+  useEffect(() => {
+    if (font && fonts.find((f) => f.name === font)) updateFiglet();
+  }, [fonts, font, updateFiglet]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams();
+    if (text) params.set('text', text);
+    if (font) params.set('font', font);
+    if (fontSize !== 16) params.set('size', String(fontSize));
+    if (lineHeight !== 1) params.set('line', String(lineHeight));
+    if (width !== 80) params.set('width', String(width));
+    if (layout !== 'default') params.set('layout', layout);
+    if (align !== 'left') params.set('align', align);
+    if (gradient !== 0) params.set('gradient', String(gradient));
+    if (kerning !== 0) params.set('kerning', String(kerning));
+    const query = params.toString();
+    history.replaceState(null, '', `${location.pathname}${query ? `?${query}` : ''}`);
+  }, [text, font, fontSize, lineHeight, width, layout, align, gradient, kerning]);
+
+  useEffect(() => {
+    if (!font || !navigator?.storage?.getDirectory) return;
+    (async () => {
+      try {
+        const dir = await navigator.storage.getDirectory();
+        const handle = await dir.getFileHandle('figlet-last-font.json', { create: true });
+        const writable = await handle.createWritable();
+        const data = uploadedFonts.current[font]
+          ? { font, data: uploadedFonts.current[font] }
+          : { font };
+        await writable.write(JSON.stringify(data));
+        await writable.close();
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [font]);
 
   return (
     <div className="flex flex-col h-full w-full bg-ub-cool-grey text-white font-mono">
@@ -118,11 +212,18 @@ const FigletApp = () => {
           aria-label="Select font"
         >
           {displayedFonts.map((f) => (
-            <option key={f.name} value={f.name}>
+            <option key={f.name} value={f.name} title={f.preview}>
               {f.name}
             </option>
           ))}
         </select>
+        <input
+          type="file"
+          accept=".flf"
+          onChange={handleUpload}
+          className="text-sm"
+          aria-label="Upload font"
+        />
         <input
           type="text"
           className="flex-1 px-2 bg-gray-700 text-white"
@@ -167,18 +268,41 @@ const FigletApp = () => {
           />
         </label>
         <label className="flex items-center gap-1 text-sm">
-          Kerning
+          Layout
           <select
-            value={kerning}
-            onChange={(e) => setKerning(e.target.value)}
+            value={layout}
+            onChange={(e) => setLayout(e.target.value)}
             className="px-1 bg-gray-700 text-white"
-            aria-label="Kerning"
+            aria-label="Layout"
           >
             <option value="default">Default</option>
             <option value="full">Full</option>
             <option value="fitted">Fitted</option>
             <option value="smush">Smush</option>
           </select>
+        </label>
+        <label className="flex items-center gap-1 text-sm">
+          Gradient
+          <input
+            type="range"
+            min="0"
+            max="360"
+            value={gradient}
+            onChange={(e) => setGradient(Number(e.target.value))}
+            aria-label="Gradient hue"
+          />
+        </label>
+        <label className="flex items-center gap-1 text-sm">
+          Kerning
+          <input
+            type="range"
+            min="-2"
+            max="10"
+            step="0.1"
+            value={kerning}
+            onChange={(e) => setKerning(Number(e.target.value))}
+            aria-label="Kerning"
+          />
         </label>
         <label className="flex items-center gap-1 text-sm">
           Align
@@ -226,9 +350,17 @@ const FigletApp = () => {
         <pre
           ref={preRef}
           className={`min-w-full p-2 whitespace-pre font-mono transition-colors motion-reduce:transition-none ${
-            inverted ? 'bg-white text-black' : 'bg-black text-white'
+            inverted ? 'bg-white' : 'bg-black'
           }`}
-          style={{ fontSize: `${fontSize}px`, lineHeight, textAlign: align }}
+          style={{
+            fontSize: `${fontSize}px`,
+            lineHeight,
+            textAlign: align,
+            letterSpacing: `${kerning}px`,
+            backgroundImage: `linear-gradient(to right, hsl(${gradient},100%,50%), hsl(${(gradient + 120) % 360},100%,50%))`,
+            WebkitBackgroundClip: 'text',
+            color: 'transparent',
+          }}
         >
           {output}
         </pre>

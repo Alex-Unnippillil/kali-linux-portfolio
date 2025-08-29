@@ -48,6 +48,19 @@ function init() {
 init();
 
 self.onmessage = (e) => {
+  if (e.data?.type === 'load') {
+    const { name, data } = e.data;
+    try {
+      figlet.parseFont(name, data);
+      const preview = figlet.textSync('Figlet', { font: name });
+      const mono = isMonospace(name);
+      self.postMessage({ type: 'font', font: name, preview, mono });
+    } catch {
+      /* ignore bad font */
+    }
+    return;
+  }
+
   const { text = '', font, width = 80, layout = 'default' } = e.data;
   if (!font) return;
   const normalized = String(text)
