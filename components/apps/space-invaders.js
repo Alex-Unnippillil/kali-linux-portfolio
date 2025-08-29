@@ -37,6 +37,7 @@ const SpaceInvaders = () => {
   const stepTimer = useRef(0);
   const playerBullets = useRef([]);
   const enemyBullets = useRef([]);
+  const particles = useRef([]); // explosion particles
   const powerUps = useRef([]);
   const shelters = useRef([]);
   const ufo = useRef({ active: false, x: 0, y: 15, dir: 1 });
@@ -254,6 +255,10 @@ const SpaceInvaders = () => {
     setupWave();
 
     const handleKey = (e) => {
+      if (e.code === 'Escape' && e.type === 'keydown') {
+        togglePause();
+        return;
+      }
       keys.current[e.code] = e.type === 'keydown';
     };
     window.addEventListener('keydown', handleKey);
@@ -302,6 +307,19 @@ const SpaceInvaders = () => {
       }
     };
 
+    const spawnExplosion = (x, y, color) => {
+      for (let i = 0; i < 20; i += 1) {
+        particles.current.push({
+          x,
+          y,
+          dx: (Math.random() - 0.5) * 100,
+          dy: (Math.random() - 0.5) * 100,
+          life: 0.5,
+          color,
+        });
+      }
+    };
+
     const addScore = (n) => {
       hitStreak.current += 1;
       const points =
@@ -332,6 +350,11 @@ const SpaceInvaders = () => {
         if (player.current.shieldHp <= 0) player.current.shield = false;
         return;
       }
+      spawnExplosion(
+        player.current.x + player.current.w / 2,
+        player.current.y + player.current.h / 2,
+        'white',
+      );
       livesRef.current -= 1;
       setLives(livesRef.current);
       if (livesRef.current <= 0) {
@@ -420,6 +443,13 @@ const SpaceInvaders = () => {
         if (pu.y > h) pu.active = false;
       }
 
+      particles.current.forEach((pt) => {
+        pt.x += pt.dx * dt;
+        pt.y += pt.dy * dt;
+        pt.life -= dt;
+      });
+      particles.current = particles.current.filter((pt) => pt.life > 0);
+
       // Player bullets collisions
       for (const b of playerBullets.current) {
         if (!b.active) continue;
@@ -436,6 +466,7 @@ const SpaceInvaders = () => {
             b.hit = true;
             addScore(10);
             playSound(400);
+            spawnExplosion(inv.x + 10, inv.y + 7, 'lime');
             if (Math.random() < 0.1)
               powerUps.current.push({
                 x: inv.x + 10,
@@ -474,6 +505,11 @@ const SpaceInvaders = () => {
           b.hit = true;
           addScore(50);
           playSound(1000);
+          spawnExplosion(
+            ufo.current.x + 15,
+            ufo.current.y + 7,
+            '#ff00ff',
+          );
         }
         if (
           boss.current.active &&
@@ -489,6 +525,11 @@ const SpaceInvaders = () => {
           playSound(600);
           if (boss.current.hp <= 0) {
             boss.current.active = false;
+            spawnExplosion(
+              boss.current.x + boss.current.w / 2,
+              boss.current.y + boss.current.h / 2,
+              'purple',
+            );
             addScore(200);
             stageRef.current += 1;
             setStage(stageRef.current);
@@ -611,14 +652,32 @@ const SpaceInvaders = () => {
         ctx.fillRect(p.x - 5, p.y - 5, p.w + 10, p.h + 10);
       }
 
+      const glow = 5 + Math.sin(time / 200) * 2;
+      ctx.save();
       ctx.fillStyle = 'lime';
+      ctx.shadowColor = '#0f0';
+      ctx.shadowBlur = glow;
       invaders.current.forEach((inv) => {
-        if (inv.alive) ctx.fillRect(inv.x, inv.y, 20, 15);
+        if (inv.alive)
+          ctx.fillRect(
+            inv.x,
+            inv.y + Math.sin(time / 200 + inv.phase) * 2,
+            20,
+            15,
+          );
       });
+      ctx.restore();
       if (bombWarning.current.time > 0) {
         ctx.fillStyle = 'red';
         ctx.fillRect(bombWarning.current.x - 4, bombWarning.current.y - 4, 8, 8);
       }
+
+      particles.current.forEach((pt) => {
+        ctx.globalAlpha = Math.max(pt.life * 2, 0);
+        ctx.fillStyle = pt.color;
+        ctx.fillRect(pt.x, pt.y, 2, 2);
+      });
+      ctx.globalAlpha = 1;
 
       ctx.fillStyle = 'red';
       playerBullets.current.forEach((b) => {
@@ -710,9 +769,18 @@ const SpaceInvaders = () => {
   }
 
   return (
-    <GameLayout stage={stage} lives={lives} score={score} highScore={highScore}>
+    <GameLayout gameId="space-invaders">
       <div className="h-full w-full relative bg-black text-white">
         <canvas ref={canvasRef} className="w-full h-full" />
+        {isPaused && (
+          <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-20">
+            <span className="text-xl">Paused</span>
+          </div>
+        )}
+        <div className="absolute top-2 left-2 text-xs flex gap-4 z-10">
+          <span>Lives: {lives}</span>
+          <span>Score: {score}</span>
+        </div>
         <div className="absolute top-2 right-2 flex gap-2 z-10">
           <div className="bg-gray-700 px-2 py-1 rounded flex items-center">
             <label htmlFor="difficulty" className="text-xs mr-2">
