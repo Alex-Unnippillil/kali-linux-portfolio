@@ -105,6 +105,10 @@ const ConnectFour = () => {
   const [winningCells, setWinningCells] = useState<{ r: number; c: number }[]>([]);
   const [animDisc, setAnimDisc] = useState<AnimatedDisc | null>(null);
   const [hintColumn, setHintColumn] = useState<number | null>(null);
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [showMenu, setShowMenu] = useState(true);
+
+  const aiDepth = { easy: 2, medium: 4, hard: 6 }[difficulty];
 
   const dropDisc = React.useCallback(
     (col: number, color: Exclude<Cell, null> = player) => {
@@ -122,7 +126,6 @@ const ConnectFour = () => {
   const [selectedCol, setSelectedCol] = useControls(COLS, dropDisc);
 
 
-  const [aiDepth, setAiDepth] = useState(4);
   const [winColumn, setWinColumn] = useState<number | null>(null);
   const [teaching, setTeaching] = useState<{ wins: { r: number; c: number }[][]; threats: { r: number; c: number }[][] }>({ wins: [], threats: [] });
 
@@ -190,19 +193,24 @@ const ConnectFour = () => {
   }, [board, dropDisc, aiDepth]);
 
   useEffect(() => {
-    if (player === 'red' && !winner && !animDisc) {
+    if (!showMenu && player === 'red' && !winner && !animDisc) {
       const timer = setTimeout(aiMove, 300);
       return () => clearTimeout(timer);
     }
     return undefined;
-  }, [player, winner, animDisc, board, aiMove]);
+  }, [player, winner, animDisc, board, aiMove, showMenu]);
 
-  const rematch = () => {
+  const startGame = () => {
     setBoard(createEmptyBoard());
     setWinner(null);
     setWinningCells([]);
     setPlayer('red');
     setWinColumn(null);
+    setShowMenu(false);
+  };
+
+  const rematch = () => {
+    setShowMenu(true);
   };
 
   const cellHighlight = (rIdx: number, cIdx: number) => {
@@ -214,98 +222,109 @@ const ConnectFour = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      {winner && (
-        <div className="mb-2 capitalize">
-          {winner === 'draw' ? 'Draw!' : `${winner} wins!`}
-        </div>
-      )}
-      <div className="relative" onMouseLeave={() => setSelectedCol(null)}>
-        <div className="grid grid-cols-7 gap-1">
-          {board.map((row, rIdx) =>
-            row.map((cell, cIdx) => (
-              <div
-                key={`${rIdx}-${cIdx}`}
-                className={`h-10 w-10 flex items-center justify-center cursor-pointer bg-blue-700 ${cellHighlight(
-                  rIdx,
-                  cIdx,
-                )}`}
-                onClick={() => dropDisc(cIdx, 'yellow')}
-                onMouseEnter={() => setSelectedCol(cIdx)}
-              >
-                {cell && (
-                  <div
-                    className={`h-8 w-8 rounded-full ${
-                      cell === 'red' ? 'bg-red-500' : 'bg-yellow-400'
-                    }`}
-                  />
-                )}
-              </div>
-            ))
-          )}
-        </div>
-        {selectedCol !== null && (
-          <div
-            className="absolute top-0 pointer-events-none bg-gradient-to-b from-black/30 to-transparent"
-            style={{
-              left: selectedCol * SLOT,
-              width: CELL_SIZE,
-              height: BOARD_HEIGHT,
-            }}
-          />
-        )}
-        {hintColumn !== null && player === 'yellow' && (
-          <div
-            className="absolute"
-            style={{ left: hintColumn * SLOT + CELL_SIZE / 2 - 4, top: -8 }}
-          >
-            <div className="h-2 w-2 rounded-full bg-yellow-300" />
-          </div>
-        )}
-        {winColumn !== null && (
-          <div
-            className="absolute"
-            style={{ left: winColumn * SLOT + CELL_SIZE / 2 - 4, top: -8 }}
-          >
-            <div className="h-2 w-2 rounded-full bg-green-400" />
-          </div>
-        )}
-        {animDisc && (
-          <div
-            className="absolute left-0 top-0"
-            style={{
-              transform: `translateX(${animDisc.col * SLOT}px) translateY(${animDisc.y}px)`,
-            }}
-          >
-            <div
-              className={`h-8 w-8 rounded-full ${
-                animDisc.color === 'red' ? 'bg-red-500' : 'bg-yellow-400'
-              }`}
-            />
-          </div>
-        )}
-      </div>
-      <div className="mt-4 flex flex-col items-center gap-2">
-        <div className="flex items-center gap-2">
-          <label htmlFor="ai-depth" className="text-sm">
-            AI Depth: {aiDepth}
+      {showMenu ? (
+        <div className="flex flex-col items-center gap-4">
+          <label className="flex flex-col items-center">
+            <span className="mb-1">Difficulty</span>
+            <select
+              className="text-black"
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value as typeof difficulty)}
+            >
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
           </label>
-          <input
-            id="ai-depth"
-            type="range"
-            min={1}
-            max={6}
-            value={aiDepth}
-            onChange={(e) => setAiDepth(parseInt(e.target.value, 10))}
-            className="w-32"
-          />
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={startGame}
+          >
+            Start
+          </button>
         </div>
-        <button
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={rematch}
-        >
-          Rematch
-        </button>
-      </div>
+      ) : (
+        <>
+          {winner && (
+            <div className="mb-2 capitalize">
+              {winner === 'draw' ? 'Draw!' : `${winner} wins!`}
+            </div>
+          )}
+          <div className="relative" onMouseLeave={() => setSelectedCol(null)}>
+            <div className="grid grid-cols-7 gap-1">
+              {board.map((row, rIdx) =>
+                row.map((cell, cIdx) => (
+                  <div
+                    key={`${rIdx}-${cIdx}`}
+                    className={`h-10 w-10 flex items-center justify-center cursor-pointer bg-blue-700 ${cellHighlight(
+                      rIdx,
+                      cIdx,
+                    )}`}
+                    onClick={() => dropDisc(cIdx, 'yellow')}
+                    onMouseEnter={() => setSelectedCol(cIdx)}
+                  >
+                    {cell && (
+                      <div
+                        className={`h-8 w-8 rounded-full ${
+                          cell === 'red' ? 'bg-red-500' : 'bg-yellow-400'
+                        }`}
+                      />
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+            {selectedCol !== null && (
+              <div
+                className="absolute top-0 pointer-events-none bg-gradient-to-b from-black/30 to-transparent"
+                style={{
+                  left: selectedCol * SLOT,
+                  width: CELL_SIZE,
+                  height: BOARD_HEIGHT,
+                }}
+              />
+            )}
+            {hintColumn !== null && player === 'yellow' && (
+              <div
+                className="absolute"
+                style={{ left: hintColumn * SLOT + CELL_SIZE / 2 - 4, top: -8 }}
+              >
+                <div className="h-2 w-2 rounded-full bg-yellow-300" />
+              </div>
+            )}
+            {winColumn !== null && (
+              <div
+                className="absolute"
+                style={{ left: winColumn * SLOT + CELL_SIZE / 2 - 4, top: -8 }}
+              >
+                <div className="h-2 w-2 rounded-full bg-green-400" />
+              </div>
+            )}
+            {animDisc && (
+              <div
+                className="absolute left-0 top-0"
+                style={{
+                  transform: `translateX(${animDisc.col * SLOT}px) translateY(${animDisc.y}px)`,
+                }}
+              >
+                <div
+                  className={`h-8 w-8 rounded-full ${
+                    animDisc.color === 'red' ? 'bg-red-500' : 'bg-yellow-400'
+                  }`}
+                />
+              </div>
+            )}
+          </div>
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <button
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={rematch}
+            >
+              Rematch
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

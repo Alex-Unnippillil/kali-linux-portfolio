@@ -4,6 +4,12 @@ import GameLayout from './GameLayout';
 const ROWS = 6;
 const COLS = 7;
 
+const DEPTHS = {
+  easy: 2,
+  medium: 4,
+  hard: 6,
+};
+
 const createEmptyBoard = () =>
   Array.from({ length: ROWS }, () => Array(COLS).fill(null));
 
@@ -194,6 +200,10 @@ export default function ConnectFour() {
   const [player, setPlayer] = useState('yellow');
   const [winner, setWinner] = useState(null);
   const [winProbs, setWinProbs] = useState(Array(COLS).fill(null));
+  const [difficulty, setDifficulty] = useState('medium');
+  const [showMenu, setShowMenu] = useState(true);
+
+  const aiDepth = DEPTHS[difficulty];
 
   const dropDisc = (col, color) => {
     const row = getValidRow(board, col);
@@ -216,12 +226,12 @@ export default function ConnectFour() {
   };
 
   useEffect(() => {
-    if (player === 'red' && !winner) {
-      const { column } = minimax(board, 4, -Infinity, Infinity, true);
+    if (!showMenu && player === 'red' && !winner) {
+      const { column } = minimax(board, aiDepth, -Infinity, Infinity, true);
       if (column !== undefined) dropDisc(column, 'red');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [player, winner, board]);
+  }, [player, winner, board, aiDepth, showMenu]);
 
   useEffect(() => {
     if (!winner) {
@@ -231,51 +241,79 @@ export default function ConnectFour() {
     }
   }, [board, player, winner]);
 
+  const startGame = () => {
+    setBoard(createEmptyBoard());
+    setPlayer('yellow');
+    setWinner(null);
+    setShowMenu(false);
+  };
+
   return (
     <GameLayout gameId="connect-four">
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-        {winner && (
-          <div className="mb-2 capitalize">
-            {winner === 'draw' ? 'Draw!' : `${winner} wins!`}
-          </div>
-        )}
-        <div className="grid grid-cols-7 gap-1 mb-1 text-xs text-center">
-          {winProbs.map((p, idx) => (
-            <div key={idx}>{p !== null ? `${p}%` : ''}</div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1 mb-4">
-          {board.map((row, rIdx) =>
-            row.map((cell, cIdx) => (
-              <button
-                key={`${rIdx}-${cIdx}`}
-                aria-label={`cell-${rIdx}-${cIdx}`}
-                className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center focus:outline-none"
-                onClick={() => handleClick(cIdx)}
+        {showMenu ? (
+          <div className="flex flex-col items-center gap-4">
+            <label className="flex flex-col items-center">
+              <span className="mb-1">Difficulty</span>
+              <select
+                className="text-black"
+                value={difficulty}
+                onChange={(e) => setDifficulty(e.target.value)}
               >
-                {cell && (
-                  <div
-                    className={`w-8 h-8 rounded-full ${
-                      cell === 'red' ? 'bg-red-500' : 'bg-yellow-400'
-                    }`}
-                  />
-                )}
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
+            <button
+              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+              onClick={startGame}
+            >
+              Start
+            </button>
+          </div>
+        ) : (
+          <>
+            {winner && (
+              <div className="mb-2 capitalize">
+                {winner === 'draw' ? 'Draw!' : `${winner} wins!`}
+              </div>
+            )}
+            <div className="grid grid-cols-7 gap-1 mb-1 text-xs text-center">
+              {winProbs.map((p, idx) => (
+                <div key={idx}>{p !== null ? `${p}%` : ''}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1 mb-4">
+              {board.map((row, rIdx) =>
+                row.map((cell, cIdx) => (
+                  <button
+                    key={`${rIdx}-${cIdx}`}
+                    aria-label={`cell-${rIdx}-${cIdx}`}
+                    className="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center focus:outline-none"
+                    onClick={() => handleClick(cIdx)}
+                  >
+                    {cell && (
+                      <div
+                        className={`w-8 h-8 rounded-full ${
+                          cell === 'red' ? 'bg-red-500' : 'bg-yellow-400'
+                        }`}
+                      />
+                    )}
+                  </button>
+                )),
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+                onClick={() => setShowMenu(true)}
+              >
+                Reset
               </button>
-            )),
-          )}
-        </div>
-        <div className="flex gap-2">
-          <button
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            onClick={() => {
-              setBoard(createEmptyBoard());
-              setPlayer('yellow');
-              setWinner(null);
-            }}
-          >
-            Reset
-          </button>
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </GameLayout>
   );
