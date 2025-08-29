@@ -376,7 +376,7 @@ keyboard hotkeys.
 | John the Ripper | /apps/john | Security Tool (simulated) |
 | Kismet | /apps/kismet | Security Tool (simulated) |
 | Metasploit | /apps/metasploit | Security Tool (simulated) |
-| Metasploit Post | /apps/msf-post | Security Tool (simulated) |
+| Metasploit Post | /apps/metasploit-post | Security Tool (simulated) |
 | Mimikatz | /apps/mimikatz | Security Tool (simulated) |
 | Nessus | /apps/nessus | Security Tool (simulated) |
 | Nmap NSE | /apps/nmap-nse | Security Tool (simulated) |
