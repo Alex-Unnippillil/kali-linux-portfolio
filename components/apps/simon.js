@@ -102,26 +102,39 @@ export const generateSequence = (length, seed) => {
 };
 
 const Simon = () => {
+  const [pads, setPads] = useState(padStyles);
   const [sequence, setSequence] = useState([]);
   const [step, setStep] = useState(0);
   const [isPlayerTurn, setIsPlayerTurn] = useState(false);
   const [activePad, setActivePad] = useState(null);
   const [status, setStatus] = useState('Press Start');
-  const [mode, setMode] = useState('classic');
-  const [tempo, setTempo] = useState(100);
-  const [striped, setStriped] = useState(false);
-  const [thickOutline, setThickOutline] = useState(false);
-  const [audioOnly, setAudioOnly] = useState(false);
-  const [colorblindPalette, setColorblindPalette] = useState(false);
-  const [seed, setSeed] = useState('');
-  const [playMode, setPlayMode] = useState('strict');
+  const [mode, setMode] = usePersistentState('simon_mode', 'classic');
+  const [tempo, setTempo] = usePersistentState('simon_tempo', 100);
+  const [striped, setStriped] = usePersistentState('simon_striped', false);
+  const [thickOutline, setThickOutline] = usePersistentState(
+    'simon_thick_outline',
+    false
+  );
+  const [audioOnly, setAudioOnly] = usePersistentState('simon_audio_only', false);
+  const [colorblindPalette, setColorblindPalette] = usePersistentState(
+    'simon_colorblind_palette',
+    false
+  );
+  const [seed, setSeed] = usePersistentState('simon_seed', '');
+  const [playMode, setPlayMode] = usePersistentState('simon_play_mode', 'strict');
+  const [timing, setTiming] = usePersistentState('simon_timing', 'relaxed');
+  const [randomPalette, setRandomPalette] = usePersistentState(
+    'simon_random_palette',
+    false
+  );
   const [leaderboard, setLeaderboard] = usePersistentState(
     'simon_leaderboard',
-    []
+    {}
   );
   const audioCtx = useRef(null);
   const errorSound = useRef(null);
   const rngRef = useRef(Math.random);
+  const timeoutRef = useRef(null);
   const [errorFlash, setErrorFlash] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -132,6 +145,19 @@ const Simon = () => {
     media.addEventListener('change', handleChange);
     return () => media.removeEventListener('change', handleChange);
   }, []);
+
+  const updateHighScores = useCallback(
+    (score) => {
+      const key = `${mode}-${timing}`;
+      setLeaderboard((prev) => {
+        const current = Array.isArray(prev[key]) ? [...prev[key]] : [];
+        current.push(score);
+        current.sort((a, b) => b - a);
+        return { ...prev, [key]: current.slice(0, 5) };
+      });
+    },
+    [mode, timing, setLeaderboard]
+  );
 
   const scheduleTone = (freq, startTime, duration) => {
     const ctx =
@@ -165,6 +191,7 @@ const Simon = () => {
 
   const stepDuration = useCallback(() => {
     const base = 60 / tempo;
+    if (mode === 'endless') return base;
     const reduction = mode === 'speed' ? 0.03 : 0.015;
     return Math.max(base - sequence.length * reduction, 0.2);
   }, [tempo, mode, sequence.length]);
@@ -210,13 +237,58 @@ const Simon = () => {
     }
   }, [sequence, isPlayerTurn, playSequence]);
 
+  useEffect(() => {
+    if (timing !== 'strict' || !isPlayerTurn) {
+      clearTimeout(timeoutRef.current);
+      return;
+    }
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      if (!errorSound.current) {
+        errorSound.current = new Howl({ src: [ERROR_SOUND_SRC] });
+      }
+      errorSound.current.play();
+      setErrorFlash(true);
+      if (playMode === 'strict') {
+        const streak = Math.max(sequence.length - 1, 0);
+        updateHighScores(streak);
+      }
+      setIsPlayerTurn(false);
+      setStatus(
+        playMode === 'strict' ? 'Time up! Game over.' : 'Time up! Try again.'
+      );
+      setTimeout(() => {
+        setErrorFlash(false);
+        if (playMode === 'strict') {
+          restartGame();
+        } else {
+          setStep(0);
+          setStatus('Listen...');
+          playSequence();
+        }
+      }, 600);
+    }, 5000);
+    return () => clearTimeout(timeoutRef.current);
+  }, [timing, isPlayerTurn, step, playMode, sequence.length, updateHighScores, restartGame, playSequence]);
+
   const startGame = useCallback(() => {
     rngRef.current = seed ? seedrandom(seed) : Math.random;
+    if (randomPalette) {
+      const shuffled = [...padStyles];
+      for (let i = shuffled.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(rngRef.current() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      setPads(shuffled);
+    } else {
+      setPads(padStyles);
+    }
     setSequence([Math.floor(rngRef.current() * 4)]);
     setStatus('Listen...');
-  }, [seed]);
+  }, [seed, randomPalette]);
 
   const restartGame = useCallback(() => {
+    clearTimeout(timeoutRef.current);
     setSequence([]);
     setStep(0);
     setIsPlayerTurn(false);
@@ -239,9 +311,7 @@ const Simon = () => {
         setErrorFlash(true);
         if (playMode === 'strict') {
           const streak = Math.max(sequence.length - 1, 0);
-          setLeaderboard((prev) =>
-            [...prev, streak].sort((a, b) => b - a).slice(0, 5)
-          );
+          updateHighScores(streak);
         }
         setIsPlayerTurn(false);
         setStatus(
@@ -278,7 +348,7 @@ const Simon = () => {
       sequence,
       step,
       stepDuration,
-      setLeaderboard,
+      updateHighScores,
       playMode,
       playSequence,
     ]
@@ -304,11 +374,14 @@ const Simon = () => {
     [activePad, audioOnly, colorblindPalette, mode, thickOutline]
   );
 
+  const scoreKey = `${mode}-${timing}`;
+  const scores = leaderboard[scoreKey] || [];
+
   return (
     <GameLayout onRestart={restartGame}>
       <div className={errorFlash ? 'buzz' : ''}>
         <div className="grid grid-cols-2 gap-4 mb-4">
-          {padStyles.map((pad, idx) => (
+          {pads.map((pad, idx) => (
             <button
               key={pad.id}
               className={padClass(pad, idx)}
@@ -332,6 +405,7 @@ const Simon = () => {
             <option value="classic">Classic</option>
             <option value="speed">Speed Up</option>
             <option value="colorblind">Colorblind</option>
+            <option value="endless">Endless</option>
           </select>
           <div className="flex items-center gap-2">
             <input
@@ -355,7 +429,15 @@ const Simon = () => {
             onChange={(e) => setPlayMode(e.target.value)}
           >
             <option value="strict">Strict</option>
-            <option value="casual">Casual</option>
+            <option value="casual">Relaxed</option>
+          </select>
+          <select
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            value={timing}
+            onChange={(e) => setTiming(e.target.value)}
+          >
+            <option value="relaxed">Relaxed timing</option>
+            <option value="strict">Strict timing</option>
           </select>
           <label className="flex items-center gap-1">
             <input
@@ -384,6 +466,14 @@ const Simon = () => {
           <label className="flex items-center gap-1">
             <input
               type="checkbox"
+              checked={randomPalette}
+              onChange={(e) => setRandomPalette(e.target.checked)}
+            />
+            Random palette
+          </label>
+          <label className="flex items-center gap-1">
+            <input
+              type="checkbox"
               checked={audioOnly}
               onChange={(e) => setAudioOnly(e.target.checked)}
             />
@@ -399,7 +489,7 @@ const Simon = () => {
         <div className="mt-4 text-center">
           <div className="mb-1">Leaderboard</div>
           <ol className="list-decimal list-inside">
-            {leaderboard.map((score, i) => (
+            {scores.map((score, i) => (
               // eslint-disable-next-line react/no-array-index-key
               <li key={i}>{score}</li>
             ))}
