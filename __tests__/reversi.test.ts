@@ -40,5 +40,10 @@ describe('Reversi rules', () => {
     const moves = computeLegalMoves(board, 'B');
     const after = applyMove(board, 2, 3, 'B', moves['2-3']);
     expect(getBookMove(after, 'W')).toEqual([2, 2]);
+
+    const board2 = createBoard();
+    const moves2 = computeLegalMoves(board2, 'B');
+    const after2 = applyMove(board2, 4, 5, 'B', moves2['4-5']);
+    expect(getBookMove(after2, 'W')).toEqual([5, 5]);
   });
 });
