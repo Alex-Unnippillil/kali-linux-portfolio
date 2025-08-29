@@ -8,7 +8,7 @@ const parseLines = (text) =>
   text
     .split('\n')
     .filter(Boolean)
-    .map((line) => {
+    .map((line, i) => {
       const parts = line.trim().split(/\s+/);
       let protocol = parts[0] || '';
       let host = parts[1] || '';
@@ -22,6 +22,7 @@ const parseLines = (text) =>
         protocol,
         host,
         details: rest.join(' '),
+        timestamp: new Date(Date.now() + i * 1000).toISOString(),
       };
     });
 
@@ -97,8 +98,11 @@ const LogRow = ({ log, prefersReduced }) => {
   }, [prefersReduced]);
 
   return (
-    <tr ref={rowRef} className="odd:bg-black even:bg-ub-grey">
-      <td className="pr-2 text-green-400">
+    <tr ref={rowRef} className="odd:bg-black even:bg-ub-grey font-mono">
+      <td className="px-2 py-[6px] text-gray-400 bg-gray-900">
+        {log.timestamp}
+      </td>
+      <td className="px-2 py-[6px] text-green-400">
         <abbr
           title={protocolInfo[log.protocol] || log.protocol}
           className="underline decoration-dotted cursor-help"
@@ -107,8 +111,8 @@ const LogRow = ({ log, prefersReduced }) => {
           {log.protocol}
         </abbr>
       </td>
-      <td className="pr-2 text-white">{log.host}</td>
-      <td className="text-green-400">{log.details}</td>
+      <td className="px-2 py-[6px] text-white">{log.host}</td>
+      <td className="px-2 py-[6px] text-green-400">{log.details}</td>
     </tr>
   );
 };
@@ -571,7 +575,7 @@ const Dsniff = () => {
         </div>
       </div>
       <div
-        className="bg-black text-green-400 p-2 h-40 overflow-auto"
+        className="bg-black text-green-400 p-2 h-40 overflow-auto font-mono"
         aria-live="polite"
         role="log"
       >
