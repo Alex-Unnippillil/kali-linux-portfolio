@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { convertUnit, unitMap } from '../../components/apps/converter/unitData';
+import FormulaExplanation from './components/FormulaExplanation';
 
 const currencyRates: Record<string, number> = {
   USD: 1,
@@ -37,6 +38,13 @@ export default function Converter() {
   const [toValue, setToValue] = useState('');
   const [precision, setPrecision] = useState(2);
   const [sigFig, setSigFig] = useState(false);
+  const [explanation, setExplanation] = useState<{
+    category: string;
+    from: string;
+    to: string;
+    input: number;
+    output: number;
+  } | null>(null);
   const [favourites, setFavourites] = useState<string[]>([]);
 
   // load favourites
@@ -68,10 +76,18 @@ export default function Converter() {
     const n = parseFloat(val);
     if (isNaN(n)) {
       setToValue('');
+      setExplanation(null);
       return;
     }
     const converted = convert(category, fromUnit, toUnit, n);
     setToValue(format(converted));
+    setExplanation({
+      category,
+      from: fromUnit,
+      to: toUnit,
+      input: n,
+      output: converted,
+    });
   };
 
   const convertTo = (val: string) => {
@@ -79,10 +95,18 @@ export default function Converter() {
     const n = parseFloat(val);
     if (isNaN(n)) {
       setFromValue('');
+      setExplanation(null);
       return;
     }
     const converted = convert(category, toUnit, fromUnit, n);
     setFromValue(format(converted));
+    setExplanation({
+      category,
+      from: toUnit,
+      to: fromUnit,
+      input: n,
+      output: converted,
+    });
   };
 
   // Recalculate when units or precision change
@@ -129,6 +153,7 @@ export default function Converter() {
     if (!units.includes(toUnit)) setToUnit(units[1] || units[0]);
     setFromValue('');
     setToValue('');
+    setExplanation(null);
   }, [category]);
 
   return (
@@ -218,6 +243,17 @@ export default function Converter() {
           Save
         </button>
       </div>
+      {explanation && (
+        <FormulaExplanation
+          category={explanation.category}
+          from={explanation.from}
+          to={explanation.to}
+          input={explanation.input}
+          output={explanation.output}
+          precision={precision}
+          sigFig={sigFig}
+        />
+      )}
       <div className="mt-6">
         <h3 className="text-lg mb-2">Favourites</h3>
         {favourites.length === 0 ? (
