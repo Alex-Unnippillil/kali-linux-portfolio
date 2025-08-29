@@ -39,7 +39,7 @@
     "autoprefixer": "^10.4.13",
     "bad-words": "^3.0.4",
     "canvas-confetti": "1.9.3",
-    "chart.js": "^4.5.0",
+    "chart.js": "patch:chart.js@npm%3A4.5.0#~/.yarn/patches/chart.js-npm-4.5.0-e95c375db8.patch",
     "chess.js": "^1.0.0",
     "chrono-node": "^2.8.4",
     "cron-parser": "^5.3.0",
