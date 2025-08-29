@@ -86,3 +86,8 @@ export const getDefaultSkin = (): SkinName => {
   if (m < 9) return 'summer';
   return 'autumn';
 };
+
+export const getRandomSkin = (): SkinName => {
+  const names = Object.keys(SKINS) as SkinName[];
+  return names[Math.floor(Math.random() * names.length)];
+};
