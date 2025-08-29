@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import InputRemap from './Games/common/input-remap/InputRemap';
 import useInputMapping from './Games/common/input-remap/useInputMapping';
 
+const noop: (action: string, key: string) => string | null = () => null;
+
 interface HelpOverlayProps {
   gameId: string;
   onClose: () => void;
@@ -226,7 +228,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
                 .join(', ')}
             </p>
             <div className="mt-2">
-              <InputRemap mapping={mapping} setKey={setKey} actions={info.actions} />
+              <InputRemap mapping={mapping} setKey={setKey ?? noop} actions={info.actions} />
             </div>
           </>
         ) : (
