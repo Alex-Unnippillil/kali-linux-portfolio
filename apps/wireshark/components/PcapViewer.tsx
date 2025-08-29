@@ -89,22 +89,49 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
   return packets;
 };
 
-// Parse PCAP-NG Enhanced Packet Blocks only
+// Parse PCAP-NG files including section and interface blocks
 const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
   const view = new DataView(buf);
   let offset = 0;
+  let little = true;
+  const ifaces: { tsres: number }[] = [];
   const packets: Packet[] = [];
+
   while (offset + 8 <= view.byteLength) {
-    const blockType = view.getUint32(offset, true);
-    const blockLen = view.getUint32(offset + 4, true);
-    if (blockType === 0x00000006) {
-      const tsHigh = view.getUint32(offset + 12, true);
-      const tsLow = view.getUint32(offset + 16, true);
-      const capLen = view.getUint32(offset + 20, true);
+    let blockType = view.getUint32(offset, little);
+    let blockLen = view.getUint32(offset + 4, little);
+
+    if (blockType === 0x0a0d0d0a) {
+      const bom = view.getUint32(offset + 8, true);
+      if (bom === 0x1a2b3c4d) little = true;
+      else if (bom === 0x4d3c2b1a) little = false;
+      blockLen = view.getUint32(offset + 4, little);
+    } else if (blockType === 0x00000001) {
+      let tsres = 1e-6;
+      let optOffset = offset + 20;
+      while (optOffset + 4 <= offset + blockLen - 4) {
+        const optCode = view.getUint16(optOffset, little);
+        const optLen = view.getUint16(optOffset + 2, little);
+        optOffset += 4;
+        if (optCode === 9 && optLen === 1) {
+          const val = view.getUint8(optOffset);
+          tsres = val & 0x80 ? 2 ** -(val & 0x7f) : 10 ** -val;
+        }
+        optOffset += optLen;
+        optOffset = (optOffset + 3) & ~3;
+        if (optCode === 0) break;
+      }
+      ifaces.push({ tsres });
+    } else if (blockType === 0x00000006) {
+      const ifaceId = view.getUint32(offset + 8, little);
+      const tsHigh = view.getUint32(offset + 12, little);
+      const tsLow = view.getUint32(offset + 16, little);
+      const capLen = view.getUint32(offset + 20, little);
       const dataStart = offset + 28;
       const data = new Uint8Array(buf.slice(dataStart, dataStart + capLen));
       const meta: any = parseEthernetIpv4(data);
-      const timestamp = `${(tsHigh * 2 ** 32 + tsLow) / 1e6}`;
+      const res = ifaces[ifaceId]?.tsres ?? 1e-6;
+      const timestamp = ((tsHigh * 2 ** 32 + tsLow) * res).toFixed(6);
       packets.push({
         timestamp,
         src: meta.src,
@@ -116,8 +143,10 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
         data,
       });
     }
+
     offset += blockLen;
   }
+
   return packets;
 };
 
