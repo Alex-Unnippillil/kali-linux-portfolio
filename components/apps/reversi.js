@@ -6,11 +6,22 @@ import {
   computeLegalMoves,
   applyMove,
   countPieces,
-  getBookMove,
 } from './reversiLogic';
 
 const BOARD_SIZE = 400;
 const CELL = BOARD_SIZE / SIZE;
+
+// Simple opening book for the AI's first response
+const getBookMove = (board, player) => {
+  if (player !== 'W') return null;
+  const { black, white } = countPieces(board);
+  // Only use the book very early in the game
+  if (black + white > 5) return null;
+  const moves = computeLegalMoves(board, player);
+  if (moves['2-2']) return [2, 2];
+  if (moves['5-5']) return [5, 5];
+  return null;
+};
 
 const Reversi = () => {
   const canvasRef = useRef(null);
@@ -25,6 +36,8 @@ const Reversi = () => {
   const reduceMotionRef = useRef(false);
   const flippingRef = useRef([]);
   const previewRef = useRef(null);
+  const overlayRef = useRef(true);
+  const moveMobilityRef = useRef({});
 
   const [board, setBoard] = useState(() => createBoard());
   const [player, setPlayer] = useState('B');
@@ -36,11 +49,14 @@ const Reversi = () => {
   const [tip, setTip] = useState('Tip: Control the corners to gain an advantage.');
   const [depth, setDepth] = useState(3);
   const [useBook, setUseBook] = useState(true);
+  const [overlay, setOverlay] = useState(true);
+  const [lastResult, setLastResult] = useState('');
 
   // keep refs in sync
   useEffect(() => { boardRef.current = board; }, [board]);
   useEffect(() => { playerRef.current = player; }, [player]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
+  useEffect(() => { overlayRef.current = overlay; }, [overlay]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -80,6 +96,8 @@ const Reversi = () => {
     if (saved) {
       try { setWins(JSON.parse(saved)); } catch { /* ignore */ }
     }
+    const last = window.localStorage.getItem('reversiLastResult');
+    if (last) setLastResult(last);
   }, []);
 
   // persist wins
@@ -87,6 +105,12 @@ const Reversi = () => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem('reversiWins', JSON.stringify(wins));
   }, [wins]);
+
+  // persist last result
+  useEffect(() => {
+    if (typeof window === 'undefined' || !lastResult) return;
+    window.localStorage.setItem('reversiLastResult', lastResult);
+  }, [lastResult]);
 
   const playSound = () => {
     if (!sound) return;
@@ -229,13 +253,22 @@ const Reversi = () => {
           ctx.stroke();
         });
       }
-      if (!pausedRef.current) {
+      if (!pausedRef.current && overlayRef.current) {
         ctx.fillStyle = '#ffff00';
         Object.keys(legalRef.current).forEach((key) => {
           const [r, c] = key.split('-').map(Number);
           ctx.beginPath();
           ctx.arc(c * CELL + CELL / 2, r * CELL + CELL / 2, 4, 0, Math.PI * 2);
           ctx.fill();
+          const score = moveMobilityRef.current[key];
+          if (score !== undefined) {
+            ctx.fillStyle = '#000';
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(score, c * CELL + CELL / 2, r * CELL + CELL / 2);
+            ctx.fillStyle = '#ffff00';
+          }
         });
       }
     };
@@ -252,6 +285,14 @@ const Reversi = () => {
     const moves = computeLegalMoves(board, player);
     legalRef.current = moves;
 
+    const opp = player === 'B' ? 'W' : 'B';
+    const scores = {};
+    Object.entries(moves).forEach(([key, flips]) => {
+      const [r, c] = key.split('-').map(Number);
+      const next = applyMove(board, r, c, player, flips);
+      scores[key] = Object.keys(computeLegalMoves(next, opp)).length;
+    });
+    moveMobilityRef.current = scores;
     const playerMoves = Object.keys(computeLegalMoves(board, 'B')).length;
     const aiMoves = Object.keys(computeLegalMoves(board, 'W')).length;
     setMobility({ player: playerMoves, ai: aiMoves });
@@ -275,11 +316,14 @@ const Reversi = () => {
         if (black > white) {
           setWins((w) => ({ ...w, player: w.player + 1 }));
           setMessage('You win!');
+          setLastResult('Win');
         } else if (white > black) {
           setWins((w) => ({ ...w, ai: w.ai + 1 }));
           setMessage('AI wins!');
+          setLastResult('Loss');
         } else {
           setMessage('Draw!');
+          setLastResult('Draw');
         }
       } else {
         setPlayer(opp); // pass turn
@@ -369,6 +413,7 @@ const Reversi = () => {
         className="bg-green-700"
       />
       <div className="mt-2">Wins - You: {wins.player} | AI: {wins.ai}</div>
+      <div className="mt-1">Last: {lastResult || 'N/A'}</div>
       <div className="mt-1">Mobility - You: {mobility.player} | AI: {mobility.ai}</div>
       <div className="mt-1" role="status" aria-live="polite">{message}</div>
       <div className="mt-1 text-sm text-gray-300">{tip}</div>
@@ -390,6 +435,12 @@ const Reversi = () => {
           onClick={() => setSound((s) => !s)}
         >
           {sound ? 'Sound: On' : 'Sound: Off'}
+        </button>
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setOverlay((o) => !o)}
+        >
+          {overlay ? 'Overlay: On' : 'Overlay: Off'}
         </button>
         <select
           className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
