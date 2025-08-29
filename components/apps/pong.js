@@ -680,6 +680,7 @@ const PongInner = () => {
               : `Player: ${scores.player} | Opponent: ${scores.opponent}`}
           </div>
           <div className="mt-1">Games: {match.player} | {match.opponent}</div>
+          <div className="mt-1">Rally: {rally}</div>
           {matchWinner && (
             <div className="mt-1 text-lg">Winner: {matchWinner}</div>
           )}
