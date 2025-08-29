@@ -140,6 +140,7 @@ const ReconNG = () => {
   const [view, setView] = useState('run');
   const [marketplace, setMarketplace] = useState([]);
   const [apiKeys, setApiKeys] = usePersistentState('reconng-api-keys', {});
+  const [showApiKeys, setShowApiKeys] = useState({});
   const [workspaces, setWorkspaces] = useState([createWorkspace(0)]);
   const [activeWs, setActiveWs] = useState(0);
   const [ariaMessage, setAriaMessage] = useState('');
@@ -599,13 +600,24 @@ const ReconNG = () => {
           {allModules.map((m) => (
             <div key={m} className="mb-2">
               <label className="block mb-1">{`${m} API Key`}</label>
-              <input
-                type="text"
-                value={apiKeys[m] || ''}
-                onChange={(e) => setApiKeys({ ...apiKeys, [m]: e.target.value })}
-                className="w-full bg-gray-800 px-2 py-1"
-                placeholder={`${m} API Key`}
-              />
+              <div className="flex">
+                <input
+                  type={showApiKeys[m] ? 'text' : 'password'}
+                  value={apiKeys[m] || ''}
+                  onChange={(e) => setApiKeys({ ...apiKeys, [m]: e.target.value })}
+                  className="flex-1 bg-gray-800 px-2 py-1"
+                  placeholder={`${m} API Key`}
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowApiKeys({ ...showApiKeys, [m]: !showApiKeys[m] })
+                  }
+                  className="ml-2 px-2 py-1 bg-gray-700"
+                >
+                  {showApiKeys[m] ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </div>
           ))}
         </div>
