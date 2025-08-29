@@ -1,7 +1,7 @@
 'use client';
 
-import GhidraApp from '../../components/apps/ghidra';
+import DemoRunner from './components/DemoRunner';
 
 export default function GhidraPage() {
-  return <GhidraApp />;
+  return <DemoRunner />;
 }
