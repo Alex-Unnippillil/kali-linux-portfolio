@@ -73,7 +73,7 @@ const CarRacer = () => {
   const startTimeRef = useRef(0);
 
   const audioCtxRef = useRef(null);
-  const playBeep = () => {
+  const playBeep = React.useCallback(() => {
     if (!soundRef.current || typeof window === 'undefined') return;
     if (!audioCtxRef.current)
       audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -86,7 +86,7 @@ const CarRacer = () => {
     osc.frequency.value = 440;
     osc.start();
     osc.stop(ctx.currentTime + 0.1);
-  };
+  }, [soundRef, audioCtxRef]);
 
   useEffect(() => {
     const stored = localStorage.getItem('car_racer_high');
@@ -361,7 +361,7 @@ const CarRacer = () => {
       cancelAnimationFrame(req);
       if (worker) worker.terminate();
     };
-  }, [canvasRef, highScore]);
+  }, [canvasRef, highScore, playBeep]);
 
   const saveGhostRun = () => {
     if (ghostRunRef.current.length > 1) {
@@ -370,7 +370,7 @@ const CarRacer = () => {
     }
   };
 
-  const registerDrift = () => {
+  const registerDrift = React.useCallback(() => {
     const now = performance.now() / 1000;
     if (now - lastLaneChangeRef.current < DRIFT_WINDOW) {
       driftComboRef.current += 1;
@@ -383,19 +383,22 @@ const CarRacer = () => {
     setScore(Math.floor(scoreRef.current));
     setDriftCombo(driftComboRef.current);
     setTimeout(() => setDriftCombo(0), 1000);
-  };
+  }, [lastLaneChangeRef, driftComboRef, scoreRef, setScore, setDriftCombo]);
 
-  const recordLaneChange = () => {
+  const recordLaneChange = React.useCallback(() => {
     const t = (performance.now() - startTimeRef.current) / 1000;
     ghostRunRef.current.push({ t, lane: car.current.lane });
     registerDrift();
-  };
+  }, [registerDrift, startTimeRef, car, ghostRunRef]);
 
-  const canSwitch = (newLane) =>
-    !laneAssistRef.current ||
-    !obstaclesRef.current.some((o) =>
-      checkCollision({ lane: newLane, y: car.current.y, height: CAR_HEIGHT }, o)
-    );
+  const canSwitch = React.useCallback(
+    (newLane) =>
+      !laneAssistRef.current ||
+      !obstaclesRef.current.some((o) =>
+        checkCollision({ lane: newLane, y: car.current.y, height: CAR_HEIGHT }, o)
+      ),
+    [laneAssistRef, obstaclesRef, car]
+  );
 
   const moveLeft = React.useCallback(() => {
     const newLane = car.current.lane - 1;
@@ -404,7 +407,7 @@ const CarRacer = () => {
       playBeep();
       recordLaneChange();
     }
-  }, []);
+  }, [canSwitch, playBeep, recordLaneChange, car]);
 
   const moveRight = React.useCallback(() => {
     const newLane = car.current.lane + 1;
@@ -413,7 +416,7 @@ const CarRacer = () => {
       playBeep();
       recordLaneChange();
     }
-  }, []);
+  }, [canSwitch, playBeep, recordLaneChange, car]);
 
   const triggerBoost = React.useCallback(() => {
     if (reduceMotionRef.current) return;
