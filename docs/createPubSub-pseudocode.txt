@@ -1,0 +1,12 @@
+Pseudo-code for createPubSub function (from utils/pubsub.ts):
+
+1. Initialize an empty map named `channels` to hold topics and their subscribers.
+2. Provide a `publish(topic, data)` method:
+   a. Retrieve the set of callbacks `subs` for the given `topic` from `channels`.
+   b. If `subs` exists, invoke each callback with `data`.
+3. Provide a `subscribe(topic, cb)` method:
+   a. Retrieve the set `subs` for the `topic` from `channels`.
+   b. If no set exists, create a new empty set and store it in `channels` for the `topic`.
+   c. Add the callback `cb` to `subs`.
+   d. Return a function that, when called, removes `cb` from `subs`.
+4. Return an object containing the `publish` and `subscribe` methods.
