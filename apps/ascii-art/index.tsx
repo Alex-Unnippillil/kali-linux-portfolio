@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, ChangeEvent } from 'react';
+import { useState, useEffect, useRef, useCallback, ChangeEvent } from 'react';
 import figlet from 'figlet';
 import Standard from 'figlet/importable-fonts/Standard.js';
 import Slant from 'figlet/importable-fonts/Slant.js';
@@ -25,13 +25,14 @@ const AsciiArtApp = () => {
   const router = useRouter();
   const [tab, setTab] = useState<'text' | 'image'>('text');
   const [text, setText] = useState('');
-    const [font, setFont] = useState<figlet.Fonts>('Standard');
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const [font, setFont] = useState<figlet.Fonts>('Standard');
   const [output, setOutput] = useState('');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [imgOutput, setImgOutput] = useState('');
-    const [brightness, setBrightness] = useState(0); // -1 to 1
-    const [contrast, setContrast] = useState(1); // 0 to 2
+  const [imgOutput, setImgOutput] = useState('');
+  const [brightness, setBrightness] = useState(0); // -1 to 1
+  const [contrast, setContrast] = useState(1); // 0 to 2
 
     useEffect(() => {
       figlet.parseFont('Standard', Standard);
@@ -53,6 +54,7 @@ const AsciiArtApp = () => {
       const ct = parseFloat(c);
       if (!Number.isNaN(ct) && ct >= 0 && ct <= 2) setContrast(ct);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady]);
 
   // update query string permalink
@@ -66,7 +68,15 @@ const AsciiArtApp = () => {
     const qs = params.toString();
     const url = qs ? `${router.pathname}?${qs}` : router.pathname;
     router.replace(url, undefined, { shallow: true });
-  }, [text, font, brightness, contrast]);
+  }, [router, text, font, brightness, contrast]);
+
+  // auto resize textarea based on content
+  useEffect(() => {
+    const el = textAreaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [text]);
 
   // render text ascii
   useEffect(() => {
@@ -106,7 +116,7 @@ const AsciiArtApp = () => {
     img.src = URL.createObjectURL(file);
   };
 
-  const renderImageAscii = () => {
+  const renderImageAscii = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -127,11 +137,11 @@ const AsciiArtApp = () => {
       result += '\n';
     }
     setImgOutput(result);
-  };
+  }, [brightness, contrast]);
 
   useEffect(() => {
     renderImageAscii();
-  }, [brightness, contrast]);
+  }, [renderImageAscii]);
 
   return (
     <div className="p-4 bg-gray-900 text-white h-full overflow-auto font-mono">
@@ -151,9 +161,10 @@ const AsciiArtApp = () => {
       </div>
       {tab === 'text' && (
         <div className="flex flex-col gap-2">
-          <input
-            type="text"
-            className="px-2 py-1 text-black rounded"
+          <textarea
+            ref={textAreaRef}
+            rows={1}
+            className="px-2 py-1 text-black rounded resize-none overflow-hidden"
             placeholder="Enter text"
             value={text}
             onChange={(e) => setText(e.target.value)}
