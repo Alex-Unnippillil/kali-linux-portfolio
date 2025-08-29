@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
+import projectsData from '../../data/projects.json';
 
 interface Project {
   id: number;
@@ -10,34 +12,80 @@ interface Project {
   thumbnail: string;
   repo: string;
   demo: string;
+  snippet: string;
+  language: string;
 }
 
 interface Props {
   openApp?: (id: string) => void;
 }
 
+const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
+
+const STORAGE_KEY = 'project-gallery-filters';
+const STORAGE_FILE = 'project-gallery-filters.json';
+
 const ProjectGallery: React.FC<Props> = ({ openApp }) => {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const projects: Project[] = projectsData as Project[];
   const [search, setSearch] = useState('');
   const [stack, setStack] = useState('');
   const [year, setYear] = useState('');
   const [type, setType] = useState('');
   const [ariaMessage, setAriaMessage] = useState('');
 
+  const readFilters = async () => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      /* ignore */
+    }
+    try {
+      // @ts-ignore - OPFS not yet in TypeScript libs
+      const root = await navigator.storage?.getDirectory();
+      const handle = await root?.getFileHandle(STORAGE_FILE);
+      const file = await handle?.getFile();
+      const text = await file?.text();
+      return text ? JSON.parse(text) : {};
+    } catch {
+      /* ignore */
+    }
+    return {};
+  };
+
+  const writeFilters = async (data: {
+    search: string;
+    stack: string;
+    year: string;
+    type: string;
+  }) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      return;
+    } catch {
+      /* ignore */
+    }
+    try {
+      // @ts-ignore - OPFS not yet in TypeScript libs
+      const root = await navigator.storage?.getDirectory();
+      const handle = await root?.getFileHandle(STORAGE_FILE, { create: true });
+      const writable = await handle?.createWritable();
+      await writable?.write(JSON.stringify(data));
+      await writable?.close();
+    } catch {
+      /* ignore */
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch('/projects.json');
-        const data = await res.json();
-        setProjects(data);
-        setAriaMessage(`Showing ${data.length} projects`);
-      } catch {
-        setProjects([]);
-        setAriaMessage('Failed to load projects');
-      }
-    };
-    load();
-  }, []);
+    readFilters().then((data) => {
+      setSearch(data.search || '');
+      setStack(data.stack || '');
+      setYear(data.year || '');
+      setType(data.type || '');
+      setAriaMessage(`Showing ${projects.length} projects`);
+    });
+  }, [projects.length]);
 
   const stacks = useMemo(
     () => Array.from(new Set(projects.flatMap((p) => p.stack))),
@@ -65,6 +113,10 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       ),
     [projects, stack, year, type, search]
   );
+
+  useEffect(() => {
+    writeFilters({ search, stack, year, type });
+  }, [search, stack, year, type]);
 
   useEffect(() => {
     setAriaMessage(
@@ -140,12 +192,23 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
             key={project.id}
             className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
           >
-            <img
-              src={project.thumbnail}
-              alt={project.title}
-              className="w-full h-48 object-cover"
-              loading="lazy"
-            />
+            <div className="flex flex-col md:flex-row h-48">
+              <img
+                src={project.thumbnail}
+                alt={project.title}
+                className="w-full md:w-1/2 h-48 object-cover"
+                loading="lazy"
+              />
+              <div className="w-full md:w-1/2 h-48">
+                <Editor
+                  height="100%"
+                  theme="vs-dark"
+                  language={project.language}
+                  value={project.snippet}
+                  options={{ readOnly: true, minimap: { enabled: false } }}
+                />
+              </div>
+            </div>
             <div className="p-4 space-y-2">
               <h3 className="text-lg font-semibold">{project.title}</h3>
               <p className="text-sm">{project.description}</p>

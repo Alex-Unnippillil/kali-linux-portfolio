@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@emailjs/browser": "^3.10.0",
+    "@monaco-editor/react": "^4.7.0",
     "@mozilla/readability": "^0.6.0",
     "@vercel/analytics": "^1.5.0",
     "@xterm/addon-fit": "^0.10.0",
@@ -44,6 +45,7 @@
     "idb-keyval": "^6.2.1",
     "mathjs": "^14.6.0",
     "matter-js": "0.20.0",
+    "monaco-editor": "^0.52.2",
     "next": "^15.0.0",
     "pdfjs-dist": "^5.4.54",
     "phaser": "3.70.0",

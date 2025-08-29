@@ -3,49 +3,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ProjectGallery from '../components/apps/project-gallery';
 
 jest.mock('react-ga4', () => ({ event: jest.fn() }));
+jest.mock('@monaco-editor/react', () => () => <div />);
 
 describe('ProjectGallery', () => {
   beforeEach(() => {
-    // @ts-ignore
-    global.fetch = jest.fn(() =>
-      Promise.resolve({
-        json: () =>
-          Promise.resolve([
-            {
-              id: 1,
-              title: 'Alpha',
-              description: 'desc1',
-              stack: ['JS'],
-              year: 2021,
-              type: 'web',
-              thumbnail: '',
-              repo: 'r1',
-              demo: 'd1',
-            },
-            {
-              id: 2,
-              title: 'Beta',
-              description: 'desc2',
-              stack: ['TS'],
-              year: 2022,
-              type: 'app',
-              thumbnail: '',
-              repo: 'r2',
-              demo: 'd2',
-            },
-          ]),
-      })
-    );
-  });
-
-  afterEach(() => {
-    // @ts-ignore
-    fetch.mockClear();
+    localStorage.clear();
   });
 
   it('filters projects and updates live region', async () => {
     render(<ProjectGallery />);
-    await waitFor(() => screen.getByText('Alpha'));
+    await screen.findByText('Alpha');
     fireEvent.change(screen.getByLabelText('Stack'), {
       target: { value: 'TS' },
     });
@@ -59,7 +26,7 @@ describe('ProjectGallery', () => {
 
   it('filters when clicking tag chip inside a project', async () => {
     render(<ProjectGallery />);
-    await waitFor(() => screen.getByText('Alpha'));
+    await screen.findByText('Alpha');
     fireEvent.click(
       screen.getAllByRole('button', { name: 'JS' })[0] // chip inside Alpha
     );
@@ -69,5 +36,29 @@ describe('ProjectGallery', () => {
     expect(screen.getByText(/Showing/)).toHaveTextContent(
       'Showing 1 project filtered by JS'
     );
+  });
+
+  it('persists filter selection to localStorage', async () => {
+    render(<ProjectGallery />);
+    await screen.findByText('Alpha');
+    fireEvent.change(screen.getByLabelText('Stack'), {
+      target: { value: 'TS' },
+    });
+    await waitFor(() => {
+      const stored = JSON.parse(
+        localStorage.getItem('project-gallery-filters') || '{}'
+      );
+      expect(stored.stack).toBe('TS');
+    });
+  });
+
+  it('loads persisted filters from localStorage', async () => {
+    localStorage.setItem(
+      'project-gallery-filters',
+      JSON.stringify({ search: '', stack: 'TS', year: '', type: '' })
+    );
+    render(<ProjectGallery />);
+    await screen.findByText('Beta');
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
   });
 });
