@@ -62,6 +62,14 @@ function setProgrammerMode(on) {
 
 progToggle?.addEventListener('click', () => setProgrammerMode(!programmerMode));
 
+document.addEventListener('mode-change', (e) => {
+  const mode = e.detail;
+  setProgrammerMode(mode === 'programmer');
+  scientificMode = mode === 'scientific';
+  scientific?.classList.toggle('hidden', !scientificMode);
+  sciToggle?.setAttribute('aria-pressed', scientificMode.toString());
+});
+
 historyToggle?.addEventListener('click', () => {
   const isHidden = historyEl.classList.toggle('hidden');
   historyToggle?.setAttribute('aria-pressed', (!isHidden).toString());
@@ -513,6 +521,7 @@ function addHistory(expr, result) {
   history = history.slice(0, 10);
   saveHistory();
   renderHistory();
+  document.dispatchEvent(new CustomEvent('tape-add', { detail: { expr, result } }));
 }
 
 function loadHistory() {
