@@ -32,6 +32,7 @@ const Checkers = () => {
   const [ariaMessage, setAriaMessage] = useState('');
   const [cursor, setCursor] = useState<[number, number]>([0, 0]);
   const [showLegal, setShowLegal] = useState(false);
+  const [rule, setRule] = useState<'forced' | 'relaxed'>('forced');
   const boardRef = useRef<HTMLDivElement>(null);
 
   const workerRef = useRef<Worker | null>(null);
@@ -125,12 +126,16 @@ const Checkers = () => {
       setDraw(state.draw);
       setLastMove(state.lastMove || []);
       if (state.turn === 'black') {
-        setTimeout(() =>
-          workerRef.current?.postMessage({
-            board: state.board,
-            color: 'black',
-            maxDepth: 8,
-          }), 0);
+        setTimeout(
+          () =>
+            workerRef.current?.postMessage({
+              board: state.board,
+              color: 'black',
+              maxDepth: 8,
+              enforceCapture: rule === 'forced',
+            }),
+          0,
+        );
       }
     }
   }, []);
@@ -149,14 +154,17 @@ const Checkers = () => {
     localStorage.setItem('checkersState', JSON.stringify(state));
   }, [board, turn, history, future, noCapture, winner, draw, lastMove]);
 
-  const allMoves = useMemo(() => getAllMoves(board, turn), [board, turn]);
+  const allMoves = useMemo(
+    () => getAllMoves(board, turn, rule === 'forced'),
+    [board, turn, rule],
+  );
 
   const selectPiece = (r: number, c: number) => {
     const piece = board[r][c];
     if (winner || draw || !piece || piece.color !== turn) return;
     setCursor([r, c]);
-    const pieceMoves = getPieceMoves(board, r, c);
-    const mustCapture = allMoves.some((m) => m.captured);
+    const pieceMoves = getPieceMoves(board, r, c, rule === 'forced');
+    const mustCapture = rule === 'forced' && allMoves.some((m) => m.captured);
     const filtered = mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
     if (filtered.length) {
       setSelected([r, c]);
@@ -230,13 +238,18 @@ const Checkers = () => {
       pathRef.current = [];
       return;
     }
-    if (!hasMoves(newBoard, next)) {
+    if (!hasMoves(newBoard, next, rule === 'forced')) {
       setWinner(turn);
       ReactGA.event({ category: 'Checkers', action: 'game_over', label: turn });
     } else {
       setTurn(next);
       if (next === 'black') {
-        workerRef.current?.postMessage({ board: newBoard, color: 'black', maxDepth: 8 });
+        workerRef.current?.postMessage({
+          board: newBoard,
+          color: 'black',
+          maxDepth: 8,
+          enforceCapture: rule === 'forced',
+        });
       }
     }
     setSelected(null);
@@ -288,6 +301,14 @@ const Checkers = () => {
     if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
     setAriaMessage('');
     pathRef.current = [];
+    if (prev.turn === 'black') {
+      workerRef.current?.postMessage({
+        board: prev.board,
+        color: 'black',
+        maxDepth: 8,
+        enforceCapture: rule === 'forced',
+      });
+    }
     focusBoard();
   };
 
@@ -309,14 +330,24 @@ const Checkers = () => {
     setAriaMessage('');
     pathRef.current = [];
     if (next.turn === 'black') {
-      workerRef.current?.postMessage({ board: next.board, color: 'black', maxDepth: 8 });
+      workerRef.current?.postMessage({
+        board: next.board,
+        color: 'black',
+        maxDepth: 8,
+        enforceCapture: rule === 'forced',
+      });
     }
     focusBoard();
   };
 
   const hintMove = () => {
     hintRequest.current = true;
-    workerRef.current?.postMessage({ board, color: turn, maxDepth: 8 });
+    workerRef.current?.postMessage({
+      board,
+      color: turn,
+      maxDepth: 8,
+      enforceCapture: rule === 'forced',
+    });
     focusBoard();
   };
 
@@ -324,6 +355,27 @@ const Checkers = () => {
     setShowLegal((s) => !s);
     setAriaMessage(showLegal ? 'Hiding legal moves' : 'Showing legal moves');
     focusBoard();
+  };
+
+  const exportMoves = () => {
+    const toSquare = ([r, c]: [number, number]) =>
+      `${String.fromCharCode(97 + c)}${8 - r}`;
+    const moveStr = history
+      .map((h, i) => {
+        const capture = h.move.some(
+          (p, idx) => idx > 0 && Math.abs(p[0] - h.move[idx - 1][0]) === 2,
+        );
+        const path = h.move.map(toSquare).join(capture ? 'x' : '-');
+        return `${i + 1}. ${path}`;
+      })
+      .join('\n');
+    const blob = new Blob([moveStr], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'checkers-moves.txt';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const focusBoard = () => boardRef.current?.focus();
@@ -449,6 +501,17 @@ const Checkers = () => {
         ) : (
           <>
             <span className="mr-2">Turn: {turn}</span>
+            <label>
+              Rules:
+              <select
+                className="ml-1 bg-gray-700 px-1"
+                value={rule}
+                onChange={(e) => setRule(e.target.value as 'forced' | 'relaxed')}
+              >
+                <option value="forced">Forced Capture</option>
+                <option value="relaxed">Capture Optional</option>
+              </select>
+            </label>
             <button
               className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
               onClick={undo}
@@ -476,6 +539,12 @@ const Checkers = () => {
             </button>
           </>
         )}
+        <button
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={exportMoves}
+        >
+          Export Moves
+        </button>
       </div>
     </div>
   );
