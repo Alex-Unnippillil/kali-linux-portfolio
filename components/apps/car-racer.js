@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
+import { CAR_SKINS, loadSkinAssets } from '../../apps/games/car-racer/customization';
 
 // Canvas dimensions
 const WIDTH = 300;
@@ -46,8 +47,15 @@ const CarRacer = () => {
   const [score, setScore] = useState(0);
   const scoreRef = useRef(0);
   const [highScore, setHighScore] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(false);
+  const [paused, setPaused] = useState(true);
+  const pausedRef = useRef(true);
+  const [showCustomization, setShowCustomization] = useState(true);
+  const [skin, setSkin] = useState(() =>
+    typeof window !== 'undefined'
+      ? localStorage.getItem('car_racer_skin') || CAR_SKINS[0].key
+      : CAR_SKINS[0].key,
+  );
+  const [skinAssets, setSkinAssets] = useState({});
   const [sound, setSound] = useState(true);
   const soundRef = useRef(true);
   const runningRef = useRef(true);
@@ -71,6 +79,8 @@ const CarRacer = () => {
   const ghostPosRef = useRef({ lane: 1, y: HEIGHT - CAR_HEIGHT - 10 });
   const ghostIndexRef = useRef(0);
   const startTimeRef = useRef(0);
+
+  const currentSkin = CAR_SKINS.find((s) => s.key === skin) || CAR_SKINS[0];
 
   const audioCtxRef = useRef(null);
   const playBeep = React.useCallback(() => {
@@ -116,6 +126,16 @@ const CarRacer = () => {
     startTimeRef.current = performance.now();
     ghostRunRef.current = [{ t: 0, lane: car.current.lane }];
   }, []);
+
+  useEffect(() => {
+    loadSkinAssets().then(setSkinAssets);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('car_racer_skin', skin);
+    }
+  }, [skin]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -190,7 +210,7 @@ const CarRacer = () => {
       }
 
       const carX = state.car.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
-      ctx.fillStyle = 'red';
+      ctx.fillStyle = state.carColor || 'red';
       ctx.fillRect(carX, state.car.y, CAR_WIDTH, CAR_HEIGHT);
 
       ctx.fillStyle = 'blue';
@@ -203,6 +223,7 @@ const CarRacer = () => {
     const postState = () => {
       const state = {
         car: { lane: car.current.lane, y: car.current.y },
+        carColor: currentSkin.color,
         obstacles: obstaclesRef.current.map((o) => ({ lane: o.lane, y: o.y })),
         roadside: reduceMotionRef.current
           ? null
@@ -440,7 +461,7 @@ const CarRacer = () => {
     return () => window.removeEventListener('keydown', handle);
   }, [moveLeft, moveRight, triggerBoost]);
 
-  const reset = () => {
+  const resetGame = () => {
     if (scoreRef.current > highScore) {
       setHighScore(scoreRef.current);
       localStorage.setItem('car_racer_high', `${scoreRef.current}`);
@@ -465,6 +486,12 @@ const CarRacer = () => {
       ? ghostDataRef.current[0].lane
       : car.current.lane;
     setDriftCombo(0);
+  };
+
+  const openCustomization = () => {
+    pausedRef.current = true;
+    setPaused(true);
+    setShowCustomization(true);
   };
 
   const togglePause = () => {
@@ -492,9 +519,39 @@ const CarRacer = () => {
     }
   };
 
+  const startRace = () => {
+    resetGame();
+    setShowCustomization(false);
+  };
+
   return (
     <div className="h-full w-full relative text-white select-none">
       <canvas ref={canvasRef} className="h-full w-full bg-black" />
+      {showCustomization && (
+        <div className="absolute inset-0 bg-black bg-opacity-60 z-20 flex flex-col items-center justify-center space-y-4">
+          <div className="flex space-x-4">
+            {CAR_SKINS.map((s) => (
+              <button
+                key={s.key}
+                onClick={() => setSkin(s.key)}
+                className={`border-2 ${skin === s.key ? 'border-white' : 'border-transparent'}`}
+              >
+                <img
+                  src={skinAssets[s.key]?.src || s.src}
+                  alt={s.label}
+                  className="h-12 w-8"
+                />
+              </button>
+            ))}
+          </div>
+          <button
+            className="bg-gray-700 px-3 py-1"
+            onClick={startRace}
+          >
+            Start
+          </button>
+        </div>
+      )}
       <div
         className="absolute top-2 left-2 text-sm space-y-1 z-10"
         aria-live="polite"
@@ -509,7 +566,7 @@ const CarRacer = () => {
       <div className="absolute bottom-2 left-2 space-x-2 z-10 text-sm">
         <button
           className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
-          onClick={reset}
+          onClick={openCustomization}
         >
           Reset
         </button>
