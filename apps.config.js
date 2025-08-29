@@ -13,6 +13,12 @@ import { displayResourceMonitor } from './components/apps/resource_monitor';
 import { displayScreenRecorder } from './components/apps/screen-recorder';
 import { displayNikto } from './components/apps/nikto';
 
+export const chromeDefaultTiles = [
+  { title: 'MDN', url: 'https://developer.mozilla.org/' },
+  { title: 'Wikipedia', url: 'https://en.wikipedia.org' },
+  { title: 'Example', url: 'https://example.com' },
+];
+
 // Dynamic applications and games
 const TerminalApp = createDynamicApp('terminal', 'Terminal');
 // VSCode app uses a Stack iframe, so no editor dependencies are required

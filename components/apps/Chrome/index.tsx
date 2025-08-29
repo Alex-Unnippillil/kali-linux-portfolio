@@ -11,6 +11,11 @@ import DOMPurify from 'dompurify';
 import AddressBar from '../chrome/AddressBar';
 import { getCachedFavicon, cacheFavicon } from '../chrome/bookmarks';
 
+interface Tile {
+  title: string;
+  url: string;
+}
+
 interface TabData {
   id: number;
   url: string;
@@ -22,7 +27,7 @@ interface TabData {
 }
 
 const STORAGE_KEY = 'chrome-tabs';
-const HOME_URL = 'https://www.google.com/webhp?igu=1';
+const HOME_URL = 'home://start';
 const SANDBOX_FLAGS = ['allow-scripts', 'allow-forms', 'allow-popups'] as const;
 const CSP = "default-src 'self'; script-src 'none'; connect-src 'none';";
 const DEMO_ORIGINS = [
@@ -88,7 +93,46 @@ const Chrome: React.FC = () => {
   const [tabQuery, setTabQuery] = useState('');
   const [overflowing, setOverflowing] = useState(false);
   const draggingId = useRef<number | null>(null);
+  const [tiles, setTiles] = useState<Tile[]>([]);
+  const [editingTiles, setEditingTiles] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newUrl, setNewUrl] = useState('');
+  const tileFileInput = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      let defaults: Tile[] = [];
+      try {
+        const mod = await import('../../../apps.config');
+        defaults = mod.chromeDefaultTiles || [];
+      } catch {}
+      let stored: Tile[] | null = null;
+      try {
+        if (typeof navigator !== 'undefined' && navigator.storage?.getDirectory) {
+          const root = await navigator.storage.getDirectory();
+          const file = await root.getFileHandle('chrome-tiles.json');
+          const data = await file.getFile();
+          stored = JSON.parse(await data.text());
+        }
+      } catch {}
+      setTiles(stored && Array.isArray(stored) && stored.length ? stored : defaults);
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (!(typeof navigator !== 'undefined' && navigator.storage?.getDirectory)) return;
+        const root = await navigator.storage.getDirectory();
+        const file = await root.getFileHandle('chrome-tiles.json', { create: true });
+        const writable = await file.createWritable();
+        await writable.write(JSON.stringify(tiles));
+        await writable.close();
+      } catch {}
+    })();
+  }, [tiles]);
   const isAllowed = useCallback((url: string) => {
+    if (url === HOME_URL) return true;
     try {
       const origin = new URL(url).origin;
       return DEMO_ORIGINS.includes(origin);
@@ -392,6 +436,51 @@ const Chrome: React.FC = () => {
     }
   }, [activeId, activeTab.muted, setIframeMuted]);
 
+  const moveTile = useCallback((idx: number, delta: number) => {
+    setTiles((prev) => {
+      const next = [...prev];
+      const n = idx + delta;
+      if (n < 0 || n >= next.length) return prev;
+      const [item] = next.splice(idx, 1);
+      next.splice(n, 0, item);
+      return next;
+    });
+  }, []);
+
+  const removeTile = useCallback((idx: number) => {
+    setTiles((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const addTile = useCallback(() => {
+    if (!newUrl.trim()) return;
+    setTiles((prev) => [...prev, { title: newTitle || newUrl, url: newUrl }]);
+    setNewTitle('');
+    setNewUrl('');
+  }, [newTitle, newUrl]);
+
+  const exportTiles = useCallback(() => {
+    const blob = new Blob([JSON.stringify(tiles, null, 2)], {
+      type: 'application/json',
+    });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'tiles.json';
+    a.click();
+  }, [tiles]);
+
+  const importTiles = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) setTiles(parsed);
+      } catch {}
+    },
+    [],
+  );
+
   const screenshot = useCallback(async () => {
     if (!iframeRef.current) return;
     try {
@@ -404,6 +493,104 @@ const Chrome: React.FC = () => {
       /* ignore */
     }
   }, []);
+
+  const homeGrid = (
+    <div className="p-4 space-y-2 text-black">
+      <div className="flex items-center justify-between">
+        <span className="font-bold">Tiles</span>
+        <div className="space-x-2">
+          <button
+            onClick={() => setEditingTiles((e) => !e)}
+            className="px-2 py-1 bg-gray-200 rounded"
+          >
+            {editingTiles ? 'Done' : 'Edit'}
+          </button>
+          {editingTiles && (
+            <>
+              <button
+                onClick={exportTiles}
+                className="px-2 py-1 bg-gray-200 rounded"
+              >
+                Export
+              </button>
+              <button
+                onClick={() => tileFileInput.current?.click()}
+                className="px-2 py-1 bg-gray-200 rounded"
+              >
+                Import
+              </button>
+              <input
+                ref={tileFileInput}
+                type="file"
+                accept="application/json"
+                onChange={importTiles}
+                className="hidden"
+              />
+            </>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        {tiles.map((t, i) => (
+          <div key={i} className="flex flex-col items-center">
+            {editingTiles && (
+              <div className="mb-1 space-x-1">
+                <button onClick={() => moveTile(i, -1)}>↑</button>
+                <button onClick={() => moveTile(i, 1)}>↓</button>
+                <button onClick={() => removeTile(i)}>×</button>
+              </div>
+            )}
+            {(() => {
+              try {
+                const origin = new URL(t.url).origin;
+                return (
+                  <img
+                    src={`https://www.google.com/s2/favicons?sz=64&domain_url=${origin}`}
+                    alt=""
+                    className="w-8 h-8 mb-1"
+                  />
+                );
+              } catch {
+                return null;
+              }
+            })()}
+            {editingTiles ? (
+              <span>{t.title}</span>
+            ) : (
+              <button
+                onClick={() => navigate(t.url)}
+                className="text-blue-600 underline"
+              >
+                {t.title}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      {editingTiles && (
+        <div className="space-x-1">
+          <input
+            className="px-1 text-black border rounded"
+            placeholder="Title"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+          />
+          <input
+            className="px-1 text-black border rounded"
+            placeholder="URL"
+            value={newUrl}
+            onChange={(e) => setNewUrl(e.target.value)}
+          />
+          <button
+            onClick={addTile}
+            className="px-2 py-1 bg-gray-200 rounded"
+          >
+            Add
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
   const onTabStripKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -582,7 +769,9 @@ const Chrome: React.FC = () => {
         </div>
       )}
         <div className="flex-grow bg-white relative overflow-auto">
-          {articles[activeId] ? (
+          {activeTab.url === HOME_URL ? (
+            homeGrid
+          ) : articles[activeId] ? (
             <main
               style={{ maxInlineSize: '60ch', margin: 'auto' }}
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(articles[activeId] ?? '') }}
