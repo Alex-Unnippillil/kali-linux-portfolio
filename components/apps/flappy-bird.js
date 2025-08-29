@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
-import useCanvasResize from '../../hooks/useCanvasResize';
+import React, { useEffect, useRef, useState } from "react";
+import useCanvasResize from "../../hooks/useCanvasResize";
 import {
   BIRD_SKINS,
   BIRD_ASSETS,
   PIPE_SKINS,
-} from '../../apps/games/flappy-bird/skins';
+} from "../../apps/games/flappy-bird/skins";
 
 const WIDTH = 400;
 const HEIGHT = 300;
@@ -27,9 +27,9 @@ const FlappyBird = () => {
 
   useEffect(() => {
     try {
-      setSkin(parseInt(localStorage.getItem('flappy-bird-skin') || '0', 10));
+      setSkin(parseInt(localStorage.getItem("flappy-bird-skin") || "0", 10));
       setPipeSkinIndex(
-        parseInt(localStorage.getItem('flappy-pipe-skin') || '0', 10),
+        parseInt(localStorage.getItem("flappy-pipe-skin") || "0", 10),
       );
     } catch {
       /* ignore */
@@ -49,26 +49,26 @@ const FlappyBird = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     const width = WIDTH;
     const height = HEIGHT;
     let reduceMotion =
-      localStorage.getItem('flappy-reduced-motion') === '1' ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      localStorage.getItem("flappy-reduced-motion") === "1" ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     // mode flags
-    let practiceMode = localStorage.getItem('flappy-practice') === '1';
+    let practiceMode = localStorage.getItem("flappy-practice") === "1";
 
     // gravity variants
     const GRAVITY_VARIANTS = [
-      { name: 'Easy', value: 0.2 },
-      { name: 'Normal', value: 0.4 },
-      { name: 'Hard', value: 0.6 },
+      { name: "Easy", value: 0.2 },
+      { name: "Normal", value: 0.4 },
+      { name: "Hard", value: 0.6 },
     ];
     let gravityVariant = parseInt(
-      localStorage.getItem('flappy-gravity-variant') || '1',
+      localStorage.getItem("flappy-gravity-variant") || "1",
       10,
     );
     if (gravityVariant < 0 || gravityVariant >= GRAVITY_VARIANTS.length)
@@ -81,7 +81,7 @@ const FlappyBird = () => {
     let pipeSkin = pipeSkinIndex;
 
     // hitbox preview
-    let showHitbox = localStorage.getItem('flappy-hitbox') === '1';
+    let showHitbox = localStorage.getItem("flappy-hitbox") === "1";
 
     // physics constants
     let bird = { x: 50, y: height / 2, vy: 0 };
@@ -91,6 +91,7 @@ const FlappyBird = () => {
     const pipeWidth = 40;
     const baseGap = 80;
     const practiceGap = 120;
+    const minGap = 60;
     let gap = practiceMode ? practiceGap : baseGap;
     let pipeInterval = 100;
     const pipeSpeed = 2;
@@ -105,7 +106,7 @@ const FlappyBird = () => {
     let crashTimer = 0;
     let birdAngle = 0;
     let loopId = 0;
-    let highHz = localStorage.getItem('flappy-120hz') === '1';
+    let highHz = localStorage.getItem("flappy-120hz") === "1";
     let fps = highHz ? 120 : 60;
 
     // sky, clouds, and wind
@@ -121,7 +122,7 @@ const FlappyBird = () => {
 
     function mixColor(c1, c2, t) {
       return `rgb(${Math.round(c1[0] + (c2[0] - c1[0]) * t)},${Math.round(
-        c1[1] + (c2[1] - c1[1]) * t
+        c1[1] + (c2[1] - c1[1]) * t,
       )},${Math.round(c1[2] + (c2[2] - c1[2]) * t)})`;
     }
 
@@ -140,14 +141,20 @@ const FlappyBird = () => {
     }
 
     function initHills() {
-      hillsBack = Array.from({ length: 2 }, (_, i) => ({ x: i * width, speed: 0.3 }));
-      hillsFront = Array.from({ length: 2 }, (_, i) => ({ x: i * width, speed: 0.6 }));
+      hillsBack = Array.from({ length: 2 }, (_, i) => ({
+        x: i * width,
+        speed: 0.3,
+      }));
+      hillsFront = Array.from({ length: 2 }, (_, i) => ({
+        x: i * width,
+        speed: 0.6,
+      }));
     }
 
     function drawHills() {
-      ctx.fillStyle = '#228B22';
+      ctx.fillStyle = "#228B22";
       for (const h of hillsBack) ctx.fillRect(h.x, height - 30, width, 30);
-      ctx.fillStyle = '#006400';
+      ctx.fillStyle = "#006400";
       for (const h of hillsFront) ctx.fillRect(h.x, height - 15, width, 15);
     }
 
@@ -165,11 +172,27 @@ const FlappyBird = () => {
 
     function drawCloud(c) {
       ctx.save();
-      ctx.fillStyle = 'white';
+      ctx.fillStyle = "white";
       ctx.beginPath();
       ctx.ellipse(c.x, c.y, 20 * c.scale, 12 * c.scale, 0, 0, Math.PI * 2);
-      ctx.ellipse(c.x + 15 * c.scale, c.y + 2 * c.scale, 20 * c.scale, 12 * c.scale, 0, 0, Math.PI * 2);
-      ctx.ellipse(c.x - 15 * c.scale, c.y + 2 * c.scale, 20 * c.scale, 12 * c.scale, 0, 0, Math.PI * 2);
+      ctx.ellipse(
+        c.x + 15 * c.scale,
+        c.y + 2 * c.scale,
+        20 * c.scale,
+        12 * c.scale,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.ellipse(
+        c.x - 15 * c.scale,
+        c.y + 2 * c.scale,
+        20 * c.scale,
+        12 * c.scale,
+        0,
+        0,
+        Math.PI * 2,
+      );
       ctx.fill();
       ctx.restore();
     }
@@ -203,7 +226,7 @@ const FlappyBird = () => {
 
     function drawBackground() {
       if (reduceMotion) {
-        ctx.fillStyle = '#87CEEB';
+        ctx.fillStyle = "#87CEEB";
         ctx.fillRect(0, 0, width, height);
         skyProgress = 0;
         return;
@@ -226,7 +249,7 @@ const FlappyBird = () => {
     function drawFoliage() {
       if (reduceMotion) return;
       ctx.save();
-      ctx.strokeStyle = 'green';
+      ctx.strokeStyle = "green";
       ctx.lineWidth = 3;
       for (const f of foliage) {
         const sway = gust * 0.5 + Math.sin((frame + f.x) / 20) * 0.2;
@@ -258,47 +281,47 @@ const FlappyBird = () => {
     }
 
     // medals
-      const medalThresholds = [
-        { name: 'bronze', distance: 10 },
-        { name: 'silver', distance: 20 },
-        { name: 'gold', distance: 30 },
-      ];
-      let medals = {};
-      try {
-        medals = JSON.parse(localStorage.getItem('flappy-medals') || '{}');
-      } catch {
-        medals = {};
-      }
+    const medalThresholds = [
+      { name: "bronze", distance: 10 },
+      { name: "silver", distance: 20 },
+      { name: "gold", distance: 30 },
+    ];
+    let medals = {};
+    try {
+      medals = JSON.parse(localStorage.getItem("flappy-medals") || "{}");
+    } catch {
+      medals = {};
+    }
 
-      // records per gravity variant
-      let records = {};
-      try {
-        records = JSON.parse(localStorage.getItem('flappy-records') || '{}');
-      } catch {
-        records = {};
+    // records per gravity variant
+    let records = {};
+    try {
+      records = JSON.parse(localStorage.getItem("flappy-records") || "{}");
+    } catch {
+      records = {};
+    }
+    let best = 0;
+    let ghostRun = null;
+    function loadRecord() {
+      const key = GRAVITY_VARIANTS[gravityVariant].name;
+      const rec = records[key];
+      best = rec ? rec.score : 0;
+      ghostRun = rec ? rec.run : null;
+      bestRef.current = best;
+    }
+    loadRecord();
+    function getMedal(dist) {
+      let m = null;
+      for (const { name, distance } of medalThresholds) {
+        if (dist >= distance) m = name;
       }
-      let best = 0;
-      let ghostRun = null;
-      function loadRecord() {
-        const key = GRAVITY_VARIANTS[gravityVariant].name;
-        const rec = records[key];
-        best = rec ? rec.score : 0;
-        ghostRun = rec ? rec.run : null;
-        bestRef.current = best;
-      }
-      loadRecord();
-      function getMedal(dist) {
-        let m = null;
-        for (const { name, distance } of medalThresholds) {
-          if (dist >= distance) m = name;
-        }
       return m;
     }
     function saveMedal(dist) {
       const medal = getMedal(dist);
       if (medal) {
         medals[dist] = medal;
-        localStorage.setItem('flappy-medals', JSON.stringify(medals));
+        localStorage.setItem("flappy-medals", JSON.stringify(medals));
       }
     }
 
@@ -349,7 +372,7 @@ const FlappyBird = () => {
       reset(newSeed);
       addPipe();
       startLoop();
-      if (liveRef.current) liveRef.current.textContent = 'Score: 0';
+      if (liveRef.current) liveRef.current.textContent = "Score: 0";
     }
 
     function flap(record = true) {
@@ -372,10 +395,10 @@ const FlappyBird = () => {
         ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
         ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, height - pipe.bottom);
         // bevel
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
         ctx.fillRect(pipe.x, 0, 4, pipe.top);
         ctx.fillRect(pipe.x, pipe.bottom, 4, height - pipe.bottom);
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
         ctx.fillRect(pipe.x + pipeWidth - 4, 0, 4, pipe.top);
         ctx.fillRect(
           pipe.x + pipeWidth - 4,
@@ -387,7 +410,7 @@ const FlappyBird = () => {
         ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, 2);
         ctx.fillStyle = pipeColor;
         if (showHitbox) {
-          ctx.strokeStyle = 'red';
+          ctx.strokeStyle = "red";
           ctx.strokeRect(pipe.x, 0, pipeWidth, pipe.top);
           ctx.strokeRect(pipe.x, pipe.bottom, pipeWidth, height - pipe.bottom);
         }
@@ -398,7 +421,7 @@ const FlappyBird = () => {
       if (ghostRun && ghostFrame < ghostRun.pos.length) {
         ctx.save();
         ctx.globalAlpha = 0.3;
-        ctx.fillStyle = 'gray';
+        ctx.fillStyle = "gray";
         ctx.beginPath();
         ctx.arc(bird.x, ghostRun.pos[ghostFrame], 10, 0, Math.PI * 2);
         ctx.fill();
@@ -413,23 +436,23 @@ const FlappyBird = () => {
       if (img && img.complete) {
         ctx.drawImage(img, -10, -10, 20, 20);
       } else {
-        ctx.fillStyle = 'yellow';
+        ctx.fillStyle = "yellow";
         ctx.beginPath();
         ctx.arc(0, 0, 10, 0, Math.PI * 2);
         ctx.fill();
       }
       if (showHitbox) {
-        ctx.strokeStyle = 'red';
+        ctx.strokeStyle = "red";
         ctx.strokeRect(-10, -10, 20, 20);
       }
       ctx.restore();
 
       // HUD
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
       ctx.fillRect(5, 5, 160, 140);
-      ctx.fillStyle = '#fff';
-      ctx.font = '16px sans-serif';
-      ctx.textAlign = 'left';
+      ctx.fillStyle = "#fff";
+      ctx.font = "16px sans-serif";
+      ctx.textAlign = "left";
       let hudY = 20;
       const hudLine = (text) => {
         ctx.fillText(text, 10, hudY);
@@ -440,22 +463,29 @@ const FlappyBird = () => {
       hudLine(`Seed: ${seed}`);
       const medal = getMedal(score);
       if (medal) hudLine(`Medal: ${medal}`);
-      if (practiceMode) hudLine('Practice');
+      if (practiceMode) hudLine("Practice");
       hudLine(`Gravity: ${GRAVITY_VARIANTS[gravityVariant].name}`);
-      if (reduceMotion) hudLine('Reduced Motion');
-      if (showHitbox) hudLine('Hitbox');
+      if (reduceMotion) hudLine("Reduced Motion");
+      if (showHitbox) hudLine("Hitbox");
 
       if (!running) {
-        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.fillRect(0, 0, width, height);
-        ctx.fillStyle = 'white';
-        ctx.textAlign = 'center';
-        ctx.font = '24px sans-serif';
-        ctx.fillText('Game Over', width / 2, height / 2);
-        ctx.font = '16px sans-serif';
-        ctx.fillText('Press Space or Click to restart', width / 2, height / 2 + 30);
-        if (lastRun) ctx.fillText('Press R to replay', width / 2, height / 2 + 50);
-        ctx.textAlign = 'left';
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+        ctx.font = "24px sans-serif";
+        ctx.fillText("Game Over", width / 2, height / 2);
+        ctx.font = "16px sans-serif";
+        ctx.fillText(
+          "Press Space or Click to restart",
+          width / 2,
+          height / 2 + 30,
+        );
+        if (lastRun)
+          ctx.fillText("Press R to replay", width / 2, height / 2 + 50);
+        if (ghostRun)
+          ctx.fillText("Press Shift+R for best", width / 2, height / 2 + 70);
+        ctx.textAlign = "left";
       }
     }
 
@@ -483,9 +513,13 @@ const FlappyBird = () => {
               bestRef.current = best;
               records[GRAVITY_VARIANTS[gravityVariant].name] = {
                 score: best,
-                run: { pos: runPositions.slice() },
+                run: {
+                  pos: runPositions.slice(),
+                  flaps: flapFrames.slice(),
+                  seed,
+                },
               };
-              localStorage.setItem('flappy-records', JSON.stringify(records));
+              localStorage.setItem("flappy-records", JSON.stringify(records));
               ghostRun = records[GRAVITY_VARIANTS[gravityVariant].name].run;
             }
             lastRun = { seed, flaps: flapFrames };
@@ -505,12 +539,19 @@ const FlappyBird = () => {
       updateHills();
 
       if (frame >= nextPipeFrame) {
+        gap = practiceMode
+          ? practiceGap
+          : Math.max(minGap, baseGap - Math.floor(score / 5) * 2);
         addPipe();
         pipeInterval = Math.max(60, 100 - Math.floor(score / 5) * 5);
         nextPipeFrame = frame + pipeInterval;
       }
 
-      if (isReplaying && replayIndex < replayFlaps.length && frame === replayFlaps[replayIndex]) {
+      if (
+        isReplaying &&
+        replayIndex < replayFlaps.length &&
+        frame === replayFlaps[replayIndex]
+      ) {
         flap(false);
         replayIndex += 1;
       }
@@ -581,79 +622,86 @@ const FlappyBird = () => {
 
     function handleKey(e) {
       if (pausedRef.current) {
-        if (e.code === 'Escape' || e.code === 'Space') {
+        if (e.code === "Escape" || e.code === "Space") {
           pausedRef.current = false;
           setPaused(false);
         }
         return;
       }
 
-      if (e.code === 'Escape' && running) {
+      if (e.code === "Escape" && running) {
         pausedRef.current = true;
         setPaused(true);
         return;
       }
 
-      if (e.code === 'Space') {
+      if (e.code === "Space") {
         e.preventDefault();
         if (running) {
           flap();
         } else {
           startGame();
         }
-      } else if (e.code === 'KeyR' && !running) {
-        if (lastRun) {
+      } else if (e.code === "KeyR" && !running) {
+        if (e.shiftKey) {
+          if (ghostRun && ghostRun.seed !== undefined && ghostRun.flaps) {
+            isReplaying = true;
+            replayFlaps = ghostRun.flaps || [];
+            replayIndex = 0;
+            startGame(ghostRun.seed);
+          }
+        } else if (lastRun) {
           isReplaying = true;
           replayFlaps = lastRun.flaps;
           replayIndex = 0;
           startGame(lastRun.seed);
         }
-      } else if (e.code === 'KeyF') {
+      } else if (e.code === "KeyF") {
         highHz = !highHz;
-        localStorage.setItem('flappy-120hz', highHz ? '1' : '0');
+        localStorage.setItem("flappy-120hz", highHz ? "1" : "0");
         if (running) startLoop();
-      } else if (e.code === 'KeyM') {
+      } else if (e.code === "KeyM") {
         reduceMotion = !reduceMotion;
-        localStorage.setItem('flappy-reduced-motion', reduceMotion ? '1' : '0');
+        localStorage.setItem("flappy-reduced-motion", reduceMotion ? "1" : "0");
         if (liveRef.current)
-          liveRef.current.textContent = `Reduced motion ${reduceMotion ? 'on' : 'off'}`;
-      } else if (e.code === 'KeyP') {
+          liveRef.current.textContent = `Reduced motion ${reduceMotion ? "on" : "off"}`;
+      } else if (e.code === "KeyP") {
         practiceMode = !practiceMode;
-        localStorage.setItem('flappy-practice', practiceMode ? '1' : '0');
+        localStorage.setItem("flappy-practice", practiceMode ? "1" : "0");
         if (liveRef.current)
-          liveRef.current.textContent = practiceMode ? 'Practice mode on' : 'Practice mode off';
+          liveRef.current.textContent = practiceMode
+            ? "Practice mode on"
+            : "Practice mode off";
         startGame();
-      } else if (e.code === 'KeyG' && !running) {
+      } else if (e.code === "KeyG" && !running) {
         gravityVariant = (gravityVariant + 1) % GRAVITY_VARIANTS.length;
-        localStorage.setItem('flappy-gravity-variant', String(gravityVariant));
+        localStorage.setItem("flappy-gravity-variant", String(gravityVariant));
         loadRecord();
         if (liveRef.current)
           liveRef.current.textContent = `Gravity: ${GRAVITY_VARIANTS[gravityVariant].name}`;
-      } else if (e.code === 'KeyX' && !running) {
+      } else if (e.code === "KeyX" && !running) {
         const key = GRAVITY_VARIANTS[gravityVariant].name;
         delete records[key];
-        localStorage.setItem('flappy-records', JSON.stringify(records));
+        localStorage.setItem("flappy-records", JSON.stringify(records));
         loadRecord();
-        if (liveRef.current) liveRef.current.textContent = 'Record reset';
-      } else if (e.code === 'KeyB') {
+        if (liveRef.current) liveRef.current.textContent = "Record reset";
+      } else if (e.code === "KeyB") {
         birdSkin = (birdSkin + 1) % birdSkins.length;
         setSkin(birdSkin);
-        localStorage.setItem('flappy-bird-skin', String(birdSkin));
+        localStorage.setItem("flappy-bird-skin", String(birdSkin));
         if (liveRef.current)
           liveRef.current.textContent = `Bird skin ${birdSkin + 1}`;
-      } else if (e.code === 'KeyO') {
+      } else if (e.code === "KeyO") {
         pipeSkin = (pipeSkin + 1) % pipeSkins.length;
         setPipeSkinIndex(pipeSkin);
-        localStorage.setItem('flappy-pipe-skin', String(pipeSkin));
+        localStorage.setItem("flappy-pipe-skin", String(pipeSkin));
         if (liveRef.current)
           liveRef.current.textContent = `Pipe skin ${pipeSkin + 1}`;
-      } else if (e.code === 'KeyH') {
+      } else if (e.code === "KeyH") {
         showHitbox = !showHitbox;
-        localStorage.setItem('flappy-hitbox', showHitbox ? '1' : '0');
+        localStorage.setItem("flappy-hitbox", showHitbox ? "1" : "0");
         if (liveRef.current)
-          liveRef.current.textContent = showHitbox
-            ? 'Hitbox on'
-            : 'Hitbox off';
+          liveRef.current.textContent = showHitbox ? "Hitbox on" : "Hitbox off";
       }
     }
 
@@ -668,16 +716,16 @@ const FlappyBird = () => {
       }
     }
 
-    window.addEventListener('keydown', handleKey, { passive: false });
-    canvas.addEventListener('mousedown', handlePointer);
-    canvas.addEventListener('touchstart', handlePointer, { passive: true });
+    window.addEventListener("keydown", handleKey, { passive: false });
+    canvas.addEventListener("mousedown", handlePointer);
+    canvas.addEventListener("touchstart", handlePointer, { passive: true });
 
     startGame();
 
     return () => {
-      window.removeEventListener('keydown', handleKey);
-      canvas.removeEventListener('mousedown', handlePointer);
-      canvas.removeEventListener('touchstart', handlePointer);
+      window.removeEventListener("keydown", handleKey);
+      canvas.removeEventListener("mousedown", handlePointer);
+      canvas.removeEventListener("touchstart", handlePointer);
       stopLoop();
     };
   }, [canvasRef, started]);
@@ -718,8 +766,8 @@ const FlappyBird = () => {
             className="px-6 py-3 w-32 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={() => {
               try {
-                localStorage.setItem('flappy-bird-skin', String(skin));
-                localStorage.setItem('flappy-pipe-skin', String(pipeSkinIndex));
+                localStorage.setItem("flappy-bird-skin", String(skin));
+                localStorage.setItem("flappy-pipe-skin", String(pipeSkinIndex));
               } catch {
                 /* ignore */
               }
