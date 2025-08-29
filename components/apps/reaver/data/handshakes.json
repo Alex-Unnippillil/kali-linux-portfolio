@@ -1,0 +1,42 @@
+{
+  "handshakes": [
+    {
+      "id": "sample",
+      "label": "WPA2 4-Way Handshake",
+      "messages": [
+        {
+          "step": "M1",
+          "from": "Access Point",
+          "to": "Client",
+          "description": "Authenticator sends ANonce and security parameters to start the handshake."
+        },
+        {
+          "step": "M2",
+          "from": "Client",
+          "to": "Access Point",
+          "description": "Supplicant responds with SNonce and a MIC computed with the PTK."
+        },
+        {
+          "step": "M3",
+          "from": "Access Point",
+          "to": "Client",
+          "description": "Authenticator sends the GTK and a MIC, instructing the client to install the PTK."
+        },
+        {
+          "step": "M4",
+          "from": "Client",
+          "to": "Access Point",
+          "description": "Supplicant acknowledges installation of the PTK completing the handshake."
+        }
+      ]
+    }
+  ],
+  "risks": [
+    "Captured handshakes can be brute‑forced offline to recover weak passphrases.",
+    "Attackers can lure clients to rogue access points to obtain handshakes."
+  ],
+  "defenses": [
+    "Use strong, unique passphrases and prefer WPA3 when possible.",
+    "Monitor for rogue APs and disable WPS to reduce attack surface."
+  ]
+}
