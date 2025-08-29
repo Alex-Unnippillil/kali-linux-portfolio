@@ -13,7 +13,8 @@ let state = {
   obstacles: [],
   roadside: { near: [], far: [] },
   background: { near: [], far: [] },
-  lineOffset: 0,
+  lineOffsetNear: 0,
+  lineOffsetFar: 0,
   ghost: null,
 };
 
@@ -21,6 +22,7 @@ self.onmessage = (e) => {
   const { type } = e.data || {};
   if (type === 'init') {
     ctx = e.data.canvas.getContext('2d');
+    if (ctx) ctx.imageSmoothingEnabled = false;
   } else if (type === 'state') {
     Object.assign(state, e.data.diff);
     draw();
@@ -58,8 +60,18 @@ function draw() {
 
   ctx.strokeStyle = '#fff';
   ctx.setLineDash([20, 20]);
+  ctx.globalAlpha = 0.6;
   ctx.lineWidth = 2;
-  ctx.lineDashOffset = -(state.lineOffset || 0);
+  ctx.lineDashOffset = -(state.lineOffsetFar || 0);
+  for (let i = 1; i < LANES; i += 1) {
+    ctx.beginPath();
+    ctx.moveTo(i * LANE_WIDTH, 0);
+    ctx.lineTo(i * LANE_WIDTH, HEIGHT);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 4;
+  ctx.lineDashOffset = -(state.lineOffsetNear || 0);
   for (let i = 1; i < LANES; i += 1) {
     ctx.beginPath();
     ctx.moveTo(i * LANE_WIDTH, 0);
