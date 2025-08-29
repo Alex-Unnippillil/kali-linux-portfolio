@@ -138,6 +138,16 @@ const Pacman = () => {
   }, []);
   const [announcement, setAnnouncement] = useState('');
   const squashRef = useRef(0);
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const updateScale = () => {
+      const s = Math.floor(window.innerWidth / WIDTH);
+      setScale(s > 1 ? s : 1);
+    };
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
 
   const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);
   const isCenter = (pos) => Math.abs((pos % tileSize) - tileSize / 2) < 0.1;
@@ -306,15 +316,23 @@ const Pacman = () => {
           ctx.fillStyle = '#2222ff';
           ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
         } else if (maze[y][x] === 2) {
+          ctx.save();
           ctx.fillStyle = 'white';
+          ctx.shadowColor = 'white';
+          ctx.shadowBlur = 4;
           ctx.beginPath();
           ctx.arc(x * tileSize + tileSize / 2, y * tileSize + tileSize / 2, 3, 0, Math.PI * 2);
           ctx.fill();
+          ctx.restore();
         } else if (maze[y][x] === 3) {
+          ctx.save();
           ctx.fillStyle = 'white';
+          ctx.shadowColor = 'white';
+          ctx.shadowBlur = 8;
           ctx.beginPath();
           ctx.arc(x * tileSize + tileSize / 2, y * tileSize + tileSize / 2, 6, 0, Math.PI * 2);
           ctx.fill();
+          ctx.restore();
         }
       }
     }
@@ -393,28 +411,33 @@ const Pacman = () => {
       const dx = pac.x - g.x;
       const dy = pac.y - g.y;
       const ang = Math.atan2(dy, dx);
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 1;
       ctx.fillStyle = 'white';
-      ctx.beginPath();
-      ctx.arc(g.x + tileSize / 2 - eyeOffsetX, g.y + tileSize / 2 - eyeOffsetY, 4, 0, Math.PI * 2);
-      ctx.arc(g.x + tileSize / 2 + eyeOffsetX, g.y + tileSize / 2 - eyeOffsetY, 4, 0, Math.PI * 2);
-      ctx.fill();
+      [
+        { ox: -eyeOffsetX, oy: -eyeOffsetY },
+        { ox: eyeOffsetX, oy: -eyeOffsetY },
+      ].forEach(({ ox, oy }) => {
+        ctx.beginPath();
+        ctx.arc(g.x + tileSize / 2 + ox, g.y + tileSize / 2 + oy, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
       ctx.fillStyle = 'black';
-      ctx.beginPath();
-      ctx.arc(
-        g.x + tileSize / 2 - eyeOffsetX + Math.cos(ang) * pupilOffset,
-        g.y + tileSize / 2 - eyeOffsetY + Math.sin(ang) * pupilOffset,
-        2,
-        0,
-        Math.PI * 2
-      );
-      ctx.arc(
-        g.x + tileSize / 2 + eyeOffsetX + Math.cos(ang) * pupilOffset,
-        g.y + tileSize / 2 - eyeOffsetY + Math.sin(ang) * pupilOffset,
-        2,
-        0,
-        Math.PI * 2
-      );
-      ctx.fill();
+      [
+        { ox: -eyeOffsetX, oy: -eyeOffsetY },
+        { ox: eyeOffsetX, oy: -eyeOffsetY },
+      ].forEach(({ ox, oy }) => {
+        ctx.beginPath();
+        ctx.arc(
+          g.x + tileSize / 2 + ox + Math.cos(ang) * pupilOffset,
+          g.y + tileSize / 2 + oy + Math.sin(ang) * pupilOffset,
+          2.5,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      });
     });
   }, [prefersReduced, isTunnel]);
 
@@ -783,18 +806,29 @@ const Pacman = () => {
 
       <SpeedControls ghostSpeeds={ghostSpeeds} setGhostSpeeds={setGhostSpeeds} />
 
-      <canvas
-        ref={canvasRef}
-        width={WIDTH}
-        height={HEIGHT}
-        className="bg-black"
-      />
+      <div
+        className="relative"
+        style={{ width: WIDTH * scale, height: HEIGHT * scale }}
+      >
+        <canvas
+          ref={canvasRef}
+          width={WIDTH}
+          height={HEIGHT}
+          className="bg-black"
+          style={{ width: WIDTH * scale, height: HEIGHT * scale, imageRendering: 'pixelated' }}
+        />
+        <div className="absolute top-0 left-0 w-full text-xs bg-black bg-opacity-75 px-1 flex justify-between">
+          <span>Score: {score}</span>
+          <span>Lvl: {levelIndex + 1}</span>
+          <span>P: pause</span>
+        </div>
+      </div>
 
       <div className="mt-2 px-2 py-1 bg-ub-grey rounded">
         {modeInfo.mode.toUpperCase()} {Math.ceil(modeInfo.timer / 60)}s
       </div>
 
-      <div className="mt-2">Score: {score} | High: {highScore}</div>
+      <div className="mt-2">High: {highScore}</div>
       <div className="mt-1">Lives: {pacRef.current.lives}</div>
       {(statusRef.current !== 'Playing' || paused) && (
         <div className="mt-2">{paused ? 'Paused' : statusRef.current}</div>
