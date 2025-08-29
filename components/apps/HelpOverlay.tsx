@@ -142,7 +142,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   sudoku: {
     objective: 'Fill the grid so each row, column, and box has 1-9.',
-    controls: 'Click a cell then type a number.',
+    controls:
+      'Click a cell then type a number. Toggle Notes or hold Shift for pencil marks. Conflicts highlight automatically. Choose a difficulty and use Hint for human strategies.',
   },
   'flappy-bird': {
     objective: 'Fly through gaps between pipes. Practice gates and easy mode available.',
