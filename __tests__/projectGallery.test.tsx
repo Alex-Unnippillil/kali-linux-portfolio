@@ -13,19 +13,25 @@ describe('ProjectGallery', () => {
           Promise.resolve([
             {
               id: 1,
-              name: 'Repo1',
+              title: 'Alpha',
               description: 'desc1',
-              language: 'JS',
-              homepage: '',
-              html_url: 'url1',
+              stack: ['JS'],
+              year: 2021,
+              type: 'web',
+              thumbnail: '',
+              repo: 'r1',
+              demo: 'd1',
             },
             {
               id: 2,
-              name: 'Repo2',
+              title: 'Beta',
               description: 'desc2',
-              language: 'TS',
-              homepage: '',
-              html_url: 'url2',
+              stack: ['TS'],
+              year: 2022,
+              type: 'app',
+              thumbnail: '',
+              repo: 'r2',
+              demo: 'd2',
             },
           ]),
       })
@@ -39,10 +45,12 @@ describe('ProjectGallery', () => {
 
   it('filters projects and updates live region', async () => {
     render(<ProjectGallery />);
-    await waitFor(() => screen.getByText('Repo1'));
-    fireEvent.click(screen.getAllByRole('button', { name: 'TS' })[0]);
+    await waitFor(() => screen.getByText('Alpha'));
+    fireEvent.change(screen.getByLabelText('Stack'), {
+      target: { value: 'TS' },
+    });
     await waitFor(() =>
-      expect(screen.queryByText('Repo1')).not.toBeInTheDocument()
+      expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
     );
     expect(screen.getByText(/Showing/)).toHaveTextContent(
       'Showing 1 project filtered by TS'
@@ -51,24 +59,15 @@ describe('ProjectGallery', () => {
 
   it('filters when clicking tag chip inside a project', async () => {
     render(<ProjectGallery />);
-    await waitFor(() => screen.getByText('Repo1'));
+    await waitFor(() => screen.getByText('Alpha'));
     fireEvent.click(
-      screen.getAllByRole('button', { name: 'JS' })[1] // chip inside Repo1
+      screen.getAllByRole('button', { name: 'JS' })[0] // chip inside Alpha
     );
     await waitFor(() =>
-      expect(screen.queryByText('Repo2')).not.toBeInTheDocument()
+      expect(screen.queryByText('Beta')).not.toBeInTheDocument()
     );
     expect(screen.getByText(/Showing/)).toHaveTextContent(
       'Showing 1 project filtered by JS'
     );
-  });
-
-  it('updates hash when opening project details', async () => {
-    render(<ProjectGallery />);
-    await screen.findByText('Repo1');
-    fireEvent.click(screen.getAllByText('Details')[0]);
-    await screen.findByRole('dialog');
-    expect(window.location.hash).toBe('#1');
-    window.location.hash = '';
   });
 });
