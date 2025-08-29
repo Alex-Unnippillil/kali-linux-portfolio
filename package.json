@@ -41,6 +41,7 @@
     "figlet": "^1.8.2",
     "howler": "^2.2.4",
     "html-to-image": "^1.11.13",
+    "html2pdf.js": "^0.11.2",
     "idb": "7.1.1",
     "idb-keyval": "^6.2.1",
     "mathjs": "^14.6.0",

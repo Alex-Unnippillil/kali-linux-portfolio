@@ -1,0 +1,35 @@
+{
+  "name": "Alex Unnippillil",
+  "title": "Security Researcher",
+  "skills": [
+    "JavaScript",
+    "React",
+    "Network Security"
+  ],
+  "projects": [
+    {
+      "name": "Password Generator",
+      "link": "https://github.com/Alex-Unnippillil/PasswordGenerator.py"
+    },
+    {
+      "name": "Text Encryption",
+      "link": "https://github.com/Alex-Unnippillil/Text-Encryption-Decryption-AES-PKCS7"
+    }
+  ],
+  "experience": [
+    {
+      "company": "Acme Corp",
+      "role": "Security Engineer",
+      "start": "2022",
+      "end": "Present",
+      "tags": ["security", "cloud"]
+    },
+    {
+      "company": "Cyberdyne",
+      "role": "Security Intern",
+      "start": "2021",
+      "end": "2022",
+      "tags": ["research"]
+    }
+  ]
+}
