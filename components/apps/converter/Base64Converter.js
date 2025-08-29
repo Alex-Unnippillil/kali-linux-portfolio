@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatBytes, formatDuration } from './format';
 
 const Base64Converter = () => {
   const [text, setText] = useState('');
@@ -55,6 +56,13 @@ const Base64Converter = () => {
           rows={3}
         />
       </label>
+      <details>
+        <summary>Examples</summary>
+        <ul className="list-disc ml-4">
+          <li>{formatBytes(1536)} = 1536 bytes</li>
+          <li>{formatDuration(3661)} = 3661 seconds</li>
+        </ul>
+      </details>
     </div>
   );
 };
