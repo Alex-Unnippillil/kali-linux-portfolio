@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../usePersistentState';
+import MapOverlay from '../../apps/weather/components/MapOverlay';
 
 const defaultLocation = {
   latitude: 40.7128,
@@ -227,6 +228,7 @@ const Weather = () => {
   const chartRef = useRef(null);
   const timesRef = useRef(null);
   const [error, setError] = useState('');
+  const [showMap, setShowMap] = useState(false);
   const fetchForecast = async (lat, lon, cityName) => {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,apparent_temperature&daily=weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min&current_weather=true&temperature_unit=${unit === 'metric' ? 'celsius' : 'fahrenheit'}&timezone=auto`;
     try {
@@ -457,6 +459,14 @@ const Weather = () => {
         >
           Pin City
         </button>
+        <button
+          onClick={() => setShowMap(!showMap)}
+          className="bg-white/20 px-4 py-2 rounded"
+          aria-pressed={showMap}
+          aria-label="Toggle map overlay"
+        >
+          {showMap ? 'Hide Map' : 'Show Map'}
+        </button>
       </div>
       {error && <div className="mb-4 text-red-500">{error}</div>}
       <div className="mb-2">{label}</div>
@@ -502,6 +512,13 @@ const Weather = () => {
           );
         })}
       </div>
+      {showMap && (
+        <MapOverlay
+          lat={currentLocation.latitude}
+          lon={currentLocation.longitude}
+          code={data.current_weather.weathercode}
+        />
+      )}
       {/* S6: Accessible hourly temperature chart */}
       <div
         ref={chartRef}
