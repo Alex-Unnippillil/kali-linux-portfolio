@@ -1,0 +1,5 @@
+[
+  { "command": "aaa", "text": "Analyze the binary to discover code, functions and references." },
+  { "command": "afl", "text": "List all functions identified in the binary." },
+  { "command": "pdf @ main", "text": "Print the disassembly of the main function." }
+]
