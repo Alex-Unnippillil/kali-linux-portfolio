@@ -728,7 +728,7 @@ const FlappyBird = () => {
       canvas.removeEventListener("touchstart", handlePointer);
       stopLoop();
     };
-  }, [canvasRef, started]);
+  }, [canvasRef, started, pipeSkinIndex, skin]);
 
   return (
     <div className="relative w-full h-full">
