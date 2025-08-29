@@ -49,7 +49,17 @@ describe('BeEF app', () => {
       if (url.endsWith('/demo-data/beef/modules.json')) {
         return Promise.resolve({
           json: () =>
-            Promise.resolve({ modules: [{ id: 'mod1', name: 'Module 1', output: 'chunk1chunk2' }] }),
+            Promise.resolve({
+              modules: [
+                {
+                  id: 'cat',
+                  name: 'Category',
+                  children: [
+                    { id: 'mod1', name: 'Module 1', output: 'chunk1chunk2' },
+                  ],
+                },
+              ],
+            }),
         });
       }
       return Promise.resolve({ json: () => Promise.resolve({}) });
@@ -57,9 +67,29 @@ describe('BeEF app', () => {
 
     render(<Beef />);
     fireEvent.click(await screen.findByText('1'));
+    fireEvent.click(screen.getByText('Category'));
     fireEvent.click(screen.getByText('Module 1'));
     fireEvent.click(screen.getByText('Run Module'));
 
     expect(await screen.findByText('chunk1chunk2')).toBeInTheDocument();
+  });
+
+  it('switches between modules and payload builder tabs', async () => {
+    (global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (url.endsWith('/demo-data/beef/hooks.json')) {
+        return Promise.resolve({ json: () => Promise.resolve({ hooked_browsers: [{ id: '1' }] }) });
+      }
+      if (url.endsWith('/demo-data/beef/modules.json')) {
+        return Promise.resolve({ json: () => Promise.resolve({ modules: [] }) });
+      }
+      return Promise.resolve({ json: () => Promise.resolve({}) });
+    });
+
+    render(<Beef />);
+    fireEvent.click(await screen.findByText('1'));
+    const payloadTab = screen.getByRole('tab', { name: 'Payload Builder' });
+    expect(screen.getByPlaceholderText('Enter JS payload...')).not.toBeVisible();
+    fireEvent.click(payloadTab);
+    expect(screen.getByPlaceholderText('Enter JS payload...')).toBeVisible();
   });
 });
