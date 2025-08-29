@@ -46,6 +46,11 @@ const mockData = {
 
 const DataModelExplorer: React.FC = () => {
   const [selected, setSelected] = useState<EntityNode | null>(null);
+  const [menu, setMenu] = useState<{
+    node: EntityNode;
+    x: number;
+    y: number;
+  } | null>(null);
   const graphData = useMemo(() => mockData, []);
 
   return (
@@ -53,7 +58,16 @@ const DataModelExplorer: React.FC = () => {
       <ForceGraph2D
         graphData={graphData}
         nodeId="id"
+        onBackgroundClick={() => setMenu(null)}
         onNodeClick={(node) => setSelected(node as EntityNode)}
+        onNodeRightClick={(node, event) => {
+          event.preventDefault();
+          setMenu({
+            node: node as EntityNode,
+            x: (event as MouseEvent).clientX,
+            y: (event as MouseEvent).clientY,
+          });
+        }}
         nodeCanvasObject={(node, ctx, globalScale) => {
           const n = node as EntityNode & { x?: number; y?: number };
           const label = n.label;
@@ -67,6 +81,28 @@ const DataModelExplorer: React.FC = () => {
         }}
         linkDirectionalArrowLength={4}
       />
+      {menu && (
+        <div
+          className="fixed z-10 bg-gray-800 text-white text-xs rounded shadow"
+          style={{ top: menu.y, left: menu.x }}
+        >
+          <button
+            className="block w-full px-2 py-1 text-left hover:bg-gray-700"
+            onClick={() => {
+              setSelected(menu.node);
+              setMenu(null);
+            }}
+          >
+            View Details
+          </button>
+          <button
+            className="block w-full px-2 py-1 text-left hover:bg-gray-700"
+            onClick={() => setMenu(null)}
+          >
+            Close
+          </button>
+        </div>
+      )}
       {selected && (
         <div className="absolute top-0 right-0 m-2 max-w-xs rounded bg-gray-800 p-2 text-xs text-white shadow">
           <div className="mb-1 font-bold">{selected.label}</div>
