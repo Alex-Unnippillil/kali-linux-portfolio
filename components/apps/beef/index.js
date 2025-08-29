@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import GuideOverlay from './GuideOverlay';
+import PayloadBuilder from './PayloadBuilder';
 
 const HookGraph = dynamic(() => import('./HookGraph'), { ssr: false });
 
 export default function Beef() {
+  const [authorized, setAuthorized] = useState(false);
   const [hooks, setHooks] = useState([]);
   const [selected, setSelected] = useState(null);
   const [moduleId, setModuleId] = useState('');
@@ -47,6 +49,24 @@ export default function Beef() {
   }, [modulesUrl]);
 
   useEffect(() => {
+    try {
+      const ok = localStorage.getItem('beef-lab-ok');
+      setAuthorized(ok === 'true');
+    } catch {
+      setAuthorized(false);
+    }
+  }, []);
+
+  const acceptLab = () => {
+    try {
+      localStorage.setItem('beef-lab-ok', 'true');
+    } catch {
+      // ignore
+    }
+    setAuthorized(true);
+  };
+
+  useEffect(() => {
     fetchHooks();
   }, [fetchHooks]);
 
@@ -78,16 +98,92 @@ export default function Beef() {
     prevSteps.current = steps.length;
   }, [steps, prevSteps]);
 
+  const findModule = (list, id) => {
+    for (const m of list) {
+      if (m.id === id) return m;
+      if (m.children) {
+        const found = findModule(m.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   const runModule = () => {
     if (!selected || !moduleId) return;
     setOutput('');
-    const mod = modules.find((m) => m.id === moduleId);
+    const mod = findModule(modules, moduleId);
     if (mod) setOutput(mod.output || '');
     setSteps((prev) => [
       ...prev,
       { id: prev.length + 1, hook: selected, module: moduleId },
     ]);
   };
+
+  const renderTree = (nodes) => (
+    <ul className="ml-4">
+      {nodes.map((node) => {
+        const label = node.name || node.id;
+        if (node.children && node.children.length) {
+          return (
+            <li key={label} className="mb-1">
+              <details>
+                <summary className="cursor-pointer">{label}</summary>
+                {renderTree(node.children)}
+              </details>
+            </li>
+          );
+        }
+        return (
+          <li key={node.id} className="mb-1">
+            <button
+              type="button"
+              onClick={() => setModuleId(node.id)}
+              className={`w-full text-left px-1 py-0.5 rounded ${
+                moduleId === node.id ? 'bg-ub-primary text-white' : 'bg-transparent'
+              }`}
+            >
+              {label}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  if (!authorized) {
+    return (
+      <div className="w-full h-full bg-ub-dark text-white p-4 flex flex-col items-center justify-center text-center">
+        <p className="mb-4 text-sm">
+          Security tools are for lab use only. Review{' '}
+          <a
+            href="https://csrc.nist.gov/publications/detail/sp/800-115/final"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            NIST SP 800-115
+          </a>{' '}
+          and{' '}
+          <a
+            href="https://owasp.org/www-project-web-security-testing-guide/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            OWASP Testing Guide
+          </a>{' '}
+          before proceeding.
+        </p>
+        <button
+          onClick={acceptLab}
+          className="px-2 py-1 bg-ub-green text-black text-xs rounded"
+        >
+          Enter Lab
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex h-full w-full bg-ub-cool-grey text-white pt-6">
@@ -143,30 +239,22 @@ export default function Beef() {
         </div>
         {selected ? (
           <>
-            <div className="mb-2">
-              <select
-                className="w-full p-1 mb-2 text-black"
-                value={moduleId}
-                onChange={(e) => setModuleId(e.target.value)}
-              >
-                <option value="">Select Module</option>
-                {modules.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name || m.id}
-                  </option>
-                ))}
-              </select>
+            <div className="mb-2 flex">
+              <div className="flex-1 overflow-auto max-h-40 border border-gray-700 p-1 mr-2">
+                {modules.length > 0 ? renderTree(modules) : <p className="text-sm">No modules</p>}
+              </div>
               <button
                 type="button"
                 onClick={runModule}
-                className="px-3 py-1 bg-ub-primary text-white rounded"
+                className="px-3 py-1 bg-ub-primary text-white rounded h-max"
               >
                 Run Module
               </button>
             </div>
             {output && (
-              <pre className="whitespace-pre-wrap text-xs bg-black p-2 rounded">{output}</pre>
+              <pre className="whitespace-pre-wrap text-xs bg-black p-2 rounded mb-4">{output}</pre>
             )}
+            <PayloadBuilder />
           </>
         ) : (
           <p>Select a hooked browser to run modules.</p>
