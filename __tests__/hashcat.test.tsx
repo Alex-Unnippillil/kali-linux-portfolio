@@ -31,6 +31,9 @@ describe('HashcatApp', () => {
     expect(
       getByText(`Attempts/sec: ${progressInfo.hashRate[0]}`)
     ).toBeInTheDocument();
+    expect(
+      getByText(`Recovered: ${progressInfo.recovered[0]}`)
+    ).toBeInTheDocument();
     act(() => {
       jest.advanceTimersByTime(1000);
     });
@@ -38,19 +41,24 @@ describe('HashcatApp', () => {
       getByText(`Attempts/sec: ${progressInfo.hashRate[1]}`)
     ).toBeInTheDocument();
     expect(getByText(`ETA: ${progressInfo.eta[1]}`)).toBeInTheDocument();
-    expect(getByText('Mode: MD5')).toBeInTheDocument();
+    expect(
+      getByText(`Recovered: ${progressInfo.recovered[1]}`)
+    ).toBeInTheDocument();
+    expect(getByText('Mode: Straight')).toBeInTheDocument();
     jest.useRealTimers();
   });
 
   it('labels hashcat modes with example hashes', () => {
-    const { getByLabelText, getByText } = render(<HashcatApp />);
+    const { getByLabelText, getAllByText } = render(<HashcatApp />);
     fireEvent.change(getByLabelText('Hash Type:'), { target: { value: '100' } });
     expect(
-      getByText(
+      getAllByText(
         'Example hash: 5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8'
-      )
+      )[0]
     ).toBeInTheDocument();
-    expect(getByText('Description: 160-bit secure hash algorithm')).toBeInTheDocument();
+    expect(
+      getAllByText('Description: 160-bit secure hash algorithm')[0]
+    ).toBeInTheDocument();
   });
 
   it('generates demo command and shows sample output', () => {
@@ -64,14 +72,32 @@ describe('HashcatApp', () => {
       target: { value: 'rockyou' },
     });
     expect(getByTestId('demo-command').textContent).toContain(
-      'hashcat -m 0 5f4dcc3b5aa765d61d8327deb882cf99 rockyou.txt'
+      'hashcat -m 0 -a 0 5f4dcc3b5aa765d61d8327deb882cf99 rockyou.txt'
     );
     expect(getByText('Sample Output:')).toBeInTheDocument();
   });
 
   it('shows descriptions for hash modes', () => {
-    const { getByText } = render(<HashcatApp />);
-    expect(getByText('Description: Raw MD5')).toBeInTheDocument();
+    const { getAllByText } = render(<HashcatApp />);
+    expect(
+      getAllByText('Description: Fast, legacy 32-character hash')[0]
+    ).toBeInTheDocument();
+  });
+
+  it('allows mask building in brute-force mode', () => {
+    const { getByLabelText, getByText } = render(<HashcatApp />);
+    fireEvent.change(getByLabelText('Attack Mode:'), { target: { value: '3' } });
+    fireEvent.click(getByText('?d'));
+    expect((getByLabelText('Mask') as HTMLInputElement).value).toBe('?d');
+  });
+
+  it('previews selected rule set', () => {
+    const { getByLabelText } = render(<HashcatApp />);
+    fireEvent.change(getByLabelText('Rule Set:'), {
+      target: { value: 'best64' },
+    });
+    const pre = getByLabelText('Rule Set:').parentElement?.querySelector('pre');
+    expect(pre?.textContent).toContain('c');
   });
 
   it('provides dictionary file hints with example paths', () => {
