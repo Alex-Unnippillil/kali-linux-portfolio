@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import HostBubbleChart from './HostBubbleChart';
 import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
@@ -51,6 +51,9 @@ const Nessus = () => {
   const [feedbackScan, setFeedbackScan] = useState(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [falsePositives, setFalsePositives] = useState([]);
+  const [findings, setFindings] = useState([]);
+  const [parseError, setParseError] = useState('');
+  const parserWorkerRef = useRef(null);
 
   const hostData = useMemo(
     () =>
@@ -67,7 +70,55 @@ const Nessus = () => {
   useEffect(() => {
     setJobs(loadJobDefinitions());
     setFalsePositives(loadFalsePositives());
+    parserWorkerRef.current = new Worker(
+      new URL('../../../workers/nessus-parser.ts', import.meta.url)
+    );
+    parserWorkerRef.current.onmessage = (e) => {
+      const { findings: parsed = [], error: err } = e.data || {};
+      if (err) {
+        setParseError(err);
+        setFindings([]);
+      } else {
+        setFindings(parsed);
+        setParseError('');
+      }
+    };
+    return () => parserWorkerRef.current?.terminate();
   }, []);
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      parserWorkerRef.current.postMessage(text);
+    } catch (err) {
+      setParseError('Failed to read file');
+    }
+  };
+
+  const exportCSV = () => {
+    const header = ['Host', 'ID', 'Finding', 'CVSS', 'Severity'];
+    const rows = findings.map((f) => [
+      f.host,
+      f.id,
+      f.name,
+      f.cvss,
+      f.severity,
+    ]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'nessus-findings.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const login = async (e) => {
     e.preventDefault();
@@ -180,6 +231,51 @@ const Nessus = () => {
         <button onClick={logout} className="bg-red-600 px-2 py-1 rounded">
           Logout
         </button>
+      </div>
+      <div className="mb-4">
+        <label htmlFor="nessus-upload" className="block text-sm mb-1">
+          Upload Nessus XML
+        </label>
+        <input
+          id="nessus-upload"
+          type="file"
+          accept=".nessus,.xml"
+          onChange={handleFile}
+          className="text-black mb-2"
+        />
+        {parseError && <FormError>{parseError}</FormError>}
+        {findings.length > 0 && (
+          <div className="mt-2">
+            <button
+              onClick={exportCSV}
+              className="bg-green-600 px-2 py-1 rounded mb-2"
+            >
+              Export CSV
+            </button>
+            <div className="overflow-auto max-h-64 border border-gray-700">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className="text-left p-1">Host</th>
+                    <th className="text-left p-1">Vulnerability</th>
+                    <th className="text-left p-1">CVSS</th>
+                    <th className="text-left p-1">Severity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {findings.map((f, i) => (
+                    <tr key={i} className="border-t border-gray-700">
+                      <td className="p-1">{f.host}</td>
+                      <td className="p-1">{f.name}</td>
+                      <td className="p-1">{f.cvss}</td>
+                      <td className="p-1">{f.severity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
       <HostBubbleChart hosts={hostData} />
       <PluginFeedViewer />
