@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
+import usePersistentState from '../../hooks/usePersistentState';
 
 const WIDTH = 300;
 const HEIGHT = 500;
@@ -8,6 +9,14 @@ const LANE_WIDTH = WIDTH / LANES;
 const PLAYER_Y = HEIGHT - 40;
 const OBSTACLE_HEIGHT = 20;
 const BASE_SPEEDS = [100, 120, 140];
+
+export const CURVE_PRESETS = {
+  linear: (t) => t,
+  'ease-in': (t) => t * t,
+  'ease-out': (t) => Math.sqrt(t),
+  'ease-in-out': (t) =>
+    t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
+};
 
 export const detectCollision = (
   playerLane,
@@ -47,6 +56,7 @@ const LaneRunner = () => {
   const [running, setRunning] = useState(true);
   const [reset, setReset] = useState(0);
   const [lives, setLives] = useState(3);
+  const [curve, setCurve] = usePersistentState('lane-runner:curve', 'linear');
   const gammaRef = useRef(0);
 
   const handleCalibrate = () => setTiltOffset(gammaRef.current);
@@ -86,6 +96,7 @@ const LaneRunner = () => {
     let l = 3;
     let last = performance.now();
     let spawn = 0;
+    let elapsed = 0;
     let alive = true;
     let tilt = 0;
     let prevTilt = 0;
@@ -108,13 +119,19 @@ const LaneRunner = () => {
     const loop = (time) => {
       const dt = (time - last) / 1000;
       last = time;
+      elapsed += dt;
       spawn += dt;
-      speeds = speeds.map((sp) => sp + dt * 10);
+      const t = Math.min(elapsed / 60, 1);
+      const curveFn = CURVE_PRESETS[curve] || CURVE_PRESETS.linear;
+      const c = curveFn(t);
+      const gapTime = 1 - c * 0.5;
+      const speedScale = 1 + c;
+      speeds = speeds.map((sp) => sp + dt * 10 * speedScale);
       obstacles.forEach((o) => {
         o.y += speeds[o.lane] * dt;
       });
       obstacles = obstacles.filter((o) => o.y < HEIGHT + OBSTACLE_HEIGHT);
-      if (spawn > 1) {
+      if (spawn > gapTime) {
         obstacles.push({ lane: Math.floor(Math.random() * LANES), y: -OBSTACLE_HEIGHT });
         spawn = 0;
       }
@@ -169,7 +186,7 @@ const LaneRunner = () => {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('deviceorientation', onOrientation);
     };
-  }, [canvasRef, control, tiltAllowed, tiltOffset, sensitivity, reset]);
+  }, [canvasRef, control, tiltAllowed, tiltOffset, sensitivity, reset, curve]);
 
   return (
     <div className="relative h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
@@ -184,6 +201,21 @@ const LaneRunner = () => {
               ❤️
             </span>
           ))}
+        </div>
+        <div className="flex items-center gap-1">
+          <label htmlFor="curve">Curve:</label>
+          <select
+            id="curve"
+            value={curve}
+            onChange={(e) => setCurve(e.target.value)}
+            className="text-black"
+          >
+            {Object.keys(CURVE_PRESETS).map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="flex items-center gap-1">
           <label htmlFor="ctrl">Control:</label>

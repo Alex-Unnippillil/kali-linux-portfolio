@@ -1,4 +1,9 @@
-import { detectCollision, updateScore, canUseTilt } from '../components/apps/lane-runner';
+import {
+  detectCollision,
+  updateScore,
+  canUseTilt,
+  CURVE_PRESETS,
+} from '../components/apps/lane-runner';
 
 describe('lane runner', () => {
   test('collision ends run', () => {
@@ -21,5 +26,12 @@ describe('lane runner', () => {
     const allowed = await canUseTilt();
     expect(allowed).toBe(false);
     (global as any).DeviceOrientationEvent = original;
+  });
+
+  test('curve presets map progress to expected values', () => {
+    const t = 0.5;
+    expect(CURVE_PRESETS.linear(t)).toBeCloseTo(0.5);
+    expect(CURVE_PRESETS['ease-in'](t)).toBeCloseTo(0.25);
+    expect(CURVE_PRESETS['ease-out'](t)).toBeCloseTo(Math.sqrt(0.5));
   });
 });
