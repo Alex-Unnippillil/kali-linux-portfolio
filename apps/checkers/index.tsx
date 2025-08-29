@@ -12,7 +12,7 @@ import {
   hasMoves,
   isDraw,
 } from '../../components/apps/checkers/engine';
-import { getSelectableMoves, getHintMove } from '../../games/checkers/logic';
+import { getSelectableMoves } from '../../games/checkers/logic';
 import './checkers.css';
 
 // Helper to get all moves without enforcing capture
@@ -47,7 +47,7 @@ export default function CheckersPage() {
   const positionCounts = useRef<Map<string, number>>(new Map());
   const [crowned, setCrowned] = useState<[number, number] | null>(null);
   const [hint, setHint] = useState<Move | null>(null);
-  const [showHint, setShowHint] = useState(false);
+  const hintRequest = useRef(false);
 
   const makeMove = useCallback(
     (move: Move) => {
@@ -100,6 +100,7 @@ export default function CheckersPage() {
       }
       setSelected(null);
       setMoves([]);
+      setHint(null);
     },
     [board, turn, noCapture, rule, difficulty, algorithm],
   );
@@ -109,7 +110,14 @@ export default function CheckersPage() {
       workerRef.current = new Worker('/checkers-worker.js');
       workerRef.current.onmessage = (e: MessageEvent<Move>) => {
         const move = e.data;
-        if (move) makeMove(move);
+        if (!move) return;
+        if (hintRequest.current) {
+          setHint(move);
+          hintRequest.current = false;
+          setTimeout(() => setHint(null), 1000);
+        } else {
+          makeMove(move);
+        }
       };
       return () => workerRef.current?.terminate();
     }
@@ -148,7 +156,7 @@ export default function CheckersPage() {
     positionCounts.current = new Map([[JSON.stringify(initial), 1]]);
     setCrowned(null);
     setHint(null);
-    setShowHint(false);
+    hintRequest.current = false;
   };
 
   const undo = () => {
@@ -184,16 +192,16 @@ export default function CheckersPage() {
     }
   }, [crowned]);
 
-  useEffect(() => {
-    if (showHint) {
-      setHint(getHintMove(board, turn, rule === 'forced'));
-    } else {
-      setHint(null);
-    }
-  }, [board, turn, rule, showHint]);
-
-  const toggleHint = () => {
-    setShowHint((s) => !s);
+  const hintMove = () => {
+    if (winner) return;
+    hintRequest.current = true;
+    workerRef.current?.postMessage({
+      board,
+      color: turn,
+      difficulty,
+      algorithm,
+      enforceCapture: rule === 'forced',
+    });
   };
 
   return (
@@ -247,9 +255,9 @@ export default function CheckersPage() {
         </button>
         <button
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={toggleHint}
+          onClick={hintMove}
         >
-          {showHint ? 'Hide Hint' : 'Show Hint'}
+          Hint
         </button>
       </div>
       <div className="w-full max-w-lg aspect-square">
