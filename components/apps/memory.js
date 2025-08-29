@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import GameLayout from './GameLayout';
 import { createDeck, PATTERN_THEMES, fisherYatesShuffle } from './memory_utils';
 
-const MAX_STORAGE = 1000; // safeguard against large writes
 const DEFAULT_TIME = { 2: 30, 4: 60, 6: 120 };
 
 // Built-in theme assets that can be used by the memory game.
@@ -176,9 +175,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
       const bestTime = stored.time != null ? Math.min(stored.time, elapsed) : elapsed;
       const updated = { moves: bestMoves, time: bestTime };
       const serialized = JSON.stringify(updated);
-      if (serialized.length < MAX_STORAGE) {
-        window.localStorage.setItem(bestKey, serialized);
-      }
+      window.localStorage.setItem(bestKey, serialized);
       setBest(updated);
     } catch {
       // ignore storage errors
