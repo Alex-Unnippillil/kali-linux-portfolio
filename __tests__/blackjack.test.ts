@@ -177,4 +177,13 @@ describe('Counting and penetration', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000, penetration: 0.6 });
     expect(game.shoe.penetration).toBe(0.6);
   });
+
+  test('Shoe.setPenetration adjusts shuffle point', () => {
+    const shoe = new Shoe(1, 0.75);
+    const original = shoe.shufflePoint;
+    shoe.setPenetration(0.5);
+    expect(shoe.penetration).toBe(0.5);
+    expect(shoe.shufflePoint).toBe(Math.floor(shoe.cards.length * 0.5));
+    expect(shoe.shufflePoint).not.toBe(original);
+  });
 });

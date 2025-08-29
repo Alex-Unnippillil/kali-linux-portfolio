@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useReducer } from 'react';
 import ReactGA from 'react-ga4';
 import { BlackjackGame, handValue, basicStrategy, cardValue, Shoe } from './engine';
+import PenetrationSlider from '../../../games/blackjack/components/PenetrationSlider';
 
 const CHIP_VALUES = [1, 5, 25, 100];
 const CHIP_COLORS = {
@@ -153,7 +154,7 @@ const Blackjack = () => {
   const [showCount, setShowCount] = useState(false);
   const [runningCount, setRunningCount] = useState(0);
   const [practice, setPractice] = useState(false);
-  const practiceShoe = useRef(new Shoe(1));
+  const practiceShoe = useRef(new Shoe(1, penetration));
   const [practiceCard, setPracticeCard] = useState(null);
   const [practiceGuess, setPracticeGuess] = useState('');
   const [streak, setStreak] = useState(0);
@@ -184,8 +185,8 @@ const Blackjack = () => {
   };
 
   useEffect(() => {
-    gameRef.current.shoe.penetration = penetration;
-    gameRef.current.shoe.shufflePoint = Math.floor(gameRef.current.shoe.cards.length * penetration);
+    gameRef.current.shoe.setPenetration(penetration);
+    practiceShoe.current.setPenetration(penetration);
   }, [penetration]);
 
   useEffect(() => {
@@ -368,22 +369,7 @@ const Blackjack = () => {
           <button className="px-2 py-1 bg-gray-700" onClick={startPractice}>
             Practice Count
           </button>
-          <label className="flex items-center space-x-1">
-            <span className="text-sm">Pen</span>
-            <input
-              type="range"
-              step="0.05"
-              min="0.5"
-              max="0.95"
-              value={penetration}
-              onChange={(e) => {
-                const val = parseFloat(e.target.value);
-                if (!Number.isNaN(val)) setPenetration(val);
-              }}
-              className="w-24"
-            />
-            <span className="text-sm">{(penetration * 100).toFixed(0)}%</span>
-          </label>
+          <PenetrationSlider penetration={penetration} onChange={setPenetration} />
         </div>
       {playerHands.length === 0 ? (
         <div className="mb-4">

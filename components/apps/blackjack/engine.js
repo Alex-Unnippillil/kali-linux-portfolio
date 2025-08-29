@@ -29,13 +29,20 @@ export class Shoe {
     this.shuffle();
   }
 
+  setPenetration(pen) {
+    this.penetration = pen;
+    if (this.cards) {
+      this.shufflePoint = Math.floor(this.cards.length * this.penetration);
+    }
+  }
+
   shuffle() {
     this.cards = [];
     for (let i = 0; i < this.decks; i += 1) {
       this.cards.push(...buildDeck());
     }
     shuffleArray(this.cards);
-    this.shufflePoint = Math.floor(this.cards.length * this.penetration);
+    this.setPenetration(this.penetration);
     this.dealt = 0;
     this.shuffleCount += 1;
     this.runningCount = 0;
