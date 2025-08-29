@@ -292,30 +292,90 @@ const ReconNG = () => {
     });
   };
 
-  const runModule = async () => {
-    if (!target) return;
-    const schema = moduleSchemas[selectedModule];
-    const demo = schema.demo(target);
+  const executeModule = async (moduleName, input) => {
+    const schema = moduleSchemas[moduleName];
+    const demo = schema.demo(input);
     let text = demo.output;
     if (useLiveData && schema.fetchUrl) {
       try {
-        const res = await fetch(schema.fetchUrl(target));
+        const res = await fetch(schema.fetchUrl(input));
         text = await res.text();
       } catch {
         text = `${demo.output}\n\n(Live fetch failed; showing demo data)`;
       }
     }
-    setOutput(text);
-    addEntities(demo.nodes);
-    updateWorkspace((ws) => ({ ...ws, graph: [...demo.nodes, ...demo.edges] }));
+    return { text, nodes: demo.nodes, edges: demo.edges };
   };
 
-  const runChain = () => {
-    if (!chainData) return;
+  const runModule = async () => {
+    if (!target) return;
+    const result = await executeModule(selectedModule, target);
+    setOutput(result.text);
+    addEntities(result.nodes);
+    updateWorkspace((ws) => ({ ...ws, graph: [...result.nodes, ...result.edges] }));
+  };
+
+  const topologicalSort = (nodes, edges) => {
+    const idMap = new Map(nodes.map((n) => [n.data.id, n]));
+    const graph = new Map();
+    const inDegree = new Map();
+    nodes.forEach((n) => {
+      graph.set(n.data.id, []);
+      inDegree.set(n.data.id, 0);
+    });
+    edges.forEach((e) => {
+      graph.get(e.data.source).push(e.data.target);
+      inDegree.set(e.data.target, inDegree.get(e.data.target) + 1);
+    });
+    const queue = [];
+    inDegree.forEach((deg, id) => {
+      if (deg === 0) queue.push(id);
+    });
+    const order = [];
+    while (queue.length) {
+      const id = queue.shift();
+      order.push(idMap.get(id));
+      graph.get(id).forEach((nbr) => {
+        inDegree.set(nbr, inDegree.get(nbr) - 1);
+        if (inDegree.get(nbr) === 0) queue.push(nbr);
+      });
+    }
+    return order;
+  };
+
+  const runChain = async () => {
+    if (!chainData || !target) return;
     setOutput('Running module chain...');
-    const { nodes, edges } = chainData.entities;
-    addEntities(nodes);
-    updateWorkspace((ws) => ({ ...ws, graph: [...nodes, ...edges] }));
+    const order = topologicalSort(chainData.chain.nodes, chainData.chain.edges);
+    const artifacts = {
+      domain: new Set([target]),
+      ip: new Set([target]),
+      entity: new Set(),
+    };
+    let combinedNodes = [];
+    let combinedEdges = [];
+    let texts = [];
+    for (const node of order) {
+      const moduleName = node.data.label;
+      const schema = moduleSchemas[moduleName];
+      if (!schema) continue;
+      const input = artifacts[schema.input].values().next().value;
+      if (!input) continue;
+      const result = await executeModule(moduleName, input);
+      texts.push(result.text);
+      combinedNodes = combinedNodes.concat(result.nodes);
+      combinedEdges = combinedEdges.concat(result.edges);
+      result.nodes.forEach((n) => {
+        if (n.data.type && n.data.label) {
+          artifacts[n.data.type].add(n.data.label);
+        }
+      });
+    }
+    if (combinedNodes.length) {
+      addEntities(combinedNodes);
+      updateWorkspace((ws) => ({ ...ws, graph: [...combinedNodes, ...combinedEdges] }));
+    }
+    setOutput(texts.join('\n\n'));
     setView('run');
   };
 
