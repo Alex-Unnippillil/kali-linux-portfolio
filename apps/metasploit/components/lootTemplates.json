@@ -1,0 +1,5 @@
+[
+  { "id": "ssh-key-1", "host": "10.0.0.2", "type": "ssh_private_key", "path": "/home/user/.ssh/id_rsa" },
+  { "id": "password-1", "host": "10.0.0.3", "type": "password", "data": "admin:admin123" },
+  { "id": "config-1", "host": "10.0.0.4", "type": "config", "data": "db_password=secret" }
+]
