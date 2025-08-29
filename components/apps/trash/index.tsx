@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import usePersistentState from '../../../hooks/usePersistentState';
+import ConfirmBanner from '../../../apps/trash/components/ConfirmBanner';
+import { bindEmptyShortcut } from '../../../apps/trash/shortcuts';
 
 interface TrashItem {
   id: string;
@@ -24,6 +27,11 @@ const formatAge = (closedAt: number): string => {
 export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const [items, setItems] = useState<TrashItem[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+  const [lastItems, setLastItems] = usePersistentState<TrashItem[] | null>(
+    'trash-last-empty',
+    null
+  );
+  const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
     const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);
@@ -72,12 +80,21 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     setSelected(null);
   };
 
-  const empty = () => {
+  const empty = useCallback(() => {
     if (items.length === 0) return;
     if (!window.confirm('Empty trash?')) return;
+    setLastItems(items);
     persist([]);
     setSelected(null);
-  };
+    setShowBanner(true);
+  }, [items, setLastItems]);
+
+  const undoEmpty = useCallback(() => {
+    if (!lastItems) return;
+    persist(lastItems);
+    setLastItems(null);
+    setShowBanner(false);
+  }, [lastItems, setLastItems]);
 
   const handleKey = useCallback(
     (e: KeyboardEvent) => {
@@ -97,6 +114,12 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [handleKey]);
+
+  useEffect(() => {
+    if (lastItems) setShowBanner(true);
+  }, [lastItems]);
+
+  useEffect(() => bindEmptyShortcut(empty), [empty]);
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
@@ -156,6 +179,9 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
           </div>
         ))}
       </div>
+      {showBanner && (
+        <ConfirmBanner onUndo={undoEmpty} onClose={() => setShowBanner(false)} />
+      )}
     </div>
   );
 }
