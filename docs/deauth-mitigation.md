@@ -1,9 +1,9 @@
 # Deauthentication Attack Mitigation
 
-Deauthentication floods send forged management frames to disconnect wireless clients. Mitigate this threat by:
+Deauthentication floods send forged management frames to disconnect wireless clients. Use the following hardening steps:
 
-- Enabling **802.11w Management Frame Protection** so that deauth frames are authenticated.
-- Monitoring for excessive deauthentication traffic and alerting on anomalies.
-- Using strong encryption (WPA2/WPA3) and rotating keys regularly.
-- Limiting access-point exposure and segmenting networks.
+- [ ] Enable **802.11w Management Frame Protection** so that deauth frames are authenticated.
+- [ ] Monitor for excessive deauthentication traffic and alert on anomalies.
+- [ ] Use strong encryption (WPA2/WPA3) and rotate keys regularly.
+- [ ] Limit access-point exposure and segment networks.
 
