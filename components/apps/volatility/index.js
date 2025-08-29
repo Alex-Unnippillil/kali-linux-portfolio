@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import MemoryHeatmap from './MemoryHeatmap';
 import PluginBrowser from './PluginBrowser';
+import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthrough';
 import memoryDemo from '../../../public/demo-data/volatility/memory.json';
 
 // pull demo data for various volatility plugins from the memory fixture
@@ -167,7 +168,7 @@ const VolatilityApp = () => {
       <div className="flex-1 flex">
         <div className="flex-1 flex flex-col">
           <div className="flex space-x-2 px-2 bg-gray-900">
-            {['pstree', 'netscan', 'malfind', 'yarascan', 'plugins'].map((tab) => (
+            {['pstree', 'netscan', 'malfind', 'yarascan', 'plugins', 'walkthrough'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -255,6 +256,7 @@ const VolatilityApp = () => {
               />
             )}
             {activeTab === 'plugins' && <PluginBrowser />}
+            {activeTab === 'walkthrough' && <PluginWalkthrough />}
           </div>
         </div>
         {finding && (
