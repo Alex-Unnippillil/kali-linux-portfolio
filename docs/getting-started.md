@@ -4,7 +4,7 @@ This project is built with [Next.js](https://nextjs.org/).
 
 ## Prerequisites
 
-- Node.js 20
+- Node.js 20 (pinned via `.nvmrc` and `package.json` `engines`; update both if you upgrade)
 - yarn or npm
 
 ## Installation

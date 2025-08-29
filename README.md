@@ -22,7 +22,7 @@ Always test inside controlled labs and obtain written permission before performi
 ## Quick Start
 
 ### Requirements
-- **Node.js 20.x** (repo includes `.nvmrc`; run `nvm use`)
+- **Node.js 20.x** (repo includes `.nvmrc`; run `nvm use`; update `.nvmrc` and `package.json` `engines` if you upgrade)
 - **Yarn** or **npm**
 - Recommended: **pnpm** if you prefer stricter hoisting; update lock/config accordingly.
 
@@ -237,6 +237,7 @@ Workflow: `.github/workflows/gh-deploy.yml`:
 
 ### Vercel deployment
 - Create a Vercel project and connect this repo.
+- In Project Settings, pin **Node.js 20.x** under "Node.js Version" to match `.nvmrc` and `package.json` `engines` (update `engines` if you upgrade Node).
 - Required env variables (Project Settings):
   - `NEXT_PUBLIC_TRACKING_ID`
   - `NEXT_PUBLIC_SERVICE_ID`
