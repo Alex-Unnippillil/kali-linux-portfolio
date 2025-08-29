@@ -1,7 +1,14 @@
 'use client';
 
-import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  forwardRef,
+  useImperativeHandle,
+} from 'react';
 import useOPFS from '../../hooks/useOPFS';
+import commandRegistry, { CommandContext } from './commands';
 
 export interface TerminalProps {
   openApp?: (id: string) => void;
@@ -23,7 +30,23 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const searchRef = useRef<any>(null);
   const commandRef = useRef('');
   const contentRef = useRef('');
-  const registryRef = useRef<Record<string, (args: string) => void>>({});
+  const registryRef = useRef(commandRegistry);
+  const workerRef = useRef<Worker | null>(null);
+  const filesRef = useRef<Record<string, string>>(files);
+  const aliasesRef = useRef<Record<string, string>>({});
+  const historyRef = useRef<string[]>([]);
+  const contextRef = useRef<CommandContext>({
+    writeLine: () => {},
+    files: filesRef.current,
+    history: historyRef.current,
+    aliases: aliasesRef.current,
+    setAlias: (n, v) => {
+      aliasesRef.current[n] = v;
+    },
+    runWorker: async () => {},
+  });
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteInput, setPaletteInput] = useState('');
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -36,22 +59,46 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     }
   }
 
+  contextRef.current.writeLine = writeLine;
+
   function prompt() {
     if (termRef.current) termRef.current.write('$ ');
   }
 
+  async function runWorker(command: string) {
+    const worker = workerRef.current;
+    if (!worker) {
+      writeLine('Worker not available');
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      worker.onmessage = ({ data }: MessageEvent<any>) => {
+        if (data.type === 'data') {
+          for (const line of String(data.chunk).split('\n')) {
+            if (line) writeLine(line);
+          }
+        } else if (data.type === 'end') {
+          resolve();
+        }
+      };
+      worker.postMessage({
+        action: 'run',
+        command,
+        files: filesRef.current,
+      });
+    });
+  }
+
+  contextRef.current.runWorker = runWorker;
+
   useEffect(() => {
     registryRef.current = {
+      ...commandRegistry,
       help: () =>
         writeLine(
           `Available commands: ${Object.keys(registryRef.current).join(', ')}`,
         ),
-      ls: () => writeLine(Object.keys(files).join('  ')),
-      cat: (arg) => {
-        const content = files[arg.trim()];
-        if (content) writeLine(content);
-        else writeLine(`cat: ${arg}: No such file`);
-      },
+      ls: () => writeLine(Object.keys(filesRef.current).join('  ')),
       clear: () => {
         termRef.current?.clear();
         contentRef.current = '';
@@ -68,16 +115,30 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         }
       },
       date: () => writeLine(new Date().toString()),
-      about: () =>
-        writeLine('This terminal is powered by xterm.js'),
+      about: () => writeLine('This terminal is powered by xterm.js'),
     };
-  }, [openApp]);
+  }, [openApp, opfsSupported, deleteFile]);
 
-  function runCommand(cmd: string) {
+  useEffect(() => {
+    if (typeof Worker === 'function') {
+      workerRef.current = new Worker(
+        new URL('../../workers/terminal-worker.ts', import.meta.url),
+      );
+    }
+    return () => workerRef.current?.terminate();
+  }, []);
+
+  async function runCommand(cmd: string) {
     const [name, ...rest] = cmd.trim().split(/\s+/);
-    const handler = registryRef.current[name];
-    if (handler) handler(rest.join(' '));
-    else if (name) writeLine(`Command not found: ${name}`);
+    const expanded =
+      aliasesRef.current[name]
+        ? `${aliasesRef.current[name]} ${rest.join(' ')}`.trim()
+        : cmd;
+    const [cmdName, ...cmdRest] = expanded.split(/\s+/);
+    const handler = registryRef.current[cmdName];
+    historyRef.current.push(cmd);
+    if (handler) await handler(cmdRest.join(' '), contextRef.current);
+    else if (cmdName) await runWorker(expanded);
   }
 
   function autocomplete() {
@@ -191,12 +252,62 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     };
   }, []);
 
+  useEffect(() => {
+    const listener = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        setPaletteOpen((v) => {
+          const next = !v;
+          if (next) termRef.current?.blur();
+          else termRef.current?.focus();
+          return next;
+        });
+      }
+    };
+    window.addEventListener('keydown', listener);
+    return () => window.removeEventListener('keydown', listener);
+  }, [paletteOpen]);
+
   return (
-    <div
-      data-testid="xterm-container"
-      ref={containerRef}
-      className="h-full w-full bg-black text-white"
-    />
+    <div className="relative h-full w-full">
+      {paletteOpen && (
+        <div className="absolute inset-0 bg-black bg-opacity-75 flex items-start justify-center">
+          <div className="mt-10 w-80 bg-gray-800 p-4 rounded">
+            <input
+              autoFocus
+              className="w-full mb-2 bg-black text-white p-2"
+              value={paletteInput}
+              onChange={(e) => setPaletteInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  runCommand(paletteInput);
+                  setPaletteInput('');
+                  setPaletteOpen(false);
+                  termRef.current?.focus();
+                } else if (e.key === 'Escape') {
+                  setPaletteOpen(false);
+                  termRef.current?.focus();
+                }
+              }}
+            />
+            <ul className="max-h-40 overflow-y-auto">
+              {Object.keys(registryRef.current)
+                .filter((c) => c.startsWith(paletteInput))
+                .map((c) => (
+                  <li key={c} className="text-white">
+                    {c}
+                  </li>
+                ))}
+            </ul>
+          </div>
+        </div>
+      )}
+      <div
+        data-testid="xterm-container"
+        ref={containerRef}
+        className="h-full w-full bg-black text-white"
+      />
+    </div>
   );
 });
 

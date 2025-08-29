@@ -59,6 +59,56 @@ const handlers: Record<string, CommandHandler> = {
     }
     return input;
   },
+  grep: (args, input, ctx) => {
+    const [pattern, file] = args;
+    let source: Stream;
+    if (file) {
+      const content = ctx.files[file];
+      if (typeof content !== 'string') {
+        return textToStream(`grep: ${file}: No such file\n`);
+      }
+      source = textToStream(content);
+    } else {
+      source = input;
+    }
+    const regex = new RegExp(pattern);
+    return (async function* () {
+      for await (const chunk of source) {
+        for (const line of chunk.split('\n')) {
+          if (regex.test(line)) yield line + '\n';
+        }
+      }
+    })();
+  },
+  jq: (args, input, ctx) => {
+    const [query, file] = args;
+    return (async function* () {
+      let jsonText = '';
+      if (file) {
+        const content = ctx.files[file];
+        if (typeof content !== 'string') {
+          yield `jq: ${file}: No such file\n`;
+          return;
+        }
+        jsonText = content;
+      } else {
+        for await (const chunk of input) {
+          jsonText += chunk;
+        }
+      }
+      try {
+        let result: any = JSON.parse(jsonText);
+        if (query) {
+          for (const key of query.split('.').filter(Boolean)) {
+            result = result[key];
+          }
+        }
+        yield JSON.stringify(result, null, 2) + '\n';
+      } catch (e: any) {
+        yield `jq: error: ${e.message}\n`;
+      }
+    })();
+  },
   linecount: async function* (args, input) {
     let count = 0;
     for await (const chunk of input) {

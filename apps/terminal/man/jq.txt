@@ -1,0 +1,2 @@
+jq QUERY FILE
+Run a simple JSON query on FILE. Only dot notation is supported.
