@@ -12,6 +12,10 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     'wireshark:recent-filters',
     []
   );
+  const [applied, setApplied] = usePersistentState<Record<string, boolean>>(
+    'wireshark:applied-presets',
+    {}
+  );
 
   const suggestions = Array.from(
     new Set([...recent, ...presets.map((p) => p.expression)])
@@ -36,31 +40,36 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     }
   };
 
-  const handlePresetSelect = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const val = e.target.value;
-    if (!val) return;
-    onChange(val);
-    setRecent((prev) => [val, ...prev.filter((f) => f !== val)].slice(0, 5));
-    e.target.selectedIndex = 0;
+  const handlePresetClick = (expression: string) => {
+    onChange(expression);
+    setRecent((prev) => [expression, ...prev.filter((f) => f !== expression)].slice(0, 5));
+    setApplied((prev) => ({ ...prev, [expression]: true }));
   };
 
   return (
     <>
-      <select
-        onChange={handlePresetSelect}
-        defaultValue=""
-        aria-label="Preset filters"
-        className="px-2 py-1 bg-gray-800 rounded text-white"
-      >
-        <option value="">Preset filters...</option>
-        {presets.map(({ label, expression }) => (
-          <option key={expression} value={expression}>
-            {label}
-          </option>
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        {presets.map(({ label, expression, docUrl }) => (
+          <div key={expression} className="flex items-center gap-1">
+            <button
+              onClick={() => handlePresetClick(expression)}
+              className="px-2 py-1 bg-gray-800 rounded text-white text-xs"
+              aria-label={`Apply ${label} filter`}
+            >
+              {label}
+              {applied[expression] ? ' ✓' : ''}
+            </button>
+            <a
+              href={docUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 underline text-xs"
+            >
+              docs
+            </a>
+          </div>
         ))}
-      </select>
+      </div>
       <input
         list="display-filter-suggestions"
         value={value}
