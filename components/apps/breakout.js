@@ -11,8 +11,14 @@ const HEIGHT = 480;
 
 const BASE_PADDLE_WIDTH = 80;
 
+const BRICK_THEMES = {
+  classic: ["#f87171", "#fb923c", "#facc15", "#34d399", "#60a5fa"],
+  neon: ["#ff47ab", "#7c3aed", "#10b981", "#fbbf24", "#f472b6"],
+  grayscale: ["#6b7280", "#9ca3af", "#d1d5db", "#374151", "#4b5563"],
+};
+
 // Build bricks from a 0/1 layout grid
-const buildBricks = (layout, width) => {
+const buildBricks = (layout, width, colors = ["#fff"]) => {
   const rows = layout.length;
   const cols = layout[0].length;
   const brickWidth = width / cols;
@@ -27,6 +33,7 @@ const buildBricks = (layout, width) => {
           w: brickWidth,
           h: brickHeight,
           alive: true,
+          color: colors[r % colors.length],
         });
       }
     }
@@ -94,7 +101,7 @@ const LevelEditor = ({ onSave, cols = 8, rows = 5 }) => {
 
 export const createRng = (seed) => (seed ? seedrandom(seed) : Math.random);
 
-const BreakoutGame = ({ levels, seed, paddleSpeed = 300 }) => {
+const BreakoutGame = ({ levels, seed, paddleSpeed = 300, theme = "classic" }) => {
   const canvasRef = useRef(null);
   const [level, setLevel] = useState(0);
   const scoreRef = useRef(0);
@@ -194,7 +201,11 @@ const BreakoutGame = ({ levels, seed, paddleSpeed = 300 }) => {
     const width = canvas.clientWidth || WIDTH;
     const height = canvas.clientHeight || HEIGHT;
 
-    let bricks = buildBricks(levels[level % levels.length], width);
+    let bricks = buildBricks(
+      levels[level % levels.length],
+      width,
+      BRICK_THEMES[theme]
+    );
     const paddle = {
       x: width / 2 - BASE_PADDLE_WIDTH / 2,
       y: height - 20,
@@ -439,9 +450,11 @@ const BreakoutGame = ({ levels, seed, paddleSpeed = 300 }) => {
       // Bricks
       for (const brick of bricks) {
         if (brick.alive) {
+          ctx.fillStyle = brick.color;
           ctx.fillRect(brick.x, brick.y, brick.w - 2, brick.h - 2);
         }
       }
+      ctx.fillStyle = "white";
 
       // Fades (reduced motion)
       if (prefersReduced) {
@@ -524,7 +537,7 @@ const BreakoutGame = ({ levels, seed, paddleSpeed = 300 }) => {
       window.removeEventListener("keyup", keyUp);
       window.removeEventListener("resize", fit);
     };
-  }, [level, levels, resetKey, prefersReduced]);
+  }, [level, levels, resetKey, prefersReduced, theme]);
 
   return (
     <div className="relative h-full w-full">
@@ -562,6 +575,7 @@ const BreakoutGame = ({ levels, seed, paddleSpeed = 300 }) => {
 const Breakout = ({ seed }) => {
   const [levels, setLevels] = useState(levelsData || []);
   const [speed, setSpeed] = useState(300);
+  const [theme, setTheme] = useState("classic");
 
   useEffect(() => {
     if (typeof localStorage === "undefined") return;
@@ -579,6 +593,8 @@ const Breakout = ({ seed }) => {
         // ignore invalid JSON
       }
     }
+    const savedTheme = localStorage.getItem("breakout-theme");
+    if (savedTheme && BRICK_THEMES[savedTheme]) setTheme(savedTheme);
   }, []);
 
   const addLevel = (grid) => {
@@ -593,9 +609,22 @@ const Breakout = ({ seed }) => {
     }
   };
 
+  const changeTheme = (e) => {
+    const val = e.target.value;
+    setTheme(val);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("breakout-theme", val);
+    }
+  };
+
   return (
-    <GameLayout editor={<LevelEditor onSave={addLevel} />}> 
-      <BreakoutGame levels={levels} seed={seed} paddleSpeed={speed} />
+    <GameLayout editor={<LevelEditor onSave={addLevel} />}>
+      <BreakoutGame
+        levels={levels}
+        seed={seed}
+        paddleSpeed={speed}
+        theme={theme}
+      />
       <div className="absolute bottom-2 right-2 z-20 flex flex-col items-end text-xs text-white">
         <label htmlFor="paddle-speed">Sensitivity</label>
         <input
@@ -607,6 +636,19 @@ const Breakout = ({ seed }) => {
           onChange={changeSpeed}
           className="w-32"
         />
+        <label htmlFor="brick-theme" className="mt-1">Theme</label>
+        <select
+          id="brick-theme"
+          value={theme}
+          onChange={changeTheme}
+          className="bg-gray-700"
+        >
+          {Object.keys(BRICK_THEMES).map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
       </div>
     </GameLayout>
   );
