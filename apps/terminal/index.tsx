@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { usePipPortal } from '../../components/common/PipPortal';
 
 export interface TerminalProps {
   openApp?: (id: string) => void;
@@ -23,6 +24,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const commandRef = useRef('');
   const contentRef = useRef('');
   const registryRef = useRef<Record<string, (args: string) => void>>({});
+  const { open, close } = usePipPortal();
 
   function writeLine(text: string) {
     if (termRef.current) termRef.current.writeln(text);
@@ -58,9 +60,68 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         }
       },
       date: () => writeLine(new Date().toString()),
-      about: () =>
-        writeLine('This terminal is powered by xterm.js'),
+      about: () => writeLine('This terminal is powered by xterm.js'),
     };
+
+    if (typeof window !== 'undefined' && window.documentPictureInPicture) {
+      registryRef.current.tail = (args: string) => {
+        const parts = args.trim().split(/\s+/);
+        if (parts[0] !== '-f' || !parts[1]) {
+          writeLine('Usage: tail -f <file>');
+          return;
+        }
+        const file = parts[1];
+
+        const TailWindow: React.FC = () => {
+          const [text, setText] = React.useState('');
+          React.useEffect(() => {
+            let active = true;
+            let last = '';
+            const fetchLog = async () => {
+              try {
+                const res = await fetch(file);
+                if (!res.ok) throw new Error('Network error');
+                const t = await res.text();
+                if (!active) return;
+                if (t !== last) {
+                  const lines = t.split('\n');
+                  setText(lines.slice(-10).join('\n'));
+                  last = t;
+                }
+              } catch {
+                active = false;
+                close();
+                writeLine(`tail: error reading ${file}`);
+              }
+            };
+            fetchLog();
+            const id = window.setInterval(fetchLog, 1000);
+            return () => {
+              active = false;
+              window.clearInterval(id);
+            };
+          }, []);
+
+          return <pre style={{ margin: 0 }}>{text}</pre>;
+        };
+
+        (async () => {
+          const win = await open(<TailWindow />);
+          if (!win) {
+            writeLine('tail: failed to open PiP window');
+            return;
+          }
+          const handleExit = () => {
+            close();
+            writeLine('tail: PiP closed');
+          };
+          win.addEventListener('pagehide', handleExit, { once: true });
+          win.addEventListener('error', handleExit, { once: true });
+          win.addEventListener('focus', () => writeLine('tail: PiP focused'));
+          win.addEventListener('blur', () => writeLine('tail: PiP blurred'));
+        })();
+      };
+    }
   }, [openApp]);
 
   function runCommand(cmd: string) {
