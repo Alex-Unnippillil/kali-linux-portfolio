@@ -1,13 +1,11 @@
 import React from 'react';
 import UnitConverter from './UnitConverter';
-import TemperatureConverter from './TemperatureConverter';
 import Base64Converter from './Base64Converter';
 import HashConverter from './HashConverter';
 import usePersistentState from '../../usePersistentState';
 
 const tabs = [
   { id: 'unit', label: 'Unit', component: <UnitConverter /> },
-  { id: 'temperature', label: 'Temperature', component: <TemperatureConverter /> },
   { id: 'base64', label: 'Base64', component: <Base64Converter /> },
   { id: 'hash', label: 'Hash', component: <HashConverter /> },
 ];

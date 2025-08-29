@@ -20,6 +20,12 @@ export const unitMap = {
     fahrenheit: 'degF',
     kelvin: 'K',
   },
+  currency: {
+    USD: 'USD',
+    EUR: 'EUR',
+    GBP: 'GBP',
+    JPY: 'JPY',
+  },
 };
 
 export const unitDetails = {
@@ -40,6 +46,12 @@ export const unitDetails = {
     fahrenheit: { min: -459.67, max: 1e6, precision: 1 },
     kelvin: { min: 0, max: 1e6, precision: 1 },
   },
+  currency: {
+    USD: { min: 0, max: 1e9, precision: 2 },
+    EUR: { min: 0, max: 1e9, precision: 2 },
+    GBP: { min: 0, max: 1e9, precision: 2 },
+    JPY: { min: 0, max: 1e12, precision: 0 },
+  },
 };
 
 export const categories = Object.keys(unitMap).map((key) => ({
@@ -47,7 +59,18 @@ export const categories = Object.keys(unitMap).map((key) => ({
   label: key.charAt(0).toUpperCase() + key.slice(1),
 }));
 
+const currencyRates = {
+  USD: 1,
+  EUR: 0.9,
+  GBP: 0.8,
+  JPY: 110,
+};
+
 export const convertUnit = (category, from, to, amount, precision) => {
+  if (category === 'currency') {
+    const result = amount * (currencyRates[to] / currencyRates[from]);
+    return typeof precision === 'number' ? math.round(result, precision) : result;
+  }
   const fromUnit = unitMap[category][from];
   const toUnit = unitMap[category][to];
   const result = math.unit(amount, fromUnit).toNumber(toUnit);

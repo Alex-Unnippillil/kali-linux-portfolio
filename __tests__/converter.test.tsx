@@ -15,6 +15,10 @@ describe('Unit conversion', () => {
     expect(convertUnit('temperature', 'celsius', 'fahrenheit', 100)).toBeCloseTo(212);
   });
 
+  it('converts currency using static rates', () => {
+    expect(convertUnit('currency', 'USD', 'EUR', 10)).toBeCloseTo(9);
+  });
+
   it('respects precision when provided', () => {
     expect(
       convertUnit('length', 'meter', 'kilometer', 1234, 2)
