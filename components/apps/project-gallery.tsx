@@ -7,6 +7,7 @@ interface Project {
   title: string;
   description: string;
   stack: string[];
+  tags: string[];
   year: number;
   type: string;
   thumbnail: string;
@@ -31,6 +32,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const [stack, setStack] = useState('');
   const [year, setYear] = useState('');
   const [type, setType] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
 
   const readFilters = async () => {
@@ -58,6 +60,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     stack: string;
     year: string;
     type: string;
+    tags: string[];
   }) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -83,6 +86,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       setStack(data.stack || '');
       setYear(data.year || '');
       setType(data.type || '');
+      setTags(data.tags || []);
       setAriaMessage(`Showing ${projects.length} projects`);
     });
   }, [projects.length]);
@@ -99,6 +103,10 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     () => Array.from(new Set(projects.map((p) => p.type))),
     [projects]
   );
+  const allTags = useMemo(
+    () => Array.from(new Set(projects.flatMap((p) => p.tags))),
+    [projects]
+  );
 
   const filtered = useMemo(
     () =>
@@ -107,22 +115,23 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           (!stack || p.stack.includes(stack)) &&
           (!year || String(p.year) === year) &&
           (!type || p.type === type) &&
+          (tags.length === 0 || tags.every((t) => p.tags.includes(t))) &&
           (search === '' ||
             p.title.toLowerCase().includes(search.toLowerCase()) ||
             p.description.toLowerCase().includes(search.toLowerCase()))
       ),
-    [projects, stack, year, type, search]
+    [projects, stack, year, type, tags, search]
   );
 
   useEffect(() => {
-    writeFilters({ search, stack, year, type });
-  }, [search, stack, year, type]);
+    writeFilters({ search, stack, year, type, tags });
+  }, [search, stack, year, type, tags]);
 
   useEffect(() => {
     setAriaMessage(
-      `Showing ${filtered.length} project${filtered.length === 1 ? '' : 's'}${stack ? ` filtered by ${stack}` : ''}${year ? ` in ${year}` : ''}${type ? ` of type ${type}` : ''}${search ? ` matching "${search}"` : ''}`
+      `Showing ${filtered.length} project${filtered.length === 1 ? '' : 's'}${stack ? ` filtered by ${stack}` : ''}${tags.length ? ` with tags ${tags.join(', ')}` : ''}${year ? ` in ${year}` : ''}${type ? ` of type ${type}` : ''}${search ? ` matching "${search}"` : ''}`
     );
-  }, [filtered.length, stack, year, type, search]);
+  }, [filtered.length, stack, year, type, tags, search]);
 
   const openInChrome = (url: string) => {
     try {
@@ -186,6 +195,26 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           ))}
         </select>
       </div>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {allTags.map((t) => (
+          <label key={t} className="flex items-center gap-1 text-xs">
+            <input
+              type="checkbox"
+              aria-label={t}
+              checked={tags.includes(t)}
+              onChange={(e) =>
+                setTags((prev) =>
+                  e.target.checked
+                    ? [...prev, t]
+                    : prev.filter((tag) => tag !== t)
+                )
+              }
+              className="text-black"
+            />
+            {t}
+          </label>
+        ))}
+      </div>
       <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
         {filtered.map((project) => (
           <div
@@ -220,6 +249,23 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
                     className="bg-gray-700 text-xs px-2 py-1 rounded-full"
                   >
                     {s}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {project.tags.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() =>
+                      setTags((prev) =>
+                        prev.includes(t)
+                          ? prev.filter((tag) => tag !== t)
+                          : [...prev, t]
+                      )
+                    }
+                    className="bg-gray-700 text-xs px-2 py-1 rounded-full"
+                  >
+                    {t}
                   </button>
                 ))}
               </div>
