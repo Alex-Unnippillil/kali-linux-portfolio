@@ -15,6 +15,8 @@ const escapeFilename = (str = '') =>
 
 function Timeline({ events, onSelect }) {
   const canvasRef = useRef(null);
+  const overviewRef = useRef(null);
+  const containerRef = useRef(null);
   const workerRef = useRef(null);
   const positionsRef = useRef([]);
   const [sorted, setSorted] = useState([]);
@@ -78,6 +80,18 @@ function Timeline({ events, onSelect }) {
     setZoomAnnouncement(`Timeline scale: ${scale}`);
   }, [zoom]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handleWheel = (e) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 2 : 0.5;
+      setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z * factor)));
+    };
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', handleWheel);
+  }, [MAX_ZOOM, MIN_ZOOM]);
+
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || sorted.length === 0) return;
@@ -138,6 +152,33 @@ function Timeline({ events, onSelect }) {
         ctx.fillRect(x, height / 2 - 10, 2, 20);
         positionsRef.current.push({ x, event: ev });
       });
+
+      const overview = overviewRef.current;
+      const container = containerRef.current;
+      if (overview) {
+        const octx = overview.getContext('2d');
+        const owidth = container ? container.clientWidth : 600;
+        overview.width = owidth;
+        overview.height = 20;
+        octx.fillStyle = '#1f1f1f';
+        octx.fillRect(0, 0, owidth, 20);
+        octx.fillStyle = '#ffa500';
+        const total = max - min || 1;
+        sorted.forEach((ev) => {
+          const t = new Date(ev.timestamp).getTime();
+          const x = ((t - min) / total) * owidth;
+          octx.fillRect(x, 5, 1, 10);
+        });
+        if (container) {
+          const startRatio = container.scrollLeft / width;
+          const endRatio =
+            (container.scrollLeft + container.clientWidth) / width;
+          const rectX = startRatio * owidth;
+          const rectWidth = Math.max((endRatio - startRatio) * owidth, 10);
+          octx.strokeStyle = '#ffffff';
+          octx.strokeRect(rectX, 0, rectWidth, 20);
+        }
+      }
     };
     if (prefersReduced) {
       render();
@@ -163,8 +204,33 @@ function Timeline({ events, onSelect }) {
     draw();
   }, [draw]);
 
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const handleScroll = () => draw();
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [draw]);
+
+  useEffect(() => {
+    const overview = overviewRef.current;
+    const container = containerRef.current;
+    if (!overview || !container) return;
+    const handleClick = (e) => {
+      const rect = overview.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const ratio = x / overview.width;
+      const target =
+        ratio * canvasRef.current.width - container.clientWidth / 2;
+      container.scrollLeft = Math.max(0, target);
+      draw();
+    };
+    overview.addEventListener('click', handleClick);
+    return () => overview.removeEventListener('click', handleClick);
+  }, [draw]);
+
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full">
       <div aria-live="polite" className="sr-only">
         {zoomAnnouncement}
       </div>
@@ -241,11 +307,19 @@ function Timeline({ events, onSelect }) {
           )}
         </div>
       )}
+      <div ref={containerRef} className="w-full overflow-x-auto">
+        <canvas
+          ref={canvasRef}
+          className="bg-ub-grey"
+          role="img"
+          aria-label="File event timeline"
+        />
+      </div>
       <canvas
-        ref={canvasRef}
-        className="bg-ub-grey"
-        role="img"
-        aria-label="File event timeline"
+        ref={overviewRef}
+        className="bg-ub-grey mt-2 w-full"
+        height={20}
+        aria-label="Timeline overview"
       />
     </div>
   );
