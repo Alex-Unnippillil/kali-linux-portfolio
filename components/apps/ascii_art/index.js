@@ -246,17 +246,27 @@ export default function AsciiArt() {
     if (text) navigator.clipboard.writeText(text);
   }, [useColor, ansiAscii, plainAscii]);
 
-  const downloadAscii = useCallback(() => {
-    const text = useColor ? ansiAscii : plainAscii;
-    if (!text) return;
-    const blob = new Blob([text], { type: 'text/plain' });
+  const downloadAnsi = useCallback(() => {
+    if (!ansiAscii) return;
+    const blob = new Blob([ansiAscii], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'ascii-art.ans';
+    link.click();
+    URL.revokeObjectURL(url);
+  }, [ansiAscii]);
+
+  const downloadTxt = useCallback(() => {
+    if (!plainAscii) return;
+    const blob = new Blob([plainAscii], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = 'ascii-art.txt';
     link.click();
     URL.revokeObjectURL(url);
-  }, [useColor, ansiAscii, plainAscii]);
+  }, [plainAscii]);
 
   const downloadPng = useCallback(async () => {
     if (!plainAscii || !colors) return;
@@ -267,6 +277,7 @@ export default function AsciiArt() {
     canvas.width = width * cellSize;
     canvas.height = height * cellSize;
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     if (document?.fonts) {
@@ -284,6 +295,19 @@ export default function AsciiArt() {
         const ch = lines[y][x];
         ctx.fillText(ch, x * cellSize, y * cellSize);
       }
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    for (let x = 0; x <= width; x += 1) {
+      ctx.beginPath();
+      ctx.moveTo(x * cellSize + 0.5, 0);
+      ctx.lineTo(x * cellSize + 0.5, height * cellSize);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= height; y += 1) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * cellSize + 0.5);
+      ctx.lineTo(width * cellSize, y * cellSize + 0.5);
+      ctx.stroke();
     }
     const dataUrl = canvas.toDataURL('image/png');
     const link = document.createElement('a');
@@ -458,7 +482,14 @@ export default function AsciiArt() {
         </button>
         <button
           type="button"
-          onClick={downloadAscii}
+          onClick={downloadAnsi}
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+        >
+          ANSI
+        </button>
+        <button
+          type="button"
+          onClick={downloadTxt}
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
         >
           TXT
