@@ -1,0 +1,10 @@
+{
+  "executive": {
+    "name": "Executive Summary",
+    "template": "Executive Summary\n\nFindings:\n{{#findings}}- {{title}} ({{severity}})\n{{/findings}}"
+  },
+  "detailed": {
+    "name": "Detailed Report",
+    "template": "Detailed Report\n\n{{#findings}}{{index}}. {{title}}\nSeverity: {{severity}}\n{{description}}\n\n{{/findings}}"
+  }
+}
