@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import usePersistedState from '../../hooks/usePersistedState';
 import calculate3BV from '../../games/minesweeper/metrics';
+import { serializeBoard, deserializeBoard } from '../../games/minesweeper/save';
 
 /**
  * Classic Minesweeper implementation.
@@ -196,6 +197,7 @@ const Minesweeper = () => {
     false,
   );
   const [showSettings, setShowSettings] = useState(false);
+  const [hasSave, setHasSave] = useState(false);
   const leftDown = useRef(false);
   const rightDown = useRef(false);
   const chorded = useRef(false);
@@ -219,7 +221,13 @@ const Minesweeper = () => {
       if (saved) {
         try {
           const data = JSON.parse(saved);
-          if (data.board) setBoard(data.board);
+          if (data.board) {
+            const first = data.board[0]?.[0];
+            setBoard(Array.isArray(first) ? deserializeBoard(data.board) : data.board);
+            setHasSave(true);
+          } else {
+            setHasSave(false);
+          }
           if (data.status) setStatus(data.status);
           if (data.seed !== undefined) setSeed(data.seed);
           if (data.shareCode) setShareCode(data.shareCode);
@@ -233,7 +241,9 @@ const Minesweeper = () => {
             if (data.startTime) setStartTime(data.startTime);
             if (data.elapsed) setElapsed(data.elapsed);
           }
-        } catch {}
+        } catch {
+          setHasSave(false);
+        }
       }
     }
   }, []);
@@ -361,7 +371,7 @@ const Minesweeper = () => {
     if (typeof window !== 'undefined') {
       try {
         const data = {
-          board,
+          board: board ? serializeBoard(board) : null,
           status,
           seed,
           shareCode,
@@ -372,6 +382,7 @@ const Minesweeper = () => {
           paused,
         };
         localStorage.setItem('minesweeper-state', JSON.stringify(data));
+        setHasSave(!!board);
       } catch {}
     }
   }, [board, status, seed, shareCode, startTime, elapsed, bv, flags, paused]);
@@ -815,6 +826,37 @@ const Minesweeper = () => {
     setCodeInput('');
   };
 
+  const loadSaved = () => {
+    if (typeof window === 'undefined') return;
+    const saved = localStorage.getItem('minesweeper-state');
+    if (!saved) return;
+    try {
+      const data = JSON.parse(saved);
+      if (data.board) {
+        const first = data.board[0]?.[0];
+        setBoard(Array.isArray(first) ? deserializeBoard(data.board) : data.board);
+        setHasSave(true);
+      } else {
+        setHasSave(false);
+      }
+      if (data.status) setStatus(data.status);
+      if (data.seed !== undefined) setSeed(data.seed);
+      if (data.shareCode) setShareCode(data.shareCode);
+      if (data.bv) setBV(data.bv);
+      if (data.flags) setFlags(data.flags);
+      if (data.paused) setPaused(data.paused);
+      if (data.status === 'playing' && !data.paused) {
+        setStartTime(Date.now() - (data.elapsed || 0) * 1000);
+        setElapsed(data.elapsed || 0);
+      } else {
+        if (data.startTime) setStartTime(data.startTime);
+        if (data.elapsed) setElapsed(data.elapsed);
+      }
+    } catch {
+      setHasSave(false);
+    }
+  };
+
   const togglePause = () => {
     if (status !== 'playing') return;
     if (!paused) {
@@ -887,6 +929,14 @@ const Minesweeper = () => {
         >
           Reset
         </button>
+        {hasSave && (
+          <button
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={loadSaved}
+          >
+            Load Save
+          </button>
+        )}
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={togglePause}
