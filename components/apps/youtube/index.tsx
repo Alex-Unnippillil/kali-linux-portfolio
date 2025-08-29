@@ -18,6 +18,27 @@ interface Props {
   initialResults?: Video[];
 }
 
+const VIDEO_CACHE_NAME = 'youtube-video-cache';
+const CACHED_LIST_KEY = 'youtube:cached-videos';
+const MAX_CACHE_BYTES = 100 * 1024 * 1024;
+
+async function trimVideoCache() {
+  if (!('storage' in navigator) || !navigator.storage?.estimate) return;
+  let { usage = 0 } = await navigator.storage.estimate();
+  if (usage <= MAX_CACHE_BYTES) return;
+  const cache = await caches.open(VIDEO_CACHE_NAME);
+  let list: { url: string; ts: number }[] = JSON.parse(
+    localStorage.getItem(CACHED_LIST_KEY) || '[]',
+  );
+  list.sort((a, b) => a.ts - b.ts);
+  while (usage > MAX_CACHE_BYTES && list.length) {
+    const { url } = list.shift()!;
+    await cache.delete(url);
+    localStorage.setItem(CACHED_LIST_KEY, JSON.stringify(list));
+    usage = (await navigator.storage.estimate()).usage || 0;
+  }
+}
+
 function ChannelHovercard({ id, name }: { id: string; name: string }) {
   const [show, setShow] = useState(false);
   const [info, setInfo] = useState<any>(null);
@@ -226,6 +247,38 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [looping, setLooping] = useState(false);
   const [theater, setTheater] = useState(false);
 
+  const downloadCurrent = useCallback(async () => {
+    if (!current) return;
+    try {
+      const infoRes = await fetch(
+        `https://piped.video/api/v1/streams/${current.id}`,
+      );
+      const info = await infoRes.json();
+      const streamUrl =
+        info?.videoStreams?.find((s: any) => s.container === 'mp4')?.url ||
+        info?.videoStreams?.[0]?.url;
+      if (!streamUrl) return;
+      const response = await fetch(streamUrl);
+      const cache = await caches.open(VIDEO_CACHE_NAME);
+      await cache.put(streamUrl, response.clone());
+      const blob = await response.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${current.title || current.id}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      const list: { url: string; ts: number }[] = JSON.parse(
+        localStorage.getItem(CACHED_LIST_KEY) || '[]',
+      );
+      list.push({ url: streamUrl, ts: Date.now() });
+      localStorage.setItem(CACHED_LIST_KEY, JSON.stringify(list));
+      await trimVideoCache();
+    } catch {
+      // ignore errors
+    }
+  }, [current]);
+
 
   useEffect(() => {
     if (!current) return;
@@ -258,6 +311,10 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       document.body.appendChild(tag);
     }
   }, [current]);
+
+  useEffect(() => {
+    void trimVideoCache();
+  }, []);
 
   useEffect(() => {
     if (!looping || loopStart === null || loopEnd === null) return;
@@ -451,6 +508,9 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
                 title="Toggle loop (S)"
               >
                 Loop
+              </button>
+              <button onClick={downloadCurrent} title="Download video">
+                Download
               </button>
               <button onClick={() => setTheater((t) => !t)} title="Toggle theater (T)">
                 {theater ? 'Default' : 'Theater'}
