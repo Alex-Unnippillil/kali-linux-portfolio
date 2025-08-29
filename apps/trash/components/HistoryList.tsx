@@ -16,7 +16,9 @@ export default function HistoryList({ history, onRestore, onRestoreAll }: Props)
       <div className="flex items-center justify-between mb-2">
         <span className="font-bold">Recently Deleted</span>
         <button
-          onClick={onRestoreAll}
+          onClick={() => {
+            if (window.confirm('Restore all windows?')) onRestoreAll();
+          }}
           className="border border-black bg-black bg-opacity-50 px-2 py-1 rounded hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-ub-orange"
         >
           Restore All
@@ -29,7 +31,9 @@ export default function HistoryList({ history, onRestore, onRestoreAll }: Props)
               {item.title}
             </span>
             <button
-              onClick={() => onRestore(idx)}
+              onClick={() => {
+                if (window.confirm(`Restore ${item.title}?`)) onRestore(idx);
+              }}
               className="text-ub-orange hover:underline"
             >
               Restore
