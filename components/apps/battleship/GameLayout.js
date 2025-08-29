@@ -12,6 +12,8 @@ const GameLayout = ({
   onSalvoChange,
   fog,
   onFogChange,
+  colorblind,
+  onColorblindChange,
 }) => {
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 overflow-auto">
@@ -51,6 +53,15 @@ const GameLayout = ({
             onChange={(e) => onFogChange(e.target.checked)}
           />
           Fog of War
+        </label>
+        <label className="text-sm">
+          <input
+            type="checkbox"
+            className="mr-1"
+            checked={colorblind}
+            onChange={(e) => onColorblindChange(e.target.checked)}
+          />
+          Colorblind
         </label>
         {stats && (
           <div className="ml-4 text-sm">

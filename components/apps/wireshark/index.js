@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Waterfall from './Waterfall';
+import BurstChart from './BurstChart';
 import { protocolName, getRowColor, matchesDisplayFilter } from './utils';
 import DecodeTree from './DecodeTree';
 import FlowGraph from '../../../apps/wireshark/components/FlowGraph';
@@ -112,6 +113,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const [colorRules, setColorRules] = useState([]);
   const [paused, setPaused] = useState(false);
   const [timeline, setTimeline] = useState([]);
+  const [minuteData, setMinuteData] = useState([]);
   const [viewIndex, setViewIndex] = useState(0);
   const [announcement, setAnnouncement] = useState('');
   const [selectedPacket, setSelectedPacket] = useState(null);
@@ -143,6 +145,9 @@ const WiresharkApp = ({ initialPackets = [] }) => {
         }
         if (e.data.type === 'timeline') {
           setTimeline(e.data.timeline);
+        }
+        if (e.data.type === 'minutes') {
+          setMinuteData(e.data.minutes);
         }
       };
       // seed worker with any bundled packets
@@ -293,7 +298,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
         </button>
         <input
           type="file"
-          accept=".keys,.txt"
+          accept=".keys,.txt,.log"
           onChange={handleTLSKeyUpload}
           aria-label="TLS key file"
           className="px-2 py-1 bg-gray-800 rounded text-white"
@@ -348,6 +353,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           prefersReducedMotion={prefersReducedMotion.current}
         />
       </div>
+      <BurstChart minutes={minuteData} />
       <div className="p-2 flex space-x-2 bg-gray-900 overflow-x-auto">
         <button
           className={`px-2 py-1 rounded border ${
@@ -399,7 +405,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
                   <th className="px-2 py-1 text-left">Protocol</th>
                   <th className="px-2 py-1 text-left">Info</th>
                   {hasTlsKeys && (
-                    <th className="px-2 py-1 text-left">Decrypted</th>
+                    <th className="px-2 py-1 text-left">Plaintext</th>
                   )}
                 </tr>
               </thead>
@@ -423,9 +429,9 @@ const WiresharkApp = ({ initialPackets = [] }) => {
                       <td className="px-2 py-1 whitespace-nowrap">{protocolName(p.protocol)}</td>
                       <td className="px-2 py-1">{p.info}</td>
                       {hasTlsKeys && (
-                        <td className="px-2 py-1">{p.decrypted}</td>
+                        <td className="px-2 py-1">{p.plaintext || p.decrypted}</td>
                       )}
-                    </tr>
+                </tr>
                   );
                 })}
               </tbody>

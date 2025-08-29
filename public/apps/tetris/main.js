@@ -3,12 +3,23 @@ const ctx = canvas.getContext('2d');
 const info = document.getElementById('info');
 const leaderboardDiv = document.getElementById('leaderboard');
 const holdBtn = document.getElementById('hold-btn');
-const CELL = 20;
+const holdCanvas = document.getElementById('hold');
+const holdCtx = holdCanvas.getContext('2d');
+const nextCanvases = [
+  document.getElementById('next1').getContext('2d'),
+  document.getElementById('next2').getContext('2d'),
+  document.getElementById('next3').getContext('2d'),
+];
+const CELL = 24;
 const COLS = 10;
 const ROWS = 20;
 
 canvas.width = COLS * CELL;
 canvas.height = ROWS * CELL;
+[holdCtx, ...nextCanvases].forEach((c) => {
+  c.canvas.width = 4 * CELL;
+  c.canvas.height = 4 * CELL;
+});
 
 const SHAPES = {
   I: [
@@ -168,13 +179,13 @@ const SHAPES = {
 };
 
 const COLORS = {
-  I: '#00f0f0',
-  J: '#0000f0',
-  L: '#f0a000',
-  O: '#f0f000',
-  S: '#00f000',
-  T: '#a000f0',
-  Z: '#f00000',
+  I: '#06b6d4',
+  J: '#3b82f6',
+  L: '#f97316',
+  O: '#eab308',
+  S: '#22c55e',
+  T: '#a855f7',
+  Z: '#ef4444',
 };
 
 const JLSTZ_KICKS = {
@@ -246,10 +257,14 @@ function createPiece(type){
   };
 }
 
-let current = createPiece(nextType());
-let next = createPiece(nextType());
+let queue = [createPiece(nextType()), createPiece(nextType()), createPiece(nextType())];
+let current = queue.shift();
 let hold = null;
 let canHold = true;
+let locking = null;
+let lockTime = 0;
+
+drawPreviews();
 
 function collide(board, piece, x, y){
   const m = piece.matrix;
@@ -277,24 +292,63 @@ function merge(board, piece){
   });
 }
 
-function drawMatrix(matrix, offset, color){
+function drawMatrixOn(targetCtx, matrix, offset, color, ghost=false){
+  targetCtx.globalAlpha = ghost ? 0.3 : 1;
   matrix.forEach((row,y)=>{
     row.forEach((v,x)=>{
       if(v){
-        ctx.fillStyle = color;
-        ctx.fillRect((x+offset.x)*CELL, (y+offset.y)*CELL, CELL, CELL);
-        ctx.strokeStyle = '#111';
-        ctx.strokeRect((x+offset.x)*CELL, (y+offset.y)*CELL, CELL, CELL);
+        targetCtx.fillStyle = color;
+        targetCtx.fillRect((x+offset.x)*CELL, (y+offset.y)*CELL, CELL, CELL);
+        targetCtx.strokeStyle = '#111';
+        targetCtx.strokeRect((x+offset.x)*CELL, (y+offset.y)*CELL, CELL, CELL);
       }
     });
   });
+  targetCtx.globalAlpha = 1;
+}
+
+function drawPreviews(){
+  holdCtx.fillStyle = '#222';
+  holdCtx.fillRect(0,0,holdCanvas.width, holdCanvas.height);
+  if(hold){
+    const m = SHAPES[hold][0];
+    const offset = {x: Math.floor((4 - m[0].length)/2), y: Math.floor((4 - m.length)/2)};
+    drawMatrixOn(holdCtx, m, offset, COLORS[hold]);
+  }
+  nextCanvases.forEach((ctx, i)=>{
+    ctx.fillStyle = '#222';
+    ctx.fillRect(0,0,ctx.canvas.width, ctx.canvas.height);
+    const p = queue[i];
+    if(p){
+      const m = SHAPES[p.type][0];
+      const offset = {x: Math.floor((4 - m[0].length)/2), y: Math.floor((4 - m.length)/2)};
+      drawMatrixOn(ctx, m, offset, COLORS[p.type]);
+    }
+  });
+}
+
+function getDropY(piece){
+  let y = piece.y;
+  while(!collide(board, piece, piece.x, y+1)){
+    y++;
+  }
+  return y;
 }
 
 function draw(){
   ctx.fillStyle = '#222';
   ctx.fillRect(0,0,canvas.width, canvas.height);
-  drawMatrix(board, {x:0,y:0}, '#444');
-  drawMatrix(current.matrix, {x:current.x, y:current.y}, COLORS[current.type]);
+  drawMatrixOn(ctx, board, {x:0,y:0}, '#444');
+  if(current){
+    const ghostY = getDropY(current);
+    drawMatrixOn(ctx, current.matrix, {x:current.x, y:ghostY}, COLORS[current.type], true);
+    drawMatrixOn(ctx, current.matrix, {x:current.x, y:current.y}, COLORS[current.type]);
+  } else if(locking){
+    ctx.globalAlpha = Math.max(lockTime/100, 0.4);
+    drawMatrixOn(ctx, locking.matrix, {x:locking.x, y:locking.y}, COLORS[locking.type]);
+    ctx.globalAlpha = 1;
+  }
+  drawPreviews();
 }
 
 function attemptRotate(dir){
@@ -318,8 +372,8 @@ function holdPiece(){
   if(!canHold) return;
   if(!hold){
     hold = current.type;
-    current = next;
-    next = createPiece(nextType());
+    current = queue.shift();
+    queue.push(createPiece(nextType()));
   } else {
     const tmp = hold;
     hold = current.type;
@@ -339,22 +393,12 @@ function hardDrop(){
 }
 
 function pieceDrop(){
-  if(!collide(board,current,current.x,current.y+1)){
+  if(current && !collide(board,current,current.x,current.y+1)){
     current.y++;
-  }else{
-    merge(board,current);
-    canHold = true;
-    const linesCleared = sweep();
-    lines += linesCleared;
-    score += [0,100,300,500,800][linesCleared];
-    if(mode==='sprint' && lines>=40){
-      finishSprint();
-      return;
-    }
-    resetPiece();
-    if(collide(board,current,current.x,current.y)){
-      gameOver();
-    }
+  } else if(current){
+    locking = { ...current };
+    current = null;
+    lockTime = 100;
   }
 }
 
@@ -373,10 +417,10 @@ function sweep(){
 }
 
 function resetPiece(){
-  current = next;
+  current = queue.shift();
   current.x = 3;
   current.y = 0;
-  next = createPiece(nextType());
+  queue.push(createPiece(nextType()));
   updateInfo();
 }
 
@@ -396,7 +440,25 @@ function update(time=0){
   const delta = time - lastTime;
   lastTime = time;
   dropCounter += delta;
-  if(dropCounter > dropInterval){
+  if(lockTime > 0){
+    lockTime -= delta;
+    if(lockTime <= 0){
+      merge(board, locking);
+      canHold = true;
+      const linesCleared = sweep();
+      lines += linesCleared;
+      score += [0,100,300,500,800][linesCleared];
+      if(mode==='sprint' && lines>=40){
+        finishSprint();
+        return;
+      }
+      resetPiece();
+      if(collide(board,current,current.x,current.y)){
+        gameOver();
+      }
+      locking = null;
+    }
+  } else if(dropCounter > dropInterval){
     pieceDrop();
     dropCounter = 0;
   }
@@ -413,18 +475,19 @@ function updateInfo(){
     text += ` Time: ${t}`;
   }
   if(hold) text += ` Hold: ${hold}`;
-  if(next) text += ` Next: ${next.type}`;
+  if(queue[0]) text += ` Next: ${queue[0].type}`;
   info.textContent = text;
 }
 
 function startSprint(){
   mode='sprint';
   resetBoard();
-  current = createPiece(nextType());
-  next = createPiece(nextType());
+  queue = [createPiece(nextType()), createPiece(nextType()), createPiece(nextType())];
+  current = queue.shift();
   hold = null; canHold=true; lines=0; score=0;
   startTime = performance.now();
   updateInfo();
+  drawPreviews();
   update();
 }
 
@@ -438,10 +501,11 @@ function finishSprint(){
 function startMarathon(){
   mode='marathon';
   resetBoard();
-  current = createPiece(nextType());
-  next = createPiece(nextType());
+  queue = [createPiece(nextType()), createPiece(nextType()), createPiece(nextType())];
+  current = queue.shift();
   hold = null; canHold=true; lines=0; score=0;
   updateInfo();
+  drawPreviews();
   update();
 }
 

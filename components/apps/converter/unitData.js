@@ -32,6 +32,20 @@ export const unitMap = {
     megabyte: 'MB',
     gigabyte: 'GB',
   },
+  area: {
+    'square meter': 'm^2',
+    'square kilometer': 'km^2',
+    'square foot': 'ft^2',
+    'square mile': 'mi^2',
+    acre: 'acre',
+  },
+  volume: {
+    liter: 'L',
+    milliliter: 'ml',
+    'cubic meter': 'm^3',
+    'cubic foot': 'ft^3',
+    gallon: 'gal',
+  },
   currency: {
     USD: 'USD',
     EUR: 'EUR',
@@ -69,6 +83,20 @@ export const unitDetails = {
     kilobyte: { min: 0, max: 1e12, precision: 2 },
     megabyte: { min: 0, max: 1e9, precision: 2 },
     gigabyte: { min: 0, max: 1e6, precision: 2 },
+  },
+  area: {
+    'square meter': { min: 0, max: 1e12, precision: 2 },
+    'square kilometer': { min: 0, max: 1e6, precision: 6 },
+    'square foot': { min: 0, max: 1e12, precision: 2 },
+    'square mile': { min: 0, max: 1e8, precision: 6 },
+    acre: { min: 0, max: 1e9, precision: 4 },
+  },
+  volume: {
+    liter: { min: 0, max: 1e9, precision: 2 },
+    milliliter: { min: 0, max: 1e12, precision: 2 },
+    'cubic meter': { min: 0, max: 1e6, precision: 6 },
+    'cubic foot': { min: 0, max: 1e9, precision: 4 },
+    gallon: { min: 0, max: 1e9, precision: 2 },
   },
   currency: {
     USD: { min: 0, max: 1e9, precision: 2 },

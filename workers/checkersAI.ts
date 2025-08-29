@@ -13,7 +13,12 @@ const inBounds = (r: number, c: number) => r >= 0 && r < 8 && c >= 0 && c < 8;
 const cloneBoard = (board: Board): Board =>
   board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
 
-const getPieceMoves = (board: Board, r: number, c: number): Move[] => {
+const getPieceMoves = (
+  board: Board,
+  r: number,
+  c: number,
+  enforceCapture = true,
+): Move[] => {
   const piece = board[r][c];
   if (!piece) return [];
   const dirs = [...directions[piece.color]];
@@ -37,7 +42,7 @@ const getPieceMoves = (board: Board, r: number, c: number): Move[] => {
       }
     }
   }
-  return captures.length ? captures : moves;
+  return enforceCapture && captures.length ? captures : [...captures, ...moves];
 };
 
 const getAllMoves = (
@@ -49,7 +54,7 @@ const getAllMoves = (
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       if (board[r][c]?.color === color) {
-        const moves = getPieceMoves(board, r, c);
+        const moves = getPieceMoves(board, r, c, enforceCapture);
         if (moves.length) result = result.concat(moves);
       }
     }

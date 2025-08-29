@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import modulesData from '../data/module-index.json';
 import versionInfo from '../data/module-version.json';
 
@@ -19,6 +19,7 @@ const PopularModules: React.FC = () => {
   const [modules, setModules] = useState<Module[]>(modulesData as Module[]);
   const [version, setVersion] = useState<string>(versionInfo.version);
   const [updateMessage, setUpdateMessage] = useState<string>('');
+  const [updateAvailable, setUpdateAvailable] = useState<boolean>(false);
   const [filter, setFilter] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   const [selected, setSelected] = useState<Module | null>(null);
@@ -61,6 +62,13 @@ const PopularModules: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    fetch(`/api/modules/update?version=${version}`)
+      .then((res) => res.json())
+      .then((data) => setUpdateAvailable(data.needsUpdate))
+      .catch(() => setUpdateAvailable(false));
+  }, [version]);
+
   const handleUpdate = async () => {
     try {
       const res = await fetch(`/api/modules/update?version=${version}`);
@@ -70,8 +78,10 @@ const PopularModules: React.FC = () => {
         setModules(mods);
         setVersion(data.latest);
         setUpdateMessage(`Updated to v${data.latest}`);
+        setUpdateAvailable(false);
       } else {
         setUpdateMessage('Already up to date');
+        setUpdateAvailable(false);
       }
     } catch {
       setUpdateMessage('Update failed');
@@ -99,6 +109,9 @@ const PopularModules: React.FC = () => {
           Update Modules
         </button>
         <span className="text-xs">v{version}</span>
+        {updateAvailable && (
+          <span className="text-xs text-yellow-300">Update available</span>
+        )}
       </div>
       {updateMessage && <p className="text-sm">{updateMessage}</p>}
       <input

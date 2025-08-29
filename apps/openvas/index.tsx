@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import ResultDiff from './components/ResultDiff';
 
 interface Vulnerability {
@@ -64,62 +64,178 @@ const sampleData: HostReport[] = [
   },
 ];
 
+const cvssColor = (score: number) => {
+  if (score >= 9) return 'bg-red-700';
+  if (score >= 7) return 'bg-orange-700';
+  if (score >= 4) return 'bg-yellow-700';
+  return 'bg-green-700';
+};
+
 const OpenVASReport: React.FC = () => {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
   const remediationTags = useMemo(() => {
     const tags = new Set<string>();
-    sampleData.forEach((h) =>
-      h.vulns.forEach((v) => tags.add(v.remediation))
-    );
+    sampleData.forEach((h) => h.vulns.forEach((v) => tags.add(v.remediation)));
     return Array.from(tags);
   }, []);
 
+  const findings = useMemo(
+    () =>
+      sampleData.flatMap((host) =>
+        host.vulns.map((v) => ({ ...v, host: host.host }))
+      ),
+    [],
+  );
+
+  const riskSummary = useMemo(() => {
+    const summary: Record<HostReport['risk'], number> = {
+      Low: 0,
+      Medium: 0,
+      High: 0,
+      Critical: 0,
+    };
+    sampleData.forEach((h) => {
+      summary[h.risk] += 1;
+    });
+    return summary;
+  }, []);
+
+  const trendData = [5, 7, 6, 9, 4];
+  const maxTrend = Math.max(...trendData, 1);
+  const trendWidth = 300;
+  const trendHeight = 80;
+  const trendStep =
+    trendData.length > 1 ? trendWidth / (trendData.length - 1) : trendWidth;
+  const trendPath = trendData
+    .map((v, i) => {
+      const x = i * trendStep;
+      const y = trendHeight - (v / maxTrend) * trendHeight;
+      return `${i === 0 ? 'M' : 'L'}${x},${y}`;
+    })
+    .join(' ');
+
+  const toggle = (id: string) =>
+    setExpanded((e) => ({ ...e, [id]: !e[id] }));
+
+  const exportJSON = () => {
+    const blob = new Blob([JSON.stringify(findings, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'openvas-findings.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCSV = () => {
+    const header = 'Host,ID,Name,CVSS,EPSS,Description,Remediation';
+    const rows = findings.map(
+      (f) =>
+        `${f.host},${f.id},"${f.name}",${f.cvss},${f.epss},"${f.description}","${f.remediation}"`,
+    );
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'openvas-findings.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
-      <h1 className="text-2xl mb-4">OpenVAS Report</h1>
-      <div className="grid gap-4 md:grid-cols-2" role="list">
-        {sampleData.map((host) => (
-          <div
-            key={host.host}
-            className="bg-gray-800 p-4 rounded"
-            role="listitem"
+    <div className="min-h-screen bg-gray-900 text-white p-4 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl">OpenVAS Report</h1>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={exportJSON}
+            className="px-2 py-1 bg-blue-600 rounded text-sm"
           >
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl">{host.host}</h2>
-              <span
-                className={`px-2 py-1 rounded text-sm ${riskColors[host.risk]}`}
-              >
-                {host.risk}
-              </span>
-            </div>
-            <ul className="space-y-2">
-              {host.vulns.map((v) => (
-                <li key={v.id} className="bg-gray-900 p-2 rounded">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-semibold">{v.name}</p>
-                    <div className="flex gap-1">
-                      <span
-                        className="px-1.5 py-0.5 rounded text-xs bg-blue-700"
-                        aria-label={`CVSS score ${v.cvss}`}
-                      >
-                        CVSS {v.cvss}
-                      </span>
-                      <span
-                        className="px-1.5 py-0.5 rounded text-xs bg-purple-700"
-                        aria-label={`EPSS probability ${v.epss}`}
-                      >
-                        EPSS {Math.round(v.epss * 100)}%
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm mb-1">{v.description}</p>
-                  <p className="text-xs text-yellow-300">{v.remediation}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+            Export JSON
+          </button>
+          <button
+            type="button"
+            onClick={exportCSV}
+            className="px-2 py-1 bg-blue-600 rounded text-sm"
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
-      <h2 className="text-xl mt-6 mb-2">Remediation Summary</h2>
+
+      <section>
+        <h2 className="text-xl mb-2">Scan Overview</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+          {Object.entries(riskSummary).map(([risk, count]) => (
+            <div
+              key={risk}
+              className={`p-4 rounded ${riskColors[risk as keyof typeof riskColors]}`}
+            >
+              <p className="text-sm">{risk}</p>
+              <p className="text-2xl font-bold">{count}</p>
+            </div>
+          ))}
+        </div>
+        <svg
+          width={trendWidth}
+          height={trendHeight}
+          className="bg-gray-800 rounded"
+        >
+          <path d={trendPath} stroke="#0ea5e9" strokeWidth={2} fill="none" />
+        </svg>
+      </section>
+
+      <section>
+        <h2 className="text-xl mb-2">Findings</h2>
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr>
+              <th className="p-2">Host</th>
+              <th className="p-2">Vulnerability</th>
+              <th className="p-2">CVSS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {findings.map((f) => {
+              const key = `${f.host}-${f.id}`;
+              return (
+                <React.Fragment key={key}>
+                  <tr
+                    className="cursor-pointer hover:bg-gray-800"
+                    onClick={() => toggle(key)}
+                  >
+                    <td className="p-2">{f.host}</td>
+                    <td className="p-2">{f.name}</td>
+                    <td className="p-2">
+                      <div className="w-full bg-gray-700 rounded h-3">
+                        <div
+                          className={`${cvssColor(f.cvss)} h-3 rounded`}
+                          style={{ width: `${(f.cvss / 10) * 100}%` }}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                  {expanded[key] && (
+                    <tr>
+                      <td colSpan={3} className="p-2 bg-gray-800">
+                        <p className="text-sm mb-1">{f.description}</p>
+                        <p className="text-xs text-yellow-300">{f.remediation}</p>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </section>
+
+      <h2 className="text-xl">Remediation Summary</h2>
       <div className="flex flex-wrap gap-2" role="list">
         {remediationTags.map((tag) => (
           <span
@@ -131,6 +247,7 @@ const OpenVASReport: React.FC = () => {
           </span>
         ))}
       </div>
+
       <h2 className="text-xl mt-6 mb-2">Compare Reports</h2>
       <ResultDiff />
       <p className="mt-4 text-xs text-gray-400">

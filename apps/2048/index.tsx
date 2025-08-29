@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import { getDailySeed } from '../../utils/dailySeed';
 
 const SIZE = 4;
 
@@ -14,9 +15,13 @@ const mulberry32 = (seed: number) => () => {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
 
-const todaySeed = () => {
-  const d = new Date();
-  return parseInt(`${d.getFullYear()}${d.getMonth() + 1}${d.getDate()}`, 10);
+// convert string seed to 32-bit number
+const hashSeed = (str: string): number => {
+  let h = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    h = Math.imul(31, h) + str.charCodeAt(i);
+  }
+  return h >>> 0;
 };
 
 const slideRow = (row: number[]) => {
@@ -124,14 +129,22 @@ const Page2048 = () => {
   const [history, setHistory] = useState<number[][][]>([]);
 
   useEffect(() => {
-    const seed = todaySeed();
-    const rand = mulberry32(seed);
-    const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
-    addRandomTile(b, rand);
-    addRandomTile(b, rand);
-    setBoard(b);
-    rngRef.current = rand;
-    seedRef.current = seed;
+    let mounted = true;
+    (async () => {
+      const seedStr = await getDailySeed('2048');
+      const seed = hashSeed(seedStr);
+      const rand = mulberry32(seed);
+      const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+      addRandomTile(b, rand);
+      addRandomTile(b, rand);
+      if (!mounted) return;
+      setBoard(b);
+      rngRef.current = rand;
+      seedRef.current = seed;
+    })();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const resetTimer = useCallback(() => {

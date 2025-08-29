@@ -7,7 +7,8 @@ const VCardPage: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [vcard, setVcard] = useState('');
-  const [qr, setQr] = useState('');
+  const [png, setPng] = useState('');
+  const [svg, setSvg] = useState('');
 
   useEffect(() => {
     if (!name && !org && !phone && !email) {
@@ -33,20 +34,35 @@ const VCardPage: React.FC = () => {
 
   useEffect(() => {
     if (!vcard) {
-      setQr('');
+      setPng('');
+      setSvg('');
       return;
     }
     QRCode.toDataURL(vcard, { margin: 1 })
-      .then(setQr)
-      .catch(() => setQr(''));
+      .then(setPng)
+      .catch(() => setPng(''));
+    QRCode.toString(vcard, { type: 'svg', margin: 1 })
+      .then(setSvg)
+      .catch(() => setSvg(''));
   }, [vcard]);
 
   const downloadPng = () => {
-    if (!qr) return;
+    if (!png) return;
     const link = document.createElement('a');
-    link.href = qr;
+    link.href = png;
     link.download = 'vcard.png';
     link.click();
+  };
+
+  const downloadSvg = () => {
+    if (!svg) return;
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'vcard.svg';
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -92,14 +108,23 @@ const VCardPage: React.FC = () => {
       {vcard && (
         <div className="flex flex-col items-center gap-2">
           <pre className="whitespace-pre-wrap break-all text-xs">{vcard}</pre>
-          {qr && <img src={qr} alt="vCard QR" className="h-48 w-48" />}
-          <button
-            type="button"
-            onClick={downloadPng}
-            className="rounded bg-blue-600 p-2 text-white"
-          >
-            Download
-          </button>
+          {png && <img src={png} alt="vCard QR" className="h-48 w-48" />}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={downloadPng}
+              className="rounded bg-blue-600 p-2 text-white"
+            >
+              Download PNG
+            </button>
+            <button
+              type="button"
+              onClick={downloadSvg}
+              className="rounded bg-green-600 p-2 text-white"
+            >
+              Download SVG
+            </button>
+          </div>
         </div>
       )}
     </div>

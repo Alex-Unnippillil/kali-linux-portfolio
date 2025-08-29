@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
 
@@ -40,6 +40,18 @@ const clearSession = () => {
   localStorage.removeItem('hydra/session');
 };
 
+const loadConfig = () => {
+  try {
+    return JSON.parse(localStorage.getItem('hydra/config') || 'null');
+  } catch {
+    return null;
+  }
+};
+
+const saveConfigStorage = (config) => {
+  localStorage.setItem('hydra/config', JSON.stringify(config));
+};
+
 const HydraApp = () => {
   const [target, setTarget] = useState('');
   const [service, setService] = useState('ssh');
@@ -65,13 +77,32 @@ const HydraApp = () => {
   const [rule, setRule] = useState('1:3');
   const [candidateStats, setCandidateStats] = useState([]);
   const canvasRef = useRef(null);
+  const [progress, setProgress] = useState(0);
+  const [showSaved, setShowSaved] = useState(false);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
 
+  const isTargetValid = useMemo(() => {
+    const trimmed = target.trim();
+    if (!trimmed) return false;
+    const [host, port] = trimmed.split(':');
+    if (port && !/^\d+$/.test(port)) return false;
+    const ipv4 = /^(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$/;
+    const hostname = /^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$/;
+    return ipv4.test(host) || hostname.test(host);
+  }, [target]);
+
   useEffect(() => {
     setUserLists(loadWordlists('hydraUserLists'));
     setPassLists(loadWordlists('hydraPassLists'));
+    const cfg = loadConfig();
+    if (cfg) {
+      setTarget(cfg.target || '');
+      setService(cfg.service || 'ssh');
+      setSelectedUser(cfg.selectedUser || '');
+      setSelectedPass(cfg.selectedPass || '');
+    }
   }, []);
 
   useEffect(() => {
@@ -179,6 +210,12 @@ const HydraApp = () => {
     (selectedPassList?.content.split('\n').filter(Boolean).length || 0);
 
   useEffect(() => {
+    const limit = Math.min(LOCKOUT_THRESHOLD, totalAttempts);
+    const completed = initialAttempt + timeline.length;
+    setProgress(limit ? Math.min((completed / limit) * 100, 100) : 0);
+  }, [totalAttempts, timeline, initialAttempt]);
+
+  useEffect(() => {
     const [minStr, maxStr] = rule.split(':');
     const min = parseInt(minStr, 10);
     const max = parseInt(maxStr, 10);
@@ -269,8 +306,8 @@ const HydraApp = () => {
   const runHydra = async () => {
     const user = selectedUserList;
     const pass = selectedPassList;
-    if (!target || !user || !pass) {
-      setOutput('Please provide target, user list and password list');
+    if (!isTargetValid || !user || !pass) {
+      setOutput('Please provide a valid target, user list and password list');
       return;
     }
 
@@ -338,6 +375,24 @@ const HydraApp = () => {
     setAnnounce('Dry run complete');
   };
 
+  const handleSaveConfig = () => {
+    saveConfigStorage({ target, service, selectedUser, selectedPass });
+    setShowSaved(true);
+    setTimeout(() => setShowSaved(false), 1500);
+  };
+
+  const handleCopyConfig = async () => {
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify({ target, service, selectedUser, selectedPass }, null, 2)
+      );
+      setShowSaved(true);
+      setTimeout(() => setShowSaved(false), 1500);
+    } catch {
+      // ignore clipboard errors
+    }
+  };
+
   const pauseHydra = async () => {
     setPaused(true);
     setAnnounce('Hydra paused');
@@ -383,6 +438,23 @@ const HydraApp = () => {
   return (
     <div className="h-full w-full p-4 bg-gray-900 text-white overflow-auto">
       <div className="space-y-2">
+        <div className="flex space-x-2 mb-2">
+          {[
+            { label: 'HTTP', value: 'http-get' },
+            { label: 'SSH', value: 'ssh' },
+            { label: 'FTP', value: 'ftp' },
+          ].map((m) => (
+            <button
+              key={m.value}
+              onClick={() => setService(m.value)}
+              className={`px-3 py-1 rounded-full text-sm ${
+                service === m.value ? 'bg-blue-600' : 'bg-gray-700'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
         <div>
           <label className="block mb-1">Target</label>
           <input
@@ -510,7 +582,7 @@ const HydraApp = () => {
         </div>
         <button
           onClick={runHydra}
-          disabled={running}
+          disabled={running || !isTargetValid}
           className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
         >
           {running ? 'Running...' : 'Run Hydra'}
@@ -521,6 +593,18 @@ const HydraApp = () => {
           className="ml-2 px-4 py-2 bg-purple-600 rounded disabled:opacity-50"
         >
           Dry Run
+        </button>
+        <button
+          onClick={handleSaveConfig}
+          className="ml-2 px-4 py-2 bg-gray-700 rounded"
+        >
+          Save Config
+        </button>
+        <button
+          onClick={handleCopyConfig}
+          className="ml-2 px-4 py-2 bg-gray-700 rounded"
+        >
+          Copy Config
         </button>
         {running && !paused && (
           <button
@@ -560,12 +644,38 @@ const HydraApp = () => {
         initialAttempt={initialAttempt}
         onAttemptChange={handleAttempt}
       />
+      <div className="mt-4 w-full bg-gray-700 h-2 rounded">
+        <div
+          className="bg-green-500 h-2 rounded"
+          style={{ width: `${progress}%` }}
+        ></div>
+      </div>
       <p className="mt-2 text-sm text-yellow-300">
         This demo slows after {BACKOFF_THRESHOLD} tries to mimic password spray
         throttling and stops at {LOCKOUT_THRESHOLD} attempts to illustrate
         account lockout.
       </p>
       <AttemptTimeline attempts={timeline} />
+      {timeline.length > 0 && (
+        <table className="mt-4 w-full text-sm">
+          <thead>
+            <tr className="text-left">
+              <th className="px-2">Host</th>
+              <th className="px-2">User</th>
+              <th className="px-2">Pass</th>
+            </tr>
+          </thead>
+          <tbody>
+            {timeline.map((t, idx) => (
+              <tr key={idx} className="border-t border-gray-800">
+                <td className="px-2">{target}</td>
+                <td className="px-2">{t.user}</td>
+                <td className="px-2">{t.password}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       <p className="mt-4 text-sm text-gray-300">
         Common password lists succeed because many users choose simple,
@@ -580,6 +690,11 @@ const HydraApp = () => {
 
       {output && (
         <pre className="mt-4 bg-black p-2 overflow-auto h-64 whitespace-pre-wrap">{output}</pre>
+      )}
+      {showSaved && (
+        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-3 py-1 rounded text-sm">
+          Saved
+        </div>
       )}
     </div>
   );

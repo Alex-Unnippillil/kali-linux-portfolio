@@ -29,10 +29,31 @@ describe('ReconNG app', () => {
     });
   });
 
+  it('hides API keys by default', async () => {
+    render(<ReconNG />);
+    await userEvent.click(screen.getByText('Settings'));
+    const input = screen.getByPlaceholderText('DNS Enumeration API Key');
+    expect(input).toHaveAttribute('type', 'password');
+  });
+
   it('loads marketplace modules', async () => {
     render(<ReconNG />);
     await userEvent.click(screen.getByText('Marketplace'));
     expect(await screen.findByText('Port Scan')).toBeInTheDocument();
+  });
+
+  it('allows tagging scripts', async () => {
+    render(<ReconNG />);
+    await userEvent.click(screen.getByText('Marketplace'));
+    const input = await screen.findByPlaceholderText('Tag Port Scan');
+    await userEvent.type(input, 'network{enter}');
+    expect(await screen.findByText('network')).toBeInTheDocument();
+    await waitFor(() => {
+      const stored = JSON.parse(
+        localStorage.getItem('reconng-script-tags') || '{}'
+      );
+      expect(stored['Port Scan']).toEqual(['network']);
+    });
   });
 
   it('dedupes entities in table', async () => {

@@ -5,13 +5,6 @@ import useWatchLater, {
   Video as WatchLaterVideo,
 } from '../../../apps/youtube/state/watchLater';
 
-declare global {
-  interface Window {
-    YT: any;
-    onYouTubeIframeAPIReady: () => void;
-  }
-}
-
 type Video = WatchLaterVideo;
 
 interface Props {
@@ -71,7 +64,7 @@ function ChannelHovercard({ id, name }: { id: string; name: string }) {
     <span className="relative" onMouseEnter={handleEnter} onMouseLeave={handleLeave}>
       {name}
       {show && info && (
-        <div className="absolute z-10 mt-1 w-48 rounded bg-gray-800 p-2 text-xs text-white shadow">
+        <div className="absolute z-10 mt-1 w-48 rounded bg-ub-cool-grey p-2 text-xs text-ubt-cool-grey shadow">
           <div className="font-bold">{info.name}</div>
           {info.subscriberCount && <div>{info.subscriberCount} subs</div>}
         </div>
@@ -108,7 +101,7 @@ function Sidebar({
   };
 
   return (
-    <aside className="w-64 overflow-y-auto border-l border-gray-700 bg-gray-800 p-2 text-sm" role="complementary">
+    <aside className="w-64 overflow-y-auto border-l border-ub-cool-grey bg-ub-cool-grey p-2 text-sm" role="complementary">
       <h2 className="mb-2 text-lg font-semibold">Queue</h2>
       <div data-testid="queue-list">
         {queue.map((v) => (
@@ -121,13 +114,13 @@ function Sidebar({
             <div>{v.title}</div>
           </div>
         ))}
-        {!queue.length && <div className="text-gray-400">Empty</div>}
+        {!queue.length && <div className="text-ubt-grey">Empty</div>}
       </div>
       <h2 className="mb-2 mt-4 text-lg font-semibold">Watch Later</h2>
       <div data-testid="watch-later-list">
         {watchLater.map((v, i) => (
           <div
-            key={v.id}
+            key={`${v.id}-${v.start ?? 0}-${v.end ?? 0}`}
             className="mb-2 cursor-pointer"
             onClick={() => onPlay(v)}
             draggable
@@ -138,10 +131,10 @@ function Sidebar({
             onKeyDown={(e) => handleKey(i, e)}
           >
             <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
-            <div>{v.title}</div>
+            <div>{v.name || v.title}</div>
           </div>
         ))}
-        {!watchLater.length && <div className="text-gray-400">Empty</div>}
+        {!watchLater.length && <div className="text-ubt-grey">Empty</div>}
       </div>
     </aside>
   );
@@ -241,11 +234,10 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const playerDivRef = useRef<HTMLDivElement>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1);
   const [loopStart, setLoopStart] = useState<number | null>(null);
   const [loopEnd, setLoopEnd] = useState<number | null>(null);
   const [looping, setLooping] = useState(false);
-  const [theater, setTheater] = useState(false);
+  const [, setPlaybackRate] = useState(1);
 
   const downloadCurrent = useCallback(async () => {
     if (!current) return;
@@ -317,11 +309,20 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   }, []);
 
   useEffect(() => {
-    if (!looping || loopStart === null || loopEnd === null) return;
+    if (!playerReady || loopStart === null) return;
+    playerRef.current?.seekTo(loopStart, true);
+  }, [playerReady, loopStart, current]);
+
+  useEffect(() => {
+    if (loopStart === null || loopEnd === null) return;
     const id = window.setInterval(() => {
       const cur = playerRef.current?.getCurrentTime() ?? 0;
       if (cur >= loopEnd) {
-        playerRef.current?.seekTo(loopStart, true);
+        if (looping && loopStart !== null) {
+          playerRef.current?.seekTo(loopStart, true);
+        } else {
+          playerRef.current?.pauseVideo();
+        }
       }
     }, 500);
     return () => clearInterval(id);
@@ -337,10 +338,6 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     }
   }, []);
 
-  const changeSpeed = useCallback((rate: number) => {
-    playerRef.current?.setPlaybackRate(rate);
-    setPlaybackRate(rate);
-  }, []);
 
   const markStart = useCallback(
     () => setLoopStart(playerRef.current?.getCurrentTime() ?? null),
@@ -387,9 +384,37 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const addQueue = useCallback((v: Video) => setQueue((q) => [...q, v]), []);
   const addWatchLater = useCallback(
     (v: Video) =>
-      setWatchLater((w) => (w.some((x) => x.id === v.id) ? w : [...w, v])),
-    []
+      setWatchLater((w) =>
+        w.some(
+          (x) => x.id === v.id && x.start === v.start && x.end === v.end,
+        )
+          ? w
+          : [...w, v],
+      ),
+    [],
   );
+  const shareClip = useCallback(async () => {
+    if (!current || loopStart === null || loopEnd === null) return;
+    const url = `https://youtu.be/${current.id}?start=${Math.floor(
+      loopStart,
+    )}&end=${Math.floor(loopEnd)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      window.prompt('Clip URL', url);
+    }
+  }, [current, loopStart, loopEnd]);
+  const saveClip = useCallback(() => {
+    if (!current || loopStart === null || loopEnd === null) return;
+    const name = window.prompt('Clip name?')?.trim();
+    if (!name) return;
+    addWatchLater({
+      ...current,
+      name,
+      start: Math.floor(loopStart),
+      end: Math.floor(loopEnd),
+    });
+  }, [current, loopStart, loopEnd, addWatchLater]);
   const moveWatchLater = useCallback(
     (from: number, to: number) => {
       setWatchLater((list) => {
@@ -401,16 +426,22 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     },
     [setWatchLater],
   );
+  const playVideo = useCallback((v: Video) => {
+    setCurrent(v);
+    setLoopStart(v.start ?? null);
+    setLoopEnd(v.end ?? null);
+    setLooping(false);
+  }, []);
   const playNext = useCallback(() => {
     setQueue((q) => {
       if (q.length) {
         const [next, ...rest] = q;
-        setCurrent(next);
+        playVideo(next);
         return rest;
       }
       return q;
     });
-  }, []);
+  }, [playVideo]);
 
   useEffect(() => {
     const handleKeys = (e: KeyboardEvent) => {
@@ -422,8 +453,6 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       } else if (e.key === ' ' && current) {
         e.preventDefault();
         togglePlay();
-      } else if (e.key.toLowerCase() === 't') {
-        setTheater((t) => !t);
       } else if (e.key.toLowerCase() === 'a') {
         markStart();
       } else if (e.key.toLowerCase() === 'b') {
@@ -449,11 +478,10 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
     markStart,
     markEnd,
     toggleLoop,
-    setTheater,
   ]);
 
   return (
-    <div className="flex h-full flex-1 bg-gray-900 text-white">
+    <div className="flex h-full flex-1 bg-ub-dark-grey font-sans text-ubt-cool-grey">
       <div className="flex flex-1 flex-col">
         <form onSubmit={handleSearch} className="p-4">
           <input
@@ -461,66 +489,117 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search YouTube"
-            className="w-full rounded bg-gray-800 p-2"
+            className="w-full rounded bg-ub-cool-grey p-2 text-ubt-cool-grey"
           />
         </form>
         {current && (
-          <div
-            className={
-              theater
-                ? 'fixed inset-0 z-50 flex flex-col bg-black'
-                : 'mx-4 mb-4 bg-black'
-            }
-          >
+          <div className="mx-4 mb-4 bg-black">
             {!playerReady && (
               <iframe
                 title="YouTube video player"
                 src={`https://www.youtube-nocookie.com/embed/${current.id}`}
-                className={`${theater ? 'flex-1' : 'aspect-video'} w-full`}
+                className="aspect-video w-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
             )}
             <div
               ref={playerDivRef}
-              className={`${playerReady ? '' : 'hidden'} ${theater ? 'flex-1' : 'aspect-video'} w-full`}
+              className={`${playerReady ? '' : 'hidden'} aspect-video w-full`}
             />
-            <div className="flex items-center gap-2 bg-gray-800 p-2 text-xs">
-              <button onClick={togglePlay}>{isPlaying ? 'Pause' : 'Play'}</button>
-              <label className="flex items-center gap-1">
-                Speed
-                <select
-                  value={playbackRate}
-                  onChange={(e) => changeSpeed(parseFloat(e.target.value))}
-                  className="rounded bg-gray-900 p-1"
-                >
-                  {[0.25, 0.5, 1, 1.5, 2].map((r) => (
-                    <option key={r} value={r}>{`${r}x`}</option>
-                  ))}
-                </select>
-              </label>
-              <button onClick={markStart} title="Set loop start (A)">A</button>
-              <button onClick={markEnd} title="Set loop end (B)">B</button>
+            <div className="flex items-center gap-3 bg-ub-cool-grey p-2">
+              <button
+                onClick={togglePlay}
+                aria-label={isPlaying ? 'Pause' : 'Play'}
+                className="text-ubt-cool-grey hover:text-ubt-green"
+              >
+                {isPlaying ? (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+                    <path
+                      fillRule="evenodd"
+                      d="M6.75 5.25a.75.75 0 0 1 .75-.75H9a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H7.5a.75.75 0 0 1-.75-.75V5.25Zm7.5 0A.75.75 0 0 1 15 4.5h1.5a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H15a.75.75 0 0 1-.75-.75V5.25Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+                    <path
+                      fillRule="evenodd"
+                      d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={markStart}
+                title="Set loop start (A)"
+                aria-label="Set loop start"
+                className="text-ubt-cool-grey hover:text-ubt-green"
+              >
+                <span className="flex h-6 w-6 items-center justify-center">A</span>
+              </button>
+              <button
+                onClick={markEnd}
+                title="Set loop end (B)"
+                aria-label="Set loop end"
+                className="text-ubt-cool-grey hover:text-ubt-green"
+              >
+                <span className="flex h-6 w-6 items-center justify-center">B</span>
+              </button>
               <button
                 onClick={toggleLoop}
                 disabled={loopStart === null || loopEnd === null}
-                className={looping ? 'font-bold' : ''}
-                title="Toggle loop (S)"
+                aria-label="Toggle loop"
+                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
               >
-                Loop
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className={`h-6 w-6 ${looping ? 'text-ubt-green' : ''}`}
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4.755 10.059a7.5 7.5 0 0 1 12.548-3.364l1.903 1.903h-3.183a.75.75 0 1 0 0 1.5h4.992a.75.75 0 0 0 .75-.75V4.356a.75.75 0 0 0-1.5 0v3.18l-1.9-1.9A9 9 0 0 0 3.306 9.67a.75.75 0 1 0 1.45.388Zm15.408 3.352a.75.75 0 0 0-.919.53 7.5 7.5 0 0 1-12.548 3.364l-1.902-1.903h3.183a.75.75 0 0 0 0-1.5H2.984a.75.75 0 0 0-.75.75v4.992a.75.75 0 0 0 1.5 0v-3.18l1.9 1.9a9 9 0 0 0 15.059-4.035.75.75 0 0 0-.53-.918Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
               </button>
-              <button onClick={downloadCurrent} title="Download video">
-                Download
+              <button
+                onClick={shareClip}
+                disabled={loopStart === null || loopEnd === null}
+                aria-label="Copy share link"
+                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+              >
+                <span className="flex h-6 w-6 items-center justify-center">Link</span>
               </button>
-              <button onClick={() => setTheater((t) => !t)} title="Toggle theater (T)">
-                {theater ? 'Default' : 'Theater'}
+              <button
+                onClick={saveClip}
+                disabled={loopStart === null || loopEnd === null}
+                aria-label="Save clip"
+                className="text-ubt-cool-grey hover:text-ubt-green disabled:opacity-50"
+              >
+                <span className="flex h-6 w-6 items-center justify-center">Save</span>
+              </button>
+              <button
+                onClick={downloadCurrent}
+                aria-label="Download video"
+                className="ml-auto text-ubt-cool-grey hover:text-ubt-green"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
+                  <path
+                    fillRule="evenodd"
+                    d="M12 2.25a.75.75 0 0 1 .75.75v11.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 1 1 1.06-1.06l3.22 3.22V3a.75.75 0 0 1 .75-.75Zm-9 13.5a.75.75 0 0 1 .75.75v2.25a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5V16.5a.75.75 0 0 1 1.5 0v2.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V16.5a.75.75 0 0 1 .75-.75Z"
+                    clipRule="evenodd"
+                  />
+                </svg>
               </button>
             </div>
           </div>
         )}
         <VirtualGrid
           items={results}
-          onPlay={setCurrent}
+          onPlay={playVideo}
           onQueue={addQueue}
           onWatchLater={addWatchLater}
         />
@@ -528,7 +607,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
       <Sidebar
         queue={queue}
         watchLater={watchLater}
-        onPlay={setCurrent}
+        onPlay={playVideo}
         onReorder={moveWatchLater}
       />
     </div>

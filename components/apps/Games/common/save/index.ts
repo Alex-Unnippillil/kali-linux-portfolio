@@ -62,7 +62,8 @@ export default function useGameSaves(gameId: string) {
   const listSlots = useCallback(
     async (): Promise<string[]> => {
       const dir = dirRef.current;
-      if (supported && dir) {
+      if (supported) {
+        if (!dir) return [];
         const names: string[] = [];
         for await (const [name, handle] of dir.entries()) {
           if (handle.kind === 'file' && name.endsWith('.json')) {
@@ -81,7 +82,8 @@ export default function useGameSaves(gameId: string) {
   const exportSaves = useCallback(
     async (): Promise<SaveSlot[]> => {
       const dir = dirRef.current;
-      if (supported && dir) {
+      if (supported) {
+        if (!dir) return [];
         const slots: SaveSlot[] = [];
         for await (const [name, handle] of dir.entries()) {
           if (handle.kind === 'file' && name.endsWith('.json')) {

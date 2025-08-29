@@ -78,7 +78,10 @@ const CarRacer = () => {
   const ghostRunRef = useRef([]);
   const ghostPosRef = useRef({ lane: 1, y: HEIGHT - CAR_HEIGHT - 10 });
   const ghostIndexRef = useRef(0);
+  const ghostBestScoreRef = useRef(0);
   const startTimeRef = useRef(0);
+  const [speed, setSpeed] = useState(0);
+  const speedRef = useRef(0);
 
   const currentSkin = CAR_SKINS.find((s) => s.key === skin) || CAR_SKINS[0];
 
@@ -108,10 +111,15 @@ const CarRacer = () => {
     }
     try {
       ghostDataRef.current = JSON.parse(localStorage.getItem('car_racer_ghost') || '[]');
+      ghostBestScoreRef.current = parseInt(
+        localStorage.getItem('car_racer_ghost_score') || '0',
+        10,
+      );
       if (ghostDataRef.current.length)
         ghostPosRef.current.lane = ghostDataRef.current[0].lane;
     } catch {
       ghostDataRef.current = [];
+      ghostBestScoreRef.current = 0;
     }
     if (typeof window !== 'undefined') {
       const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -152,11 +160,14 @@ const CarRacer = () => {
       worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
     } else {
       ctx = canvas.getContext('2d');
+      if (ctx) ctx.imageSmoothingEnabled = false;
     }
+    canvas.style.imageRendering = 'pixelated';
 
     let last = performance.now();
     let spawnTimer = 0;
-    let lineOffset = 0;
+    let lineOffsetNear = 0;
+    let lineOffsetFar = 0;
     let nearTimer = 0;
     let farTimer = 0;
     let bgNearTimer = 0;
@@ -193,8 +204,18 @@ const CarRacer = () => {
 
       ctx.strokeStyle = '#fff';
       ctx.setLineDash([20, 20]);
+      ctx.globalAlpha = 0.6;
       ctx.lineWidth = 2;
-      ctx.lineDashOffset = -(state.lineOffset || 0);
+      ctx.lineDashOffset = -(state.lineOffsetFar || 0);
+      for (let i = 1; i < LANES; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(i * LANE_WIDTH, 0);
+        ctx.lineTo(i * LANE_WIDTH, HEIGHT);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 4;
+      ctx.lineDashOffset = -(state.lineOffsetNear || 0);
       for (let i = 1; i < LANES; i += 1) {
         ctx.beginPath();
         ctx.moveTo(i * LANE_WIDTH, 0);
@@ -237,7 +258,8 @@ const CarRacer = () => {
               near: backgroundRef.current.near.map((s) => ({ x: s.x, y: s.y })),
               far: backgroundRef.current.far.map((s) => ({ x: s.x, y: s.y })),
             },
-        lineOffset,
+        lineOffsetNear,
+        lineOffsetFar,
         ghost:
           ghostDataRef.current.length > 0
             ? { lane: ghostPosRef.current.lane, y: car.current.y }
@@ -264,10 +286,17 @@ const CarRacer = () => {
       const dt = (time - last) / 1000;
       last = time;
 
+      const speedMult = boostRef.current > 0 ? 2 : 1;
+      const baseSpeed = SPEED * speedMult;
+      const currentSpeed = !pausedRef.current && runningRef.current ? baseSpeed : 0;
+      if (speedRef.current !== currentSpeed) {
+        speedRef.current = currentSpeed;
+        setSpeed(Math.floor(currentSpeed));
+      }
+
       if (!pausedRef.current && runningRef.current) {
-        const speedMult = boostRef.current > 0 ? 2 : 1;
-        const speed = SPEED * speedMult;
-        lineOffset = (lineOffset + speed * dt) % 40;
+        lineOffsetNear = (lineOffsetNear + baseSpeed * dt) % 40;
+        lineOffsetFar = (lineOffsetFar + baseSpeed * 0.5 * dt) % 40;
         spawnTimer += dt;
         if (spawnTimer > SPAWN_TIME) {
           const lane = Math.floor(Math.random() * LANES);
@@ -280,7 +309,7 @@ const CarRacer = () => {
         }
 
         obstaclesRef.current.forEach((o) => {
-          o.y += speed * dt;
+          o.y += baseSpeed * dt;
         });
         obstaclesRef.current = obstaclesRef.current.filter(
           (o) => o.y < HEIGHT + OBSTACLE_HEIGHT
@@ -298,10 +327,10 @@ const CarRacer = () => {
             farTimer = 0;
           }
           roadsideRef.current.near.forEach((r) => {
-            r.y += speed * 1.2 * dt;
+            r.y += baseSpeed * 1.2 * dt;
           });
           roadsideRef.current.far.forEach((r) => {
-            r.y += speed * 0.5 * dt;
+            r.y += baseSpeed * 0.5 * dt;
           });
           roadsideRef.current.near = roadsideRef.current.near.filter(
             (r) => r.y < HEIGHT + 30
@@ -321,10 +350,10 @@ const CarRacer = () => {
             bgFarTimer = 0;
           }
           backgroundRef.current.near.forEach((s) => {
-            s.y += speed * 0.3 * dt;
+            s.y += baseSpeed * 0.3 * dt;
           });
           backgroundRef.current.far.forEach((s) => {
-            s.y += speed * 0.15 * dt;
+            s.y += baseSpeed * 0.15 * dt;
           });
           backgroundRef.current.near = backgroundRef.current.near.filter(
             (s) => s.y < HEIGHT
@@ -350,7 +379,7 @@ const CarRacer = () => {
           if (checkCollision(car.current, o)) {
             runningRef.current = false;
             playBeep();
-            saveGhostRun();
+            saveGhostRun(scoreRef.current);
             if (scoreRef.current > highScore) {
               setHighScore(scoreRef.current);
               localStorage.setItem('car_racer_high', `${scoreRef.current}`);
@@ -384,10 +413,12 @@ const CarRacer = () => {
     };
   }, [canvasRef, highScore, playBeep]);
 
-  const saveGhostRun = () => {
-    if (ghostRunRef.current.length > 1) {
+  const saveGhostRun = (score) => {
+    if (ghostRunRef.current.length > 1 && score >= ghostBestScoreRef.current) {
       localStorage.setItem('car_racer_ghost', JSON.stringify(ghostRunRef.current));
+      localStorage.setItem('car_racer_ghost_score', `${score}`);
       ghostDataRef.current = ghostRunRef.current.map((g) => ({ ...g }));
+      ghostBestScoreRef.current = score;
     }
   };
 
@@ -479,8 +510,13 @@ const CarRacer = () => {
     ghostIndexRef.current = 0;
     try {
       ghostDataRef.current = JSON.parse(localStorage.getItem('car_racer_ghost') || '[]');
+      ghostBestScoreRef.current = parseInt(
+        localStorage.getItem('car_racer_ghost_score') || '0',
+        10,
+      );
     } catch {
       ghostDataRef.current = [];
+      ghostBestScoreRef.current = 0;
     }
     ghostPosRef.current.lane = ghostDataRef.current.length
       ? ghostDataRef.current[0].lane
@@ -593,6 +629,31 @@ const CarRacer = () => {
           onClick={triggerBoost}
         >
           Boost
+        </button>
+      </div>
+      <div className="absolute bottom-2 right-2 z-10 text-sm w-24">
+        <div className="w-full h-2 bg-gray-700">
+          <div
+            className="h-full bg-green-500"
+            style={{ width: `${(speed / (SPEED * 2)) * 100}%` }}
+          />
+        </div>
+        <div className="text-right mt-1">{Math.round(speed)}</div>
+      </div>
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-4 z-10">
+        <button
+          aria-label="Steer left"
+          className="w-12 h-12 bg-gray-700 bg-opacity-70 flex items-center justify-center text-xl rounded"
+          onPointerDown={moveLeft}
+        >
+          ←
+        </button>
+        <button
+          aria-label="Steer right"
+          className="w-12 h-12 bg-gray-700 bg-opacity-70 flex items-center justify-center text-xl rounded"
+          onPointerDown={moveRight}
+        >
+          →
         </button>
       </div>
       {!runningRef.current && (

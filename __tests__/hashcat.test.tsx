@@ -91,6 +91,13 @@ describe('HashcatApp', () => {
     expect((getByLabelText('Mask') as HTMLInputElement).value).toBe('?d');
   });
 
+  it('estimates candidate space for mask', () => {
+    const { getByLabelText, getByText } = render(<HashcatApp />);
+    fireEvent.change(getByLabelText('Attack Mode:'), { target: { value: '3' } });
+    fireEvent.change(getByLabelText('Mask'), { target: { value: '?d?d' } });
+    expect(getByText(/Candidate space:/).textContent).toContain('100');
+  });
+
   it('previews selected rule set', () => {
     const { getByLabelText } = render(<HashcatApp />);
     fireEvent.change(getByLabelText('Rule Set:'), {

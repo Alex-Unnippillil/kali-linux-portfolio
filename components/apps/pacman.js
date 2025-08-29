@@ -68,6 +68,7 @@ const Pacman = () => {
   ]);
   const [levelIndex, setLevelIndex] = useState(0);
   const [ghostSpeeds, setGhostSpeeds] = useState({ scatter: 1, chase: 1 });
+  const [gameSpeed, setGameSpeed] = useState(1);
   const [search, setSearch] = useState('');
   const [highlight, setHighlight] = useState(0);
   const filteredLevels = useMemo(
@@ -108,6 +109,7 @@ const Pacman = () => {
     timer: modeSchedule[0].duration,
   });
   const [score, setScore] = useState(0);
+  const [pelletCount, setPelletCount] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [started, setStarted] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -138,6 +140,16 @@ const Pacman = () => {
   }, []);
   const [announcement, setAnnouncement] = useState('');
   const squashRef = useRef(0);
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const updateScale = () => {
+      const s = Math.floor(window.innerWidth / WIDTH);
+      setScale(s > 1 ? s : 1);
+    };
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, []);
 
   const tileAt = (tx, ty) => (mazeRef.current[ty] ? mazeRef.current[ty][tx] : 1);
   const isCenter = (pos) => Math.abs((pos % tileSize) - tileSize / 2) < 0.1;
@@ -185,6 +197,8 @@ const Pacman = () => {
       const lvl = lvls[idx];
       setLevelIndex(idx);
       mazeRef.current = lvl.maze.map((r) => r.slice());
+      const pellets = lvl.maze.flat().filter((t) => t === 2 || t === 3).length;
+      setPelletCount(pellets);
       fruitRef.current.x = lvl.fruit.x;
       fruitRef.current.y = lvl.fruit.y;
       fruitRef.current.active = false;
@@ -306,15 +320,23 @@ const Pacman = () => {
           ctx.fillStyle = '#2222ff';
           ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
         } else if (maze[y][x] === 2) {
+          ctx.save();
           ctx.fillStyle = 'white';
+          ctx.shadowColor = 'white';
+          ctx.shadowBlur = 4;
           ctx.beginPath();
           ctx.arc(x * tileSize + tileSize / 2, y * tileSize + tileSize / 2, 3, 0, Math.PI * 2);
           ctx.fill();
+          ctx.restore();
         } else if (maze[y][x] === 3) {
+          ctx.save();
           ctx.fillStyle = 'white';
+          ctx.shadowColor = 'white';
+          ctx.shadowBlur = 8;
           ctx.beginPath();
           ctx.arc(x * tileSize + tileSize / 2, y * tileSize + tileSize / 2, 6, 0, Math.PI * 2);
           ctx.fill();
+          ctx.restore();
         }
       }
     }
@@ -393,28 +415,33 @@ const Pacman = () => {
       const dx = pac.x - g.x;
       const dy = pac.y - g.y;
       const ang = Math.atan2(dy, dx);
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 1;
       ctx.fillStyle = 'white';
-      ctx.beginPath();
-      ctx.arc(g.x + tileSize / 2 - eyeOffsetX, g.y + tileSize / 2 - eyeOffsetY, 4, 0, Math.PI * 2);
-      ctx.arc(g.x + tileSize / 2 + eyeOffsetX, g.y + tileSize / 2 - eyeOffsetY, 4, 0, Math.PI * 2);
-      ctx.fill();
+      [
+        { ox: -eyeOffsetX, oy: -eyeOffsetY },
+        { ox: eyeOffsetX, oy: -eyeOffsetY },
+      ].forEach(({ ox, oy }) => {
+        ctx.beginPath();
+        ctx.arc(g.x + tileSize / 2 + ox, g.y + tileSize / 2 + oy, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
       ctx.fillStyle = 'black';
-      ctx.beginPath();
-      ctx.arc(
-        g.x + tileSize / 2 - eyeOffsetX + Math.cos(ang) * pupilOffset,
-        g.y + tileSize / 2 - eyeOffsetY + Math.sin(ang) * pupilOffset,
-        2,
-        0,
-        Math.PI * 2
-      );
-      ctx.arc(
-        g.x + tileSize / 2 + eyeOffsetX + Math.cos(ang) * pupilOffset,
-        g.y + tileSize / 2 - eyeOffsetY + Math.sin(ang) * pupilOffset,
-        2,
-        0,
-        Math.PI * 2
-      );
-      ctx.fill();
+      [
+        { ox: -eyeOffsetX, oy: -eyeOffsetY },
+        { ox: eyeOffsetX, oy: -eyeOffsetY },
+      ].forEach(({ ox, oy }) => {
+        ctx.beginPath();
+        ctx.arc(
+          g.x + tileSize / 2 + ox + Math.cos(ang) * pupilOffset,
+          g.y + tileSize / 2 + oy + Math.sin(ang) * pupilOffset,
+          2.5,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      });
     });
   }, [prefersReduced, isTunnel]);
 
@@ -439,7 +466,8 @@ const Pacman = () => {
 
     const pacTileX = Math.floor((pac.x + tileSize / 2) / tileSize);
     const pacTileY = Math.floor((pac.y + tileSize / 2) / tileSize);
-    const pacSpeed = isTunnel(pacTileX, pacTileY) ? speed * TUNNEL_SPEED : speed;
+    const pacSpeed =
+      (isTunnel(pacTileX, pacTileY) ? speed * TUNNEL_SPEED : speed) * gameSpeed;
 
     // move pacman
     const tx = Math.floor((pac.x + pac.dir.x * pacSpeed + tileSize / 2) / tileSize);
@@ -464,6 +492,7 @@ const Pacman = () => {
         frightTimerRef.current = 6 * 60;
         setAnnouncement('Pacman energized');
       }
+      setPelletCount((c) => c - 1);
       maze[pty][ptx] = 0;
     }
 
@@ -522,11 +551,12 @@ const Pacman = () => {
       const gy = g.y / tileSize;
       const gtxPrev = Math.floor((g.x + tileSize / 2) / tileSize);
       const gtyPrev = Math.floor((g.y + tileSize / 2) / tileSize);
-      const base = frightTimerRef.current > 0
-        ? ghostSpeeds.scatter * 0.5
-        : modeSchedule[modeRef.current.index].mode === 'scatter'
-          ? ghostSpeeds.scatter
-          : ghostSpeeds.chase;
+      const base =
+        (frightTimerRef.current > 0
+          ? ghostSpeeds.scatter * 0.5
+          : modeSchedule[modeRef.current.index].mode === 'scatter'
+            ? ghostSpeeds.scatter
+            : ghostSpeeds.chase) * gameSpeed;
       const gSpeed = (isTunnel(gtxPrev, gtyPrev) ? TUNNEL_SPEED : 1) * base;
 
       if (isCenter(g.x) && isCenter(g.y)) {
@@ -580,7 +610,7 @@ const Pacman = () => {
         }
       }
     });
-  }, [score, availableDirs, levelIndex, isTunnel, prefersReduced, setAnnouncement, ghostSpeeds]);
+  }, [score, availableDirs, levelIndex, isTunnel, prefersReduced, setAnnouncement, ghostSpeeds, gameSpeed]);
 
   const stepRef = useRef(step);
   useEffect(() => {
@@ -781,20 +811,37 @@ const Pacman = () => {
         </ul>
       </div>
 
-      <SpeedControls ghostSpeeds={ghostSpeeds} setGhostSpeeds={setGhostSpeeds} />
-
-      <canvas
-        ref={canvasRef}
-        width={WIDTH}
-        height={HEIGHT}
-        className="bg-black"
+      <SpeedControls
+        ghostSpeeds={ghostSpeeds}
+        setGhostSpeeds={setGhostSpeeds}
+        gameSpeed={gameSpeed}
+        setGameSpeed={setGameSpeed}
       />
+
+      <div
+        className="relative"
+        style={{ width: WIDTH * scale, height: HEIGHT * scale }}
+      >
+        <canvas
+          ref={canvasRef}
+          width={WIDTH}
+          height={HEIGHT}
+          className="bg-black"
+          style={{ width: WIDTH * scale, height: HEIGHT * scale, imageRendering: 'pixelated' }}
+        />
+        <div className="absolute top-0 left-0 w-full text-xs bg-black bg-opacity-75 px-1 flex justify-between">
+          <span>Score: {score}</span>
+          <span>Pellets: {pelletCount}</span>
+          <span>Lvl: {levelIndex + 1}</span>
+          <span>P: pause</span>
+        </div>
+      </div>
 
       <div className="mt-2 px-2 py-1 bg-ub-grey rounded">
         {modeInfo.mode.toUpperCase()} {Math.ceil(modeInfo.timer / 60)}s
       </div>
 
-      <div className="mt-2">Score: {score} | High: {highScore}</div>
+      <div className="mt-2">High: {highScore}</div>
       <div className="mt-1">Lives: {pacRef.current.lives}</div>
       {(statusRef.current !== 'Playing' || paused) && (
         <div className="mt-2">{paused ? 'Paused' : statusRef.current}</div>

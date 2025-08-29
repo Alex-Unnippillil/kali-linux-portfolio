@@ -1,3 +1,5 @@
+import { detectHashType, hashTypes } from '../hashcat';
+
 export const parseRules = (text) =>
   text
     .split(/\r?\n/)
@@ -18,10 +20,9 @@ export const distributeTasks = (hashes, endpoints) => {
 };
 
 export const identifyHashType = (hash) => {
-  if (/^[a-fA-F0-9]{32}$/.test(hash)) return 'MD5';
-  if (/^[a-fA-F0-9]{40}$/.test(hash)) return 'SHA1';
-  if (/^[a-fA-F0-9]{64}$/.test(hash)) return 'SHA256';
-  return 'Unknown';
+  const id = detectHashType(hash);
+  const match = hashTypes.find((t) => t.id === id);
+  return match && match.regex.test(hash) ? match.name : 'Unknown';
 };
 
 export const generateIncrementalCandidates = (

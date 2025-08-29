@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 export type PencilMarksProps = {
   /**
-   * Initial list of candidate numbers for the cell.
+   * Current list of candidate numbers for the cell.
    */
-  initial?: number[];
+  marks: number[];
+  /**
+   * Notify parent components when the marks change.
+   */
+  onChange: (marks: number[]) => void;
   /**
    * Whether the marks should start hidden.
    */
@@ -16,14 +20,18 @@ export type PencilMarksProps = {
  * candidates for a Sudoku cell. Each number can be toggled individually and
  * the entire set of notes can be shown or hidden per cell.
  */
-const PencilMarks: React.FC<PencilMarksProps> = ({ initial = [], hidden }) => {
-  const [marks, setMarks] = useState<number[]>(initial);
+const PencilMarks: React.FC<PencilMarksProps> = ({
+  marks,
+  onChange,
+  hidden,
+}) => {
   const [visible, setVisible] = useState(!hidden);
 
   const toggleMark = (n: number) => {
-    setMarks((prev) =>
-      prev.includes(n) ? prev.filter((m) => m !== n) : [...prev, n]
-    );
+    const next = marks.includes(n)
+      ? marks.filter((m) => m !== n)
+      : [...marks, n];
+    onChange(next.sort((a, b) => a - b));
   };
 
   const toggleVisibility = (e: React.MouseEvent) => {

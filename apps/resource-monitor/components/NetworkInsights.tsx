@@ -8,6 +8,7 @@ import {
   FetchEntry,
 } from '../../../lib/fetchProxy';
 import { exportMetrics } from '../export';
+import RequestChart from './RequestChart';
 
 const HISTORY_KEY = 'network-insights-history';
 
@@ -31,9 +32,9 @@ export default function NetworkInsights() {
   }, [setHistory]);
 
   return (
-    <div className="p-2 text-xs text-white">
+    <div className="p-2 text-xs text-white bg-[var(--kali-bg)]">
       <h2 className="font-bold mb-1">Active Fetches</h2>
-      <ul className="mb-2 divide-y divide-gray-700 border border-gray-700 rounded">
+      <ul className="mb-2 divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
         {active.length === 0 && <li className="p-1 text-gray-400">None</li>}
         {active.map((f) => (
           <li key={f.id} className="p-1">
@@ -50,12 +51,12 @@ export default function NetworkInsights() {
         <h2 className="font-bold">History</h2>
         <button
           onClick={() => exportMetrics(history)}
-          className="ml-auto px-2 py-1 bg-ub-dark-grey rounded"
+          className="ml-auto px-2 py-1 rounded bg-[var(--kali-panel)]"
         >
           Export
         </button>
       </div>
-      <ul className="divide-y divide-gray-700 border border-gray-700 rounded">
+      <ul className="divide-y divide-gray-700 border border-gray-700 rounded bg-[var(--kali-panel)]">
         {history.length === 0 && <li className="p-1 text-gray-400">No requests</li>}
         {history.map((f) => (
           <li key={f.id} className="p-1">
@@ -71,6 +72,12 @@ export default function NetworkInsights() {
           </li>
         ))}
       </ul>
+      <div className="mt-2 flex justify-center">
+        <RequestChart
+          data={history.map((h) => h.duration ?? 0)}
+          label="Request duration (ms)"
+        />
+      </div>
     </div>
   );
 }

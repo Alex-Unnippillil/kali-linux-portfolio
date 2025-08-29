@@ -29,7 +29,7 @@ const ReadingMode = () => {
     if (typeof document === 'undefined') return;
     const doc = document.cloneNode(true) as Document;
     const article = new Readability(doc).parse();
-    const cleaned = article ? DOMPurify.sanitize(article.content) : '';
+    const cleaned = DOMPurify.sanitize(article?.content ?? '');
     setContent(cleaned);
   }, []);
 

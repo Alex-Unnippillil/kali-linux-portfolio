@@ -1,19 +1,28 @@
-import { useState, useEffect, ChangeEvent } from 'react';
+"use client";
+
+import { useEffect, ChangeEvent } from 'react';
+import usePersistentState from '../../../hooks/usePersistentState.js';
 import { getTheme, setTheme } from '../../../utils/theme';
 
 export default function ThemeSettings() {
-  const [theme, setThemeState] = useState('default');
+  // Persist theme selection in localStorage so it survives reloads
+  const [theme, setThemeState] = usePersistentState('app:theme', 'default');
 
+  // Initialize and sync theme with user preference or system settings
   useEffect(() => {
     const current = getTheme();
-    setTheme(current);
     setThemeState(current);
+    setTheme(current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Apply theme whenever selection changes
+  useEffect(() => {
+    setTheme(theme);
+  }, [theme]);
+
   const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const next = e.target.value;
-    setThemeState(next);
-    setTheme(next);
+    setThemeState(e.target.value);
   };
 
   return (

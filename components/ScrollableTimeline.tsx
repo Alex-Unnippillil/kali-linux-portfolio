@@ -1,10 +1,7 @@
 import React from 'react';
-import milestones from '../data/milestones.json';
+import rawMilestones from '../data/milestones.json';
 
-type Milestone = {
-  year: string;
-  description: string;
-};
+const milestones = rawMilestones as Record<string, string>;
 
 const ScrollableTimeline: React.FC = () => (
   <div className="overflow-x-auto" aria-labelledby="timeline-heading">
@@ -12,10 +9,10 @@ const ScrollableTimeline: React.FC = () => (
       Timeline
     </h3>
     <ol className="flex space-x-6">
-      {(milestones as Milestone[]).map((m) => (
-        <li key={m.year} className="flex-shrink-0 w-48">
-          <div className="text-ubt-blue font-bold">{m.year}</div>
-          <p className="text-sm">{m.description}</p>
+      {Object.entries(milestones).map(([year, description]) => (
+        <li key={year} className="flex-shrink-0 w-48">
+          <div className="text-ubt-blue font-bold">{year}</div>
+          <p className="text-sm">{description}</p>
         </li>
       ))}
     </ol>

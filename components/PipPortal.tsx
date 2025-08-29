@@ -1,18 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-declare global {
-  interface Window {
-    documentPictureInPicture?: {
-      requestWindow: (options?: PictureInPictureWindowOptions) => Promise<Window>;
-    };
-  }
-
-  interface PictureInPictureWindowOptions {
-    width?: number;
-    height?: number;
-  }
-}
+// The Document Picture-in-Picture API is still experimental and the
+// TypeScript definitions do not ship with the DOM lib yet.
 
 interface PipPortalContextValue {
   open: (content: React.ReactNode) => Promise<void>;

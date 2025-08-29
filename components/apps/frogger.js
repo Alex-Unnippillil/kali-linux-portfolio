@@ -108,6 +108,8 @@ const updateLogs = (prev, frogPos, dt) => {
     }
     return { ...lane, entities, timer };
   });
+  // snap frog to integer grid to keep movement aligned
+  newFrog.x = Math.round(newFrog.x);
   const dead = (newFrog.y === 1 || newFrog.y === 2) && !safe;
   return { lanes: newLanes, frog: newFrog, dead };
 };
@@ -154,6 +156,11 @@ const Frogger = () => {
   const [showHitboxes, setShowHitboxes] = useState(false);
   const deathStreakRef = useRef(0);
   const safeFlashRef = useRef(0);
+  const livesRef = useRef(lives);
+  const levelRef = useRef(level);
+  const statusRef = useRef(status);
+  const hitFlashRef = useRef(0);
+  const pendingDeathRef = useRef(null);
 
 
   useEffect(() => { frogRef.current = frog; }, [frog]);
@@ -164,6 +171,9 @@ const Frogger = () => {
   useEffect(() => { soundRef.current = sound; }, [sound]);
   useEffect(() => { reduceMotionRef.current = reduceMotion; }, [reduceMotion]);
   useEffect(() => { slowTimeRef.current = slowTime; }, [slowTime]);
+  useEffect(() => { livesRef.current = lives; }, [lives]);
+  useEffect(() => { levelRef.current = level; }, [level]);
+  useEffect(() => { statusRef.current = status; }, [status]);
 
   useEffect(() => {
     const saved = Number(localStorage.getItem('frogger-highscore') || 0);
@@ -386,6 +396,25 @@ const Frogger = () => {
           ctx.fillRect(x * CELL, CELL * 3 - 4 + offset, CELL, 4);
         }
       }
+      // parallax background for logs
+      logsRef.current.forEach((lane) => {
+        const bgOffset =
+          ((rippleRef.current * lane.speed * lane.dir * 20) % CELL) - CELL;
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        for (let x = bgOffset; x < WIDTH * CELL + CELL; x += CELL) {
+          ctx.fillRect(x, lane.y * CELL, CELL / 8, CELL);
+        }
+      });
+      // parallax background for car lanes
+      carsRef.current.forEach((lane) => {
+        const bgOffset =
+          ((rippleRef.current * lane.speed * lane.dir * 20) % CELL) - CELL;
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        for (let x = bgOffset; x < WIDTH * CELL + CELL; x += CELL) {
+          ctx.fillRect(x, lane.y * CELL, CELL / 4, CELL);
+        }
+      });
+      // draw logs and cars
       logsRef.current.forEach((lane) => {
         ctx.fillStyle = colors.log;
         lane.entities.forEach((e) => {
@@ -415,6 +444,13 @@ const Frogger = () => {
       });
       ctx.fillStyle = colors.frog;
       ctx.fillRect(frogRef.current.x * CELL, frogRef.current.y * CELL, CELL, CELL);
+      // HUD
+      ctx.fillStyle = '#fff';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Lives: ${livesRef.current}`, 4, 12);
+      ctx.textAlign = 'right';
+      ctx.fillText(`Level: ${levelRef.current}`, canvas.width - 4, 12);
       if (showHitboxes) {
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         logsRef.current.forEach((lane) => {
@@ -444,13 +480,21 @@ const Frogger = () => {
           CELL,
         );
       }
-      if (pausedRef.current) {
+      if (hitFlashRef.current > 0) {
+        ctx.fillStyle = `rgba(255,255,255,${hitFlashRef.current / 0.2})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      if (pausedRef.current || statusRef.current) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#fff';
         ctx.font = '20px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Paused', canvas.width / 2, canvas.height / 2);
+        ctx.fillText(
+          pausedRef.current ? 'Paused' : statusRef.current,
+          canvas.width / 2,
+          canvas.height / 2,
+        );
       }
     };
     const loop = (time) => {
@@ -459,17 +503,30 @@ const Frogger = () => {
       const dt = rawDt * (slowTimeRef.current ? 0.7 : 1);
       rippleRef.current += dt * 4;
       if (safeFlashRef.current > 0) safeFlashRef.current -= dt;
+      if (hitFlashRef.current > 0) hitFlashRef.current -= dt;
       splashesRef.current = splashesRef.current
         .map((s) => ({ ...s, t: s.t + dt }))
         .filter((s) => s.t < RIPPLE_DURATION);
+      if (pendingDeathRef.current) {
+        if (hitFlashRef.current <= 0) {
+          loseLife(pendingDeathRef.current);
+          frogRef.current = { ...initialFrog };
+          pendingDeathRef.current = null;
+        }
+        draw();
+        raf = requestAnimationFrame(loop);
+        return;
+      }
 
       const carResult = updateCars(carsRef.current, frogRef.current, dt);
       carsRef.current = carResult.lanes;
       const logResult = updateLogs(logsRef.current, frogRef.current, dt);
       logsRef.current = logResult.lanes;
       frogRef.current = logResult.frog;
-      if (
-        carResult.dead ||
+      if (carResult.dead) {
+        hitFlashRef.current = 0.2;
+        pendingDeathRef.current = { ...frogRef.current };
+      } else if (
         logResult.dead ||
         frogRef.current.x < 0 ||
         frogRef.current.x >= WIDTH
@@ -553,7 +610,7 @@ const Frogger = () => {
         className="border border-gray-700"
       />
       <div className="mt-4" aria-live="polite">
-        Score: {score} High: {highScore} Lives: {lives}
+        Score: {score} High: {highScore} Lives: {lives} Level: {level}
       </div>
       <div className="mt-1" role="status" aria-live="polite">
         {status}

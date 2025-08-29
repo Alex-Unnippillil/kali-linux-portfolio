@@ -6,6 +6,7 @@ import {
   redo,
   isSolved,
   findHint,
+  findSolution,
   wouldDeadlock,
   findMinPushes,
 } from '../apps/sokoban/engine';
@@ -55,6 +56,12 @@ describe('sokoban engine', () => {
     const state = loadLevel(defaultLevels[0]);
     const hint = findHint(state);
     expect(hint).toBe('ArrowRight');
+  });
+
+  test('solver returns full solution path', () => {
+    const state = loadLevel(defaultLevels[0]);
+    const sol = findSolution(state);
+    expect(sol).toEqual(['ArrowRight']);
   });
 
   test('minimal pushes computed', () => {

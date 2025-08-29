@@ -9,17 +9,20 @@ export interface OPFSHook {
   ) => Promise<FileSystemDirectoryHandle | null>;
   readFile: (
     name: string,
-    dir?: FileSystemDirectoryHandle,
+    dir?: FileSystemDirectoryHandle | null,
   ) => Promise<string | null>;
   writeFile: (
     name: string,
     data: string | Blob,
-    dir?: FileSystemDirectoryHandle,
+    dir?: FileSystemDirectoryHandle | null,
   ) => Promise<boolean>;
   deleteFile: (
     name: string,
-    dir?: FileSystemDirectoryHandle,
+    dir?: FileSystemDirectoryHandle | null,
   ) => Promise<boolean>;
+  listFiles: (
+    dir?: FileSystemDirectoryHandle | null,
+  ) => Promise<FileSystemFileHandle[]>;
 }
 
 export default function useOPFS(): OPFSHook {
@@ -65,7 +68,7 @@ export default function useOPFS(): OPFSHook {
   );
 
   const readFile = useCallback<OPFSHook['readFile']>(
-    async (name, dir = root) => {
+    async (name, dir: FileSystemDirectoryHandle | null | undefined = root) => {
       if (!dir) return null;
       try {
         const handle = await dir.getFileHandle(name);
@@ -79,7 +82,11 @@ export default function useOPFS(): OPFSHook {
   );
 
   const writeFile = useCallback<OPFSHook['writeFile']>(
-    async (name, data, dir = root) => {
+    async (
+      name,
+      data,
+      dir: FileSystemDirectoryHandle | null | undefined = root,
+    ) => {
       if (!dir) return false;
       try {
         const handle = await dir.getFileHandle(name, { create: true });
@@ -95,7 +102,7 @@ export default function useOPFS(): OPFSHook {
   );
 
   const deleteFile = useCallback<OPFSHook['deleteFile']>(
-    async (name, dir = root) => {
+    async (name, dir: FileSystemDirectoryHandle | null | undefined = root) => {
       if (!dir) return false;
       try {
         await dir.removeEntry(name);
@@ -107,6 +114,20 @@ export default function useOPFS(): OPFSHook {
     [root],
   );
 
-  return { supported, root, getDir, readFile, writeFile, deleteFile };
+  const listFiles = useCallback<OPFSHook['listFiles']>(
+    async (dir: FileSystemDirectoryHandle | null | undefined = root) => {
+      if (!dir) return [];
+      const files: FileSystemFileHandle[] = [];
+      try {
+        for await (const entry of dir.values()) {
+          if (entry.kind === 'file') files.push(entry as FileSystemFileHandle);
+        }
+      } catch {}
+      return files;
+    },
+    [root],
+  );
+
+  return { supported, root, getDir, readFile, writeFile, deleteFile, listFiles };
 }
 

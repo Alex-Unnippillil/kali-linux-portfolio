@@ -49,7 +49,7 @@ const AttachmentUploader: React.FC<AttachmentUploaderProps> = ({
   };
 
   return (
-    <div className="mt-2">
+    <div className="mt-3">
       <input
         ref={inputRef}
         type="file"

@@ -53,6 +53,18 @@ const modules: ModuleMetadata[] = [
       },
     ],
   },
+  {
+    name: 'hashdump',
+    description: 'Dump password hashes from the SAM database.',
+    tags: ['credentials', 'dump'],
+    options: [
+      {
+        name: 'SESSION',
+        required: true,
+        description: 'The session to run this module on.',
+      },
+    ],
+  },
 ];
 
 export default modules;

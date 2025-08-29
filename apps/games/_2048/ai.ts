@@ -1,8 +1,17 @@
-import { Board, cloneBoard, moveLeft, moveRight, moveUp, moveDown, boardsEqual } from './logic';
+import {
+  Board,
+  cloneBoard,
+  moveLeft,
+  moveRight,
+  moveUp,
+  moveDown,
+  boardsEqual,
+  MoveResult,
+} from './logic';
 
 export type Direction = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
 
-const MOVES: { dir: Direction; fn: (b: Board) => Board }[] = [
+const MOVES: { dir: Direction; fn: (b: Board) => MoveResult }[] = [
   { dir: 'ArrowLeft', fn: moveLeft },
   { dir: 'ArrowRight', fn: moveRight },
   { dir: 'ArrowUp', fn: moveUp },
@@ -39,7 +48,7 @@ const expectimax = (board: Board, depth: number, isPlayer: boolean): number => {
   if (isPlayer) {
     let best = -Infinity;
     for (const { fn } of MOVES) {
-      const next = fn(cloneBoard(board));
+      const { board: next } = fn(cloneBoard(board));
       if (boardsEqual(board, next)) continue;
       const val = expectimax(next, depth - 1, false);
       if (val > best) best = val;
@@ -66,7 +75,7 @@ export const findBestMove = (board: Board, depth = 2): Direction | null => {
   let bestDir: Direction | null = null;
   let bestScore = -Infinity;
   for (const { dir, fn } of MOVES) {
-    const next = fn(cloneBoard(board));
+    const { board: next } = fn(cloneBoard(board));
     if (boardsEqual(board, next)) continue;
     const score = expectimax(next, depth - 1, false);
     if (score > bestScore) {
@@ -85,7 +94,7 @@ export const scoreMoves = (
 ): Partial<Record<Direction, number>> => {
   const scores: Partial<Record<Direction, number>> = {};
   for (const { dir, fn } of MOVES) {
-    const next = fn(cloneBoard(board));
+    const { board: next } = fn(cloneBoard(board));
     if (boardsEqual(board, next)) continue;
     scores[dir] = expectimax(next, depth - 1, false);
   }

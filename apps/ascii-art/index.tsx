@@ -13,17 +13,72 @@ const ramp = '@%#*+=-:. ';
 
 const ESC = '\u001b';
 
-const colorOptions = {
-  green: { label: 'Green', ansi: `${ESC}[32m`, class: 'text-green-400' },
-  red: { label: 'Red', ansi: `${ESC}[31m`, class: 'text-red-400' },
-  yellow: { label: 'Yellow', ansi: `${ESC}[33m`, class: 'text-yellow-400' },
-  blue: { label: 'Blue', ansi: `${ESC}[34m`, class: 'text-blue-400' },
-  magenta: { label: 'Magenta', ansi: `${ESC}[35m`, class: 'text-fuchsia-400' },
-  cyan: { label: 'Cyan', ansi: `${ESC}[36m`, class: 'text-cyan-400' },
-  white: { label: 'White', ansi: `${ESC}[37m`, class: 'text-white' },
+const samples = [
+  '¯\\_(ツ)_/¯',
+  '(╯°□°）╯︵ ┻━┻',
+  '┌─┐\n│ │\n└─┘',
+];
+
+const palette = {
+  black: {
+    label: 'Black',
+    fgAnsi: `${ESC}[30m`,
+    bgAnsi: `${ESC}[40m`,
+    fgClass: 'text-black',
+    bgClass: 'bg-black',
+  },
+  red: {
+    label: 'Red',
+    fgAnsi: `${ESC}[31m`,
+    bgAnsi: `${ESC}[41m`,
+    fgClass: 'text-red-400',
+    bgClass: 'bg-red-800',
+  },
+  green: {
+    label: 'Green',
+    fgAnsi: `${ESC}[32m`,
+    bgAnsi: `${ESC}[42m`,
+    fgClass: 'text-green-400',
+    bgClass: 'bg-green-800',
+  },
+  yellow: {
+    label: 'Yellow',
+    fgAnsi: `${ESC}[33m`,
+    bgAnsi: `${ESC}[43m`,
+    fgClass: 'text-yellow-400',
+    bgClass: 'bg-yellow-800',
+  },
+  blue: {
+    label: 'Blue',
+    fgAnsi: `${ESC}[34m`,
+    bgAnsi: `${ESC}[44m`,
+    fgClass: 'text-blue-400',
+    bgClass: 'bg-blue-800',
+  },
+  magenta: {
+    label: 'Magenta',
+    fgAnsi: `${ESC}[35m`,
+    bgAnsi: `${ESC}[45m`,
+    fgClass: 'text-fuchsia-400',
+    bgClass: 'bg-fuchsia-800',
+  },
+  cyan: {
+    label: 'Cyan',
+    fgAnsi: `${ESC}[36m`,
+    bgAnsi: `${ESC}[46m`,
+    fgClass: 'text-cyan-400',
+    bgClass: 'bg-cyan-800',
+  },
+  white: {
+    label: 'White',
+    fgAnsi: `${ESC}[37m`,
+    bgAnsi: `${ESC}[47m`,
+    fgClass: 'text-white',
+    bgClass: 'bg-white',
+  },
 };
 
-type ColorKey = keyof typeof colorOptions;
+type PaletteKey = keyof typeof palette;
 
 function download(text: string, filename: string) {
   const blob = new Blob([text], { type: 'text/plain' });
@@ -42,7 +97,8 @@ const AsciiArtApp = () => {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const [font, setFont] = useState<figlet.Fonts>('Standard');
   const [output, setOutput] = useState('');
-  const [color, setColor] = useState<ColorKey>('green');
+  const [fg, setFg] = useState<PaletteKey>('green');
+  const [bg, setBg] = useState<PaletteKey>('black');
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [imgOutput, setImgOutput] = useState('');
@@ -105,7 +161,7 @@ const AsciiArtApp = () => {
   const copy = async (value: string) => {
     try {
       const colored = value
-        ? `${colorOptions[color].ansi}${value}${ESC}[0m`
+        ? `${palette[fg].fgAnsi}${palette[bg].bgAnsi}${value}${ESC}[0m`
         : '';
       await navigator.clipboard.writeText(colored);
     } catch {
@@ -182,7 +238,8 @@ const AsciiArtApp = () => {
           <textarea
             ref={textAreaRef}
             rows={1}
-            className="px-2 py-1 text-black rounded resize-none overflow-hidden"
+            className="px-2 py-1 text-black rounded resize-none overflow-hidden font-mono leading-none"
+            style={{ fontFamily: 'monospace', lineHeight: '1' }}
             placeholder="Enter text"
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -199,11 +256,22 @@ const AsciiArtApp = () => {
             ))}
           </select>
           <select
-            value={color}
-            onChange={(e) => setColor(e.target.value as ColorKey)}
+            value={fg}
+            onChange={(e) => setFg(e.target.value as PaletteKey)}
             className="px-2 py-1 text-black rounded"
           >
-            {Object.entries(colorOptions).map(([key, val]) => (
+            {Object.entries(palette).map(([key, val]) => (
+              <option key={key} value={key}>
+                {val.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={bg}
+            onChange={(e) => setBg(e.target.value as PaletteKey)}
+            className="px-2 py-1 text-black rounded"
+          >
+            {Object.entries(palette).map(([key, val]) => (
               <option key={key} value={key}>
                 {val.label}
               </option>
@@ -220,7 +288,7 @@ const AsciiArtApp = () => {
               className="px-2 py-1 bg-green-700 rounded"
               onClick={() =>
                 download(
-                  `${colorOptions[color].ansi}${output}${ESC}[0m`,
+                  `${palette[fg].fgAnsi}${palette[bg].bgAnsi}${output}${ESC}[0m`,
                   'ascii-art.txt',
                 )
               }
@@ -229,10 +297,24 @@ const AsciiArtApp = () => {
             </button>
           </div>
           <pre
-            className={`bg-black p-2 whitespace-pre overflow-auto ${colorOptions[color].class}`}
+            className={`p-2 whitespace-pre overflow-auto font-mono leading-none ${palette[bg].bgClass} ${palette[fg].fgClass}`}
+            style={{ imageRendering: 'pixelated' }}
           >
             {output}
           </pre>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4">
+            {samples.map((s, i) => (
+              <pre
+                // eslint-disable-next-line react/no-array-index-key
+                key={i}
+                onMouseEnter={() => copy(s)}
+                className="p-2 whitespace-pre cursor-pointer bg-black hover:bg-gray-800 font-mono leading-none"
+                style={{ imageRendering: 'pixelated' }}
+              >
+                {s}
+              </pre>
+            ))}
+          </div>
         </div>
       )}
       {tab === 'image' && (
@@ -259,11 +341,22 @@ const AsciiArtApp = () => {
             />
           </div>
           <select
-            value={color}
-            onChange={(e) => setColor(e.target.value as ColorKey)}
+            value={fg}
+            onChange={(e) => setFg(e.target.value as PaletteKey)}
             className="px-2 py-1 text-black rounded"
           >
-            {Object.entries(colorOptions).map(([key, val]) => (
+            {Object.entries(palette).map(([key, val]) => (
+              <option key={key} value={key}>
+                {val.label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={bg}
+            onChange={(e) => setBg(e.target.value as PaletteKey)}
+            className="px-2 py-1 text-black rounded"
+          >
+            {Object.entries(palette).map(([key, val]) => (
               <option key={key} value={key}>
                 {val.label}
               </option>
@@ -280,7 +373,7 @@ const AsciiArtApp = () => {
               className="px-2 py-1 bg-green-700 rounded"
               onClick={() =>
                 download(
-                  `${colorOptions[color].ansi}${imgOutput}${ESC}[0m`,
+                  `${palette[fg].fgAnsi}${palette[bg].bgAnsi}${imgOutput}${ESC}[0m`,
                   'image-ascii.txt',
                 )
               }
@@ -290,7 +383,8 @@ const AsciiArtApp = () => {
           </div>
           <canvas ref={canvasRef} className="hidden" />
           <pre
-            className={`bg-black p-2 whitespace-pre overflow-auto ${colorOptions[color].class}`}
+            className={`p-2 whitespace-pre overflow-auto font-mono leading-none ${palette[bg].bgClass} ${palette[fg].fgClass}`}
+            style={{ imageRendering: 'pixelated' }}
           >
             {imgOutput}
           </pre>

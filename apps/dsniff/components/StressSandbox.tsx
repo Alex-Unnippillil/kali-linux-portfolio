@@ -50,8 +50,8 @@ const StressSandbox: React.FC = () => {
         Capture: {captureMs.toFixed(2)} ms | Replay: {replayMs.toFixed(2)} ms
       </p>
       <ul className="h-40 overflow-auto text-xs bg-black p-1">
-        {logs.slice(0, 100).map((log) => (
-          <li key={log.id}>
+        {logs.slice(0, 100).map((log, i) => (
+          <li key={`${log.protocol}-${log.host}-${log.path}-${i}`}>
             <span className="text-green-400">{log.protocol}</span> {log.host} {log.path}
           </li>
         ))}

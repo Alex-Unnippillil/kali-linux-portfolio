@@ -16,6 +16,7 @@ const NiktoApp = () => {
   const [entries, setEntries] = useState([]);
   const [filterHost, setFilterHost] = useState('');
   const [filterPath, setFilterPath] = useState('');
+  const [filterSeverity, setFilterSeverity] = useState('All');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -134,9 +135,11 @@ const NiktoApp = () => {
     return entries.filter(
       (e) =>
         e.host.toLowerCase().includes(filterHost.toLowerCase()) &&
-        e.path.toLowerCase().includes(filterPath.toLowerCase())
+        e.path.toLowerCase().startsWith(filterPath.toLowerCase()) &&
+        (filterSeverity === 'All' ||
+          e.severity.toLowerCase() === filterSeverity.toLowerCase())
     );
-  }, [entries, filterHost, filterPath]);
+  }, [entries, filterHost, filterPath, filterSeverity]);
 
   const exportCsv = () => {
     const rows = [
@@ -314,6 +317,20 @@ const NiktoApp = () => {
                 onChange={(e) => setFilterPath(e.target.value)}
                 className="p-1 rounded text-black flex-1"
               />
+              <select
+                aria-label="Filter severity"
+                value={filterSeverity}
+                onChange={(e) => setFilterSeverity(e.target.value)}
+                className="p-1 rounded text-black"
+              >
+                {['All', 'Info', 'Low', 'Medium', 'High', 'Critical'].map(
+                  (s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  )
+                )}
+              </select>
               <button
                 type="button"
                 onClick={exportCsv}

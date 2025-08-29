@@ -12,6 +12,7 @@ import ListImport from '../../games/word-search/components/ListImport';
 
 const WORD_COUNT = 5;
 const GRID_SIZE = 12;
+const CELL_SIZE = 32; // px size of each grid cell
 
 function key(p: Position) {
   return `${p.row}-${p.col}`;
@@ -484,40 +485,64 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         </label>
       </div>
       <div
-        style={{
-          gridTemplateColumns: `repeat(${GRID_SIZE}, 2rem)`,
-          gridTemplateRows: `repeat(${GRID_SIZE}, 2rem)`,
-          transform: `scale(${quality})`,
-          transformOrigin: 'top left',
-        }}
-        className={`grid border w-max ${highContrast ? 'contrast-200' : ''}`}
+        className="relative w-max"
+        style={{ transform: `scale(${quality})`, transformOrigin: 'top left' }}
         onMouseLeave={handleMouseUp}
       >
-        {grid.map((row, r) =>
-          row.map((letter, c) => {
-            const posKey = key({ row: r, col: c });
-            const isSelected = selection.some((p) => p.row === r && p.col === c);
-            const isFound = foundCells.has(posKey);
-            const isHint = hintCells.has(posKey);
-            return (
-              <div
-                key={posKey}
-                onMouseDown={() => handleMouseDown(r, c)}
-                onMouseEnter={() => handleMouseEnter(r, c)}
-                onMouseUp={handleMouseUp}
-                className={`w-8 h-8 flex items-center justify-center border text-sm font-bold cursor-pointer select-none ${isFound ? 'bg-green-300' : isSelected ? 'selection' : isHint ? 'bg-blue-200' : 'bg-white'}`}
-                aria-label={`row ${r + 1} column ${c + 1} letter ${letter}`}
-              >
-                {letter}
-              </div>
-            );
-          })
+        <div
+          style={{
+            gridTemplateColumns: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
+            gridTemplateRows: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
+          }}
+          className={`grid border w-max ${highContrast ? 'contrast-200' : ''}`}
+        >
+          {grid.map((row, r) =>
+            row.map((letter, c) => {
+              const posKey = key({ row: r, col: c });
+              const isSelected = selection.some((p) => p.row === r && p.col === c);
+              const isFound = foundCells.has(posKey);
+              const isHint = hintCells.has(posKey);
+              return (
+                <div
+                  key={posKey}
+                  onMouseDown={() => handleMouseDown(r, c)}
+                  onMouseEnter={() => handleMouseEnter(r, c)}
+                  onMouseUp={handleMouseUp}
+                  className={`flex items-center justify-center border font-bold cursor-pointer select-none ${isFound ? 'bg-blue-300' : isSelected ? 'selection' : isHint ? 'bg-purple-200' : 'bg-white'}`}
+                  style={{ width: CELL_SIZE, height: CELL_SIZE, fontSize: CELL_SIZE * 0.6 }}
+                  aria-label={`row ${r + 1} column ${c + 1} letter ${letter}`}
+                >
+                  {letter}
+                </div>
+              );
+            })
+          )}
+        </div>
+        {selection.length > 1 && (
+          <svg
+            className="absolute top-0 left-0 pointer-events-none"
+            width={GRID_SIZE * CELL_SIZE}
+            height={GRID_SIZE * CELL_SIZE}
+          >
+            <polyline
+              points={selection
+                .map((p) => `${p.col * CELL_SIZE + CELL_SIZE / 2},${p.row * CELL_SIZE + CELL_SIZE / 2}`)
+                .join(' ')}
+              stroke="#fbbf24"
+              strokeWidth={CELL_SIZE - 4}
+              fill="none"
+              strokeLinecap="round"
+            />
+          </svg>
         )}
       </div>
-      <ul className="mt-4 columns-2 md:columns-3">
+      <ul className="mt-4 flex flex-wrap gap-2 list-none p-0">
         {words.map((w) => (
-          <li key={w} className="relative overflow-hidden w-fit">
-            <span className={found.has(w) ? 'line-through text-gray-500 word-found' : ''}>{w}</span>
+          <li
+            key={w}
+            className={`px-2 py-1 border rounded-full ${found.has(w) ? 'line-through opacity-60 word-found' : ''}`}
+          >
+            {w}
           </li>
         ))}
       </ul>

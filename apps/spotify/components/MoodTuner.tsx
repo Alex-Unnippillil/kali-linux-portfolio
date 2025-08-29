@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import usePersistentState from '../../../hooks/usePersistentState';
+import { useCallback, useEffect, useRef, useState } from "react";
+import usePersistentState from "../../../hooks/usePersistentState";
 
 interface Playlists {
   [mood: string]: string;
@@ -7,13 +7,13 @@ interface Playlists {
 
 const MoodTuner = () => {
   const [playlists, setPlaylists] = useState<Playlists>({});
-  const [mood, setMood] = usePersistentState<string>('spotify-mood', '');
+  const [mood, setMood] = usePersistentState<string>("spotify-mood", "");
   const [isPlaying, setIsPlaying] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Load playlists from public JSON
   useEffect(() => {
-    fetch('/spotify-playlists.json')
+    fetch("/spotify-playlists.json")
       .then((res) => res.json())
       .then((data: Playlists) => {
         setPlaylists(data);
@@ -35,53 +35,53 @@ const MoodTuner = () => {
   }, [playlists, mood, setMood]);
 
   const post = useCallback((cmd: string) => {
-    iframeRef.current?.contentWindow?.postMessage({ command: cmd }, '*');
+    iframeRef.current?.contentWindow?.postMessage({ command: cmd }, "*");
   }, []);
 
   const togglePlay = useCallback(() => {
     setIsPlaying((playing) => {
-      post(playing ? 'pause' : 'play');
+      post(playing ? "pause" : "play");
       return !playing;
     });
   }, [post]);
 
-  const next = useCallback(() => post('next'), [post]);
-  const previous = useCallback(() => post('previous'), [post]);
+  const next = useCallback(() => post("next"), [post]);
+  const previous = useCallback(() => post("previous"), [post]);
 
   // Update play state from Spotify messages
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
-      if (!e.origin.includes('spotify')) return;
+      if (!e.origin.includes("spotify")) return;
       const data = e.data;
-      if (Array.isArray(data) && data[0] === 'playback_update') {
+      if (Array.isArray(data) && data[0] === "playback_update") {
         setIsPlaying(!data[1]?.is_paused);
       }
     };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, []);
 
   // Hotkeys
   useEffect(() => {
     const handleKeys = (e: KeyboardEvent) => {
-      if (e.key === ' ') {
+      if (e.key === " ") {
         e.preventDefault();
         togglePlay();
-      } else if (e.key.toLowerCase() === 'n') {
+      } else if (e.key.toLowerCase() === "n") {
         next();
-      } else if (e.key.toLowerCase() === 'p') {
+      } else if (e.key.toLowerCase() === "p") {
         previous();
       }
     };
-    window.addEventListener('keydown', handleKeys);
-    return () => window.removeEventListener('keydown', handleKeys);
+    window.addEventListener("keydown", handleKeys);
+    return () => window.removeEventListener("keydown", handleKeys);
   }, [togglePlay, next, previous]);
 
   const moods = Object.keys(playlists);
   const index = moods.indexOf(mood);
 
   return (
-    <div className="h-full w-full bg-ub-cool-grey flex flex-col">
+    <div className="h-full w-full bg-[var(--color-bg)] text-[var(--color-text)] flex flex-col">
       <div className="p-2 flex items-center gap-2 bg-black bg-opacity-30">
         <input
           type="range"
@@ -91,7 +91,7 @@ const MoodTuner = () => {
           onChange={(e) => setMood(moods[Number(e.target.value)])}
           className="flex-1"
         />
-        <span className="capitalize text-white min-w-[4rem] text-center">{mood}</span>
+        <span className="capitalize min-w-[4rem] text-center">{mood}</span>
       </div>
       {mood && playlists[mood] && (
         <>
@@ -105,15 +105,28 @@ const MoodTuner = () => {
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             loading="lazy"
           />
-          <div className="flex justify-center space-x-4 p-2 bg-black bg-opacity-30 text-white">
-            <button onClick={previous} title="Prev (P)" className="flex items-center gap-1">
-              ⏮<span className="text-xs">(P)</span>
+          <div className="flex justify-center space-x-4 p-2 bg-black bg-opacity-30">
+            <button
+              onClick={previous}
+              title="Prev (P)"
+              className="w-8 h-8 flex items-center justify-center"
+            >
+              ⏮<span className="sr-only">(P)</span>
             </button>
-            <button onClick={togglePlay} title="Play/Pause (Space)" className="flex items-center gap-1">
-              {isPlaying ? '⏸' : '▶'}<span className="text-xs">(Space)</span>
+            <button
+              onClick={togglePlay}
+              title="Play/Pause (Space)"
+              className="w-8 h-8 flex items-center justify-center"
+            >
+              {isPlaying ? "⏸" : "▶"}
+              <span className="sr-only">(Space)</span>
             </button>
-            <button onClick={next} title="Next (N)" className="flex items-center gap-1">
-              ⏭<span className="text-xs">(N)</span>
+            <button
+              onClick={next}
+              title="Next (N)"
+              className="w-8 h-8 flex items-center justify-center"
+            >
+              ⏭<span className="sr-only">(N)</span>
             </button>
           </div>
         </>
@@ -123,4 +136,3 @@ const MoodTuner = () => {
 };
 
 export default MoodTuner;
-

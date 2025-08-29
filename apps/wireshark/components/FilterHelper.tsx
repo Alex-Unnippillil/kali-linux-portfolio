@@ -1,6 +1,6 @@
 import React from 'react';
 import usePersistentState from '../../../hooks/usePersistentState';
-import presets from '../filters/presets.json';
+import presets, { FilterPreset } from '../../../filters/presets';
 
 interface FilterHelperProps {
   value: string;
@@ -12,9 +12,19 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     'wireshark:recent-filters',
     []
   );
+  const [customPresets, setCustomPresets] = usePersistentState<FilterPreset[]>(
+    'wireshark:custom-presets',
+    []
+  );
+
+  const allPresets = [...customPresets, ...presets];
+
 
   const suggestions = Array.from(
-    new Set([...recent, ...presets.map((p) => p.expression)])
+    new Set([
+      ...recent,
+      ...allPresets.map((p) => p.expression),
+    ])
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,14 +46,29 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
     }
   };
 
-  const handlePresetSelect = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    const val = e.target.value;
-    if (!val) return;
-    onChange(val);
-    setRecent((prev) => [val, ...prev.filter((f) => f !== val)].slice(0, 5));
-    e.target.selectedIndex = 0;
+  const handlePresetClick = (expression: string) => {
+    onChange(expression);
+    setRecent((prev) => [expression, ...prev.filter((f) => f !== expression)].slice(0, 5));
+    setApplied((prev) => ({ ...prev, [expression]: true }));
+  };
+
+  const handleSavePreset = () => {
+    const expression = value.trim();
+    if (!expression) return;
+    const label = prompt('Preset name');
+    if (!label) return;
+    setCustomPresets((prev) => [
+      ...prev.filter((p) => p.label !== label),
+      { label, expression },
+    ]);
+  };
+
+  const handleShare = () => {
+    if (typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (value) url.searchParams.set('filter', value);
+    else url.searchParams.delete('filter');
+    navigator.clipboard?.writeText(url.toString());
   };
 
   return (
@@ -55,12 +80,13 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
         className="px-2 py-1 bg-gray-800 rounded text-white"
       >
         <option value="">Preset filters...</option>
-        {presets.map(({ label, expression }) => (
-          <option key={expression} value={expression}>
+        {allPresets.map(({ label, expression }) => (
+          <option key={label} value={expression}>
             {label}
           </option>
+
         ))}
-      </select>
+      </div>
       <input
         list="display-filter-suggestions"
         value={value}
@@ -71,6 +97,22 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
         aria-label="Quick search"
         className="px-2 py-1 bg-gray-800 rounded text-white"
       />
+      <button
+        onClick={handleSavePreset}
+        aria-label="Save filter preset"
+        className="px-2 py-1 bg-gray-700 rounded text-white"
+        type="button"
+      >
+        Save
+      </button>
+      <button
+        onClick={handleShare}
+        aria-label="Share filter preset"
+        className="px-2 py-1 bg-gray-700 rounded text-white"
+        type="button"
+      >
+        Share
+      </button>
       <datalist id="display-filter-suggestions">
         {suggestions.map((f) => (
           <option key={f} value={f} />

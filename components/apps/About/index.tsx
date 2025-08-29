@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
 import ReactGA from 'react-ga4';
-import LazyGitHubButton from '../../LazyGitHubButton';
+import GitHubStars from '../../GitHubStars';
 import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
@@ -69,7 +69,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
           }
         >
           <Image
-            className=" w-3 md:w-4"
+            className="w-3 md:w-4 rounded border border-gray-600"
             alt={section.alt}
             src={section.icon}
             width={16}
@@ -170,7 +170,7 @@ function About() {
     <>
       <div className="w-20 md:w-28 my-4 full">
         <Image
-          className="w-full"
+          className="w-full rounded border border-gray-600"
           src="/images/logos/bitmoji.png"
           alt="Alex Unnippillil Logo"
           width={256}
@@ -413,7 +413,7 @@ function Skills({ skills }: { skills: any }) {
       </div>
       <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
         <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
-        <LazyGitHubButton user="alex-unnippillil" repo="" />
+        <GitHubStars user="alex-unnippillil" repo="kali-linux-portfolio" />
       </div>
     </>
   );
@@ -452,7 +452,7 @@ function Projects({ projects }: { projects: any[] }) {
                   <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-base md:text-lg mr-2">
                     {project.name.toLowerCase()}
                   </a>
-                  <LazyGitHubButton user="alex-unnippillil" repo={projectName} />
+                  <GitHubStars user="alex-unnippillil" repo={projectName} />
                 </div>
                 <div className="text-gray-300 font-light text-sm">{project.date}</div>
               </div>

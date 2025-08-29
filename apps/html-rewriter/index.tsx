@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { diffLines } from 'diff';
+import { diffLines, type Change } from 'diff';
 
 interface Rule {
   selector: string;
@@ -77,7 +77,7 @@ const HtmlRewriterApp: React.FC = () => {
       <div>
         <h2 className="text-xl mb-2">Diff</h2>
         <pre className="whitespace-pre-wrap bg-gray-800 p-2 rounded overflow-auto">
-          {diff.map((part, i) => (
+          {diff.map((part: Change, i: number) => (
             <span
               key={i}
               className={part.added ? 'bg-green-800' : part.removed ? 'bg-red-800 line-through' : ''}

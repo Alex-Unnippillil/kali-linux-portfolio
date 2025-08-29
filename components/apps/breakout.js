@@ -10,14 +10,17 @@ import BreakoutLevels from './breakoutLevels';
 // Basic canvas dimensions
 const WIDTH = 400;
 const HEIGHT = 300;
-const PADDLE_WIDTH = 60;
-const PADDLE_HEIGHT = 10;
+const HUD_HEIGHT = 20;
+const PADDLE_WIDTH = WIDTH * 0.15;
+const PADDLE_HEIGHT = HEIGHT * 0.033;
+const PADDLE_Y = HEIGHT - PADDLE_HEIGHT * 2;
 const BALL_RADIUS = 5;
 const ROWS = 5;
 const COLS = 10;
 const BRICK_WIDTH = WIDTH / COLS;
-const BRICK_HEIGHT = 15;
+const BRICK_HEIGHT = HEIGHT * 0.05;
 const DEFAULT_LAYOUT = Array.from({ length: ROWS }, () => Array(COLS).fill(1));
+const TRAIL_LENGTH = 10;
 
 const createBricks = (layout) => {
   const bricks = [];
@@ -27,7 +30,7 @@ const createBricks = (layout) => {
       if (type > 0) {
         bricks.push({
           x: c * BRICK_WIDTH,
-          y: 30 + r * (BRICK_HEIGHT + 2),
+          y: HUD_HEIGHT + r * (BRICK_HEIGHT + 2),
           w: BRICK_WIDTH - 2,
           h: BRICK_HEIGHT,
           type,
@@ -48,6 +51,8 @@ const Breakout = () => {
   const levelRef = useRef(DEFAULT_LAYOUT);
   const magnetRef = useRef(0);
   const animationRef = useRef(0);
+  const livesRef = useRef(3);
+  const levelNumRef = useRef(1);
   const [selecting, setSelecting] = useState(true);
 
   const startLevel = (layout) => {
@@ -55,7 +60,14 @@ const Breakout = () => {
     levelRef.current = grid;
     bricksRef.current = createBricks(grid);
     ballsRef.current = [
-      { x: WIDTH / 2, y: HEIGHT / 2, vx: 2, vy: -2, stuck: false },
+      {
+        x: WIDTH / 2,
+        y: HEIGHT / 2,
+        vx: 2,
+        vy: -2,
+        stuck: false,
+        trail: [],
+      },
     ];
     magnetRef.current = 0;
     setSelecting(false);
@@ -104,9 +116,51 @@ const Breakout = () => {
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
       magnetRef.current = Math.max(0, magnetRef.current - 1);
 
+      // HUD
+      ctx.fillStyle = '#fff';
+      ctx.font = '12px sans-serif';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`Lives: ${livesRef.current}`, 4, 2);
+      ctx.fillText(`Level: ${levelNumRef.current}`, WIDTH - 60, 2);
+
+      // Power-up icons
+      const icons = [];
+      if (magnetRef.current > 0) icons.push('magnet');
+      if (ballsRef.current.length > 1) icons.push('multi');
+      const iconSize = 12;
+      const spacing = 6;
+      let iconX =
+        WIDTH / 2 -
+        (icons.length * iconSize + (icons.length - 1) * spacing) / 2;
+      icons.forEach((ic) => {
+        ctx.save();
+        ctx.translate(iconX, 4);
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = '#fff';
+        if (ic === 'magnet') {
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(iconSize / 2, iconSize / 2, iconSize / 2 - 1, Math.PI * 0.1, Math.PI * 0.9);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(iconSize / 2, iconSize / 2);
+          ctx.lineTo(iconSize / 2, iconSize - 1);
+          ctx.stroke();
+        } else if (ic === 'multi') {
+          ctx.beginPath();
+          ctx.arc(iconSize / 3, iconSize / 2, iconSize / 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc((iconSize / 3) * 2, iconSize / 2, iconSize / 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+        iconX += iconSize + spacing;
+      });
+
       // Draw paddle
       ctx.fillStyle = '#fff';
-      ctx.fillRect(paddleX.current, HEIGHT - 20, PADDLE_WIDTH, PADDLE_HEIGHT);
+      ctx.fillRect(paddleX.current, PADDLE_Y, PADDLE_WIDTH, PADDLE_HEIGHT);
 
       // Draw bricks
       bricksRef.current.forEach((br) => {
@@ -120,8 +174,11 @@ const Breakout = () => {
       ballsRef.current.forEach((ball) => {
         if (ball.stuck) {
           ball.x = paddleX.current + ball.offset;
-          ball.y = HEIGHT - 20 - BALL_RADIUS;
+          ball.y = PADDLE_Y - BALL_RADIUS;
+          ball.trail = [];
         } else {
+          ball.trail.push({ x: ball.x, y: ball.y });
+          if (ball.trail.length > TRAIL_LENGTH) ball.trail.shift();
           ball.x += ball.vx;
           ball.y += ball.vy;
         }
@@ -137,12 +194,12 @@ const Breakout = () => {
         // Paddle collision
         if (
           !ball.stuck &&
-          ball.y >= HEIGHT - 20 - BALL_RADIUS &&
+          ball.y >= PADDLE_Y - BALL_RADIUS &&
           ball.x >= paddleX.current &&
           ball.x <= paddleX.current + PADDLE_WIDTH
         ) {
           ball.vy *= -1;
-          ball.y = HEIGHT - 20 - BALL_RADIUS;
+          ball.y = PADDLE_Y - BALL_RADIUS;
           if (magnetRef.current > 0) {
             ball.stuck = true;
             ball.offset = BALL_RADIUS;
@@ -167,6 +224,7 @@ const Breakout = () => {
                 vx: -ball.vx,
                 vy: ball.vy,
                 stuck: false,
+                trail: [],
               });
             } else if (br.type === 3) {
               magnetRef.current = 300;
@@ -174,18 +232,42 @@ const Breakout = () => {
           }
         });
 
+        // Draw trail
+        ball.trail.forEach((p, i) => {
+          ctx.fillStyle = `rgba(255,255,255,${
+            ((i + 1) / ball.trail.length) * 0.5
+          })`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, BALL_RADIUS, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
         // Draw ball
+        ctx.fillStyle = '#fff';
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
         ctx.fill();
       });
+
+      if (bricksRef.current.every((br) => !br.alive)) {
+        levelNumRef.current += 1;
+        startLevel(levelRef.current);
+        return;
+      }
 
       // Remove lost balls
       ballsRef.current = ballsRef.current.filter(
         (b) => b.y < HEIGHT + BALL_RADIUS,
       );
       if (ballsRef.current.length === 0) {
-        startLevel(levelRef.current);
+        livesRef.current -= 1;
+        if (livesRef.current > 0) {
+          startLevel(levelRef.current);
+        } else {
+          livesRef.current = 3;
+          levelNumRef.current = 1;
+          startLevel(levelRef.current);
+        }
         return;
       }
 
@@ -202,6 +284,8 @@ const Breakout = () => {
   }, [canvasRef, selecting]);
 
   const handleSelect = (layout) => {
+    livesRef.current = 3;
+    levelNumRef.current = 1;
     startLevel(layout);
   };
 

@@ -35,7 +35,7 @@ describe('NiktoReport', () => {
     await screen.findByText('/admin');
     expect(screen.getAllByRole('row')).toHaveLength(3);
 
-    await user.type(screen.getByPlaceholderText(/filter by path/i), 'cgi');
+    await user.type(screen.getByPlaceholderText(/filter by path/i), '/cgi');
     expect(screen.queryByText('/admin')).not.toBeInTheDocument();
 
     await user.clear(screen.getByPlaceholderText(/filter by path/i));

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import copyToClipboard from '../../../utils/clipboard';
 
 interface Artifact {
   name: string;
@@ -45,13 +46,25 @@ const ReportExport: React.FC<ReportExportProps> = ({ caseName = 'case', artifact
     URL.revokeObjectURL(url);
   };
 
+  const copyReport = () => {
+    copyToClipboard(htmlReport);
+  };
+
   return (
-    <button
-      onClick={exportReport}
-      className="bg-ub-orange px-3 py-1 rounded text-sm text-black"
-    >
-      Download HTML Report
-    </button>
+    <div className="flex gap-2">
+      <button
+        onClick={copyReport}
+        className="bg-ub-gray px-3 py-1 rounded text-sm text-black"
+      >
+        Copy HTML Report
+      </button>
+      <button
+        onClick={exportReport}
+        className="bg-ub-orange px-3 py-1 rounded text-sm text-black"
+      >
+        Download HTML Report
+      </button>
+    </div>
   );
 };
 

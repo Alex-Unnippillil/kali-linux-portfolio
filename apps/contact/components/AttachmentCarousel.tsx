@@ -36,12 +36,12 @@ const AttachmentCarousel: React.FC<AttachmentCarouselProps> = ({
   const next = () => setIndex((index + 1) % attachments.length);
 
   return (
-    <div className="mt-4">
+    <div className="mt-6">
       <div className="relative">
         {isImage ? (
           <img src={url} alt={file.name} className="max-h-48 object-contain" />
         ) : (
-          <div className="p-4 bg-gray-800 rounded">{file.name}</div>
+          <div className="p-3 bg-gray-800 rounded">{file.name}</div>
         )}
         <button
           type="button"
@@ -52,7 +52,7 @@ const AttachmentCarousel: React.FC<AttachmentCarouselProps> = ({
         </button>
       </div>
       {attachments.length > 1 && (
-        <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center justify-between mt-3">
           <button
             type="button"
             onClick={prev}

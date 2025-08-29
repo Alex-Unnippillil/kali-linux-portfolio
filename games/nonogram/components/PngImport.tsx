@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import type { Clue, Grid } from "../../../apps/games/nonogram/logic";
 import { lineToClues } from "../../../apps/games/nonogram/logic";
+import Board from "./Board";
 
 export interface ParsedPuzzle {
   grid: Grid;
@@ -75,9 +76,6 @@ const dataToPuzzle = (data: Uint8Array, width: number, height: number) => {
   return { grid, rows, cols };
 };
 
-const cellStyle = (filled: number) =>
-  `w-4 h-4 border border-gray-400 ${filled ? "bg-black" : "bg-white"}`;
-
 const PngImport: React.FC = () => {
   const [puzzle, setPuzzle] = useState<ParsedPuzzle | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -104,17 +102,9 @@ const PngImport: React.FC = () => {
       <input type="file" accept="image/png" onChange={onFile} />
       {error && <p className="text-red-600 mt-2">{error}</p>}
       {puzzle && (
-        <table className="mt-4 border-collapse">
-          <tbody>
-            {puzzle.grid.map((row, i) => (
-              <tr key={i}>
-                {row.map((cell, j) => (
-                  <td key={j} className={cellStyle(cell)} />
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="mt-4">
+          <Board rows={puzzle.rows} cols={puzzle.cols} solution={puzzle.grid} />
+        </div>
       )}
     </div>
   );

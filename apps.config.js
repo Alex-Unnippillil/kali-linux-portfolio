@@ -3,7 +3,7 @@ import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 import { displayX } from './components/apps/x';
 import { displaySpotify } from './components/apps/spotify';
 import { displaySettings } from './components/apps/settings';
-import { displayChrome } from './components/apps/Chrome';
+import { displayChrome } from './components/apps/chrome';
 import { displayGedit } from './components/apps/gedit';
 import { displayTodoist } from './components/apps/todoist';
 import { displayWeather } from './components/apps/weather';
@@ -787,7 +787,7 @@ const apps = [
   {
     id: 'trash',
     title: 'Trash',
-    icon: './themes/Yaru/system/user-trash-full.png',
+    icon: './themes/Yaru/status/user-trash-symbolic.svg',
     disabled: false,
     favourite: false,
     desktop_shortcut: true,

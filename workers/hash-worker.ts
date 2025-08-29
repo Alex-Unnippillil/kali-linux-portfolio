@@ -1,4 +1,5 @@
 import {
+  createMD5,
   createSHA1,
   createSHA256,
   createSHA384,
@@ -9,6 +10,7 @@ import {
 } from 'hash-wasm';
 
 export type Algorithm =
+  | 'MD5'
   | 'SHA-1'
   | 'SHA-256'
   | 'SHA-384'
@@ -47,6 +49,9 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
 
     for (const alg of algorithms) {
       switch (alg) {
+        case 'MD5':
+          hashers[alg] = await createMD5();
+          break;
         case 'SHA-1':
           hashers[alg] = await createSHA1();
           break;
@@ -111,6 +116,9 @@ self.onmessage = async ({ data }: MessageEvent<HashWorkerRequest>) => {
     const hashers: Record<string, any> = {};
     for (const alg of hashAlgs) {
       switch (alg) {
+        case 'MD5':
+          hashers[alg] = await createMD5();
+          break;
         case 'SHA-1':
           hashers[alg] = await createSHA1();
           break;

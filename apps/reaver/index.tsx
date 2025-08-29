@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import LegalInterstitial from '../../components/ui/LegalInterstitial';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 import RouterProfiles, {
   ROUTER_PROFILES,
   RouterProfile,
 } from './components/RouterProfiles';
+import APList from './components/APList';
+import ProgressDonut from './components/ProgressDonut';
 
 interface RouterMeta {
   model: string;
@@ -37,6 +38,7 @@ const stages = [
 ];
 
 const TOTAL_PINS = 11000; // example PIN space for demonstration
+const FOUND_PIN = '12345670';
 
 const formatTime = (seconds: number) => {
   const hrs = Math.floor(seconds / 3600);
@@ -59,6 +61,8 @@ const ReaverPanel: React.FC = () => {
   const intervalRef = useRef<NodeJS.Timeout>();
   const burstRef = useRef(0); // attempts since last lock
   const lockRef = useRef(0); // lockout seconds remaining
+  const [logs, setLogs] = useState<string[]>([]);
+  const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch('/demo-data/reaver/routers.json')
@@ -86,13 +90,19 @@ const ReaverPanel: React.FC = () => {
           if (profile.lockDuration > 0) {
             lockRef.current = profile.lockDuration;
             setLockRemaining(lockRef.current);
+            setLogs((l) => [...l, `WPS locked for ${profile.lockDuration}s`]);
           }
+        }
+
+        if (next % 1000 === 0) {
+          setLogs((l) => [...l, `Tried ${next} PINs`]);
         }
 
         if (next >= TOTAL_PINS) {
           clearInterval(intervalRef.current!);
           setRunning(false);
           setStageIdx(stages.length);
+          setLogs((l) => [...l, `PIN found: ${FOUND_PIN}`]);
           return TOTAL_PINS;
         }
         return next;
@@ -115,12 +125,14 @@ const ReaverPanel: React.FC = () => {
     setLockRemaining(0);
     setStageIdx(0);
     setRunning(true);
+    setLogs(['Attack started']);
   };
 
   const stop = () => {
     setRunning(false);
     clearInterval(intervalRef.current!);
     setStageIdx(-1);
+    setLogs((l) => [...l, 'Attack stopped']);
   };
 
   useEffect(() => {
@@ -130,6 +142,20 @@ const ReaverPanel: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [running, stageIdx]);
+
+  useEffect(() => {
+    if (stageIdx >= 0 && stageIdx < stages.length) {
+      setLogs((l) => [...l, `Stage: ${stages[stageIdx].title}`]);
+    }
+    if (stageIdx === stages.length) {
+      setLogs((l) => [...l, 'Attack complete']);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageIdx]);
+
+  useEffect(() => {
+    logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
+  }, [logs]);
 
   const stageStatus = (i: number) => {
     if (i < stageIdx) return 'completed';
@@ -145,6 +171,11 @@ const ReaverPanel: React.FC = () => {
       <p className="text-sm text-yellow-300 mb-4">
         Educational simulation. No real Wi-Fi traffic is generated.
       </p>
+
+      <div className="mb-6">
+        <h2 className="text-lg mb-2">Access Points</h2>
+        <APList />
+      </div>
 
       <div className="mb-6">
         <h2 className="text-lg mb-2">Attack Stages</h2>
@@ -180,25 +211,28 @@ const ReaverPanel: React.FC = () => {
       <div className="mb-6">
         <h2 className="text-lg mb-2">PIN Brute-force Simulator</h2>
         <RouterProfiles onChange={setProfile} />
-        <div className="flex items-center gap-2 mb-2">
-          <label htmlFor="rate" className="text-sm">
-            Attempts/sec
-          </label>
-          <input
-            id="rate"
-            type="number"
-            min="1"
-            value={rate}
-            onChange={(e) => setRate(Number(e.target.value) || 1)}
-            className="w-20 p-1 bg-gray-800 rounded text-white"
-          />
-          <button
-            type="button"
-            onClick={running ? stop : start}
-            className="px-2 py-1 bg-green-700 rounded disabled:opacity-50"
-          >
-            {running ? 'Stop' : 'Start'}
-          </button>
+        <div className="flex items-center gap-4 mb-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <label htmlFor="rate" className="text-sm">
+              Attempts/sec
+            </label>
+            <input
+              id="rate"
+              type="number"
+              min="1"
+              value={rate}
+              onChange={(e) => setRate(Number(e.target.value) || 1)}
+              className="w-20 p-1 bg-gray-800 rounded text-white"
+            />
+            <button
+              type="button"
+              onClick={running ? stop : start}
+              className="px-2 py-1 bg-green-700 rounded disabled:opacity-50"
+            >
+              {running ? 'Stop' : 'Start'}
+            </button>
+          </div>
+          <ProgressDonut value={attempts} total={TOTAL_PINS} />
         </div>
         <div className="text-sm mb-1">
           Attempts: {attempts} / {TOTAL_PINS}
@@ -214,9 +248,32 @@ const ReaverPanel: React.FC = () => {
             WPS locked. Resuming in {lockRemaining}s
           </div>
         )}
-        <div className="text-sm">
+        <div className="text-sm mb-2">
           Est. time remaining: {formatTime(timeRemaining)}
         </div>
+        <div
+          ref={logRef}
+          className="h-32 bg-gray-800 rounded p-2 overflow-y-auto text-xs font-mono mb-4"
+        >
+          {logs.map((log, i) => (
+            <div key={i}>{log}</div>
+          ))}
+        </div>
+        {stageIdx === stages.length && (
+          <div className="mt-4 p-4 bg-gray-800 rounded">
+            <h3 className="text-lg mb-2">Attack Summary</h3>
+            <p className="mb-2">
+              WPS PIN: <code className="text-green-400">{FOUND_PIN}</code>
+            </p>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard.writeText(FOUND_PIN)}
+              className="px-2 py-1 bg-blue-600 rounded"
+            >
+              Copy PIN
+            </button>
+          </div>
+        )}
       </div>
 
       <div>
@@ -249,12 +306,7 @@ const ReaverApp: React.FC = () => {
 };
 
 const ReaverPage: React.FC = () => {
-  const [accepted, setAccepted] = useState(false);
   const countRef = useRef(1);
-
-  if (!accepted) {
-    return <LegalInterstitial onAccept={() => setAccepted(true)} />;
-  }
 
   const createTab = (): TabDefinition => {
     const id = Date.now().toString();

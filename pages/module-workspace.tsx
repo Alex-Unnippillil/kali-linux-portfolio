@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
+import { setValue, getAll } from '../utils/moduleStore';
 
 interface ModuleOption {
   name: string;
@@ -57,6 +58,7 @@ const ModuleWorkspace: React.FC = () => {
   const [selected, setSelected] = useState<Module | null>(null);
   const [optionValues, setOptionValues] = useState<Record<string, string>>({});
   const [result, setResult] = useState('');
+  const [storeData, setStoreData] = useState<Record<string, string>>({});
 
   const tags = Array.from(new Set(modules.flatMap((m) => m.tags)));
   const filteredModules = filter
@@ -89,7 +91,10 @@ const ModuleWorkspace: React.FC = () => {
       .map((o) => `${o.name}=${optionValues[o.name] || ''}`)
       .join(' ');
     const cmd = `${selected.id} ${opts}`.trim();
-    setResult(`$ ${cmd}\n${selected.sample}`);
+    const res = `$ ${cmd}\n${selected.sample}`;
+    setResult(res);
+    setValue(selected.id, res);
+    setStoreData(getAll());
   };
 
   return (
@@ -192,6 +197,18 @@ const ModuleWorkspace: React.FC = () => {
                 >
                   {result}
                 </pre>
+              )}
+              {Object.keys(storeData).length > 0 && (
+                <div>
+                  <h3 className="font-semibold">Stored Values</h3>
+                  <ul className="text-xs">
+                    {Object.entries(storeData).map(([k, v]) => (
+                      <li key={k}>
+                        <strong>{k}</strong>: {v}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           )}

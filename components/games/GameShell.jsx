@@ -14,8 +14,8 @@ export default function GameShell({
   children,
   controls = null,
   settings = null,
-  onPause,
-  onResume,
+  onPause = () => {},
+  onResume = () => {},
 }) {
   useOrientationGuard();
 
@@ -26,12 +26,12 @@ export default function GameShell({
 
   const pause = useCallback(() => {
     setPaused(true);
-    onPause && onPause();
+    onPause();
   }, [onPause]);
 
   const resume = useCallback(() => {
     setPaused(false);
-    onResume && onResume();
+    onResume();
   }, [onResume]);
 
   const toggleSettings = () => setShowSettings((s) => !s);
