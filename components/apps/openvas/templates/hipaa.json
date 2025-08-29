@@ -1,0 +1,6 @@
+{
+  "name": "HIPAA",
+  "portList": "Healthcare Services",
+  "maxHosts": "5 concurrent hosts",
+  "qod": "80% minimum"
+}

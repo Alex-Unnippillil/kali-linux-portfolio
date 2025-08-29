@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import chartData from './chart-data.json';
 import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
+import pciProfile from './templates/pci.json';
+import hipaaProfile from './templates/hipaa.json';
+
+const templates = { PCI: pciProfile, HIPAA: hipaaProfile };
 
 // Simple helper for notifications that falls back to alert()
 const notify = (title, body) => {
@@ -136,6 +140,7 @@ const hostReports = [
 const OpenVASApp = () => {
   const [target, setTarget] = useState('');
   const [group, setGroup] = useState('');
+  const [profile, setProfile] = useState('PCI');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [summaryUrl, setSummaryUrl] = useState(null);
@@ -167,7 +172,7 @@ const OpenVASApp = () => {
   }, []);
 
   const generateSummary = (data) => {
-    const summary = `# OpenVAS Scan Summary\n\n- Target: ${target}\n- Group: ${group}\n\n## Output\n\n${data}`;
+    const summary = `# OpenVAS Scan Summary\n\n- Target: ${target}\n- Group: ${group}\n- Profile: ${profile}\n\n## Output\n\n${data}`;
     const blob = new Blob([summary], { type: 'text/markdown' });
     setSummaryUrl(URL.createObjectURL(blob));
   };
@@ -180,7 +185,7 @@ const OpenVASApp = () => {
     setSummaryUrl(null);
     try {
       const res = await fetch(
-        `/api/openvas?target=${encodeURIComponent(target)}&group=${encodeURIComponent(group)}`
+        `/api/openvas?target=${encodeURIComponent(target)}&group=${encodeURIComponent(group)}&profile=${encodeURIComponent(profile)}`
       );
       if (!res.ok) throw new Error(`Request failed with ${res.status}`);
       const data = await res.text();
@@ -252,7 +257,7 @@ const OpenVASApp = () => {
   return (
     <div className="h-full w-full p-4 bg-ub-cool-grey text-white overflow-auto">
       <TaskOverview />
-      <PolicySettings />
+      <PolicySettings policy={templates[profile]} />
       {hostReports.length > 0 && (
         <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 mb-4">
           {hostReports.map((h) => (
@@ -295,6 +300,18 @@ const OpenVASApp = () => {
           value={group}
           onChange={(e) => setGroup(e.target.value)}
         />
+        <select
+          aria-label="Scan profile"
+          className="flex-1 p-2 rounded text-black"
+          value={profile}
+          onChange={(e) => setProfile(e.target.value)}
+        >
+          {Object.keys(templates).map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           onClick={runScan}
