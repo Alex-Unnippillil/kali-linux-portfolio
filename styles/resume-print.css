@@ -5,11 +5,16 @@
   body {
     background: var(--color-surface);
     color: var(--color-inverse);
+    -webkit-print-color-adjust: exact;
   }
   .no-print {
     display: none !important;
   }
   .windowMainScreen {
     background: var(--color-surface) !important;
+  }
+  #resume-content {
+    max-height: 520mm;
+    overflow: hidden;
   }
 }

@@ -5,6 +5,7 @@ import LazyGitHubButton from '../LazyGitHubButton';
 import Certs from './certs';
 import data from './alex/data.json';
 import resumeData from './alex/resume.json';
+import ActivityCalendar from 'react-activity-calendar';
 
 export class AboutAlex extends Component {
 
@@ -452,23 +453,13 @@ function Projects({ projects }) {
 }
 
 
-function Resume({ data }) {
+function Resume({ data: resume }) {
     const [filter, setFilter] = React.useState('all');
     const [liveMessage, setLiveMessage] = React.useState('');
 
-    const handleDownload = async () => {
+    const handleDownload = () => {
         ReactGA.event({ category: 'resume', action: 'download' });
-        const element = document.getElementById('resume-content');
-        if (!element) return;
-        if (!window.html2pdf) {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-            document.body.appendChild(script);
-            await new Promise((resolve) => {
-                script.onload = resolve;
-            });
-        }
-        window.html2pdf().from(element).save('Alex-Unnippillil-Resume.pdf');
+        window.print();
     };
 
     const shareContact = async () => {
@@ -488,10 +479,10 @@ function Resume({ data }) {
     };
 
     const tags = React.useMemo(
-        () => Array.from(new Set(data.experience.flatMap((e) => e.tags))),
-        [data]
+        () => Array.from(new Set(resume.experience.flatMap((e) => e.tags))),
+        [resume]
     );
-    const experiences = filter === 'all' ? data.experience : data.experience.filter((e) => e.tags.includes(filter));
+    const experiences = filter === 'all' ? resume.experience : resume.experience.filter((e) => e.tags.includes(filter));
 
     React.useEffect(() => {
         const elements = document.querySelectorAll('.exp-item');
@@ -521,7 +512,7 @@ function Resume({ data }) {
                     onClick={handleDownload}
                     className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
                 >
-                    Download
+                    Download PDF
                 </button>
                 <a
                     href="/assets/alex-unnippillil.vcf"
@@ -537,11 +528,26 @@ function Resume({ data }) {
                     Share contact
                 </button>
             </div>
-            <div id="resume-content" className="p-4 overflow-y-auto flex-1">
+            <div id="resume-content" className="p-4 overflow-y-auto flex-1 print:scale-90">
+                <div className="mb-4">
+                    <div className="font-bold text-lg">Milestones</div>
+                    <div className="border-l-2 border-ubt-blue ml-2">
+                        {data.milestones.map((m, i) => (
+                            <div key={i} className="timeline-item mb-4 pl-4">
+                                <div className="text-ubt-blue font-bold">{m.year}</div>
+                                <p className="text-gray-200">{m.description}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="mb-4">
+                    <div className="font-bold text-lg">Badges</div>
+                    <ActivityCalendar data={data.badges} hideTotal colorScheme="light" className="print:scale-90" />
+                </div>
                 <div className="mb-4">
                     <div className="font-bold text-lg">Skills</div>
                     <div className="flex flex-wrap mt-2">
-                        {data.skills.map((skill) => (
+                        {resume.skills.map((skill) => (
                             <span
                                 key={skill}
                                 className="m-1 px-2 py-1 bg-ub-gedit-light rounded-full text-xs"
@@ -554,7 +560,7 @@ function Resume({ data }) {
                 <div className="mb-4">
                     <div className="font-bold text-lg">Projects</div>
                     <ul className="list-disc ml-5 mt-2">
-                        {data.projects.map((p) => (
+                        {resume.projects.map((p) => (
                             <li key={p.name} className="text-sm">
                                 <a
                                     href={p.link}
