@@ -29,6 +29,9 @@ const InputHub = () => {
   const [status, setStatus] = useState('');
   const [useCaptcha, setUseCaptcha] = useState(false);
   const [emailjsReady, setEmailjsReady] = useState(false);
+  const [sentMessages, setSentMessages] = useState<
+    { name: string; email: string; subject: string; message: string; status: string; time: number }[]
+  >([]);
 
   useEffect(() => {
     const { preset, title, text, url, files } = router.query;
@@ -78,10 +81,38 @@ const InputHub = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = window.localStorage.getItem('sentMessages');
+      if (stored) {
+        setSentMessages(JSON.parse(stored));
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem('sentMessages', JSON.stringify(sentMessages));
+    } catch {
+      // ignore write errors
+    }
+  }, [sentMessages]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const appendMessage = (result: string) =>
+      setSentMessages((msgs) => [
+        ...msgs,
+        { name, email, subject, message, status: result, time: Date.now() },
+      ]);
     if (!emailjsReady) {
-      setStatus('Email service unavailable');
+      const final = 'Email service unavailable';
+      setStatus(final);
+      appendMessage(final);
       return;
     }
     const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID as string;
@@ -97,13 +128,39 @@ const InputHub = () => {
         message,
         'g-recaptcha-response': token,
       });
-      setStatus('Message sent!');
+      const final = 'Message sent!';
+      setStatus(final);
+      appendMessage(final);
       setName('');
       setEmail('');
       setMessage('');
     } catch {
-      setStatus('Failed to send message');
+      const final = 'Failed to send message';
+      setStatus(final);
+      appendMessage(final);
     }
+  };
+
+  const exportCsv = () => {
+    const header = ['Name', 'Email', 'Subject', 'Message', 'Status', 'Time'];
+    const rows = sentMessages.map((m) => [
+      m.name,
+      m.email,
+      m.subject,
+      m.message,
+      m.status,
+      new Date(m.time).toISOString(),
+    ]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sent-messages.csv';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -167,6 +224,15 @@ const InputHub = () => {
         <div role="status" className="mt-2 text-sm">
           {status}
         </div>
+      )}
+      {sentMessages.length > 0 && (
+        <button
+          type="button"
+          onClick={exportCsv}
+          className="mt-4 bg-gray-600 px-2 py-1 text-white"
+        >
+          Export CSV
+        </button>
       )}
     </div>
   );
