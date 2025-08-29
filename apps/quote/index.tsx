@@ -4,6 +4,7 @@ import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
 import offlineQuotes from '../../components/apps/quotes.json';
 import share, { canShare } from '../../utils/share';
+import { useQuoteNotification } from './state';
 
 interface Quote {
   content: string;
@@ -61,6 +62,7 @@ export default function QuoteApp() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [dailyQuote, setDailyQuote] = useState<Quote | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const { time, setTime, enabled, setEnabled } = useQuoteNotification();
 
   useEffect(() => {
     const fav = localStorage.getItem('quote-favorites');
@@ -93,6 +95,36 @@ export default function QuoteApp() {
     setDailyQuote(q);
     localStorage.setItem('daily-quote', JSON.stringify({ date: today, quote: q }));
   }, [quotes]);
+
+  useEffect(() => {
+    if (!enabled || !quotes.length) return;
+    if (!('Notification' in window)) return;
+    let timer: number;
+    const schedule = () => {
+      const [h, m] = time.split(':').map(Number);
+      const now = new Date();
+      const next = new Date();
+      next.setHours(h, m, 0, 0);
+      if (next <= now) next.setDate(next.getDate() + 1);
+      const delay = next.getTime() - now.getTime();
+      timer = window.setTimeout(() => {
+        const q =
+          dailyQuote || quotes[Math.floor(Math.random() * quotes.length)];
+        new Notification(q.author, { body: q.content });
+        schedule();
+      }, delay);
+    };
+    if (Notification.permission === 'granted') {
+      schedule();
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then((p) => {
+        if (p === 'granted') schedule();
+      });
+    }
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [enabled, time, dailyQuote, quotes]);
 
   const filtered = useMemo(() => {
     const lower = search.toLowerCase();
@@ -237,6 +269,23 @@ export default function QuoteApp() {
               </option>
             ))}
           </select>
+        </div>
+        <div className="mt-4 flex items-center gap-2">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={enabled}
+              onChange={(e) => setEnabled(e.target.checked)}
+            />
+            <span>Daily notification</span>
+          </label>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            disabled={!enabled}
+            className="px-2 py-1 rounded text-black"
+          />
         </div>
       </div>
     </div>
