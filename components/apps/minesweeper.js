@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 
+/**
+ * Classic Minesweeper implementation.
+ * The grid logic is powered by a seeded board generator
+ * and renders to a canvas element.
+ */
+
 const BOARD_SIZE = 8;
 const MINES_COUNT = 10;
 const CELL_SIZE = 32;
