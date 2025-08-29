@@ -36,6 +36,7 @@ const Reversi = () => {
   const [tip, setTip] = useState('Tip: Control the corners to gain an advantage.');
   const [depth, setDepth] = useState(3);
   const [useBook, setUseBook] = useState(true);
+  const bookEnabled = React.useMemo(() => useBook, [useBook]);
 
   // keep refs in sync
   useEffect(() => { boardRef.current = board; }, [board]);
@@ -88,7 +89,7 @@ const Reversi = () => {
     window.localStorage.setItem('reversiWins', JSON.stringify(wins));
   }, [wins]);
 
-  const playSound = () => {
+  const playSound = React.useCallback(() => {
     if (!sound) return;
     const ctx =
       audioRef.current || new (window.AudioContext || window.webkitAudioContext)();
@@ -102,7 +103,7 @@ const Reversi = () => {
     gain.gain.setValueAtTime(0.3, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
     osc.stop(ctx.currentTime + 0.1);
-  };
+  }, [sound]);
 
   const queueFlips = (r, c, player, prevBoard) => {
     if (reduceMotionRef.current) return;
@@ -287,7 +288,7 @@ const Reversi = () => {
       return;
     }
     if (player === 'W' && !paused && !aiThinkingRef.current) {
-      const bookMove = useBook ? getBookMove(board, 'W') : null;
+      const bookMove = bookEnabled ? getBookMove(board, 'W') : null;
       if (bookMove) {
         const [r, c] = bookMove;
         const flips = moves[`${r}-${c}`];
@@ -307,7 +308,7 @@ const Reversi = () => {
       }
     }
     setMessage(player === 'B' ? 'Your turn' : "AI's turn");
-  }, [board, player, paused]);
+  }, [board, player, paused, depth, playSound, bookEnabled]);
 
   const handleClick = (e) => {
     if (paused || player !== 'B') return;
