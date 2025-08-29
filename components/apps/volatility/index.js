@@ -281,9 +281,13 @@ const VolatilityApp = () => {
         )}
       </div>
       {output && (
-        <pre className="h-32 overflow-auto p-4 bg-black text-green-400 whitespace-pre-wrap">
-          {output}
-        </pre>
+        <div className="h-32 overflow-auto bg-black text-white text-xs font-mono rounded">
+          {output.split('\n').map((line, i) => (
+            <div key={i} className={`px-2 ${i % 2 ? 'bg-gray-900' : 'bg-gray-800'}`}>
+              {line || '\u00A0'}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState, createContext, useContext } from 'react';
 
+function middleEllipsis(text: string, max = 30) {
+  if (text.length <= max) return text;
+  const half = Math.floor((max - 1) / 2);
+  return `${text.slice(0, half)}…${text.slice(text.length - half)}`;
+}
+
 export interface TabDefinition {
   id: string;
   title: string;
@@ -166,7 +172,7 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
         {tabs.map((t, i) => (
           <div
             key={t.id}
-            className={`flex items-center px-2 py-1 cursor-pointer select-none ${
+            className={`flex items-center gap-1.5 px-3 py-1 cursor-pointer select-none ${
               t.id === activeId ? 'bg-gray-700' : 'bg-gray-800'
             }`}
             draggable
@@ -175,12 +181,10 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
             onDrop={handleDrop(i)}
             onClick={() => setActive(t.id)}
           >
-            <span className="mr-2 truncate" style={{ maxWidth: 150 }}>
-              {t.title}
-            </span>
+            <span className="max-w-[150px]">{middleEllipsis(t.title)}</span>
             {t.closable !== false && tabs.length > 1 && (
               <button
-                className="ml-1"
+                className="p-0.5"
                 onClick={(e) => {
                   e.stopPropagation();
                   closeTab(t.id);

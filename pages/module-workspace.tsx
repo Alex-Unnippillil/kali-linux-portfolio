@@ -191,12 +191,22 @@ const ModuleWorkspace: React.FC = () => {
                 Run
               </button>
               {result && (
-                <pre
-                  className="bg-black text-green-400 p-2 overflow-auto"
-                  role="log"
-                >
-                  {result}
-                </pre>
+                <div className="flex items-start gap-2">
+                  <pre
+                    className="flex-1 bg-black text-green-400 p-2 overflow-auto font-mono"
+                    role="log"
+                  >
+                    {result}
+                  </pre>
+                  <button
+                    onClick={() =>
+                      navigator.clipboard?.writeText(result)
+                    }
+                    className="px-2 py-1 text-sm rounded bg-gray-700"
+                  >
+                    Copy
+                  </button>
+                </div>
               )}
               {Object.keys(storeData).length > 0 && (
                 <div>

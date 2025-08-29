@@ -6,12 +6,6 @@ const categories = {
   socket: 'Sockets',
 };
 
-const colors = {
-  process: '#ef4444', // red-500
-  dll: '#3b82f6', // blue-500
-  socket: '#10b981', // green-500
-};
-
 // Use darker shades for chips to ensure sufficient contrast on white text
 const chipColors = {
   process: 'bg-red-700',
@@ -56,9 +50,10 @@ const MemoryHeatmap = ({ data }) => {
         if (x + cell.width < 0 || y + cell.height < 0 || x > canvas.width || y > canvas.height) {
           return;
         }
-        ctx.fillStyle = colors[cell.type];
+        const gap = 6;
+        ctx.fillStyle = '#ffffff';
         ctx.globalAlpha = cell.value;
-        ctx.fillRect(x, y, cell.width, cell.height);
+        ctx.fillRect(x + gap / 2, y + gap / 2, cell.width - gap, cell.height - gap);
       });
       ctx.globalAlpha = 1;
       if (!prefersReducedMotion.current) {

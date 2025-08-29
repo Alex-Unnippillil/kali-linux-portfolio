@@ -8,6 +8,22 @@ interface DeviceInfo {
   class: string;
 }
 
+const SignalBars: React.FC<{ rssi: number }> = ({ rssi }) => {
+  const level =
+    rssi >= -60 ? 4 : rssi >= -70 ? 3 : rssi >= -80 ? 2 : rssi >= -90 ? 1 : 0;
+  const heights = ["h-[4px]", "h-[8px]", "h-[12px]", "h-[16px]"];
+  return (
+    <div className="mt-[6px] flex h-4 items-end gap-[2px]">
+      {heights.map((h, i) => (
+        <div
+          key={i}
+          className={`w-1 ${h} ${level > i ? "bg-green-500" : "bg-gray-600"}`}
+        />
+      ))}
+    </div>
+  );
+};
+
 const BluetoothApp: React.FC = () => {
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [error, setError] = useState("");
@@ -72,6 +88,14 @@ const BluetoothApp: React.FC = () => {
 
   return (
     <div className="relative h-full w-full bg-black p-4 text-white">
+      <div className="mb-4 flex items-center gap-2">
+        <span
+          className={`h-3 w-3 rounded-full ${pairedDevice ? "bg-green-500" : "bg-red-500"}`}
+        ></span>
+        <span className="text-sm">
+          {pairedDevice ? "Paired" : "Not paired"}
+        </span>
+      </div>
       <div className="mb-4 flex items-center gap-4">
         <button onClick={handleScan} className="rounded bg-blue-600 px-3 py-1">
           Scan for Devices
@@ -99,16 +123,24 @@ const BluetoothApp: React.FC = () => {
         {Object.entries(grouped).map(([type, list]) => (
           <div key={type}>
             <h3 className="mb-2 font-bold">{type}</h3>
-            <ul className="space-y-2">
+            <ul className="grid grid-cols-2 gap-[6px]">
               {list.map((d) => (
-                <li key={d.address} className="border-b border-gray-700 pb-2">
-                  <p className="font-bold">{d.name || d.address}</p>
-                  <p className="text-sm">
-                    RSSI: {d.rssi} | Class: {d.class}
+                <li
+                  key={d.address}
+                  className="flex flex-col items-center rounded bg-gray-800 p-[6px]"
+                >
+                  <img
+                    src="/themes/Yaru/status/emblem-system-symbolic.svg"
+                    alt=""
+                    className="h-16 w-16"
+                  />
+                  <p className="mt-[6px] text-center text-sm font-bold">
+                    {d.name || d.address}
                   </p>
+                  <SignalBars rssi={d.rssi} />
                   <button
                     onClick={() => setPairingDevice(d)}
-                    className="mt-2 rounded bg-gray-700 px-2 py-1 text-sm"
+                    className="mt-[6px] w-full rounded bg-gray-700 px-2 py-1 text-sm"
                   >
                     Pair
                   </button>
@@ -128,7 +160,7 @@ const BluetoothApp: React.FC = () => {
                   setShowPermissionModal(false);
                   setError("Permission denied.");
                 }}
-                className="rounded bg-gray-600 px-2 py-1"
+                className="w-[90px] rounded bg-gray-600 px-2 py-1"
               >
                 Cancel
               </button>
@@ -138,7 +170,7 @@ const BluetoothApp: React.FC = () => {
                   setShowPermissionModal(false);
                   loadData();
                 }}
-                className="rounded bg-blue-600 px-2 py-1"
+                className="w-[90px] rounded bg-blue-600 px-2 py-1"
               >
                 Allow
               </button>
@@ -155,7 +187,7 @@ const BluetoothApp: React.FC = () => {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setPairingDevice(null)}
-                className="rounded bg-gray-600 px-2 py-1"
+                className="w-[90px] rounded bg-gray-600 px-2 py-1"
               >
                 Cancel
               </button>
@@ -164,7 +196,7 @@ const BluetoothApp: React.FC = () => {
                   setPairedDevice(pairingDevice.name || pairingDevice.address);
                   setPairingDevice(null);
                 }}
-                className="rounded bg-blue-600 px-2 py-1"
+                className="w-[90px] rounded bg-blue-600 px-2 py-1"
               >
                 Pair
               </button>

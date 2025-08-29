@@ -102,12 +102,12 @@ function Sidebar({
 
   return (
     <aside className="w-64 overflow-y-auto border-l border-ub-cool-grey bg-ub-cool-grey p-2 text-sm" role="complementary">
-      <h2 className="mb-2 text-lg font-semibold">Queue</h2>
+      <h2 className="mb-[6px] text-lg font-semibold">Queue</h2>
       <div data-testid="queue-list">
         {queue.map((v) => (
           <div
             key={v.id}
-            className="mb-2 cursor-pointer"
+            className="mb-[6px] cursor-pointer"
             onClick={() => onPlay(v)}
           >
             <img src={v.thumbnail} alt="" className="h-24 w-full rounded object-cover" />
@@ -116,12 +116,12 @@ function Sidebar({
         ))}
         {!queue.length && <div className="text-ubt-grey">Empty</div>}
       </div>
-      <h2 className="mb-2 mt-4 text-lg font-semibold">Watch Later</h2>
+      <h2 className="mb-[6px] mt-[24px] text-lg font-semibold">Watch Later</h2>
       <div data-testid="watch-later-list">
         {watchLater.map((v, i) => (
           <div
             key={`${v.id}-${v.start ?? 0}-${v.end ?? 0}`}
-            className="mb-2 cursor-pointer"
+            className="mb-[6px] cursor-pointer"
             onClick={() => onPlay(v)}
             draggable
             onDragStart={(e) => e.dataTransfer.setData('text/plain', String(i))}
@@ -154,14 +154,22 @@ function VirtualGrid({
   const containerRef = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState<[number, number]>([0, 0]);
   const [cols, setCols] = useState(3);
-  const ITEM_HEIGHT = 220;
+  // Align virtual grid items to a 6px rhythm
+  const ITEM_HEIGHT = 216;
+
+  const truncateTitle = (title: string) => {
+    const MAX_CHARS = 80;
+    if (title.length <= MAX_CHARS) return title;
+    const half = Math.floor((MAX_CHARS - 1) / 2);
+    return `${title.slice(0, half)}…${title.slice(title.length - half)}`;
+  };
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const update = () => {
       const width = el.clientWidth;
-      const newCols = Math.max(1, Math.floor(width / 220));
+      const newCols = Math.max(1, Math.floor(width / 216));
       const height = el.clientHeight;
       const scrollTop = el.scrollTop;
       const startRow = Math.floor(scrollTop / ITEM_HEIGHT);
@@ -197,20 +205,28 @@ function VirtualGrid({
                 left: `${left}%`,
                 width: `${100 / cols}%`,
                 height: ITEM_HEIGHT,
-                padding: '0.5rem',
+                padding: '6px',
               }}
             >
               <div className="cursor-pointer" onClick={() => onPlay(v)}>
-                <img
-                  src={v.thumbnail}
-                  alt={v.title}
-                  className="h-40 w-full rounded object-cover"
-                />
-                <div className="mt-1 line-clamp-2 text-sm">{v.title}</div>
+                <div className="relative">
+                  <img
+                    src={v.thumbnail}
+                    alt={v.title}
+                    className="h-[162px] w-full rounded object-cover"
+                  />
+                  <div className="absolute bottom-[6px] right-[6px] flex gap-[6px] text-[12px]">
+                    <span className="bg-black/70 px-1 text-white">CC</span>
+                    <span className="bg-black/70 px-1 text-white">HD</span>
+                  </div>
+                </div>
+                <div className="mt-[6px] text-sm line-clamp-2">
+                  {truncateTitle(v.title)}
+                </div>
               </div>
-              <div className="mt-1 flex justify-between text-xs">
+              <div className="mt-[6px] flex justify-between text-xs">
                 <ChannelHovercard id={v.channelId} name={v.channelName} />
-                <div className="space-x-2">
+                <div className="space-x-[6px]">
                   <button onClick={() => onQueue(v)}>Queue</button>
                   <button onClick={() => onWatchLater(v)}>Later</button>
                 </div>
@@ -238,6 +254,13 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
   const [loopEnd, setLoopEnd] = useState<number | null>(null);
   const [looping, setLooping] = useState(false);
   const [, setPlaybackRate] = useState(1);
+  const [solidHeader, setSolidHeader] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setSolidHeader(window.scrollY > 0);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const downloadCurrent = useCallback(async () => {
     if (!current) return;
@@ -493,7 +516,7 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
           />
         </form>
         {current && (
-          <div className="mx-4 mb-4 bg-black">
+          <div className="relative mx-4 mb-4 bg-black">
             {!playerReady && (
               <iframe
                 title="YouTube video player"
@@ -507,7 +530,9 @@ export default function YouTubeApp({ initialResults = [] }: Props) {
               ref={playerDivRef}
               className={`${playerReady ? '' : 'hidden'} aspect-video w-full`}
             />
-            <div className="flex items-center gap-3 bg-ub-cool-grey p-2">
+            <div
+              className={`sticky top-0 z-10 flex items-center gap-[6px] p-[6px] transition-colors ${solidHeader ? 'bg-ub-cool-grey' : 'bg-transparent'}`}
+            >
               <button
                 onClick={togglePlay}
                 aria-label={isPlaying ? 'Pause' : 'Play'}

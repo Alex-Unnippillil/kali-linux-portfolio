@@ -80,6 +80,17 @@ To send text or links directly into the Sticky Notes app:
 
 ---
 
+## Speed Insights
+
+- Enable Speed Insights in the Vercel project dashboard.
+- `<SpeedInsights />` is rendered in [`pages/_app.jsx`](./pages/_app.jsx) alongside `<Analytics />`.
+- Validate collection by requesting `/_vercel/speed-insights/script.js` from a deployed build.
+- No metrics are collected in development mode; ad blockers or network filters can block the script.
+
+See Vercel's [Speed Insights Quickstart](https://vercel.com/docs/speed-insights/quickstart) and [troubleshooting guide](https://vercel.com/docs/speed-insights/troubleshooting) for more information.
+
+---
+
 ## Tech Stack
 
 - **Next.js 15** (app uses `/pages` routing) + **TypeScript** in parts
@@ -205,7 +216,9 @@ These external domains are whitelisted in the default CSP. Update this list when
 | `cdn.syndication.twimg.com` | Twitter asset CDN |
 | `*.twitter.com` | Additional Twitter content |
 | `*.x.com` | X (Twitter) domain equivalents |
-| `*.google.com` | Google services used by demos |
+| `*.google.com` | Google services used by demos (e.g., reCAPTCHA) |
+| `cdn.jsdelivr.net` | Math.js library |
+| `cdnjs.cloudflare.com` | PDF.js worker |
 | `stackblitz.com` | StackBlitz IDE embeds |
 | `www.youtube.com` | YouTube IFrame API |
 | `www.youtube-nocookie.com` | YouTube video embeds (privacy-enhanced) |

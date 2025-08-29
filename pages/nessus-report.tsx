@@ -133,7 +133,14 @@ const NessusReport: React.FC = () => {
 
   return (
     <div className="p-4 bg-gray-900 text-white min-h-screen">
-      <h1 className="text-2xl mb-4">Sample Nessus Report</h1>
+      <div className="flex items-center mb-4">
+        <img
+          src="/themes/Yaru/apps/nessus.svg"
+          alt="Nessus badge"
+          className="w-12 h-12 mr-2"
+        />
+        <h1 className="text-2xl">Sample Nessus Report</h1>
+      </div>
       <div className="flex items-center space-x-2 mb-4 flex-wrap">
         <label htmlFor="report-file" className="text-sm">
           Import report
@@ -211,26 +218,27 @@ const NessusReport: React.FC = () => {
       </svg>
       <table className="w-full mb-4 text-sm">
         <thead>
-          <tr className="text-left border-b border-gray-700">
-            <th className="py-1" scope="col">ID</th>
-            <th className="py-1" scope="col">Finding</th>
-            <th className="py-1" scope="col">CVSS</th>
-            <th className="py-1" scope="col">Severity</th>
-            <th className="py-1" scope="col">Host</th>
-            <th className="py-1" scope="col">Plugin Family</th>
+          <tr className="text-left border-b border-gray-700 h-9">
+            <th className="px-2" scope="col">ID</th>
+            <th className="px-2" scope="col">Finding</th>
+            <th className="px-2" scope="col">CVSS</th>
+            <th className="px-2" scope="col">Severity</th>
+            <th className="px-2" scope="col">Host</th>
+            <th className="px-2" scope="col">Plugin Family</th>
           </tr>
         </thead>
         <tbody>
           {filtered.map((f) => (
             <tr
               key={f.id}
-              className="border-b border-gray-800 cursor-pointer hover:bg-gray-800"
+              className="border-b border-gray-800 cursor-pointer hover:bg-gray-800 h-9"
+              style={{ borderLeft: `4px solid ${severityColors[f.severity]}` }}
               onClick={() => setSelected(f)}
             >
-              <td className="py-1">{f.id}</td>
-              <td className="py-1">{f.name}</td>
-              <td className="py-1">{f.cvss}</td>
-              <td className="py-1">
+              <td className="px-2">{f.id}</td>
+              <td className="px-2">{f.name}</td>
+              <td className="px-2">{f.cvss}</td>
+              <td className="px-2">
                 <span
                   className="px-2 py-0.5 rounded-full text-xs text-white"
                   style={{ backgroundColor: severityColors[f.severity] }}
@@ -238,8 +246,8 @@ const NessusReport: React.FC = () => {
                   {f.severity}
                 </span>
               </td>
-              <td className="py-1">{f.host}</td>
-              <td className="py-1">{f.pluginFamily}</td>
+              <td className="px-2">{f.host}</td>
+              <td className="px-2">{f.pluginFamily}</td>
             </tr>
           ))}
         </tbody>
