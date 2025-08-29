@@ -10,6 +10,7 @@ const DEFAULT_SETTINGS = {
   highContrast: false,
   largeHitAreas: false,
   pongSpin: true,
+  allowNetwork: false,
 };
 
 export async function getAccent() {
@@ -94,6 +95,16 @@ export async function setPongSpin(value) {
   window.localStorage.setItem('pong-spin', value ? 'true' : 'false');
 }
 
+export async function getAllowNetwork() {
+  if (typeof window === 'undefined') return DEFAULT_SETTINGS.allowNetwork;
+  return window.localStorage.getItem('allow-network') === 'true';
+}
+
+export async function setAllowNetwork(value) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem('allow-network', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   if (typeof window === 'undefined') return;
   await Promise.all([
@@ -106,10 +117,21 @@ export async function resetSettings() {
   window.localStorage.removeItem('high-contrast');
   window.localStorage.removeItem('large-hit-areas');
   window.localStorage.removeItem('pong-spin');
+  window.localStorage.removeItem('allow-network');
 }
 
 export async function exportSettings() {
-  const [accent, wallpaper, density, reducedMotion, fontScale, highContrast, largeHitAreas, pongSpin] = await Promise.all([
+  const [
+    accent,
+    wallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
+    allowNetwork,
+  ] = await Promise.all([
     getAccent(),
     getWallpaper(),
     getDensity(),
@@ -118,9 +140,21 @@ export async function exportSettings() {
     getHighContrast(),
     getLargeHitAreas(),
     getPongSpin(),
+    getAllowNetwork(),
   ]);
   const theme = getTheme();
-  return JSON.stringify({ accent, wallpaper, density, reducedMotion, fontScale, highContrast, largeHitAreas, pongSpin, theme });
+  return JSON.stringify({
+    accent,
+    wallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
+    allowNetwork,
+    theme,
+  });
 }
 
 export async function importSettings(json) {
@@ -132,7 +166,18 @@ export async function importSettings(json) {
     console.error('Invalid settings', e);
     return;
   }
-  const { accent, wallpaper, density, reducedMotion, fontScale, highContrast, largeHitAreas, pongSpin, theme } = settings;
+  const {
+    accent,
+    wallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
+    allowNetwork,
+    theme,
+  } = settings;
   if (accent !== undefined) await setAccent(accent);
   if (wallpaper !== undefined) await setWallpaper(wallpaper);
   if (density !== undefined) await setDensity(density);
@@ -141,6 +186,7 @@ export async function importSettings(json) {
   if (highContrast !== undefined) await setHighContrast(highContrast);
   if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
+  if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (theme !== undefined) setTheme(theme);
 }
 
