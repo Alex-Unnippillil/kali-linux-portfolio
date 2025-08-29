@@ -48,6 +48,7 @@
     "pdfjs-dist": "^5.4.54",
     "phaser": "3.70.0",
     "postcss": "^8.4.21",
+    "prettier": "^3.6.2",
     "prop-types": "^15.8.1",
     "qrcode": "^1.5.4",
     "react": "18.3.1",
