@@ -3,6 +3,16 @@
 import React, { useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 
+interface PcapViewerProps {
+  showLegend?: boolean;
+}
+
+const protocolColors: Record<string, string> = {
+  TCP: 'bg-blue-900',
+  UDP: 'bg-green-900',
+  ICMP: 'bg-yellow-800',
+};
+
 // Convert bytes to hex dump string
 const toHex = (bytes: Uint8Array) =>
   Array.from(bytes, (b, i) =>
@@ -124,7 +134,7 @@ const parseWithWasm = async (buf: ArrayBuffer): Promise<Packet[]> => {
   return magic === 0x0a0d0d0a ? parsePcapNg(buf) : parsePcap(buf);
 };
 
-const PcapViewer: React.FC = () => {
+const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   const [packets, setPackets] = useState<Packet[]>([]);
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
@@ -166,6 +176,16 @@ const PcapViewer: React.FC = () => {
             onChange={(e) => setFilter(e.target.value)}
             className="text-black p-1 rounded"
           />
+          {showLegend && (
+            <div className="flex space-x-4 text-xs">
+              {Object.entries(protocolColors).map(([proto, color]) => (
+                <div key={proto} className="flex items-center space-x-1">
+                  <span className={`w-3 h-3 inline-block ${color}`}></span>
+                  <span>{proto}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex flex-1 overflow-hidden space-x-2">
             <div className="overflow-auto flex-1">
               <table className="text-xs w-full">
@@ -183,7 +203,11 @@ const PcapViewer: React.FC = () => {
                     <tr
                       key={i}
                       className={`cursor-pointer hover:bg-gray-700 ${
-                        selected === i ? 'bg-gray-700' : ''
+                        selected === i
+                          ? 'bg-gray-700'
+                          : protocolColors[
+                              protocolName(pkt.protocol).toString()
+                            ] || ''
                       }`}
                       onClick={() => setSelected(i)}
                     >
