@@ -15,6 +15,7 @@ import {
   updateShortcut,
   Shortcut,
 } from '../../utils/shortcutRegistry';
+import ThemeLab from './components/ThemeLab';
 
 export default function Settings() {
   const {
@@ -131,6 +132,7 @@ export default function Settings() {
           backgroundPosition: 'center center',
         }}
       ></div>
+      <ThemeLab />
       <div className="flex justify-center my-4">
         <label className="mr-2 text-ubt-grey">Theme:</label>
         <select
