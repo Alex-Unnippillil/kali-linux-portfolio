@@ -10,6 +10,7 @@ import { Readability } from '@mozilla/readability';
 import DOMPurify from 'dompurify';
 import AddressBar from '../chrome/AddressBar';
 import { getCachedFavicon, cacheFavicon } from '../chrome/bookmarks';
+import useOPFS from '../../../hooks/useOPFS';
 
 interface TabData {
   id: number;
@@ -19,17 +20,24 @@ interface TabData {
   scroll: number;
   blocked?: boolean;
   muted?: boolean;
+  profile: string;
+  sandboxFlags: string[];
 }
 
-const STORAGE_KEY = 'chrome-tabs';
 const HOME_URL = 'https://www.google.com/webhp?igu=1';
-const SANDBOX_FLAGS = ['allow-scripts', 'allow-forms', 'allow-popups'] as const;
+const SANDBOX_OPTIONS = ['allow-scripts', 'allow-forms', 'allow-popups'] as const;
+const DEFAULT_FLAGS = [...SANDBOX_OPTIONS];
 const CSP = "default-src 'self'; script-src 'none'; connect-src 'none';";
 const DEMO_ORIGINS = [
   'https://example.com',
   'https://developer.mozilla.org',
   'https://en.wikipedia.org',
 ];
+const PROFILES: Record<string, string[]> = {
+  demo: DEMO_ORIGINS,
+  open: [],
+};
+const DEFAULT_PROFILE = 'demo';
 
 const formatUrl = (value: string) => {
   let url = value.trim();
@@ -44,27 +52,22 @@ const formatUrl = (value: string) => {
   return encodeURI(url);
 };
 
-const readTabs = (): { tabs: TabData[]; active: number } => {
-  if (typeof window === 'undefined') return { tabs: [], active: 0 };
-  try {
-    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '');
-    return data || { tabs: [], active: 0 };
-  } catch {
-    return { tabs: [], active: 0 };
-  }
-};
-
-const saveTabs = (tabs: TabData[], active: number) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ tabs, active }));
-};
-
 const Chrome: React.FC = () => {
-  const { tabs: storedTabs, active: storedActive } = readTabs();
+  const [persisted, setPersisted] = useOPFS<{ tabs: TabData[]; active: number }>(
+    'chrome-tabs.json',
+    { tabs: [], active: 0 },
+  );
   const sessionUrl =
     typeof window !== 'undefined' ? sessionStorage.getItem('chrome-last-url') : null;
   const [tabs, setTabs] = useState<TabData[]>(
-    storedTabs.length
-      ? storedTabs.map((t) => ({ blocked: false, muted: false, ...t }))
+    persisted.tabs.length
+      ? persisted.tabs.map((t) => ({
+          ...t,
+          blocked: false,
+          muted: false,
+          profile: t.profile || DEFAULT_PROFILE,
+          sandboxFlags: t.sandboxFlags || [...DEFAULT_FLAGS],
+        }))
       : [
           {
             id: Date.now(),
@@ -74,11 +77,18 @@ const Chrome: React.FC = () => {
             scroll: 0,
             blocked: false,
             muted: false,
+            profile: DEFAULT_PROFILE,
+            sandboxFlags: [...DEFAULT_FLAGS],
           },
         ]
   );
-  const [activeId, setActiveId] = useState<number>(storedActive || tabs[0].id);
-  const [address, setAddress] = useState<string>(tabs.find((t) => t.id === activeId)?.url || HOME_URL);
+  const [activeId, setActiveId] = useState<number>(persisted.active || tabs[0].id);
+  useEffect(() => {
+    setPersisted({ tabs, active: activeId });
+  }, [tabs, activeId, setPersisted]);
+  const [address, setAddress] = useState<string>(
+    tabs.find((t) => t.id === activeId)?.url || HOME_URL,
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [showFlags, setShowFlags] = useState(false);
@@ -87,15 +97,31 @@ const Chrome: React.FC = () => {
   const tabSearchRef = useRef<HTMLInputElement | null>(null);
   const [tabQuery, setTabQuery] = useState('');
   const [overflowing, setOverflowing] = useState(false);
-  const draggingId = useRef<number | null>(null);
-  const isAllowed = useCallback((url: string) => {
+  const dragTabId = useRef<number | null>(null);
+  const isAllowed = useCallback((url: string, profile: string) => {
     try {
       const origin = new URL(url).origin;
-      return DEMO_ORIGINS.includes(origin);
+      const list = PROFILES[profile] || [];
+      return list.length === 0 || list.includes(origin);
     } catch {
       return false;
     }
   }, []);
+  useEffect(() => {
+    if (persisted.tabs.length) {
+      setTabs(
+        persisted.tabs.map((t) => ({
+          ...t,
+          blocked:
+            t.blocked ?? !isAllowed(t.url, t.profile || DEFAULT_PROFILE),
+          muted: t.muted ?? false,
+          profile: t.profile || DEFAULT_PROFILE,
+          sandboxFlags: t.sandboxFlags || [...DEFAULT_FLAGS],
+        })),
+      );
+      setActiveId(persisted.active || persisted.tabs[0].id);
+    }
+  }, [persisted, isAllowed]);
 
   const setIframeMuted = useCallback((mute: boolean) => {
     try {
@@ -144,17 +170,15 @@ const Chrome: React.FC = () => {
   );
 
   useEffect(() => {
-    DEMO_ORIGINS.forEach((url) => updateFavicon(url));
+    Object.values(PROFILES)
+      .flat()
+      .forEach((url) => updateFavicon(url));
   }, [updateFavicon]);
 
   useEffect(() => {
     const el = tabStripRef.current;
     if (el) setOverflowing(el.scrollWidth > el.clientWidth);
   }, [tabs, tabQuery]);
-
-  useEffect(() => {
-    saveTabs(tabs, activeId);
-  }, [tabs, activeId]);
 
   const filteredTabs = useMemo(
     () =>
@@ -168,7 +192,10 @@ const Chrome: React.FC = () => {
 
   useEffect(() => {
     setTabs((prev) =>
-      prev.map((t) => ({ ...t, blocked: t.blocked || !isAllowed(t.url) })),
+      prev.map((t) => ({
+        ...t,
+        blocked: t.blocked || !isAllowed(t.url, t.profile),
+      })),
     );
   }, [isAllowed]);
 
@@ -190,7 +217,7 @@ const Chrome: React.FC = () => {
   const navigate = useCallback(
     async (raw: string) => {
       const url = formatUrl(raw);
-      let blocked = !isAllowed(url);
+      let blocked = !isAllowed(url, activeTab.profile);
       if (!blocked) {
         try {
           const res = await fetch(url, { method: 'HEAD', mode: 'cors' });
@@ -229,6 +256,9 @@ const Chrome: React.FC = () => {
   const addTab = useCallback(
     (url: string = HOME_URL) => {
       const id = Date.now();
+      const profile = activeTab.profile;
+      const flags = activeTab.sandboxFlags;
+      const blocked = !isAllowed(url, profile);
       setTabs((prev) => [
         ...prev,
         {
@@ -237,16 +267,20 @@ const Chrome: React.FC = () => {
           history: [url],
           historyIndex: 0,
           scroll: 0,
-          blocked: false,
+          blocked,
           muted: false,
+          profile,
+          sandboxFlags: [...flags],
         },
       ]);
       setActiveId(id);
       setAddress(url);
       updateFavicon(url);
-      fetchArticle(id, url);
+      if (!blocked) {
+        fetchArticle(id, url);
+      }
     },
-    [updateFavicon, fetchArticle],
+    [activeTab.profile, activeTab.sandboxFlags, fetchArticle, updateFavicon, isAllowed],
   );
 
   const closeTab = useCallback(
@@ -265,36 +299,6 @@ const Chrome: React.FC = () => {
   },
   [activeId, tabs],
 );
-
-  const handleDragStart = useCallback(
-    (id: number) => () => {
-      dragTabId.current = id;
-    },
-    [],
-  );
-
-  const handleDrop = useCallback(
-    (id: number) => (e: React.DragEvent) => {
-      e.preventDefault();
-      const from = dragTabId.current;
-      dragTabId.current = null;
-      if (from === null || from === id) return;
-      setTabs((prev) => {
-        const next = [...prev];
-        const fromIdx = next.findIndex((t) => t.id === from);
-        const toIdx = next.findIndex((t) => t.id === id);
-        if (fromIdx === -1 || toIdx === -1) return prev;
-        const [moved] = next.splice(fromIdx, 1);
-        next.splice(toIdx, 0, moved);
-        return next;
-      });
-    },
-    [],
-  );
-
-  const allowDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-  }, []);
 
   const reload = useCallback(() => {
     iframeRef.current?.contentWindow?.location.reload();
@@ -334,7 +338,11 @@ const Chrome: React.FC = () => {
   }, [activeTab.url, updateFavicon]);
 
   useEffect(() => {
-    if (!activeTab.blocked && isAllowed(activeTab.url) && !articles[activeId]) {
+    if (
+      !activeTab.blocked &&
+      isAllowed(activeTab.url, activeTab.profile) &&
+      !articles[activeId]
+    ) {
       fetchArticle(activeId, activeTab.url);
     }
     if (!setIframeMuted(!!activeTab.muted) && activeTab.muted) {
@@ -343,7 +351,17 @@ const Chrome: React.FC = () => {
       );
 
     }
-  }, [activeId, activeTab.url, activeTab.muted, articles, fetchArticle, setIframeMuted, isAllowed, activeTab.blocked]);
+  }, [
+    activeId,
+    activeTab.url,
+    activeTab.muted,
+    activeTab.profile,
+    articles,
+    fetchArticle,
+    setIframeMuted,
+    isAllowed,
+    activeTab.blocked,
+  ]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -405,6 +423,37 @@ const Chrome: React.FC = () => {
     }
   }, []);
 
+  const changeProfile = useCallback(
+    (profile: string) => {
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id === activeId
+            ? { ...t, profile, blocked: !isAllowed(t.url, profile) }
+            : t,
+        ),
+      );
+    },
+    [activeId, isAllowed],
+  );
+
+  const toggleFlag = useCallback(
+    (flag: string) => {
+      setTabs((prev) =>
+        prev.map((t) =>
+          t.id === activeId
+            ? {
+                ...t,
+                sandboxFlags: t.sandboxFlags.includes(flag)
+                  ? t.sandboxFlags.filter((f) => f !== flag)
+                  : [...t.sandboxFlags, flag],
+              }
+            : t,
+        ),
+      );
+    },
+    [activeId],
+  );
+
   const onTabStripKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (tabs.length === 0) return;
@@ -435,7 +484,7 @@ const Chrome: React.FC = () => {
 
   const onDragStart = useCallback(
     (id: number) => (e: React.DragEvent<HTMLDivElement>) => {
-      draggingId.current = id;
+      dragTabId.current = id;
       e.dataTransfer.effectAllowed = 'move';
     },
     [],
@@ -444,7 +493,7 @@ const Chrome: React.FC = () => {
   const onDrop = useCallback(
     (id: number) => (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
-      const from = draggingId.current;
+      const from = dragTabId.current;
       if (from === null || from === id) return;
       setTabs((prev) => {
         const fromIdx = prev.findIndex((t) => t.id === from);
@@ -455,7 +504,7 @@ const Chrome: React.FC = () => {
         newTabs.splice(toIdx, 0, moved);
         return newTabs;
       });
-      draggingId.current = null;
+      dragTabId.current = null;
     },
     [],
   );
@@ -501,6 +550,17 @@ const Chrome: React.FC = () => {
         >
           ↗
         </button>
+        <select
+          value={activeTab.profile}
+          onChange={(e) => changeProfile(e.target.value)}
+          className="bg-gray-700 text-white text-xs rounded px-1"
+        >
+          {Object.keys(PROFILES).map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
         <button
           onClick={() => setShowFlags((s) => !s)}
           aria-label="Show sandbox flags"
@@ -595,7 +655,7 @@ const Chrome: React.FC = () => {
               src={activeTab.url}
               title={activeTab.url}
               className="w-full h-full"
-              sandbox={SANDBOX_FLAGS.join(' ')}
+              sandbox={activeTab.sandboxFlags.join(' ')}
               // @ts-ignore - CSP is a valid attribute but not in the React types
               csp={CSP}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; geolocation; gyroscope; picture-in-picture; microphone; camera"
@@ -605,8 +665,24 @@ const Chrome: React.FC = () => {
           )}
           {showFlags && (
             <div className="absolute bottom-0 left-0 right-0 bg-black/70 text-white text-xs p-2 space-y-1">
-              <p>Active sandbox flags: {SANDBOX_FLAGS.join(', ') || '(none)'}</p>
-              <p>Note: combining <code>allow-scripts</code> with <code>allow-same-origin</code> defeats isolation.</p>
+              <div className="flex flex-wrap gap-2">
+                {SANDBOX_OPTIONS.map((flag) => (
+                  <label key={flag} className="flex items-center space-x-1">
+                    <input
+                      type="checkbox"
+                      checked={activeTab.sandboxFlags.includes(flag)}
+                      onChange={() => toggleFlag(flag)}
+                    />
+                    <span>{flag}</span>
+                  </label>
+                ))}
+              </div>
+              <p>
+                Active sandbox flags: {activeTab.sandboxFlags.join(', ') || '(none)'}
+              </p>
+              <p>
+                Note: combining <code>allow-scripts</code> with <code>allow-same-origin</code> defeats isolation.
+              </p>
             </div>
           )}
         </div>
