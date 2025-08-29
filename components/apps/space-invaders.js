@@ -5,6 +5,8 @@ import useAssetLoader from '../../hooks/useAssetLoader';
 const EXTRA_LIFE_THRESHOLDS = [1000, 5000, 10000];
 const BOSS_EVERY = 3;
 const MAX_SHIELD_HP = 3;
+const STREAK_THRESHOLD = 3;
+const STREAK_MULTIPLIER = 2;
 
 const SpaceInvaders = () => {
   const { loading, error } = useAssetLoader({
@@ -121,6 +123,7 @@ const SpaceInvaders = () => {
     stageRef.current = 1;
     setStage(1);
     scoreRef.current = 0;
+    hitStreak.current = 0;
     setScore(0);
     livesRef.current = 3;
     setLives(3);
@@ -153,6 +156,7 @@ const SpaceInvaders = () => {
 
   const [score, setScore] = useState(0);
   const scoreRef = useRef(score);
+  const hitStreak = useRef(0);
   useEffect(() => {
     scoreRef.current = score;
   }, [score]);
@@ -180,7 +184,7 @@ const SpaceInvaders = () => {
     const createBulletPool = (n, dy) => {
       const arr = [];
       for (let i = 0; i < n; i += 1)
-        arr.push({ x: 0, y: 0, dx: 0, dy, active: false });
+        arr.push({ x: 0, y: 0, dx: 0, dy, active: false, hit: false });
       return arr;
     };
     playerBullets.current = createBulletPool(20, -200);
@@ -262,6 +266,7 @@ const SpaceInvaders = () => {
           b.y = y;
           b.dx = dx;
           b.active = true;
+          b.hit = false;
           if (freq) playSound(freq);
           break;
         }
@@ -273,7 +278,10 @@ const SpaceInvaders = () => {
         if (!b.active) continue;
         b.x += b.dx * dt * mult;
         b.y += b.dy * dt * mult;
-        if (b.y < 0 || b.y > h || b.x < 0 || b.x > w) b.active = false;
+        if (b.y < 0 || b.y > h || b.x < 0 || b.x > w) {
+          b.active = false;
+          if (pool === playerBullets.current && !b.hit) hitStreak.current = 0;
+        }
       }
     };
 
@@ -295,7 +303,10 @@ const SpaceInvaders = () => {
     };
 
     const addScore = (n) => {
-      scoreRef.current += n;
+      hitStreak.current += 1;
+      const points =
+        hitStreak.current >= STREAK_THRESHOLD ? n * STREAK_MULTIPLIER : n;
+      scoreRef.current += points;
       setScore(scoreRef.current);
 
       if (
@@ -315,6 +326,7 @@ const SpaceInvaders = () => {
     };
 
     const loseLife = () => {
+      hitStreak.current = 0;
       if (player.current.shield && player.current.shieldHp > 0) {
         player.current.shieldHp -= 1;
         if (player.current.shieldHp <= 0) player.current.shield = false;
@@ -421,6 +433,7 @@ const SpaceInvaders = () => {
           ) {
             inv.alive = false;
             b.active = false;
+            b.hit = true;
             addScore(10);
             playSound(400);
             if (Math.random() < 0.1)
@@ -444,6 +457,7 @@ const SpaceInvaders = () => {
           ) {
             s.hp -= 1;
             b.active = false;
+            hitStreak.current = 0;
             break;
           }
         }
@@ -457,6 +471,7 @@ const SpaceInvaders = () => {
         ) {
           ufo.current.active = false;
           b.active = false;
+          b.hit = true;
           addScore(50);
           playSound(1000);
         }
@@ -469,6 +484,7 @@ const SpaceInvaders = () => {
         ) {
           boss.current.hp -= 1;
           b.active = false;
+          b.hit = true;
           addScore(20);
           playSound(600);
           if (boss.current.hp <= 0) {
