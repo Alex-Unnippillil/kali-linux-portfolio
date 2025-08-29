@@ -3,7 +3,6 @@ import Waterfall from './Waterfall';
 import { protocolName, getRowColor } from './utils';
 import DecodeTree from './DecodeTree';
 import FlowGraph from '../../../apps/wireshark/components/FlowGraph';
-import filters from './filters.json';
 import FilterHelper from '../../../apps/wireshark/components/FilterHelper';
 
 const SMALL_CAPTURE_SIZE = 1024 * 1024; // 1MB threshold
@@ -184,13 +183,6 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     }
   };
 
-  const handleFilterSelect = (e) => {
-    const val = e.target.value;
-    setFilter(val);
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem('wireshark-filter', val);
-    }
-  };
 
   const handleBpfChange = (e) => {
     setBpf(e.target.value);
@@ -330,19 +322,6 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           aria-label="TLS key file"
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
-        <select
-          value={filters.some((f) => f.expression === filter) ? filter : ''}
-          onChange={handleFilterSelect}
-          aria-label="Common filters"
-          className="px-2 py-1 bg-gray-800 rounded text-white"
-        >
-          <option value="">Choose filter...</option>
-          {filters.map(({ label, expression }) => (
-            <option key={expression} value={expression}>
-              {label}
-            </option>
-          ))}
-        </select>
         <FilterHelper value={filter} onChange={handleFilterChange} />
         <input
           value={bpf}
