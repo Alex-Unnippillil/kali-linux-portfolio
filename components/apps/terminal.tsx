@@ -1,6 +1,7 @@
 import dynamic from 'next/dynamic';
 
-const Terminal = dynamic(() => import('../../apps/terminal'), {
+// Lazily load the heavy terminal app on the client only.
+const TerminalApp = dynamic(() => import('../../apps/terminal'), {
   ssr: false,
   loading: () => (
     <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
@@ -9,4 +10,15 @@ const Terminal = dynamic(() => import('../../apps/terminal'), {
   ),
 });
 
-export default Terminal;
+/**
+ * Wrapper component that ensures the terminal area can scroll when content
+ * overflows. The actual indicator/scroll handling lives inside the terminal
+ * app, this wrapper just provides the necessary container styles.
+ */
+export default function Terminal() {
+  return (
+    <div className="h-full w-full overflow-y-auto">
+      <TerminalApp />
+    </div>
+  );
+}
